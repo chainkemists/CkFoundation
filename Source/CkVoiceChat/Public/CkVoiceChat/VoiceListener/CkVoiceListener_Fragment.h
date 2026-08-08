@@ -23,10 +23,10 @@ namespace ck
 
     // Local-machine ears state: per-talker client mute and receive volume. The mute set is also
     // reported upstream as a routing exclusion, so muted audio is never sent at all.
-    struct CKVOICECHAT_API FFragment_VoiceListener_Current
+    struct CKVOICECHAT_API FFragment_VoiceListener
     {
     public:
-        CK_GENERATED_BODY(FFragment_VoiceListener_Current);
+        CK_GENERATED_BODY(FFragment_VoiceListener);
 
     public:
         friend class FProcessor_VoiceListener_HandleRequests;

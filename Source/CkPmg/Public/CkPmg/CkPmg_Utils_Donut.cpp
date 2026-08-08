@@ -44,7 +44,7 @@ auto
     auto& ParamsFragment = InHandle.Add<ck::FFragment_Pmg_Donut_Params>();
     ParamsFragment._Params = InParams;
 
-    auto& Current = InHandle.Add<ck::FFragment_Pmg_Donut_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_Pmg_Donut>();
     InHandle.Add<ck::FTag_Pmg_Donut_NeedsSetup>();
 
     // Kick the material preload at composition so the load overlaps the frames before Setup —
@@ -109,7 +109,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_Donut_UE, FCk_Handle_Pmg_Donut,
-    ck::FFragment_Pmg_Donut_Current)
+    ck::FFragment_Pmg_Donut)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -237,11 +237,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDonut), TEXT("Invalid Pmg Donut handle"))
     { return 0.0f; }
 
-    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut_Current>(),
+    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut>(),
         TEXT("Pmg Donut [{}] has no Current fragment"), InDonut)
     { return 0.0f; }
 
-    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
+    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut>();
     return Current.Get_InnerRadius();
 }
 
@@ -254,11 +254,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDonut), TEXT("Invalid Pmg Donut handle"))
     { return 0.0f; }
 
-    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut_Current>(),
+    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut>(),
         TEXT("Pmg Donut [{}] has no Current fragment"), InDonut)
     { return 0.0f; }
 
-    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
+    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut>();
     return Current.Get_OuterRadius();
 }
 
@@ -271,11 +271,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDonut), TEXT("Invalid Pmg Donut handle"))
     { return 0; }
 
-    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut_Current>(),
+    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut>(),
         TEXT("Pmg Donut [{}] has no Current fragment"), InDonut)
     { return 0; }
 
-    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
+    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut>();
     return Current.Get_Segments();
 }
 
@@ -288,11 +288,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDonut), TEXT("Invalid Pmg Donut handle"))
     { return 0.0f; }
 
-    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut_Current>(),
+    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut>(),
         TEXT("Pmg Donut [{}] has no Current fragment"), InDonut)
     { return 0.0f; }
 
-    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
+    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut>();
     return Current.Get_FillAngle();
 }
 
@@ -305,11 +305,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDonut), TEXT("Invalid Pmg Donut handle"))
     { return ECk_Pmg_RenderMode::DoubleSided; }
 
-    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut_Current>(),
+    CK_ENSURE_IF_NOT(InDonut.Has<ck::FFragment_Pmg_Donut>(),
         TEXT("Pmg Donut [{}] has no Current fragment"), InDonut)
     { return ECk_Pmg_RenderMode::DoubleSided; }
 
-    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut_Current>();
+    const auto& Current = InDonut.Get<ck::FFragment_Pmg_Donut>();
     return Current.Get_RenderMode();
 }
 

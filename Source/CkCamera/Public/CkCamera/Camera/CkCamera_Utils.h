@@ -184,7 +184,7 @@ public:
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
-    // ---- Toggles for the non-blending bool leaves stored on FFragment_Camera_Current. Local-only, take effect the
+    // ---- Toggles for the non-blending bool leaves stored on FFragment_Camera. Local-only, take effect the
     //      same frame, and are reflected by Get_ComposedProfile / the POV pipeline. ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Fixed Boom Rotation",

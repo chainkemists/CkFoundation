@@ -55,10 +55,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKRENDERTARGET_API FFragment_RenderTarget_Current
+    struct CKRENDERTARGET_API FFragment_RenderTarget
     {
     public:
-        CK_GENERATED_BODY(FFragment_RenderTarget_Current);
+        CK_GENERATED_BODY(FFragment_RenderTarget);
 
     public:
         friend class FProcessor_RenderTarget_Setup;

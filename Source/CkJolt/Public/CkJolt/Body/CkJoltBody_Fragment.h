@@ -81,10 +81,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKJOLT_API FFragment_JoltBody_Current
+    struct CKJOLT_API FFragment_JoltBody
     {
     public:
-        CK_GENERATED_BODY(FFragment_JoltBody_Current);
+        CK_GENERATED_BODY(FFragment_JoltBody);
 
     public:
         friend class FProcessor_JoltBody_Setup;

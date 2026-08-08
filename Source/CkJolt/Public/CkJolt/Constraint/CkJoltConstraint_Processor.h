@@ -28,7 +28,7 @@ namespace ck
             FProcessor_JoltConstraint_Setup,
             FCk_Handle_JoltConstraint,
             ck::TReadOnly<FFragment_JoltConstraint_Params>,
-            ck::TReadWrite<FFragment_JoltConstraint_Current>,
+            ck::TReadWrite<FFragment_JoltConstraint>,
             FTag_JoltConstraint_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -49,7 +49,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            FFragment_JoltConstraint_Current& InCurrent) -> void;
+            FFragment_JoltConstraint& InJoltConstraint) -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -61,7 +61,7 @@ namespace ck
             FProcessor_JoltConstraint_HandleRequests,
             FCk_Handle_JoltConstraint,
             ck::TReadOnly<FFragment_JoltConstraint_Params>,
-            ck::TReadWrite<FFragment_JoltConstraint_Current>,
+            ck::TReadWrite<FFragment_JoltConstraint>,
             ck::TReadWrite<FFragment_JoltConstraint_Requests>,
             TExclude<FTag_JoltConstraint_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -84,7 +84,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            FFragment_JoltConstraint_Current& InCurrent,
+            FFragment_JoltConstraint& InJoltConstraint,
             FFragment_JoltConstraint_Requests& InRequestsComp) const -> void;
 
     private:
@@ -92,21 +92,21 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_SetEnabled& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_Distance_SetRange& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest) const -> void;
 
     private:
@@ -144,7 +144,7 @@ namespace ck
     class CKJOLT_API FProcessor_JoltConstraint_LivenessReap : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_LivenessReap,
             FCk_Handle_JoltConstraint,
-            ck::TReadWrite<FFragment_JoltConstraint_Current>,
+            ck::TReadWrite<FFragment_JoltConstraint>,
             TExclude<FTag_JoltConstraint_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -163,7 +163,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltConstraint_Current& InCurrent) const -> void;
+            FFragment_JoltConstraint& InJoltConstraint) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -176,7 +176,7 @@ namespace ck
     class CKJOLT_API FProcessor_JoltConstraint_EndPlay : public ck_exp::TProcessor<
             FProcessor_JoltConstraint_EndPlay,
             FCk_Handle_JoltConstraint,
-            ck::TReadWrite<FFragment_JoltConstraint_Current>,
+            ck::TReadWrite<FFragment_JoltConstraint>,
             CK_IF_END_PLAY>
     {
     public:
@@ -196,7 +196,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltConstraint_Current& InCurrent) const -> void;
+            FFragment_JoltConstraint& InJoltConstraint) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;

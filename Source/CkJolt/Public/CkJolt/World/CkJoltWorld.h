@@ -119,7 +119,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Per-registered-CharacterVirtual state. Character is a NON-owning raw pointer (the entity's
-    // FFragment_JoltCharacter_Current holds the owning JPH::Ref). Registration is game-thread only; the
+    // FFragment_JoltCharacter holds the owning JPH::Ref). Registration is game-thread only; the
     // in/out split below is serialized by the WaitForAsync gate, so nothing here is touched concurrently.
     struct FCk_Jolt_CharacterEntry
     {

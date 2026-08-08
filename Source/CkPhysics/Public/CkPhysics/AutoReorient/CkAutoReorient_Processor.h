@@ -16,7 +16,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_AutoReorient_OrientTowardsVelocity : public ck_exp::TProcessor<
             FProcessor_AutoReorient_OrientTowardsVelocity,
             FCk_Handle_Transform,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity>,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_AutoReorient_Params>,
             FTag_AutoReorient_OrientTowardsVelocity,
@@ -37,7 +37,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocityCurrent,
+            const FFragment_Velocity& InVelocityCurrent,
             const FFragment_Transform& InTransformCurrent,
             const FFragment_AutoReorient_Params& InAutoReorientParams) const -> void;
     };

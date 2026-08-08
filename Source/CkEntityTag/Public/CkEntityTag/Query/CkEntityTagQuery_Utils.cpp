@@ -23,7 +23,7 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
 
-    NewEntity.Add<ck::FFragment_EntityTagQuery_Current>();
+    NewEntity.Add<ck::FFragment_EntityTagQuery>();
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     UCk_Utils_Handle_UE::Set_DebugName(
@@ -42,7 +42,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_EntityTagQuery_Current>();
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_EntityTagQuery>();
 }
 
 // ----
@@ -88,7 +88,7 @@ auto
 
     CK_SIGNAL_BIND(ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate, InQuery, InDelegate, InBindingPolicy, InPostFireBehavior);
 
-    auto& Current = InQuery.AddOrGet<ck::FFragment_EntityTagQuery_Current>();
+    auto& Current = InQuery.AddOrGet<ck::FFragment_EntityTagQuery>();
     ++Current._ContinuousUpdateListenerCount;
 
     return InQuery;
@@ -107,9 +107,9 @@ auto
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate, InQuery, InDelegate);
 
-    if (InQuery.Has<ck::FFragment_EntityTagQuery_Current>())
+    if (InQuery.Has<ck::FFragment_EntityTagQuery>())
     {
-        auto& Current = InQuery.Get<ck::FFragment_EntityTagQuery_Current>();
+        auto& Current = InQuery.Get<ck::FFragment_EntityTagQuery>();
         if (Current._ContinuousUpdateListenerCount > 0)
         {
             --Current._ContinuousUpdateListenerCount;
@@ -182,10 +182,10 @@ auto
     if (ck::Is_NOT_Valid(InQuery))
     { return false; }
 
-    if (NOT InQuery.Has<ck::FFragment_EntityTagQuery_Current>())
+    if (NOT InQuery.Has<ck::FFragment_EntityTagQuery>())
     { return false; }
 
-    return InQuery.Get<ck::FFragment_EntityTagQuery_Current>().Get_IsSatisfied();
+    return InQuery.Get<ck::FFragment_EntityTagQuery>().Get_IsSatisfied();
 }
 
 auto
@@ -194,10 +194,10 @@ auto
         const FCk_Handle_EntityTagQuery& InQuery)
     -> TArray<FCk_EntityTagQuery_Requirement>
 {
-    if (ck::Is_NOT_Valid(InQuery) || NOT InQuery.Has<ck::FFragment_EntityTagQuery_Current>())
+    if (ck::Is_NOT_Valid(InQuery) || NOT InQuery.Has<ck::FFragment_EntityTagQuery>())
     { return {}; }
 
-    return InQuery.Get<ck::FFragment_EntityTagQuery_Current>().Get_Requirements();
+    return InQuery.Get<ck::FFragment_EntityTagQuery>().Get_Requirements();
 }
 
 auto
@@ -206,10 +206,10 @@ auto
         const FCk_Handle_EntityTagQuery& InQuery)
     -> TArray<FCk_EntityTagQuery_Result>
 {
-    if (ck::Is_NOT_Valid(InQuery) || NOT InQuery.Has<ck::FFragment_EntityTagQuery_Current>())
+    if (ck::Is_NOT_Valid(InQuery) || NOT InQuery.Has<ck::FFragment_EntityTagQuery>())
     { return {}; }
 
-    const auto& Current = InQuery.Get<ck::FFragment_EntityTagQuery_Current>();
+    const auto& Current = InQuery.Get<ck::FFragment_EntityTagQuery>();
     const auto& Reqs    = Current.Get_Requirements();
     const auto& Results = Current.Get_ResultsPerRequirement();
 

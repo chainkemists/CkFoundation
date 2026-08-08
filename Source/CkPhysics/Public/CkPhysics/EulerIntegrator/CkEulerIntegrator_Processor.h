@@ -25,9 +25,9 @@ namespace ck
             FProcessor_EulerIntegrator_DoOnePredictiveUpdate,
             TExclude<FTag_HasAuthority>,
             FTag_EulerIntegrator_DoOnePredictiveUpdate,
-            ck::TReadWrite<FFragment_EulerIntegrator_Current>,
-            ck::TReadWrite<FFragment_Velocity_Current>,
-            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadWrite<FFragment_EulerIntegrator>,
+            ck::TReadWrite<FFragment_Velocity>,
+            ck::TReadOnly<FFragment_Acceleration>,
             ck::TReadOnly<FFragment_ContainerRef_Velocity>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -45,9 +45,9 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EulerIntegrator_Current& InIntegrator,
-            FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration,
+            FFragment_EulerIntegrator& InIntegrator,
+            FFragment_Velocity& InVelocity,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_ContainerRef_Velocity& InVelocityContainerRef) const -> void;
     };
 
@@ -57,9 +57,9 @@ namespace ck
             FProcessor_EulerIntegrator_Update,
             TExclude<FTag_EulerIntegrator_DoOnePredictiveUpdate>,
             FTag_EulerIntegrator_NeedsUpdate,
-            ck::TReadWrite<FFragment_EulerIntegrator_Current>,
-            ck::TReadWrite<FFragment_Velocity_Current>,
-            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadWrite<FFragment_EulerIntegrator>,
+            ck::TReadWrite<FFragment_Velocity>,
+            ck::TReadOnly<FFragment_Acceleration>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -74,9 +74,9 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EulerIntegrator_Current& InIntegrator,
-            FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration) -> void;
+            FFragment_EulerIntegrator& InIntegrator,
+            FFragment_Velocity& InVelocity,
+            const FFragment_Acceleration& InAcceleration) -> void;
     };
 }
 

@@ -29,10 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKGRID_API FFragment_2dGridOccupancy_Current
+    struct CKGRID_API FFragment_2dGridOccupancy
     {
     public:
-        CK_GENERATED_BODY(FFragment_2dGridOccupancy_Current);
+        CK_GENERATED_BODY(FFragment_2dGridOccupancy);
 
     public:
         friend class FProcessor_2dGridOccupancy_StampCells;

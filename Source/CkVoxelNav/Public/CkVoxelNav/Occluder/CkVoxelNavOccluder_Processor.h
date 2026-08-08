@@ -27,7 +27,7 @@ namespace ck
         FProcessor_VoxelNavOccluder_Setup,
         FCk_Handle_VoxelNavOccluder,
         ck::TReadOnly<FFragment_VoxelNavOccluder_Params>,
-        ck::TReadWrite<FFragment_VoxelNavOccluder_Current>,
+        ck::TReadWrite<FFragment_VoxelNavOccluder>,
         FTag_VoxelNavOccluder_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -44,7 +44,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InOccluderEntity,
             const FFragment_VoxelNavOccluder_Params& InParams,
-            FFragment_VoxelNavOccluder_Current& InCurrent) -> void;
+            FFragment_VoxelNavOccluder& InVoxelNavOccluder) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ namespace ck
         FProcessor_VoxelNavOccluder_Track,
         FCk_Handle_VoxelNavOccluder,
         ck::TReadOnly<FFragment_VoxelNavOccluder_Params>,
-        ck::TReadWrite<FFragment_VoxelNavOccluder_Current>,
+        ck::TReadWrite<FFragment_VoxelNavOccluder>,
         TExclude<FTag_VoxelNavOccluder_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -73,7 +73,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InOccluderEntity,
             const FFragment_VoxelNavOccluder_Params& InParams,
-            FFragment_VoxelNavOccluder_Current& InCurrent) const -> void;
+            FFragment_VoxelNavOccluder& InVoxelNavOccluder) const -> void;
     };
 }
 

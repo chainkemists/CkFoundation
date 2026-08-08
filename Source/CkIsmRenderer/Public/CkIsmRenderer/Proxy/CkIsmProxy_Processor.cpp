@@ -206,7 +206,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const
+            FFragment_IsmProxy& InIsmProxy) const
         -> void
     {
         using namespace ck_ism_proxy_processor;
@@ -229,7 +229,7 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& NumCustomDataFloats = IsmComp->NumCustomDataFloats;
-        InCurrent._CustomInstanceDataValues.Init(0, NumCustomDataFloats);
+        InIsmProxy._CustomInstanceDataValues.Init(0, NumCustomDataFloats);
 
         for (const auto& CustomInstanceDataDefaults = InParams.Get_CustomInstanceDataDefaults();
             const auto& Override : CustomInstanceDataDefaults)
@@ -246,14 +246,14 @@ namespace ck
             {
                 const auto& TargetIndex = DataIndex + FloatIndex;
 
-                CK_ENSURE_IF_NOT(InCurrent.Get_CustomInstanceDataValues().IsValidIndex(TargetIndex),
+                CK_ENSURE_IF_NOT(InIsmProxy.Get_CustomInstanceDataValues().IsValidIndex(TargetIndex),
                     TEXT("ISM Proxy [{}] tried to set custom instance data at index [{}], but the ISM component only has [{}] custom data floats"),
                     InHandle,
                     TargetIndex,
                     NumCustomDataFloats)
                 { continue; }
 
-                InCurrent._CustomInstanceDataValues[TargetIndex] = FloatArray[FloatIndex];
+                InIsmProxy._CustomInstanceDataValues[TargetIndex] = FloatArray[FloatIndex];
             }
         }
 
@@ -279,7 +279,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InCurrentTransform) const
         -> void
     {
@@ -317,9 +317,9 @@ namespace ck
         const auto& CurrentTransformWithLocalOffset = Get_TransformWithLocalOffset(InCurrentTransform.Get_Transform());
 
         const auto& InstanceIndex = IsmComp->AddInstanceById(CurrentTransformWithLocalOffset, TransformAsWorldSpace);
-        InCurrent._IsmInstanceIndex = InstanceIndex;
+        InIsmProxy._IsmInstanceIndex = InstanceIndex;
 
-        IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomInstanceDataValues());
+        IsmComp->SetCustomDataById(InstanceIndex, InIsmProxy.Get_CustomInstanceDataValues());
 
         if (RendererData->Get_Mobility() == ECk_Mobility::Movable)
         {
@@ -371,7 +371,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -384,7 +384,7 @@ namespace ck
         const auto& IsmComp = FindRendererIsmCompForTransform(
             _World.Get(), RendererData, InHandle, _IsmComponentsByRendererData);
 #endif
-        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
+        const auto InstanceId = InIsmProxy.Get_IsmInstanceIndex();
 
         if (ck::Is_NOT_Valid(IsmComp) || NOT IsmComp->IsValidId(InstanceId))
         { return; }
@@ -451,7 +451,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -459,7 +459,7 @@ namespace ck
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
-        const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
+        const auto InstanceId = InIsmProxy.Get_IsmInstanceIndex();
 
         if (ck::Is_NOT_Valid(IsmComp) || NOT IsmComp->IsValidId(InstanceId))
         { return; }
@@ -506,7 +506,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const
+            FFragment_IsmProxy& InIsmProxy) const
         -> void
     {
         using namespace ck_ism_proxy_processor;
@@ -517,10 +517,10 @@ namespace ck
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
 
-        if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+        if (IsmComp->IsValidId(InIsmProxy.Get_IsmInstanceIndex()))
         {
-            IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
-            InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{INDEX_NONE};
+            IsmComp->RemoveInstanceById(InIsmProxy.Get_IsmInstanceIndex());
+            InIsmProxy._IsmInstanceIndex = FPrimitiveInstanceId{INDEX_NONE};
         }
     }
 
@@ -543,7 +543,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_IsmProxy_Requests& InRequestsComp) const
         -> void
     {
@@ -557,7 +557,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InIsmProxy, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -574,7 +574,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest) const
         -> void
     {
@@ -583,7 +583,7 @@ namespace ck
         if (NewCustomData.IsEmpty())
         { return; }
 
-        const auto& CurrentCustomData = InCurrent.Get_CustomInstanceDataValues();
+        const auto& CurrentCustomData = InIsmProxy.Get_CustomInstanceDataValues();
 
         CK_ENSURE_IF_NOT(CurrentCustomData.Num() == NewCustomData.Num(),
             TEXT("Trying to set [{}] number of custom instance data on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements\n"
@@ -593,7 +593,7 @@ namespace ck
             CurrentCustomData.Num())
         { return; }
 
-        InCurrent._CustomInstanceDataValues = NewCustomData;
+        InIsmProxy._CustomInstanceDataValues = NewCustomData;
 
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
@@ -609,9 +609,9 @@ namespace ck
                 return;
             }
 
-            if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+            if (IsmComp->IsValidId(InIsmProxy.Get_IsmInstanceIndex()))
             {
-                IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
+                IsmComp->SetCustomDataById(InIsmProxy.Get_IsmInstanceIndex(), NewCustomData);
             }
 
             auto ShadowInstanceId = FPrimitiveInstanceId{};
@@ -637,7 +637,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp) const -> void
     {
         // Removing the lane before dispatch mirrors the general request contract: a completion
@@ -650,7 +650,7 @@ namespace ck
                     auto Result = ECk_Request_OperationResult::Failed;
                     const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                    const auto WasApplied = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                    const auto WasApplied = DoHandleRequest(InHandle, InParams, InIsmProxy, InRequest);
 
                     if (InRequest.Get_IsRequestHandleValid())
                     {
@@ -668,10 +668,10 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> bool
     {
-        const auto& CurrentCustomInstanceData = InCurrent.Get_CustomInstanceDataValues();
+        const auto& CurrentCustomInstanceData = InIsmProxy.Get_CustomInstanceDataValues();
         const auto& NewCustomDataIndex = InRequest.Get_CustomDataIndex();
         const auto& NewCustomDataValue = InRequest.Get_CustomDataValue();
         const auto IsIndexValid = CurrentCustomInstanceData.IsValidIndex(NewCustomDataIndex);
@@ -705,7 +705,7 @@ namespace ck
                     InHandle)
                 { return false; }
 
-                const auto HasLiveInstance = IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex());
+                const auto HasLiveInstance = IsmComp->IsValidId(InIsmProxy.Get_IsmInstanceIndex());
                 CK_ENSURE_IF_NOT(HasLiveInstance,
                     TEXT("Ready ISM Proxy [{}] has no live instance during late custom-data write"),
                     InHandle)
@@ -715,14 +715,14 @@ namespace ck
             }
         }
 
-        InCurrent._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
+        InIsmProxy._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
 
         if (Mobility == ECk_Mobility::Movable)
         {
             if (ck::IsValid(IsmCompToUpdate))
             {
                 IsmCompToUpdate->SetCustomDataValueById(
-                    InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+                    InIsmProxy.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
             }
 
             auto ShadowInstanceId = FPrimitiveInstanceId{};
@@ -742,11 +742,11 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const
         -> void
     {
-        const auto& CurrentCustomInstanceData = InCurrent.Get_CustomInstanceDataValues();
+        const auto& CurrentCustomInstanceData = InIsmProxy.Get_CustomInstanceDataValues();
         const auto& NewCustomDataIndex = InRequest.Get_CustomDataIndex();
         const auto& NewCustomDataValue = InRequest.Get_CustomDataValue();
 
@@ -758,7 +758,7 @@ namespace ck
                 CurrentCustomInstanceData.Num())
         { return; }
 
-        InCurrent._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
+        InIsmProxy._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
 
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
@@ -774,9 +774,9 @@ namespace ck
                 return;
             }
 
-            if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+            if (IsmComp->IsValidId(InIsmProxy.Get_IsmInstanceIndex()))
             {
-                IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+                IsmComp->SetCustomDataValueById(InIsmProxy.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
             }
 
             auto ShadowInstanceId = FPrimitiveInstanceId{};
@@ -793,7 +793,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest) const
         -> void
     {
@@ -816,7 +816,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_EnableDisable& InRequest) const
             -> void
     {
@@ -842,10 +842,10 @@ namespace ck
                 const auto& RendererData = InParams.Get_IsmRenderer().Get();
 
                 if (const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
-                    ck::IsValid(IsmComp) && IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+                    ck::IsValid(IsmComp) && IsmComp->IsValidId(InIsmProxy.Get_IsmInstanceIndex()))
                 {
-                    IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
-                    InCurrent._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
+                    IsmComp->RemoveInstanceById(InIsmProxy.Get_IsmInstanceIndex());
+                    InIsmProxy._IsmInstanceIndex = FPrimitiveInstanceId{ INDEX_NONE };
                 }
                 
                 ck::ismrenderer::Verbose(TEXT("Disabling ISM Proxy [{}]..."), InHandle);

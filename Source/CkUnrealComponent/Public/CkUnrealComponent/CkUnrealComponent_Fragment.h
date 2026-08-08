@@ -37,10 +37,10 @@ namespace ck
     // world and EndPlay must remove its bodies before destroying the component.
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_BakedIntoStaticWorld);
 
-    struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_Current
+    struct CKUNREALCOMPONENT_API FFragment_UnrealComponent
     {
     public:
-        CK_GENERATED_BODY(FFragment_UnrealComponent_Current);
+        CK_GENERATED_BODY(FFragment_UnrealComponent);
 
         friend class FProcessor_UnrealComponent_Setup;
         friend class FProcessor_UnrealComponent_PushTransform;
@@ -57,7 +57,7 @@ namespace ck
         CK_PROPERTY_GET(_Component);
         CK_PROPERTY_GET(_OwningEntity);
 
-        CK_DEFINE_CONSTRUCTORS(FFragment_UnrealComponent_Current, _OwningEntity);
+        CK_DEFINE_CONSTRUCTORS(FFragment_UnrealComponent, _OwningEntity);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

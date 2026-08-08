@@ -16,7 +16,7 @@ namespace ck
     class CKPROJECTILE_API FProcessor_Projectile_Update : public TProcessor<
             FProcessor_Projectile_Update,
             FTag_Projectile,
-            ck::TReadOnly<FFragment_EulerIntegrator_Current>,
+            ck::TReadOnly<FFragment_EulerIntegrator>,
             FTag_EulerIntegrator_NeedsUpdate,
             CK_IGNORE_PENDING_KILL>
     {
@@ -36,7 +36,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegratorComp) -> void;
+            const FFragment_EulerIntegrator& InIntegratorComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

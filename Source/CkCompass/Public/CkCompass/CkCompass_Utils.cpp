@@ -35,9 +35,9 @@ auto
         InParams.Get_MaxEntries(),
         InParams.Get_HeadingSource(),
         InParams.Get_UpdateInterval());
-    InHandle.Add<ck::FFragment_Compass_Current>();
+    InHandle.Add<ck::FFragment_Compass>();
 
-    InHandle.Get<ck::FFragment_Compass_Current>()._CategoryFilter = InParams.Get_CategoryFilter();
+    InHandle.Get<ck::FFragment_Compass>()._CategoryFilter = InParams.Get_CategoryFilter();
     InHandle.Add<ck::FFragment_Compass_Scratch>();
     InHandle.Add<ck::FTag_Compass_NeedsSetup>();
 
@@ -69,7 +69,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Compass_UE, FCk_Handle_Compass, ck::FFragment_Compass_Current, ck::FFragment_Compass_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Compass_UE, FCk_Handle_Compass, ck::FFragment_Compass, ck::FFragment_Compass_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ auto
         const FCk_Handle_Compass& InCompass)
     -> float
 {
-    return InCompass.Get<ck::FFragment_Compass_Current>().Get_HeadingDegrees();
+    return InCompass.Get<ck::FFragment_Compass>().Get_HeadingDegrees();
 }
 
 auto
@@ -97,7 +97,7 @@ auto
         const FCk_Handle_Compass& InCompass)
     -> FCk_Handle
 {
-    return InCompass.Get<ck::FFragment_Compass_Current>().Get_Observer();
+    return InCompass.Get<ck::FFragment_Compass>().Get_Observer();
 }
 
 auto
@@ -106,7 +106,7 @@ auto
         const FCk_Handle_Compass& InCompass)
     -> TArray<FCk_Compass_Entry>
 {
-    return InCompass.Get<ck::FFragment_Compass_Current>().Get_Entries();
+    return InCompass.Get<ck::FFragment_Compass>().Get_Entries();
 }
 
 auto

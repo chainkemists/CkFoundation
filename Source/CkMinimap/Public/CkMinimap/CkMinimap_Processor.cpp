@@ -58,19 +58,19 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap& InMinimap)
         -> void
     {
         InMinimapEntity.Remove<MarkedDirtyBy>();
 
         // Direct-attach default only — Create points its child's observer at the lifetime owner via a request
-        if (ck::Is_NOT_Valid(InCurrent._Observer))
+        if (ck::Is_NOT_Valid(InMinimap._Observer))
         {
-            InCurrent._Observer = InMinimapEntity;
+            InMinimap._Observer = InMinimapEntity;
         }
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             FFragment_Minimap_Requests& InRequests) const
         -> void
@@ -101,12 +101,12 @@ namespace ck
             // success condition.
             if constexpr (std::is_same_v<T, FCk_Request_Minimap_SetViewExtent>)
             {
-                if (DoHandleRequest(InMinimapEntity, InCurrent, InParams, InRequest))
+                if (DoHandleRequest(InMinimapEntity, InMinimap, InParams, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
             }
             else
             {
-                DoHandleRequest(InMinimapEntity, InCurrent, InParams, InRequest);
+                DoHandleRequest(InMinimapEntity, InMinimap, InParams, InRequest);
                 Result = ECk_Request_OperationResult::Succeeded;
             }
 
@@ -126,7 +126,7 @@ namespace ck
         FProcessor_Minimap_HandleRequests::
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetViewExtent& InRequest)
         -> bool
@@ -138,10 +138,10 @@ namespace ck
             InMinimapEntity, InRequest.Get_ViewExtent())
         { return false; }
 
-        InCurrent._ViewExtent = InRequest.Get_ViewExtent();
+        InMinimap._ViewExtent = InRequest.Get_ViewExtent();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
 
         return true;
     }
@@ -150,70 +150,70 @@ namespace ck
         FProcessor_Minimap_HandleRequests::
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetCategoryFilter& InRequest)
         -> void
     {
         minimap::VeryVerbose(TEXT("Handling SetCategoryFilter Request for Minimap with Entity [{}]"), InMinimapEntity);
 
-        InCurrent._CategoryFilter = InRequest.Get_CategoryFilter();
+        InMinimap._CategoryFilter = InRequest.Get_CategoryFilter();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
         FProcessor_Minimap_HandleRequests::
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetObserver& InRequest)
         -> void
     {
         minimap::VeryVerbose(TEXT("Handling SetObserver Request for Minimap with Entity [{}]"), InMinimapEntity);
 
-        InCurrent._Observer = ck::IsValid(InRequest.Get_Observer())
+        InMinimap._Observer = ck::IsValid(InRequest.Get_Observer())
             ? InRequest.Get_Observer()
             : InMinimapEntity;
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
         FProcessor_Minimap_HandleRequests::
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetRotationMode& InRequest)
         -> void
     {
         minimap::VeryVerbose(TEXT("Handling SetRotationMode Request for Minimap with Entity [{}]"), InMinimapEntity);
 
-        InCurrent._RotationMode = InRequest.Get_RotationMode();
+        InMinimap._RotationMode = InRequest.Get_RotationMode();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
         FProcessor_Minimap_HandleRequests::
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetFogOfWar& InRequest)
         -> void
     {
         minimap::VeryVerbose(TEXT("Handling SetFogOfWar Request for Minimap with Entity [{}]"), InMinimapEntity);
 
-        InCurrent._FogOfWar = InRequest.Get_FogOfWar();
+        InMinimap._FogOfWar = InRequest.Get_FogOfWar();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InMinimap._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -237,19 +237,19 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch) const
         -> void
     {
         // Observers die (pawn destroyed, possession changed) as part of normal play — degrade silently and
         // wait for a Request_SetObserver. FixedBounds minimaps degrade the same way (no observer-less world map)
-        if (ck::Is_NOT_Valid(InCurrent._Observer))
+        if (ck::Is_NOT_Valid(InMinimap._Observer))
         {
-            DoClearAllEntries(InMinimapEntity, InCurrent, InScratch);
+            DoClearAllEntries(InMinimapEntity, InMinimap, InScratch);
             return;
         }
 
-        const auto& Observer = InCurrent._Observer;
+        const auto& Observer = InMinimap._Observer;
 
         auto ObserverTransform = UCk_Utils_Transform_UE::Cast(Observer);
 
@@ -257,30 +257,30 @@ namespace ck
             TEXT("Minimap [{}] Observer [{}] has no Transform feature. The Minimap cannot project POIs without an observer position"),
             InMinimapEntity, Observer)
         {
-            DoClearAllEntries(InMinimapEntity, InCurrent, InScratch);
+            DoClearAllEntries(InMinimapEntity, InMinimap, InScratch);
             return;
         }
 
-        InCurrent._TimeSinceUpdate += InDeltaT;
+        InMinimap._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InMinimap._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
+        InMinimap._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
-        InCurrent._ViewOrigin = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform);
-        InCurrent._ViewYawDegrees = FRotator::ClampAxis(DoResolveViewYaw(Observer, InCurrent));
+        InMinimap._ViewOrigin = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform);
+        InMinimap._ViewYawDegrees = FRotator::ClampAxis(DoResolveViewYaw(Observer, InMinimap));
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkMinimap_Projection);
-            DoProjectPois(InMinimapEntity, InParams, InCurrent, InScratch);
+            DoProjectPois(InMinimapEntity, InParams, InMinimap, InScratch);
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkMinimap_DiffSignals);
-            DoDiffAndPublishEntries(InMinimapEntity, InCurrent, InScratch);
+            DoDiffAndPublishEntries(InMinimapEntity, InMinimap, InScratch);
         }
     }
 
@@ -288,7 +288,7 @@ namespace ck
         FProcessor_Minimap_Update::
         DoResolveViewYaw(
             const FCk_Handle& InObserver,
-            const FFragment_Minimap_Current& InCurrent)
+            const FFragment_Minimap& InMinimap)
         -> float
     {
         if (const auto ObserverCamera = UCk_Utils_Camera_UE::Cast(InObserver);
@@ -303,7 +303,7 @@ namespace ck
             return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(ObserverTransform).Yaw;
         }
 
-        return InCurrent._ViewYawDegrees;
+        return InMinimap._ViewYawDegrees;
     }
 
     auto
@@ -311,23 +311,23 @@ namespace ck
         DoProjectPois(
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch)
         -> void
     {
         auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
-        const auto& CategoryFilter = InCurrent.Get_CategoryFilter();
+        const auto& CategoryFilter = InMinimap.Get_CategoryFilter();
         const auto FilterIsEmpty = CategoryFilter.IsEmpty();
         const auto ProjectionMode = InParams.Get_ProjectionMode();
         const auto FrameShape = InParams.Get_FrameShape();
         const auto& FixedBounds = InParams.Get_FixedBounds();
-        const auto& ViewOrigin = InCurrent._ViewOrigin;
-        const auto ViewYawDegrees = InCurrent._ViewYawDegrees;
-        const auto ViewExtent = InCurrent._ViewExtent;
-        const auto RotationMode = InCurrent._RotationMode;
-        const auto& FogOfWar = InCurrent._FogOfWar;
+        const auto& ViewOrigin = InMinimap._ViewOrigin;
+        const auto ViewYawDegrees = InMinimap._ViewYawDegrees;
+        const auto ViewExtent = InMinimap._ViewExtent;
+        const auto RotationMode = InMinimap._RotationMode;
+        const auto& FogOfWar = InMinimap._FogOfWar;
 
         // The four pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
         // Destroy) — without them, dying POIs would linger on the minimap. Initiate-frame POIs are
@@ -501,12 +501,12 @@ namespace ck
         FProcessor_Minimap_Update::
         DoDiffAndPublishEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch)
         -> void
     {
         const auto& NewEntries = InScratch._Entries;
-        const auto& OldEntries = InCurrent._Entries;
+        const auto& OldEntries = InMinimap._Entries;
 
         // Stable ordered membership cannot emit appeared/disappeared signals. Still publish the
         // newly projected entries: positions and other display values can change without membership.
@@ -554,23 +554,23 @@ namespace ck
             }
         }
 
-        Swap(InCurrent._Entries, InScratch._Entries);
+        Swap(InMinimap._Entries, InScratch._Entries);
     }
 
     auto
         FProcessor_Minimap_Update::
         DoClearAllEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch)
         -> void
     {
-        for (const auto& Entry : InCurrent._Entries)
+        for (const auto& Entry : InMinimap._Entries)
         {
             UUtils_Signal_OnMinimapEntryDisappeared::Broadcast(InMinimapEntity, MakePayload(InMinimapEntity, Entry.Get_Poi()));
         }
 
-        InCurrent._Entries.Reset();
+        InMinimap._Entries.Reset();
         InScratch._Entries.Reset();
     }
 
@@ -582,16 +582,16 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch)
         -> void
     {
-        for (const auto& Entry : InCurrent._Entries)
+        for (const auto& Entry : InMinimap._Entries)
         {
             UUtils_Signal_OnMinimapEntryDisappeared::Broadcast(InMinimapEntity, MakePayload(InMinimapEntity, Entry.Get_Poi()));
         }
 
-        InCurrent._Entries.Reset();
+        InMinimap._Entries.Reset();
         InScratch._Entries.Reset();
     }
 }

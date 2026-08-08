@@ -38,10 +38,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_PredictedVelocity_Current
+    struct CKPHYSICS_API FFragment_PredictedVelocity
     {
     public:
-        CK_GENERATED_BODY(FFragment_PredictedVelocity_Current);
+        CK_GENERATED_BODY(FFragment_PredictedVelocity);
 
     public:
         friend class FProcessor_PredictedVelocity_Update;

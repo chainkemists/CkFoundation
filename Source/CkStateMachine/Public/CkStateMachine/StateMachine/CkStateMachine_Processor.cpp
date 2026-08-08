@@ -64,7 +64,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent)
+            FFragment_Sm& InSm)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_Setup);
@@ -109,7 +109,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FFragment_Sm_Requests& InRequests) const
         -> void
     {
@@ -179,7 +179,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                Result = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                Result = DoHandleRequest(InHandle, InParams, InSm, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -258,15 +258,15 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Start& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._RunStatus != ECk_SmRunStatus::Stopped)
+        if (InSm._RunStatus != ECk_SmRunStatus::Stopped)
         {
             // Paused is rejected too: falling through would Add a duplicate FTag_Sm_Running and stack
             // a fresh initial state on top of the still-alive paused one. Resume is the way back.
-            if (InCurrent._RunStatus == ECk_SmRunStatus::Paused)
+            if (InSm._RunStatus == ECk_SmRunStatus::Paused)
             {
                 ck::sm::Warning(
                     TEXT("Request_Start on [{}] while Paused — ignored. Use Request_Resume."), InHandle);
@@ -274,13 +274,13 @@ namespace ck
             return ECk_Request_OperationResult::Failed;
         }
 
-        InCurrent._RunStatus = ECk_SmRunStatus::Running;
+        InSm._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Add<FTag_Sm_Running>();
         InHandle.Try_Remove<FTag_Sm_Paused>();
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Running);
 
-        DoEnterState(InHandle, InCurrent, InParams.Get_InitialStateClass());
+        DoEnterState(InHandle, InSm, InParams.Get_InitialStateClass());
 
         UUtils_Signal_OnSmStarted::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
@@ -288,8 +288,8 @@ namespace ck
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
                 TSubclassOf<UCk_SmState_EntityScript>{},
-                InCurrent._CurrentStateClass,
-                InCurrent._CurrentStateHandle
+                InSm._CurrentStateClass,
+                InSm._CurrentStateHandle
             }));
 
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InParams.Get_InitialStateClass());
@@ -305,9 +305,9 @@ namespace ck
             if (UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(ParentSm))
             {
                 auto ParentStateName = FString{};
-                if (ck::IsValid(ParentSm) && ParentSm.Has<FFragment_Sm_Current>())
+                if (ck::IsValid(ParentSm) && ParentSm.Has<FFragment_Sm>())
                 {
-                    if (const auto ParentCurrentClass = ParentSm.Get<FFragment_Sm_Current>().Get_CurrentStateClass();
+                    if (const auto ParentCurrentClass = ParentSm.Get<FFragment_Sm>().Get_CurrentStateClass();
                         ck::IsValid(ParentCurrentClass))
                     {
                         ParentStateName = UCk_Utils_Object_UE::Get_CleanClassName(ParentCurrentClass);
@@ -317,7 +317,7 @@ namespace ck
                 // _CurrentStateClass is already override-resolved by DoEnterState; the params'
                 // initial state class is the pre-resolution request and would display the base class.
                 auto SubSmStartRequest = FCk_Request_SmDebug_RecordTransition{
-                    TSubclassOf<UCk_SmState_EntityScript>{}, InCurrent._CurrentStateClass};
+                    TSubclassOf<UCk_SmState_EntityScript>{}, InSm._CurrentStateClass};
                 SubSmStartRequest.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
                 SubSmStartRequest.Set_RealTimeSeconds(FPlatformTime::Seconds());
                 SubSmStartRequest.Set_SubSmParentStateName(ParentStateName);
@@ -335,16 +335,16 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Stop& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._RunStatus == ECk_SmRunStatus::Stopped)
+        if (InSm._RunStatus == ECk_SmRunStatus::Stopped)
         { return ECk_Request_OperationResult::Failed; }
 
-        DoExitCurrentState(InHandle, InCurrent);
+        DoExitCurrentState(InHandle, InSm);
 
-        InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
+        InSm._RunStatus = ECk_SmRunStatus::Stopped;
         InHandle.Try_Remove<FTag_Sm_Running>();
         InHandle.Try_Remove<FTag_Sm_Paused>();
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
@@ -367,14 +367,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Pause& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
+        if (InSm._RunStatus != ECk_SmRunStatus::Running)
         { return ECk_Request_OperationResult::Failed; }
 
-        InCurrent._RunStatus = ECk_SmRunStatus::Paused;
+        InSm._RunStatus = ECk_SmRunStatus::Paused;
         InHandle.Add<FTag_Sm_Paused>();
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Paused);
@@ -387,14 +387,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Resume& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._RunStatus != ECk_SmRunStatus::Paused)
+        if (InSm._RunStatus != ECk_SmRunStatus::Paused)
         { return ECk_Request_OperationResult::Failed; }
 
-        InCurrent._RunStatus = ECk_SmRunStatus::Running;
+        InSm._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Remove<FTag_Sm_Paused>();
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Running);
@@ -407,11 +407,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Transition& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
+        if (InSm._RunStatus != ECk_SmRunStatus::Running)
         {
             // The enqueue side unconditionally added FTag_Sm_TransitionQueued; a dropped request must
             // clear it or FProcessor_SmState_Evaluate blocks forever.
@@ -419,8 +419,8 @@ namespace ck
             return ECk_Request_OperationResult::Failed;
         }
 
-        const auto PreviousStateClass  = InCurrent._CurrentStateClass;
-        const auto PreviousStateHandle = InCurrent._CurrentStateHandle;
+        const auto PreviousStateClass  = InSm._CurrentStateClass;
+        const auto PreviousStateHandle = InSm._CurrentStateHandle;
 
         UCk_Utils_StateMachine_UE::TryCheckExitBreakpoint(InHandle, PreviousStateClass);
 
@@ -428,7 +428,7 @@ namespace ck
         // handle: destroying here (deferred to end-of-frame) can win the race against a commit whose
         // exit cascade straddles a frame boundary, leaving the commit querying a tombstone.
         constexpr auto ScheduleDestroyNow = false;
-        DoExitCurrentState(InHandle, InCurrent, ScheduleDestroyNow);
+        DoExitCurrentState(InHandle, InSm, ScheduleDestroyNow);
 
         // The entry itself happens in FProcessor_Sm_CommitPendingTransition. A second
         // Request_Transition can land before the first commits: keep the ORIGINAL previous-state
@@ -453,7 +453,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_AddOverrideState& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -487,7 +487,7 @@ namespace ck
         FProcessor_Sm_HandleRequests::
         DoEnterState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             TSubclassOf<UCk_SmState_EntityScript> InStateClass)
         -> void
     {
@@ -495,19 +495,19 @@ namespace ck
             TEXT("Invalid state class when entering state on SM [{}]"), InSmHandle)
         { return; }
 
-        InCurrent._CurrentStateHandle = UCk_Utils_SmState_UE::Create(InSmHandle, InStateClass);
-        InCurrent._CurrentStateClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(InSmHandle, InStateClass);
+        InSm._CurrentStateHandle = UCk_Utils_SmState_UE::Create(InSmHandle, InStateClass);
+        InSm._CurrentStateClass = UCk_Utils_SmState_UE::Get_ResolvedStateClass(InSmHandle, InStateClass);
     }
 
     auto
         FProcessor_Sm_HandleRequests::
         DoExitCurrentState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             bool InScheduleDestroy)
         -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent._CurrentStateHandle))
+        if (ck::Is_NOT_Valid(InSm._CurrentStateHandle))
         {
             ck::sm::VeryVerbose(TEXT("[SM Lifecycle] DoExitCurrentState on SM [{}] — no current state, nothing to exit"),
                 InSmHandle);
@@ -515,12 +515,12 @@ namespace ck
         }
 
         ck::sm::VeryVerbose(TEXT("[SM Lifecycle] DoExitCurrentState on SM [{}] -> exiting state [{}]"),
-            InSmHandle, InCurrent._CurrentStateHandle);
+            InSmHandle, InSm._CurrentStateHandle);
 
-        UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle, InScheduleDestroy);
+        UCk_Utils_SmState_UE::Request_Exit(InSm._CurrentStateHandle, InScheduleDestroy);
 
-        InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
-        InCurrent._CurrentStateClass = nullptr;
+        InSm._CurrentStateHandle = FCk_Handle_SmState{};
+        InSm._CurrentStateClass = nullptr;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -544,7 +544,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_PendingTransition& InPending)
         -> void
     {
@@ -557,7 +557,7 @@ namespace ck
             && UCk_Utils_SmState_UE::Get_IsPendingExit(InPending._PreviousStateHandle))
         { return; }
 
-        if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
+        if (InSm._RunStatus != ECk_SmRunStatus::Running)
         {
             // Discard rather than just remove — the deferred-alive previous state must not leak
             // when the SM stopped mid-transition.
@@ -570,7 +570,7 @@ namespace ck
         const auto IncomingNewFingerprint = InPending._NewStateFingerprint;
         const auto PreviousStateHandle    = InPending._PreviousStateHandle;
 
-        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, TargetStateClass);
+        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InSm, TargetStateClass);
 
         // Safe to destroy the state the transition path deliberately kept alive: its exit lifecycle
         // already ran via FProcessor_SmState_Exit, and EndPlay's ExitState is a no-op (Active dedup).
@@ -583,14 +583,14 @@ namespace ck
         // Pass the replicated fingerprint expectation to the new state so its Construct /
         // DoComputeFingerprint cycle can verify against it. Authority-driven commits leave it at 0 —
         // no carrier, no verify. The fragment lives just long enough for the deferred verify pass.
-        if (IncomingNewFingerprint != 0 && ck::IsValid(InCurrent._CurrentStateHandle))
+        if (IncomingNewFingerprint != 0 && ck::IsValid(InSm._CurrentStateHandle))
         {
-            auto& Expected = InCurrent._CurrentStateHandle.AddOrGet<FFragment_SmState_ExpectedFingerprint>();
+            auto& Expected = InSm._CurrentStateHandle.AddOrGet<FFragment_SmState_ExpectedFingerprint>();
             Expected.Set_Hash(IncomingNewFingerprint);
         }
 
 #if !UE_BUILD_SHIPPING
-        if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
+        if (ck::IsValid(PreviousStateClass) && ck::IsValid(InSm._CurrentStateClass))
         {
             if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InHandle))
             {
@@ -599,7 +599,7 @@ namespace ck
             else
             {
                 auto Request = FCk_Request_SmDebug_RecordTransition{
-                    PreviousStateClass, InCurrent._CurrentStateClass};
+                    PreviousStateClass, InSm._CurrentStateClass};
                 Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
 
                 if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
@@ -625,7 +625,7 @@ namespace ck
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
                 PreviousStateClass,
                 TargetStateClass,
-                InCurrent._CurrentStateHandle
+                InSm._CurrentStateHandle
             }));
 
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
@@ -806,7 +806,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_PendingReplicationEntries& InStash)
         -> void
     {
@@ -843,7 +843,7 @@ namespace ck
             StashedEntries.Reset();
         }
 
-        // Teardown precedes the mirror so MirrorRunStatus's Has<FFragment_Sm_Current> check is the
+        // Teardown precedes the mirror so MirrorRunStatus's Has<FFragment_Sm> check is the
         // only gate.
         InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
 
@@ -863,7 +863,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_ReplayQueue& InQueue)
         -> void
     {
@@ -880,7 +880,7 @@ namespace ck
         Queue.RemoveAt(0);
 
         auto& Pending = InHandle.AddOrGet<FFragment_Sm_PendingTransition>();
-        Pending._PreviousStateHandle = InCurrent.Get_CurrentStateHandle();
+        Pending._PreviousStateHandle = InSm.Get_CurrentStateHandle();
         Pending._PreviousStateClass  = Event.Get_PreviousStateClass();
         Pending._TargetStateClass    = Event.Get_NewStateClass();
         Pending._NewStateFingerprint = Event.Get_NewStateFingerprint();
@@ -900,7 +900,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent) const
+            FFragment_Sm& InSm) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_FirstSyncInitialState);
@@ -914,21 +914,21 @@ namespace ck
 
         // Idempotence guards: only enter when the SM is actually Running and hasn't already acquired
         // a state via the replay path.
-        if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Running)
+        if (InSm.Get_RunStatus() != ECk_SmRunStatus::Running)
         { return; }
 
-        if (ck::IsValid(InCurrent.Get_CurrentStateHandle()))
+        if (ck::IsValid(InSm.Get_CurrentStateHandle()))
         { return; }
 
         // No publish: a local reconstruction on a non-authority machine, mirroring the replay path.
-        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, InParams.Get_InitialStateClass());
+        FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InSm, InParams.Get_InitialStateClass());
 
         // Initial-entry fire with PreviousStateClass=null, matching the authority's DoStart.
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
                 TSubclassOf<UCk_SmState_EntityScript>{},
-                InCurrent.Get_CurrentStateClass(),
-                InCurrent.Get_CurrentStateHandle()
+                InSm.Get_CurrentStateClass(),
+                InSm.Get_CurrentStateHandle()
             }));
     }
 
@@ -940,7 +940,7 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_HydrationResume& InResume) const
         -> void
     {
@@ -956,9 +956,9 @@ namespace ck
         const auto DoMarkResumed = [&]() -> void
         {
             ck::sm::Display(TEXT("[SM HydrationResume] [{}] done — RunStatus [{}] state [{}]"),
-                InHandle, InCurrent.Get_RunStatus(),
-                ck::IsValid(InCurrent.Get_CurrentStateClass())
-                    ? InCurrent.Get_CurrentStateClass()->GetFName()
+                InHandle, InSm.Get_RunStatus(),
+                ck::IsValid(InSm.Get_CurrentStateClass())
+                    ? InSm.Get_CurrentStateClass()->GetFName()
                     : FName{TEXT("<none>")});
 
             // Removing the fragment is the done marker — it drops the entity out of this processor's view.
@@ -1002,7 +1002,7 @@ namespace ck
                 if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Stopped)
                 {
                     // AutoStart=OnSetup may have started the fresh machine — converge back to Stopped.
-                    if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Stopped)
+                    if (InSm.Get_RunStatus() != ECk_SmRunStatus::Stopped)
                     {
                         if (NOT Pending.Get_StopEnqueued())
                         {
@@ -1016,7 +1016,7 @@ namespace ck
                     return;
                 }
 
-                if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Running)
+                if (InSm.Get_RunStatus() != ECk_SmRunStatus::Running)
                 {
                     if (NOT Pending.Get_StartEnqueued())
                     {
@@ -1043,7 +1043,7 @@ namespace ck
 
                 // A null desired class means the SM was saved mid-transition or before any state
                 // entry; staying in InitialState is the contract for both.
-                if (ck::IsValid(DesiredClass) && InCurrent.Get_CurrentStateClass() != DesiredClass)
+                if (ck::IsValid(DesiredClass) && InSm.Get_CurrentStateClass() != DesiredClass)
                 {
                     if (NOT Pending.Get_TransitionEnqueued())
                     {
@@ -1063,7 +1063,7 @@ namespace ck
             {
                 if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Paused)
                 {
-                    if (InCurrent.Get_RunStatus() == ECk_SmRunStatus::Running)
+                    if (InSm.Get_RunStatus() == ECk_SmRunStatus::Running)
                     {
                         if (NOT Pending.Get_PauseEnqueued())
                         {
@@ -1073,7 +1073,7 @@ namespace ck
                         return;
                     }
 
-                    if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Paused)
+                    if (InSm.Get_RunStatus() != ECk_SmRunStatus::Paused)
                     { return; }
                 }
 
@@ -1177,26 +1177,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sm_Current& InCurrent)
+            FFragment_Sm& InSm)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_EndPlay);
 
         ck::sm::VeryVerbose(TEXT("[SM Lifecycle] FProcessor_Sm_EndPlay on SM [{}] — current state [{}]"),
-            InHandle, InCurrent._CurrentStateHandle);
+            InHandle, InSm._CurrentStateHandle);
 
-        if (ck::IsValid(InCurrent._CurrentStateHandle))
+        if (ck::IsValid(InSm._CurrentStateHandle))
         {
-            UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
+            UCk_Utils_SmState_UE::Request_Exit(InSm._CurrentStateHandle);
         }
 
         // Redundant with the lifetime cascade, but keeps the "abandon a mid-flight transition"
         // contract uniform across every abandoning path.
         UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
 
-        InCurrent._RunStatus = ECk_SmRunStatus::Stopped;
-        InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
-        InCurrent._CurrentStateClass = nullptr;
+        InSm._RunStatus = ECk_SmRunStatus::Stopped;
+        InSm._CurrentStateHandle = FCk_Handle_SmState{};
+        InSm._CurrentStateClass = nullptr;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

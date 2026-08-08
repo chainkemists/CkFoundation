@@ -18,7 +18,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             FFragment_PoiDisplayDefinition_Requests& InRequests) const
         -> void
     {
@@ -33,7 +33,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DisplayChanged |= DoHandleRequest(InHandle, InCurrent, InRequest);
+            DisplayChanged |= DoHandleRequest(InHandle, InPoiDisplayDefinition, InRequest);
 
             Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
@@ -53,17 +53,17 @@ namespace ck
         FProcessor_PoiDisplayDefinition_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             const FCk_Request_PoiDisplayDefinition_SetTint& InRequest)
         -> bool
     {
-        if (InRequest.Get_Tint().Equals(InCurrent._Tint))
+        if (InRequest.Get_Tint().Equals(InPoiDisplayDefinition._Tint))
         { return false; }
 
         poidisplaydefinition::VeryVerbose(TEXT("PoiDisplayDefinition [{}] Tint changed to [{}]"),
             InHandle, InRequest.Get_Tint().ToString());
 
-        InCurrent._Tint = InRequest.Get_Tint();
+        InPoiDisplayDefinition._Tint = InRequest.Get_Tint();
 
         return true;
     }
@@ -72,17 +72,17 @@ namespace ck
         FProcessor_PoiDisplayDefinition_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             const FCk_Request_PoiDisplayDefinition_SetSizeHint& InRequest)
         -> bool
     {
-        if (InRequest.Get_SizeHint().Equals(InCurrent._SizeHint))
+        if (InRequest.Get_SizeHint().Equals(InPoiDisplayDefinition._SizeHint))
         { return false; }
 
         poidisplaydefinition::VeryVerbose(TEXT("PoiDisplayDefinition [{}] SizeHint changed to [{}]"),
             InHandle, InRequest.Get_SizeHint().ToString());
 
-        InCurrent._SizeHint = InRequest.Get_SizeHint();
+        InPoiDisplayDefinition._SizeHint = InRequest.Get_SizeHint();
 
         return true;
     }

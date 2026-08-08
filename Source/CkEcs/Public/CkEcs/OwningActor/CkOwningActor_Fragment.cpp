@@ -4,8 +4,8 @@
 
 namespace ck
 {
-    FFragment_OwningActor_Current::
-        FFragment_OwningActor_Current(
+    FFragment_OwningActor::
+        FFragment_OwningActor(
             AActor* InEntityOwningActor)
         : _EntityOwningActor(InEntityOwningActor)
     {

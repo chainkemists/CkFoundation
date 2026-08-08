@@ -29,7 +29,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_StateMachine_UE, FCk_Handle_StateMachine, ck::FFragment_Sm_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_StateMachine_UE, FCk_Handle_StateMachine, ck::FFragment_Sm);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ auto
 
     InOwner.Add<ck::FTag_Sm_RequiresSetup>();
     InOwner.Add<ck::FFragment_Sm_Params>(InParams);
-    InOwner.Add<ck::FFragment_Sm_Current>();
+    InOwner.Add<ck::FFragment_Sm>();
 
     auto StateMachine = Cast(InOwner);
     UCk_Utils_StateMachineDebug_UE::BeginDebuggerCapture(StateMachine);
@@ -178,7 +178,7 @@ auto
     if (ck::Is_NOT_Valid(InStateMachine))
     { return InStateMachine; }
 
-    auto& Current = InStateMachine.Get<ck::FFragment_Sm_Current>();
+    auto& Current = InStateMachine.Get<ck::FFragment_Sm>();
     if (ck::IsValid(Current.Get_CurrentStateHandle()))
     {
         auto StateHandle = Current._CurrentStateHandle;
@@ -209,7 +209,7 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> ECk_SmRunStatus
 {
-    return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_RunStatus();
+    return InStateMachine.Get<ck::FFragment_Sm>().Get_RunStatus();
 }
 
 auto
@@ -218,7 +218,7 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> TSubclassOf<UCk_SmState_EntityScript>
 {
-    return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass();
+    return InStateMachine.Get<ck::FFragment_Sm>().Get_CurrentStateClass();
 }
 
 auto
@@ -227,7 +227,7 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> FCk_Handle_SmState
 {
-    return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateHandle();
+    return InStateMachine.Get<ck::FFragment_Sm>().Get_CurrentStateHandle();
 }
 
 auto
@@ -237,7 +237,7 @@ auto
         TSubclassOf<UCk_SmState_EntityScript> InStateClass)
     -> bool
 {
-    return InStateMachine.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass() == InStateClass;
+    return InStateMachine.Get<ck::FFragment_Sm>().Get_CurrentStateClass() == InStateClass;
 }
 
 auto

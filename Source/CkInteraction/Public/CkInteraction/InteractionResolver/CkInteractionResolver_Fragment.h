@@ -21,10 +21,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINTERACTION_API FFragment_InteractionResolver_Current
+    struct CKINTERACTION_API FFragment_InteractionResolver
     {
     public:
-        CK_GENERATED_BODY(FFragment_InteractionResolver_Current);
+        CK_GENERATED_BODY(FFragment_InteractionResolver);
 
     public:
         friend class FProcessor_InteractionResolver_Persistent;

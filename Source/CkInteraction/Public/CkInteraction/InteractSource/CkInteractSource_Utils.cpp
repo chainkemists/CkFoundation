@@ -22,7 +22,7 @@ auto
     auto NewInteractSourceEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractSource>(InInteractSourceOwner);
 
     NewInteractSourceEntity.Add<ck::FFragment_InteractSource_Params>(InParams);
-    NewInteractSourceEntity.Add<ck::FFragment_InteractSource_Current>();
+    NewInteractSourceEntity.Add<ck::FFragment_InteractSource>();
     NewInteractSourceEntity.Add<ck::FTag_InteractSource_RequiresSetup>();
 
     UCk_Utils_GameplayLabel_UE::Add(NewInteractSourceEntity, InParams.Get_InteractionChannel());
@@ -51,7 +51,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_InteractSource_UE, FCk_Handle_InteractSource,
-    ck::FFragment_InteractSource_Params, ck::FFragment_InteractSource_Current)
+    ck::FFragment_InteractSource_Params, ck::FFragment_InteractSource)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -81,11 +81,11 @@ auto
 {
     ck::interaction::VeryVerbose(TEXT("Request_CancelAllInteractions on InteractSource [{}]. Channel: [{}]. Active interactions: {}"),
         InInteractSource, Get_InteractionChannel(InInteractSource),
-        InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.Num());
+        InInteractSource.Get<ck::FFragment_InteractSource>()._InteractionFinishedSignals.Num());
 
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests;
 
-    for (const auto& SignalPair : InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
+    for (const auto& SignalPair : InInteractSource.Get<ck::FFragment_InteractSource>()._InteractionFinishedSignals)
     {
         const auto& CurrentInteraction = SignalPair.Key;
         Request_CancelInteraction(InInteractSource,
@@ -110,7 +110,7 @@ auto
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests.Emplace(InRequest);
-    InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionsPendingAdd.Emplace(InRequest.Get_Interaction());
+    InInteractSource.Get<ck::FFragment_InteractSource>()._InteractionsPendingAdd.Emplace(InRequest.Get_Interaction());
     return InInteractSource;
 }
 
@@ -142,7 +142,7 @@ auto
     -> TArray<FCk_Handle_Interaction>
 {
     auto CurrentInteractions = TArray<FCk_Handle_Interaction>{};
-    InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.GetKeys(CurrentInteractions);
+    InHandle.Get<ck::FFragment_InteractSource>()._InteractionFinishedSignals.GetKeys(CurrentInteractions);
 
     switch (InSortingPolicy)
     {
@@ -184,7 +184,7 @@ auto
         const FCk_Handle_InteractSource& InHandle)
     -> TArray<FCk_Handle_Interaction>
 {
-    return InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionsPendingAdd;
+    return InHandle.Get<ck::FFragment_InteractSource>()._InteractionsPendingAdd;
 }
 
 auto
@@ -194,7 +194,7 @@ auto
         const FCk_Handle& InTarget)
     -> FCk_Handle_Interaction
 {
-    for (auto& SignalPair : InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
+    for (auto& SignalPair : InHandle.Get<ck::FFragment_InteractSource>()._InteractionFinishedSignals)
     {
         if (const auto& Interaction = SignalPair.Key;
             UCk_Utils_Interaction_UE::Get_InteractionTarget(Interaction) == InTarget)

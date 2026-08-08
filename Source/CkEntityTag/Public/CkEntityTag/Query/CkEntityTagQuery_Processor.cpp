@@ -33,7 +33,7 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             FFragment_EntityTagQuery_Requests& InRequestsComp) const
         -> void
     {
@@ -47,7 +47,7 @@ namespace ck
                     auto Result = ECk_Request_OperationResult::Failed;
                     const auto Guard = MakeCompletionGuard(InEntry, InHandle, Result);
 
-                    DoHandleRequest(InCurrent, InEntry);
+                    DoHandleRequest(InEntityTagQuery, InEntry);
 
                     Result = ECk_Request_OperationResult::Succeeded;
                 }),
@@ -60,27 +60,27 @@ namespace ck
     auto
         FProcessor_EntityTagQuery_HandleRequests::
         DoHandleRequest(
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             const FCk_Request_EntityTagQuery_AddRequirement& InRequest)
         -> void
     {
-        InCurrent._Requirements.Emplace(InRequest.Get_Requirement());
-        InCurrent._ResultsPerRequirement.Emplace(TArray<FCk_Handle>{});
-        InCurrent._PendingAdded.Emplace(TArray<FCk_Handle>{});
-        InCurrent._PendingRemoved.Emplace(TArray<FCk_Handle>{});
+        InEntityTagQuery._Requirements.Emplace(InRequest.Get_Requirement());
+        InEntityTagQuery._ResultsPerRequirement.Emplace(TArray<FCk_Handle>{});
+        InEntityTagQuery._PendingAdded.Emplace(TArray<FCk_Handle>{});
+        InEntityTagQuery._PendingRemoved.Emplace(TArray<FCk_Handle>{});
 
         // A new requirement has no cached results, and its tag version snapshot does not exist yet.
-        InCurrent._NeedsEvaluate = true;
+        InEntityTagQuery._NeedsEvaluate = true;
     }
 
     auto
         FProcessor_EntityTagQuery_HandleRequests::
         DoHandleRequest(
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest)
         -> void
     {
-        const auto Index = ck::algo::FindIndex(InCurrent._Requirements,
+        const auto Index = ck::algo::FindIndex(InEntityTagQuery._Requirements,
             [&InRequest](const FCk_EntityTagQuery_Requirement& R)
             {
                 return R.Get_Tag() == InRequest.Get_Tag();
@@ -89,23 +89,23 @@ namespace ck
         if (Index == INDEX_NONE)
         { return; }
 
-        InCurrent._Requirements.RemoveAt(Index);
-        if (Index < InCurrent._ResultsPerRequirement.Num())
+        InEntityTagQuery._Requirements.RemoveAt(Index);
+        if (Index < InEntityTagQuery._ResultsPerRequirement.Num())
         {
-            InCurrent._ResultsPerRequirement.RemoveAt(Index);
+            InEntityTagQuery._ResultsPerRequirement.RemoveAt(Index);
         }
-        if (Index < InCurrent._PendingAdded.Num())
+        if (Index < InEntityTagQuery._PendingAdded.Num())
         {
-            InCurrent._PendingAdded.RemoveAt(Index);
+            InEntityTagQuery._PendingAdded.RemoveAt(Index);
         }
-        if (Index < InCurrent._PendingRemoved.Num())
+        if (Index < InEntityTagQuery._PendingRemoved.Num())
         {
-            InCurrent._PendingRemoved.RemoveAt(Index);
+            InEntityTagQuery._PendingRemoved.RemoveAt(Index);
         }
 
         // Satisfaction is computed across every requirement, so dropping one can flip it without
         // any tag having mutated.
-        InCurrent._NeedsEvaluate = true;
+        InEntityTagQuery._NeedsEvaluate = true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -127,11 +127,11 @@ namespace ck
         FProcessor_EntityTagQuery_Evaluate::
         DoTryConsume_UnchangedTagVersions(
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent)
+            FFragment_EntityTagQuery& InEntityTagQuery)
         -> bool
     {
-        const auto& Requirements = InCurrent._Requirements;
-        auto& LastSeen = InCurrent._LastSeenTagVersionPerRequirement;
+        const auto& Requirements = InEntityTagQuery._Requirements;
+        auto& LastSeen = InEntityTagQuery._LastSeenTagVersionPerRequirement;
 
         const auto Registry = InHandle.Get_RegistryView();
 
@@ -143,7 +143,7 @@ namespace ck
         // ck::algo::Compare treats a size mismatch as a plain false, which is exactly the
         // "requirement set changed shape" case — no separate Num() check needed.
         const auto VersionsAreUnchanged =
-            NOT InCurrent._NeedsEvaluate &&
+            NOT InEntityTagQuery._NeedsEvaluate &&
             ck::algo::Compare(LastSeen, Requirements,
                 [&](uint64 InSeenVersion, const FCk_EntityTagQuery_Requirement& InRequirement)
                 {
@@ -158,7 +158,7 @@ namespace ck
         LastSeen.Reset();
         ck::algo::Transform(Requirements, ck::algo::ToTransform(LastSeen), Get_TagVersion);
 
-        InCurrent._NeedsEvaluate = false;
+        InEntityTagQuery._NeedsEvaluate = false;
 
         return false;
     }
@@ -170,35 +170,35 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent) const
+            FFragment_EntityTagQuery& InEntityTagQuery) const
         -> void
     {
-        const auto& Requirements = InCurrent._Requirements;
+        const auto& Requirements = InEntityTagQuery._Requirements;
 
         if (Requirements.Num() == 0)
         {
-            InCurrent._IsSatisfied = false;
+            InEntityTagQuery._IsSatisfied = false;
             return;
         }
 
         // HandleRequests keeps these in sync; the resizes are defensive.
-        if (InCurrent._ResultsPerRequirement.Num() != Requirements.Num())
+        if (InEntityTagQuery._ResultsPerRequirement.Num() != Requirements.Num())
         {
-            InCurrent._ResultsPerRequirement.SetNum(Requirements.Num());
+            InEntityTagQuery._ResultsPerRequirement.SetNum(Requirements.Num());
         }
-        if (InCurrent._PendingAdded.Num() != Requirements.Num())
+        if (InEntityTagQuery._PendingAdded.Num() != Requirements.Num())
         {
-            InCurrent._PendingAdded.SetNum(Requirements.Num());
+            InEntityTagQuery._PendingAdded.SetNum(Requirements.Num());
         }
-        if (InCurrent._PendingRemoved.Num() != Requirements.Num())
+        if (InEntityTagQuery._PendingRemoved.Num() != Requirements.Num())
         {
-            InCurrent._PendingRemoved.SetNum(Requirements.Num());
+            InEntityTagQuery._PendingRemoved.SetNum(Requirements.Num());
         }
 
         // The tail of this function is already delta-only: nothing below can change a result set,
         // flip satisfaction, or broadcast unless an entity gained or lost one of this query's tags.
         // Unchanged versions therefore make the whole pass — prune, append, ensure — a provable no-op.
-        if (DoTryConsume_UnchangedTagVersions(InHandle, InCurrent))
+        if (DoTryConsume_UnchangedTagVersions(InHandle, InEntityTagQuery))
         { return; }
 
         auto AnyAppendedThisPass = false;
@@ -206,10 +206,10 @@ namespace ck
         for (int32 i = 0; i < Requirements.Num(); ++i)
         {
             const auto& Req     = Requirements[i];
-            auto&       Results = InCurrent._ResultsPerRequirement[i];
+            auto&       Results = InEntityTagQuery._ResultsPerRequirement[i];
             const auto  Tag     = Req.Get_Tag();
 
-            auto& PendingRemoved = InCurrent._PendingRemoved[i];
+            auto& PendingRemoved = InEntityTagQuery._PendingRemoved[i];
 
             // TrackedEntity_Destructor prunes destroyed entities proactively in FGroup_EndPlay, but Eval can run
             // before EndPlay in the frame of the destruction — catch that window here so we never read tag state
@@ -259,7 +259,7 @@ namespace ck
                         { return; }
                         Results.Add(InEntity);
                         AnyAppendedThisPass = true;
-                        InCurrent._PendingAdded[i].AddUnique(InEntity);
+                        InEntityTagQuery._PendingAdded[i].AddUnique(InEntity);
 
                         auto& Tracked = InEntity.AddOrGet<FFragment_EntityTagQuery_TrackedByQueries>();
                         Tracked._Queries.AddUnique(InHandle);
@@ -288,12 +288,12 @@ namespace ck
             }
         }
 
-        const auto WasSatisfied   = InCurrent._IsSatisfied;
+        const auto WasSatisfied   = InEntityTagQuery._IsSatisfied;
         auto       IsNowSatisfied = true;
         for (int32 i = 0; i < Requirements.Num(); ++i)
         {
             const auto& Req       = Requirements[i];
-            const auto  N         = InCurrent._ResultsPerRequirement[i].Num();
+            const auto  N         = InEntityTagQuery._ResultsPerRequirement[i].Num();
             const auto  Threshold = [&]() -> int32
             {
                 switch (Req.Get_Mode())
@@ -312,7 +312,7 @@ namespace ck
             }
         }
 
-        InCurrent._IsSatisfied = IsNowSatisfied;
+        InEntityTagQuery._IsSatisfied = IsNowSatisfied;
 
         if (IsNowSatisfied)
         {
@@ -329,9 +329,9 @@ namespace ck
                 }
             }
 
-            const auto FirstTime      = NOT InCurrent._HasFiredOnce;
-            const auto AllModeRefire  = InCurrent._HasFiredOnce && AnyAllModeAppended;
-            const auto DropAndRecover = InCurrent._HasFiredOnce && NOT WasSatisfied;
+            const auto FirstTime      = NOT InEntityTagQuery._HasFiredOnce;
+            const auto AllModeRefire  = InEntityTagQuery._HasFiredOnce && AnyAllModeAppended;
+            const auto DropAndRecover = InEntityTagQuery._HasFiredOnce && NOT WasSatisfied;
             const auto ShouldFire     = FirstTime || AllModeRefire || DropAndRecover;
 
             if (ShouldFire)
@@ -345,13 +345,13 @@ namespace ck
                     {
                         Payload.Emplace(FCk_EntityTagQuery_Result{
                             Requirements[i].Get_Tag(),
-                            InCurrent._ResultsPerRequirement[i],
-                            InCurrent._PendingAdded[i],
-                            InCurrent._PendingRemoved[i]});
+                            InEntityTagQuery._ResultsPerRequirement[i],
+                            InEntityTagQuery._PendingAdded[i],
+                            InEntityTagQuery._PendingRemoved[i]});
                     }
                 }
 
-                InCurrent._HasFiredOnce = true;
+                InEntityTagQuery._HasFiredOnce = true;
 
                 ck::UUtils_Signal_EntityTagQuery_OnSatisfied::Broadcast(
                     InHandle,
@@ -361,10 +361,10 @@ namespace ck
 
         // Delta-only broadcast: a satisfaction flip cannot happen without a result-count change, so skipping
         // no-change passes still delivers every _IsSatisfied transition. See CkEntityTag/CLAUDE.md § "Query system".
-        if (InCurrent._ContinuousUpdateListenerCount > 0)
+        if (InEntityTagQuery._ContinuousUpdateListenerCount > 0)
         {
             auto AnyRemovedThisPass = false;
-            for (const auto& Removed : InCurrent._PendingRemoved)
+            for (const auto& Removed : InEntityTagQuery._PendingRemoved)
             {
                 if (Removed.Num() > 0)
                 { AnyRemovedThisPass = true; break; }
@@ -378,21 +378,21 @@ namespace ck
                 {
                     ContinuousPayload.Emplace(FCk_EntityTagQuery_Result{
                         Requirements[i].Get_Tag(),
-                        InCurrent._ResultsPerRequirement[i],
-                        InCurrent._PendingAdded[i],
-                        InCurrent._PendingRemoved[i]});
+                        InEntityTagQuery._ResultsPerRequirement[i],
+                        InEntityTagQuery._PendingAdded[i],
+                        InEntityTagQuery._PendingRemoved[i]});
                 }
 
                 ck::UUtils_Signal_EntityTagQuery_OnContinuousUpdate::Broadcast(
                     InHandle,
-                    ck::MakePayload(InHandle, InCurrent._IsSatisfied, ContinuousPayload));
+                    ck::MakePayload(InHandle, InEntityTagQuery._IsSatisfied, ContinuousPayload));
             }
         }
 
         // Deltas not consumed by a fire this pass are dropped, deliberately. The destructor writes _PendingRemoved
         // in FGroup_EndPlay (after Eval), so those writes survive to next frame's pass.
-        for (auto& A : InCurrent._PendingAdded)   { A.Reset(); }
-        for (auto& R : InCurrent._PendingRemoved) { R.Reset(); }
+        for (auto& A : InEntityTagQuery._PendingAdded)   { A.Reset(); }
+        for (auto& R : InEntityTagQuery._PendingRemoved) { R.Reset(); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -411,10 +411,10 @@ namespace ck
             { continue; }
 
             auto MutableQuery = QueryHandle;
-            if (NOT MutableQuery.Has<FFragment_EntityTagQuery_Current>())
+            if (NOT MutableQuery.Has<FFragment_EntityTagQuery>())
             { continue; }
 
-            auto& Current = MutableQuery.Get<FFragment_EntityTagQuery_Current>();
+            auto& Current = MutableQuery.Get<FFragment_EntityTagQuery>();
 
             // Recorded into _PendingRemoved so the next Evaluate pass bakes it into the payload before resetting.
             for (int32 i = 0; i < Current._ResultsPerRequirement.Num(); ++i)
@@ -449,10 +449,10 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            const FFragment_EntityTagQuery_Current& InCurrent) const
+            const FFragment_EntityTagQuery& InEntityTagQuery) const
         -> void
     {
-        for (const auto& Results : InCurrent.Get_ResultsPerRequirement())
+        for (const auto& Results : InEntityTagQuery.Get_ResultsPerRequirement())
         {
             for (const auto& TaggedEntity : Results)
             {

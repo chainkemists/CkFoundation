@@ -43,10 +43,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKISMRENDERER_API FFragment_IsmRenderer_Current
+    struct CKISMRENDERER_API FFragment_IsmRenderer
     {
     public:
-        CK_GENERATED_BODY(FFragment_IsmRenderer_Current);
+        CK_GENERATED_BODY(FFragment_IsmRenderer);
 
     public:
         friend class FProcessor_IsmRenderer_Setup;

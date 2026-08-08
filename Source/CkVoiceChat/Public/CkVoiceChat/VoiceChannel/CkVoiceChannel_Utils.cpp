@@ -56,7 +56,7 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(VoiceChannel, InParams.Get_ChannelName());
 
     VoiceChannel.Add<ck::FFragment_VoiceChannel_Params>(InParams);
-    VoiceChannel.Add<ck::FFragment_VoiceChannel_Current>();
+    VoiceChannel.Add<ck::FFragment_VoiceChannel>();
     VoiceChannel.Add<ck::FTag_VoiceChannel_NeedsSetup>();
     VoiceChannel.Add<ck::FTag_VoiceChannel_NeedsIdx>();
 
@@ -136,7 +136,7 @@ auto
         const FCk_Handle_VoiceChannel& InVoiceChannel)
     -> USoundAttenuation*
 {
-    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ResolvedAttenuation().Get();
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_ResolvedAttenuation().Get();
 }
 
 auto
@@ -145,7 +145,7 @@ auto
         const FCk_Handle_VoiceChannel& InVoiceChannel)
     -> USoundEffectSourcePresetChain*
 {
-    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ResolvedSourceEffectChain().Get();
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_ResolvedSourceEffectChain().Get();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ auto
         const FCk_Handle_VoiceChannel& InVoiceChannel)
     -> uint8
 {
-    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ChannelIdx();
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_ChannelIdx();
 }
 
 auto
@@ -273,7 +273,7 @@ auto
         const FCk_Handle_VoiceTalker& InTalker)
     -> bool
 {
-    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_Members().Contains(InTalker);
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_Members().Contains(InTalker);
 }
 
 auto
@@ -283,7 +283,7 @@ auto
         const FCk_Handle_VoiceTalker& InTalker)
     -> FCk_VoiceChat_MemberFlags
 {
-    const auto& Members = InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_Members();
+    const auto& Members = InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_Members();
 
     const auto* Found = Members.Find(InTalker);
 
@@ -302,7 +302,7 @@ auto
         const FCk_Handle_VoiceChannel& InVoiceChannel)
     -> TArray<FCk_Handle_VoiceTalker>
 {
-    const auto& Members = InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_Members();
+    const auto& Members = InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_Members();
 
     auto Result = TArray<FCk_Handle_VoiceTalker>{};
     Result.Reserve(Members.Num());
@@ -323,7 +323,7 @@ auto
         const FCk_Handle_VoiceTalker& InTalker)
     -> bool
 {
-    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ServerMuted().Contains(InTalker);
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel>().Get_ServerMuted().Contains(InTalker);
 }
 
 auto
@@ -376,7 +376,7 @@ auto
     for (const auto& Entry : InRepData.Get_Channels())
     {
         auto Channel = TryGet_VoiceChannel(InChannelHost, Entry.Get_ChannelName());
-        auto& Current = Channel.Get<ck::FFragment_VoiceChannel_Current>();
+        auto& Current = Channel.Get<ck::FFragment_VoiceChannel>();
 
         Current._ChannelIdx = Entry.Get_ChannelIdx();
 

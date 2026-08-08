@@ -24,7 +24,7 @@ namespace ck_pmg_processor_angular_shapes
     auto SetupMeshComponent_Angular(
         FCk_Handle_Pmg_DebugShape InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
-        ck::FFragment_Pmg_DebugShape_Current& InCurrent,
+        ck::FFragment_Pmg_DebugShape& InDebugShape,
         float InDeltaT)
         -> UProceduralMeshComponent*
     {
@@ -60,7 +60,7 @@ namespace ck_pmg_processor_angular_shapes
         UProceduralMeshComponent* InMeshComponent,
         const FCk_Handle& InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
-        ck::FFragment_Pmg_DebugShape_Current& InCurrent,
+        ck::FFragment_Pmg_DebugShape& InDebugShape,
         float InDeltaSeconds)
         -> void
     {
@@ -388,14 +388,14 @@ namespace ck
         TimeType InDeltaT, HandleType InHandle,
         const FFragment_Pmg_Wedge_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
+        FFragment_Pmg_DebugShape& InDebugShape) -> void
     {
-        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_angular_shapes_impl::GenerateDebugShape_Wedge(MeshComponent, InParams.Get_Radius(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Segments(), InParams.Get_Axis());
-        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -452,14 +452,14 @@ namespace ck
         TimeType InDeltaT, HandleType InHandle,
         const FFragment_Pmg_Arc_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
+        FFragment_Pmg_DebugShape& InDebugShape) -> void
     {
-        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_angular_shapes_impl::GenerateDebugShape_Arc(MeshComponent, InParams.Get_Radius(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Thickness(), InParams.Get_Segments(), InParams.Get_Axis());
-        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -530,14 +530,14 @@ namespace ck
         TimeType InDeltaT, HandleType InHandle,
         const FFragment_Pmg_WedgeCone_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent) -> void
+        FFragment_Pmg_DebugShape& InDebugShape) -> void
     {
-        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_angular_shapes::SetupMeshComponent_Angular(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_angular_shapes_impl::GenerateDebugShape_WedgeCone(MeshComponent, InParams.Get_Radius(), InParams.Get_Height(), InParams.Get_StartAngle(), InParams.Get_EndAngle(), InParams.Get_Segments(), InParams.Get_Axis());
-        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_angular_shapes::FinalizeMeshComponent_Angular(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {

@@ -20,7 +20,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTransition_Evaluate : public ck_exp::TProcessor<
         FProcessor_SmTransition_Evaluate,
         FCk_Handle_SmTransition,
-        TReadWrite<FFragment_SmTransition_Current>,
+        TReadWrite<FFragment_SmTransition>,
         FTag_SmTransition_Evaluating,
         TExclude<FTag_SmTransition_PendingExit>,
         CK_IGNORE_PENDING_KILL>
@@ -40,7 +40,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTransition_Current& InCurrent) -> void;
+            FFragment_SmTransition& InSmTransition) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

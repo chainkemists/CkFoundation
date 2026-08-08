@@ -16,7 +16,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmRenderer_Params& InParams,
-            FFragment_IskmRenderer_Current& InCurrent) const -> void
+            FFragment_IskmRenderer& InIskmRenderer) const -> void
     {
         auto* RendererData = InParams.Get_RendererData().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
@@ -38,7 +38,7 @@ namespace ck
             TEXT("IskmRenderer Setup: subsystem could not create renderer actor for [{}]"), InHandle)
         { return; }
 
-        InCurrent._RendererActor = RendererActor;
+        InIskmRenderer._RendererActor = RendererActor;
         InHandle.Remove<FTag_IskmRenderer_NeedsSetup>();
         // Try_Remove: Plan-1 never sets this forward-compat tag, so it is expected-absent here.
         InHandle.Try_Remove<FTag_IskmRenderer_PendingAsyncLoad>();

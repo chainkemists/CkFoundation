@@ -9,7 +9,7 @@
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript_Current + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // entries queued on a dying entity are a counted loss
@@ -291,7 +291,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
 
-    return (InHandle.Has<ck::FFragment_EntityScript_Current>() &&
+    return (InHandle.Has<ck::FFragment_EntityScript>() &&
             NOT InHandle.Has<ck::FTag_EntityScript_HasBegunPlay>()) ||
            InHandle.Has<ck::FTag_DefinitionBuild_InProgress>();
 }

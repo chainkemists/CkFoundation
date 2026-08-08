@@ -31,10 +31,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKGRID_API FFragment_2dGridBlocker_Current
+    struct CKGRID_API FFragment_2dGridBlocker
     {
     public:
-        CK_GENERATED_BODY(FFragment_2dGridBlocker_Current);
+        CK_GENERATED_BODY(FFragment_2dGridBlocker);
 
     public:
         friend class FProcessor_2dGridBlocker_Setup;

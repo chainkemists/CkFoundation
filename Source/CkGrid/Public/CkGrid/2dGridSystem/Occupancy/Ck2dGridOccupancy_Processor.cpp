@@ -37,11 +37,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_2dGridOccupancy_Current& InCurrent) const
+            FFragment_2dGridOccupancy& In2dGridOccupancy) const
         -> void
     {
         auto GridBase = FCk_Handle{InHandle};
-        auto Desired = MoveTemp(InCurrent._DesiredCellsScratch);
+        auto Desired = MoveTemp(In2dGridOccupancy._DesiredCellsScratch);
         Desired.Reset();
 
         RecordOf_GridPlacements_Utils::ForEach_ValidEntry(GridBase,
@@ -54,7 +54,7 @@ namespace ck
             }
         });
 
-        for (const auto& StampedPair : InCurrent._StampedCells)
+        for (const auto& StampedPair : In2dGridOccupancy._StampedCells)
         {
             if (Desired.Contains(StampedPair.Key))
             { continue; }
@@ -71,7 +71,7 @@ namespace ck
 
         for (const auto& DesiredPair : Desired)
         {
-            const auto* MaybeStamped = InCurrent._StampedCells.Find(DesiredPair.Key);
+            const auto* MaybeStamped = In2dGridOccupancy._StampedCells.Find(DesiredPair.Key);
             if (MaybeStamped != nullptr && *MaybeStamped == DesiredPair.Value)
             { continue; }
 
@@ -83,14 +83,14 @@ namespace ck
             Cell.AddOrGet<FFragment_2dGridCell_Occupancy>()._Placement = DesiredPair.Value;
         }
 
-        Swap(InCurrent._StampedCells, Desired);
+        Swap(In2dGridOccupancy._StampedCells, Desired);
 
         if (Desired.GetAllocatedSize() > ck_2d_grid_occupancy_processor::DesiredCellsScratchMaxBytes)
         { Desired.Empty(); }
         else
         { Desired.Reset(); }
 
-        InCurrent._DesiredCellsScratch = MoveTemp(Desired);
+        In2dGridOccupancy._DesiredCellsScratch = MoveTemp(Desired);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -121,10 +121,10 @@ namespace ck
             const FFragment_2dGridOccupancy_SyncReplication& InSync) const
         -> void
     {
-        const auto& InCurrent  = InSync.Get_PlacementsToReplicate();
+        const auto& In2dGridOccupancy  = InSync.Get_PlacementsToReplicate();
         const auto& InPrevious = InSync.Get_PlacementsToReplicate_Previous();
 
-        if (InCurrent == InPrevious)
+        if (In2dGridOccupancy == InPrevious)
         {
             InHandle.Remove<FFragment_2dGridOccupancy_SyncReplication>();
             return;
@@ -133,7 +133,7 @@ namespace ck
         // Diffing by occupant alone would miss a same-occupant re-place (move/rotate keeps the
         // occupant, changes anchor/cells), so an occupant whose ENTRY changed is torn down and re-added.
         const auto ByOccupant = &FCk_2dGridPlacement_ReplicatedEntry::Get_Occupant;
-        const auto OccupantsGone = ck::algo::Except(InPrevious, InCurrent, ByOccupant);
+        const auto OccupantsGone = ck::algo::Except(InPrevious, In2dGridOccupancy, ByOccupant);
 
         auto Grid = InHandle;
 
@@ -150,7 +150,7 @@ namespace ck
 
         // Request_AddPlacement is the raw, un-authority-gated data layer; clients only mirror
         // replicated state and never originate a placement.
-        for (const auto& Entry : InCurrent)
+        for (const auto& Entry : In2dGridOccupancy)
         {
             const auto* Prev = InPrevious.FindByPredicate([&](const FCk_2dGridPlacement_ReplicatedEntry& InPrev)
             { return InPrev.Get_Occupant() == Entry.Get_Occupant(); });

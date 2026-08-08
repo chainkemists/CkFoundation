@@ -26,7 +26,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_EntityScript, ck::FFragment_EntityScript);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -122,13 +122,13 @@ auto
         const FCk_Handle_EntityScript& InHandle)
     -> TSubclassOf<UCk_EntityScript_UE>
 {
-    const auto& Current = InHandle.Get<ck::FFragment_EntityScript_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_EntityScript>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Current.Get_Script()), TEXT("The EntityScript [{}] for Handle [{}] is NOT valid"),
         Current.Get_Script(), InHandle)
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script()->GetClass();
+    return InHandle.Get<ck::FFragment_EntityScript>().Get_Script()->GetClass();
 }
 
 auto
@@ -197,7 +197,7 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
     const auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
@@ -276,7 +276,7 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
 
     return Add(NewEntity, InEntityScriptClassArchetype, InSpawnParams, nullptr, InDelegate);
@@ -291,7 +291,7 @@ auto
     return UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
     [&](const FCk_Handle& Handle)
     {
-        return Handle.Has<ck::FFragment_EntityScript_Current>();
+        return Handle.Has<ck::FFragment_EntityScript>();
     });
 }
 
@@ -359,7 +359,7 @@ auto
             Replication, Settings.Get_NetMode(), NetRole});
     }
 
-    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, InScriptEntity,
         TEXT("Add() creating request entity for class: {}"), InEntityScriptClassArchetype);
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InScriptEntity);
@@ -379,7 +379,7 @@ auto
 
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
 
-    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InScriptEntity,
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, InScriptEntity,
         TEXT("Spawn request entity created, awaiting processing"));
 
     return FCk_Handle_PendingEntityScript{InScriptEntity};

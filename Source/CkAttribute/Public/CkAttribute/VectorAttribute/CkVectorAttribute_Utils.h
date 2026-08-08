@@ -28,7 +28,7 @@ public:
 private:
     using VectorAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Min>;
     using VectorAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Max>;
-    using VectorAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Current>;
+    using VectorAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_VectorAttribute>;
 
     using RecordOfVectorAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributes>;
 
@@ -272,7 +272,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_VectorAttributeModifier);
 
 private:
-    using VectorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Current>;
+    using VectorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier>;
     using VectorAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Min>;
     using VectorAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Max>;
 

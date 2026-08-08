@@ -62,7 +62,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltStaticActor_Current& InCurrent) const
+            FFragment_JoltStaticActor& InJoltStaticActor) const
         -> void
     {
         auto* Subsystem = _StaticWorldSubsystem.Get();

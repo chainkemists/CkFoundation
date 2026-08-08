@@ -30,10 +30,10 @@ namespace ck
 
     // An UNALLOCATED grid (_Explored empty — invalid bounds or cell budget blown at Setup) degrades to
     // fully-unfogged: every location queries as explored. Cell math contracts: CkFogOfWar_Utils.h.
-    struct CKMINIMAP_API FFragment_FogOfWar_Current
+    struct CKMINIMAP_API FFragment_FogOfWar
     {
     public:
-        CK_GENERATED_BODY(FFragment_FogOfWar_Current);
+        CK_GENERATED_BODY(FFragment_FogOfWar);
 
     public:
         friend class FProcessor_FogOfWar_Setup;

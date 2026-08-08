@@ -20,7 +20,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_ShapeCylinder_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeCylinder_Current>(InParams.Get_InitialDimensions());
+    InHandle.Add<ck::FFragment_ShapeCylinder>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -39,7 +39,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeCylinder_UE, FCk_Handle_ShapeCylinder,
-    ck::FFragment_ShapeCylinder_Params, ck::FFragment_ShapeCylinder_Current)
+    ck::FFragment_ShapeCylinder_Params, ck::FFragment_ShapeCylinder)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ auto
         const FCk_Handle_ShapeCylinder& InShapeCylinder)
         -> FCk_ShapeCylinder_Dimensions
 {
-    return InShapeCylinder.Get<ck::FFragment_ShapeCylinder_Current>().Get_Dimensions();
+    return InShapeCylinder.Get<ck::FFragment_ShapeCylinder>().Get_Dimensions();
 }
 
 auto

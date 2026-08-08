@@ -20,7 +20,7 @@ namespace ck_render_target_processor
     CKRENDERTARGET_API auto
     DrawPixelsToTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const ck::FFragment_RenderTarget_Current& InCurrent,
+        const ck::FFragment_RenderTarget& InRenderTarget,
         const TArray<uint8>& InPixels,
         const FIntPoint& InSize,
         TStrongObjectPtr<UTexture2D>& InOutUploadTexture) -> void;
@@ -35,7 +35,7 @@ namespace ck
         FProcessor_RenderTarget_Setup,
         FCk_Handle_RenderTarget,
         ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadWrite<FFragment_RenderTarget_Current>,
+        ck::TReadWrite<FFragment_RenderTarget>,
         FTag_RenderTarget_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -52,7 +52,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent)
+            FFragment_RenderTarget& InRenderTarget)
             -> void;
     };
 
@@ -63,7 +63,7 @@ namespace ck
         FProcessor_RenderTarget_HandleRequests,
         FCk_Handle_RenderTarget,
         ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadWrite<FFragment_RenderTarget_Current>,
+        ck::TReadWrite<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_Requests>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -83,7 +83,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_Requests& InRequests) const -> void;
 
     private:
@@ -162,7 +162,7 @@ namespace ck
         static auto
         DoApplyBatch(
             HandleType InRenderTargetEntity,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
 
         // Returns false (retry next pass) until the restored child's Setup has composed Current and, for a
@@ -181,7 +181,7 @@ namespace ck
 
         static auto
         DoPinCmdAssets(
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
     };
 
@@ -245,7 +245,7 @@ namespace ck
         FProcessor_RenderTarget_PixelCapture,
         FCk_Handle_RenderTarget,
         ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadOnly<FFragment_RenderTarget_Current>,
+        ck::TReadOnly<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_PixelSync>,
         FTag_RenderTarget_PixelCapturePending,
         TExclude<FTag_RenderTarget_PixelSyncInFlight>,
@@ -266,7 +266,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync)
             -> void;
     };
@@ -368,7 +368,7 @@ namespace ck
     class CKRENDERTARGET_API FProcessor_RenderTarget_ApplyReplicatedBatches : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ApplyReplicatedBatches,
         FCk_Handle_RenderTarget,
-        ck::TReadWrite<FFragment_RenderTarget_Current>,
+        ck::TReadWrite<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_ReplayQueue>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -388,7 +388,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ReplayQueue& InReplayQueue)
             -> void;
     };
@@ -503,7 +503,7 @@ namespace ck
     class CKRENDERTARGET_API FProcessor_RenderTarget_ReceivePixels : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ReceivePixels,
         FCk_Handle_RenderTarget,
-        ck::TReadOnly<FFragment_RenderTarget_Current>,
+        ck::TReadOnly<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_ClientStaging>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -522,7 +522,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging)
             -> void;
 
@@ -530,13 +530,13 @@ namespace ck
         static auto
         DoFinishApply(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging) -> void;
 
         static auto
         DoUploadStagingToTarget(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging) -> void;
     };
 
@@ -607,7 +607,7 @@ namespace ck
         FProcessor_RenderTarget_ApplyClientBatches,
         FCk_Handle_RenderTarget,
         ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadWrite<FFragment_RenderTarget_Current>,
+        ck::TReadWrite<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_ServerIngressBatches>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -628,7 +628,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ServerIngressBatches& InIngress)
             -> void;
     };
@@ -641,7 +641,7 @@ namespace ck
         FProcessor_RenderTarget_ReceiveClientUploads,
         FCk_Handle_RenderTarget,
         ck::TReadOnly<FFragment_RenderTarget_Params>,
-        ck::TReadOnly<FFragment_RenderTarget_Current>,
+        ck::TReadOnly<FFragment_RenderTarget>,
         ck::TReadWrite<FFragment_RenderTarget_PixelSync>,
         ck::TReadWrite<FFragment_RenderTarget_UploadAssembly>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
@@ -665,7 +665,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync,
             FFragment_RenderTarget_UploadAssembly& InAssembly)
             -> void;
@@ -674,7 +674,7 @@ namespace ck
         static auto
         DoFinishUploadApply(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync,
             FFragment_RenderTarget_UploadAssembly& InAssembly) -> void;
     };

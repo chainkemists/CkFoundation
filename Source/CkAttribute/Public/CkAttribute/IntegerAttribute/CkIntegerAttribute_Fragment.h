@@ -20,7 +20,7 @@ namespace ck
         using TFragment_Attribute<FCk_Handle_IntegerAttribute, int32, T_Component>::TFragment_Attribute;
     };
 
-    using FFragment_IntegerAttribute_Current = TFragment_IntegerAttribute<ECk_MinMaxCurrent::Current>;
+    using FFragment_IntegerAttribute = TFragment_IntegerAttribute<ECk_MinMaxCurrent::Current>;
     using FFragment_IntegerAttribute_Min = TFragment_IntegerAttribute<ECk_MinMaxCurrent::Min>;
     using FFragment_IntegerAttribute_Max = TFragment_IntegerAttribute<ECk_MinMaxCurrent::Max>;
 
@@ -33,7 +33,7 @@ namespace ck
         using TFragment_AttributeModifier<FCk_Handle_IntegerAttributeModifier, TFragment_IntegerAttribute<T_Component>>::TFragment_AttributeModifier;
     };
 
-    using FFragment_IntegerAttributeModifier_Current = TFragment_IntegerAttributeModifier<ECk_MinMaxCurrent::Current>;
+    using FFragment_IntegerAttributeModifier = TFragment_IntegerAttributeModifier<ECk_MinMaxCurrent::Current>;
     using FFragment_IntegerAttributeModifier_Min = TFragment_IntegerAttributeModifier<ECk_MinMaxCurrent::Min>;
     using FFragment_IntegerAttributeModifier_Max = TFragment_IntegerAttributeModifier<ECk_MinMaxCurrent::Max>;
 
@@ -44,9 +44,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_IntegerAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_IntegerAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_IntegerAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_IntegerAttribute>& InPayload) const
         {
             return FCk_Payload_IntegerAttribute_OnValueChanged
             {
@@ -98,9 +98,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_IntegerAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_IntegerAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnClamped<FFragment_IntegerAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnClamped<FFragment_IntegerAttribute>& InPayload) const
         {
             return FCk_Payload_IntegerAttribute_OnClamped
             {
@@ -116,10 +116,10 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnIntegerAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged>;
+        FFragment_IntegerAttribute, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FCk_Delegate_IntegerAttribute_OnValueChanged>;
+        FFragment_IntegerAttribute, FCk_Delegate_IntegerAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnIntegerAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
         FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnValueChanged>;
@@ -135,16 +135,16 @@ namespace ck
 
     // Clamped
     using UUtils_Signal_OnIntegerAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
+        FFragment_IntegerAttribute, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
+        FFragment_IntegerAttribute, FFragment_IntegerAttribute_Min, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
+        FFragment_IntegerAttribute, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     using UUtils_Signal_OnIntegerAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_IntegerAttribute_Current, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
+        FFragment_IntegerAttribute, FFragment_IntegerAttribute_Max, FCk_Delegate_IntegerAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

@@ -14,7 +14,7 @@ namespace ck
             FProcessor_ShapeBox_HandleRequests,
             FCk_Handle_ShapeBox,
             ck::TReadOnly<FFragment_ShapeBox_Params>,
-            ck::TReadWrite<FFragment_ShapeBox_Current>,
+            ck::TReadWrite<FFragment_ShapeBox>,
             ck::TReadWrite<FFragment_ShapeBox_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
-            FFragment_ShapeBox_Current& InCurrent,
+            FFragment_ShapeBox& InShapeBox,
             FFragment_ShapeBox_Requests& InRequestsComp) const -> void;
 
     private:
@@ -39,7 +39,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
-            FFragment_ShapeBox_Current& InCurrent,
+            FFragment_ShapeBox& InShapeBox,
             const FCk_Request_ShapeBox_UpdateDimensions& InRequest) -> void;
     };
 

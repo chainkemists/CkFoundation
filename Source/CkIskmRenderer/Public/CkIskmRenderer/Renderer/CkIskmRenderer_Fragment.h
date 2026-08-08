@@ -31,10 +31,10 @@ namespace ck
         CK_PROPERTY_GET(_RendererData);
     };
 
-    struct CKISKMRENDERER_API FFragment_IskmRenderer_Current
+    struct CKISKMRENDERER_API FFragment_IskmRenderer
     {
     public:
-        CK_GENERATED_BODY(FFragment_IskmRenderer_Current);
+        CK_GENERATED_BODY(FFragment_IskmRenderer);
 
     public:
         friend class FProcessor_IskmRenderer_Setup;

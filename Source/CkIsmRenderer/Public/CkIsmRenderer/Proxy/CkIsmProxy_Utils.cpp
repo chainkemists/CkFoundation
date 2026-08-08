@@ -26,7 +26,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IsmProxy_Params>(InParams);
-    InHandle.Add<ck::FFragment_IsmProxy_Current>();
+    InHandle.Add<ck::FFragment_IsmProxy>();
     InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
 
     if (InParams.Get_StartingState() == ECk_EnableDisable::Disable)
@@ -240,7 +240,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_IsmProxy_Current>().Get_CustomInstanceDataValues();
+    return InHandle.Get<ck::FFragment_IsmProxy>().Get_CustomInstanceDataValues();
 }
 
 auto

@@ -60,10 +60,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_SceneNode_Current
+    struct CKECSEXT_API FFragment_SceneNode
     {
     public:
-        CK_GENERATED_BODY(FFragment_SceneNode_Current);
+        CK_GENERATED_BODY(FFragment_SceneNode);
 
     public:
         friend class FProcessor_SceneNode_Setup;
@@ -78,7 +78,7 @@ namespace ck
     public:
         CK_PROPERTY(_RelativeTransform);
 
-        CK_DEFINE_CONSTRUCTORS(FFragment_SceneNode_Current, _RelativeTransform);
+        CK_DEFINE_CONSTRUCTORS(FFragment_SceneNode, _RelativeTransform);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

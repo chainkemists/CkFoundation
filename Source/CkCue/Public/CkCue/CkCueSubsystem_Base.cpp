@@ -130,7 +130,7 @@ namespace ck_cue_subsystem_base
             if (auto ExistingCue = ck::ActiveCues_Utils::Get_ValidEntry_ByTag(InOwnerEntity, InCueName);
                 ck::IsValid(ExistingCue))
             {
-                if (const auto CueScript = Cast<UCk_CueBase_EntityScript>(ExistingCue.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
+                if (const auto CueScript = Cast<UCk_CueBase_EntityScript>(ExistingCue.Get<ck::FFragment_EntityScript>().Get_Script().Get());
                     ck::IsValid(CueScript))
                 {
                     ck::cue::Verbose(TEXT("Restarting existing cue [{}] on entity [{}]"), InCueName, InOwnerEntity);

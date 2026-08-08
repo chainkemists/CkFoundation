@@ -22,10 +22,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKRAYSENSE_API FFragment_RaySense_Current
+    struct CKRAYSENSE_API FFragment_RaySense
     {
     public:
-        CK_GENERATED_BODY(FFragment_RaySense_Current);
+        CK_GENERATED_BODY(FFragment_RaySense);
 
     public:
         friend class FProcessor_RaySense_HandleRequests;

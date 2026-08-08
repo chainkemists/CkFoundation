@@ -20,7 +20,7 @@ namespace ck
         using TFragment_Attribute<FCk_Handle_VectorAttribute, FVector, T_Component>::TFragment_Attribute;
     };
 
-    using FFragment_VectorAttribute_Current = TFragment_VectorAttribute<ECk_MinMaxCurrent::Current>;
+    using FFragment_VectorAttribute = TFragment_VectorAttribute<ECk_MinMaxCurrent::Current>;
     using FFragment_VectorAttribute_Min = TFragment_VectorAttribute<ECk_MinMaxCurrent::Min>;
     using FFragment_VectorAttribute_Max = TFragment_VectorAttribute<ECk_MinMaxCurrent::Max>;
 
@@ -33,7 +33,7 @@ namespace ck
         using TFragment_AttributeModifier<FCk_Handle_VectorAttributeModifier, TFragment_VectorAttribute<T_Component>>::TFragment_AttributeModifier;
     };
 
-    using FFragment_VectorAttributeModifier_Current = TFragment_VectorAttributeModifier<ECk_MinMaxCurrent::Current>;
+    using FFragment_VectorAttributeModifier = TFragment_VectorAttributeModifier<ECk_MinMaxCurrent::Current>;
     using FFragment_VectorAttributeModifier_Min = TFragment_VectorAttributeModifier<ECk_MinMaxCurrent::Min>;
     using FFragment_VectorAttributeModifier_Max = TFragment_VectorAttributeModifier<ECk_MinMaxCurrent::Max>;
 
@@ -68,9 +68,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute>& InPayload) const
         {
             return FCk_Payload_VectorAttribute_OnValueChanged
             {
@@ -86,9 +86,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_VectorAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_VectorAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnClamped<FFragment_VectorAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnClamped<FFragment_VectorAttribute>& InPayload) const
         {
             return FCk_Payload_VectorAttribute_OnClamped
             {
@@ -140,10 +140,10 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnVectorAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged>;
+        FFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FCk_Delegate_VectorAttribute_OnValueChanged>;
+        FFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnVectorAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
         FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnValueChanged>;
@@ -159,16 +159,16 @@ namespace ck
 
     // Clamped
     using UUtils_Signal_OnVectorAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
+        FFragment_VectorAttribute, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
+        FFragment_VectorAttribute, FFragment_VectorAttribute_Min, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
+        FFragment_VectorAttribute, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
 
     using UUtils_Signal_OnVectorAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_VectorAttribute_Current, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
+        FFragment_VectorAttribute, FFragment_VectorAttribute_Max, FCk_Delegate_VectorAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

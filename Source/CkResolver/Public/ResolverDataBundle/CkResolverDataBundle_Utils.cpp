@@ -34,7 +34,7 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("ResolverDataBundle with Owner [{}]"), InOwner));
 
     const auto& Params = NewEntity.Add<ck::FFragment_ResolverDataBundle_Params>(InParams);
-    auto& Current = NewEntity.Add<ck::FFragment_ResolverDataBundle_Current>();
+    auto& Current = NewEntity.Add<ck::FFragment_ResolverDataBundle>();
 
     // Add the attributes we need for damage calculation
     // Formula = (BaseDamage + BonusDamage) * TotalScalarDamage
@@ -65,7 +65,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ResolverDataBundle_UE, FCk_Handle_ResolverDataBundle,
-    ck::FFragment_ResolverDataBundle_Params, ck::FFragment_ResolverDataBundle_Current)
+    ck::FFragment_ResolverDataBundle_Params, ck::FFragment_ResolverDataBundle)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ auto
     -> FGameplayTag
 {
     const auto& Phases = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>().Get_Phases();
-    const auto& CurrentPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_CurrentPhaseIndex();
+    const auto& CurrentPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle>().Get_CurrentPhaseIndex();
 
     return Phases.IsValidIndex(CurrentPhaseIndex) ? Phases[CurrentPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 }
@@ -133,7 +133,7 @@ auto
     -> FGameplayTag
 {
     const auto& Phases = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>().Get_Phases();
-    const auto& NextPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_CurrentPhaseIndex() + 1;
+    const auto& NextPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle>().Get_CurrentPhaseIndex() + 1;
 
     return Phases.IsValidIndex(NextPhaseIndex) ? Phases[NextPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 }
@@ -144,7 +144,7 @@ auto
         const FCk_Handle_ResolverDataBundle& InDataBundle)
     -> float
 {
-    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_FinalValue();
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle>().Get_FinalValue();
 }
 
 auto
@@ -153,7 +153,7 @@ auto
         const FCk_Handle_ResolverDataBundle& InDataBundle)
     -> FGameplayTagContainer
 {
-    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_MetadataTags();
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle>().Get_MetadataTags();
 }
 
 auto
@@ -163,7 +163,7 @@ auto
     -> FCk_Payload_ResolverDataBundle_Resolved
 {
     const auto& Params = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>();
-    const auto& Current = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>();
+    const auto& Current = InDataBundle.Get<ck::FFragment_ResolverDataBundle>();
 
     const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
         .Set_DataBundle(InDataBundle)

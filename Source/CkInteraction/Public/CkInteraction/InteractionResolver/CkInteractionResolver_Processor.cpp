@@ -40,7 +40,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FFragment_InteractionResolver_Requests& InRequestsComp) const
         -> void
     {
@@ -51,7 +51,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InInteractionResolver, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -68,7 +68,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_StartIntent& InRequest)
         -> void
     {
@@ -78,16 +78,16 @@ namespace ck
             TEXT("Cannot start invalid intent for resolver [{}]"), InHandle)
         { return; }
 
-        if (InCurrent._ActiveIntents.Contains(Intent))
+        if (InInteractionResolver._ActiveIntents.Contains(Intent))
         {
             ck::interaction::VeryVerbose(TEXT("Intent [{}] already active for resolver [{}]"), Intent, InHandle);
             return;
         }
 
         InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
-        InCurrent._ActiveIntents.Add(Intent);
+        InInteractionResolver._ActiveIntents.Add(Intent);
 
-        ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]. Active intents: {}"), Intent, InHandle, InCurrent._ActiveIntents.Num());
+        ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]. Active intents: {}"), Intent, InHandle, InInteractionResolver._ActiveIntents.Num());
     }
 
     auto
@@ -95,7 +95,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_StopIntent& InRequest)
         -> void
     {
@@ -105,7 +105,7 @@ namespace ck
             TEXT("Cannot stop invalid intent for resolver [{}]"), InHandle)
         { return; }
 
-        if (NOT InCurrent._ActiveIntents.Contains(Intent))
+        if (NOT InInteractionResolver._ActiveIntents.Contains(Intent))
         {
             ck::interaction::VeryVerbose(TEXT("Intent [{}] was not active for resolver [{}]"), Intent, InHandle);
             return;
@@ -113,14 +113,14 @@ namespace ck
 
         InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
-        const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
+        const auto PreviousTargets = InInteractionResolver.Get_CachedBestTargets().Find(Intent);
         const auto PreviousTargetsArray = PreviousTargets ? *PreviousTargets : TArray<FCk_Handle_InteractTarget>{};
 
-        InCurrent._ActiveIntents.Remove(Intent);
-        InCurrent._CachedBestTargets.Remove(Intent);
+        InInteractionResolver._ActiveIntents.Remove(Intent);
+        InInteractionResolver._CachedBestTargets.Remove(Intent);
 
         ck::interaction::VeryVerbose(TEXT("Stopped intent [{}] for resolver [{}]. Remaining active intents: {}. Removing {} cached targets"),
-            Intent, InHandle, InCurrent._ActiveIntents.Num(), PreviousTargetsArray.Num());
+            Intent, InHandle, InInteractionResolver._ActiveIntents.Num(), PreviousTargetsArray.Num());
 
         auto EmptyTargets = TArray<FCk_Handle_InteractTarget>{};
         UUtils_Signal_InteractionResolver_OnBestTargetsChanged::Broadcast(InHandle,
@@ -135,7 +135,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_AddInteractTarget& InRequest)
         -> void
     {
@@ -147,13 +147,13 @@ namespace ck
             return;
         }
 
-        if (InCurrent._AvailableTargets.Contains(Target))
+        if (InInteractionResolver._AvailableTargets.Contains(Target))
         {
             ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] already available for resolver [{}]"), Target, InHandle);
             return;
         }
 
-        InCurrent._AvailableTargets.Add(Target);
+        InInteractionResolver._AvailableTargets.Add(Target);
         InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
         ck::interaction::VeryVerbose(TEXT("Added InteractTarget [{}] to resolver [{}]"), Target, InHandle);
@@ -164,19 +164,19 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest)
         -> void
     {
         const auto& Target = InRequest.Get_Target();
 
-        if (NOT InCurrent._AvailableTargets.Contains(Target))
+        if (NOT InInteractionResolver._AvailableTargets.Contains(Target))
         {
             ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] was not available for resolver [{}]"), Target, InHandle);
             return;
         }
 
-        InCurrent._AvailableTargets.Remove(Target);
+        InInteractionResolver._AvailableTargets.Remove(Target);
         InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
         ck::interaction::VeryVerbose(TEXT("Removed InteractTarget [{}] from resolver [{}]"), Target, InHandle);
@@ -187,7 +187,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest)
         -> void
     {
@@ -199,7 +199,7 @@ namespace ck
 
         auto TargetsToRemove = TArray<FCk_Handle_InteractTarget>{};
 
-        for (const auto& Target : InCurrent.Get_AvailableTargets())
+        for (const auto& Target : InInteractionResolver.Get_AvailableTargets())
         {
             if (ck::IsValid(Target) &&
                 UCk_Utils_InteractTarget_UE::Get_InteractionChannel(Target).MatchesTagExact(Channel))
@@ -210,7 +210,7 @@ namespace ck
 
         for (const auto& TargetToRemove : TargetsToRemove)
         {
-            InCurrent._AvailableTargets.Remove(TargetToRemove);
+            InInteractionResolver._AvailableTargets.Remove(TargetToRemove);
         }
 
         if (NOT TargetsToRemove.IsEmpty())
@@ -241,10 +241,10 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
             -> void
     {
-        DoUpdateCachedTargets(InHandle, InParams, InCurrent);
+        DoUpdateCachedTargets(InHandle, InParams, InInteractionResolver);
     }
 
     auto
@@ -252,13 +252,13 @@ namespace ck
         DoUpdateCachedTargets(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
         -> void
     {
         InHandle.Remove<FTag_InteractionResolver_ResolveDirty>();
 
         auto InvalidTargets = TArray<FCk_Handle_InteractTarget>{};
-        for (const auto& Target : InCurrent.Get_AvailableTargets())
+        for (const auto& Target : InInteractionResolver.Get_AvailableTargets())
         {
             if (ck::Is_NOT_Valid(Target))
             {
@@ -268,7 +268,7 @@ namespace ck
 
         for (const auto& InvalidTarget : InvalidTargets)
         {
-            InCurrent._AvailableTargets.Remove(InvalidTarget);
+            InInteractionResolver._AvailableTargets.Remove(InvalidTarget);
         }
 
         if (InvalidTargets.Num() > 0)
@@ -277,9 +277,9 @@ namespace ck
                 InvalidTargets.Num(), InHandle);
         }
 
-        auto AvailableTargetsArray = InCurrent.Get_AvailableTargets().Array();
+        auto AvailableTargetsArray = InInteractionResolver.Get_AvailableTargets().Array();
 
-        for (const auto& Intent : InCurrent.Get_ActiveIntents())
+        for (const auto& Intent : InInteractionResolver.Get_ActiveIntents())
         {
             const auto NewTargets = UCk_Utils_InteractionResolver_UE::DoResolveTargets_Internal(
                 InHandle,
@@ -287,7 +287,7 @@ namespace ck
                 AvailableTargetsArray
             );
 
-            const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
+            const auto PreviousTargets = InInteractionResolver.Get_CachedBestTargets().Find(Intent);
             const auto PreviousTargetsArray = PreviousTargets ? *PreviousTargets : TArray<FCk_Handle_InteractTarget>{};
 
             const auto TargetsChanged = [&]() -> bool
@@ -315,7 +315,7 @@ namespace ck
                     }
                 }
 
-                InCurrent._CachedBestTargets.Add(Intent, NewTargets);
+                InInteractionResolver._CachedBestTargets.Add(Intent, NewTargets);
 
                 UUtils_Signal_InteractionResolver_OnBestTargetsChanged::Broadcast(InHandle,
                     ck::MakePayload(InHandle, Intent, PreviousTargetsArray, NewTargets, RemovedTargets));
@@ -326,9 +326,9 @@ namespace ck
         }
 
         auto IntentsToRemove = TArray<FGameplayTag>{};
-        for (const auto& [CachedIntent, CachedTargets] : InCurrent.Get_CachedBestTargets())
+        for (const auto& [CachedIntent, CachedTargets] : InInteractionResolver.Get_CachedBestTargets())
         {
-            if (NOT InCurrent.Get_ActiveIntents().Contains(CachedIntent))
+            if (NOT InInteractionResolver.Get_ActiveIntents().Contains(CachedIntent))
             {
                 IntentsToRemove.Add(CachedIntent);
             }
@@ -336,7 +336,7 @@ namespace ck
 
         for (const auto& IntentToRemove : IntentsToRemove)
         {
-            InCurrent._CachedBestTargets.Remove(IntentToRemove);
+            InInteractionResolver._CachedBestTargets.Remove(IntentToRemove);
         }
     }
 
@@ -348,12 +348,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
         -> void
     {
-        InCurrent._ActiveIntents.Empty();
-        InCurrent._CachedBestTargets.Empty();
-        InCurrent._AvailableTargets.Empty();
+        InInteractionResolver._ActiveIntents.Empty();
+        InInteractionResolver._CachedBestTargets.Empty();
+        InInteractionResolver._AvailableTargets.Empty();
     }
 
 }

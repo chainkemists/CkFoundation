@@ -39,7 +39,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_VatProxy_Params>(InParams);
-    auto& Current = InHandle.Add<ck::FFragment_VatProxy_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_VatProxy>();
     InHandle.Add<ck::FTag_VatProxy_NeedsSetup>();
 
     Current._CollectionPinBatch = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
@@ -142,7 +142,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_VatProxy_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_VatProxy>();
     if (Current.Get_ActiveClipIndex() == INDEX_NONE)
     { return {}; }
 

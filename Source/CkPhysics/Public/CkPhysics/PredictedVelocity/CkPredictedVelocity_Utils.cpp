@@ -13,7 +13,7 @@ auto
     -> void
 {
     InHandle.Add<ck::FFragment_PredictedVelocity_Params>(InParams);
-    InHandle.Add<ck::FFragment_PredictedVelocity_Current>();
+    InHandle.Add<ck::FFragment_PredictedVelocity>();
 }
 
 auto
@@ -22,7 +22,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FFragment_PredictedVelocity_Current>();
+    return InHandle.Has<ck::FFragment_PredictedVelocity>();
 }
 
 auto

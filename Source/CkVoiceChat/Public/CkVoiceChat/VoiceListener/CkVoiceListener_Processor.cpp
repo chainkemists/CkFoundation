@@ -67,7 +67,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceListenerEntity,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             FFragment_VoiceListener_Requests& InRequests) const
         -> void
     {
@@ -80,7 +80,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InVoiceListenerEntity, Result);
 
-            if (DoHandleRequest(InVoiceListenerEntity, InCurrent, InRequest))
+            if (DoHandleRequest(InVoiceListenerEntity, InVoiceListener, InRequest))
             {
                 Result = ECk_Request_OperationResult::Succeeded;
             }
@@ -96,7 +96,7 @@ namespace ck
         FProcessor_VoiceListener_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_MuteTalker& InRequest)
         -> bool
     {
@@ -108,7 +108,7 @@ namespace ck
         { return false; }
 
         auto AlreadyMuted = false;
-        InCurrent._MutedTalkers.Add(Talker, &AlreadyMuted);
+        InVoiceListener._MutedTalkers.Add(Talker, &AlreadyMuted);
 
         if (NOT AlreadyMuted)
         {
@@ -122,11 +122,11 @@ namespace ck
         FProcessor_VoiceListener_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_UnmuteTalker& InRequest)
         -> bool
     {
-        if (InCurrent._MutedTalkers.Remove(InRequest.Get_Talker()) > 0)
+        if (InVoiceListener._MutedTalkers.Remove(InRequest.Get_Talker()) > 0)
         {
             InHandle.AddOrGet<FTag_VoiceListener_MutesDirty>();
         }
@@ -138,7 +138,7 @@ namespace ck
         FProcessor_VoiceListener_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_SetTalkerVolume& InRequest)
         -> bool
     {
@@ -149,7 +149,7 @@ namespace ck
             TEXT("SetTalkerVolume on VoiceListener [{}] with an invalid Talker handle"), InHandle)
         { return false; }
 
-        InCurrent._TalkerVolumes.Add(Talker, InRequest.Get_Volume());
+        InVoiceListener._TalkerVolumes.Add(Talker, InRequest.Get_Volume());
         return true;
     }
 
@@ -173,7 +173,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceListenerEntity,
-            const FFragment_VoiceListener_Current& InCurrent)
+            const FFragment_VoiceListener& InVoiceListener)
         -> void
     {
         using namespace ck_voice_listener_processor;
@@ -184,7 +184,7 @@ namespace ck
         if (ck::Is_NOT_Valid(LocalPlayer))
         { return; }   // no local player yet - keep the dirty tag, retry next tick
 
-        auto MutedTalkers = InCurrent.Get_MutedTalkers().Array();
+        auto MutedTalkers = InVoiceListener.Get_MutedTalkers().Array();
 
         if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InVoiceListenerEntity))
         {

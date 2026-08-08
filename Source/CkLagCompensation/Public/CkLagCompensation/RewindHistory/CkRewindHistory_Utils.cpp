@@ -32,7 +32,7 @@ auto
 
     InHandle.Add<ck::FFragment_RewindHistory_Params>(InParams);
 
-    auto& Current = InHandle.Add<ck::FFragment_RewindHistory_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_RewindHistory>();
     Current._Frames.Init(ck::rewind_history_detail::Get_FrameCapacity(InParams));
 
     return Cast(InHandle);
@@ -41,7 +41,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RewindHistory_UE, FCk_Handle_RewindHistory,
-    ck::FFragment_RewindHistory_Params, ck::FFragment_RewindHistory_Current)
+    ck::FFragment_RewindHistory_Params, ck::FFragment_RewindHistory)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ auto
         const FCk_Handle_RewindHistory& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_RewindHistory_Current>().Get_Frames().Get_Count();
+    return InHandle.Get<ck::FFragment_RewindHistory>().Get_Frames().Get_Count();
 }
 
 auto
@@ -60,7 +60,7 @@ auto
         const FCk_Handle_RewindHistory& InHandle)
     -> FCk_Time
 {
-    const auto& Frames = InHandle.Get<ck::FFragment_RewindHistory_Current>().Get_Frames();
+    const auto& Frames = InHandle.Get<ck::FFragment_RewindHistory>().Get_Frames();
 
     if (Frames.Get_Count() == 0)
     { return FCk_Time::ZeroSecond(); }
@@ -74,7 +74,7 @@ auto
         const FCk_Handle_RewindHistory& InHandle)
     -> FCk_Time
 {
-    const auto& Frames = InHandle.Get<ck::FFragment_RewindHistory_Current>().Get_Frames();
+    const auto& Frames = InHandle.Get<ck::FFragment_RewindHistory>().Get_Frames();
 
     if (Frames.Get_Count() == 0)
     { return FCk_Time::ZeroSecond(); }
@@ -90,7 +90,7 @@ auto
     -> TArray<FCk_LagComp_HitShapeSnapshot>
 {
     return ck::lag_comp::Get_InterpolatedSnapshots(
-        InHandle.Get<ck::FFragment_RewindHistory_Current>().Get_Frames(), InWorldTime);
+        InHandle.Get<ck::FFragment_RewindHistory>().Get_Frames(), InWorldTime);
 }
 
 auto
@@ -106,7 +106,7 @@ auto
     -> bool
 {
     const auto Hit = ck::lag_comp::Sweep_SegmentVsHistory(
-        InHandle.Get<ck::FFragment_RewindHistory_Current>().Get_Frames(),
+        InHandle.Get<ck::FFragment_RewindHistory>().Get_Frames(),
         InSegmentStart, InSegmentEnd, InTimeStart, InTimeEnd, InSweepRadius);
 
     if (NOT Hit.IsSet())

@@ -29,7 +29,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WorldSpaceWidget_UE, FCk_Handle_WorldSpaceWidget,
-    ck::FFragment_WorldSpaceWidget_Current, ck::FFragment_WorldSpaceWidget_Params);
+    ck::FFragment_WorldSpaceWidget, ck::FFragment_WorldSpaceWidget_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ auto
     const auto ZOrder = InParams.Get_ZOrder();
     auto WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget, ZOrder);
 
-    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WrapperWidget);
+    InHandle.Add<ck::FFragment_WorldSpaceWidget>(WrapperWidget);
 
     if (InParams.Get_ScalingInfo().Get_ScalingPolicy() == ECk_WorldSpaceWidget_Scaling_Policy::ScaleWithDistance)
     {
@@ -243,7 +243,7 @@ auto
     // instantiation is unreliable for runtime-created components and leaves GetWidget() null.
     WidgetComponent->SetWidget(ContentWidget);
 
-    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WidgetComponent, ContentWidget);
+    InHandle.Add<ck::FFragment_WorldSpaceWidget>(WidgetComponent, ContentWidget);
 
     auto TypedHandle = Cast(InHandle);
 
@@ -268,7 +268,7 @@ auto
     else
     { InWorldSpaceWidgetHandle.AddOrGet<ck::FTag_WorldSpaceWidget_Disabled>(); }
 
-    auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
+    auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget>();
     const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
 
     if (Params.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
@@ -416,7 +416,7 @@ auto
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> UUserWidget*
 {
-    return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._ContentWidgetHardRef.Get();
+    return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget>()._ContentWidgetHardRef.Get();
 }
 
 auto
@@ -432,7 +432,7 @@ auto
     { return false; }
 
     const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
-    const auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
+    const auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget>();
 
     const auto PlayerController = Current.Get_ResolvedOwningPlayer();
     if (ck::Is_NOT_Valid(PlayerController))
@@ -473,7 +473,7 @@ auto
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> bool
 {
-    const auto WrapperWidget = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>().Get_WrapperWidget().Get();
+    const auto WrapperWidget = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget>().Get_WrapperWidget().Get();
 
     if (ck::Is_NOT_Valid(WrapperWidget))
     { return false; }

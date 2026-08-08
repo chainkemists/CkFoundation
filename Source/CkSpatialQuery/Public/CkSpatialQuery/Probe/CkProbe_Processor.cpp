@@ -265,7 +265,7 @@ namespace ck::details
     // four factories produce different shape types — ShapeResult is the one return type they share.
     // See CkSpatialQuery/CLAUDE.md § "Jolt axis convention".
     template <>
-    struct TProbeShapeFactory<FFragment_ShapeBox_Current>
+    struct TProbeShapeFactory<FFragment_ShapeBox>
     {
         static constexpr const TCHAR* ShapeName = TEXT("Box");
 
@@ -284,7 +284,7 @@ namespace ck::details
 
         static auto
         CreateUpdateShape(
-            const FFragment_ShapeBox_Current& InShape)
+            const FFragment_ShapeBox& InShape)
             -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
@@ -308,7 +308,7 @@ namespace ck::details
     };
 
     template <>
-    struct TProbeShapeFactory<FFragment_ShapeSphere_Current>
+    struct TProbeShapeFactory<FFragment_ShapeSphere>
     {
         static constexpr const TCHAR* ShapeName = TEXT("Sphere");
 
@@ -327,7 +327,7 @@ namespace ck::details
 
         static auto
         CreateUpdateShape(
-            const FFragment_ShapeSphere_Current& InShape)
+            const FFragment_ShapeSphere& InShape)
             -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
@@ -351,7 +351,7 @@ namespace ck::details
     };
 
     template <>
-    struct TProbeShapeFactory<FFragment_ShapeCapsule_Current>
+    struct TProbeShapeFactory<FFragment_ShapeCapsule>
     {
         static constexpr const TCHAR* ShapeName = TEXT("Capsule");
 
@@ -374,7 +374,7 @@ namespace ck::details
 
         static auto
         CreateUpdateShape(
-            const FFragment_ShapeCapsule_Current& InShape)
+            const FFragment_ShapeCapsule& InShape)
             -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
@@ -402,7 +402,7 @@ namespace ck::details
     };
 
     template <>
-    struct TProbeShapeFactory<FFragment_ShapeCylinder_Current>
+    struct TProbeShapeFactory<FFragment_ShapeCylinder>
     {
         static constexpr const TCHAR* ShapeName = TEXT("Cylinder");
 
@@ -425,7 +425,7 @@ namespace ck::details
 
         static auto
         CreateUpdateShape(
-            const FFragment_ShapeCylinder_Current& InShape)
+            const FFragment_ShapeCylinder& InShape)
             -> JPH::ShapeSettings::ShapeResult
         {
             const auto& Dimensions = InShape.Get_Dimensions();
@@ -470,7 +470,7 @@ namespace ck::details
             HandleType InHandle,
             const T_ShapeFragment& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FFragment_Transform& InTransform) const
         -> void
     {
@@ -571,9 +571,9 @@ namespace ck::details
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
         Body->SetCollideKinematicVsNonDynamic(true);
 
-        InCurrent._BodyId = Body->GetID();
+        InProbe._BodyId = Body->GetID();
 
-        InCurrent._ShapeDimensionsChangedConnection = Factory::BindDimensionsChanged(InHandle);
+        InProbe._ShapeDimensionsChangedConnection = Factory::BindDimensionsChanged(InHandle);
 
         // A LinearCast probe's body is never added to the broadphase: Jolt does NOT support
         // LinearCast for sensors, so that path casts shapes by hand instead.
@@ -601,7 +601,7 @@ namespace ck::details
             HandleType InHandle,
             const T_ShapeFragment& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const
+            FFragment_Probe& InProbe) const
         -> void
     {
         using Factory = TProbeShapeFactory<T_ShapeFragment>;
@@ -631,7 +631,7 @@ namespace ck::details
         InHandle.template Replace<Ref<JPH::Shape>>(NewShape);
 
         BodyInterface.SetShape(
-            InCurrent.Get_BodyId(),
+            InProbe.Get_BodyId(),
             NewShape,
             false,
             ::ck_probe_processor::Get_ActivationMode(InParams));
@@ -639,15 +639,15 @@ namespace ck::details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template class TProcessor_ProbeSetup<FFragment_ShapeBox_Current>;
-    template class TProcessor_ProbeSetup<FFragment_ShapeSphere_Current>;
-    template class TProcessor_ProbeSetup<FFragment_ShapeCapsule_Current>;
-    template class TProcessor_ProbeSetup<FFragment_ShapeCylinder_Current>;
+    template class TProcessor_ProbeSetup<FFragment_ShapeBox>;
+    template class TProcessor_ProbeSetup<FFragment_ShapeSphere>;
+    template class TProcessor_ProbeSetup<FFragment_ShapeCapsule>;
+    template class TProcessor_ProbeSetup<FFragment_ShapeCylinder>;
 
-    template class TProcessor_ProbeUpdateShape<FFragment_ShapeBox_Current>;
-    template class TProcessor_ProbeUpdateShape<FFragment_ShapeSphere_Current>;
-    template class TProcessor_ProbeUpdateShape<FFragment_ShapeCapsule_Current>;
-    template class TProcessor_ProbeUpdateShape<FFragment_ShapeCylinder_Current>;
+    template class TProcessor_ProbeUpdateShape<FFragment_ShapeBox>;
+    template class TProcessor_ProbeUpdateShape<FFragment_ShapeSphere>;
+    template class TProcessor_ProbeUpdateShape<FFragment_ShapeCapsule>;
+    template class TProcessor_ProbeUpdateShape<FFragment_ShapeCylinder>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -683,14 +683,14 @@ namespace ck_probe
     auto
         Request_EndOverlaps_ForLostContacts(
             const FCk_Handle_Probe& InCastingProbe,
-            const ck::FFragment_Probe_Current& InCurrent,
+            const ck::FFragment_Probe& InProbe,
             const TSet<FCk_Handle>& InContactsThisCast)
         -> void
     {
         // Request_* utils take a mutable handle — one local copy for the loop.
         auto CastingProbe = InCastingProbe;
 
-        for (const auto& Overlap : InCurrent.Get_CurrentOverlaps())
+        for (const auto& Overlap : InProbe.Get_CurrentOverlaps())
         {
             auto OtherEntity = Overlap.Get_OtherEntity();
 
@@ -826,7 +826,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -841,13 +841,13 @@ namespace ck
 
         if (::ck_probe_processor::Get_ActivationMode(InParams) == JPH::EActivation::DontActivate)
         {
-            _PendingInactiveBodyIds.Add(InCurrent.Get_BodyId());
+            _PendingInactiveBodyIds.Add(InProbe.Get_BodyId());
             _PendingInactivePositions.Add(Position);
             _PendingInactiveRotations.Add(Rotation);
         }
         else
         {
-            _PendingActiveBodyIds.Add(InCurrent.Get_BodyId());
+            _PendingActiveBodyIds.Add(InProbe.Get_BodyId());
             _PendingActivePositions.Add(Position);
             _PendingActiveRotations.Add(Rotation);
         }
@@ -867,7 +867,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FFragment_Transform_Previous& InPreviousTransform,
             const FFragment_Transform& InTransform) const
         -> void
@@ -890,7 +890,7 @@ namespace ck
         { return; }
 
         const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-        const auto& Shape = BodyInterface.GetShape(InCurrent.Get_BodyId());
+        const auto& Shape = BodyInterface.GetShape(InProbe.Get_BodyId());
 
         const auto& PrevTransform = InPreviousTransform.Get_Transform();
         const auto& PrevLocation = InPreviousTransform.Get_Transform().GetLocation();
@@ -912,7 +912,7 @@ namespace ck
             PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
         }
 
-        if (Collector.Get_OverlappingProbes().IsEmpty() && InCurrent.Get_CurrentOverlaps().IsEmpty())
+        if (Collector.Get_OverlappingProbes().IsEmpty() && InProbe.Get_CurrentOverlaps().IsEmpty())
         { return; }
 
         InHandle.DeferCustom(
@@ -926,7 +926,7 @@ namespace ck
             auto Probe = CastingProbe;
             ck_probe::Request_BeginOrUpdateCollectedOverlaps(Probe, Overlapping);
             ck_probe::Request_EndOverlaps_ForLostContacts(
-                Probe, Probe.Get<FFragment_Probe_Current>(), ContactsThisCast);
+                Probe, Probe.Get<FFragment_Probe>(), ContactsThisCast);
         });
     }
 
@@ -938,7 +938,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
+            FFragment_Probe& InProbe)
             -> void
     {
         if (InHandle.Has<FTag_Transform_RestoreRebase>())
@@ -1094,7 +1094,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FFragment_Probe_Requests& InRequestsComp) const
             -> void
     {
@@ -1107,7 +1107,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                Result = DoHandleRequest(InHandle, InCurrent, InRequest);
+                Result = DoHandleRequest(InHandle, InProbe, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -1245,7 +1245,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent)
+            const FFragment_Probe& InProbe)
         -> void
     {
         if (InParams.Get_MotionType() != ECk_MotionType::Kinematic
@@ -1254,7 +1254,7 @@ namespace ck
 
         ++_PhysicalKinematicCount;
 
-        const auto HasCurrentOverlaps = NOT InCurrent.Get_CurrentOverlaps().IsEmpty();
+        const auto HasCurrentOverlaps = NOT InProbe.Get_CurrentOverlaps().IsEmpty();
         if (HasCurrentOverlaps)
         { ++_OverlapHeldCount; }
         else
@@ -1323,7 +1323,7 @@ namespace ck
                 ++Row->Samples;
                 Row->TransformUpdatedSamples += InHandle.Has<FTag_Transform_Updated>() ? 1 : 0;
                 Row->OverlapHeldSamples += HasCurrentOverlaps ? 1 : 0;
-                Row->OverlapCardinalitySamples += InCurrent.Get_CurrentOverlaps().Num();
+                Row->OverlapCardinalitySamples += InProbe.Get_CurrentOverlaps().Num();
                 Row->PendingRequestSamples += HasPendingRequests ? 1 : 0;
             }
         }
@@ -1343,7 +1343,7 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_BeginOverlap& InRequest)
             -> ECk_Request_OperationResult
     {
@@ -1351,12 +1351,12 @@ namespace ck
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
                                  .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        if (InCurrent._CurrentOverlaps.Contains(OverlapInfo))
+        if (InProbe._CurrentOverlaps.Contains(OverlapInfo))
         {
-            return DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_OverlapUpdated{InRequest});
+            return DoHandleRequest(InHandle, InProbe, FCk_Request_Probe_OverlapUpdated{InRequest});
         }
 
-        InCurrent._CurrentOverlaps.Add(OverlapInfo);
+        InProbe._CurrentOverlaps.Add(OverlapInfo);
 
         UCk_Utils_Probe_UE::Request_MarkProbe_AsOverlapping(InHandle);
 
@@ -1376,7 +1376,7 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_OverlapUpdated& InRequest)
             -> ECk_Request_OperationResult
     {
@@ -1384,9 +1384,9 @@ namespace ck
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
                                  .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        if (NOT InCurrent._CurrentOverlaps.Contains(OverlapInfo))
+        if (NOT InProbe._CurrentOverlaps.Contains(OverlapInfo))
         {
-            return DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_BeginOverlap{InRequest});
+            return DoHandleRequest(InHandle, InProbe, FCk_Request_Probe_BeginOverlap{InRequest});
         }
 
         const auto Payload = FCk_Probe_Payload_OnOverlapUpdated{
@@ -1396,7 +1396,7 @@ namespace ck
             InRequest.Get_PhysicalMaterial().Get()
         };
 
-        InCurrent._CurrentOverlaps.Add(OverlapInfo);
+        InProbe._CurrentOverlaps.Add(OverlapInfo);
 
         UUtils_Signal_OnProbeOverlapUpdated::Broadcast(InHandle, MakePayload(InHandle, Payload));
 
@@ -1407,13 +1407,13 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_EndOverlap& InRequest)
         -> ECk_Request_OperationResult
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()};
 
-        const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
+        const auto& NumRemovedItems = InProbe._CurrentOverlaps.Remove(OverlapInfo);
 
         if (NumRemovedItems == 0)
         {
@@ -1436,7 +1436,7 @@ namespace ck
             return ECk_Request_OperationResult::Failed;
         }
 
-        if (InCurrent.Get_CurrentOverlaps().IsEmpty())
+        if (InProbe.Get_CurrentOverlaps().IsEmpty())
         {
             UCk_Utils_Probe_UE::Request_MarkProbe_AsNotOverlapping(InHandle);
         }
@@ -1451,7 +1451,7 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FCk_Request_Probe_EnableDisable& InRequest) const
         -> ECk_Request_OperationResult
     {
@@ -1470,7 +1470,7 @@ namespace ck
 
                     const auto ActivationMode = ::ck_probe_processor::Get_ActivationMode(
                         InHandle.Get<FFragment_Probe_Params>());
-                    BodyInterface.AddBody(InCurrent.Get_BodyId(), ActivationMode);
+                    BodyInterface.AddBody(InProbe.Get_BodyId(), ActivationMode);
 
                     const auto& EntityTransform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
                     const auto& EntityPosition = EntityTransform.GetLocation();
@@ -1479,7 +1479,7 @@ namespace ck
                     const auto EntityRotationQuat = FQuat{EntityRotation};
                     const auto Rot = jolt::Conv(EntityRotationQuat);
 
-                    BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, ActivationMode);
+                    BodyInterface.SetPositionAndRotation(InProbe.Get_BodyId(), jolt::Conv(EntityPosition), Rot, ActivationMode);
                 }
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
@@ -1493,7 +1493,7 @@ namespace ck
 
                 if (NOT InHandle.Has<FTag_Probe_LinearCast>())
                 {
-                    PhysicsSystem->GetBodyInterface().RemoveBody(InCurrent.Get_BodyId());
+                    PhysicsSystem->GetBodyInterface().RemoveBody(InProbe.Get_BodyId());
                 }
 
                 InHandle.AddOrGet<ck::FTag_Probe_Disabled>();
@@ -1547,17 +1547,17 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const
+            FFragment_Probe& InProbe) const
         -> void
     {
-        if (InCurrent._ShapeDimensionsChangedConnection)
+        if (InProbe._ShapeDimensionsChangedConnection)
         {
-            InCurrent._ShapeDimensionsChangedConnection.release();
+            InProbe._ShapeDimensionsChangedConnection.release();
         }
 
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
-            for (const auto& OverlapInfo : InCurrent.Get_CurrentOverlaps())
+            for (const auto& OverlapInfo : InProbe.Get_CurrentOverlaps())
             {
                 const auto& OtherEntity = OverlapInfo.Get_OtherEntity();
 
@@ -1579,7 +1579,7 @@ namespace ck
         { return; }
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-        const auto& BodyId = InCurrent.Get_BodyId();
+        const auto& BodyId = InProbe.Get_BodyId();
 
         if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
         {

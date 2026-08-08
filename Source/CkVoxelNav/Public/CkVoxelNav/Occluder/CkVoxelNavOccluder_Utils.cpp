@@ -26,7 +26,7 @@ auto
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_VoxelNavOccluder_Params>(InParams);
-    InHandle.Add<ck::FFragment_VoxelNavOccluder_Current>();
+    InHandle.Add<ck::FFragment_VoxelNavOccluder>();
     InHandle.Add<ck::FTag_VoxelNavOccluder_NeedsSetup>();
 
     ck::voxelnav::Verbose(TEXT("VoxelNav Occluder added to [{}] (half-extents [{}])"),
@@ -57,7 +57,7 @@ auto
     if (ck::Is_NOT_Valid(InOccluder))
     { return FBox{ForceInit}; }
 
-    return InOccluder.Get<ck::FFragment_VoxelNavOccluder_Current>().Get_TrackedBounds();
+    return InOccluder.Get<ck::FFragment_VoxelNavOccluder>().Get_TrackedBounds();
 }
 
 auto
@@ -69,7 +69,7 @@ auto
     if (ck::Is_NOT_Valid(InOccluder))
     { return 0; }
 
-    return InOccluder.Get<ck::FFragment_VoxelNavOccluder_Current>().Get_TimesDirtied();
+    return InOccluder.Get<ck::FFragment_VoxelNavOccluder>().Get_TimesDirtied();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -131,7 +131,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_Params& InParams,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& InCustomData,
@@ -163,7 +163,7 @@ namespace ck
             TEXT("IskmProxy Setup: cached world is invalid for [{}]"), InHandle)
         { return; }
 
-        auto& RendererCurrent = RendererHandle.Get<FFragment_IskmRenderer_Current>();
+        auto& RendererCurrent = RendererHandle.Get<FFragment_IskmRenderer>();
         auto* RendererActor = RendererCurrent.Get_RendererActor().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(RendererActor),
             TEXT("IskmProxy Setup: renderer actor missing for [{}]"), InHandle)
@@ -202,9 +202,9 @@ namespace ck
         }
 
         // Composed entity-space -> world via the spawn rotation; UpdateTransform re-applies it each frame.
-        InCurrent._LocalLocationOffset = InParams.Get_LocalLocationOffset();
+        InIskmProxy._LocalLocationOffset = InParams.Get_LocalLocationOffset();
         auto SpawnXf = InParams.Get_SpawnTransform();
-        SpawnXf.AddToTranslation(SpawnXf.GetRotation().RotateVector(InCurrent._LocalLocationOffset));
+        SpawnXf.AddToTranslation(SpawnXf.GetRotation().RotateVector(InIskmProxy._LocalLocationOffset));
         SKMC->SetWorldTransform(SpawnXf);
 
         // Sync-load: first use of an AnimCollection can hitch.
@@ -226,7 +226,7 @@ namespace ck
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
 
-        InCurrent._BaseSKMC = SKMC;
+        InIskmProxy._BaseSKMC = SKMC;
 
         const auto NumCustom = RendererData->Get_NumCustomDataFloat();
         InCustomData._Values.Init(0.0f, NumCustom);
@@ -264,8 +264,8 @@ namespace ck
                     Child->SetMaterial(MatIdx, Mat);
                 }
             }
-            InCurrent._SubmeshSKMCs.Add(Child);
-            InCurrent._AttachedSubmeshIndices.Add(Idx);
+            InIskmProxy._SubmeshSKMCs.Add(Child);
+            InIskmProxy._AttachedSubmeshIndices.Add(Idx);
         }
 
         for (const auto& Override : InParams.Get_CustomInstanceDataDefaults())
@@ -312,7 +312,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_Params& InParams,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& InCustomData,
@@ -357,7 +357,7 @@ namespace ck
                     InHandle, GateResult._Path.ToString())
                 { return; }
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
+                DoHandleRequest(InHandle, InParams, InIskmProxy, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
 
                 Result = ECk_Request_OperationResult::Succeeded;
             }, RequestsCopy[Index]);
@@ -371,12 +371,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             const FFragment_Transform& InTransform) const -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIskm_UpdateTransform);
 
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in UpdateTransform processor"),
             InHandle)
@@ -385,7 +385,7 @@ namespace ck
         // The plain fragment read is exact even for actor-backed owners: this runs in FGroup_PostTransform,
         // AFTER FGroup_Transform_SyncFrom mirrored the live root component into the fragment this tick.
         auto NewTransform = InTransform.Get_Transform();
-        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
+        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InIskmProxy.Get_LocalLocationOffset()));
         SKMC->SetWorldTransform(NewTransform);
     }
 
@@ -394,7 +394,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_CustomData& InCustomData,
             FFragment_IskmProxy_LateCustomDataRequests& InRequests) const -> void
     {
@@ -409,7 +409,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (DoHandleRequest(InHandle, InCurrent, InCustomData, InRequest))
+                if (DoHandleRequest(InHandle, InIskmProxy, InCustomData, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
             }, ck::policy::DontResetContainer{});
     }
@@ -418,7 +418,7 @@ namespace ck
         FProcessor_IskmProxy_HandleLateCustomDataRequests::
         DoHandleRequest(
             HandleType& InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_CustomData& InCustomData,
             const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> bool
     {
@@ -428,7 +428,7 @@ namespace ck
             InHandle, InRequest.Get_Offset(), InCustomData._Values.Num())
         { return false; }
 
-        const auto& SKMC = InCurrent.Get_BaseSKMC();
+        const auto& SKMC = InIskmProxy.Get_BaseSKMC();
         const auto HasLiveSkmc = ck::IsValid(SKMC);
         CK_ENSURE_IF_NOT(HasLiveSkmc,
             TEXT("IskmProxy [{}]: BaseSKMC missing in late SetCustomDataFloat handler"),
@@ -438,7 +438,7 @@ namespace ck
         InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
 
         SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
-        for (const auto& WeakChild : InCurrent._SubmeshSKMCs)
+        for (const auto& WeakChild : InIskmProxy._SubmeshSKMCs)
         {
             if (ck::IsValid(WeakChild))
             {
@@ -490,7 +490,7 @@ namespace ck
             auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
             // Must match FProcessor_IskmProxy_UpdateTransform's SKMC placement, or the follower tracks
             // the entity origin instead of the offset body and floats by the offset.
-            const auto LeaderOffset = Leader.Get<FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
+            const auto LeaderOffset = Leader.Get<FFragment_IskmProxy>().Get_LocalLocationOffset();
             LeaderTransform.AddToTranslation(LeaderTransform.GetRotation().RotateVector(LeaderOffset));
 
             NewTransform = InFollower.Get_Offset() * SocketComponentSpace * LeaderTransform;
@@ -554,7 +554,7 @@ namespace ck
                 NOT InChild.Has<FTag_Transform_ExternallyDriven>())
             { return; }
 
-            const auto NewTransform = InChild.Get<FFragment_SceneNode_Current>().Get_RelativeTransform() * InParentWorld;
+            const auto NewTransform = InChild.Get<FFragment_SceneNode>().Get_RelativeTransform() * InParentWorld;
 
             auto ChildAsTransform = UCk_Utils_Transform_UE::Cast(InChild);
             // Scene nodes always carry FFragment_Transform, so this never structurally inserts into a
@@ -578,7 +578,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState) const -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkIskm_EmitFinishedEvents);
@@ -589,7 +589,7 @@ namespace ck
         auto* Cur = InAnimState._CurrentSequence.Get();
         if (ck::Is_NOT_Valid(Cur))
         { return; }
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in EmitFinishedEvents processor"),
             InHandle)
@@ -611,23 +611,23 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent) const -> void
+            FFragment_IskmProxy& InIskmProxy) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in EndPlay processor — the SKMC was released before EndPlay ran"),
             InHandle)
         { return; }
 
-        for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+        for (auto& WeakChild : InIskmProxy._SubmeshSKMCs)
         {
             if (auto* Child = WeakChild.Get())
             {
                 Child->DestroyComponent();
             }
         }
-        InCurrent._SubmeshSKMCs.Reset();
-        InCurrent._AttachedSubmeshIndices.Reset();
+        InIskmProxy._SubmeshSKMCs.Reset();
+        InIskmProxy._AttachedSubmeshIndices.Reset();
 
         // Pool hygiene (load-bearing): both arrays are component-level state that survives
         // Release_BaseSKMC, so without these clears the proxy's materials and morphs leak to the next
@@ -640,11 +640,11 @@ namespace ck
             TEXT("IskmProxy [{}]: BaseSKMC has no ACk_IskmRenderer_Actor_UE owner in EndPlay — pooled SKMC leaked"),
             InHandle)
         {
-            InCurrent._BaseSKMC.Reset();
+            InIskmProxy._BaseSKMC.Reset();
             return;
         }
         RendererActor->Release_BaseSKMC(SKMC);
-        InCurrent._BaseSKMC.Reset();
+        InIskmProxy._BaseSKMC.Reset();
     }
 
     // ---- DoHandleRequest handlers ----
@@ -656,7 +656,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& InParams,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& InCustomData,
@@ -669,7 +669,7 @@ namespace ck
             return;
         }
 
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in PlayAnimation handler — Setup did not complete or the SKMC was released early"),
             InHandle)
@@ -713,14 +713,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_StopAnimation& /*InRequest*/) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in StopAnimation handler"),
             InHandle)
@@ -742,14 +742,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetPlayRate& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetPlayRate handler"),
             InHandle)
@@ -762,14 +762,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetVisibility& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetVisibility handler"),
             InHandle)
@@ -778,7 +778,7 @@ namespace ck
         const auto IsVisible = InRequest.Get_IsVisible();
         SKMC->SetVisibility(IsVisible);
 
-        for (const auto& WeakChild : InCurrent.Get_SubmeshSKMCs())
+        for (const auto& WeakChild : InIskmProxy.Get_SubmeshSKMCs())
         {
             if (auto* Child = WeakChild.Get(); ck::IsValid(Child))
             {
@@ -792,7 +792,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& InCustomData,
@@ -806,14 +806,14 @@ namespace ck
 
         InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
 
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetCustomDataFloat handler"),
             InHandle)
         { return; }
 
         SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
-        for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+        for (auto& WeakChild : InIskmProxy._SubmeshSKMCs)
         {
             if (auto* Child = WeakChild.Get())
             {
@@ -827,14 +827,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetMaterialOverride& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetMaterialOverride handler"),
             InHandle)
@@ -868,14 +868,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_ClearMaterialOverrides& /*InRequest*/) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in ClearMaterialOverrides handler"),
             InHandle)
@@ -898,14 +898,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetMorphTarget& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetMorphTarget handler"),
             InHandle)
@@ -929,14 +929,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_ClearMorphTargets& /*InRequest*/) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in ClearMorphTargets handler"),
             InHandle)
@@ -958,14 +958,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& InCustomData,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetSkeletalMesh& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetSkeletalMesh handler"),
             InHandle)
@@ -1015,7 +1015,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& InParams,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
@@ -1035,16 +1035,16 @@ namespace ck
         { return; }
 
         // Intentional dedup: re-attaching an already-attached submesh is a no-op.
-        if (InCurrent._AttachedSubmeshIndices.Contains(Idx))
+        if (InIskmProxy._AttachedSubmeshIndices.Contains(Idx))
         { return; }
         // The cap is the Plan-2 GPU custom-data bitmask (mesh presence packs into 4 bits = 15 slots);
         // game code that exceeds it today would silently break under the batched path.
-        CK_ENSURE_IF_NOT(InCurrent._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
+        CK_ENSURE_IF_NOT(InIskmProxy._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
             TEXT("IskmProxy [{}]: cannot attach submesh [{}] — already at MaxSubmeshPerInstance ({})"),
             InHandle, InRequest.Get_SubmeshName(), RendererData->Get_MaxSubmeshPerInstance())
         { return; }
 
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in AttachSubmesh handler"),
             InHandle)
@@ -1081,8 +1081,8 @@ namespace ck
                 Child->SetMaterial(MatIdx, Mat);
             }
         }
-        InCurrent._SubmeshSKMCs.Add(Child);
-        InCurrent._AttachedSubmeshIndices.Add(Idx);
+        InIskmProxy._SubmeshSKMCs.Add(Child);
+        InIskmProxy._AttachedSubmeshIndices.Add(Idx);
     }
 
     auto
@@ -1090,7 +1090,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& InParams,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
@@ -1110,20 +1110,20 @@ namespace ck
         { return; }
 
         // Intentional silent return: detaching an unattached submesh is a no-op.
-        const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
+        const auto Slot = InIskmProxy._AttachedSubmeshIndices.IndexOfByKey(Idx);
         if (Slot == INDEX_NONE)
         { return; }
         // Tripwire on the parallel-array invariant maintained by this file's Add/RemoveAt/Reset pairs.
-        CK_ENSURE_IF_NOT(InCurrent._SubmeshSKMCs.IsValidIndex(Slot),
+        CK_ENSURE_IF_NOT(InIskmProxy._SubmeshSKMCs.IsValidIndex(Slot),
             TEXT("IskmProxy [{}]: _AttachedSubmeshIndices/_SubmeshSKMCs desynced (slot [{}] vs [{}] SKMCs)"),
-            InHandle, Slot, InCurrent._SubmeshSKMCs.Num())
+            InHandle, Slot, InIskmProxy._SubmeshSKMCs.Num())
         { return; }
-        if (auto* Child = InCurrent._SubmeshSKMCs[Slot].Get())
+        if (auto* Child = InIskmProxy._SubmeshSKMCs[Slot].Get())
         {
             Child->DestroyComponent();
         }
-        InCurrent._SubmeshSKMCs.RemoveAt(Slot);
-        InCurrent._AttachedSubmeshIndices.RemoveAt(Slot);
+        InIskmProxy._SubmeshSKMCs.RemoveAt(Slot);
+        InIskmProxy._AttachedSubmeshIndices.RemoveAt(Slot);
     }
 
     auto
@@ -1131,20 +1131,20 @@ namespace ck
         DoHandleRequest(
             HandleType& /*InHandle*/,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_DetachAllSubmeshes& /*InRequest*/) const -> void
     {
-        for (auto& Weak : InCurrent._SubmeshSKMCs)
+        for (auto& Weak : InIskmProxy._SubmeshSKMCs)
         {
             if (auto* C = Weak.Get())
             { C->DestroyComponent(); }
         }
-        InCurrent._SubmeshSKMCs.Reset();
-        InCurrent._AttachedSubmeshIndices.Reset();
+        InIskmProxy._SubmeshSKMCs.Reset();
+        InIskmProxy._AttachedSubmeshIndices.Reset();
     }
 
     auto
@@ -1152,14 +1152,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_SetAnimInstanceClass& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in SetAnimInstanceClass handler"),
             InHandle)
@@ -1187,14 +1187,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_PlayMontage& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in PlayMontage handler"),
             InHandle)
@@ -1247,14 +1247,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& /*InPoseSource*/,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_StopMontage& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in StopMontage handler"),
             InHandle)
@@ -1285,14 +1285,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& InAnimState,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_BeginRagdoll& InRequest) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in BeginRagdoll handler"),
             InHandle)
@@ -1332,14 +1332,14 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IskmProxy_Params& /*InParams*/,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_AnimState& /*InAnimState*/,
             FFragment_IskmProxy_PoseSource& InPoseSource,
             FFragment_IskmProxy_CustomData& /*InCustomData*/,
             const FFragment_Transform& InTransform,
             const FCk_Request_IskmProxy_EndRagdoll& /*InRequest*/) const -> void
     {
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        auto* SKMC = InIskmProxy.Get_BaseSKMC().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(SKMC),
             TEXT("IskmProxy [{}]: BaseSKMC missing in EndRagdoll handler"),
             InHandle)
@@ -1367,7 +1367,7 @@ namespace ck
         auto NewTransform = InHandle.Has<FFragment_Transform_RootComponent>()
             ? ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle)
             : InTransform.Get_Transform();
-        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
+        NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InIskmProxy.Get_LocalLocationOffset()));
         SKMC->SetWorldTransform(NewTransform);
 
         SKMC->RefreshBoneTransforms();

@@ -18,7 +18,7 @@ namespace ck
         FProcessor_FogOfWar_Setup,
         FCk_Handle_FogOfWar,
         ck::TReadOnly<FFragment_FogOfWar_Params>,
-        ck::TReadWrite<FFragment_FogOfWar_Current>,
+        ck::TReadWrite<FFragment_FogOfWar>,
         FTag_FogOfWar_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -36,7 +36,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InFogEntity,
             const FFragment_FogOfWar_Params& InParams,
-            FFragment_FogOfWar_Current& InCurrent)
+            FFragment_FogOfWar& InFogOfWar)
             -> void;
     };
 
@@ -44,7 +44,7 @@ namespace ck
 
     class CKMINIMAP_API FProcessor_FogOfWar_HandleRequests
         : public ck_exp::TProcessor<FProcessor_FogOfWar_HandleRequests, FCk_Handle_FogOfWar,
-            ck::TReadWrite<FFragment_FogOfWar_Current>, ck::TReadOnly<FFragment_FogOfWar_Params>, ck::TReadWrite<FFragment_FogOfWar_Requests>,
+            ck::TReadWrite<FFragment_FogOfWar>, ck::TReadOnly<FFragment_FogOfWar_Params>, ck::TReadWrite<FFragment_FogOfWar_Requests>,
             TExclude<FTag_FogOfWar_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -61,7 +61,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             FFragment_FogOfWar_Requests& InRequests) const -> void;
 
@@ -71,35 +71,35 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_AddRevealer& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RemoveRevealer& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RevealLocation& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RevealAll& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_Reset& InRequest) -> void;
 
@@ -107,7 +107,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_SetExplored& InRequest) -> bool;
     };
@@ -141,7 +141,7 @@ namespace ck
         FProcessor_FogOfWar_Update,
         FCk_Handle_FogOfWar,
         ck::TReadOnly<FFragment_FogOfWar_Params>,
-        ck::TReadWrite<FFragment_FogOfWar_Current>,
+        ck::TReadWrite<FFragment_FogOfWar>,
         TExclude<FTag_FogOfWar_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -159,7 +159,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InFogEntity,
             const FFragment_FogOfWar_Params& InParams,
-            FFragment_FogOfWar_Current& InCurrent) const -> void;
+            FFragment_FogOfWar& InFogOfWar) const -> void;
     };
 }
 

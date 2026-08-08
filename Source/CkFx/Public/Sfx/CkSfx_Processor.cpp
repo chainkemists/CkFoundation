@@ -36,12 +36,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent)
+            FFragment_Sfx& InSfx)
             -> void
     {
         const auto& Params = InParams;
 
-        if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+        if (NOT InSfx._LoadedAssets.Get_IsRequested())
         {
             // An unset cue is a legal composition (pinned by Ck_AutoTest_Sfx_Add_CreatesValidHandle):
             // the sfx composes inert and the PLAY path is where an unset/unresolved cue gets loud.
@@ -60,24 +60,24 @@ namespace ck
             if (ck::IsValid(Params.Get_ConcurrencySettings()))
             { PathsToLoad.Emplace(Params.Get_ConcurrencySettings().ToSoftObjectPath()); }
 
-            InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            InSfx._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("Sfx.Setup"), PathsToLoad);
         }
 
-        if (NOT InCurrent._LoadedAssets.Get_IsReady())
+        if (NOT InSfx._LoadedAssets.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_Sfx_PendingAssetLoad>();
             return;
         }
 
         const auto ResolvedSoundCue = Cast<USoundBase>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
-        const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSoundCue);
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
+        const auto AssetsAreLoaded = NOT InSfx._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSoundCue);
 
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup Sfx [{}] - loading its SoundCue [{}] (or a settings asset) through CkResourceLoader failed"),
             InHandle, Params.Get_SoundCue().ToSoftObjectPath())
-        { InCurrent._LoadedAssets = {}; }
+        { InSfx._LoadedAssets = {}; }
 
         InHandle.Try_Remove<FTag_Sfx_PendingAssetLoad>();
         InHandle.Remove<MarkedDirtyBy>();
@@ -91,7 +91,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             FFragment_Sfx_Requests& InRequestsComp) const
         -> void
     {
@@ -104,7 +104,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            Result = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+            Result = DoHandleRequest(InHandle, InParams, InSfx, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())
@@ -118,7 +118,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             const FCk_Request_Sfx_PlayAttached& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -127,7 +127,7 @@ namespace ck
         const auto& Params = InParams;
 
         const auto ResolvedSoundCue = Cast<USoundBase>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
         const auto SoundCueIsResolved = ck::IsValid(ResolvedSoundCue);
 
         CK_ENSURE_IF_NOT(SoundCueIsResolved, TEXT("Sfx [{}] cannot play - its SoundCue is not resolved "
@@ -148,9 +148,9 @@ namespace ck
                                         : Params.Get_DefaultAudioSettings();
 
         const auto ResolvedAttenuation = Cast<USoundAttenuation>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_AttenuationSettings().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_AttenuationSettings().ToSoftObjectPath()));
         const auto ResolvedConcurrency = Cast<USoundConcurrency>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ConcurrencySettings().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_ConcurrencySettings().ToSoftObjectPath()));
 
         constexpr auto StartTime = 0.0f;
         UGameplayStatics::SpawnSoundAttached
@@ -179,7 +179,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             const FCk_Request_Sfx_PlayAtLocation& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -188,7 +188,7 @@ namespace ck
         const auto& Params = InParams;
 
         const auto ResolvedSoundCue = Cast<USoundBase>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
         const auto SoundCueIsResolved = ck::IsValid(ResolvedSoundCue);
 
         CK_ENSURE_IF_NOT(SoundCueIsResolved, TEXT("Sfx [{}] cannot play - its SoundCue is not resolved "
@@ -208,9 +208,9 @@ namespace ck
                                         : Params.Get_DefaultAudioSettings();
 
         const auto ResolvedAttenuation = Cast<USoundAttenuation>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_AttenuationSettings().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_AttenuationSettings().ToSoftObjectPath()));
         const auto ResolvedConcurrency = Cast<USoundConcurrency>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ConcurrencySettings().ToSoftObjectPath()));
+            InSfx._LoadedAssets.Get_ResolvedObject(Params.Get_ConcurrencySettings().ToSoftObjectPath()));
 
         constexpr auto StartTime = 0.0f;
         UGameplayStatics::SpawnSoundAtLocation
@@ -251,11 +251,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sfx_Current& InCurrent)
+            FFragment_Sfx& InSfx)
             -> void
     {
         // Drops the streamable handle — the sfx's assets become collectible again
-        InCurrent._LoadedAssets = {};
+        InSfx._LoadedAssets = {};
     }
 }
 

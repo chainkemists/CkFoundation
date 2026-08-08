@@ -13,7 +13,7 @@ namespace ck
             FProcessor_ObjectiveOwner_Setup,
             FCk_Handle_ObjectiveOwner,
             TReadOnly<FFragment_ObjectiveOwner_Params>,
-            TReadWrite<FFragment_ObjectiveOwner_Current>,
+            TReadWrite<FFragment_ObjectiveOwner>,
             FTag_ObjectiveOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -30,7 +30,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ObjectiveOwner_Params& InParams,
-            FFragment_ObjectiveOwner_Current& InCurrent) -> void;
+            FFragment_ObjectiveOwner& InObjectiveOwner) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_ObjectiveOwner_HandleRequests : public ck_exp::TProcessor<
             FProcessor_ObjectiveOwner_HandleRequests,
             FCk_Handle_ObjectiveOwner,
-            TReadWrite<FFragment_ObjectiveOwner_Current>,
+            TReadWrite<FFragment_ObjectiveOwner>,
             TReadOnly<FFragment_ObjectiveOwner_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -56,20 +56,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FFragment_ObjectiveOwner_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FCk_Request_ObjectiveOwner_AddObjective& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest) -> bool;
     };
 

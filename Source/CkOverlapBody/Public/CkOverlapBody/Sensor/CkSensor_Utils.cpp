@@ -52,7 +52,7 @@ auto
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
     NewSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
-    NewSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
+    NewSensorEntity.Add<ck::FFragment_Sensor>(ParamsToUse.Get_StartingState());
     NewSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
 
     UCk_Utils_GameplayLabel_UE::Add(NewSensorEntity, SensorName);
@@ -80,7 +80,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sensor_UE, FCk_Handle_Sensor, ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sensor_UE, FCk_Handle_Sensor, ck::FFragment_Sensor_Params, ck::FFragment_Sensor);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -287,7 +287,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> ECk_EnableDisable
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_EnableDisable();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_EnableDisable();
 }
 
 auto
@@ -296,7 +296,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_Sensor_MarkerOverlaps
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_CurrentMarkerOverlaps();
 }
 
 auto
@@ -305,7 +305,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> int32
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps().Get_Overlaps().Num();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_CurrentMarkerOverlaps().Get_Overlaps().Num();
 }
 
 auto
@@ -314,7 +314,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> int32
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps().Get_Overlaps().Num();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_CurrentNonMarkerOverlaps().Get_Overlaps().Num();
 }
 
 auto
@@ -416,7 +416,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_Sensor_NonMarkerOverlaps
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_CurrentNonMarkerOverlaps();
 }
 
 auto
@@ -434,7 +434,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> UShapeComponent*
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_Sensor().Get();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_Sensor().Get();
 }
 
 auto
@@ -443,7 +443,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_AttachedEntityAndActor();
+    return InSensorEntity.Get<ck::FFragment_Sensor>().Get_AttachedEntityAndActor();
 }
 
 auto
@@ -660,7 +660,7 @@ auto
     -> void
 {
     const auto& Params = InHandle.Get<ck::FFragment_Sensor_Params>();
-    const auto& Current = InHandle.Get<ck::FFragment_Sensor_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_Sensor>();
 
     UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, Current, Params);
 }

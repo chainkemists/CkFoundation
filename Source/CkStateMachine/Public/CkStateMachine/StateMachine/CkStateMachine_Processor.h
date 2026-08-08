@@ -54,7 +54,7 @@ namespace ck
         FProcessor_Sm_Setup,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         FTag_Sm_RequiresSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -73,7 +73,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent) -> void;
+            FFragment_Sm& InSm) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ namespace ck
         FProcessor_Sm_HandleRequests,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         TReadOnly<FFragment_Sm_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -106,7 +106,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FFragment_Sm_Requests& InRequests) const -> void;
 
     private:
@@ -117,49 +117,49 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Start& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_Transition& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             const FCk_Request_Sm_AddOverrideState& InRequest) -> ECk_Request_OperationResult;
 
     private:
         static auto
         DoEnterState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             TSubclassOf<UCk_SmState_EntityScript> InStateClass) -> void;
 
         // InScheduleDestroy=false runs the exit cascade but leaves the previous state entity alive;
@@ -167,7 +167,7 @@ namespace ck
         static auto
         DoExitCurrentState(
             HandleType InSmHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             bool InScheduleDestroy = true) -> void;
     };
 
@@ -212,7 +212,7 @@ namespace ck
         FProcessor_Sm_FirstSyncInitialState,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         FTag_Sm_NeedsInitialStateEntry,
         TExclude<FFragment_Sm_PendingTransition>,
         TExclude<FTag_Sm_DeterminismFault>,
@@ -236,7 +236,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent) const -> void;
+            FFragment_Sm& InSm) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -247,7 +247,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_FlushPendingReplication_Drain : public ck_exp::TProcessor<
         FProcessor_Sm_FlushPendingReplication_Drain,
         FCk_Handle_StateMachine,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         TReadWrite<FFragment_Sm_PendingReplicationEntries>,
         TExclude<FTag_Sm_DeterminismFault>,
         TExclude<FTag_Sm_RequiresSetup>,
@@ -263,13 +263,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        // FFragment_Sm_Current is TReadWrite because MirrorRunStatus mutates it when applying the
+        // FFragment_Sm is TReadWrite because MirrorRunStatus mutates it when applying the
         // stashed run-status after events drain.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_PendingReplicationEntries& InStash) -> void;
     };
 
@@ -282,7 +282,7 @@ namespace ck
         FProcessor_Sm_ApplyReplicatedHistory,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         TReadWrite<FFragment_Sm_ReplayQueue>,
         TExclude<FFragment_Sm_PendingTransition>,
         TExclude<FTag_Sm_DeterminismFault>,
@@ -303,7 +303,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_ReplayQueue& InQueue) -> void;
     };
 
@@ -315,7 +315,7 @@ namespace ck
         FProcessor_Sm_CommitPendingTransition,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         TReadWrite<FFragment_Sm_PendingTransition>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -335,7 +335,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_PendingTransition& InPending) -> void;
     };
 
@@ -350,7 +350,7 @@ namespace ck
         FProcessor_Sm_HydrationResume,
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         TReadWrite<FFragment_Sm_HydrationResume>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -367,7 +367,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
-            FFragment_Sm_Current& InCurrent,
+            FFragment_Sm& InSm,
             FFragment_Sm_HydrationResume& InResume) const -> void;
     };
 
@@ -412,7 +412,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_EndPlay : public ck_exp::TProcessor<
         FProcessor_Sm_EndPlay,
         FCk_Handle_StateMachine,
-        TReadWrite<FFragment_Sm_Current>,
+        TReadWrite<FFragment_Sm>,
         CK_IF_END_PLAY>
     {
     public:
@@ -426,7 +426,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sm_Current& InCurrent) -> void;
+            FFragment_Sm& InSm) -> void;
     };
 }
 

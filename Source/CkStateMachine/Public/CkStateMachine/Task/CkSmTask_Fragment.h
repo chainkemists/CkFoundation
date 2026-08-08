@@ -49,10 +49,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSTATEMACHINE_API FFragment_SmTask_Current
+    struct CKSTATEMACHINE_API FFragment_SmTask
     {
     public:
-        CK_GENERATED_BODY(FFragment_SmTask_Current);
+        CK_GENERATED_BODY(FFragment_SmTask);
 
         friend class FProcessor_SmTask_Tick;
         friend class FProcessor_SmTask_FireFinishedSignal;

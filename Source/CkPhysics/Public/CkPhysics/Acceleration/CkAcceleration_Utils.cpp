@@ -21,7 +21,7 @@ auto
     -> FCk_Handle_Acceleration
 {
     InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
-    InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
+    InHandle.Add<ck::FFragment_Acceleration>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();
 
     // World coordinates are finished by the seed above; LOCAL ones still owe a rotation, and the Transform to
@@ -32,7 +32,7 @@ auto
 
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        // Seed with REAL data at construction (FFragment_Acceleration_Current was composed above with the
+        // Seed with REAL data at construction (FFragment_Acceleration was composed above with the
         // starting acceleration, so Produce reads it). Consume the registered Produce — one projection for wire + save.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Acceleration>(InHandle);
         if (Produced.IsSet())
@@ -59,7 +59,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Acceleration_UE,
-    FCk_Handle_Acceleration, ck::FFragment_Acceleration_Params, ck::FFragment_Acceleration_Current);
+    FCk_Handle_Acceleration, ck::FFragment_Acceleration_Params, ck::FFragment_Acceleration);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ auto
         const FCk_Handle_Acceleration& InHandle)
     -> FVector
 {
-    return InHandle.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration();
+    return InHandle.Get<ck::FFragment_Acceleration>().Get_CurrentAcceleration();
 }
 
 auto
@@ -80,7 +80,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.Get<ck::FFragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
+    InHandle.Get<ck::FFragment_Acceleration>()._CurrentAcceleration = InNewAcceleration;
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);

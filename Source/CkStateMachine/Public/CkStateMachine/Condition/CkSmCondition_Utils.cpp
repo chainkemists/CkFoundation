@@ -23,7 +23,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_SmCondition_Current>();
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_SmCondition>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ auto
         return {};
     }
 
-    ConditionEntity.Add<ck::FFragment_SmCondition_Current>();
+    ConditionEntity.Add<ck::FFragment_SmCondition>();
     ConditionEntity.Add<ck::FFragment_SmCondition_Params>(InConditionClass);
 
     auto ConditionEntityTyped = CastChecked(ConditionEntity);
@@ -152,7 +152,7 @@ auto
         FCk_Handle_SmCondition& InCondition)
     -> FCk_Handle_SmCondition
 {
-    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(ECk_SmConditionResult::Undetermined);
+    InCondition.Get<ck::FFragment_SmCondition>().Set_Result(ECk_SmConditionResult::Undetermined);
     InCondition.AddOrGet<ck::FTag_SmCondition_Evaluating>();
 
     return InCondition;
@@ -167,7 +167,7 @@ auto
         ECk_SmConditionResult InResult)
     -> FCk_Handle_SmCondition
 {
-    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(InResult);
+    InCondition.Get<ck::FFragment_SmCondition>().Set_Result(InResult);
 
     // Wake the parent transition so the transition processor re-evaluates this pump.
     // AddOrGet bumps the dirty-marker version even when the tag already exists.
@@ -188,7 +188,7 @@ auto
     -> FCk_Handle_SmCondition
 {
     // Direct write only — no parent-transition wake-up. See header for usage rules.
-    InCondition.Get<ck::FFragment_SmCondition_Current>().Set_Result(InResult);
+    InCondition.Get<ck::FFragment_SmCondition>().Set_Result(InResult);
 
     return InCondition;
 }
@@ -201,7 +201,7 @@ auto
         const FCk_Handle_SmCondition& InCondition)
     -> ECk_SmConditionResult
 {
-    return InCondition.Get<ck::FFragment_SmCondition_Current>().Get_Result();
+    return InCondition.Get<ck::FFragment_SmCondition>().Get_Result();
 }
 
 auto

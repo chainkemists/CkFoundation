@@ -40,7 +40,7 @@ auto
         InParams.Get_LibraryAttenuationSettings(),
         InParams.Get_LibraryConcurrencySettings(),
         InParams.Get_LibrarySoundClassSettings());
-    AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
+    AudioTrack.Add<ck::FFragment_AudioTrack>();
     AudioTrack.Add<ck::FFragment_AudioTrack_ComponentBindings>();
     AudioTrack.Add<ck::FFragment_AudioTrack_Debug>();
     AudioTrack.Add<ck::FTag_AudioTrack_NeedsSetup>();
@@ -58,7 +58,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AudioTrack_UE, FCk_Handle_AudioTrack,
-    ck::FFragment_AudioTrack_Params, ck::FFragment_AudioTrack_Current)
+    ck::FFragment_AudioTrack_Params, ck::FFragment_AudioTrack)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ auto
         const FCk_Handle_AudioTrack& InTrack)
         -> ECk_AudioTrack_State
 {
-    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_State();
+    return InTrack.Get<ck::FFragment_AudioTrack>().Get_State();
 }
 
 auto
@@ -95,7 +95,7 @@ auto
         const FCk_Handle_AudioTrack& InTrack)
         -> bool
 {
-    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_IsVirtualized();
+    return InTrack.Get<ck::FFragment_AudioTrack>().Get_IsVirtualized();
 }
 
 auto
@@ -104,7 +104,7 @@ auto
         const FCk_Handle_AudioTrack& InTrack)
         -> float
 {
-    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_CurrentVolume();
+    return InTrack.Get<ck::FFragment_AudioTrack>().Get_CurrentVolume();
 }
 
 auto
@@ -131,7 +131,7 @@ auto
         const FCk_Handle_AudioTrack& InTrack)
         -> float
 {
-    return InTrack.Get<ck::FFragment_AudioTrack_Current>().Get_PlaybackPercent();
+    return InTrack.Get<ck::FFragment_AudioTrack>().Get_PlaybackPercent();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
