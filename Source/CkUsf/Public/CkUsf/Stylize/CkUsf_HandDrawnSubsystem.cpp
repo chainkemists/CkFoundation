@@ -290,32 +290,31 @@ auto
     DoGet_EffectiveSettings() const
     -> FCk_Usf_HandDrawn_Params
 {
+    using namespace ck::usf::stylize;
+
     auto Effective = _Settings;
 
-    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_HandDrawn();
-    if (EnabledOverride >= 0)
-    {
-        Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
-    }
+    if (const auto Enabled = Get_FlagOverride(Get_EnabledOverride_HandDrawn()))
+    { Effective.Set_Enabled(*Enabled); }
 
-    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_HandDrawn();
-    if (DebugOverride >= 0)
-    {
-        // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
-        // one-past-the-end would pass here and then fall through the shader's if-chain to the
-        // final image — a debug mode that silently shows no debug view.
-        const auto* DebugEnum = StaticEnum<ECk_Usf_HandDrawn_DebugMode>();
-        const auto DebugOverrideIsValid =
-            DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
+    if (const auto Debug = Get_EnumOverride<ECk_Usf_HandDrawn_DebugMode>(
+            Get_DebugOverride_HandDrawn(), TEXT("ck.Usf.HandDrawn.Debug")))
+    { Effective.Set_DebugMode(*Debug); }
 
-        CK_ENSURE_IF_NOT(DebugOverrideIsValid,
-            TEXT("ck.Usf.HandDrawn.Debug is [{}], which is not an ECk_Usf_HandDrawn_DebugMode value; "
-                 "the setting's own debug mode is used instead"), DebugOverride)
-        {}
+    if (const auto StyleStrength = Get_ScalarOverride(Get_StrengthOverride_HandDrawn()))
+    { Effective.Set_StyleStrength(*StyleStrength); }
 
-        if (DebugOverrideIsValid)
-        { Effective.Set_DebugMode(static_cast<ECk_Usf_HandDrawn_DebugMode>(DebugOverride)); }
-    }
+    if (const auto Ink = Get_FlagOverride(Get_InkOverride_HandDrawn()))
+    { Effective.Set_EnableInk(*Ink); }
+
+    if (const auto InkThickness = Get_ScalarOverride(Get_InkThicknessOverride_HandDrawn()))
+    { Effective.Set_InkThickness(*InkThickness); }
+
+    if (const auto Strokes = Get_FlagOverride(Get_StrokesOverride_HandDrawn()))
+    { Effective.Set_EnableShadowStrokes(*Strokes); }
+
+    if (const auto Paper = Get_FlagOverride(Get_PaperOverride_HandDrawn()))
+    { Effective.Set_EnablePaper(*Paper); }
 
     return Effective;
 }

@@ -10,7 +10,7 @@
 //   2. colour shaping  — saturation, contrast, optional monochrome collapse
 //   3. encode          — optional linearize + PreGamma, so the bands land where the author wants them
 //   4. dither          — one threshold PER BLOCK (not per pixel), offsetting by up to one step
-//   5. quantize        — N steps per channel, or nearest entry of a custom palette
+//   5. quantize        — N steps per channel, N steps on the luminance alone, or nearest palette entry
 //   6. decode + weight — undo the encode, lerp against the untouched original
 //
 // Only SceneColor and CustomStencil are read; the wired depth and normal are the historical default
@@ -198,12 +198,22 @@ FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
     float AnimPhase = Animate > 0.5 ? floor(In.Time / max(AnimationPeriod, 1e-4)) : 0.0;
     float Threshold = CkUsf_Stylize_DitherThreshold((int)(DitherPattern + 0.5), BlockIndex, AnimPhase);
 
-    bool UsesCustomPalette = (PaletteMode > 0.5) && !IsMonochrome;
+    // ECk_Usf_PaletteMode: 0 ColorSteps, 1 CustomPalette, 2 LuminanceSteps. Compared exactly rather than
+    // thresholded, so a mode added at the end of the enum cannot silently fall into an earlier branch.
+    // Monochrome outranks both non-default modes: it has already thrown the hue away, leaving nothing for
+    // the palette search to match against or for the luminance path to preserve.
+    int Mode = (int)(PaletteMode + 0.5);
+    bool UsesCustomPalette  = (Mode == 1) && !IsMonochrome;
+    bool UsesLuminanceSteps = (Mode == 2) && !IsMonochrome;
+
     float Steps = max(ColorSteps, 2.0);
     float StepSize = UsesCustomPalette
         ? 1.0 / max(PaletteCount, 1.0)
         : 1.0 / (Steps - 1.0);
 
+    // The same offset on all three channels moves LUMINANCE by exactly that offset, because
+    // CkUsf_Stylize_Luminance's weights sum to 1 — so the luminance path gets a real pre-quantize dither
+    // from this, not an approximation of one, and its step size is the ColorSteps ladder unchanged.
     float Offset = (Threshold - 0.5) * StepSize * max(DitherStrength, 0.0);
     float3 DitherOffset = float3(Offset, Offset, Offset);
 
@@ -229,6 +239,15 @@ FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
         int Count = (int)(PaletteCount + 0.5);
         Quantized = CkUsf_Stylize_NearestPaletteColor(saturate(Encoded + DitherOffset), Palette, Count);
         QuantizedNoDither = CkUsf_Stylize_NearestPaletteColor(Encoded, Palette, Count);
+    }
+    else if (UsesLuminanceSteps)
+    {
+        // Hue and saturation survive; only brightness is reduced. The operator rescales the colour by
+        // Banded/Luma, so a colour whose luminance rounds UP can leave a channel above 1 — Decode
+        // saturates it, which is the only place this mode can shift a hue and only at the ceiling.
+        // Per-channel posterization shifts hue at EVERY band edge — that is the trade this mode makes.
+        Quantized = CkUsf_Stylize_QuantizeLuminance(saturate(Encoded + DitherOffset), Steps);
+        QuantizedNoDither = CkUsf_Stylize_QuantizeLuminance(Encoded, Steps);
     }
     else
     {
