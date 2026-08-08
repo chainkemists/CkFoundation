@@ -14,7 +14,7 @@
 namespace ck
 {
     using FFragment_PathNetwork_Params = FCk_PathNetwork_Spec;
-    using FFragment_PathNetworkFollower_Params = FCk_PathNetworkFollower_Spec;
+    using FFragment_PathNetworkFollower_Tunables = FCk_PathNetworkFollower_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
