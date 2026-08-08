@@ -37,3 +37,15 @@ defensible thing to leave behind.
   (`Set_*` onto a retained Params) added three Utils-side ones and ~170 legitimate
   build-a-local-Spec-then-Add hits that are NOT defects. Predecessor campaign fixed CkMinimap
   (`9347e2062`), which is the template.
+
+## Scope (measured 2026-08-06 on the branch)
+
+- **24 Spec-wrapper fragments** (22 files; CkAcceleration and CkVelocity carry two each):
+  CkAnimation ×3, CkCamera ×2, CkChaos, CkEntityCollection, CkFx ×2, CkGraphics,
+  CkInteraction ×3, CkOverlapBody ×2, CkPhysics ×6, CkResolver ×3.
+- **72 `FFragment_*_Current` fragments** to retire (ruling 3). Full list reproducible with:
+  `Select-String -Pattern '^\s*struct\s+\w*API\s+FFragment_(\w+)_Current\b'` over `Source/**/*.h`.
+
+~96 conversions total, each needing per-field read analysis, consumer updates across
+processor/utils/debugger, and its own gate. This is a multi-session campaign; work it in gated
+batches and keep this ledger current, because the checkout is shared and context is lost easily.
