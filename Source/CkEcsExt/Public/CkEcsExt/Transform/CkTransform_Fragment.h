@@ -94,23 +94,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_TransformInterpolation_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_TransformInterpolation_Params);
-
-    public:
-        using ParamsType = FCk_TransformInterpolation_Spec;
-
-    private:
-        ParamsType _Data;
-
-    public:
-        CK_PROPERTY_GET(_Data);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_TransformInterpolation_Params, _Data);
-    };
+    using FFragment_TransformInterpolation_Params = FCk_TransformInterpolation_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

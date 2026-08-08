@@ -11,23 +11,7 @@
 
 namespace ck
 {
-    struct CKANIMATION_API FFragment_AnimAsset_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_AnimAsset_Params);
-
-    public:
-        using ParamsType = FCk_AnimAsset_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_AnimAsset_Params, _Params);
-    };
+    using FFragment_AnimAsset_Params = FCk_AnimAsset_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

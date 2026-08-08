@@ -193,7 +193,7 @@ auto
         const FCk_Handle_InteractTarget& InHandle)
     -> const FGameplayTag&
 {
-    return InHandle.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_InteractionChannel();
+    return InHandle.Get<ck::FFragment_InteractTarget_Params>().Get_InteractionChannel();
 }
 
 auto
@@ -237,7 +237,7 @@ auto
         return ECk_CanInteractWithResult::AlreadyExists;
     }
 
-    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
+    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>();
 
     if (Params.Get_ConcurrentInteractionsPolicy() == ECk_InteractionTarget_ConcurrentInteractionsPolicy::SingleInteraction &&
         UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
@@ -256,7 +256,7 @@ auto
         const FCk_Handle_InteractTarget& InTarget)
     -> ECk_InteractionTarget_ConcurrentInteractionsPolicy
 {
-    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_ConcurrentInteractionsPolicy();
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_ConcurrentInteractionsPolicy();
 }
 
 auto
@@ -265,7 +265,7 @@ auto
         const FCk_Handle_InteractTarget& InTarget)
     -> ECk_Interaction_CompletionPolicy
 {
-    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_CompletionPolicy();
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_CompletionPolicy();
 }
 
 auto
@@ -274,7 +274,7 @@ auto
         const FCk_Handle_InteractTarget& InTarget)
     -> FCk_Time
 {
-    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_InteractionDuration();
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_InteractionDuration();
 }
 
 auto
@@ -354,7 +354,7 @@ auto
     if (ck::Is_NOT_Valid(InTarget))
     { return true; }
 
-    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
+    const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>();
 
     if (const auto& NativeDelegate = Params.Get_CustomCanInteractWith();
         NativeDelegate.IsBound())

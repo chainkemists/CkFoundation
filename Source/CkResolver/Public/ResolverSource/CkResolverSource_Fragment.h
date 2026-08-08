@@ -18,23 +18,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKRESOLVER_API FFragment_ResolverSource_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_ResolverSource_Params);
-
-    public:
-        using ParamsType = FCk_ResolverSource_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ResolverSource_Params, _Params);
-    };
+    using FFragment_ResolverSource_Params = FCk_ResolverSource_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -73,7 +73,7 @@ namespace ck
         };
 
         const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
-        InCurrent._CurrentAcceleration = Rotation.RotateVector(InParams.Get_Params().Get_StartingAcceleration());
+        InCurrent._CurrentAcceleration = Rotation.RotateVector(InParams.Get_StartingAcceleration());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ namespace ck
             const FFragment_BulkAccelerationModifier_Params& InParams) const
         -> void
     {
-        const auto& TargetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetAccelerationChannels = InParams.Get_TargetChannels();
 
         InHandle.View<FFragment_RecordOfAccelerationChannels>().ForEach(
         [&](FCk_Entity InEntity, const FFragment_RecordOfAccelerationChannels& InAccelerationChannels)
@@ -156,7 +156,7 @@ namespace ck
         InHandle.View<FFragment_BulkAccelerationModifier_Params, FTag_BulkAccelerationModifier_GlobalScope>().ForEach(
         [&](FCk_Entity InModifierEntity, const FFragment_BulkAccelerationModifier_Params& InMultiTargetAccelerationModifierParams)
         {
-            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetAccelerationModifierParams.Get_Params().Get_TargetChannels()))
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetAccelerationModifierParams.Get_TargetChannels()))
             { return; }
 
             auto ModifierHandle = MakeHandle(InModifierEntity, InHandle);
@@ -179,7 +179,7 @@ namespace ck
             FFragment_BulkAccelerationModifier_Requests& InRequests) const
         -> void
     {
-        const auto& TargetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetAccelerationChannels = InParams.Get_TargetChannels();
 
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
         [&](const auto& InRequest)
@@ -225,7 +225,7 @@ namespace ck
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
             FCk_AccelerationModifier_Spec
             {
-                InParams.Get_Params().Get_AccelerationParams()
+                InParams.Get_AccelerationParams()
             }
         );
     }

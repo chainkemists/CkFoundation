@@ -21,23 +21,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINTERACTION_API FFragment_Interaction_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Interaction_Params);
-
-    public:
-        using ParamsType = FCk_Interaction_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Interaction_Params, _Params);
-    };
+    using FFragment_Interaction_Params = FCk_Interaction_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
