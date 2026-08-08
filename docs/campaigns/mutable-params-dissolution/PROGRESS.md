@@ -190,3 +190,47 @@ anchor; if so the residue may be empty, and the anchor should move to the featur
   `-RedirectStandardOutput` pointed there holds such a lock, so the toolbox detects the launcher's
   own redirect file and waits forever on a nonexistent editor. Redirect to the scratchpad. Verify a
   claimed editor two ways before overriding — no `UnrealEditor` process AND `CkPlugins.log` free.
+
+## Log (cont. 4) — 2026-08-08: rebased onto dev, campaign objective met
+
+- **ZERO mutable `_Params` fragments remain framework-wide**, CkUI included. The objective of this
+  campaign is discharged; what is left is naming polish, listed at the bottom.
+
+- **Rebasing onto a moving `dev` REINTRODUCES what a rename campaign removed.** `origin/dev` added
+  files after this branch forked, so the rename commits never saw them — the rebase landed 47
+  dangling `FFragment_{IsmProxy,IskmProxy,OwningActor,Sm}_Current` refs and 5 dangling
+  `FCk_Fragment_{IsmProxy,IskmProxy}_ParamsData` refs, all naming types that no longer exist. These
+  are compile breaks, not style drift. **After ANY rebase in a rename campaign, re-run every sweep
+  and audit before gating** — the branch being green before the rebase says nothing about after.
+
+- **A collision gate can block on the campaign's own work.** The `_Current` gate refused to proceed
+  because the bare names were "already declared" — by this branch's own rename. The `_Current` types
+  had ZERO declarations left, so the refs were dangling, not colliding. A true collision requires
+  BOTH names to still be declared; test that, or the gate stops exactly when it should act.
+
+- **The audit-regex lesson has a second, opposite failure mode.** Earlier the sweep pattern was too
+  NARROW (`[A-Za-z0-9]+` missing underscored feature segments). Here the audit pattern was too
+  LOOSE: `FCk_Fragment_[A-Za-z0-9_]+_ParamsData` with no trailing `\b` matches
+  `FCk_Fragment_ByteAttribute_ParamsDataCustomization` — a detail-customization CLASS name in
+  CkAttributeEditor that merely starts with the old type name. It reported 152 phantom "dangling
+  refs"; the true count was 0. Anchor both ends, and confirm a hit is a REFERENCE before believing it.
+
+- **Plain string replace is unsafe when one identifier contains another.** `InParams.Get_LocationInfo()`
+  contains `Params.Get_LocationInfo()`, so replacing the local `Params.` would have silently rewritten
+  the parameter too. The assertion (expected 1, found 2) is the only reason it was caught — use
+  `(?<!In)\bParams\.` and keep the counts.
+
+- **Module extraction + rename = modify/delete conflicts, but git's rename detection handles it.**
+  `dev` extracted WorldSpaceWidget out of CkUI into its own module. Both conflicts were the same
+  shape — `CKUI_API` -> `CKWORLDSPACEWIDGET_API` on one side, the struct rename on the other — and
+  the resolution is always "take both". Backups: `backup/prerebase-2026-08-08` in all four repos.
+
+- **CkWorldSpaceWidget split:** 4 of 9 Spec fields carry their own `Request_Set*` (`_LocationInfo`,
+  `_ScalingInfo`, `_FadingInfo`, `_OcclusionInfo`) -> `FFragment_WorldSpaceWidget_Tunables`; the
+  other 5 stay as the Params residue, which stops aliasing the Spec. `HandleRequests` takes Tunables
+  ReadWrite and NO Params — it never read one.
+
+- **Remaining, all cosmetic:** `FFragment_IsmRenderer_Params` (wraps a data-asset pointer, not a
+  Spec); `FCk_Fragment_*_ParamsDataCustomization` class names in CkAttributeEditor; and the
+  PathNetworkFollower handler's parameter still named `InParams` on a `_Tunables` type (the same file
+  hosts the network handler's real `InParams`, so it needs a per-function rename, not a file sweep).
