@@ -1,9 +1,9 @@
 using System;
 using UnrealBuildTool;
 
-public class CkUI : CkModuleRules
+public class CkWorldSpaceWidget : CkModuleRules
 {
-    public CkUI(ReadOnlyTargetRules Target) : base(Target)
+    public CkWorldSpaceWidget(ReadOnlyTargetRules Target) : base(Target)
     {
         PublicIncludePaths.AddRange(
             new string[] {
@@ -19,11 +19,10 @@ public class CkUI : CkModuleRules
             new string[]
             {
                 "Core",
-                "CommonUI",
-                "CommonInput",
                 "CkCore",
                 "CkEcs",
-                "CkGraphics",
+                "CkEcsExt",
+                "CkUI",
             }
             );
 
@@ -32,34 +31,18 @@ public class CkUI : CkModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "InputCore",
                 "Slate",
                 "SlateCore",
-                "GameplayTags",
-                "DeveloperSettings",
                 "UMG",
-                "CommonUI",
-                "CommonInput",
-                "Paper2D",
-                "RenderCore",
 
                 "CkThirdParty",
                 "CkCore",
                 "CkEcs",
+                "CkEcsExt",
                 "CkLog",
                 "CkSettings",
-                "CkGameSession"
+                "CkUI"
             }
             );
-
-        if (Target.bBuildEditor)
-        {
-            PrivateDependencyModuleNames.AddRange(
-                new []
-                {
-                    "UnrealEd"
-                }
-            );
-        }
     }
 }

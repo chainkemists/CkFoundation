@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment_Data.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Fragment_Data.h"
 
 #include "Components/WidgetComponent.h"
 
@@ -26,7 +26,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKUI_API FFragment_WorldSpaceWidget_Current
+    struct CKWORLDSPACEWIDGET_API FFragment_WorldSpaceWidget_Current
     {
     public:
         CK_GENERATED_BODY(FFragment_WorldSpaceWidget_Current);
@@ -65,7 +65,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKUI_API FFragment_WorldSpaceWidget_Requests
+    struct CKWORLDSPACEWIDGET_API FFragment_WorldSpaceWidget_Requests
     {
     public:
         CK_GENERATED_BODY(FFragment_WorldSpaceWidget_Requests);

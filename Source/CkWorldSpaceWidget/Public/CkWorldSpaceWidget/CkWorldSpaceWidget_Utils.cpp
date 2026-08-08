@@ -9,9 +9,9 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
-#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
 
-#include "CkUI/CkUI_Stats.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Stats.h"
 
 #include "CollisionQueryParams.h"
 
@@ -29,8 +29,8 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WorldSpaceWidget_UE, FCk_Handl
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_CYCLE_STAT(TEXT("UI::WorldSpaceWidget OcclusionTrace"), STAT_CkUI_WSWidget_OcclusionTrace, STATGROUP_CkUI);
-DECLARE_DWORD_COUNTER_STAT(TEXT("UI Occlusion Traces"), STAT_CkUI_OcclusionTraces, STATGROUP_CkUI);
+DECLARE_CYCLE_STAT(TEXT("UI::WorldSpaceWidget OcclusionTrace"), STAT_CkWorldSpaceWidget_OcclusionTrace, STATGROUP_CkWorldSpaceWidget);
+DECLARE_DWORD_COUNTER_STAT(TEXT("UI Occlusion Traces"), STAT_CkWorldSpaceWidget_OcclusionTraces, STATGROUP_CkWorldSpaceWidget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -356,8 +356,8 @@ auto
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> bool
 {
-    SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_OcclusionTrace);
-    INC_DWORD_STAT(STAT_CkUI_OcclusionTraces);
+    SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_OcclusionTrace);
+    INC_DWORD_STAT(STAT_CkWorldSpaceWidget_OcclusionTraces);
 
     if (ck::Is_NOT_Valid(InWorldSpaceWidgetHandle))
     { return false; }

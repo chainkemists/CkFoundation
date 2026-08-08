@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment_Data.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -14,7 +14,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_WorldSpaceWidget"))
-class CKUI_API UCk_Utils_WorldSpaceWidget_UE : public UBlueprintFunctionLibrary
+class CKWORLDSPACEWIDGET_API UCk_Utils_WorldSpaceWidget_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

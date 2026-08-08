@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKUI_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget); };
+struct CKWORLDSPACEWIDGET_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_RenderMode);
 
 // Consumed only when RenderMode == WorldComponent.
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_WorldComponentInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_WorldComponentInfo
 {
     GENERATED_BODY()
 
@@ -133,7 +133,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Occlusion_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_OcclusionInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_OcclusionInfo
 {
     GENERATED_BODY()
 
@@ -159,7 +159,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_ScalingInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_ScalingInfo
 {
     GENERATED_BODY()
 
@@ -214,7 +214,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_Fading_Policy);
 // StartDistance, MinOpacity at/above EndDistance, lerped between. It is a multiplier on the
 // enabled-state, so it never fights occlusion or the off-screen hide (which force opacity to 0).
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_FadingInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_FadingInfo
 {
     GENERATED_BODY()
 
@@ -306,7 +306,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_OffsetDistanceScaling_Polic
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_ScreenOffsetScalingInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_ScreenOffsetScalingInfo
 {
     GENERATED_BODY()
 
@@ -360,7 +360,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WorldSpaceWidget_LocationInfo
+struct CKWORLDSPACEWIDGET_API FCk_WorldSpaceWidget_LocationInfo
 {
     GENERATED_BODY()
 
@@ -401,7 +401,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Fragment_WorldSpaceWidget_ParamsData
+struct CKWORLDSPACEWIDGET_API FCk_Fragment_WorldSpaceWidget_ParamsData
 {
     GENERATED_BODY()
 
@@ -464,7 +464,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WorldSpaceWidget_SetLocationInfo : public FCk_Request_Base
+struct CKWORLDSPACEWIDGET_API FCk_Request_WorldSpaceWidget_SetLocationInfo : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -486,7 +486,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WorldSpaceWidget_SetScalingInfo : public FCk_Request_Base
+struct CKWORLDSPACEWIDGET_API FCk_Request_WorldSpaceWidget_SetScalingInfo : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -508,7 +508,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WorldSpaceWidget_SetFadingInfo : public FCk_Request_Base
+struct CKWORLDSPACEWIDGET_API FCk_Request_WorldSpaceWidget_SetFadingInfo : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -530,7 +530,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WorldSpaceWidget_SetOcclusionInfo : public FCk_Request_Base
+struct CKWORLDSPACEWIDGET_API FCk_Request_WorldSpaceWidget_SetOcclusionInfo : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -552,7 +552,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKUI_API UCk_WorldSpaceWidget_Wrapper_UE : public UUserWidget
+class CKWORLDSPACEWIDGET_API UCk_WorldSpaceWidget_Wrapper_UE : public UUserWidget
 {
     GENERATED_BODY()
 
