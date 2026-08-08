@@ -1,7 +1,7 @@
 // Language=angelscript
 
 //============================================================================
-// SCREEN DITHER PRESETS — the six authored styles, applied via the subsystem:
+// SCREEN DITHER PRESETS — the seven authored styles, applied via the subsystem:
 //   UCkUsf_ScreenDitherSubsystem::Get_ScreenDitherSubsystem().Apply_Preset(CkUsf::DA_Dither_RetroPixel);
 //
 // Needs the ScreenDither master on disk (console: "Ck_Usf_GenerateLooks ScreenDither"
@@ -73,6 +73,22 @@ namespace CkUsf
         _Palette.Add(FLinearColor(0.61, 0.74, 0.06, 1.0));
         _Contrast            = 1.20;
         _Weight              = 1.0;
+    }
+
+    // Screen-printed poster: five tone steps, but on the LUMINANCE only, so every surface keeps its own
+    // hue and saturation and steps only in brightness — the way an ink separation behaves. Deliberately
+    // shares Balanced's pattern, scale and strength, so the only thing separating the two is what gets
+    // quantized: at this step count the per-channel path visibly walks a saturated surface's hue at each
+    // band edge, and this one does not. The demonstration preset for ECk_Usf_PaletteMode::LuminanceSteps.
+    asset DA_Dither_ScreenPrint of UCkUsf_ScreenDitherPreset
+    {
+        _Enabled        = ECk_EnableDisable::Enable;
+        _Pattern        = ECk_Usf_DitherPattern::Bayer4x4;
+        _PixelScale     = 1.0;
+        _DitherStrength = 1.0;
+        _PaletteMode    = ECk_Usf_PaletteMode::LuminanceSteps;
+        _ColorSteps     = 5;
+        _Weight         = 1.0;
     }
 
     // Film-grain read: the blue-noise threshold re-rolled 20x a second. Blue noise rather than white

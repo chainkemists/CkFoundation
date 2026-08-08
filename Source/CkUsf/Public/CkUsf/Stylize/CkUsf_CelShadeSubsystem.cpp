@@ -429,32 +429,36 @@ auto
     DoGet_EffectiveSettings() const
     -> FCk_Usf_CelShade_Params
 {
+    using namespace ck::usf::stylize;
+
     auto Effective = _Settings;
 
-    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_CelShade();
-    if (EnabledOverride >= 0)
-    {
-        Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
-    }
+    if (const auto Enabled = Get_FlagOverride(Get_EnabledOverride_CelShade()))
+    { Effective.Set_Enabled(*Enabled); }
 
-    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_CelShade();
-    if (DebugOverride >= 0)
-    {
-        // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
-        // one-past-the-end would pass here and then fall through the shader's if-chain to the
-        // final image — a debug mode that silently shows no debug view.
-        const auto* DebugEnum = StaticEnum<ECk_Usf_CelShade_DebugMode>();
-        const auto DebugOverrideIsValid =
-            DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
+    if (const auto Debug = Get_EnumOverride<ECk_Usf_CelShade_DebugMode>(
+            Get_DebugOverride_CelShade(), TEXT("ck.Usf.CelShade.Debug")))
+    { Effective.Set_DebugMode(*Debug); }
 
-        CK_ENSURE_IF_NOT(DebugOverrideIsValid,
-            TEXT("ck.Usf.CelShade.Debug is [{}], which is not an ECk_Usf_CelShade_DebugMode value; "
-                 "the setting's own debug mode is used instead"), DebugOverride)
-        {}
+    if (const auto Bands = Get_CountOverride(Get_BandsOverride_CelShade()))
+    { Effective.Set_Bands(*Bands); }
 
-        if (DebugOverrideIsValid)
-        { Effective.Set_DebugMode(static_cast<ECk_Usf_CelShade_DebugMode>(DebugOverride)); }
-    }
+    if (const auto Midpoint = Get_ScalarOverride(Get_MidpointOverride_CelShade()))
+    { Effective.Set_Midpoint(*Midpoint); }
+
+    if (const auto Pattern = Get_EnumOverride<ECk_Usf_CelPattern>(
+            Get_PatternOverride_CelShade(), TEXT("ck.Usf.CelShade.Pattern")))
+    { Effective.Set_Pattern(*Pattern); }
+
+    if (const auto PatternStrength = Get_ScalarOverride(Get_PatternStrengthOverride_CelShade()))
+    { Effective.Set_PatternStrength(*PatternStrength); }
+
+    if (const auto PatternSpace = Get_EnumOverride<ECk_Usf_CelPatternSpace>(
+            Get_PatternSpaceOverride_CelShade(), TEXT("ck.Usf.CelShade.PatternSpace")))
+    { Effective.Set_PatternSpace(*PatternSpace); }
+
+    if (const auto Outline = Get_FlagOverride(Get_OutlineOverride_CelShade()))
+    { Effective.Set_EnableOutline(*Outline); }
 
     return Effective;
 }

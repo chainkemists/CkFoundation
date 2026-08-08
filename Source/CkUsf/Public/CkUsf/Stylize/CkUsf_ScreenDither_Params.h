@@ -30,11 +30,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_DitherPattern);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What the quantizer reduces. The order is a CONTRACT with the branches in /CkUsf/Looks/ScreenDither.ush —
+// the subsystem writes the enum's integer value straight into the look's PaletteMode parameter, so a new
+// mode goes at the END and an existing one is never moved.
+//
+// LuminanceSteps is NOT a variant of Monochrome: monochrome throws the hue away and remaps N grey levels
+// through a two-colour tint ramp, so every pixel ends up on one line through colour space. LuminanceSteps
+// keeps each pixel's own hue and saturation and quantizes only how bright it is, which is the reduction a
+// paletted console did on a colour signal rather than on a green one.
 UENUM(BlueprintType)
 enum class ECk_Usf_PaletteMode : uint8
 {
-    ColorSteps,     // posterize each channel to _ColorSteps levels
-    CustomPalette   // snap to the nearest entry of _Palette (up to 8 colours)
+    ColorSteps,      // posterize each channel to _ColorSteps levels
+    CustomPalette,   // snap to the nearest entry of _Palette (up to 8 colours)
+    LuminanceSteps   // posterize the LUMINANCE to _ColorSteps levels, preserving hue
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_PaletteMode);
@@ -131,9 +140,11 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Usf_PaletteMode _PaletteMode = ECk_Usf_PaletteMode::ColorSteps;
 
+    // The level count of BOTH step modes: per channel in ColorSteps, on the luminance in LuminanceSteps.
+    // CustomPalette takes its count from the authored palette instead.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = 2, ClampMin = 2, UIMax = 64,
-                      EditCondition = "_PaletteMode == ECk_Usf_PaletteMode::ColorSteps"))
+                      EditCondition = "_PaletteMode != ECk_Usf_PaletteMode::CustomPalette"))
     int32 _ColorSteps = 8;
 
     // Entries past MaxPaletteEntries are ignored (the shader carries a fixed 8-wide palette). Must be
@@ -155,7 +166,8 @@ private:
     float _PreGamma = 1.0f;
 
     // Collapse to luminance before quantization, then remap the bands through the tint ramp below —
-    // N tinted levels rather than N desaturated ones. Overrides CustomPalette when both are set.
+    // N tinted levels rather than N desaturated ones. It overrides the palette mode: with no hue left to
+    // match against or to preserve, neither CustomPalette nor LuminanceSteps has anything to do.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _Monochrome = ECk_EnableDisable::Disable;

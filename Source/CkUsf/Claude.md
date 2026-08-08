@@ -64,9 +64,9 @@ of all of it.
   at `OnWorldBeginPlay` with no game code involved. It is a `UCk_Plugin_ProjectSettings_UE`, so it inherits
   the family's `Config = CkFoundation` and the "CkFoundation" settings category — the row lives in
   `DefaultCkFoundation.ini`, NOT `DefaultGame.ini`. Read it through `UCk_Utils_Usf_Stylize_Settings_UE`.
-- `ck.Usf.{HandDrawn,CelShade,ScreenDither,CrossHatch}.{Enabled,Debug}` (`Stylize/CkUsf_Stylize_CVars.h`) — the
-  developer overlay. `-1` on both is "settings decide"; `Enabled` `0`/`1` forces off/on; `Debug` takes the
-  effect's DebugMode index.
+- `ck.Usf.{HandDrawn,CelShade,ScreenDither,CrossHatch}.*` (`Stylize/CkUsf_Stylize_CVars.h`) — the developer
+  overlay: `Enabled` and `Debug` on all four, plus a tuning set on three of them. A NEGATIVE value is
+  always "settings decide". Full table + the fold-in helpers: *Stylize CVars* below.
 - `/CkUsf/Common.ush` — the input/output structs + the shader stdlib (sampling, normals, parallax,
   triplanar, flow maps, SDFs, color ops, dithering).
 - `/CkUsf/StylizeCommon.ush` — procedural pattern library for the stylize looks (Bayer/noise dither
@@ -363,6 +363,53 @@ Consequences worth knowing before debugging one of these:
   context anyway. Known granularity gap, shared with `UCk_LoadingScreen_Subsystem_UE`: a PIE
   dedicated-server world lives in the editor process and still gets one.
 
+### Stylize CVars
+
+Every one of them is a NON-PERSISTENT overlay read through `DoGet_EffectiveSettings` on the way to the MID.
+A negative value means "no override" — which works only because every setting they reach has a
+non-negative domain, so one number can mean both. `Request_SetSettings` never sees them.
+
+| CVar | Effect on the effective settings |
+|---|---|
+| `ck.Usf.<Effect>.Enabled` | `0` force off, `1` force on. All four effects |
+| `ck.Usf.<Effect>.Debug` | the effect's `DebugMode` enum index. All four effects |
+| `ck.Usf.CelShade.Bands` | band count (inert in `CustomEdges` mode, where the edge list IS the placement) |
+| `ck.Usf.CelShade.Midpoint` | the exposure anchor — tune this one first |
+| `ck.Usf.CelShade.Pattern` | `ECk_Usf_CelPattern` index. The GLOBAL pattern only; per-object stencil meshes keep theirs |
+| `ck.Usf.CelShade.PatternStrength` | how much of a band transition the halftone owns |
+| `ck.Usf.CelShade.PatternSpace` | `ECk_Usf_CelPatternSpace` index |
+| `ck.Usf.CelShade.Outline` | the look's own ink line, `0`/`1` |
+| `ck.Usf.ScreenDither.Pattern` | `ECk_Usf_DitherPattern` index → the material's `DitherPattern` |
+| `ck.Usf.ScreenDither.ColorSteps` | level count of both step modes |
+| `ck.Usf.ScreenDither.PixelScale` | pixelation block size, in input-viewport pixels |
+| `ck.Usf.ScreenDither.Strength` | dither strength in quantization steps → the material's `DitherStrength` |
+| `ck.Usf.ScreenDither.Weight` | blend against the untouched frame |
+| `ck.Usf.ScreenDither.Monochrome` | `0`/`1` |
+| `ck.Usf.HandDrawn.Strength` | the master `StyleStrength` — one lerp over the WHOLE composite |
+| `ck.Usf.HandDrawn.{Ink,Strokes,Paper}` | the three composite stages, `0`/`1` |
+| `ck.Usf.HandDrawn.InkThickness` | ink detector radius in viewport pixels |
+
+Four things to know before adding to this surface:
+
+- **Only `Enabled` can bring an effect into existence.** The re-sync guard refuses to instantiate an effect
+  it did not already find alive unless `Enabled` is forced to `1`, so every tuning CVar is inert in a world
+  that is not already running the effect — which is what stops a console flip from switching an effect on
+  in every other loaded world at once.
+- **Enum-valued overrides go through `Get_EnumOverride<T>`, and the `_MAX` trap lives there once.** UHT
+  appends a `_MAX` enumerator to every UENUM and `IsValidEnumValue` ACCEPTS it, so a one-past-the-end
+  console value passes a naive check and then falls through the shader's if-chain to its else branch — an
+  override that silently is not one. `Get_ValidatedEnumOverride` rejects it loudly and leaves the setting's
+  own value in place. Written per-effect, that check was four copies and every new enum CVar was a fifth
+  chance to forget it.
+- **CrossHatch deliberately has no tuning CVars.** The three sets above are the ones the reference
+  feature's own console surface has; CrossHatch has no counterpart there, and adding five by symmetry
+  would be five more hand-written fold-in lines to keep true with nothing behind them. Adding them later
+  costs one CVar + one accessor + one `if` each.
+- **CVars are not clamped to the property's `ClampMin`/`UIMax`.** They are folded in verbatim, exactly like
+  a settings write from C++/BP/AS — the reflected clamps are a details-panel affordance, never the guard
+  (the `_Saturation` policy above, applied to the console). The shader's own `max()` floors are what bound
+  a nonsense value.
+
 **The Custom-Stencil byte is shared, and the THREE claims on it are disjoint by construction.**
 `UCkUsf_OutlineSubsystem` *allocates* refcounted values from the top of the range (240–255);
 `UCkUsf_CelShadeSubsystem` uses *direct* values, `[StencilBase-1, StencilBase+9]`, default 199–209; the
@@ -474,6 +521,27 @@ parameter, so reordering an enum silently re-maps the look:
 | `ECk_Usf_PaletteMode`, `ECk_Usf_DitherColorSpace` | branches in `ScreenDither.ush` |
 | `ECk_Usf_ScreenDither_DebugMode` | the `DebugMode` dispatcher at the end of `ScreenDither.ush` |
 
+**Three things the quantizer can reduce, and they are not interchangeable.** `ECk_Usf_PaletteMode` picks
+one: `ColorSteps` posterizes each channel independently, `CustomPalette` snaps to the nearest authored
+entry, and `LuminanceSteps` posterizes the LUMINANCE alone, rescaling the pixel by `Banded / Luma` so its
+hue and saturation survive. Per-channel posterization shifts hue at EVERY band edge (the three channels
+cross their step boundaries at different values); the luminance path shifts one only at the ceiling, where
+a colour whose luminance rounds up can push a channel above 1 and Decode's `saturate` clips it. That is the
+trade, and it is why this is a third mode rather than a flag on the first.
+
+`LuminanceSteps` is NOT a variant of `Monochrome`: monochrome throws the hue away and remaps N grey levels
+through a two-colour tint ramp, putting every pixel on one line through colour space. Monochrome therefore
+OUTRANKS the palette mode in the shader — with the hue already gone there is nothing for a palette search
+to match against or for the luminance path to preserve. Both step modes read `_ColorSteps`; only
+`CustomPalette` takes its count from the authored list.
+
+The dither offset is correct on the luminance path for a reason worth stating: the SAME offset on all three
+channels moves luminance by exactly that offset, because `CkUsf_Stylize_Luminance`'s weights sum to 1. So
+the pre-quantize threshold is a real one-step dither there, not an approximation, and the step size is the
+`ColorSteps` ladder unchanged. The mode is compared by EXACT value in the shader (`Mode == 2`), not
+thresholded — a fourth mode appended to the enum cannot silently fall into an earlier branch the way a
+`PaletteMode > 0.5` test would have let it.
+
 **The custom palette is a FIXED 8 vector parameters + a count**, not an array — a material has no
 array parameters. Entries past 8 are dropped and unused slots are written black, so a shrunk palette
 cannot leave a stale colour behind for the nearest-entry search to find. The shader ENCODES each entry
@@ -504,8 +572,10 @@ resolution at this placement. `_StabilizeGrid` rounds the block to a whole numbe
 block size gives every block a different sub-pixel phase and crawls as the viewport resizes.
 
 Presets ship in `Script/CkUsf/CkUsf_ScreenDitherPresets_Assets.as` (Balanced, SubtleColor, RetroPixel,
-FourColorHandheld, AnimatedGrain, Off). Gym: "Stylize: Screen Dither" (CkTests) — stations are preset
-SELECTORS over one shared judge scene, because the effect is view-wide.
+FourColorHandheld, ScreenPrint, AnimatedGrain, Off). `ScreenPrint` is the `LuminanceSteps` demonstration
+and shares Balanced's pattern, scale and strength on purpose, so the only difference between the two
+stations is WHAT gets quantized. Gym: "Stylize: Screen Dither" (CkTests) — stations are preset SELECTORS
+over one shared judge scene, because the effect is view-wide.
 
 ### Cel shade (Stylize)
 
@@ -869,6 +939,16 @@ indistinguishable.
   refused LOUDLY at the call site rather than silently skipped — ensuring once per call is diagnosis, not spam.
 - **Per-preset outline fill textures** (recorded earlier, still open): `_UseFillTexture` samples the
   subsystem's single shared texture; per-preset would need an atlas or array.
+
+- **No factory-reset button on the "Usf Stylize" project-settings page.** Deliberately not built, because
+  the version worth having is undoable and nothing in this plugin can currently make it so.
+  `UCk_Plugin_ProjectSettings_UE` derives from `UDeveloperSettingsBackedByCVars`, so the object being
+  edited is a CDO whose rows live in `DefaultCkFoundation.ini` — not a transactable instance, and no Ck
+  settings class participates in editor undo today. The details-customization half has precedent
+  (`ck::layout::FEditorStyle_ProjectSettings_Details`, registered from `CkEditorStyle_Module.cpp`) and adds
+  buttons with no transaction at all; copying that shape would ship a one-click, unrecoverable wipe of a
+  project's configured default presets. `Request_ResetToDefaults` already covers the runtime meaning of
+  "back to how this project ships". Revisit if a Ck settings class ever grows real undo support.
 
 ## See also
 
