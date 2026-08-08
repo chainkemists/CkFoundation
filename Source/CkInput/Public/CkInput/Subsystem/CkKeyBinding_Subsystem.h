@@ -65,6 +65,9 @@ public:
     virtual void Initialize(FSubsystemCollectionBase& InCollection) override;
     virtual void Deinitialize() override;
 
+    // --- ULocalPlayerSubsystem ---
+    virtual void PlayerControllerChanged(APlayerController* NewPlayerController) override;
+
 public:
     /** Start listening for changes on a specific mapping. */
     auto
@@ -78,6 +81,8 @@ public:
 private:
     UFUNCTION()
     void OnSettingsChanged(UEnhancedInputUserSettings* InSettings);
+
+    auto DoBindToSettingsAndRegisterScanPaths() -> void;
 
 private:
     struct FWatcherEntry
