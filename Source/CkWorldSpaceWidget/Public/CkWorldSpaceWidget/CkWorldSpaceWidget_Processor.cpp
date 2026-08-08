@@ -51,6 +51,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FFragment_WorldSpaceWidget& InWorldSpaceWidget)
         -> void
     {
@@ -65,7 +66,7 @@ namespace ck
             }
 
             auto WorldTransform = InTransform.Get_Transform();
-            WorldTransform.AddToTranslation(InParams.Get_LocationInfo().Get_WorldSpaceOffset());
+            WorldTransform.AddToTranslation(InTunables.Get_LocationInfo().Get_WorldSpaceOffset());
             WidgetComponent->SetWorldTransform(WorldTransform);
             return;
         }
@@ -78,7 +79,7 @@ namespace ck
             return;
         }
 
-        const auto& LocationInfo = InParams.Get_LocationInfo();
+        const auto& LocationInfo = InTunables.Get_LocationInfo();
         const auto AnchorWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
 
         const auto HideWidget = [&]() -> void
@@ -117,7 +118,7 @@ namespace ck
             : AnchorWorldLocation;
         const auto DistanceToCamera = FVector::Dist(CameraLocation, AnchorWorldLocation);
 
-        const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
+        const auto& OcclusionInfo = InTunables.Get_OcclusionInfo();
         const auto IsOccluded = [&]() -> bool
         {
             SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_Occlusion);
@@ -125,7 +126,7 @@ namespace ck
                    UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
         }();
 
-        const auto& FadingInfo = InParams.Get_FadingInfo();
+        const auto& FadingInfo = InTunables.Get_FadingInfo();
         const auto FadeFactor = FadingInfo.Get_FadingPolicy() == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance
             ? FMath::GetMappedRangeValueClamped(
                 UE::Math::TVector2(FadingInfo.Get_FadeFalloff_StartDistance(), FadingInfo.Get_FadeFalloff_EndDistance()),
@@ -245,6 +246,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FFragment_WorldSpaceWidget& InWorldSpaceWidget)
         -> void
     {
@@ -274,11 +276,11 @@ namespace ck
         { return; }
 
         const auto WidgetWorldLocation = InTransform.Get_Transform().GetLocation();
-        const auto WidgetWorldLocation_WithOffset = WidgetWorldLocation + InParams.Get_LocationInfo().Get_WorldSpaceOffset();
+        const auto WidgetWorldLocation_WithOffset = WidgetWorldLocation + InTunables.Get_LocationInfo().Get_WorldSpaceOffset();
 
         const auto DistanceFromTargetToViewport = FVector::Dist(CameraManager->GetCameraLocation(), WidgetWorldLocation_WithOffset);
 
-        const auto ScalingInfo = InParams.Get_ScalingInfo();
+        const auto ScalingInfo = InTunables.Get_ScalingInfo();
 
         const auto WidgetScale = FMath::GetMappedRangeValueClamped(
             UE::Math::TVector2(ScalingInfo.Get_ScaleFalloff_StartDistance(), ScalingInfo.Get_ScaleFalloff_EndDistance()),
@@ -296,7 +298,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             FFragment_WorldSpaceWidget_Requests& InRequests) const
         -> void
     {
@@ -311,7 +313,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InWorldSpaceWidget, InParams, InRequest);
+            DoHandleRequest(InHandle, InWorldSpaceWidget, InTunables, InRequest);
 
             Result = ECk_Request_OperationResult::Succeeded;
 
@@ -328,11 +330,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetLocationInfo& InRequest)
         -> void
     {
-        InParams.Set_LocationInfo(InRequest.Get_LocationInfo());
+        InTunables._LocationInfo = InRequest.Get_LocationInfo();
     }
 
     auto
@@ -340,11 +342,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetScalingInfo& InRequest)
         -> void
     {
-        InParams.Set_ScalingInfo(InRequest.Get_ScalingInfo());
+        InTunables._ScalingInfo = InRequest.Get_ScalingInfo();
 
         const auto ScalingEnabled =
             InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::ScreenOverlay &&
@@ -369,11 +371,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetFadingInfo& InRequest)
         -> void
     {
-        InParams.Set_FadingInfo(InRequest.Get_FadingInfo());
+        InTunables._FadingInfo = InRequest.Get_FadingInfo();
     }
 
     auto
@@ -381,11 +383,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest)
         -> void
     {
-        InParams.Set_OcclusionInfo(InRequest.Get_OcclusionInfo());
+        InTunables._OcclusionInfo = InRequest.Get_OcclusionInfo();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
