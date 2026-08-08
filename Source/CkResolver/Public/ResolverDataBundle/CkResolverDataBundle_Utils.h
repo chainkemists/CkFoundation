@@ -16,7 +16,6 @@
 namespace ck
 {
     struct FFragment_ResolverDataBundle_Current;
-    struct FFragment_ResolverDataBundle_Params;
 
     class FProcessor_ResolverDataBundle_StartNewPhase;
     class FProcessor_ResolverDataBundle_HandleRequests;
