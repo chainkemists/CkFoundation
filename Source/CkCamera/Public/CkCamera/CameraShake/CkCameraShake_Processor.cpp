@@ -23,7 +23,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_CameraShake_Params& InParams,
+            const FFragment_CameraShake_Params& InParams,
             const FFragment_CameraShake_Requests& InRequestsComp) const
         -> void
     {
