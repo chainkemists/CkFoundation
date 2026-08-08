@@ -3,7 +3,7 @@
 **Purpose:** UI framework — layer stack and primary game layout, HUD, extension points, the widget
 base classes, per-player UI policy (input suspension, cursor lock, navigation config), and screen fade.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkGameSession`, `CkGraphics`, `CkLog`, `CkSettings`, `CkThirdParty`.
+**Depends on:** `CkCore`, `CkEcs`, `CkGameSession`, `CkGraphics`, `CkInput`, `CkLog`, `CkSettings`, `CkThirdParty`.
 **Used by:** `CkCompass`, `CkCueEditor`, `CkDynamicEditor`, `CkEditorToolbar`, `CkMinimap`, `CkUIDebugger`,
 `CkUIEditor`, `CkWatermark`, `CkWorldSpaceWidget`.
 
@@ -29,6 +29,12 @@ here, and the only reason this module depended on `CkEcsExt`.
   fires while Escape and gamepad face buttons do (gamepad routes through the `FCommonAnalogCursor` *preprocessor*,
   which runs ahead of navigation). `FSlateApplication` is **process-global** — a caller that narrows navigation for
   gameplay must restore defaults on EndPlay or the editor's own UI keeps the narrowed config after PIE.
+- `UCk_InputActionWidget_UE` — `UCommonActionWidget` that resolves its glyph through the player's mappable
+  key profile instead of the applied Mapping Contexts, so it still shows a binding on a rebinding screen
+  where no gameplay context is applied. Adds `_Slot` (secondary bindings), `_UnboundPolicy` (the parent
+  hard-collapses on a missing glyph), and `Get_ResolvedKey` / `Get_ResolvedKeyDisplayName` /
+  `OnResolvedKeyChanged` for a key-name text fallback. Seed from `Get_ResolvedKey`, then track
+  `OnResolvedKeyChanged` — the first broadcast happens during construction, before a subclass can bind.
 
 ---
 
@@ -66,6 +72,30 @@ collided under AngelScript binding — the binder strips the parent's leading `b
   `UCk_DialogueTextBlock::RebuildWidget` mirrors `URichTextBlock::RebuildWidget`, re-implemented only
   to capture the `FSlateTextLayout` / `FRichTextLayoutMarshaller` the typewriter effect needs.
 - `ECk_WidgetRasterizer_GammaCorrection` defaults to `Enabled` to preserve pre-existing callers.
+
+**`UCk_InputActionWidget_UE` exists for resolution, NOT for refresh.** `UCommonActionWidget` already
+re-resolves on rebind: `ListenToInputMethodChanged` subscribes to
+`UEnhancedInputLocalPlayerSubsystem::ControlMappingsRebuiltDelegate`, and `MapPlayerKey` →
+`OnSettingsChanged` → `OnUserSettingsChanged` → `RequestRebuildControlMappings` closes that loop. Do not
+re-add a rebind listener believing it is missing. What the parent genuinely cannot do is resolve a key
+that no APPLIED Mapping Context supplies — `GetIcon` runs through `CommonUI::GetFirstKeyForInputType` →
+`QueryKeysMappedToAction`, which reads applied contexts only — so it blanks on every rebinding-screen row
+and on any prompt shown ahead of its context. It is also slot-blind (first key suiting the current
+device). The subclass reads `UEnhancedPlayerMappableKeyProfile::FindKeyMapping` first, which is
+application-independent and slot-addressed, then falls back to the parent lookup.
+
+Three details that are easy to get wrong here:
+- **The unbound fallback must be `FStyleDefaults::GetNoBrush()`, not `FSlateBrush{}`.** A default brush is
+  `DrawAs=Image` with a null resource, so the parent's `DrawAs == NoDrawType` collapse test never fires and
+  the prompt stays visible drawing nothing. `UCk_Utils_KeyIcon_UE::Get_BrushForKey` returns exactly that
+  default brush on a miss, which is why `ck_input_action_widget::Get_IsDrawableBrush` also checks the
+  resource.
+- **`Get_ResolvedKey` deliberately calls the same `CommonUI::GetFirstKeyForInputType` the parent's icon path
+  uses** for its fallback tier. Querying `QueryKeysMappedToAction` directly and taking `[0]` reports a
+  keyboard key while a gamepad glyph is on screen.
+- **`OnSettingsChanged` is unsubscribed through a cached `TWeakObjectPtr`, never a re-query.**
+  `ReleaseSlateResources` can run after the PlayerController is gone, and the CkInput accessors
+  `CK_ENSURE` on a missing controller/subsystem.
 
 **HUD layout config is a soft ref by design.** A subclass default carries only a path, async-loaded
 in `DoInitializeUI` at BeginPlay. A CDO-time hard ref cannot block-load safely in a packaged client
