@@ -43,22 +43,22 @@ namespace ck
     // DIRECTOR FRAGMENTS
     // ----------------------------------------------------------------------------------------------------------------
 
+    // The retained immutable residue of FCk_Camera_Spec: the one field read after construction.
+    // _Profile is construction-only — Add materializes every leaf into a tuner attribute and writes
+    // the bool/curve leaves onto the state fragment, and nothing reads the authored copy again.
     struct CKCAMERA_API FFragment_Camera_Params
     {
     public:
         CK_GENERATED_BODY(FFragment_Camera_Params);
 
-    public:
-        using ParamsType = FCk_Camera_Spec;
-
     private:
-        ParamsType _Params;
+        bool _DriveControllerControlRotation = false;
 
     public:
-        CK_PROPERTY_GET(_Params);
+        CK_PROPERTY_GET(_DriveControllerControlRotation);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Camera_Params, _Params);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Camera_Params, _DriveControllerControlRotation);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
