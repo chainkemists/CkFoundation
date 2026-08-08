@@ -274,32 +274,16 @@ auto
     DoGet_EffectiveSettings() const
     -> FCk_Usf_CrossHatch_Params
 {
+    using namespace ck::usf::stylize;
+
     auto Effective = _Settings;
 
-    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_CrossHatch();
-    if (EnabledOverride >= 0)
-    {
-        Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
-    }
+    if (const auto Enabled = Get_FlagOverride(Get_EnabledOverride_CrossHatch()))
+    { Effective.Set_Enabled(*Enabled); }
 
-    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_CrossHatch();
-    if (DebugOverride >= 0)
-    {
-        // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
-        // one-past-the-end would pass here and then fall through the shader's if-chain to the
-        // final image — a debug mode that silently shows no debug view.
-        const auto* DebugEnum = StaticEnum<ECk_Usf_CrossHatch_DebugMode>();
-        const auto DebugOverrideIsValid =
-            DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
-
-        CK_ENSURE_IF_NOT(DebugOverrideIsValid,
-            TEXT("ck.Usf.CrossHatch.Debug is [{}], which is not an ECk_Usf_CrossHatch_DebugMode value; "
-                 "the setting's own debug mode is used instead"), DebugOverride)
-        {}
-
-        if (DebugOverrideIsValid)
-        { Effective.Set_DebugMode(static_cast<ECk_Usf_CrossHatch_DebugMode>(DebugOverride)); }
-    }
+    if (const auto Debug = Get_EnumOverride<ECk_Usf_CrossHatch_DebugMode>(
+            Get_DebugOverride_CrossHatch(), TEXT("ck.Usf.CrossHatch.Debug")))
+    { Effective.Set_DebugMode(*Debug); }
 
     return Effective;
 }

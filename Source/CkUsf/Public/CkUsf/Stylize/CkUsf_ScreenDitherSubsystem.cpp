@@ -288,32 +288,35 @@ auto
     DoGet_EffectiveSettings() const
     -> FCk_Usf_ScreenDither_Params
 {
+    using namespace ck::usf::stylize;
+
     auto Effective = _Settings;
 
-    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_ScreenDither();
-    if (EnabledOverride >= 0)
-    {
-        Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
-    }
+    if (const auto Enabled = Get_FlagOverride(Get_EnabledOverride_ScreenDither()))
+    { Effective.Set_Enabled(*Enabled); }
 
-    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_ScreenDither();
-    if (DebugOverride >= 0)
-    {
-        // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
-        // one-past-the-end would pass here and then fall through the shader's if-chain to the
-        // final image — a debug mode that silently shows no debug view.
-        const auto* DebugEnum = StaticEnum<ECk_Usf_ScreenDither_DebugMode>();
-        const auto DebugOverrideIsValid =
-            DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
+    if (const auto Debug = Get_EnumOverride<ECk_Usf_ScreenDither_DebugMode>(
+            Get_DebugOverride_ScreenDither(), TEXT("ck.Usf.ScreenDither.Debug")))
+    { Effective.Set_DebugMode(*Debug); }
 
-        CK_ENSURE_IF_NOT(DebugOverrideIsValid,
-            TEXT("ck.Usf.ScreenDither.Debug is [{}], which is not an ECk_Usf_ScreenDither_DebugMode value; "
-                 "the setting's own debug mode is used instead"), DebugOverride)
-        {}
+    if (const auto Pattern = Get_EnumOverride<ECk_Usf_DitherPattern>(
+            Get_PatternOverride_ScreenDither(), TEXT("ck.Usf.ScreenDither.Pattern")))
+    { Effective.Set_Pattern(*Pattern); }
 
-        if (DebugOverrideIsValid)
-        { Effective.Set_DebugMode(static_cast<ECk_Usf_ScreenDither_DebugMode>(DebugOverride)); }
-    }
+    if (const auto ColorSteps = Get_CountOverride(Get_ColorStepsOverride_ScreenDither()))
+    { Effective.Set_ColorSteps(*ColorSteps); }
+
+    if (const auto PixelScale = Get_ScalarOverride(Get_PixelScaleOverride_ScreenDither()))
+    { Effective.Set_PixelScale(*PixelScale); }
+
+    if (const auto DitherStrength = Get_ScalarOverride(Get_StrengthOverride_ScreenDither()))
+    { Effective.Set_DitherStrength(*DitherStrength); }
+
+    if (const auto Weight = Get_ScalarOverride(Get_WeightOverride_ScreenDither()))
+    { Effective.Set_Weight(*Weight); }
+
+    if (const auto Monochrome = Get_FlagOverride(Get_MonochromeOverride_ScreenDither()))
+    { Effective.Set_Monochrome(*Monochrome); }
 
     return Effective;
 }
