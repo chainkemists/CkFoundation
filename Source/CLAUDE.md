@@ -102,6 +102,8 @@ Before writing any code, navigate the documentation in this order:
 | drive a UMG widget from an entity's world transform (screen projection, clamping, distance scale/fade, occlusion) | `CkWorldSpaceWidget` (+ `UCk_WidgetComponent_UE` for the world-component path) |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
 | Enhanced Input IMC lifecycle | `CkInput` |
+| query/remap/swap/reset player key bindings, detect conflicts, resolve a key's icon brush | `CkInput` — `UCk_Utils_KeyBinding_UE`, `UCk_KeyBinding_Subsystem`, `UCk_Utils_KeyIcon_UE` |
+| show an input-action key prompt that survives rebinds AND an unapplied Mapping Context | `CkUI` — `UCk_InputActionWidget_UE` |
 | async asset loading → fragments | `CkResourceLoader` |
 | relay entity events to an actor (channels) | `CkActorRelay` |
 | debug shapes / procedural mesh text | `CkPmg` |
@@ -222,7 +224,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkTargeting | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
 | CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
-| CkUI | Core,Ecs,GameSession,Graphics,Log,Settings,ThirdParty (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer) |
+| CkUI | Core,Ecs,GameSession,Graphics,Input,Log,Settings,ThirdParty (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; Input added 2026-08-08 for `UCk_InputActionWidget_UE` — T4→T2, and CkInput does NOT depend on CkUI) |
 | CkUnrealComponent | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |

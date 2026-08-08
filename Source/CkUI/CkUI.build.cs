@@ -21,9 +21,12 @@ public class CkUI : CkModuleRules
                 "Core",
                 "CommonUI",
                 "CommonInput",
+                // Public: CkInputAction_Widget.h exposes EPlayerMappableKeySlot in its reflected surface.
+                "EnhancedInput",
                 "CkCore",
                 "CkEcs",
                 "CkGraphics",
+                "CkInput",
             }
             );
 
