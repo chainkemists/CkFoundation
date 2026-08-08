@@ -83,7 +83,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             FFragment_Compass_Current& InCurrent,
-            FFragment_Compass_Params& InParams,
+            const FFragment_Compass_Params& InParams,
             FFragment_Compass_Requests& InRequests) const
         -> void
     {
@@ -119,13 +119,13 @@ namespace ck
         DoHandleRequest(
             HandleType InCompassEntity,
             FFragment_Compass_Current& InCurrent,
-            FFragment_Compass_Params& InParams,
+            const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetCategoryFilter& InRequest)
         -> void
     {
         compass::VeryVerbose(TEXT("Handling SetCategoryFilter Request for Compass with Entity [{}]"), InCompassEntity);
 
-        InParams.Set_CategoryFilter(InRequest.Get_CategoryFilter());
+        InCurrent._CategoryFilter = InRequest.Get_CategoryFilter();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
@@ -136,7 +136,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCompassEntity,
             FFragment_Compass_Current& InCurrent,
-            FFragment_Compass_Params& InParams,
+            const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetManualHeading& InRequest)
         -> void
     {
@@ -150,7 +150,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCompassEntity,
             FFragment_Compass_Current& InCurrent,
-            FFragment_Compass_Params& InParams,
+            const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetObserver& InRequest)
         -> void
     {
@@ -296,7 +296,7 @@ namespace ck
         auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
-        const auto& CategoryFilter = InParams.Get_CategoryFilter();
+        const auto& CategoryFilter = InCurrent.Get_CategoryFilter();
         const auto FilterIsEmpty = CategoryFilter.IsEmpty();
         const auto HeadingDegrees = InCurrent._HeadingDegrees;
         const auto ArcDegrees = InParams.Get_ArcDegrees();

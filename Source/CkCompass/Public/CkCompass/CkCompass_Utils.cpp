@@ -30,8 +30,14 @@ auto
         InHandle)
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_Compass_Params>(InParams);
+    InHandle.Add<ck::FFragment_Compass_Params>(
+        InParams.Get_ArcDegrees(),
+        InParams.Get_MaxEntries(),
+        InParams.Get_HeadingSource(),
+        InParams.Get_UpdateInterval());
     InHandle.Add<ck::FFragment_Compass_Current>();
+
+    InHandle.Get<ck::FFragment_Compass_Current>()._CategoryFilter = InParams.Get_CategoryFilter();
     InHandle.Add<ck::FFragment_Compass_Scratch>();
     InHandle.Add<ck::FTag_Compass_NeedsSetup>();
 
