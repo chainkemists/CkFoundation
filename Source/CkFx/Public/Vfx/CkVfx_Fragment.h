@@ -26,23 +26,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKFX_API FFragment_Vfx_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Vfx_Params);
-
-    public:
-        using ParamsType = FCk_Vfx_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Vfx_Params, _Params);
-    };
+    using FFragment_Vfx_Params = FCk_Vfx_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

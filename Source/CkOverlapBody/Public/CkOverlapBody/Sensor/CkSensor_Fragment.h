@@ -25,23 +25,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FFragment_Sensor_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Sensor_Params);
-
-    public:
-        using ParamsType = FCk_Sensor_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Sensor_Params, _Params);
-    };
+    using FFragment_Sensor_Params = FCk_Sensor_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

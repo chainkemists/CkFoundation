@@ -59,7 +59,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy();
+    return InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_ReorientPolicy();
 }
 
 auto
@@ -75,7 +75,7 @@ auto
         return;
     }
 
-    if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() ==
+    if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_ReorientPolicy() ==
         ECk_AutoReorient_Policy::OrientTowardsVelocity)
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::Has(InHandle),
@@ -104,7 +104,7 @@ auto
         return;
     }
 
-    if (InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() == ECk_AutoReorient_Policy::OrientTowardsVelocity)
+    if (InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_ReorientPolicy() == ECk_AutoReorient_Policy::OrientTowardsVelocity)
     {
         InHandle.Remove<ck::FTag_AutoReorient_OrientTowardsVelocity>();
     }

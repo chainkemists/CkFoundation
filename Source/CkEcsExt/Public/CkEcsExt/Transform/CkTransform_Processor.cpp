@@ -872,7 +872,7 @@ namespace ck
             return;
         }
 
-        const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& InterpSettings = InParams.Get_InterpolationSettings();
         const auto& SmoothTime = InterpSettings.Get_SmoothLocationTime();
 
         const auto PrevDeltaT = InGoal.Get_DeltaT();
@@ -934,7 +934,7 @@ namespace ck
             return;
         }
 
-        const auto& Interpolation_Settings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& Interpolation_Settings = InParams.Get_InterpolationSettings();
         const auto& SmoothTime = Interpolation_Settings.Get_SmoothRotationTime();
 
         const auto PrevDeltaT = InGoal.Get_DeltaT();

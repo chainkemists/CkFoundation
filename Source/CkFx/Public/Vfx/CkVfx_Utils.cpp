@@ -86,7 +86,7 @@ auto
         const FCk_Handle_Vfx& InVfxHandle)
     -> UNiagaraSystem*
 {
-    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_Params().Get_ParticleSystem().Get();
+    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_ParticleSystem().Get();
 }
 
 auto
@@ -95,7 +95,7 @@ auto
         const FCk_Handle_Vfx& InVfxHandle)
     -> FCk_Vfx_AttachmentSettings
 {
-    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_Params().Get_AttachmentSettings();
+    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_AttachmentSettings();
 }
 
 auto

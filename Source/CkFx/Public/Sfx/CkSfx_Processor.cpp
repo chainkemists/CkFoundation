@@ -39,7 +39,7 @@ namespace ck
             FFragment_Sfx_Current& InCurrent)
             -> void
     {
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         if (NOT InCurrent._LoadedAssets.Get_IsRequested())
         {
@@ -124,7 +124,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAttached);
 
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         const auto ResolvedSoundCue = Cast<USoundBase>(
             InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
@@ -185,7 +185,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAtLocation);
 
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         const auto ResolvedSoundCue = Cast<USoundBase>(
             InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));

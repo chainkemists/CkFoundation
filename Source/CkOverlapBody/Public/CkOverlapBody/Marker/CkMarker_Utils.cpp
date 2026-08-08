@@ -179,7 +179,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FCk_Marker_PhysicsInfo
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_PhysicsParams();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_PhysicsParams();
 }
 
 auto
@@ -188,7 +188,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FCk_Marker_ShapeInfo
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_ShapeParams();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_ShapeParams();
 }
 
 auto
@@ -197,7 +197,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FCk_Marker_DebugInfo
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_DebugParams();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_DebugParams();
 }
 
 auto
@@ -206,7 +206,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> ECk_Net_ReplicationType
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_ReplicationType();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_ReplicationType();
 }
 
 auto
@@ -215,7 +215,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FTransform
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_RelativeTransform();
 }
 
 auto
@@ -224,7 +224,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FVector
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetLocation();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_RelativeTransform().GetLocation();
 }
 
 auto
@@ -233,7 +233,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FRotator
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetRotation().Rotator();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_RelativeTransform().GetRotation().Rotator();
 }
 
 auto
@@ -242,7 +242,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FVector
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetScale3D();
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_RelativeTransform().GetScale3D();
 }
 
 auto
@@ -368,7 +368,7 @@ auto
     const auto& Params = InHandle.Get<ck::FFragment_Marker_Params>();
     const auto& Current = InHandle.Get<ck::FFragment_Marker_Current>();
 
-    UCk_Utils_MarkerAndSensor_UE::Draw_Marker_DebugLines(InOuter, Current, Params.Get_Params());
+    UCk_Utils_MarkerAndSensor_UE::Draw_Marker_DebugLines(InOuter, Current, Params);
 }
 
 auto

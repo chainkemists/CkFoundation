@@ -18,23 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_PredictedVelocity_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_PredictedVelocity_Params);
-
-    public:
-        using ParamsType = FCk_PredictedVelocity_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_PredictedVelocity_Params, _Params);
-    };
+    using FFragment_PredictedVelocity_Params = FCk_PredictedVelocity_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
