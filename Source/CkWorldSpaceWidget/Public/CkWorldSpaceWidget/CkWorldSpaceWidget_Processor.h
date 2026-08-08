@@ -6,13 +6,13 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
-#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKUI_API FProcessor_WorldSpaceWidget_UpdateLocation : public ck_exp::TProcessor<
+    class CKWORLDSPACEWIDGET_API FProcessor_WorldSpaceWidget_UpdateLocation : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_UpdateLocation,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadOnly<FFragment_Transform>,
@@ -36,7 +36,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKUI_API FProcessor_WorldSpaceWidget_UpdateScaling : public ck_exp::TProcessor<
+    class CKWORLDSPACEWIDGET_API FProcessor_WorldSpaceWidget_UpdateScaling : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_UpdateScaling,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadOnly<FFragment_Transform>,
@@ -62,7 +62,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKUI_API FProcessor_WorldSpaceWidget_HandleRequests : public ck_exp::TProcessor<
+    class CKWORLDSPACEWIDGET_API FProcessor_WorldSpaceWidget_HandleRequests : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_HandleRequests,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Current>,
@@ -123,7 +123,7 @@ namespace ck
     // HandleRequests excludes owners already tagged for destruction, so a destroyed widget's still-queued
     // requests are never drained. This fires each pending request's completion delegate with
     // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
-    class CKUI_API FProcessor_WorldSpaceWidget_CancelPendingRequests : public ck_exp::TProcessor<
+    class CKWORLDSPACEWIDGET_API FProcessor_WorldSpaceWidget_CancelPendingRequests : public ck_exp::TProcessor<
         FProcessor_WorldSpaceWidget_CancelPendingRequests,
         FCk_Handle_WorldSpaceWidget,
         ck::TReadOnly<FFragment_WorldSpaceWidget_Requests>,
@@ -146,7 +146,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKUI_API FProcessor_WorldSpaceWidget_EndPlay : public ck_exp::TProcessor<
+    class CKWORLDSPACEWIDGET_API FProcessor_WorldSpaceWidget_EndPlay : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_EndPlay,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,

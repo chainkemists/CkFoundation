@@ -21,15 +21,15 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
-#include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Utils.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Utils.h"
 
-#include "CkUI/CkUI_Stats.h"
+#include "CkWorldSpaceWidget/CkWorldSpaceWidget_Stats.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Projection"), STAT_CkUI_WSWidget_Projection, STATGROUP_CkUI);
-DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Occlusion"),  STAT_CkUI_WSWidget_Occlusion,  STATGROUP_CkUI);
-DECLARE_CYCLE_STAT(TEXT("UI::WSWidget UMGWrite"),   STAT_CkUI_WSWidget_UMGWrite,   STATGROUP_CkUI);
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Projection"), STAT_CkWorldSpaceWidget_Projection, STATGROUP_CkWorldSpaceWidget);
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget Occlusion"),  STAT_CkWorldSpaceWidget_Occlusion,  STATGROUP_CkWorldSpaceWidget);
+DECLARE_CYCLE_STAT(TEXT("UI::WSWidget UMGWrite"),   STAT_CkWorldSpaceWidget_UMGWrite,   STATGROUP_CkWorldSpaceWidget);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ namespace ck
         const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
         const auto IsOccluded = [&]() -> bool
         {
-            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_Occlusion);
+            SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_Occlusion);
             return OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
                    UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
         }();
@@ -113,7 +113,7 @@ namespace ck
         auto ViewportSize = FVector2D::ZeroVector;
         const auto HasViewport = ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}) && GEngine->GameViewport != nullptr;
         {
-            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_Projection);
+            SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_Projection);
 
             ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
                 PlayerController,
@@ -196,7 +196,7 @@ namespace ck
         { TargetOpacity = 0.0f; }
 
         {
-            SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_UMGWrite);
+            SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_UMGWrite);
 
             if (WrapperWidget->GetRenderOpacity() != TargetOpacity)
             { WrapperWidget->SetRenderOpacity(TargetOpacity); }
