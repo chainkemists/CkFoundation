@@ -22,7 +22,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Compass_Params = FCk_Compass_Spec;
+    // The retained immutable residue of FCk_Compass_Spec. _CategoryFilter is DISSOLVED into
+    // FFragment_Compass_Current: it is request-mutable (Request_SetCategoryFilter), and it used to be
+    // mutated IN this fragment through the reflected Spec's own setter, which is the only reason
+    // HandleRequests took Params ReadWrite. Same defect and same fix as CkMinimap (9347e2062).
+    struct CKCOMPASS_API FFragment_Compass_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Compass_Params);
+
+    private:
+        float _ArcDegrees = 180.0f;
+        int32 _MaxEntries = 32;
+        ECk_Compass_HeadingSource _HeadingSource = ECk_Compass_HeadingSource::Auto;
+        FCk_Time _UpdateInterval;
+
+    public:
+        CK_PROPERTY_GET(_ArcDegrees);
+        CK_PROPERTY_GET(_MaxEntries);
+        CK_PROPERTY_GET(_HeadingSource);
+        CK_PROPERTY_GET(_UpdateInterval);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Compass_Params, _ArcDegrees, _MaxEntries, _HeadingSource,
+            _UpdateInterval);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,6 +69,8 @@ namespace ck
 
         float _ManualHeadingDegrees = 0.0f;
 
+        FGameplayTagQuery _CategoryFilter;
+
         TArray<FCk_Compass_Entry> _Entries;
 
         FCk_Time _TimeSinceUpdate;
@@ -52,6 +78,7 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Observer);
         CK_PROPERTY_GET(_HeadingDegrees);
+        CK_PROPERTY_GET(_CategoryFilter);
         CK_PROPERTY_GET(_Entries);
     };
 
