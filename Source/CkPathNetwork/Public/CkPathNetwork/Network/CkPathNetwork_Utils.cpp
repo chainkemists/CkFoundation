@@ -462,7 +462,7 @@ auto
         TEXT("PathNetworkFollower parameters contain invalid tuning"))
     { return {}; }
 
-    InHandle.Add<ck::FFragment_PathNetworkFollower_Params>(InParams);
+    InHandle.Add<ck::FFragment_PathNetworkFollower_Tunables>(InParams);
     InHandle.Add<ck::FFragment_PathNetworkFollower_Corridor>();
 
     ck::pathnetwork::Verbose(TEXT("PathNetworkFollower added to [{}] (multiplier=[{}])"),
@@ -533,7 +533,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FFragment_PathNetworkFollower_Params>();
+    return InHandle.Has<ck::FFragment_PathNetworkFollower_Tunables>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -549,7 +549,7 @@ auto
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Get_OwnerToken"), InFollower)
     { return NAME_None; }
 
-    return InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Get_OwnerToken();
+    return InFollower.Get<ck::FFragment_PathNetworkFollower_Tunables>().Get_OwnerToken();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -575,7 +575,7 @@ auto
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Remove"), InFollower)
     { return InFollower; }
 
-    InFollower.Try_Remove<ck::FFragment_PathNetworkFollower_Params>();
+    InFollower.Try_Remove<ck::FFragment_PathNetworkFollower_Tunables>();
     InFollower.Try_Remove<ck::FFragment_PathNetworkFollower_Corridor>();
     InFollower.Try_Remove<ck::FFragment_PathNetworkFollower_Requests>();
 
@@ -614,7 +614,7 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    auto& Params = InFollower.Get<ck::FFragment_PathNetworkFollower_Params>();
+    auto& Params = InFollower.Get<ck::FFragment_PathNetworkFollower_Tunables>();
     auto Request = InRequest;
     Request.Set_TuningRevision(Params.Get_TuningRevision());
     InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Request);
@@ -768,8 +768,8 @@ auto
     // Snapshot matching handles before adding request fragments. This keeps the
     // registry view read-only for the full iteration.
     TArray<FCk_Handle_PathNetworkFollower> MatchingFollowers;
-    InAnyHandleInWorld.View<ck::FFragment_PathNetworkFollower_Params>().ForEach(
-        [&](FCk_Entity InEntity, const ck::FFragment_PathNetworkFollower_Params& InParams)
+    InAnyHandleInWorld.View<ck::FFragment_PathNetworkFollower_Tunables>().ForEach(
+        [&](FCk_Entity InEntity, const ck::FFragment_PathNetworkFollower_Tunables& InParams)
     {
         if (InParams.Get_OwnerToken() != InOwnerToken)
         { return; }
@@ -808,7 +808,7 @@ auto
         return InFollower;
     }
 
-    InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Set_Network(InNetwork);
+    InFollower.Get<ck::FFragment_PathNetworkFollower_Tunables>().Set_Network(InNetwork);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Succeeded);
