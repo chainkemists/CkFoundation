@@ -140,3 +140,53 @@ anchor; if so the residue may be empty, and the anchor should move to the featur
   4. Superproject AngelScript on an orphaned commit — and AS failures fail the run via
      `AS_COMPILE_FAILED` (exit 76) with **zero tests executed**, because the editor keeps stale
      bytecode. A suite that reports Total: 0 is not a pass.
+
+## Log (cont. 3) — 2026-08-08: ruling 3 discharged, Params tail closed
+
+- **RULING 3 DONE — `_Current` is purged.** 83 fragment types / 2380 refs across CkFoundation,
+  CkTests and CkGameplayDebugger. Target name is the bare `FFragment_[Feature]` from the two-tier
+  table; verified zero collisions against all 415 declared fragment names AND every `using`-alias
+  first, and confirmed none of the 83 was a reflected USTRUCT (so no BP/serialization exposure).
+  Parameter `InCurrent` followed its type to `In[Feature]`.
+
+- **A REGEX THAT MISSES AND AN AUDIT THAT AGREES WITH IT.** The first sweep matched
+  `FFragment_([A-Za-z0-9]+)_Current`, which cannot match a feature segment containing an underscore
+  — so `Pmg_DebugShape`, `Pmg_Donut`, `Goap_Planner` and `Goap_Action` (246 refs) were silently
+  skipped. The audit then reported "0 residual" because **it reused the same narrow pattern**. It
+  surfaced only via an unrelated grep. Two rules follow, and they generalize past this campaign:
+  1. Feature segments are NOT `[A-Za-z0-9]+`. Use `[A-Za-z0-9_]+` (greedy, anchored on the suffix).
+  2. **Never audit with the expression you edited with.** A sweep and its verification must not
+     share a regex, or the verification can only confirm the sweep's own blind spot. Verify with a
+     different tool (`rg` over the tree) than the one that made the change.
+
+- **SCAN D — direct member writes.** Scans A (writable view), B (`Set_` on a param) and C
+  (`Get<>().Set_`) all miss `InParams._Field = ...`, which is legal inside a friend. That form is
+  what hid CkCrowdAgent's `_MaxSpeed` and CkPathNetwork's `_Ribbons` through two earlier passes and
+  produced two wrong "false positive" calls. Scan D is
+  `In(Params|Tunables)\._[A-Za-z0-9]+ *=` — note it also matches `==`, so read the hits.
+
+- **Scans key on the TYPE, not the parameter name.** `CkPathNetwork_Processor.cpp` hosts both the
+  network handler and the follower handler, and both name their parameter `InParams` even though
+  the follower's type is `_Tunables`. A file-scoped rename would hit the wrong one, so the name was
+  left alone deliberately — expect scan B to report it forever. Judge by the fragment type.
+
+- **`_Tunables` is now a documented category, not an ad-hoc escape.** Config that a request or the
+  debugger REPLACES at runtime, where there is no immutable residue to split off. Members:
+  CkCrowdAgent (19 fields; the Crowd debugger's tuner live-writes 5), CkAStar,
+  CkPathNetworkFollower, CkVoiceTalker. Recorded in the root doctrine's two-tier table.
+
+- **Params tail closed.** Split: CkVoxelNavPath (`_Volume` → its own binding fragment, deliberately
+  NOT merged with `_Result._Volume`, which records what a COMPLETED plan was made against),
+  CkPathNetwork (`_Ribbons` → `_Graph`, beside the `_Network` they build), CkPmg Text (`_Text` →
+  `FFragment_Pmg_Text`). Dissolved the last two Spec-wrappers: CkMontagePlayer (one-field Spec, the
+  field is a rebindable skeletal mesh) and CkPmg Donut (1:1 and unmutated → alias per ruling 1).
+
+- **Still open, by choice:** CkUI `WorldSpaceWidget` (4 `Set_*`) — deferred at the maintainer's
+  request while renames are in flight there. `FFragment_IsmRenderer_Params` keeps its name but is
+  NOT a Spec-wrapper: it wraps `TWeakObjectPtr<const UCk_IsmRenderer_Data>`, a data-asset pointer.
+
+- **Toolbox trap: do not redirect a detached run's stdout into `Saved/Logs/`.** The toolbox's
+  editor guard probes `Saved/Logs/*.log` for an exclusive write lock. A `Start-Process`
+  `-RedirectStandardOutput` pointed there holds such a lock, so the toolbox detects the launcher's
+  own redirect file and waits forever on a nonexistent editor. Redirect to the scratchpad. Verify a
+  claimed editor two ways before overriding — no `UnrealEditor` process AND `CkPlugins.log` free.
