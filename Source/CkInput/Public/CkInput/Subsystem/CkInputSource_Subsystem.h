@@ -5,6 +5,7 @@
 #include "CkInput/CkInputSource_Fragment_Data.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
+#include <UserSettings/EnhancedInputUserSettings.h>
 
 #include "CkInputSource_Subsystem.generated.h"
 
@@ -17,6 +18,10 @@
  *
  * The entity is created once a PlayerController exists, never at Initialize: the subsystem collection comes
  * up before the engine has given the local player a controller (or a world to create an entity into).
+ *
+ * It is also the seam that turns a key rebind into a button-map re-derive. The subsystem already owns the
+ * handle a derivation request has to land on, and it is the raw-input half of the module that reads user
+ * settings here — the keybinding half stays unaware that entities exist.
  */
 UCLASS(NotBlueprintable)
 class CKINPUT_API UCk_InputSource_Subsystem : public ULocalPlayerSubsystem
@@ -45,11 +50,18 @@ public:
     Get_InputSource();
 
 private:
+    UFUNCTION()
+    void OnSettingsChanged(UEnhancedInputUserSettings* InSettings);
+
     auto
     DoCreateInputSource() -> void;
 
+    auto
+    DoBindToSettings() -> void;
+
 private:
     FCk_Handle_InputSource _InputSource;
+    bool _BoundToSettings = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -57,7 +57,7 @@ the file-local `ck_key_binding_utils::Get_CurrentProfile` (`GetCurrentKeyProfile
 | Reset | `ResetMappingToDefault` (one row), `ResetAllToDefaults` (whole profile) |
 | Persistence | `SaveKeyBindings` |
 | Conflicts | `Get_HasKeyConflicts` → `TArray<FCk_KeyBinding_ConflictInfo>`, scoped by `ECk_KeyConflictScope::{All, SameCategory}` |
-| Resolution | `SwapKeys` (trade keys with the holder), `UnbindConflictAndRemap` (clear the holder, then take the key) |
+| Resolution | `SwapKeys` (trade keys with the holder), `UnbindConflictAndRemap` (leave the holder UNBOUND — not reset to its default — then take the key) |
 
 Data shapes: `FCk_KeyBinding_MappableKeyInfo` (MappingName / DisplayName / DisplayCategory /
 Metadata, lifted off `UPlayerMappableKeySettings`) and `FCk_KeyBinding_ConflictInfo` (MappingName /
@@ -65,8 +65,9 @@ DisplayName / DisplayCategory / CurrentKey / Slot).
 
 The four mutating functions (`RemapKey`, `RemapKeys`, `SwapKeys`, `UnbindConflictAndRemap`) return
 `bool` and fill an `FGameplayTagContainer& OutFailureReason` — the reason container is the engine's,
-appended from every `MapPlayerKey`/`UnMapPlayerKey` call the operation makes, and `true` means it
-came back empty.
+appended from every `MapPlayerKey` call the operation makes, and `true` means it came back empty.
+Nothing in this module calls `UnMapPlayerKey`: that engine entry point RESETS a mapping to its
+default rather than unbinding it, so an unbind is `MapPlayerKey` with `NewKey = EKeys::Invalid`.
 
 ### `UCk_KeyBinding_Subsystem` — `Subsystem/CkKeyBinding_Subsystem.h`
 
@@ -224,7 +225,8 @@ FGroup_Gameplay_TimeDelta → FGroup_Input_Collect → FGroup_Input_Bias → FGr
 ```
 
 - **`FGroup_Input_Collect`** — `FProcessor_InputSource_HandleRequests` (drains inject/assign into the
-  inbox and the owned-device list), `FProcessor_InputLayer_HandleRequests` (drains capture edits), and
+  inbox and the owned-device list), `FProcessor_InputLayer_HandleRequests` (drains capture edits),
+  `FProcessor_InputButtonMap_HandleRequests` (drains button-map derivations), and
   `FProcessor_InputLayer_SetupRouterState`, which stamps `FFragment_InputLayer_RouterState` onto every
   input source whether or not a layer was ever registered on it — without that, the router's view would
   skip layer-less sources and their inboxes would grow for the life of the session.
@@ -236,9 +238,10 @@ group is not an ordering guarantee, and a consumer module can only order against
 `RunBefore = FGroup_Gameplay` edge is what keeps the whole raw layer ahead of gameplay, so a press is
 visible on the frame it arrives rather than the one after.
 
-`FProcessor_InputSource_CancelPendingRequests` and `FProcessor_InputLayer_CancelPendingRequests` sit in
-`FGroup_EndPlay` under `CK_IF_END_PLAY` and call `ck::request::FireCancelledForPending`. Both drains
-exclude `FTag_DestroyEntity_Initiate`, so a source or layer destroyed on the same stack that enqueued a
+`FProcessor_InputSource_CancelPendingRequests`, `FProcessor_InputLayer_CancelPendingRequests` and
+`FProcessor_InputButtonMap_CancelPendingRequests` sit in
+`FGroup_EndPlay` under `CK_IF_END_PLAY` and call `ck::request::FireCancelledForPending`. Every drain
+excludes `FTag_DestroyEntity_Initiate`, so a source, layer or map destroyed on the same stack that enqueued a
 request deterministically reaches the cancel processor and its caller completes `Failed_Cancelled`
 instead of hanging.
 
@@ -297,6 +300,22 @@ them holding state no press ever opened. Either way the entry is removed when th
 fresh press on the same key replaces any stale entry, so an unreleased press never wedges the key.
 `PassThrough` matches never take ownership, so their releases walk the stack normally.
 `TryGet_PressOwner(Source, Key)` exposes the table.
+
+**Delivery visibility — the router also retains what it did.** Alongside arbitration, the router writes one
+`FCk_InputLayer_RoutedEvent` per routed event into `ck::FFragment_InputLayer_RoutedThisFrame` on the SOURCE:
+the verbatim event plus its outcome, `ECk_InputLayer_DeliveryOutcome::{ConsumedByLayer, PassedThrough,
+DroppedNoOwner}`, with the consuming layer named only in the first case. These are the router's three terminal
+paths and nothing else. `PassedThrough` means no layer ENDED the walk — every `PassThrough` capture on the way
+down was still delivered — which is the property a consumer reasoning about masking actually needs; it is not
+"nobody saw it". Retention rather than a signal because the value is the SHAPE of the frame (what was masked,
+what fell through, what was dropped), which no per-event delivery can express.
+
+The array is cleared at the top of EVERY Route pass, including one that finds an empty inbox, so a stale frame
+can never be read as the current one. **Only a consumer ordered AFTER `FGroup_Input_Route` sees this frame's
+outcomes** — gameplay qualifies by group edge; anything in `FGroup_Input_Collect`/`FGroup_Input_Bias` reads the
+cleared array. Read it with `UCk_Utils_InputLayer_UE::Get_RoutedEventsThisFrame(Source)`. The fragment is
+stamped by `FProcessor_InputLayer_SetupRouterState` in the same pass as the router state, so the two always
+co-exist. First consumer: `CkIntent`'s frame record (`CkIntent/Claude.md`).
 
 **Global actions are the reserved bottom of the stack.** `ck::input_layer::GlobalActionPriority` is
 `TNumericLimits<int32>::Lowest()`, and `Add`/`Create` ensure-reject it so an ordinary layer cannot
@@ -367,6 +386,76 @@ frame's conditioned values rather than last frame's. The full chain is
 identity row — a stored row always names a real key, so the two can never be confused. `Get_AxisBiases`
 is the live table, and like every deferred edit in this module a retune enqueued this frame is absent
 from it until the request drains.
+
+---
+
+## The button space — stable identity for a pressable thing
+
+A `ButtonId` is what a definition names when it must not care which key is pressed. It is composed onto
+the input SOURCE (`UCk_Utils_InputButtonMap_UE::Add`, handle `FCk_Handle_InputButtonMap`) — one button
+space per local player, no `Create`, because a map on a child entity would have no player whose profile
+to derive from. It is **opt-in**: a source without it simply has no button space, and nothing else in the
+module notices.
+
+**Identity is `(Tier, FName)` and is immutable.** Once a button has been derived or registered it never
+changes and is never removed for the map's lifetime; a re-derive moves key ASSOCIATIONS only. That is the
+whole point — a definition that names Jump keeps naming Jump after the player rebinds it, with no edit
+anywhere. Deliberately not a dense int: packing buttons into a bitmask is a bake-time job for a consumer
+that knows exactly which buttons it references, and a dense index assigned here would have to stay stable
+across profiles it knows nothing about.
+
+**Two tiers, and they answer to different authorities.**
+
+- **Tier 1 — `Mapped`.** One button per Enhanced Input player-mappable MAPPING NAME (the name the
+  settings store keys on, which is stable across rebinds by construction). Its key association is read
+  from the player's resolved mappings and re-read on every derive. A name owns one button no matter how
+  many slots it has; the association follows slot **First**, the slot every other query in this module
+  defaults to.
+- **Tier 2 — `Physical`.** One button per raw `FKey` nothing maps, identity = the key's own `FName`,
+  association = that key, fixed forever and never touched by a re-derive. This is the tier for
+  prototyping, for synthetic tests, and for anything that has to work before a binding profile exists.
+
+**Key → button is ONE-TO-MANY by design.** Two mappings in different categories legitimately share a
+key, and duplicate bindings exist in real profiles, so `Get_ButtonIdsForKey` returns EVERY holder. A
+consumer that wants "the" button has to say which tier and name it means. `TryGet_KeyForButton` answers
+the other direction and returns an INVALID key both for a button the map never minted and for one that is
+currently unbound — both mean "pressing nothing produces it", which is all a consumer can act on. An
+invalid key handed to `Get_ButtonIdsForKey` answers empty rather than listing the unbound buttons: "no
+key" is a state those buttons are in, not a key they answer to.
+
+**Derivation is deferred and drains in `FGroup_Input_Collect`**, alongside every other CkInput request and
+ahead of `FGroup_Input_Route` — so a consumer woken by a delivered event resolves buttons against this
+frame's map. `Add` composes the fragments and then enqueues its declared tier-2 registrations followed by
+the first `Request_Rederive` through the ordinary request path, so composition-time state and steady-state
+state are produced by the same code and cannot disagree. The consequence is the same one-frame boundary
+capture edits obey: **the map is EMPTY on the calling stack of `Add`** and fills in when the requests
+drain. `Get_AllButtons` right after `Add` returning nothing is the contract, not a race.
+
+**`Request_Rederive` rebuilds tier-1 from the profile rather than patching it.** Every mapped association
+is cleared first, then re-established from `Get_AllRemappableKeys`, so a mapping that stopped being
+player-mappable is left holding an invalid key instead of its last one. Newly seen names mint new
+identities; existing ones are never re-minted. A derive against an unmoved profile is an accepted no-op
+and completes `Succeeded`.
+
+**A derive with no `PlayerController` is a graceful no-op that completes `Succeeded`, and it changes
+nothing.** The profile lives on the local player, and a source composed before the engine has handed that
+player a controller is the normal startup order — the same quiet early-out the keybinding utils and both
+subsystems already take. It returns BEFORE the clearing pass on purpose: a transient absence must not wipe
+associations that were correct a frame ago.
+
+**`Request_RegisterPhysicalButton` is idempotent.** Re-registering a key the map already carries —
+whether it came from a declaration or an earlier request — completes `Succeeded`, because a physical
+button's association is the key itself and the caller's intent already holds. An invalid key is rejected
+before enqueue with `Failed_NotEnqueued`. `Add` validates every declared key and their mutual uniqueness
+and rejects the WHOLE composition on the first bad one, leaving nothing composed.
+
+**The re-derive trigger is `UCk_InputSource_Subsystem`, not the keybinding half.** It binds
+`UEnhancedInputUserSettings::OnSettingsChanged` with the same late-binding discipline it already uses for
+source creation, and on each broadcast enqueues a `Request_Rederive` on its own source — guarded on the
+map being present, since the feature is opt-in. The subsystem already owns the handle the request has to
+land on, and putting the seam here keeps the new dependency (raw layer READS user settings) on the raw
+side: no keybinding path learns that entities exist. A rebind made from a settings widget therefore
+reaches the map on the next frame's collect pass, since gameplay runs after routing.
 
 ---
 
@@ -494,8 +583,9 @@ subsystem, not part of either namespace.
     "did my push take" checks must wait a frame; that one-frame gap is the contract, not a race.
 13. **Captures name physical `FKey`s and do not follow rebinds.** Nothing in the router consults
     `UEnhancedInputUserSettings`, so a player who remaps an action in the settings UI does not move any
-    capture. The two halves of this module share a module boundary and nothing else — no routing path
-    reads user settings, and no keybinding path knows a layer exists. In particular, do not reach for
+    capture. No routing path reads user settings, and no keybinding path knows a layer exists; the one
+    place the two halves meet is the button map (*The button space*), which reads the profile and which
+    nothing in the router consults. In particular, do not reach for
     `SaveKeyBindings` (or any keybinding util) from a capture callback: it needs an `APlayerController`
     the layer does not have, and it writes real user settings to disk (see #2).
 14. **A release reaches the press owner or nobody.** Don't write a layer that assumes it will see a
