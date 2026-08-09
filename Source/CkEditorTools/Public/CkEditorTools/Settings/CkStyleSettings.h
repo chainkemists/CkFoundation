@@ -90,6 +90,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Domain")
 	FLinearColor PickMarker_Hover = FLinearColor(1.0f, 0.9f, 0.2f, 1.0f);
 
+	// UE-gizmo-familiar R/G/B, pulled toward the existing Domain/Value brightness so an axis-colored
+	// numeric column sits beside Value_Numeric text without shouting: X from the Value_Bool_False red
+	// family, Y from the Value_Numeric green family, Z from the EntityId blue family.
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Domain")
+	FLinearColor AxisX = FLinearColor(0.94f, 0.36f, 0.38f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Domain")
+	FLinearColor AxisY = FLinearColor(0.50f, 0.85f, 0.45f);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Palette|Domain")
+	FLinearColor AxisZ = FLinearColor(0.42f, 0.62f, 1.0f);
+
 	// ----- Palette: Value-type colors ---------------------------------------
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Values")
 	FLinearColor Value_Bool_True = FLinearColor(0.2f, 1.0f, 0.4f);
