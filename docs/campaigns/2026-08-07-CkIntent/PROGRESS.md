@@ -109,11 +109,438 @@ blocks Phase 1a. The **poll-surface hole** (DESIGN_InputLayering.md) blocks Phas
 | 2026-08-08 | **[P1-D2]** O2 seam = minimal `ULocalPlayerSubsystem` owning the per-local-player input-source entity, created from `PlayerControllerChanged` (+ lazy backstop) — the 1a timing lesson applied | Engine-lifecycle boundary is exactly where D25 permits subsystems; no general LocalPlayer↔entity mechanism exists (0D) and Phase 1 must not invent one | If the maintainer wants a general mechanism instead |
 | 2026-08-08 | **[P1-D3]** Phase 1 proceeds WITHOUT the 0A spike; the Phase-1 thin writer + event dump becomes the 0A instrument (supersedes the throwaway probe, pending maintainer agreement) | PHASE_0.md's expected-observations table pre-writes a graceful response to every 0A outcome — the answers refine docs/tuning (Phases 3-4), not Phase 1 structures; maintainer's live directive authorized phase chaining this session | If 0A's results contradict a D21/D22 assumption after all |
 | 2026-08-08 | **[P1-D4]** Default device routing for the thin writer: keyboard+mouse → local player 0's source; gamepad → local player at its raw UserIndex; **explicit D22 assignment always overrides**. | With zero assignments nothing would flow (unusable); this is the pragmatic UE convention while keeping D22's explicit ownership as the authority; PHASE_0 :128 pre-wrote the composite-routing proposal | Maintainer review — split-screen keyboard assignment is exactly the case D22 exists for |
+| 2026-08-08 | **[P1A-D7]** Gym redesign (maintainer directive, REVISES [P1A-D6]): stations become SM-driven (`CkGym_StationSm`) self-running, **self-asserting** demos — each step renders WHAT/EXPECT/GOT + PASS/FAIL; exec commands demoted to manual layer; last-action report renders on the advertising panel. Design bar for ALL future gyms: a viewer with zero feature knowledge must read working/broken off the panels. Visual layer: per-line colored text via a new additive colored-lines API on the shared station display (`UTextRenderComponent` = one color per component — no rich text, no glyph brushes without .uasset widgets, so key icons = colored key-name text). Palette: white base / green pass / red fail / amber changed / cyan active / grey idle | Maintainer drove the gym at [EDITOR-VERIFY] and could not tell what was working without orchestrator narration — exec-driven stations make the viewer the assertion engine | If the colored-lines layout regresses other gyms' displays (shared-file change) |
 | 2026-08-08 | **[P1A-D3]** Layer ordering = **option (b), explicit `_Priority` int with registration-time collision detection** — option (a) ordered-child-record is DEAD. This executes DESIGN_InputLayering.md's own prewritten fallback ("(b) only if CkRecord does not preserve order"), triggered by O11's verdict | O11: `ORDERED-TODAY-BUT-INCIDENTAL` — `DoForEach_Entry` swap-prunes dead entries (`CkRecord_Utils.h:825` `RemoveAtSwap`, orchestrator re-verified), re-insertion is tail-only, zero contractual language; CkCamera's shipped layer stack already uses explicit priority on a population destroyed mid-life (`CkCamera_Processor.cpp:210-216`) | Only if CkRecord ever gains an ordering contract |
+| 2026-08-08 | **[P1A-D9]** Defect-#13 production fix AUTHORIZED by maintainer: `UnbindConflictAndRemap`'s unbind loop truly unbinds the conflict holder via `MapPlayerKey` + `EKeys::Invalid` (was `UnMapPlayerKey` = revert-to-default, a no-op for a default-bound holder → silent duplicate binding). Pinned by a new AutoTest; gym step-6 amber CONFIRMED-DEFECT annotation retired | Maintainer directive 2026-08-08 ("Fix the unbindconflictandremap"). Mechanism proven in-module: `SwapKeys` already assigns `EKeys::Invalid` through `MapPlayerKey` (anti-pattern #6 in `CkInput/Claude.md`) | If a downstream consumer (CkGameSettings page, BusterBlock) turns out to want revert-to-default semantics — that becomes a separate, honestly-named API, not a revert of this fix |
+| 2026-08-08 | **[P2-D1]** 0F settled by the maintainer's resume directive: the ButtonId map is a read-only consumer of the store the CkGameSettings page writes through; `OnSettingsChanged` is the shared broadcast both already use; no conflict. Phase 2 UNBLOCKED | Maintainer owns both campaigns and directed "move on to the next phase(s)" with the 0F gate on record. Defect escalation (1-5, 7; #13 fixed) stays on the human queue | If the CkGameSettings page grows a WRITE path keyed on anything the map derives from besides mapping names |
+| 2026-08-08 | **[P2-D2]** Button model reconstructed (original design PROMPT superseded + lost): ButtonId = stable `(Tier, FName)` identity, NOT a dense int (dense packing = Phase 4 bake). Tier 1 Mapped = one id per EI mapping name, associations re-derived on `OnSettingsChanged`; Tier 2 Physical = one id per raw FKey, fixed (the D16/test tier). Identities never change for the map's lifetime; FKey→ButtonId is one-to-many by design | Mapping names are what the settings store keys on — rebind-stable by construction; duplicate/shared keys are legal EI states (defect #13's residue proved they occur) | Maintainer review (reconstruction flag); or if Phase 3's frame record needs dense global indices before Phase 4 exists |
+| 2026-08-08 | **[P2-D3]** `InputButtonMap` is a feature composed on the input-SOURCE entity (mimic `InputBias`: `Add` only, no `Create`), opt-in in v1 | A map on a child entity has no player identity; Phase 3 composes it alongside the sampler | If every source ends up needing one unconditionally — then auto-compose from the source subsystem |
+| 2026-08-08 | **[P2-D4] GATE POLICY, campaign-wide (maintainer):** phase-close FULL-suite runs are DEFERRED — phases close on their SCOPED gate; ONE full suite runs when the complete campaign is green (and the ship flow's regate law still applies at push time). The Phase-2 full-suite run was killed mid-flight on this directive (no orphan editor, log lock verified free) | Maintainer 2026-08-08: "let's speed this up. We can do a full suite when the complete campaign is Green." Delta-zero accountability moves to campaign end: the final full suite diffs vs `1027/1025/2` PLUS every test name added after it | If a phase touches shared/base code with suite-wide blast (e.g. the D19 clamp on `TProcessorBase`) the orchestrator may still flag a targeted broader pattern, but not a full suite |
 
 ---
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-08 — [P1A-D9] defect-#13 fix authorized; campaign resumes ("move on to the next phase(s)")
+
+- Maintainer answered both open questions in one directive: fix `UnbindConflictAndRemap`, then
+  continue the campaign. Ruled [P1A-D9] (see decision log). Dispatched a single Opus unit:
+  the 3-line C++ fix (`CkKeyBinding_Utils.cpp:577-584` — `NewKey = EKeys::Invalid` via
+  `MapPlayerKey`), the deferred pinning AutoTest (from the 1a-7 "would-pin" list), and retirement
+  of the gym step-6 amber CONFIRMED-DEFECT caption (the step's `<unbound>` expectation should now
+  pass green on its own). Orchestrator gates with build + scoped `Ck_AutoTest_Input`
+  + `--discover-fresh` after return (C++ change → build required → waits for the editor lock).
+- **Phase 2 OPENED** (`PHASE_2.md` authored; rulings [P2-D1] 0F settlement, [P2-D2] button
+  model reconstruction — the original design PROMPT that defined "two-tier button space" is
+  lost, so the model is a fresh orchestrator ruling FLAGGED for maintainer review, [P2-D3]
+  source-entity composition). Sequencing: fix unit returns → orchestrator review → build +
+  scoped gate → full-suite run with editor closed (triple duty: strict gate-of-record for the
+  gym polish, fix verification, Phase-2 entry baseline — expect `1027/1025/2`) → dispatch the
+  Phase-2 `InputButtonMap` unit. Serialization law holds: no Script/ or source edits while any
+  build/test runs, orchestrator runs every gate.
+- **[P1A-D9] fix unit LANDED and orchestrator-accepted** (single Opus unit, no STOPs). The
+  defect was corroborated AT ENGINE SOURCE before the edit: `UnMapPlayerKey` →
+  `FoundMapping->ResetToDefault()` (`EnhancedInputUserSettings.cpp:1268-1271`) and it skips the
+  broadcast when the holder is not dirty — so a default-bound holder produced no change event
+  either, matching the Change Signal evidence exactly. `MapPlayerKey` accepts `EKeys::Invalid`
+  (`:1133-1250` — NewKey never validated, goes straight to `SetCurrentKey`), and
+  `GetMappingNamesForKey` drops Invalid-keyed rows from the key index (`:591-610`). Diff:
+  `CkKeyBinding_Utils.cpp:577-585` (the 3-line fix), `.h:346-350` contract reword,
+  `CkInput/Claude.md` 2 falsified sentences fixed, NEW
+  `CkAutoTest_Input_UnbindConflictAndRemapUnbindsHolder.as` (103 lines — holder-on-default is
+  the load-bearing precondition; asserts both `Get_KeyForMapping` AND the key→name index;
+  unconditional teardown + restore-proof asserts), gym step-6 amber caption + falsified header
+  sentence removed. **Accepted deviations:** teardown mimics the battery (no SaveKeyBindings —
+  the test never writes disk; no unregister — no sibling does), no `_TimeoutSeconds` override
+  (CkTests/CLAUDE.md marks the actor-wrapper wording stale; synchronous test), 2 extra restore
+  assertions (only test that leaves a row unbound). Orchestrator spot-checks: `Assert_False`
+  exists (`CkAutoTest_Base.as:632`), `<unbound>` rendering confirmed
+  (`CkInputGym_Shared.as:226`), asset idiom matches `RemapRoundTrip:46`, C++/h diffs read
+  exactly to spec. Call-site census: only the gym (2 sites) + the new test call it; both gym
+  sites already assert `<unbound>` (were red under the defect, go green now); step-7
+  `RemapKeys` re-binds all four rows so the demo cycle is self-healing. BusterBlock NOT swept
+  (downstream, pointer-bump concern). **Gate ✅ GREEN: 22/22 (31s)** — build succeeded, the new
+  pinning test PASSED BY NAME (`Saved/Logs/BuildTest-UnbindFix.log`). Full suite (test-only,
+  `--no-nullrhi --parallel 1`, editor closed) launched as the triple-duty run (gym-polish
+  gate-of-record / fix verification / Phase-2 entry baseline; expect `1027/1025/2`).
+- **Phase-2 unit DISPATCHED in parallel with the full suite** (single Opus unit,
+  `InputButtonMap` per PHASE_2.md): C++ writes direct (test-only run uses built binaries), ALL
+  AS test files drafted to scratchpad `phase2/` — installed by the orchestrator only after the
+  suite completes ([P1A-D2] precedent). STOPs: new subsystem, scheduler cycle, absent-settings
+  Result-semantics fork with no precedent, any unenumerated design fork.
+- **Full suite ✅ GREEN, DELTA-ZERO: `1027/1025/2/0/0`, 10m31s**
+  (`Saved/Logs/Test-FullSuite-PostFix.log`, editor closed) — exactly the prediction. Failing
+  names = the SAME two pre-existing `PathNetworkFollower` rows, nothing else. Three claims this
+  single run settles: (1) the [P1A-D7]+[P1A-D8] gym rework is regression-free under the strict
+  gate-of-record — the earlier Jolt red (`KinematicPlatformCarriesDynamicBox`) PASSED with the
+  editor closed, confirming the load-flake diagnosis and CLEARING that caveat; (2) the
+  [P1A-D9] fix is verified suite-wide (+1 test vs the 1026 baseline, all green); (3) **Phase-2
+  entry baseline = `1027/1025/2`** with those two names — Phase 2 diffs against this.
+- **Phase-2 unit LANDED and orchestrator-accepted** (single Opus unit, NO STOPs — both
+  potential forks had in-module precedent). 6 new C++ files (`CkInputButtonMap_*` quartet,
+  ~990 lines), `CkInputSource_Subsystem` gains the `OnSettingsChanged` → `Request_Rederive`
+  seam (late-binding discipline mirrored from source creation, unbound in `Deinitialize`,
+  `Cast`-guarded for the opt-in map), `CkInput/CLAUDE.md` +1 section + anti-pattern #13
+  narrowed (its "two halves share nothing" claim was falsified by this feature). NO new
+  processor group (HandleRequests drains in `FGroup_Input_Collect`, cancel in
+  `FGroup_EndPlay`); no Build.cs change. **Key precedents verified by the orchestrator:**
+  `_CompletionDelegate` is `mutable` in `FCk_Request_Base` so the const-ref
+  `Set_CompletionDelegate` shape matches `InputBias_Utils.cpp:184` exactly; handle meta
+  matches all 3 sibling handles; absent-PC re-derive early-outs BEFORE the clearing pass
+  (transient absence never wipes state) and reports `Succeeded` (retryable ≠ Failed, house
+  Result rule). **Accepted judgment calls:** slot-First association (a name with only
+  non-First rows keeps an identity holding Invalid), clear-then-rebuild for Mapped tier
+  (vanished mapping → Invalid key, identity retained), params read-only at runtime (table is
+  single source of truth), flat array no key-index, no struct formatter for ButtonId (only
+  `CkFormat_Defaults.cpp` precedent — logs print tier/name separately), test keys F1/F2/F9-F11
+  grep-verified unused. **Orchestrator fixed inline:** one `In`-prefix param-name drop in the
+  subsystem .cpp (the exact style deviation the old module was flagged for). 6 AS tests
+  installed from scratchpad AFTER the full suite completed ([P1A-D2] discipline held).
+  **Scoped gate ✅ GREEN: 28/28 (33s)** — quartet + subsystem edit compiled first-try, ALL SIX
+  ButtonMap tests passed by name (`Saved/Logs/BuildTest-Phase2.log`). Comment audit: breadcrumb
+  sweep over the quartet = zero hits.
+- **Phase 2 CLOSED under [P2-D4]:** scoped gate 28/28, doc subsection landed + reviewed,
+  decisions recorded, comment audit clean. The phase-close full suite was killed mid-flight on
+  the maintainer's directive — **full-suite delta-zero for Phases 2+ is DEFERRED to campaign
+  end** (final diff vs `1027/1025/2` + all names added since). Phase 3 opens next: the
+  `CkIntent` module (sampler / frame record / ring / octant+SOCD).
+- **Phase 3 OPENED** (`PHASE_3.md` authored; rulings [P3-D1] module scaffold + one-way dep
+  law, [P3-D2] D19 clamp per the 0H-researched shape — the phase's high-blast edit, [P3-D3]
+  sampler/record/ring on the source entity at Hz(60), [P3-D4] router delivery-retention
+  fragment — FLAGGED for maintainer review, first structure DESIGN_PollSurface anticipated,
+  [P3-D5] octant/hysteresis/SOCD deferred to unit 3-2). **Unit 3-1 DISPATCHED** (single Opus
+  unit): scaffold + clamp + retention + sampler quartet + 5 AutoTests. Gate on return: build
+  `--generate` (uplugin gains a module) + scoped pattern `Ck_AutoTest_In` `--discover-fresh`
+  (expect 28 + new Intent rows). STOPs: 0H-vs-code contradiction, scheduler cycle, undrivable
+  clamp test (STOP-lite: implement + report gap), any unenumerated fork.
+- **Unit 3-1 LANDED with one legitimate STOP** (13 new CkIntent files ~991 lines + clamp on
+  `TProcessorBase` + router retention + 4 AS tests + 1 C++ clamp test). Orchestrator verified
+  the high-blast `CkProcessor.h` diff line-by-line: pure insertions + ONE modified line
+  (`else` → `else if constexpr (unlimited)`), unlimited branch byte-identical, misuse guarded
+  by 3 static_asserts, drop-don't-defer + single `ck::ecs::Log` report (deliberately not
+  Warning — AutoTest harness escalates warnings; why-comment at the call site). Clamp
+  implemented VERBATIM to 0H's researched shape; clamp test added to the EXISTING hermetic
+  `Test_Processor_TickRateTrait.cpp` fixture (clamped=2 vs unclamped=4 over one
+  `TickWith(1.0)`, drop-not-defer + cadence-resume proven). **Gate note recorded:** that row
+  is `CkTests.UnitTests.CkEcs.Processor.*` — needs a SECOND test pattern (`TickRateTrait`)
+  beside `Ck_AutoTest_In`. **The STOP — ruled [P3-D6]:** Hz(60) sampler + per-render-frame
+  retention loses edges >60 fps / duplicates <60 fps. Ruling = accumulator option (A) refined
+  with `FGroup_Intent_Collect` (same-group order is not a guarantee — house law), pending
+  buffer consumed-and-cleared by the rated sampler, hitch attribution documented. Follow-up
+  assigned back to the 3-1 agent (context intact); gate deferred until it lands.
+- **[P3-D6] fix LANDED** (same agent, context intact; CkIntent-only + 1 new test, CkInput/
+  CkEcs untouched this round). `FGroup_Intent_Collect` spliced (edges declared once each,
+  chain `... Route → Intent_Collect → Intent_Sample → Gameplay`); unrated
+  `FProcessor_IntentSampler_Collect` appends retention → pending buffer; sampler
+  claims-by-value-and-clears BEFORE deriving (orchestrator spot-checked
+  `CkIntentSampler_Processor.cpp:74-75`); held-keys + raw-axis fallback read claimed events;
+  Claude.md defect text REPLACED by the buffered contract. New test
+  `NoEdgeLostAcrossSkippedRenderFrames` pins exactly-one-edge with three non-vacuity guards
+  (frame-index-based settle, not render hops). **Accepted judgment calls:** buffer unbounded
+  by design (bounded in practice by one logic frame; a cap would drop the edges it exists to
+  keep), `Claimed` copied not moved (row must own storage), sampler's first rows may precede
+  router-state stamping (benign, tests gate on content). **Gate 1 ✅ GREEN: 97/97 (58s)** —
+  the `Ck_AutoTest_In` substring caught Interaction/Inventory suites too (free regression
+  coverage over the D19 base-class edit's blast radius); all 5 Intent rows passed BY NAME;
+  CkIntent module compiled + generated + discovered first-try
+  (`Saved/Logs/BuildTest-Phase3Unit1.log`). **Gate 2 ✅ GREEN: 3/3 (28s)** —
+  `TickRateTrait_ClampBoundsCatchUpReplay` passed + both pre-existing trait tests unchanged
+  (`Saved/Logs/Test-TickRateTrait.log`). **Unit 3-1 fully gated.** Unit 3-2 (octant/
+  hysteresis/SOCD, [P3-D5]) dispatched next — fresh Opus agent, extends the landed sampler
+  quartet additively (the 5 existing Intent tests must stay green).
+- **Unit 3-2 LANDED, orchestrator-accepted** (no STOPs; +466 C++ lines across the sampler
+  quartet + 4 new AS tests, 859 lines; additivity preserved — no existing field/getter/
+  signature changed). Orchestrator verified the octant algorithm by reading `DoRecordOctant`:
+  neutral-pass RESETS the hysteresis memory (why-comment: gesture ended, memory must not bias
+  the next one), hold-band asymmetry = half-width + margin, `FindDeltaAngleDegrees` handles
+  the W-octant wraparound; hand-checked test 1's angle walk (26°→E held, 30°→NE, 21°→NE by
+  travel direction, 5°→E). **Defaults proposed:** neutral radius 0.25 (≈ XInput stock
+  deadzone), hysteresis 5° (~11% of an octant); flagged in Claude.md as proposal pending 0A.
+  **Accepted judgment calls:** `FCk_Intent_SocdQuad` struct (all-or-none structural),
+  quad-distinctness rejection added (mirrors AxisKeysAreDistinct), press-order as
+  oldest-first ButtonId array rebuilt from claimed arrival order, one `ECk_Intent_CleanedAxis`
+  enum on two row fields, SOCD quads from tier-2 Physical buttons (no binding-profile
+  dependency), policy-disagreement test uses two samplers in one test (single policy is
+  unfalsifiable alone), NO new utils. Follow-up noted: `Source/CLAUDE.md` decision-tree row
+  now incomplete (octant/SOCD missing) — orchestrator takes it at phase close. Gate in
+  flight: build + `Ck_AutoTest_In` `--discover-fresh` (expect 101 = 97 + 4; CkEcs untouched
+  → no trait re-run).
+- **Unit 3-2 gate ✅ GREEN: 101/101 (1m0s)** — all 4 octant/SOCD tests by name, the 5 earlier
+  Intent tests green = additivity proven (`Saved/Logs/BuildTest-Phase3Unit2.log`).
+  Orchestrator took the flagged follow-up (Source/CLAUDE.md decision-tree row now names
+  octant/SOCD). Comment audit over ALL CkIntent source: clean (2 hits, both domain "phase").
+  **PHASE 3 CLOSED** under [P2-D4].
+- **Phase 4 OPENED** (`PHASE_4.md` authored): rulings [P4-D1] grammar v1 (numpad directions
+  onto the octant vocabulary, `+` chords, whitespace sequences, `w=<frames>` in LOGIC frames
+  — D9's `w=200` re-read as frames under frame-determinism, `lenient`, `hold=<frames>`; flat,
+  no conditionals) — RECONSTRUCTION, maintainer review flag (original design doc lost);
+  [P4-D2] definition model (parser is the only producer, explicit int priority, tie =
+  rejection); [P4-D3] bake = pure function → `FCk_Intent_CompiledSet` with per-terminal
+  resolution tables + D7 deferral VERDICTS AS DATA (sequence-suffix never defers — success
+  criterion 2 baked in); [P4-D4] "cycle validation" reconstructed as strict-total-order
+  validation over shared-terminal priorities; [P4-D5] pure data + free functions, zero ECS
+  this phase, AS/BP `Parse`/`Bake` surface. Units: 4-1 parser (dispatched), 4-2 bake (after
+  4-1's gate).
+- **Unit 4-1 LANDED** (no STOPs): `CkIntentGrammar_Data.h` (375) + `_Utils.h/.cpp` (87+397)
+  + 505-line hermetic C++ test (6 tests, `Ck.Intent.Grammar.*` greenfield family, 13
+  rejection reasons each with a distinct asserted reason) + entity-free AS notation test +
+  Claude.md authoring section. Two justified Build.cs edits: `GameplayTags` → CkIntent
+  (recorded LNK2019 lesson), `CkIntent` → CkTests (C++ test include path). **Evidence-backed
+  shape calls:** result struct mimics `FCk_2dGridPlacement_Result` (enum-mode + reason +
+  empty-definition-on-reject); NO ExpandEnumAsExecs (repo sweep: exec pins ONLY on DoCast
+  family, never BlueprintPure); "parser is the only producer" enforced via friend +
+  CK_PROPERTY_GET-only + private all-fields ctor + BlueprintReadOnly (public default ctor =
+  the empty rejection value, precedent `FCk_Nav_PathResult`); `ECk_Intent_Lenience` enum not
+  bool. **Binding rule:** digit-run in a chord token emits prefix digits as standalone steps,
+  last digit joins the chord — `236+LP` → `[S][SE][E+LP]`, uniform over token position.
+  Edges settled: case-insensitive modifier keywords (cost: no button named `lenient`),
+  `=`-containing token is always a modifier, duplicate modifiers reject (never last-wins),
+  digit-leading token IS a direction run (enforces button-name charset), `0` window rejects
+  (stored 0 = undeclared, unambiguous), malformed input logs Verbose only (no ensure — AS
+  rejection leg needs no ExpectedLogErrors). Gate 1 in flight (build `--generate` +
+  `Ck_AutoTest_In` `--discover-fresh`, expect 102); gate 2 = `Ck.Intent.Grammar` pattern
+  after (memory: brand-new C++ test .cpp discovers fine when its TU links this build;
+  recovery if "No tests matched" = touch + rebuild).
+- **Unit 4-1 gates ✅ GREEN: 102/102 (1m3s) + 6/6 (25s)** — AS notation test by name (the
+  generated `utils_intent_grammar` surface exists and works), all 6 C++ grammar tests incl.
+  the 25-row/13-reason rejection matrix (`BuildTest-Phase4Unit1.log`, `Test-IntentGrammar.log`).
+  **[P4-D6] ruled at 4-2 dispatch:** chord simultaneity window = BAKE parameter
+  (`ChordWindowFrames`, uniform per set, default 3 logic frames), not notation — the grammar
+  has no chord-window syntax and D9's revisit clause resists growing one; feeds the D7
+  chord-membership verdicts. **Unit 4-2 (bake) dispatched to the SAME agent** (context holds
+  the model): compiled set + resolution tables + D7 verdicts-as-data (sequence-suffix
+  no-deferral must be the structural DEFAULT, not a computed special case) + [P4-D4]
+  tie-rejection + parser-as-fixture C++ tests + AS bake leg.
+- **Unit 4-2 LANDED** (compiled-set data 569 lines + bake in the same utils class + 447-line
+  C++ test + AS bake row; no Build.cs change). **Key shapes:** verdict = two named int32
+  causes (`_HoldSiblingFrames`/`_ChordMemberFrames`, 0 = absent — combining left to the
+  matcher); resolution rows = index arrays into the set's own `_Intents` (no name/priority
+  duplication); deferral rows store ONLY deferring buttons — no-deferral is what happens when
+  nothing wrote a row, structurally. **Accepted judgment calls:** a DIRECTION in a chord is
+  not chord ambiguity (directions are frame-record state on the press frame; only a second
+  BUTTON can still be in flight — this is what makes `236+LP` legally zero-deferral);
+  both causes require ≥2 candidates (`HasRivals` — D7's "forward ambiguity only" as one
+  gate); chord-vs-chord rivals defer too; compiled intents do NOT carry source definitions
+  (one authoritative step list); pure-direction-terminal intents contribute no resolution row
+  (documented Phase-5 gap: direction-driven triggers); tests pass ChordWindowFrames=4 to
+  prove the argument is carried, not the default. **[P4-D7] ruled at review** (the unit's
+  flagged fork): name→ButtonId duplicate rows — same-value idempotent, conflicting-value
+  REJECTS (`ConflictingButtonRow`, names button + both ids); first-match-wins-silently was a
+  non-negotiable-#3 violation. Fix assigned to same agent; gate after it lands.
+- **[P4-D7] fix LANDED** (+15/+24/+47/+7 across the four files): vocabulary check placed
+  BEFORE any row is read (first-match becomes a proven consequence, not a policy);
+  `_ConflictingButton` field mirrors the `_OffendingIntent`/`_ConflictingIntent` naming;
+  both identities carried (the fix is deleting one of two rows — showing one is useless);
+  idempotent-duplicate BAKES leg + conflicting-duplicate REJECTS leg added. AS deliberately
+  NOT extended (would prove nothing new; enum + ButtonId getters already exercised AS-side).
+  Phase-4 closing gates in flight: build + `Ck_AutoTest_In` (expect 103 = 102 + bake AS
+  row), then `Ck.Intent.Grammar` (expect 10 = 6 parser + 4 bake).
+- **First gate attempt: BUILD BREAK, root-caused + fixed inline by orchestrator.** LNK2019 in
+  `Test_IntentGrammar_Bake.cpp`: unresolved dllimport `FCk_Input_ButtonId::{operator==, 2-arg
+  ctor}`. Cause: `CkTests.Build.cs` never declared `CkInput` (AS tests reach it via
+  reflection; this is the first CkTests C++ TU constructing a ButtonId), and the 4-1 agent's
+  "comes transitively through CkIntent's public deps" claim did not hold for LINKAGE on this
+  toolchain — includes propagated (it compiled), the import lib did not (it failed to link).
+  Fix: `"CkInput"` added to CkTests deps (one line, alphabetical slot; same class of fix as
+  the recorded GameplayTags-LNK2019 lesson). Rebuild `--generate` + gate re-running.
+- **PHASE 4 CLOSED under [P2-D4]:** post-fix gates ✅ `103/103` (1m5s, both grammar AS rows
+  by name) + ✅ `10/10` (21s, full C++ battery incl. [P4-D7] legs). Comment audit: zero hits
+  across all four grammar files. Reconstruction flags standing for maintainer review:
+  [P4-D1] grammar, [P4-D4] cycle-validation reading, [P2-D2] button model.
+- **Phase 5 OPENED — the poll-surface ruling batch.** Orchestrator adversarially reviewed
+  `DESIGN_PollSurface.md` and ACCEPTED its analysis (its load-bearing reframe verified:
+  D15-revised's text already mandates the delivery rows, and [P3-D4]/[P3-D6] BUILT the
+  per-event substrate). All five questions it demanded be ruled in one sitting are ruled in
+  `PHASE_5.md`: **[P5-D1]** a layer IS the compiled-set anchor (`IntentMatcher` feature on
+  the layer entity; D8's vehicle case is the motivating case); **[P5-D2]** α/β/γ = γ
+  (per-layer matching over layer-visible events; visibility derived from recorded outcomes;
+  α unrepresentable, β's recording need already met); **[P5-D3]** Shape C is the primary
+  read API WITHOUT v1 intent entities (tag-keyed reads on the matcher handle; persistent
+  rows in one stable fragment — kills C-F3; C-F5 deferred with Phase 6's entity decision);
+  **[P5-D4]** claim = immediate mutator (declared escape hatch + reason), per-layer free
+  under γ, through-mask unrepresentable, NO down-stack claim, same-layer order accepted +
+  documented; **[P5-D5]** naming N1 — capture keeps `Consume`, gameplay verb is
+  `Request_Claim`; **[P5-D6]** D15 policies = default pair only in v1; **[P5-D7]** captures
+  follow the SET, rebinds follow the MAP (activation resolves ButtonIds→FKeys through
+  InputButtonMap, re-derive re-registers — success criterion 4's wiring). Dossier appendix
+  items: O13/O9 stale-table rows acknowledged (already-closed items; table cleanup deferred
+  to campaign close); naming hazard resolved by [P5-D5]; immediate-vs-deferred now declared
+  by [P5-D4]. Units: 5-1 matcher core (dispatching), 5-2 deferral/holds/claim.
+- **Unit 5-1 LANDED, orchestrator-accepted** (no STOPs; 6 new `CkIntentMatcher_*` files
+  ~1499 lines + 5 AS tests ~1267 lines + group `FGroup_Intent_Match` spliced after Sample;
+  zero additions to gated Phase-4 surfaces — one falsified comment corrected in
+  `CkIntentGrammar_Data.h`, flagged). **Load-bearing shapes verified by orchestrator:**
+  visibility predicate handles the dead-consumer edge conservatively (unrankable → not
+  visible); scan bookkeeping clamps unscanned rows to the ring, resets on swap, replays
+  oldest-first, missing row fails safe (spot-read `:413,:476-480`). **Accepted judgment
+  calls:** swap drains in `FGroup_Intent_Collect` (deterministic set-before-scan without a
+  4th group; disjoint fragments from the sampler's collector), matcher UNRATED using record
+  frame indices (two 60 Hz accumulators have no defined phase alignment), terminal accepts
+  pressed-or-held / prefix requires a visible press EDGE (chord = "down together", sequence
+  = "an input"), capture edits DIFFED (two terminals may share a key), swap-reject logs
+  Verbose (unbound mapping is legitimate player state + avoids warning-escalation),
+  unknown==uncompleted (`Idle`/INDEX_NONE, anti-pattern #19), rebind test uses Flashlight
+  F→F3 (no other test remaps it). 5-1 deferral boundary: nonzero-verdict buttons SKIPPED
+  with one Verbose per activation (5-2 implements). Gate in flight (build + `Ck_AutoTest_In`
+  `--discover-fresh`, expect 108 = 103 + 5).
+- **First 5-1 gate attempt: AS COMPILE FAILED (toolbox correctly invalidated the run —
+  AS_COMPILE_FAILED verdict, stale bytecode never trusted).** Two agent errors, both known
+  traps, fixed inline by orchestrator: `Request_Rederive(_Map)` missing its request-struct
+  arg (×2 in `RebindMovesTheMatch.as:157,182` — the AS wrapper defaults only the trailing
+  delegate) and adjacent string literals in `SuffixTerminalNeverDefers.as:188` (the recorded
+  no-splice trap; SelfHeal named it but has no strategy). Gate re-running.
+- **Unit 5-1 gate ✅ GREEN: 108/108 (1m4s)** — all 5 matcher tests by name
+  (`BuildTest-Phase5Unit1b.log`). **Success criteria 1, 2, 4 now PROVEN HEADLESS:**
+  completion frame == press-row frame (criterion 1), suffix-terminal-never-defers with live
+  arbitration (criterion 2), rebind-moves-the-match with zero definition edits (criterion 4
+  headless leg; the `[EDITOR-VERIFY]` CkGameSettings-page leg remains human). Unit 5-2
+  dispatched to the same agent (context intact): deferral execution (Pending phase, chord
+  window, hold thresholds from the baked verdicts), D11 hold accumulator, `Request_Claim`,
+  D15 default-pair on delivery loss, criterion-3 tap-vs-hold threshold±1 tests.
+- **Unit 5-2 LANDED** (no STOPs; matcher files grew to ~2488 lines total + 5 AS tests
+  ~1219 lines; ZERO new processors/groups — the Match processor owns episodes, "two readers
+  of one ring would race the hold count"). **Shapes:** episodes keyed by FRAME not offset
+  (offsets slide); two armed-cause flags not a mode enum (a button can be both); accumulator
+  separate struct per D11, policy-applied (advances only down+deliverable). **Resolution
+  order per row:** delivery-check → accumulator → chord branch (terminal=this row) → hold
+  branch (terminal=press row) → disarm → final resolution (both disarmed; scan anchored on
+  press row, completion frame = resolution row — latency paid, history not rewritten).
+  **Accepted judgment calls:** losers → `Idle` not `Failed` (Failed = a wait that matched
+  NOTHING); episode-open clobbers candidate latches; swap drops episodes (withdraws the
+  question); any completion purges episodes listing that intent (no chord double-complete);
+  fresh episodes advance once against their own press row (partner-already-down = zero
+  latency); delivery LOSS polled prospectively via read-only cross-module fragment view
+  (would-this-key-reach-me — correct question, distinct from the historical per-event
+  predicate; precedent = sampler's Collect view, no CkInput edits); claim rejections split
+  `Failed_NotEnqueued` (handle validity) vs `Failed` (state refusals = answers). Both AS
+  lessons applied (request-structs everywhere, zero adjacent literals, grep-verified). Gate
+  in flight (expect 113 = 108 + 5).
+- **Unit 5-2 gate ✅ GREEN: 113/113 (1m6s), first try** — all 5 by name
+  (`BuildTest-Phase5Unit2.log`). **Success criterion 3 PROVEN** (tap at threshold−1, hold
+  completes ON the threshold frame, held-past still reports the threshold frame). Comment
+  audit over all matcher files: zero hits. **PHASE 5 CLOSED under [P2-D4].** Criteria 1-4
+  all proven headless; remaining: 5 (debugger, Phase 7 + EDITOR-VERIFY), 6 (~40-move AS
+  bake, Phase 8), 7 (three-environment, ongoing), 8 (full suite, campaign end).
+- **Phase 6 OPENED** (`PHASE_6.md`): **[P6-D1]** signals on the MATCHER entity, identity in
+  the payload — NO per-intent entities, closing [P5-D3]'s deferred question and retiring
+  C-F5 permanently; **[P6-D2]** latch decay to Idle after `_LatchDecayFrames` (default 20 ≈
+  333 ms buffer feel), claim cleared with it, Pending never decays, decay owned by the Match
+  processor (single-reader rule) — without decay a stale completion is claimable seconds
+  later = the detonation bug reborn at the claim level; **[P6-D3]** exactly two signals
+  (`OnIntentPhaseChanged` full transitions incl. decay, `OnIntentCompleted` presentational)
+  fired from the one phase-write helper (structural can't-miss, not disciplinary), D6's
+  last-payload law restated at the API. Unit 6-1 dispatched to the matcher agent (context
+  intact).
+- **Unit 6-1 LANDED, orchestrator-accepted** (no STOPs; additive-only on gated 5-x surfaces;
+  5 new AS tests ~1259 lines; no new processors/groups — decay is the Match processor's last
+  per-row pass). **Structural enforcement EXCEEDS spec:** `FIntentMatcher_PhaseRow`'s friend
+  list narrowed to `{PhaseWriter, Utils}` — a direct phase write NO LONGER COMPILES;
+  orchestrator ran the agent's own verification grep: `_Phase/_PhaseFrame` written ONLY at
+  `Set_Phase` (:433-434), claims only at the stamp + the writer's clear. 6 call sites
+  inventoried (swap→Idle DOES signal — observable phase move; dropped episodes silent —
+  different thing, documented). **Binding policy:** default `FireIfPayloadInFlightThisFrame`
+  — the only policy that cannot contradict the poll (a latch cannot decay in its stamping
+  frame); `FireIfPayloadInFlight` documented opt-in with its decayed-payload hazard.
+  **Accepted calls:** any transition clears the claim inside the writer (subsumes 5-2's
+  per-site clears); writer fires on phase-or-frame change (re-completion is a real event,
+  no-op tick silent); 6-param delegate verified against variadic signal templates;
+  `_LatchDecayFrames` optional-with-default (5-x tests untouched). One stale doc breadcrumb
+  (anti-pattern 15 named a Phase) removed. Gate in flight (expect 118 = 113 + 5).
+- **Phase-6 gate attempt 1: 116/118 — both reds in the NEW decay path** (everything prior
+  stayed green). `PhaseChangedObservesFullOrder`: decay-gap arithmetic got **-32** (fits
+  payload frame = INDEX_NONE: -1 − completion ~31); `LatchDecayClearsClaim`: `Check_Decayed`
+  never true in 1.04s on a CLAIMED row (fits a claim guard wrongly skipping decay).
+  Failures + hypotheses bounced to the 6-1 agent for confirmed root-cause + fix; design
+  forks return, mechanical fixes proceed.
+- **Decay reds ROOT-CAUSED + FIXED** (hypothesis (a) CONFIRMED at
+  `CkIntentMatcher_Processor.cpp:1155-1156` — decay passed `INDEX_NONE` into the signal
+  payload; -32 = -1 − completion 31; the claimed-row "no decay" was OBSERVATIONAL — the
+  test's readiness gate required `_DecayFrame >= 0`; hypothesis (b) disproven, no claim
+  guard exists). Fix: real frames threaded through `DoDecayLatches` AND
+  `DoSettleLosingRows`/`DoPurgeEpisodesResolvedElsewhere` (same defect — losers' 
+  `Pending→Idle` also reported -1). Zero test-assertion changes needed (`TryGet_Completion*`
+  gates on phase, not frame). **Bonus hardening:** agent found a latent render-rate coupling
+  it had introduced — `WaitFrames` counts RENDER frames, decay counts LOGIC frames; three
+  latch-holding tests pass only above 60 fps — hardened with explicit
+  `Set_LatchDecayFrames(600)` (the precondition made explicit; they are not decay tests).
+  **[P6-D4] ruled:** the swap-reset's `→ Idle` payload KEEPS `INDEX_NONE` — the swap drains
+  before this frame's row exists; an administrative transition tied to no row should say so
+  rather than borrow the last row's index and invent precision. Documented as the one
+  explicit exception. Re-gate in flight.
+- **Phase-6 re-gate ✅ GREEN: 118/118 (1m8s)** — both former reds pass with ZERO assertion
+  changes (`BuildTest-Phase6b.log`). **PHASE 6 CLOSED under [P2-D4].**
+- **Phase 7 OPENED** (`PHASE_7.md`): [P7-D1] the debugger renders recorded facts, never
+  recomputes (dossier's B-debugger argument → doctrine); [P7-D2] near-miss needs new data —
+  opt-in scan-diagnostic ring on the matcher, `ck.Intent.RecordScanDiagnostics` CVar
+  default OFF, answers criterion 5's "which step timed out and by how many frames";
+  [P7-D3] `CkIntentDebugger` module mimicking CkGoapDebugger (category + MVVM +
+  `SCkDebug_EventTimeline` reuse); rosette = part of the key/state view. Units: 7-1
+  diagnostics (dispatched to the matcher agent), 7-2 debugger UI (fresh agent, must load
+  ck-gameplaydebugger-extension + ck-slate-tools skills first; visual layer =
+  EDITOR-VERIFY).
+
+### 2026-08-08 — [P1A-D7] gym's first drive: CONFIRMED defect #13 + presentation rulings [P1A-D8]
+
+- **CONFIRMED shipped defect #13 (NEW — not among the 12 suspected):**
+  `UCk_Utils_KeyBinding_UE::UnbindConflictAndRemap` does not unbind a conflict holder — the
+  unbind loop calls `Settings->UnMapPlayerKey` (`CkKeyBinding_Utils.cpp:583`), which REMOVES THE
+  PLAYER'S CUSTOMIZATION (revert-to-default), not the binding. A holder sitting ON its authored
+  default is a no-op: it keeps the contested key → silent DUPLICATE binding, no change event.
+  Evidence (maintainer's live gym drive, 3 independent assertions): step-6 verdict
+  `Interact EXPECT <unbound> -> GOT E` red; profile shows Jump AND Interact both on E;
+  Change Signal shows Interact's listener NEVER fired across multiple laps while the other
+  rows fired 4-15 times. Mechanism is the only reading consistent with all three. The old
+  exec-driven gym demoed this function for weeks and printed "previous holder is cleared"
+  unconditionally — the self-asserting redesign caught it on first drive.
+  **True fix (maintainer decision, NOT applied — semantic choice + CkGameSettings/BusterBlock
+  consume this path):** `MapPlayerKey` with `EKeys::Invalid` (the mechanism SwapKeys' trap
+  proves works), or rename/redocument to revert-to-default semantics. **Escalate with 1-5+7.**
+- **[P1A-D8] gym color contract (rules the panels the maintainer flagged):** Red = a true
+  failed assertion ONLY. A CONFIRMED defect renders its red verdict + an amber "CONFIRMED
+  DEFECT (recorded, escalated)" annotation — the gym's job is to show it, labeled, not to
+  expect-around it. Demo-driven divergence (rows off-default mid-lap) = amber, never
+  red-with-apology. Environment absence (this host ships no CommonUI controller-data key art →
+  every glyph misses) = one amber note, not N red rows; per-row red only when SOME rows
+  resolve (differential = meaningful). Change Signal's 4/4 verdict DECOUPLED from defect #13
+  by adding Interact to the batch step — every row then moves per lap on healthy paths alone.
+- **[P1A-D8] fixes LANDED** (single Opus unit, orchestrator-reviewed: no stale callers of the
+  re-signatured glyph helpers, edits confined to Script/CkInput/, deviations = panel-width
+  line wrapping only). Regate: scoped `Ck_AutoTest_Input` **21/21 green (31s)**. Uncommitted
+  with the [P1A-D7] work. Awaiting maintainer: PIE re-drive of the panels; decision on the
+  production `UnbindConflictAndRemap` fix (true unbind via MapPlayerKey+EKeys::Invalid) + the
+  deferred pinning AutoTest.
+
+### 2026-08-08 — [P1A-D7] gym redesign executed (post-commit polish, uncommitted on top)
+
+- Single Opus unit LANDED: colored-lines API on the shared station display
+  (`CkGym_Utils.as` +94 purely additive, `CkGymStation_EntityScript.as` +250: one
+  `UTextRenderComponent` per same-color run, plain path falls through untouched, auto-size
+  measures runs) + all 5 Input stations reworked to self-asserting colored panels + 8-step
+  SM demo loop (`CkInputGym_RemapDemoSteps.as`, dwell-gated, `Ck_GymInput_Auto` toggle,
+  manual exec = demo-hold) + persistence checklist w/ construct-time probe
+  (`k_PersistMarkerKey = EKeys::Y`, grep-verified unused) + wart fix (4 report families
+  render on their advertising panel). **Accepted agent judgment calls** (all within latitude,
+  recorded in its report): tag-based station resolution (SM context resolves to the GymStation
+  display entity via lifetime-owner context inheritance — matches known ck::Ctx behavior);
+  batch step also moves Flashlight + step 6 clears Interact so Change Signal's 4/4 verdict is
+  reachable; FString formatter family deleted (grep: zero remaining refs); glyph station has
+  no "last device seen" line (`Get_ActiveControllerData` ensures on legitimate miss).
+- **Orchestrator review found 1 defect, fixed inline:** colored path never cleared the plain
+  description component, which still holds the spawn-payload text at the SAME anchor the
+  colored runs stack from → overlapping text on every colored station. Fix in
+  `Apply_ColouredBody`: retry-safe blank of the description component (async-instantiation
+  guarded, `_DescriptionClearedForColour`), mirrors the file's existing null-retry pattern.
+- Gate: scoped `Ck_AutoTest_Input` **21/21 green (35s)**. Full suite `1026/1023/3` — the 2
+  known PathNetworkFollower names **plus 1 NEW red**:
+  `Ck_AutoTest_CkJolt_KinematicPlatformCarriesDynamicBox`, 1/597 assertions ("box 165.9 vs
+  platform 200.0" tracking tolerance). Root-caused as **load flake, not regression**: (a) no
+  causal path — the diff is gym display script, never executed in the headless AutoTests
+  world; (b) first full run today with the user's interactive editor open alongside (5/5
+  earlier full runs green on this test); (c) discriminating experiment: 2/2 isolated re-runs
+  GREEN (27s each, editor still open). Confidence: most-likely, not proven — strict proof
+  would need a red repro on the pre-change tree under identical load. **Gate-of-record
+  caveat:** if strict delta-zero is wanted before committing the polish, re-run the full
+  suite with the user's editor closed. Uncommitted; commit only on user authorization.
 
 ### 2026-08-08 — Phase 1b executed (same session, after Phase 1 gate green)
 
