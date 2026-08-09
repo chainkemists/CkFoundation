@@ -52,6 +52,19 @@ this file in CkFoundation; the diagnostics test + pipeline artifacts in CkTests 
 repos' `git log -3` for the SHAs). **Phase 7's remaining work is unit 7-2 only** (the
 `CkIntentDebugger` UI). Nothing is uncommitted except foreign dirt.
 
+**UNIT 7-2 WAS DISPATCHED AND KILLED MID-READING (machine restart)** — it wrote NOTHING
+(verified: no `CkIntentDebugger` dir, CkGameplayDebugger status clean). Re-dispatch it
+fresh from the package in PHASE_7.md + [P7-D3]: fresh Opus agent, MUST load
+`ck-gameplaydebugger-extension` + `ck-slate-tools` skills first, mimic `CkGoapDebugger`,
+consume ONLY recorded state ([P7-D1] — the read APIs are enumerated in PROGRESS's Phase-7
+entries), deliver the `[EDITOR-VERIFY]` list incl. criterion 5's scenario. Note its last
+observation before the kill: "the launcher catalog spec enforces a census — check it
+before adding a module" — the CkGameplayDebugger plugin appears to have a module-census
+spec the new module must be registered in; make sure the re-dispatched unit honors it.
+One more gitignore trap learned: CkFoundation's `.gitignore:49` is a blanket `*.md` —
+NEW module docs must be `git add -f`'d (89 tracked sibling docs are the precedent) or
+they silently vanish from commits.
+
 **Foreign dirt — NEVER stage:** CkFoundation: 78-82 `Content/CkUsf/GeneratedLooks/*.uasset`,
 `docs/reviews/`, `docs/superpowers/`, request-completion-delegates continuation. Superproject:
 `Config/DefaultGameplayTags.ini`, `CONTINUATION_PROMPT_CrowdDebuggerRuntimeSidewalksInvisible.md`,
