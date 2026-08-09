@@ -2,7 +2,30 @@
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
 
-**As of 2026-08-08 (COMMITTED LOCALLY on user authorization — push still withheld, awaiting explicit ok):**
+**As of 2026-08-09 session end: ALL PHASES 0-8 CLOSED; CAMPAIGN-END FULL SUITE ✅ GREEN +
+DELTA-ZERO BY NAME** (`1065/1062/3`, +38 rows all ours all green, zero lost, third red =
+proven load flake [INV-B] — the only failures anywhere are the two eternal
+`PathNetworkFollower` names). **Technical scope COMPLETE.** This session: Phase 7 closed
+(7-1 verified committed CkFoundation `4c7ab4d0e`/`a3f4c8cd1`/`5a2a15595` + CkTests
+`ab861b3f`; 7-2 = `CkIntentDebugger`, 25 files ~4380 lines in **CkGameplayDebugger** — a
+NEW repo in the ship set — under [P7-D4]/[P7-D5], gated build + 120/120 + census 2/2);
+Phase 8 closed (8-1 forty-move bake = criterion 6; 8-2 Fighting / 8-3 Souls / 8-4 Debugger
+gyms; 8-5 coverage gap tests from the [P8-D6] audit; final scoped gate 123/123).
+**UNCOMMITTED, awaiting user authorization:** CkTests (5 autotests + 17 gym/asset files +
+registry + wrapper regen + populator uasset), CkGameplayDebugger (`Source/CkIntentDebugger/`
++ uplugin + census spec + launcher CLAUDE.md), CkFoundation (campaign docs + one stale-line
+fix in `Source/CkIntent/CLAUDE.md`). **Push NEVER authorized** — ship flow (fetch/divergence/
+backup/rebase CkTests/regate/push/pointer bumps; CkGameplayDebugger JOINS the ship set) is
+a separate user conversation. Foreign dirt unchanged — never stage. **Human queue:** the
+`[EDITOR-VERIFY]` items (Phase-7 debugger views incl. criterion-5 scrub; three gym
+drive-throughs incl. criterion-1's counter; earlier queue items — KeyBinding gym, 1a-4/1a-5,
+criterion-4 settings-page leg), 0A hardware spike, maintainer review flags ([P2-D2]/[P4-D1]/
+[P4-D4]/[P3-D4] reconstructions, [P7-D4] fragment-read precedent, [P8-D6] residual C++
+coverage + 2 dead-API flags + greenfield-prefix full-suite discovery gap, CkGameSettings
+defects 1-5,7), the load-flake note to the crowd workstream. Today's rulings: [P7-D4]
+[P7-D5] [P8-D1..D6]. Every gate log named in the dated entry below.
+
+**Prior state (2026-08-08, superseded):**
 Commits (all on `dev`): CkFoundation `9b49261bd` (keybinding subsystem fix, own commit per the
 suggested split) → `c1cc2bce8` (Phase 1 raw layer) → `f888fbdf1` (Phase 1b bias) → `e646ad827`
 (CkInput Claude.md) → campaign-docs commit (this file's snapshot). CkTests `9d5a3278` (gym + 21
@@ -116,12 +139,296 @@ blocks Phase 1a. The **poll-surface hole** (DESIGN_InputLayering.md) blocks Phas
 | 2026-08-08 | **[P2-D2]** Button model reconstructed (original design PROMPT superseded + lost): ButtonId = stable `(Tier, FName)` identity, NOT a dense int (dense packing = Phase 4 bake). Tier 1 Mapped = one id per EI mapping name, associations re-derived on `OnSettingsChanged`; Tier 2 Physical = one id per raw FKey, fixed (the D16/test tier). Identities never change for the map's lifetime; FKey→ButtonId is one-to-many by design | Mapping names are what the settings store keys on — rebind-stable by construction; duplicate/shared keys are legal EI states (defect #13's residue proved they occur) | Maintainer review (reconstruction flag); or if Phase 3's frame record needs dense global indices before Phase 4 exists |
 | 2026-08-08 | **[P2-D3]** `InputButtonMap` is a feature composed on the input-SOURCE entity (mimic `InputBias`: `Add` only, no `Create`), opt-in in v1 | A map on a child entity has no player identity; Phase 3 composes it alongside the sampler | If every source ends up needing one unconditionally — then auto-compose from the source subsystem |
 | 2026-08-08 | **[P2-D4] GATE POLICY, campaign-wide (maintainer):** phase-close FULL-suite runs are DEFERRED — phases close on their SCOPED gate; ONE full suite runs when the complete campaign is green (and the ship flow's regate law still applies at push time). The Phase-2 full-suite run was killed mid-flight on this directive (no orphan editor, log lock verified free) | Maintainer 2026-08-08: "let's speed this up. We can do a full suite when the complete campaign is Green." Delta-zero accountability moves to campaign end: the final full suite diffs vs `1027/1025/2` PLUS every test name added after it | If a phase touches shared/base code with suite-wide blast (e.g. the D19 clamp on `TProcessorBase`) the orchestrator may still flag a targeted broader pattern, but not a full suite |
+| 2026-08-09 | **[P7-D4] Debugger modules MAY read CkIntent/CkInput fragments directly (read-only)** — the 7-2 dispatch package's "public Utils APIs only" clause is RELAXED to match in-plugin precedent; [P7-D1]'s substance (render RECORDED facts, never recompute matching/octants/verdicts) stays iron. NO new CkFoundation read APIs for debugger-only needs (option 2 rejected: `Get_PendingEpisodes`/`Get_ActiveSet` as public Utils would expose matcher internals gameplay code must never touch — worse encapsulation than a privileged editor-only observer). Gaps G1-G4 resolve via `View<>`/`Has<>`/`CK_PROPERTY_GET` accessors: G1 layer-stack enumeration via `FFragment_InputLayer_Params` view, G2 `_ActiveSet`, G3 `_PhaseFrame` (IS the current-phase span start), G4 pending episodes + hold accumulators. Write-protection intact (phase-row friend narrowing still forbids writes at compile time) | Shipped precedent: `CkAggroDebugger_DataCollector.cpp:52-78` (fragment view + `Get_LastSwitchTime`), `CkGoapDebugger_Module.cpp:50,69,80` (`Has<FFragment_*>`). Debuggers are UncookedOnly privileged observers; the Utils surface is the GAMEPLAY API, not the diagnostic one | If a debugger read is ever observed to mutate (e.g. a non-const view) or a recompute sneaks in under the read |
+| 2026-08-09 | **[P7-D5] CkIntentDebugger registers an `FCkDebug_EntityTargetRoute`** (resolves exact/ancestor/descendant to the owning source + layer row via the common closest-lineage helper; never a tab-open-only route). The 7-2 unit's deferral was procedurally correct but the mimicked exemplar (CkGoapDebugger) registers one and the layer-stack panel selects entities — in scope per [P7-D3]'s mimic ruling, not an invention | Plugin CLAUDE.md "Entity-aware debugger entry" contract; grep: Goap/Sm/AStar/Crowd all register routes | If the closest-lineage helper cannot express source-or-layer resolution |
+| 2026-08-09 | **[P8-D5] Gym motion legs are stick-only; keyboard fallbacks exist for BUTTON legs only** — a keyboard-driven octant is unrepresentable (octant derives solely from the conditioned axis pair, `CkIntentSampler_Processor.cpp:277-323`; SOCD cleaned slots are never compared against direction steps) and the mouse-axis alternative is REJECTED (unnormalized pixel deltas vs the 0.25 neutral radius; last conditioned value persists at rest → sticky octant; one sampler per source would break the gamepad path for all stations). Panels state the constraint in plain text; no SOCD quad is composed (a quad that moves a readout while the octant refuses would read as broken to the zero-knowledge viewer) | The 8-2 unit's verbatim STOP analysis, verified against the sampler processor + module doc ("a player on a stick moves _Octant and leaves both cleaned slots at Neutral") | If a future device class supplies digital octants natively |
+| 2026-08-09 | **[P8-D6] Coverage-audit ruling over the criterion-7 matrix (89 UFUNCTIONs / 58 automated / 37 zero-automated):** (a) macro-generated `DoCast`/`DoCastChecked`/`Get_InvalidHandle`/`Has` boilerplate = NOT gaps (uniform `CK_DEFINE_*` codegen, one working instance proves the generator; several gym/debugger-exercised); (b) tag-keyed matcher quartet zero-covered BECAUSE every set bakes an empty tag (open `Intent.*` namespace, already a maintainer flag) — but the CURRENT contract (empty-tag reads answer Idle/INDEX_NONE/false/invalid) gets a pinning test; (c) REAL gaps dispatched (unit 8-5): the three `UnbindFrom_*` signal functions (unbind regressions are a recorded failure class — this campaign's first commit was an unbind fix) + the subsystem `Get_InputSource` lazy-creation/idempotence seam; (d) maintainer flags, no action: `InputSource::Create` (zero callers repo-wide) + `Get_RoutedEventsThisFrame` (AS-bound, never called) — dead-or-future API; (e) criterion-7 environment reading: AS reflection exercise validates the BP/AS binding layer for all 58; C++ automation full only on grammar, C++ consumption of read surfaces via the debugger; residual per-function C++ exercise flagged to maintainer review, not force-closed | The enumeration agent's matrix (full tables in its return, 2026-08-09); non-negotiable #4 read against repo-wide practice | Maintainer review; or if the Intent.* namespace lands (then the tag-keyed quartet needs real coverage) |
+| 2026-08-09 | **[P7-D3] revisit clause CLOSED — `SCkDebug_EventTimeline` lane model suffices:** `FCkDebug_TimelineSpan{LaneIndex,Start,End,Color,Tooltip}` carries per-intent phase spans; `FCkDebug_TimelineEvent{Shape,Tooltip,SelectionId,SideLabel}` carries blocked-by markers with scrub ids (`SCkDebug_EventTimeline.h:28-50`). No new timeline widget | 7-2 unit verified against the header during enumeration | Closed |
 
 ---
 
 ## Dated entries (append-only, newest first)
 
-### 2026-08-08 — [P1A-D9] defect-#13 fix authorized; campaign resumes ("move on to the next phase(s)")
+### 2026-08-09 — session resume (fresh orchestrator): 7-1 disk state verified; 7-2 re-dispatch
+
+- **Unit 7-1 on-disk verification ✅** (the continuation prompt's first task): CkFoundation
+  `4c7ab4d0e` (matcher + scan diagnostics) → `a3f4c8cd1` (`Source/CkIntent/Claude.md`) →
+  `5a2a15595` (handoff notes) all present on `dev`; CkTests `ab861b3f` (427-line
+  `CkAutoTest_Intent_ScanDiagnosticsRecordOnlyWhenEnabled.as` + wrapper regen + 1 pipeline
+  uasset), status clean. `Get_ScanDiagnostics` present in `CkIntentMatcher_Utils.h/.cpp` +
+  processor. 7-1 was reviewed AND gated before commit per the 2026-08-08 entries — nothing
+  landed unreviewed. CkGameplayDebugger: NO `CkIntentDebugger` dir, status clean — the killed
+  7-2 unit wrote nothing, confirmed. Only foreign dirt remains anywhere (CkUsf GeneratedLooks
+  etc. per the handoff list).
+- **7-2 dispatch prep:** launcher census located — `CkDebuggerLauncherCatalog.spec.cpp` keeps
+  a strict 15-entry tab-id set + per-tool descriptor asserts + UNIQUE category/order slot;
+  authoring steps = `Source/CkDebuggerLauncher/CLAUDE.md` steps 1-5 (descriptor after tab
+  spawner, token-matched unregister before spawner removal, census row, `Ck.DebuggerLauncher`
+  filter). New-module checklist = `Source/CkDebuggerCommon/CLAUDE.md` "Creating a new debugger
+  module". Gate plan for 7-2: build `--generate` (uplugin gains a module) + scoped
+  `Ck_AutoTest_In` + `Ck.DebuggerLauncher` pattern (census spec must pass with the 16th row).
+- **Unit 7-2 DISPATCHED** (fresh Opus agent per the re-dispatch package: skills-first, mimic
+  CkGoapDebugger, [P7-D1] recorded facts only, census row + Interface category next-free
+  order slot, EndPIE/OnEnginePreExit lifecycle contracts, no git/no builds, STOPs incl. the
+  `SCkDebug_EventTimeline` lane-model revisit clause and any missing read API).
+- **Phase 8 OPENED in parallel** (`PHASE_8.md` authored; rulings **[P8-D1]** unit split/order
+  — bake test first, gyms sequential (shared registry file), Script/ drafts to scratchpad
+  while runs are in flight; **[P8-D2]** 40-move set = asset-shaped AS container + one
+  parse+bake AutoTest, criterion-6 "no per-move structs" enforced by review-grep;
+  **[P8-D3]** gym scope caps for Fighting/Souls/Debugger, all [P1A-D7] self-asserting,
+  criterion-1 counter in Fighting, criterion-5 scrub fodder in Debugger; **[P8-D4]**
+  gap-closing = orchestrator coverage audit at phase close, only proven gaps dispatch).
+  Phase-7/8 overlap justified: units touch disjoint repos/files; 8-4's drive-through wants
+  7-2 landed but has no code dependency. **Unit 8-1 DISPATCHED in parallel with 7-2**
+  (Opus; drafts to scratchpad `phase8/`, orchestrator installs + gates).
+- **Unit 8-1 LANDED (scratchpad), orchestrator-reviewed, INSTALLED, gate in flight.** Drafts:
+  `CkIntent_Moves_Assets.as` (223 — `UCkTests_Intent_MoveTable` + `asset MoveTable_FortyMove`,
+  40 `Declare_Move(name, notation, priority)` lines + 8 `Declare_Button`, `Reset_Declarations`
+  re-compile guard) + `CkAutoTest_Intent_FortyMoveBake.as` (228 — entity-free parse→bake→
+  assert; count pins, three terminal-zone verdicts LP 0/0, HP hold=45, HK chord=window=4,
+  strictly-descending priority walk per asserted row). **Orchestrator verification:** Parse/
+  Bake/TryGet_ResolutionRow/Get_DeferralVerdict signatures read against
+  `CkIntentGrammar_Utils.h` (match, incl. default-verdict semantics that make LP's 0/0
+  structural); terminal zones hand-checked against all 40 rows (LP: 6 rivals none hold/chord;
+  HP: Qcf/Charge/Strong/LenientHcf, one hold=45; HK: bare + LK+HK); `5`-neutral standalone
+  step verified legal at parser source (`:58`; ChordNeutralDirection is chord-only `:204`);
+  criterion-6 self-grep in the unit's return (every ctor site singular+shared, none per-move).
+  **Accepted judgment calls:** AS-declared member `Declare_*` methods called unqualified from
+  the asset init block (precedent = C++ members `UnmapAll`/`MapKey` in `CkInput_Assets.as:89`;
+  residual risk = loud AS compile error, fallbacks enumerated); button vocabulary in-asset;
+  globally-unique priorities; hold constant duplicated as notation text + pinned by verdict
+  assert; no `_TimeoutSeconds` (entity-free, no waits). Installed to
+  `Plugins/CkTests/Script/CkInput/` (2 untracked files; no run was in flight). Gate: test-only
+  `Ck_AutoTest_In --discover-fresh --parallel 1` (AS-only change, no build; editor lock
+  probed free; expect 120 = 119 + FortyMoveBake by name; wrapper regen + populator churn
+  expected in `Script/Generated/` + the `.umap`).
+- **Unit 8-1 gate ✅ GREEN: 120/120 (1m15s), first try** — `Ck_AutoTest_Intent_FortyMoveBake`
+  passed BY NAME (`Saved/Logs/Test-Phase8Unit1.log`), all 119 prior rows green, zero
+  contamination. **Success criterion 6 PROVEN HEADLESS** (40 notation strings from an
+  asset-shaped container parse+bake with zero per-move struct construction — the review-grep
+  is in the unit's return, recorded above). Pipeline churn as predicted: wrapper row appended
+  to `Script/Generated/CkTests_AutoTestActors.as` + 1 populator-placed external actor (staged
+  by the populator's own save). **Unit 8-1 CLOSED.** Uncommitted (awaiting user commit
+  authorization with the rest of the phase): the 2 new .as files + the 2 generated artifacts.
+- **Unit 7-2 LANDED post-ruling** (25 new files ~4380 lines in `Source/CkIntentDebugger/` + 3
+  modified: uplugin entry, census row 15→16, launcher CLAUDE.md tool-group row). All five
+  views; all reads funnel through ONE file (`CkIntentDebugger_DataCollector.cpp`); Utils-first
+  with fragment reads only at the ruled gaps; timeline axis = logic-frame indices (unit-agnostic
+  widget, wall-clock would lie under hitches); witnessed-phase ring in the ViewModel (Goap
+  history-ring precedent — matcher stores one phase, no history API per [P7-D4]); near-miss
+  rows keyed by scan signature not ring position (CkDebuggerCommon selection contract);
+  EndPIE + session-invalidated + world-change all route to one snapshot reset; PreExit drops
+  the tree (not ShutdownModule). Launcher slot `Interface:30`, icon `Crosshair`; new module
+  CLAUDE.md NOT gitignored (check-ignore exit 1 — no add -f needed). Self-greps clean (no anon
+  namespaces, no breadcrumbs, teardown symmetric). Full draft `[EDITOR-VERIFY]` queue (8 steps
+  incl. criterion-5 scrub with the WindowExhausted-vs-ContiguityBroken contrast) in the unit's
+  return — installed into PROGRESS at phase close. **Orchestrator spot-review** (Module.cpp
+  + DataCollector.cpp read in full): lifecycle + census + read discipline verified; THREE
+  findings sent back as a follow-up batch (same agent): [P7-D5] entity route (see decision
+  log), the banned `static_cast<const FCk_Handle&>` reference-alias at collector :196
+  (unnecessary — typesafe handles inherit `Get<>`), value casts → `ConvertToHandle()` sweep.
+  **Accepted deviation recorded:** Params-fragment reads (sampler/matcher config blobs,
+  collector :345/:423) are outside the literal G1-G4 list but inside [P7-D4]'s substance
+  (stored config, no Utils surface, read-only). Gate deferred until the follow-up lands —
+  ONE gate covers module + fixes (build `--generate` + `Ck_AutoTest_In` + `Ck.DebuggerLauncher`).
+- **7-2 follow-up batch LANDED** (same agent): [P7-D5] route registered after spawner+
+  descriptor, token-matched unregister FIRST in Shutdown (GOAP's order); route REALLY targets
+  — layer target selects owning source in toolbar + its row in the stack panel, source target
+  selects the source; pending target reduced to two int32s before storage (no handle survives
+  the open-to-first-snapshot gap — strictly safer than GOAP's retained `FCk_Entity`); the two
+  re-entrancy hazards handled (pending flag cleared BEFORE setters that broadcast back into
+  the apply path; wanted-layer resolved against the snapshot before any setter). Collector
+  casts: module-wide sweep grep = zero `static_cast<FCk_Handle...>` hits; :196 → direct
+  `Get<>`, two genuine conversions → `ConvertToHandle()`, three sites → bare typesafe
+  compares (operator!= availability verified at `CkHandle_TypeSafe.h:94/118`). Module
+  CLAUDE.md gained the Entity-targeting section. Two `[EDITOR-VERIFY]` additions (Open In
+  from ECS debugger warm + cold tab). **Gate 1 IN FLIGHT:** single-shot build `--generate` +
+  `Ck_AutoTest_In --discover-fresh --parallel 1` (editor lock probed free; 8-2 agent writes
+  scratchpad only — no source-edit hazard). Gate 2 after: test-only `Ck.DebuggerLauncher`
+  (census 16-row assert).
+- **7-2 gate attempt 1: BUILD BREAK, fixed inline by orchestrator** (5 sites, 2 error classes,
+  all in the new module): (1) `SCkIntentDebuggerWindow.cpp:3` module-header include path —
+  the header lives at module root, not under `Public/`; respelled to GOAP's proven form
+  `"CkIntentDebugger/CkIntentDebugger_Module.h"`; (2) `auto X = INDEX_NONE` deduces the
+  unnamed enum → C2440/C3487 on later int32 assignment — fixed at `TimelineDock.cpp:235-236`
+  + `Window.cpp:294,:354` with `static_cast<int32>(INDEX_NONE)` (house typed-cast idiom) and
+  an explicit `-> int32` on the timeline's SelectedId lambda; module-wide grep confirmed no
+  further instances. Re-gate in flight (`BuildTest-Phase7Unit2b.log`, no `--generate` needed
+  — regen succeeded in attempt 1).
+- **7-2 re-gate ✅ GREEN: build succeeded + 120/120 (1m9s)** (`BuildTest-Phase7Unit2b.log`) —
+  the module compiles in the full build, zero suite regressions. **Census gate ✅ GREEN: 2/2
+  (23s)** (`Test-Phase7Unit2-Census.log`) — the 16-row catalog assert passes with
+  `CkIntentDebugger` registered at `Interface:30`. **Unit 7-2 CLOSED. PHASE 7 CLOSED under
+  [P2-D4]** — exit criteria: scoped gate green (120 incl. the 7-1 diagnostics row) ✔;
+  module compiles in full build ✔; docs ✔ (`Source/CkIntentDebugger/CLAUDE.md` authored;
+  `CkIntent/CLAUDE.md` stale "Not yet built: debugger lanes" line refreshed at close);
+  comment audit ✔ (unit greps + orchestrator review; inline fixes added no comments);
+  full suite NOT run ✔. **`[EDITOR-VERIFY]` queue for Phase 7** (drive steps verbatim in the
+  7-2 unit returns; summary): (1) launcher entry Interface group below Enhanced Input,
+  open/focus/close indicator cycle; (2) toolbar world+source strips populate in PIE;
+  (3) layer-stack selection persists across ticks, copy menu works; (4) rosette shows
+  RECORDED hysteresis (dot crosses a wedge boundary while the previous spoke stays lit —
+  the load-bearing check that it renders, not recomputes) + SOCD policy readout;
+  (5) resolution table: immediate vs `hold sibling Nf` rows, `<unbound>` red after settings
+  unbind; (6) timeline lanes + deferral marker on BLOCKED lane + scrub LIVE↔SCRUB;
+  (7) **criterion 5**: CVar on → fumbled 236 → newest near-miss row names step +
+  `WindowExhausted` + frames examined, detail panel walk-order list, timeline scrubs to
+  terminal frame; contrast run shows `ContiguityBroken`; (8) teardown: EndPIE empty views
+  no crash, re-PIE no AV, editor close with docked tab clean, restart restores tab;
+  (+) `Open In ▸ CK Intent Debugger` from ECS debugger selects layer row + owning player,
+  warm AND cold tab.
+- **Unit 8-2 LANDED (scratchpad), one STOP-lite ruled [P8-D5]** (see decision log). 8 new
+  Script/CkInput files + 1-line registry diff (~2330 lines): shared gym namespace (idempotent
+  SOURCE composition — subsystem source + bias/map/sampler, forced by anti-patterns 10/6;
+  composition from display tick not DoConstruct, source needs a controller first), 3 stations
+  on layers 520/510/500 each with own matcher (LatchDecay 600) + own move table via 8-1's
+  `Declare_Move` idiom (criterion-6 grep clean: zero move-struct ctors, 10 Declare_Move).
+  Station 1 = criterion-1 counter (pad QCF+P vs bare P + keyboard `;` leg, EXPECT 0 delay);
+  station 2 = D7 visible (chord `'`+`,` vs suffix `.` — fully keyboard-drivable); station 3 =
+  near-miss (w=12 too-slow QCF, pad RB + keyboard `/` legs, CVar armed on arming/cleared in
+  EndPlay+exec, WHAT-THAT-MEANS line per outcome, names the debugger view). Keys `;'`,`./`
+  grep-proven unclaimed; no autotest rows (per PHASE_8.md, verified no reason to deviate).
+  **Accepted evidence-backed deviation:** measured chord gap renders `>= window` not `==`
+  (module's own contract, `ChordWindowResolvesPartnerOrTimeout.as:171-172` asserts `>=`;
+  the BAKED verdict still renders exact). **Flagged unverified binding:**
+  `UCk_InputSource_Subsystem::Get(PC)` from AS (precedent: EnhancedInput subsystem same-shape
+  at `CkCameraGym_GameMode.as:37`; all sites validity-guarded) — first compile confirms.
+  Install + gate DEFERRED until the 7-2 gate completes (Script/ freeze during runs).
+- **8-2 INSTALLED after Phase-7 gates completed** (8 new Script/CkInput files + registry —
+  mirror diffed against repo first: exactly the one claimed line). Gate in flight: test-only
+  `Ck_AutoTest_In --discover-fresh --parallel 1` (`Test-Phase8Unit2.log`) — gyms add no
+  autotest rows, so PASS = AS compile green (editor boot compiles all Script/, exit 76 =
+  AS_COMPILE_FAILED would name the line — this also settles the flagged
+  `UCk_InputSource_Subsystem::Get` binding) + suite stays 120/120.
+- **8-2 gate attempt 1: AS_COMPILE_FAILED (exit 76, results invalid by design), fixed inline
+  by orchestrator:** `CkIntentGym_Shared.as:251,:265` used `Cast` as a LOCAL VARIABLE NAME —
+  `Cast` is a reserved word in AS (the builtin `Cast<T>()` operator), so `auto Cast = ...`
+  parse-errors and `Cast.IsSet()` reads as `Cast<`-missing. Renamed both locals to
+  `CastResult`; grep confirmed no other `Cast`-as-identifier sites in the gym files. NEW TRAP
+  for the memory file (SelfHeal had no strategy; the error text never names the actual
+  problem). Re-gate in flight (`Test-Phase8Unit2b.log`).
+- **8-2 re-gate ✅ GREEN: 120/120 (1m17s), zero AS errors** — gym compiles (settles the
+  flagged `UCk_InputSource_Subsystem::Get` AS binding), suite unchanged. **Unit 8-2 CLOSED**;
+  drive-throughs on the `[EDITOR-VERIFY]` queue (verbatim steps in the unit return: station 1
+  = criterion-1's 0-frame counter with pad QCF+A, station 2 keyboard-only D7 contrast,
+  station 3 near-miss WindowExhausted/fast-Matched + CVar-off-after-exit check). New AS trap
+  (`Cast` reserved identifier) saved to the memory index. **[P8-D3] AMENDED in PHASE_8.md:**
+  the Souls delivery-loss station demos the D15 DEFAULT pair only — the original "vs opt-in
+  Continue/Inherit" wording contradicted [P5-D6] (opt-ins not constructible in v1); caught
+  before dispatch, no executor cost. **Unit 8-3 (Souls gym) DISPATCHED** (scratchpad,
+  sequential — may now reference the INSTALLED `CkIntentGym_Shared.as` + registry).
+- **Unit 8-3 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (7 new
+  files ~2100 lines + shared-file extension + 1 registry line — both cross-cutting diffs
+  verified against repo before install: registry exactly +1, shared file's only removed line
+  the old one-gym title comment). 3 stations at priorities 420/410/400 (+450 menu masker,
+  clear of 8-2's), keys `[`/`]`/`\`/`=` + 4 pad buttons grep-proven unclaimed. **Key review
+  points:** threshold expectation taken VERBATIM from the battery (`TapVsHold...as:186`
+  asserts exact `hold==N`, correcting the dispatch's N−1..N paraphrase — evidence-backed);
+  every hold ships a bare-tap rival (forced: `_HoldSiblingFrames` needs ≥2 candidates —
+  deferral law); menu key read off the record (no capture, no delegate signature trap);
+  display-only hold arithmetic labeled per anti-pattern 23; 10-frame amber grace before any
+  red ([P1A-D8]). Accepted judgment calls all precedent-cited. **Flagged:** first in-tree AS
+  use of `utils_input_layer::Request_RemoveCapture` (0 prior AS call sites; wrapper shape
+  same as AddCapture's 13) — the gate's AS compile settles it. No autotest rows → PASS =
+  AS compile green + 120/120 (`Test-Phase8Unit3.log`).
+- **8-3 gate ✅ GREEN: 120/120 (1m9s), AS compile first try** — `Request_RemoveCapture`
+  AS binding settled. **Unit 8-3 CLOSED**; drive-throughs on the `[EDITOR-VERIFY]` queue
+  (verbatim in the unit return: tap-vs-hold exact-45 gap, charge countdown + no-resume,
+  menu-eats-charge + RequireRePress persistence). **Unit 8-4 (Debugger gym) DISPATCHED** —
+  last Phase-8 unit before the [P8-D4] coverage audit.
+- **[P8-D4] coverage audit run** (read-only Opus enumeration + orchestrator ruling
+  **[P8-D6]**, see decision log): 89 UFUNCTIONs across the 7 new surfaces, 58 automated (AS
+  58/58 of those; C++ automation full on grammar only; BP by specifier + reflection, zero
+  assets), 37 zero-automated → ruled: boilerplate/tag-quartet accepted with reasons, 2
+  dead-API maintainer flags (`InputSource::Create`, `Get_RoutedEventsThisFrame`), 3 REAL
+  gaps → **unit 8-5 dispatched, LANDED, orchestrator-reviewed, INSTALLED** (3 test files
+  ~733 lines): `UnbindStopsDelivery` (all 3 uncovered UnbindFrom_* off ONE routed press —
+  matcher registers captures on its own layer; dual-handler positive controls on the SAME
+  broadcast, snapshot-relative counters, RemoveSingle semantics verified at
+  `CkSignal_Fragment.inl.h:185-211`, settle window justified in-file per wait-rule 1;
+  orchestrator spot-read the silence/controls steps), `TagKeyedReadsAnswerEmptyOnUnmintedTag`
+  (empty + registered-unrelated tag legs, _ByName positive controls on a completed+claimed
+  row, contract pre-verified at `CkIntentMatcher_Utils.cpp:477-502`),
+  `SubsystemSourceLazyCreateIdempotent` (read-only, nothing composed on the shared source).
+  Keys F6/F7 (the only free function keys). Gate deferred to the combined 8-4+8-5 run
+  (expect 123 = 120 + 3 by name).
+- **Unit 8-4 LANDED (scratchpad), orchestrator-verified, INSTALLED** (8 new files + registry
+  +1 + shared-file extension; both cross-cutting diffs verified against repo pre-install:
+  registry exactly +1 line, shared deletions = title/paragraph comments + the ONE sampler-Add
+  hunk). 4 view-paired stations at priorities 340/335/330/320/310 (clear of both gyms), 16
+  `Declare_Move` rows, criterion-6 grep clean. **Accepted judgment calls:** (1) SOCD quad in
+  the SHARED sampler composition — the one behavioral shared change; forced (sampler has no
+  requests, `_SocdQuad` is Add-time-only, one sampler per source → a station-local compose is
+  structurally impossible), blast radius nil (cleaned pair feeds no matching, other gyms
+  don't read it, unminted-button quad = documented normal state), fallback recorded (drop the
+  hunk → station 3 renders Neutral/Neutral); quad keys NumPad operators, grep-proven free;
+  (2) stations 1-2 keyboard-only (pad legs spent where sticks are REQUIRED; 2-move-table
+  legibility; one-leg precedent cited); (3) near-miss corpus 6 moves = 3 windows × 2 devices
+  (one press still yields exactly 3 distinguishable rows); (4) panel renders Pending-rows AND
+  blocked-terminals (the spec's single count over-counts vs the BLOCKED lane — recorded-facts
+  grouping, no recompute); (5) frames-examined = last recorded step's own value; (6)
+  octants-visited as int32 bitmask (no unreflected TArray<UENUM> member). Combined 8-4+8-5
+  gate in flight (`Test-Phase8Units4and5.log`, expect 123 = 120 + 8-5's 3 by name; 8-4 adds
+  no rows).
+- **Combined gate attempt 1: AS_COMPILE_FAILED — orchestrator inline fix:** 8-4 used
+  `EKeys::Gamepad_RightTriggerButton`, which does not exist (`Gamepad_RightTrigger` is the
+  real key); 2 sites in `CkIntentGym_Shared.as`. **Re-gate ✅ GREEN: 123/123 (1m8s)**
+  (`Test-Phase8Units4and5b.log`) — all 3 gap tests by name (`UnbindStopsDelivery`,
+  `TagKeyedReadsAnswerEmptyOnUnmintedTag`, `SubsystemSourceLazyCreateIdempotent`), Debugger
+  gym compiles. **Units 8-4 + 8-5 CLOSED.**
+- **PHASE 8 CLOSED under [P2-D4].** Exit criteria: 8-1 bake test green by name + review-grep
+  recorded ✔; FOUR gyms (Fighting/Souls/Debugger + the pre-existing KeyBinding) compiled,
+  registered, [P1A-D7] self-asserting ✔; coverage audit run, 3 real gaps closed+gated,
+  accepted/flagged remainder recorded in [P8-D6] ✔; `[EDITOR-VERIFY]` queue updated (all
+  gym drive-throughs + the 8-4 panel-vs-debugger-view comparisons, verbatim in the unit
+  returns) ✔; PROGRESS current ✔; comment audit over ALL new Script files: zero breadcrumb
+  hits (grep over gyms + 5 autotests + assets) ✔; full suite not yet run ✔ — it runs NOW as
+  the campaign-end gate. **Expected full-suite arithmetic:** baseline `1027/1025/2` + AS
+  In-set additions since (92→123 = +31) + `Ck.Intent.Grammar` C++ battery (+10) +
+  `TickRateTrait` clamp (+1) = 1069 total expected, failures EXACTLY the two
+  `PathNetworkFollower` names; verdict is by NAME-diff, not arithmetic alone.
+- **CAMPAIGN-END FULL SUITE RAN: `1065/1062/3` (11m14s, editor closed,
+  `Test-FullSuite-CampaignEnd.log`).** Name-diff vs the baseline log
+  (`Test-FullSuite-PostFix.log`): **ZERO lost rows; +38 added, ALL 38 ours, ALL GREEN**
+  (37 AS: 30 Intent + 6 ButtonMap + 1 SubsystemSource — the 1027 baseline predated the
+  ButtonMap-test install, resolving the arithmetic — + the TickRateTrait clamp row).
+  **Prediction miss #1 RESOLVED, not a defect:** the toolbox full-suite discovery includes
+  `CkTests.UnitTests.*` + `Project.Functional Tests.*` but NOT greenfield `Ck.*` C++
+  prefix families — identically in BOTH runs (0 Grammar/DebuggerLauncher rows in either),
+  so the grammar battery (10/10, Phase 4) + census (2/2, today) stand on their own scoped
+  gates. Flag to maintainer: greenfield-prefix C++ families are invisible to the toolbox
+  full suite. **Prediction miss #2 UNDER INVESTIGATION [INV-B]:** THREE fails, not two —
+  the eternal `PathNetworkFollower` pair PLUS `FallsBackToNavigation` (same foreign
+  family; passed in baseline; this campaign changed zero nav code; family has recorded
+  load-flakiness). Discriminating experiment in flight: isolated `PathNetworkFollower`
+  re-run, editor closed — pass ⇒ load/contamination flake under the grown suite;
+  fail ⇒ deterministic, needs cross-test-contamination bisection before any delta-zero
+  claim.
+- **[INV-B] CLOSED — load flake, not a regression.** Isolated family re-run (13 rows, 52s,
+  editor closed, `Test-PathNetFollower-Isolated.log`): `FallsBackToNavigation` **PASSED**;
+  failures exactly the two eternal names (`DesiredNavmeshClearanceMovesInward`,
+  `ProjectsRibbonWaypointWithinNavQueryExtent`). Foreign family, zero nav code changed by
+  this campaign, recorded load-flake precedent in the same workstream's area
+  (`KinematicPlatformCarriesDynamicBox`, PathRefresh). Flagged to the crowd workstream via
+  the human queue. **CAMPAIGN-END GATE: ✅ GREEN + DELTA-ZERO BY NAME** (composition:
+  full suite `1065/1062/3` + isolated pass of the third red + name-diff proving zero lost
+  rows and all +38 additions green; the only reds anywhere = the two pre-existing
+  `PathNetworkFollower` names). **THE CKINTENT CAMPAIGN'S TECHNICAL SCOPE IS COMPLETE** —
+  success criteria: 2, 3, 6 proven headless (criterion 2/3 in Phases 5-6, 6 in 8-1);
+  1, 4, 5 headless legs proven + `[EDITOR-VERIFY]` legs queued; 7 audited under [P8-D6]
+  (AS 58/58, C++ full on grammar, residual flagged); 8 = this gate. Remaining: human
+  EDITOR-VERIFY queue, maintainer review flags, commit authorization for today's work,
+  and the ship conversation (push never authorized).
+- **7-2 STOPped correctly pre-write** (legitimate fork: views 1/2/4 need data with no public
+  Utils read API — gaps G1 layer-stack enumeration, G2 active compiled set, G3 non-Completed
+  phase frames, G4 pending episodes/hold accumulators; its report enumerated the full
+  available-vs-missing read surface per view, views 3+5 fully covered by Utils). **Ruled
+  [P7-D4]** (fragment reads permitted, read-only, in-plugin precedent; NO new CkFoundation
+  APIs) + **[P7-D3] revisit clause closed** (timeline lane model suffices — spans + events
+  with scrub ids). Launcher slot approved from its census read: `Interface:30`, icon
+  `Crosshair`, census 15→16. Agent RESUMED with the ruling + guardrails (read-only const
+  access; Utils-first, fragment reads only for G1-G4; lifecycle contracts now more
+  load-bearing). Awaiting its full implementation return.
 
 - Maintainer answered both open questions in one directive: fix `UnbindConflictAndRemap`, then
   continue the campaign. Ruled [P1A-D9] (see decision log). Dispatched a single Opus unit:
