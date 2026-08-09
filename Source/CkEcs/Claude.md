@@ -158,6 +158,14 @@ public:
 - Optional: `static constexpr auto TickCatchUpPolicy = ECk_ProcessorTickCatchUp::SampleLatestOnly;`
   fires DoTick once with summed elapsed intervals after a hitch instead of replaying per interval
   (default `ReplayMissedTicks` = fixed-timestep replay, the original behavior).
+- Optional: `static constexpr int32 MaxReplayedTicks = N;` bounds how many DoTick calls ONE Tick may
+  replay under `ReplayMissedTicks`. Whole intervals past the bound are drained WITHOUT ticking —
+  dropped, not carried into the next frame — so a hitch cannot hand a consumer an unbounded burst.
+  Declaring nothing keeps the unbounded replay every processor had before the trait, so it changes
+  no existing processor; a non-positive or non-`int32` value is a compile error. A clamped Tick logs
+  once at `Log` (deliberately not `Warning` — clamping is the designed response to a hitch, and the
+  AutoTest runner escalates warnings to failures). Orthogonal to `SampleLatestOnly`, which already
+  collapses the backlog and ignores the bound. First consumer: `CkIntent`'s sampler.
 - A rated processor's accumulator freezes while the scheduler's empty-view skip bypasses its
   dispatch — its phase re-aligns to when its view last became non-empty.
 

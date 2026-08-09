@@ -71,6 +71,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    namespace processor
+    {
+        // What Get_MaxReplayedTicks answers when the derived processor declares no clamp: replay every elapsed
+        // interval, which is exactly what every processor did before the trait existed.
+        inline constexpr auto UnlimitedReplayedTicks = TNumericLimits<int32>::Max();
+
+        // Declared here and defined out of line so the shared base does not pull a log header into every
+        // processor translation unit.
+        CKECS_API auto
+        Report_ClampedCatchUpReplay(
+            const FString& InProcessorName,
+            int32 InMaxReplayedTicks,
+            int32 InDroppedTicks) -> void;
+    }
+
+    // A ReplayMissedTicks processor may additionally bound how many DoTick calls ONE Tick replays after a hitch:
+    //     static constexpr int32 MaxReplayedTicks = 4;
+    // Whole intervals past the bound are drained WITHOUT ticking — dropped, not deferred — so a burst cannot
+    // outlive the frame that caused it and a consumer woken by the processor cannot receive an unbounded
+    // backlog in one go. Declaring nothing keeps today's unlimited replay, so this changes no existing
+    // processor. It is orthogonal to TickCatchUpPolicy: SampleLatestOnly already collapses the backlog and
+    // ignores the clamp.
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor>
     class TProcessorBase
     {
@@ -105,6 +130,10 @@ namespace ck
     private:
         static constexpr auto
         Get_TickCatchUpPolicy() -> ECk_ProcessorTickCatchUp;
+
+        // The derived's compile-time MaxReplayedTicks trait, else UnlimitedReplayedTicks.
+        static constexpr auto
+        Get_MaxReplayedTicks() -> int32;
 
     private:
         RegistryType _Registry;
@@ -214,6 +243,31 @@ namespace ck
     }
 
     template <typename T_DerivedProcessor>
+    constexpr auto
+        TProcessorBase<T_DerivedProcessor>::
+        Get_MaxReplayedTicks()
+        -> int32
+    {
+        static_assert(requires { DerivedType::MaxReplayedTicks; } or NOT requires { &DerivedType::MaxReplayedTicks; },
+            "MaxReplayedTicks declared as an instance member — the base can only see a compile-time trait. "
+            "Spell it: static constexpr int32 MaxReplayedTicks = N;");
+
+        if constexpr (requires { DerivedType::MaxReplayedTicks; })
+        {
+            static_assert(std::is_same_v<std::remove_const_t<decltype(DerivedType::MaxReplayedTicks)>, int32>,
+                "MaxReplayedTicks must be an int32 — it counts DoTick calls, not seconds");
+
+            static_assert(DerivedType::MaxReplayedTicks > 0,
+                "MaxReplayedTicks must be positive — a zero or negative bound would stop the processor ticking "
+                "at all. Declare no trait for the unlimited default.");
+
+            return DerivedType::MaxReplayedTicks;
+        }
+        else
+        { return processor::UnlimitedReplayedTicks; }
+    }
+
+    template <typename T_DerivedProcessor>
     auto
         TProcessorBase<T_DerivedProcessor>::
         Get_TickRate() const
@@ -279,7 +333,7 @@ namespace ck
                 This()->DoTick(FiredElapsed);
             }
         }
-        else
+        else if constexpr (Get_MaxReplayedTicks() == processor::UnlimitedReplayedTicks)
         {
             while(AdjustedTickRate >= TickRate)
             {
@@ -287,6 +341,37 @@ namespace ck
                 ++_TotalTicks;
 
                 This()->DoTick(TickRate);
+            }
+        }
+        else
+        {
+            constexpr auto MaxReplayedTicks = Get_MaxReplayedTicks();
+
+            auto ReplayedTicks = int32{0};
+
+            while (AdjustedTickRate >= TickRate && ReplayedTicks < MaxReplayedTicks)
+            {
+                AdjustedTickRate -= TickRate;
+                ++ReplayedTicks;
+                ++_TotalTicks;
+
+                This()->DoTick(TickRate);
+            }
+
+            // Draining rather than leaving the backlog in the accumulator is what makes the clamp a bound
+            // instead of a deferral: carrying it forward would replay the same burst next frame.
+            auto DroppedTicks = int32{0};
+
+            while (AdjustedTickRate >= TickRate)
+            {
+                AdjustedTickRate -= TickRate;
+                ++DroppedTicks;
+            }
+
+            if (DroppedTicks > 0)
+            {
+                processor::Report_ClampedCatchUpReplay(
+                    Get_RuntimeTypeToString<DerivedType>(), MaxReplayedTicks, DroppedTicks);
             }
         }
 
