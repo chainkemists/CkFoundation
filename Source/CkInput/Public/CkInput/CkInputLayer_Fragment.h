@@ -141,6 +141,37 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * This frame's routed events with the outcome the router reached for each, on the input SOURCE. Reset at the
+     * top of every Route pass — including a pass that finds an empty inbox — so a stale frame's rows can never be
+     * read as the current one.
+     *
+     * VISIBILITY CONTRACT: only something ordered AFTER FGroup_Input_Route sees this frame's outcomes. Anything
+     * before it (or in FGroup_Input_Collect / FGroup_Input_Bias) reads an already-cleared array, and anything in
+     * FGroup_Gameplay or later reads THIS frame's — routing runs ahead of gameplay by group edge. A consumer
+     * whose group is not ordered against FGroup_Input_Route is reading an undefined frame, not last frame's.
+     *
+     * The rows are retained rather than broadcast because their value is the SHAPE of the frame — what was
+     * masked, what fell through, what was dropped — which no per-event signal can express.
+     */
+    struct CKINPUT_API FFragment_InputLayer_RoutedThisFrame
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_InputLayer_RoutedThisFrame);
+
+    public:
+        friend class FProcessor_InputLayer_Route;
+        friend class FProcessor_InputLayer_SetupRouterState;
+
+    private:
+        TArray<FCk_InputLayer_RoutedEvent> _RoutedEvents;
+
+    public:
+        CK_PROPERTY_GET(_RoutedEvents);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKINPUT_API, OnInputCaptureTriggered, FCk_Delegate_InputLayer_CaptureTriggered, FCk_Handle_InputLayer, FCk_InputSource_RawEvent, FCk_InputLayer_Capture);
 }
 
