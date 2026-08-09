@@ -104,6 +104,7 @@ Before writing any code, navigate the documentation in this order:
 | Enhanced Input IMC lifecycle | `CkInput` |
 | query/remap/swap/reset player key bindings, detect conflicts, resolve a key's icon brush | `CkInput` — `UCk_Utils_KeyBinding_UE`, `UCk_KeyBinding_Subsystem`, `UCk_Utils_KeyIcon_UE` |
 | show an input-action key prompt that survives rebinds AND an unapplied Mapping Context | `CkUI` — `UCk_InputActionWidget_UE` |
+| per-frame record of what the player pressed (ring buffer of button edges, held set, conditioned axes, delivery outcomes, octant direction with hysteresis, SOCD-cleaned cardinals) | `CkIntent` |
 | async asset loading → fragments | `CkResourceLoader` |
 | relay entity events to an actor (channels) | `CkActorRelay` |
 | debug shapes / procedural mesh text | `CkPmg` |
@@ -195,6 +196,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkGoap | AStar,Core,Ecs,EcsExt,Label,Log,Record |
 | CkGraphics | Core,Ecs,Log,Variables |
 | CkGrid | Core,Ecs,EcsExt,Label,Log,Record,Settings (+EntitySpawner, editor-only) |
+| CkIntent | Core,Ecs,EcsExt,Input,Log,Settings (frame record over the raw input layer; the dependency is strictly one-way — CkInput must never depend on CkIntent) |
 | CkInteraction | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
 | CkJolt | Core,Ecs,EcsExt,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16; +EcsExt Phase 3, also engine PhysicsCore/Landscape) |
