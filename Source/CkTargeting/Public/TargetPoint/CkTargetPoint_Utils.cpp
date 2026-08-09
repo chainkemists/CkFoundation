@@ -17,7 +17,7 @@ auto
     -> FCk_Handle_Transform
 {
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("TARGET POINT: [{}]"), InTransform));
+    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, TEXT("TARGET POINT"));
 
     if (InLifetime == ECk_Lifetime::AfterOneFrame)
     { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TargetPointEntity); }
@@ -83,7 +83,7 @@ auto
     { return {}; }
 
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
-    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("(Transient) TARGET POINT: [{}]"), InTransform));
+    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, TEXT("(Transient) TARGET POINT"));
 
     if (InLifetime == ECk_Lifetime::AfterOneFrame)
     { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TargetPointEntity); }
