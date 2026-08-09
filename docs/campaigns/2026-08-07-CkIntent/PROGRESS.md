@@ -11,12 +11,17 @@ proven load flake [INV-B] — the only failures anywhere are the two eternal
 NEW repo in the ship set — under [P7-D4]/[P7-D5], gated build + 120/120 + census 2/2);
 Phase 8 closed (8-1 forty-move bake = criterion 6; 8-2 Fighting / 8-3 Souls / 8-4 Debugger
 gyms; 8-5 coverage gap tests from the [P8-D6] audit; final scoped gate 123/123).
-**UNCOMMITTED, awaiting user authorization:** CkTests (5 autotests + 17 gym/asset files +
-registry + wrapper regen + populator uasset), CkGameplayDebugger (`Source/CkIntentDebugger/`
-+ uplugin + census spec + launcher CLAUDE.md), CkFoundation (campaign docs + one stale-line
-fix in `Source/CkIntent/CLAUDE.md`). **Push NEVER authorized** — ship flow (fetch/divergence/
-backup/rebase CkTests/regate/push/pointer bumps; CkGameplayDebugger JOINS the ship set) is
-a separate user conversation. Foreign dirt unchanged — never stage. **Human queue:** the
+**COMMITTED 2026-08-09 (user-authorized "/commit while I test"; push still NEVER
+authorized):** CkTests on `dev`: `f67fbf5c` (40-move bake) → `c350a184` (coverage gap
+tests) → `03b977ca` (three gyms + registry) → `9fa88957` (wrapper regen + 4 populator
+actors). CkFoundation on `dev`: `121614c89` (campaign docs) → `fc4dbf660` +1 follow-up
+(module-doc line). **CkGameplayDebugger: `0f51a76` landed on
+`feature/debugger-qol-campaign` — NOT dev** (the submodule was sitting on the insights/QoL
+campaign's branch; discovered at commit time, deliberately not moved under the user's open
+editor). **SHIP FLAG:** the ship conversation must decide cherry-pick-to-dev vs shipping
+that branch, BEFORE any pointer bump (publish guard: only pushed SHAs). Ship flow
+(fetch/divergence/backup/rebase CkTests/regate/push/pointer bumps) remains a separate
+conversation. Foreign dirt untouched — never stage. **Human queue:** the
 `[EDITOR-VERIFY]` items (Phase-7 debugger views incl. criterion-5 scrub; three gym
 drive-throughs incl. criterion-1's counter; earlier queue items — KeyBinding gym, 1a-4/1a-5,
 criterion-4 settings-page leg), 0A hardware spike, maintainer review flags ([P2-D2]/[P4-D1]/

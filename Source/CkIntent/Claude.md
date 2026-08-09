@@ -11,7 +11,7 @@ those bake into: resolved button identities, arbitration order, and the deferral
 *The bake*). Above that sits the MATCHER — a set running on one input layer, scanning the record backwards from
 every press that layer was allowed to see, holding the two genuinely ambiguous presses open for as long as the
 verdict says and no longer, and latching a phase per move that a consumer polls, subscribes to, and can CLAIM
-exclusively — until the latch decays (see *The matcher* and *Two surfaces*). The editor debugger is `CkIntentDebugger` (CkGameplayDebugger plugin). Not yet built: gyms.
+exclusively — until the latch decays (see *The matcher* and *Two surfaces*). The editor debugger is `CkIntentDebugger` (CkGameplayDebugger plugin); the interactive gyms are CkTests' `Gym_Input_{Fighting,Souls,Debugger}`.
 
 **Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkInput`, `CkLog`, `CkSettings` — plus engine `InputCore` and
 `GameplayTags`.
