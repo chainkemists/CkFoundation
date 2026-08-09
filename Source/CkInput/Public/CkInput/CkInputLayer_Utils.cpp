@@ -212,6 +212,21 @@ auto
     return PressOwners[OwnerIndex].Get_Owner();
 }
 
+auto
+    UCk_Utils_InputLayer_UE::
+    Get_RoutedEventsThisFrame(
+        FCk_Handle_InputSource InInputSource)
+    -> TArray<FCk_InputLayer_RoutedEvent>
+{
+    if (ck::Is_NOT_Valid(InInputSource))
+    { return {}; }
+
+    if (NOT InInputSource.Has<ck::FFragment_InputLayer_RoutedThisFrame>())
+    { return {}; }
+
+    return InInputSource.Get<ck::FFragment_InputLayer_RoutedThisFrame>().Get_RoutedEvents();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
