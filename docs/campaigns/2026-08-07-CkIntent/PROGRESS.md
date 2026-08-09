@@ -478,6 +478,37 @@ blocks Phase 1a. The **poll-surface hole** (DESIGN_InputLayering.md) blocks Phas
   diagnostics (dispatched to the matcher agent), 7-2 debugger UI (fresh agent, must load
   ck-gameplaydebugger-extension + ck-slate-tools skills first; visual layer =
   EDITOR-VERIFY).
+- **COMMIT CHECKPOINT (user-authorized, /commit):** 6 CkFoundation commits
+  (`241048f2d` fix → `46f92c369` ButtonMap+seam+doc → `6d7431b15` retention → `e90384363`
+  clamp → `0bb6febde` CkIntent module minus matcher → `8f27fd68f` campaign docs) + 4
+  CkTests commits (`9fc7ffb7` gym → `e552626b` pins → `c6dc4605` intent battery+Build.cs →
+  `6260c453` pipeline artifacts). Matcher files + `CkIntent/Claude.md` + the 7-1 test HELD
+  BACK (7-1 in flight at commit time) — they get one commit post-review with fresh
+  authorization. Push NOT authorized; pointer bumps deferred (publish guard). Continuation
+  prompt written: `CONTINUATION_PROMPT_Phases7and8AndShip.md` (this dir).
+- **Unit 7-1 LANDED, orchestrator-accepted** (STOP-lite exercised as permitted: deferral
+  EPISODE outcomes get no ring entries — window expiry already IS the per-frame failed
+  chord scans; hold cancel runs no scan and belongs to the phase signal; verbatim reasoning
+  recorded in its report + Claude.md). Shapes: 32-entry ring, entry = intent identity +
+  terminal frame + outcome + per-step walk-order detail; **`WindowExhausted` vs
+  `ContiguityBroken` is the criterion-5 distinguisher**; `_StepIndex` = definition index so
+  authored order recovers. CVar `ck.Intent.RecordScanDiagnostics` owned by Utils (one
+  source of truth), read once per pass. **Funnel exclusivity orchestrator-verified by
+  grep:** `Get_ScanSucceeds` has ONE caller (`DoRunScan` :1235→:1246) which has exactly 2
+  sites (:886 immediate arbiter, :1017 all episode branches) — the ring cannot describe a
+  subset. Accepted: swap does NOT clear the ring (entries describe scans that happened,
+  [P7-D1] coherent); ring-fill cost note documented (wide chord windows; ring small + off
+  by default). Gate in flight (expect 119 = 118 + 1).
+- **7-1 gate: 118/119 on the suite run, then GREEN after two ORCHESTRATOR test fixes**
+  (both in the new test, code untouched): (1) the exact frames-examined pin lacked its
+  fixture guarantee — the scan clamps to retained rows, so pressing before the ring held a
+  full window made retention the binding constraint (expected 9, got 4); fixed with a
+  `Check_RingWarm` wait (`Get_FrameCount >= 12`); (2) **leg 2 never released the punch** —
+  leg 1's assert step injects `Released`, leg 2's did not; the suite run's timing masked it,
+  the isolated run wedged on `Check_Released`; fixed by injecting the release at the TOP of
+  `Step_AssertFailure` (early-return guards can't skip it). Isolated re-run ✅ 1/1 (27s,
+  `Test-ScanDiag2.log`); composition with the suite run's 118 greens = **unit 7-1 CLOSED**.
+  The `[EDITOR-VERIFY]` queue and Phase-7 close await unit 7-2 (debugger UI).
 
 ### 2026-08-08 — [P1A-D7] gym's first drive: CONFIRMED defect #13 + presentation rulings [P1A-D8]
 
