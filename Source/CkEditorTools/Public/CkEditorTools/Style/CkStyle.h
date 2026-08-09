@@ -85,6 +85,9 @@ namespace CkStyle
 	CKEDITORTOOLS_API auto Reference()          -> FLinearColor;
 	CKEDITORTOOLS_API auto PickMarker_Default() -> FLinearColor;
 	CKEDITORTOOLS_API auto PickMarker_Hover()   -> FLinearColor;
+	CKEDITORTOOLS_API auto AxisX()              -> FLinearColor;
+	CKEDITORTOOLS_API auto AxisY()              -> FLinearColor;
+	CKEDITORTOOLS_API auto AxisZ()              -> FLinearColor;
 
 	// ----- Value-type colors -------------------------------------------------
 	CKEDITORTOOLS_API auto Value_Bool_True()  -> FLinearColor;
