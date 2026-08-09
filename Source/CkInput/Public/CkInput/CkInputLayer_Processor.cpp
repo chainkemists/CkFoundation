@@ -31,6 +31,7 @@ namespace ck
         -> void
     {
         InInputSource.Add<FFragment_InputLayer_RouterState>();
+        InInputSource.Add<FFragment_InputLayer_RoutedThisFrame>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -144,9 +145,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InInputSource,
             FFragment_InputSource_Current& InCurrent,
-            FFragment_InputLayer_RouterState& InRouterState) const
+            FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted) const
         -> void
     {
+        // Cleared before the empty-inbox early-out, not after it: a frame that routed nothing must report
+        // nothing, and leaving the previous frame's rows standing would read as this frame's.
+        InRouted._RoutedEvents.Reset();
+
         const auto EventsCopy = InCurrent._PendingRawEvents;
         InCurrent._PendingRawEvents.Reset();
 
@@ -157,7 +163,7 @@ namespace ck
 
         for (const auto& Event : EventsCopy)
         {
-            DoRouteEvent(InInputSource, InRouterState, Event);
+            DoRouteEvent(InInputSource, InRouterState, InRouted, Event);
         }
     }
 
@@ -207,6 +213,7 @@ namespace ck
         DoRouteEvent(
             HandleType InInputSource,
             FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted,
             const FCk_InputSource_RawEvent& InEvent)
         -> void
     {
@@ -218,7 +225,7 @@ namespace ck
 
             if (OwnerIndex != INDEX_NONE)
             {
-                DoConsumeOwnedRelease(InRouterState, OwnerIndex, InEvent);
+                DoConsumeOwnedRelease(InRouterState, InRouted, OwnerIndex, InEvent);
                 return;
             }
         }
@@ -262,6 +269,10 @@ namespace ck
             if (Capture.Get_Behavior() == ECk_InputLayer_CaptureBehavior::PassThrough)
             { continue; }
 
+            auto Routed = FCk_InputLayer_RoutedEvent{InEvent, ECk_InputLayer_DeliveryOutcome::ConsumedByLayer};
+            Routed.Set_ConsumingLayer(Layer);
+            InRouted._RoutedEvents.Emplace(Routed);
+
             if (EventType == ECk_InputSource_EventType::Pressed)
             {
                 const auto& Key = InEvent.Get_Key();
@@ -277,6 +288,11 @@ namespace ck
 
             return;
         }
+
+        // The walk completed without a Consume ending it. Every PassThrough capture on the way down was still
+        // delivered — this records that nothing MASKED the event, not that nothing received it.
+        InRouted._RoutedEvents.Emplace(
+            FCk_InputLayer_RoutedEvent{InEvent, ECk_InputLayer_DeliveryOutcome::PassedThrough});
     }
 
     auto
@@ -297,6 +313,7 @@ namespace ck
         FProcessor_InputLayer_Route::
         DoConsumeOwnedRelease(
             FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted,
             int32 InOwnerIndex,
             const FCk_InputSource_RawEvent& InEvent)
         -> void
@@ -320,10 +337,17 @@ namespace ck
                 InEvent.Get_Key(), Owner
             );
 
+            InRouted._RoutedEvents.Emplace(
+                FCk_InputLayer_RoutedEvent{InEvent, ECk_InputLayer_DeliveryOutcome::DroppedNoOwner});
+
             return;
         }
 
         DoDeliver(Owner, InEvent, Ownership.Get_Capture());
+
+        auto Routed = FCk_InputLayer_RoutedEvent{InEvent, ECk_InputLayer_DeliveryOutcome::ConsumedByLayer};
+        Routed.Set_ConsumingLayer(Owner);
+        InRouted._RoutedEvents.Emplace(Routed);
     }
 
     auto

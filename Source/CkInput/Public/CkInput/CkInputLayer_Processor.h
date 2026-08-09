@@ -14,6 +14,9 @@ namespace ck
 {
     // Every input source gets router state, whether or not a layer was ever registered on it. Without this the
     // router's view would skip layer-less sources and their inboxes would grow for the life of the session.
+    //
+    // The per-frame retention fragment is stamped in the same pass, so the two always co-exist and the router
+    // never has to test for one of them.
     class CKINPUT_API FProcessor_InputLayer_SetupRouterState : public ck_exp::TProcessor<
             FProcessor_InputLayer_SetupRouterState,
             FCk_Handle_InputSource,
@@ -109,6 +112,7 @@ namespace ck
             FCk_Handle_InputSource,
             ck::TReadWrite<FFragment_InputSource_Current>,
             ck::TReadWrite<FFragment_InputLayer_RouterState>,
+            ck::TReadWrite<FFragment_InputLayer_RoutedThisFrame>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -124,7 +128,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InInputSource,
             FFragment_InputSource_Current& InCurrent,
-            FFragment_InputLayer_RouterState& InRouterState) const -> void;
+            FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted) const -> void;
 
     private:
         static auto
@@ -136,6 +141,7 @@ namespace ck
         DoRouteEvent(
             HandleType InInputSource,
             FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted,
             const FCk_InputSource_RawEvent& InEvent) -> void;
 
         static auto
@@ -146,6 +152,7 @@ namespace ck
         static auto
         DoConsumeOwnedRelease(
             FFragment_InputLayer_RouterState& InRouterState,
+            FFragment_InputLayer_RoutedThisFrame& InRouted,
             int32 InOwnerIndex,
             const FCk_InputSource_RawEvent& InEvent) -> void;
 

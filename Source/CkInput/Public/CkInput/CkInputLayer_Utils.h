@@ -180,6 +180,21 @@ public:
         FCk_Handle_InputSource InInputSource,
         const FKey& InKey);
 
+    /**
+     * Every event this frame's routing pass delivered, each paired with the outcome the walk reached. Empty on a
+     * frame that routed nothing, and empty on a source whose router state has not been stamped yet.
+     *
+     * READ ORDER MATTERS: this is per-frame state the router clears at the top of every pass, so only a caller
+     * ordered AFTER FGroup_Input_Route sees this frame's rows. Gameplay qualifies (routing runs ahead of it by
+     * group edge); anything inside FGroup_Input_Collect or FGroup_Input_Bias reads the cleared array.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InputLayer",
+              DisplayName = "[Ck][InputLayer] Get Routed Events This Frame")
+    static TArray<FCk_InputLayer_RoutedEvent>
+    Get_RoutedEventsThisFrame(
+        FCk_Handle_InputSource InInputSource);
+
 public:
     /**
      * Declares interest in an input. Deferred: the capture joins the layer when the request drains, which is before

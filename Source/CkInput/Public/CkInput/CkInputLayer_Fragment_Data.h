@@ -39,6 +39,26 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InputLayer_CaptureMatch);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * What became of one routed event once the walk over the stack finished. These are the router's three terminal
+ * paths and nothing else: an event either ended on a Consume capture (or on the recorded owner of its press),
+ * fell off the bottom of the stack, or was a release whose press owner no longer exists.
+ *
+ * PassedThrough does not mean "nobody saw it" — every PassThrough capture on the way down was delivered. It
+ * means no layer ended the walk, which is the property a consumer reasoning about masking actually needs.
+ */
+UENUM(BlueprintType)
+enum class ECk_InputLayer_DeliveryOutcome : uint8
+{
+    ConsumedByLayer,
+    PassedThrough,
+    DroppedNoOwner
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InputLayer_DeliveryOutcome);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // One declaration of interest. A capture is DATA: it names what the layer wants and what happens to the layers
 // below when it matches. It carries no callback, so the "matched but declined" state that a callback's return
 // value would express does not exist here and cannot silently eat a key.
@@ -86,6 +106,47 @@ public:
 USTRUCT(BlueprintType, meta = (HasNativeMake, HasNativeBreak))
 struct CKINPUT_API FCk_Handle_InputLayer : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_InputLayer); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InputLayer);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * One routed event paired with what the router did with it. The event half is the verbatim inbox row — the same
+ * physical fact a layer's delivery carries — so a consumer reading these never has to reconcile two versions of
+ * the same press.
+ *
+ * The consuming layer is meaningful ONLY for ConsumedByLayer and is an invalid handle otherwise; there is no
+ * layer to name when nothing ended the walk. It is also the one field that can be a handle to an entity that
+ * died later in the frame, so read it through ck::IsValid rather than storing it.
+ */
+USTRUCT(BlueprintType)
+struct CKINPUT_API FCk_InputLayer_RoutedEvent
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_InputLayer_RoutedEvent);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_InputSource_RawEvent _Event;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_InputLayer_DeliveryOutcome _Outcome = ECk_InputLayer_DeliveryOutcome::PassedThrough;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_InputLayer _ConsumingLayer;
+
+public:
+    CK_PROPERTY_GET(_Event);
+    CK_PROPERTY_GET(_Outcome);
+    CK_PROPERTY(_ConsumingLayer);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_InputLayer_RoutedEvent, _Event, _Outcome);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
