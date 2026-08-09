@@ -344,8 +344,8 @@ public:
         FGameplayTagContainer& OutFailureReason);
 
     /**
-     * Unbind all mappings that use the given key, then remap InMappingName to it.
-     * Resolves a conflict by clearing the conflicting binding.
+     * Unbind every conflicting holder of InNewKey — their mapping becomes UNBOUND, not
+     * reset to its default — then map InMappingName to it.
      * @param OutFailureReason  Gameplay tags describing the failure (empty on success)
      */
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Unbind Conflict And Remap")

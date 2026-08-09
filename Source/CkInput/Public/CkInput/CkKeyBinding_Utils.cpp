@@ -577,10 +577,12 @@ auto
                 auto UnbindArgs = FMapPlayerKeyArgs{};
                 UnbindArgs.MappingName = ConflictName;
                 UnbindArgs.Slot = Mapping.GetSlot();
+                UnbindArgs.NewKey = FKey{EKeys::Invalid};
+                UnbindArgs.bCreateMatchingSlotIfNeeded = false;
                 UnbindArgs.bDeferOnSettingsChangedBroadcast = true;
 
                 auto FailureReason = FGameplayTagContainer{};
-                Settings->UnMapPlayerKey(UnbindArgs, FailureReason);
+                Settings->MapPlayerKey(UnbindArgs, FailureReason);
                 OutFailureReason.AppendTags(FailureReason);
                 break;
             }
