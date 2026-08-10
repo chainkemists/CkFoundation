@@ -8,6 +8,7 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkJolt/CkJolt_Common.h"
+#include "CkJolt/Query/CkJoltQuery_Data.h"
 
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
 
@@ -33,6 +34,40 @@ enum class ECk_ProbeTrace_Policy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// Whether a ProbeTrace also sees NON-probe Jolt bodies (baked static world, JoltBodies), and what
+/// it does with them. Opt-in per call: the default keeps a trace probe-only, which every existing
+/// caller (EQS line-of-sight, crowd counts, the claw-machine cabinet scan) depends on.
+UENUM(BlueprintType)
+enum class ECk_ProbeTrace_WorldHitPolicy : uint8
+{
+    // Non-probe bodies are invisible to the trace.
+    Ignore,
+
+    // The nearest passing world hit truncates: probes beyond it are not returned and not
+    // overlap-fired; the world hit itself IS returned as the final element.
+    Blocking,
+
+    // World hits interleave with probe hits in fraction order; nothing is truncated.
+    Reported
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_WorldHitPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// Discriminates what a single trace result refers to. `_Probe` is populated for Probe hits ONLY;
+/// on World hits it is deliberately INVALID.
+UENUM(BlueprintType)
+enum class ECk_ProbeTrace_HitKind : uint8
+{
+    Probe,
+    World
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_HitKind);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -383,12 +418,35 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _EndPos = FVector::ZeroVector;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_HitKind _HitKind = ECk_ProbeTrace_HitKind::Probe;
+
+    // Probe hits: the probe entity. World hits: the body's attribution entity (JoltStaticActor or
+    // the JoltBody's own entity), which MAY be invalid — a body with no entity is still a real hit.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _HitEntity;
+
+    // The TRUE surface normal at the hit. Distinct from _NormalDirLen, which is (StartPos - HitLocation).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _SurfaceNormal = FVector::UpVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _Fraction = 0.0f;
+
 public:
     CK_PROPERTY_GET(_Probe);
     CK_PROPERTY_GET(_HitLocation);
     CK_PROPERTY_GET(_NormalDirLen);
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_EndPos);
+    CK_PROPERTY(_HitKind);
+    CK_PROPERTY(_HitEntity);
+    CK_PROPERTY(_SurfaceNormal);
+    CK_PROPERTY(_Fraction);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Result, _Probe, _HitLocation, _NormalDirLen, _StartPos, _EndPos);
@@ -425,12 +483,38 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_WorldHitPolicy != ECk_ProbeTrace_WorldHitPolicy::Ignore"))
+    FCk_Jolt_QueryFilter _WorldFilter;
+
+    // Whether filter-matching PROBE hits ping Begin/EndOverlap into the probes they hit. World hits
+    // never fire overlaps regardless. Silent exists because a weapon aim sweep wants the hit list
+    // without the side-effects (see bb_aim::Sweep, which bypassed this API entirely to get it).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeResponse_Policy _OverlapNotifyPolicy = ECk_ProbeResponse_Policy::Notify;
+
+    // Hits whose resolved entity (probe entity or world attribution entity) is listed are dropped
+    // before ordering and blocking. Own-collision-pill exclusion for weapon traces.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _IgnoredEntities;
+
 public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_EndPos);
     CK_PROPERTY_GET(_Filter);
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
+    CK_PROPERTY(_WorldHitPolicy);
+    CK_PROPERTY(_WorldFilter);
+    CK_PROPERTY(_OverlapNotifyPolicy);
+    CK_PROPERTY(_IgnoredEntities);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCast_Settings, _StartPos, _EndPos, _Filter);
@@ -471,6 +555,21 @@ private:
               meta = (AllowPrivateAccess = true))
     float _Fraction = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_HitKind _HitKind = ECk_ProbeTrace_HitKind::Probe;
+
+    // Probe hits: the probe entity. World hits: the body's attribution entity (JoltStaticActor or
+    // the JoltBody's own entity), which MAY be invalid — a body with no entity is still a real hit.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _HitEntity;
+
+    // The TRUE surface normal at the hit. Distinct from _NormalDirLen, which is (StartPos - HitLocation).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _SurfaceNormal = FVector::UpVector;
+
 public:
     CK_PROPERTY_GET(_Probe);
     CK_PROPERTY_GET(_HitLocation);
@@ -478,6 +577,9 @@ public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_EndPos);
     CK_PROPERTY_GET(_Fraction);
+    CK_PROPERTY(_HitKind);
+    CK_PROPERTY(_HitEntity);
+    CK_PROPERTY(_SurfaceNormal);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Result, _Probe, _HitLocation, _NormalDirLen, _StartPos, _EndPos, _Fraction);
@@ -518,6 +620,28 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_BackFaceMode _BackFaceModeConvex = ECk_BackFaceMode::IgnoreBackFaces;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_WorldHitPolicy != ECk_ProbeTrace_WorldHitPolicy::Ignore"))
+    FCk_Jolt_QueryFilter _WorldFilter;
+
+    // Whether filter-matching PROBE hits ping Begin/EndOverlap into the probes they hit. World hits
+    // never fire overlaps regardless. Silent exists because a weapon aim sweep wants the hit list
+    // without the side-effects (see bb_aim::Sweep, which bypassed this API entirely to get it).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeResponse_Policy _OverlapNotifyPolicy = ECk_ProbeResponse_Policy::Notify;
+
+    // Hits whose resolved entity (probe entity or world attribution entity) is listed are dropped
+    // before ordering and blocking. Own-collision-pill exclusion for weapon traces.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _IgnoredEntities;
+
 public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_EndPos);
@@ -525,6 +649,10 @@ public:
     CK_PROPERTY_GET(_Filter);
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
+    CK_PROPERTY(_WorldHitPolicy);
+    CK_PROPERTY(_WorldFilter);
+    CK_PROPERTY(_OverlapNotifyPolicy);
+    CK_PROPERTY(_IgnoredEntities);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ShapeCast_Settings, _StartPos, _EndPos, _Shape, _Filter);
@@ -565,6 +693,19 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_WorldHitPolicy != ECk_ProbeTrace_WorldHitPolicy::Ignore"))
+    FCk_Jolt_QueryFilter _WorldFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _IgnoredEntities;
+
 public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_DirectionAndLength);
@@ -572,6 +713,9 @@ public:
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
     CK_PROPERTY(_TracePolicy);
+    CK_PROPERTY(_WorldHitPolicy);
+    CK_PROPERTY(_WorldFilter);
+    CK_PROPERTY(_IgnoredEntities);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_RayCastPersistent_Settings, _StartPos, _DirectionAndLength, _Filter);
@@ -616,6 +760,19 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProbeTrace_Policy _TracePolicy = ECk_ProbeTrace_Policy::Single;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_WorldHitPolicy != ECk_ProbeTrace_WorldHitPolicy::Ignore"))
+    FCk_Jolt_QueryFilter _WorldFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _IgnoredEntities;
+
 public:
     CK_PROPERTY_GET(_StartPos);
     CK_PROPERTY_GET(_DirectionAndLength);
@@ -624,6 +781,9 @@ public:
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
     CK_PROPERTY(_TracePolicy);
+    CK_PROPERTY(_WorldHitPolicy);
+    CK_PROPERTY(_WorldFilter);
+    CK_PROPERTY(_IgnoredEntities);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Probe_ShapeCastPersistent_Settings, _StartPos, _DirectionAndLength, _Shape, _Filter);
@@ -789,5 +949,45 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Probe_OnEnableDisable,
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEnableDisable, InPayload);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_ProbeTrace_Payload_OnWorldHit
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ProbeTrace_Payload_OnWorldHit);
+
+private:
+    // MAY be invalid: a Jolt body with no owning entity is still a real world contact.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _WorldEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _HitLocation = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _SurfaceNormal = FVector::UpVector;
+
+public:
+    CK_PROPERTY_GET(_WorldEntity);
+    CK_PROPERTY_GET(_HitLocation);
+    CK_PROPERTY_GET(_SurfaceNormal);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_ProbeTrace_Payload_OnWorldHit, _WorldEntity, _HitLocation, _SurfaceNormal);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProbeTrace_OnWorldHit,
+    FCk_Handle_ProbeTrace, InHandle,
+    FCk_ProbeTrace_Payload_OnWorldHit, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,12 +6,6 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-#include <Templates/SharedPointer.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace JPH { class PhysicsSystem; }
-
 // --------------------------------------------------------------------------------------------------------------------
 // Pipeline: HandleRequests → Generate → Test → Finalize → Cleanup, all in FGroup_PostTransform,
 // chained by the RunAfter lists below.
@@ -84,13 +78,11 @@ namespace ck
         using RunAfter = TDepList<FProcessor_Eqs_HandleRequests>;
         using MarkedDirtyBy = FTag_EqsQuery_Pending;
 
-        // Grid ground-projection needs a JPH::PhysicsSystem, absent in editor worlds.
+        // Grid ground-projection needs a valid ProbeTrace context, absent in editor worlds.
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
-        FProcessor_Eqs_Generate(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
     public:
         auto
@@ -99,9 +91,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_EqsQuery_Params& InParams,
             FFragment_EqsQuery_State& InState) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -126,9 +115,7 @@ namespace ck
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
-        FProcessor_Eqs_Test(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
     public:
         auto
@@ -144,7 +131,6 @@ namespace ck
             FFragment_EqsQuery_DebugInfo& InDebug) -> void;
 
     private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
         int32 _RemainingBudgetThisFrame = 0;
     };
 

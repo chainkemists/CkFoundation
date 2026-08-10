@@ -7,11 +7,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// ReSharper disable once CppInconsistentNaming
-namespace JPH { class PhysicsSystem; }
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     class CKSPATIALQUERY_API FProcessor_ProbeTrace_RayCast : public ck_exp::TProcessor<
@@ -31,18 +26,13 @@ namespace ck
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
-        FProcessor_ProbeTrace_RayCast(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProbeTrace_RayCast& InRequest) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -61,18 +51,13 @@ namespace ck
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
-        FProcessor_ProbeTrace_ShapeCast(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProbeTrace_ShapeCast& InRequest) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -88,18 +73,13 @@ namespace ck
         using Group = FGroup_Overlap;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
-        FProcessor_ProbeTrace_DebugDraw_RayCast(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProbeTrace_RayCast& InRequest) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -115,18 +95,13 @@ namespace ck
         using Group = FGroup_Overlap;
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
-        FProcessor_ProbeTrace_DebugDraw_ShapeCast(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+        using TProcessor::TProcessor;
 
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProbeTrace_ShapeCast& InRequest) const -> void;
-
-    private:
-        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 }
 
