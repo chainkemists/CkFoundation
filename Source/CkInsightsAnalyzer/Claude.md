@@ -21,9 +21,11 @@ Run headlessly through `-run=CkInsightsAnalyzer`; use CkGameplayDebugger's Insig
 
 ---
 
-## Anti-patterns
+## Packaged QA boundary
 
-Don't ship with Insights integration enabled.
+`CkInsightsAnalyzer` is a `DeveloperTool` module so packaged Development and DebugGame QA builds can
+analyze captures. UBT excludes it from Test and Shipping targets. Keep it UI-free and do not move it
+to `Runtime` or introduce gameplay-module dependencies.
 
 ---
 
