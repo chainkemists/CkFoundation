@@ -83,36 +83,53 @@ namespace ck_jolt_bake_extraction
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    static auto Get_ShouldSkipComponent(
+    // Movable is distinguished from every other skip because it is the one a designer trips by accident:
+    // a floor dragged in as Movable silently vanishes from the static world while Chaos still blocks
+    // against it. The stats plumbing exists so that skip is countable, not just VeryVerbose-visible.
+    enum class ECk_Jolt_ComponentSkipReason : uint8
+    {
+        NotSkipped,
+        NotEligible,
+        MovableInLevelSweep
+    };
+
+    static auto Get_ComponentSkipReason(
         const UPrimitiveComponent& InComponent,
-        ECk_Jolt_ExtractionPolicy InPolicy) -> bool
+        ECk_Jolt_ExtractionPolicy InPolicy) -> ECk_Jolt_ComponentSkipReason
     {
         if (NOT InComponent.IsRegistered())
-        { return true; }
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 
         if (InComponent.IsEditorOnly())
-        { return true; }
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 
 #if WITH_EDITORONLY_DATA
         if (InComponent.IsVisualizationComponent())
-        { return true; }
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 #endif
 
         if (InComponent.GetCollisionEnabled() == ECollisionEnabled::NoCollision)
-        { return true; }
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 
         if (InComponent.IsSimulatingPhysics())
-        { return true; }
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 
         if (InPolicy == ECk_Jolt_ExtractionPolicy::LevelSweep &&
             InComponent.Mobility == EComponentMobility::Movable)
         {
             ck::jolt::VeryVerbose(TEXT("Static bake skipping MOVABLE component [{}] — kinematic/dynamic territory"),
                 InComponent.GetName());
-            return true;
+            return ECk_Jolt_ComponentSkipReason::MovableInLevelSweep;
         }
 
-        return false;
+        return ECk_Jolt_ComponentSkipReason::NotSkipped;
+    }
+
+    static auto Get_ShouldSkipComponent(
+        const UPrimitiveComponent& InComponent,
+        ECk_Jolt_ExtractionPolicy InPolicy) -> bool
+    {
+        return Get_ComponentSkipReason(InComponent, InPolicy) != ECk_Jolt_ComponentSkipReason::NotSkipped;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -477,11 +494,21 @@ namespace ck::jolt::bake
             const UPrimitiveComponent& InComponent,
             FCk_Jolt_ShapeCache& InShapeCache,
             TArray<FCk_Jolt_ExtractedBody>& OutBodies,
-            ECk_Jolt_ExtractionPolicy InPolicy)
+            ECk_Jolt_ExtractionPolicy InPolicy,
+            FCk_Jolt_ExtractionStats* OutStats)
         -> int32
     {
-        if (Get_ShouldSkipComponent(InComponent, InPolicy))
-        { return 0; }
+        if (OutStats != nullptr)
+        { ++OutStats->_NumComponentsConsidered; }
+
+        if (const auto SkipReason = Get_ComponentSkipReason(InComponent, InPolicy);
+            SkipReason != ECk_Jolt_ComponentSkipReason::NotSkipped)
+        {
+            if (OutStats != nullptr && SkipReason == ECk_Jolt_ComponentSkipReason::MovableInLevelSweep)
+            { ++OutStats->_NumComponentsSkippedMovable; }
+
+            return 0;
+        }
 
         const auto StartingCount = OutBodies.Num();
         const auto& ComponentTransform = InComponent.GetComponentTransform();
@@ -628,7 +655,12 @@ namespace ck::jolt::bake
             EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
         }
 
-        return OutBodies.Num() - StartingCount;
+        const auto NumExtracted = OutBodies.Num() - StartingCount;
+
+        if (OutStats != nullptr)
+        { OutStats->_NumBodiesExtracted += NumExtracted; }
+
+        return NumExtracted;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -638,7 +670,8 @@ namespace ck::jolt::bake
             const AActor& InActor,
             FCk_Jolt_ShapeCache& InShapeCache,
             TArray<FCk_Jolt_ExtractedBody>& OutBodies,
-            ECk_Jolt_ExtractionPolicy InPolicy)
+            ECk_Jolt_ExtractionPolicy InPolicy,
+            FCk_Jolt_ExtractionStats* OutStats)
         -> int32
     {
         const auto StartingCount = OutBodies.Num();
@@ -698,6 +731,10 @@ namespace ck::jolt::bake
                 OutBodies.Emplace(MoveTemp(Body));
             }
         }
+
+        // Landscape bodies bypass ExtractComponent, so their count is added here.
+        if (OutStats != nullptr)
+        { OutStats->_NumBodiesExtracted += OutBodies.Num() - StartingCount; }
 #endif
 
         InActor.ForEachComponent<UPrimitiveComponent>(false,
@@ -713,7 +750,7 @@ namespace ck::jolt::bake
                 { return; }
 #endif
 
-                ExtractComponent(*InComponent, InShapeCache, OutBodies, InPolicy);
+                ExtractComponent(*InComponent, InShapeCache, OutBodies, InPolicy, OutStats);
             });
 
         return OutBodies.Num() - StartingCount;

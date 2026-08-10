@@ -100,6 +100,17 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `UCk_EcsWorld_Subsystem_UE` so the registry outlives it. A level added before the ECS world is
   ready is SKIPPED (Verbose) and re-attempted by the `OnWorldBeginPlay` sweep — bodies are never
   baked without an entity.
+- **Movable mobility is the #1 empty-static-world trap.** The level sweep bakes Static-mobility
+  components ONLY (`LevelSweep` policy; `ExplicitActor` via `Request_BakeActor` bakes movables —
+  the caller declared them static-in-intent). A designer-placed Movable floor therefore silently
+  vanishes from the Jolt static world while Chaos still blocks queries against it — probe traces
+  with `WorldHitPolicy != Ignore` fly straight through. Observability (pinned by
+  `Ck.Jolt.BakeExtraction.MobilityPolicy`): movable skips are counted in
+  `FCk_Jolt_ExtractionStats`, every world boot logs a one-line sweep summary at Log verbosity
+  (`JoltStaticWorld: BeginPlay sweep for [world]: [N] static bodies … [M] movable … skipped`),
+  and an all-skipped level logs its own zero line at Verbose. `[0] static bodies` on that summary
+  line = your map's geometry is Movable (or the map is empty) — fix the mobility, don't debug the
+  trace.
 - Cooked data: `UCk_Jolt_CookedWorldIndex_UE` (per map, found by path convention under
   `_CookedDataRootPath`) + `UCk_Jolt_CookedCell_UE` per bake-grid cell (`SaveWithChildren` blob,
   shared-dedup). `CookVersion` + `JPH_VERSION_ID` + per-actor runtime hash — stale data ensures
