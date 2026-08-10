@@ -2,6 +2,25 @@
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
 
+**As of 2026-08-10 (late): PHASE 10 technically CLOSED under [P2-D4] — all five slices built,
+gated, and committed; the AFK mandate ("complete all the slices, /commit periodically") is
+FULFILLED.** Slice 3b gated `Test-Phase10Slice3b-BuildTest2.log` 123/123 (first-ever compile of
+those edits, first try) → committed CkTests `abeb30f5` + docs `efeb2006f`. Slice 4 (combos,
+Opus draft → orchestrator mirror-diff/signature re-verification → install + legend fix +
+comment-audit re-applies) gated `Test-Phase10Slice4.log` 123/123 → committed CkTests
+`96bed75f`. Slice 5 (orchestrator-inline: 3 dead Shared helpers pruned with per-symbol caller
+census, registry verified 2 rows, comment audit zero hits, `PHASE_10_EDITOR_VERIFY.md` v2
+drive script) gated `Test-Phase10Slice5-Final.log` ✅ 123/123 on the FINAL tree → committed
+below. Rulings this session: [P10-D8] (combos-as-sequences), [P10-D9] (W+L chord on held-ness).
+Build unblock cost nothing: the debugger session fixed its own `CkWorldSpaceWidget` consumers
+(`fba4d4c`). **Human queue on return: drive `PHASE_10_EDITOR_VERIFY.md` (~10 min — §2 chain
+feel + §5 combos are the accumulated PIE debt), rule on gamepad parity ("if wanted", not
+built), then the ship conversation (push NEVER authorized this session; superproject pointer
+bumps untouched).** Session log: fresh Fable orchestrator; 1 Opus dispatch (slice 4, landed
+clean, 3 surfaced calls ruled); slices 3b-gate/5 orchestrator-inline; 3 scoped gates + 1
+build, all green first try; 5 commits, 0 pushes. The OPEN-state paragraph below stands as
+history.
+
 **As of 2026-08-10: PHASE 10 OPEN — the maintainer drove the Phase-9 gym and REJECTED the
 design ("this gym was a disappointment"); the playground is being rebuilt as ONE Diablo-style
 combat arena per the spec + rulings in `PHASE_10.md` ([P10-D1] arena replaces stations,
@@ -55,7 +74,12 @@ RULED inline: **[P10-D8]** directional combos = sequences `"L H w=30"`/`"H L w=3
 are a set — order inexpressible; sequences add zero latency), **[P10-D9]** W+LMB = real chord
 `"W+L"` (chord terminals accept held partners; locomotion reads engine `IsInputKeyDown` outside
 the routed pipeline so the Consume capture is harmless; W minted as third key) — full rationale
-in PHASE_10.md. Slice-4 Opus draft dispatched to scratchpad in parallel with the gate. Phase 9's paragraph below
+in PHASE_10.md. Slice-4 Opus draft dispatched to scratchpad in parallel with the gate; returned COMPLETE, no
+STOPs; orchestrator mirror-diffed all four files (hunks exactly as claimed), re-verified the
+load-bearing signatures at source, ruled the drafter's three surfaced calls (legend `45f` fixed,
+enemy combo-tint accepted, family/step derivation accepted), INSTALLED + two comment-audit
+re-applies; slice-4 gate `Test-Phase10Slice4.log` in flight. **Slice 3b COMMITTED (standing
+/commit): CkTests `abeb30f5` (+252/−70), CkFoundation docs `efeb2006f`.** Phase 9's paragraph below
 stands as history: its PLUMBING (shared source composition, record readers, salvage) carries
 forward; its gym DESIGN is dead. `PHASE_9_EDITOR_VERIFY.md` is OBSOLETE (death condition
 fired) — do not drive it; slice 5 writes the v2 script. All work remains UNCOMMITTED.

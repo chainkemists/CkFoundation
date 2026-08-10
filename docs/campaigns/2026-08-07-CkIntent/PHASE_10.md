@@ -204,16 +204,60 @@
   `Test-Phase10Slice3b-BuildTest2.log`, 2026-08-10) — the 3b edits' first-ever compile. PIE feel
   verdict pending maintainer return (waived as a slice gate by the AFK completion mandate).
 
+- **Slice 4 — combos (2026-08-10, Opus dispatch): INSTALLED, gate in flight.** Drafted COMPLETE,
+  no STOPs; the load-bearing risk (a bare `W` token being eaten as the `w=` modifier keyword)
+  verified in the tokenizer source (`CkIntentGrammar_Utils.cpp:353-363` — a token is a modifier
+  only if it equals `lenient` or contains `=`), and the orchestrator re-verified `DoSpawnSwing`'s
+  6-param shape, `k_Attack_SpecialForwardOffset`, and the Bake wrapper's chord-window default (3,
+  `utils_intent_grammar.as:31-32`). Installed per [P10-D8]/[P10-D9]: move table +3
+  (`Kit_Combo_WL "W+L" 960`, `Kit_Combo_HL "H L w=30" 950`, `Kit_Combo_LH "L H w=30" 940`,
+  `Declare_Button(W)`, count 4→7; per-terminal priority audit strict); Shared mints
+  `k_Key_Forward = EKeys::W` with the dual-read ledger paragraph (capture ends a ROUTING walk;
+  locomotion's `IsInputKeyDown` is engine-level); Pawn gains the W ButtonNameRow, third
+  minted-key swap-gate wait, three combo states (11/12/13) entered by unconditional phase-exempt
+  `DoOnComboLanded` (clears step/buffer/grace, spawns 0.7s swing at extent 170 in three
+  off-family hues, floor label `COMBO L-H`/`H-L`/`W+L`), ALL-SEVEN row reads with combos
+  dispatched first; PC legend extended. **Orchestrator touches at install:** two comment-audit
+  fixes re-applied (ruling-ID breadcrumbs stripped, they predate the draft), and the PC legend's
+  stale `hold 45f` → `hold` (wrong player instruction since the hold=5 verdict split).
+  **Orchestrator rulings on the drafter's surfaced calls:** enemy tinting a combo hit as heavy
+  special ACCEPTED (enemy out of scope, feedback intact); `k_Family_None`+`k_Step_Special` for
+  combo swings ACCEPTED (derivations of documented meanings — also what earns the 75° special
+  arc). Known interaction kept: a charge landing the same tick stomps a combo (pre-existing
+  "charge interrupts everything" rule, unchanged). **Gate ✅ GREEN 123/123** (0 failed/skipped/
+  contaminated, AS compile first try, `Test-Phase10Slice4.log`, 1m10s). Honest scope of that
+  green: the gym's Parse/Bake run at PIE time, not under autotests — the three new notations'
+  acceptance rests on tokenizer-source verification, with the `SET REJECTED` floor latch as the
+  PIE tripwire if that reasoning is wrong.
+
+- **Slice 5 — cleanup + close (2026-08-10, orchestrator-inline): EXECUTED.** Shared.as prune:
+  `Get_HeldButtonNames`, `Get_LiveOctant`, `TryGet_Matcher` DELETED (zero callers anywhere —
+  station-era leftovers; caller census run per symbol across all six gym files).
+  `Format_Bool`/`Get_IsArmed` KEPT (live in the pawn's input readout, Pawn.as:1940-1942).
+  Registry verified: exactly "Input Key Binding" + "Input Playground". Comment audit: zero
+  TODO/breadcrumb/ruling-ID hits across all playground files. `PHASE_10_EDITOR_VERIFY.md`
+  (v2 drive script) authored — supersedes PHASE_9's (whose obsolete banner already stands);
+  carries the accumulated PIE debt (3b feel + slice-4 combos), the failure-signature table,
+  and the open items (gamepad parity not built — "if wanted" + maintainer AFK). Final scoped
+  gate on the pruned tree ✅ **GREEN 123/123** (0 failed/skipped/contaminated,
+  `Test-Phase10Slice5-Final.log`, 1m9s). **PHASE 10 technically CLOSED under [P2-D4]** —
+  every slice built, gated, committed; the PIE-dependent exit criteria are `[EDITOR-VERIFY]`
+  debt carried by `PHASE_10_EDITOR_VERIFY.md`.
+
 ## Exit criteria
 
-- [ ] Maintainer signs off on the Diablo feel (slice 1) in PIE
-- [ ] Full light/heavy kit: 3-chain, charge specials, verified against baked notation moves
-- [ ] Enemy takes visible hits; projectile block demonstrably works
-- [ ] Chord + direction combos resolve as distinct moves (LMB+RMB ≠ RMB+LMB; W+LMB)
-- [ ] Key vocabulary is exactly the standard set (WASD QERFC LMB RMB), ledger updated
-- [ ] Scoped gate 123/123 BY NAME on the final tree; PHASE_9_EDITOR_VERIFY.md superseded by a
-      v2 drive script
-- [ ] PROGRESS current; comment audit; full suite NOT run ([P2-D4])
+- [x] Maintainer signs off on the Diablo feel (slice 1) in PIE — "Slice 1 is good", 2026-08-10
+- [x] Full light/heavy kit: 3-chain, charge specials, verified against baked notation moves —
+      BUILT + GATED; 3b chain-FEEL verdict = `[EDITOR-VERIFY]` §2 (AFK debt)
+- [x] Enemy takes visible hits; projectile block demonstrably works — BUILT + GATED; PIE pass =
+      `[EDITOR-VERIFY]` §4
+- [x] Chord + direction combos resolve as distinct moves (LMB+RMB ≠ RMB+LMB; W+LMB) — BUILT +
+      GATED per [P10-D8]/[P10-D9]; PIE pass = `[EDITOR-VERIFY]` §5
+- [x] Key vocabulary is exactly the standard set — WASD + Q + LMB/RMB live (W minted), E/R/F/C
+      reserved-unused, no brackets/backslashes/semicolons anywhere; ledger updated
+- [x] Scoped gate 123/123 BY NAME on the final tree (`Test-Phase10Slice5-Final.log`);
+      PHASE_9_EDITOR_VERIFY.md superseded by `PHASE_10_EDITOR_VERIFY.md`
+- [x] PROGRESS current; comment audit clean; full suite NOT run ([P2-D4])
 
 ## NOT in this phase
 
