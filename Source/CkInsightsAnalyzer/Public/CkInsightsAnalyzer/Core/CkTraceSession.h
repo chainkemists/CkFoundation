@@ -11,6 +11,38 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Metadata for a screenshot embedded in an Insights trace.
+ *
+ * Payload bytes are deliberately excluded. Use FCk_TraceSession::TryCopyScreenshotData
+ * only when a caller needs to decode or persist a particular screenshot.
+ */
+struct FCk_TraceScreenshot
+{
+    /** TraceServices screenshot identifier, used with TryCopyScreenshotData. */
+    uint32 Id = static_cast<uint32>(INDEX_NONE);
+
+    FString Name;
+    double  TimestampSeconds = 0.0;
+    uint32  Width = 0;
+    uint32  Height = 0;
+
+    /** Bytes declared by the screenshot header and bytes currently available in the trace. */
+    uint32 ExpectedPayloadByteSize = 0;
+    uint32 PayloadByteSize = 0;
+    bool   bIsPayloadComplete = false;
+
+    /** The frame selected by TraceServices' preceding-frame lookup, or INDEX_NONE when no frame precedes the timestamp. */
+    int64 GameFrameIndex = INDEX_NONE;
+    int64 RenderFrameIndex = INDEX_NONE;
+
+    /** True only when TimestampSeconds is inside the selected frame's actual [StartTime, EndTime] interval. */
+    bool bIsInsideGameFrame = false;
+    bool bIsInsideRenderFrame = false;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Wrapper around UE TraceServices that opens a .utrace file and provides
  * convenient access to timing, frame, and thread providers.
  *
@@ -125,6 +157,23 @@ public:
 
     /** Get all thread infos as an array of (ThreadId, Name, GroupName). */
     auto GetThreadInfos() const -> TArray<TraceServices::FThreadInfo>;
+
+    /**
+     * Enumerate screenshots represented by Screenshot-category trace log messages.
+     *
+     * Metadata is sorted by timestamp and then ID. The scan does not copy image bytes.
+     * Missing providers, categories, log records, or screenshot payloads produce an empty
+     * result or incomplete metadata rather than an error.
+     */
+    auto GetScreenshots() const -> TArray<FCk_TraceScreenshot>;
+
+    /**
+     * Copy the embedded payload for one complete screenshot.
+     *
+     * Returns false and clears OutData when the session/provider/screenshot is missing
+     * or the trace only contains a partial payload.
+     */
+    auto TryCopyScreenshotData(uint32 InScreenshotId, TArray<uint8>& OutData) const -> bool;
 
 private:
     FString _FilePath;

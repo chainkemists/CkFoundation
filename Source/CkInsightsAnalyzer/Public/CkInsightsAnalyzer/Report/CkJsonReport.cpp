@@ -210,15 +210,11 @@ auto
 
 auto
     FCk_JsonReport::
-    GenerateSingleFrame(const FCk_TraceSession& Session,
-                        const FCk_FrameAnalysisResult& Result,
-                        const FCk_FrameReportConfig& Config)
-    -> FString
+    MakeFrameDetails(const FCk_TraceSession& Session,
+                     const FCk_FrameAnalysisResult& Result,
+                     const FCk_FrameReportConfig& Config)
+    -> TSharedPtr<FJsonObject>
 {
-    TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
-    Root->SetObjectField(TEXT("trace"), MakeTraceOverview(Session));
-    Root->SetNumberField(TEXT("budgetMs"), Round3(Config.TargetFrameMs));
-
     TSharedPtr<FJsonObject> Frame = MakeShared<FJsonObject>();
     Frame->SetNumberField(TEXT("frameIndex"), static_cast<double>(Result.FrameIndex));
     Frame->SetNumberField(TEXT("durationMs"), Round3(Result.FrameDurationMs));
@@ -399,7 +395,26 @@ auto
         Frame->SetArrayField(TEXT("waitBreakdown"), WaitValues);
     }
 
-    Root->SetObjectField(TEXT("singleFrame"), Frame);
+    return Frame;
+}
+
+auto
+    FCk_JsonReport::
+    GenerateSingleFrame(const FCk_TraceSession& Session,
+                        const FCk_FrameAnalysisResult& Result,
+                        const FCk_FrameReportConfig& Config)
+    -> FString
+{
+    TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
+    Root->SetNumberField(TEXT("schemaVersion"), 2);
+
+    TSharedPtr<FJsonObject> Generator = MakeShared<FJsonObject>();
+    Generator->SetStringField(TEXT("name"), TEXT("CkInsightsAnalyzer"));
+    Generator->SetStringField(TEXT("reportKind"), TEXT("singleFrame"));
+    Root->SetObjectField(TEXT("generator"), Generator);
+    Root->SetObjectField(TEXT("trace"), MakeTraceOverview(Session));
+    Root->SetNumberField(TEXT("budgetMs"), Round3(Config.TargetFrameMs));
+    Root->SetObjectField(TEXT("singleFrame"), MakeFrameDetails(Session, Result, Config));
     return ToJsonString(Root);
 }
 
@@ -415,6 +430,13 @@ auto
     -> FString
 {
     TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
+    Root->SetNumberField(TEXT("schemaVersion"), 2);
+
+    TSharedPtr<FJsonObject> Generator = MakeShared<FJsonObject>();
+    Generator->SetStringField(TEXT("name"), TEXT("CkInsightsAnalyzer"));
+    Generator->SetStringField(TEXT("reportKind"), TEXT("multiFrame"));
+    Generator->SetNumberField(TEXT("hotFrameDetailLimit"), Config.WorstFrameCount);
+    Root->SetObjectField(TEXT("generator"), Generator);
     Root->SetObjectField(TEXT("trace"), MakeTraceOverview(Session));
     Root->SetNumberField(TEXT("budgetMs"), Round3(Config.TargetFrameMs));
 
@@ -439,6 +461,24 @@ auto
     if (WorstValues.Num() > 0)
     {
         Multi->SetArrayField(TEXT("worstFrames"), WorstValues);
+    }
+
+    FCk_FrameReportConfig HotFrameConfig;
+    HotFrameConfig.Depth = Config.Depth;
+    HotFrameConfig.TargetFrameMs = Config.TargetFrameMs;
+    HotFrameConfig.ApplyDepth();
+
+    TArray<TSharedPtr<FJsonValue>> HotFrameValues;
+    for (const FCk_HotFrameDetails& HotFrame : Stats.HotFrames)
+    {
+        TSharedPtr<FJsonObject> HotFrameObj = MakeFrameDetails(Session, HotFrame.Analysis, HotFrameConfig);
+        HotFrameObj->SetStringField(TEXT("dominantCost"), HotFrame.Summary.DominantCost);
+        HotFrameObj->SetNumberField(TEXT("dominantCostMs"), Round3(HotFrame.Summary.DominantCostMs));
+        HotFrameValues.Add(MakeShared<FJsonValueObject>(HotFrameObj));
+    }
+    if (HotFrameValues.Num() > 0)
+    {
+        Multi->SetArrayField(TEXT("hotFrames"), HotFrameValues);
     }
 
     TArray<TSharedPtr<FJsonValue>> CategoryValues;
