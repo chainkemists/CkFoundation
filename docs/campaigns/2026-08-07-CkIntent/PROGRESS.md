@@ -27,7 +27,35 @@ maintainer explicitly OK deferring; lives in CkGameplayDebugger
 plate's back side) → readouts now FLAT ON THE FLOOR behind the character per maintainer
 direction, mirror-proof derived transform `FRotator(-90, CameraYaw, 0)` on YZ at
 floor+3cm, 150/215cm camera-backward (PHASE_10 round-2 entry has the derivation).
-Floor labels APPROVED ("Excellent"). **COMMITTED 2026-08-10 (maintainer /commit; push NEVER authorized; superproject pointer bumps left to the ship conversation):** CkTests dev `50f07fb9` (playground changeover, 30 files +2017/-7367); CkFoundation dev `22844b778` (module-doc gym line, re-freshened to the arena first) + `a9a2815c3` (campaign docs). Slice 3 (enemy + Q block) INSTALLED — Opus draft mirror-diffed, three flagged bindings attested in corpus, PC legend applied; details in PHASE_10.md slice log. Gate `Test-Phase10Slice3.log` ✅ GREEN 123/123 (AS compile first try, 1m26s; covers the floor-label fix too). Awaiting: maintainer PIE (hit the dummy, block the shot). **PUSHED 2026-08-10 (maintainer /commit-push):** CkTests dev rebased onto origin/dev (12 local commits replayed over the CkUsf test wave, zero conflicts) and pushed - tip `9fecb8f0`, the whole intent test corpus + playground is PUBLIC. CkFoundation dev (19 local commits: CkInput raw/bias/keybinding + CkIntent module + campaign docs incl. this file) rebased + pushed in the same pass - this entry rides that push. Superproject pointer bumps deliberately NOT done here (gitlinks span other sessions' repos; ship conversation or maintainer bumps them). Phase 9's paragraph below
+Floor labels APPROVED ("Excellent"). **COMMITTED 2026-08-10 (maintainer /commit; push NEVER authorized; superproject pointer bumps left to the ship conversation):** CkTests dev `50f07fb9` (playground changeover, 30 files +2017/-7367); CkFoundation dev `22844b778` (module-doc gym line, re-freshened to the arena first) + `a9a2815c3` (campaign docs). Slice 3 (enemy + Q block) INSTALLED — Opus draft mirror-diffed, three flagged bindings attested in corpus, PC legend applied; details in PHASE_10.md slice log. Gate `Test-Phase10Slice3.log` ✅ GREEN 123/123 (AS compile first try, 1m26s; covers the floor-label fix too). Awaiting: maintainer PIE (hit the dummy, block the shot). Slice 3b (chain-feel rework per NEW rulings [P10-D6] phases/press-buffer/grace +
+[P10-D7] hold=5 verdict threshold) INSTALLED orchestrator-inline; gate `Test-Phase10Slice3b.log`
+FAILED-INVALID (exit 1 at editor boot, NOT our red: the rebase's remote wave added the
+NEW C++ module CkWorldSpaceWidget - local binaries predate it, plugin refused to load).
+Re-run as single-shot `--build --test` -> `Test-Phase10Slice3b-BuildTest.log` = BUILD
+FAILED, cross-repo break: CkGameplayDebugger/CkEcsDebugger still includes
+`CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h` (moved by remote `3d1b68b26`
+module extraction) - `CkInspector_UI.cpp:5` + `CkEcsDebugger_FeatureFlags.cpp:53`,
+fatal C1083. That repo is the debugger campaign's feature branch - fix is THEIRS to
+authorize. Slice-3b AS edits have therefore NEVER compiled. Session ended here;
+handoff = `CONTINUATION_PROMPT_ArenaSlices4Plus.md` (same dir). Awaiting: gate verdict + maintainer PIE
+(chain 1-2-3 by deliberate clicking, crisp taps, dummy, block). **PUSHED 2026-08-10 (maintainer /commit-push):** CkTests dev rebased onto origin/dev (12 local commits replayed over the CkUsf test wave, zero conflicts) and pushed - tip `9fecb8f0`, the whole intent test corpus + playground is PUBLIC. CkFoundation dev (19 local commits: CkInput raw/bias/keybinding + CkIntent module + campaign docs incl. this file) rebased + pushed in the same pass - this entry rides that push. Superproject pointer bumps deliberately NOT done here (gitlinks span other sessions' repos; ship conversation or maintainer bumps them). **2026-08-10 (resumed session, fresh orchestrator): MAINTAINER WENT AFK with a standing
+directive — "You now know what I am looking for... /commit periodically and complete all the
+slices." Per-slice PIE steering is thereby waived; commit authorization is standing; push still
+NEVER (only /commit-push).** Build unblock resolved WITHOUT touching the debugger repo: the
+debugger session fixed its own consumers (CkGameplayDebugger `fba4d4c` "follow CkWorldSpaceWidget
+out of CkUI" — includes retargeted + `CkWorldSpaceWidget` dep in `CkEcsDebugger.Build.cs:84`;
+their tree clean, branch ahead 43). CkFoundation dev tip moved to `70d708e23` (debugger-UX
+campaign's local commits); our `e317e35b4` and the extraction `3d1b68b26` both verified
+ancestors. Slice-3b gate re-run as single-shot `--build --test` ✅ **GREEN 123/123**
+(0 failed/skipped/contaminated, AS compile FIRST TRY, build succeeded, test phase 1m9s;
+`Test-Phase10Slice3b-BuildTest2.log`, editor lock probed FREE before launch). **Slice 3b is
+gated**; PIE feel verdict deferred until the maintainer returns (branch table in the
+continuation prompt stands). Slice-4 fork RESEARCHED and
+RULED inline: **[P10-D8]** directional combos = sequences `"L H w=30"`/`"H L w=30"` (chord atoms
+are a set — order inexpressible; sequences add zero latency), **[P10-D9]** W+LMB = real chord
+`"W+L"` (chord terminals accept held partners; locomotion reads engine `IsInputKeyDown` outside
+the routed pipeline so the Consume capture is harmless; W minted as third key) — full rationale
+in PHASE_10.md. Slice-4 Opus draft dispatched to scratchpad in parallel with the gate. Phase 9's paragraph below
 stands as history: its PLUMBING (shared source composition, record readers, salvage) carries
 forward; its gym DESIGN is dead. `PHASE_9_EDITOR_VERIFY.md` is OBSOLETE (death condition
 fired) — do not drive it; slice 5 writes the v2 script. All work remains UNCOMMITTED.

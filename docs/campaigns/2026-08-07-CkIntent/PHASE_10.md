@@ -50,6 +50,46 @@
   signals/phases. NOT this phase (CkFoundation production fence) — the gym demos the
   equivalent reads game-side off the record until it lands. Candidate for the post-campaign
   frontier alongside O12.
+- **[P10-D6] Chain feel = the wind-up/attack/wind-down model (maintainer, 2026-08-10).**
+  The slice-2 chain was unplayable-by-design three ways: the chain input was graded on the
+  tap COMPLETION (release), the whole attack duration was the window with no wind-down
+  concept, and a late tap reset to step 1. Rework (orchestrator-inline, slice 3b): every
+  chain step phases 20% wind-up / strike (swing spawns where the wind-up ends, hit-test at
+  the strike; a mid-wind-up charge cancels it for free); the chain window = active +
+  wind-down; the buffer answers the PRESS row off the record the moment it lands ([P10-D5]
+  played game-side - a later charge verdict clears the buffer it briefly held); wind-up
+  presses are NOT chain inputs (both the press path and the completion back-stop gate on
+  `_WindUpEndFrame`); a step expiring unbuffered arms a 10-frame grace window where a
+  same-family tap CONTINUES the chain instead of resetting. Specials phase-exempt (the
+  charge was the wind-up).
+- **[P10-D7] hold= threshold is the VERDICT point, ~83ms (maintainer, 2026-08-10):**
+  "usually the hold threshold is around 70-80ms so that the non-hold attack doesn't feel
+  sluggish." Move table hold=45 -> hold=5 (5 frames at the 60Hz cadence); the tap's
+  worst-case wait is now bounded at 5f. The old 45 survives ONLY as the pawn's
+  `k_ChargeFullFrames` display number (sphere saturation + counter denominator) - verdict
+  threshold and charge-ripeness are two different numbers the old design conflated.
+- **[P10-D8] Directional combos are grammar SEQUENCES, not chords (orchestrator-ruled 2026-08-10
+  under the maintainer's AFK completion mandate).** `L+H` and `H+L` are semantically ONE chord step
+  (atoms are a set — module doc: "`6+LP` and `LP+6` are the same step semantically"), so press
+  ORDER is inexpressible as a chord. The two distinct combos are two-step sequences with distinct
+  terminals: `"L H w=30"` (terminal H) and `"H L w=30"` (terminal L). Sequences share terminals
+  without deferring ("sharing a terminal never defers"), so bare-tap latency is untouched; the
+  combo resolves at the existing hold-episode resolution (release <5f), winning over the bare tap
+  by priority. Holding through the verdict point still resolves the charge — combos are
+  tap-sequenced by construction. Priorities (strict per-terminal order): terminal L =
+  `W+L` 960 > `H L` 950 > `L hold=5` 900 > `L` 600; terminal H = `L H` 940 > `H hold=5` 890 >
+  `H` 590. w=30 (~500ms) steerable.
+- **[P10-D9] W+LMB is a real grammar CHORD `"W+L"` — fork option (a) (orchestrator-ruled
+  2026-08-10).** The premise that would kill it is FALSE: chord terminals accept HELD partners
+  (module doc: "a partner pressed a frame earlier is still down on the terminal's row"), so
+  locomotion-held W satisfies the chord on L's press row and completes IMMEDIATELY (within a row
+  the chord is asked first). Zero added latency: the chord cause (3f default window) is dominated
+  by L's existing concurrent hold cause (5f). Locomotion cannot be starved by the Consume capture
+  on W — WASD movement reads engine-level `PC.IsInputKeyDown` (Pawn.as:640-643), outside the
+  routed pipeline. W becomes the ledger's third minted key (A/S/D stay claimed-unminted); the
+  swap-gate gains a third minted-key wait (a chord terminal contributes EVERY button, and one
+  unresolved terminal rejects the whole swap atomically). The bake's "no chord terminals" comment
+  dies; the default chord window (3) now governs and stands.
 - **[P10-D4] Slice sequencing:** ① controls (camera/aim/movement) → ② light/heavy chains +
   charge specials on shapes → ③ enemy dummy + projectile + block → ④ chord/direction combos →
   ⑤ gamepad parity (if wanted) + ledger/registry/shared-file cleanup + EDITOR-VERIFY rewrite.
@@ -154,6 +194,15 @@
   123/123, 0 failed/skipped/contaminated, AS compile first try (`Test-Phase10Slice3.log`,
   1m26s; also covers the slice-2 floor-label fix — the cross-file pawn<->enemy reference
   resolved fine).** Awaiting maintainer PIE.
+
+- **Slice 3b — chain-feel rework + hold=5 (2026-08-10, orchestrator-inline): INSTALLED + GATED.**
+  Rulings [P10-D6]/[P10-D7] implemented in the pawn + move table (wind-up phases, press-buffer
+  chain, 10f grace, hold=45→5 verdict split from `k_ChargeFullFrames=45` display). First gate
+  attempt died at editor boot (stale binaries vs the remote `CkWorldSpaceWidget` extraction);
+  second died at build (cross-repo break in CkGameplayDebugger, fixed by that repo's own session
+  in `fba4d4c`). **Gate ✅ GREEN 123/123** (0 failed/skipped/contaminated, AS compile first try,
+  `Test-Phase10Slice3b-BuildTest2.log`, 2026-08-10) — the 3b edits' first-ever compile. PIE feel
+  verdict pending maintainer return (waived as a slice gate by the AFK completion mandate).
 
 ## Exit criteria
 
