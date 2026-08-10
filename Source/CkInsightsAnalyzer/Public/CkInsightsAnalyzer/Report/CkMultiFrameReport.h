@@ -77,6 +77,15 @@ struct FCk_FrameSummary
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/** Complete analysis data for one selected hot frame. */
+struct CKINSIGHTSANALYZER_API FCk_HotFrameDetails
+{
+    FCk_FrameSummary Summary;
+    FCk_FrameAnalysisResult Analysis;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Aggregate statistics across multiple frames.
  */
@@ -98,6 +107,9 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
 
     /** Top worst frames with summaries. */
     TArray<FCk_FrameSummary> WorstFrames;
+
+    /** Full per-frame analysis for the selected worst frames, in the same order as WorstFrames. */
+    TArray<FCk_HotFrameDetails> HotFrames;
 
     /** Per-category average exclusive time across all frames. */
     struct FCategoryStats

@@ -17,7 +17,8 @@ class FJsonObject;
  *
  * Mirrors the data behind the markdown reports (FCk_FrameReport / FCk_MultiFrameReport) but emits
  * structured output for scripts, CI gates, and AI consumption:
- * - Times in milliseconds, camelCase keys, empty sections omitted.
+ * - Schema version 2 adds generator metadata and detailed multi-frame hotFrames while preserving
+ *   all existing keys. Times are milliseconds, keys are camelCase, and empty sections are omitted.
  * - The call tree is the TRUE aggregated call tree built from raw timing events (events merged by
  *   call path) — no wrapper collapsing and no display-name simplification. The one exception is
  *   workerThreads[].topTimers, which reuses the shared summary computation and therefore carries
@@ -45,8 +46,8 @@ public:
     /**
      * Generate a JSON report for a multi-frame analysis.
      *
-     * Contains: trace overview, budget, aggregate frame-time statistics
-     * (avg/min/max/p95/p99), worst frames with dominant cost, and category averages.
+     * Contains: trace overview, generator metadata, budget, aggregate frame-time statistics
+     * (avg/min/max/p95/p99), legacy worst-frame summaries, detailed hot frames, and category averages.
      * Stats come from FCk_MultiFrameReport::GetStats() after an Analyze* call.
      */
     static auto GenerateMultiFrame(const FCk_TraceSession& Session,
@@ -79,6 +80,11 @@ private:
                                       const TArray<FCallTreeNode>& Pool,
                                       const FCk_FrameReport::FTimerNameMap& TimerNames,
                                       double MinInclusiveMs) -> TSharedPtr<FJsonObject>;
+
+    /** Full structured detail for one frame, shared by single-frame and multi-frame reports. */
+    static auto MakeFrameDetails(const FCk_TraceSession& Session,
+                                 const FCk_FrameAnalysisResult& Result,
+                                 const FCk_FrameReportConfig& Config) -> TSharedPtr<FJsonObject>;
 
     /** Trace overview: file, duration, game/render frame counts, thread list. */
     static auto MakeTraceOverview(const FCk_TraceSession& Session) -> TSharedPtr<FJsonObject>;

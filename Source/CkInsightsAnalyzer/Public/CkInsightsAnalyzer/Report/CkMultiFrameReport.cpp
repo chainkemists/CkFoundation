@@ -152,6 +152,12 @@ auto
     for (int32 i = 0; i < WorstCount; ++i)
     {
         _Stats.WorstFrames.Add(AllSummaries[i]);
+
+        FCk_FrameAnalysisResult Analysis = FCk_FrameAnalyzer::AnalyzeFrame(Session, AllSummaries[i].FrameIndex);
+        if (Analysis.IsValid())
+        {
+            _Stats.HotFrames.Add(FCk_HotFrameDetails{AllSummaries[i], MoveTemp(Analysis)});
+        }
     }
     if (AllSummaries.Num() > 0)
     {
@@ -301,6 +307,28 @@ auto
                 *FCk_TimerCategorizer::FormatMs(F.DurationMs),
                 *F.DominantCost,
                 *FCk_TimerCategorizer::FormatMs(F.DominantCostMs)));
+        }
+    }
+
+    if (_Stats.HotFrames.Num() > 0)
+    {
+        FCk_FrameReportConfig HotFrameConfig;
+        HotFrameConfig.Depth = _Config.Depth;
+        HotFrameConfig.TargetFrameMs = _Config.TargetFrameMs;
+        HotFrameConfig.ApplyDepth();
+        HotFrameConfig.ShowRawTimerList = true;
+
+        FCk_FrameReport HotFrameReport(HotFrameConfig);
+        for (int32 i = 0; i < _Stats.HotFrames.Num(); ++i)
+        {
+            const FCk_HotFrameDetails& HotFrame = _Stats.HotFrames[i];
+            Lines.Add(TEXT(""));
+            Lines.Add(FString::Printf(
+                TEXT("*Hot Frame %d Detail: #%llu (%s)*"),
+                i + 1,
+                HotFrame.Summary.FrameIndex,
+                *FCk_TimerCategorizer::FormatMs(HotFrame.Summary.DurationMs)));
+            Lines.Add(HotFrameReport.Generate(Session, HotFrame.Analysis));
         }
     }
 
