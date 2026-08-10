@@ -2,6 +2,72 @@
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
 
+**As of 2026-08-10: PHASE 10 OPEN — the maintainer drove the Phase-9 gym and REJECTED the
+design ("this gym was a disappointment"); the playground is being rebuilt as ONE Diablo-style
+combat arena per the spec + rulings in `PHASE_10.md` ([P10-D1] arena replaces stations,
+[P10-D2] KB/M first, [P10-D4] five steering slices with a maintainer PIE between each).**
+Slice 1 (true top-down + cursor aim + WASD; stations/zones/orbit/freeze DELETED — 9 station
+files removed from disk, archived in session scratchpad) is ✅ SIGNED OFF by the maintainer
+in PIE ("Slice 1 is good"); movement halved on their feedback (MaxSpeed 1200→600). NEW
+LIBRARY BACKLOG [P10-D5]: matcher candidate-lifecycle signals (press/deferring,
+threshold-crossed, resolved-as-tap/hold) for speculative-animation flows — maintainer wants
+it first-class; fenced out of this phase. Slice 2 (L/H combat kit) is INSTALLED — Opus draft reviewed
+(signatures re-verified incl. the four the agent's report skipped) + 2 orchestrator touches;
+details in PHASE_10.md slice log. Scoped gate `Test-Phase10Slice2.log` ✅ GREEN 123/123
+(0 failed/skipped/contaminated, AS compile first try, 1m14s) — covers all three previously
+ungated `.as` waves; the tree was fully gated at that point. PIE round 1 verdicts: mouse
+buttons PROVEN (timeline shows Kit_Light_* spans — the first-caller probe is settled, L/H
+are real keys); readout text rendered vertical+crushed → FIXED inline (upright YZ
+camera-facing nameplates, the deleted stations' proven shape, sizes 52/28; this `.as` edit
+supersedes `Test-Phase10Slice2.log` — re-gate folds into the next slice's gate); NEW
+DEFERRED FLAG **[P10-F1]** CkIntentDebugger timeline scrub UX ("can't really scrub... or do
+anything meaningful") + axis ticks carry an `s` suffix on the logic-frame counter —
+maintainer explicitly OK deferring; lives in CkGameplayDebugger
+(`feature/debugger-qol-campaign`). PIE round 2: nameplates were MIRRORED (yaw 180 = the
+plate's back side) → readouts now FLAT ON THE FLOOR behind the character per maintainer
+direction, mirror-proof derived transform `FRotator(-90, CameraYaw, 0)` on YZ at
+floor+3cm, 150/215cm camera-backward (PHASE_10 round-2 entry has the derivation).
+Awaiting: maintainer re-PIE (floor labels + kit feel). Phase 9's paragraph below
+stands as history: its PLUMBING (shared source composition, record readers, salvage) carries
+forward; its gym DESIGN is dead. `PHASE_9_EDITOR_VERIFY.md` is OBSOLETE (death condition
+fired) — do not drive it; slice 5 writes the v2 script. All work remains UNCOMMITTED.
+
+**As of 2026-08-09 (later session) session end: PHASE 9 CLOSED under [P2-D4] —
+`Gym_Input_Playground` is BUILT, the three text gyms are DELETED, all work UNCOMMITTED
+pending authorization.** Six consecutive scoped gates green, 123/123 BY NAME every time,
+final gate on the phase-final tree (`Test-Phase9Unit6.log`); five of six were first-try AS
+compiles. Landed (CkTests, all uncommitted): 13 new `CkPlaygroundGym_*` files (~5,900
+lines — skeleton pawn/PC/GameMode, shared salvage + zone framework + station base, four
+stations with move tables), 23 `CkIntentGym_*` files DELETED (staged), registry 4→2 input
+rows, one test retarget (`TagKeyedReads...as:181` → `AutoTest.Cue.AfterOneFrame`, its tag
+died with the old gyms). CkFoundation (uncommitted): `Source/CkIntent/Claude.md` gym line,
+campaign docs (PHASE_9.md, PHASE_9_EDITOR_VERIFY.md = the consolidated drive script incl.
+the migrated criterion-1 and criterion-5 legs, this file, the continuation prompt).
+Rulings this session: [P9-D1..D8] at open, [P9-D9] zone ownership, [P9-D10]
+station-registration transport (+ MAINTAINER FLAG: `Script/CLAUDE.md:139,:509` teach the
+nonexistent `utils_entity_script::TryGet_EntityScript` — doc drift), [P9-D11] deletion
+pulled forward, [P9-D12] sekiro = game-layer state over completions. Also stale-noted: the
+"13-param AddCapture wrapper" memory (wrapper is 2-arg+delegate). Orchestrator inline
+fixes: 2 (9-2 `_SelfEntity` collision + dead API; 9-3 dead field + wrong comment) — every
+other unit landed clean from Opus. **Remaining for the human:** the
+`PHASE_9_EDITOR_VERIFY.md` drive-through (visuals are unverifiable headless; text
+geometry expects one tuning pass), commit authorization for the Phase-9 set, and the ship
+conversation (push NEVER authorized). Everything in the paragraph below (campaign-end
+0-8 state, ship flags, prior human queue) still stands.
+
+**2026-08-09 drive-through defect #1 FIXED, RE-GATE PENDING:** the maintainer's first PIE
+hit the `Add` ensure — `FCk_Fragment_Camera_ParamsData` requires a caller-supplied
+`UCk_CameraComponent` since CkFoundation `34d89aa91` (2026-05-30, "require a
+UCk_CameraComponent output, drop OutputMode"); the 9-1 pawn copied the PRE-refactor call
+shape from `CkCameraGym_Pawn.as:89`, which is itself still broken today (see flag below).
+Fix in `CkPlaygroundGym_Pawn.as`: `UPROPERTY(DefaultComponent) UCk_CameraComponent
+CameraComponent` + pass it via the generated one-arg ctor (the pattern every
+`CkAutoTest_GameplayCamera_*` test already uses, `CkAutoTest_GameplayCamera_Fixtures.as:17`).
+This `.as` edit supersedes `Test-Phase9Unit6.log` as the gate on the final tree — scoped
+re-gate REQUIRED, deferred because the maintainer's editor holds the log lock.
+**MAINTAINER FLAG:** `CkCameraGym_Pawn.as:89` has the identical latent ensure (pre-refactor
+call, never migrated) — same 3-line fix, left untouched (outside Phase-9 scope).
+
 **As of 2026-08-09 session end: ALL PHASES 0-8 CLOSED; CAMPAIGN-END FULL SUITE ✅ GREEN +
 DELTA-ZERO BY NAME** (`1065/1062/3`, +38 rows all ours all green, zero lost, third red =
 proven load flake [INV-B] — the only failures anywhere are the two eternal
@@ -153,6 +219,265 @@ blocks Phase 1a. The **poll-surface hole** (DESIGN_InputLayering.md) blocks Phas
 ---
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-09 — Phase 9 OPENED (fresh orchestrator, playground-gym session)
+
+- Resume ritual run: continuation prompt + PROGRESS read; tree verified against the handoff
+  (CkTests clean at `9fa88957`, CkFoundation clean except foreign CkUsf dirt; delete set =
+  23 files / ~7,360 lines confirmed from `03b977ca`). `CkIntentGym_Shared.as` +
+  `CkCameraGym_Pawn.as` read IN FULL by the orchestrator before any dispatch, per the
+  handoff's own flow.
+- **`PHASE_9.md` authored** — rulings at open: **[P9-D1]** DebugDraw single-frame / PMG
+  long-running split (maintainer verbatim); **[P9-D2]** both devices first-class, octants
+  stay stick-only ([P8-D5] not reopened); **[P9-D3]** delete-the-23 + explicit salvage
+  inventory (source doctrine, composition, key-audit method, priority bands, record readers,
+  attempt bookkeeping, matcher-not-layer arming read); **[P9-D4]** arcade-cabinet zone plan —
+  outer ring = layer push/pop by walking, inner ring freezes STICK locomotion only, WASD
+  always live (no locomotion deadlock), left-stick-click toggles the freeze for pad-only
+  players; **[P9-D5]** key-plan constraints (menu-HUD set + locomotion set untouchable;
+  old gym keys freed EXCEPT F6/F7 now owned by the 8-5 AutoTests); **[P9-D6]** registry
+  choreography (9-1 adds, 9-7 removes — every intermediate state green); **[P9-D7]**
+  criterion-1 counter + criterion-5 scrub fodder migrate intact; **[P9-D8]** 9-1 carries
+  fail-fast first-caller probes for `Request_SetColor`/`SetVisible` + DebugDraw AS bindings.
+- Unit split 9-1 skeleton → 9-2 shared/zones → 9-3..9-6 stations (sequential, shared-file
+  collisions) → 9-7 deletion+close; all Opus dispatches, scratchpad drafts, orchestrator
+  installs + gates (scoped 123/123 by name per gate; [P2-D4] holds — no full suite).
+- **Unit 9-1 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (3 new
+  Script/CkInput files — GameMode 21 / PC 112 / Pawn 265 lines — + registry +1 row after
+  "Input Key Binding"). Orchestrator verification: all 3 drafts read in full; registry anchor,
+  `ACkTests_Gym_Base_GameMode` base + `};` shape, station-less base flow
+  (`CkGym_Base_PlayerController.as:74-85` — empty `Get_RequiredStations` → straight to
+  `Request_StartGym`), IA asset classes (`CkCameraGym_Inputs.as`), `GetControlledPawn` +
+  `UEnhancedInputLocalPlayerSubsystem::Get` idioms all re-checked against repo. **Accepted
+  evidence-backed deviation:** TWO look input-actions (Mouse2D vs Gamepad_Right2D, separate
+  sensitivities 0.05/1.0) — mouse arrives in pixel deltas, stick normalized; one action would
+  leave one device untuned (CameraGym is mouse-only so had no such fork). Keys claimed by 9-1:
+  WASD (locomotion), C + Gamepad_Special_Left (view toggle), Mouse2D + Gamepad_Right2D (orbit),
+  Gamepad_LeftX/Y (locomotion) — the [P9-D5] ledger seed. [P9-D8] self-check wired (DebugDraw
+  sphere 5s + PMG sphere recolor@1s/hide@2s/destroy@3s from Tick accumulator). Five
+  UNVERIFIED-UNTIL-COMPILE first-caller flags recorded in the unit return
+  (`GetInputAnalogKeyState`, `Request_SetVisible`, `Request_SetColor` utils-form,
+  `Request_DestroyEntity` on a Pmg handle via `FCk_Handle()`, double `MapKey` on one IA) —
+  the in-flight gate's AS compile settles all five. Gate: test-only scoped run
+  (`Test-Phase9Unit1.log`, editor lock probed free; expect 123/123, playground adds no rows).
+- **9-1 gate ✅ GREEN: 123/123 (1m13s), zero contamination, AS compile first try**
+  (`Test-Phase9Unit1.log`) — all five first-caller flags SETTLED (the bindings exist).
+  **Unit 9-1 CLOSED.** Skeleton `[EDITOR-VERIFY]` steps in the unit return (capsule drive on
+  both devices, camera-relative WASD, stick deadzone, C/touchpad view toggle, self-check
+  shape schedule: DebugDraw sphere gone at 5s; PMG sphere magenta@1s, hidden@2s, entity
+  destroyed@3s — a shape that vanishes at 1s instead of recoloring is the failure signature).
+  Ruled at 9-2 dispatch: **[P9-D9] zone-framework ownership** — the PC is the single zone-
+  detection authority (one Tick, distance checks against registered zone descriptors);
+  STATIONS own ring rendering + their layer push/pop, reached over the same PC↔station
+  transport the old gyms used; the PAWN owns the stick-freeze state + left-stick-click
+  toggle, driven by inner-ring notifications. Playground layer-priority band = 200-299
+  (clear of the dying 300-520 bands, no cross-file ambiguity while old gyms coexist).
+- **Unit 9-2 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (2 new
+  files — `CkPlaygroundGym_Shared.as` 635 / `CkPlaygroundGym_StationBase.as` 272 — + revised
+  Pawn 265→316 and PC 112→416). Orchestrator verification: both new files read IN FULL;
+  both revisions mirror-diffed against repo — pawn delta = exactly the 6 claimed additive
+  hunks (WASD untouched, stick block gated on `_StickFrozen`), PC delta = the 10 claimed
+  hunks (BeginPlay/handlers byte-identical); first-caller signatures re-read at source
+  (`Create_Ring` `utils_pmg_flat_shapes.as:70`, `Create_Text` `utils_pmg_text_shapes.as:20`
+  — 12-param order incl. UFontFace nullptr — `TryGet_LayerWithPriority`
+  `utils_input_layer.as:21`); station idioms match the old station line-for-line
+  (`UCk_GenericEntityScript_UE` base, `ck::ToEntity(this)`, tag-add, `Create_Tick`,
+  InputLayer params ctor). [P9-D3] salvage checklist complete in the unit return (all
+  doctrine/contract comments survive; panel vocabulary dropped as ruled). **Accepted
+  judgment calls:** (1) rings via `Create_Ring` NOT `utils_pmg_donut` — donut has no
+  `Request_SetColor` path and a params struct with zero AS callers; (2) station spawn owner
+  = the PC's own WithActor entity (old gyms hung stations off display entities the
+  playground doesn't have); (3) slot ring starts at 36° so +X (spawn view) is a gap, not a
+  station; (4) hysteresis band ±20cm; (5) labels FLAT (PMG text has no billboard — per-frame
+  transform rewrite noted as the future option); (6) bonus `Ck_GymPlayground_Status` exec
+  (salvaged `Ck_GymIntent_Status` shape + zone dump — accepted, it is the only
+  no-station-yet observability). Eight UNVERIFIED-UNTIL-COMPILE flags in the unit return
+  (first-caller wrappers, `float32()` conversion form, layer re-push retry) — the gate's AS
+  compile settles them. Zone list ships EMPTY — framework proven by 9-3's first consumer.
+  Gate: `Test-Phase9Unit2.log` (lock probed free; expect 123/123, no new rows).
+- **9-2 gate attempt 1: AS_COMPILE_FAILED (exit 76), fixed inline by orchestrator** (2 error
+  classes, both in the PC): (1) `_SelfEntity` is a PRIVATE field of
+  `ACk_Gym_Base_PlayerController` (`:29`) — the draft's redeclaration name-conflicted and
+  every reference then hit "illegal access to inherited private property"; renamed the
+  playground's copy `_PlaygroundEntity` (5 sites). (2) `utils_entity_script::
+  TryGet_EntityScript(FCk_Handle)` DOES NOT EXIST — **`Script/CLAUDE.md:139` and `:509`
+  teach a stale API** (generated surface has only `TryGet_Entity_EntityScript_InOwnershipChain`,
+  which returns a handle, not the script object; the old PC never did typed station dispatch
+  — its execs used console commands). **[P9-D10] ruled:** stations pass `this` to
+  `Request_RegisterZone(descriptor, station)` and the PC keeps an index-aligned
+  `_Stations` array — the registrant IS the script object, so no entity→object lookup is
+  needed; `TryGet_Station` deleted; notify/tick take the zone index. Station entity tags
+  stay (ECS-debugger visibility + old-idiom parity). **MAINTAINER FLAG: Script/CLAUDE.md
+  doc drift** — `TryGet_EntityScript` appears twice as a taught example and is uncallable;
+  CkFoundation doc fix wanted (not this campaign's file to edit unprompted). Re-gate in
+  flight (`Test-Phase9Unit2b.log`).
+- **9-2 re-gate ✅ GREEN: 123/123 (1m9s)** (`Test-Phase9Unit2b.log`) — [P9-D10] transport +
+  rename compile clean; the 8 first-caller flags all settled. **Unit 9-2 CLOSED.**
+- **[P9-D11] Unit 9-7's DELETION half pulled forward (executed inline as "9-7a"):** the
+  fighting station needs gamepad face buttons and ALL FOUR were still claimed by the old
+  gyms' files; deletion is maintainer-approved, salvage is verifiably complete (9-2 landed +
+  gated), recovery path = `03b977ca` in git history. Mechanical, so orchestrator-inline
+  rather than a dispatch. Executed: `git rm` all 23 `CkIntentGym_*.as` + registry −3 rows
+  (net: registry now "Input Key Binding" + "Input Playground"). **Blast-radius sweep before
+  deleting:** repo-wide grep for `intent_gym::|IntentGym|Gym.Intent` outside the delete set
+  found exactly TWO real references — the generated `CkTests_EntitySpawnParams.as`
+  (regenerates on compile, expected churn) and **the 8-5 test
+  `TagKeyedReadsAnswerEmptyOnUnmintedTag.as:181`, whose registered-unrelated-tag leg
+  resolved `Gym.Intent.NearMiss`** — a tag minted by the dying tag asset (the test's own
+  `Assert_True(UnrelatedTag.IsValid())` would have gone red). Retargeted to
+  `AutoTest.Cue.AfterOneFrame` (stable, AutoTest-owned, still another-feature's-namespace —
+  contract intact). 9-7's REMAINING half (CkIntent module-doc gym line, comment audit,
+  consolidated drive script) stays at phase close. Gate in flight (`Test-Phase9Unit7a.log`;
+  expect 123/123 incl. the retargeted test BY NAME + expected generated-file churn).
+- **9-7a gate ✅ GREEN: 123/123 (1m8s)**, `TagKeyedReadsAnswerEmptyOnUnmintedTag` PASSED BY
+  NAME on the retargeted tag (`Test-Phase9Unit7a.log`). **Unit 9-7a CLOSED** — the old gyms
+  are gone from the tree, all keys freed, nothing dangled. **Unit 9-3 (fighting station)
+  DISPATCHED** — first zone-framework consumer; deleted-file precedents readable via
+  `git show 03b977ca:<path>`.
+- **Unit 9-3 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (2 new
+  files — `Station_Fighting.as` 644→641 after inline fixes, `Fighting_Moves_Assets.as` 76 —
+  + Shared +15 / PC +6, both mirror-diffed to exactly the claimed minimal hunks).
+  **Orchestrator verification:** station + moves files read IN FULL; octant-ring basis math
+  hand-checked (E→player's-right = −StationRight, N→outward = −StationForward — station yaw
+  faces inward, so both stick axes are negated basis vectors; enum order E..SE CCW matches
+  `CkIntentSampler_Fragment_Data.h:36-47`); MoveRow `_Name/_Notation/_Priority` are plain
+  AS struct fields (direct access legal, not CK_PROPERTY codegen); Parse/Bake/DrawDebugLine
+  signatures re-read at the generated wrappers; `Request_SetText` EXISTS
+  (`utils_pmg_debug_shape.as:15`) so the counter mutates in place. Notation table:
+  `"236+P w=20"`/900, `"236+PK w=20"`/890, `"P"`/600, `"PK"`/590 — zero hold=/chord
+  terminals ⇒ 0/0 deferral by construction (the counter's zero is the LAW leg, not a thin
+  set: the bare-punch rival shares each terminal). Criterion-6 grep clean (0 struct ctors,
+  all moves through Parse). **Accepted judgment calls:** 4th file for the move table
+  (`Script/CLAUDE.md` §13 `_Assets.as` rule, old-gym + bake-asset precedent); ledger
+  header paragraph rewritten (its "must not take old-gym keys" clause died with 9-7a);
+  punch pair reuses the ancestor's keys (FaceButton_Bottom + Semicolon) deliberately;
+  per-move attempt records (shared record would ping-pong on sibling latches); near-miss
+  gray puff = display heuristic over the record, labeled as such (anti-pattern 23); pip =
+  single-frame DebugDraw re-issued 12 ticks (a 16ms flash is invisible). **Orchestrator
+  inline fixes pre-install:** dead `_SwapRejected` field removed (written, never read);
+  moves-file comment "KEYBOARD QCF CAN NEVER MATCH" corrected — stick-roll + keyboard
+  terminal DOES match `236+PK` (directions and terminals are independent record facts);
+  the EDITOR-VERIFY step claiming "rolling the stick first changes nothing on the keyboard
+  terminal" is likewise wrong and must NOT enter the drive script. 5
+  UNVERIFIED-UNTIL-COMPILE flags (3rd-generation Super::DoConstruct, const FName in asset
+  body, const-color ternary, override on plain base hooks, text-box geometry) — gate
+  settles the first four; geometry is an expected PIE tuning pass. Gate:
+  `Test-Phase9Unit3.log` (lock free; expect 123/123, no new rows).
+- **9-3 gate ✅ GREEN: 123/123 (1m37s), AS compile first try** (`Test-Phase9Unit3.log`) —
+  all four compile-risk flags settled. **Unit 9-3 CLOSED**; fighting-station drive steps
+  land in the consolidated 9-7b script (with the keyboard-terminal step CORRECTED per the
+  inline comment fix). **Unit 9-4 (souls station) DISPATCHED** (slot 1, no arcade pad —
+  button exercises; ancestor keys `[`/FaceButton_Right + `]`/FaceButton_Top reused; donut
+  fill surface to be probed, transform-scale fallback pre-ruled).
+- **Unit 9-4 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (2 new
+  — `Station_Souls.as` 843, `Souls_Moves_Assets.as` 96 — + Shared +18 / PC +10, both
+  mirror-diffed to the claimed minimal hunks; the one non-append Shared edit is the ledger
+  prose correction "the pair its ancestor used" → plural, forced true by the second
+  station). **Orchestrator verification:** station read IN FULL — accumulator lifecycle
+  airtight (per-exercise `_Consumed` flags model RequireRePress from the display side; all
+  three abandonment paths destroy the persistent shape: release, completion, zone exit;
+  enter-zone-while-held covered by the scale ceiling); held runs read ONCE per tick and
+  handed down; `Create_Circle` arg order verified at `utils_pmg_flat_shapes.as:98` (the
+  extra bool = `InDrawDirectionLine`, correctly false); `Request_SetTransform` signature
+  verified via the unit's citation (`utils_transform.as:14-19`, 1-arg request ctor).
+  8-move table: hold=45/hold=120 rows + bare rivals per terminal — verdict table per
+  TERMINAL recorded in the unit return (45f/45f/120f/120f hold-sibling, 0 chord; tap
+  rivals pay the shared wait, the anti-pattern-22 live demo). **Accepted judgment calls:**
+  (1) **donut REJECTED despite fill surface existing** (`Request_SetFillAngle`,
+  `utils_pmg_donut.as:49`) — donut params carry NO color/duration, no DebugShape_Common
+  (SetColor unreachable), and a missing `_Material` fires a per-spawn Warning the only
+  in-tree caller had to whitelist (`CkAutoTest_Pmg_Donut_Create...as:53-60`); fallback =
+  transform-scaled filled circle, one-line reversible swap named in the unit return;
+  (2) `"CHARGE ABANDONED"` as the charge-tap verdict string; (3) charge disc on YZ facing
+  the player, hold sphere volumetric. UNVERIFIED-UNTIL-COMPILE: by-mutable-ref typesafe
+  handle param (`DoDestroyShape`), int→float32 casts — gate settles. Gate:
+  `Test-Phase9Unit4.log` (lock free; expect 123/123).
+- **9-4 gate ✅ GREEN: 123/123 (1m9s), AS compile first try** (`Test-Phase9Unit4.log`) —
+  by-mutable-ref typesafe-handle param and int→float32 casts both fine. **Unit 9-4
+  CLOSED.** **[P9-D12] ruled for 9-5 (sekiro station mechanism):** block and the
+  combo/buffer are GAME-LAYER state over matcher COMPLETIONS, not mask-layers — the
+  matcher grades every attack press (2 bare moves, pad+kb); the STATION owns the demo
+  state machine (Idle→Blocking / Attack1→Attack2), the buffer queue (depth 1), and the
+  timing; block is a HELD state read off the record (no block move — a hold with no rival
+  defers nothing and grades nothing). Rationale: this is how a real game consumes intents
+  (poll/consume is the primary surface), the buffering is thereby VISIBLE as the maintainer
+  asked, and mask-layer lessons already belong to 9-6's fodder. **Unit 9-5 DISPATCHED**
+  (slot 2, no pad; keys: attack = RightShoulder+Slash, block = LeftShoulder+Backslash, all
+  four freed ancestors).
+- **Unit 9-5 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (2 new
+  — `Station_Sekiro.as` 892, `Sekiro_Moves_Assets.as` 61 (2 moves: `"A"`/900, `"AK"`/890)
+  — + Shared +29/0 pure-append (4 keys incl. block pair minted-but-terminating-nothing,
+  with the why) / PC +11 (slot-2 SpawnStation). **Orchestrator verification:** mirror-diffs
+  numstat-clean; criterion-6 grep zero by my own run; state-machine core read at source
+  (`:244-699`) — transition table matches [P9-D12] verbatim: fixed tick order
+  attack→block→timer IS the design (same-tick press+release buffers then fires; entry tick
+  = swing's first frame so state and shape durations agree exactly); shield ownership
+  single-sourced in `DoRefreshShield` (state != Blocking ⇒ destroy — covers release AND
+  exit); swings deliberately untracked (self-clocked timed shapes, no path outlives the
+  clock — why-comment present); block keys excluded from the swap's minted-key gate with
+  the correct reason (no move ⇒ cannot reject a swap). `Create_Plane`/`Create_Box`
+  signatures cited at source by the unit (axis-vs-color order DIFFERS between the two
+  families — both call sites ordered correctly). **Accepted judgment call:** shield
+  POSITION tracks the pawn per tick, orientation stays station-inward (pawn yaw is not a
+  reliable facing under camera-relative drive; why-comment at `Get_ShieldTransform`).
+  UNVERIFIED-UNTIL-COMPILE: `const` on pawn-reading helpers (drop-const is the one-line
+  fix). Gate: `Test-Phase9Unit5.log` (lock free; expect 123/123).
+- **9-5 gate ✅ GREEN: 123/123 (1m7s), AS compile first try** (`Test-Phase9Unit5.log`).
+  **Unit 9-5 CLOSED. Unit 9-6 (debugger-fodder station) DISPATCHED** — slot 3 (prio 220,
+  WITH arcade pad), keys from the freed set: near-miss QCF = FaceButton_Left+Hyphen
+  (`"236+N w=12"`), deferral hold = RightTrigger+F8 (`"D hold=60"` + bare rival), mask
+  toggle = Special_Right+F12 (timed Consume mask at prio 225 — the band's modal gap);
+  CVar `ck.Intent.RecordScanDiagnostics` armed on entry / cleared on exit + teardown
+  (8-2 station-3 discipline via git-show); octant sweep = cumulative visited bitmask
+  (8-4 idiom); one persistent CHECK-view line naming the CkIntentDebugger view per event.
+- **Unit 9-6 LANDED (scratchpad), orchestrator-verified, INSTALLED, gate in flight** (2 new
+  — `Station_DebugFodder.as` 1042, `DebugFodder_Moves_Assets.as` 121 — + Shared +38/0 /
+  PC +10/0 pure-append, numstat-verified). **Orchestrator verification:** novel sections
+  read at source — CVar cleared on THREE paths (zone exit, `DoEndPlay` BlueprintOverride
+  per the NearMiss ancestor `:79-83`, manual exec); mask lifecycle disciplined (edge-primed
+  toggle off the record so it works while masked, `TryGet_LayerWithPriority` guard,
+  restart-clock on re-press, three destroy paths through ONE `DoDestroyMaskLayer`);
+  capture shape verified live (`Request_AddCapture`/`Make_KeyCapture`,
+  `utils_input_layer.as:47,:54` — **campaign-history "13-param AddCapture wrapper" note is
+  STALE**, the wrapper is 2-arg+delegate); sweep bitmask = 8-4 idiom, enum-order verified.
+  **STOP ruled:** the brief's exec-vs-single-hunk contradiction — exec APPLIED to the PC
+  (execs are PC-owned per [P9-D9] shape, `Ck_GymPlayground_Status` precedent, ancestor
+  parity); the agent's parked hunk installed verbatim above Status. **Accepted:** CHECK
+  line emits the LIVE scan verdict (`{Outcome :n}` off the newest matching
+  `Get_ScanDiagnostics` row) — produces the briefed string in the briefed scenario and
+  makes WindowExhausted-vs-ContiguityBroken observable; mask re-press restarts the clock;
+  sweep burst shares the center lane; DeferralFrames<=0 folds into the no-invented-zero
+  guard. UNVERIFIED-UNTIL-COMPILE: RightTrigger mints as a pressable button (swap-reject
+  names it if not), `1 << int32(Octant)`, `Entries[0]`-newest ordering, `:n` on the
+  outcome enum. Gate: `Test-Phase9Unit6.log` (lock free; expect 123/123).
+- **9-6 gate ✅ GREEN: 123/123 (1m10s), AS compile first try** (`Test-Phase9Unit6.log`) —
+  all four compile flags settled (RightTrigger mints, enum shift, ordering, `:n`).
+  **Unit 9-6 CLOSED.**
+- **Unit 9-7b (close-out) executed inline by the orchestrator:** `Source/CkIntent/Claude.md`
+  gym line rewritten (three gyms → the playground + its four stations); final comment
+  audit = zero breadcrumb/TODO hits across all 13 playground files (no `.as` edits, so
+  `Test-Phase9Unit6.log` stands as the gate on the final tree); consolidated drive script
+  authored as `PHASE_9_EDITOR_VERIFY.md` (survives the session; carries the migrated
+  criterion-1/criterion-5 legs, the corrected keyboard-terminal step, per-station debugger
+  cross-checks, and its own death condition); registry verified 2 rows ("Input Key
+  Binding" + "Input Playground") = net −2 vs Phase-8 close. **PHASE 9 CLOSED under
+  [P2-D4].** Exit criteria: playground compiles/registered/gated ✔; four station zones +
+  skeleton render shape-first feedback, zero text panels ✔ (the criteria's "five
+  stations" = four zones + skeleton, noted in PHASE_9.md); old gyms deleted, nothing
+  dangling ✔ (9-7a gate + 9-6 gate); criterion legs migrated ✔ (drive script §2.3, §5);
+  scoped gate green on final tree ✔; PROGRESS current ✔; comment audit ✔; full suite NOT
+  run ✔ ([P2-D4] — ship regates). **Session log:** fresh Fable orchestrator; 6 Opus
+  dispatches (9-1..9-6) all landed, 2 needed inline compile fixes, 1 STOP ruled (exec
+  placement), 1 fork bounced correctly ([P9-D10]); 9-7a+9-7b orchestrator-inline;
+  6 scoped gates + 0 full suites; commits: NONE (awaiting authorization).
+- **Post-close drive-through defect #1 (camera ensure) fixed inline by the orchestrator** —
+  details in the current-state block above. `CkPlaygroundGym_Pawn.as`: +`CameraComponent`
+  DefaultComponent, ctor arg on the `utils_camera::Add` call, two stale "auto-creates"
+  comments corrected. Root cause: 9-1's dispatch named `ACk_CameraGym_Pawn` as the recipe
+  and that recipe predates CkFoundation `34d89aa91`; the ensure only fires at PIE, so six
+  green gates never saw it (AutoTests use the post-refactor pattern via their fixture
+  helper). Scoped re-gate pending editor-lock free; `PHASE_9_EDITOR_VERIFY.md` §1 steps
+  unchanged (the fix makes the documented behavior true).
 
 ### 2026-08-09 — session resume (fresh orchestrator): 7-1 disk state verified; 7-2 re-dispatch
 
