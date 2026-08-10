@@ -212,7 +212,7 @@ auto
         FCk_Handle_EqsQuery InQueryHandle,
         const FCk_Eqs_QueryParams& InParams,
         FFragment_EqsQuery_State& InState,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        const FCk_ProbeTrace_Context& InContext)
     -> bool
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Generate);
@@ -237,7 +237,7 @@ auto
             DoGenerate_SimpleGrid(InParams.Get_GeneratorParams(), QuerierLocation, OutCandidates);
             break;
         case ECk_Eqs_GeneratorType::Grid:
-            DoGenerate_Grid(InParams.Get_GeneratorParams(), QuerierLocation, Querier, InPhysicsSystem, OutCandidates);
+            DoGenerate_Grid(InParams.Get_GeneratorParams(), QuerierLocation, Querier, InContext, OutCandidates);
             break;
         case ECk_Eqs_GeneratorType::Donut:
             DoGenerate_Donut(InParams.Get_GeneratorParams(), QuerierLocation, OutCandidates);
@@ -325,15 +325,13 @@ auto
         const FCk_Eqs_GeneratorParams& InGen,
         const FVector& InQuerierLocation,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& OutCandidates)
     -> void
 {
     DoGenerate_SimpleGrid(InGen, InQuerierLocation, OutCandidates);
 
-    const auto PhysicsSystem = InPhysicsSystem.Pin();
-
-    if (ck::Is_NOT_Valid(PhysicsSystem))
+    if (ck::Is_NOT_Valid(InContext))
     {
         ck::eqs::Verbose(TEXT("DoGenerate_Grid: physics unavailable; using flat-grid fallback ({} candidates)."),
             OutCandidates.Num());
@@ -366,7 +364,7 @@ auto
         const auto Settings = FCk_Probe_RayCast_Settings{Start, End, Filter};
         INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
         const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(
-            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, InContext);
 
         if (Hits.Num() > 0)
         { Candidate._Location = Hits[0].Get_HitLocation(); }
@@ -531,7 +529,7 @@ auto
         const FCk_Eqs_QueryParams& InParams,
         FFragment_EqsQuery_State& InState,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         int32& InOutRemainingBudget)
     -> bool
 {
@@ -579,13 +577,13 @@ auto
                 DoRunTest_Dot(Test, InParams, InState._Candidates, InOutDebug, TestIdx);
                 break;
             case ECk_Eqs_TestType::Trace:
-                DoRunTest_Trace(Test, InParams, InParams.Get_Querier(), InPhysicsSystem, InState._Candidates, InOutDebug, TestIdx);
+                DoRunTest_Trace(Test, InParams, InParams.Get_Querier(), InContext, InState._Candidates, InOutDebug, TestIdx);
                 break;
             case ECk_Eqs_TestType::GameplayTag:
                 DoRunTest_GameplayTag(Test, InQueryHandle, InState._Candidates, InOutDebug, TestIdx);
                 break;
             case ECk_Eqs_TestType::Overlap:
-                DoRunTest_Overlap(Test, InParams.Get_Querier(), InPhysicsSystem, InState._Candidates, InOutDebug, TestIdx);
+                DoRunTest_Overlap(Test, InParams.Get_Querier(), InContext, InState._Candidates, InOutDebug, TestIdx);
                 break;
             case ECk_Eqs_TestType::VolumeCheck:
                 DoRunTest_VolumeCheck(Test, InState._Candidates, InOutDebug, TestIdx);
@@ -763,7 +761,7 @@ auto
         const FCk_Eqs_TestParams& InTest,
         const FCk_Eqs_QueryParams& InParams,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& InOutCandidates,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
         int32 InTestIndex)
@@ -771,9 +769,7 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Trace);
 
-    const auto PhysicsSystem = InPhysicsSystem.Pin();
-
-    if (ck::Is_NOT_Valid(PhysicsSystem))
+    if (ck::Is_NOT_Valid(InContext))
     {
         ck::eqs::Warning(TEXT("DoRunTest_Trace: physics unavailable; failing every candidate for this test."));
         for (auto i = 0; i < InOutCandidates.Num(); ++i)
@@ -818,7 +814,7 @@ auto
                 const auto Settings = FCk_Probe_RayCast_Settings{QuerierLocation, Candidate.Get_Location(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
                 const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiLineTrace(
-                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, InContext);
                 LosClear = Hits.IsEmpty();
                 break;
             }
@@ -827,7 +823,7 @@ auto
                 const auto Settings = FCk_ShapeCast_Settings{QuerierLocation, Candidate.Get_Location(), InTest.Get_TraceShape(), TraceFilter};
                 INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
                 const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(
-                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+                    InAnyHandle, Settings, FireOverlaps, TryDrawDebug, InContext);
                 LosClear = Hits.IsEmpty();
                 break;
             }
@@ -923,7 +919,7 @@ auto
     DoRunTest_Overlap(
         const FCk_Eqs_TestParams& InTest,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& InOutCandidates,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
         int32 InTestIndex)
@@ -931,9 +927,7 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_Eqs_Test_Overlap);
 
-    const auto PhysicsSystem = InPhysicsSystem.Pin();
-
-    if (ck::Is_NOT_Valid(PhysicsSystem))
+    if (ck::Is_NOT_Valid(InContext))
     {
         ck::eqs::Warning(TEXT("DoRunTest_Overlap: physics unavailable; failing every candidate for this test."));
         for (auto i = 0; i < InOutCandidates.Num(); ++i)
@@ -971,7 +965,7 @@ auto
         const auto Settings = FCk_ShapeCast_Settings{Loc, Loc, Sphere, OverlapFilter};
         INC_DWORD_STAT(STAT_Eqs_PhysicsCastsIssued);
         const auto Hits = UCk_Utils_ProbeTrace_UE::Request_MultiShapeTrace(
-            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+            InAnyHandle, Settings, FireOverlaps, TryDrawDebug, InContext);
 
         const auto Raw = static_cast<float>(Hits.Num());
         RawValues[InIndex] = Raw;

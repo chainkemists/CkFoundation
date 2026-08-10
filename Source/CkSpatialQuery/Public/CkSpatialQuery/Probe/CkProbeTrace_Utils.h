@@ -1,14 +1,13 @@
 #pragma once
 
 #include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
+#include "CkSpatialQuery/Probe/CkProbeTrace_Context.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkProbeTrace_Utils.generated.h"
-
-namespace JPH { class PhysicsSystem; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,6 +54,12 @@ private:
     Get_InvalidHandle() { return {}; }
 
 public:
+    /**
+     * Nearest-first list of every hit the trace kept. By default that is filter-matching PROBES only;
+     * set the settings' WorldHitPolicy to also see non-probe world bodies (Blocking truncates the list
+     * at the first one, Reported interleaves them). Read Get_HitKind() to tell the two apart —
+     * Get_Probe() is valid for Probe hits ONLY.
+     */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ProbeTrace",
         DisplayName="[Ck][ProbeTrace] Request LineTrace (Multi)")
@@ -63,6 +68,12 @@ public:
         const FCk_Handle& InAnyHandle,
         const FCk_Probe_RayCast_Settings& InSettings);
 
+    /**
+     * The nearest kept hit, i.e. Multi[0]. Under Blocking that is the nearest of (first matching probe,
+     * world blocker) and Get_HitKind() answers "did the shot land or hit the wall". It CANNOT answer
+     * "was there a probe behind the wall" — for that use Multi (absence past the terminal World element
+     * is the answer) or the Reported policy, which hides nothing.
+     */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ProbeTrace",
         DisplayName="[Ck][ProbeTrace] Request LineTrace (Single)")
@@ -87,6 +98,7 @@ public:
         const FCk_Probe_ShapeCastPersistent_Settings& InSettings);
 
 public:
+    /** Shape twin of Request_MultiLineTrace — same world-hit and hit-kind contract. */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ProbeTrace",
         DisplayName="[Ck][ProbeTrace] Request ShapeTrace (Multi)",
@@ -96,6 +108,7 @@ public:
         const FCk_Handle& InAnyHandle,
         const FCk_ShapeCast_Settings& InSettings);
 
+    /** Shape twin of Request_SingleLineTrace — same nearest-of-(probe, blocker) contract. */
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ProbeTrace",
         DisplayName="[Ck][ProbeTrace] Request ShapeTrace (Single)",
@@ -185,6 +198,30 @@ public:
         UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
         const FCk_Delegate_ProbeTrace_OnEndOverlap& InDelegate);
 
+    /**
+     * Fires when a persistent trace makes NEW contact with a non-probe world body — the melee clang.
+     * Requires the trace's WorldHitPolicy to be Blocking or Reported. Deduped per contact episode: one
+     * fire while the same body stays hit, and again after contact is lost and remade. There is no
+     * matching end signal.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProbeTrace",
+              DisplayName = "[Ck][ProbeTrace] Bind To OnWorldHit")
+    static FCk_Handle_ProbeTrace
+    BindTo_OnProbeTraceWorldHit(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnWorldHit& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProbeTrace",
+              DisplayName = "[Ck][ProbeTrace] Unbind From OnWorldHit")
+    static FCk_Handle_ProbeTrace
+    UnbindFrom_OnProbeTraceWorldHit(
+        UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnWorldHit& InDelegate);
+
 public:
     static auto
     Request_MultiLineTrace(
@@ -192,7 +229,7 @@ public:
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_Probe_RayCast_Result>;
+        const FCk_ProbeTrace_Context& InContext) -> TArray<FCk_Probe_RayCast_Result>;
 
     static auto
     Request_SingleLineTrace(
@@ -200,7 +237,7 @@ public:
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_Probe_RayCast_Result>;
+        const FCk_ProbeTrace_Context& InContext) -> TOptional<FCk_Probe_RayCast_Result>;
 
     static auto
     Request_DrawLineTrace(
@@ -215,7 +252,7 @@ public:
         const FCk_ShapeCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem) -> TArray<FCk_ShapeCast_Result>;
+        const FCk_ProbeTrace_Context& InContext) -> TArray<FCk_ShapeCast_Result>;
 
     static auto
     Request_SingleShapeTrace(
@@ -223,7 +260,7 @@ public:
         const FCk_ShapeCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem) -> TOptional<FCk_ShapeCast_Result>;
+        const FCk_ProbeTrace_Context& InContext) -> TOptional<FCk_ShapeCast_Result>;
 
     static auto
     Request_DrawShapeTrace(

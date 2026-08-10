@@ -12,7 +12,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-namespace JPH { class PhysicsSystem; }
+#include "CkSpatialQuery/Probe/CkProbeTrace_Context.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -105,12 +105,11 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(QueryEntity,
         FName{*ck::Format_UE(TEXT("EqsQueryImmediate_{}"), InQuerierEntity)});
 
-    const auto Registry       = QueryEntity.Get_RegistryView();
-    const auto& PhysicsSystem = Registry.GetContext<TWeakPtr<JPH::PhysicsSystem>>();
+    const auto TraceContext = FCk_ProbeTrace_Context::Get_ForEntity(QueryEntity);
 
     auto Results = FCk_Eqs_QueryResults{};
 
-    const auto Generated = FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, PhysicsSystem);
+    const auto Generated = FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, TraceContext);
 
     if (Generated)
     {
@@ -126,7 +125,7 @@ auto
         }
 
         auto UnboundedBudget = TNumericLimits<int32>::Max();
-        FCk_Eqs_Algorithm::DoRunTests(TypedQuery, InQueryParams, State, DebugInfo, PhysicsSystem, UnboundedBudget);
+        FCk_Eqs_Algorithm::DoRunTests(TypedQuery, InQueryParams, State, DebugInfo, TraceContext, UnboundedBudget);
         Results = FCk_Eqs_Algorithm::DoFinalize(TypedQuery, InQueryParams, State, DebugInfo);
     }
     else

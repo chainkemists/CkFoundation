@@ -15,24 +15,16 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
-// --------------------------------------------------------------------------------------------------------------------
+#include "CkSpatialQuery/Probe/CkProbeTrace_Context.h"
 
-#define CK_EQS_FACTORY(ProcessorType) \
-    CK_REGISTER_PROCESSOR_WITH_FACTORY(ProcessorType, \
-        [](const FCk_Registry& InRegistry) -> ck::concepts::FTickableType \
-        { \
-            const auto& PhysicsSystem = InRegistry.GetContext<TWeakPtr<JPH::PhysicsSystem>>(); \
-            return ProcessorType{InRegistry, PhysicsSystem}; \
-        })
+// --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_CancelPendingRequests);
-CK_EQS_FACTORY(ck::FProcessor_Eqs_Generate);
-CK_EQS_FACTORY(ck::FProcessor_Eqs_Test);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Generate);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Test);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Finalize);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Cleanup);
-
-#undef CK_EQS_FACTORY
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -134,15 +126,6 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    FProcessor_Eqs_Generate::
-        FProcessor_Eqs_Generate(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
-        , _PhysicsSystem(InPhysicsSystem)
-    {
-    }
-
     auto
         FProcessor_Eqs_Generate::
         ForEachEntity(
@@ -169,7 +152,8 @@ namespace ck
             return;
         }
 
-        const auto Generated = FCk_Eqs_Algorithm::DoGenerate(InHandle, InParams, InState, _PhysicsSystem);
+        const auto Generated = FCk_Eqs_Algorithm::DoGenerate(InHandle, InParams, InState,
+            FCk_ProbeTrace_Context::Get_ForEntity(InHandle));
 
         if (NOT Generated || InState.Get_Candidates().IsEmpty())
         {
@@ -183,15 +167,6 @@ namespace ck
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-
-    FProcessor_Eqs_Test::
-        FProcessor_Eqs_Test(
-            const RegistryType& InRegistry,
-            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
-        , _PhysicsSystem(InPhysicsSystem)
-    {
-    }
 
     auto
         FProcessor_Eqs_Test::
@@ -237,7 +212,8 @@ namespace ck
             return;
         }
 
-        FCk_Eqs_Algorithm::DoRunTests(InHandle, InParams, InState, InDebug, _PhysicsSystem, _RemainingBudgetThisFrame);
+        FCk_Eqs_Algorithm::DoRunTests(InHandle, InParams, InState, InDebug,
+            FCk_ProbeTrace_Context::Get_ForEntity(InHandle), _RemainingBudgetThisFrame);
     }
 
     // ----------------------------------------------------------------------------------------------------------------

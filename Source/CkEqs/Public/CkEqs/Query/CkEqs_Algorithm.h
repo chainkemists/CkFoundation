@@ -3,11 +3,7 @@
 #include "CkEqs/Query/CkEqs_Fragment_Data.h"
 #include "CkEqs/Query/CkEqs_Fragment.h"
 
-#include <Templates/SharedPointer.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace JPH { class PhysicsSystem; }
+#include "CkSpatialQuery/Probe/CkProbeTrace_Context.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Statics so the deferred processors and Request_RunQuery_Immediate share one implementation. The
@@ -22,7 +18,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
         FCk_Handle_EqsQuery InQueryHandle,
         const FCk_Eqs_QueryParams& InParams,
         FFragment_EqsQuery_State& InState,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem) -> bool;
+        const FCk_ProbeTrace_Context& InContext) -> bool;
 
     // Resumes from InState._NextTestIndex; true only when every test finished this call, false
     // means it yielded at a test boundary with the cursor preserved. Tests are atomic — never a
@@ -33,7 +29,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
         const FCk_Eqs_QueryParams& InParams,
         FFragment_EqsQuery_State& InState,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         int32& InOutRemainingBudget) -> bool;
 
     // InOutDebug._PerCandidate is reordered/truncated in lockstep with the results, so a
@@ -58,7 +54,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
         const FCk_Eqs_GeneratorParams& InGen,
         const FVector& InQuerierLocation,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& OutCandidates) -> void;
 
     static auto
@@ -112,7 +108,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
         const FCk_Eqs_TestParams& InTest,
         const FCk_Eqs_QueryParams& InParams,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& InOutCandidates,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
         int32 InTestIndex) -> void;
@@ -129,7 +125,7 @@ struct CKEQS_API FCk_Eqs_Algorithm
     DoRunTest_Overlap(
         const FCk_Eqs_TestParams& InTest,
         const FCk_Handle& InAnyHandle,
-        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+        const FCk_ProbeTrace_Context& InContext,
         TArray<FCk_Eqs_Candidate>& InOutCandidates,
         FFragment_EqsQuery_DebugInfo& InOutDebug,
         int32 InTestIndex) -> void;
