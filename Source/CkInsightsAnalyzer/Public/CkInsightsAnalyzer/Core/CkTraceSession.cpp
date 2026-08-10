@@ -6,6 +6,38 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <TraceServices/ITraceServicesModule.h>
+#include <TraceServices/Model/Log.h>
+#include <TraceServices/Model/Screenshot.h>
+
+namespace ck_trace_session
+{
+    auto
+        Map_ScreenshotTimestampToFrame(const TraceServices::IFrameProvider& FrameProvider,
+                                       ETraceFrameType FrameType,
+                                       double TimestampSeconds,
+                                       int64& OutFrameIndex,
+                                       bool& OutIsInsideFrame)
+        -> void
+    {
+        OutFrameIndex = INDEX_NONE;
+        OutIsInsideFrame = false;
+
+        if (FrameProvider.GetFrameCount(FrameType) == 0)
+        {
+            return;
+        }
+
+        const auto FrameIndex = FrameProvider.GetFrameNumberForTimestamp(FrameType, TimestampSeconds);
+        const auto Frame = FrameProvider.GetFrame(FrameType, FrameIndex);
+        if (ck::Is_NOT_Valid(Frame, ck::IsValid_Policy_NullptrOnly{}) || TimestampSeconds < Frame->StartTime)
+        {
+            return;
+        }
+
+        OutFrameIndex = static_cast<int64>(Frame->Index);
+        OutIsInsideFrame = TimestampSeconds <= Frame->EndTime;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -426,6 +458,134 @@ auto
             });
     }
     return Result;
+}
+
+auto
+    FCk_TraceSession::
+    GetScreenshots() const
+    -> TArray<FCk_TraceScreenshot>
+{
+    TArray<FCk_TraceScreenshot> Result;
+    if (NOT IsOpen())
+    {
+        return Result;
+    }
+
+    TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
+
+    const TraceServices::ILogProvider* LogProvider =
+        _Session->ReadProvider<TraceServices::ILogProvider>(TraceServices::GetLogProviderName());
+    const TraceServices::IScreenshotProvider* ScreenshotProvider =
+        _Session->ReadProvider<TraceServices::IScreenshotProvider>(TraceServices::GetScreenshotProviderName());
+    const TraceServices::IFrameProvider* FrameProvider =
+        _Session->ReadProvider<TraceServices::IFrameProvider>(TraceServices::GetFrameProviderName());
+
+    if (LogProvider == nullptr || ScreenshotProvider == nullptr)
+    {
+        return Result;
+    }
+
+    const TraceServices::FLogCategoryInfo* ScreenshotCategory = nullptr;
+    LogProvider->EnumerateCategories(
+        [&ScreenshotCategory](const TraceServices::FLogCategoryInfo& Category)
+        {
+            if (Category.Name != nullptr && FCString::Strcmp(Category.Name, TEXT("Screenshot")) == 0)
+            {
+                ScreenshotCategory = &Category;
+            }
+        });
+
+    if (ScreenshotCategory == nullptr)
+    {
+        return Result;
+    }
+
+    const uint64 MessageCount = LogProvider->GetMessageCount();
+    LogProvider->EnumerateMessagesByIndex(
+        0, MessageCount,
+        [&Result, ScreenshotCategory, ScreenshotProvider, FrameProvider](const TraceServices::FLogMessageInfo& Message)
+        {
+            if (Message.Category != ScreenshotCategory || Message.Line < 0)
+            {
+                return;
+            }
+
+            const uint32 ScreenshotId = static_cast<uint32>(Message.Line);
+            const TSharedPtr<const TraceServices::FScreenshot> Screenshot =
+                ScreenshotProvider->GetScreenshot(ScreenshotId);
+            if (ck::Is_NOT_Valid(Screenshot))
+            {
+                return;
+            }
+
+            FCk_TraceScreenshot& Metadata = Result.AddDefaulted_GetRef();
+            Metadata.Id = Screenshot->Id;
+            Metadata.Name = Screenshot->Name;
+            Metadata.TimestampSeconds = Screenshot->Timestamp;
+            Metadata.Width = Screenshot->Width;
+            Metadata.Height = Screenshot->Height;
+            Metadata.ExpectedPayloadByteSize = Screenshot->Size;
+            Metadata.PayloadByteSize = static_cast<uint32>(Screenshot->Data.Num());
+            Metadata.bIsPayloadComplete =
+                Metadata.PayloadByteSize == Metadata.ExpectedPayloadByteSize;
+
+            if (FrameProvider != nullptr)
+            {
+                ck_trace_session::Map_ScreenshotTimestampToFrame(
+                    *FrameProvider,
+                    ETraceFrameType::TraceFrameType_Game,
+                    Metadata.TimestampSeconds,
+                    Metadata.GameFrameIndex,
+                    Metadata.bIsInsideGameFrame);
+                ck_trace_session::Map_ScreenshotTimestampToFrame(
+                    *FrameProvider,
+                    ETraceFrameType::TraceFrameType_Rendering,
+                    Metadata.TimestampSeconds,
+                    Metadata.RenderFrameIndex,
+                    Metadata.bIsInsideRenderFrame);
+            }
+        });
+
+    Result.Sort(
+        [](const FCk_TraceScreenshot& Left, const FCk_TraceScreenshot& Right)
+        {
+            if (Left.TimestampSeconds != Right.TimestampSeconds)
+            {
+                return Left.TimestampSeconds < Right.TimestampSeconds;
+            }
+            return Left.Id < Right.Id;
+        });
+    return Result;
+}
+
+auto
+    FCk_TraceSession::
+    TryCopyScreenshotData(uint32 InScreenshotId, TArray<uint8>& OutData) const
+    -> bool
+{
+    OutData.Reset();
+    if (NOT IsOpen())
+    {
+        return false;
+    }
+
+    TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
+    const TraceServices::IScreenshotProvider* ScreenshotProvider =
+        _Session->ReadProvider<TraceServices::IScreenshotProvider>(TraceServices::GetScreenshotProviderName());
+    if (ScreenshotProvider == nullptr)
+    {
+        return false;
+    }
+
+    const TSharedPtr<const TraceServices::FScreenshot> Screenshot =
+        ScreenshotProvider->GetScreenshot(InScreenshotId);
+    if (ck::Is_NOT_Valid(Screenshot) || Screenshot->Data.Num() != Screenshot->Size)
+    {
+        return false;
+    }
+
+    OutData = Screenshot->Data;
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
