@@ -207,6 +207,16 @@ public:
 	static TArray<FCk_Goap_SearchDebugRow>
 	Get_LastSearchDebug(const FCk_Handle_Goap_Planner& InPlanner);
 
+	// Returns false when no completed search history is available. An inactive promoted Planner may retain
+	// a graph after deactivation while its inherited WorldState source is intentionally unresolved; that is
+	// an unavailable history snapshot, not a broken invariant.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Try Get Last Search Debug")
+	static bool
+	TryGet_LastSearchDebug(
+		const FCk_Handle_Goap_Planner& InPlanner,
+		TArray<FCk_Goap_SearchDebugRow>& OutRows);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
