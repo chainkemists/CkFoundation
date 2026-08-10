@@ -291,7 +291,7 @@ auto
             Color,
             true,
             1.0f,
-            ECk_Plane_Axis::YZ,
+            ECk_Plane_Axis::XY,
             ck_entity_visualizer_utils::PersistentDuration);
 
         Shape = ck_entity_visualizer_utils::AttachPmg(InAttachTo, Shape, LocalTransform);
