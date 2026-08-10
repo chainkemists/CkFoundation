@@ -12,10 +12,103 @@
 #include <CoreMinimal.h>
 #include <Windows/WindowsPlatformApplicationMisc.h> // required for clipboard copy
 
+#if WITH_ANGELSCRIPT_CK
+#include <as_context.h>
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck::ensure
 {
-    static auto EnsureIsFromScript = false;
+    static thread_local int32 EnsureFromScriptDepth = 0;
+
+    auto Request_GetCurrentScriptSiteIdentity() -> FString
+    {
+    #if WITH_ANGELSCRIPT_CK
+        if (FAngelscriptManager::IsInitialized())
+        {
+            if (auto* Context = FAngelscriptManager::GetCurrentScriptContext(); Context != nullptr)
+            {
+                if (auto* Function = Context->GetFunction(0); Function != nullptr)
+                {
+                    const auto FunctionName = FString{StringCast<TCHAR>(Function->GetName()).Get()};
+                    const auto ObjectTypeName = Function->GetObjectType() != nullptr
+                        ? FString{StringCast<TCHAR>(Function->GetObjectType()->GetName()).Get()}
+                        : FString{TEXT("Global")};
+
+                    auto Column = 0;
+                    const char* Section = nullptr;
+                    const auto Line = Context->GetLineNumber(0, &Column, &Section);
+                    const auto SectionName = Section != nullptr
+                        ? FString{StringCast<TCHAR>(Section).Get()}
+                        : FString{TEXT("UnknownSection")};
+
+                    return ck::Format_UE(
+                        TEXT("AS:{}::{}@{}:{}:{}"),
+                        ObjectTypeName,
+                        FunctionName,
+                        SectionName,
+                        Line,
+                        Column);
+                }
+            }
+        }
+    #endif
+
+    #if !CK_DISABLE_STACK_TRACE
+        // Blueprint VM frames and their UObject nodes are game-thread state. AngelScript's active context above is
+        // thread-local and can still provide a stable worker-script function/line without touching UObjects.
+        if (IsInGameThread())
+        {
+            if (const auto* BlueprintContextTracker = FBlueprintContextTracker::TryGet(); BlueprintContextTracker != nullptr)
+            {
+                const auto& ScriptStack = BlueprintContextTracker->GetCurrentScriptStack();
+                if (NOT ScriptStack.IsEmpty())
+                {
+                    const auto* const Frame = ScriptStack.Last();
+                    if (Frame != nullptr && Frame->Node != nullptr)
+                    {
+                        auto BytecodeOffset = static_cast<int64>(-1);
+                        const auto* const ScriptStart = Frame->Node->Script.GetData();
+                        const auto ScriptSize = Frame->Node->Script.Num();
+                        const auto CodeAddress = reinterpret_cast<UPTRINT>(Frame->Code);
+                        const auto ScriptStartAddress = reinterpret_cast<UPTRINT>(ScriptStart);
+                        const auto ScriptEndAddress = ScriptStartAddress + ScriptSize;
+                        if (Frame->Code != nullptr
+                            && ScriptStart != nullptr
+                            && CodeAddress >= ScriptStartAddress
+                            && CodeAddress <= ScriptEndAddress)
+                        {
+                            BytecodeOffset = static_cast<int64>(CodeAddress - ScriptStartAddress);
+                        }
+
+                        return ck::Format_UE(
+                            TEXT("BP:{}@Bytecode[{}]"),
+                            GetPathNameSafe(Frame->Node),
+                            BytecodeOffset);
+                    }
+                }
+            }
+        }
+    #endif
+
+        return FString{TEXT("Script::Unknown")};
+    }
+
+    auto Request_ReportFirstOccurrenceFromWorkerThread(
+        const FString& InMessage,
+        const FString& InExpressionText,
+        TFunctionRef<void(const FString&)> InReportEmitter) -> void
+    {
+        constexpr auto FramesToSkip_GetStackTrace_EnsureImpl_HandleFail = 3;
+        const auto& StackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(
+            FramesToSkip_GetStackTrace_EnsureImpl_HandleFail);
+
+        InReportEmitter(ck::Format_UE(
+            TEXT("[Worker] {}\n{}\n\n == CallStack ==\n{}"),
+            InExpressionText,
+            InMessage,
+            StackTrace));
+    }
 
     auto Request_TrimEngineBoilerplateFrames(const FString& InStackTrace) -> FString
     {
@@ -89,13 +182,14 @@ namespace ck::ensure
     }
 
     auto
-        Ensure_Impl(
+        Ensure_Impl_Internal(
             const FString& InMessage,
             const FString& InExpressionText,
             const FName& InFile,
             int32 InLine,
             bool& OutBreakInCode,
-            bool& OutBreakInScript)
+            bool& OutBreakInScript,
+            TFunctionRef<void(const FString&)> InWorkerReportEmitter)
         -> void
     {
         OutBreakInCode = false;
@@ -104,9 +198,29 @@ namespace ck::ensure
         if (ck::Is_AngelscriptDebugger_Paused())
         { return; }
 
-        UCk_Utils_Ensure_UE::Request_IncrementEnsureCountAtFileAndLine(InFile, InLine);
+        const auto IsEnsureFromScript = Get_IsEnsureFromScript();
+        const auto& Record = UCk_Utils_Ensure_UE::Request_RecordEnsureOccurrence(
+            FCk_EnsureSignature
+            {
+                InFile,
+                InLine,
+                InExpressionText,
+                IsEnsureFromScript ? Request_GetCurrentScriptSiteIdentity() : FString{},
+            });
 
-        if (NOT EnsureIsFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(InFile, InLine))
+        if (NOT Record.IsFirstOccurrence)
+        { return; }
+
+        if (NOT IsInGameThread())
+        {
+            Request_ReportFirstOccurrenceFromWorkerThread(
+                InMessage,
+                InExpressionText,
+                InWorkerReportEmitter);
+            return;
+        }
+
+        if (NOT IsEnsureFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(InFile, InLine))
         { return; }
 
         const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;
@@ -156,13 +270,13 @@ namespace ck::ensure
 
         const auto& MessagePlusBpCallStackStr = FText::FromString(CleanMessagePlusBpCallStack);
 
-        if (EnsureIsFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(BpStackTrace + AsStackTrace))
+        if (IsEnsureFromScript && UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(BpStackTrace + AsStackTrace))
         { return; }
 
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::StreamerMode)
         {
             ck::ensure::Error(TEXT("{}"), MessagePlusBpCallStack);
-            if (NOT EnsureIsFromScript)
+            if (NOT IsEnsureFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
@@ -214,7 +328,7 @@ namespace ck::ensure
     #else
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         {
-            if (NOT EnsureIsFromScript)
+            if (NOT IsEnsureFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
@@ -230,7 +344,7 @@ namespace ck::ensure
             {
                 UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr, MessagePlusBpCallStackStr);
             }
-            if (NOT EnsureIsFromScript)
+            if (NOT IsEnsureFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
@@ -311,7 +425,7 @@ namespace ck::ensure
 
         Buttons.Add(DialogButton{FText::FromString(TEXT("Ignore All")), FSimpleDelegate::CreateLambda([&]()
         {
-            if (NOT EnsureIsFromScript)
+            if (NOT IsEnsureFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
@@ -323,7 +437,7 @@ namespace ck::ensure
 
         Buttons.Add(DialogButton{FText::FromString(TEXT("Snooze")), FSimpleDelegate::CreateLambda([&]()
         {
-            if (NOT EnsureIsFromScript)
+            if (NOT IsEnsureFromScript)
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsurePermanently_AtFileAndLine(InFile, InLine); }
             else
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsurePermanently_WithCallstack(BpStackTrace + AsStackTrace); }
@@ -367,6 +481,52 @@ namespace ck::ensure
     }
 
     auto
+        Ensure_Impl(
+            const FString& InMessage,
+            const FString& InExpressionText,
+            const FName& InFile,
+            int32 InLine,
+            bool& OutBreakInCode,
+            bool& OutBreakInScript)
+        -> void
+    {
+        Ensure_Impl_Internal(
+            InMessage,
+            InExpressionText,
+            InFile,
+            InLine,
+            OutBreakInCode,
+            OutBreakInScript,
+            [](const FString& InReport)
+            {
+                Error(TEXT("{}"), InReport);
+            });
+    }
+
+#if WITH_DEV_AUTOMATION_TESTS
+    auto
+        Ensure_Impl_ForTesting(
+            const FString& InMessage,
+            const FString& InExpressionText,
+            const FName& InFile,
+            int32 InLine,
+            bool& OutBreakInCode,
+            bool& OutBreakInScript,
+            TFunctionRef<void(const FString&)> InWorkerReportEmitter)
+        -> void
+    {
+        Ensure_Impl_Internal(
+            InMessage,
+            InExpressionText,
+            InFile,
+            InLine,
+            OutBreakInCode,
+            OutBreakInScript,
+            InWorkerReportEmitter);
+    }
+#endif
+
+    auto
         Do_HandleFail(
             const FString& InMessage,
             const FString& InExpressionText,
@@ -405,17 +565,25 @@ namespace ck::ensure
     }
 
     auto
+      Get_IsEnsureFromScript()
+      -> bool
+    {
+        return EnsureFromScriptDepth > 0;
+    }
+
+    auto
       Do_Push_EnsureIsFromScript()
       -> void
     {
-        EnsureIsFromScript = true;
+        ++EnsureFromScriptDepth;
     }
 
     auto
       Do_Pop_EnsureIsFromScript()
       -> void
     {
-        EnsureIsFromScript = false;
+        if (EnsureFromScriptDepth > 0)
+        { --EnsureFromScriptDepth; }
     }
 }
 
