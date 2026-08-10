@@ -87,6 +87,23 @@ namespace ck { namespace details
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    /// Per-episode dedup for OnProbeTraceWorldHit: the signal fires on NEW contact only. A named wrapper
+    /// rather than a bare TSet<FCk_Handle> because component pools are type-keyed and a generic container
+    /// type would collide with any other feature that registered the same one.
+    struct CKSPATIALQUERY_API FFragment_ProbeTrace_WorldContacts
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProbeTrace_WorldContacts);
+
+    public:
+        TSet<FCk_Handle> _Entities;
+
+        // World bodies with no owning entity cannot be told apart, so they share one contact slot.
+        bool _AnonymousContact = false;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
         OnProbeBeginOverlap,
@@ -137,6 +154,13 @@ namespace ck { namespace details
         FCk_Delegate_ProbeTrace_OnEndOverlap,
         FCk_Handle_ProbeTrace,
         FCk_Probe_Payload_OnEndOverlap);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
+        OnProbeTraceWorldHit,
+        FCk_Delegate_ProbeTrace_OnWorldHit,
+        FCk_Handle_ProbeTrace,
+        FCk_ProbeTrace_Payload_OnWorldHit);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -10,11 +10,12 @@
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
-#include "CkJolt/Subsystem/CkJolt_Subsystem.h"
+#include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
@@ -25,6 +26,134 @@
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 
 #include <Kismet/KismetMathLibrary.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_probe_trace_utils
+{
+    struct FProbeTrace_HitClassification
+    {
+        bool _Keep = false;
+        ECk_ProbeTrace_HitKind _Kind = ECk_ProbeTrace_HitKind::Probe;
+        FCk_Handle _Entity;
+        FCk_Handle_Probe _Probe;
+    };
+
+    /// The three-way UserData branch is deliberate and must NOT be collapsed into a single
+    /// TryGet_EntityFromBody call: that helper returns an invalid handle both for a body owned by the
+    /// tracing entity itself and for a body with no entity at all. A self-hit must be DROPPED, while
+    /// UserData 0 is a legitimate anonymous world body. Reading the raw UserData first keeps them apart.
+    /// Raw entity id 0 is never resolved — it is the registry's transient root, not a body owner.
+    inline auto
+        Classify_BodyHit(
+            const FCk_Handle& InAnyHandle,
+            const JPH::BodyInterface& InBodyInterface,
+            JPH::BodyID InBodyId,
+            ECk_ProbeTrace_WorldHitPolicy InWorldHitPolicy,
+            const FCk_Jolt_QueryFilter& InWorldFilter,
+            const ck::jolt::FCk_Jolt_CollisionLayerTable& InLayerTable,
+            const TArray<FCk_Handle>& InIgnoredEntities)
+        -> FProbeTrace_HitClassification
+    {
+        auto Classification = FProbeTrace_HitClassification{};
+
+        const auto WorldHitsAreVisible = InWorldHitPolicy != ECk_ProbeTrace_WorldHitPolicy::Ignore;
+
+        const auto& DoPassesWorldChannel = [&]() -> bool
+        {
+            return InLayerTable.Get_ResponseOfLayerToChannel(InBodyInterface.GetObjectLayer(InBodyId),
+                InWorldFilter.Get_Channel()) >= InWorldFilter.Get_MinResponse();
+        };
+
+        const auto UserData = ck::jolt::Get_BodyUserData(InBodyInterface, InBodyId);
+
+        if (UserData == 0)
+        {
+            if (NOT WorldHitsAreVisible || NOT DoPassesWorldChannel())
+            { return Classification; }
+
+            Classification._Keep = true;
+            Classification._Kind = ECk_ProbeTrace_HitKind::World;
+
+            return Classification;
+        }
+
+        if (static_cast<FCk_Entity::IdType>(UserData) == InAnyHandle.Get_Entity().Get_ID())
+        { return Classification; }
+
+        const auto Entity = ck::jolt::TryGet_EntityFromBody(InAnyHandle, InBodyInterface, InBodyId);
+
+        if (const auto OtherProbe = UCk_Utils_Probe_UE::Cast(Entity);
+            ck::IsValid(OtherProbe))
+        {
+            if (InIgnoredEntities.Contains(Entity))
+            { return Classification; }
+
+            Classification._Keep = true;
+            Classification._Kind = ECk_ProbeTrace_HitKind::Probe;
+            Classification._Entity = Entity;
+            Classification._Probe = OtherProbe;
+
+            return Classification;
+        }
+
+        if (NOT WorldHitsAreVisible || NOT DoPassesWorldChannel())
+        { return Classification; }
+
+        if (ck::IsValid(Entity) && InIgnoredEntities.Contains(Entity))
+        { return Classification; }
+
+        Classification._Keep = true;
+        Classification._Kind = ECk_ProbeTrace_HitKind::World;
+        Classification._Entity = Entity;
+
+        return Classification;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct FProbeTrace_RayHit
+    {
+        JPH::BodyID _BodyId;
+        float _Fraction = 0.0f;
+        JPH::SubShapeID _SubShapeId2;
+        ECk_ProbeTrace_HitKind _Kind = ECk_ProbeTrace_HitKind::Probe;
+        FCk_Handle _Entity;
+        FCk_Handle_Probe _Probe;
+    };
+
+    struct FProbeTrace_ShapeHit
+    {
+        JPH::BodyID _BodyId;
+        float _Fraction = 0.0f;
+        JPH::Vec3 _PenetrationAxis = JPH::Vec3::sZero();
+        JPH::Vec3 _ContactPointOn2 = JPH::Vec3::sZero();
+        ECk_ProbeTrace_HitKind _Kind = ECk_ProbeTrace_HitKind::Probe;
+        FCk_Handle _Entity;
+        FCk_Handle_Probe _Probe;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /// Jolt only reports a surface normal for shape casts; for a ray the face has to be asked of the body
+    /// itself. Lock failure means the body died between the cast and this read — Up is the same fallback
+    /// the CkJolt query utils use.
+    inline auto
+        Get_RaySurfaceNormal(
+            const JPH::PhysicsSystem& InPhysicsSystem,
+            const JPH::BodyID& InBodyId,
+            const JPH::SubShapeID& InSubShapeId,
+            const JPH::Vec3& InWorldPosition)
+        -> FVector
+    {
+        const auto Lock = JPH::BodyLockRead{InPhysicsSystem.GetBodyLockInterface(), InBodyId};
+
+        if (NOT Lock.Succeeded())
+        { return FVector::UpVector; }
+
+        return ck::jolt::Conv(Lock.GetBody().GetWorldSpaceSurfaceNormal(InSubShapeId, InWorldPosition));
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,24 +170,38 @@ namespace ck::details
                 const ResultType& InResult)
             -> void override
         {
-            const auto OtherProbe = jolt::TryGet_ProbeFromBodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID);
+            const auto Classification = ck_probe_trace_utils::Classify_BodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID,
+                _WorldHitPolicy, _WorldFilter, _LayerTable, _IgnoredEntities);
 
-            if (ck::Is_NOT_Valid(OtherProbe))
+            if (NOT Classification._Keep)
             { return; }
 
-            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
+            _Hits.Emplace(ck_probe_trace_utils::FProbeTrace_RayHit
+            {
+                InResult.mBodyID,
+                InResult.mFraction,
+                InResult.mSubShapeID2,
+                Classification._Kind,
+                Classification._Entity,
+                Classification._Probe
+            });
         }
 
     private:
         FCk_Handle _AnyHandle;
         const JPH::BodyInterface& _BodyInterface;
+        ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+        const FCk_Jolt_QueryFilter& _WorldFilter;
+        const jolt::FCk_Jolt_CollisionLayerTable& _LayerTable;
+        const TArray<FCk_Handle>& _IgnoredEntities;
 
-        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
+        TArray<ck_probe_trace_utils::FProbeTrace_RayHit> _Hits;
 
     public:
         CK_PROPERTY_GET(_Hits);
 
-        CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface);
+        CK_DEFINE_CONSTRUCTOR(CastRayCollector, _AnyHandle, _BodyInterface, _WorldHitPolicy, _WorldFilter,
+            _LayerTable, _IgnoredEntities);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -74,23 +217,39 @@ namespace ck::details
                 const JPH::ShapeCastResult& InResult)
             -> void override
         {
-            const auto OtherProbe = jolt::TryGet_ProbeFromBodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID2);
+            const auto Classification = ck_probe_trace_utils::Classify_BodyHit(_AnyHandle, _BodyInterface, InResult.mBodyID2,
+                _WorldHitPolicy, _WorldFilter, _LayerTable, _IgnoredEntities);
 
-            if (ck::Is_NOT_Valid(OtherProbe))
+            if (NOT Classification._Keep)
             { return; }
 
-            _Hits.Emplace(std::make_pair(OtherProbe, InResult.mFraction));
+            _Hits.Emplace(ck_probe_trace_utils::FProbeTrace_ShapeHit
+            {
+                InResult.mBodyID2,
+                InResult.mFraction,
+                InResult.mPenetrationAxis,
+                InResult.mContactPointOn2,
+                Classification._Kind,
+                Classification._Entity,
+                Classification._Probe
+            });
         }
 
     private:
         FCk_Handle _AnyHandle;
         const JPH::BodyInterface& _BodyInterface;
-        TArray<std::pair<FCk_Handle_Probe, float>> _Hits;
+        ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
+        const FCk_Jolt_QueryFilter& _WorldFilter;
+        const jolt::FCk_Jolt_CollisionLayerTable& _LayerTable;
+        const TArray<FCk_Handle>& _IgnoredEntities;
+
+        TArray<ck_probe_trace_utils::FProbeTrace_ShapeHit> _Hits;
 
     public:
         CK_PROPERTY_GET(_Hits);
 
-        CK_DEFINE_CONSTRUCTOR(CastShapeCollector, _AnyHandle, _BodyInterface);
+        CK_DEFINE_CONSTRUCTOR(CastShapeCollector, _AnyHandle, _BodyInterface, _WorldHitPolicy, _WorldFilter,
+            _LayerTable, _IgnoredEntities);
     };
 }
 
@@ -107,16 +266,10 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> TArray<FCk_Probe_RayCast_Result>
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
-    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
-        TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
-    { return {}; }
-
     constexpr auto FireOverlaps = true;
     constexpr auto TryDebugDraw = true;
-    return Request_MultiLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
+    return Request_MultiLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw,
+        FCk_ProbeTrace_Context::Get_ForEntity(InAnyHandle));
 }
 
 auto
@@ -126,18 +279,12 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings)
     -> FCk_Probe_RayCast_Result
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
-    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
-        TEXT("PhysicsSystem is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
-    { return {}; }
-
     constexpr auto FireOverlaps = true;
     constexpr auto TryDrawDebug = true;
 
     // The internal Single overload already debug-draws its result — no extra draw here.
-    const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+    const auto& Result = Request_SingleLineTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug,
+        FCk_ProbeTrace_Context::Get_ForEntity(InAnyHandle));
 
     if (ck::Is_NOT_Valid(Result))
     { return {}; }
@@ -194,16 +341,10 @@ auto
         const FCk_ShapeCast_Settings& InSettings)
     -> TArray<FCk_ShapeCast_Result>
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
-    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
-        TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
-    { return {}; }
-
     constexpr auto FireOverlaps = true;
     constexpr auto TryDebugDraw = true;
-    return Request_MultiShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw, *PhysicsSystem);
+    return Request_MultiShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDebugDraw,
+        FCk_ProbeTrace_Context::Get_ForEntity(InAnyHandle));
 }
 
 auto
@@ -213,18 +354,12 @@ auto
         const FCk_ShapeCast_Settings& InSettings)
     -> FCk_ShapeCast_Result
 {
-    const auto Subsystem = UCk_Utils_EcsWorld_Subsystem_UE::Get_WorldSubsystem<UCk_Jolt_Subsystem>(InAnyHandle);
-    const auto& PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
-        TEXT("PhysicsSystem is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
-    { return {}; }
-
     constexpr auto FireOverlaps = true;
     constexpr auto TryDrawDebug = true;
 
     // The internal Single overload already debug-draws its result — no extra draw here.
-    const auto& Result = Request_SingleShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug, *PhysicsSystem);
+    const auto& Result = Request_SingleShapeTrace(InAnyHandle, InSettings, FireOverlaps, TryDrawDebug,
+        FCk_ProbeTrace_Context::Get_ForEntity(InAnyHandle));
 
     if (ck::Is_NOT_Valid(Result))
     { return {}; }
@@ -383,6 +518,31 @@ auto
     return InProbeTraceEntity;
 }
 
+auto
+    UCk_Utils_ProbeTrace_UE::
+    BindTo_OnProbeTraceWorldHit(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnWorldHit& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeTraceWorldHit, InProbeTraceEntity, InDelegate, InBindingPolicy,
+        InPostFireBehavior);
+    return InProbeTraceEntity;
+}
+
+auto
+    UCk_Utils_ProbeTrace_UE::
+    UnbindFrom_OnProbeTraceWorldHit(
+        FCk_Handle_ProbeTrace& InProbeTraceEntity,
+        const FCk_Delegate_ProbeTrace_OnWorldHit& InDelegate)
+    -> FCk_Handle_ProbeTrace
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeTraceWorldHit, InProbeTraceEntity, InDelegate);
+    return InProbeTraceEntity;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -392,12 +552,24 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem)
+        const FCk_ProbeTrace_Context& InContext)
     -> TArray<FCk_Probe_RayCast_Result>
 {
     using namespace ck;
 
-    const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
+    const auto PinnedPhysicsSystem = InContext._PhysicsSystem.Pin();
+    const auto ContextIsValid = ck::IsValid(PinnedPhysicsSystem) && InContext._LayerTable != nullptr;
+
+    CK_ENSURE_IF_NOT(ContextIsValid,
+        TEXT("ProbeTrace context is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
+    {}
+
+    if (NOT ContextIsValid)
+    { return {}; }
+
+    const auto& PhysicsSystem = *PinnedPhysicsSystem;
+
+    const auto& BodyInterface = PhysicsSystem.GetBodyInterface();
 
     const auto& StartPos = InSettings.Get_StartPos();
     const auto& EndPos = InSettings.Get_EndPos();
@@ -409,61 +581,92 @@ auto
         jolt::Conv(InSettings.Get_BackFaceModeConvex())
     };
 
-    auto Collector = details::CastRayCollector{InAnyHandle, BodyInterface};
-    InPhysicsSystem.GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
+    auto Collector = details::CastRayCollector{InAnyHandle, BodyInterface, InSettings.Get_WorldHitPolicy(),
+        InSettings.Get_WorldFilter(), *InContext._LayerTable, InSettings.Get_IgnoredEntities()};
+    PhysicsSystem.GetNarrowPhaseQuery().CastRay(RayCast, RayCastSettings, Collector);
 
     // Jolt collectors receive hits in broadphase-traversal order, NOT distance order — sort by
     // fraction so Multi results are nearest-first and Single's Result[0] is the closest hit.
     auto SortedHits = Collector.Get_Hits();
-    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA.second < InB.second; });
+    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA._Fraction < InB._Fraction; });
+
+    const auto FilterIsEmpty = InSettings.Get_Filter().IsEmpty();
+
+    auto KeptHits = decltype(SortedHits){};
+
+    for (const auto& Hit : SortedHits)
+    {
+        if (Hit._Kind == ECk_ProbeTrace_HitKind::Probe && NOT FilterIsEmpty)
+        {
+            const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit._Probe);
+
+            // Direction is load-bearing: the probe NAME is matched against the filter, never the
+            // reverse — same as Get_CanOverlapWith.
+            if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
+            { continue; }
+        }
+
+        KeptHits.Emplace(Hit);
+
+        // Blocking truncates AFTER the blocker: it is the final element, and nothing behind it is
+        // returned or overlap-fired.
+        if (Hit._Kind == ECk_ProbeTrace_HitKind::World &&
+            InSettings.Get_WorldHitPolicy() == ECk_ProbeTrace_WorldHitPolicy::Blocking)
+        { break; }
+    }
 
     auto Result = TArray<FCk_Probe_RayCast_Result>{};
-    for (const auto& [HitProbe, Fraction] : SortedHits)
-    {
-        const auto HitLocation = StartPos + Fraction * (EndPos - StartPos);
 
-        Result.Emplace(FCk_Probe_RayCast_Result
+    for (const auto& Hit : KeptHits)
+    {
+        const auto HitLocation = StartPos + Hit._Fraction * (EndPos - StartPos);
+
+        auto HitResult = FCk_Probe_RayCast_Result
         {
-            HitProbe,
+            Hit._Probe,
             HitLocation,
             StartPos - HitLocation,
             StartPos,
             EndPos
-        });
+        };
+
+        HitResult.Set_HitKind(Hit._Kind);
+        HitResult.Set_HitEntity(Hit._Entity);
+        HitResult.Set_SurfaceNormal(ck_probe_trace_utils::Get_RaySurfaceNormal(PhysicsSystem, Hit._BodyId,
+            Hit._SubShapeId2, RayCast.GetPointOnRay(Hit._Fraction)));
+        HitResult.Set_Fraction(Hit._Fraction);
+
+        Result.Emplace(MoveTemp(HitResult));
     }
 
-    if (InSettings.Get_Filter().IsEmpty())
+    // An empty filter matches every probe AND returns before the overlap block. That predates the
+    // world-hit policy and is deliberately preserved: existing empty-filter callers have never fired
+    // overlaps and must not start now.
+    if (FilterIsEmpty)
     {
         if (InTryDrawDebug && Result.IsEmpty())
         { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
         return Result;
     }
 
-    auto FilteredResult = decltype(Result){};
-
-    for (const auto& Hit : Result)
+    if (InTryDrawDebug)
     {
-        const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
-
-        // Direction is load-bearing: the probe NAME is matched against the filter, never the
-        // reverse — same as Get_CanOverlapWith.
-        if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
-        { continue; }
-
-        if (InTryDrawDebug)
+        for (const auto& Hit : Result)
         { Request_DrawLineTrace(InAnyHandle, InSettings, Hit); }
 
-        FilteredResult.Emplace(Hit);
+        // Post-filter, mirroring the shape twin: a trace whose every hit was filtered out is still a miss.
+        if (Result.IsEmpty())
+        { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
     }
 
-    // Post-filter, mirroring the shape twin: a trace whose every hit was filtered out is still a miss.
-    if (InTryDrawDebug && FilteredResult.IsEmpty())
-    { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
-
-    if (InFireOverlaps)
+    if (InFireOverlaps && InSettings.Get_OverlapNotifyPolicy() == ECk_ProbeResponse_Policy::Notify)
     {
-        for (const auto& Hit : FilteredResult)
+        for (const auto& Hit : Result)
         {
+            // World hits never ping a probe — there is no probe on the other end.
+            if (Hit.Get_HitKind() != ECk_ProbeTrace_HitKind::Probe)
+            { continue; }
+
             auto Probe = Hit.Get_Probe();
             UCk_Utils_Probe_UE::Request_BeginOverlap(Probe,
                 FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr}, {});
@@ -472,7 +675,7 @@ auto
         }
     }
 
-    return FilteredResult;
+    return Result;
 }
 
 auto
@@ -482,10 +685,10 @@ auto
         const FCk_Probe_RayCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem)
+        const FCk_ProbeTrace_Context& InContext)
     -> TOptional<FCk_Probe_RayCast_Result>
 {
-    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InPhysicsSystem);
+    const auto& Result = Request_MultiLineTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InContext);
 
     if (Result.IsEmpty())
     {
@@ -551,6 +754,12 @@ auto
 
     if (ck::IsValid(InResult) && NOT InIsDisabled)
     {
+        // World hits reuse the whole hit vocabulary; only the marker changes colour, so a blocker is
+        // distinguishable from a probe at a glance without a new settings knob.
+        const auto MarkerColor = InResult->Get_HitKind() == ECk_ProbeTrace_HitKind::World
+            ? MissColor
+            : BoxColor;
+
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InResult->Get_StartPos(),
             InResult->Get_HitLocation(), HitColor, Duration, LineThickness);
 
@@ -558,7 +767,7 @@ auto
             MissColor, Duration, LineThickness);
 
         UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, InResult->Get_HitLocation(), FVector{1.0},
-            BoxColor,
+            MarkerColor,
             UKismetMathLibrary::FindLookAtRotation(InResult->Get_HitLocation(), InResult->Get_StartPos()), Duration, LineThickness);
     }
     else
@@ -586,10 +795,20 @@ auto
         const FCk_ShapeCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem)
+        const FCk_ProbeTrace_Context& InContext)
     -> TArray<FCk_ShapeCast_Result>
 {
     using namespace ck;
+
+    const auto PinnedPhysicsSystem = InContext._PhysicsSystem.Pin();
+    const auto ContextIsValid = ck::IsValid(PinnedPhysicsSystem) && InContext._LayerTable != nullptr;
+
+    CK_ENSURE_IF_NOT(ContextIsValid,
+        TEXT("ProbeTrace context is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
+    {}
+
+    if (NOT ContextIsValid)
+    { return {}; }
 
     JPH::Ref<JPH::Shape> JoltShape;
 
@@ -655,7 +874,9 @@ auto
         return {};
     }
 
-    const auto& BodyInterface = InPhysicsSystem.GetBodyInterface();
+    const auto& PhysicsSystem = *PinnedPhysicsSystem;
+
+    const auto& BodyInterface = PhysicsSystem.GetBodyInterface();
     const auto& StartPos = InSettings.Get_StartPos();
     const auto& EndPos = InSettings.Get_EndPos();
     const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
@@ -675,58 +896,85 @@ auto
     ShapeCastSettings.mBackFaceModeTriangles = jolt::Conv(InSettings.Get_BackFaceModeTriangles());
     ShapeCastSettings.mBackFaceModeConvex = jolt::Conv(InSettings.Get_BackFaceModeConvex());
 
-    auto Collector = details::CastShapeCollector{InAnyHandle, BodyInterface};
-    InPhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
+    auto Collector = details::CastShapeCollector{InAnyHandle, BodyInterface, InSettings.Get_WorldHitPolicy(),
+        InSettings.Get_WorldFilter(), *InContext._LayerTable, InSettings.Get_IgnoredEntities()};
+    PhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
 
     // Same broadphase-order sort as the line-trace path above.
     auto SortedHits = Collector.Get_Hits();
-    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA.second < InB.second; });
+    SortedHits.Sort([](const auto& InA, const auto& InB) { return InA._Fraction < InB._Fraction; });
+
+    const auto FilterIsEmpty = InSettings.Get_Filter().IsEmpty();
+
+    auto KeptHits = decltype(SortedHits){};
+
+    for (const auto& Hit : SortedHits)
+    {
+        if (Hit._Kind == ECk_ProbeTrace_HitKind::Probe && NOT FilterIsEmpty)
+        {
+            const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit._Probe);
+
+            if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
+            { continue; }
+        }
+
+        KeptHits.Emplace(Hit);
+
+        if (Hit._Kind == ECk_ProbeTrace_HitKind::World &&
+            InSettings.Get_WorldHitPolicy() == ECk_ProbeTrace_WorldHitPolicy::Blocking)
+        { break; }
+    }
 
     auto Result = TArray<FCk_ShapeCast_Result>{};
-    for (const auto& [Probe, Fraction] : SortedHits)
-    {
-        const auto HitLocation = StartPos + Fraction * Direction;
 
-        Result.Emplace(FCk_ShapeCast_Result
+    for (const auto& Hit : KeptHits)
+    {
+        const auto HitLocation = StartPos + Hit._Fraction * Direction;
+
+        auto HitResult = FCk_ShapeCast_Result
         {
-            Probe,
+            Hit._Probe,
             HitLocation,
             StartPos - HitLocation,
             StartPos,
             EndPos,
-            Fraction
-        });
+            Hit._Fraction
+        };
+
+        HitResult.Set_HitKind(Hit._Kind);
+        HitResult.Set_HitEntity(Hit._Entity);
+        // NormalizedOr, not Normalized: a zero-length shape cast (EQS's overlap test casts a sphere
+        // from a point to itself) can report a degenerate penetration axis, and a raw divide would
+        // put a NaN in the result. Up matches the ray path's lock-failure fallback.
+        HitResult.Set_SurfaceNormal(jolt::Conv((-Hit._PenetrationAxis).NormalizedOr(JPH::Vec3::sAxisZ())));
+
+        Result.Emplace(MoveTemp(HitResult));
     }
 
-    if (InSettings.Get_Filter().IsEmpty())
+    // Empty-filter early return — see the line-trace twin for why the overlap block is skipped.
+    if (FilterIsEmpty)
     {
         if (InTryDrawDebug && Result.IsEmpty())
         { Request_DrawShapeTrace(InAnyHandle, InSettings, {}); }
         return Result;
     }
 
-    auto FilteredResult = decltype(Result){};
-
-    for (const auto& Hit : Result)
+    if (InTryDrawDebug)
     {
-        const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
-
-        if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
-        { continue; }
-
-        if (InTryDrawDebug)
+        for (const auto& Hit : Result)
         { Request_DrawShapeTrace(InAnyHandle, InSettings, Hit); }
 
-        FilteredResult.Emplace(Hit);
+        if (Result.IsEmpty())
+        { Request_DrawShapeTrace(InAnyHandle, InSettings, {}); }
     }
 
-    if (InTryDrawDebug && FilteredResult.IsEmpty())
-    { Request_DrawShapeTrace(InAnyHandle, InSettings, {}); }
-
-    if (InFireOverlaps)
+    if (InFireOverlaps && InSettings.Get_OverlapNotifyPolicy() == ECk_ProbeResponse_Policy::Notify)
     {
-        for (const auto& Hit : FilteredResult)
+        for (const auto& Hit : Result)
         {
+            if (Hit.Get_HitKind() != ECk_ProbeTrace_HitKind::Probe)
+            { continue; }
+
             auto Probe = Hit.Get_Probe();
             UCk_Utils_Probe_UE::Request_BeginOverlap(Probe,
                 FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr}, {});
@@ -735,7 +983,7 @@ auto
         }
     }
 
-    return FilteredResult;
+    return Result;
 }
 
 auto
@@ -745,10 +993,10 @@ auto
         const FCk_ShapeCast_Settings& InSettings,
         bool InFireOverlaps,
         bool InTryDrawDebug,
-        const JPH::PhysicsSystem& InPhysicsSystem)
+        const FCk_ProbeTrace_Context& InContext)
     -> TOptional<FCk_ShapeCast_Result>
 {
-    const auto& Result = Request_MultiShapeTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InPhysicsSystem);
+    const auto& Result = Request_MultiShapeTrace(InAnyHandle, InSettings, InFireOverlaps, InTryDrawDebug, InContext);
 
     if (Result.IsEmpty())
     {
@@ -811,10 +1059,16 @@ auto
     {
         const auto& HitLocation = InResult->Get_HitLocation();
 
+        // Same reasoning as the line-trace twin: only the hit marker's colour distinguishes a world
+        // blocker from a probe hit.
+        const auto MarkerColor = InResult->Get_HitKind() == ECk_ProbeTrace_HitKind::World
+            ? FLinearColor::Red
+            : FLinearColor::Yellow;
+
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
             FLinearColor::Red, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, HitLocation, Orientation,
-            FLinearColor::Yellow, Duration, LineThickness);
+            MarkerColor, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
             FLinearColor::Green, Duration, LineThickness);
 
