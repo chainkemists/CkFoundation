@@ -25,8 +25,20 @@ namespace ck::ensure
         int32 InLine) -> bool;
 
     CKCORE_API auto Do_BreakInScript() -> void;
+    CKCORE_API auto Get_IsEnsureFromScript() -> bool;
     CKCORE_API auto Do_Push_EnsureIsFromScript() -> void;
     CKCORE_API auto Do_Pop_EnsureIsFromScript() -> void;
+
+#if WITH_DEV_AUTOMATION_TESTS
+    CKCORE_API auto Ensure_Impl_ForTesting(
+        const FString& InMessage,
+        const FString& InExpressionText,
+        const FName& InFile,
+        int32 InLine,
+        bool& OutBreakInCode,
+        bool& OutBreakInScript,
+        TFunctionRef<void(const FString&)> InWorkerReportEmitter) -> void;
+#endif
 }
 
 // PLATFORM_BREAK expands textually here rather than inside a lambda or an ensureAlwaysMsgf wrapper,
