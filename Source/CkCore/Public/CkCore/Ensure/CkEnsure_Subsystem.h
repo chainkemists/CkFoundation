@@ -69,6 +69,10 @@ public:
 
 public:
     auto
+    Request_NotifyEnsureCountChanged(
+        const ck::ensure::FCk_EnsureRecordResult& InRecord) -> void;
+
+    auto
     Request_IncrementEnsureCountAtFileAndLine(
         FName InFile,
         int32 InLine) -> void;
@@ -106,10 +110,6 @@ public:
 
 private:
     bool _IgnoreAllEnsure = false;
-    int32 _NumberOfEnsuresTriggered = 0;
-    int32 _NumberOfUniqueEnsuresTriggered = 0;
-    TMap<FName, TSet<FCk_Ensure_Entry>> _UniqueTriggeredEnsures;
-    TSet<FString> _UniqueTriggeredEnsures_BP;
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
     TSet<FString> _IgnoredEnsures_BP;
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _PersistentIgnoredEnsures;

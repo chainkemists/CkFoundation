@@ -24,8 +24,8 @@ auto
 {
     if (ck::IsValid(World->GetGameInstance()))
     {
+        ck::ensure::Request_LogEnsureOccurrenceSummaryAndReset();
         _IgnoreAllEnsure = false;
-        _NumberOfEnsuresTriggered = 0;
         _IgnoredEnsures.Reset();
         _IgnoredEnsures_BP.Reset();
 
@@ -39,8 +39,8 @@ auto
     Deinitialize()
     -> void
 {
+    ck::ensure::Request_LogEnsureOccurrenceSummaryAndReset();
     _IgnoreAllEnsure = false;
-    _NumberOfEnsuresTriggered = 0;
     _IgnoredEnsures.Reset();
     _IgnoredEnsures_BP.Reset();
 
@@ -80,7 +80,9 @@ auto
     Get_EnsureCount() const
     -> int32
 {
-    return _NumberOfEnsuresTriggered;
+    return static_cast<int32>(FMath::Min<uint64>(
+        ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount(),
+        MAX_int32));
 }
 
 auto
@@ -88,7 +90,7 @@ auto
     Get_UniqueEnsureCount() const
     -> int32
 {
-    return _NumberOfUniqueEnsuresTriggered;
+    return ck::ensure::Get_EnsureOccurrenceTracker().GetUniqueCount();
 }
 
 auto
@@ -244,25 +246,25 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
+    Request_NotifyEnsureCountChanged(
+        const ck::ensure::FCk_EnsureRecordResult& InRecord)
+    -> void
+{
+    _OnEnsureCountChanged_MC.Broadcast(
+        static_cast<int32>(FMath::Min<uint64>(InRecord.TotalCount, MAX_int32)),
+        InRecord.UniqueCount);
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
     Request_IncrementEnsureCountAtFileAndLine(
         FName InFile,
         int32 InLine)
     -> void
 {
-    ++_NumberOfEnsuresTriggered;
-
-    bool WasAlreadyAdded = false;
-
-    auto& LineSet = _UniqueTriggeredEnsures.FindOrAdd(InFile);
-    const auto& EnsureEntry = FCk_Ensure_Entry{InFile, InLine};
-    LineSet.Add(EnsureEntry, &WasAlreadyAdded);
-
-    if (NOT WasAlreadyAdded)
-    {
-        ++_NumberOfUniqueEnsuresTriggered;
-    }
-
-    _OnEnsureCountChanged_MC.Broadcast(_NumberOfEnsuresTriggered, _NumberOfUniqueEnsuresTriggered);
+    const auto& Record = ck::ensure::Get_EnsureOccurrenceTracker().Record(
+        ck::ensure::FCk_EnsureSignature{InFile, InLine, {}, {}});
+    Request_NotifyEnsureCountChanged(Record);
 }
 
 auto
@@ -271,18 +273,9 @@ auto
         const FString& InCallstack)
     -> void
 {
-    ++_NumberOfEnsuresTriggered;
-
-    bool WasAlreadyAdded = false;
-
-    _UniqueTriggeredEnsures_BP.Add(InCallstack, &WasAlreadyAdded);
-
-    if (NOT WasAlreadyAdded)
-    {
-        ++_NumberOfUniqueEnsuresTriggered;
-    }
-
-    _OnEnsureCountChanged_MC.Broadcast(_NumberOfEnsuresTriggered, _NumberOfUniqueEnsuresTriggered);
+    const auto& Record = ck::ensure::Get_EnsureOccurrenceTracker().Record(
+        ck::ensure::FCk_EnsureSignature{{}, 0, {}, InCallstack});
+    Request_NotifyEnsureCountChanged(Record);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

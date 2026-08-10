@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "CkCore/Ensure/CkEnsure_Tracker.h"
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkCore/Enums/CkEnums.h"
@@ -206,6 +207,10 @@ public:
         const FCk_Delegate_OnEnsureCountChanged& InDelegate);
 
 public:
+    static auto
+    Request_RecordEnsureOccurrence(
+        const ck::ensure::FCk_EnsureSignature& InSignature) -> ck::ensure::FCk_EnsureRecordResult;
+
     static auto
     Get_IsEnsureIgnored(
         FName InFile,

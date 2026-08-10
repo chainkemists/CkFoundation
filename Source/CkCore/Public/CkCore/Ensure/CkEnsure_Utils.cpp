@@ -135,15 +135,9 @@ auto
     Get_EnsureCount()
     -> int32
 {
-    if (NOT GEngine)
-    { return {}; }
-
-    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
-
-    if (ck::Is_NOT_Valid(EnsureSubsystem))
-    { return {}; }
-
-    return EnsureSubsystem->Get_EnsureCount();
+    return static_cast<int32>(FMath::Min<uint64>(
+        ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount(),
+        MAX_int32));
 }
 
 auto
@@ -151,15 +145,7 @@ auto
     Get_UniqueEnsureCount()
     -> int32
 {
-    if (NOT GEngine)
-    { return {}; }
-
-    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
-
-    if (ck::Is_NOT_Valid(EnsureSubsystem))
-    { return {}; }
-
-    return EnsureSubsystem->Get_UniqueEnsureCount();
+    return ck::ensure::Get_EnsureOccurrenceTracker().GetUniqueCount();
 }
 
 auto
@@ -386,20 +372,32 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
+    Request_RecordEnsureOccurrence(
+        const ck::ensure::FCk_EnsureSignature& InSignature)
+    -> ck::ensure::FCk_EnsureRecordResult
+{
+    const auto& Record = ck::ensure::Get_EnsureOccurrenceTracker().Record(InSignature);
+
+    // UObject lookup and dynamic-delegate dispatch remain game-thread only. Worker-thread hits are still
+    // counted exactly and the next game-thread query observes the same process-global tracker.
+    if (NOT IsInGameThread() || NOT GEngine)
+    { return Record; }
+
+    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
+    if (ck::IsValid(EnsureSubsystem))
+    { EnsureSubsystem->Request_NotifyEnsureCountChanged(Record); }
+
+    return Record;
+}
+
+auto
+    UCk_Utils_Ensure_UE::
     Request_IncrementEnsureCountAtFileAndLine(
         FName InFile,
         int32 InLine)
     -> void
 {
-    if (NOT GEngine)
-    { return; }
-
-    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
-
-    if (ck::Is_NOT_Valid(EnsureSubsystem))
-    { return; }
-
-    EnsureSubsystem->Request_IncrementEnsureCountAtFileAndLine(InFile, InLine);
+    Request_RecordEnsureOccurrence(ck::ensure::FCk_EnsureSignature{InFile, InLine, {}, {}});
 }
 
 auto
@@ -408,15 +406,7 @@ auto
         const FString& InCallstack)
     -> void
 {
-    if (NOT GEngine)
-    { return; }
-
-    const auto EnsureSubsystem = GEngine->GetEngineSubsystem<UCk_Ensure_Subsystem_UE>();
-
-    if (ck::Is_NOT_Valid(EnsureSubsystem))
-    { return; }
-
-    EnsureSubsystem->Request_IncrementEnsureCountWithCallstack(InCallstack);
+    Request_RecordEnsureOccurrence(ck::ensure::FCk_EnsureSignature{{}, 0, {}, InCallstack});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
