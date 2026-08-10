@@ -352,6 +352,50 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Graph Nodes", meta = (ClampMin = 0.1, ClampMax = 1))
 	float NodeInactiveOpacity = 0.55f;
+
+	// ----- Alpha ladder ------------------------------------------------------
+	// The four strengths a translucent overlay is allowed to take. Defaults are the literals that
+	// already dominate the debugger suite, so migrating a hardcoded alpha onto a rung is a no-op.
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float AlphaFaint = 0.15f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float AlphaDim = 0.30f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float AlphaSoft = 0.45f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float AlphaStrong = 0.65f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float SelectionOverlayAlpha = 0.22f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float HoverOverlayAlpha = 0.30f;
+
+	// Backdrop strength for the tinted well behind an icon glyph.
+	UPROPERTY(Config, EditAnywhere, Category = "Alphas", meta = (ClampMin = 0, ClampMax = 1))
+	float IconWellAlpha = 0.15f;
+
+	// ----- Shape -------------------------------------------------------------
+	// Corner radii as VALUES, not brushes: a brush is a Slate object and has to be registered once
+	// by whoever owns a style set. These are the numbers those registrations are built from.
+	UPROPERTY(Config, EditAnywhere, Category = "Shape", meta = (ClampMin = 0, ClampMax = 32))
+	float RadiusS = 3.0f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Shape", meta = (ClampMin = 0, ClampMax = 32))
+	float RadiusM = 6.0f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Shape", meta = (ClampMin = 0, ClampMax = 32))
+	float RadiusL = 8.0f;
+
+	// Large enough that the rounded-box shader clamps to a full half-capsule at any height.
+	UPROPERTY(Config, EditAnywhere, Category = "Shape", meta = (ClampMin = 0, ClampMax = 999))
+	float RadiusPill = 99.0f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Shape", meta = (ClampMin = 0, ClampMax = 8))
+	float RingWidth = 1.0f;
 };
 
 // ====================================================================================================================
