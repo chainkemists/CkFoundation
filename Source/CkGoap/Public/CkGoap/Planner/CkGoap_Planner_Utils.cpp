@@ -566,20 +566,54 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Get_LastSearchDebug(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Goap_SearchDebugRow>
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
-		TEXT("Invalid Planner handle in Get_LastSearchDebug"))
-	{ return {}; }
+	auto Rows = TArray<FCk_Goap_SearchDebugRow>{};
+	TryGet_LastSearchDebug(InPlanner, Rows);
+	return Rows;
+}
 
-	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>()) { return {}; }
+auto
+	UCk_Utils_Goap_Planner_UE::
+	TryGet_LastSearchDebug(
+		const FCk_Handle_Goap_Planner& InPlanner,
+		TArray<FCk_Goap_SearchDebugRow>& OutRows) -> bool
+{
+	OutRows.Reset();
+
+	const auto IsValidPlanner = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(IsValidPlanner,
+		TEXT("Invalid Planner handle in TryGet_LastSearchDebug"))
+	{}
+	if (NOT IsValidPlanner) { return false; }
+
+	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>()) { return false; }
 
 	const auto& Graph = InPlanner.Get<ck::FFragment_Goap_Planner_PlanContext>().Get_Graph();
 	const auto PoolSize = Graph.Get_StatePoolSize();
-	if (PoolSize <= 0) { return {}; }
+	if (PoolSize <= 0) { return false; }
 
-	const auto WSSource = Get_WorldStateSource(InPlanner);
-	CK_ENSURE_IF_NOT(ck::IsValid(WSSource),
+	const auto HasActivation = InPlanner.Has<ck::FFragment_Goap_Planner_Activation>();
+	CK_ENSURE_IF_NOT(HasActivation,
+		TEXT("Planner [{}] has search state but no Activation fragment"), InPlanner)
+	{}
+	if (NOT HasActivation) { return false; }
+
+	const auto IsPromotedPlanner = InPlanner.Has<ck::FFragment_Goap_Action_Definition>();
+	const auto IsActive = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>().Get_IsActive();
+	if (IsPromotedPlanner && NOT IsActive) { return false; }
+
+	const auto HasWorldStateSource = InPlanner.Has<ck::FFragment_Goap_Planner_WorldStateSource>();
+	CK_ENSURE_IF_NOT(HasWorldStateSource,
+		TEXT("Planner [{}] has search state but no WorldStateSource fragment"), InPlanner)
+	{}
+	if (NOT HasWorldStateSource) { return false; }
+
+	const auto WSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
+	const auto HasResolvedWorldState = ck::IsValid(WSSource)
+		&& WSSource.Has<ck::FFragment_Goap_WorldState_KeyRegistry>();
+	CK_ENSURE_IF_NOT(HasResolvedWorldState,
 		TEXT("Planner [{}] has search state but no resolved WorldState source"), InPlanner)
-	{ return {}; }
+	{}
+	if (NOT HasResolvedWorldState) { return false; }
 
 	const auto& Registry = WSSource.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 
@@ -596,8 +630,7 @@ auto
 	const auto& SeedWorldState = Graph.Get_CurrentWorldState();
 	const auto& StatePool = Graph.Get_StatePool();
 
-	auto Rows = TArray<FCk_Goap_SearchDebugRow>{};
-	Rows.Reserve(PoolSize);
+	OutRows.Reserve(PoolSize);
 
 	for (auto NodeIndex = 0; NodeIndex < PoolSize; ++NodeIndex)
 	{
@@ -623,10 +656,10 @@ auto
 		Row._UnsatisfiedCount = ConstraintSet.CountUnsatisfied(SeedWorldState);
 		Row._SatisfiedByWorldState = ConstraintSet.IsSatisfiedBy(SeedWorldState);
 
-		Rows.Add(MoveTemp(Row));
+		OutRows.Add(MoveTemp(Row));
 	}
 
-	return Rows;
+	return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
