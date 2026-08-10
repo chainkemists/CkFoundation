@@ -174,6 +174,25 @@ namespace CkStyle
 	CKEDITORTOOLS_API auto NodeBorderThickness()   -> float;
 	CKEDITORTOOLS_API auto NodeInactiveOpacity()   -> float;
 
+	// ----- Alpha ladder ------------------------------------------------------
+	// The sanctioned strengths for a translucent overlay. Compose with OverlayOf(Base, Alpha)
+	// instead of writing `Color.A = 0.55f` at the use site.
+	CKEDITORTOOLS_API auto AlphaFaint()  -> float;
+	CKEDITORTOOLS_API auto AlphaDim()    -> float;
+	CKEDITORTOOLS_API auto AlphaSoft()   -> float;
+	CKEDITORTOOLS_API auto AlphaStrong() -> float;
+
+	CKEDITORTOOLS_API auto SelectionOverlayAlpha() -> float;
+	CKEDITORTOOLS_API auto HoverOverlayAlpha()     -> float;
+	CKEDITORTOOLS_API auto IconWellAlpha()         -> float;
+
+	// ----- Shape (radii as VALUES; the brushes built from them are below) ----
+	CKEDITORTOOLS_API auto RadiusS()    -> float;
+	CKEDITORTOOLS_API auto RadiusM()    -> float;
+	CKEDITORTOOLS_API auto RadiusL()    -> float;
+	CKEDITORTOOLS_API auto RadiusPill() -> float;
+	CKEDITORTOOLS_API auto RingWidth()  -> float;
+
 	// ----- Spacing (compile-time constants — no need to tune) -----------------
 	constexpr auto SpaceXS  = 2.0f;
 	constexpr auto SpaceS   = 4.0f;

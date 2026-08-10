@@ -140,6 +140,20 @@ CK_STYLE_GETTER(NodeMetaFontSize)
 CK_STYLE_GETTER(NodeBorderThickness)
 CK_STYLE_GETTER(NodeInactiveOpacity)
 
+CK_STYLE_GETTER(AlphaFaint)
+CK_STYLE_GETTER(AlphaDim)
+CK_STYLE_GETTER(AlphaSoft)
+CK_STYLE_GETTER(AlphaStrong)
+CK_STYLE_GETTER(SelectionOverlayAlpha)
+CK_STYLE_GETTER(HoverOverlayAlpha)
+CK_STYLE_GETTER(IconWellAlpha)
+
+CK_STYLE_GETTER(RadiusS)
+CK_STYLE_GETTER(RadiusM)
+CK_STYLE_GETTER(RadiusL)
+CK_STYLE_GETTER(RadiusPill)
+CK_STYLE_GETTER(RingWidth)
+
 #undef CK_STYLE_GETTER
 
 // ====================================================================================================================
