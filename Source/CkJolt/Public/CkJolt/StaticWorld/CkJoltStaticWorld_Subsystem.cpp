@@ -142,13 +142,23 @@ auto
     { return; }
 #endif
 
+    auto SweepStats = ck::jolt::bake::FCk_Jolt_ExtractionStats{};
+    auto NumLevels = int32{0};
+
     for (const auto& Level : InWorld.GetLevels())
     {
         if (ck::Is_NOT_Valid(Level))
         { continue; }
 
-        DoAdd_BodiesForLevel(*Level);
+        SweepStats += DoAdd_BodiesForLevel(*Level);
+        ++NumLevels;
     }
+
+    // Always at Log verbosity: an EMPTY static world means probe traces cannot hit world geometry, and
+    // that emptiness used to be invisible below VeryVerbose. One line per world boot, spam-free.
+    ck::jolt::Log(TEXT("JoltStaticWorld: BeginPlay sweep for [{}]: [{}] static bodies across [{}] levels "
+        "([{}] movable primitive components skipped — the level sweep bakes Static-mobility only)"),
+        InWorld.GetFName(), _NumStaticBodies, NumLevels, SweepStats._NumComponentsSkippedMovable);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -356,12 +366,12 @@ auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoAdd_BodiesForLevel(
         ULevel& InLevel)
-        -> void
+        -> ck::jolt::bake::FCk_Jolt_ExtractionStats
 {
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldLevelAdd);
 
     if (_LevelBodies.Contains(&InLevel))
-    { return; }
+    { return {}; }
 
     // A level can be added before BeginPlay: with no transient entity to parent attribution entities under,
     // SKIP — the level is not recorded, so the OnWorldBeginPlay sweep re-attempts it.
@@ -370,24 +380,31 @@ auto
     {
         ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added before the ECS world was ready — deferring "
             "to the BeginPlay sweep"), InLevel.GetOutermost()->GetName());
-        return;
+        return {};
     }
 
     auto ActorEntities = TArray<FCk_Handle_JoltStaticActor>{};
     auto BodyIds = TArray<uint32>{};
     auto CellIndices = TArray<int32>{};
+    auto Stats = ck::jolt::bake::FCk_Jolt_ExtractionStats{};
 
     if (Get_UsesCookedData())
     { DoAdd_BodiesForLevel_Cooked(InLevel, TransientEntity, ActorEntities, BodyIds, CellIndices); }
     else
-    { DoAdd_BodiesForLevel_LiveExtract(InLevel, TransientEntity, ActorEntities, BodyIds); }
+    { DoAdd_BodiesForLevel_LiveExtract(InLevel, TransientEntity, ActorEntities, BodyIds, Stats); }
 
     if (ActorEntities.IsEmpty())
     {
         // Cells can be loaded even when every actor was skipped (stale hashes) — release so they GC.
         for (const auto& CellIndex : CellIndices)
         { DoRelease_Cell(CellIndex); }
-        return;
+
+        // This return used to be TOTALLY silent, which cost a real debugging session: a level whose only
+        // static geometry is Movable-mobility adds nothing, and nothing said so below VeryVerbose.
+        ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added NO static bodies ([{}] primitive components "
+            "considered, [{}] skipped as MOVABLE — use Request_BakeActor for movable-but-static-in-intent actors)"),
+            InLevel.GetOutermost()->GetName(), Stats._NumComponentsConsidered, Stats._NumComponentsSkippedMovable);
+        return Stats;
     }
 
     DoBatchAdd_Bodies(BodyIds);
@@ -403,6 +420,8 @@ auto
 
     ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added [{}] static bodies across [{}] source entities "
         "(total [{}])"), InLevel.GetOutermost()->GetName(), NumBodies, NumEntities, _NumStaticBodies);
+
+    return Stats;
 }
 
 auto
@@ -445,7 +464,8 @@ auto
         ULevel& InLevel,
         const FCk_Handle& InTransientEntity,
         TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
-        TArray<uint32>& OutBodyIdsForBatch)
+        TArray<uint32>& OutBodyIdsForBatch,
+        ck::jolt::bake::FCk_Jolt_ExtractionStats& OutStats)
         -> void
 {
     for (const auto& Actor : InLevel.Actors)
@@ -454,7 +474,8 @@ auto
         { continue; }
 
         auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
-        ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted);
+        ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted,
+            ck::jolt::bake::ECk_Jolt_ExtractionPolicy::LevelSweep, &OutStats);
 
         if (Extracted.IsEmpty())
         { continue; }

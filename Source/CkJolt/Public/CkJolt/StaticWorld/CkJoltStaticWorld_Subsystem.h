@@ -117,9 +117,11 @@ private:
         ULevel* InLevel,
         UWorld* InWorld) -> void;
 
+    // Returns the level's extraction stats so the BeginPlay sweep can report a per-world summary
+    // (zeroed for the cooked path — its skips happened at cook time and are loud there).
     auto
     DoAdd_BodiesForLevel(
-        ULevel& InLevel) -> void;
+        ULevel& InLevel) -> ck::jolt::bake::FCk_Jolt_ExtractionStats;
 
     auto
     DoRemove_BodiesForLevel(
@@ -130,7 +132,8 @@ private:
         ULevel& InLevel,
         const FCk_Handle& InTransientEntity,
         TArray<FCk_Handle_JoltStaticActor>& OutActorEntities,
-        TArray<uint32>& OutBodyIdsForBatch) -> void;
+        TArray<uint32>& OutBodyIdsForBatch,
+        ck::jolt::bake::FCk_Jolt_ExtractionStats& OutStats) -> void;
 
     auto
     DoAdd_BodiesForLevel_Cooked(
