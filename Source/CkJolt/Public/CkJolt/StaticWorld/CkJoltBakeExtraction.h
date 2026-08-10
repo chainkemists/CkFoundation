@@ -33,6 +33,24 @@ namespace ck::jolt::bake
         ExplicitActor
     };
 
+    /// Per-sweep visibility: WHY a level contributed nothing is otherwise invisible (the per-component
+    /// skip logs at VeryVerbose only, and an all-skipped level used to add zero bodies in total silence).
+    /// Aggregated per level and per BeginPlay sweep by the static-world subsystem.
+    struct CKJOLT_API FCk_Jolt_ExtractionStats
+    {
+        int32 _NumComponentsConsidered = 0;
+        int32 _NumComponentsSkippedMovable = 0;
+        int32 _NumBodiesExtracted = 0;
+
+        auto operator+=(const FCk_Jolt_ExtractionStats& InOther) -> FCk_Jolt_ExtractionStats&
+        {
+            _NumComponentsConsidered += InOther._NumComponentsConsidered;
+            _NumComponentsSkippedMovable += InOther._NumComponentsSkippedMovable;
+            _NumBodiesExtracted += InOther._NumBodiesExtracted;
+            return *this;
+        }
+    };
+
     /// Scale is baked into _Shape; _Position/_Rotation are the body's world transform.
     struct CKJOLT_API FCk_Jolt_ExtractedBody
     {
@@ -95,14 +113,16 @@ namespace ck::jolt::bake
         const AActor& InActor,
         FCk_Jolt_ShapeCache& InShapeCache,
         TArray<FCk_Jolt_ExtractedBody>& OutBodies,
-        ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep) -> int32;
+        ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep,
+        FCk_Jolt_ExtractionStats* OutStats = nullptr) -> int32;
 
     /// Component-level entry (used by ExtractActor and by tests). Same skip/ensure rules.
     CKJOLT_API auto ExtractComponent(
         const UPrimitiveComponent& InComponent,
         FCk_Jolt_ShapeCache& InShapeCache,
         TArray<FCk_Jolt_ExtractedBody>& OutBodies,
-        ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep) -> int32;
+        ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep,
+        FCk_Jolt_ExtractionStats* OutStats = nullptr) -> int32;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Shape builders (exposed for tests and for the dynamic-body feature)
