@@ -133,6 +133,28 @@
   explicitly OK deferring; lives in CkGameplayDebugger (`feature/debugger-qol-campaign`),
   tackle as its own unit after the arena slices or hand to the debugger campaign.
 
+- **Slice 3 — enemy + block (2026-08-10, Opus dispatch): INSTALLED, gate in flight, awaiting
+  maintainer PIE.** Drafted COMPLETE, no STOPs; every wrapper signature cited file:line and
+  the orchestrator attested the agent's three flagged risks in the corpus (`ck::ToEntity(this)`
+  — CkAStar/CkAttribute gyms; `Math::Cos` — CkAggro; `.DotProduct` — CkCrowd/CkPathNetwork).
+  Installed: `CkPlaygroundGym_Enemy.as` (603, NEW — `UCk_GenericEntityScript_UE`, spawn via
+  the CueGym `FCk_Gym_TransformSpawnParams`/`InitialTransform` name-match idiom [agent's
+  correct catch: a self-named generated params struct is a first-compile chicken-and-egg];
+  PMG sphere torso + base ring, edge-triggered tint with telegraph > hit-flash, floor HITS
+  counter on the solved recipe with camera yaw asked of the pawn, one-projectile-in-flight
+  700cm/s straight shot resolving at 80cm into `Request_TakeProjectileHit`, clock HELD at
+  interval while out of range, DoEndPlay destroys all owned shapes), `Shared.as` (497→522 —
+  `B`=Q minted with NO move rows, ledger states the read-not-graded contrast),
+  `Pawn.as` (1301→1620 — enemy registration, live-record `Get_IsBlocking` [not tick-cached:
+  the projectile resolves on the enemy's own timer tick], YZ block plate riding the cursor
+  aim, `DoSpawnSwing(+family,+step)` runs the hit-test from the same numbers the shape drew
+  with [cosine arc 55/75, planar both operands], blocked=cyan-at-plate / hit=red-at-body
+  beats, input line `+ B h<n>f`, `Get_CameraYaw` accessor, Q deliberately NOT in the
+  minted-key swap gate). Orchestrator touch: PC legend updated. **Gate ✅ GREEN:
+  123/123, 0 failed/skipped/contaminated, AS compile first try (`Test-Phase10Slice3.log`,
+  1m26s; also covers the slice-2 floor-label fix — the cross-file pawn<->enemy reference
+  resolved fine).** Awaiting maintainer PIE.
+
 ## Exit criteria
 
 - [ ] Maintainer signs off on the Diablo feel (slice 1) in PIE
