@@ -48,9 +48,66 @@ lock probed FREE before both launch attempts; one infra false-start — wrong to
 `C:\Program Files\...`, correct is project-relative `CkAuto/UnrealToolbox.exe`, zero tests ran
 on the failed attempt). ALL UNCOMMITTED (slices 6+7+8): CkTests (5 gym .as — Pawn, Enemy,
 Moves, Shared, PC) + CkFoundation (PHASE_10.md, PROGRESS.md, PHASE_10_EDITOR_VERIFY.md).
-Next: maintainer /commit call → PIE re-drive §1 (sprint) / §2 (hitbox, BUFFERED label) /
-§4 (parry deflect) / §5 (sprint attacks). The closed-state paragraph below stands as
-history.
+**COMMITTED 2026-08-10 (maintainer /commit; push NOT authorized): CkTests dev `aa43af46`
+(slices 6-8, 5 gym files, +444/−333), CkFoundation dev `4fe8fbd79` (campaign docs; this
+line rides the next docs commit).** Superproject pointer bumps left to the ship
+conversation. Remaining on the maintainer: PIE re-drive §1 (sprint) / §2 (hitbox, BUFFERED
+label) / §4 (parry deflect) / §5 (sprint attacks). **NEW WORKSTREAM opened same day (maintainer
+"proceed"): PHASE_11 — device visualizers (full-size keyboard + realistic gamepad) for
+CkIntentDebugger, with a standing constraint: the device widgets must support IN-GAME
+overlay use in the near future (runtime-module placement, not debugger-only).** See
+PHASE_11.md — rulings [P11-D1] (widgets live in CkDebuggerCommon, Runtime, data-decoupled via
+plain-value `FCkDebug_DeviceSnapshot`; verified cookable — CkEditorTools is Runtime despite
+the name, editor deps properly bBuildEditor-gated; slice 11-2's gamepad MASTER SVG is
+authored at `CkDebuggerCommon/Resources/Devices/Gamepad_Master.svg` and preview-verified via
+ImageMagick — awaiting maintainer art verdict before the per-layer split), [P11-D2] (keyboard
+procedural / gamepad layered SVG-masters→PNG pipeline, ImageMagick on this machine),
+[P11-D3] (one state
+vocabulary: flash 15f decay, fill toward hold verdict, analog analog, disconnected grey),
+[P11-D4] (two-tier key fidelity: minted exact off the ring, unminted witnessed per-pass —
+declared in the panel caption). **Slice 11-1 INSTALLED orchestrator-inline** (5 new files in
+CkDebuggerCommon/CkIntentDebugger + 6 edits; details in PHASE_11.md slice log); gate
+`--build --test` ✅ **GREEN 123/123** (0 failed/skipped/contaminated, fresh build, 1m9s test
+phase, `BuildTest-Phase11Slice1-2.log`; first attempt failed on one real defect — C2398
+narrowing, FVector2D is double in UE5 and poisoned the unit-scale inference — fixed at the
+single source). **Maintainer PIE round 5 (same day) → slice 11-1b INSTALLED, gate in
+flight (`BuildTest-Phase11Slice1b.log`)**: [P11-D5] tabless layout (all four views visible in
+splitter quadrants), [P11-D6] mouse added + all-devices-always-visible-greyed rule,
+[P11-D7] STUCK-KEY FIX — witnessed release edges were sampled at refresh cadence and latched
+IsDown forever (unminted keys only, e.g. locomotion D); edge capture now runs UNGATED every
+widget frame (`Tick_WitnessDeviceEdges`, supersedes [P11-D4]'s deferral). **Slice 11-1b
+GATED ✅ GREEN 123/123** (0 failed/skipped/contaminated, fresh build, 1m13s,
+`BuildTest-Phase11Slice1b-2.log`; one compile retry — `auto` deduced INDEX_NONE's unnamed
+enum type, fixed with `int32{INDEX_NONE}`). **PRODUCTION FIX same day (maintainer: "when I
+double click rapidly, only the first click is registered"): the Slate writer never
+implemented `HandleMouseButtonDoubleClickEvent`** — the OS classifies a rapid double click's
+second press as its own event type, Slate routes it to that separate callback, and the
+IInputProcessor default swallowed it: the inbox saw press→release→(nothing)→release. Slow
+doubles (outside GetDoubleClickTime) worked, which is why it presented as "rapid only"; this
+was also a hidden contributor to the earlier chains-feel-bad rounds. Fix: the override
+records an ordinary `Pressed` row (`CkInputSlate_Preprocessor.{h,cpp}` + module-doc handler
+table row). Untestable in the harness by construction — autotests inject via
+`Request_InjectRawEvent`, bypassing Slate, and the writer gates on viewport focus;
+[EDITOR-VERIFY] = rapid-double-click in PIE, both presses must flash on the debugger
+keyboard and the chain must advance. Gate ✅ **GREEN 123/123** (0 failed/skipped/
+contaminated, fresh build, 1m11s, `BuildTest-DoubleClickFix.log`, compile first try).
+**Round 6 (maintainer, same day, going AFK with a /commit directive): slice 11-1c INSTALLED**
+— all-splitter resizable layout, tables moved under the layer stack, timeline lane step
+16→22px + dock fills its slot, [P11-D8] terminal-phase spans clamp to 20f pulses (the
+"perpetual red bars" = still-open Failed spans drawn to the live edge — demystified + fixed);
+gate ✅ **GREEN 123/123** (0 failed/skipped/contaminated, fresh build, 1m12s,
+`BuildTest-Phase11Round6-2.log`; one compile retry — a scripted edit-splice mangled the
+window file, repaired + structure-verified). **COMMITTED per the maintainer's AFK
+directive (push still NEVER): commit SHAs recorded in the next docs commit's log.**
+Remaining for the maintainer on return: PIE the round-6 layout (resizable everything,
+tables under the stack, timeline pulses + legible lanes), rapid-double-click check,
+gamepad art verdict → slice 11-2 build-out, ship conversation.
+Awaiting: maintainer PIE re-drive (tabless window, mouse, stuck-key check, rapid
+double-click) + gamepad art verdict + /commit for CkGameplayDebugger AND this CkFoundation
+production fix. NOTE:
+CkGameplayDebugger now sits on **dev** at `a71d10e` (qol campaign landed; the old
+do-not-touch-their-branch constraint is OBSOLETE); slice 11-1 work is uncommitted on dev
+there. The closed-state paragraph below stands as history.
 
 **As of 2026-08-10 (late): PHASE 10 technically CLOSED under [P2-D4] — all five slices built,
 gated, and committed; the AFK mandate ("complete all the slices, /commit periodically") is
