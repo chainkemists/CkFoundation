@@ -98,13 +98,139 @@ contaminated, fresh build, 1m11s, `BuildTest-DoubleClickFix.log`, compile first 
 gate ✅ **GREEN 123/123** (0 failed/skipped/contaminated, fresh build, 1m12s,
 `BuildTest-Phase11Round6-2.log`; one compile retry — a scripted edit-splice mangled the
 window file, repaired + structure-verified). **COMMITTED per the maintainer's AFK
-directive (push still NEVER): commit SHAs recorded in the next docs commit's log.**
-Remaining for the maintainer on return: PIE the round-6 layout (resizable everything,
-tables under the stack, timeline pulses + legible lanes), rapid-double-click check,
-gamepad art verdict → slice 11-2 build-out, ship conversation.
-Awaiting: maintainer PIE re-drive (tabless window, mouse, stuck-key check, rapid
-double-click) + gamepad art verdict + /commit for CkGameplayDebugger AND this CkFoundation
-production fix. NOTE:
+directive (push still NEVER): CkGameplayDebugger dev `3a446fb` (device widgets) +
+`de631f5` (devices view/layout/pulses); CkFoundation dev `b225748e2` (double-click fix) +
+`d3e6826a4` (campaign docs).**
+**Round 7 (maintainer returned, 2026-08-11): slice 11-1d INSTALLED + GATED ✅ GREEN
+123/123** (0 failed/skipped/contaminated, fresh build, compile first try, 1m14s test
+phase, `BuildTest-Phase11Round7.log`; editor lock probed FREE). UNCOMMITTED. Two
+items: (1) directed layout — the three tables (Layer stack | Resolution table | Near
+misses) become a HORIZONTAL row on TOP; timeline over { Key/State | Devices } takes the
+full window width below (outer splitter flipped vertical; every boundary still a splitter
+handle). (2) **[P11-D9] alt-tab stuck key = a second CkInput production fix**: the Slate
+writer's focus gate drops the out-of-focus release, so the pipeline (not just the
+debugger) held a phantom press; the writer now tracks recorded-down keys and its Tick
+flushes them as synthetic `Released` rows when viewport focus is gone — FlushPressedKeys
+semantics; a hold does not survive the focus gap (re-press on return); analog not flushed.
+Untestable in the harness (injection bypasses Slate); [EDITOR-VERIFY] = hold a key,
+alt-tab out, release, return — the debugger keyboard must show it up. Files: CkInput
+`CkInputSlate_Preprocessor.{h,cpp}` + `CLAUDE.md` writer contract; CkIntentDebugger
+`SCkIntentDebuggerWindow.cpp` Build_Body; PHASE_11.md + this file.
+**Round 8 (maintainer, same day): slice 11-1e INSTALLED + GATED ✅ GREEN 123/123** (0
+failed/skipped/contaminated, fresh build, compile first try, 1m9s test phase,
+`BuildTest-Phase11Round8.log`; editor lock probed FREE). UNCOMMITTED. Four findings:
+(1) actionable-key OUTLINES on the devices (minted ∪ layer-captured keys, Accent rim,
+`IsActionable` on the snapshot contract); (2) Q/block invisible in the timeline —
+grammar-free presses have no intent lane, so the timeline gains PER-BUTTON lanes (held-run
+spans + press markers off the ring, between layer and intent lanes); (3) timeline
+scrub/zoom/pan ruled **[P11-D10]** — the multi-lane `SCkDebug_EventTimeline` adopts the
+`SCkDebug_ScrubTimeline` interaction contract opt-in (wheel zoom about cursor, right-drag
+pan, LMB-drag scrub, F = follow live; GOAP consumer untouched), with pan/zoom carried
+across lane-set rebuilds; (4) pips-over-label-text = the fixed 56px gutter — now MEASURED
+from the widest lane label + boundary line + out-of-view marker culling; frame ticks label
+"f1234" instead of the lying "s" suffix.
+**Round 8b (maintainer: "I am still unable to scrub"): slice 11-1f INSTALLED, gate
+pending.** Three inspection-confirmed defects (PIE not reproducible here; the first is the
+dominant mechanism): the timeline drew NO scrub cursor (the model scrubbed — SCRUB @ label
++ Key/State followed — but the track itself showed nothing, so a working drag read as
+dead); a press within the marker pick radius selected instead of starting a drag (fatal on
+the now-dense track — marker clicks now continue as drags); and a mid-drag lane-set
+rebuild destroyed the capture-holding widget (dock now defers rebuilds while
+`Get_IsInteracting()`). New `CursorTime` attribute on the shared widget; details in
+PHASE_11.md 11-1f.
+**Round 8c (maintainer's discriminating observation: "timeline stops moving while I hold
+right-click, pan does nothing, resumes on release"): slice 11-1g INSTALLED, gate pending.**
+Two mechanisms: the freeze = Slate's responsive-UI throttle (a held button on an editor
+widget pauses PIE — fixed with `PreventThrottling()` on both drag replies), and pan-no-op =
+the full-range default view (nothing outside it to pan to — fixed with an initial
+live-following 600-frame window via new `InitialViewDuration`, the SM track's own default
+feel). GATE-INFRA (root-caused): FOUR gate attempts died exit-255 at four random stages
+(run-editor boot ×2, mid-compile, UBA start) — cause is SIBLING toolbox sessions cycling
+gates concurrently on the `_Other` worktree lane (CkPlugins_Other build +
+BusterBlock_Other Gauntlet, own engine tree) starting ~07:26, exactly when this session's
+greens turned to kills; concurrent toolbox activity is the known false-red machinery.
+Earlier window-closed theory RETRACTED. After the sibling lane drained, **slices
+11-1f+11-1g GATED together ✅ GREEN 123/123** (0 failed/skipped/contaminated, fresh build,
+1m12s test phase, `BuildTest-Phase11Round8c-3.log`). UNCOMMITTED.
+**Round 9 (maintainer PIE of 8c — scrub cursor/outlines/button lanes visibly working in
+the screenshot): slice 11-1h INSTALLED + GATED ✅ GREEN 123/123** (0 failed/skipped/
+contaminated, fresh build incl. gym AS, 1m14s, `BuildTest-Phase11Round9.log`).
+UNCOMMITTED. (1) scrub-while-live — the drag
+never detached the live-follow, so the window slid out from under the cursor; scrub now
+PARKS the window, "Go live" re-attaches (`Refollow_Live()`). (2) pan-history wall = the
+GYM's sampler ring (240 ≈ 4s) → 1800 (~30s) in `CkPlaygroundGym_Shared.as` (CkTests). (3)
+devices + key/state now render as-of the scrubbed frame (minted = exact ring walk to that
+frame; witnessed unminted = best-effort latest-edge-pair, declared tier difference).
+**Round 10 (maintainer: park still broken, pan still broken, phantom keys under slomo):
+slice 11-1i INSTALLED + GATED ✅ GREEN 123/123** (0 failed/skipped/contaminated, fresh
+build, 1m16s, `BuildTest-Phase11Round10-2.log`; attempt 1 failed on own C2440 —
+`HasAnyUserFocus()` returns `TOptional`, fixed `.IsSet()`; the maintainer's
+"did you look at the SM timeline?" callout landed mid-round — the ScrubTimeline
+IMPLEMENTATION had never been read, only its header; alignment pass folded into this
+gate, see PHASE_11 11-1i round-10b addendum). UNCOMMITTED.
+**Round 11 (maintainer: "STILL does not pan / STILL does not stop — should I start a new
+conversation?"): build-desync identified as the live hypothesis.** On-disk code +
+line-by-line re-read + built DLL mtimes (08:25) all agree park/pan work by construction
+in the round-10-2 build; every feedback round's symptoms have exactly matched the
+PREVIOUS build's defect list, and the failed first round-10 gate left round-9 binaries
+on disk until 08:25 — a PIE session in that window drove the old build. Resolution: the
+timeline header now carries a BUILD STAMP (SubText trailing "r10"; bump on every
+behavior change to the dock or shared widget) — gated ✅ GREEN 123/123
+(`BuildTest-Phase11Round10-stamped.log`, fresh build, 1m13s). Maintainer protocol: PIE
+only after a green report, confirm the stamp on screen, then judge. If park/pan fail
+WITH r10 visible, next step is an instrumented repro, not another fix-and-gate round.
+**Round 12: r10 CONFIRMED on screen, SM timeline verified working, intent park/pan
+STILL dead ("all I can do is scrub in the timeline that I see") — definitively this
+code, and three clean code-simulations have failed to find it. Instrumented repro
+shipped as r10.1**: the timeline draws a live state readout (FOLLOW/PARKED, window,
+data range, pan/scrub input counters, [PANNING]/[SCRUBBING]) whenever pan-zoom is on.
+The maintainer reads the line while dragging; the counters separate input-never-arrived
+from state-never-applied from paint-never-reflected, and the data range settles the
+ring question (gym file verified on disk: k_RingCapacity=1800, composed idempotently at
+`CkPlaygroundGym_Shared.as:286`).
+**The readout delivered the verdict in one screenshot: `PARKED win 3251-3491 (240)
+data 3251-3491 pan#441 [PANNING]` — flags flip, input arrives and applies, and the
+DATA RANGE IS EXACTLY 240: the ViewModel's own `MaxRecordedFrames = 240` collector cap
+(predating the ring raise; invisible while cap == ring) was the true root cause of
+every park/pan symptom since round 9. Ruled [P11-D12]: cap DELETED, the pull is
+bounded by the ring itself; stamp bumped r11; the diagnostic readout stays until the
+maintainer confirms, then comes out. Slice 11-1j GATED ✅ GREEN 123/123
+(`BuildTest-Phase11-r11.log`, fresh build, 1m21s). UNCOMMITTED.**
+**Round 13: MAINTAINER CONFIRMED — "Excellent! It finally worked." Park, pan, scrub all
+behaving in PIE on r11. Follow-ups shipped as slice 11-1k (stamp r12, gate pending):
+diagnostic readout + counters REMOVED (their job is done); maintainer-requested history
+tunability first shipped as a CVar floor ([P11-D13], gated green r12) — then the
+maintainer rejected the design's complexity ("why can't I just write a number?") and it
+was REPLACED by [P11-D14] (ViewModel-side recording) — then the maintainer named the
+HOUSE pattern mid-implementation ("debug is a fragment on the entity, consumed by the
+debugger, compiled out in shipping") and it was replaced again by **[P11-D15]** (slice
+11-1m, stamp r13, gate pending): new `CkIntentHistory` debug-feature quartet in CkIntent
+(processor-recorded, sampler-style read surface, `Request_SetCapacity` immediate mutator,
+`#if !UE_BUILD_SHIPPING` per the CkStateMachine/Debug precedent), collector prefers it
+transparently, timeline "history" field retunes it via the ViewModel's one sanctioned
+mutation (carve-out recorded in CkIntentDebugger CLAUDE.md), gym composes 1800 / ring
+back to 240; the D14 ViewModel machinery + D13 CVar both deleted same change. Slice
+11-1m GATED ✅ GREEN 123/123 (`BuildTest-Phase11-r13-2.log`, fresh build incl. new
+quartet + gym AS, 1m10s; attempt 1 failed on a missing `CkProcessorRegistration.h`
+include). UNCOMMITTED. The maintainer's "did you reference existing debug fragments?"
+audit found the naming delta (house debug fragments carry `Debug` in their symbols);
+rename APPROVED and executed — feature token now **IntentDebugHistory** uniformly, files
+under `CkIntent/Debug/` (round-14b addendum in PHASE_11). Rename regate ✅ GREEN
+123/123 (`BuildTest-Phase11-r13-rename.log`, fresh build incl. gym AS, 1m16s).
+**MAINTAINER CONFIRMED r13 in PIE: "Everything's good." Rounds 7-14 are DONE and
+verified — awaiting /commit; then gamepad art verdict → slice 11-2, and the ship
+conversation.** Park/pan = two compounding view-state bugs (follow
+re-derived from geometry undid every park within seconds; the duration-0 full-view
+collapse permanently killed pan+park after any full zoom-out or early-ring rebuild) —
+follow is now explicit owned state, scrubbed⇒parked enforced per refresh, the collapse
+trap removed. Phantom keys = the maintainer's own `slomo 0.1` CONSOLE TYPING (the lit keys
+spell it): the console box is a viewport DESCENDANT, so the focus gate recorded it — ruled
+**[P11-D11]**, gate is now direct `HasAnyUserFocus()` (third CkInput production fix; the
+[P11-D9] flush covers the handoff).
+Remaining for the maintainer: PIE round 10 (park survives rebuilds, pan works regardless
+of zoom history, console typing invisible to the record) + round-7 checks, gamepad art
+verdict → slice 11-2 build-out, ship conversation.
+NOTE:
 CkGameplayDebugger now sits on **dev** at `a71d10e` (qol campaign landed; the old
 do-not-touch-their-branch constraint is OBSOLETE); slice 11-1 work is uncommitted on dev
 there. The closed-state paragraph below stands as history.
