@@ -127,10 +127,16 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   (component-granular runtime bake for runtime-composed geometry — a re-bake REPLACES the
   component's bodies, so repopulated ISMs re-bake cleanly), `Get_RayCastStaticWorld` (Phase-1
   introspection; the channel-filtered query API is Phase 2; the hit carries a `_Entity` handle,
-  not an actor name). CkUnrealComponent layers an opt-in on top:
-  `UCk_Utils_UnrealComponent_UE::Request_BakeIntoJoltStaticWorld` (call AFTER configuring the
-  hosted component — an ISM baked before its instances exist bakes nothing) with automatic body
-  removal at the component's EndPlay teardown.
+  not an actor name). CkUnrealComponent bakes hosted primitives AUTOMATICALLY
+  (`_StaticWorldBakePolicy = Automatic`, the default): a collision-bearing component bakes at
+  setup unless the Jolt bake-filter's component exclusions say otherwise, moving the owning
+  entity RE-BAKES the bodies at the new pose (teleports/rearrangement stay query-correct; a
+  continuously moving blocker churns the broadphase — that content belongs on a kinematic
+  CkJoltBody), and EndPlay teardown removes them. Zero bodies under Automatic is a quiet skip —
+  an ISM whose instances arrive after Add calls
+  `UCk_Utils_UnrealComponent_UE::Request_BakeIntoJoltStaticWorld` once configured. `BakeOnSetup`
+  declares archetype-complete collision (zero bodies = loud ensure, filter bypassed);
+  `DoNotBake` opts out.
 - **Per-mesh pre-baked shapes** (`UCk_Jolt_CookedMeshShape_UE` + `mesh_shape_utils`,
   StaticWorld/CkJoltMeshShape_Utils.h): the CkJoltEditor mesh cook sweeps every static mesh under
   `_BakedMeshShapeRoots` and stores its SCALE-1 shape blob at

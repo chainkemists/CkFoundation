@@ -539,6 +539,15 @@ namespace ck::jolt::bake
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_IsComponentExcludedByBakeFilter(
+            const UPrimitiveComponent& InComponent,
+            const FCk_Jolt_BakeFilter& InFilter)
+        -> bool
+    {
+        return Get_IsComponentExcludedByFilter(InComponent, InFilter);
+    }
+
+    auto
         FCk_Jolt_ShapeCache::
         GetOrCreate_Shape(
             const UBodySetup& InBodySetup,
