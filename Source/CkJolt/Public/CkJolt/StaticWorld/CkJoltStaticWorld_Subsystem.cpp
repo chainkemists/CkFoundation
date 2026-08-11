@@ -157,8 +157,12 @@ auto
     // Always at Log verbosity: an EMPTY static world means probe traces cannot hit world geometry, and
     // that emptiness used to be invisible below VeryVerbose. One line per world boot, spam-free.
     ck::jolt::Log(TEXT("JoltStaticWorld: BeginPlay sweep for [{}]: [{}] static bodies across [{}] levels "
-        "([{}] movable primitive components skipped — the level sweep bakes Static-mobility only)"),
-        InWorld.GetFName(), _NumStaticBodies, NumLevels, SweepStats._NumComponentsSkippedMovable);
+        "(mobility policy [{}]: [{}] components excluded by mobility, [{}] components + [{}] actors excluded "
+        "by bake-filter settings)"),
+        InWorld.GetFName(), _NumStaticBodies, NumLevels,
+        UCk_Utils_Jolt_ProjectSettings::Get_BakeMobilityPolicy(),
+        SweepStats._NumComponentsExcludedByMobility, SweepStats._NumComponentsExcludedByFilter,
+        SweepStats._NumActorsExcludedByFilter);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -223,8 +227,9 @@ auto
         const AActor& InActor)
         -> int32
 {
+    // ExplicitActor ignores the bake filter — the caller declared the actor static-in-intent.
     auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
-    ck::jolt::bake::ExtractActor(InActor, _LiveShapeCache, Extracted,
+    ck::jolt::bake::ExtractActor(InActor, _LiveShapeCache, Extracted, {},
         ck::jolt::bake::ECk_Jolt_ExtractionPolicy::ExplicitActor);
 
     if (Extracted.IsEmpty())
@@ -400,10 +405,14 @@ auto
         { DoRelease_Cell(CellIndex); }
 
         // This return used to be TOTALLY silent, which cost a real debugging session: a level whose only
-        // static geometry is Movable-mobility adds nothing, and nothing said so below VeryVerbose.
+        // static geometry is excluded (mobility policy or bake-filter settings) adds nothing, and nothing
+        // said so below VeryVerbose.
         ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added NO static bodies ([{}] primitive components "
-            "considered, [{}] skipped as MOVABLE — use Request_BakeActor for movable-but-static-in-intent actors)"),
-            InLevel.GetOutermost()->GetName(), Stats._NumComponentsConsidered, Stats._NumComponentsSkippedMovable);
+            "considered, [{}] excluded by mobility policy, [{}] components + [{}] actors excluded by "
+            "bake-filter settings — use Request_BakeActor to bypass the filter for static-in-intent actors)"),
+            InLevel.GetOutermost()->GetName(), Stats._NumComponentsConsidered,
+            Stats._NumComponentsExcludedByMobility, Stats._NumComponentsExcludedByFilter,
+            Stats._NumActorsExcludedByFilter);
         return Stats;
     }
 
@@ -468,13 +477,15 @@ auto
         ck::jolt::bake::FCk_Jolt_ExtractionStats& OutStats)
         -> void
 {
+    const auto BakeFilter = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings();
+
     for (const auto& Actor : InLevel.Actors)
     {
         if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
         auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
-        ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted,
+        ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted, BakeFilter,
             ck::jolt::bake::ECk_Jolt_ExtractionPolicy::LevelSweep, &OutStats);
 
         if (Extracted.IsEmpty())
@@ -510,6 +521,10 @@ auto
     const auto& Cells = _CookedIndex->Get_Cells();
     auto UsedCellIndices = TSet<int32>{};
 
+    // The index-level filter-hash check in DoEnsure_IndexLoaded guarantees this matches the cook-time
+    // filter, so per-actor hash comparisons below are apples-to-apples.
+    const auto BakeFilter = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings();
+
     for (const auto& Actor : InLevel.Actors)
     {
         if (ck::Is_NOT_Valid(Actor))
@@ -538,7 +553,7 @@ auto
 
         const auto& Group = ActorGroups[ActorRef->Get_GroupIndex()];
 
-        const auto CurrentHash = ck::jolt::bake::ComputeRuntimeCheckHash(*Actor);
+        const auto CurrentHash = ck::jolt::bake::ComputeRuntimeCheckHash(*Actor, BakeFilter);
         CK_ENSURE_IF_NOT(CurrentHash == Group.Get_RuntimeCheckHash(),
             TEXT("STALE cooked Jolt data for actor [{}] (hash [{}] vs cooked [{}]) — its bodies are SKIPPED, "
                  "not silently substituted. Re-cook the map."),
@@ -823,6 +838,19 @@ auto
              "the entire map's cooked Jolt data is SKIPPED. Re-cook the map."),
         MapPackageName, _CookedIndex->Get_CookVersion(), ck::jolt::CookVersion_Current,
         _CookedIndex->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID))
+    {
+        _CookedIndex = nullptr;
+        return false;
+    }
+
+    const auto CurrentFilterHash = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings().ComputeHash();
+    const auto FilterHashMatches = _CookedIndex->Get_BakeFilterHash() == CurrentFilterHash;
+
+    CK_ENSURE_IF_NOT(FilterHashMatches,
+        TEXT("Cooked Jolt index for [{}] was baked under DIFFERENT bake-filter settings (cooked hash [{}] vs "
+             "current [{}]) — the entire map's cooked Jolt data is SKIPPED, not silently mis-populated. "
+             "Re-cook the map, or revert the Bake Filter project settings."),
+        MapPackageName, _CookedIndex->Get_BakeFilterHash(), CurrentFilterHash)
     {
         _CookedIndex = nullptr;
         return false;

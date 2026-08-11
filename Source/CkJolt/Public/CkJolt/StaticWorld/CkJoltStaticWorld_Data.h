@@ -13,9 +13,10 @@
 
 namespace ck::jolt
 {
-    /// Bump on ANY change to the cooked record/blob format. Mismatching cooked data is ensured
-    /// loudly and skipped — never silently reinterpreted.
-    constexpr uint32 CookVersion_Current = 1;
+    /// Bump on ANY change to the cooked record/blob format OR the bake-admission semantics.
+    /// Mismatching cooked data is ensured loudly and skipped — never silently reinterpreted.
+    /// v2: settings-driven bake filter (mobility policy + exclusions) changed the baked population.
+    constexpr uint32 CookVersion_Current = 2;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -214,6 +215,11 @@ private:
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     FName _SourceMapPackage;
 
+    // Fingerprint of the bake filter the cook ran under. Compared against the CURRENT settings-built
+    // filter at load: cooked data baked under different filter settings is stale for the whole map.
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    uint64 _BakeFilterHash = 0;
+
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     TArray<FCk_Jolt_CookedCellRef> _Cells;
 
@@ -224,6 +230,7 @@ public:
     CK_PROPERTY(_CookVersion);
     CK_PROPERTY(_JoltVersionId);
     CK_PROPERTY(_SourceMapPackage);
+    CK_PROPERTY(_BakeFilterHash);
     CK_PROPERTY(_Cells);
     CK_PROPERTY(_ActorLookup);
 };

@@ -72,6 +72,10 @@ namespace ck_voxelnav_preview_editor_subsystem
     auto Build_CurrentActorRuntimeHashes(UWorld& InWorld) -> TMap<FName, uint64>
     {
         auto Result = TMap<FName, uint64>{};
+
+        // Same filter the cooked static world was baked under — hashes must cover the same population.
+        const auto BakeFilter = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings();
+
         for (const auto& Level : InWorld.GetLevels())
         {
             if (Level == nullptr)
@@ -82,7 +86,7 @@ namespace ck_voxelnav_preview_editor_subsystem
                 if (Actor == nullptr)
                 { continue; }
 
-                Result.Add(Actor->GetFName(), ck::jolt::bake::ComputeRuntimeCheckHash(*Actor));
+                Result.Add(Actor->GetFName(), ck::jolt::bake::ComputeRuntimeCheckHash(*Actor, BakeFilter));
             }
         }
         return Result;

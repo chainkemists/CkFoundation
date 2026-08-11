@@ -2,6 +2,23 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include <GameFramework/Pawn.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCk_Jolt_ProjectSettings_UE::UCk_Jolt_ProjectSettings_UE(
+    const FObjectInitializer& InObjectInitializer)
+    : Super(InObjectInitializer)
+{
+    // Pawn collision is dynamic-object territory — baking a level-placed pawn's capsule into the
+    // static world would be wrong vs Chaos, where it is a movable queryable object.
+    _BakeExcludedActorClasses.Emplace(APawn::StaticClass());
+
+    const auto NoBakeTag = FName{TEXT("Ck.Jolt.NoBake")};
+    _BakeExcludedActorTags.Emplace(NoBakeTag);
+    _BakeExcludedComponentTags.Emplace(NoBakeTag);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Fallback values used when the CDO is unavailable (e.g. during early engine init).
@@ -256,6 +273,97 @@ auto
     { return {}; }
 
     return Settings->Get_CookExcludedMapPathPrefixes();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeMobilityPolicy()
+    -> ECk_Jolt_BakeMobilityPolicy
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_Jolt_BakeMobilityPolicy::All; }
+
+    return Settings->Get_BakeMobilityPolicy();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludedActorClasses()
+    -> TArray<TSoftClassPtr<AActor>>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakeExcludedActorClasses();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludedActorTags()
+    -> TArray<FName>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakeExcludedActorTags();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludedComponentTags()
+    -> TArray<FName>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakeExcludedComponentTags();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludedObjectChannels()
+    -> TArray<TEnumAsByte<ECollisionChannel>>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakeExcludedObjectChannels();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludedCollisionProfiles()
+    -> TArray<FName>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakeExcludedCollisionProfiles();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_BakeExcludeOverlapOnlyComponents()
+    -> ECk_EnableDisable
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_EnableDisable::Disable; }
+
+    return Settings->Get_BakeExcludeOverlapOnlyComponents();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
