@@ -1,12 +1,18 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkSettings/Public/CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include <CoreMinimal.h>
+#include <Engine/EngineTypes.h>
 
 #include "CkJolt_ProjectSettings.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class AActor;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,6 +30,24 @@ enum class ECk_Jolt_PIEStaticWorldMode : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_PIEStaticWorldMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// Which component mobilities the static-world LEVEL SWEEP bakes. ExplicitActor bakes (Request_BakeActor)
+/// always bake every mobility — the caller declared the actor static-in-intent.
+UENUM(BlueprintType)
+enum class ECk_Jolt_BakeMobilityPolicy : uint8
+{
+    // Bake every collision-bearing component regardless of mobility. A baked Movable is a SNAPSHOT at
+    // sweep time — if gameplay moves it later, the static body does not follow. (Default)
+    All,
+    // Bake Static and Stationary components; skip Movable.
+    StaticAndStationary,
+    // Bake Static-mobility components only.
+    StaticOnly
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_BakeMobilityPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -134,6 +158,50 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FString> _CookExcludedMapPathPrefixes;
 
+    // Which component mobilities the level sweep bakes. A baked Movable is a snapshot at sweep time —
+    // the static body does not follow later movement.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    ECk_Jolt_BakeMobilityPolicy _BakeMobilityPolicy = ECk_Jolt_BakeMobilityPolicy::All;
+
+    // Actors of these classes (including subclasses) are excluded from the level sweep.
+    // Pawns are excluded by default: their collision is dynamic-object territory, not static world.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    TArray<TSoftClassPtr<AActor>> _BakeExcludedActorClasses;
+
+    // Actors carrying any of these tags are excluded from the level sweep.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _BakeExcludedActorTags;
+
+    // Components carrying any of these tags are excluded from the level sweep.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _BakeExcludedComponentTags;
+
+    // Components whose collision OBJECT TYPE is one of these channels are excluded from the level sweep.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    TArray<TEnumAsByte<ECollisionChannel>> _BakeExcludedObjectChannels;
+
+    // Components using any of these named collision profiles are excluded from the level sweep.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _BakeExcludedCollisionProfiles;
+
+    // Exclude components that Block NOTHING (pure overlap volumes / triggers) from the level sweep.
+    // A component that blocks ANY channel — including project custom channels, which often default to
+    // Block even under the stock OverlapAll profile — is NOT overlap-only.
+    // Disabled by default: an overlap-only body still answers overlap-semantics queries with UE parity.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World|Bake Filter",
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _BakeExcludeOverlapOnlyComponents = ECk_EnableDisable::Disable;
+
+public:
+    explicit UCk_Jolt_ProjectSettings_UE(
+        const FObjectInitializer& InObjectInitializer);
+
 public:
     CK_PROPERTY_GET(_MaxBodies);
     CK_PROPERTY_GET(_MaxBodyPairs);
@@ -153,6 +221,13 @@ public:
     CK_PROPERTY_GET(_CompoundShapeInstanceThreshold);
     CK_PROPERTY_GET(_BroadphaseOptimizeThreshold);
     CK_PROPERTY_GET(_CookExcludedMapPathPrefixes);
+    CK_PROPERTY_GET(_BakeMobilityPolicy);
+    CK_PROPERTY_GET(_BakeExcludedActorClasses);
+    CK_PROPERTY_GET(_BakeExcludedActorTags);
+    CK_PROPERTY_GET(_BakeExcludedComponentTags);
+    CK_PROPERTY_GET(_BakeExcludedObjectChannels);
+    CK_PROPERTY_GET(_BakeExcludedCollisionProfiles);
+    CK_PROPERTY_GET(_BakeExcludeOverlapOnlyComponents);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -178,6 +253,13 @@ public:
     static auto Get_CompoundShapeInstanceThreshold() -> int32;
     static auto Get_BroadphaseOptimizeThreshold() -> int32;
     static auto Get_CookExcludedMapPathPrefixes() -> TArray<FString>;
+    static auto Get_BakeMobilityPolicy() -> ECk_Jolt_BakeMobilityPolicy;
+    static auto Get_BakeExcludedActorClasses() -> TArray<TSoftClassPtr<AActor>>;
+    static auto Get_BakeExcludedActorTags() -> TArray<FName>;
+    static auto Get_BakeExcludedComponentTags() -> TArray<FName>;
+    static auto Get_BakeExcludedObjectChannels() -> TArray<TEnumAsByte<ECollisionChannel>>;
+    static auto Get_BakeExcludedCollisionProfiles() -> TArray<FName>;
+    static auto Get_BakeExcludeOverlapOnlyComponents() -> ECk_EnableDisable;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

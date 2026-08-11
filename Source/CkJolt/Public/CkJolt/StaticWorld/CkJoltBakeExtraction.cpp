@@ -83,19 +83,90 @@ namespace ck_jolt_bake_extraction
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Movable is distinguished from every other skip because it is the one a designer trips by accident:
-    // a floor dragged in as Movable silently vanishes from the static world while Chaos still blocks
-    // against it. The stats plumbing exists so that skip is countable, not just VeryVerbose-visible.
+    // Mobility is distinguished from every other exclusion because it is the one a designer trips by
+    // accident under a restrictive policy: a floor dragged in as Movable silently vanishes from the
+    // static world while Chaos still blocks against it. The stats plumbing exists so every exclusion
+    // is countable, not just VeryVerbose-visible.
     enum class ECk_Jolt_ComponentSkipReason : uint8
     {
         NotSkipped,
         NotEligible,
-        MovableInLevelSweep
+        ExcludedByMobility,
+        ExcludedByFilter
     };
+
+    static auto Get_IsMobilityExcluded(
+        EComponentMobility::Type InMobility,
+        ECk_Jolt_BakeMobilityPolicy InPolicy) -> bool
+    {
+        switch (InPolicy)
+        {
+            case ECk_Jolt_BakeMobilityPolicy::All:
+                return false;
+            case ECk_Jolt_BakeMobilityPolicy::StaticAndStationary:
+                return InMobility == EComponentMobility::Movable;
+            case ECk_Jolt_BakeMobilityPolicy::StaticOnly:
+                return InMobility != EComponentMobility::Static;
+            default:
+                CK_TRIGGER_ENSURE(TEXT("Invalid ECk_Jolt_BakeMobilityPolicy [{}]"), InPolicy);
+                return false;
+        }
+    }
+
+    static auto Get_BlocksNothing(
+        const UPrimitiveComponent& InComponent) -> bool
+    {
+        const auto& Responses = InComponent.GetCollisionResponseToChannels();
+
+        for (auto ChannelIndex = 0; ChannelIndex < 32; ++ChannelIndex)
+        {
+            if (Responses.GetResponse(static_cast<ECollisionChannel>(ChannelIndex)) == ECR_Block)
+            { return false; }
+        }
+
+        return true;
+    }
+
+    static auto Get_IsComponentExcludedByFilter(
+        const UPrimitiveComponent& InComponent,
+        const FCk_Jolt_BakeFilter& InFilter) -> bool
+    {
+        if (InFilter._ExcludedObjectChannels.Contains(InComponent.GetCollisionObjectType()))
+        { return true; }
+
+        if (InFilter._ExcludedCollisionProfiles.Contains(InComponent.GetCollisionProfileName()))
+        { return true; }
+
+        if (ck::algo::AnyOf(InComponent.ComponentTags,
+            [&](const FName& InTag) { return InFilter._ExcludedComponentTags.Contains(InTag); }))
+        { return true; }
+
+        if (InFilter._ExcludeOverlapOnlyComponents == ECk_EnableDisable::Enable &&
+            Get_BlocksNothing(InComponent))
+        { return true; }
+
+        return false;
+    }
+
+    static auto Get_IsActorExcludedByFilter(
+        const AActor& InActor,
+        const FCk_Jolt_BakeFilter& InFilter) -> bool
+    {
+        const auto* ActorClass = InActor.GetClass();
+
+        if (ck::algo::AnyOf(InFilter._ExcludedActorClasses,
+            [&](const TStrongObjectPtr<UClass>& InExcluded)
+            { return InExcluded.IsValid() && ActorClass->IsChildOf(InExcluded.Get()); }))
+        { return true; }
+
+        return ck::algo::AnyOf(InActor.Tags,
+            [&](const FName& InTag) { return InFilter._ExcludedActorTags.Contains(InTag); });
+    }
 
     static auto Get_ComponentSkipReason(
         const UPrimitiveComponent& InComponent,
-        ECk_Jolt_ExtractionPolicy InPolicy) -> ECk_Jolt_ComponentSkipReason
+        ECk_Jolt_ExtractionPolicy InPolicy,
+        const FCk_Jolt_BakeFilter& InFilter) -> ECk_Jolt_ComponentSkipReason
     {
         if (NOT InComponent.IsRegistered())
         { return ECk_Jolt_ComponentSkipReason::NotEligible; }
@@ -114,12 +185,22 @@ namespace ck_jolt_bake_extraction
         if (InComponent.IsSimulatingPhysics())
         { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 
-        if (InPolicy == ECk_Jolt_ExtractionPolicy::LevelSweep &&
-            InComponent.Mobility == EComponentMobility::Movable)
+        if (InPolicy != ECk_Jolt_ExtractionPolicy::LevelSweep)
+        { return ECk_Jolt_ComponentSkipReason::NotSkipped; }
+
+        if (Get_IsMobilityExcluded(InComponent.Mobility, InFilter._MobilityPolicy))
         {
-            ck::jolt::VeryVerbose(TEXT("Static bake skipping MOVABLE component [{}] — kinematic/dynamic territory"),
+            // Engine enum — no Ck formatter; format the raw mobility value.
+            ck::jolt::VeryVerbose(TEXT("Static bake skipping component [{}] — mobility [{}] excluded by policy [{}]"),
+                InComponent.GetName(), static_cast<int32>(InComponent.Mobility), InFilter._MobilityPolicy);
+            return ECk_Jolt_ComponentSkipReason::ExcludedByMobility;
+        }
+
+        if (Get_IsComponentExcludedByFilter(InComponent, InFilter))
+        {
+            ck::jolt::VeryVerbose(TEXT("Static bake skipping component [{}] — excluded by bake-filter settings"),
                 InComponent.GetName());
-            return ECk_Jolt_ComponentSkipReason::MovableInLevelSweep;
+            return ECk_Jolt_ComponentSkipReason::ExcludedByFilter;
         }
 
         return ECk_Jolt_ComponentSkipReason::NotSkipped;
@@ -127,9 +208,10 @@ namespace ck_jolt_bake_extraction
 
     static auto Get_ShouldSkipComponent(
         const UPrimitiveComponent& InComponent,
-        ECk_Jolt_ExtractionPolicy InPolicy) -> bool
+        ECk_Jolt_ExtractionPolicy InPolicy,
+        const FCk_Jolt_BakeFilter& InFilter) -> bool
     {
-        return Get_ComponentSkipReason(InComponent, InPolicy) != ECk_Jolt_ComponentSkipReason::NotSkipped;
+        return Get_ComponentSkipReason(InComponent, InPolicy, InFilter) != ECk_Jolt_ComponentSkipReason::NotSkipped;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -365,6 +447,97 @@ namespace ck::jolt::bake
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FCk_Jolt_BakeFilter::
+        Make_FromProjectSettings()
+        -> FCk_Jolt_BakeFilter
+    {
+        auto Filter = FCk_Jolt_BakeFilter{};
+        Filter._MobilityPolicy = UCk_Utils_Jolt_ProjectSettings::Get_BakeMobilityPolicy();
+        Filter._ExcludedActorTags = UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludedActorTags();
+        Filter._ExcludedComponentTags = UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludedComponentTags();
+        Filter._ExcludedObjectChannels = UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludedObjectChannels();
+        Filter._ExcludedCollisionProfiles = UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludedCollisionProfiles();
+        Filter._ExcludeOverlapOnlyComponents = UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludeOverlapOnlyComponents();
+
+        for (const auto& SoftClass : UCk_Utils_Jolt_ProjectSettings::Get_BakeExcludedActorClasses())
+        {
+            auto* Resolved = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
+
+            CK_ENSURE_IF_NOT(Resolved != nullptr,
+                TEXT("Bake-filter excluded actor class [{}] is unset or failed to load — the entry is IGNORED. "
+                     "Fix or remove the row in Project Settings > Jolt > Bake Filter."), SoftClass.ToString())
+            {}
+            if (Resolved == nullptr)
+            { continue; }
+
+            Filter._ExcludedActorClasses.Emplace(TStrongObjectPtr{Resolved});
+        }
+
+        return Filter;
+    }
+
+    auto
+        FCk_Jolt_BakeFilter::
+        ComputeHash() const
+        -> uint64
+    {
+        auto Builder = FXxHash64Builder{};
+
+        const auto HashByte = [&](uint8 InValue) -> void
+        {
+            Builder.Update(&InValue, sizeof(InValue));
+        };
+
+        // FNames are case-insensitive — hash the lowercase string, with a separator byte so
+        // adjacent entries cannot alias by concatenation.
+        const auto HashString = [&](const FString& InString) -> void
+        {
+            const auto Lower = InString.ToLower();
+            Builder.Update(*Lower, Lower.Len() * sizeof(TCHAR));
+            HashByte(0);
+        };
+
+        const auto HashSortedNames = [&](const TArray<FName>& InNames) -> void
+        {
+            auto Sorted = ck::algo::Transform<TArray<FString>>(InNames,
+                [](const FName& InName) { return InName.ToString().ToLower(); });
+            Sorted.Sort();
+
+            for (const auto& Name : Sorted)
+            { HashString(Name); }
+            HashByte(0xFF);
+        };
+
+        HashByte(static_cast<uint8>(_MobilityPolicy));
+
+        auto ClassPaths = ck::algo::Transform<TArray<FString>>(_ExcludedActorClasses,
+            [](const TStrongObjectPtr<UClass>& InClass)
+            { return InClass.IsValid() ? InClass->GetPathName() : FString{}; });
+        ClassPaths.Sort();
+        for (const auto& ClassPath : ClassPaths)
+        { HashString(ClassPath); }
+        HashByte(0xFF);
+
+        HashSortedNames(_ExcludedActorTags);
+        HashSortedNames(_ExcludedComponentTags);
+
+        auto Channels = ck::algo::Transform<TArray<uint8>>(_ExcludedObjectChannels,
+            [](const TEnumAsByte<ECollisionChannel>& InChannel) { return static_cast<uint8>(InChannel.GetValue()); });
+        Channels.Sort();
+        for (const auto& Channel : Channels)
+        { HashByte(Channel); }
+        HashByte(0xFF);
+
+        HashSortedNames(_ExcludedCollisionProfiles);
+
+        HashByte(static_cast<uint8>(_ExcludeOverlapOnlyComponents));
+
+        return Builder.Finalize().Hash;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FCk_Jolt_ShapeCache::
         GetOrCreate_Shape(
             const UBodySetup& InBodySetup,
@@ -494,6 +667,7 @@ namespace ck::jolt::bake
             const UPrimitiveComponent& InComponent,
             FCk_Jolt_ShapeCache& InShapeCache,
             TArray<FCk_Jolt_ExtractedBody>& OutBodies,
+            const FCk_Jolt_BakeFilter& InFilter,
             ECk_Jolt_ExtractionPolicy InPolicy,
             FCk_Jolt_ExtractionStats* OutStats)
         -> int32
@@ -501,11 +675,14 @@ namespace ck::jolt::bake
         if (OutStats != nullptr)
         { ++OutStats->_NumComponentsConsidered; }
 
-        if (const auto SkipReason = Get_ComponentSkipReason(InComponent, InPolicy);
+        if (const auto SkipReason = Get_ComponentSkipReason(InComponent, InPolicy, InFilter);
             SkipReason != ECk_Jolt_ComponentSkipReason::NotSkipped)
         {
-            if (OutStats != nullptr && SkipReason == ECk_Jolt_ComponentSkipReason::MovableInLevelSweep)
-            { ++OutStats->_NumComponentsSkippedMovable; }
+            if (OutStats != nullptr && SkipReason == ECk_Jolt_ComponentSkipReason::ExcludedByMobility)
+            { ++OutStats->_NumComponentsExcludedByMobility; }
+
+            if (OutStats != nullptr && SkipReason == ECk_Jolt_ComponentSkipReason::ExcludedByFilter)
+            { ++OutStats->_NumComponentsExcludedByFilter; }
 
             return 0;
         }
@@ -670,11 +847,23 @@ namespace ck::jolt::bake
             const AActor& InActor,
             FCk_Jolt_ShapeCache& InShapeCache,
             TArray<FCk_Jolt_ExtractedBody>& OutBodies,
+            const FCk_Jolt_BakeFilter& InFilter,
             ECk_Jolt_ExtractionPolicy InPolicy,
             FCk_Jolt_ExtractionStats* OutStats)
         -> int32
     {
         const auto StartingCount = OutBodies.Num();
+
+        if (InPolicy == ECk_Jolt_ExtractionPolicy::LevelSweep &&
+            Get_IsActorExcludedByFilter(InActor, InFilter))
+        {
+            if (OutStats != nullptr)
+            { ++OutStats->_NumActorsExcludedByFilter; }
+
+            ck::jolt::VeryVerbose(TEXT("Static bake skipping actor [{}] — excluded by bake-filter settings "
+                "(class or actor tag)"), InActor.GetFName());
+            return 0;
+        }
 
 #if WITH_EDITOR
         // Landscape heights are readable only in editor context — cooked builds get them from cooked data.
@@ -690,6 +879,18 @@ namespace ck::jolt::bake
                     TEXT("Landscape component [{}] has no heightfield collision component — skipping (Chaos would have no physics state for it either)"),
                     LandscapeComponent->GetName())
                 { continue; }
+
+                // The collision component carries the landscape's real collision setup — apply the
+                // FILTER axes on it (mirroring the signature capture below), but not the eligibility
+                // gates: the landscape path never had them, and a WP-loaded-but-unregistered
+                // collision component must not silently drop the landscape from a cook.
+                if (InPolicy == ECk_Jolt_ExtractionPolicy::LevelSweep &&
+                    Get_IsComponentExcludedByFilter(*CollisionComponent, InFilter))
+                {
+                    if (OutStats != nullptr)
+                    { ++OutStats->_NumComponentsExcludedByFilter; }
+                    continue;
+                }
 
                 auto DataInterface = FLandscapeComponentDataInterface{LandscapeComponent};
 
@@ -750,7 +951,7 @@ namespace ck::jolt::bake
                 { return; }
 #endif
 
-                ExtractComponent(*InComponent, InShapeCache, OutBodies, InPolicy, OutStats);
+                ExtractComponent(*InComponent, InShapeCache, OutBodies, InFilter, InPolicy, OutStats);
             });
 
         return OutBodies.Num() - StartingCount;
@@ -785,7 +986,9 @@ namespace ck::jolt::bake
         InOutBuilder.Update(*InString, InString.Len() * sizeof(TCHAR));
     }
 
-    static auto DoGather_RelevantComponents(const AActor& InActor) -> TArray<const UPrimitiveComponent*>
+    static auto DoGather_RelevantComponents(
+        const AActor& InActor,
+        const FCk_Jolt_BakeFilter& InFilter) -> TArray<const UPrimitiveComponent*>
     {
         auto Components = TArray<const UPrimitiveComponent*>{};
 
@@ -795,8 +998,8 @@ namespace ck::jolt::bake
                 if (ck::Is_NOT_Valid(InComponent))
                 { return; }
 
-                // Hashes cover the cooked/level-sweep population — same skip policy.
-                if (Get_ShouldSkipComponent(*InComponent, ECk_Jolt_ExtractionPolicy::LevelSweep))
+                // Hashes cover the cooked/level-sweep population — same skip policy, same filter.
+                if (Get_ShouldSkipComponent(*InComponent, ECk_Jolt_ExtractionPolicy::LevelSweep, InFilter))
                 { return; }
 
                 Components.Emplace(InComponent);
@@ -813,12 +1016,13 @@ namespace ck::jolt::bake
 
     auto
         ComputeRuntimeCheckHash(
-            const AActor& InActor)
+            const AActor& InActor,
+            const FCk_Jolt_BakeFilter& InFilter)
         -> uint64
     {
         auto Builder = FXxHash64Builder{};
 
-        for (const auto* Component : DoGather_RelevantComponents(InActor))
+        for (const auto* Component : DoGather_RelevantComponents(InActor, InFilter))
         {
             DoHash_String(Builder, Component->GetClass()->GetName());
             DoHash_Transform(Builder, Component->GetComponentTransform());
@@ -842,12 +1046,13 @@ namespace ck::jolt::bake
 #if WITH_EDITOR
     auto
         ComputeSourceHash(
-            const AActor& InActor)
+            const AActor& InActor,
+            const FCk_Jolt_BakeFilter& InFilter)
         -> uint64
     {
         auto Builder = FXxHash64Builder{};
 
-        for (const auto* Component : DoGather_RelevantComponents(InActor))
+        for (const auto* Component : DoGather_RelevantComponents(InActor, InFilter))
         {
             DoHash_String(Builder, Component->GetClass()->GetName());
             DoHash_Transform(Builder, Component->GetComponentTransform());

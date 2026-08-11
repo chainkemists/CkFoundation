@@ -1,10 +1,13 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Data.h"
+#include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 
 #include <PhysicalMaterials/PhysicalMaterial.h>
+#include <UObject/StrongObjectPtr.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Reference.h>
@@ -33,19 +36,45 @@ namespace ck::jolt::bake
         ExplicitActor
     };
 
+    /// Level-sweep admission control, built from project settings once per sweep/cook and passed
+    /// explicitly so tests construct filters directly (no CDO mutation). ExplicitActor extraction
+    /// ignores the filter entirely — the caller declared the actor static-in-intent.
+    struct CKJOLT_API FCk_Jolt_BakeFilter
+    {
+        ECk_Jolt_BakeMobilityPolicy _MobilityPolicy = ECk_Jolt_BakeMobilityPolicy::All;
+        // Strong: the cooker's World Partition walk collects garbage between batches, and a raw
+        // pointer to a Blueprint exclusion class would dangle mid-cook.
+        TArray<TStrongObjectPtr<UClass>> _ExcludedActorClasses;
+        TArray<FName> _ExcludedActorTags;
+        TArray<FName> _ExcludedComponentTags;
+        TArray<TEnumAsByte<ECollisionChannel>> _ExcludedObjectChannels;
+        TArray<FName> _ExcludedCollisionProfiles;
+        ECk_EnableDisable _ExcludeOverlapOnlyComponents = ECk_EnableDisable::Disable;
+
+        static auto Make_FromProjectSettings() -> FCk_Jolt_BakeFilter;
+
+        /// Order-insensitive fingerprint of the whole filter. Stored on the cooked index and compared at
+        /// load: cooked data baked under DIFFERENT filter settings is stale for the whole map.
+        auto ComputeHash() const -> uint64;
+    };
+
     /// Per-sweep visibility: WHY a level contributed nothing is otherwise invisible (the per-component
     /// skip logs at VeryVerbose only, and an all-skipped level used to add zero bodies in total silence).
     /// Aggregated per level and per BeginPlay sweep by the static-world subsystem.
     struct CKJOLT_API FCk_Jolt_ExtractionStats
     {
         int32 _NumComponentsConsidered = 0;
-        int32 _NumComponentsSkippedMovable = 0;
+        int32 _NumComponentsExcludedByMobility = 0;
+        int32 _NumComponentsExcludedByFilter = 0;
+        int32 _NumActorsExcludedByFilter = 0;
         int32 _NumBodiesExtracted = 0;
 
         auto operator+=(const FCk_Jolt_ExtractionStats& InOther) -> FCk_Jolt_ExtractionStats&
         {
             _NumComponentsConsidered += InOther._NumComponentsConsidered;
-            _NumComponentsSkippedMovable += InOther._NumComponentsSkippedMovable;
+            _NumComponentsExcludedByMobility += InOther._NumComponentsExcludedByMobility;
+            _NumComponentsExcludedByFilter += InOther._NumComponentsExcludedByFilter;
+            _NumActorsExcludedByFilter += InOther._NumActorsExcludedByFilter;
             _NumBodiesExtracted += InOther._NumBodiesExtracted;
             return *this;
         }
@@ -107,20 +136,25 @@ namespace ck::jolt::bake
     // ----------------------------------------------------------------------------------------------------------------
 
     /// Appends one extracted body per physics representation Chaos would see for a STATIC actor; returns
-    /// the number appended. Skips: unregistered, editor-only/visualization, NoCollision, simulating
-    /// physics, Movable mobility. Collision enabled but NO valid geometry ensures and is skipped.
+    /// the number appended. Always skips: unregistered, editor-only/visualization, NoCollision,
+    /// simulating physics. Under LevelSweep the filter additionally governs mobility and the settings
+    /// exclusions (classes/tags/channels/profiles/overlap-only); ExplicitActor ignores the filter.
+    /// Collision enabled but NO valid geometry ensures and is skipped.
     CKJOLT_API auto ExtractActor(
         const AActor& InActor,
         FCk_Jolt_ShapeCache& InShapeCache,
         TArray<FCk_Jolt_ExtractedBody>& OutBodies,
+        const FCk_Jolt_BakeFilter& InFilter,
         ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep,
         FCk_Jolt_ExtractionStats* OutStats = nullptr) -> int32;
 
-    /// Component-level entry (used by ExtractActor and by tests). Same skip/ensure rules.
+    /// Component-level entry (used by ExtractActor and by tests). Same skip/ensure rules — but only
+    /// the COMPONENT-level filter checks; actor-level exclusions (class, actor tags) live in ExtractActor.
     CKJOLT_API auto ExtractComponent(
         const UPrimitiveComponent& InComponent,
         FCk_Jolt_ShapeCache& InShapeCache,
         TArray<FCk_Jolt_ExtractedBody>& OutBodies,
+        const FCk_Jolt_BakeFilter& InFilter,
         ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep,
         FCk_Jolt_ExtractionStats* OutStats = nullptr) -> int32;
 
@@ -153,15 +187,19 @@ namespace ck::jolt::bake
     // ----------------------------------------------------------------------------------------------------------------
 
     /// Cheap hash computable in COOKED builds: mesh asset path + quantized world transform +
-    /// instance count. Drives load-time staleness ensures.
+    /// instance count. Drives load-time staleness ensures. The filter selects the hashed component
+    /// population — it must be the SAME filter the bake ran under (the cooked index's filter hash
+    /// guards settings drift at map granularity).
     CKJOLT_API auto ComputeRuntimeCheckHash(
-        const AActor& InActor) -> uint64;
+        const AActor& InActor,
+        const FCk_Jolt_BakeFilter& InFilter) -> uint64;
 
 #if WITH_EDITOR
     /// Full hash (editor only): BodySetupGuids + trace flags + mesh asset paths + quantized
     /// world transform + ISM instance stream. Drives incremental re-cook decisions.
     CKJOLT_API auto ComputeSourceHash(
-        const AActor& InActor) -> uint64;
+        const AActor& InActor,
+        const FCk_Jolt_BakeFilter& InFilter) -> uint64;
 #endif
 }
 

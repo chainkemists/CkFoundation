@@ -59,11 +59,12 @@ namespace ck_jolt_cook_world_cooker
     static auto DoExtract_Actor(
         const AActor& InActor,
         FCk_Jolt_ShapeCache& InShapeCache,
+        const FCk_Jolt_BakeFilter& InFilter,
         TArray<FActorCookData>& OutActors)
         -> int32
     {
         auto Bodies = TArray<FCk_Jolt_ExtractedBody>{};
-        ExtractActor(InActor, InShapeCache, Bodies);
+        ExtractActor(InActor, InShapeCache, Bodies, InFilter);
 
         if (Bodies.IsEmpty())
         { return 0; }
@@ -71,8 +72,8 @@ namespace ck_jolt_cook_world_cooker
         auto& ActorData = OutActors.Emplace_GetRef();
         ActorData._ActorName = InActor.GetFName();
         ActorData._ActorPath = FSoftObjectPath{&InActor};
-        ActorData._SourceHash = ComputeSourceHash(InActor);
-        ActorData._RuntimeCheckHash = ComputeRuntimeCheckHash(InActor);
+        ActorData._SourceHash = ComputeSourceHash(InActor, InFilter);
+        ActorData._RuntimeCheckHash = ComputeRuntimeCheckHash(InActor, InFilter);
         ActorData._Bodies = MoveTemp(Bodies);
 
         return ActorData._Bodies.Num();
@@ -133,6 +134,7 @@ auto
 
     auto ShapeCache = FCk_Jolt_ShapeCache{};
     auto ActorCookData = TArray<FActorCookData>{};
+    const auto BakeFilter = FCk_Jolt_BakeFilter::Make_FromProjectSettings();
 
     for (const auto& Level : InWorld.GetLevels())
     {
@@ -144,7 +146,7 @@ auto
             if (ck::Is_NOT_Valid(Actor))
             { continue; }
 
-            Stats._NumBodies += DoExtract_Actor(*Actor, ShapeCache, ActorCookData);
+            Stats._NumBodies += DoExtract_Actor(*Actor, ShapeCache, BakeFilter, ActorCookData);
         }
     }
 
@@ -165,7 +167,7 @@ auto
                 if (AlreadyCooked.Contains(Actor->GetFName()))
                 { return true; }
 
-                Stats._NumBodies += DoExtract_Actor(*Actor, ShapeCache, ActorCookData);
+                Stats._NumBodies += DoExtract_Actor(*Actor, ShapeCache, BakeFilter, ActorCookData);
                 return true;
             });
     }
@@ -312,6 +314,7 @@ auto
     IndexAsset->Set_CookVersion(CookVersion_Current);
     IndexAsset->Set_JoltVersionId(static_cast<uint32>(JPH_VERSION_ID));
     IndexAsset->Set_SourceMapPackage(FName{*MapPackageName});
+    IndexAsset->Set_BakeFilterHash(BakeFilter.ComputeHash());
     IndexAsset->Set_Cells(MoveTemp(CellRefs));
     IndexAsset->Set_ActorLookup(MoveTemp(ActorLookup));
 
@@ -352,6 +355,14 @@ auto
     }
 
     auto StaleCount = 0;
+    const auto BakeFilter = FCk_Jolt_BakeFilter::Make_FromProjectSettings();
+
+    if (Index->Get_BakeFilterHash() != BakeFilter.ComputeHash())
+    {
+        ck::jolt::Warning(TEXT("JoltCook validate: cooked index for [{}] was baked under DIFFERENT bake-filter "
+            "settings — the whole map needs a re-cook"), MapPackageName);
+        return Stats;
+    }
 
     for (const auto& Level : InWorld.GetLevels())
     {
@@ -376,7 +387,7 @@ auto
 
             const auto& Group = CellAsset->Get_ActorGroups()[ActorRef->Get_GroupIndex()];
 
-            if (ComputeSourceHash(*Actor) == Group.Get_SourceHash())
+            if (ComputeSourceHash(*Actor, BakeFilter) == Group.Get_SourceHash())
             { ++Stats._NumActorsUpToDate; }
             else
             {
