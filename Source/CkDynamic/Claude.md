@@ -75,6 +75,10 @@ comment-light; the *why* lives here.
 - **AngelScript descriptors are the source of truth for script-authored labels.** First-use
   observation captures only fragments that actually enter dynamic storage; PostCompile atomically
   replaces the AngelScript-owned generation so stale hot-reload objects are never retained.
+- **The initial PostCompile is the startup publication point.** CkDynamic loads before the
+  PostDefault AngelScript loader initializes its manager, so module startup subscribes without
+  reading the manager. A late module reload may refresh immediately only when the manager already
+  exists.
 - **Native producers own native custom labels.** They register an explicit schema during startup and
   unregister it during shutdown. Native entries take precedence and are not erased by an
   AngelScript refresh.
