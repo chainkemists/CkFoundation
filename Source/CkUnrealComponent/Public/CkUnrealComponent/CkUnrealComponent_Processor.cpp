@@ -14,6 +14,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Utils.h"
 
 #include "Components/ActorComponent.h"
@@ -31,18 +32,20 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_UnrealComponent_EndPlay);
 
 namespace ck_unreal_component_processor
 {
+    // Returns whether the transform actually changed — baked static-world bodies must follow.
     auto
         PushTransformIfChanged(
             USceneComponent* InSceneComponent,
-            const FTransform& InWorldTransform) -> void
+            const FTransform& InWorldTransform) -> bool
     {
         if (ck::Is_NOT_Valid(InSceneComponent))
-        { return; }
+        { return false; }
 
         if (InSceneComponent->GetComponentTransform().Equals(InWorldTransform))
-        { return; }
+        { return false; }
 
         InSceneComponent->SetWorldTransform(InWorldTransform);
+        return true;
     }
 }
 
@@ -145,6 +148,60 @@ namespace ck
             InHandle.AddOrGet<FTag_UnrealComponent_TickViaProcessor>();
         }
 
+        switch (InParams.Get_StaticWorldBakePolicy())
+        {
+            case ECk_UnrealComponent_StaticWorldBakePolicy::Automatic:
+            {
+                // Default-on with the designer opt-outs: a collision-bearing primitive bakes unless
+                // the Jolt bake-filter's component exclusions say otherwise. Zero bodies is a QUIET
+                // skip — NoCollision content and an ISM whose instances arrive after Add are legal
+                // here (the latter opts in via Request_BakeIntoJoltStaticWorld once configured).
+                auto* PrimitiveComponent = Cast<UPrimitiveComponent>(NewComponent);
+                if (ck::Is_NOT_Valid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                { break; }
+
+                if (PrimitiveComponent->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+                { break; }
+
+                const auto BakeFilter = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings();
+                if (ck::jolt::bake::Get_IsComponentExcludedByBakeFilter(*PrimitiveComponent, BakeFilter))
+                { break; }
+
+                if (UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent) > 0)
+                { InHandle.AddOrGet<FTag_UnrealComponent_BakedIntoStaticWorld>(); }
+                break;
+            }
+            case ECk_UnrealComponent_StaticWorldBakePolicy::BakeOnSetup:
+            {
+                // BakeOnSetup declares the archetype carried complete collision — a primitive
+                // component with zero extracted bodies means the policy was set on unbakeable content.
+                auto* PrimitiveComponent = Cast<UPrimitiveComponent>(NewComponent);
+
+                CK_ENSURE_IF_NOT(ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}),
+                    TEXT("UnrealComponent [{}] has StaticWorldBakePolicy BakeOnSetup but hosts a NON-PRIMITIVE "
+                         "class [{}] — nothing can bake."), InHandle, ComponentClass->GetName())
+                {}
+
+                if (ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                {
+                    const auto NumBodies = UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent);
+
+                    CK_ENSURE_IF_NOT(NumBodies > 0,
+                        TEXT("UnrealComponent [{}] has StaticWorldBakePolicy BakeOnSetup but its archetype produced "
+                             "ZERO static bodies — the archetype's collision is disabled or invalid. Author the "
+                             "collision on the archetype, or use Automatic/DoNotBake + "
+                             "Request_BakeIntoJoltStaticWorld for components configured after Add."), InHandle)
+                    {}
+
+                    if (NumBodies > 0)
+                    { InHandle.AddOrGet<FTag_UnrealComponent_BakedIntoStaticWorld>(); }
+                }
+                break;
+            }
+            case ECk_UnrealComponent_StaticWorldBakePolicy::DoNotBake:
+            { break; }
+        }
+
         UCk_Utils_UnrealComponent_UE::DoRegisterBridge(NewComponent, InHandle);
 
         ck::unreal_component::Verbose(TEXT("UnrealComponent [{}] registered component of class [{}]"),
@@ -179,7 +236,20 @@ namespace ck
 
                 auto* SceneComponent = Cast<USceneComponent>(
                     InComponentHandle.Get<FFragment_UnrealComponent_Current>().Get_Component().Get());
-                ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
+                const auto TransformChanged =
+                    ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
+
+                // A baked static-world body is a snapshot — when the component actually moves,
+                // re-bake at the new pose so queries stay correct (teleports, store rearrangement).
+                // A CONTINUOUSLY moving blocker churns the broadphase every frame; that content
+                // belongs on a kinematic CkJoltBody, not the static world.
+                if (TransformChanged &&
+                    InComponentHandle.Has<FTag_UnrealComponent_BakedIntoStaticWorld>())
+                {
+                    if (auto* PrimitiveComponent = Cast<UPrimitiveComponent>(SceneComponent);
+                        ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                    { UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent); }
+                }
             });
     }
 

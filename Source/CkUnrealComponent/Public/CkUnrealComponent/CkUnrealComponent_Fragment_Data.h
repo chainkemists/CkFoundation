@@ -28,6 +28,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UnrealComponent_TickPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/// Whether the hosted PRIMITIVE component's geometry is baked into the Jolt static world. Baked
+/// bodies are re-baked at the new pose when the transform push actually moves the component
+/// (teleports and rearrangement stay query-correct; a CONTINUOUSLY moving blocker churns the
+/// broadphase and belongs on a kinematic CkJoltBody instead), and teardown removes them.
+///
+/// Automatic (default): a primitive component with collision bakes at setup, honoring the Jolt
+/// bake-filter's tag/profile/channel exclusions. Zero bodies is a quiet skip — an ISM whose
+/// instances arrive after Add bakes nothing here; call
+/// UCk_Utils_UnrealComponent_UE::Request_BakeIntoJoltStaticWorld once configured.
+/// BakeOnSetup: declared intent — the bake filter is bypassed and ZERO bodies is a loud ensure.
+/// DoNotBake: never bake automatically (the explicit request still works).
+UENUM(BlueprintType)
+enum class ECk_UnrealComponent_StaticWorldBakePolicy : uint8
+{
+    Automatic,
+    DoNotBake,
+    BakeOnSetup
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UnrealComponent_StaticWorldBakePolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKUNREALCOMPONENT_API FCk_Fragment_UnrealComponent_ParamsData
 {
@@ -58,12 +80,17 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_UnrealComponent_StaticWorldBakePolicy _StaticWorldBakePolicy = ECk_UnrealComponent_StaticWorldBakePolicy::Automatic;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FName _DebugName;
 
 public:
     CK_PROPERTY_GET(_ComponentClass);
     CK_PROPERTY_GET(_ComponentArchetype);
     CK_PROPERTY(_TickPolicy);
+    CK_PROPERTY(_StaticWorldBakePolicy);
     CK_PROPERTY(_DebugName);
 };
 
