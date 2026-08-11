@@ -852,8 +852,12 @@ auto
 		for (auto i = Chain.Num() - 1; i >= 0; --i)
 		{
 			auto Action = Chain[i];
-			if (NOT ck::IsValid(Action)) { continue; }
-			if (NOT Action.Has<ck::FFragment_Goap_Planner_Activation>()) { continue; }
+			if (ck::Is_NOT_Valid(Action))
+			{ continue; }
+
+			if (NOT Action.Has<ck::FFragment_Goap_Planner_Activation>())
+			{ continue; }
+
 			ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 		}
 
