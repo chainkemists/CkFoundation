@@ -480,6 +480,7 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleAnalogInputEvent` | `AnalogAxis` carrying the analog value |
 | `HandleMouseMoveEvent` | the cursor delta split into `EKeys::MouseX` / `EKeys::MouseY` `AnalogAxis` rows; a component that did not move writes no row rather than a zero one |
 | `HandleMouseButtonDownEvent` / `HandleMouseButtonUpEvent` | `Pressed` / `Released` on the effecting button |
+| `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
 **viewport focus** (`GetGameViewportWidget()->HasAnyUserFocusOrFocusedDescendants()` on THIS game
