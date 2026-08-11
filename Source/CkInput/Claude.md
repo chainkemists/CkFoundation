@@ -483,9 +483,22 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
-**viewport focus** (`GetGameViewportWidget()->HasAnyUserFocusOrFocusedDescendants()` on THIS game
-instance — what keeps the editor's own keystrokes out of a source during PIE, and what stops a background
-PIE window recording the foreground window's input); and resolution to a live source.
+**DIRECT viewport focus** (`GetGameViewportWidget()->HasAnyUserFocus()` on THIS game instance — what
+keeps the editor's own keystrokes out of a source during PIE, stops a background PIE window recording the
+foreground window's input, and keeps CONSOLE/CHAT typing out of the record: a text field steals focus to
+a viewport DESCENDANT, so descendant-counting focus recorded `slomo 0.1` as gameplay presses); and
+resolution to a live source. A UMG widget that takes keyboard focus mid-game therefore also pauses
+recording — the flush below releases anything held at that boundary, so nothing phantoms.
+
+**Losing viewport focus flushes every recorded-down key as a synthetic `Released`.** The focus gate
+means a release that happens while unfocused (alt-tab, a click on an editor panel) never records, so a
+key pressed in-focus and released out-of-focus would otherwise stay down in every consumer forever —
+router press-owners, the intent record's held set, the device debugger. The writer tracks each
+(key, raw user index) it recorded a `Pressed` for and, from its Slate `Tick`, writes the matching
+`Released` rows the moment the viewport is unfocused while any are outstanding — the pipeline's
+equivalent of the engine's `FlushPressedKeys`. Consequence: a hold does NOT survive a focus gap; a key
+still physically held when focus returns reads as up until it is re-pressed (the OS resends no edge, and
+auto-repeat is dropped). Analog axes are not flushed — they hold their last conditioned value.
 
 Device class is derived from the KEY, not from which handler fired: `IsGamepadKey()` → Gamepad, else
 `IsMouseButton()` → Mouse, else Keyboard. Ordering fidelity follows from the class — Gamepad is

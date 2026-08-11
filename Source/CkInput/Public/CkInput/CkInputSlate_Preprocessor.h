@@ -19,9 +19,10 @@ class UGameInstance;
  * Slate index 0 with the loading screen's and the debugger's pre-processors without any of them arbitrating
  * against another.
  *
- * Recording is gated on this game instance's viewport holding user focus. That is what keeps the editor's own
- * keystrokes out of a source during PIE, and what stops a background PIE window from recording the foreground
- * window's input — Slate pre-processors are application-global, while an input source is one local player's.
+ * Recording is gated on this game instance's viewport holding DIRECT user focus. That is what keeps the
+ * editor's own keystrokes out of a source during PIE, what stops a background PIE window from recording the
+ * foreground window's input, and what keeps console/chat typing out of the record — a text field steals focus
+ * to a viewport DESCENDANT, and its keystrokes belong to the field, not the game.
  */
 class FCk_InputSlate_Preprocessor : public IInputProcessor
 {
@@ -30,6 +31,10 @@ public:
         UGameInstance* InGameInstance);
 
 public:
+    // Releases that happen while the viewport is unfocused (alt-tab, a click on an editor panel) never reach
+    // the handlers below the focus gate, so a key pressed in-focus and released out-of-focus would stay down
+    // forever. The tick watches for that state and flushes every recorded-down key as a synthetic Released —
+    // the pipeline's equivalent of the engine's FlushPressedKeys. A hold does not survive the focus gap.
     virtual void Tick(
         const float InDeltaTime,
         FSlateApplication& InSlateApp,
@@ -77,6 +82,16 @@ private:
         int32 InRawDeviceUserIndex) -> void;
 
     auto
+    DoWriteEvent(
+        const FKey& InKey,
+        ECk_InputSource_EventType InEventType,
+        float InAnalogValue,
+        int32 InRawDeviceUserIndex) -> void;
+
+    auto
+    DoFlushRecordedDownKeys() -> void;
+
+    auto
     DoGet_HasViewportFocus() const -> bool;
 
     auto
@@ -89,6 +104,7 @@ private:
 
 private:
     TWeakObjectPtr<UGameInstance> _GameInstance;
+    TSet<TPair<FKey, int32>> _RecordedDownKeys;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
