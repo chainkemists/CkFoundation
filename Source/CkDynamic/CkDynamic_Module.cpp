@@ -5,6 +5,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkDynamic/CkDynamic_Fragment.h"
+#include "CkDynamic/CkDynamic_FragmentDisplaySchema.h"
 #include "CkDynamic/CkDynamic_ScriptProcessor_Host.h"
 #include "CkDynamic/CkDynamic_Utils.h"
 
@@ -14,6 +15,10 @@
 
 void FCkDynamicModule::StartupModule()
 {
+#if WITH_ANGELSCRIPT_CK
+    ck::dynamic::Startup_AngelscriptFragmentDisplaySchemas();
+#endif
+
     ck::FScriptProcessor_Host::Startup();
 
     // Generic catch-all for replicated dynamic fragments: their payload UScriptStruct is only known at
@@ -58,6 +63,10 @@ void FCkDynamicModule::StartupModule()
 void FCkDynamicModule::ShutdownModule()
 {
     ck::FScriptProcessor_Host::Shutdown();
+
+#if WITH_ANGELSCRIPT_CK
+    ck::dynamic::Shutdown_AngelscriptFragmentDisplaySchemas();
+#endif
 }
 
 #undef LOCTEXT_NAMESPACE

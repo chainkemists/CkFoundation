@@ -66,6 +66,22 @@ comment-light; the *why* lives here.
   identify them through runtime `IsChildOf` / marker-typed-property scan. Do not use USTRUCT
   metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.
 
+### Cooked display schema (`CkDynamic_FragmentDisplaySchema.*`)
+
+- **Debugger-facing labels cannot depend on reflected metadata in Game targets.** USTRUCT,
+  UPROPERTY, and enum `DisplayName` metadata is stripped with editor-only data, so the runtime
+  registry owns fragment, property, and enum labels as values keyed by stable type paths, authored
+  property names, and numeric enum values.
+- **AngelScript descriptors are the source of truth for script-authored labels.** First-use
+  observation captures only fragments that actually enter dynamic storage; PostCompile atomically
+  replaces the AngelScript-owned generation so stale hot-reload objects are never retained.
+- **Native producers own native custom labels.** They register an explicit schema during startup and
+  unregister it during shutdown. Native entries take precedence and are not erased by an
+  AngelScript refresh.
+- **Display metadata is diagnostic, never gameplay admission.** Failure to observe a display schema
+  emits an ensure but must not prevent `Get_StorageId` from computing and caching the fragment's
+  storage ID.
+
 ### Script-processor host (`CkDynamic_ScriptProcessor_Host.*`)
 
 - **Lives in CkDynamic, not CkEcs**, because descriptor construction needs CkDynamic's

@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkDynamic/CkDynamic_Fragment.h"
+#include "CkDynamic/CkDynamic_FragmentDisplaySchema.h"
 #include "CkDynamic/CkDynamic_FragmentSchema.h"
 #include "CkDynamic/CkDynamic_Sentinel.h"
 
@@ -477,17 +478,31 @@ auto
         const UScriptStruct* InStructType)
     -> entt::id_type
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
+    const auto TypeIsValid = ck::IsValid(InStructType);
+    CK_ENSURE_IF_NOT(TypeIsValid, TEXT("Invalid struct type"))
+    {}
+    if (NOT TypeIsValid)
     { return entt::id_type{}; }
 
     // Keyed by weak pointer so an AS live-reload — which replaces UScriptStruct objects, potentially at a
     // recycled address — re-computes instead of serving a stale id. Game-thread-only, matching every caller.
-    check(IsInGameThread());
+    const auto IsGameThreadLookup = IsInGameThread();
+    CK_ENSURE_IF_NOT(IsGameThreadLookup, TEXT("Dynamic Fragment storage ids must be resolved on the game thread"))
+    {}
+    if (NOT IsGameThreadLookup)
+    { return entt::id_type{}; }
 
     static TMap<TWeakObjectPtr<const UScriptStruct>, entt::id_type> Cache;
 
     if (const auto* Found = Cache.Find(InStructType))
     { return *Found; }
+
+    // This is the first common observation point for every dynamic-fragment producer. The display registry keeps
+    // only the stable path and owned labels; it never retains this UScriptStruct across an AngelScript hot reload.
+    const auto DisplaySchemaObserved = ck::dynamic::Observe_FragmentDisplaySchema(InStructType);
+    CK_ENSURE_IF_NOT(DisplaySchemaObserved,
+        TEXT("Unable to observe Dynamic Fragment display schema for [{}]"), InStructType)
+    {}
 
     const auto Id = entt::id_type{GetTypeHash(InStructType->GetPathName())};
     Cache.Add(InStructType, Id);
