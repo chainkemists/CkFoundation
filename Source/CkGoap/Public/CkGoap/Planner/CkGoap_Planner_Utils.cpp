@@ -847,11 +847,13 @@ auto
 	const auto Chain = Get_ActiveChain(InPlanner);
 	if (Chain.Num() > 0)
 	{
-		// Leaf → outermost.
+		// Leaf → outermost. An atomic leaf Action is included in the chain as the
+		// execution step but carries no Planner role — nothing to deactivate on it.
 		for (auto i = Chain.Num() - 1; i >= 0; --i)
 		{
 			auto Action = Chain[i];
 			if (NOT ck::IsValid(Action)) { continue; }
+			if (NOT Action.Has<ck::FFragment_Goap_Planner_Activation>()) { continue; }
 			ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 		}
 
