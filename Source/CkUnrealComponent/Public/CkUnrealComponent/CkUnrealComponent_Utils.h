@@ -93,6 +93,31 @@ public:
         UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Bakes the hosted PRIMITIVE component's geometry into the Jolt static world (ExplicitActor
+    // semantics — the bake filter does not apply; the caller declared it static-in-intent). Call
+    // AFTER the component is configured: an ISM baked before its instances are added bakes nothing.
+    // Calling again REPLACES the previous bodies (re-bake after repopulating instances). Removal is
+    // automatic at teardown, or explicit via Request_RemoveFromJoltStaticWorld.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Request Bake Into Jolt Static World",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_UnrealComponent
+    Request_BakeIntoJoltStaticWorld(
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Removes the bodies added by Request_BakeIntoJoltStaticWorld. Idempotent — removing an
+    // unbaked component succeeds (the intent "no baked bodies" holds).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Request Remove From Jolt Static World",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_UnrealComponent
+    Request_RemoveFromJoltStaticWorld(
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     // Stops the per-tick push of the owning entity's world transform onto this component — use when
     // it is about to be Unreal-physics-driven instead. ONE-WAY: there is no re-enable, and the
     // component is expected to be short-lived after opting out.

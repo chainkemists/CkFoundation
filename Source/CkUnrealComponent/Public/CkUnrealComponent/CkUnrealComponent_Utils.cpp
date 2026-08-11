@@ -9,6 +9,10 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Utils.h"
+
+#include <Components/PrimitiveComponent.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_actor_component_internal
@@ -145,6 +149,75 @@ auto
     InUnrealComponent.AddOrGet<ck::FTag_UnrealComponent_TransformPushDisabled>();
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
+
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Request_BakeIntoJoltStaticWorld(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_UnrealComponent
+{
+    auto* PrimitiveComponent = ::Cast<UPrimitiveComponent>(Get_Component(InUnrealComponent));
+
+    const auto ComponentIsBakeable = ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{});
+    CK_ENSURE_IF_NOT(ComponentIsBakeable,
+        TEXT("Cannot bake UnrealComponent [{}] into the Jolt static world — it hosts no PRIMITIVE component "
+             "(not set up yet, torn down, or a non-primitive class). Call this after the component is "
+             "created AND configured (an ISM baked before its instances are added bakes nothing)."),
+        InUnrealComponent)
+    {}
+    if (NOT ComponentIsBakeable)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto NumBodies = UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent);
+
+    if (NumBodies > 0)
+    { InUnrealComponent.AddOrGet<ck::FTag_UnrealComponent_BakedIntoStaticWorld>(); }
+
+    // Zero bodies means the component has no valid collision (already ensured inside extraction
+    // where the specific defect is known) — the caller's intent "geometry is in the static world"
+    // does not hold, and retrying without fixing the component will not help.
+    InDelegate.ExecuteIfBound(InUnrealComponent, NumBodies > 0
+        ? ECk_Request_OperationResult::Succeeded
+        : ECk_Request_OperationResult::Failed);
+
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Request_RemoveFromJoltStaticWorld(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_UnrealComponent
+{
+    const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
+    CK_ENSURE_IF_NOT(UnrealComponentIsValid,
+        TEXT("Cannot remove an invalid UnrealComponent from the Jolt static world"))
+    {}
+    if (NOT UnrealComponentIsValid)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    if (InUnrealComponent.Has<ck::FTag_UnrealComponent_BakedIntoStaticWorld>())
+    {
+        InUnrealComponent.Remove<ck::FTag_UnrealComponent_BakedIntoStaticWorld>();
+
+        if (auto* PrimitiveComponent = ::Cast<UPrimitiveComponent>(Get_Component(InUnrealComponent));
+            ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+        { UCk_Utils_JoltStaticWorld_UE::Request_RemoveComponent(PrimitiveComponent); }
+    }
+
+    // Removing an unbaked component is an idempotent no-op: the intent "no baked bodies" holds.
     InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
 
     return InUnrealComponent;

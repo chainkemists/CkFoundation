@@ -33,6 +33,10 @@ namespace ck
     // K2_DetachFromComponent, which the ECS push would otherwise overwrite).
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_TransformPushDisabled);
 
+    // Set by Request_BakeIntoJoltStaticWorld: this component's geometry lives in the Jolt static
+    // world and EndPlay must remove its bodies before destroying the component.
+    CK_DEFINE_ECS_TAG(FTag_UnrealComponent_BakedIntoStaticWorld);
+
     struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_Current
     {
     public:

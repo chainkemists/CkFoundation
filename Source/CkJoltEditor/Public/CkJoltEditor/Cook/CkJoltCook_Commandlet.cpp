@@ -4,6 +4,7 @@
 
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJoltEditor/Cook/CkJoltCook_MeshShapeCooker.h"
 #include "CkJoltEditor/Cook/CkJoltCook_WorldCooker.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -59,6 +60,17 @@ auto
 
     ck_jolt_cook_commandlet::DoEnsure_AlwaysCookEntry();
 
+    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map/-AllMaps
+    // or run alone.
+    const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
+    auto MeshShapesFailed = false;
+
+    if (CookMeshShapes)
+    {
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
+        MeshShapesFailed = NOT FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(DryRun)._Success;
+    }
+
     auto MapsToCook = TArray<FString>{};
 
     if (const auto* SingleMap = ParamsMap.Find(TEXT("Map")))
@@ -100,8 +112,9 @@ auto
         }
     }
 
-    CK_ENSURE_IF_NOT(MapsToCook.Num() > 0,
-        TEXT("CkJoltCook: nothing to cook — pass -Map=/Game/Path/ToMap or -AllMaps"))
+    const auto NothingRequested = MapsToCook.IsEmpty() && NOT CookMeshShapes;
+    CK_ENSURE_IF_NOT(NOT NothingRequested,
+        TEXT("CkJoltCook: nothing to cook — pass -Map=/Game/Path/ToMap, -AllMaps, and/or -MeshShapes"))
     { return 1; }
 
     auto FailureCount = 0;
@@ -112,9 +125,10 @@ auto
         { ++FailureCount; }
     }
 
-    ck::jolt::Log(TEXT("CkJoltCook: [{}] maps processed, [{}] failed"), MapsToCook.Num(), FailureCount);
+    if (MapsToCook.Num() > 0)
+    { ck::jolt::Log(TEXT("CkJoltCook: [{}] maps processed, [{}] failed"), MapsToCook.Num(), FailureCount); }
 
-    return FailureCount == 0 ? 0 : 1;
+    return (FailureCount == 0 && NOT MeshShapesFailed) ? 0 : 1;
 }
 
 auto

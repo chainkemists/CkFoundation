@@ -190,6 +190,14 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FName> _BakeExcludedCollisionProfiles;
 
+    // Content roots whose static meshes get PRE-BAKED per-asset Jolt shapes (the CkJoltEditor mesh
+    // cook sweeps these; runtime uses the cooked shape instead of building hulls/tri-meshes).
+    // In cooked-data contexts, a hull/tri-mesh mesh under one of these roots with NO cooked shape
+    // is a loud ensure. Empty = the per-mesh pre-bake is off.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true))
+    TArray<FString> _BakedMeshShapeRoots;
+
     // Exclude components that Block NOTHING (pure overlap volumes / triggers) from the level sweep.
     // A component that blocks ANY channel — including project custom channels, which often default to
     // Block even under the stock OverlapAll profile — is NOT overlap-only.
@@ -228,6 +236,7 @@ public:
     CK_PROPERTY_GET(_BakeExcludedObjectChannels);
     CK_PROPERTY_GET(_BakeExcludedCollisionProfiles);
     CK_PROPERTY_GET(_BakeExcludeOverlapOnlyComponents);
+    CK_PROPERTY_GET(_BakedMeshShapeRoots);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -260,6 +269,7 @@ public:
     static auto Get_BakeExcludedObjectChannels() -> TArray<TEnumAsByte<ECollisionChannel>>;
     static auto Get_BakeExcludedCollisionProfiles() -> TArray<FName>;
     static auto Get_BakeExcludeOverlapOnlyComponents() -> ECk_EnableDisable;
+    static auto Get_BakedMeshShapeRoots() -> TArray<FString>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

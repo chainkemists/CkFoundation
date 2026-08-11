@@ -18,6 +18,8 @@ public class CkJoltEditor : CkModuleRules
             "AssetRegistry",
             "ToolMenus",
             "Landscape",
+            // The mesh-shape cook reads UBodySetupCore trace flags directly.
+            "PhysicsCore",
             "Slate",
             "SlateCore",
 

@@ -5,6 +5,7 @@
 
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 
+#include <Components/PrimitiveComponent.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
 
@@ -59,6 +60,40 @@ auto
     { return; }
 
     Subsystem->Request_RemoveActor(*InActor);
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Request_BakeComponent(
+        UPrimitiveComponent* InComponent)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InComponent), TEXT("Request_BakeComponent called with an INVALID Component"))
+    { return 0; }
+
+    auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InComponent);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("No JoltStaticWorld subsystem for Component [{}] — game worlds only"), InComponent->GetName())
+    { return 0; }
+
+    return Subsystem->Request_BakeComponent(*InComponent);
+}
+
+auto
+    UCk_Utils_JoltStaticWorld_UE::
+    Request_RemoveComponent(
+        UPrimitiveComponent* InComponent)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InComponent), TEXT("Request_RemoveComponent called with an INVALID Component"))
+    { return; }
+
+    auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InComponent);
+    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return; }
+
+    Subsystem->Request_RemoveComponent(*InComponent);
 }
 
 auto

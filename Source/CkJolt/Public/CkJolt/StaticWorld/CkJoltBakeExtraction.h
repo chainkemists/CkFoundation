@@ -3,6 +3,9 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
+// This API returns JPH::Ref<JPH::Shape> — carry the ck::IsValid support for it with the API so
+// every consumer TU sees the same executor specialization (an ODR requirement, not a convenience).
+#include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Data.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 

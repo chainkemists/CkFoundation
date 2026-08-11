@@ -355,6 +355,19 @@ auto
 
 auto
     UCk_Utils_Jolt_ProjectSettings::
+    Get_BakedMeshShapeRoots()
+    -> TArray<FString>
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    return Settings->Get_BakedMeshShapeRoots();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
     Get_BakeExcludeOverlapOnlyComponents()
     -> ECk_EnableDisable
 {
