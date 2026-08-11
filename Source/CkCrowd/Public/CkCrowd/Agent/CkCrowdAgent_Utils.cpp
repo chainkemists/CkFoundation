@@ -10,6 +10,8 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -449,6 +451,77 @@ auto
     { return FVector::ZeroVector; }
 
     return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveGoal();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_HasReachedActiveGoal(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_HasReachedActiveGoal"), InAgent)
+    {}
+    if (NOT AgentIsValid)
+    { return false; }
+
+    // A queued MoveTo/Stop supersedes the retained result immediately from the caller's perspective, before the
+    // request processor has replaced _ActiveGoal or reset the waypoint cursor.
+    if (InAgent.Has<ck::FFragment_CrowdAgent_MoveRequests>())
+    { return false; }
+
+    const auto HasRequiredState =
+        InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>() &&
+        InAgent.Has<ck::FFragment_Nav_PathResult>();
+    if (NOT HasRequiredState || NOT InAgent.Has<ck::FTag_CrowdAgent_Idle>())
+    { return false; }
+
+    const auto& PathFollow = InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>();
+    const auto& PathResult = InAgent.Get<ck::FFragment_Nav_PathResult>();
+    const auto& Waypoints = PathResult.Get_Waypoints();
+    return PathResult.Get_Status() == ECk_Nav_PathStatus::Ready &&
+           NOT Waypoints.IsEmpty() &&
+           PathFollow.Get_WaypointIndex() >= Waypoints.Num() &&
+           NOT PathFollow.Get_ActivePathEndsShortOfGoal();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_ActiveMoveEpisode(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> int32
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_ActiveMoveEpisode"), InAgent)
+    {}
+    if (NOT AgentIsValid || NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
+    { return 0; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveMoveEpisode();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_ActiveMoveCorrelationId(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> int32
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_ActiveMoveCorrelationId"), InAgent)
+    {}
+    if (NOT AgentIsValid || NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
+    { return 0; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveMoveCorrelationId();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

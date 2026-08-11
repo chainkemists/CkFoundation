@@ -292,6 +292,18 @@ private:
     UPROPERTY()
     FVector _ActiveGoal = FVector::ZeroVector;
 
+    // Monotonic identity of the accepted MoveTo episode that owns _ActiveGoal.
+    // Same-goal requests ignored while Walking do not advance it, allowing a
+    // callback consumer to reject an arrival owned by an earlier intent.
+    UPROPERTY()
+    int32 _ActiveMoveEpisode = 0;
+
+    // Opaque caller identity for the accepted MoveTo that owns _ActiveGoal. Zero
+    // preserves the ordinary uncorrelated request contract. A different nonzero
+    // identity may claim a fresh episode even when its goal matches the walk in flight.
+    UPROPERTY()
+    int32 _ActiveMoveCorrelationId = 0;
+
     // World-space start of the CURRENT path segment. CkNavigation's ExtractWaypoints strips the
     // path's start point, so the first segment's incoming direction — which Steering's
     // plane-crossing retirement needs — cannot be recovered from the waypoint array alone.
@@ -316,6 +328,8 @@ public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
     CK_PROPERTY_GET(_ActiveGoal);
+    CK_PROPERTY_GET(_ActiveMoveEpisode);
+    CK_PROPERTY_GET(_ActiveMoveCorrelationId);
     CK_PROPERTY_GET(_CurrentSegmentStart);
     CK_PROPERTY_GET(_ActivePathEndsShortOfGoal);
     CK_PROPERTY_GET(_PathSerial);
@@ -404,10 +418,16 @@ private:
                     EditCondition="_ArrivalRadiusOverrideMode == ECk_Override::Override"))
     float _ArrivalRadiusOverrideValue = 30.0f;
 
+    // Optional caller identity for correlating a retained arrival with the exact
+    // accepted request that authored it. Zero keeps legacy same-goal no-op behavior.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _CorrelationId = 0;
+
 public:
     CK_PROPERTY_GET(_Target);
     CK_PROPERTY(_ArrivalRadiusOverrideMode);
     CK_PROPERTY(_ArrivalRadiusOverrideValue);
+    CK_PROPERTY(_CorrelationId);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_MoveTo, _Target);

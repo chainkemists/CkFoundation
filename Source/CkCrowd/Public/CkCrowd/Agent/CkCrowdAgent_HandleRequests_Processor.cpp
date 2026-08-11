@@ -85,12 +85,20 @@ namespace ck
         // re-issuer would stop the final-stop ever latching and the agent would orbit its goal.
         constexpr auto SameGoalEpsilonCm = 20.0f;
         if (InHandle.Has<FTag_CrowdAgent_Walking>() &&
-            FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm)
+            FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm &&
+            (InRequest.Get_CorrelationId() == 0 ||
+             InRequest.Get_CorrelationId() == InPathFollow.Get_ActiveMoveCorrelationId()))
         {
-            ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal, already walking)"),
-                InHandle, Goal);
+            ck::crowd::Verbose(
+                TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal without a new nonzero correlation {}, already walking)"),
+                InHandle, Goal, InRequest.Get_CorrelationId());
             return;
         }
+
+        InPathFollow._ActiveMoveEpisode = InPathFollow._ActiveMoveEpisode == MAX_int32
+            ? 1
+            : InPathFollow._ActiveMoveEpisode + 1;
+        InPathFollow._ActiveMoveCorrelationId = InRequest.Get_CorrelationId();
 
         const auto ArrivalRadius = InRequest.Get_ArrivalRadiusOverrideMode() == ECk_Override::Override
             ? InRequest.Get_ArrivalRadiusOverrideValue()
