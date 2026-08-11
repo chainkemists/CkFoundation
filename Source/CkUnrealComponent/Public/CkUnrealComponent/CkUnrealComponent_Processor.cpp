@@ -138,9 +138,18 @@ namespace ck
             if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
             {
                 auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+                const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
                 ck_unreal_component_processor::PushTransformIfChanged(
-                    CastChecked<USceneComponent>(NewComponent),
-                    UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform));
+                    CastChecked<USceneComponent>(NewComponent), OwnerWorldTransform);
+
+                // Seeded with the exact value just pushed so PushTransform's change detection starts
+                // settled. The fragment lives on the OWNER, shared by all its components — seed only
+                // when absent: resetting existing memory here would swallow an owner move that a
+                // sibling component (added earlier, positioned at the old pose) still needs delivered.
+                if (NOT OwnerTransform.Has<FFragment_UnrealComponent_LastPushedTransform>())
+                {
+                    OwnerTransform.Add<FFragment_UnrealComponent_LastPushedTransform>(OwnerWorldTransform);
+                }
             }
         }
 
@@ -226,12 +235,18 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_RecordOfUnrealComponents&)
+            const FFragment_RecordOfUnrealComponents&,
+            FFragment_UnrealComponent_LastPushedTransform& InLastPushed)
         -> void
     {
         // PostTransform runs after root-to-ECS synchronization and transform requests. At this point the
         // fragment is the authoritative value for both root-driven and externally-driven owners.
         const auto& CurrentTransform = InTransform.Get_Transform();
+
+        if (InLastPushed.Get_Transform().Equals(CurrentTransform))
+        { return; }
+
+        InLastPushed._Transform = CurrentTransform;
         RecordOfUnrealComponents_Utils::ForEach_ValidEntry(
             InHandle,
             [&CurrentTransform](FCk_Handle_UnrealComponent InComponentHandle)
