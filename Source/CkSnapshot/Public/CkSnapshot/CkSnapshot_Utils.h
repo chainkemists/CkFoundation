@@ -100,6 +100,19 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FString& InStableIdentity);
 
+    /**
+     * Registers a historical SaveKey identity for load rendezvous while keeping
+     * the canonical key written by the next save unchanged. The entity must
+     * already carry its canonical SaveKey.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Assign Save Key Alias")
+    static void
+    Request_AssignSaveKeyAlias(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FString& InHistoricalIdentity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Has Save Key")

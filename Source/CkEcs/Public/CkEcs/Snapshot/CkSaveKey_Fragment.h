@@ -29,9 +29,35 @@ private:
     UPROPERTY(SaveGame)
     FGuid _Key;
 
+    // Compatibility-only rendezvous identities. They are rebuilt by current
+    // world construction and must never become the identity written by the
+    // next save; that is always _Key.
+    UPROPERTY(Transient)
+    TArray<FGuid> _Aliases;
+
+    // Opt-in for infrastructure pools whose members are deliberately
+    // interchangeable across boots. Unique SaveKeys remain the default.
+    UPROPERTY(Transient)
+    bool _IsSharedRendezvousGroup = false;
+
 public:
     CK_PROPERTY_GET(_Key);
     CK_DEFINE_CONSTRUCTORS(FFragment_SaveKey, _Key);
+
+    auto Get_Aliases() const -> const TArray<FGuid>&
+    { return _Aliases; }
+
+    auto AddAlias(FGuid InAlias) -> void
+    {
+        if (InAlias.IsValid() && InAlias != _Key)
+        { _Aliases.AddUnique(InAlias); }
+    }
+
+    auto Get_IsSharedRendezvousGroup() const -> bool
+    { return _IsSharedRendezvousGroup; }
+
+    auto MarkSharedRendezvousGroup() -> void
+    { _IsSharedRendezvousGroup = true; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -45,13 +71,33 @@ namespace ck::save_key
      * spawner, the relay channels) can key the entities they create without depending on it.
      *
      * The caller owns identity STABILITY: the same logical entity must produce a byte-identical identity on every
-     * boot, and two distinct logical entities must never produce the same one — they would consolidate onto
-     * whichever the load's resolver published last.
+     * boot, and two distinct logical entities must never produce the same one — the load resolver diagnoses the
+     * collision and preserves the first published entity.
      */
     CKECS_API auto
     Assign(
         FCk_Handle& InEntity,
         const FString& InStableIdentity) -> void;
+
+    /**
+     * Assigns a canonical key that identifies an interchangeable rendezvous
+     * group rather than one unique entity. The resolver retains one live
+     * representative without diagnosing other explicitly shared members.
+     */
+    CKECS_API auto
+    AssignSharedRendezvousGroup(
+        FCk_Handle& InEntity,
+        const FString& InStableIdentity) -> void;
+
+    /**
+     * Adds a historical identity that may rendezvous saved state onto this
+     * entity without changing the canonical SaveKey captured next time.
+     * Assign the canonical key first; aliases are reconstruction metadata.
+     */
+    CKECS_API auto
+    AssignAlias(
+        FCk_Handle& InEntity,
+        const FString& InHistoricalIdentity) -> void;
 
     /**
      * True when the actor came from LOADING (or PIE-duplicating) its level rather than from a runtime SpawnActor.
