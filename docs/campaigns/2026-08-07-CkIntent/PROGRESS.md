@@ -2,6 +2,56 @@
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
 
+**As of 2026-08-10 (maintainer returned): PIE pass delivered two findings → slice 6 feel patch
+INSTALLED + GATED ✅ GREEN 123/123 (0 failed/skipped/contaminated, AS compile first try,
+`Test-Phase10Slice6.log`, 1m13s; editor lock probed FREE; one infra false-start — wrong log
+dir, zero tests ran).** Finding 1 (bug): single clicks fired specials — root cause: the 5f
+hold verdict (~83ms) sits INSIDE the human click-duration distribution (~90-150ms), so ordinary
+clicks graded as holds; mid-chain the press-buffer had already started the next step, so one
+press double-answered (step-start → special). Fixed per **[P10-D11]**: `hold=10` (~166ms) in
+notation + `k_ChargeHoldFrames`, plus a pending-swing verdict gate in `DoTrySpawnPendingSwing`
+(strike waits out an unresolved press; keeps the free mid-wind-up cancel a longer verdict would
+break; spawn duration = state remainder for co-expiry; `_PendingSwing_DurationSeconds` retired).
+Finding 2 (design): chord-with-delta pushback conceded, but maintainer ruled ordering IS the
+test target → sequences stay, comment corrected (**[P10-D10]**). Drive script §2/§3 re-tuned.
+Second PIE pass (same day) → **slice 7 INSTALLED, gate pending**: chains were "very hard" —
+root cause [P10-D6]'s wind-up rejection swallowing a double-click's second press (state enters
+on click 1's RELEASE, second press lands ~50-120ms later, inside the 70ms wind-up). Ruled
+**[P10-D12]**: chain window opens at STEP ENTRY (`_StepEntryFrame`, strictly-after; wind-up is
+animation only; `_WindUpEndFrame`/`k_SamplerHz` retired), durations to maintainer's numbers
+(light 2s x3, heavy 4s x3), red sphere demystified = unblocked projectile hit (no change).
+Slice 7 extended with PARRY per **[P10-D13]** (maintainer: block "needs to be instant... add
+support for parry"): Q stays grammar-free (press registers on its row, zero verdict); parry
+judged at IMPACT from `Get_HeldRunFrames(Q)` — run in [1,8] (~133ms) = PARRIED gold beat,
+longer = BLOCKED cyan, 0 = STRUCK red; `Get_IsBlocking()` retired into the three-way verdict.
+Slices 6+7 GATED together on the final tree ✅ **GREEN 123/123** (0 failed/skipped/
+contaminated, AS compile first try, `Test-Phase10Slice7.log`, 1m9s; editor lock probed FREE
+before launch — it had been LOCKED mid-slice-7, gate deferred until it freed).
+**Third PIE pass (same day) → slice 8 INSTALLED, gate pending**: five findings ruled
+**[P10-D14]** (drawn swing IS the hitbox — persistent per-tick window at the shape's centre,
+arc + at-spawn test retired; dummy hit feedback = ONE red 0.4s flash, `Request_TakeHit()`
+no-arg; BUFFERED annotates the step label `"LIGHT 2 + BUFFERED"` instead of replacing it;
+overhead sphere identified for the maintainer = buffered-attack marker, kept),
+**[P10-D15]** (parry deflects — `Request_TakeProjectileHit` → `Request_ResolveProjectileImpact`
+returning the verdict; parried shot turns gold, flies home, dummy self-hits on arrival;
+one-in-flight holds through the return), **[P10-D16]** (sprint attacks — LeftShift minted as
+button `R`/`k_Key_Sprint`, sprint locomotion MaxSpeed 1000 vs walk 600 polled per tick,
+`"W+L"` → `"W+R+L"` + NEW `"W+R+H"` (955) `Kit_Combo_WH`/state 14/`_Attempt_ComboWH`,
+both spawn a 300cm AoE ring with radial hit window; 3-button chords verified legal in the
+grammar parser). Root cause of "no hits": the old test ran ONCE at swing spawn, pawn-centred
+(reach 275-330cm vs dummy at 800cm), so closing distance during the 2s/4s step never
+re-tested; landed hits flashed 0.15s in family colour — read as nothing. Files touched:
+CkTests Pawn/Enemy/Moves/Shared/PC + CkFoundation PHASE_10.md/PHASE_10_EDITOR_VERIFY.md
+(§1/§2/§4/§5/§6/§7)/this file. **Slice 8 GATED on the final tree ✅ GREEN 123/123** (0
+failed/skipped/contaminated, AS compile first try, `Test-Phase10Slice8.log`, 1m10s; editor
+lock probed FREE before both launch attempts; one infra false-start — wrong toolbox exe path
+`C:\Program Files\...`, correct is project-relative `CkAuto/UnrealToolbox.exe`, zero tests ran
+on the failed attempt). ALL UNCOMMITTED (slices 6+7+8): CkTests (5 gym .as — Pawn, Enemy,
+Moves, Shared, PC) + CkFoundation (PHASE_10.md, PROGRESS.md, PHASE_10_EDITOR_VERIFY.md).
+Next: maintainer /commit call → PIE re-drive §1 (sprint) / §2 (hitbox, BUFFERED label) /
+§4 (parry deflect) / §5 (sprint attacks). The closed-state paragraph below stands as
+history.
+
 **As of 2026-08-10 (late): PHASE 10 technically CLOSED under [P2-D4] — all five slices built,
 gated, and committed; the AFK mandate ("complete all the slices, /commit periodically") is
 FULFILLED.** Slice 3b gated `Test-Phase10Slice3b-BuildTest2.log` 123/123 (first-ever compile of
