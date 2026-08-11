@@ -182,6 +182,16 @@ empty ring — with a row whose `_FrameIndex` is negative. A real row always car
 never be confused and there is no separate success flag to forget to check. `Get_LatestFrame` is offset 0 and
 answers the same way before the first sampling pass has run.
 
+A consumer that wants MORE history than the working window records rows out of the ring as they arrive
+(anti-pattern 5's prescribed shape). The module ships that consumer as the **IntentDebugHistory feature**
+(`Debug/CkIntentDebugHistory_*`, `UCk_Utils_IntentDebugHistory_UE`): an opt-in fragment on the same source,
+filled by `FProcessor_IntentDebugHistory_Record` copying each newly-sampled row, read back through the same
+offset-from-newest addressing as the ring, with a runtime-retunable capacity (`Request_SetCapacity`, an
+immediate mutator — a debug knob whose only consumer is a human). **Compiled out in Shipping** (the
+CkStateMachine/Debug precedent): the reflected surface stays for UHT's sake, but Add composes nothing and
+the recorder does not exist. `CkIntentDebugger`'s timeline reads it when present ("history" field) and
+falls back to the bare ring otherwise.
+
 ---
 
 ## Direction — the octant, and why it sticks
