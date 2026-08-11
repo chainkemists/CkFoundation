@@ -148,7 +148,7 @@ auto
     UCk_Utils_OwningActor_UE::Promise_OnActorEcsReady(this,
         [SaveKeyIdentity](AActor*, FCk_Handle InChannelEntity) -> void
         {
-            ck::save_key::Assign(InChannelEntity, SaveKeyIdentity);
+            ck::save_key::AssignSharedRendezvousGroup(InChannelEntity, SaveKeyIdentity);
         },
         ECk_ActorEcsReady_Policy::LinkEstablished);
 }
