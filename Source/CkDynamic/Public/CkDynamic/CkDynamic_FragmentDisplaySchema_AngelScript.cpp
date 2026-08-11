@@ -153,7 +153,7 @@ auto
         FFragmentDisplaySchema& OutSchema)
     -> bool
 {
-    if (ck::Is_NOT_Valid(InFragmentType))
+    if (ck::Is_NOT_Valid(InFragmentType) || NOT FAngelscriptManager::IsInitialized())
     { return false; }
 
     const auto Modules = FAngelscriptManager::Get().GetActiveModules();
@@ -172,9 +172,9 @@ auto
     Refresh_AngelscriptFragmentDisplaySchemas()
     -> bool
 {
-    const auto CanRefresh = IsInGameThread();
+    const auto CanRefresh = IsInGameThread() && FAngelscriptManager::IsInitialized();
     CK_ENSURE_IF_NOT(CanRefresh,
-        TEXT("AngelScript Dynamic Fragment display schemas must refresh on the game thread"))
+        TEXT("AngelScript Dynamic Fragment display schemas must refresh on the game thread after initialization"))
     {}
     if (NOT CanRefresh)
     { return false; }
@@ -217,12 +217,14 @@ auto
     if (ck_dynamic_fragment_display_schema_as::PostCompileHandle.IsValid())
     { return; }
 
-    Refresh_AngelscriptFragmentDisplaySchemas();
     ck_dynamic_fragment_display_schema_as::PostCompileHandle =
         FAngelscriptCodeModule::GetPostCompile().AddLambda([]
         {
             Refresh_AngelscriptFragmentDisplaySchemas();
         });
+
+    if (FAngelscriptManager::IsInitialized())
+    { Refresh_AngelscriptFragmentDisplaySchemas(); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
