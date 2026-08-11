@@ -213,6 +213,20 @@ auto
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
+    const auto OwnerIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(OwnerIsValid,
+        TEXT("Unable to BuildAndReplicate using invalid owner [{}]"), InHandle)
+    {}
+    if (NOT OwnerIsValid)
+    { return {}; }
+
+    const auto OwnerHasNetParams = UCk_Utils_Net_UE::Has(InHandle);
+    CK_ENSURE_IF_NOT(OwnerHasNetParams,
+        TEXT("Entity [{}] does NOT have Network Info. Unable to BuildAndReplicate."), InHandle)
+    {}
+    if (NOT OwnerHasNetParams)
+    { return {}; }
+
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
     { return {}; }
 
@@ -227,6 +241,16 @@ auto
             ConstructionInfo.Get_ConstructionScript())
         { return {}; }
     }
+
+    const auto EntityReplication = UCk_Utils_Net_UE::Get_EntityReplication(InHandle);
+    const auto HasRequiredReplicationDriver = EntityReplication == ECk_Replication::DoesNotReplicate
+        || InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+    CK_ENSURE_IF_NOT(HasRequiredReplicationDriver,
+        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication."),
+        InHandle)
+    {}
+    if (NOT HasRequiredReplicationDriver)
+    { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
 
@@ -265,12 +289,7 @@ auto
     }
 
     // Non-replicated owners: entity was built successfully, skip replication setup.
-    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
-    { return NewEntity; }
-
-    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication."),
-        InHandle)
+    if (EntityReplication == ECk_Replication::DoesNotReplicate)
     { return NewEntity; }
 
     switch (const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
