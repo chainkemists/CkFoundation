@@ -1,6 +1,7 @@
 #include "CkSnapshot_Subsystem.h"
 
 #include "CkSnapshot/CkSnapshot_Log.h"
+#include "CkSnapshot/Inspection/CkSnapshot_Inspection.h" // shared identity/provenance rendering + the DumpSlot census
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path)
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
@@ -53,47 +54,6 @@ namespace ck_snapshot_subsystem
 {
     constexpr auto UserIndex = 0;
     constexpr auto k_NoEntity = 0xFFFFFFFFu; // mirrors ck::snapshot's k_NoEntity sentinel
-
-    // ECk_Snapshot_V3_Provenance carries no fmt formatter, so it cannot be printed via {} directly.
-    auto
-        DoProvenance_ToString(
-            ECk_Snapshot_V3_Provenance InProvenance)
-        -> const TCHAR*
-    {
-        switch (InProvenance)
-        {
-            case ECk_Snapshot_V3_Provenance::EngineOwned:      return TEXT("EngineOwned");
-            case ECk_Snapshot_V3_Provenance::ConstructSpawned: return TEXT("ConstructSpawned");
-            case ECk_Snapshot_V3_Provenance::RuntimeSpawned:   return TEXT("RuntimeSpawned");
-            case ECk_Snapshot_V3_Provenance::DefinitionBuilt:  return TEXT("DefinitionBuilt");
-        }
-        return TEXT("Unknown");
-    }
-
-    // The identity an entry is addressed BY, per provenance — the only human-readable key a diagnostic can offer
-    // once the saved-id has failed to resolve. Shared by the skip and orphan records so the two read alike.
-    auto
-        DoIdentity_ForEntry(
-            const FCk_Snapshot_V3_EntityEntry& InEntry)
-        -> FString
-    {
-        switch (InEntry.Get_Provenance())
-        {
-            case ECk_Snapshot_V3_Provenance::EngineOwned:
-                return InEntry.Get_SaveKey().IsValid() ? InEntry.Get_SaveKey().ToString() : InEntry.Get_PlayerId();
-            case ECk_Snapshot_V3_Provenance::ConstructSpawned:
-                return InEntry.Get_Label();
-            case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
-                return NOT InEntry.Get_ActorClassPath().IsEmpty()
-                    ? InEntry.Get_ActorClassPath()
-                    : InEntry.Get_ScriptClassPath();
-            case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
-                return NOT InEntry.Get_BuildRecipe().IsEmpty()
-                    ? InEntry.Get_BuildRecipe()[0].Get_ScriptClassPath()
-                    : InEntry.Get_ScriptClassPath();
-        }
-        return {};
-    }
 
     // Replays the capture's ArIsSaveGame tagged-property blob onto a deferred-spawn actor. Empty bytes mean the saved
     // class declared no SaveGame property (or the row predates the field), and the spawn proceeds untouched.
@@ -725,8 +685,8 @@ auto
                             {
                                 ck::snapshot::Warning(
                                     TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
-                                    SavedId, ck_snapshot_subsystem::DoProvenance_ToString(Entry.Get_Provenance()),
-                                    ck_snapshot_subsystem::DoIdentity_ForEntry(Entry), Entry.Get_LifetimeOwnerSavedId(),
+                                    SavedId, ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()),
+                                    ck::snapshot::Get_IdentityText(Entry), Entry.Get_LifetimeOwnerSavedId(),
                                     ECk_Snapshot_SkipReason::DuplicateSaveKey);
                                 DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::DuplicateSaveKey);
                                 break;
@@ -850,8 +810,8 @@ auto
                                 {
                                     ck::snapshot::Warning(
                                         TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
-                                        SavedId, ck_snapshot_subsystem::DoProvenance_ToString(Entry.Get_Provenance()),
-                                        ck_snapshot_subsystem::DoIdentity_ForEntry(Entry), OwnerSavedId,
+                                        SavedId, ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()),
+                                        ck::snapshot::Get_IdentityText(Entry), OwnerSavedId,
                                         ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
                                     DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
                                     break;
@@ -1007,7 +967,7 @@ auto
     auto Record = FCk_Snapshot_SkipRecord{};
     Record.Set_SavedId(SavedId);
     Record.Set_Provenance(InEntry.Get_Provenance());
-    Record.Set_Identity(ck_snapshot_subsystem::DoIdentity_ForEntry(InEntry));
+    Record.Set_Identity(ck::snapshot::Get_IdentityText(InEntry));
     Record.Set_OwnerSavedId(InEntry.Get_LifetimeOwnerSavedId());
     Record.Set_Reason(InReason);
     _SkipRecords.Add(MoveTemp(Record));
@@ -1194,7 +1154,7 @@ auto
         const auto OwnerSavedId  = Entry.Get_LifetimeOwnerSavedId();
         const auto bOwnerOrphaned = OwnerSavedId != ck_snapshot_subsystem::k_NoEntity && OrphanIds.Contains(OwnerSavedId);
 
-        const auto Identity = ck_snapshot_subsystem::DoIdentity_ForEntry(Entry);
+        const auto Identity = ck::snapshot::Get_IdentityText(Entry);
         auto Reason = FString{};
         switch (Entry.Get_Provenance())
         {
@@ -1226,7 +1186,7 @@ auto
         }
 
         ck::snapshot::Warning(TEXT("v3 load ORPHAN: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
-            SavedId, ck_snapshot_subsystem::DoProvenance_ToString(Entry.Get_Provenance()), Identity, OwnerSavedId, Reason);
+            SavedId, ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()), Identity, OwnerSavedId, Reason);
 
         auto Record = FCk_Snapshot_OrphanRecord{};
         Record.Set_SavedId(SavedId);
@@ -1694,38 +1654,24 @@ namespace ck_snapshot_subsystem
             }
 
             const auto& SlotName = InArgs[0];
-            auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, UserIndex));
-            if (ck::Is_NOT_Valid(SaveGame))
+            const auto Document = ck::snapshot::Inspect_SaveSlot(FName{*SlotName});
+
+            if (Document.Get_ReadStatus() != ECk_SnapshotInspection_ReadStatus::Success)
             {
-                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: no/invalid save in slot [{}]"), SlotName);
+                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: cannot census slot [{}] — read status [{}]"),
+                    SlotName, ck::snapshot::Get_ReadStatusText(Document.Get_ReadStatus()));
                 return;
             }
 
-            auto Tables = FCk_Snapshot_V3_Tables{};
-            auto Reader = FMemoryReader{SaveGame->_SnapshotBytesV3, /*bIsPersistent=*/true};
-            FCk_Snapshot_V3_Tables::StaticStruct()->SerializeItem(Reader, &Tables, /*Defaults=*/nullptr);
-            if (Reader.IsError())
-            {
-                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: v3 stream in slot [{}] is corrupt (deserialize failed)"), SlotName);
-                return;
-            }
-
-            auto EngineOwned = 0, ConstructSpawned = 0, RuntimeSpawned = 0, DefinitionBuilt = 0;
             auto IdentityCounts = TMap<FString, int32>{};
             auto AdoptKeyCounts = TMap<FString, int32>{};
 
-            for (const auto& Entry : Tables.Get_Entities())
+            for (const auto& Summary : Document.Get_Entities())
             {
-                switch (Entry.Get_Provenance())
-                {
-                    case ECk_Snapshot_V3_Provenance::EngineOwned:      ++EngineOwned; break;
-                    case ECk_Snapshot_V3_Provenance::ConstructSpawned: ++ConstructSpawned; break;
-                    case ECk_Snapshot_V3_Provenance::RuntimeSpawned:   ++RuntimeSpawned; break;
-                    case ECk_Snapshot_V3_Provenance::DefinitionBuilt:  ++DefinitionBuilt; break;
-                }
+                const auto& Entry = Summary.Get_Entry();
 
                 ++IdentityCounts.FindOrAdd(ck::Format_UE(TEXT("[{}] {}"),
-                    DoProvenance_ToString(Entry.Get_Provenance()), DoIdentity_ForEntry(Entry)));
+                    ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()), Summary.Get_IdentityText()));
 
                 if (Entry.Get_Provenance() == ECk_Snapshot_V3_Provenance::ConstructSpawned)
                 {
@@ -1734,10 +1680,11 @@ namespace ck_snapshot_subsystem
                 }
             }
 
+            const auto& Census = Document.Get_Census();
             ck::snapshot::Display(TEXT("DumpSlot [{}]: entities [{}] = EngineOwned [{}] + ConstructSpawned [{}] + "
                 "RuntimeSpawned [{}] + DefinitionBuilt [{}] | payloads [{}]"),
-                SlotName, Tables.Get_Entities().Num(), EngineOwned, ConstructSpawned, RuntimeSpawned, DefinitionBuilt,
-                Tables.Get_Payloads().Num());
+                SlotName, Census.Get_EntityCount(), Census.Get_EngineOwnedCount(), Census.Get_ConstructSpawnedCount(),
+                Census.Get_RuntimeSpawnedCount(), Census.Get_DefinitionBuiltCount(), Census.Get_PayloadCount());
 
             auto SortedIdentities = IdentityCounts.Array();
             SortedIdentities.Sort([](const auto& InA, const auto& InB) { return InA.Value > InB.Value; });
