@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
@@ -134,6 +135,15 @@ private:
     auto DoRehydrate_SaveKeyResolver() -> int32;
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
     auto DoRebuild_Tick() -> bool;                       // resolve/spawn each entry into _SavedIdMap; true == complete
+    UFUNCTION()
+    void
+    DoOnRuntimeEntityScriptConstructed(
+        FCk_Handle_EntityScript InEntityScript);
+    UFUNCTION()
+    void
+    DoOnRuntimeEntityScriptSpawnRequestCompleted(
+        FCk_Handle InEntity,
+        ECk_Request_OperationResult InResult);
     // The ONLY way an entry enters _SkippedIds: pairs the set membership with its reasoned per-entity record.
     auto DoRecord_Skip(const FCk_Snapshot_V3_EntityEntry& InEntry, ECk_Snapshot_SkipReason InReason) -> void;
     auto DoRestore_SavedOwnership() -> void;             // restore mapped lifetime/context links before hydration
@@ -162,6 +172,7 @@ private:
     TMap<uint32, FCk_Handle> _SavedIdMap;               // saved-id -> live handle (built during Rebuilding)
     TSet<FCk_Handle> _MappedLiveEntities;               // every _SavedIdMap value — a live entity one row already claimed
     TSet<uint32> _SpawnedRuntimeIds;                    // RuntimeSpawned entries we already issued a spawn for
+    TSet<FCk_Handle> _RuntimeEntityScriptsAwaitingConstruction; // mapped identity; not yet safe as a definition-build owner
     TSet<uint32> _PersistedIds;                         // every saved entity id — an owner NOT here is the world root/transient
     TSet<uint32> _SkippedIds;                           // entries the loader deliberately does NOT rebuild
     TArray<FCk_Snapshot_SkipRecord> _SkipRecords;       // one reasoned record per _SkippedIds entry; copied into the report

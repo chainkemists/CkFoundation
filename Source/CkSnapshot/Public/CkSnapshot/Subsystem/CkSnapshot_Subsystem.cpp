@@ -194,6 +194,7 @@ auto
 
     _LoadInProgress = false;
     _LoadPhase = ELoadPhase::Idle;
+    _RuntimeEntityScriptsAwaitingConstruction.Reset();
 
     Super::Deinitialize();
 }
@@ -365,6 +366,7 @@ void
     _SavedIdMap.Reset();
     _MappedLiveEntities.Reset();
     _SpawnedRuntimeIds.Reset();
+    _RuntimeEntityScriptsAwaitingConstruction.Reset();
     _SkippedIds.Reset();
     _SkipRecords.Reset();
     _PersistedIds.Reset();
@@ -831,10 +833,22 @@ auto
 
                         _SpawnedRuntimeIds.Add(SavedId);
                         auto Params = DoDeserialize_V3Blob(Entry.Get_SpawnParamsBytes());
-                        const auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity(Owner, ScriptClass, Params, {});
+                        auto OnSpawnRequestCompleted = FCk_Delegate_Request_OnCompleted{};
+                        OnSpawnRequestCompleted.BindDynamic(
+                            this, &UCk_Snapshot_Subsystem_UE::DoOnRuntimeEntityScriptSpawnRequestCompleted);
+                        auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity(
+                            Owner, ScriptClass, Params, OnSpawnRequestCompleted);
                         // The pending handle wraps the immediately-created entity (Construct completes over the pumps);
                         // map it now so dependents can reference it.
                         Resolved = Pending.Get_EntityUnderConstruction();
+                        if (ck::IsValid(Resolved))
+                        {
+                            _RuntimeEntityScriptsAwaitingConstruction.Add(Resolved);
+
+                            auto OnConstructed = FCk_Delegate_EntityScript_Constructed{};
+                            OnConstructed.BindDynamic(this, &UCk_Snapshot_Subsystem_UE::DoOnRuntimeEntityScriptConstructed);
+                            UCk_Utils_PendingEntityScript_UE::Promise_OnConstructed(Pending, OnConstructed);
+                        }
                     }
                 }
                 break;
@@ -908,6 +922,24 @@ auto
                     if (ck::Is_NOT_Valid(BuildOwner))
                     { BuildOwner = *MappedOwner; }
 
+                    if (_RuntimeEntityScriptsAwaitingConstruction.Contains(BuildOwner))
+                    {
+                        AnyUnresolved = true;
+                        break;
+                    }
+
+                    // Mapping is an identity rendezvous, not a construction-readiness guarantee. EngineOwned level
+                    // roots can publish their SaveKey while their EntityScript pipeline is still composing the
+                    // ReplicationDriver required by a DefinitionBuilt child. Wait on that exact prerequisite and let
+                    // the existing bounded rebuild/escalation loop diagnose a topology that never becomes ready.
+                    const auto BuildOwnerIsReplicated = UCk_Utils_Net_UE::Has(BuildOwner)
+                        && UCk_Utils_Net_UE::Get_EntityReplication(BuildOwner) == ECk_Replication::Replicates;
+                    if (BuildOwnerIsReplicated && NOT UCk_Utils_EntityReplicationDriver_UE::Has(BuildOwner))
+                    {
+                        AnyUnresolved = true;
+                        break;
+                    }
+
                     const auto BuiltItem = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate_Multiple(BuildOwner, ConstructionInfos);
 
                     // Claim the once-guard + map ONLY on a valid build. An invalid handle (host gate / rep-driver
@@ -950,6 +982,32 @@ auto
     EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::LoadKernel);
 
     return NOT AnyUnresolved;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_Snapshot_Subsystem_UE::
+    DoOnRuntimeEntityScriptConstructed(
+        FCk_Handle_EntityScript InEntityScript)
+{
+    _RuntimeEntityScriptsAwaitingConstruction.Remove(InEntityScript.ConvertToHandle());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_Snapshot_Subsystem_UE::
+    DoOnRuntimeEntityScriptSpawnRequestCompleted(
+        FCk_Handle InEntity,
+        ECk_Request_OperationResult InResult)
+{
+    // Failed_NotEnqueued fires synchronously with the lifetime owner and never
+    // enters this set. Queued failures report the under-construction entity.
+    const auto FailedAfterEnqueue = InResult == ECk_Request_OperationResult::Failed
+        || InResult == ECk_Request_OperationResult::Failed_Cancelled;
+    if (FailedAfterEnqueue)
+    { _RuntimeEntityScriptsAwaitingConstruction.Remove(InEntity); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1549,6 +1607,7 @@ auto
     _SavedIdMap.Reset();
     _MappedLiveEntities.Reset();
     _SpawnedRuntimeIds.Reset();
+    _RuntimeEntityScriptsAwaitingConstruction.Reset();
     _SkippedIds.Reset();
     _SkipRecords.Reset();
     _PersistedIds.Reset();
