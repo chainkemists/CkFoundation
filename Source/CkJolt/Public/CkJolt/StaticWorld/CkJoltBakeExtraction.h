@@ -151,6 +151,13 @@ namespace ck::jolt::bake
         ECk_Jolt_ExtractionPolicy InPolicy = ECk_Jolt_ExtractionPolicy::LevelSweep,
         FCk_Jolt_ExtractionStats* OutStats = nullptr) -> int32;
 
+    /// The COMPONENT-level settings exclusions alone (tags/channels/profiles/overlap-only) — no
+    /// eligibility or mobility checks. Exposed for consumers that admit components through their own
+    /// policy but still honor the designer exclusions (CkUnrealComponent's Automatic bake).
+    CKJOLT_API auto Get_IsComponentExcludedByBakeFilter(
+        const UPrimitiveComponent& InComponent,
+        const FCk_Jolt_BakeFilter& InFilter) -> bool;
+
     /// Component-level entry (used by ExtractActor and by tests). Same skip/ensure rules — but only
     /// the COMPONENT-level filter checks; actor-level exclusions (class, actor tags) live in ExtractActor.
     CKJOLT_API auto ExtractComponent(
