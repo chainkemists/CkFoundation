@@ -1,5 +1,6 @@
 #include "CkJolt_ProjectSettings.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include <GameFramework/Pawn.h>
@@ -10,6 +11,8 @@ UCk_Jolt_ProjectSettings_UE::UCk_Jolt_ProjectSettings_UE(
     const FObjectInitializer& InObjectInitializer)
     : Super(InObjectInitializer)
 {
+    _CookedDataRootPath.Path = TEXT("/Game/CkJoltData");
+
     // Pawn collision is dynamic-object territory — baking a level-placed pawn's capsule into the
     // static world would be wrong vs Chaos, where it is a movable queryable object.
     _BakeExcludedActorClasses.Emplace(APawn::StaticClass());
@@ -220,7 +223,7 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return TEXT("/Game/CkJoltData"); }
 
-    return Settings->Get_CookedDataRootPath();
+    return Settings->Get_CookedDataRootPath().Path;
 }
 
 auto
@@ -272,7 +275,8 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    return Settings->Get_CookExcludedMapPathPrefixes();
+    return ck::algo::Transform<TArray<FString>>(Settings->Get_CookExcludedMapPathPrefixes(),
+        [](const FDirectoryPath& InPath) { return InPath.Path; });
 }
 
 auto
@@ -363,7 +367,8 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return {}; }
 
-    return Settings->Get_BakedMeshShapeRoots();
+    return ck::algo::Transform<TArray<FString>>(Settings->Get_BakedMeshShapeRoots(),
+        [](const FDirectoryPath& InPath) { return InPath.Path; });
 }
 
 auto
