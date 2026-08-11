@@ -230,6 +230,36 @@ public:
     Get_ActiveGoal(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // Monotonic identity for the accepted MoveTo episode that owns ActiveGoal. It advances only
+    // when HandleRequests accepts a new movement episode; an ignored same-goal request while
+    // Walking leaves it unchanged. Zero means no MoveTo has been accepted in this runtime.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Active Move Episode")
+    static int32
+    Get_ActiveMoveEpisode(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    // Opaque identity supplied by the caller whose accepted MoveTo owns the active goal.
+    // Zero means that request did not opt into correlation. Same-goal requests with the
+    // same identity remain no-ops; a different nonzero identity claims a fresh episode.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Active Move Correlation Id")
+    static int32
+    Get_ActiveMoveCorrelationId(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    // True only after the current/last MoveTo genuinely reached its full-path goal. False while a new move/stop
+    // request is queued, while pathing/walking, after Stop, and after a failed or partial-path completion. This is
+    // retained runtime state rather than an edge, so a consumer later in the same runtime can reconcile it.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Has Reached Active Goal")
+    static bool
+    Get_HasReachedActiveGoal(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // True as soon as the stationary cost-area painter exists. This deliberately does NOT mean
     // the async navmesh tile rebuild has finished; use Get_IsStationaryMarkupConfirmed before
     // assuming a path query can see the area. Exposed separately so diagnostics and tests can
