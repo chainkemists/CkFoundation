@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkJoltEditor/Cook/CkJoltCook_MeshShapeCooker.h"
 #include "CkJoltEditor/Cook/CkJoltCook_WorldCooker.h"
 
 #include <Editor.h>
@@ -61,6 +62,15 @@ auto
     { return false; }
 
     return FCk_Jolt_WorldCooker::Validate_World(*World)._Success;
+}
+
+auto
+    UCk_JoltCook_EditorSubsystem_UE::
+    Cook_MeshShapes()
+    -> bool
+{
+    constexpr auto DryRun = false;
+    return FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(DryRun)._Success;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

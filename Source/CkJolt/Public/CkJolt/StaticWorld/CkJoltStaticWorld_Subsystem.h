@@ -99,6 +99,20 @@ public:
     Request_RemoveActor(
         const AActor& InActor) -> void;
 
+    /// Extracts and adds static bodies for a single PRIMITIVE COMPONENT at runtime — the surface for
+    /// runtime-composed geometry (CkUnrealComponent-hosted ISMs and friends). ExplicitActor
+    /// semantics: the bake filter is bypassed, the caller declared the geometry static-in-intent.
+    /// Re-baking the same component REPLACES its previous bodies (call again after repopulating an
+    /// ISM's instances). Returns the number of bodies added.
+    auto
+    Request_BakeComponent(
+        const UPrimitiveComponent& InComponent) -> int32;
+
+    /// Removes bodies previously added via Request_BakeComponent for this component.
+    auto
+    Request_RemoveComponent(
+        const UPrimitiveComponent& InComponent) -> void;
+
     /// The single idempotent funnel for freeing a source actor's bodies, ending in EMPTYING the fragment's
     /// body-id array (that emptiness is the idempotence guard, since both the removal paths and
     /// FProcessor_JoltStaticActor_EndPlay call it). Does NOT destroy the entity.
@@ -148,6 +162,11 @@ private:
     DoCreate_ActorEntity(
         const FCk_Handle& InTransientEntity,
         const AActor& InSourceActor) -> FCk_Handle_JoltStaticActor;
+
+    auto
+    DoCreate_ComponentEntity(
+        const FCk_Handle& InTransientEntity,
+        const UPrimitiveComponent& InSourceComponent) -> FCk_Handle_JoltStaticActor;
 
     // Appends the raw body ids to BOTH the entity's fragment and the batch-add accumulator.
     auto
@@ -219,6 +238,7 @@ private:
 
     TMap<TWeakObjectPtr<ULevel>, FLevelBodies> _LevelBodies;
     TMap<TWeakObjectPtr<const AActor>, FCk_Handle_JoltStaticActor> _ManualActorEntities;
+    TMap<TWeakObjectPtr<const UPrimitiveComponent>, FCk_Handle_JoltStaticActor> _ManualComponentEntities;
     TMap<int32, FLoadedCell> _LoadedCells;
 
     int32 _NumStaticBodies = 0;

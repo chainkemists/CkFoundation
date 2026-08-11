@@ -6,6 +6,7 @@
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/StaticWorld/CkJoltMeshShape_Utils.h"
 
 #include <Components/BrushComponent.h>
 #include <Components/InstancedStaticMeshComponent.h>
@@ -312,7 +313,7 @@ namespace ck_jolt_bake_extraction
                 JPH::cDefaultConvexRadius, MinimumHalfExtent * MaximumConvexRadiusFraction);
             const auto Settings = JPH::BoxShapeSettings{JoltHalfExtents, ConvexRadius};
             auto Shape = Create_ShapeFromSettings(Settings, InDebugName);
-            if (Shape == nullptr)
+            if (ck::Is_NOT_Valid(Shape))
             { return false; }
 
             OutLeaves.Emplace(FLeafShape{Shape, BoxElem.Center * InScale, BoxElem.Rotation.Quaternion()});
@@ -324,7 +325,7 @@ namespace ck_jolt_bake_extraction
 
             const auto Settings = JPH::SphereShapeSettings{static_cast<float>(Radius)};
             auto Shape = Create_ShapeFromSettings(Settings, InDebugName);
-            if (Shape == nullptr)
+            if (ck::Is_NOT_Valid(Shape))
             { continue; }
 
             OutLeaves.Emplace(FLeafShape{Shape, SphereElem.Center * InScale, FQuat::Identity});
@@ -339,13 +340,13 @@ namespace ck_jolt_bake_extraction
             const auto CapsuleSettings = JPH::CapsuleShapeSettings{
                 static_cast<float>(CylinderHalfLength), static_cast<float>(Radius)};
             auto CapsuleShape = Create_ShapeFromSettings(CapsuleSettings, InDebugName);
-            if (CapsuleShape == nullptr)
+            if (ck::Is_NOT_Valid(CapsuleShape))
             { continue; }
 
             const auto UprightSettings = JPH::RotatedTranslatedShapeSettings{
                 JPH::Vec3::sZero(), jolt::Get_ShapeAxisCorrection_YToZ(), CapsuleShape.GetPtr()};
             auto UprightShape = Create_ShapeFromSettings(UprightSettings, InDebugName);
-            if (UprightShape == nullptr)
+            if (ck::Is_NOT_Valid(UprightShape))
             { continue; }
 
             OutLeaves.Emplace(FLeafShape{UprightShape, SphylElem.Center * InScale, SphylElem.Rotation.Quaternion()});
@@ -366,7 +367,7 @@ namespace ck_jolt_bake_extraction
 
             const auto Settings = JPH::ConvexHullShapeSettings{Points};
             auto Shape = Create_ShapeFromSettings(Settings, InDebugName);
-            if (Shape == nullptr)
+            if (ck::Is_NOT_Valid(Shape))
             { continue; }
 
             OutLeaves.Emplace(FLeafShape{Shape, FVector::ZeroVector, FQuat::Identity});
@@ -463,11 +464,11 @@ namespace ck::jolt::bake
         {
             auto* Resolved = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
 
-            CK_ENSURE_IF_NOT(Resolved != nullptr,
+            CK_ENSURE_IF_NOT(ck::IsValid(Resolved, ck::IsValid_Policy_NullptrOnly{}),
                 TEXT("Bake-filter excluded actor class [{}] is unset or failed to load — the entry is IGNORED. "
                      "Fix or remove the row in Project Settings > Jolt > Bake Filter."), SoftClass.ToString())
             {}
-            if (Resolved == nullptr)
+            if (ck::Is_NOT_Valid(Resolved, ck::IsValid_Policy_NullptrOnly{}))
             { continue; }
 
             Filter._ExcludedActorClasses.Emplace(TStrongObjectPtr{Resolved});
@@ -551,9 +552,23 @@ namespace ck::jolt::bake
         if (const auto* Existing = _Shapes.Find(Key))
         { return *Existing; }
 
-        auto Shape = BuildShape_FromBodySetup(InBodySetup, InScale, InDebugName);
+        // Pre-baked path first: a mesh BodySetup's outer IS the UStaticMesh, and its cooked scale-1
+        // shape (when present, valid and scalable to InScale) skips the hull/tri-mesh build
+        // entirely. Brush/spline BodySetups have different outers and per-instance geometry — they
+        // always build. A null wrap (missing asset, stale, or scale invalid for the topology) falls
+        // through to the build, which bakes the scale into the geometry as this path always has.
+        auto Shape = JPH::Ref<JPH::Shape>{};
 
-        if (Shape != nullptr)
+        if (const auto* Mesh = Cast<UStaticMesh>(InBodySetup.GetOuter()))
+        {
+            const auto ScaleOneShape = mesh_shape_utils::TryGet_ScaleOneShape(*Mesh);
+            Shape = mesh_shape_utils::TryWrap_AtScale(ScaleOneShape, InScale, InDebugName);
+        }
+
+        if (ck::Is_NOT_Valid(Shape))
+        { Shape = BuildShape_FromBodySetup(InBodySetup, InScale, InDebugName); }
+
+        if (ck::IsValid(Shape))
         { _Shapes.Add(Key, Shape); }
 
         return Shape;
@@ -652,7 +667,7 @@ namespace ck::jolt::bake
             Samples.GetData(), Offset, Scale, static_cast<JPH::uint32>(SampleCount)};
 
         auto HeightFieldShape = Create_ShapeFromSettings(HeightFieldSettings, TEXT("HeightField"));
-        if (HeightFieldShape == nullptr)
+        if (ck::Is_NOT_Valid(HeightFieldShape))
         { return {}; }
 
         const auto UprightSettings = JPH::RotatedTranslatedShapeSettings{
@@ -694,7 +709,7 @@ namespace ck::jolt::bake
         const auto EmitBody = [&](const JPH::Ref<JPH::Shape>& InShape, const FVector& InPosition,
             const FQuat& InRotation, const UBodySetup* InBodySetup) -> void
         {
-            if (InShape == nullptr)
+            if (ck::Is_NOT_Valid(InShape))
             { return; }
 
             auto Body = FCk_Jolt_ExtractedBody{};
@@ -764,7 +779,7 @@ namespace ck::jolt::bake
                 {
                     const auto Shape = InShapeCache.GetOrCreate_Shape(*BodySetup,
                         InstanceTransform.GetScale3D(), DebugName);
-                    if (Shape == nullptr)
+                    if (ck::Is_NOT_Valid(Shape))
                     { continue; }
 
                     const auto LocalPosition = InvBodyRotation.RotateVector(InstanceTransform.GetLocation() - BodyPosition);
@@ -911,7 +926,7 @@ namespace ck::jolt::bake
                 }
 
                 const auto Shape = CreateHeightFieldShape(Heights, SampleCount, FVector2D{Scale.X, Scale.Y});
-                if (Shape == nullptr)
+                if (ck::Is_NOT_Valid(Shape))
                 { continue; }
 
                 auto Body = FCk_Jolt_ExtractedBody{};

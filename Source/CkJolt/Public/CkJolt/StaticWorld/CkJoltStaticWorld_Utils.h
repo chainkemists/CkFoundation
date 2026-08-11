@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class AActor;
+class UPrimitiveComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,6 +69,25 @@ public:
     static void
     Request_RemoveActor(
         AActor* InActor);
+
+    /// Extracts and adds static bodies for a single primitive component at runtime (the surface for
+    /// runtime-composed geometry — CkUnrealComponent-hosted ISMs and friends). Re-baking the same
+    /// component replaces its bodies; call again after repopulating an ISM's instances. Returns the
+    /// number of bodies added.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Jolt",
+              DisplayName="[Ck][Jolt] Request Bake Component Into Static World")
+    static int32
+    Request_BakeComponent(
+        UPrimitiveComponent* InComponent);
+
+    /// Removes bodies previously added via Request_BakeComponent.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Jolt",
+              DisplayName="[Ck][Jolt] Request Remove Component From Static World")
+    static void
+    Request_RemoveComponent(
+        UPrimitiveComponent* InComponent);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Jolt",

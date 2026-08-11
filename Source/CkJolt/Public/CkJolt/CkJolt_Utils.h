@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -26,6 +27,16 @@ namespace JPH
     class PhysicsSystem;
     class BodyInterface;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// ck::IsValid support for Jolt's intrusive ref-counted handle — valid = non-null referent.
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(JPH::Ref);
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, JPH::Ref<T>, IsValid_Policy_Default, [=](const JPH::Ref<T>& InRef)
+{
+    return InRef.GetPtr() != nullptr;
+});
 
 // --------------------------------------------------------------------------------------------------------------------
 
