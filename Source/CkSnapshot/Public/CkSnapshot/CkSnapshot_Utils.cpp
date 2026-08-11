@@ -132,6 +132,18 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
+    Request_AssignSaveKeyAlias(
+        FCk_Handle& InHandle,
+        const FString& InHistoricalIdentity)
+    -> void
+{
+    ck::save_key::AssignAlias(InHandle, InHistoricalIdentity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
     Get_HasSaveKey(
         const FCk_Handle& InHandle)
     -> bool

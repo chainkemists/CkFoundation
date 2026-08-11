@@ -548,8 +548,13 @@ auto
         { continue; }
 
         const auto& Frag = RawRegistry->get<FFragment_SaveKey>(Entity);
-        Publish_SaveKey(Frag.Get_Key(), Handle);
-        ++PublishedCount;
+        if (TryPublish_SaveKey(Frag.Get_Key(), Handle))
+        { ++PublishedCount; }
+        for (const auto& Alias : Frag.Get_Aliases())
+        {
+            if (TryPublish_SaveKey(Alias, Handle))
+            { ++PublishedCount; }
+        }
     }
 
     return PublishedCount;
@@ -966,8 +971,13 @@ auto
             if (Entry.Get_Provenance() == ECk_Snapshot_V3_Provenance::RuntimeSpawned &&
                 Entry.Get_SaveKey().IsValid())
             {
-                Resolved.AddOrReplace<FFragment_SaveKey>(Entry.Get_SaveKey());
-                Publish_SaveKey(Entry.Get_SaveKey(), Resolved);
+                // A current live entity may have resolved this row through a
+                // historical alias. Preserve its canonical key and aliases so
+                // the next capture writes the current identity; only rebuilt
+                // entities with no authored key adopt the saved key directly.
+                if (NOT Resolved.Has<FFragment_SaveKey>())
+                { Resolved.Add<FFragment_SaveKey>(Entry.Get_SaveKey()); }
+                TryPublish_SaveKey(Entry.Get_SaveKey(), Resolved);
             }
 
             _SavedIdMap.Add(SavedId, Resolved);
@@ -1675,14 +1685,77 @@ bool
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
+bool
     UCk_Snapshot_Subsystem_UE::
-    Publish_SaveKey(
+    TryPublish_SaveKey(
         FGuid InKey,
         FCk_Handle InHandle)
-    -> void
 {
+    return DoTryPublish_SaveKey(InKey, InHandle, true);
+}
+
+bool
+    UCk_Snapshot_Subsystem_UE::
+    DoTryPublish_SaveKey(
+        FGuid InKey,
+        FCk_Handle InHandle,
+        bool InDiagnoseCollision)
+{
+    const auto KeyIsValid = InKey.IsValid();
+    CK_ENSURE_IF_NOT(KeyIsValid,
+        TEXT("Cannot publish an invalid Snapshot SaveKey for Entity [{}]"), InHandle)
+    {}
+    if (NOT KeyIsValid)
+    { return false; }
+
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Cannot publish Snapshot SaveKey [{}] for an invalid Entity Handle"), InKey)
+    {}
+    if (NOT HandleIsValid)
+    { return false; }
+
+    if (const auto* Existing = _SaveKeyResolverMap.Find(InKey))
+    {
+        if (*Existing == InHandle)
+        { return true; }
+
+        // The resolver can outlive a resolved entity. A stale mapping is not a
+        // live collision, so replace it before querying fragments on the old
+        // handle (which is invalid by definition).
+        if (ck::Is_NOT_Valid(*Existing))
+        {
+            _SaveKeyResolverMap.Add(InKey, InHandle);
+            return true;
+        }
+
+        // ActorRelay-style pools deliberately give every interchangeable
+        // member one group key. Accept that cardinality only when BOTH live
+        // publishers explicitly mark this exact canonical key as shared;
+        // unique keys and mixed shared/unique collisions remain loud.
+        const auto IsSharedPublisher = [InKey](const FCk_Handle& InPublisher) -> bool
+        {
+            if (NOT InPublisher.Has<FFragment_SaveKey>())
+            { return false; }
+
+            const auto& SaveKey = InPublisher.Get<FFragment_SaveKey>();
+            return SaveKey.Get_Key() == InKey && SaveKey.Get_IsSharedRendezvousGroup();
+        };
+        if (IsSharedPublisher(*Existing) && IsSharedPublisher(InHandle))
+        { return true; }
+
+        if (InDiagnoseCollision)
+        {
+            CK_ENSURE_IF_NOT(false,
+                TEXT("Snapshot SaveKey [{}] is already published by Entity [{}]; rejecting conflicting Entity [{}]"),
+                InKey, *Existing, InHandle)
+            {}
+        }
+        return false;
+    }
+
     _SaveKeyResolverMap.Add(InKey, InHandle);
+    return true;
 }
 
 auto

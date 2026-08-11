@@ -82,7 +82,10 @@ public:
 public:
     // SaveKey resolver -- maps a stable FGuid (stored on the FFragment_SaveKey of a saved entity) to the
     // live FCk_Handle. Populated during load so post-load consumers can re-acquire entities by key.
-    auto Publish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> void;
+    // Collision-safe publication: repeated publication by the same entity is
+    // idempotent; explicitly shared rendezvous-group members retain the first
+    // representative; every unique or mixed collision is diagnosed/rejected.
+    auto TryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> bool;
     auto Consume_SaveKey(FGuid InKey) -> void;
 
 public:
@@ -109,9 +112,12 @@ protected:
 #if WITH_AUTOMATION_TESTS
 public:
     auto TestOnly_LastPumpCount() const -> int32 { return _LastPumpCount; }
+    auto TestOnly_TryPublish_SaveKeyWithoutDiagnostics(FGuid InKey, FCk_Handle InHandle) -> bool
+    { return DoTryPublish_SaveKey(InKey, InHandle, false); }
 #endif
 
 private:
+    auto DoTryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle, bool InDiagnoseCollision) -> bool;
     auto DoGet_SnapshotSource() const -> FCk_Handle;
 
     // ---- v3 rebuild+hydrate load orchestration ------------------------------------------------------------------
