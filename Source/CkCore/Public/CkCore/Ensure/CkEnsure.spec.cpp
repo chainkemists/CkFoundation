@@ -1,9 +1,12 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Ensure/CkEnsure_Tracker.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+#include "CkCore/Settings/CkCore_Settings.h"
 
 #include <Async/Async.h>
 #include <Async/ParallelFor.h>
 #include <Misc/AutomationTest.h>
+#include <Misc/ScopeExit.h>
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -154,6 +157,9 @@ bool FCkTest_Ensure_WorkerFirstReport::RunTest(const FString&)
             {
                 ReportEmitterRanOnWorker = NOT IsInGameThread();
                 WorkerReport = InReport;
+            },
+            [](const FCk_Utils_EditorOnly_PushNewEditorMessage_Params&)
+            {
             });
     });
     Future.Wait();
@@ -169,6 +175,82 @@ bool FCkTest_Ensure_WorkerFirstReport::RunTest(const FString&)
     TestTrue(TEXT("The worker report includes a native call stack"), WorkerReport.Contains(TEXT("== CallStack ==")));
     TestFalse(TEXT("The worker report does not request a Blueprint stack"), WorkerReport.Contains(TEXT("== BP CallStack ==")));
     TestFalse(TEXT("The worker report does not request an AngelScript stack"), WorkerReport.Contains(TEXT("== AS CallStack ==")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage,
+    "Ck.CkCore.Ensure.GameThreadRepeatSuppressesEditorMessage",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage::RunTest(const FString&)
+{
+    const auto PreviousDisplayPolicy = UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy();
+    const auto PreviousDetailsPolicy = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy();
+    ON_SCOPE_EXIT
+    {
+        UCk_Utils_Core_UserSettings_UE::Set_EnsureDisplayPolicy(PreviousDisplayPolicy);
+        UCk_Utils_Core_UserSettings_UE::Set_EnsureDetailsPolicy(PreviousDetailsPolicy);
+    };
+
+    // Exercise the editor-notification branch while the automation process remains unattended, so the real
+    // implementation returns before any modal dialog. The injected emitter is the exact Message Log callsite.
+    UCk_Utils_Core_UserSettings_UE::Set_EnsureDisplayPolicy(ECk_EnsureDisplay_Policy::ModalDialog);
+    UCk_Utils_Core_UserSettings_UE::Set_EnsureDetailsPolicy(ECk_EnsureDetails_Policy::MessageOnly);
+
+    const auto CountBefore = ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount();
+    const auto UniqueBefore = ck::ensure::Get_EnsureOccurrenceTracker().GetUniqueCount();
+    const auto UniqueFile = FName{*FString::Printf(
+        TEXT("CkEnsureGameThreadTest-%s.cpp"),
+        *FGuid::NewGuid().ToString(EGuidFormats::Digits))};
+    auto EditorMessageCount = 0;
+    auto BreakInCode = false;
+    auto BreakInScript = false;
+
+    AddExpectedError(TEXT("Game-thread ensure integration test"), EAutomationExpectedErrorFlags::Contains, 2);
+
+    const auto Invoke = [&](const FString& InExpression)
+    {
+        ck::ensure::Ensure_Impl_ForTesting(
+            TEXT("Game-thread ensure integration test"),
+            InExpression,
+            UniqueFile,
+            911,
+            BreakInCode,
+            BreakInScript,
+            [](const FString&)
+            {
+            },
+            [&](const FCk_Utils_EditorOnly_PushNewEditorMessage_Params&)
+            {
+                ++EditorMessageCount;
+            });
+    };
+
+    constexpr auto RepeatCount = 1000;
+    for (auto Index = 0; Index < RepeatCount; ++Index)
+    {
+        Invoke(TEXT("RepeatedGameThreadExpression"));
+    }
+
+    TestEqual(TEXT("One repeated signature pushes one editor message"), EditorMessageCount, 1);
+
+    Invoke(TEXT("DistinctGameThreadExpression"));
+
+    TestEqual(TEXT("A distinct expression pushes its own editor message"), EditorMessageCount, 2);
+    TestEqual(
+        TEXT("Every repeated and distinct hit remains aggregated"),
+        ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount(),
+        CountBefore + RepeatCount + 1);
+    TestEqual(
+        TEXT("The two game-thread signatures remain distinct"),
+        ck::ensure::Get_EnsureOccurrenceTracker().GetUniqueCount(),
+        UniqueBefore + 2);
+    TestFalse(TEXT("Unattended game-thread reporting does not request a native break"), BreakInCode);
+    TestFalse(TEXT("Unattended game-thread reporting does not request a script break"), BreakInScript);
 
     return true;
 }

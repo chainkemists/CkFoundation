@@ -5,6 +5,8 @@
 
 #include <HAL/PlatformMisc.h> // for PLATFORM_BREAK() + FPlatformMisc::IsDebuggerPresent()
 
+struct FCk_Utils_EditorOnly_PushNewEditorMessage_Params;
+
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck::ensure
 {
@@ -37,7 +39,8 @@ namespace ck::ensure
         int32 InLine,
         bool& OutBreakInCode,
         bool& OutBreakInScript,
-        TFunctionRef<void(const FString&)> InWorkerReportEmitter) -> void;
+        TFunctionRef<void(const FString&)> InWorkerReportEmitter,
+        TFunctionRef<void(const FCk_Utils_EditorOnly_PushNewEditorMessage_Params&)> InEditorMessageEmitter) -> void;
 #endif
 }
 
