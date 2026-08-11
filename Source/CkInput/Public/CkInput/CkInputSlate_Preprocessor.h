@@ -55,6 +55,13 @@ public:
         FSlateApplication& InSlateApp,
         const FPointerEvent& InMouseEvent) override;
 
+    // The OS classifies the second press of a rapid double click as its own event type and Slate routes it here
+    // instead of the down handler — without this override that press never exists for the pipeline, and a fast
+    // double click records as one click. The record wants the physical fact: the button went down again.
+    virtual bool HandleMouseButtonDoubleClickEvent(
+        FSlateApplication& InSlateApp,
+        const FPointerEvent& InMouseEvent) override;
+
     virtual bool HandleMouseButtonUpEvent(
         FSlateApplication& InSlateApp,
         const FPointerEvent& InMouseEvent) override;
