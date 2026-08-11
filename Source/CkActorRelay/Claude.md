@@ -42,7 +42,8 @@ Audio/VFX modules acquire a relay channel on the owning actor; the cue system br
   classifies `EngineOwned` (capture rule 2) and rendezvouses onto the fresh world's channel for the same group, so
   the entities the channel lifetime-owns keep a resolvable owner across a load. The key is per GROUP, not per
   channel — N pooled channels share it and N saved rows consolidate onto one fresh channel, which is sound because
-  channels within a group are interchangeable and nothing per-instance is stable across runs.
+  channels within a group are interchangeable and nothing per-instance is stable across runs. Relay stamping uses
+  the explicit shared-rendezvous policy; ordinary SaveKeys remain unique and collision-diagnosed.
 - **`OnPostLoadMapWithWorld` must filter on `InWorld == GetWorld()`.** The delegate is process-global,
   so under multi-PIE it fires for other PIE worlds; reacting to a foreign world wipes this world's
   player pools and spawns channels owned by the foreign world's PlayerStates.
