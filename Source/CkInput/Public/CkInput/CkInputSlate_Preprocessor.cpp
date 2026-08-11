@@ -74,6 +74,15 @@ auto
         TSharedRef<ICursor>)
     -> void
 {
+    // The probe only runs while something is recorded down — the common every-frame case exits on the
+    // empty set.
+    if (_RecordedDownKeys.IsEmpty())
+    { return; }
+
+    if (DoGet_HasViewportFocus())
+    { return; }
+
+    DoFlushRecordedDownKeys();
 }
 
 auto
@@ -211,6 +220,20 @@ auto
     if (NOT DoGet_HasViewportFocus())
     { return; }
 
+    DoWriteEvent(InKey, InEventType, InAnalogValue, InRawDeviceUserIndex);
+}
+
+// The focus-gate-free half of recording: the focus-loss flush has to write Released rows at exactly the
+// moment the gate would drop them, so the gate lives in DoRecordEvent and everything below it lives here.
+auto
+    FCk_InputSlate_Preprocessor::
+    DoWriteEvent(
+        const FKey& InKey,
+        ECk_InputSource_EventType InEventType,
+        float InAnalogValue,
+        int32 InRawDeviceUserIndex)
+    -> void
+{
     const auto DeviceClass = ck_input_slate_preprocessor::Get_DeviceClassForKey(InKey);
     const auto OrderingFidelity = ck_input_slate_preprocessor::Get_OrderingFidelityForDeviceClass(DeviceClass);
 
@@ -226,6 +249,13 @@ auto
     UCk_Utils_InputSource_UE::Request_InjectRawEvent(RoutedSource,
         FCk_Request_InputSource_InjectRawEvent{Event}, {});
 
+    // Only a press that actually reached an inbox can leave a phantom behind, so tracking sits below the
+    // routing early-outs.
+    if (InEventType == ECk_InputSource_EventType::Pressed)
+    { _RecordedDownKeys.Add({InKey, InRawDeviceUserIndex}); }
+    else if (InEventType == ECk_InputSource_EventType::Released)
+    { _RecordedDownKeys.Remove({InKey, InRawDeviceUserIndex}); }
+
     if (NOT ck_input_slate_preprocessor::DumpRawEvents)
     { return; }
 
@@ -234,6 +264,20 @@ auto
              "Ordering=[{}] Source=[{}]"),
         GFrameCounter, DeviceClass, InKey, InEventType, InAnalogValue, InRawDeviceUserIndex,
         OrderingFidelity, RoutedSource);
+}
+
+auto
+    FCk_InputSlate_Preprocessor::
+    DoFlushRecordedDownKeys()
+    -> void
+{
+    // DoWriteEvent removes each Released from the set, so the walk runs over a moved-out copy.
+    const auto DownKeys = MoveTemp(_RecordedDownKeys);
+
+    for (const auto& [Key, RawDeviceUserIndex] : DownKeys)
+    {
+        DoWriteEvent(Key, ECk_InputSource_EventType::Released, 0.0f, RawDeviceUserIndex);
+    }
 }
 
 auto
@@ -253,7 +297,11 @@ auto
     if (NOT ViewportWidget.IsValid())
     { return false; }
 
-    return ViewportWidget->HasAnyUserFocusOrFocusedDescendants();
+    // DIRECT focus only. The console (and any chat/text field hosted in the viewport's overlay) steals focus
+    // to a DESCENDANT, and those keystrokes belong to the text field, not the game — descendant-focus recorded
+    // "slomo 0.1" into the input record as gameplay presses. The focus-loss flush releases anything held when
+    // a text field takes over, so the strictness cannot strand a phantom press.
+    return ViewportWidget->HasAnyUserFocus().IsSet();
 }
 
 auto
