@@ -189,7 +189,8 @@ namespace ck::ensure
             int32 InLine,
             bool& OutBreakInCode,
             bool& OutBreakInScript,
-            TFunctionRef<void(const FString&)> InWorkerReportEmitter)
+            TFunctionRef<void(const FString&)> InWorkerReportEmitter,
+            TFunctionRef<void(const FCk_Utils_EditorOnly_PushNewEditorMessage_Params&)> InEditorMessageEmitter)
         -> void
     {
         OutBreakInCode = false;
@@ -298,8 +299,7 @@ namespace ck::ensure
                 InExpressionText,
                 InMessage);
 
-            UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
-            (
+            InEditorMessageEmitter(
                 FCk_Utils_EditorOnly_PushNewEditorMessage_Params
                 {
                     TEXT("CkEnsures"),
@@ -500,6 +500,10 @@ namespace ck::ensure
             [](const FString& InReport)
             {
                 Error(TEXT("{}"), InReport);
+            },
+            [](const FCk_Utils_EditorOnly_PushNewEditorMessage_Params& InParams)
+            {
+                UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage(InParams);
             });
     }
 
@@ -512,7 +516,8 @@ namespace ck::ensure
             int32 InLine,
             bool& OutBreakInCode,
             bool& OutBreakInScript,
-            TFunctionRef<void(const FString&)> InWorkerReportEmitter)
+            TFunctionRef<void(const FString&)> InWorkerReportEmitter,
+            TFunctionRef<void(const FCk_Utils_EditorOnly_PushNewEditorMessage_Params&)> InEditorMessageEmitter)
         -> void
     {
         Ensure_Impl_Internal(
@@ -522,7 +527,8 @@ namespace ck::ensure
             InLine,
             OutBreakInCode,
             OutBreakInScript,
-            InWorkerReportEmitter);
+            InWorkerReportEmitter,
+            InEditorMessageEmitter);
     }
 #endif
 
