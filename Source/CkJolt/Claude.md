@@ -100,21 +100,28 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `UCk_EcsWorld_Subsystem_UE` so the registry outlives it. A level added before the ECS world is
   ready is SKIPPED (Verbose) and re-attempted by the `OnWorldBeginPlay` sweep — bodies are never
   baked without an entity.
-- **Movable mobility is the #1 empty-static-world trap.** The level sweep bakes Static-mobility
-  components ONLY (`LevelSweep` policy; `ExplicitActor` via `Request_BakeActor` bakes movables —
-  the caller declared them static-in-intent). A designer-placed Movable floor therefore silently
-  vanishes from the Jolt static world while Chaos still blocks queries against it — probe traces
-  with `WorldHitPolicy != Ignore` fly straight through. Observability (pinned by
-  `Ck.Jolt.BakeExtraction.MobilityPolicy`): movable skips are counted in
-  `FCk_Jolt_ExtractionStats`, every world boot logs a one-line sweep summary at Log verbosity
-  (`JoltStaticWorld: BeginPlay sweep for [world]: [N] static bodies … [M] movable … skipped`),
-  and an all-skipped level logs its own zero line at Verbose. `[0] static bodies` on that summary
-  line = your map's geometry is Movable (or the map is empty) — fix the mobility, don't debug the
-  trace.
+- **Level-sweep admission is settings-driven (`FCk_Jolt_BakeFilter`).** Built from project settings
+  once per sweep/cook (`Make_FromProjectSettings`) and passed explicitly through
+  `ExtractActor`/`ExtractComponent` AND the source hashes — tests construct filters directly, no CDO
+  mutation. Axes: `_BakeMobilityPolicy` (`All` default — Static, Stationary AND Movable bake; a
+  baked Movable is a SNAPSHOT at sweep time, the static body does not follow later movement;
+  `StaticAndStationary` restores the pre-v2 behavior), excluded actor classes (IsChildOf; default
+  `{APawn}` — a pawn's collision is dynamic-object territory), excluded actor/component tags
+  (default `{"Ck.Jolt.NoBake"}` — the designer per-instance opt-out), excluded object channels,
+  excluded collision profiles, and opt-in overlap-only exclusion (default Disable — triggers keep
+  UE query parity). `ExplicitActor` (`Request_BakeActor`) ignores the filter entirely: the caller
+  declared the actor static-in-intent. Observability (pinned by
+  `Ck.Jolt.BakeExtraction.MobilityPolicy` + `Ck.Jolt.BakeExtraction.FilterExclusions`): every
+  exclusion is counted per-axis in `FCk_Jolt_ExtractionStats`, every world boot logs a one-line
+  sweep summary at Log verbosity naming the active mobility policy, and an all-skipped level logs
+  its own zero line at Verbose. `[0] static bodies` on that summary line = your map's geometry is
+  excluded (or the map is empty) — check the Bake Filter settings, don't debug the trace.
 - Cooked data: `UCk_Jolt_CookedWorldIndex_UE` (per map, found by path convention under
   `_CookedDataRootPath`) + `UCk_Jolt_CookedCell_UE` per bake-grid cell (`SaveWithChildren` blob,
-  shared-dedup). `CookVersion` + `JPH_VERSION_ID` + per-actor runtime hash — stale data ensures
-  loudly and is SKIPPED, never re-extracted silently.
+  shared-dedup). `CookVersion` (v2: settings-driven bake filter) + `JPH_VERSION_ID` + per-actor
+  runtime hash + the index-level `_BakeFilterHash` (cook-time filter fingerprint vs the current
+  settings-built one — settings drift stales the WHOLE map) — stale data ensures loudly and is
+  SKIPPED, never re-extracted silently.
 - `UCk_Utils_JoltStaticWorld_UE` — `Request_BakeActor/RemoveActor` (runtime-spawned statics;
   ExplicitActor policy bakes Movable-mobility components), `Get_RayCastStaticWorld` (Phase-1
   introspection; the channel-filtered query API is Phase 2; the hit carries a `_Entity` handle,
@@ -306,7 +313,10 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   `_MaxPhysicsStepsPerFrame`, MaxBodies / MaxBodyPairs / MaxContactConstraints (a 10k-body
   single pile EXCEEDS the defaults — the update returns an error and CkJolt ensures loudly),
   temp allocator size, collision steps, threading (parallel on/off, thread count),
-  `_PIEStaticWorldMode`, `_CompoundShapeInstanceThreshold`, `_CookedDataRootPath`.
+  `_PIEStaticWorldMode`, `_CompoundShapeInstanceThreshold`, `_CookedDataRootPath`, and the
+  Bake Filter block (`_BakeMobilityPolicy`, `_BakeExcludedActorClasses`, `_BakeExcludedActorTags`,
+  `_BakeExcludedComponentTags`, `_BakeExcludedObjectChannels`, `_BakeExcludedCollisionProfiles`,
+  `_BakeExcludeOverlapOnlyComponents`).
 - **Startup-only CVars/cmdline**: `jolt.EnableParallelPhysics`,
   `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
 - **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,

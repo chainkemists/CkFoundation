@@ -6,6 +6,7 @@
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 #include "CkJolt/Query/CkJoltOccupancy_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 
@@ -148,10 +149,13 @@ namespace ck::jolt
         const auto IndexMatchesMap = Index->Get_SourceMapPackage() == FName{*InRequest._MapPackageName};
         const auto IndexMatchesVersion = Index->Get_CookVersion() == CookVersion_Current &&
                                          Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
-        const auto IndexIsCurrent = IndexMatchesMap && IndexMatchesVersion;
+        const auto IndexMatchesBakeFilter = Index->Get_BakeFilterHash() ==
+            bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings().ComputeHash();
+        const auto IndexIsCurrent = IndexMatchesMap && IndexMatchesVersion && IndexMatchesBakeFilter;
 
         CK_ENSURE_IF_NOT(IndexIsCurrent,
-            TEXT("Cooked Jolt index [{}] is stale or names a different map"), IndexPath)
+            TEXT("Cooked Jolt index [{}] is stale, was baked under different bake-filter settings, or names "
+                 "a different map"), IndexPath)
         {}
 
         if (NOT IndexIsCurrent)
