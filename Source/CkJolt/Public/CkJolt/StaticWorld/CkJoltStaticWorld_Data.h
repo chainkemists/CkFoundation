@@ -194,6 +194,52 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/// One per pre-baked MESH ASSET: <CookedDataRoot>/Meshes/<MeshPath>_JoltShape. Holds the SCALE-1
+/// Jolt shape (SaveWithChildren blob) built from the mesh's BodySetup — runtime wraps it in a
+/// JPH::ScaledShape per instance scale, skipping the expensive hull/tri-mesh build. Found by path
+/// convention like the map index. Only meshes whose collision includes a convex hull or cooked
+/// tri-mesh get one — pure-primitive collision is cheaper to rebuild than to load.
+UCLASS()
+class CKJOLT_API UCk_Jolt_CookedMeshShape_UE : public UDataAsset
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Jolt_CookedMeshShape_UE);
+
+private:
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    uint32 _CookVersion = 0;
+
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    uint32 _JoltVersionId = 0;
+
+    // Debug/reporting only — the asset is FOUND by path convention, never by this reference.
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    FSoftObjectPath _SourceMesh;
+
+    // Staleness identity: the source BodySetup at cook time. A runtime mismatch means the mesh's
+    // collision changed since the cook — the blob is WRONG geometry, ensured loudly and skipped.
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    FGuid _BodySetupGuid;
+
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    uint8 _TraceFlag = 0;
+
+    UPROPERTY()
+    TArray<uint8> _ShapeBlob;
+
+public:
+    CK_PROPERTY(_CookVersion);
+    CK_PROPERTY(_JoltVersionId);
+    CK_PROPERTY(_SourceMesh);
+    CK_PROPERTY(_BodySetupGuid);
+    CK_PROPERTY(_TraceFlag);
+    CK_PROPERTY(_ShapeBlob);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /// One per baked map: <CookedDataRoot>/<MapPath>/JoltIndex. Found by path convention at runtime
 /// (nothing hard-references cooked assets — the cook root must be in DirectoriesToAlwaysCook,
 /// which the cook commandlet ensures loudly).

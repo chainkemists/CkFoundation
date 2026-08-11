@@ -227,7 +227,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
 | CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
 | CkUI | Core,Ecs,GameSession,Graphics,Input,Log,Settings,ThirdParty (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; Input added 2026-08-08 for `UCk_InputActionWidget_UE` — T4→T2, and CkInput does NOT depend on CkUI) |
-| CkUnrealComponent | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkUnrealComponent | Core,Ecs,EcsExt,Jolt,Label,Log,Record,Settings (Jolt added 2026-08-11 for the static-world bake opt-in — same-tier dep) |
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |

@@ -123,9 +123,30 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   settings-built one — settings drift stales the WHOLE map) — stale data ensures loudly and is
   SKIPPED, never re-extracted silently.
 - `UCk_Utils_JoltStaticWorld_UE` — `Request_BakeActor/RemoveActor` (runtime-spawned statics;
-  ExplicitActor policy bakes Movable-mobility components), `Get_RayCastStaticWorld` (Phase-1
+  ExplicitActor policy bakes Movable-mobility components), `Request_BakeComponent/RemoveComponent`
+  (component-granular runtime bake for runtime-composed geometry — a re-bake REPLACES the
+  component's bodies, so repopulated ISMs re-bake cleanly), `Get_RayCastStaticWorld` (Phase-1
   introspection; the channel-filtered query API is Phase 2; the hit carries a `_Entity` handle,
-  not an actor name).
+  not an actor name). CkUnrealComponent layers an opt-in on top:
+  `UCk_Utils_UnrealComponent_UE::Request_BakeIntoJoltStaticWorld` (call AFTER configuring the
+  hosted component — an ISM baked before its instances exist bakes nothing) with automatic body
+  removal at the component's EndPlay teardown.
+- **Per-mesh pre-baked shapes** (`UCk_Jolt_CookedMeshShape_UE` + `mesh_shape_utils`,
+  StaticWorld/CkJoltMeshShape_Utils.h): the CkJoltEditor mesh cook sweeps every static mesh under
+  `_BakedMeshShapeRoots` and stores its SCALE-1 shape blob at
+  `<CookedDataRoot>/Meshes/<MeshPath>_JoltShape` (path convention, like the map index). Runtime
+  (`FCk_Jolt_ShapeCache::GetOrCreate_Shape` + the JoltBody StaticMeshAsset source) restores the
+  root once per mesh per session and wraps a `JPH::ScaledShape` per instance scale — skipping the
+  expensive hull/tri-mesh builds. ONLY hull/tri-mesh collision is pre-baked
+  (`Get_IsWorthPreBaking`, shared by cooker and runtime so the skip rule and the miss-loudness
+  rule cannot disagree); pure primitives rebuild cheaply. Fallback-to-build (never a missing
+  body): missing asset, stale asset (guid/trace-flag/version ensures), a scale the topology
+  rejects (`IsValidScale` — non-uniform on spheres/capsules or rotated compound children;
+  `MakeScaleValid` is deliberately NOT used, approximated collision is silently wrong), or any
+  negative scale. A miss ensures loudly ONLY when cooked data is expected (packaged / PIE-Cooked)
+  AND the mesh sits under a baked root AND its collision is worth pre-baking. Cook via the
+  Tools-menu subsystem entry or `-run=CkJoltCook -MeshShapes` (combinable with `-Map`/`-AllMaps`);
+  incremental by BodySetupGuid; orphans logged, never auto-deleted.
 - `UCk_Utils_JoltStaticActor_UE` — typesafe-handle BPFL over the attribution entity: `Has`,
   `Cast`/`DoCast`/`DoCastChecked`, `Get_SourceActor` (may be null after the actor dies),
   `Get_SourceActorName` (cached, survives actor death), `Get_NumBodies`.

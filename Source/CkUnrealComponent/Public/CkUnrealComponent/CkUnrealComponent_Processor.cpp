@@ -14,7 +14,10 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Utils.h"
+
 #include "Components/ActorComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -217,6 +220,15 @@ namespace ck
         auto Component = InCurrent._Component.Get();
         if (ck::IsValid(Component))
         {
+            // Baked static-world bodies must go BEFORE the component: the subsystem's removal map is
+            // keyed by the component pointer.
+            if (InHandle.Has<FTag_UnrealComponent_BakedIntoStaticWorld>())
+            {
+                if (auto* PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
+                    ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                { UCk_Utils_JoltStaticWorld_UE::Request_RemoveComponent(PrimitiveComponent); }
+            }
+
             UCk_Utils_UnrealComponent_UE::DoUnregisterBridge(Component);
             Component->UnregisterComponent();
 

@@ -38,6 +38,13 @@ public:
               DisplayName = "[Ck][Jolt] Validate Cooked Static World (Current Map)")
     bool
     Validate_CurrentWorld();
+
+    /// Cooks per-mesh scale-1 Jolt shapes for every static mesh under the configured
+    /// BakedMeshShapeRoots (incremental — up-to-date assets are skipped).
+    UFUNCTION(BlueprintCallable, Category = "Ck|Jolt",
+              DisplayName = "[Ck][Jolt] Cook Mesh Shapes (Baked Roots)")
+    bool
+    Cook_MeshShapes();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

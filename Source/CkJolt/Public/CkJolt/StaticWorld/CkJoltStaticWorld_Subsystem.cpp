@@ -12,6 +12,7 @@
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJolt/StaticWorld/CkJoltStaticActor_Fragment.h"
 
+#include <Components/PrimitiveComponent.h>
 #include <Engine/Level.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
@@ -121,8 +122,20 @@ auto
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
     }
 
+    for (auto& [Component, ComponentEntity] : _ManualComponentEntities)
+    {
+        if (ck::Is_NOT_Valid(ComponentEntity))
+        { continue; }
+
+        Request_RemoveBodiesForEntity(ComponentEntity);
+
+        auto GenericHandle = FCk_Handle{ComponentEntity};
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
+    }
+
     _LevelBodies.Empty();
     _ManualActorEntities.Empty();
+    _ManualComponentEntities.Empty();
     _LoadedCells.Empty();
     _NumStaticBodies = 0;
 
@@ -269,6 +282,76 @@ auto
     DoNote_BodiesChanged(BodyIds.Num());
 
     return BodyIds.Num();
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    Request_BakeComponent(
+        const UPrimitiveComponent& InComponent)
+        -> int32
+{
+    // ExplicitActor semantics: the caller declared the geometry static-in-intent; the bake filter
+    // does not apply. Same extraction the actor path uses — ISM compound/per-instance rules included.
+    auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
+    ck::jolt::bake::ExtractComponent(InComponent, _LiveShapeCache, Extracted, {},
+        ck::jolt::bake::ECk_Jolt_ExtractionPolicy::ExplicitActor);
+
+    if (Extracted.IsEmpty())
+    { return 0; }
+
+    const auto TransientEntity = DoGet_TransientEntity();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
+        TEXT("Request_BakeComponent for [{}] has no live ECS transient entity to attribute bodies to — the "
+             "ECS world is not ready."), InComponent.GetFName())
+    { return 0; }
+
+    // Re-baking REPLACES the previous attribution — same rule as Request_BakeActor: overwriting the
+    // map entry would orphan its bodies.
+    if (auto* ExistingEntity = _ManualComponentEntities.Find(&InComponent))
+    {
+        if (ck::IsValid(*ExistingEntity))
+        {
+            Request_RemoveBodiesForEntity(*ExistingEntity);
+
+            auto GenericHandle = FCk_Handle{*ExistingEntity};
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
+        }
+
+        _ManualComponentEntities.Remove(&InComponent);
+    }
+
+    auto ComponentEntity = DoCreate_ComponentEntity(TransientEntity, InComponent);
+    if (ck::Is_NOT_Valid(ComponentEntity))
+    { return 0; }
+
+    auto BodyIds = TArray<uint32>{};
+    DoCreate_BodiesFromExtracted(Extracted, ComponentEntity, BodyIds);
+    DoBatchAdd_Bodies(BodyIds);
+
+    _ManualComponentEntities.Add(&InComponent, ComponentEntity);
+    DoNote_BodiesChanged(BodyIds.Num());
+
+    return BodyIds.Num();
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    Request_RemoveComponent(
+        const UPrimitiveComponent& InComponent)
+        -> void
+{
+    auto ComponentEntity = FCk_Handle_JoltStaticActor{};
+    if (NOT _ManualComponentEntities.RemoveAndCopyValue(&InComponent, ComponentEntity))
+    { return; }
+
+    if (ck::Is_NOT_Valid(ComponentEntity))
+    { return; }
+
+    Request_RemoveBodiesForEntity(ComponentEntity);
+
+    auto GenericHandle = FCk_Handle{ComponentEntity};
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
 }
 
 auto
@@ -624,6 +707,30 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoCreate_ComponentEntity(
+        const FCk_Handle& InTransientEntity,
+        const UPrimitiveComponent& InSourceComponent)
+        -> FCk_Handle_JoltStaticActor
+{
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransientEntity);
+    if (ck::Is_NOT_Valid(NewEntity))
+    { return {}; }
+
+    NewEntity.Add<ck::FFragment_JoltStaticActor_Current>();
+
+    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    // Attribution names the COMPONENT (a shared host actor can own many baked components); the
+    // source actor stays reachable for consumers that walk up.
+    Fragment._SourceActor = InSourceComponent.GetOwner();
+    Fragment._SourceActorName = InSourceComponent.GetFName();
+
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceComponent.GetFName());
+
+    return ck::StaticCast<FCk_Handle_JoltStaticActor>(NewEntity);
+}
 
 auto
     UCk_JoltStaticWorld_Subsystem_UE::

@@ -22,6 +22,7 @@
 #include "CkJolt/CkJoltShapeFactory.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Utils.h"
+#include "CkJolt/StaticWorld/CkJoltMeshShape_Utils.h"
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 
 #include <Engine/StaticMesh.h>
@@ -185,12 +186,20 @@ namespace ck
                 { return; }
 
                 MeshBodySetup = BodySetup;
-                Shape = ck::jolt::bake::BuildShape_FromBodySetup(*BodySetup, EntityScale, DebugName);
+
+                // Pre-baked mesh shape first (scale-1 blob + ScaledShape wrap); a null result —
+                // missing/stale asset or a scale the topology cannot wrap — builds from the
+                // BodySetup with the scale baked into the geometry, as always.
+                const auto ScaleOneShape = ck::jolt::bake::mesh_shape_utils::TryGet_ScaleOneShape(*Mesh);
+                Shape = ck::jolt::bake::mesh_shape_utils::TryWrap_AtScale(ScaleOneShape, EntityScale, DebugName);
+
+                if (ck::Is_NOT_Valid(Shape))
+                { Shape = ck::jolt::bake::BuildShape_FromBodySetup(*BodySetup, EntityScale, DebugName); }
                 break;
             }
         }
 
-        if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Shape))
         { return; }
 
         // ---- Trimesh-on-Dynamic guard: Jolt forbids a MeshShape leaf on a dynamic body ----
