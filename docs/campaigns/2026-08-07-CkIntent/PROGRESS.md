@@ -2,6 +2,75 @@
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
 
+**As of 2026-08-10 (maintainer returned): PIE pass delivered two findings → slice 6 feel patch
+INSTALLED + GATED ✅ GREEN 123/123 (0 failed/skipped/contaminated, AS compile first try,
+`Test-Phase10Slice6.log`, 1m13s; editor lock probed FREE; one infra false-start — wrong log
+dir, zero tests ran).** Finding 1 (bug): single clicks fired specials — root cause: the 5f
+hold verdict (~83ms) sits INSIDE the human click-duration distribution (~90-150ms), so ordinary
+clicks graded as holds; mid-chain the press-buffer had already started the next step, so one
+press double-answered (step-start → special). Fixed per **[P10-D11]**: `hold=10` (~166ms) in
+notation + `k_ChargeHoldFrames`, plus a pending-swing verdict gate in `DoTrySpawnPendingSwing`
+(strike waits out an unresolved press; keeps the free mid-wind-up cancel a longer verdict would
+break; spawn duration = state remainder for co-expiry; `_PendingSwing_DurationSeconds` retired).
+Finding 2 (design): chord-with-delta pushback conceded, but maintainer ruled ordering IS the
+test target → sequences stay, comment corrected (**[P10-D10]**). Drive script §2/§3 re-tuned.
+Second PIE pass (same day) → **slice 7 INSTALLED, gate pending**: chains were "very hard" —
+root cause [P10-D6]'s wind-up rejection swallowing a double-click's second press (state enters
+on click 1's RELEASE, second press lands ~50-120ms later, inside the 70ms wind-up). Ruled
+**[P10-D12]**: chain window opens at STEP ENTRY (`_StepEntryFrame`, strictly-after; wind-up is
+animation only; `_WindUpEndFrame`/`k_SamplerHz` retired), durations to maintainer's numbers
+(light 2s x3, heavy 4s x3), red sphere demystified = unblocked projectile hit (no change).
+Slice 7 extended with PARRY per **[P10-D13]** (maintainer: block "needs to be instant... add
+support for parry"): Q stays grammar-free (press registers on its row, zero verdict); parry
+judged at IMPACT from `Get_HeldRunFrames(Q)` — run in [1,8] (~133ms) = PARRIED gold beat,
+longer = BLOCKED cyan, 0 = STRUCK red; `Get_IsBlocking()` retired into the three-way verdict.
+Slices 6+7 GATED together on the final tree ✅ **GREEN 123/123** (0 failed/skipped/
+contaminated, AS compile first try, `Test-Phase10Slice7.log`, 1m9s; editor lock probed FREE
+before launch — it had been LOCKED mid-slice-7, gate deferred until it freed).
+**Third PIE pass (same day) → slice 8 INSTALLED, gate pending**: five findings ruled
+**[P10-D14]** (drawn swing IS the hitbox — persistent per-tick window at the shape's centre,
+arc + at-spawn test retired; dummy hit feedback = ONE red 0.4s flash, `Request_TakeHit()`
+no-arg; BUFFERED annotates the step label `"LIGHT 2 + BUFFERED"` instead of replacing it;
+overhead sphere identified for the maintainer = buffered-attack marker, kept),
+**[P10-D15]** (parry deflects — `Request_TakeProjectileHit` → `Request_ResolveProjectileImpact`
+returning the verdict; parried shot turns gold, flies home, dummy self-hits on arrival;
+one-in-flight holds through the return), **[P10-D16]** (sprint attacks — LeftShift minted as
+button `R`/`k_Key_Sprint`, sprint locomotion MaxSpeed 1000 vs walk 600 polled per tick,
+`"W+L"` → `"W+R+L"` + NEW `"W+R+H"` (955) `Kit_Combo_WH`/state 14/`_Attempt_ComboWH`,
+both spawn a 300cm AoE ring with radial hit window; 3-button chords verified legal in the
+grammar parser). Root cause of "no hits": the old test ran ONCE at swing spawn, pawn-centred
+(reach 275-330cm vs dummy at 800cm), so closing distance during the 2s/4s step never
+re-tested; landed hits flashed 0.15s in family colour — read as nothing. Files touched:
+CkTests Pawn/Enemy/Moves/Shared/PC + CkFoundation PHASE_10.md/PHASE_10_EDITOR_VERIFY.md
+(§1/§2/§4/§5/§6/§7)/this file. **Slice 8 GATED on the final tree ✅ GREEN 123/123** (0
+failed/skipped/contaminated, AS compile first try, `Test-Phase10Slice8.log`, 1m10s; editor
+lock probed FREE before both launch attempts; one infra false-start — wrong toolbox exe path
+`C:\Program Files\...`, correct is project-relative `CkAuto/UnrealToolbox.exe`, zero tests ran
+on the failed attempt). ALL UNCOMMITTED (slices 6+7+8): CkTests (5 gym .as — Pawn, Enemy,
+Moves, Shared, PC) + CkFoundation (PHASE_10.md, PROGRESS.md, PHASE_10_EDITOR_VERIFY.md).
+Next: maintainer /commit call → PIE re-drive §1 (sprint) / §2 (hitbox, BUFFERED label) /
+§4 (parry deflect) / §5 (sprint attacks). The closed-state paragraph below stands as
+history.
+
+**As of 2026-08-10 (late): PHASE 10 technically CLOSED under [P2-D4] — all five slices built,
+gated, and committed; the AFK mandate ("complete all the slices, /commit periodically") is
+FULFILLED.** Slice 3b gated `Test-Phase10Slice3b-BuildTest2.log` 123/123 (first-ever compile of
+those edits, first try) → committed CkTests `abeb30f5` + docs `efeb2006f`. Slice 4 (combos,
+Opus draft → orchestrator mirror-diff/signature re-verification → install + legend fix +
+comment-audit re-applies) gated `Test-Phase10Slice4.log` 123/123 → committed CkTests
+`96bed75f`. Slice 5 (orchestrator-inline: 3 dead Shared helpers pruned with per-symbol caller
+census, registry verified 2 rows, comment audit zero hits, `PHASE_10_EDITOR_VERIFY.md` v2
+drive script) gated `Test-Phase10Slice5-Final.log` ✅ 123/123 on the FINAL tree → committed
+below. Rulings this session: [P10-D8] (combos-as-sequences), [P10-D9] (W+L chord on held-ness).
+Build unblock cost nothing: the debugger session fixed its own `CkWorldSpaceWidget` consumers
+(`fba4d4c`). **Human queue on return: drive `PHASE_10_EDITOR_VERIFY.md` (~10 min — §2 chain
+feel + §5 combos are the accumulated PIE debt), rule on gamepad parity ("if wanted", not
+built), then the ship conversation (push NEVER authorized this session; superproject pointer
+bumps untouched).** Session log: fresh Fable orchestrator; 1 Opus dispatch (slice 4, landed
+clean, 3 surfaced calls ruled); slices 3b-gate/5 orchestrator-inline; 3 scoped gates + 1
+build, all green first try; 5 commits, 0 pushes. The OPEN-state paragraph below stands as
+history.
+
 **As of 2026-08-10: PHASE 10 OPEN — the maintainer drove the Phase-9 gym and REJECTED the
 design ("this gym was a disappointment"); the playground is being rebuilt as ONE Diablo-style
 combat arena per the spec + rulings in `PHASE_10.md` ([P10-D1] arena replaces stations,
@@ -27,7 +96,40 @@ maintainer explicitly OK deferring; lives in CkGameplayDebugger
 plate's back side) → readouts now FLAT ON THE FLOOR behind the character per maintainer
 direction, mirror-proof derived transform `FRotator(-90, CameraYaw, 0)` on YZ at
 floor+3cm, 150/215cm camera-backward (PHASE_10 round-2 entry has the derivation).
-Floor labels APPROVED ("Excellent"). **COMMITTED 2026-08-10 (maintainer /commit; push NEVER authorized; superproject pointer bumps left to the ship conversation):** CkTests dev `50f07fb9` (playground changeover, 30 files +2017/-7367); CkFoundation dev `22844b778` (module-doc gym line, re-freshened to the arena first) + `a9a2815c3` (campaign docs). Slice 3 (enemy + Q block) INSTALLED — Opus draft mirror-diffed, three flagged bindings attested in corpus, PC legend applied; details in PHASE_10.md slice log. Gate `Test-Phase10Slice3.log` ✅ GREEN 123/123 (AS compile first try, 1m26s; covers the floor-label fix too). Awaiting: maintainer PIE (hit the dummy, block the shot). **PUSHED 2026-08-10 (maintainer /commit-push):** CkTests dev rebased onto origin/dev (12 local commits replayed over the CkUsf test wave, zero conflicts) and pushed - tip `9fecb8f0`, the whole intent test corpus + playground is PUBLIC. CkFoundation dev (19 local commits: CkInput raw/bias/keybinding + CkIntent module + campaign docs incl. this file) rebased + pushed in the same pass - this entry rides that push. Superproject pointer bumps deliberately NOT done here (gitlinks span other sessions' repos; ship conversation or maintainer bumps them). Phase 9's paragraph below
+Floor labels APPROVED ("Excellent"). **COMMITTED 2026-08-10 (maintainer /commit; push NEVER authorized; superproject pointer bumps left to the ship conversation):** CkTests dev `50f07fb9` (playground changeover, 30 files +2017/-7367); CkFoundation dev `22844b778` (module-doc gym line, re-freshened to the arena first) + `a9a2815c3` (campaign docs). Slice 3 (enemy + Q block) INSTALLED — Opus draft mirror-diffed, three flagged bindings attested in corpus, PC legend applied; details in PHASE_10.md slice log. Gate `Test-Phase10Slice3.log` ✅ GREEN 123/123 (AS compile first try, 1m26s; covers the floor-label fix too). Awaiting: maintainer PIE (hit the dummy, block the shot). Slice 3b (chain-feel rework per NEW rulings [P10-D6] phases/press-buffer/grace +
+[P10-D7] hold=5 verdict threshold) INSTALLED orchestrator-inline; gate `Test-Phase10Slice3b.log`
+FAILED-INVALID (exit 1 at editor boot, NOT our red: the rebase's remote wave added the
+NEW C++ module CkWorldSpaceWidget - local binaries predate it, plugin refused to load).
+Re-run as single-shot `--build --test` -> `Test-Phase10Slice3b-BuildTest.log` = BUILD
+FAILED, cross-repo break: CkGameplayDebugger/CkEcsDebugger still includes
+`CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Fragment.h` (moved by remote `3d1b68b26`
+module extraction) - `CkInspector_UI.cpp:5` + `CkEcsDebugger_FeatureFlags.cpp:53`,
+fatal C1083. That repo is the debugger campaign's feature branch - fix is THEIRS to
+authorize. Slice-3b AS edits have therefore NEVER compiled. Session ended here;
+handoff = `CONTINUATION_PROMPT_ArenaSlices4Plus.md` (same dir). Awaiting: gate verdict + maintainer PIE
+(chain 1-2-3 by deliberate clicking, crisp taps, dummy, block). **PUSHED 2026-08-10 (maintainer /commit-push):** CkTests dev rebased onto origin/dev (12 local commits replayed over the CkUsf test wave, zero conflicts) and pushed - tip `9fecb8f0`, the whole intent test corpus + playground is PUBLIC. CkFoundation dev (19 local commits: CkInput raw/bias/keybinding + CkIntent module + campaign docs incl. this file) rebased + pushed in the same pass - this entry rides that push. Superproject pointer bumps deliberately NOT done here (gitlinks span other sessions' repos; ship conversation or maintainer bumps them). **2026-08-10 (resumed session, fresh orchestrator): MAINTAINER WENT AFK with a standing
+directive — "You now know what I am looking for... /commit periodically and complete all the
+slices." Per-slice PIE steering is thereby waived; commit authorization is standing; push still
+NEVER (only /commit-push).** Build unblock resolved WITHOUT touching the debugger repo: the
+debugger session fixed its own consumers (CkGameplayDebugger `fba4d4c` "follow CkWorldSpaceWidget
+out of CkUI" — includes retargeted + `CkWorldSpaceWidget` dep in `CkEcsDebugger.Build.cs:84`;
+their tree clean, branch ahead 43). CkFoundation dev tip moved to `70d708e23` (debugger-UX
+campaign's local commits); our `e317e35b4` and the extraction `3d1b68b26` both verified
+ancestors. Slice-3b gate re-run as single-shot `--build --test` ✅ **GREEN 123/123**
+(0 failed/skipped/contaminated, AS compile FIRST TRY, build succeeded, test phase 1m9s;
+`Test-Phase10Slice3b-BuildTest2.log`, editor lock probed FREE before launch). **Slice 3b is
+gated**; PIE feel verdict deferred until the maintainer returns (branch table in the
+continuation prompt stands). Slice-4 fork RESEARCHED and
+RULED inline: **[P10-D8]** directional combos = sequences `"L H w=30"`/`"H L w=30"` (chord atoms
+are a set — order inexpressible; sequences add zero latency), **[P10-D9]** W+LMB = real chord
+`"W+L"` (chord terminals accept held partners; locomotion reads engine `IsInputKeyDown` outside
+the routed pipeline so the Consume capture is harmless; W minted as third key) — full rationale
+in PHASE_10.md. Slice-4 Opus draft dispatched to scratchpad in parallel with the gate; returned COMPLETE, no
+STOPs; orchestrator mirror-diffed all four files (hunks exactly as claimed), re-verified the
+load-bearing signatures at source, ruled the drafter's three surfaced calls (legend `45f` fixed,
+enemy combo-tint accepted, family/step derivation accepted), INSTALLED + two comment-audit
+re-applies; slice-4 gate `Test-Phase10Slice4.log` in flight. **Slice 3b COMMITTED (standing
+/commit): CkTests `abeb30f5` (+252/−70), CkFoundation docs `efeb2006f`.** Phase 9's paragraph below
 stands as history: its PLUMBING (shared source composition, record readers, salvage) carries
 forward; its gym DESIGN is dead. `PHASE_9_EDITOR_VERIFY.md` is OBSOLETE (death condition
 fired) — do not drive it; slice 5 writes the v2 script. All work remains UNCOMMITTED.
