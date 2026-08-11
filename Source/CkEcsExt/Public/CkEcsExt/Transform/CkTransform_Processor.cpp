@@ -790,6 +790,10 @@ namespace ck
         DoTick(
             TimeType InDeltaT) -> void
     {
+        // A tag set by a PUMP-pass drain (post-PostTransform) has not been seen by any main-pass
+        // consumer when this clear runs early the next frame — consumers of the tag must therefore
+        // either be dirty-version-driven (FireSignals, IsmProxy) or not tag-gated at all
+        // (UnrealComponent_PushTransform). Do not add a tag-gated main-pass view downstream of this.
         // Unconditional, for the same reason as FTag_EntityJustCreated: this marks THIS frame's transform writes,
         // and the load writes restored transforms, so preserving it would leave every restored entity permanently
         // dirty to every consumer that polls it.
