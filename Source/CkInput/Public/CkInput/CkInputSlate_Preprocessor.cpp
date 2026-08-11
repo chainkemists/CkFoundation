@@ -162,6 +162,19 @@ auto
 
 auto
     FCk_InputSlate_Preprocessor::
+    HandleMouseButtonDoubleClickEvent(
+        FSlateApplication&,
+        const FPointerEvent& InMouseEvent)
+    -> bool
+{
+    DoRecordEvent(InMouseEvent.GetEffectingButton(), ECk_InputSource_EventType::Pressed, 0.0f,
+        static_cast<int32>(InMouseEvent.GetUserIndex()));
+
+    return false;
+}
+
+auto
+    FCk_InputSlate_Preprocessor::
     HandleMouseButtonUpEvent(
         FSlateApplication&,
         const FPointerEvent& InMouseEvent)
