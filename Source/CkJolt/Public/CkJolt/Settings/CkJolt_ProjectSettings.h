@@ -132,9 +132,9 @@ private:
 
     // Content root for cooked Jolt data assets. Must be listed in DirectoriesToAlwaysCook
     // (the cook commandlet ensures this loudly).
-    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
-              meta = (AllowPrivateAccess = true))
-    FString _CookedDataRootPath = TEXT("/Game/CkJoltData");
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, LongPackageName))
+    FDirectoryPath _CookedDataRootPath;
 
     // Bake-grid cell size (uu) used to partition cooked bodies for streaming.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
@@ -154,9 +154,9 @@ private:
     int32 _BroadphaseOptimizeThreshold = 512;
 
     // Map path prefixes excluded from Cook_AllMaps (e.g. /Game/Developers).
-    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
-              meta = (AllowPrivateAccess = true))
-    TArray<FString> _CookExcludedMapPathPrefixes;
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, LongPackageName))
+    TArray<FDirectoryPath> _CookExcludedMapPathPrefixes;
 
     // Which component mobilities the level sweep bakes. A baked Movable is a snapshot at sweep time —
     // the static body does not follow later movement.
@@ -194,9 +194,9 @@ private:
     // cook sweeps these; runtime uses the cooked shape instead of building hulls/tri-meshes).
     // In cooked-data contexts, a hull/tri-mesh mesh under one of these roots with NO cooked shape
     // is a loud ensure. Empty = the per-mesh pre-bake is off.
-    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
-              meta = (AllowPrivateAccess = true))
-    TArray<FString> _BakedMeshShapeRoots;
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true, LongPackageName))
+    TArray<FDirectoryPath> _BakedMeshShapeRoots;
 
     // Exclude components that Block NOTHING (pure overlap volumes / triggers) from the level sweep.
     // A component that blocks ANY channel — including project custom channels, which often default to
