@@ -242,10 +242,13 @@ auto
 
     for (const auto& Registered : InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_RegisteredCaptures())
     {
-        if (NOT Registered.Get_Key().IsValid())
-        { continue; }
+        for (const auto& Key : Registered.Get_Keys())
+        {
+            if (NOT Key.IsValid())
+            { continue; }
 
-        Keys.AddUnique(Registered.Get_Key());
+            Keys.AddUnique(Key);
+        }
     }
 
     return Keys;
