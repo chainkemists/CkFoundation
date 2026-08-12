@@ -140,6 +140,26 @@ auto
 
 auto
     UCk_Utils_IntentMatcher_UE::
+    TryGet_ActivationFrame(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        const FGameplayTag& InIntentTag)
+    -> int32
+{
+    return DoGet_ActivationFrame(InMatcher, DoGet_IntentIndex_ByTag(InMatcher, InIntentTag));
+}
+
+auto
+    UCk_Utils_IntentMatcher_UE::
+    TryGet_ActivationFrame_ByName(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        FName InIntentName)
+    -> int32
+{
+    return DoGet_ActivationFrame(InMatcher, DoGet_IntentIndex_ByName(InMatcher, InIntentName));
+}
+
+auto
+    UCk_Utils_IntentMatcher_UE::
     Get_IsClaimed(
         const FCk_Handle_IntentMatcher& InMatcher,
         const FGameplayTag& InIntentTag)
@@ -327,12 +347,15 @@ auto
 
     auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>()._PhaseRows[Index];
 
-    if (Row._Phase != ECk_Intent_Phase::Completed)
+    const auto PhaseIsClaimable = Row._Phase == ECk_Intent_Phase::Completed ||
+                                  Row._Phase == ECk_Intent_Phase::Active;
+
+    if (NOT PhaseIsClaimable)
     {
         ck::intent::Verbose
         (
-            TEXT("Request_Claim on IntentMatcher [{}] rejected: intent [{}] is [{}], and only a completed intent "
-                 "is something to take ownership of"),
+            TEXT("Request_Claim on IntentMatcher [{}] rejected: intent [{}] is [{}], and only a completed or an "
+                 "active intent is something to take ownership of"),
             InMatcher, InRequest.Get_IntentName(), Row._Phase
         );
 
@@ -446,6 +469,26 @@ auto
 
 auto
     UCk_Utils_IntentMatcher_UE::
+    DoGet_ActivationFrame(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        int32 InIntentIndex)
+    -> int32
+{
+    if (InIntentIndex == INDEX_NONE)
+    { return INDEX_NONE; }
+
+    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[InIntentIndex];
+
+    // Gated for the same reason the completion frame is: the row carries one frame for whichever phase it is in,
+    // and a level that has already been released names the frame it was released on, not the one it began at.
+    if (Row.Get_Phase() != ECk_Intent_Phase::Active)
+    { return INDEX_NONE; }
+
+    return Row.Get_PhaseFrame();
+}
+
+auto
+    UCk_Utils_IntentMatcher_UE::
     DoGet_ClaimedBy(
         const FCk_Handle_IntentMatcher& InMatcher,
         int32 InIntentIndex)
@@ -456,7 +499,7 @@ auto
 
     const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[InIntentIndex];
 
-    if (Row.Get_Phase() != ECk_Intent_Phase::Completed)
+    if (Row.Get_Phase() != ECk_Intent_Phase::Completed && Row.Get_Phase() != ECk_Intent_Phase::Active)
     { return {}; }
 
     return Row.Get_ClaimedBy();

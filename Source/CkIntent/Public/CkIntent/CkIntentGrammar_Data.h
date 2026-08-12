@@ -50,6 +50,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Intent_Lenience);
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Which lifecycle a definition's phase row follows — the two are genuinely different questions a consumer asks.
+ *
+ * `Edge` is the episodic one the module was built around: a press COMPLETES the move, the completion latches on the
+ * frame it landed on, and the latch decays back to `Idle`. A consumer turns that into an edge by comparing the
+ * completion frame against the frame it last acted on.
+ *
+ * `Level` is the sustained one: the row goes `Active` on the visible press edge of its terminal button and stays
+ * there until the button leaves the row's held union or the press key stops being deliverable to the layer. There is
+ * no completion, no latch and nothing to decay — a consumer asks whether it is `Active` right now.
+ */
+UENUM(BlueprintType)
+enum class ECk_Intent_Kind : uint8
+{
+    Edge,
+    Level
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Intent_Kind);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Why a notation string produced no definition.
  *
  * Every value names a DISTINCT malformation, because a designer reading "this move did not parse" needs to know
@@ -90,7 +112,14 @@ enum class ECk_Intent_ParseError : uint8
     // A chord named two directions. One stick cannot be in two octants at once.
     ChordTwoDirections,
     // A chord named neutral. Neutral is the ABSENCE of a direction, so it cannot be simultaneous with anything.
-    ChordNeutralDirection
+    ChordNeutralDirection,
+
+    // `level` declared beside `hold=`. A level intent has no threshold — it is active for as long as the button is.
+    LevelWithHold,
+    // `level` on a multi-step notation. A sustained prefix is rejected until a consumer needs one.
+    LevelWithSequence,
+    // A level terminal that is not exactly one Button atom. There is no direction and no chord to sustain.
+    LevelTerminalNotSingleButton
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Intent_ParseError);
@@ -272,6 +301,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Intent_Lenience _Lenience = ECk_Intent_Lenience::Strict;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_Intent_Kind _Kind = ECk_Intent_Kind::Edge;
+
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_IntentTag);
@@ -280,6 +313,7 @@ public:
     CK_PROPERTY_GET(_HoldFrames);
     CK_PROPERTY_GET(_Priority);
     CK_PROPERTY_GET(_Lenience);
+    CK_PROPERTY_GET(_Kind);
 
 public:
     auto Get_IsEmpty() const -> bool { return _Steps.IsEmpty(); }
@@ -295,7 +329,8 @@ private:
         int32 InWindowFrames,
         int32 InHoldFrames,
         int32 InPriority,
-        ECk_Intent_Lenience InLenience)
+        ECk_Intent_Lenience InLenience,
+        ECk_Intent_Kind InKind)
         : _Name(InName)
         , _IntentTag(MoveTemp(InIntentTag))
         , _Steps(MoveTemp(InSteps))
@@ -303,6 +338,7 @@ private:
         , _HoldFrames(InHoldFrames)
         , _Priority(InPriority)
         , _Lenience(InLenience)
+        , _Kind(InKind)
     { }
 };
 

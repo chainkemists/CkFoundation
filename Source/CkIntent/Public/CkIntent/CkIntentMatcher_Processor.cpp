@@ -195,6 +195,14 @@ namespace ck_intent_matcher_processor
         return {};
     }
 
+    auto
+        Get_IsLevelIntent(
+            const FCk_Intent_CompiledIntent& InIntent)
+        -> bool
+    {
+        return InIntent.Get_Kind() == ECk_Intent_Kind::Level;
+    }
+
     // How many BUTTONS the move's terminal asks for at once. More than one is the definition of a chord terminal
     // and therefore of an intent that cannot complete until a partner press arrives — a direction in the chord
     // does not count, because the record already reports the direction on the very frame of the press.
@@ -697,9 +705,11 @@ namespace ck
 
         // Episodes are indices into the set that just went away, so they cannot survive it — and nothing is
         // reported for them: a swap is not an answer to the press that was waiting, it is the question being
-        // withdrawn.
+        // withdrawn. Active levels go the same way, and their Active -> Idle signal already rode the non-Idle
+        // sweep above.
         InCurrent._PendingEpisodes.Reset();
         InCurrent._HoldAccumulators.Reset();
+        InCurrent._ActiveLevels.Reset();
 
         InCurrent._PhaseRows.Reset();
         InCurrent._PhaseRows.SetNum(Set.Get_Intents().Num());
@@ -870,6 +880,10 @@ namespace ck
 
         DoScanRowForNewPresses(InMatcher, InCurrent, InContext, Row, InOffset, ButtonsSpokenFor, CompletedThisRow);
 
+        // Deliberately outside the spoken-for bookkeeping: a level row is not an episode candidate and a press
+        // that opened an episode for its edge siblings still activates the level move on the same button.
+        DoUpdateLevelRows(InMatcher, InCurrent, InContext, Row, InOffset);
+
         DoPurgeEpisodesResolvedElsewhere(InMatcher, InCurrent, CompletedThisRow, Row.Get_FrameIndex());
 
         DoDecayLatches(InMatcher, InCurrent, InContext, Row.Get_FrameIndex());
@@ -908,8 +922,26 @@ namespace ck
 
             if (Verdict.Get_IsDeferred())
             {
-                DoOpenEpisode(InMatcher, InCurrent, InRow, PressedButton, PressKey, Verdict,
-                    ResolutionRow.Get_IntentIndices());
+                // A level index can never enter an episode's candidate list: `Pending` is a phase it has no way
+                // to leave — nothing resolves it later — and a wait it joined would answer for a press its own
+                // lifecycle already answered on this very frame.
+                auto EdgeCandidates = TArray<int32>{};
+
+                for (const auto IntentIndex : ResolutionRow.Get_IntentIndices())
+                {
+                    if (NOT Set.Get_Intents().IsValidIndex(IntentIndex))
+                    { continue; }
+
+                    if (ck_intent_matcher_processor::Get_IsLevelIntent(Set.Get_Intents()[IntentIndex]))
+                    { continue; }
+
+                    EdgeCandidates.Add(IntentIndex);
+                }
+
+                if (EdgeCandidates.IsEmpty())
+                { continue; }
+
+                DoOpenEpisode(InMatcher, InCurrent, InRow, PressedButton, PressKey, Verdict, EdgeCandidates);
 
                 // A chord whose partner was ALREADY down completes on the press row itself, so the freshly opened
                 // episode gets one advance against the row that opened it rather than waiting for the next one.
@@ -932,6 +964,9 @@ namespace ck
                 if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
                 { continue; }
 
+                if (ck_intent_matcher_processor::Get_IsLevelIntent(Set.Get_Intents()[IntentIndex]))
+                { continue; }
+
                 if (OutCompletedThisRow.Contains(IntentIndex))
                 { break; }
 
@@ -942,6 +977,139 @@ namespace ck
                 break;
             }
         }
+    }
+
+    auto
+        FProcessor_IntentMatcher_Match::
+        DoUpdateLevelRows(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            const FIntentMatcher_ScanContext& InContext,
+            const FCk_Intent_FrameRecord& InRow,
+            int32 InOffset)
+        -> void
+    {
+        const auto& Set = InCurrent._ActiveSet;
+
+        for (const auto& PressedButton : InRow.Get_Pressed())
+        {
+            const auto PressKey = ck_intent_matcher_processor::TryGet_VisiblePressKey(InRow, PressedButton, InContext);
+
+            if (NOT PressKey.IsValid())
+            { continue; }
+
+            const auto ResolutionRow = UCk_Utils_IntentGrammar_UE::TryGet_ResolutionRow(Set, PressedButton);
+
+            for (const auto IntentIndex : ResolutionRow.Get_IntentIndices())
+            {
+                if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+                { continue; }
+
+                if (NOT ck_intent_matcher_processor::Get_IsLevelIntent(Set.Get_Intents()[IntentIndex]))
+                { continue; }
+
+                // Already active: a second press of a button that is still down cannot start a hold that never
+                // ended, and re-entering would restamp a phase frame the consumer measures the hold from.
+                if (Get_IsLevelActive(InCurrent, IntentIndex))
+                { continue; }
+
+                if (NOT DoRunScan(InCurrent, InContext, Set.Get_Intents()[IntentIndex], InOffset))
+                { continue; }
+
+                DoActivateLevelRow(InMatcher, InCurrent, IntentIndex, PressedButton, PressKey, InRow.Get_FrameIndex());
+            }
+        }
+
+        // Backwards so a release cannot move an entry the sweep has not reached yet.
+        for (auto Index = InCurrent._ActiveLevels.Num() - 1; Index >= 0; --Index)
+        {
+            const auto& Active = InCurrent._ActiveLevels[Index];
+
+            const auto HeldUnionIsIntact = InRow.Get_Held().Contains(Active._Button);
+
+            const auto ButtonKeys = ck::IsValid(InContext.Get_ButtonMap())
+                ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InContext.Get_ButtonMap(), Active._Button)
+                : TArray<FKey>{};
+
+            // The same per-key reading a pending episode's delivery check makes, for the same reason: a modal
+            // masking only one of several bound devices must release only the hold the player is actually on, and
+            // a rebind that moves the anchor off the button ends it because the key can never arrive again.
+            const auto DeliveryIsIntact = Active._AnchorKey.IsValid() &&
+                                          ButtonKeys.Contains(Active._AnchorKey) &&
+                                          ck_intent_matcher_processor::Get_IsKeyDeliverableToLayer(
+                                              InContext, Active._AnchorKey);
+
+            if (HeldUnionIsIntact && DeliveryIsIntact)
+            { continue; }
+
+            DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
+                NOT HeldUnionIsIntact
+                    ? FString{TEXT("the button is no longer held")}
+                    : FString{TEXT("this layer no longer receives its anchor key")});
+        }
+    }
+
+    auto
+        FProcessor_IntentMatcher_Match::
+        DoActivateLevelRow(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InIntentIndex,
+            const FCk_Input_ButtonId& InButton,
+            const FKey& InAnchorKey,
+            int32 InFrame)
+        -> void
+    {
+        FIntentMatcher_PhaseWriter::Set_Phase(
+            InMatcher, InCurrent, InIntentIndex, ECk_Intent_Phase::Active, InFrame);
+
+        InCurrent._ActiveLevels.Emplace(FIntentMatcher_ActiveLevel{InIntentIndex, InButton, InAnchorKey});
+
+        intent::Verbose
+        (
+            TEXT("IntentMatcher [{}] activated level intent [{}] on button [{}|{}] anchored to key [{}] on record "
+                 "frame [{}]"),
+            InMatcher, InCurrent._ActiveSet.Get_Intents()[InIntentIndex].Get_Name(),
+            InButton.Get_Tier(), InButton.Get_Name(), InAnchorKey.ToString(), InFrame
+        );
+    }
+
+    auto
+        FProcessor_IntentMatcher_Match::
+        DoDeactivateLevelRow(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InActiveLevelIndex,
+            int32 InFrame,
+            const FString& InReason)
+        -> void
+    {
+        const auto IntentIndex = InCurrent._ActiveLevels[InActiveLevelIndex]._IntentIndex;
+
+        FIntentMatcher_PhaseWriter::Set_Phase(
+            InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
+
+        InCurrent._ActiveLevels.RemoveAt(InActiveLevelIndex);
+
+        intent::Verbose
+        (
+            TEXT("IntentMatcher [{}] released level intent [{}] on record frame [{}]: {}"),
+            InMatcher, InCurrent._ActiveSet.Get_Intents()[IntentIndex].Get_Name(), InFrame, InReason
+        );
+    }
+
+    auto
+        FProcessor_IntentMatcher_Match::
+        Get_IsLevelActive(
+            const FFragment_IntentMatcher_Current& InCurrent,
+            int32 InIntentIndex)
+        -> bool
+    {
+        return InCurrent._ActiveLevels.ContainsByPredicate(
+        [&](const FIntentMatcher_ActiveLevel& InActive) -> bool
+        {
+            return InActive.Get_IntentIndex() == InIntentIndex;
+        });
     }
 
     auto
