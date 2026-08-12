@@ -409,19 +409,24 @@ across profiles it knows nothing about.
 - **Tier 1 — `Mapped`.** One button per Enhanced Input player-mappable MAPPING NAME (the name the
   settings store keys on, which is stable across rebinds by construction). Its key association is read
   from the player's resolved mappings and re-read on every derive. A name owns one button no matter how
-  many slots it has; the association follows slot **First**, the slot every other query in this module
-  defaults to.
+  many slots it has, and the association carries **every bound slot's key, primary first** (ascending
+  slot order, so the First slot leads) — a keyboard binding in one slot and a gamepad binding in
+  another both produce the button. Scalar queries answer the primary; `Get_KeysForButton` answers them
+  all.
 - **Tier 2 — `Physical`.** One button per raw `FKey` nothing maps, identity = the key's own `FName`,
   association = that key, fixed forever and never touched by a re-derive. This is the tier for
   prototyping, for synthetic tests, and for anything that has to work before a binding profile exists.
 
-**Key → button is ONE-TO-MANY by design.** Two mappings in different categories legitimately share a
-key, and duplicate bindings exist in real profiles, so `Get_ButtonIdsForKey` returns EVERY holder. A
-consumer that wants "the" button has to say which tier and name it means. `TryGet_KeyForButton` answers
-the other direction and returns an INVALID key both for a button the map never minted and for one that is
-currently unbound — both mean "pressing nothing produces it", which is all a consumer can act on. An
-invalid key handed to `Get_ButtonIdsForKey` answers empty rather than listing the unbound buttons: "no
-key" is a state those buttons are in, not a key they answer to.
+**The association is MANY-TO-MANY by design.** Key → button: two mappings in different categories
+legitimately share a key, and duplicate bindings exist in real profiles, so `Get_ButtonIdsForKey`
+returns EVERY holder — a consumer that wants "the" button has to say which tier and name it means.
+Button → keys: a Mapped button carries one key per bound slot, so `Get_KeysForButton` returns every
+key (primary first) and answers EMPTY both for a button the map never minted and for one that is
+currently unbound — both mean "pressing nothing produces it", which is all a consumer can act on.
+`TryGet_KeyForButton` answers the PRIMARY key alone (invalid on the same two states) and exists for
+consumers that need one display key, not for delivery logic. An invalid key handed to
+`Get_ButtonIdsForKey` answers empty rather than listing the unbound buttons: "no key" is a state those
+buttons are in, not a key they answer to.
 
 **Derivation is deferred and drains in `FGroup_Input_Collect`**, alongside every other CkInput request and
 ahead of `FGroup_Input_Route` — so a consumer woken by a delivered event resolves buttons against this
