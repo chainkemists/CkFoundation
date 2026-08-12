@@ -129,7 +129,7 @@ auto
 
     for (const auto& Association : Associations)
     {
-        if (Association.Get_Key() != InKey)
+        if (NOT Association.Get_Keys().Contains(InKey))
         { continue; }
 
         Result.Emplace(Association.Get_ButtonId());
@@ -152,7 +152,26 @@ auto
     if (FoundIndex == INDEX_NONE)
     { return FKey{EKeys::Invalid}; }
 
-    return Associations[FoundIndex].Get_Key();
+    const auto& Keys = Associations[FoundIndex].Get_Keys();
+
+    return Keys.IsEmpty() ? FKey{EKeys::Invalid} : Keys[0];
+}
+
+auto
+    UCk_Utils_InputButtonMap_UE::
+    Get_KeysForButton(
+        const FCk_Handle_InputButtonMap& InButtonMap,
+        const FCk_Input_ButtonId& InButtonId)
+    -> TArray<FKey>
+{
+    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap_Current>().Get_Associations();
+
+    const auto FoundIndex = ck_input_button_map_utils::Get_IndexOfButton(Associations, InButtonId);
+
+    if (FoundIndex == INDEX_NONE)
+    { return {}; }
+
+    return Associations[FoundIndex].Get_Keys();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

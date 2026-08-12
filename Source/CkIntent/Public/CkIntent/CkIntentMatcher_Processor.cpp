@@ -130,13 +130,43 @@ namespace ck_intent_matcher_processor
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Whether this row carries a press of this button that the layer was allowed to see.
+     * The key of a press of this button on this row that the layer was allowed to see — an invalid key when
+     * there is none, which is also the "was it visible at all" answer.
      *
-     * The row names buttons while the delivery outcomes name KEYS, so the map is consulted to bridge them. That
-     * makes the answer a statement about the CURRENT resolution of the button rather than the one in force when the
-     * row was written — a one-frame skew across a rebind, and the alternative would be storing a key on every edge
-     * the record already describes in button space.
+     * The row names buttons while the delivery outcomes name KEYS, so the map is consulted to bridge them —
+     * against EVERY key the button currently resolves to, since a press on any bound device is a press of the
+     * button. That makes the answer a statement about the CURRENT resolution rather than the one in force when
+     * the row was written — a one-frame skew across a rebind, and the alternative would be storing a key on
+     * every edge the record already describes in button space.
      */
+    auto
+        TryGet_VisiblePressKey(
+            const FCk_Intent_FrameRecord& InRow,
+            const FCk_Input_ButtonId& InButton,
+            const ck::FIntentMatcher_ScanContext& InContext)
+        -> FKey
+    {
+        if (NOT InRow.Get_Pressed().Contains(InButton))
+        { return FKey{EKeys::Invalid}; }
+
+        const auto Keys = ck::IsValid(InContext.Get_ButtonMap())
+            ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InContext.Get_ButtonMap(), InButton)
+            : TArray<FKey>{};
+
+        if (Keys.IsEmpty())
+        { return FKey{EKeys::Invalid}; }
+
+        const auto* Found = InRow.Get_RoutedEvents().FindByPredicate(
+        [&](const FCk_InputLayer_RoutedEvent& InRouted) -> bool
+        {
+            return Keys.Contains(InRouted.Get_Event().Get_Key()) &&
+                   InRouted.Get_Event().Get_EventType() == ECk_InputSource_EventType::Pressed &&
+                   Get_IsEventVisibleToLayer(InRouted, InContext);
+        });
+
+        return Found != nullptr ? Found->Get_Event().Get_Key() : FKey{EKeys::Invalid};
+    }
+
     auto
         Get_IsButtonPressVisible(
             const FCk_Intent_FrameRecord& InRow,
@@ -144,23 +174,7 @@ namespace ck_intent_matcher_processor
             const ck::FIntentMatcher_ScanContext& InContext)
         -> bool
     {
-        if (NOT InRow.Get_Pressed().Contains(InButton))
-        { return false; }
-
-        const auto Key = ck::IsValid(InContext.Get_ButtonMap())
-            ? UCk_Utils_InputButtonMap_UE::TryGet_KeyForButton(InContext.Get_ButtonMap(), InButton)
-            : FKey{};
-
-        if (NOT Key.IsValid())
-        { return false; }
-
-        return InRow.Get_RoutedEvents().ContainsByPredicate(
-        [&](const FCk_InputLayer_RoutedEvent& InRouted) -> bool
-        {
-            return InRouted.Get_Event().Get_Key() == Key &&
-                   InRouted.Get_Event().Get_EventType() == ECk_InputSource_EventType::Pressed &&
-                   Get_IsEventVisibleToLayer(InRouted, InContext);
-        });
+        return TryGet_VisiblePressKey(InRow, InButton, InContext).IsValid();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -460,13 +474,44 @@ namespace ck_intent_matcher_processor
 
         for (const auto& Entry : InEntries)
         {
-            if (NOT Entry.Get_Key().IsValid())
-            { continue; }
+            for (const auto& Key : Entry.Get_Keys())
+            {
+                if (NOT Key.IsValid())
+                { continue; }
 
-            Keys.AddUnique(Entry.Get_Key());
+                Keys.AddUnique(Key);
+            }
         }
 
         return Keys;
+    }
+
+    // Order-insensitive: a rebind that reorders a button's slots without changing the key SET moves nothing a
+    // capture cares about, and reporting it as drift would log a transition no edit follows.
+    auto
+        Get_KeySetsMatch(
+            const TArray<FKey>& InA,
+            const TArray<FKey>& InB)
+        -> bool
+    {
+        if (InA.Num() != InB.Num())
+        { return false; }
+
+        for (const auto& Key : InA)
+        {
+            if (NOT InB.Contains(Key))
+            { return false; }
+        }
+
+        return true;
+    }
+
+    auto
+        Format_Keys(
+            const TArray<FKey>& InKeys)
+        -> FString
+    {
+        return FString::JoinBy(InKeys, TEXT(", "), [](const FKey& InKey) { return InKey.ToString(); });
     }
 
     /**
@@ -605,13 +650,16 @@ namespace ck
             {
                 const auto& Terminal = ResolutionRow.Get_TerminalButton();
 
-                const auto Key = ck::IsValid(ButtonMap)
-                    ? UCk_Utils_InputButtonMap_UE::TryGet_KeyForButton(ButtonMap, Terminal)
-                    : FKey{};
+                const auto Keys = ck::IsValid(ButtonMap)
+                    ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(ButtonMap, Terminal)
+                    : TArray<FKey>{};
 
-                // Atomic: one terminal nothing produces means the set describes a move the player could not make,
-                // and half-activating it would leave a matcher whose captures and whose definitions disagree.
-                if (NOT Key.IsValid())
+                // Atomic on EMPTINESS: a terminal NO key produces means the set describes a move the player
+                // could not make, and half-activating it would leave a matcher whose captures and whose
+                // definitions disagree. A terminal that still resolves on one device while another slot sits
+                // unbound activates with the keys it has — a partial binding is a state the player can produce
+                // from a settings screen, not a defective set.
+                if (Keys.IsEmpty())
                 {
                     intent::Verbose
                     (
@@ -623,7 +671,7 @@ namespace ck
                     return ECk_Request_OperationResult::Failed;
                 }
 
-                Desired.Emplace(FIntentMatcher_RegisteredCapture{Terminal, Key});
+                Desired.Emplace(FIntentMatcher_RegisteredCapture{Terminal, Keys});
             }
         }
 
@@ -754,11 +802,11 @@ namespace ck
 
         for (const auto& Registered : InCurrent._RegisteredCaptures)
         {
-            const auto FreshKey = ck::IsValid(InButtonMap)
-                ? UCk_Utils_InputButtonMap_UE::TryGet_KeyForButton(InButtonMap, Registered.Get_Button())
-                : FKey{};
+            const auto FreshKeys = ck::IsValid(InButtonMap)
+                ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InButtonMap, Registered.Get_Button())
+                : TArray<FKey>{};
 
-            if (FreshKey != Registered.Get_Key())
+            if (NOT ck_intent_matcher_processor::Get_KeySetsMatch(FreshKeys, Registered.Get_Keys()))
             {
                 AnyAssociationMoved = true;
 
@@ -766,14 +814,15 @@ namespace ck
                 // comparison actually changed — a terminal that stays unbound is silent after the first line.
                 intent::Verbose
                 (
-                    TEXT("IntentMatcher on InputLayer [{}]: terminal button [{}|{}] moved from key [{}] to key "
-                         "[{}]; its capture follows on the next routing pass"),
+                    TEXT("IntentMatcher on InputLayer [{}]: terminal button [{}|{}] moved from keys [{}] to keys "
+                         "[{}]; its captures follow on the next routing pass"),
                     InLayer, Registered.Get_Button().Get_Tier(), Registered.Get_Button().Get_Name(),
-                    Registered.Get_Key(), FreshKey
+                    ck_intent_matcher_processor::Format_Keys(Registered.Get_Keys()),
+                    ck_intent_matcher_processor::Format_Keys(FreshKeys)
                 );
             }
 
-            Refreshed.Emplace(FIntentMatcher_RegisteredCapture{Registered.Get_Button(), FreshKey});
+            Refreshed.Emplace(FIntentMatcher_RegisteredCapture{Registered.Get_Button(), FreshKeys});
         }
 
         if (NOT AnyAssociationMoved)
@@ -845,7 +894,9 @@ namespace ck
             if (InButtonsSpokenFor.Contains(PressedButton))
             { continue; }
 
-            if (NOT ck_intent_matcher_processor::Get_IsButtonPressVisible(InRow, PressedButton, InContext))
+            const auto PressKey = ck_intent_matcher_processor::TryGet_VisiblePressKey(InRow, PressedButton, InContext);
+
+            if (NOT PressKey.IsValid())
             { continue; }
 
             const auto ResolutionRow = UCk_Utils_IntentGrammar_UE::TryGet_ResolutionRow(Set, PressedButton);
@@ -857,7 +908,8 @@ namespace ck
 
             if (Verdict.Get_IsDeferred())
             {
-                DoOpenEpisode(InMatcher, InCurrent, InRow, PressedButton, Verdict, ResolutionRow.Get_IntentIndices());
+                DoOpenEpisode(InMatcher, InCurrent, InRow, PressedButton, PressKey, Verdict,
+                    ResolutionRow.Get_IntentIndices());
 
                 // A chord whose partner was ALREADY down completes on the press row itself, so the freshly opened
                 // episode gets one advance against the row that opened it rather than waiting for the next one.
@@ -904,14 +956,21 @@ namespace ck
             TArray<int32>& OutCompletedThisRow)
         -> bool
     {
-        const auto Key = ck::IsValid(InContext.Get_ButtonMap())
-            ? UCk_Utils_InputButtonMap_UE::TryGet_KeyForButton(InContext.Get_ButtonMap(), InEpisode._Button)
-            : FKey{};
+        const auto ButtonKeys = ck::IsValid(InContext.Get_ButtonMap())
+            ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InContext.Get_ButtonMap(), InEpisode._Button)
+            : TArray<FKey>{};
 
         // [D15]'s default pair, the Cancel half: an episode whose input this layer no longer receives is over.
         // Conservative and loud on purpose — the alternative is a charge that silently completes out of a menu.
-        const auto DeliveryIsIntact = Key.IsValid() &&
-                                      ck_intent_matcher_processor::Get_IsKeyDeliverableToLayer(InContext, Key);
+        // Evaluated against the KEY THE PRESS ARRIVED ON, not whichever key the button resolves to first: with
+        // several devices bound to one button, a modal masking only the gamepad key must not cancel a keyboard
+        // charge — and masking the key the player is actually holding must, whichever slot it sits in. A rebind
+        // that moves the opening key off the button ends the episode the same way: the layer will never receive
+        // that key again.
+        const auto DeliveryIsIntact = InEpisode._PressKey.IsValid() &&
+                                      ButtonKeys.Contains(InEpisode._PressKey) &&
+                                      ck_intent_matcher_processor::Get_IsKeyDeliverableToLayer(
+                                          InContext, InEpisode._PressKey);
 
         if (NOT DeliveryIsIntact)
         {
@@ -1033,6 +1092,7 @@ namespace ck
             FFragment_IntentMatcher_Current& InCurrent,
             const FCk_Intent_FrameRecord& InRow,
             const FCk_Input_ButtonId& InButton,
+            const FKey& InPressKey,
             const FCk_Intent_DeferralVerdict& InVerdict,
             const TArray<int32>& InCandidates)
         -> void
@@ -1040,6 +1100,7 @@ namespace ck
         auto Episode = FIntentMatcher_PendingEpisode{};
 
         Episode._Button = InButton;
+        Episode._PressKey = InPressKey;
         Episode._PressFrame = InRow.Get_FrameIndex();
         Episode._ChordWindowFrames = InVerdict.Get_ChordMemberFrames();
         Episode._HoldSiblingFrames = InVerdict.Get_HoldSiblingFrames();

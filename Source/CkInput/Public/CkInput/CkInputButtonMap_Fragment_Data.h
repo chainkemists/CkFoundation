@@ -87,8 +87,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
- * One button and the key currently producing it. An INVALID key is a real state, not an error: a mapping the
- * player left unbound — or one whose context stopped being registered — keeps its identity and reports no key,
+ * One button and the keys currently producing it, PRIMARY FIRST: ascending slot order for a Mapped button —
+ * the First slot leads, and is what `TryGet_KeyForButton` answers — and the single fixed key for a Physical
+ * one. A mapping name that binds a keyboard key in one slot and a gamepad key in another therefore carries
+ * BOTH, which is what lets a definition naming the button complete from either device.
+ *
+ * Only bound slots contribute, so an EMPTY list is the real unbound state, not an error: a mapping the player
+ * left unbound — or one whose context stopped being registered — keeps its identity and reports no keys,
  * because dropping the identity would break every definition that names it.
  */
 USTRUCT(BlueprintType)
@@ -106,11 +111,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FKey _Key = FKey{EKeys::Invalid};
+    TArray<FKey> _Keys;
 
 public:
     CK_PROPERTY_GET(_ButtonId);
-    CK_PROPERTY(_Key);
+    CK_PROPERTY(_Keys);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Input_ButtonAssociation, _ButtonId);

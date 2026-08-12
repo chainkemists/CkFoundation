@@ -254,6 +254,7 @@ namespace ck
             FFragment_IntentMatcher_Current& InCurrent,
             const FCk_Intent_FrameRecord& InRow,
             const FCk_Input_ButtonId& InButton,
+            const FKey& InPressKey,
             const FCk_Intent_DeferralVerdict& InVerdict,
             const TArray<int32>& InCandidates) -> void;
 

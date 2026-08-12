@@ -23,6 +23,14 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_InputButtonMap_CancelPendingRequests);
 
 namespace ck_input_button_map_processor
 {
+    // TPair's .Key/.Value would make the FKey the ".Value" of a pair whose ".Key" is a slot — named members
+    // keep the derive loop readable.
+    struct FSlotKey
+    {
+        EPlayerMappableKeySlot Slot = EPlayerMappableKeySlot::Unspecified;
+        FKey Key;
+    };
+
     auto
         Get_IndexOfButton(
             const TArray<FCk_Input_ButtonAssociation>& InAssociations,
@@ -119,17 +127,24 @@ namespace ck
         }
 
         // Associations are rebuilt from the profile rather than patched against it, so a mapping that stopped
-        // being player-mappable is left holding an invalid key instead of its last one. Identities are never
+        // being player-mappable is left holding no keys instead of its last ones. Identities are never
         // touched here — that is the stability contract the whole tier exists for.
         for (auto& Association : InCurrent._Associations)
         {
             if (Association.Get_ButtonId().Get_Tier() != ECk_Input_ButtonTier::Mapped)
             { continue; }
 
-            Association.Set_Key(FKey{EKeys::Invalid});
+            Association.Set_Keys({});
         }
 
         const auto Mappings = UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(PlayerController);
+
+        // A mapping name owns one button but may own several slots — a keyboard binding in one and a gamepad
+        // binding in another — and the association carries EVERY bound slot's key. Gathered before writing
+        // because the profile hands slots back in no contractual order while the key list is contractually
+        // primary-first: ascending slot puts First at index 0 (the engine orders Unspecified after the named
+        // slots), which is the key every scalar query in this module answers with.
+        auto SlotKeysByIndex = TMap<int32, TArray<ck_input_button_map_processor::FSlotKey>>{};
 
         for (const auto& Mapping : Mappings)
         {
@@ -142,12 +157,38 @@ namespace ck
                 ? ExistingIndex
                 : InCurrent._Associations.Emplace(FCk_Input_ButtonAssociation{ButtonId});
 
-            // A mapping name owns one button but may own several slots. The association follows the FIRST
-            // slot, which is the slot every other query in this module defaults to.
-            if (Mapping.GetSlot() != EPlayerMappableKeySlot::First)
+            const auto& CurrentKey = Mapping.GetCurrentKey();
+
+            // An unbound slot contributes nothing rather than an invalid entry, so an empty key list IS the
+            // unbound state and no consumer has to filter invalid keys out of the middle of it.
+            if (NOT CurrentKey.IsValid())
             { continue; }
 
-            InCurrent._Associations[Index].Set_Key(Mapping.GetCurrentKey());
+            SlotKeysByIndex.FindOrAdd(Index).Emplace(
+                ck_input_button_map_processor::FSlotKey{Mapping.GetSlot(), CurrentKey});
+        }
+
+        for (auto& Kvp : SlotKeysByIndex)
+        {
+            auto& SlotKeys = Kvp.Value;
+
+            SlotKeys.Sort([](const ck_input_button_map_processor::FSlotKey& InA,
+                             const ck_input_button_map_processor::FSlotKey& InB) -> bool
+            {
+                return static_cast<uint8>(InA.Slot) < static_cast<uint8>(InB.Slot);
+            });
+
+            auto Keys = TArray<FKey>{};
+            Keys.Reserve(SlotKeys.Num());
+
+            for (const auto& SlotKey : SlotKeys)
+            {
+                // Two slots may name one key; the association answers WHICH keys produce the button, not how
+                // many slots do, so the duplicate collapses.
+                Keys.AddUnique(SlotKey.Key);
+            }
+
+            InCurrent._Associations[Kvp.Key].Set_Keys(MoveTemp(Keys));
         }
 
         input::VeryVerbose
@@ -180,7 +221,7 @@ namespace ck
         { return ECk_Request_OperationResult::Succeeded; }
 
         auto Association = FCk_Input_ButtonAssociation{ButtonId};
-        Association.Set_Key(Key);
+        Association.Set_Keys(TArray<FKey>{Key});
 
         InCurrent._Associations.Emplace(Association);
 

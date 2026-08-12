@@ -28,9 +28,12 @@
  * would have no player whose profile to derive from. It is opt-in: a source without it simply has no button
  * space.
  *
- * Key -> button is ONE-TO-MANY by design. Two mappings in different categories may share a key, and duplicate
- * bindings occur in real profiles, so Get_ButtonIdsForKey answers with every holder; a caller that wants "the"
- * button has to say which tier and name it means.
+ * The association is MANY-TO-MANY. Key -> button: two mappings in different categories may share a key, and
+ * duplicate bindings occur in real profiles, so Get_ButtonIdsForKey answers with every holder; a caller that
+ * wants "the" button has to say which tier and name it means. Button -> keys: a Mapped button carries one key
+ * per bound SLOT — a keyboard binding in one slot and a gamepad binding in another both produce it — so
+ * Get_KeysForButton answers with every key, primary (slot First) first, and TryGet_KeyForButton answers the
+ * primary alone.
  */
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_InputButtonMap"))
 class CKINPUT_API UCk_Utils_InputButtonMap_UE : public UBlueprintFunctionLibrary
@@ -115,15 +118,32 @@ public:
         const FKey& InKey);
 
     /**
-     * The key currently producing this button — the resolved mapping for a tier-1 button, the fixed key for a
-     * tier-2 one. An INVALID key is returned both for a button this map has never minted and for one that is
-     * currently unbound; both mean "pressing nothing produces it", which is all a consumer can act on.
+     * The PRIMARY key currently producing this button — the First-slot resolution for a tier-1 button, the
+     * fixed key for a tier-2 one. An INVALID key is returned both for a button this map has never minted and
+     * for one that is currently unbound; both mean "pressing nothing produces it", which is all a consumer can
+     * act on. A button may carry MORE keys than this answers — a mapping bound on several slots (keyboard in
+     * one, gamepad in another) resolves them all; a consumer that must honour every device reads
+     * Get_KeysForButton instead.
      */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|InputButtonMap",
               DisplayName = "[Ck][InputButtonMap] Try Get Key For Button")
     static FKey
     TryGet_KeyForButton(
+        const FCk_Handle_InputButtonMap& InButtonMap,
+        const FCk_Input_ButtonId& InButtonId);
+
+    /**
+     * Every key currently producing this button, primary first (ascending slot order). A Mapped button carries
+     * one key per BOUND slot — a keyboard and a gamepad binding on one mapping name are both here — and a
+     * Physical button carries exactly its own key. Empty both for a button this map has never minted and for
+     * one that is currently unbound; both mean "pressing nothing produces it".
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|InputButtonMap",
+              DisplayName = "[Ck][InputButtonMap] Get Keys For Button")
+    static TArray<FKey>
+    Get_KeysForButton(
         const FCk_Handle_InputButtonMap& InButtonMap,
         const FCk_Input_ButtonId& InButtonId);
 
