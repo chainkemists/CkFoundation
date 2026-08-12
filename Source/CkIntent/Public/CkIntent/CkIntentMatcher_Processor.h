@@ -225,6 +225,38 @@ namespace ck
             const TArray<FCk_Input_ButtonId>& InButtonsSpokenFor,
             TArray<int32>& OutCompletedThisRow) -> void;
 
+        // Activation before release, so a level row that is pressed and released on ONE row is seen to have been
+        // active rather than never entered at all.
+        static auto
+        DoUpdateLevelRows(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            const FIntentMatcher_ScanContext& InContext,
+            const FCk_Intent_FrameRecord& InRow,
+            int32 InOffset) -> void;
+
+        static auto
+        DoActivateLevelRow(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InIntentIndex,
+            const FCk_Input_ButtonId& InButton,
+            const FKey& InAnchorKey,
+            int32 InFrame) -> void;
+
+        static auto
+        DoDeactivateLevelRow(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InActiveLevelIndex,
+            int32 InFrame,
+            const FString& InReason) -> void;
+
+        static auto
+        Get_IsLevelActive(
+            const FFragment_IntentMatcher_Current& InCurrent,
+            int32 InIntentIndex) -> bool;
+
         // Answers whether the episode is FINISHED and should be dropped by the caller — the caller owns the array,
         // so nothing here can remove an entry out from under an iteration.
         static auto

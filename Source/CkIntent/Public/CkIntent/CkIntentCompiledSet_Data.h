@@ -198,6 +198,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Intent_Lenience _Lenience = ECk_Intent_Lenience::Strict;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_Intent_Kind _Kind = ECk_Intent_Kind::Edge;
+
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_IntentTag);
@@ -206,6 +210,7 @@ public:
     CK_PROPERTY_GET(_HoldFrames);
     CK_PROPERTY_GET(_Priority);
     CK_PROPERTY_GET(_Lenience);
+    CK_PROPERTY_GET(_Kind);
 
 public:
     FCk_Intent_CompiledIntent() = default;
@@ -218,7 +223,8 @@ private:
         int32 InWindowFrames,
         int32 InHoldFrames,
         int32 InPriority,
-        ECk_Intent_Lenience InLenience)
+        ECk_Intent_Lenience InLenience,
+        ECk_Intent_Kind InKind)
         : _Name(InName)
         , _IntentTag(MoveTemp(InIntentTag))
         , _Steps(MoveTemp(InSteps))
@@ -226,6 +232,7 @@ private:
         , _HoldFrames(InHoldFrames)
         , _Priority(InPriority)
         , _Lenience(InLenience)
+        , _Kind(InKind)
     { }
 };
 

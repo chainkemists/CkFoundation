@@ -38,6 +38,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IntentMatcher)
  * `Failed` is reserved for an ambiguity that resolved with NOTHING matching — the input was real, was waited on,
  * and answered no move. A candidate that merely LOST arbitration returns to `Idle` instead: every tap press would
  * otherwise permanently mark its hold sibling as failed, which is noise rather than information.
+ *
+ * `Active` belongs to the LEVEL kind alone and is the one phase that is not an answer to a press but a statement
+ * about the present. It is entered on the visible press edge of the definition's terminal button and left when the
+ * button leaves the row's held union, when the anchor press key stops being deliverable to this layer, when a
+ * rebind moves that key off the button, or when the set is swapped. It is NOT a latch: nothing decays it, and
+ * `OnIntentCompleted` never fires for it, because nothing about it completed.
  */
 UENUM(BlueprintType)
 enum class ECk_Intent_Phase : uint8
@@ -45,7 +51,8 @@ enum class ECk_Intent_Phase : uint8
     Idle,
     Pending,
     Completed,
-    Failed
+    Failed,
+    Active
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Intent_Phase);
