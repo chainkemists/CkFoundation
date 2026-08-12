@@ -12,6 +12,8 @@
 
 #include "CkSpline/CkSpline_Fragment_Data.h"
 
+#include <Curves/CurveFloat.h>
+
 #include "CkTween_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -222,6 +224,91 @@ public:
         int32 InLoopCount = 0,
         float InYoyoDelay = 0.0f,
         ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Curve-DRIVEN rotation: the channels emit DEGREES (X/Y/Z mapping to Pitch/Yaw/Roll) and are
+    // composed onto the entity's current rotation, captured now and held for the tween's life. A
+    // null channel contributes 0, so a single-axis wobble authors one curve.
+    //
+    // This is the creator to reach for when the motion RETURNS to where it began (a shake, a
+    // wobble, a recoil). The Start->End creators above cannot express one at any easing: with
+    // Start == End, Interpolate(V, V, alpha) is V for every alpha, so the prop never moves.
+    //
+    // Because the pose is recomputed from the immutable base every frame it is ABSOLUTE, never
+    // accumulated -- so re-triggering (Restart) cannot walk the prop away from its rest pose.
+    //
+    // InDuration <= 0 derives the duration from the curves' own last key, so the length cannot
+    // drift out of sync with the authored curve.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Rotation (Curve Offset)")
+    static FCk_Handle_Tween
+    Create_TweenEntityRotation_CurveOffset(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration = 0.0f,
+        ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    // Curve-DRIVEN location: sibling of Create_TweenEntityRotation_CurveOffset. The channels emit
+    // WORLD-axis units of offset added onto the entity's location, captured now and held for the
+    // tween's life. Same contract throughout: a null channel contributes 0, InDuration <= 0
+    // derives the duration from the curves' last key, and the absolute-recompute guarantee means
+    // re-triggering (Restart) cannot walk the entity away from its rest position.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween Entity Location (Curve Offset)")
+    static FCk_Handle_Tween
+    Create_TweenEntityLocation_CurveOffset(
+        UPARAM(ref) FCk_Handle_Transform& InEntity,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration = 0.0f,
+        ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    // Curve-DRIVEN float: the curve's output is the tween's value outright. Start/End play no part.
+    // InDuration <= 0 derives the duration from the curve's last key.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween (Float Curve)")
+    static FCk_Handle_Tween
+    Create_TweenFloat_Curve(
+        UPARAM(ref) FCk_Handle& InOwner,
+        UCurveFloat* InCurve,
+        float InDuration = 0.0f,
+        ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    // Replaces the ECk_TweenEasing table with an authored progress -> eased-progress curve on an
+    // existing tween. This still interpolates Start->End, so it does NOT enable a shake -- for that
+    // use Create_TweenEntityRotation_CurveOffset. The eased alpha is clamped to [0, 1], so an
+    // overshooting curve shape will not actually overshoot.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Set Easing Curve")
+    static FCk_Handle_Tween
+    SetEasingCurve(
+        UPARAM(ref) FCk_Handle_Tween& InTween,
+        UCurveFloat* InCurve);
+
+    // Latest last-key time across the channels' curves; 0 when none are valid. This is the
+    // duration a curve-driven tween derives for itself, exposed for callers that need the number.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Get Curves Max Time")
+    static float
+    Get_CurvesMaxTime(
+        const FCk_TweenCurveChannels& InChannels);
 
     // --------------------------------------------------------------------------------------------------------------------
 

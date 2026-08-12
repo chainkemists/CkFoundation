@@ -1,6 +1,17 @@
 #include "CkTween_Fragment_Data.h"
 
+#include "CkCore/Validation/CkIsValid.h"
+
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto FCk_TweenCurveChannels::Get_HasAnyCurve() const -> bool
+{
+    return ck::IsValid(_X.Get(), ck::IsValid_Policy_NullptrOnly{}) ||
+           ck::IsValid(_Y.Get(), ck::IsValid_Policy_NullptrOnly{}) ||
+           ck::IsValid(_Z.Get(), ck::IsValid_Policy_NullptrOnly{});
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

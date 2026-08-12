@@ -277,6 +277,197 @@ auto
 
 auto
     UCk_Utils_Tween_UE::
+    Get_CurvesMaxTime(
+        const FCk_TweenCurveChannels& InChannels)
+    -> float
+{
+    auto MaxTime = 0.0f;
+
+    for (const UCurveFloat* Curve : {InChannels.Get_X().Get(), InChannels.Get_Y().Get(), InChannels.Get_Z().Get()})
+    {
+        if (ck::Is_NOT_Valid(Curve, ck::IsValid_Policy_NullptrOnly{}))
+        { continue; }
+
+        auto CurveMinTime = 0.0f;
+        auto CurveMaxTime = 0.0f;
+        Curve->GetTimeRange(CurveMinTime, CurveMaxTime);
+
+        MaxTime = FMath::Max(MaxTime, CurveMaxTime);
+    }
+
+    return MaxTime;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityRotation_CurveOffset(
+        FCk_Handle_Transform& InEntity,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration,
+        ECk_TweenCurveTimeInput InTimeInput,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
+        TEXT("Cannot create a curve-offset rotation tween on [{}]: no channel has a valid curve."), InEntity)
+    { return {}; }
+
+    // Refused rather than left to misbehave quietly: the curves are sampled forward by time and
+    // ignore FFragment_Tween_Current's reversed flag, so a Yoyo's return leg would replay the curve
+    // IDENTICALLY instead of backwards. A motion that must come back authors the return in its keys.
+    CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
+        TEXT("Cannot create a curve-offset rotation tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InEntity)
+    { return {}; }
+
+    // A duration that disagrees with the curve's own extent is a bug waiting to happen (the motion
+    // is cut short, or holds its last key), so deriving it is the default rather than an option.
+    const auto Duration = InDuration > 0.0f
+        ? InDuration
+        : Get_CurvesMaxTime(InChannels);
+
+    CK_ENSURE_IF_NOT(Duration > 0.0f,
+        TEXT("Cannot create a curve-offset rotation tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InEntity)
+    { return {}; }
+
+    const auto BaseRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InEntity);
+
+    // Start/End are unused on this path but are still seeded with the base pose: the OnUpdate /
+    // OnComplete payloads carry an FCk_TweenValue and consumers type-check it, so it must be a
+    // rotator from the first frame.
+    auto NewTween = DoCreateTween(InEntity, FCk_TweenValue{BaseRotation}, FCk_TweenValue{BaseRotation},
+        Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
+        ECk_TweenTarget::Transform_Rotation, InCompletionBehavior);
+
+    auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{InChannels.Get_X().Get()};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Y().Get()};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Z().Get()};
+    CurveDrive._Output = ECk_TweenCurveOutput::RotatorOffset;
+    CurveDrive._TimeInput = InTimeInput;
+    CurveDrive._BaseValue = FCk_TweenValue{BaseRotation};
+
+    return NewTween;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenEntityLocation_CurveOffset(
+        FCk_Handle_Transform& InEntity,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration,
+        ECk_TweenCurveTimeInput InTimeInput,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
+        TEXT("Cannot create a curve-offset location tween on [{}]: no channel has a valid curve."), InEntity)
+    { return {}; }
+
+    // Same forward-only sampling caveat as Create_TweenEntityRotation_CurveOffset.
+    CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
+        TEXT("Cannot create a curve-offset location tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InEntity)
+    { return {}; }
+
+    const auto Duration = InDuration > 0.0f
+        ? InDuration
+        : Get_CurvesMaxTime(InChannels);
+
+    CK_ENSURE_IF_NOT(Duration > 0.0f,
+        TEXT("Cannot create a curve-offset location tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InEntity)
+    { return {}; }
+
+    const auto BaseLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InEntity);
+
+    auto NewTween = DoCreateTween(InEntity, FCk_TweenValue{BaseLocation}, FCk_TweenValue{BaseLocation},
+        Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
+        ECk_TweenTarget::Transform_Location, InCompletionBehavior);
+
+    auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{InChannels.Get_X().Get()};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Y().Get()};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Z().Get()};
+    CurveDrive._Output = ECk_TweenCurveOutput::VectorOffset;
+    CurveDrive._TimeInput = InTimeInput;
+    CurveDrive._BaseValue = FCk_TweenValue{BaseLocation};
+
+    return NewTween;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenFloat_Curve(
+        FCk_Handle& InOwner,
+        UCurveFloat* InCurve,
+        float InDuration,
+        ECk_TweenCurveTimeInput InTimeInput,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InCurve, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Cannot create a curve-driven float tween on [{}] with an invalid curve."), InOwner)
+    { return {}; }
+
+    // Same forward-only sampling caveat as Create_TweenEntityRotation_CurveOffset.
+    CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
+        TEXT("Cannot create a curve-driven float tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InOwner)
+    { return {}; }
+
+    const auto Duration = InDuration > 0.0f
+        ? InDuration
+        : Get_CurvesMaxTime(FCk_TweenCurveChannels{InCurve, nullptr, nullptr});
+
+    CK_ENSURE_IF_NOT(Duration > 0.0f,
+        TEXT("Cannot create a curve-driven float tween on [{}]: derived duration is 0 (the curve has no key past t=0)."), InOwner)
+    { return {}; }
+
+    const auto StartValue = InCurve->GetFloatValue(0.0f);
+
+    auto NewTween = DoCreateTween(InOwner, FCk_TweenValue{StartValue}, FCk_TweenValue{StartValue},
+        Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
+        ECk_TweenTarget::Custom, InCompletionBehavior);
+
+    auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{InCurve};
+    CurveDrive._Output = ECk_TweenCurveOutput::Float;
+    CurveDrive._TimeInput = InTimeInput;
+
+    return NewTween;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    SetEasingCurve(
+        FCk_Handle_Tween& InTween,
+        UCurveFloat* InCurve)
+    -> FCk_Handle_Tween
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InTween),
+        TEXT("Cannot set an easing curve on an invalid Tween handle."))
+    { return InTween; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InCurve, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Cannot set an invalid easing curve on Tween [{}]."), InTween)
+    { return InTween; }
+
+    auto& EasingCurve = InTween.AddOrGet<ck::FFragment_Tween_EasingCurve>();
+    EasingCurve._Curve = TStrongObjectPtr<UCurveFloat>{InCurve};
+
+    return InTween;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Tween_UE::
     ChainTween(
         FCk_Handle_Tween& InNextTween,
         FCk_Handle_Tween& InFirstTween,
