@@ -7,6 +7,9 @@
 
 #include "CkSpline/CkSpline_Fragment_Data.h"
 
+#include <Curves/CurveFloat.h>
+#include <UObject/StrongObjectPtr.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Tween_UE;
@@ -87,6 +90,72 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Spline);
         CK_PROPERTY_GET(_Orientation);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Curves that PRODUCE a curve-driven tween's value, rather than reshaping the alpha between
+    // Start and End. See ECk_TweenCurveOutput for why a shake needs this and easing cannot serve.
+    //
+    // TStrongObjectPtr and not TObjectPtr/raw: CkFoundation fragments are NOT GC-traced (see
+    // CkEcs/Claude.md), so a curve reachable only from here would be collected and dangle. That
+    // also rules out carrying these in FCk_Fragment_Tween_ParamsData -- it is the ECS fragment
+    // itself, so a UPROPERTY on it buys no tracing either.
+    struct CKTWEEN_API FFragment_Tween_CurveDrive
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Tween_CurveDrive);
+
+        friend class FProcessor_Tween_Update;
+        friend class FProcessor_Tween_HandleRequests;
+        friend class FProcessor_Tween_ApplyToTransform;
+        friend class UCk_Utils_Tween_UE;
+
+    private:
+        // Maps to X/Y/Z world units under VectorOffset and Pitch/Yaw/Roll degrees under
+        // RotatorOffset; X alone is the value under Float. A null channel contributes 0, so a
+        // single-axis motion authors one curve and leaves the rest unset.
+        TStrongObjectPtr<UCurveFloat> _Curve_X;
+        TStrongObjectPtr<UCurveFloat> _Curve_Y;
+        TStrongObjectPtr<UCurveFloat> _Curve_Z;
+
+        ECk_TweenCurveOutput _Output = ECk_TweenCurveOutput::Float;
+        ECk_TweenCurveTimeInput _TimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds;
+
+        // What the offset curves compose onto: the location (VectorOffset) or rotation
+        // (RotatorOffset) captured when the tween starts, re-captured when a Restart arrives on
+        // a NON-playing tween -- never while it is mid-flight, or the half-played value would be
+        // baked in as the new base and every re-trigger would drift.
+        FCk_TweenValue _BaseValue;
+
+    public:
+        CK_PROPERTY_GET(_Curve_X);
+        CK_PROPERTY_GET(_Curve_Y);
+        CK_PROPERTY_GET(_Curve_Z);
+        CK_PROPERTY_GET(_Output);
+        CK_PROPERTY_GET(_TimeInput);
+        CK_PROPERTY_GET(_BaseValue);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Reshapes Progress before the Start->End interpolation, replacing the ECk_TweenEasing table
+    // with an authored curve. Orthogonal to FFragment_Tween_CurveDrive: this still interpolates
+    // Start->End, so it does NOT enable a shake (Start == End collapses the lerp either way).
+    struct CKTWEEN_API FFragment_Tween_EasingCurve
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Tween_EasingCurve);
+
+        friend class FProcessor_Tween_Update;
+        friend class UCk_Utils_Tween_UE;
+
+    private:
+        // TStrongObjectPtr for the same reason as FFragment_Tween_CurveDrive.
+        TStrongObjectPtr<UCurveFloat> _Curve;
+
+    public:
+        CK_PROPERTY_GET(_Curve);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

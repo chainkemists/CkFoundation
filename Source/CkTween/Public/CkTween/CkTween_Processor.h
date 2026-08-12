@@ -43,6 +43,7 @@ namespace ck
 
     private:
         static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent) -> FCk_FloatRange_0to1;
+        static auto DoComputeValue(HandleType InHandle, const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent, FCk_FloatRange_0to1 InProgress) -> FCk_TweenValue;
         static auto DoCheckLoopCompletion(HandleType InHandle, const FFragment_Tween_Params& InParams, FFragment_Tween_Current& InCurrent) -> void;
         static auto DoStartNextTweenInQueue(HandleType InHandle) -> void;
         static auto DoResolveValue(const FCk_TweenValue& InValue, ECk_TweenTarget InTargetType) -> FCk_TweenValue;
@@ -128,6 +129,8 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_SetTimeMultiplier& InRequest) -> ECk_Request_OperationResult;
+
+        static auto DoRecaptureCurveBase(HandleType InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

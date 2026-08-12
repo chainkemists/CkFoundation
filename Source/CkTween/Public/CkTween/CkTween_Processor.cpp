@@ -114,6 +114,65 @@ namespace ck_tween
         const auto Rotation = UCk_Utils_Spline_UE::Get_RotationAtDistance(SplineHandle, Distance);
         UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{Rotation}, {});
     }
+
+    // An unset channel contributes 0 rather than erroring: a single-axis shake authors one curve
+    // and leaves the other two null.
+    auto EvaluateCurveChannel(
+        const UCurveFloat* InCurve,
+        float InTime)
+        -> float
+    {
+        if (ck::Is_NOT_Valid(InCurve, ck::IsValid_Policy_NullptrOnly{}))
+        { return 0.0f; }
+
+        return InCurve->GetFloatValue(InTime);
+    }
+
+    auto EvaluateCurveDrive(
+        const ck::FFragment_Tween_CurveDrive& InCurveDrive,
+        float InElapsedSeconds,
+        FCk_FloatRange_0to1 InProgress)
+        -> FCk_TweenValue
+    {
+        const auto Time = InCurveDrive.Get_TimeInput() == ECk_TweenCurveTimeInput::ElapsedSeconds
+            ? InElapsedSeconds
+            : InProgress.Get_Value();
+
+        switch (InCurveDrive.Get_Output())
+        {
+            case ECk_TweenCurveOutput::VectorOffset:
+            {
+                const auto Offset = FVector
+                {
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_X().Get(), Time),
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_Y().Get(), Time),
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_Z().Get(), Time)
+                };
+
+                return FCk_TweenValue{InCurveDrive.Get_BaseValue().GetAsVector() + Offset};
+            }
+            case ECk_TweenCurveOutput::RotatorOffset:
+            {
+                const auto Offset = FRotator
+                {
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_X().Get(), Time),
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_Y().Get(), Time),
+                    EvaluateCurveChannel(InCurveDrive.Get_Curve_Z().Get(), Time)
+                };
+
+                // Quaternion compose, NOT a component-wise FRotator add. The two agree only while
+                // the base is axis-aligned; once it carries a yaw (any placed prop) the additive
+                // form shears the pose. The offset acts in the PARENT frame, hence Offset * Base.
+                const auto Composed = (Offset.Quaternion() * InCurveDrive.Get_BaseValue().GetAsRotator().Quaternion()).Rotator();
+                return FCk_TweenValue{Composed};
+            }
+            case ECk_TweenCurveOutput::Float:
+            default:
+            {
+                return FCk_TweenValue{EvaluateCurveChannel(InCurveDrive.Get_Curve_X().Get(), Time)};
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -134,13 +193,7 @@ namespace ck
 
         const auto Progress = DoCalculateProgress(InParams, InCurrent);
 
-        const auto& StartValueRef = InCurrent.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
-        const auto& EndValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
-
-        const auto StartValue = DoResolveValue(StartValueRef, InParams.Get_Target());
-        const auto EndValue = DoResolveValue(EndValueRef, InParams.Get_Target());
-
-        const auto InterpolatedValue = UCk_Utils_TweenEasing_UE::Interpolate(StartValue, EndValue, Progress, InParams.Get_Easing());
+        const auto InterpolatedValue = DoComputeValue(InHandle, InParams, InCurrent, Progress);
         InCurrent.Set_CurrentValue(InterpolatedValue);
 
         UUtils_Signal_OnTweenUpdate::Broadcast(InHandle,
@@ -207,6 +260,48 @@ namespace ck
 
     auto
         FProcessor_Tween_Update::
+        DoComputeValue(
+            HandleType InHandle,
+            const FFragment_Tween_Params& InParams,
+            const FFragment_Tween_Current& InCurrent,
+            FCk_FloatRange_0to1 InProgress)
+        -> FCk_TweenValue
+    {
+        // Curve-driven: the curve's OUTPUT is the value, so Start/End play no part at all. This is
+        // the only shape that can express a motion returning to where it began -- with Start == End
+        // the interpolation below is constant for every alpha, however the easing reshapes it.
+        if (InHandle.Has<FFragment_Tween_CurveDrive>())
+        {
+            return ck_tween::EvaluateCurveDrive(
+                InHandle.Get<FFragment_Tween_CurveDrive>(), InCurrent.Get_CurrentTime(), InProgress);
+        }
+
+        const auto& StartValueRef = InCurrent.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
+        const auto& EndValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+
+        const auto StartValue = DoResolveValue(StartValueRef, InParams.Get_Target());
+        const auto EndValue = DoResolveValue(EndValueRef, InParams.Get_Target());
+
+        if (InHandle.Has<FFragment_Tween_EasingCurve>())
+        {
+            if (const auto& EasingCurve = InHandle.Get<FFragment_Tween_EasingCurve>();
+                ck::IsValid(EasingCurve.Get_Curve().Get(), ck::IsValid_Policy_NullptrOnly{}))
+            {
+                // The curve REPLACES the easing table, so the table entry is bypassed (Linear).
+                // Interpolate takes a 0to1 range, so a curve that overshoots (an easeOutBack shape)
+                // is CLAMPED here -- authoring a real overshoot needs the curve-drive path above.
+                const auto Shaped = ck_tween::EvaluateCurveChannel(EasingCurve.Get_Curve().Get(), InProgress.Get_Value());
+
+                return UCk_Utils_TweenEasing_UE::Interpolate(StartValue, EndValue,
+                    UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(Shaped), ECk_TweenEasing::Linear);
+            }
+        }
+
+        return UCk_Utils_TweenEasing_UE::Interpolate(StartValue, EndValue, InProgress, InParams.Get_Easing());
+    }
+
+    auto
+        FProcessor_Tween_Update::
         DoCheckLoopCompletion(
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
@@ -222,8 +317,22 @@ namespace ck
             InHandle.Add<FTag_Tween_Completed>();
             InCurrent.Set_State(ECk_TweenState::Completed);
 
-            const auto& FinalValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
-            const auto FinalValue = DoResolveValue(FinalValueRef, InParams.Get_Target());
+            // A curve-driven tween's end is its curve sampled at the far end, NOT EndValue -- which
+            // it never used. A shake curve whose last key is 0 therefore lands exactly on the
+            // captured base, which is what restores the rest pose on completion.
+            const auto FinalValue = [&]() -> FCk_TweenValue
+            {
+                if (InHandle.Has<FFragment_Tween_CurveDrive>())
+                {
+                    return ck_tween::EvaluateCurveDrive(
+                        InHandle.Get<FFragment_Tween_CurveDrive>(),
+                        InParams.Get_Duration(),
+                        UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f));
+                }
+
+                const auto& FinalValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+                return DoResolveValue(FinalValueRef, InParams.Get_Target());
+            }();
 
             InCurrent.Set_CurrentValue(FinalValue);
 
@@ -443,6 +552,12 @@ namespace ck
             const FCk_Request_Tween_Restart& InRequest)
         -> ECk_Request_OperationResult
     {
+        // Sampled BEFORE the reset below overwrites it: a Restart arriving on an already-playing
+        // curve-offset tween must NOT re-read the base. That is the spammable re-trigger case (hold
+        // to shake), and re-reading mid-flight would capture the half-shaken pose as the new rest,
+        // so every re-trigger would walk the prop a little further from where it started.
+        const auto WasPlaying = InCurrent.Get_State() == ECk_TweenState::Playing;
+
         InCurrent.Set_CurrentTime(0.0f);
         InCurrent.Set_YoyoDelayTimer(0.0f);
         InCurrent.Set_State(ECk_TweenState::Playing);
@@ -458,7 +573,53 @@ namespace ck
 
         InHandle.Add<FTag_Tween_Playing>();
 
+        if (NOT WasPlaying)
+        { DoRecaptureCurveBase(InHandle); }
+
         return ECk_Request_OperationResult::Succeeded;
+    }
+
+    // A prop can be picked up and re-placed between shakes, so a tween restarted from rest re-reads
+    // the pose it should wobble about. Guarded by the caller -- see the Restart handler.
+    auto
+        FProcessor_Tween_HandleRequests::
+        DoRecaptureCurveBase(
+            HandleType InHandle)
+        -> void
+    {
+        if (NOT InHandle.Has<FFragment_Tween_CurveDrive>())
+        { return; }
+
+        auto& CurveDrive = InHandle.AddOrGet<FFragment_Tween_CurveDrive>();
+
+        if (CurveDrive.Get_Output() == ECk_TweenCurveOutput::Float)
+        { return; }
+
+        const auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        if (ck::Is_NOT_Valid(TargetEntity))
+        { return; }
+
+        auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
+        if (ck::Is_NOT_Valid(MaybeTransformHandle))
+        { return; }
+
+        switch (CurveDrive.Get_Output())
+        {
+            case ECk_TweenCurveOutput::VectorOffset:
+            {
+                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentLocation(MaybeTransformHandle)};
+                break;
+            }
+            case ECk_TweenCurveOutput::RotatorOffset:
+            {
+                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentRotation(MaybeTransformHandle)};
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
 
     auto

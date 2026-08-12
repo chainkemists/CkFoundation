@@ -8,6 +8,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
+#include <Curves/CurveFloat.h>
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 
@@ -154,6 +155,84 @@ enum class ECk_TweenTarget : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// What a curve-driven tween's curves produce.
+//
+// A motion that ends where it began (a shake, a bounce, a recoil) cannot be expressed by
+// Start/End interpolation no matter how the easing reshapes Progress -- Interpolate(V, V, alpha)
+// is V for every alpha. These modes take the curve's OUTPUT as the value instead.
+//
+// The offset modes compose onto a base captured when the tween starts and held immutable for
+// its life, so every frame recomputes an ABSOLUTE value -- repeated triggers cannot
+// accumulate drift.
+UENUM(BlueprintType)
+enum class ECk_TweenCurveOutput : uint8
+{
+    // Channel X alone produces the tween's float value. Y and Z are ignored.
+    Float,
+    // X/Y/Z are WORLD-axis units added onto the captured base vector.
+    VectorOffset,
+    // X/Y/Z are Pitch/Yaw/Roll in DEGREES, quaternion-composed onto the captured base rotation.
+    RotatorOffset
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenCurveOutput);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// What time value a curve-driven tween samples its curves at.
+UENUM(BlueprintType)
+enum class ECk_TweenCurveTimeInput : uint8
+{
+    // Elapsed SECONDS -- for curves authored against a real timeline, where key times are the
+    // timeline's own seconds. Duration and curve extent stay independently meaningful.
+    ElapsedSeconds,
+    // Normalized progress in [0, 1] -- for curves authored shape-only, which stretch to fit
+    // whatever Duration the tween was given.
+    Progress
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenCurveTimeInput);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The up-to-three float curves driving a curve-driven tween, one per output channel. What a
+// channel MEANS is the output mode's business: X/Y/Z world units under VectorOffset,
+// Pitch/Yaw/Roll degrees under RotatorOffset, X alone under Float. A null channel contributes 0,
+// so a single-axis motion sets one and leaves the rest unset.
+USTRUCT(BlueprintType)
+struct CKTWEEN_API FCk_TweenCurveChannels
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_TweenCurveChannels);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCurveFloat> _X;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCurveFloat> _Y;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCurveFloat> _Z;
+
+public:
+    CK_PROPERTY_GET(_X);
+    CK_PROPERTY_GET(_Y);
+    CK_PROPERTY_GET(_Z);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_TweenCurveChannels, _X, _Y, _Z);
+
+public:
+    auto Get_HasAnyCurve() const -> bool;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
