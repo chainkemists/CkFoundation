@@ -695,6 +695,12 @@ currently declare a `Consume` capture that would end the walk for that key. A he
 its press edge, so there is no row to read the answer off — and the mask can appear on any frame of a hold, which
 is precisely the case the policy exists for.
 
+The key asked about is **the key the episode's opening press arrived on**, not whichever key the button resolves
+to first. With several devices bound to one button, delivery-loss is per-key: a modal masking only the gamepad
+key must not cancel a keyboard charge, and masking the key the player is actually holding must — whichever slot
+it sits in. A rebind that moves the opening key off the button mid-hold cancels the episode the same way, since
+the layer will never receive that key again.
+
 ### The claim — an IMMEDIATE mutator, and why
 
 Polling is a read, so nothing about it stops two consumers acting on the same completion. `Request_Claim` is what
@@ -829,14 +835,19 @@ stack-constructed entry whose `TArray` never allocates.
 
 ### Captures follow the SET, and rebinds follow the MAP
 
-Activating a set registers a `Key` capture on the matcher's own layer for each of the set's terminal buttons,
-resolved through the source's `InputButtonMap`. Behaviour is the matcher's `_CaptureBehavior` (default `Consume`).
+Activating a set registers a `Key` capture on the matcher's own layer for EVERY key of each of the set's
+terminal buttons, resolved through the source's `InputButtonMap` — a terminal whose mapping binds a keyboard
+key in one slot and a gamepad key in another is completable from either device. Behaviour is the matcher's
+`_CaptureBehavior` (default `Consume`).
 
-- **The swap is ATOMIC.** Every terminal is resolved first; a single one that resolves to no key — a button the
-  map never minted, or a mapped button the player left unbound — rejects the WHOLE swap with `Failed`, leaving the
-  previous set active and its captures untouched. That is a RESULT rather than a diagnostic on purpose: an unbound
-  mapping is a state a player can produce from a settings screen, so the caller is told and decides. A definition
-  naming a button that does not exist at all was already rejected at bake time and cannot reach here.
+- **The swap is ATOMIC on emptiness.** Every terminal is resolved first; a single one that resolves to NO key
+  at all — a button the map never minted, or a mapped button the player left fully unbound — rejects the WHOLE
+  swap with `Failed`, leaving the previous set active and its captures untouched. That is a RESULT rather than
+  a diagnostic on purpose: an unbound mapping is a state a player can produce from a settings screen, so the
+  caller is told and decides. A terminal that still resolves on one device while another slot sits unbound
+  activates with the keys it has — a partial binding is also a player-producible state, not a defective set.
+  A definition naming a button that does not exist at all was already rejected at bake time and cannot reach
+  here.
 - **A default-constructed set DEACTIVATES** — captures removed, rows cleared — and completes `Succeeded`, because
   that is what the caller asked for.
 - **Capture edits are the ordinary deferred kind.** The matcher enqueues them through the layer's own
