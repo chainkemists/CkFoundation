@@ -86,12 +86,13 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * One terminal button and the physical key the matcher currently has a capture registered for.
+     * One terminal button and the physical keys the matcher currently has captures registered for — every key
+     * the button's mapping binds, so a keyboard and a gamepad binding on one mapping name both complete it.
      *
-     * The key is CACHED rather than re-resolved at every use, because the cache is what makes drift detectable: a
-     * re-derived button map moves the association silently, and comparing the map's fresh answer against what the
-     * matcher last registered is the only way to notice without a callback the router does not offer. An invalid
-     * key is a real state — the button resolved to nothing, so no capture is registered for it.
+     * The keys are CACHED rather than re-resolved at every use, because the cache is what makes drift
+     * detectable: a re-derived button map moves the association silently, and comparing the map's fresh answer
+     * against what the matcher last registered is the only way to notice without a callback the router does not
+     * offer. An EMPTY list is a real state — the button resolved to nothing, so no capture is registered for it.
      */
     struct CKINTENT_API FIntentMatcher_RegisteredCapture
     {
@@ -105,14 +106,14 @@ namespace ck
     private:
         FCk_Input_ButtonId _Button;
 
-        FKey _Key;
+        TArray<FKey> _Keys;
 
     public:
         CK_PROPERTY_GET(_Button);
-        CK_PROPERTY_GET(_Key);
+        CK_PROPERTY_GET(_Keys);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FIntentMatcher_RegisteredCapture, _Button, _Key);
+        CK_DEFINE_CONSTRUCTORS(FIntentMatcher_RegisteredCapture, _Button, _Keys);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -180,6 +181,11 @@ namespace ck
     private:
         FCk_Input_ButtonId _Button;
 
+        // The key the OPENING press arrived on. With several devices bound to one button, delivery-loss is a
+        // per-key question — a modal masking only the gamepad key must not cancel a keyboard charge — and the
+        // record's held set cannot say which device the player is holding; the press edge could, once.
+        FKey _PressKey;
+
         int32 _PressFrame = INDEX_NONE;
 
         int32 _ChordWindowFrames = 0;
@@ -194,6 +200,7 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Button);
+        CK_PROPERTY_GET(_PressKey);
         CK_PROPERTY_GET(_PressFrame);
         CK_PROPERTY_GET(_ChordWindowFrames);
         CK_PROPERTY_GET(_HoldSiblingFrames);
