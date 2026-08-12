@@ -156,6 +156,43 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One level definition that is currently `Active`, and the two facts its release is decided against.
+     *
+     * The ANCHOR key is the single key the delivery question is asked about, on exactly the terms a pending
+     * episode's `_PressKey` sets: with several devices bound to one button, delivery-loss is per-key — a modal
+     * masking only the gamepad key must not release a keyboard hold — and a rebind that moves the anchor off the
+     * button releases the row, since the layer will never receive that key again.
+     *
+     * There is deliberately NO activation frame here. `_PhaseRows[Get_IntentIndex()].Get_PhaseFrame()` already
+     * holds it, and a second copy is a second thing that can disagree with the phase it is supposed to describe.
+     */
+    struct CKINTENT_API FIntentMatcher_ActiveLevel
+    {
+    public:
+        CK_GENERATED_BODY(FIntentMatcher_ActiveLevel);
+
+    public:
+        friend class FProcessor_IntentMatcher_Match;
+
+    private:
+        int32 _IntentIndex = INDEX_NONE;
+
+        FCk_Input_ButtonId _Button;
+
+        FKey _AnchorKey;
+
+    public:
+        CK_PROPERTY_GET(_IntentIndex);
+        CK_PROPERTY_GET(_Button);
+        CK_PROPERTY_GET(_AnchorKey);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FIntentMatcher_ActiveLevel, _IntentIndex, _Button, _AnchorKey);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * One press the matcher is not allowed to answer yet, and what it is waiting on.
      *
      * The press FRAME is stored rather than a ring offset, because offsets slide as the ring advances and an
@@ -246,6 +283,8 @@ namespace ck
 
         TArray<FIntentMatcher_HoldAccumulator> _HoldAccumulators;
 
+        TArray<FIntentMatcher_ActiveLevel> _ActiveLevels;
+
         // The near-miss ring, BESIDE the phase rows rather than in them: a row is one definition's current
         // standing, while a diagnostic is one attempt that has already finished — the two have different
         // lifetimes and a row carrying its own history would grow without bound. Written only while
@@ -265,6 +304,7 @@ namespace ck
         CK_PROPERTY_GET(_RegisteredCaptures);
         CK_PROPERTY_GET(_PendingEpisodes);
         CK_PROPERTY_GET(_HoldAccumulators);
+        CK_PROPERTY_GET(_ActiveLevels);
         CK_PROPERTY_GET(_ScanDiagnostics);
         CK_PROPERTY_GET(_ScanDiagnosticsNextWrite);
         CK_PROPERTY_GET(_ScanDiagnosticsCount);

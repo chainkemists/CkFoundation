@@ -81,12 +81,16 @@ matcher off a layer would have no arbitration to answer to.
 | Group | Functions |
 |---|---|
 | Compose | `Add`, `Has` (C++ only), `Cast`/`CastChecked` (`DoCast`/`DoCastChecked` in BP/AS), `Get_InvalidHandle` |
-| Poll | `Get_IntentPhase`, `Get_IntentPhase_ByName`, `TryGet_CompletionFrame`, `TryGet_CompletionFrame_ByName` |
+| Poll | `Get_IntentPhase`, `Get_IntentPhase_ByName`, `TryGet_CompletionFrame`, `TryGet_CompletionFrame_ByName`, `TryGet_ActivationFrame`, `TryGet_ActivationFrame_ByName` |
 | Claim | `Get_IsClaimed`, `Get_IsClaimed_ByName`, `TryGet_ClaimedBy`, `TryGet_ClaimedBy_ByName`, `Request_Claim` |
 | Inspect | `Get_HasActiveSet`, `Get_ActiveIntentCount`, `Get_RegisteredCaptureKeys` |
 | Diagnose | `Get_ScanDiagnostics`, `Get_ScanDiagnosticsEnabled` (see *Scan diagnostics*) |
 | Signals | `BindTo_/UnbindFrom_OnIntentPhaseChanged`, `BindTo_/UnbindFrom_OnIntentCompleted` |
 | Requests | `Request_SwapSet` (deferred), `Request_Claim` (**immediate** — see *The claim*) |
+
+`TryGet_ActivationFrame*` is the completion frame's twin for the LEVEL kind (see *Level intents*): `INDEX_NONE`
+unless the row is `Active` right now, and while it is, the latest record frame minus it is how long this layer has
+had the input, in the sampler's own logic frames.
 
 `FCk_Fragment_IntentMatcher_ParamsData` carries two fields: `_CaptureBehavior` (default `Consume`, the essential
 constructor argument) and `_LatchDecayFrames` (default 20, fluent setter, rejected at composition if not
@@ -329,6 +333,7 @@ Atoms joined by `+` are ONE step, all required at the same moment: `6+LP`, `LP+M
 | `w=<frames>` | the whole-sequence window, in LOGIC FRAMES at the sampler's 60 Hz cadence |
 | `hold=<frames>` | the terminal must be held this many frames |
 | `lenient` | the matcher may skip transient unmatched directions BETWEEN steps |
+| `level` | the move is SUSTAINED rather than episodic — it is active for as long as the button is (see *Level intents*) |
 
 - **Frames, never milliseconds.** The record they will be matched against is indexed in frames; a millisecond
   budget would mean a different number of rows on every machine, which is exactly the determinism this module
@@ -338,9 +343,15 @@ Atoms joined by `+` are ONE step, all required at the same moment: `6+LP`, `LP+M
 - **Order-free among themselves, but strictly TRAILING.** Once a modifier appears, every later token must be one.
   A step after a modifier is either a step written in the wrong place or a misspelled modifier, and guessing which
   would silently reorder the move.
-- **Keywords match case-insensitively** (`W=200`, `LENIENT`). That costs a button the right to be named after a
-  modifier, deliberately: with case-sensitive keywords, `Lenient` would read as a button token and the modifier
-  the designer wrote would vanish with no complaint.
+- **Keywords match case-insensitively** (`W=200`, `LENIENT`, `Level`). That costs a button the right to be named
+  after a modifier, deliberately — `lenient` and `level` are both spoken for: with case-sensitive keywords,
+  `Lenient` would read as a button token and the modifier the designer wrote would vanish with no complaint.
+- **A `level` notation is exactly `<ButtonName> level`.** One button, no threshold, no prefix — the three
+  rejections below are that sentence written three ways. `w=` and `lenient` are accepted beside it and do nothing:
+  a window bounds a backward walk that has one step to take, and lenience is a statement about the directions
+  between two steps, of which a one-step move has none. They are inert rather than rejected because neither says
+  anything that CONTRADICTS the level shape, and rejecting a harmless token teaches an author a rule that is not
+  really there.
 
 ### What the parser does NOT check
 
@@ -369,14 +380,23 @@ The rejected result carries an empty definition and the offending token.
 | `ChordDuplicateAtom` | the same atom twice in one chord (names compare case-insensitively, as `FName` does) | `"LP+LP"`, `"LP+lp"`, `"6+6"` |
 | `ChordTwoDirections` | two directions in one chord — one stick, one octant | `"6+4"`, `"236+4+LP"` |
 | `ChordNeutralDirection` | neutral inside a chord — it is the absence of a direction | `"5+LP"`, `"25+LP"` |
+| `LevelWithHold` | `level` beside `hold=` — a level intent has no threshold, it is active for as long as the button is | `"LP level hold=60"` |
+| `LevelWithSequence` | `level` on a multi-step notation — a sustained PREFIX is rejected until a consumer needs one | `"236 LP level"` |
+| `LevelTerminalNotSingleButton` | a level terminal that is not exactly one button atom — no direction, no chord | `"6 level"`, `"6+LP level"` |
+
+**The three level rejections carry an EMPTY token**, as `NoSteps` does. They are about the notation as a whole:
+once `level` and the steps disagree there is no honest answer to which of them is the mistake, and blaming one
+token would send the author to edit the half they meant. `LevelTerminalNotSingleButton` is the held-union
+ref-count showing through the grammar — what a level row is released against is one button being in the row's
+held set, which is a single-button fact and has no reading for a direction or for two atoms at once.
 
 Duplicates answer before the two-directions rule: `6+6` is one atom typed twice, and saying so names the fix,
 where "a chord cannot hold two directions" would send the author hunting for a second direction they never wrote.
 
 ### The definition
 
-`FCk_Intent_Definition` carries `_Name`, `_IntentTag`, `_Steps`, `_WindowFrames`, `_HoldFrames`, `_Priority` and
-`_Lenience`. A step is `FCk_Intent_Step` — a set of `FCk_Intent_Atom`, each a direction or a button name — and a
+`FCk_Intent_Definition` carries `_Name`, `_IntentTag`, `_Steps`, `_WindowFrames`, `_HoldFrames`, `_Priority`,
+`_Lenience` and `_Kind`. A step is `FCk_Intent_Step` — a set of `FCk_Intent_Atom`, each a direction or a button name — and a
 chord is simply a step with more than one atom, not a second shape a consumer has to branch on.
 
 **Definitions are produced ONLY by the parser.** There are no setters, no public field constructor, and no
@@ -384,6 +404,13 @@ chord is simply a step with more than one atom, not a second shape a consumer ha
 `UCk_Utils_IntentGrammar_UE` is its only friend. Everyone else can make exactly one definition — the default,
 empty one — which is the value a rejected parse carries. A definition that exists and is non-empty therefore came
 through the grammar, and there is no second dialect a move could have been written in.
+
+`_Kind` is `ECk_Intent_Kind::{ Edge, Level }` and defaults to `Edge`, which is what makes the whole notation the
+module was built around mean exactly what it always did: a definition that says nothing about its kind is the
+episodic one. The two are genuinely different questions a consumer asks — *did this just happen* versus *is this
+happening right now* — and they are one enum on one definition rather than two definition shapes, because
+everything above the parser (resolution, priority order, the tie check, capture registration) is the same work
+for both.
 
 **The tag is carried, not minted.** The `Intent.*` namespace question is still open; nothing here registers or
 validates a tag.
@@ -432,6 +459,12 @@ accident. Equal priorities on DIFFERENT terminals are fine — a tie is only a d
 actually have to choose. Because the tie check runs before the sort, the resulting order is identical on every
 machine and every run.
 
+**The tie check covers EVERY index on the terminal, level and edge alike.** A level intent is excused from being
+a rival for deferral purposes (below) and from nothing else: it still occupies a slot in the terminal's order, and
+two rows the resolver walks in an accidental order are the defect the rule exists to catch regardless of which
+lifecycle each of them follows. So a level and an edge intent sharing one button need distinct priorities — the
+pair is otherwise entirely legal, and one press answers both.
+
 ### Deferral — the forward-ambiguity law, as data
 
 **A press is acted on immediately unless waiting is the only way to be right.** The set stores a verdict only for
@@ -458,6 +491,14 @@ no other intent a press could have meant, so nothing is ambiguous no matter how 
 on the `LP` press: the direction is state the frame record already reports on that very frame, so nothing is in
 flight and waiting would buy latency for nothing. Two buttons are the case where the partner press may still be
 arriving.
+
+**A LEVEL sibling is not a rival, and neither fold can see one.** `HasRivals` counts the terminal's Edge-kind
+indices, and the longest-`hold=` and needs-a-second-button folds run over those same indices — so a press intent
+sharing a terminal with a level intent still resolves on its own press frame, exactly as it would if the level
+intent were not there. That falls straight out of what a level intent is: it declares no threshold and its
+terminal is one button, so there is nothing in flight for a wait to resolve, and the press is answered by its own
+lifecycle on the very frame it arrives. Letting it into the fold would have cost the terminal's edge moves a wait
+that no future input could ever settle.
 
 Both causes are independent and may both apply; the verdict carries both, and **how to combine them is the
 matcher's call**, deliberately not answered by the bake. Zero on a cause means that cause does not apply — the
@@ -590,7 +631,7 @@ The resolution row is already ordered most-dominant first, so **first full match
 and there is no second sort here that could disagree with the one the bake settled. Two DIFFERENT buttons
 completing different moves on one row both complete: they were never rivals, only neighbours.
 
-### Phases — `Idle / Pending / Completed / Failed`, latched
+### Phases — `Idle / Pending / Completed / Failed / Active`
 
 | Phase | Means | Frame it names |
 |---|---|---|
@@ -598,10 +639,15 @@ completing different moves on one row both complete: they were never rivals, onl
 | `Pending` | a press that could complete it is being waited out (see *Deferral*) | the press frame |
 | `Completed` | it last completed on this frame | the completion frame |
 | `Failed` | a wait it was part of resolved and NOTHING matched | the resolution frame |
+| `Active` | a LEVEL move's button is down and its input is reaching this layer (see *Level intents*) | the activation frame |
 
-Transitions out of each: `Idle → Pending` (a wait opens) or `→ Completed` (an unambiguous press);
-`Pending → Completed` / `Failed` / `Idle` (won / answered nothing / lost); `Completed` and `Failed` `→ Idle`
-(decay), or straight to `Pending`/`Completed` when a new press supersedes them.
+Transitions out of each: `Idle → Pending` (a wait opens) or `→ Completed` (an unambiguous press) or `→ Active`
+(a level move's press edge); `Pending → Completed` / `Failed` / `Idle` (won / answered nothing / lost);
+`Completed` and `Failed` `→ Idle` (decay), or straight to `Pending`/`Completed` when a new press supersedes them;
+`Active → Idle` (released — nothing else, and nothing decays it).
+
+`Active` is appended LAST to `ECk_Intent_Phase` rather than slotted beside the phases it reads next to: the enum
+is reflected, so its values serialize as numbers, and inserting one would silently renumber every phase after it.
 
 `Completed` and `Failed` are both latched, and both DECAY back to `Idle` `_LatchDecayFrames` after the frame they
 were stamped on. Until then a poller reads "how did this last resolve, and on which frame" — comparing that frame
@@ -621,14 +667,71 @@ new press supersedes the previous answer** for every candidate on its terminal: 
 first, applied one step earlier.
 
 `TryGet_CompletionFrame*` answers `INDEX_NONE` for every row that is not `Completed` — a `Pending` one, a `Failed`
-one, and an intent the set does not carry. Rows hold ONE frame for whichever phase they are in, and a caller that
-could read a failure's frame as a completion's would act on a move that did not happen.
+one, an `Active` one, and an intent the set does not carry. Rows hold ONE frame for whichever phase they are in,
+and a caller that could read a failure's frame as a completion's would act on a move that did not happen.
+`TryGet_ActivationFrame*` is the same gate on the other side: `INDEX_NONE` for everything that is not `Active`,
+including a level row that has already been released and whose frame now names the release.
 
 `Get_IntentPhase` is the ruled primary read and it is keyed by the definition's `_IntentTag`. The `Intent.*` tag
 namespace is still an open question and nothing mints one, so every set baked today carries an EMPTY tag that
 matches no row — `Get_IntentPhase_ByName` is what a v1 consumer and every test actually calls. Both answer `Idle`
 for an intent the active set does not carry: `Idle` is what a consumer acts on either way, and a phase enum with
 an `Unknown` value would make every caller branch on a case only a typo produces.
+
+### Level intents — a phase about the present
+
+A `level` definition asks the other question: not *did the player just do this* but *is the player doing this right
+now*. Its row goes `Active` on the visible press edge of its terminal button and comes back to `Idle` when the
+input stops reaching this layer. There is no completion, no latch and nothing to decay, and that is the whole
+difference — everything else about it (resolution, priority order, capture registration, delivery visibility) is
+the machinery every other intent already uses.
+
+**Activation.** On the press row, the level candidates on that terminal are scanned with the terminal anchored on
+that row, and a match writes `Active` stamped with THAT row's frame. **A level candidate never defers**: the
+deferral verdict is a question about edge candidates and the level pass does not consult it, so even on a terminal
+whose edge siblings are in a wait, the level row activates on the frame the press landed on. Zero-latency
+activation is what falls out of that, not a special case bolted beside it.
+
+**The four ways it ends**, all of them `Active → Idle`:
+
+| Cause | Frame the transition names |
+|---|---|
+| the button left the row's held union | the release row's |
+| the ANCHOR key stopped being deliverable to this layer (a modal `Consume` or `CatchAll` above it) | the row it was noticed on |
+| a rebind moved the anchor key off the button | the row it was noticed on |
+| a set swap | `INDEX_NONE` — it rides the existing swap sweep, which signals every non-`Idle` row out before discarding it |
+
+**The ANCHOR is the key the activating press arrived on** — the same reading a pending episode makes of its
+`_PressKey`, for the same reason: with several devices bound to one button, delivery-loss is per-key, and a modal
+masking only the gamepad must not release a keyboard hold. **The asymmetry is real and worth stating plainly:
+masking a bound key that is NOT the anchor does not release the row.** In practice a modal captures every key of
+the buttons it means to take, or declares `CatchAll`, so both readings agree; the divergence surfaces under a
+synthetic single-key mask and nowhere else. The alternative — releasing when ANY of the button's keys is masked —
+would cancel the hold the player is actually on because a device they are not touching was silenced.
+
+**No re-activation while `Active`.** A second press of a button that is still down cannot restart a hold that
+never ended, and the anchor cannot move mid-hold — re-entering would restamp the very frame a consumer measures
+the hold from. **After any deactivation the policy is `RequireRePress`**, the same one the hold accumulator
+applies and for the same reason: a modal closing re-activates nothing, because a button that is merely still
+physically down is not a fresh input. Only a new visible press edge activates.
+
+**A press and a release that collapse onto ONE row produce `Active` then `Idle` on the same frame** — activation
+is evaluated before release precisely so that a tap under a hitch is seen to have happened rather than never
+entered at all. Both are real signals with a real frame, and a consumer polling gameplay-side sees `Idle` while
+the two `OnIntentPhaseChanged` payloads say what occurred. This is the *Hitch attribution* cost showing through
+one more surface, not a defect of the level lifecycle.
+
+**`Active` is not a latch.** Decay never looks at it (only `Completed` and `Failed` are latches); `OnIntentCompleted`
+never fires for a level row, because nothing about it completed; and `TryGet_CompletionFrame*` answers
+`INDEX_NONE` for one always. `TryGet_ActivationFrame*` is its analogue, and `OnIntentPhaseChanged` carries both
+edges of it.
+
+**Level rows never enter EPISODES.** The edge arbiter skips them, and a deferred press builds its candidate list
+from the terminal's edge indices only — `Pending` is a phase a level row has no way to leave, since nothing later
+resolves it, and a wait it joined would be answering for a press its own lifecycle already answered on the press
+frame. If a terminal's only candidate is a level intent, no episode opens at all. Activation is therefore computed
+in its own per-row pass AFTER the edge scan, deliberately outside the spoken-for bookkeeping: a press that opened
+an episode for the terminal's edge siblings still activates the level move on that same button.
 
 ### Deferral — executing the verdicts
 
@@ -708,17 +811,28 @@ makes ownership exclusive, and it is **the house immediate-mutator escape hatch,
 a deferred claim makes same-frame double-claim a race, and two pollers must observe the first claim
 synchronously.** The mutation lands on the calling stack and the completion delegate fires after it.
 
+**Two phases are claimable: `Completed` and `Active`.** A level intent has the same exclusivity problem an
+episodic one has — two consumers can both poll `Active` and both act — and it is the same answer, so it is the
+same mechanism rather than a second one beside it. What differs is only how long the claim can stand: a
+completion's is bounded by the latch decay, a level's by the player letting go.
+
 | Situation | Result |
 |---|---|
-| `Completed`, unclaimed | `Succeeded`, claim stamped with the claimant and the current record frame |
-| `Completed`, already held by the SAME claimant | `Succeeded`, stamp untouched — idempotent, the caller's intent already holds |
-| `Completed`, held by ANOTHER entity | `Failed` — the exclusion working, not an error |
-| `Idle` / `Pending` / `Failed` | `Failed` — there is nothing completed to claim |
+| `Completed` or `Active`, unclaimed | `Succeeded`, claim stamped with the claimant and the current record frame |
+| `Completed` or `Active`, already held by the SAME claimant | `Succeeded`, stamp untouched — idempotent, the caller's intent already holds |
+| `Completed` or `Active`, held by ANOTHER entity | `Failed` — the exclusion working, not an error |
+| `Idle` / `Pending` / `Failed` | `Failed` — there is nothing to take ownership of |
 | a name the active set does not carry | `Failed` |
 | invalid matcher or invalid claimant | `Failed_NotEnqueued` — rejected at the boundary, nothing touched |
 
+`Get_IsClaimed*` and `TryGet_ClaimedBy*` answer for both claimable phases and for neither of the others, so the
+read agrees with what a claim would do.
+
 - **A new completion clears the claim.** A fresh press is a fresh event; a stale claim riding across it would let
   one consumer's old ownership block everybody from the next completion.
+- **Deactivation releases a level claim**, and by the same rule rather than a new one: EVERY phase transition
+  clears the claim as it is written, so the `Active → Idle` a release writes drops the claim with it. There is
+  nothing for a consumer to release and nothing that can outlive the input it was taken against.
 - **Per-layer by construction.** Each matcher's rows are its own, so `PassThrough` layers stay honest for free and
   claiming through a mask is unrepresentable — a layer that never received the press never completed the intent.
 - **There is no down-stack claim.** That request is `handled == true` reborn; the mechanism for "block the layers
@@ -1020,6 +1134,19 @@ check against whichever frame the renderer caught up to.
 34. **Don't read `_FramesExamined` as "how late the player was".** It is how many rows the WALK read, which is
     bounded by `w=` and by the ring's retention. A step that missed by a hundred frames inside a ten-frame window
     reports nine, because nine is all the walk was ever allowed to look at.
+35. **Don't read `TryGet_CompletionFrame*` for a level intent.** It never completes, so the answer is `INDEX_NONE`
+    forever and a consumer waiting on one waits on a thing that cannot happen. The activation frame is the level
+    analogue, and it is gated exactly the same way — real only while the phase it describes is the current one.
+36. **Don't expect a level intent to re-activate when a modal closes.** `RequireRePress` is the policy here for the
+    same reason it is for episodes: a button that is merely still physically down is not a fresh input, and
+    re-arming on a mask lifting would hand the player a hold they never re-asked for the moment a menu dismissed.
+    If a consumer needs the input back, the player presses again.
+37. **Don't put a level and an edge intent on one terminal at the same priority.** The bake's total-order rule
+    rejects the whole set, and the fix is a priority edit rather than a redesign — the pair is a legal and useful
+    shape, and one press answers both, with the completion frame and the activation frame naming the same frame.
+38. **Don't rely on destroying the layer or the matcher to deactivate a level intent for you.** Teardown emits NO
+    phase signal — there is deliberately no EndPlay phase-writer, because a signal fired out of a dying entity's
+    rows is one nothing can act on — so a consumer holding released-state of its own owns writing it on teardown.
 
 ---
 

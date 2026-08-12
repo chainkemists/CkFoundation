@@ -150,6 +150,31 @@ public:
         const FCk_Handle_IntentMatcher& InMatcher,
         FName InIntentName);
 
+    /**
+     * The record frame a LEVEL intent went `Active` on, or INDEX_NONE for any row that is not `Active` right now —
+     * including one that was active and has since been released, and an intent the active set does not carry.
+     *
+     * The completion-frame gate, applied to the other lifecycle. A level row holds one frame like every other row,
+     * so once it is released that frame names the release; a caller reading it as an activation would believe a
+     * hold is still going. What it buys while the row IS active is the duration: this frame subtracted from the
+     * record's latest is how long the layer has had the input, in the sampler's own logic frames.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IntentMatcher",
+              DisplayName = "[Ck][IntentMatcher] Try Get Activation Frame")
+    static int32
+    TryGet_ActivationFrame(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        const FGameplayTag& InIntentTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IntentMatcher",
+              DisplayName = "[Ck][IntentMatcher] Try Get Activation Frame By Name")
+    static int32
+    TryGet_ActivationFrame_ByName(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        FName InIntentName);
+
     /** Whether a non-empty set is currently active. False after a deactivating swap and before the first one. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IntentMatcher",
@@ -165,7 +190,7 @@ public:
     Get_ActiveIntentCount(
         const FCk_Handle_IntentMatcher& InMatcher);
 
-    /** Whether a completed intent has already been claimed. False for every row that is not `Completed`. */
+    /** Whether a claimable intent has already been claimed. False for every row that is neither `Completed` nor `Active`. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IntentMatcher",
               DisplayName = "[Ck][IntentMatcher] Get Is Claimed")
@@ -183,7 +208,7 @@ public:
         FName InIntentName);
 
     /**
-     * Who holds the claim on a completed intent, or an invalid handle when nobody does.
+     * Who holds the claim on a completed or an active intent, or an invalid handle when nobody does.
      *
      * The claimant is the entity that asked, not a token the matcher minted: a consumer that already holds the
      * handle it claimed with can compare directly instead of remembering a receipt.
@@ -271,7 +296,7 @@ public:
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     /**
-     * Takes exclusive ownership of a completed intent. **IMMEDIATE, not deferred** — the mutation lands on the
+     * Takes exclusive ownership of a completed — or of a currently ACTIVE level — intent. **IMMEDIATE, not deferred** — the mutation lands on the
      * calling stack and the completion delegate fires synchronously after it, which is the house immediate-mutator
      * escape hatch and is declared as such.
      *
@@ -280,11 +305,11 @@ public:
      * lag.
      *
      * Outcomes, all of them decided against one row:
-     * - Completed and unclaimed -> `Succeeded`, claim stamped
-     * - Completed and already claimed by the SAME claimant -> `Succeeded`, stamp untouched (idempotent; the
+     * - Completed or Active, and unclaimed -> `Succeeded`, claim stamped
+     * - Completed or Active, already claimed by the SAME claimant -> `Succeeded`, stamp untouched (idempotent; the
      *   caller's intent already holds, and re-stamping would move a claim frame nobody asked to move)
-     * - Completed and claimed by ANOTHER entity -> `Failed`. That is the exclusion working, not an error.
-     * - `Idle` / `Pending` / `Failed` -> `Failed`. There is nothing completed to claim.
+     * - Completed or Active, claimed by ANOTHER entity -> `Failed`. That is the exclusion working, not an error.
+     * - `Idle` / `Pending` / `Failed` -> `Failed`. There is nothing to take ownership of.
      * - a name the active set does not carry -> `Failed`
      * - an invalid matcher or an invalid claimant -> `Failed_NotEnqueued` (rejected at the boundary, same call
      *   stack, nothing touched)
@@ -369,6 +394,11 @@ private:
 
     static auto
     DoGet_CompletionFrame(
+        const FCk_Handle_IntentMatcher& InMatcher,
+        int32 InIntentIndex) -> int32;
+
+    static auto
+    DoGet_ActivationFrame(
         const FCk_Handle_IntentMatcher& InMatcher,
         int32 InIntentIndex) -> int32;
 
