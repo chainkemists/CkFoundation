@@ -10,6 +10,7 @@ namespace ck_intent_grammar
     // a case-sensitive keyword would read `Lenient` as a button token and silently drop the modifier the designer
     // wrote, and a silently-ignored modifier is the one failure mode a parser must never have.
     constexpr auto ModifierKeyword_Lenient = TEXT("lenient");
+    constexpr auto ModifierKeyword_Level   = TEXT("level");
     constexpr auto ModifierKey_Window      = TEXT("w");
     constexpr auto ModifierKey_Hold        = TEXT("hold");
 
@@ -320,6 +321,30 @@ namespace ck_intent_grammar
 
         return InGroups.Emplace_GetRef(FTerminalGroup{InButton, {}});
     }
+
+    /*
+     * The group's EDGE members — the only ones a deferral is a question about.
+     *
+     * A level intent is answered on the press frame by construction: it declares no threshold and its terminal is
+     * one button, so there is nothing in flight for a wait to resolve. It is therefore neither a rival that could
+     * make a press ambiguous nor a candidate an episode could complete, and it must not lengthen a wait that only
+     * its edge neighbours are in.
+     */
+    auto
+    DoGet_EdgeIndices(
+        const TArray<FCk_Intent_CompiledIntent>& InIntents,
+        const TArray<int32>& InIndices) -> TArray<int32>
+    {
+        auto EdgeIndices = TArray<int32>{};
+
+        for (const auto& Index : InIndices)
+        {
+            if (InIntents[Index].Get_Kind() == ECk_Intent_Kind::Edge)
+            { EdgeIndices.Add(Index); }
+        }
+
+        return EdgeIndices;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -346,14 +371,16 @@ auto
     auto WindowFrames = int32{0};
     auto HoldFrames   = int32{0};
     auto Lenience     = ECk_Intent_Lenience::Strict;
+    auto Kind         = ECk_Intent_Kind::Edge;
     auto SeenModifier = false;
 
     for (const auto& Token : Tokens)
     {
         const auto TokenIsLenience = Token.Equals(ModifierKeyword_Lenient, ESearchCase::IgnoreCase);
+        const auto TokenIsLevel    = Token.Equals(ModifierKeyword_Level, ESearchCase::IgnoreCase);
         const auto TokenIsKeyed    = Token.Contains(TEXT("="));
 
-        if (NOT TokenIsLenience && NOT TokenIsKeyed)
+        if (NOT TokenIsLenience && NOT TokenIsLevel && NOT TokenIsKeyed)
         {
             if (SeenModifier)
             { return DoMake_Rejection(ECk_Intent_ParseError::ModifierNotTrailing, Token); }
@@ -370,6 +397,15 @@ auto
             { return DoMake_Rejection(ECk_Intent_ParseError::DuplicateModifier, Token); }
 
             Lenience = ECk_Intent_Lenience::Lenient;
+            continue;
+        }
+
+        if (TokenIsLevel)
+        {
+            if (Kind == ECk_Intent_Kind::Level)
+            { return DoMake_Rejection(ECk_Intent_ParseError::DuplicateModifier, Token); }
+
+            Kind = ECk_Intent_Kind::Level;
             continue;
         }
 
@@ -423,6 +459,23 @@ auto
         { return DoMake_Rejection(Rejection._Error, Rejection._Token); }
     }
 
+    // The three level constraints are about the notation as a WHOLE — which token to blame is a question with no
+    // honest answer once `level` and the steps disagree — so they reject with an empty token, as NoSteps does.
+    const auto KindIsLevel = Kind == ECk_Intent_Kind::Level;
+
+    if (KindIsLevel && HoldFrames != 0)
+    { return DoMake_Rejection(ECk_Intent_ParseError::LevelWithHold, {}); }
+
+    if (KindIsLevel && Steps.Num() > 1)
+    { return DoMake_Rejection(ECk_Intent_ParseError::LevelWithSequence, {}); }
+
+    const auto TerminalIsOneButton = Steps.Num() == 1 &&
+                                     Steps.Last().Get_Atoms().Num() == 1 &&
+                                     Steps.Last().Get_Atoms()[0].Get_Kind() == ECk_Intent_AtomKind::Button;
+
+    if (KindIsLevel && NOT TerminalIsOneButton)
+    { return DoMake_Rejection(ECk_Intent_ParseError::LevelTerminalNotSingleButton, {}); }
+
     return DoMake_Acceptance(FCk_Intent_Definition
     {
         InIntentName,
@@ -431,7 +484,8 @@ auto
         WindowFrames,
         HoldFrames,
         InPriority,
-        Lenience
+        Lenience,
+        Kind
     });
 }
 
@@ -553,7 +607,8 @@ auto
             Definition.Get_WindowFrames(),
             Definition.Get_HoldFrames(),
             Definition.Get_Priority(),
-            Definition.Get_Lenience()
+            Definition.Get_Lenience(),
+            Definition.Get_Kind()
         });
     }
 
@@ -604,17 +659,19 @@ auto
             return CompiledIntents[InLeft].Get_Priority() > CompiledIntents[InRight].Get_Priority();
         });
 
+        const auto EdgeIndices = DoGet_EdgeIndices(CompiledIntents, Group._IntentIndices);
+
         // Deferral is about being WRONG, not about waiting: with one candidate there is no other intent a press
         // could have meant, so nothing is ambiguous no matter how the move is shaped. This single condition is
         // why sharing a terminal, on its own, still defers for nothing.
-        const auto HasRivals = Group._IntentIndices.Num() > 1;
+        const auto HasRivals = EdgeIndices.Num() > 1;
 
         auto HoldSiblingFrames = int32{0};
         auto NeedsSecondPress  = false;
 
         if (HasRivals)
         {
-            for (const auto& IntentIndex : Group._IntentIndices)
+            for (const auto& IntentIndex : EdgeIndices)
             {
                 HoldSiblingFrames = FMath::Max(HoldSiblingFrames, CompiledIntents[IntentIndex].Get_HoldFrames());
                 NeedsSecondPress = NeedsSecondPress || DoGet_TerminalNeedsSecondPress(CompiledIntents[IntentIndex]);
