@@ -166,10 +166,10 @@ auto
 	// every Action's preconditions/effects is a diagnostic (Get_InvalidGoal), and
 	// registering it would let the planner search toward a key it cannot affect.
 
-	if (SourceRegistry.Num() > goap::WorldState_MaxKeys)
+	if (SourceRegistry.Num() >= goap::WorldState_MaxKeys)
 	{
 		ck::goap::Warning(
-			TEXT("GOAP WorldState [{}] (resolved source of Action [{}]) has more distinct keys ({}) than MAX_KEYS ({}). Excess keys will be rejected."),
+			TEXT("GOAP WorldState [{}] (resolved source of Action [{}]) is at key capacity ({}/{}). Further keys will be silently rejected."),
 			Source, InHandle, SourceRegistry.Num(), goap::WorldState_MaxKeys);
 	}
 
