@@ -18,8 +18,11 @@ cooked-data root (`UCk_Jolt_ProjectSettings_UE::_CookedDataRootPath`).
 - `UCk_JoltCook_EditorSubsystem_UE` — the PRIMARY cook vehicle (world already booted by the
   editor): `Cook_CurrentWorld()` / `Cook_CurrentWorld_DryRun()` / `Validate_CurrentWorld()`,
   BlueprintCallable for editor-utility widgets + a Tools-menu entry.
-- `UCk_JoltCook_Commandlet` — headless cross-map cook (`-run=CkJoltCook -Map=… | -AllMaps
-  [-DryRun]`), CK_ENSUREs the DirectoriesToAlwaysCook ini entry. Boots worlds itself; if that
+- `UCk_JoltCook_Commandlet` — headless cross-map + mesh-shape cook
+  (`-run=Ck_JoltCook_Commandlet -Map=… | -AllMaps | -MeshShapes [-DryRun]` — the FULL class token
+  is required, `-run=CkJoltCook` resolves to no class; on unique-build-environment projects invoke
+  the project's own `<Target>-Cmd.exe`, not the engine's `UnrealEditor-Cmd.exe`), CK_ENSUREs the
+  DirectoriesToAlwaysCook ini entry. Boots worlds itself; if that
   proves flaky on WP/landscape maps, the documented pivot is a UWorldPartitionBuilder subclass.
 
 ## Anti-patterns

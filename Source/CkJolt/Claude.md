@@ -150,8 +150,10 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   rejects (`IsValidScale` — non-uniform on spheres/capsules or rotated compound children;
   `MakeScaleValid` is deliberately NOT used, approximated collision is silently wrong), or any
   negative scale. A miss ensures loudly ONLY when cooked data is expected (packaged / PIE-Cooked)
-  AND the mesh sits under a baked root AND its collision is worth pre-baking. Cook via the
-  Tools-menu subsystem entry or `-run=CkJoltCook -MeshShapes` (combinable with `-Map`/`-AllMaps`);
+  AND the mesh sits under a baked root AND its collision is worth pre-baking. Cook via
+  `-run=Ck_JoltCook_Commandlet -MeshShapes` (combinable with `-Map`/`-AllMaps`; the FULL class
+  token is required — `-run=CkJoltCook` resolves to no class) — the Tools-menu entry cooks
+  only the CURRENT WORLD (`Cook_CurrentWorld`), never mesh shapes;
   incremental by BodySetupGuid; orphans logged, never auto-deleted.
 - `UCk_Utils_JoltStaticActor_UE` — typesafe-handle BPFL over the attribution entity: `Has`,
   `Cast`/`DoCast`/`DoCastChecked`, `Get_SourceActor` (may be null after the actor dies),
