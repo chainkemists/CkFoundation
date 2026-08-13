@@ -4,6 +4,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkJolt/CkJolt_Log.h"
+#include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltMeshShape_Utils.h"
@@ -12,6 +13,7 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <AssetRegistry/IAssetRegistry.h>
 #include <Engine/StaticMesh.h>
+#include <Misc/ScopeExit.h>
 #include <PhysicsEngine/BodySetup.h>
 #include <UObject/Package.h>
 #include <UObject/SavePackage.h>
@@ -83,6 +85,11 @@ auto
     using namespace ck::jolt::bake;
 
     auto Stats = FCookStats{};
+
+    // Cook vehicles (commandlet, editor subsystem) have no game world, so nothing else has
+    // registered Jolt's allocator/factory/types — shape creation crashes without this.
+    Request_GlobalJoltInit();
+    ON_SCOPE_EXIT { Request_GlobalJoltShutdown(); };
 
     const auto Roots = UCk_Utils_Jolt_ProjectSettings::Get_BakedMeshShapeRoots();
     const auto CookedRootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
