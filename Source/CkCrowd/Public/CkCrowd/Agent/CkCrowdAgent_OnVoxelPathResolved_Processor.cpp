@@ -120,6 +120,7 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 auto WaypointsToInstall = InPathResult.Get_Waypoints();
+                InPathFollow._ProtectedLeadingWaypointCount = 0;
 
                 FCk_Nav_Algorithm::InstallExternalPath(
                     NonConstHandle,

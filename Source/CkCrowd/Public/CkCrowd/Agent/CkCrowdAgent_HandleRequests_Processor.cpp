@@ -127,6 +127,7 @@ namespace ck
             : InParams.Get_ArrivalRadius();
 
         InPathFollow._WaypointIndex = 0;
+        InPathFollow._ProtectedLeadingWaypointCount = 0;
         InPathFollow._ActiveArrivalRadius = ArrivalRadius;
         InPathFollow._ActiveGoal = Goal;
 
@@ -313,6 +314,7 @@ namespace ck
     {
         InDesired._Velocity = FVector::ZeroVector;
         InPathFollow._WaypointIndex = 0;
+        InPathFollow._ProtectedLeadingWaypointCount = 0;
         InHandle.Get<FFragment_CrowdAgent_PathTrouble>() = FFragment_CrowdAgent_PathTrouble{};
 
         InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();

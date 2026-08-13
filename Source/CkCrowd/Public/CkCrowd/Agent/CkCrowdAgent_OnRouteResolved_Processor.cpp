@@ -77,20 +77,110 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 auto WaypointsToInstall = Result.Get_CompiledWaypoints();
+                const auto HasRouteWaypoints = NOT WaypointsToInstall.IsEmpty();
+                CK_ENSURE_IF_NOT(
+                    HasRouteWaypoints,
+                    TEXT("CrowdAgent [{}] received a Ready PathNetwork route with no waypoints"),
+                    InHandle)
+                {}
+                if (NOT HasRouteWaypoints)
+                {
+                    if (IsPathPending &&
+                        NOT InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
+                    {
+                        NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                        InPathFollow._ProtectedLeadingWaypointCount = 0;
+                        FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+                        FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                            NonConstHandle,
+                            InParams,
+                            InPathFollow,
+                            InPathFollow.Get_ActiveGoal());
+                    }
+                    break;
+                }
+
+                const auto AgentLocation = InTransform.Get_Transform().GetLocation();
+                const auto ActiveGoal = InPathFollow.Get_ActiveGoal();
+                const auto EscapedStart =
+                    FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
+                        NonConstHandle,
+                        InHandle.Get_Entity(),
+                        AgentLocation,
+                        ActiveGoal,
+                        InParams.Get_Radius());
+                auto EscapeWaypoints = TArray<FVector>{};
+                const auto UsedNavigableEscapePrefix =
+                    EscapedStart.IsSet() &&
+                    FProcessor_CrowdAgent_PathRefresh::
+                    Try_BuildStationaryMarkupEscapePath(
+                        NonConstHandle,
+                        InHandle.Get_Entity(),
+                        AgentLocation,
+                        EscapedStart.GetValue(),
+                        InParams,
+                        EscapeWaypoints);
+                const auto DetourStart = UsedNavigableEscapePrefix
+                    ? EscapeWaypoints.Last()
+                    : AgentLocation;
                 auto DetouredWaypoints = TArray<FVector>{};
                 const auto UsedStationaryMarkupDetour =
                     FProcessor_CrowdAgent_PathRefresh::
                     Try_BuildStationaryMarkupDetour(
                         NonConstHandle,
                         InHandle.Get_Entity(),
-                        InTransform.Get_Transform().GetLocation(),
-                        Result.Get_GoalLocation(),
+                        DetourStart,
+                        ActiveGoal,
                         InParams,
                         InPathFollow.Get_ActiveArrivalRadius(),
                         WaypointsToInstall,
                         DetouredWaypoints);
                 if (UsedStationaryMarkupDetour)
                 { WaypointsToInstall = MoveTemp(DetouredWaypoints); }
+
+                InPathFollow._ProtectedLeadingWaypointCount = 0;
+                if (UsedNavigableEscapePrefix)
+                {
+                    constexpr auto MergeDistanceUu = 1.0f;
+                    auto CombinedWaypoints = TArray<FVector>{};
+                    CombinedWaypoints.Reserve(
+                        EscapeWaypoints.Num() + WaypointsToInstall.Num());
+                    const auto AppendDistinct = [&](const FVector& InPoint)
+                    {
+                        if (CombinedWaypoints.IsEmpty() ||
+                            FVector::DistSquared(CombinedWaypoints.Last(), InPoint) >
+                                FMath::Square(MergeDistanceUu))
+                        {
+                            CombinedWaypoints.Add(InPoint);
+                        }
+                    };
+                    for (const auto& EscapeWaypoint : EscapeWaypoints)
+                    { AppendDistinct(EscapeWaypoint); }
+
+                    // Every point in the navigable egress belongs to the physical escape. Preserve
+                    // it from install-time stale-corner normalization until Steering consumes it.
+                    InPathFollow._ProtectedLeadingWaypointCount =
+                        CombinedWaypoints.Num();
+                    for (const auto& RouteWaypoint : WaypointsToInstall)
+                    { AppendDistinct(RouteWaypoint); }
+
+                    const auto CombinedPathIsValid =
+                        InPathFollow.Get_ProtectedLeadingWaypointCount() > 0 &&
+                        CombinedWaypoints.Num() >
+                            InPathFollow.Get_ProtectedLeadingWaypointCount();
+                    CK_ENSURE_IF_NOT(
+                        CombinedPathIsValid,
+                        TEXT("CrowdAgent [{}] could not append its PathNetwork route after a "
+                             "stationary-markup escape prefix"),
+                        InHandle)
+                    {}
+                    if (NOT CombinedPathIsValid)
+                    {
+                        InPathFollow._ProtectedLeadingWaypointCount = 0;
+                    }
+                    else
+                    { WaypointsToInstall = MoveTemp(CombinedWaypoints); }
+                }
 
                 FCk_Nav_Algorithm::InstallExternalPath(
                     NonConstHandle,
@@ -106,7 +196,7 @@ namespace ck
 
                 // The corridor's leading waypoint has no predecessor, so the incoming direction for
                 // Steering's plane-crossing retirement comes from where the agent IS at install time.
-                InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
+                InPathFollow._CurrentSegmentStart = AgentLocation;
 
                 // PathPending installs are normalized by OnPathResolved before they begin walking.
                 // A rebuild swap is already Walking, so it bypasses that processor: retire any
@@ -119,7 +209,8 @@ namespace ck
                             InPathFollow.Get_CurrentSegmentStart(),
                             InstalledWaypoints,
                             InPathFollow._WaypointIndex,
-                            InPathFollow._CurrentSegmentStart);
+                            InPathFollow._CurrentSegmentStart,
+                            InPathFollow.Get_ProtectedLeadingWaypointCount());
 
                     if (SkippedWaypointCount > 0)
                     {
@@ -144,11 +235,12 @@ namespace ck
 
                 ck::crowd::Verbose(
                     TEXT("CrowdAgent [{}] network route ready ({} raw wps, {} installed wps, "
-                         "stationary detour={}, cost={}, epoch={}) — installed as nav path"),
+                         "stationary detour={}, escape prefix={}, cost={}, epoch={}) — installed as nav path"),
                     InHandle,
                     Result.Get_CompiledWaypoints().Num(),
                     InstalledWaypoints.Num(),
                     UsedStationaryMarkupDetour,
+                    UsedNavigableEscapePrefix,
                     Result.Get_TotalCost(),
                     InCorridor.Get_NetworkEpoch());
                 break;
@@ -177,6 +269,7 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                InPathFollow._ProtectedLeadingWaypointCount = 0;
                 FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,

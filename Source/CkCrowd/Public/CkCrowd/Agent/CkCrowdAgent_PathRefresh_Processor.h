@@ -86,6 +86,19 @@ namespace ck
             const FVector& InGoal,
             float InAgentRadius) -> TOptional<FVector>;
 
+        // Converts a geometry-only escape point into a physically followable Recast prefix from
+        // the agent's real location. Returns false without mutating OutWaypoints when either end
+        // cannot be projected, no complete path exists, or the projected endpoint falls back
+        // inside another agent's expanded painted markup.
+        static auto
+        Try_BuildStationaryMarkupEscapePath(
+            FCk_Handle InAnyWorldHandle,
+            FCk_Entity InSelfEntity,
+            const FVector& InSelfLocation,
+            const FVector& InEscapedLocation,
+            const FFragment_CrowdAgent_Params& InParams,
+            TArray<FVector>& OutWaypoints) -> bool;
+
         // PathNetwork corridors are preferred geometry, not hard movement boundaries. When a
         // resolved corridor crosses confirmed stationary-agent markup, replace only the affected
         // span with a Recast path computed under the agent's own query filter. The untouched

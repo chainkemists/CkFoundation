@@ -151,7 +151,8 @@ namespace ck
                         InPathFollow.Get_CurrentSegmentStart(),
                         Wps,
                         InPathFollow._WaypointIndex,
-                        InPathFollow._CurrentSegmentStart);
+                        InPathFollow._CurrentSegmentStart,
+                        InPathFollow.Get_ProtectedLeadingWaypointCount());
 
                 if (SkippedWaypointCount > 0)
                 {
