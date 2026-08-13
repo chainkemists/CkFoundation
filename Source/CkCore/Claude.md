@@ -123,6 +123,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | 2D/3D geometry primitives and intersection tests | `Math/Geometry` | `CkGeometry_Types.h`, `CkGeometry_Utils.h` | AABB/sphere/line tests |
 | Numeric limit wrappers | `Math/NumericLimits` | per folder | typed min/max |
 | Random / probability helpers (weights, dice, sampling) | `Math/Probability` | per folder | weighted pick |
+| Streak-bounded random draws — sampling without replacement ("shuffle bag") | `Math/Probability` | `CkShuffleBag.h` | `ck::TShuffleBag<T>` |
 | `FCk_ValueRange<T>` (typed `[Min, Max]` with clamp / normalize / interpolate) | `Math/ValueRange` | `CkValueRange.h` | attribute ranges |
 | Vector helpers beyond UE's built-ins | `Math/Vector` | per folder | extended ops |
 | Color utilities (hue/lightness/mix), named palettes, stable per-hash colors | `Color` | `CkColor_Utils.h` | `UCk_Utils_LinearColor::Get_StableColorFromHash` |
@@ -190,6 +191,7 @@ const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
 …work with FProperty names           → Reflection/
 …define a condition / rule           → Logic/       (FCk_Condition)
 …build a Min/Max value range         → Math/ValueRange
+…draw random outcomes without streaks → Math/Probability (ck::TShuffleBag)
 …build a normalized health meter     → Meter/       (FCk_Meter)
 …wrap a pointer with const-correct.  → Types/       (TPtrWrapper)
 …bundle args for a signal payload    → Payload/     (ck::MakePayload)

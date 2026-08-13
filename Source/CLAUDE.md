@@ -33,6 +33,7 @@ Before writing any code, navigate the documentation in this order:
 | check/intersect gameplay tags | `CkCore/GameplayTag` |
 | walk FProperty / reflection | `CkCore/Reflection` |
 | bound range [min,max] + normalize | `CkCore/Math/ValueRange` |
+| streak-bounded random draws (shuffle bag) | `CkCore/Math/Probability` + `ck::TShuffleBag<T>` |
 | create/destroy entities | `CkEcs` + `UCk_Utils_EntityLifetime_UE` |
 | pool/recycle a UObject (or subsystem-own its lifetime) | `CkCore/ObjectPooling` — `UCk_Utils_Object_UE::Request_CreateNewObject` with `FCk_ObjectPooling_PoolParams` (Recycle) or DestroyOnRelease to just pin; release via `TryReleaseToPool`. Poolable EntityScripts: the `InstancedPerEntity_Poolable` policy |
 | write a processor | `CkEcs/Processor` (`TProcessor`, self-registered via `CK_REGISTER_PROCESSOR`) |
