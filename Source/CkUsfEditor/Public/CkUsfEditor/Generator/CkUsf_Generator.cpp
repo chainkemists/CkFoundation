@@ -372,6 +372,7 @@ namespace ck::usf_editor
                     UMaterialEditingLibrary::CreateMaterialExpression(
                         InMaterial, UMaterialExpressionScalarParameter::StaticClass(), -800, InRow));
                 S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar;
+                S->Group = P._Group; S->SortPriority = P._SortPriority;
                 return S;
             }
             case ECk_Usf_ParamType::Vector:
@@ -380,6 +381,7 @@ namespace ck::usf_editor
                     UMaterialEditingLibrary::CreateMaterialExpression(
                         InMaterial, UMaterialExpressionVectorParameter::StaticClass(), -800, InRow));
                 V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector;
+                V->Group = P._Group; V->SortPriority = P._SortPriority;
                 return V;
             }
             default: // Texture2D / TextureCube
@@ -388,6 +390,9 @@ namespace ck::usf_editor
                     UMaterialEditingLibrary::CreateMaterialExpression(
                         InMaterial, UMaterialExpressionTextureObjectParameter::StaticClass(), -800, InRow));
                 T->ParameterName = P._Name;
+                // Group/SortPriority live on UMaterialExpressionTextureSampleParameter, a DIFFERENT base
+                // from the scalar/vector one -- same field names, no shared parent that declares them.
+                T->Group = P._Group; T->SortPriority = P._SortPriority;
                 if (P._DefaultTexturePath.IsEmpty() == false)
                 {
                     auto* Tex = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath);
