@@ -137,6 +137,26 @@ public:
         float InMaxSpeed,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Replace the query-filter policy used by every Recast path this agent issues. Active Recast
+    // and PathNetwork routes are rebuilt by default; Voxel paths do not consume this policy and
+    // remain undisturbed. Set ForceReplan to Disable to defer until the next applicable request.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Set Nav Query Filter",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_CrowdAgent
+    Request_SetNavQueryFilter(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Nav Query Filter")
+    static FGameplayTag
+    Get_NavQueryFilter(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // The params fragment's current max speed (post any runtime SetMaxSpeed override).
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",

@@ -50,6 +50,11 @@ namespace ck
         if (NOT IsPathPending && NOT IsWalking)
         { return; }
 
+        // A policy/goal replan can retain the same goal while superseding an already
+        // queued path-network request. Do not let an older result alter this episode.
+        if (Result.Get_RequestRevision() != InPathFollow.Get_ActiveNavigationRequestRevision())
+        { return; }
+
         // A result left over from the previous goal (the follower has not drained the fresh
         // FindRoute yet) must never transition the agent.
         constexpr auto GoalMatchEpsilonCm = 25.0f;
@@ -90,7 +95,8 @@ namespace ck
                 FCk_Nav_Algorithm::InstallExternalPath(
                     NonConstHandle,
                     MoveTemp(WaypointsToInstall),
-                    Result.Get_GoalLocation());
+                    Result.Get_GoalLocation(),
+                    InPathFollow.Get_ActiveNavigationRequestRevision());
                 const auto& InstalledWaypoints =
                     NonConstHandle.Get<FFragment_Nav_PathResult>().Get_Waypoints();
 
@@ -171,9 +177,11 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,
                     InParams,
+                    InPathFollow,
                     InPathFollow.Get_ActiveGoal());
 
                 ck::crowd::Display(

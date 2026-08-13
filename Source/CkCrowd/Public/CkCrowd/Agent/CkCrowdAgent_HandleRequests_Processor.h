@@ -44,10 +44,16 @@ namespace ck
             FFragment_CrowdAgent_MoveRequests& InRequests) const -> void;
 
         static auto
-        Request_NavigationPath(
-            HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
-            const FVector& InGoal) -> void;
+		Request_NavigationPath(
+			HandleType InHandle,
+			const FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow,
+			const FVector& InGoal) -> void;
+
+		// Invalidates CkNavigation results issued before this route dispatch. This advances for
+		// every provider so a late CkNavigation result cannot replace a newer non-navigation route.
+		static auto
+		AdvanceNavigationRequestRevision(FFragment_CrowdAgent_PathFollow& InPathFollow) -> int32;
 
     private:
         static auto
@@ -77,16 +83,37 @@ namespace ck
         // Ends any blocked episode: OnGoalBlocked may fire again for the new goal, and BlockedRecheck
         // can no longer resume the goal the caller abandoned.
         static auto
-        DoClearBlockedState(
-            FCk_Handle_CrowdAgent& InAgent) -> void;
+		DoClearBlockedState(
+			FCk_Handle_CrowdAgent& InAgent) -> void;
+
+		static auto
+		RequestPathForActiveGoal(
+			HandleType InHandle,
+			const FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+
+		static auto
+		DoForceReplan(
+			HandleType InHandle,
+			const FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow,
+			FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity) -> void;
 
         static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
-            FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_DesiredVelocity& InDesired,
-            const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;
+		DoHandleRequest(
+			HandleType InHandle,
+			FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow,
+			FFragment_CrowdAgent_DesiredVelocity& InDesired,
+			const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest) -> void;
+
+		static auto
+		DoHandleRequest(
+			HandleType InHandle,
+			FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow,
+			FFragment_CrowdAgent_DesiredVelocity& InDesired,
+			const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

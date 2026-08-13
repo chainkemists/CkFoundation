@@ -159,6 +159,11 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     int32 _TuningRevision = 0;
 
+    // Opaque caller-owned revision for superseding a same-goal route request without
+    // conflating policy changes with follower tuning or network rebuild identity.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    int32 _RequestRevision = 0;
+
 public:
     CK_PROPERTY_GET(_Status);
     CK_PROPERTY_GET(_FailReason);
@@ -167,6 +172,7 @@ public:
     CK_PROPERTY_GET(_TotalCost);
     CK_PROPERTY_GET(_GoalLocation);
     CK_PROPERTY_GET(_TuningRevision);
+    CK_PROPERTY_GET(_RequestRevision);
 };
 
 // A complete, world-independent route preference profile. Path-network actors can
@@ -545,11 +551,16 @@ private:
 
     int32 _TuningRevision = 0;
 
+    // Optional opaque caller-owned revision. The route result mirrors it unchanged
+    // on every terminal route outcome so a consumer can reject superseded work.
+    int32 _RequestRevision = 0;
+
 public:
     CK_PROPERTY_GET(_GoalLocation);
     CK_PROPERTY(_Network);
     CK_PROPERTY(_NavQueryFilter);
     CK_PROPERTY(_TuningRevision);
+    CK_PROPERTY(_RequestRevision);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_PathNetworkFollower_FindRoute, _GoalLocation);
