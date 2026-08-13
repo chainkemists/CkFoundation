@@ -32,6 +32,7 @@
 #include <HAL/FileManager.h>
 #include <Misc/FileHelper.h>
 #include <Materials/MaterialInterface.h>
+#include <Materials/MaterialFunctionInterface.h>
 #include <Misc/PackageName.h>
 #include <Misc/Paths.h>
 #include <NiagaraSystem.h>
@@ -72,6 +73,7 @@ namespace ck_asset_exporter_dispatch
             { TEXT("Niagara"),      UNiagaraSystem::StaticClass() },
             { TEXT("Cascade"),      UParticleSystem::StaticClass() },
             { TEXT("Material"),     UMaterialInterface::StaticClass() }, // covers UMaterial + UMaterialInstance(Constant)
+            { TEXT("MaterialFunction"), UMaterialFunctionInterface::StaticClass() }, // NOT a UMaterialInterface
         };
     }
 
@@ -208,6 +210,13 @@ namespace ck_asset_exporter_dispatch
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::Material, InOutEntry))
             { return; }
             Fill_Entry(InOutEntry, FCk_MaterialExporter::ExportMaterial(Material));
+            return;
+        }
+        if (auto* MaterialFunction = Cast<UMaterialFunctionInterface>(InAsset))
+        {
+            if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::MaterialFunction, InOutEntry))
+            { return; }
+            Fill_Entry(InOutEntry, FCk_MaterialExporter::ExportMaterialFunction(MaterialFunction));
             return;
         }
         if (auto* DataTable = Cast<UDataTable>(InAsset)) // dedicated type — NOT a UDataAsset, but keep dedicated-first order

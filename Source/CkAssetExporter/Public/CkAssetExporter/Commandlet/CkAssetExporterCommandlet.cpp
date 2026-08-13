@@ -96,7 +96,7 @@ namespace ck_asset_exporter_commandlet
         ck::asset_exporter::Display(TEXT("                    a package path (/Game/X/Y), or a Content disk path. Semicolon-separated."));
         ck::asset_exporter::Display(TEXT("  -Dir=<packagePath> Sweep a package dir recursively and export matching assets."));
         ck::asset_exporter::Display(TEXT("  -Classes=<a,b>    (with -Dir) Restrict to friendly class names. Valid: DataAsset, DataTable,"));
-        ck::asset_exporter::Display(TEXT("                    Blueprint, BehaviorTree, EQS, StateTree, Enum, Struct, Niagara, Cascade, Material. Empty = all."));
+        ck::asset_exporter::Display(TEXT("                    Blueprint, BehaviorTree, EQS, StateTree, Enum, Struct, Niagara, Cascade, Material, MaterialFunction. Empty = all."));
         ck::asset_exporter::Display(TEXT("  -DumpGraph        Dump the dependency graph (every class) under -Dir (default /Game) to graph.json."));
         ck::asset_exporter::Display(TEXT("                    Composes with nothing else — -Assets/-List are ignored when present."));
         ck::asset_exporter::Display(TEXT("  -List             (with -Dir) List matching assets to LastList.json + console; does not export."));
