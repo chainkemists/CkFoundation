@@ -124,6 +124,17 @@ struct CKUSF_API FCk_Usf_ParamDesc
     // "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap".
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     FString _DefaultTexturePath;
+
+    // Parameter-panel group on the generated master (and every MID of it), e.g. "Distortion". None leaves
+    // the parameter ungrouped, which is where the engine files it today — so existing looks regenerate
+    // byte-identically. Purely presentational: it changes no wiring and no shader code.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    FName _Group = NAME_None;
+
+    // Ordering WITHIN _Group (ascending). 32 is the engine's own default, so leaving it alone sorts
+    // alphabetically alongside anything else that never set it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    int32 _SortPriority = 32;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
