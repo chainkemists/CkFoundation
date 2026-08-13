@@ -22,7 +22,15 @@ namespace ck::asset_exporter::version
     inline constexpr int32 StateTree = 2;
     inline constexpr int32 UserDefinedEnum = 2;
     inline constexpr int32 UserDefinedStruct = 2;
-    inline constexpr int32 Material = 2;
+    // 3 adds "graph": the expression nodes with their connectivity, pin masks and non-default properties, plus
+    // which node feeds each material output. Through 2 the export carried only a CLASS HISTOGRAM of the graph,
+    // which says a material has 29 Multiplies but never which 29 things it multiplies — enough to compare two
+    // materials, never enough to reconstruct one.
+    inline constexpr int32 Material = 3;
+
+    // MaterialFunction exports the same "graph" shape as Material 3, minus the parameter/blend fields a
+    // function does not have. First stamped at 1 — there is no older shape to be compatible with.
+    inline constexpr int32 MaterialFunction = 1;
 
     // First stamped at 3, the shape that added systemState / eventHandlers / lifetimeResolved: earlier Niagara
     // sidecars carried no "_meta" at all, so a consumer cannot tell 1 from 2 and must not be told it can.
