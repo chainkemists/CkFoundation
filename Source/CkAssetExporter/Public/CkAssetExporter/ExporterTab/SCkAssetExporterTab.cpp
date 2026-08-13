@@ -7,6 +7,7 @@
 #include <Engine/DataAsset.h>
 #include <EnvironmentQuery/EnvQuery.h>
 #include <Materials/MaterialInterface.h>
+#include <Materials/MaterialFunctionInterface.h>
 #include <StateTree.h>
 #include <Engine/UserDefinedEnum.h>
 #include <StructUtils/UserDefinedStruct.h>
@@ -156,6 +157,21 @@ auto
                 .Text(FText::FromString(TEXT("Export Selected Materials")))
                 .ToolTipText(FText::FromString(TEXT("Export Materials / Material Instances currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedMaterialsClicked)
+                .HAlign(HAlign_Center)
+            ]
+        ]
+
+        + SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(0, 0, AssetExporterTab_Constants::SectionSpacing, 0)
+        [
+            SNew(SBox)
+            .WidthOverride(200.0f)
+            [
+                SNew(SButton)
+                .Text(FText::FromString(TEXT("Export Selected Material Functions")))
+                .ToolTipText(FText::FromString(TEXT("Export Material Functions currently selected in the Content Browser to .ckexport files")))
+                .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedMaterialFunctionsClicked)
                 .HAlign(HAlign_Center)
             ]
         ]
@@ -576,6 +592,55 @@ auto
     {
         _StatusText->SetText(FText::FromString(
             FString::Printf(TEXT("Exported %d, failed %d Material(s)."), SuccessCount, FailCount)));
+    }
+
+    return FReply::Handled();
+}
+
+auto
+    SCkAssetExporterTab::
+    DoOnExportSelectedMaterialFunctionsClicked()
+    -> FReply
+{
+    auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+    auto SelectedAssets = TArray<FAssetData>{};
+    ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+    auto Functions = TArray<UMaterialFunctionInterface*>{};
+    for (const auto& AssetData : SelectedAssets)
+    {
+        if (auto* Function = Cast<UMaterialFunctionInterface>(AssetData.GetAsset()))
+        {
+            Functions.Add(Function);
+        }
+    }
+
+    if (Functions.Num() == 0)
+    {
+        _StatusText->SetText(FText::FromString(TEXT("No Material Function assets selected in the Content Browser.")));
+        return FReply::Handled();
+    }
+
+    const auto Results = FCk_MaterialExporter::ExportMaterialFunctions(Functions);
+    DoRefreshResultsListFromMaterialResults(Results);
+
+    auto SuccessCount = int32{0};
+    auto FailCount = int32{0};
+    for (const auto& R : Results)
+    {
+        if (R.Succeeded) { ++SuccessCount; }
+        else { ++FailCount; }
+    }
+
+    if (FailCount == 0)
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Successfully exported %d Material Function(s)."), SuccessCount)));
+    }
+    else
+    {
+        _StatusText->SetText(FText::FromString(
+            FString::Printf(TEXT("Exported %d, failed %d Material Function(s)."), SuccessCount, FailCount)));
     }
 
     return FReply::Handled();

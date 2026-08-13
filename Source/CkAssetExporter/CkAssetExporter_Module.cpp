@@ -84,6 +84,7 @@ auto
     ck::asset_exporter::RegisterDataAssetContextMenu();
     ck::asset_exporter::RegisterEQSContextMenu();
     ck::asset_exporter::RegisterMaterialContextMenu();
+    ck::asset_exporter::RegisterMaterialFunctionContextMenu();
     ck::asset_exporter::RegisterNiagaraContextMenu();
     ck::asset_exporter::RegisterStateTreeContextMenu();
     ck::asset_exporter::RegisterUserDefinedEnumContextMenu();

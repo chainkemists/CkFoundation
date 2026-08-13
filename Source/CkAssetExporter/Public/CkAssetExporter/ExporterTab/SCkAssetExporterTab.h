@@ -44,6 +44,7 @@ private:
     auto DoOnExportSelectedDataAssetsClicked() -> FReply;
     auto DoOnExportSelectedEQSClicked() -> FReply;
     auto DoOnExportSelectedMaterialsClicked() -> FReply;
+    auto DoOnExportSelectedMaterialFunctionsClicked() -> FReply;
     auto DoOnExportSelectedStateTreesClicked() -> FReply;
     auto DoOnExportSelectedUserDefinedEnumsClicked() -> FReply;
     auto DoOnExportSelectedUserDefinedStructsClicked() -> FReply;
