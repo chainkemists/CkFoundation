@@ -1,0 +1,446 @@
+// /CkUsf/Looks/ScanChipGrid.ush
+// PostProcess "chip grid" scan sweep — the CkUsf port of PP_ChipGrid_Initialize.
+//
+// Rebuilt against the v3 graph export (PP_ChipGrid_Initialize.ckexport, "graph"), so the composite
+// order, the mask sources and the randomization mechanism below are READ, not inferred. Node ids in
+// comments refer to that export.
+//
+// The five MF_ScanEffect_* material functions are transcribed from their own v1 exports, so nothing in
+// this file is inferred any more. Where the master leaves a function input unconnected, the value quoted
+// in the call is that function's own preview default, which is what the translator would use.
+//
+//   #0   EmissiveColor = Flash-Use ? (#82 + Flash) : #82
+//   #82  = lerp(SceneColor @ UVDistorted, EyeAdaptationInverse(#84), UVDistortionMask)
+//   #84  = lerp(BackgroundColor.rgb*a, <layer stack>, ExpansionRing(...).Inner)  <- pin 1, not 0
+//   layers: Base -> Overlay -> Outline (LERP) -> Fresnel (ADD) -> Grid (ADD) -> Dots (ADD)
+//
+// Managed inputs (SceneColor/SceneDepth/SceneNormal) declare the scene-texture usage that legalizes
+// the raw SceneTextureLookup() taps. Those take BUFFER UV — convert once, tap in buffer space.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// The source's seven StaticSwitchParameters. The LookDefinition sets each as a _Define; these
+// fallbacks keep the include compilable if one is ever omitted.
+#ifndef CKUSF_SCAN_USE_VOXELIZE
+#define CKUSF_SCAN_USE_VOXELIZE 1
+#endif
+#ifndef CKUSF_SCAN_USE_OUTLINE
+#define CKUSF_SCAN_USE_OUTLINE 1
+#endif
+#ifndef CKUSF_SCAN_USE_FRESNEL
+#define CKUSF_SCAN_USE_FRESNEL 1
+#endif
+#ifndef CKUSF_SCAN_USE_OVERLAY
+#define CKUSF_SCAN_USE_OVERLAY 1
+#endif
+#ifndef CKUSF_SCAN_USE_GRID
+#define CKUSF_SCAN_USE_GRID 1
+#endif
+#ifndef CKUSF_SCAN_USE_DOTS
+#define CKUSF_SCAN_USE_DOTS 1
+#endif
+#ifndef CKUSF_SCAN_USE_FLASH
+#define CKUSF_SCAN_USE_FLASH 1
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+// Local helpers. An include lands in the generated master's GLOBAL scope, so every name is prefixed.
+// --------------------------------------------------------------------------------------------------------------------
+
+// The source's Custom node "WorldToUVs" (#58), transcribed from the export's Code property — this one
+// is quoted, not inferred. LWCToFloat/ResolvedView.WorldToClip is exactly what it does.
+float2 CkUsf_ScanChip_WorldToUVs(float3 WorldPosition)
+{
+    const float4 PixelCoordinate = mul(float4(WorldPosition, 1.0f), DFHackToFloat(ResolvedView.WorldToClip));
+    const float2 UVs = ((PixelCoordinate.xy / PixelCoordinate.w) + 1) * 0.5;
+    return float2(UVs.x, 1.0 - UVs.y);
+}
+
+// Scene pixel (BUFFER UV + linear depth) -> ABSOLUTE world position. Mirrors the engine's
+// ReconstructWorldPositionFromDepth (PositionReconstructionCommon.ush), which material shaders do not include.
+float3 CkUsf_ScanChip_WorldFromDepth(float2 BufferUV, float SceneDepth)
+{
+    float2 ScreenPosition = (BufferUV - View.ScreenPositionScaleBias.wz) / View.ScreenPositionScaleBias.xy;
+    float4 Hom = mul(float4(GetScreenPositionForProjectionType(ScreenPosition, SceneDepth), SceneDepth, 1.0),
+                     DFHackToFloat(PrimaryView.ScreenToWorld));
+    return Hom.xyz / Hom.w;
+}
+
+// Photoshop "overlay" blend, scalar. This one is READ off the graph: #28 is an If on ExpandAlpha vs 0.5
+// whose branches are 2*a*n (#22) and 1 - 2*(1-a)*(1-n) (#24) — the textbook overlay, applied to the
+// expansion alpha with the per-voxel noise. It is what makes chips lead and lag the sweep, and it is the
+// whole mechanism behind the "randomly missing tiles".
+float CkUsf_ScanChip_Overlay(float Base, float Blend)
+{
+    return Base < 0.5 ? (2.0 * Base * Blend) : (1.0 - 2.0 * (1.0 - Base) * (1.0 - Blend));
+}
+
+// MF_ScanEffect_GetGridWorldPosition - transcribed from its v1 graph export.
+// The outputs are NOT named the way you would guess: "Grid Unit Position" is the SNAPPED WORLD position,
+// while "Grid Position" is the unfloored CELL-SPACE coordinate. The master seeds its noise off the latter
+// (#208 Use[GridPos] -> VectorNoise) and reprojects the former (#66 -> WorldToUVs).
+struct FCkUsf_ScanChip_Grid
+{
+    float3 UnitPosition;   // floor(P/Size + Offset) * Size   - snapped world position
+    float3 GridPosition;   // P/Size + Offset                 - cell space
+    float3 Gradient;       // abs(frac(cell space) - 0.5) * 2 - 0 at the cell centre, 1 at its faces
+};
+
+FCkUsf_ScanChip_Grid CkUsf_ScanChip_GetGridWorldPosition(float3 Position, float GridSize, float3 Offset)
+{
+    const float Size = max(GridSize, 1e-3);
+
+    FCkUsf_ScanChip_Grid G;
+    G.GridPosition = Position / Size + Offset;
+    G.UnitPosition = floor(G.GridPosition) * Size;
+    G.Gradient = abs(frac(G.GridPosition) - 0.5) * 2.0;
+    return G;
+}
+
+// MF_ScanEffect_ExpansionRing - transcribed from its v1 graph export. Two saturated ramps one band apart,
+// combined as SA * (1 - SB): a triangular shell of half-width Thick riding a sphere of radius Range*Time.
+// Thickness is in WORLD units (the master feeds it the collection's GridCellSize), NOT normalized - which
+// is the correction that matters most, since the band width sets the whole effect's read.
+struct FCkUsf_ScanChip_Ring
+{
+    float Result;   // the band  (#28: SA * (1 - Outer))
+    float Inner;    // 1 - SA    (1 inside, 0 outside)
+    float Outer;    // SB        (1 outside, 0 inside)
+};
+
+FCkUsf_ScanChip_Ring CkUsf_ScanChip_ExpansionRing(
+    float3 Position, float3 Origin, float Range, float Time,
+    float RadiusOffset, float Thickness, float ThicknessMultiplier)
+{
+    const float Dist  = distance(Position, Origin);
+    const float Thick = max(Thickness * ThicknessMultiplier, 1e-4);
+    const float Front = RadiusOffset + (Range * Time) - Thick;   // #21: offset + radius*time - thickness
+
+    const float SA = saturate((Dist - Front) / Thick);
+    const float SB = saturate(((Dist - Front) - Thick) / Thick);
+
+    FCkUsf_ScanChip_Ring R;
+    R.Inner  = 1.0 - SA;
+    R.Outer  = SB;
+    R.Result = SA * (1.0 - SB);
+    return R;
+}
+
+// MF_ScanEffect_RadialDistortion - transcribed from its v1 graph export. Entirely in UV space, and the
+// ring is evaluated on a CELL-QUANTIZED UV (round(UV*CellSize)/CellSize) - that quantization is what makes
+// the warp read as blocks rather than a smooth pinch. The sqrt(2) terms are the graph's own literals: the
+// ring has to reach the corners of a UV square.
+struct FCkUsf_ScanChip_Distortion
+{
+    float2 DistortedUVs;
+    float2 Distortion;
+    float  InnerMask;
+    float  OuterMask;
+};
+
+FCkUsf_ScanChip_Distortion CkUsf_ScanChip_RadialDistortion(
+    float2 UVs, float Radius, float Thickness, float Falloff,
+    float InnerAmount, float OuterAmount, float CellSize, float Time)
+{
+    const float  Cell      = max(CellSize, 1e-5);
+    const float2 Quantized = round(UVs * Cell) / Cell;
+    const float2 Centred   = (Quantized - 0.5) * 2.0;             // #5 / #6 -> [-1, 1]
+
+    const float SqrtTwo = 1.414214015007019;                       // the graph's own literal
+    // #8 -> #9 -> #10 -> #11 -> #7: Range = sqrt2 * (Radius + Radius * 2*sqrt2*Thickness)
+    const float Range = (Radius + Radius * (Thickness * 2.0 * SqrtTwo)) * SqrtTwo;
+
+    const FCkUsf_ScanChip_Ring Ring = CkUsf_ScanChip_ExpansionRing(
+        float3(Centred, 0.0), float3(0.0, 0.0, 0.0), Range, Time,
+        /*RadiusOffset*/ Thickness * -2.0, Thickness, /*ThicknessMultiplier*/ 2.0);
+
+    // Ceil(Inner) picks Outer Amount anywhere the inner mask is non-zero, Inner Amount elsewhere (#33/#34).
+    const float Amount = lerp(InnerAmount, OuterAmount, ceil(Ring.Inner)) * pow(Ring.Result, max(Falloff, 0.0));
+
+    // SafeNormalize of float3(Centred, 0) (#39) - zero length at dead centre returns zero, not NaN.
+    const float  Len = length(Centred);
+    const float2 Dir = Len > 1e-5 ? (Centred / Len) : float2(0.0, 0.0);
+
+    FCkUsf_ScanChip_Distortion D;
+    D.Distortion   = Dir * Amount;
+    D.DistortedUVs = UVs + D.Distortion;
+    D.InnerMask    = Ring.Inner;
+    D.OuterMask    = Ring.Outer;
+    return D;
+}
+
+// MF_ScanEffect_NormalConvolutionKernel - transcribed from its v1 graph export. Far simpler than a depth
+// Laplacian: the centre world normal dotted against the AVERAGE of its four neighbours, so a flat surface
+// reads 1 and any crease or silhouette drops. The master leaves both inputs unconnected (#90), so they take
+// the function's own preview defaults - Width 1, Falloff 8.
+float CkUsf_ScanChip_NormalConvolutionKernel(float2 ViewportUV, float Width, float Falloff)
+{
+    const float2 Step = CkUsf_BufferTexelSize() * Width;
+    const float2 Base = CkUsf_ViewportUVToBufferUV(ViewportUV);
+
+    const float3 NR = SceneTextureLookup(Base + float2( Step.x, 0.0), PPI_WorldNormal, false).rgb;
+    const float3 NL = SceneTextureLookup(Base + float2(-Step.x, 0.0), PPI_WorldNormal, false).rgb;
+    const float3 ND = SceneTextureLookup(Base + float2(0.0,  Step.y), PPI_WorldNormal, false).rgb;
+    const float3 NU = SceneTextureLookup(Base + float2(0.0, -Step.y), PPI_WorldNormal, false).rgb;
+    const float3 NC = SceneTextureLookup(Base, PPI_WorldNormal, false).rgb;
+
+    return 1.0 - pow(saturate(dot(NC, (NR + NL + ND + NU) / 4.0)), max(Falloff, 0.0));
+}
+
+// MF_ScanEffect_NormalFresnel - transcribed from its v1 graph export. The "Facets" branch quantizes the
+// normal before the dot; the master leaves Facets - Use unconnected, so it takes the StaticBool default
+// (off). Define CKUSF_SCAN_FRESNEL_FACETS=1 to restore it.
+#ifndef CKUSF_SCAN_FRESNEL_FACETS
+#define CKUSF_SCAN_FRESNEL_FACETS 0
+#endif
+
+float3 CkUsf_ScanChip_NormalFresnel(
+    float2 ViewportUV, float3 CameraVector, float3 Color, float Falloff, float FacetsAmount)
+{
+    float3 N = SceneTextureLookup(CkUsf_ViewportUVToBufferUV(ViewportUV), PPI_WorldNormal, false).rgb;
+#if CKUSF_SCAN_FRESNEL_FACETS
+    N = round(N * FacetsAmount) / max(FacetsAmount, 1e-4);
+#endif
+    return pow(saturate(1.0 - dot(N, CameraVector)), max(Falloff, 0.0)) * Color;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_ScanChipGrid(
+    FCkUsf_SurfaceInput In,
+    // ---- MPC_ChipGrid_Initialize collection parameters (#2 #18 #67 #201) ----
+    float  NormalizedTime,
+    float  GridCellSize,
+    float  ScreenCellSize,
+    float  FadeIn,
+    // ---- the scan sphere: inside MF_ScanEffect_ExpansionRing in the source, so exposed here ----
+    float3 ScanOrigin,
+    float  ScanRange,
+    // ---- CA_ScanEffect_PP row C_ScanEffect_PP_Speed, sampled at NormalizedTime.
+    //      .r = distortion time (#3), .g = expansion alpha (#34), .b = flash brightness (#144) ----
+    Texture2D CurveAtlas,
+    SamplerState CurveAtlasSampler,
+    float  CurveAtlasRow,
+    // ---- Distortion ----
+    float  DistortionThickness,
+    float  DistortionFalloff,
+    float  DistortionOuterAmount,
+    float  DistortionInnerAmount,
+    // ---- Boost ----
+    float  BoostFade,
+    float  BoostRandomize,
+    float  BoostThicknessMultiplier,
+    float  BoostFadeFalloff,
+    // ---- Voxelize / Grid / Dots geometry ----
+    float  VoxelizeSubdivisions,
+    float  GridSubdivisions,
+    float  GridThinness,
+    float  DotsThickness,
+    float  DotsBoostThickness,
+    float  DotsPulse,
+    // ---- Base ----
+    float  BaseDesaturation,
+    float3 BaseTint,
+    float  BaseValue,
+    // ---- Fresnel ----
+    float  FresnelFalloff,
+    float  FresnelPulse,
+    float3 FresnelTint,
+    float  FresnelAmount,
+    float3 FresnelBoostTint,
+    float  FresnelBoostAmount,
+    // ---- Outline ----
+    float  OutlinePulse,
+    float3 OutlineTint,
+    float  OutlineAmount,
+    float3 OutlineBoostTint,
+    float  OutlineBoostAmount,
+    // ---- Grid / Dots colour ----
+    float3 GridTint,
+    float  GridAmount,
+    float3 DotsTint,
+    float  DotsAmount,
+    float3 DotsBoostTint,
+    float  DotsBoostAmount,
+    // ---- Background / Overlay / Flash ----
+    float  BackgroundRandomize,
+    float3 BackgroundTint,
+    float  BackgroundBrightness,
+    float3 OverlayTint,
+    float  OverlayOpacity,
+    float3 FlashTint,
+    float  FlashBrightness)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.Opacity = 1.0;
+
+    const float2 ViewportUV = In.UV;
+
+    // ---- the three time envelopes (#3 #34 #144) ------------------------------------------------------
+    // One curve row, three channels. The source reads it through CurveAtlasRowParameter; here it is a
+    // direct atlas sample at (NormalizedTime, CurveAtlasRow) — same texture, same row, same channels.
+    const float3 Curve = CkUsf_SampleTexture2D(
+        CurveAtlas, CurveAtlasSampler, float2(saturate(NormalizedTime), saturate(CurveAtlasRow))).rgb;
+    const float DistortTime = Curve.r;
+    const float ExpandAlpha = Curve.g;
+    const float FlashCurve  = Curve.b;
+
+    // ---- radial distortion (#1) ----------------------------------------------------------------------
+    // Note there is NO scan centre here: the function centres its own ring on the UV square (Origin is a
+    // zeroed Constant3Vector, #19), so the warp pulls toward SCREEN centre, not toward the scan origin.
+    // Radius is left unconnected in the master, so it takes the function's preview default of 1.
+    const FCkUsf_ScanChip_Distortion Distort = CkUsf_ScanChip_RadialDistortion(
+        ViewportUV, /*Radius*/ 1.0, DistortionThickness, DistortionFalloff,
+        DistortionInnerAmount, DistortionOuterAmount, ScreenCellSize, DistortTime);
+
+    // The UNDISTORTED-path sample: SceneColor read at UVDistorted (#95 @ #198), the A side of the final
+    // lerp. This is the layer the mosaic sits over.
+    const float2 DistortedBufferUV = CkUsf_ViewportUVToBufferUV(Distort.DistortedUVs);
+    const float3 SceneAtDistorted = SceneTextureLookup(DistortedBufferUV, PPI_PostProcessInput0, false).rgb;
+
+    // ---- per-voxel noise (#19 #21) -------------------------------------------------------------------
+    // World position under this pixel drives a world-locked grid, so the chips are anchored to the scene
+    // rather than the screen — the reason a static camera shows a stable mosaic.
+    const float2 CentreBufferUV = CkUsf_ViewportUVToBufferUV(ViewportUV);
+    const float  CentreDepth = SceneTextureLookup(CentreBufferUV, PPI_SceneDepth, false).r;
+    const float3 CentreWorld = CkUsf_ScanChip_WorldFromDepth(CentreBufferUV, CentreDepth);
+    const float3 CentreNormal = normalize(SceneTextureLookup(CentreBufferUV, PPI_WorldNormal, false).rgb);
+
+    // #203 runs with every input defaulted (Position = world position, GridSize = GridCellSize,
+    // Offset = 0.5) and fans out to three reroutes. The noise is seeded off "Grid Position" (o1, cell
+    // space) via #208, NOT off the snapped world position.
+    const FCkUsf_ScanChip_Grid BaseGrid =
+        CkUsf_ScanChip_GetGridWorldPosition(CentreWorld, GridCellSize, 0.5);
+    const float3 NoiseCell = floor(BaseGrid.GridPosition);
+    const float  GridNoise = CkUsf_Hash21(NoiseCell.xy + NoiseCell.z * 37.0);
+
+    // ExpandAlphaRandomized (#31): the sweep alpha overlay-blended with the per-voxel noise. Chips whose
+    // noise is high run AHEAD of the wavefront and those with low noise lag it — which is what reads as
+    // tiles being missing, rather than any explicit dropout test.
+    const float ExpandAlphaRandomized = CkUsf_ScanChip_Overlay(ExpandAlpha, GridNoise);
+
+    // ---- voxelize (#57 #58 #60..#69) -----------------------------------------------------------------
+    // GridSize halves in powers of two as the sweep advances (#62's own comment: "decrease grid cell size
+    // with time by power of twos to increase voxel resolution while scan expands"), so the chips get
+    // FINER over the effect's life. Screen-space cell size never enters it.
+    const float VoxelSubdiv = floor(VoxelizeSubdivisions * ExpandAlphaRandomized);
+    const float VoxelGridSize = GridCellSize / exp2(max(VoxelSubdiv, 0.0));
+    const FCkUsf_ScanChip_Grid VoxelGrid =
+        CkUsf_ScanChip_GetGridWorldPosition(CentreWorld, VoxelGridSize, 0.5);
+
+    // bFadeIn (#67) crossfades the voxelized UV back to the plain screen UV.
+#if CKUSF_SCAN_USE_VOXELIZE
+    const float2 VoxelUV = lerp(CkUsf_ScanChip_WorldToUVs(VoxelGrid.UnitPosition), ViewportUV, saturate(FadeIn));
+#else
+    const float2 VoxelUV = ViewportUV;
+#endif
+    // "add 'blink' distortion" (#79) — the chip sample rides the distortion offset.
+    const float2 SampleUV = VoxelUV + Distort.Distortion;
+    const float2 SampleBufferUV = CkUsf_ViewportUVToBufferUV(SampleUV);
+
+    // ---- the two expansion rings ---------------------------------------------------------------------
+    // Ring time is lerp(ExpandAlpha, ExpandAlphaRandomized, Randomize) — the Randomize parameters choose
+    // how much per-voxel noise perturbs the sweep, they are NOT dropout probabilities (#147, #45).
+    const float MainRingTime = lerp(ExpandAlpha, ExpandAlphaRandomized, saturate(BackgroundRandomize));
+    // #117 leaves Origin/Range/Thickness/RadiusOffset/ThicknessMultiplier defaulted, so they are the
+    // collection values and the function's own preview default of 2 for the multiplier.
+    const FCkUsf_ScanChip_Ring MainRing = CkUsf_ScanChip_ExpansionRing(
+        BaseGrid.UnitPosition, ScanOrigin, ScanRange, MainRingTime, 0.0, GridCellSize, 2.0);
+
+    const float BoostRingTime = lerp(ExpandAlpha, ExpandAlphaRandomized, saturate(BoostRandomize));
+    const FCkUsf_ScanChip_Ring BoostRing = CkUsf_ScanChip_ExpansionRing(
+        BaseGrid.UnitPosition, ScanOrigin, ScanRange, BoostRingTime, 0.0, GridCellSize, BoostThicknessMultiplier);
+
+    // ExpandingBoostMask (#37 #43): lerp(Ring, Ring*(1-Ring^FadeFalloff), Fade).
+    const float BoostFaded = BoostRing.Result * (1.0 - pow(saturate(BoostRingTime), max(BoostFadeFalloff, 0.0)));
+    const float BoostMask = lerp(BoostRing.Result, BoostFaded, saturate(BoostFade));
+
+    // Pulse (#51): a SECOND, sharper ring raised to the 4th — added into each layer's amount. The source
+    // has no time oscillator; "Pulse" is this ring's contribution, not a sine.
+    const FCkUsf_ScanChip_Ring PulseRing = CkUsf_ScanChip_ExpansionRing(
+        BaseGrid.UnitPosition, ScanOrigin, ScanRange, NormalizedTime, 0.0, GridCellSize, 4.0);
+    const float Pulse = pow(PulseRing.Result, 4.0);
+
+    // ---- Base (#72..#80) -----------------------------------------------------------------------------
+    const float3 Sampled = SceneTextureLookup(SampleBufferUV, PPI_PostProcessInput0, false).rgb;
+    float3 Layers = CkUsf_Desaturate(Sampled, saturate(BaseDesaturation)) * (BaseTint * BaseValue);
+
+#if CKUSF_SCAN_USE_OVERLAY
+    // ---- Overlay (#89) — a lerp toward a flat colour, before Outline ---------------------------------
+    Layers = lerp(Layers, OverlayTint, OverlayOpacity);
+
+#endif
+#if CKUSF_SCAN_USE_OUTLINE
+    // ---- Outline (#85 #87 #110 #111) — a LERP, not an add --------------------------------------------
+    // Both inputs unconnected in the master (#90), so they are the function's preview defaults.
+    const float  Edge = CkUsf_ScanChip_NormalConvolutionKernel(ViewportUV, /*Width*/ 1.0, /*Falloff*/ 8.0);
+    const float3 OutlineColor = lerp(OutlineTint, OutlineBoostTint, BoostMask);
+    const float  OutlineWeight = lerp(OutlineAmount, OutlineBoostAmount, BoostMask) + OutlinePulse * Pulse;
+    Layers = lerp(Layers, OutlineColor, Edge * OutlineWeight);
+
+#endif
+#if CKUSF_SCAN_USE_FRESNEL
+    // ---- Fresnel (#91 #92) — additive ----------------------------------------------------------------
+    const float3 FresnelColor = lerp(FresnelTint, FresnelBoostTint, BoostMask);
+    const float  FresnelWeight = lerp(FresnelAmount, FresnelBoostAmount, BoostMask) + FresnelPulse * Pulse;
+    const float3 CameraVector = normalize(DFHackToFloat(PrimaryView.WorldCameraOrigin) - CentreWorld);
+    Layers += CkUsf_ScanChip_NormalFresnel(
+        ViewportUV, CameraVector, FresnelColor * FresnelWeight, FresnelFalloff, /*FacetsAmount*/ 2.0);
+
+#endif
+    // The line lattice is shared by the Grid and Dots layers (both threshold its within-cell gradient),
+    // so it is hoisted out of both switches — Dots must still build with Grid compiled out.
+    // #127 multiplies Grid - Subdivisions by (1 - ExpandAlphaRandomized), the INVERSE of the voxelize
+    // path -- so the line lattice gets COARSER as the sweep advances while the chips get finer.
+    const float GridSize = GridCellSize / exp2(floor(GridSubdivisions * (1.0 - ExpandAlphaRandomized)));
+    const FCkUsf_ScanChip_Grid LineGrid = CkUsf_ScanChip_GetGridWorldPosition(CentreWorld, GridSize, 0.5);
+
+#if CKUSF_SCAN_USE_GRID
+    // ---- Grid (#96..#126) - lines from the within-cell gradient, additive ----------------------------
+    // No x10: #126 carries ConstB=10 but its B pin IS connected, and a Const* operand is only used when
+    // the matching pin is empty. Same reason #119 is not x0.25 and #99 is not x2.
+    const float  LineWidth = (GridSize * GridThinness) * 0.5;
+    const float3 LineG = saturate(LineGrid.Gradient * LineWidth);
+    const float  GridLine = 1.0 - pow(LineG.x * LineG.y * LineG.z, 4.0);
+    Layers += GridLine * (GridTint * GridAmount);
+
+#endif
+#if CKUSF_SCAN_USE_DOTS
+    // ---- Dots (#133 #171..#191) — thresholded gradient, radius swells on the boost -------------------
+    // #178 is its OWN GetGridWorldPosition call: GridSize defaulted to the collection's GridCellSize and
+    // Offset = 0 (#202), so the dots sit on a different lattice than the lines (#164 uses Offset 0.5).
+    const FCkUsf_ScanChip_Grid DotGrid = CkUsf_ScanChip_GetGridWorldPosition(CentreWorld, GridCellSize, 0.0);
+    const float  DotRadius = lerp(DotsThickness, DotsBoostThickness, BoostMask);
+    // floor(gradient + 1 - radius) is a per-axis step(radius, gradient). No +0.9: #172 carries
+    // ConstB=0.9 but its B pin is wired, so the constant is dead.
+    const float3 DotG = floor(DotGrid.Gradient + (1.0 - saturate(DotRadius)));
+    const float  DotMask = 1.0 - (max(DotG.r, DotG.g) * max(DotG.r, DotG.b) * max(DotG.g, DotG.b));
+    const float3 DotColor = lerp(DotsTint, DotsBoostTint, BoostMask);
+    const float  DotWeight = lerp(DotsAmount, DotsBoostAmount, BoostMask) + Pulse * DotsPulse;
+    Layers += DotMask * DotColor * DotWeight;
+
+#endif
+    // ---- composite (#84 #196 #82 #193) ---------------------------------------------------------------
+    // The layer stack is revealed by the main ring OVER the background wash, the whole thing is
+    // exposure-compensated (EyeAdaptationInverse — which is why boost amounts of 20 are sane rather than
+    // blown out), and that result is revealed over the scene by the distortion's INNER mask.
+    const float3 Background = BackgroundTint * BackgroundBrightness;
+    // #84's Alpha reads the ring's pin[1] = Inner, NOT pin[0] = Result. Inner is 1 - SA: a FILLED disc
+    // that grows behind the wavefront, so the chip stack covers the whole swept region. Result is the thin
+    // band, which would have shown chips only in a ring at the sweep's leading edge.
+    const float3 Chip = lerp(Background, Layers, MainRing.Inner);
+    // EyeAdaptationInverse (#196) with its Alpha pin unconnected (= 1): divide out the exposure the
+    // tonemapper will re-apply. EyeAdaptationCommon.ush is included by MaterialTemplate.ush:25, so
+    // EyeAdaptationLookup() is in scope here.
+    const float3 Exposed = Chip / max(EyeAdaptationLookup(), 1e-4);
+
+    float3 Result = lerp(SceneAtDistorted, Exposed, Distort.InnerMask);
+
+#if CKUSF_SCAN_USE_FLASH
+    // ---- Flash (#193 #194) — additive, straight off the curve's blue channel --------------------------
+    Result += (FlashTint * FlashBrightness) * FlashCurve;
+#endif
+
+    O.EmissiveColor = Result;
+    return O;
+}
