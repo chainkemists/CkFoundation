@@ -139,6 +139,34 @@ auto
 
 auto
     UCk_InventoryUI_DataOnlyPanel::
+    DoRemoveSlotFromPanel(
+        UCk_InventoryUI_ItemSlotEntry* InItemSlot)
+    -> void
+{
+    // _Slots tracks the SLOT, but DoCreateSlot parents a WRAPPER into _ItemPanel
+    // whenever _OverrideSlotSize is set (the slot goes inside a SizeBox). Calling
+    // RemoveFromParent on the slot itself therefore only detaches it from that
+    // wrapper: the empty wrapper stays a child of the panel forever, and because
+    // the unbounded path appends, every later item lands one cell further along —
+    // a trail of dead cells that never fill (repro: drop an item into an unbounded
+    // lootable, loot it, drop it again — it lands in cell 2, cell 1 stays blank).
+    //
+    // Walk up to whatever is actually parented into _ItemPanel rather than
+    // special-casing SizeBox, so a future wrapper cannot reintroduce this.
+    UWidget* Outer = InItemSlot;
+
+    while (IsValid(Outer->GetParent()) && Outer->GetParent() != _ItemPanel)
+    {
+        Outer = Outer->GetParent();
+    }
+
+    Outer->RemoveFromParent();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_InventoryUI_DataOnlyPanel::
     DoRefresh_Bounded(
         const TArray<FCk_Handle_Item>& InItems)
     -> void
@@ -184,7 +212,7 @@ auto
         {
             if (auto* const ItemSlot = _Slots[Index].Get(); IsValid(ItemSlot))
             {
-                ItemSlot->RemoveFromParent();
+                DoRemoveSlotFromPanel(ItemSlot);
             }
         }
 
