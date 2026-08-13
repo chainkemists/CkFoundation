@@ -143,9 +143,14 @@ namespace ck::jolt::bake::mesh_shape_utils
         const auto AssetPath = Get_CookedMeshShapeAssetPath(
             UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath(), MeshPackagePath);
 
+        // LOAD_NoWarn | LOAD_Quiet: a missing cooked asset is an expected miss (fallback builds
+        // from the BodySetup), but the engine's default load path emits LogUObjectGlobals
+        // "Failed to find object" + LogStreaming "SkipPackage" warnings that automation test
+        // runs capture as failures. Loudness for a miss that SHOULD have been baked stays with
+        // the CK_ENSURE below.
         const auto* ShapeAsset = AssetPath.IsEmpty()
             ? nullptr
-            : LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath);
+            : LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
 
         if (ck::Is_NOT_Valid(ShapeAsset, ck::IsValid_Policy_NullptrOnly{}))
         {
