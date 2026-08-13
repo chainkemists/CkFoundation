@@ -72,14 +72,6 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DynamicDelegate, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
-    TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
-    ~TFragment_Signal_Delegate()
-    {
-        if (_Connection)
-        { _Connection.release(); }
-    }
-
 #if STATS
     // Build a "ClassName::FunctionName" label for a bound dynamic delegate, for the per-listener stat.
     template <typename T_DynamicDelegate>
