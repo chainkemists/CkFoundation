@@ -42,6 +42,76 @@ namespace ck_nav_processor
 
     static TArray<FCk_Nav_DeferredRequest> GDeferredNavRequests;
 
+    // Nonzero request revisions opt a caller into latest-request-wins semantics.
+    // This is load-bearing for policy changes while nav is still baking: the
+    // deferred queue drains from the back, so merely rejecting a stale result at
+    // the consumer can otherwise let an older request overwrite the newer shared
+    // result slot in the same pump.
+    static auto
+        IsNewerRevision(
+            int32 InCandidate,
+            int32 InExisting)
+        -> bool
+    {
+        if (InCandidate == InExisting)
+        { return false; }
+
+        // Revisions cycle through [1, MAX_int32]. Treat the shorter forward
+        // distance around that ring as newer. There can never be remotely half
+        // the revision space worth of live requests for one entity, so the
+        // opposite half is unambiguously an older generation.
+        constexpr auto RevisionRange = static_cast<int64>(MAX_int32);
+        auto ForwardDistance = static_cast<int64>(InCandidate) - InExisting;
+        if (ForwardDistance <= 0)
+        { ForwardDistance += RevisionRange; }
+        return ForwardDistance < (RevisionRange / 2);
+    }
+
+    static auto
+        AddDeferredLatest(
+            const FCk_Handle& InHandle,
+            const FCk_Request_Nav_FindPath& InRequest,
+            double InDeferredAt)
+        -> void
+    {
+        const auto Revision = InRequest.Get_RequestRevision();
+        if (Revision != 0)
+        {
+            for (auto Index = GDeferredNavRequests.Num() - 1; Index >= 0; --Index)
+            {
+                auto& Existing = GDeferredNavRequests[Index];
+                if (Existing.Handle != InHandle
+                    || Existing.Request.Get_RequestRevision() == 0)
+                { continue; }
+
+                if (NOT IsNewerRevision(Revision, Existing.Request.Get_RequestRevision()))
+                {
+                    InRequest.TryFireCompletion(
+                        InHandle, ECk_Request_OperationResult::Failed_Cancelled);
+                    return;
+                }
+
+                Existing.Request.TryFireCompletion(
+                    Existing.Handle, ECk_Request_OperationResult::Failed_Cancelled);
+                GDeferredNavRequests.RemoveAt(Index, EAllowShrinking::No);
+            }
+        }
+
+        GDeferredNavRequests.Add({InHandle, InRequest, InDeferredAt});
+    }
+
+    static auto
+        IsSupersededByAuthoritativeRevision(
+            int32 InRequestRevision,
+            int32 InAuthoritativeRevision)
+        -> bool
+    {
+        return InRequestRevision != 0
+            && InAuthoritativeRevision != 0
+            && InRequestRevision != InAuthoritativeRevision
+            && IsNewerRevision(InAuthoritativeRevision, InRequestRevision);
+    }
+
     static TAutoConsoleVariable<float> CVarMaxDeferralSeconds(
         TEXT("ck.Nav.MaxDeferralSeconds"),
         5.0f,
@@ -124,7 +194,18 @@ namespace ck
                     if (Handle.Has<FFragment_Nav_PathResult>())
                     {
                         auto& Result = Handle.Get<FFragment_Nav_PathResult>();
+                        if (ck_nav_processor::IsSupersededByAuthoritativeRevision(
+                            Entry.Request.Get_RequestRevision(),
+                            Result.Get_RequestRevision()))
+                        {
+                            Entry.Request.TryFireCompletion(
+                                Handle, ECk_Request_OperationResult::Failed_Cancelled);
+                            ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                            ++DrainActions;
+                            continue;
+                        }
                         Result._Status = ECk_Nav_PathStatus::Failed;
+                        Result._RequestRevision = Entry.Request.Get_RequestRevision();
                         Result._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavData;
                         UUtils_Signal_Nav_OnPathFailed::Broadcast(Handle, ck::MakePayload(Handle));
                         ck::nav::Warning(
@@ -163,9 +244,33 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Nav_HandleRequests);
 
+        auto LatestRequestRevision = int32{0};
+        for (const auto& Variant : InRequests.Get_Requests())
+        {
+            std::visit([&](const auto& InFindPath)
+            {
+                const auto Revision = InFindPath.Get_RequestRevision();
+                if (Revision != 0
+                    && (LatestRequestRevision == 0
+                    || ck_nav_processor::IsNewerRevision(Revision, LatestRequestRevision)))
+                { LatestRequestRevision = Revision; }
+            }, Variant);
+        }
+
+        if (ck_nav_processor::IsSupersededByAuthoritativeRevision(
+            LatestRequestRevision, InResult.Get_RequestRevision()))
+        {
+            InHandle.CopyAndRemove(InRequests, [&](const auto& InSnapshot)
+            {
+                request::FireCancelledForPending(InHandle, InSnapshot.Get_Requests());
+            });
+            return;
+        }
+
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
+            InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NotAuthority;
             ck::nav::Warning(TEXT("FindPath request on [{}] dropped: client lacks authority"), InHandle);
             // Early-outs skip the CopyAndRemove drain below, so clear the queue here instead.
@@ -177,6 +282,7 @@ namespace ck
         if (NOT IsValid(World))
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
+            InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
             InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
@@ -186,6 +292,7 @@ namespace ck
         if (NavSys == nullptr)
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
+            InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
             InHandle.Try_Remove<FFragment_Nav_Requests>();
             return;
@@ -197,6 +304,7 @@ namespace ck
         if (NOT ck::IsValid(TransformHandle))
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
+            InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::StartProjectFailed;
             ck::nav::Warning(TEXT("FindPath request on [{}] dropped: entity has no Transform feature"), InHandle);
             InHandle.Try_Remove<FFragment_Nav_Requests>();
@@ -222,7 +330,7 @@ namespace ck
                 {
                     std::visit([&](const auto& InFindPath)
                     {
-                        ck_nav_processor::GDeferredNavRequests.Add({InHandle, InFindPath, NowSec});
+                        ck_nav_processor::AddDeferredLatest(InHandle, InFindPath, NowSec);
                     }, Variant);
                 }
             });
@@ -240,6 +348,20 @@ namespace ck
                 {
                     auto Result = ECk_Request_OperationResult::Failed;
                     const auto Guard = MakeCompletionGuard(InFindPath, InHandle, Result);
+
+                    // A deferred request can be re-enqueued in the same pump
+                    // that a newer policy/goal request reaches this fragment.
+                    // Both would otherwise write the one shared PathResult;
+                    // whichever happened to run last could erase the current
+                    // result and leave its consumer Pending forever.
+                    const auto RequestRevision = InFindPath.Get_RequestRevision();
+                    if (RequestRevision != 0
+                        && LatestRequestRevision != 0
+                        && RequestRevision != LatestRequestRevision)
+                    {
+                        Result = ECk_Request_OperationResult::Failed_Cancelled;
+                        return;
+                    }
 
                     const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
 
@@ -260,6 +382,7 @@ namespace ck
                         /*InAgentRadiusForFirstSkip*/ 0.0f,
                         InResult,
                         FilterClass);
+                    InResult._RequestRevision = InFindPath.Get_RequestRevision();
 
                     const auto& Diagnostics = InResult.Get_Diagnostics();
                     const auto FilterName = FilterClass.Get() != nullptr

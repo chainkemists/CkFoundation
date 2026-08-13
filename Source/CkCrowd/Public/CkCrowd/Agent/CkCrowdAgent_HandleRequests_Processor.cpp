@@ -48,6 +48,18 @@ namespace ck
 
         InHandle.CopyAndRemove(InRequests, [&](const auto& InSnapshot)
         {
+            // Policy is setup, not a sequential movement command: choose the final value before
+            // dispatching this batch so SetPolicy + MoveTo is order-independent within one frame.
+            const auto* LastPolicyRequest = static_cast<const FCk_Request_CrowdAgent_SetNavQueryFilter*>(nullptr);
+            for (const auto& Request : InSnapshot._Requests)
+            {
+                if (const auto* Policy = std::get_if<FCk_Request_CrowdAgent_SetNavQueryFilter>(&Request))
+                { LastPolicyRequest = Policy; }
+            }
+            if (LastPolicyRequest != nullptr)
+            { InParams._NavQueryFilter = LastPolicyRequest->Get_NavQueryFilter(); }
+            const auto NavigationRevisionBeforeCommands = InPathFollow.Get_ActiveNavigationRequestRevision();
+
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
@@ -60,6 +72,16 @@ namespace ck
 
                 Result = ECk_Request_OperationResult::Succeeded;
             }), policy::DontResetContainer{});
+
+            // A MoveTo/FollowTarget that actually dispatched a route advanced this revision using
+            // the resolved policy. If it was a same-goal no-op (or no movement command appeared),
+            // force-replan the current episode without changing its goal/correlation/follow ownership.
+            if (LastPolicyRequest != nullptr
+                && LastPolicyRequest->Get_ForceReplan() == ECk_EnableDisable::Enable
+                && InPathFollow.Get_ActiveNavigationRequestRevision() == NavigationRevisionBeforeCommands)
+            {
+                DoForceReplan(InHandle, InParams, InPathFollow, InDesired);
+            }
         });
     }
 
@@ -124,44 +146,7 @@ namespace ck
         // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal.
         DoClearBlockedState(InHandle);
 
-        // A volumetric agent plans through the free space its bound volume baked, and its refined
-        // waypoints install through the same FFragment_Nav_PathResult seam the other two providers use.
-        if (UCk_Utils_VoxelNavPath_UE::Has(InHandle) &&
-            ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume()))
-        {
-            // Park the slot at Pending and forget the installed path: no nav request exists to do the
-            // former, and the path-result fragment persists across MoveTos.
-            FCk_Nav_Algorithm::MarkPathPending(InHandle);
-            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
-
-            auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(InHandle);
-            const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
-                UCk_Utils_Transform_UE::CastChecked(InHandle));
-
-            UCk_Utils_VoxelNavPath_UE::Request_FindPath(
-                Path,
-                FCk_Request_VoxelNavPath_FindPath{
-                    InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume(), From, Goal},
-                {});
-        }
-        // Followers route through the path network, which installs its compiled waypoints through
-        // the same FFragment_Nav_PathResult seam — everything downstream stays provider-agnostic.
-        else if (UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
-        {
-            // Park the slot at Pending and forget the installed corridor: no nav request exists to
-            // do the former, and the corridor fragment persists across MoveTos.
-            FCk_Nav_Algorithm::MarkPathPending(InHandle);
-            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
-
-            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
-            auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
-            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
-            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
-        }
-        else
-        {
-            Request_NavigationPath(InHandle, InParams, Goal);
-        }
+        RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
             InHandle, Goal, ArrivalRadius);
@@ -174,16 +159,19 @@ namespace ck
         Request_NavigationPath(
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FVector& InGoal)
         -> void
     {
         // Park the slot at Pending BEFORE enqueueing: OnPathResolved runs after this processor
         // in the same frame and would otherwise consume a previous move's Ready result as if
         // it answered THIS MoveTo, walking the agent down the stale corridor.
-        FCk_Nav_Algorithm::MarkPathPending(InHandle);
+        FCk_Nav_Algorithm::MarkPathPending(
+            InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
         auto Request = FCk_Request_Nav_FindPath{InGoal};
         Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+        Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
         // A MoveTo issued while the agent stands inside painted stationary markup would plan
         // "through" the band — see Get_EscapedQueryStart.
@@ -204,6 +192,76 @@ namespace ck
         }
 
         UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        AdvanceNavigationRequestRevision(FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> int32
+    {
+        InPathFollow._ActiveNavigationRequestRevision =
+            InPathFollow._ActiveNavigationRequestRevision == MAX_int32
+                ? 1
+                : InPathFollow._ActiveNavigationRequestRevision + 1;
+        return InPathFollow._ActiveNavigationRequestRevision;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        RequestPathForActiveGoal(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> void
+    {
+        const auto Goal = InPathFollow.Get_ActiveGoal();
+
+        // Advance even for a non-CkNavigation provider: an already queued CkNavigation result must
+        // not replace this newer route after the provider decision changes.
+        AdvanceNavigationRequestRevision(InPathFollow);
+
+        const auto HasValidVoxelVolume = UCk_Utils_VoxelNavPath_UE::Has(InHandle)
+            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume());
+        const auto IsActiveVoxelProvider = HasValidVoxelVolume
+            && (InHandle.Has<FFragment_CrowdAgent_InstalledVoxelPath>()
+                || (InHandle.Has<FTag_CrowdAgent_PathPending>()
+                    && NOT InHandle.Has<FTag_CrowdAgent_VoxelPathFallbackPending>()));
+        if (IsActiveVoxelProvider)
+        {
+            FCk_Nav_Algorithm::MarkPathPending(
+                InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
+
+            auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(InHandle);
+            const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+                UCk_Utils_Transform_UE::CastChecked(InHandle));
+            UCk_Utils_VoxelNavPath_UE::Request_FindPath(
+                Path,
+                FCk_Request_VoxelNavPath_FindPath{
+                    InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume(), From, Goal},
+                {});
+            return;
+        }
+
+        if (UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
+        {
+            FCk_Nav_Algorithm::MarkPathPending(
+                InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+
+            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
+            auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
+            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
+            return;
+        }
+
+        Request_NavigationPath(InHandle, InParams, InPathFollow, Goal);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -290,6 +348,70 @@ namespace ck
         BlockDetect._SampleAccumulatorSec = 0.0f;
         BlockDetect._RecheckAccumulatorSec = 0.0f;
         BlockDetect._BlockedSignalSent = false;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoForceReplan(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
+        -> void
+    {
+        const auto HasActiveGoal = InHandle.Has<FTag_CrowdAgent_Walking>()
+            || InHandle.Has<FTag_CrowdAgent_PathPending>()
+            || InHandle.Has<FTag_CrowdAgent_GoalBlocked>();
+        if (NOT HasActiveGoal)
+        { return; }
+
+        // Query filters are a Recast policy. A Voxel route cannot apply one,
+        // and replacing its in-flight job without a provider-owned revision
+        // would create a false stale-result guarantee. Persist the policy for
+        // future Recast fallback but leave the current volumetric route intact.
+        if (UCk_Utils_VoxelNavPath_UE::Has(InHandle)
+            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume()))
+        {
+            ck::crowd::Verbose(TEXT("CrowdAgent [{}] stored nav-query policy without replanning its Voxel route"),
+                InHandle);
+            return;
+        }
+
+        InHandle.Try_Remove<FTag_CrowdAgent_Idle>();
+        InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
+        InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+        InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+        InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
+
+        InPathFollow._WaypointIndex = 0;
+        InPathFollow._ActivePathEndsShortOfGoal = false;
+        DoClearBlockedState(InHandle);
+
+        // Preserve _ActiveGoal, _ActiveArrivalRadius, move episode/correlation, FollowTarget and
+        // desired velocity. This is a route replacement, not a terminal movement transition.
+        RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] nav-query policy forced replan to {}"),
+            InHandle, InPathFollow.Get_ActiveGoal());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest)
+        -> void
+    {
+        // The batch prepass wrote the last policy before any movement command was dispatched.
+        // Keep an overload so this request participates in ordinary completion/cancellation flow.
     }
 
     // --------------------------------------------------------------------------------------------------------------------

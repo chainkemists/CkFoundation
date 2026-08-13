@@ -1058,6 +1058,12 @@ namespace ck
         if (InRequest.Get_TuningRevision() != InParams.Get_TuningRevision())
         { return; }
 
+        // Request_FindRoute records the most recent caller-owned revision before this
+        // deferred work can run. An older same-goal request must neither replace that
+        // pending/result state nor emit an obsolete route signal.
+        if (InRequest.Get_RequestRevision() != InCorridor._Result.Get_RequestRevision())
+        { return; }
+
         const auto GoalLocation = InRequest.Get_GoalLocation();
         const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
             InRequest.Get_NavQueryFilter());
@@ -1070,6 +1076,7 @@ namespace ck
             InCorridor._Result._FailReason = InReason;
             InCorridor._Result._GoalLocation = GoalLocation;
             InCorridor._Result._TuningRevision = InRequest.Get_TuningRevision();
+            InCorridor._Result._RequestRevision = InRequest.Get_RequestRevision();
 
             auto Follower = InHandle;
             {
@@ -1553,6 +1560,7 @@ namespace ck
         Result._TotalCost = AcceptedCost;
         Result._GoalLocation = GoalLocation;
         Result._TuningRevision = InRequest.Get_TuningRevision();
+        Result._RequestRevision = InRequest.Get_RequestRevision();
         auto RibbonRuns = TArray<TArray<FRouteLegSpan>>{};
         auto CompiledSegmentRibbonRunIndices = TArray<int32>{};
         auto CompiledSegmentNeedsValidation = TArray<bool>{};
@@ -2060,6 +2068,7 @@ namespace ck
         Replan.Set_Network(InCorridor._Network);
         Replan.Set_NavQueryFilter(InCorridor._NavQueryFilter);
         Replan.Set_TuningRevision(InParams.Get_TuningRevision());
+        Replan.Set_RequestRevision(InCorridor._Result.Get_RequestRevision());
         auto NonConstHandle = InHandle;
         NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Replan);
         InCorridor._Result._Status = ECk_PathNetwork_RouteStatus::Pending;
@@ -2096,6 +2105,7 @@ namespace ck
         Request.Set_Network(InCorridor.Get_Network());
         Request.Set_NavQueryFilter(InCorridor.Get_NavQueryFilter());
         Request.Set_TuningRevision(InParams.Get_TuningRevision());
+        Request.Set_RequestRevision(InCorridor.Get_Result().Get_RequestRevision());
 
         auto NonConstHandle = InHandle;
         NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Request);

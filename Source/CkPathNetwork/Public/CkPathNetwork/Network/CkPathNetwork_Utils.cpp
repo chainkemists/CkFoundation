@@ -667,6 +667,7 @@ auto
     Result._Status = ECk_PathNetwork_RouteStatus::Pending;
     Result._GoalLocation = Request.Get_GoalLocation();
     Result._TuningRevision = Params.Get_TuningRevision();
+    Result._RequestRevision = Request.Get_RequestRevision();
 
     return InFollower;
 }

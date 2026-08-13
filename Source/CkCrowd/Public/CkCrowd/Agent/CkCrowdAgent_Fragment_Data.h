@@ -317,6 +317,11 @@ private:
     UPROPERTY()
     bool _ActivePathEndsShortOfGoal = false;
 
+    // Incremented for every CkNavigation request issued for this movement episode. The result
+    // carries the same opaque value so OnPathResolved can ignore an older deferred query.
+    UPROPERTY()
+    int32 _ActiveNavigationRequestRevision = 0;
+
     // Stationary-markup confirmation serial current when this path was installed. PathRefresh
     // compares it against each confirmed disc's serial: only a disc that became visible to Recast
     // AFTER the path can trigger a re-path, so a path that already chose to pay a disc's cost is
@@ -332,6 +337,7 @@ public:
     CK_PROPERTY_GET(_ActiveMoveCorrelationId);
     CK_PROPERTY_GET(_CurrentSegmentStart);
     CK_PROPERTY_GET(_ActivePathEndsShortOfGoal);
+    CK_PROPERTY_GET(_ActiveNavigationRequestRevision);
     CK_PROPERTY_GET(_PathSerial);
 };
 
@@ -518,6 +524,35 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_SetMaxSpeed, _MaxSpeed);
+};
+
+// Public request — replace this agent's navigation-query policy. Policy requests are resolved as
+// batch setup before movement requests, so the last policy in a frame applies to every MoveTo or
+// FollowTarget accepted in that frame. When enabled, _ForceReplan rebuilds an active Recast or
+// PathNetwork route without changing its movement episode, goal, arrival radius, correlation, or
+// follow ownership. Voxel paths do not consume Recast query filters and remain undisturbed.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_SetNavQueryFilter : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_SetNavQueryFilter);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_SetNavQueryFilter);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FGameplayTag _NavQueryFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_EnableDisable _ForceReplan = ECk_EnableDisable::Enable;
+
+public:
+    CK_PROPERTY_GET(_NavQueryFilter);
+    CK_PROPERTY(_ForceReplan);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_SetNavQueryFilter, _NavQueryFilter);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
