@@ -454,13 +454,21 @@ button's association is the key itself and the caller's intent already holds. An
 before enqueue with `Failed_NotEnqueued`. `Add` validates every declared key and their mutual uniqueness
 and rejects the WHOLE composition on the first bad one, leaving nothing composed.
 
-**The re-derive trigger is `UCk_InputSource_Subsystem`, not the keybinding half.** It binds
-`UEnhancedInputUserSettings::OnSettingsChanged` with the same late-binding discipline it already uses for
-source creation, and on each broadcast enqueues a `Request_Rederive` on its own source — guarded on the
-map being present, since the feature is opt-in. The subsystem already owns the handle the request has to
-land on, and putting the seam here keeps the new dependency (raw layer READS user settings) on the raw
-side: no keybinding path learns that entities exist. A rebind made from a settings widget therefore
-reaches the map on the next frame's collect pass, since gameplay runs after routing.
+**The re-derive triggers are `UCk_InputSource_Subsystem`, not the keybinding half.** It binds
+`UEnhancedInputUserSettings::OnSettingsChanged` AND `OnMappingContextRegistered` with the same
+late-binding discipline it already uses for source creation, and on each broadcast enqueues a
+`Request_Rederive` on its own source — guarded on the map being present, since the feature is opt-in.
+Both delegates are load-bearing: a REBIND broadcasts only `OnSettingsChanged`, while REGISTERING an
+IMC (`RegisterInputMappingContext` — the path every runtime-built, `bNotifyUserSettings` context
+takes) broadcasts only `OnMappingContextRegistered`; before the second bind existed, mapping names
+first registered after the map's initial derive never minted, permanently starving any consumer
+gating on them (the second-engaged-station bug, 2026-08-12). The subsystem already owns the handle
+the request has to land on, and putting the seam here keeps the dependency (raw layer READS user
+settings) on the raw side: no keybinding path learns that entities exist. A rebind or registration
+therefore reaches the map on the next frame's collect pass, since gameplay runs after routing.
+Related caveat: `UnregisterInputMappingContext` never removes key-profile rows, so a Mapped button
+keeps its keys after its IMC is gone — `Get_IsMappedButtonMinted`-style gates can be satisfied by a
+stale key.
 
 ---
 
