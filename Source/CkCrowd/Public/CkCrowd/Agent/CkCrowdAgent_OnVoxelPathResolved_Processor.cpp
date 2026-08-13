@@ -124,7 +124,8 @@ namespace ck
                 FCk_Nav_Algorithm::InstallExternalPath(
                     NonConstHandle,
                     MoveTemp(WaypointsToInstall),
-                    InPathFollow.Get_ActiveGoal());
+                    InPathFollow.Get_ActiveGoal(),
+                    InPathFollow.Get_ActiveNavigationRequestRevision());
                 const auto& InstalledWaypoints =
                     NonConstHandle.Get<FFragment_Nav_PathResult>().Get_Waypoints();
 
@@ -200,9 +201,11 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 NonConstHandle.AddOrGet<FTag_CrowdAgent_VoxelPathFallbackPending>();
+                FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,
                     InParams,
+                    InPathFollow,
                     InPathFollow.Get_ActiveGoal());
 
                 ck::crowd::Display(

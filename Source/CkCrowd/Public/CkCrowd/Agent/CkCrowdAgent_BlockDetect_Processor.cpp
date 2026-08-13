@@ -288,24 +288,29 @@ namespace ck
         // external MoveTo/Stop starts a new one.
 
         const auto Goal = InPathFollow.Get_ActiveGoal();
+        FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
 
         if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
         {
-            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+            FCk_Nav_Algorithm::MarkPathPending(
+                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
             NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {
             // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor.
-            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+            FCk_Nav_Algorithm::MarkPathPending(
+                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
             // A held agent may have been shoved inside painted stationary markup — resuming from
             // inside the band would pick "through". See Get_EscapedQueryStart.

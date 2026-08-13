@@ -137,11 +137,17 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     FCk_Nav_PathDiagnostics _Diagnostics;
 
+    // Opaque caller-owned identity copied from the request. Navigation does not interpret it;
+    // consumers use it to reject a result superseded while this request was deferred.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    int32 _RequestRevision = 0;
+
 public:
     CK_PROPERTY_GET(_Waypoints);
     CK_PROPERTY_GET(_DestinationLocation);
     CK_PROPERTY_GET(_Status);
     CK_PROPERTY_GET(_Diagnostics);
+    CK_PROPERTY_GET(_RequestRevision);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -173,12 +179,18 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FVector _StartOverrideLocation = FVector::ZeroVector;
 
+    // Opaque caller-owned identity returned on FCk_Nav_PathResult. Zero preserves callers that
+    // do not need stale-result protection.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _RequestRevision = 0;
+
 public:
     CK_PROPERTY_GET(_TargetLocation);
     CK_PROPERTY(_AllowPartialPath);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_StartOverride);
     CK_PROPERTY(_StartOverrideLocation);
+    CK_PROPERTY(_RequestRevision);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Nav_FindPath, _TargetLocation);

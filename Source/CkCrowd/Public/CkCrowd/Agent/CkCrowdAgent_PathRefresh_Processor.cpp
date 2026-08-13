@@ -1,5 +1,7 @@
 #include "CkCrowdAgent_PathRefresh_Processor.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -525,6 +527,7 @@ namespace ck
         NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         InPathFollow._WaypointIndex = 0;
+        FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
 
         // A feet-sample ring straddling the re-path would smear two corridors into one centroid test.
         InBlockDetect._FeetSamples.Reset();
@@ -533,22 +536,26 @@ namespace ck
 
         if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
         {
-            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+            FCk_Nav_Algorithm::MarkPathPending(
+                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
             NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {
             // Park the slot at Pending so OnPathResolved can't consume the stale Ready result —
             // which is the exact path that crosses the fresh markup, defeating this re-path.
-            FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
+            FCk_Nav_Algorithm::MarkPathPending(
+                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
             const auto Escaped = Get_EscapedQueryStart(NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());
             if (Escaped.IsSet())

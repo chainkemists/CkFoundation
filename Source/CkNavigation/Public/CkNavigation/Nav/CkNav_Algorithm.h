@@ -47,12 +47,14 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
     static auto InstallExternalPath(
         FCk_Handle&     InHandle,
         TArray<FVector> InWaypoints,
-        const FVector&  InDestination) -> void;
+        const FVector&  InDestination,
+        int32           InRequestRevision = 0) -> void;
 
     // Parks the result at Pending while an external provider computes, so pollers don't consume
     // the PREVIOUS Ready result as the answer to the new request. Creates the fragment if absent.
     static auto MarkPathPending(
-        FCk_Handle& InHandle) -> void;
+        FCk_Handle& InHandle,
+        int32       InRequestRevision = 0) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -42,6 +42,18 @@ namespace ck
             InPathResult.Get_Status() == ECk_Nav_PathStatus::Ready
             || InPathResult.Get_Status() == ECk_Nav_PathStatus::Partial
             || InPathResult.Get_Status() == ECk_Nav_PathStatus::Failed;
+        const auto IsStaleNavigationResult = InPathResult.Get_RequestRevision() != 0
+            && InPathResult.Get_RequestRevision() != InPathFollow.Get_ActiveNavigationRequestRevision();
+        if (IsTerminalPathResult && IsStaleNavigationResult)
+        {
+            // CkNavigation may complete a deferred query after a newer policy/path dispatch. Its
+            // result must be observationally inert: do not alter route state or emit terminal signals.
+            ck::crowd::Verbose(TEXT("CrowdAgent [{}] ignored stale CkNavigation result rev {} (active {})"),
+                InHandle,
+                InPathResult.Get_RequestRevision(),
+                InPathFollow.Get_ActiveNavigationRequestRevision());
+            return;
+        }
         if (IsPathNetworkFallback && IsTerminalPathResult)
         {
             const auto& Diagnostics = InPathResult.Get_Diagnostics();

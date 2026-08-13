@@ -310,6 +310,59 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Request_SetNavQueryFilter(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetNavQueryFilter"), InAgent)
+    {}
+    if (NOT AgentIsValid)
+    {
+        InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAgent;
+    }
+
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAgent);
+    CK_ENSURE_IF_NOT(HasAuthority,
+        TEXT("Request_SetNavQueryFilter on CrowdAgent [{}] dropped — caller does not have authority. "
+             "Pathfinding is server-only."), InAgent)
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAgent;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(InRequest);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_NavQueryFilter(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> FGameplayTag
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_NavQueryFilter"), InAgent)
+    { return {}; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_Params>().Get_NavQueryFilter();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Get_MaxSpeed(
         const FCk_Handle_CrowdAgent& InAgent)
     -> float

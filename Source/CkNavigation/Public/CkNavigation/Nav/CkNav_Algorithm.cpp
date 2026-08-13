@@ -248,7 +248,8 @@ auto
     InstallExternalPath(
         FCk_Handle&     InHandle,
         TArray<FVector> InWaypoints,
-        const FVector&  InDestination)
+        const FVector&  InDestination,
+        int32           InRequestRevision)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
@@ -265,6 +266,10 @@ auto
     Result._Waypoints           = MoveTemp(InWaypoints);
     Result._DestinationLocation = InDestination;
     Result._Status              = ECk_Nav_PathStatus::Ready;
+    // External providers share this result slot with CkNavigation. Retaining
+    // the caller's revision makes this install the writer authority: an older
+    // deferred Recast request cannot subsequently replace this route.
+    Result._RequestRevision     = InRequestRevision;
 
     // No navmesh query ran, so only the fields an external provider can honestly report are set.
     Result._Diagnostics                          = FCk_Nav_PathDiagnostics{};
@@ -283,14 +288,17 @@ auto
 auto
     FCk_Nav_Algorithm::
     MarkPathPending(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        int32       InRequestRevision)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
         TEXT("MarkPathPending called with an invalid Handle"))
     { return; }
 
-    InHandle.AddOrGet<ck::FFragment_Nav_PathResult>()._Status = ECk_Nav_PathStatus::Pending;
+    auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
+    Result._Status = ECk_Nav_PathStatus::Pending;
+    Result._RequestRevision = InRequestRevision;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
