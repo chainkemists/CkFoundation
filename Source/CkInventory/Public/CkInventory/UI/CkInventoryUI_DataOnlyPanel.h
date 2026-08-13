@@ -48,6 +48,11 @@ private:
     auto DoRefresh_Bounded(const TArray<FCk_Handle_Item>& InItems) -> void;
     auto DoRefresh_Unbounded(const TArray<FCk_Handle_Item>& InItems) -> void;
 
+    /** Detaches a slot from _ItemPanel. Removes the widget actually parented into
+     *  the panel, which is the SizeBox WRAPPER when _OverrideSlotSize is set --
+     *  removing the slot alone leaves an empty wrapper behind as a dead cell. */
+    auto DoRemoveSlotFromPanel(UCk_InventoryUI_ItemSlotEntry* InItemSlot) -> void;
+
 protected:
     /** Panel widget for the item layout.
      *  Must be named "_ItemPanel" in Blueprint.
