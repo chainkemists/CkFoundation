@@ -66,6 +66,19 @@ Section numbers cited elsewhere in this skill point into these files.
 - Reading "no ensure dialog" as "no ensure fired" in `-unattended`, Test, or Shipping (§6.5).
 - Patching a packaged GC crash at the crash site instead of answering "who roots this object?" (§5.4).
 - Re-running a flaky build until green instead of sweeping for the concurrent process holding it hostage (§7.1).
+- **Piping a build or test command through `tail`/`head`/`grep` and then trusting the exit code** —
+  the shell reports the LAST stage's status, so `Build.bat ... | tail -60` prints exit 0 on a failed
+  build and the harness's completion ping agrees. Redirect to a log, echo `$?` unpiped, and read the
+  run's own verdict line (`Result: Succeeded`, `**** TEST COMPLETE. EXIT CODE: 0 ****`). Never let a
+  wrapper's success stand in for the build's.
+- **Reading a wall of C++ errors as a wall of problems.** One bad deduction cascades: `auto* X =
+  SomeArray[i];` over a `TObjectPtr` array deduces NOTHING (`auto*` does not apply user-defined
+  conversions), so `X` becomes an error type and every later use reports its own unrelated-looking
+  failure — 12 errors across 4 call sites from one line. Fix the FIRST error and rebuild before
+  reading the rest. Spell the pointer type out when the source is a `TObjectPtr`/handle wrapper.
+- **Trusting a verification script you just wrote.** A parameter-order checker reported 44 mismatches
+  that were all its own comment-splitting bug. When a checker says everything is wrong, suspect the
+  checker; confirm it reports a known-good case as good before acting on its failures.
 
 ## When NOT to use this skill
 

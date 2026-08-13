@@ -118,6 +118,11 @@ static-class spelling fails: that's the mixin split working as designed — use 
 - Declaring "verified in AS" from a stale log — the log rotates per boot; check its mtime against
   your edit.
 - Naming a new BFL with a strip-list suffix (catalog 4) instead of `_UE`.
+- Assuming a C++ member is reachable from AS because it exists in C++. `default
+  PrimaryActorTick.bCanEverTick = true;` does not compile — `bCanEverTick` is not bound on
+  `FActorTickFunction`. Enable tick the way every CkTests gym does: `SetActorTickEnabled(true)` in
+  `BeginPlay` (`CkCameraGym_Pawn`, `CkCompassGym`, `CkMinimapGym`). Check an existing AS consumer of
+  the same engine type before writing the C++ shape from memory.
 - Hand-editing `DynamicHandleTypes.json` in a UTF-8 editor — it is UTF-16 LE (catalog 1).
 - Re-deriving self-heal/modal-tick/ownership behavior from scratch — the module Claude.md is the
   canonical mechanism doc; this skill only carries the operator's view.

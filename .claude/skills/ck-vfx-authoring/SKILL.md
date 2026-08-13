@@ -87,6 +87,45 @@ testing/perf discipline for VFX work.
 - **`_UsedWithNiagara*` usage flags are independent** — a look drawn by two renderer
   kinds needs the master compiled for both, or one kind renders default-glow.
 
+## Porting a MATERIAL from a graph export (CkUsf looks)
+
+The Niagara method above assumes the corpus carries the mechanism. A material's does too — since
+asset-exporter `version::Material` 3 — but the failure modes are different, and each rule below cost
+a wrong port on the AdvancedScan/ScanChipGrid job (2026-08).
+
+- **`ConstA`/`ConstB` are DEAD when the matching pin is wired.** A `Const*` in a node's props is the
+  default for an EMPTY pin, never an operand alongside a connected one. Reading them as live
+  multipliers put a phantom `×10` on a layer, a `+0.9` inside a threshold, and phantom factors on two
+  subdivision exponents — three separate wrong values from one misread, and every one of them
+  compiles and renders something plausible.
+- **Audit every non-zero output index before believing the port.** Multi-output nodes (material
+  functions, `CurveAtlasRowParameter`, `VectorParameter`) accept the wrong pin silently: pin 0 always
+  compiles and usually looks close. Script the sweep — walk `graph.nodes[].inputs[]` and print every
+  entry whose `output != 0` with the source's `outputs[]` name. The one that survived eyeballing: a
+  composite read the expansion ring's `Inner` (a FILLED disc that grows) where the port used `Result`
+  (the thin band). Same colours, same timing, same geometry — wrong coverage, and it reads as
+  "close but not quite".
+- **A master's export does NOT contain its material functions.** `UMaterialFunction` is a separate
+  asset with its own sidecar (`version::MaterialFunction`). Export the callees too. Guessed bodies
+  were wrong in ways that change the whole read: the ring's band width is `Thickness ×
+  ThicknessMultiplier` in WORLD units (guessed: a normalized fraction), and the radial distortion
+  evaluates its ring on a CELL-QUANTIZED UV — that quantization is the entire reason the warp reads
+  as blocks rather than a smooth pinch.
+- **Never infer a mechanism from the rendered effect when the graph is available.** Reference frames
+  suggested screen-space cells; the graph had world-space cells whose size halves in powers of two as
+  the sweep advances (the author's own node comment said so). The same habit invented a `sin()`
+  oscillator for a parameter named `Speed` that was actually a `CurveAtlasRowParameter`'s ROW NAME.
+  Screenshots are for verdicts, never for mechanism.
+- **Three `CurveAtlasRowParameter` nodes on one row at one time are three envelopes in one sample.**
+  They differ only by output pin = channel; sample the atlas once and take `.rgb`.
+- **A CkUsf Vector param arrives as a float3** (the generator `.rgb`-swizzles), so a source float4
+  "Colour And Amount" must split into a Vector + a Scalar. Give both halves the same `_Group` or the
+  pairs scatter across the panel.
+- **Static switches are permutations — spell them as `_Defines`, and actually wire them.** Declaring
+  a define the `.ush` never reads ships a lie. When wrapping layers in `#if`, hoist anything a later
+  layer consumes: a mechanical wrap left one layer's lattice declared inside another's switch, so
+  compiling the first out broke the second.
+
 ## Testing discipline for VFX
 
 - Gate shape: `--test --parallel 1 --discover-fresh --no-nullrhi --no-live`, pattern
