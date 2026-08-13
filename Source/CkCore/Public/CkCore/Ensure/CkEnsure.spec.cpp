@@ -5,8 +5,10 @@
 
 #include <Async/Async.h>
 #include <Async/ParallelFor.h>
+#include <CoreGlobals.h>
 #include <Misc/AutomationTest.h>
 #include <Misc/ScopeExit.h>
+#include <Templates/UnrealTemplate.h>
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -182,11 +184,11 @@ bool FCkTest_Ensure_WorkerFirstReport::RunTest(const FString&)
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage,
-    "Ck.CkCore.Ensure.GameThreadRepeatSuppressesEditorMessage",
+    FCkTest_Ensure_GameThreadRepeatSuppressionInteractiveOnly,
+    "Ck.CkCore.Ensure.GameThreadRepeatSuppressionInteractiveOnly",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage::RunTest(const FString&)
+bool FCkTest_Ensure_GameThreadRepeatSuppressionInteractiveOnly::RunTest(const FString&)
 {
     const auto PreviousDisplayPolicy = UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy();
     const auto PreviousDetailsPolicy = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy();
@@ -210,8 +212,6 @@ bool FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage::RunTest(const FStri
     auto BreakInCode = false;
     auto BreakInScript = false;
 
-    AddExpectedError(TEXT("Game-thread ensure integration test"), EAutomationExpectedErrorFlags::Contains, 2);
-
     const auto Invoke = [&](const FString& InExpression)
     {
         ck::ensure::Ensure_Impl_ForTesting(
@@ -230,21 +230,48 @@ bool FCkTest_Ensure_GameThreadRepeatSuppressesEditorMessage::RunTest(const FStri
             });
     };
 
-    constexpr auto RepeatCount = 1000;
-    for (auto Index = 0; Index < RepeatCount; ++Index)
+    constexpr auto InteractiveRepeatCount = 1000;
+    constexpr auto AutomationRepeatCount = 3;
+
+    AddExpectedError(
+        TEXT("Game-thread ensure integration test"),
+        EAutomationExpectedErrorFlags::Contains,
+        1 + AutomationRepeatCount + 1);
+
+    {
+        // The automation output device stays registered while the flag is cleared, so the first
+        // occurrence's error line is still captured and matched by the expectation above.
+        const auto InteractiveScope = TGuardValue{GIsAutomationTesting, false};
+        for (auto Index = 0; Index < InteractiveRepeatCount; ++Index)
+        {
+            Invoke(TEXT("RepeatedGameThreadExpression"));
+        }
+    }
+
+    TestEqual(TEXT("One repeated signature pushes one editor message outside automation"), EditorMessageCount, 1);
+
+    // Under automation every occurrence reports: tests assert exact per-occurrence counts, and the
+    // process-global tracker would otherwise swallow a later test's ensure at an already-fired site.
+    for (auto Index = 0; Index < AutomationRepeatCount; ++Index)
     {
         Invoke(TEXT("RepeatedGameThreadExpression"));
     }
 
-    TestEqual(TEXT("One repeated signature pushes one editor message"), EditorMessageCount, 1);
+    TestEqual(
+        TEXT("Under automation every repeated hit pushes its own editor message"),
+        EditorMessageCount,
+        1 + AutomationRepeatCount);
 
     Invoke(TEXT("DistinctGameThreadExpression"));
 
-    TestEqual(TEXT("A distinct expression pushes its own editor message"), EditorMessageCount, 2);
+    TestEqual(
+        TEXT("A distinct expression pushes its own editor message"),
+        EditorMessageCount,
+        1 + AutomationRepeatCount + 1);
     TestEqual(
         TEXT("Every repeated and distinct hit remains aggregated"),
         ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount(),
-        CountBefore + RepeatCount + 1);
+        CountBefore + InteractiveRepeatCount + AutomationRepeatCount + 1);
     TestEqual(
         TEXT("The two game-thread signatures remain distinct"),
         ck::ensure::Get_EnsureOccurrenceTracker().GetUniqueCount(),
