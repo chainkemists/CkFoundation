@@ -209,7 +209,11 @@ namespace ck::ensure
                 IsEnsureFromScript ? Request_GetCurrentScriptSiteIdentity() : FString{},
             });
 
-        if (NOT Record.IsFirstOccurrence)
+        // Automation asserts on per-occurrence log lines (AddExpectedError exact counts), and the
+        // tracker is process-global — a suppressed repeat would also swallow a LATER test's ensure
+        // at a site some earlier test already fired, turning a red run green. Repeats are therefore
+        // only suppressed outside automation.
+        if (NOT Record.IsFirstOccurrence && NOT GIsAutomationTesting)
         { return; }
 
         if (NOT IsInGameThread())
