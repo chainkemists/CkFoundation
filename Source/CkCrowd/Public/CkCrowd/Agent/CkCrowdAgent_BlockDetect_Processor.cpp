@@ -304,6 +304,7 @@ namespace ck
         }
         else
         {
+            InPathFollow._ProtectedLeadingWaypointCount = 0;
             // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor.
             FCk_Nav_Algorithm::MarkPathPending(
                 NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());

@@ -310,6 +310,12 @@ private:
     UPROPERTY()
     FVector _CurrentSegmentStart = FVector::ZeroVector;
 
+    // Leading waypoints that path-install normalization must not retire before Steering has
+    // physically followed them. PathNetwork uses one protected point when an agent starts inside
+    // stationary markup: that point is the outward escape leg, not a stale async-path corner.
+    UPROPERTY()
+    int32 _ProtectedLeadingWaypointCount = 0;
+
     // A Partial path ends at the closest REACHABLE point, not the goal. Set at install when
     // that end falls outside the arrival radius of the (projected) goal: the final-stop latch
     // must then report OnGoalFailed, not OnGoalReached — an agent marooned off its goal's nav
@@ -336,6 +342,7 @@ public:
     CK_PROPERTY_GET(_ActiveMoveEpisode);
     CK_PROPERTY_GET(_ActiveMoveCorrelationId);
     CK_PROPERTY_GET(_CurrentSegmentStart);
+    CK_PROPERTY_GET(_ProtectedLeadingWaypointCount);
     CK_PROPERTY_GET(_ActivePathEndsShortOfGoal);
     CK_PROPERTY_GET(_ActiveNavigationRequestRevision);
     CK_PROPERTY_GET(_PathSerial);
