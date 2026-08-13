@@ -197,6 +197,38 @@ auto
 
 auto
     FCk_InputSlate_Preprocessor::
+    HandleMouseWheelOrGestureEvent(
+        FSlateApplication&,
+        const FPointerEvent& InWheelEvent,
+        const FPointerEvent* InGestureEvent)
+    -> bool
+{
+    // A trackpad gesture is surfaced by its gesture TYPE and carries no wheel key, so there is no
+    // identity to record one under. The wheel event that accompanies it still records below.
+    if (InGestureEvent != nullptr)
+    { return false; }
+
+    const auto WheelDelta = InWheelEvent.GetWheelDelta();
+    if (WheelDelta == 0.0f)
+    { return false; }
+
+    const auto RawDeviceUserIndex = static_cast<int32>(InWheelEvent.GetUserIndex());
+
+    DoRecordEvent(EKeys::MouseWheelAxis, ECk_InputSource_EventType::AnalogAxis, WheelDelta,
+        RawDeviceUserIndex);
+
+    // A notch has no duration — the engine surfaces MouseScrollUp/Down as a press and a release inside
+    // one frame, and the record has to say the same thing. A press with no release would leave the
+    // button held for the rest of the session in every consumer that tracks the held set.
+    const auto NotchKey = WheelDelta > 0.0f ? EKeys::MouseScrollUp : EKeys::MouseScrollDown;
+    DoRecordEvent(NotchKey, ECk_InputSource_EventType::Pressed, 0.0f, RawDeviceUserIndex);
+    DoRecordEvent(NotchKey, ECk_InputSource_EventType::Released, 0.0f, RawDeviceUserIndex);
+
+    return false;
+}
+
+auto
+    FCk_InputSlate_Preprocessor::
     GetDebugName() const
     -> const TCHAR*
 {
