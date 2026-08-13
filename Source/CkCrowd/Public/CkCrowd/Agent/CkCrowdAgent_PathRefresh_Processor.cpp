@@ -123,6 +123,25 @@ namespace ck
             float InAgentRadius)
         -> TOptional<FVector>
     {
+        const auto InputsAreValid =
+            ck::IsValid(InAnyWorldHandle) &&
+            NOT InSelfLocation.ContainsNaN() &&
+            NOT InGoal.ContainsNaN() &&
+            FMath::IsFinite(InAgentRadius) &&
+            InAgentRadius >= 0.0f;
+        CK_ENSURE_IF_NOT(
+            InputsAreValid,
+            TEXT("Invalid escaped-query-start inputs "
+                 "(handle [{}], self [{}], location [{}], goal [{}], radius [{}])"),
+            InAnyWorldHandle,
+            InSelfEntity,
+            InSelfLocation,
+            InGoal,
+            InAgentRadius)
+        {}
+        if (NOT InputsAreValid)
+        { return {}; }
+
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
         if (NOT IsValid(Settings) ||
             Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled ||
@@ -141,11 +160,16 @@ namespace ck
             { return; }
             // PAINTED is enough here, deliberately NOT ConfirmedOnMesh: the escape is pure
             // geometry and is valid the moment the disc exists.
-            if (NOT InMarkup.Get_Markup().IsValid())
+            const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
+            const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
+            if (NOT InMarkup.Get_Markup().IsValid() ||
+                MarkupLocation.ContainsNaN() ||
+                NOT FMath::IsFinite(MarkupRadius) ||
+                MarkupRadius <= 0.0f)
             { return; }
 
-            Centers.Add(InMarkup.Get_MarkupLocation());
-            Radii.Add(InMarkup.Get_MarkupRadiusUu());
+            Centers.Add(MarkupLocation);
+            Radii.Add(MarkupRadius);
         });
 
         if (Centers.IsEmpty())
@@ -180,61 +204,310 @@ namespace ck
         // once, so the march provably terminates within one step per disc.
         constexpr auto MarginUu = 10.0f;
 
-        auto NearestIdx = 0;
-        auto NearestDistSq = TNumericLimits<double>::Max();
-        for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
+        auto CandidateDirections = TArray<FVector2D, TInlineAllocator<24>>{};
+        const auto AddCandidateDirection = [&](const FVector2D& InDirection)
         {
-            const auto DistSq = FVector::DistSquared2D(InSelfLocation, Centers[Idx]);
-            if (DistSq < NearestDistSq)
+            const auto Direction = InDirection.GetSafeNormal();
+            if (Direction.IsNearlyZero())
+            { return; }
+
+            constexpr auto DirectionMergeDistanceSq = 0.0001f;
+            for (const auto& Existing : CandidateDirections)
             {
-                NearestDistSq = DistSq;
-                NearestIdx = Idx;
+                if ((Existing - Direction).SizeSquared() <= DirectionMergeDistanceSq)
+                { return; }
             }
+            CandidateDirections.Add(Direction);
+        };
+
+        // A nearest-centre radial can point through the rest of an overlapping line. Use a fixed
+        // angular fan so work remains bounded as crowds grow, then keep the shortest candidate ray
+        // that exits the whole expanded union. Goal-relative rays reduce quantization in the most
+        // useful directions without making candidate count depend on disc count.
+        const auto Self2D = FVector2D{InSelfLocation};
+        constexpr auto RadialSampleCount = 16;
+        for (auto SampleIndex = 0; SampleIndex < RadialSampleCount; ++SampleIndex)
+        {
+            const auto Angle =
+                2.0f * UE_PI * static_cast<float>(SampleIndex) /
+                static_cast<float>(RadialSampleCount);
+            AddCandidateDirection(FVector2D{FMath::Cos(Angle), FMath::Sin(Angle)});
         }
 
-        const auto LeanDir = FVector2D{InSelfLocation} - FVector2D{Centers[NearestIdx]};
-        const auto RayDir = LeanDir.SizeSquared() > UE_KINDA_SMALL_NUMBER
-            ? LeanDir.GetSafeNormal()
-            : FVector2D{1.0f, 0.0f};
+        const auto GoalDirection = FVector2D{InGoal} - Self2D;
+        AddCandidateDirection(GoalDirection);
+        AddCandidateDirection(-GoalDirection);
+        AddCandidateDirection(FVector2D{GoalDirection.Y, -GoalDirection.X});
+        AddCandidateDirection(FVector2D{-GoalDirection.Y, GoalDirection.X});
 
-        auto Point = FVector2D{InSelfLocation};
-        for (auto Step = 0; Step <= Centers.Num(); ++Step)
+        const auto IsInsideExpandedUnion = [&](const FVector2D& InPoint) -> bool
         {
-            auto Moved = false;
             for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
             {
                 const auto Required = Radii[Idx] + InAgentRadius + MarginUu;
-                const auto Centre2D = FVector2D{Centers[Idx]};
-                const auto ToCentre = Centre2D - Point;
-                if (ToCentre.SizeSquared() >= Required * Required)
-                { continue; }
-
-                // Larger root of |Point + t*Dir - Centre| = Required, guaranteed real because the
-                // point is inside the zone.
-                const auto ProjectionOntoRay = FVector2D::DotProduct(ToCentre, RayDir);
-                const auto Discriminant = ProjectionOntoRay * ProjectionOntoRay + (Required * Required - ToCentre.SizeSquared());
-                const auto ExitT = ProjectionOntoRay + FMath::Sqrt(Discriminant);
-                Point += RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
-                Moved = true;
+                if ((InPoint - FVector2D{Centers[Idx]}).SizeSquared() < Required * Required)
+                { return true; }
             }
-            if (NOT Moved)
-            { break; }
+            return false;
+        };
+
+        auto BestPoint = TOptional<FVector2D>{};
+        auto BestDistanceSq = TNumericLimits<double>::Max();
+        for (const auto& RayDir : CandidateDirections)
+        {
+            auto Point = Self2D;
+            for (auto Step = 0; Step <= Centers.Num(); ++Step)
+            {
+                auto Moved = false;
+                for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
+                {
+                    const auto Required = Radii[Idx] + InAgentRadius + MarginUu;
+                    const auto Centre2D = FVector2D{Centers[Idx]};
+                    const auto ToCentre = Centre2D - Point;
+                    if (ToCentre.SizeSquared() >= Required * Required)
+                    { continue; }
+
+                    // Larger root of |Point + t*Dir - Centre| = Required, guaranteed real because
+                    // the point is inside that expanded zone.
+                    const auto ProjectionOntoRay = FVector2D::DotProduct(ToCentre, RayDir);
+                    const auto Discriminant =
+                        ProjectionOntoRay * ProjectionOntoRay +
+                        (Required * Required - ToCentre.SizeSquared());
+                    const auto ExitT =
+                        ProjectionOntoRay + FMath::Sqrt(FMath::Max(0.0f, Discriminant));
+                    Point += RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
+                    Moved = true;
+                }
+                if (NOT Moved)
+                { break; }
+            }
+
+            if (IsInsideExpandedUnion(Point))
+            { continue; }
+
+            const auto DistanceSq = (Point - Self2D).SizeSquared();
+            if (DistanceSq < BestDistanceSq)
+            {
+                BestPoint = Point;
+                BestDistanceSq = DistanceSq;
+            }
         }
 
-        const auto Escape = FVector{Point.X, Point.Y, InSelfLocation.Z};
-
-        // Unreachable by construction; the fallback (plan from the real location) is the status
-        // quo, not a failure.
-        if (IsInsideAny(Escape))
+        // The fallback (plan from the real location) is the status quo, not a failure.
+        if (NOT BestPoint.IsSet())
         {
-            ck::crowd::Verbose(TEXT("EscapedQueryStart: ray-march from {} did not exit the union (last try {})"),
-                InSelfLocation, Escape);
+            ck::crowd::Verbose(
+                TEXT("EscapedQueryStart: no candidate ray from {} exited the expanded union"),
+                InSelfLocation);
             return {};
         }
 
-        ck::crowd::Verbose(TEXT("EscapedQueryStart: self {} escapes to {} ({} discs)"),
-            InSelfLocation, Escape, Centers.Num());
+        const auto& ChosenPoint = BestPoint.GetValue();
+        const auto Escape = FVector{ChosenPoint.X, ChosenPoint.Y, InSelfLocation.Z};
+
+        ck::crowd::Verbose(
+            TEXT("EscapedQueryStart: self {} escapes to {} via shortest of {} rays ({} discs)"),
+            InSelfLocation,
+            Escape,
+            CandidateDirections.Num(),
+            Centers.Num());
         return Escape;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_PathRefresh::
+        Try_BuildStationaryMarkupEscapePath(
+            FCk_Handle InAnyWorldHandle,
+            FCk_Entity InSelfEntity,
+            const FVector& InSelfLocation,
+            const FVector& InEscapedLocation,
+            const FFragment_CrowdAgent_Params& InParams,
+            TArray<FVector>& OutWaypoints)
+        -> bool
+    {
+        const auto InputsAreValid =
+            ck::IsValid(InAnyWorldHandle) &&
+            NOT InSelfLocation.ContainsNaN() &&
+            NOT InEscapedLocation.ContainsNaN() &&
+            FMath::IsFinite(InParams.Get_Radius()) &&
+            InParams.Get_Radius() > 0.0f;
+        CK_ENSURE_IF_NOT(
+            InputsAreValid,
+            TEXT("Invalid stationary-markup escape-path inputs "
+                 "(handle [{}], self [{}], start [{}], escaped [{}], radius [{}])"),
+            InAnyWorldHandle,
+            InSelfEntity,
+            InSelfLocation,
+            InEscapedLocation,
+            InParams.Get_Radius())
+        {}
+        if (NOT InputsAreValid)
+        { return false; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
+        auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
+        auto* NavData = NavSys != nullptr
+            ? Cast<ARecastNavMesh>(
+                NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+            : nullptr;
+        if (NavSys == nullptr || NavData == nullptr)
+        { return false; }
+
+        auto EscapeResult = FCk_Nav_PathResult{};
+        const auto FilterClass =
+            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
+                InParams.Get_NavQueryFilter());
+        const auto FoundEscape = FCk_Nav_Algorithm::FindPathSync(
+            *NavSys,
+            *NavData,
+            InSelfLocation,
+            InEscapedLocation,
+            /*InAllowPartial*/ false,
+            UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
+            UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
+            InParams.Get_Radius(),
+            EscapeResult,
+            FilterClass);
+        if (NOT FoundEscape || EscapeResult.Get_Waypoints().IsEmpty())
+        { return false; }
+
+        const auto& ProjectedEscape = EscapeResult.Get_Waypoints().Last();
+        auto ProjectedEscapeIsClear = NOT ProjectedEscape.ContainsNaN();
+        auto PaintedCenters = TArray<FVector2D, TInlineAllocator<32>>{};
+        auto PaintedExpandedRadii = TArray<float, TInlineAllocator<32>>{};
+        InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
+        {
+            if (NOT ProjectedEscapeIsClear ||
+                InEntity == InSelfEntity ||
+                NOT InMarkup.Get_Markup().IsValid())
+            { return; }
+
+            const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
+            const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
+            const auto MarkupGeometryIsValid =
+                NOT MarkupLocation.ContainsNaN() &&
+                FMath::IsFinite(MarkupRadius) &&
+                MarkupRadius > 0.0f;
+            if (NOT MarkupGeometryIsValid)
+            {
+                // A malformed painted obstacle cannot establish that the projected endpoint is
+                // safe. Reject the physical prefix and retain the ordinary PathNetwork route.
+                ProjectedEscapeIsClear = false;
+                return;
+            }
+
+            constexpr auto EndpointMarginUu = 1.0f;
+            const auto RequiredClearance =
+                MarkupRadius +
+                InParams.Get_Radius() +
+                EndpointMarginUu;
+            PaintedCenters.Add(FVector2D{MarkupLocation});
+            PaintedExpandedRadii.Add(RequiredClearance);
+            if (FVector::DistSquared2D(
+                    ProjectedEscape,
+                    MarkupLocation) <
+                FMath::Square(RequiredClearance))
+            {
+                ProjectedEscapeIsClear = false;
+            }
+        });
+        if (NOT ProjectedEscapeIsClear)
+        {
+            ck::crowd::Verbose(
+                TEXT("Stationary-markup escape path [{} -> {}] projected back inside the expanded union"),
+                InSelfLocation,
+                ProjectedEscape);
+            return false;
+        }
+
+        // The Recast filter treats painted agents as expensive rather than impassable. Starting
+        // inside the painted union necessarily traverses its initial component, but once the
+        // egress reaches clear ground it must never enter any painted component again. Validate
+        // exact disc/segment intervals rather than waypoint positions: a long straight segment
+        // can cross a disc while both of its corners remain clear.
+        auto HasExitedPaintedUnion = false;
+        auto SegmentStart = FVector2D{InSelfLocation};
+        for (const auto& Waypoint : EscapeResult.Get_Waypoints())
+        {
+            if (Waypoint.ContainsNaN())
+            { return false; }
+
+            const auto SegmentEnd = FVector2D{Waypoint};
+            const auto Segment = SegmentEnd - SegmentStart;
+            const auto SegmentLengthSq = Segment.SizeSquared();
+            auto InsideIntervals = TArray<TPair<float, float>, TInlineAllocator<32>>{};
+            for (auto DiscIndex = 0; DiscIndex < PaintedCenters.Num(); ++DiscIndex)
+            {
+                const auto FromCenter = SegmentStart - PaintedCenters[DiscIndex];
+                const auto Radius = PaintedExpandedRadii[DiscIndex];
+                if (SegmentLengthSq <= UE_KINDA_SMALL_NUMBER)
+                {
+                    if (FromCenter.SizeSquared() < Radius * Radius)
+                    { InsideIntervals.Emplace(0.0f, 1.0f); }
+                    continue;
+                }
+
+                const auto B = 2.0f * FVector2D::DotProduct(FromCenter, Segment);
+                const auto C = FromCenter.SizeSquared() - Radius * Radius;
+                const auto Discriminant = B * B - 4.0f * SegmentLengthSq * C;
+                if (Discriminant < 0.0f)
+                { continue; }
+
+                const auto Root = FMath::Sqrt(FMath::Max(0.0f, Discriminant));
+                const auto Denominator = 2.0f * SegmentLengthSq;
+                const auto EnterT = FMath::Max(0.0f, (-B - Root) / Denominator);
+                const auto ExitT = FMath::Min(1.0f, (-B + Root) / Denominator);
+                if (EnterT <= ExitT)
+                { InsideIntervals.Emplace(EnterT, ExitT); }
+            }
+
+            InsideIntervals.Sort(
+                [](const TPair<float, float>& InA, const TPair<float, float>& InB)
+                { return InA.Key < InB.Key; });
+
+            auto MergedIntervals = TArray<TPair<float, float>, TInlineAllocator<32>>{};
+            for (const auto& Interval : InsideIntervals)
+            {
+                if (MergedIntervals.IsEmpty() ||
+                    Interval.Key > MergedIntervals.Last().Value + UE_KINDA_SMALL_NUMBER)
+                {
+                    MergedIntervals.Add(Interval);
+                    continue;
+                }
+                MergedIntervals.Last().Value =
+                    FMath::Max(MergedIntervals.Last().Value, Interval.Value);
+            }
+
+            for (const auto& Interval : MergedIntervals)
+            {
+                if (Interval.Value <= UE_KINDA_SMALL_NUMBER)
+                { continue; }
+
+                if (HasExitedPaintedUnion || Interval.Key > UE_KINDA_SMALL_NUMBER)
+                {
+                    ck::crowd::Verbose(
+                        TEXT("Stationary-markup escape path [{} -> {}] re-enters painted markup"),
+                        InSelfLocation,
+                        ProjectedEscape);
+                    return false;
+                }
+
+                if (Interval.Value < 1.0f - UE_KINDA_SMALL_NUMBER)
+                { HasExitedPaintedUnion = true; }
+            }
+
+            if (MergedIntervals.IsEmpty())
+            { HasExitedPaintedUnion = true; }
+            SegmentStart = SegmentEnd;
+        }
+        if (NOT HasExitedPaintedUnion)
+        { return false; }
+
+        OutWaypoints = EscapeResult.Get_Waypoints();
+        return true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -548,6 +821,7 @@ namespace ck
         }
         else
         {
+            InPathFollow._ProtectedLeadingWaypointCount = 0;
             // Park the slot at Pending so OnPathResolved can't consume the stale Ready result —
             // which is the exact path that crosses the fresh markup, defeating this re-path.
             FCk_Nav_Algorithm::MarkPathPending(

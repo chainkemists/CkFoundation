@@ -15,7 +15,8 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
         const FVector InAgentLocation,
         const TConstArrayView<FVector> InWaypoints,
         int32& InOutWaypointIndex,
-        FVector& InOutCurrentSegmentStart) -> int32
+        FVector& InOutCurrentSegmentStart,
+        const int32 InProtectedLeadingWaypointCount = 0) -> int32
     {
         const auto CursorIsValid =
             InOutWaypointIndex >= 0 &&
@@ -37,14 +38,17 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
         const auto InputsAreValid =
             NOT InAgentLocation.ContainsNaN() &&
             CursorIsValid &&
-            WaypointsAreValid;
+            WaypointsAreValid &&
+            InProtectedLeadingWaypointCount >= 0 &&
+            InProtectedLeadingWaypointCount <= InWaypoints.Num();
         CK_ENSURE_IF_NOT(
             InputsAreValid,
             TEXT("Invalid crowd path-install inputs "
-                 "(agent_location [{}], waypoint_count [{}], waypoint_index [{}])"),
+                  "(agent_location [{}], waypoint_count [{}], waypoint_index [{}], protected_leading [{}])"),
             InAgentLocation,
             InWaypoints.Num(),
-            InOutWaypointIndex)
+            InOutWaypointIndex,
+            InProtectedLeadingWaypointCount)
         {}
         if (NOT InputsAreValid)
         { return 0; }
@@ -52,6 +56,9 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
         const auto StartingWaypointIndex = InOutWaypointIndex;
         while (InOutWaypointIndex < InWaypoints.Num() - 1)
         {
+            if (InOutWaypointIndex < InProtectedLeadingWaypointCount)
+            { break; }
+
             const auto& Corner = InWaypoints[InOutWaypointIndex];
             const auto OnwardDirection =
                 (InWaypoints[InOutWaypointIndex + 1] - Corner).GetSafeNormal();

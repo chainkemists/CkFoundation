@@ -87,6 +87,13 @@ namespace ck
             ++InPathFollow._WaypointIndex;
         }
 
+        if (InPathFollow.Get_ProtectedLeadingWaypointCount() > 0 &&
+            InPathFollow.Get_WaypointIndex() >=
+                InPathFollow.Get_ProtectedLeadingWaypointCount())
+        {
+            InPathFollow._ProtectedLeadingWaypointCount = 0;
+        }
+
         // Defensive: a single frame's offset can cross the whole path tail. The arrival side
         // effects stay owned by the final-stop branch below.
         if (InPathFollow._WaypointIndex >= Waypoints.Num())
