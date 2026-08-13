@@ -516,6 +516,7 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleMouseMoveEvent` | the cursor delta split into `EKeys::MouseX` / `EKeys::MouseY` `AnalogAxis` rows; a component that did not move writes no row rather than a zero one |
 | `HandleMouseButtonDownEvent` / `HandleMouseButtonUpEvent` | `Pressed` / `Released` on the effecting button |
 | `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click |
+| `HandleMouseWheelOrGestureEvent` | one `AnalogAxis` row on `EKeys::MouseWheelAxis` carrying the signed delta, then a `Pressed` **and** `Released` pair on `EKeys::MouseScrollUp`/`MouseScrollDown` in the same call. A notch has no duration, so the pair is what the engine itself produces and what the record must say — a press with no release would leave the notch key held for the rest of the session. Trackpad gestures write nothing: a gesture is surfaced by its type and has no wheel key to be recorded under. Zero-delta events write nothing |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
 **DIRECT viewport focus** (`GetGameViewportWidget()->HasAnyUserFocus()` on THIS game instance — what
@@ -644,7 +645,12 @@ subsystem, not part of either namespace.
 15. **Neither devices nor layers are "removed".** There is no unassign-device request and no layer
     `Remove` — device ownership ends when the source entity dies, and popping a layer means destroying its
     entity. `Request_DestroyEntity` on the layer is the pop.
-16. **`ck.Input.DumpRawEvents` silence is not evidence that no input arrived.** The line is emitted at the
+16. **Don't read `MouseWheelAxis` to ask whether the wheel moved this frame.** Axes are sampled state
+    and are never flushed, so the last notch's delta stands until the next one — a poll cannot tell a
+    stationary wheel from one that just turned. The notch is an IMPULSE and its edges are what carry
+    that fact: read the `MouseScrollUp`/`MouseScrollDown` press rows (or a button/intent terminal on
+    them). The axis row exists so the magnitude is answerable, not so it can be polled.
+17. **`ck.Input.DumpRawEvents` silence is not evidence that no input arrived.** The line is emitted at the
     END of `DoRecordEvent`, after the valid-key check, the viewport-focus gate and destination
     resolution. An unfocused window, an invalid key and a missing local-player-0 source all produce
     exactly zero output, indistinguishable from a device that sent nothing.

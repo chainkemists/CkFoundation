@@ -71,6 +71,15 @@ public:
         FSlateApplication& InSlateApp,
         const FPointerEvent& InMouseEvent) override;
 
+    // The wheel reaches Slate on its own channel — none of the handlers above ever sees it — so without
+    // this override a notch produces no row at all, while the Mapped button its mapping mints still
+    // reports as minted. That combination is the worst failure shape available: a terminal that passes
+    // every readiness gate and can never fire.
+    virtual bool HandleMouseWheelOrGestureEvent(
+        FSlateApplication& InSlateApp,
+        const FPointerEvent& InWheelEvent,
+        const FPointerEvent* InGestureEvent) override;
+
     virtual const TCHAR* GetDebugName() const override;
 
 private:
