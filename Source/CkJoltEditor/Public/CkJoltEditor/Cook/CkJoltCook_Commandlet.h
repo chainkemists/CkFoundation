@@ -12,9 +12,11 @@
  * Headless Jolt static-world cook across maps — no PIE required (fixes UnrealJolt's
  * "must PIE every level once" limitation).
  *
- * Invocation:
- *   UnrealEditor-Cmd.exe <Project>.uproject -run=CkJoltCook -Map=/Game/Maps/MyMap
- *   UnrealEditor-Cmd.exe <Project>.uproject -run=CkJoltCook -AllMaps [-Root=/Game] [-DryRun]
+ * Invocation (the FULL class token is required — UE appends "Commandlet" to a bare -run= token,
+ * and "CkJoltCookCommandlet" matches no class; on unique-build-environment projects use the
+ * project's own <Target>-Cmd.exe, not the engine's UnrealEditor-Cmd.exe):
+ *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -Map=/Game/Maps/MyMap
+ *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -AllMaps [-Root=/Game] [-DryRun]
  *
  * Exit codes: 0 = success, 1 = any map failed to cook.
  *
