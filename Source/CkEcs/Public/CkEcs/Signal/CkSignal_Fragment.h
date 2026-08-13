@@ -94,6 +94,14 @@ namespace ck
         template <typename, typename>
         friend class TUtils_Signal_Delegate;
 
+#if WITH_DEV_AUTOMATION_TESTS
+        // Lets the teardown UAF repro spec aim a REAL fragment at a sigh the spec owns and can
+        // poison, proving both halves of the _Connection contract below: destruction never
+        // releases (safe), an explicit release into a dead sigh faults (the prevented crash).
+        // Test-only; adds no public surface.
+        friend struct FSignalDelegate_TeardownSpecAccess;
+#endif
+
         CK_GENERATED_BODY(TFragment_Signal_Delegate<T_DynamicDelegate COMMA T_PostFireBehavior COMMA T_Args...>);
 
     public:
@@ -117,7 +125,6 @@ namespace ck
         TFragment_Signal_Delegate() = default;
         TFragment_Signal_Delegate(const ThisType&) = delete;
         TFragment_Signal_Delegate(ThisType&& InOther) noexcept = delete;
-        ~TFragment_Signal_Delegate();
 
     public:
         auto operator=(ThisType InOther) -> ThisType& = delete;
@@ -135,6 +142,17 @@ namespace ck
     private:
         TArray<DynamicDelegateType> _UnconditionalDelegates;
         TArray<ConditionalDynamicDelegate> _ConditionalInvocationList;
+
+        /**
+         * NON-OWNING token — deliberately no RAII release, and this type must never grow a
+         * destructor that calls _Connection.release(). The sigh (in TFragment_Signal, a different
+         * pool) owns the subscription; on every whole-entity/whole-registry destruction the sigh
+         * dies in the same operation, and during ~basic_registry it dies FIRST, so a destructor-side
+         * release is a use-after-free (the packaged save/load crash). Release is required exactly
+         * when this fragment is removed from a LIVE entity whose sigh survives — Unbind is that
+         * path and releases before Remove (CkSignal_Utils.inl.h). Any new removal path must do the
+         * same or the sigh keeps a dangling pointer to this fragment.
+         */
         ConnectionType _Connection;
         static constexpr auto PostFireBehavior = T_PostFireBehavior;
 
