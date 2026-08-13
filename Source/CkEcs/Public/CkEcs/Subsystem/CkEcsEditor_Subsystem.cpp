@@ -53,7 +53,7 @@ auto
 {
     Super::Initialize(Collection);
 
-    _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
+    _OwnedRegistry = ck::registry_table::Make_GuardedRegistry();
 
     const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
 
@@ -103,6 +103,7 @@ auto
 
     _Registry        = FCk_Registry{};
     _TransientEntity = FCk_Handle{};
+
     _OwnedRegistry.Reset();
 
     Super::Deinitialize();

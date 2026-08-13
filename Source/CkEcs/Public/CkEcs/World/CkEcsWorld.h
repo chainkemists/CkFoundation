@@ -31,7 +31,7 @@ namespace ck
         auto operator=(FEcsWorld&&) -> FEcsWorld& = delete;
 
     private:
-        TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
+        ck::registry_table::TGuardedRegistryPtr _OwnedRegistry;
         RegistryType _Registry;
 
     public:

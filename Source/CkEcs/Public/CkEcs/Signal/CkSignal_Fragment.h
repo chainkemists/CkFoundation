@@ -5,6 +5,8 @@
 
 #include "CkEcs/Tag/CkTag.h"
 
+#include "CkEcs/Registry/CkRegistry_Teardown.h"
+
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkProfile/Stats/CkStats.h"
@@ -93,6 +95,13 @@ namespace ck
 
         template <typename, typename>
         friend class TUtils_Signal_Delegate;
+
+#if WITH_DEV_AUTOMATION_TESTS
+        // Lets the teardown UAF repro spec aim a REAL fragment at a sigh the spec owns and can
+        // poison, so the destructor's release branch is exercised for real rather than re-typed
+        // into the test. Test-only; adds no public surface.
+        friend struct FSignalDelegate_TeardownSpecAccess;
+#endif
 
         CK_GENERATED_BODY(TFragment_Signal_Delegate<T_DynamicDelegate COMMA T_PostFireBehavior COMMA T_Args...>);
 

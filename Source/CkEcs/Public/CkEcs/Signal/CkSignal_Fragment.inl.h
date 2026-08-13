@@ -76,7 +76,12 @@ namespace ck
     TFragment_Signal_Delegate<T_DynamicDelegate, T_PostFireBehavior, T_Args...>::
     ~TFragment_Signal_Delegate()
     {
-        if (_Connection)
+        // The sigh this connection points at lives in TFragment_Signal — a different pool — and
+        // pools die in insertion order, which Bind fixes as signal-then-delegate. So during
+        // whole-registry destruction the sigh is already freed, systematically. Releasing then is a
+        // use-after-free read, and it buys nothing: every sigh in the registry is dying in the same
+        // operation.
+        if (_Connection && NOT ck::registry_teardown::Get_IsInProgress())
         { _Connection.release(); }
     }
 

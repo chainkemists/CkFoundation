@@ -7,7 +7,7 @@ namespace ck
     FEcsWorld::
     FEcsWorld()
     {
-        _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
+        _OwnedRegistry = ck::registry_table::Make_GuardedRegistry();
 
         const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
         const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
@@ -26,6 +26,7 @@ namespace ck
         ck::registry_table::Free(_Registry.Get_RegistryHandle());
 
         _Registry = FCk_Registry{};
+
         _OwnedRegistry.Reset();
     }
 }

@@ -200,7 +200,7 @@ private:
 
 private:
     // _Registry below is a non-owning (slot+gen) view bound to this owned registry.
-    TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
+    ck::registry_table::TGuardedRegistryPtr _OwnedRegistry;
     FCk_Registry _Registry;
 
 public:

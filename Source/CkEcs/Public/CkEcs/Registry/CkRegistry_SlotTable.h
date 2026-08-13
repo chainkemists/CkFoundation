@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry_Handle.h"
+#include "CkEcs/Registry/CkRegistry_Teardown.h"
 
 #include "entt/entity/registry.hpp"
 
@@ -14,6 +15,32 @@
 namespace ck::registry_table
 {
     using EnttRegistryType = entt::basic_registry<FCk_Entity::IdType, std::allocator<FCk_Entity::IdType>>;
+
+    // Owning pointer for an entt registry. Destroying a registry must happen inside a
+    // ck::registry_teardown window — pools die in insertion order, so a fragment destructor reaching
+    // across pools (signal delegates) reads freed memory whenever its target pool was assured first.
+    // Carrying the window in the
+    // deleter means every destruction path takes it, including ones not yet written: a subsystem
+    // torn down without Deinitialize having run is otherwise the original crash on the path least
+    // likely to be reviewed.
+    struct FGuardedRegistryDeleter
+    {
+        auto operator()(EnttRegistryType* InRegistry) const -> void
+        {
+            if (InRegistry == nullptr)
+            { return; }
+
+            const auto TeardownGuard = ck::registry_teardown::FScopedGuard{};
+            delete InRegistry;
+        }
+    };
+
+    using TGuardedRegistryPtr = TUniquePtr<EnttRegistryType, FGuardedRegistryDeleter>;
+
+    [[nodiscard]] inline auto Make_GuardedRegistry() -> TGuardedRegistryPtr
+    {
+        return TGuardedRegistryPtr{new EnttRegistryType{}};
+    }
 
     // Hard upper bound on simultaneously-live registries: Slots is pre-reserved to this count and
     // growth past it would relocate the array and break concurrent worker-thread reads. The
