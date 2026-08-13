@@ -140,6 +140,11 @@ auto
     { return; }
 
     Settings->OnSettingsChanged.AddDynamic(this, &UCk_InputSource_Subsystem::OnSettingsChanged);
+    // Registration is the OTHER way new mapping names reach the key profile, and it does NOT fire
+    // OnSettingsChanged — a runtime-built IMC registered after the map's first derive would otherwise
+    // never mint its names, permanently starving any consumer gating on them (the second-engaged-station
+    // bug: the compose loop spins on an unminted button with no diagnostic).
+    Settings->OnMappingContextRegistered.AddDynamic(this, &UCk_InputSource_Subsystem::OnMappingContextRegistered);
     _BoundToSettings = true;
 }
 
@@ -149,6 +154,23 @@ auto
     UCk_InputSource_Subsystem::
     OnSettingsChanged(
         UEnhancedInputUserSettings* InSettings)
+    -> void
+{
+    DoRequestRederive();
+}
+
+auto
+    UCk_InputSource_Subsystem::
+    OnMappingContextRegistered(
+        const UInputMappingContext* InMappingContext)
+    -> void
+{
+    DoRequestRederive();
+}
+
+auto
+    UCk_InputSource_Subsystem::
+    DoRequestRederive()
     -> void
 {
     // The button map is opt-in, so a source without one has nothing to re-derive. The request is deferred like

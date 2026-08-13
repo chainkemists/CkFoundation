@@ -53,11 +53,17 @@ private:
     UFUNCTION()
     void OnSettingsChanged(UEnhancedInputUserSettings* InSettings);
 
+    UFUNCTION()
+    void OnMappingContextRegistered(const UInputMappingContext* InMappingContext);
+
     auto
     DoCreateInputSource() -> void;
 
     auto
     DoBindToSettings() -> void;
+
+    auto
+    DoRequestRederive() -> void;
 
 private:
     FCk_Handle_InputSource _InputSource;
