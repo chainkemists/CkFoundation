@@ -218,15 +218,20 @@ auto
 
     const auto RawDeviceUserIndex = static_cast<int32>(InWheelEvent.GetUserIndex());
 
-    DoRecordEvent(EKeys::MouseWheelAxis, ECk_InputSource_EventType::AnalogAxis, WheelDelta,
-        RawDeviceUserIndex);
-
-    // A notch has no duration — the engine surfaces MouseScrollUp/Down as a press and a release inside
-    // one frame, and the record has to say the same thing. A press with no release would leave the
-    // button held for the rest of the session in every consumer that tracks the held set.
+    // A notch has no duration — the engine surfaces MouseScrollUp/Down as a press and a release inside one
+    // frame, and the record has to say the same thing. A press with no release would leave the button held for
+    // the rest of the session in every consumer that tracks the held set.
+    //
+    // Pressed, Released, THEN the axis, matching the order `FSceneViewport::OnMouseWheel` writes to the viewport
+    // client. Mouse events are recorded `SubFrameOrdered`, which is a promise that arrival order within the frame
+    // is real — so writing the axis first would hand a consumer an order the engine's own pipeline never
+    // produces.
     const auto NotchKey = WheelDelta > 0.0f ? EKeys::MouseScrollUp : EKeys::MouseScrollDown;
     DoRecordEvent(NotchKey, ECk_InputSource_EventType::Pressed, 0.0f, RawDeviceUserIndex);
     DoRecordEvent(NotchKey, ECk_InputSource_EventType::Released, 0.0f, RawDeviceUserIndex);
+
+    DoRecordEvent(EKeys::MouseWheelAxis, ECk_InputSource_EventType::AnalogAxis, WheelDelta,
+        RawDeviceUserIndex);
 
     return false;
 }
