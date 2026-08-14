@@ -121,6 +121,14 @@ a wrong port on the AdvancedScan/ScanChipGrid job (2026-08).
 - **A CkUsf Vector param arrives as a float3** (the generator `.rgb`-swizzles), so a source float4
   "Colour And Amount" must split into a Vector + a Scalar. Give both halves the same `_Group` or the
   pairs scatter across the panel.
+- **Every look sets `_Group` on every parameter — no exceptions past a handful of params.** An
+  ungrouped look lists flat and alphabetically in the master and in every MID, which puts
+  `BackgroundTint` next to `BaseValue` next to `BoostFade` and makes the panel unusable exactly when
+  the parameter count is what justified the look existing. Use `_SortPriority` to order WITHIN a
+  group so a tint sits beside its own amount rather than sorting away from it. When porting, take
+  the group names from the source's own `props.Group` instead of inventing a taxonomy — the original
+  author already grouped by what an artist reaches for together. Both fields default inert
+  (`NAME_None`, 32), so adding them never changes an existing look's generated output.
 - **Static switches are permutations — spell them as `_Defines`, and actually wire them.** Declaring
   a define the `.ush` never reads ships a lie. When wrapping layers in `#if`, hoist anything a later
   layer consumes: a mechanical wrap left one layer's lattice declared inside another's switch, so
