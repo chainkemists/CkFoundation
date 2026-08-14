@@ -8,11 +8,14 @@
 
 #include "CkGameSettings/CkGameSettings_Log.h"
 #include "CkGameSettings/Collection/CkGameSettings_Collection.h"
+#include "CkGameSettings/Packs/CkGameSettings_AudioPack.h"
+#include "CkGameSettings/Packs/CkGameSettings_VideoPack.h"
 #include "CkGameSettings/Settings/CkGameSettings_Settings.h"
 #include "CkGameSettings/Storage/CkGameSettings_IniStorageProvider.h"
 
 #include <Engine/Engine.h>
 #include <Engine/GameInstance.h>
+#include <GameFramework/GameUserSettings.h>
 #include <Misc/CoreDelegates.h>
 #include <UObject/UObjectGlobals.h>
 
@@ -245,6 +248,12 @@ auto
         ck::game_settings::Display(TEXT("GameSettings PIE instance: CVar-bound writes are skipped; the store and Get_SettingValue remain authoritative"));
     }
 
+    if (UCk_Utils_GameSettings_Settings_UE::Get_EnableAudioPack())
+    { Request_RegisterAudioPack(); }
+
+    if (UCk_Utils_GameSettings_Settings_UE::Get_EnableVideoPack())
+    { Request_RegisterVideoPack(); }
+
     constexpr auto TickIntervalSeconds = 1.0f;
     _TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateWeakLambda(this, [this](float)
@@ -283,6 +292,14 @@ auto
     FCoreDelegates::OnEnginePreExit.Remove(_EnginePreExitHandle);
     FCoreDelegates::ApplicationWillDeactivateDelegate.Remove(_AppDeactivateHandle);
     FCoreUObjectDelegates::PreLoadMapWithContext.RemoveAll(this);
+
+    for (const auto& PackObject : _PackHandlerObjects)
+    {
+        if (auto* AudioHandler = Cast<UCk_GameSettings_AudioCategoryHandler_UE>(PackObject))
+        { AudioHandler->Shutdown_Handler(); }
+    }
+    _PackHandlerObjects.Empty();
+    _ResolutionConfirmActive = false;
 
     _DeferredCVarApplies.Empty();
     _OrphanValues_Machine.Empty();
@@ -798,6 +815,14 @@ auto
     if (NOT IsRegistered)
     { return false; }
 
+    // External values live in their external store (e.g. GameUserSettings); the schema default is
+    // a placeholder, and "resetting" to it would destroy real user configuration.
+    const auto IsProviderPolicy = _Definitions.FindChecked(Key).Get_PersistencePolicy() == ECk_GameSettings_PersistencePolicy::Provider;
+    CK_ENSURE_IF_NOT(IsProviderPolicy, TEXT("Cannot reset External GameSettings key [{}], its value is owned by the external store"), Key)
+    {}
+    if (NOT IsProviderPolicy)
+    { return false; }
+
     DoResetToDefault(Key);
     return true;
 }
@@ -811,6 +836,9 @@ auto
 
     for (const auto& Key : _RegistrationOrder)
     {
+        if (_Definitions.FindChecked(Key).Get_PersistencePolicy() == ECk_GameSettings_PersistencePolicy::External)
+        { continue; }
+
         if (DoResetToDefault(Key))
         { ++ResetCount; }
     }
@@ -1201,6 +1229,129 @@ auto
 
 auto
     UCk_GameSettings_Subsystem_UE::
+    Request_RegisterAudioPack()
+    -> int32
+{
+    return ck::game_settings::RegisterAudioPack(
+        *this,
+        UCk_Utils_GameSettings_Settings_UE::Get_AudioMix(),
+        UCk_Utils_GameSettings_Settings_UE::Get_AudioCategories(),
+        _PackHandlerObjects);
+}
+
+auto
+    UCk_GameSettings_Subsystem_UE::
+    Request_RegisterVideoPack()
+    -> int32
+{
+    return ck::game_settings::RegisterVideoPack(*this, _PackHandlerObjects);
+}
+
+auto
+    UCk_GameSettings_Subsystem_UE::
+    Request_RunHardwareBenchmark()
+    -> bool
+{
+    if (ck::game_settings::Get_IsHeadlessPresentation())
+    {
+        ck::game_settings::Display(TEXT("GameSettings: hardware benchmark skipped (headless presentation)"));
+        return false;
+    }
+
+    auto* UserSettings = ck::IsValid(GEngine) ? GEngine->GetGameUserSettings() : nullptr;
+    const auto UserSettingsAreValid = ck::IsValid(UserSettings);
+    CK_ENSURE_IF_NOT(UserSettingsAreValid, TEXT("GEngine->GetGameUserSettings() returned null, cannot run the hardware benchmark"))
+    {}
+    if (NOT UserSettingsAreValid)
+    { return false; }
+
+    UserSettings->RunHardwareBenchmark();
+    constexpr auto CheckForCommandLineOverrides = false;
+    UserSettings->ApplySettings(CheckForCommandLineOverrides);
+    UserSettings->SaveSettings();
+
+    for (const auto& VideoKey : ck::game_settings::Get_VideoSettingKeys())
+    {
+        const auto* Definition = _Definitions.Find(VideoKey);
+
+        if (Definition == nullptr)
+        { continue; }
+
+        DoFireChanged(VideoKey, DoGet_CurrentValueString(VideoKey, *Definition));
+    }
+
+    return true;
+}
+
+auto
+    UCk_GameSettings_Subsystem_UE::
+    Request_SetResolutionWithConfirmWindow(
+        const FString& InNewResolution,
+        float InWindowSeconds)
+    -> bool
+{
+    auto NewResolution = FIntPoint{};
+    const auto ResolutionParses = ck::game_settings::TryParse_Resolution(InNewResolution, NewResolution);
+    CK_ENSURE_IF_NOT(ResolutionParses, TEXT("Resolution [{}] is not of the form WIDTHxHEIGHT"), InNewResolution)
+    {}
+    if (NOT ResolutionParses)
+    { return false; }
+
+    const auto NoWindowActive = NOT _ResolutionConfirmActive;
+    CK_ENSURE_IF_NOT(NoWindowActive, TEXT("A resolution confirm window is already active"))
+    {}
+    if (NOT NoWindowActive)
+    { return false; }
+
+    auto* UserSettings = ck::IsValid(GEngine) ? GEngine->GetGameUserSettings() : nullptr;
+    const auto UserSettingsAreValid = ck::IsValid(UserSettings);
+    CK_ENSURE_IF_NOT(UserSettingsAreValid, TEXT("GEngine->GetGameUserSettings() returned null, cannot change the resolution"))
+    {}
+    if (NOT UserSettingsAreValid)
+    { return false; }
+
+    _ResolutionConfirmPriorResolution = UserSettings->GetScreenResolution();
+    UserSettings->SetScreenResolution(NewResolution);
+
+    if (NOT ck::game_settings::Get_IsHeadlessPresentation())
+    {
+        constexpr auto CheckForCommandLineOverrides = false;
+        UserSettings->ApplyResolutionSettings(CheckForCommandLineOverrides);
+    }
+
+    _ResolutionConfirmActive = true;
+    _ResolutionConfirmDeadlineSeconds = FPlatformTime::Seconds() + InWindowSeconds;
+
+    DoFireChanged(ck::game_settings::Key_Video_Resolution, ck::game_settings::Format_Resolution(NewResolution));
+    return true;
+}
+
+auto
+    UCk_GameSettings_Subsystem_UE::
+    Request_ConfirmResolution()
+    -> bool
+{
+    const auto WindowActive = _ResolutionConfirmActive;
+    CK_ENSURE_IF_NOT(WindowActive, TEXT("No resolution confirm window is active"))
+    {}
+    if (NOT WindowActive)
+    { return false; }
+
+    _ResolutionConfirmActive = false;
+
+    auto* UserSettings = ck::IsValid(GEngine) ? GEngine->GetGameUserSettings() : nullptr;
+
+    if (ck::IsValid(UserSettings))
+    {
+        UserSettings->ConfirmVideoMode();
+        UserSettings->SaveSettings();
+    }
+
+    return true;
+}
+
+auto
+    UCk_GameSettings_Subsystem_UE::
     Request_FlushStorage()
     -> void
 {
@@ -1506,6 +1657,30 @@ auto
         {}
         if (TimedOut)
         { _DeferredCVarApplies.RemoveAt(Index); }
+    }
+
+    if (_ResolutionConfirmActive && NowSeconds >= _ResolutionConfirmDeadlineSeconds)
+    {
+        _ResolutionConfirmActive = false;
+
+        auto* UserSettings = ck::IsValid(GEngine) ? GEngine->GetGameUserSettings() : nullptr;
+
+        if (ck::IsValid(UserSettings))
+        {
+            UserSettings->SetScreenResolution(_ResolutionConfirmPriorResolution);
+
+            if (NOT ck::game_settings::Get_IsHeadlessPresentation())
+            {
+                constexpr auto CheckForCommandLineOverrides = false;
+                UserSettings->ApplyResolutionSettings(CheckForCommandLineOverrides);
+            }
+
+            UserSettings->SaveSettings();
+
+            const auto PriorResolutionString = ck::game_settings::Format_Resolution(_ResolutionConfirmPriorResolution);
+            ck::game_settings::Display(TEXT("GameSettings: resolution confirm window expired, reverted to [{}]"), PriorResolutionString);
+            DoFireChanged(ck::game_settings::Key_Video_Resolution, PriorResolutionString);
+        }
     }
 
     constexpr auto FlushDebounceSeconds = 2.0;

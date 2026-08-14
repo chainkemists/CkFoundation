@@ -38,4 +38,36 @@ auto
     return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_StorageProviderClass();
 }
 
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_EnableAudioPack()
+    -> bool
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_EnableAudioPack();
+}
+
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_AudioMix()
+    -> const TSoftObjectPtr<USoundMix>&
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_AudioMix();
+}
+
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_AudioCategories()
+    -> const TArray<FCk_GameSettings_AudioCategory>&
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_AudioCategories();
+}
+
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_EnableVideoPack()
+    -> bool
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_EnableVideoPack();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

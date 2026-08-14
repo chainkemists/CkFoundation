@@ -523,6 +523,78 @@ auto
 
 auto
     UCk_Utils_GameSettings_UE::
+    Request_RegisterAudioPack(
+        const UObject* InWorldContextObject)
+    -> int32
+{
+    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return 0; }
+
+    return Subsystem->Request_RegisterAudioPack();
+}
+
+auto
+    UCk_Utils_GameSettings_UE::
+    Request_RegisterVideoPack(
+        const UObject* InWorldContextObject)
+    -> int32
+{
+    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return 0; }
+
+    return Subsystem->Request_RegisterVideoPack();
+}
+
+auto
+    UCk_Utils_GameSettings_UE::
+    Request_RunHardwareBenchmark(
+        const UObject* InWorldContextObject)
+    -> bool
+{
+    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->Request_RunHardwareBenchmark();
+}
+
+auto
+    UCk_Utils_GameSettings_UE::
+    Request_SetResolutionWithConfirmWindow(
+        const UObject* InWorldContextObject,
+        const FString& InNewResolution,
+        float InWindowSeconds)
+    -> bool
+{
+    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->Request_SetResolutionWithConfirmWindow(InNewResolution, InWindowSeconds);
+}
+
+auto
+    UCk_Utils_GameSettings_UE::
+    Request_ConfirmResolution(
+        const UObject* InWorldContextObject)
+    -> bool
+{
+    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->Request_ConfirmResolution();
+}
+
+auto
+    UCk_Utils_GameSettings_UE::
     Request_FlushStorage(
         const UObject* InWorldContextObject)
     -> void
