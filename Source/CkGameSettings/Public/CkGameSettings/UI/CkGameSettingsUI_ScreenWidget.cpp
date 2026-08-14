@@ -3,7 +3,7 @@
 #include "CkGameSettings/CkGameSettings_Log.h"
 #include "CkGameSettings/Subsystem/CkGameSettings_Utils.h"
 
-#include "CkUI/CustomWidgets/TabBar/CkTabBar_Widget.h"
+#include "CkWidgets/TabBar/CkTabBar_Widget.h"
 
 #include "Components/PanelWidget.h"
 

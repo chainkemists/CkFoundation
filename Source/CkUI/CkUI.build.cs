@@ -25,9 +25,7 @@ public class CkUI : CkModuleRules
                 "EnhancedInput",
                 "CkCore",
                 "CkEcs",
-                "CkUICore",
-                "CkGraphics",
-                "CkInput",
+                "CkUICore",
             }
             );
 
