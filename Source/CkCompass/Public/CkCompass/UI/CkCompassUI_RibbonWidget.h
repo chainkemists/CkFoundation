@@ -13,42 +13,23 @@
 
 class UCanvasPanel;
 class UImage;
-class UTextBlock;
 class UMaterialInstanceDynamic;
-class UMaterialInterface;
 class UCk_CompassUI_MarkerWidget;
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_CompassRibbon_Presentation : uint8
-{
-    // Zero-asset debug/default presentation: the widget code-builds the whole tree (root canvas, cardinal
-    // letters, debug icon markers, optional _RibbonMaterial strip). The WBP must NOT author a tree.
-    CodeBuilt,
-
-    // Designer-authored: the WBP owns the tree. Bind _RibbonImage (its brush material is fed the
-    // heading/arc scalars) and _MarkerCanvas (+ _MarkerWidgetClass) for POI markers.
-    Custom
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CompassRibbon_Presentation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
  * Consumer of the CkCompass delivery contract. The widget owns the MECHANISM (compass bind/unbind
- * lifecycle, heading/arc→material plumbing, arc math, marker pooling + positioning); _Presentation
- * declares who owns the TREE — ZERO graph/code either way:
- *  - CodeBuilt: empty WBP; the widget builds the debug look (canvas, cardinal letters, debug icon
- *               markers, optional _RibbonMaterial strip).
- *  - Custom:    the WBP authors the tree. Bind _RibbonImage → its brush material is wrapped in a MID
- *               receiving _HeadingParameterName/_ArcParameterName every frame. Bind _MarkerCanvas
- *               (+ set _MarkerWidgetClass) → one UCk_CompassUI_MarkerWidget per POI
- *               (DisplayDefinition-styled, distance readout), positioned by the widget.
+ * lifecycle, heading/arc→material plumbing, arc math, marker pooling + positioning); the WBP owns
+ * the TREE — author it and bind:
+ *  - _RibbonImage → its brush material is wrapped in a MID receiving _HeadingParameterName /
+ *    _ArcParameterName every frame.
+ *  - _MarkerCanvas (+ set _MarkerWidgetClass) → one UCk_CompassUI_MarkerWidget per POI
+ *    (DisplayDefinition-styled, distance readout), positioned by the widget.
+ *  - _CardinalN.._CardinalNW → any styled widgets; the widget anchors them along the arc.
  *
- * Misconfigurations (CodeBuilt with an authored tree; Custom markers without _MarkerCanvas) are
- * ensured at runtime and warned at design time.
+ * Misconfigurations (markers requested without a _MarkerCanvas) are ensured at runtime and warned
+ * at design time.
  *
  * Design-time: PreConstruct lays out _PreviewMarkerCount fake entries across _PreviewArcDegrees at
  * _PreviewHeadingDegrees through the SAME anchor math runtime uses, so the designer preview cannot
@@ -109,43 +90,61 @@ private:
         FCk_Handle_Poi InPoi);
 
 private:
-    auto DoResolvePresentation() -> void;
+    auto DoResolveBindings() -> void;
     auto DoLayoutPreview() -> void;
     auto DoRefreshLayout() -> void;
     auto DoPositionCardinals(float InHeading, float InArcDegrees) -> void;
     auto DoPositionChildAtOffset(UWidget* InChild, float InNormalizedOffset, float InBandNormalizedY) const -> void;
-    auto Get_EffectiveCanvas() const -> UCanvasPanel*;
-    auto Get_MarkerAt(int32 InIndex) -> UWidget*;
+    auto Get_CardinalWidgets() const -> TArray<UWidget*, TInlineAllocator<8>>;
+    auto Get_MarkerAt(int32 InIndex) -> UCk_CompassUI_MarkerWidget*;
     auto DoHideMarkersFromIndex(int32 InFirstHiddenIndex) -> void;
     auto DoReportMisconfig(const TCHAR* InMessage) -> void;
 
 private:
-    /** Custom mode: the designer-authored ribbon strip. Name a UImage "_RibbonImage" in the WBP;
-     *  its brush material is wrapped in a MID that receives _HeadingParameterName and
-     *  _ArcParameterName every frame. (CodeBuilt mode uses _RibbonMaterial instead.) */
+    /** The ribbon strip. Its brush material is wrapped in a MID that receives
+     *  _HeadingParameterName and _ArcParameterName every frame. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidgetOptional, AllowPrivateAccess = true))
     TObjectPtr<UImage> _RibbonImage;
 
-    /** Custom mode: the canvas the cardinal labels + POI markers are injected into. Name a
-     *  UCanvasPanel "_MarkerCanvas" in the WBP — required there for markers/cardinals; in
-     *  CodeBuilt mode the code-built root canvas is used instead. */
+    /** The canvas the cardinal widgets + POI markers are anchored into. Required for markers/cardinals. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidgetOptional, AllowPrivateAccess = true))
     TObjectPtr<UCanvasPanel> _MarkerCanvas;
 
-    /** Who owns the widget tree — see class comment. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon",
-              meta = (AllowPrivateAccess = true))
-    ECk_CompassRibbon_Presentation _Presentation = ECk_CompassRibbon_Presentation::CodeBuilt;
+    /** Cardinal direction widgets, anchored along the arc by the widget. Bind any styled widget;
+     *  unbound directions simply don't render. All eight must live inside _MarkerCanvas. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalN;
 
-    /** Ribbon material for the code-built strip (CodeBuilt only — in Custom, author the material
-     *  on the bound _RibbonImage's brush instead). Leave unset for the pure-widget presentation. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon",
-              meta = (AllowPrivateAccess = true, EditCondition = "_Presentation == ECk_CompassRibbon_Presentation::CodeBuilt"))
-    TObjectPtr<UMaterialInterface> _RibbonMaterial;
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalNE;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalE;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalSE;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalS;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalSW;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalW;
+
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _CardinalNW;
 
     /** Scalar parameter on the ribbon material that receives the heading (degrees, 0-360) every frame. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -162,22 +161,11 @@ private:
               meta = (AllowPrivateAccess = true))
     FName _ArcParameterName = TEXT("ArcDegrees");
 
-    /** One styled widget per POI entry. Unset: pooled plain UImages (_IconSize/_IconTint debug look). */
+    /** One styled widget per POI entry, pooled into _MarkerCanvas. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "Ck|UI|Compass|Ribbon",
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_CompassUI_MarkerWidget> _MarkerWidgetClass;
-
-    /** Debug icon markers — used only while _MarkerWidgetClass is unset. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon",
-              meta = (AllowPrivateAccess = true, EditCondition = "_MarkerWidgetClass == nullptr"))
-    FVector2D _IconSize = FVector2D{16.0, 16.0};
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon",
-              meta = (AllowPrivateAccess = true, EditCondition = "_MarkerWidgetClass == nullptr"))
-    FLinearColor _IconTint = FLinearColor::White;
 
     /** Clamped-to-edge entries render with this opacity multiplier so off-arc waypoints read as pinned. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -191,26 +179,10 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
     float _MarkerBandY = 0.7f;
 
+    /** Normalized vertical band [0..1] the cardinal widgets sit on. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon|Cardinals",
-              meta = (AllowPrivateAccess = true))
-    bool _ShowCardinals = true;
-
-    /** Applied to the code-built cardinal labels when it names a valid font (leave unset for engine default). */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon|Cardinals",
-              meta = (AllowPrivateAccess = true, EditCondition = "_ShowCardinals"))
-    FSlateFontInfo _CardinalFont;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon|Cardinals",
-              meta = (AllowPrivateAccess = true, EditCondition = "_ShowCardinals"))
-    FLinearColor _CardinalColor = FLinearColor::White;
-
-    /** Normalized vertical band [0..1] the cardinal letters sit on. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Compass|Ribbon|Cardinals",
-              meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0", EditCondition = "_ShowCardinals"))
+              Category = "Ck|UI|Compass|Ribbon",
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
     float _CardinalBandY = 0.3f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -242,19 +214,7 @@ private:
     TArray<FCk_Handle_Poi> _PendingShownPois;
 
     UPROPERTY(Transient)
-    TObjectPtr<UCanvasPanel> _RootCanvas;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UImage> _FallbackRibbonImage;
-
-    UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> _RibbonMID;
-
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<UTextBlock>> _CardinalLabels;
-
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<UImage>> _IconPool;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_CompassUI_MarkerWidget>> _MarkerPool;
@@ -263,8 +223,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_Compass);
-    CK_PROPERTY_GET(_Presentation);
-    CK_PROPERTY_GET(_RibbonMaterial);
     CK_PROPERTY_GET(_HeadingParameterName);
     CK_PROPERTY_GET(_ArcParameterName);
     CK_PROPERTY_GET(_MarkerWidgetClass);

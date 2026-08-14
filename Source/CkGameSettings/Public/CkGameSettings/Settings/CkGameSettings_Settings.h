@@ -13,6 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GameSettings_StorageProvider_UE;
+class UCk_GameSettingsUI_RowWidgetBase;
 class USoundMix;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -71,6 +72,16 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _EnableVideoPack = false;
 
+    /** Per-value-type row widget class for the settings screen. Unset types use the built-in rows. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "UI",
+              meta = (AllowPrivateAccess = true))
+    TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>> _RowClassOverrides;
+
+    /** Row widget class for options-present settings. Unset uses the built-in Select row. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "UI",
+              meta = (AllowPrivateAccess = true))
+    TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase> _SelectRowClassOverride;
+
 public:
     CK_PROPERTY_GET(_CollectionScanPaths);
     CK_PROPERTY_GET(_DeferredApplyTimeoutSeconds);
@@ -79,6 +90,8 @@ public:
     CK_PROPERTY_GET(_AudioMix);
     CK_PROPERTY_GET(_AudioCategories);
     CK_PROPERTY_GET(_EnableVideoPack);
+    CK_PROPERTY_GET(_RowClassOverrides);
+    CK_PROPERTY_GET(_SelectRowClassOverride);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -106,6 +119,12 @@ public:
 
     static auto
     Get_EnableVideoPack() -> bool;
+
+    static auto
+    Get_RowClassOverrides() -> const TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>>&;
+
+    static auto
+    Get_SelectRowClassOverride() -> const TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
