@@ -25,7 +25,8 @@ namespace ck::goap::internal_planner
 {
 	CKGOAP_API auto DoResolveChildWorldStateFromParent(
 		FCk_Handle_Goap_Action& InChild,
-		const FCk_Handle_Goap_Action& InParentAction) -> void;
+		const FCk_Handle_Goap_Action& InParentAction,
+		EResolveWorldStateSourcePolicy InPolicy) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -158,7 +159,8 @@ namespace ck
 
 		friend auto goap::internal_planner::DoResolveChildWorldStateFromParent(
 			FCk_Handle_Goap_Action& InChild,
-			const FCk_Handle_Goap_Action& InParentAction) -> void;
+			const FCk_Handle_Goap_Action& InParentAction,
+			goap::internal_planner::EResolveWorldStateSourcePolicy InPolicy) -> void;
 
 	private:
 		// Planner-level default; falls through to children whose own

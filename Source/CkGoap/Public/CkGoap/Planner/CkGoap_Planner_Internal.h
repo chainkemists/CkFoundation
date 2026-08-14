@@ -1,7 +1,8 @@
 #pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
-// PRIVATE despite living under Public/ — include only from CkGoap_Planner_Utils.cpp.
+// PRIVATE despite living under Public/ — include only from CkGoap_Planner_Utils.cpp and
+// CkGoap_Planner_Processor.cpp.
 
 #include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
@@ -17,9 +18,12 @@ namespace ck::goap::internal_planner
         const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action;
 
     // Resolution order: the child's own override → the parent's resolved → the owning Planner's
-    // default. Eager, so the child's Setup can run before any parent plan is requested.
+    // default (_Resolved first, then authored). KeepExisting is the eager AddAction pass, so the
+    // child's Setup can run before any parent plan is requested; Reassign is activation's
+    // correcting pass (overwrites, but only with a valid result).
     CKGOAP_API auto
     DoResolveChildWorldStateFromParent(
         FCk_Handle_Goap_Action& InChild,
-        const FCk_Handle_Goap_Action& InParentAction) -> void;
+        const FCk_Handle_Goap_Action& InParentAction,
+        EResolveWorldStateSourcePolicy InPolicy) -> void;
 }

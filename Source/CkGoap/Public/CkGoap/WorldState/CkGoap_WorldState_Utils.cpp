@@ -3,6 +3,7 @@
 #include "CkGoap_WorldState_Fragment.h"
 
 #include "CkGoap/CkGoap_Fragment.h"
+#include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/CkGoap_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -35,6 +36,14 @@ namespace ck_goap_world_state_utils
 		: public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfGoapWorldStates> {};
 }
 
+namespace ck_goap_world_state_utils_impl
+{
+	auto DoGetEffectiveValue(
+		const FCk_Handle_Goap_WorldState& InWS,
+		FGameplayTag InTag,
+		int32 InDepth = 0) -> bool;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_goap_world_state_utils_internal
@@ -42,15 +51,29 @@ namespace ck_goap_world_state_utils_internal
 	auto
 		DoStampWorldStateFragments(
 			FCk_Handle& InTargetEntity,
-			const FCk_Fragment_Goap_WorldState_ParamsData& /*InParams*/)
+			const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
 		-> void
 	{
-		// Params is empty today and the fragment path rejects empty structs, so it is not
-		// stamped — re-add Add<FFragment_Goap_WorldState_Params>(InParams) once it gains knobs.
+		// Params has no stampable knobs — _PreRegisteredKeys is consumed here at composition, not
+		// stored. Re-add Add<FFragment_Goap_WorldState_Params>(InParams) once a stampable field lands.
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_KeyRegistry>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Values>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_OverrideStack>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Subscribers>();
+
+		// Synchronous on purpose: parent-fallback residency classification must find these keys
+		// resident before ANY Action setup pass can run against this WS — a deferred request
+		// cannot pin that ordering. Rejection is a composition-time authoring error, so it is a
+		// loud ensure, never the drain's Verbose silent-drop.
+		auto& Registry = InTargetEntity.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
+		for (const auto& Key : InParams.Get_PreRegisteredKeys())
+		{
+			CK_ENSURE_IF_NOT(Registry.FindOrRegister(Key) != ck::goap::InvalidGoapKey,
+				TEXT("GOAP WorldState [{}] rejected pre-registered key [{}] — invalid tag, or registry at capacity ({})."),
+				InTargetEntity, Key, ck::goap::WorldState_MaxKeys)
+			{ continue; }
+		}
+
 	}
 }
 
@@ -72,7 +95,9 @@ auto
 
 	ck_goap_world_state_utils_internal::DoStampWorldStateFragments(InOwner, InParams);
 
-	return CastChecked(InOwner);
+	auto Result = CastChecked(InOwner);
+	DoApplyParentLink(Result, InParams);
+	return Result;
 }
 
 auto
@@ -104,6 +129,8 @@ auto
 		ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 	ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Request_Connect(InOwner, WSEntity);
 
+	DoApplyParentLink(WSEntity, InParams);
+
 	return WSEntity;
 }
 
@@ -129,31 +156,7 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_WS_GetValue);
 	INC_DWORD_STAT(STAT_Goap_WS_Reads);
 
-	if (ck::Is_NOT_Valid(InWorldState))
-	{ return false; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>())
-	{ return false; }
-
-	if (InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
-	{
-		const auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
-		const auto& Layers = Stack.Get_Layers();
-		for (auto i = Layers.Num() - 1; i >= 0; --i)
-		{
-			if (const auto* V = Layers[i].Values.Find(InKey))
-			{
-				return *V;
-			}
-		}
-	}
-
-	const auto& Registry = InWorldState.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
-	const auto Key = Registry.Find(InKey);
-	if (Key == ck::goap::InvalidGoapKey)
-	{ return false; }
-
-	const auto& Values = InWorldState.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values();
-	return Values.Get(Key);
+	return ck_goap_world_state_utils_impl::DoGetEffectiveValue(InWorldState, InKey);
 }
 
 auto
@@ -182,28 +185,193 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_FallbackParent(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> FCk_Handle_Goap_WorldState
+{
+	if (NOT ck::IsValid(InWorldState)) { return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_ParentLink>()) { return {}; }
+	return InWorldState.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent();
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Has_Key_InChain(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
+	-> bool
+{
+	auto Walker = InWorldState;
+	for (auto Depth = 0; Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth; ++Depth)
+	{
+		if (NOT ck::IsValid(Walker)) { return false; }
+		if (NOT Walker.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
+
+		if (Walker.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry().Find(InKey)
+			!= ck::goap::InvalidGoapKey)
+		{ return true; }
+
+		if (NOT Walker.Has<ck::FFragment_Goap_WorldState_ParentLink>()) { return false; }
+		Walker = Walker.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent();
+	}
+
+	CK_TRIGGER_ENSURE(
+		TEXT("GOAP WorldState parent chain exceeded depth {} at [{}] — ParentLink cycle or over-deep chain."),
+		UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth, InWorldState);
+	return false;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_ImportedKeys(const FCk_Handle_Goap_WorldState& InWorldState)
+	-> TArray<FGameplayTag>
+{
+	if (NOT ck::IsValid(InWorldState)) { return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_ParentLink>()) { return {}; }
+	return InWorldState.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_ImportedTags().Array();
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Register_Key_WithResidencyClassification(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FGameplayTag InKey)
+	-> int32
+{
+	if (NOT InKey.IsValid()) { return ck::goap::InvalidGoapKey; }
+
+	auto& Registry = InWorldState.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
+
+	if (const auto Existing = Registry.Find(InKey); Existing != ck::goap::InvalidGoapKey)
+	{ return Existing; }
+
+	if (InWorldState.Has<ck::FFragment_Goap_WorldState_ParentLink>())
+	{
+		auto Walker = InWorldState.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent();
+		for (auto Depth = 0; Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth; ++Depth)
+		{
+			if (NOT ck::IsValid(Walker)) { break; }
+			if (NOT Walker.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { break; }
+
+			const auto ImportedThere = Walker.Has<ck::FFragment_Goap_WorldState_ParentLink>()
+				&& Walker.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_IsImported(InKey);
+
+			if (NOT ImportedThere &&
+				Walker.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry().Find(InKey)
+					!= ck::goap::InvalidGoapKey)
+			{
+				// Ancestor-resident: alias locally, mark imported only on successful registration.
+				const auto Alias = Registry.FindOrRegister(InKey);
+				if (Alias != ck::goap::InvalidGoapKey)
+				{
+					InWorldState.Get<ck::FFragment_Goap_WorldState_ParentLink>()._ImportedTags.Add(InKey);
+				}
+				return Alias;
+			}
+
+			if (NOT Walker.Has<ck::FFragment_Goap_WorldState_ParentLink>()) { break; }
+			Walker = Walker.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent();
+		}
+
+		// Findable observability for the residency audit: a brand-new local key on a parented WS
+		// is the normal path for sub-local keys, but it is also what a missed pre-registration
+		// looks like — Verbose, never Warning (the AutoTest harness escalates Warnings).
+		ck::goap::Verbose(TEXT("GOAP sub-WS [{}] registering brand-new LOCAL key [{}] (not resident anywhere in its parent chain)."),
+			InWorldState, InKey);
+	}
+
+	return Registry.FindOrRegister(InKey);
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	Get_OwningWorldStateForKey(
+		const FCk_Handle_Goap_WorldState& InWorldState,
+		FGameplayTag InKey)
+	-> FCk_Handle_Goap_WorldState
+{
+	auto SawImportMark = false;
+	auto Walker = InWorldState;
+
+	for (auto Depth = 0; Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth; ++Depth)
+	{
+		if (NOT ck::IsValid(Walker) || NOT Walker.Has<ck::FFragment_Goap_WorldState_KeyRegistry>())
+		{ return SawImportMark ? FCk_Handle_Goap_WorldState{} : InWorldState; }
+
+		const auto ImportedHere = Walker.Has<ck::FFragment_Goap_WorldState_ParentLink>()
+			&& Walker.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_IsImported(InKey);
+
+		if (NOT ImportedHere &&
+			Walker.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry().Find(InKey)
+				!= ck::goap::InvalidGoapKey)
+		{ return Walker; }
+
+		SawImportMark |= ImportedHere;
+
+		if (NOT Walker.Has<ck::FFragment_Goap_WorldState_ParentLink>())
+		{ return SawImportMark ? FCk_Handle_Goap_WorldState{} : InWorldState; }
+
+		Walker = Walker.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent();
+	}
+
+	CK_TRIGGER_ENSURE(
+		TEXT("GOAP WorldState parent chain exceeded depth {} at [{}] — ParentLink cycle or over-deep chain."),
+		UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth, InWorldState);
+	return {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_goap_world_state_utils_impl
 {
+	constexpr auto MaxParentChainDepth = 8;
+
+	// The one effective-read path: own override layers (tag-keyed, so they may shadow imported
+	// keys) → own non-imported registry hit → parent chain. Dead/missing parent => false — the
+	// stale local alias slot is never served as truth.
 	auto
 		DoGetEffectiveValue(
 			const FCk_Handle_Goap_WorldState& InWS,
-			FGameplayTag InTag)
+			FGameplayTag InTag,
+			int32 InDepth)
 		-> bool
 	{
-		const auto& Stack = InWS.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
-		const auto& Layers = Stack.Get_Layers();
-		for (auto i = Layers.Num() - 1; i >= 0; --i)
+		if (NOT ck::IsValid(InWS)) { return false; }
+		if (NOT InWS.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
+
+		CK_ENSURE_IF_NOT(InDepth < MaxParentChainDepth,
+			TEXT("GOAP WorldState parent chain exceeded depth {} at [{}] — ParentLink cycle or over-deep chain."),
+			MaxParentChainDepth, InWS)
+		{ return false; }
+
+		if (InWS.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
 		{
-			if (const auto* V = Layers[i].Values.Find(InTag))
-			{ return *V; }
+			const auto& Layers = InWS.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
+			for (auto i = Layers.Num() - 1; i >= 0; --i)
+			{
+				if (const auto* V = Layers[i].Values.Find(InTag)) { return *V; }
+			}
 		}
 
-		const auto& Registry = InWS.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
-		const auto Key = Registry.Find(InTag);
-		if (Key == ck::goap::InvalidGoapKey)
-		{ return false; }
-		const auto& Values = InWS.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values();
-		return Values.Get(Key);
+		const auto IsImported = InWS.Has<ck::FFragment_Goap_WorldState_ParentLink>()
+			&& InWS.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_IsImported(InTag);
+
+		if (NOT IsImported)
+		{
+			const auto& Registry = InWS.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+			const auto Key = Registry.Find(InTag);
+			if (Key != ck::goap::InvalidGoapKey)
+			{
+				return InWS.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values().Get(Key);
+			}
+		}
+
+		if (InWS.Has<ck::FFragment_Goap_WorldState_ParentLink>())
+		{
+			return DoGetEffectiveValue(
+				InWS.Get<ck::FFragment_Goap_WorldState_ParentLink>().Get_Parent(), InTag, InDepth + 1);
+		}
+
+		return false;
 	}
 
 	auto
@@ -744,6 +912,24 @@ auto
 	auto& Requests = InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_Requests>();
 	Requests._Requests.Add(InRequest);
 	return InWorldState;
+}
+
+auto
+	UCk_Utils_Goap_WorldState_UE::
+	DoApplyParentLink(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+	-> void
+{
+	if (NOT ck::IsValid(InParams.Get_FallbackParent()))
+	{ return; }
+
+	CK_ENSURE_IF_NOT(InParams.Get_FallbackParent() != InWorldState,
+		TEXT("GOAP WorldState [{}] cannot be its own fallback parent."), InWorldState)
+	{ return; }
+
+	auto& ParentLink = InWorldState.Add<ck::FFragment_Goap_WorldState_ParentLink>();
+	ParentLink._Parent = InParams.Get_FallbackParent();
 }
 
 auto

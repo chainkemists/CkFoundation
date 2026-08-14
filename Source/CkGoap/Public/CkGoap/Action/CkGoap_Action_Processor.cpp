@@ -6,6 +6,7 @@
 #include "CkGoap/Action/CkGoap_Action_Utils.h"  // CastChecked for Planner-as-Action
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 #include "CkGoap/Planner/CkGoap_Planner_Utils.h"  // resolve owning Planner for signal payload
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"  // residency classification + parent effective reads
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -166,8 +167,14 @@ auto
 			InActionDef._Effects       = CDO->_Effects;
 			InActionDef._Cost          = CDO->_Cost;
 
-			for (const auto& Pre : InActionDef._Preconditions) { SourceRegistry.FindOrRegister(Pre.Key); }
-			for (const auto& Eff : InActionDef._Effects)       { SourceRegistry.FindOrRegister(Eff.Key); }
+			// Residency classification (parent-fallback): ancestor-resident keys register as local
+			// import aliases; genuinely new keys register local. Plain FindOrRegister would claim
+			// shared keys as sub-local and silently desync them from the parent's values.
+			auto MutableSource = Source;
+			for (const auto& Pre : InActionDef._Preconditions)
+			{ UCk_Utils_Goap_WorldState_UE::Register_Key_WithResidencyClassification(MutableSource, Pre.Key); }
+			for (const auto& Eff : InActionDef._Effects)
+			{ UCk_Utils_Goap_WorldState_UE::Register_Key_WithResidencyClassification(MutableSource, Eff.Key); }
 		}
 	}
 
@@ -447,6 +454,27 @@ auto
 				// snapshot so the A* inner loop never walks the stack.
 				auto SourceWorldState = const_cast<FCk_Handle_Goap_WorldState&>(Source)
 					.template Get<FFragment_Goap_WorldState_Values>().Get_Values();
+
+				// Parent-fallback: imported slots are aliases whose truth lives in the parent
+				// chain — refresh them into the snapshot BEFORE the override flatten, so this
+				// planner's own overrides may still shadow them. Dead parent reads false,
+				// matching Get_Value (the local slot's stale value is never served).
+				if (const_cast<FCk_Handle_Goap_WorldState&>(Source)
+					.template Has<FFragment_Goap_WorldState_ParentLink>())
+				{
+					const auto& ParentLink = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+						.template Get<FFragment_Goap_WorldState_ParentLink>();
+					const auto& ImportRegistry = const_cast<FCk_Handle_Goap_WorldState&>(Source)
+						.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
+
+					for (const auto& ImportedTag : ParentLink.Get_ImportedTags())
+					{
+						const auto FlatKey = ImportRegistry.Find(ImportedTag);
+						if (FlatKey == goap::InvalidGoapKey) { continue; }
+						SourceWorldState.Set(FlatKey,
+							UCk_Utils_Goap_WorldState_UE::Get_Value(ParentLink.Get_Parent(), ImportedTag));
+					}
+				}
 
 				if (const_cast<FCk_Handle_Goap_WorldState&>(Source)
 					.template Has<FFragment_Goap_WorldState_OverrideStack>())

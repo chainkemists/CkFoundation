@@ -13,6 +13,20 @@
 #include "CkGoap_Planner_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+// Shared by the AddAction-time (eager) and activation-time (correcting) WS-source resolution
+// passes: KeepExisting no-ops when _Resolved is already valid; Reassign recomputes and overwrites,
+// but only with a valid result.
+
+namespace ck::goap::internal_planner
+{
+	enum class EResolveWorldStateSourcePolicy : uint8
+	{
+		KeepExisting,
+		Reassign,
+	};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGOAP_API FCk_Handle_Goap_Planner : public FCk_Handle_TypeSafe
