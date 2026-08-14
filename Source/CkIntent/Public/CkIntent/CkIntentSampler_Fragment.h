@@ -111,6 +111,7 @@ namespace ck
         CK_PROPERTY_GET(_Rows);
         CK_PROPERTY_GET(_NextWriteIndex);
         CK_PROPERTY_GET(_RowCount);
+        CK_PROPERTY_GET(_HeldKeys);
     };
 }
 
