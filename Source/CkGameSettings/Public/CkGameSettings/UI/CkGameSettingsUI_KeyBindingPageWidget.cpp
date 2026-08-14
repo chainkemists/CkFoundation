@@ -12,6 +12,8 @@
 #include <CommonButtonBase.h>
 #include <CommonInputSubsystem.h>
 #include <CommonInputBaseTypes.h>
+#include <Framework/Application/IInputProcessor.h>
+#include <Framework/Application/SlateApplication.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,6 +21,70 @@ namespace ck_game_settings_ui_key_binding_page_widget
 {
     constexpr auto AnalogCaptureThreshold = 0.5f;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Captures the NEXT input during a rebind window, regardless of Slate keyboard focus — an
+ * activatable settings screen routinely owns focus, and a widget-focus capture also cannot see
+ * mouse buttons or the wheel at all (legacy rows bind LMB/RMB/scroll). Registered by the page
+ * for exactly the capture window; every handled event is swallowed so the press cannot leak
+ * into the UI underneath.
+ */
+class FCk_GameSettingsUI_KeyCaptureProcessor : public IInputProcessor
+{
+public:
+    explicit FCk_GameSettingsUI_KeyCaptureProcessor(
+        UCk_GameSettingsUI_KeyBindingPageWidget* InPage)
+        : _Page(InPage)
+    {}
+
+    auto Tick(const float InDeltaTime, FSlateApplication& InSlateApp, TSharedRef<ICursor> InCursor) -> void override
+    {}
+
+    auto HandleKeyDownEvent(FSlateApplication& InSlateApp, const FKeyEvent& InKeyEvent) -> bool override
+    {
+        DoDeliver(InKeyEvent.GetKey());
+        return true;
+    }
+
+    auto HandleMouseButtonDownEvent(FSlateApplication& InSlateApp, const FPointerEvent& InPointerEvent) -> bool override
+    {
+        DoDeliver(InPointerEvent.GetEffectingButton());
+        return true;
+    }
+
+    auto HandleMouseWheelOrGestureEvent(FSlateApplication& InSlateApp, const FPointerEvent& InWheelEvent, const FPointerEvent* InGestureEvent) -> bool override
+    {
+        if (InWheelEvent.GetWheelDelta() == 0.0f)
+        { return true; }
+
+        DoDeliver(InWheelEvent.GetWheelDelta() > 0.0f ? EKeys::MouseScrollUp : EKeys::MouseScrollDown);
+        return true;
+    }
+
+    auto HandleAnalogInputEvent(FSlateApplication& InSlateApp, const FAnalogInputEvent& InAnalogEvent) -> bool override
+    {
+        using namespace ck_game_settings_ui_key_binding_page_widget;
+
+        if (FMath::Abs(InAnalogEvent.GetAnalogValue()) < AnalogCaptureThreshold)
+        { return true; }
+
+        DoDeliver(InAnalogEvent.GetKey());
+        return true;
+    }
+
+private:
+    auto DoDeliver(const FKey& InKey) -> void
+    {
+        if (auto* Page = _Page.Get();
+            ck::IsValid(Page))
+        { Page->INTERNAL__HandleCapturedKey(InKey); }
+    }
+
+private:
+    TWeakObjectPtr<UCk_GameSettingsUI_KeyBindingPageWidget> _Page;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -120,6 +186,28 @@ auto
     -> void
 {
     DoRefreshKeyDisplay();
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingRowWidget::
+    Request_SetCaptureDisplay(
+        bool InCapturing)
+    -> void
+{
+    if (NOT InCapturing)
+    {
+        DoRefreshKeyDisplay();
+        return;
+    }
+
+    if (ck::IsValid(_KeyIconImage))
+    { _KeyIconImage->SetVisibility(ESlateVisibility::Collapsed); }
+
+    if (ck::IsValid(_KeyText))
+    {
+        _KeyText->SetVisibility(ESlateVisibility::HitTestInvisible);
+        _KeyText->SetText(NSLOCTEXT("CkGameSettings", "KeyCapturePrompt", "..."));
+    }
 }
 
 auto
@@ -303,9 +391,18 @@ auto
         { NamesToShow.Append(NamesByCategory[Category]); }
     }
 
+    auto PreviousCategory = TOptional<FString>{};
+
     for (const auto& MappingName : NamesToShow)
     {
         const auto& Mapping = FirstMappingByName[MappingName];
+
+        if (const auto Category = Mapping.GetDisplayCategory().ToString();
+            NOT PreviousCategory.IsSet() || PreviousCategory.GetValue() != Category)
+        {
+            PreviousCategory = Category;
+            OnCategoryHeaderNeeded(Mapping.GetDisplayCategory());
+        }
 
         const auto Row = CreateWidget<UCk_GameSettingsUI_KeyBindingRowWidget>(this, _RowWidgetClass);
 
@@ -374,6 +471,9 @@ auto
     NativeDestruct()
     -> void
 {
+    if (_CaptureProcessor.IsValid() && FSlateApplication::IsInitialized())
+    { FSlateApplication::Get().UnregisterInputPreProcessor(_CaptureProcessor); }
+
     if (const auto PlayerController = GetOwningPlayer();
         ck::IsValid(PlayerController))
     {
@@ -572,14 +672,43 @@ auto
 
     if (ck::IsValid(_CapturePromptText))
     {
-        _CapturePromptText->SetText(FText::FromString(
-            FString::Printf(TEXT("Press a key for [%s] — Esc cancels"), *InMappingName.ToString())));
+        _CapturePromptText->SetText(FText::Format(
+            NSLOCTEXT("CkGameSettings", "KeyCapturePromptFormat", "Press a key for {0} — Esc cancels"),
+            DoGet_MappingDisplayName(InMappingName)));
     }
 
     if (ck::IsValid(_CaptureOverlay))
     { _CaptureOverlay->SetVisibility(ESlateVisibility::Visible); }
 
+    DoSetPendingRowCaptureDisplay(true);
+
+    if (FSlateApplication::IsInitialized())
+    {
+        if (NOT _CaptureProcessor.IsValid())
+        { _CaptureProcessor = MakeShared<FCk_GameSettingsUI_KeyCaptureProcessor>(this); }
+
+        FSlateApplication::Get().RegisterInputPreProcessor(_CaptureProcessor);
+    }
+
     SetKeyboardFocus();
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    INTERNAL__HandleCapturedKey(
+        const FKey& InKey)
+    -> void
+{
+    if (NOT _CaptureActive)
+    { return; }
+
+    if (InKey == EKeys::Escape)
+    {
+        DoCancelCapture();
+        return;
+    }
+
+    DoAttemptRebind(InKey);
 }
 
 auto
@@ -589,8 +718,45 @@ auto
 {
     _CaptureActive = false;
 
+    if (_CaptureProcessor.IsValid() && FSlateApplication::IsInitialized())
+    { FSlateApplication::Get().UnregisterInputPreProcessor(_CaptureProcessor); }
+
+    DoSetPendingRowCaptureDisplay(false);
+
     if (ck::IsValid(_CaptureOverlay))
     { _CaptureOverlay->SetVisibility(ESlateVisibility::Collapsed); }
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    DoSetPendingRowCaptureDisplay(
+        bool InCapturing)
+    -> void
+{
+    for (const auto& Row : _Rows)
+    {
+        if (ck::IsValid(Row) && Row->Get_MappingName() == _PendingMappingName)
+        { Row->Request_SetCaptureDisplay(InCapturing); }
+    }
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    DoGet_MappingDisplayName(
+        FName InMappingName) const
+    -> FText
+{
+    if (const auto PlayerController = GetOwningPlayer();
+        ck::IsValid(PlayerController))
+    {
+        for (const auto& Mapping : UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(PlayerController))
+        {
+            if (Mapping.GetMappingName() == InMappingName && NOT Mapping.GetDisplayName().IsEmpty())
+            { return Mapping.GetDisplayName(); }
+        }
+    }
+
+    return FText::FromName(InMappingName);
 }
 
 auto
@@ -608,9 +774,12 @@ auto
 
     _PendingKey = InNewKey;
 
+    auto ExcludedNames = TArray<FName>{_PendingMappingName};
+    ExcludedNames.Append(Get_LinkedMappingNames(_PendingMappingName));
+
     auto Conflicts = TArray<FCk_KeyBinding_ConflictInfo>{};
 
-    if (UCk_Utils_KeyBinding_UE::Get_HasKeyConflicts(PlayerController, InNewKey, {_PendingMappingName}, Conflicts))
+    if (UCk_Utils_KeyBinding_UE::Get_HasKeyConflicts(PlayerController, InNewKey, ExcludedNames, Conflicts, _ConflictScope))
     {
         const auto Description = Conflicts.Num() > 0
             ? FText::FromString(FString::Printf(TEXT("[%s] is already bound to [%s]"),
@@ -646,11 +815,31 @@ auto
 {
     if (InSucceeded)
     {
+        // Linked followers ride along — covers the plain, swap and overwrite paths alike.
+        if (const auto PlayerController = GetOwningPlayer();
+            ck::IsValid(PlayerController))
+        {
+            for (const auto& LinkedName : Get_LinkedMappingNames(_PendingMappingName))
+            {
+                auto LinkedFailure = FGameplayTagContainer{};
+                UCk_Utils_KeyBinding_UE::RemapKey(PlayerController, LinkedName, _PendingSlot, _PendingKey, LinkedFailure);
+            }
+        }
+
         DoSetStatus(FText::GetEmpty());
         return;
     }
 
     DoSetStatus(FText::FromString(FString::Printf(TEXT("Rebind failed: %s"), *InFailureReason.ToStringSimple())));
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    Get_LinkedMappingNames_Implementation(
+        FName InMappingName)
+    -> TArray<FName>
+{
+    return {};
 }
 
 auto

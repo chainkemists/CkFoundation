@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkInput/CkInput_Utils.h"
+#include "CkInput/CkPlayerMappableKeySettings.h"
 #include "CkInput/Subsystem/CkKeyBinding_Subsystem.h"
 
 #include <EnhancedInputSubsystems.h>
@@ -322,7 +323,9 @@ auto
         const UInputAction* InAction,
         FKey InKey,
         FName InMappingName,
-        FText InDisplayName)
+        FText InDisplayName,
+        const FText& InDisplayCategory,
+        const FGameplayTagContainer& InScopeTags)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InContext), TEXT("Invalid Input Mapping Context"))
@@ -361,9 +364,11 @@ auto
         TEXT("FEnhancedActionKeyMapping no longer exposes SettingBehavior/PlayerMappableKeySettings — engine drift, re-verify this write path"))
     { return {}; }
 
-    auto* MappableSettings = NewObject<UPlayerMappableKeySettings>(InContext);
+    auto* MappableSettings = NewObject<UCk_PlayerMappableKeySettings_UE>(InContext);
     MappableSettings->Name = InMappingName;
     MappableSettings->DisplayName = InDisplayName;
+    MappableSettings->DisplayCategory = InDisplayCategory;
+    MappableSettings->Set_ScopeTags(InScopeTags);
 
     auto& Mapping = InContext->GetMapping(MappingIndex);
 
@@ -483,6 +488,15 @@ auto
         }
     }
 
+    auto SourceScopeTags = FGameplayTagContainer{};
+    if (InScope == ECk_KeyConflictScope::SameScopeTags && NOT InExcludeMappingNames.IsEmpty())
+    {
+        if (const auto* SourceSettings = Cast<UCk_PlayerMappableKeySettings_UE>(
+                Get_MappableSettingsForMapping(InPlayerController, InExcludeMappingNames[0]));
+            ck::IsValid(SourceSettings))
+        { SourceScopeTags = SourceSettings->Get_ScopeTags(); }
+    }
+
     auto ConflictingMappingNames = TArray<FName>{};
     Profile->GetMappingNamesForKey(InNewKey, ConflictingMappingNames);
 
@@ -494,6 +508,17 @@ auto
         const auto* Row = Profile->FindKeyMappingRow(MappingName);
         if (ck::Is_NOT_Valid(Row, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
+
+        if (InScope == ECk_KeyConflictScope::SameScopeTags)
+        {
+            const auto* CandidateSettings = Cast<UCk_PlayerMappableKeySettings_UE>(
+                Get_MappableSettingsForMapping(InPlayerController, MappingName));
+
+            // Untagged mappings (or ones on stock settings) never match a scope-tag scan
+            if (ck::Is_NOT_Valid(CandidateSettings) ||
+                NOT CandidateSettings->Get_ScopeTags().HasAny(SourceScopeTags))
+            { continue; }
+        }
 
         for (const auto& Mapping : Row->Mappings)
         {
@@ -510,6 +535,39 @@ auto
     }
 
     return NOT OutConflicts.IsEmpty();
+}
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_MappableSettingsForMapping(
+        const APlayerController* InPlayerController,
+        FName InMappingName)
+    -> const UPlayerMappableKeySettings*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid Player Controller"))
+    { return {}; }
+
+    auto* Settings = Get_InputUserSettings(InPlayerController);
+    if (ck::Is_NOT_Valid(Settings))
+    { return {}; }
+
+    for (const auto& Context : Settings->GetRegisteredInputMappingContexts())
+    {
+        if (ck::Is_NOT_Valid(Context))
+        { continue; }
+
+        for (const auto& Mapping : Context->GetMappings())
+        {
+            if (Mapping.GetMappingName() != InMappingName)
+            { continue; }
+
+            if (const auto* MappableSettings = Mapping.GetPlayerMappableKeySettings();
+                ck::IsValid(MappableSettings))
+            { return MappableSettings; }
+        }
+    }
+
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

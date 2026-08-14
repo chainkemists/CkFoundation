@@ -139,6 +139,12 @@ private:
     HandleTabSelected(
         int32 InTabIndex);
 
+    UFUNCTION()
+    void
+    HandleSettingChangedForApply(
+        FName InKey,
+        const FString& InNewValue);
+
 private:
     auto HandleApplyClicked() -> void;
     auto HandleCancelClicked() -> void;
@@ -156,7 +162,9 @@ private:
 
 private:
     /** The panel rows are injected into — required (rows have no injection point without it).
-     *  WBP-compile-enforced; headless native instantiation still runs with it null. */
+     *  WBP-compile-enforced; headless native instantiation still runs with it null.
+     *  ROWS ONLY: every populate re-appends rows in display order, which pushes any designed
+     *  child above them — chrome (headers, embedded blocks) goes in siblings of this panel. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UPanelWidget> _RowContainer;
