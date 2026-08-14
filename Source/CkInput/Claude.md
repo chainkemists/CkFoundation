@@ -438,15 +438,21 @@ drain. `Get_AllButtons` right after `Add` returning nothing is the contract, not
 
 **`Request_Rederive` rebuilds tier-1 from the profile rather than patching it.** Every mapped association
 is cleared first, then re-established from `Get_AllRemappableKeys`, so a mapping that stopped being
-player-mappable is left holding an invalid key instead of its last one. Newly seen names mint new
+player-mappable is left holding an EMPTY key list instead of its last keys. Newly seen names mint new
 identities; existing ones are never re-minted. A derive against an unmoved profile is an accepted no-op
 and completes `Succeeded`.
 
-**A derive with no `PlayerController` is a graceful no-op that completes `Succeeded`, and it changes
-nothing.** The profile lives on the local player, and a source composed before the engine has handed that
-player a controller is the normal startup order — the same quiet early-out the keybinding utils and both
-subsystems already take. It returns BEFORE the clearing pass on purpose: a transient absence must not wipe
-associations that were correct a frame ago.
+**An UNREADABLE profile is a graceful no-op that completes `Succeeded`, and it changes nothing.** Three
+absences count, and all three are transient: no `PlayerController` yet, no `UEnhancedInputUserSettings`,
+and no active key profile. A source composed before the engine has handed the local player a controller is
+the normal startup order — the same quiet early-out the keybinding utils and both subsystems already take.
+The first is caught by its own null check; the other two are indistinguishable from a real empty profile at
+the query boundary (`Get_AllRemappableKeys` answers `{}` for all three), so they are caught by reading the
+query BEFORE the clearing pass and skipping the derive when it comes back empty while the map still holds
+Mapped keys. A transient absence must not wipe associations that were correct a frame ago: the wipe would
+last a frame, and a frame is long enough to cancel every live episode and Active level row a `CkIntent`
+matcher is holding on those buttons. A map that has no Mapped keys yet is not in that state, so the FIRST
+derive of a session still runs against a genuinely empty profile.
 
 **`Request_RegisterPhysicalButton` is idempotent.** Re-registering a key the map already carries —
 whether it came from a declaration or an earlier request — completes `Succeeded`, because a physical
