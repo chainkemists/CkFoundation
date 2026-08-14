@@ -143,10 +143,41 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Action_Setup);
 
-	// Defer to the next frame WITHOUT removing the setup tag: the WS source is
+	// ROLE SPLIT: this entity's preconditions/effects describe it as a CANDIDATE for the planner
+	// whose A* searches it, so they register and resolve against THAT planner's WS — the tree
+	// parent's (promoted host) or the owning top-level planner's. The entity's own _Resolved
+	// (planner role, possibly overridden to a sub-WS) governs only its goal, its snapshot, and
+	// its children's inheritance. Without the split, a promoted host carrying a sub-WS override
+	// would cache candidate indices in sub-registry space while the parent's snapshot stays in
+	// parent space — silent index aliasing in the parent's search.
+	const auto Source = [&]() -> FCk_Handle_Goap_WorldState
+	{
+		if (InHandle.Has<FFragment_Goap_Action_Tree>())
+		{
+			const auto& Tree = InHandle.Get<FFragment_Goap_Action_Tree>();
+			auto Parent = static_cast<FCk_Handle>(Tree.Get_ParentAction());
+			if (ck::IsValid(Parent) && Parent.Has<FFragment_Goap_Planner_WorldStateSource>())
+			{
+				return Parent.Get<FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
+			}
+		}
+
+		auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+		if (ck::IsValid(Owner) && Owner.Has<FFragment_Goap_Planner_WorldStateSource>())
+		{
+			const auto& OwnerWS = Owner.Get<FFragment_Goap_Planner_WorldStateSource>();
+			if (ck::IsValid(OwnerWS.Get_Resolved())) { return OwnerWS.Get_Resolved(); }
+			return OwnerWS.Get_WorldStateSource();
+		}
+
+		// Entities with no searching planner (a bare top-level Planner is not a candidate) fall
+		// back to their own resolution.
+		return InWSSource.Get_Resolved();
+	}();
+
+	// Defer to the next frame WITHOUT removing the setup tag: the searching planner's WS is
 	// resolved at AddAction time (top-level) or at activation time (non-root).
-	const auto Source = InWSSource.Get_Resolved();
-	if (ck::Is_NOT_Valid(Source))
+	if (NOT ck::IsValid(Source))
 	{
 		return;
 	}
