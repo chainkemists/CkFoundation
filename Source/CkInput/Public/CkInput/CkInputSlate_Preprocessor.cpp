@@ -203,8 +203,12 @@ auto
         const FPointerEvent* InGestureEvent)
     -> bool
 {
-    // A trackpad gesture is surfaced by its gesture TYPE and carries no wheel key, so there is no
-    // identity to record one under. The wheel event that accompanies it still records below.
+    // A gesture-sourced scroll is surfaced by its gesture TYPE and carries no wheel key, so there is no identity
+    // to record it under, and it is deliberately not recorded — this return precedes BOTH record calls below and
+    // Slate makes no second dispatch of the same scroll without the gesture. The consequence is worth knowing
+    // before anyone relies on the wheel: on a platform that routes all scrolling through gestures (a macOS
+    // trackpad) the record gets neither a notch nor an axis row. Whether that should synthesize a wheel identity
+    // is a design call, and it is the maintainer's.
     if (InGestureEvent != nullptr)
     { return false; }
 
