@@ -6,8 +6,13 @@
 #include "CkCVar/CkCVar_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <UObject/SoftObjectPtr.h>
 
 #include "CkGameSettings_Common.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class USoundClass;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -335,6 +340,44 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GameSettings_ResetToDefault, _Key);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** One Audio-pack category: a Float volume setting (key) driving a SoundClass through the pack's SoundMix. */
+USTRUCT(BlueprintType)
+struct CKGAMESETTINGS_API FCk_GameSettings_AudioCategory
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_GameSettings_AudioCategory);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _CategoryTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _SettingKey;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSoftObjectPtr<USoundClass> _SoundClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
+    float _DefaultVolume = 1.0f;
+
+public:
+    CK_PROPERTY_GET(_SettingKey);
+    CK_PROPERTY(_CategoryTag);
+    CK_PROPERTY(_SoundClass);
+    CK_PROPERTY(_DefaultVolume);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_GameSettings_AudioCategory, _SettingKey);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

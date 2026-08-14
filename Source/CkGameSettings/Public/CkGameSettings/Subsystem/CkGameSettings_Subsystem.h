@@ -307,6 +307,47 @@ public:
         FName InKey) const;
 
 public:
+    /** Registers the Audio pack from the project-settings config (SoundMix + categories). Idempotent per key. Returns how many categories were newly registered. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Register Audio Pack")
+    int32
+    Request_RegisterAudioPack();
+
+    /** Registers the Video pack (External-policy bridge over GEngine->GetGameUserSettings()). Idempotent per key. Returns how many settings were newly registered. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Register Video Pack")
+    int32
+    Request_RegisterVideoPack();
+
+    /** Runs the engine hardware benchmark, applies + saves the result, and fires change delegates for every registered video.* key. No-op (with a Display log) under headless presentation. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Run Hardware Benchmark")
+    bool
+    Request_RunHardwareBenchmark();
+
+    /**
+     * Applies InNewResolution ("WIDTHxHEIGHT") and starts a revert countdown: unless
+     * Request_ConfirmResolution arrives within InWindowSeconds, the prior resolution is restored.
+     * Nothing is saved to GameUserSettings.ini until confirm or revert.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Set Resolution With Confirm Window")
+    bool
+    Request_SetResolutionWithConfirmWindow(
+        const FString& InNewResolution,
+        float InWindowSeconds);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Confirm Resolution")
+    bool
+    Request_ConfirmResolution();
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|GameSettings",
               DisplayName = "[Ck][GameSettings] Request Flush Storage")
@@ -380,8 +421,15 @@ private:
 
     TArray<FDeferredCVarApply> _DeferredCVarApplies;
 
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UObject>> _PackHandlerObjects;
+
     bool _PendingSessionActive = false;
     TMap<FName, FString> _PendingPriorValues;
+
+    bool _ResolutionConfirmActive = false;
+    double _ResolutionConfirmDeadlineSeconds = 0.0;
+    FIntPoint _ResolutionConfirmPriorResolution = FIntPoint::ZeroValue;
 
     bool _IsPieInstance = false;
     bool _FlushPending = false;

@@ -360,6 +360,57 @@ public:
         FName InKey);
 
 public:
+    /** Registers the Audio pack from the project-settings config (SoundMix + categories). Idempotent per key. Returns how many categories were newly registered. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Register Audio Pack",
+              meta = (WorldContext = "InWorldContextObject"))
+    static int32
+    Request_RegisterAudioPack(
+        const UObject* InWorldContextObject);
+
+    /** Registers the Video pack (External-policy bridge over GEngine->GetGameUserSettings()). Idempotent per key. Returns how many settings were newly registered. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Register Video Pack",
+              meta = (WorldContext = "InWorldContextObject"))
+    static int32
+    Request_RegisterVideoPack(
+        const UObject* InWorldContextObject);
+
+    /** Runs the engine hardware benchmark, applies + saves the result, and fires change delegates for every registered video.* key. No-op (with a Display log) under headless presentation. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Run Hardware Benchmark",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    Request_RunHardwareBenchmark(
+        const UObject* InWorldContextObject);
+
+    /**
+     * Applies InNewResolution ("WIDTHxHEIGHT") and starts a revert countdown: unless
+     * Request_ConfirmResolution arrives within InWindowSeconds, the prior resolution is restored.
+     * Nothing is saved to GameUserSettings.ini until confirm or revert.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Set Resolution With Confirm Window",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    Request_SetResolutionWithConfirmWindow(
+        const UObject* InWorldContextObject,
+        const FString& InNewResolution,
+        float InWindowSeconds);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Request Confirm Resolution",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    Request_ConfirmResolution(
+        const UObject* InWorldContextObject);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GameSettings",
               DisplayName = "[Ck][GameSettings] Request Flush Storage",
