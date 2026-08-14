@@ -137,10 +137,18 @@ auto
 	InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	// Subscribing is what makes WS-dirty tags land on the Planner for AutoReplan to pick up.
+	// The WHOLE parent chain: an imported key's truth changes on an ancestor, and that change
+	// must dirty this planner too.
 	if (ck::IsValid(InParams.Get_WorldStateSource()))
 	{
 		auto WS = InParams.Get_WorldStateSource();
-		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity, {});
+		for (auto Depth = 0;
+			ck::IsValid(WS) && Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth;
+			++Depth)
+		{
+			UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity, {});
+			WS = UCk_Utils_Goap_WorldState_UE::Get_FallbackParent(WS);
+		}
 	}
 
 	if (InParams.Get_PlanOnStart())
@@ -698,47 +706,50 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 // Befriended on FFragment_Goap_Planner_WorldStateSource so it can write _Resolved directly.
+// The single resolver behind both the eager AddAction pass (KeepExisting) and activation's
+// correcting pass (Reassign) — any resolution-order change lands here once.
 auto
 	ck::goap::internal_planner::
 	DoResolveChildWorldStateFromParent(
 		FCk_Handle_Goap_Action& InChild,
-		const FCk_Handle_Goap_Action& InParentAction) -> void
+		const FCk_Handle_Goap_Action& InParentAction,
+		EResolveWorldStateSourcePolicy InPolicy) -> void
 {
 	auto& ChildWSSource = InChild.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-	if (ck::IsValid(ChildWSSource.Get_Resolved())) { return; }
+	if (InPolicy == EResolveWorldStateSourcePolicy::KeepExisting &&
+		ck::IsValid(ChildWSSource.Get_Resolved()))
+	{ return; }
 
-	const auto& ChildParams = InChild.Get<ck::FFragment_Goap_Action_Params>();
-	const auto Override = ChildParams.Get_WorldStateSource_Override();
-	if (ck::IsValid(Override))
+	const auto Computed = [&]() -> FCk_Handle_Goap_WorldState
 	{
-		ChildWSSource._Resolved = Override;
-		return;
-	}
+		const auto& ChildParams = InChild.Get<ck::FFragment_Goap_Action_Params>();
+		const auto Override = ChildParams.Get_WorldStateSource_Override();
+		if (ck::IsValid(Override))
+		{ return Override; }
 
-	if (ck::IsValid(InParentAction))
-	{
-		const auto& ParentWSSource = InParentAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-		const auto ParentWS = ParentWSSource.Get_Resolved();
-		if (ck::IsValid(ParentWS))
+		if (ck::IsValid(InParentAction))
 		{
-			ChildWSSource._Resolved = ParentWS;
-			return;
+			const auto& ParentWSSource = InParentAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+			if (ck::IsValid(ParentWSSource.Get_Resolved()))
+			{ return ParentWSSource.Get_Resolved(); }
 		}
-	}
 
-	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
-	if (OwnerEntity.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
+		auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
+		if (OwnerEntity.Has<ck::FFragment_Goap_Planner_WorldStateSource>())
+		{
+			const auto& OwnerWS = OwnerEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
+			if (ck::IsValid(OwnerWS.Get_Resolved()))
+			{ return OwnerWS.Get_Resolved(); }
+			return OwnerWS.Get_WorldStateSource();
+		}
+
+		return {};
+	}();
+
+	// Never stomp a valid resolution with an invalid recompute (Reassign included).
+	if (ck::IsValid(Computed))
 	{
-		const auto& OwnerWS = OwnerEntity.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
-		if (ck::IsValid(OwnerWS.Get_Resolved()))
-		{
-			ChildWSSource._Resolved = OwnerWS.Get_Resolved();
-			return;
-		}
-		if (ck::IsValid(OwnerWS.Get_WorldStateSource()))
-		{
-			ChildWSSource._Resolved = OwnerWS.Get_WorldStateSource();
-		}
+		ChildWSSource._Resolved = Computed;
 	}
 }
 
@@ -778,7 +789,8 @@ auto
 		auto& HostTree = InPlanner.Get<ck::FFragment_Goap_Action_Tree>();
 		HostTree._ChildActions.AddUnique(ActionEntity);
 
-		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, HostAsAction);
+		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, HostAsAction,
+			ck::goap::internal_planner::EResolveWorldStateSourcePolicy::KeepExisting);
 		return ActionEntity;
 	}
 
@@ -786,7 +798,8 @@ auto
 	// Planner's ActionCatalogIndex is the candidate set.
 	{
 		auto InvalidParent = FCk_Handle_Goap_Action{};
-		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, InvalidParent);
+		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, InvalidParent,
+			ck::goap::internal_planner::EResolveWorldStateSourcePolicy::KeepExisting);
 	}
 
 	return ActionEntity;

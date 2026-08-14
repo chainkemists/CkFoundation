@@ -6,6 +6,7 @@
 #include "CkGoap/Action/CkGoap_Action_Utils.h"
 #include "CkGoap/Algorithm/CkGoap_WorldState.h"
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
+#include "CkGoap/Planner/CkGoap_Planner_Internal.h"  // shared WS-source resolver
 #include "CkGoap/Planner/CkGoap_Planner_Utils.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
@@ -415,33 +416,8 @@ auto
 		FCk_Handle_Goap_Action& InChild,
 		const FCk_Handle_Goap_Action& InParent) -> void
 {
-	auto& ChildWSSource = InChild.template Get<FFragment_Goap_Planner_WorldStateSource>();
-	const auto& ChildParams = InChild.template Get<FFragment_Goap_Action_Params>();
-
-	const auto Override = ChildParams.Get_WorldStateSource_Override();
-	if (ck::IsValid(Override))
-	{
-		ChildWSSource._Resolved = Override;
-		return;
-	}
-
-	if (ck::IsValid(InParent))
-	{
-		const auto& ParentWSSource = InParent.template Get<FFragment_Goap_Planner_WorldStateSource>();
-		if (ck::IsValid(ParentWSSource.Get_Resolved()))
-		{
-			ChildWSSource._Resolved = ParentWSSource.Get_Resolved();
-			return;
-		}
-	}
-
-	// Last resort: the top-level Planner's default. Every Action's lifetime owner is that Planner.
-	auto OwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChild);
-	if (OwnerEntity.template Has<FFragment_Goap_Planner_WorldStateSource>())
-	{
-		const auto& SetWS = OwnerEntity.template Get<FFragment_Goap_Planner_WorldStateSource>();
-		ChildWSSource._Resolved = SetWS.Get_WorldStateSource();
-	}
+	ck::goap::internal_planner::DoResolveChildWorldStateFromParent(InChild, InParent,
+		ck::goap::internal_planner::EResolveWorldStateSourcePolicy::Reassign);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -450,13 +426,19 @@ auto
 	FProcessor_Goap_Planner_UpdateActivation::
 	DoSubscribeActionToWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
+	// The whole parent chain: an imported key's truth changes on an ancestor and must dirty us.
 	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	auto WS = WSSource._Resolved;
-	if (ck::Is_NOT_Valid(WS))
-	{ return; }
+	for (auto Depth = 0;
+		ck::IsValid(WS) && Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth;
+		++Depth)
+	{
+		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>()) { return; }
+		auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
+		Subscribers._Subscribers.AddUnique(FCk_Handle{InAction});
 
-	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
-	Subscribers._Subscribers.AddUnique(FCk_Handle{InAction});
+		WS = UCk_Utils_Goap_WorldState_UE::Get_FallbackParent(WS);
+	}
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -465,13 +447,20 @@ auto
 	FProcessor_Goap_Planner_UpdateActivation::
 	DoUnsubscribeActionFromWorldState(FCk_Handle_Goap_Action& InAction) -> void
 {
+	// Mirror of the chain subscribe — a deactivated sub-planner left subscribed to an ancestor
+	// would take spurious replan pressure from every shared-gate flip.
 	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	auto WS = WSSource._Resolved;
-	if (ck::Is_NOT_Valid(WS))
-	{ return; }
+	for (auto Depth = 0;
+		ck::IsValid(WS) && Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth;
+		++Depth)
+	{
+		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>()) { return; }
+		auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
+		Subscribers._Subscribers.RemoveSwap(FCk_Handle{InAction});
 
-	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
-	Subscribers._Subscribers.RemoveSwap(FCk_Handle{InAction});
+		WS = UCk_Utils_Goap_WorldState_UE::Get_FallbackParent(WS);
+	}
 }
 
 // --------------------------------------------------------------------------------------------------------------------

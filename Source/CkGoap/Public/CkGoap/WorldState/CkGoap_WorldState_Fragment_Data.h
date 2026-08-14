@@ -21,7 +21,11 @@ struct CKGOAP_API FCk_Handle_Goap_WorldState : public FCk_Handle_TypeSafe
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_WorldState);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Deliberately empty — reserved so the Add/Create signatures stay stable when knobs land.
+// _PreRegisteredKeys is registered SYNCHRONOUSLY inside Add/Create, pinning residency before any
+// Action setup pass can classify against this WS — the parent-fallback residency guarantee. A
+// deferred Request_RegisterKey cannot give that ordering.
+// _FallbackParent makes this WS a sub-WS: keys it doesn't own resolve, read, and write through to
+// the parent chain (import-aliasing). Set once at composition; there is no re-parenting API.
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Fragment_Goap_WorldState_ParamsData
@@ -30,6 +34,22 @@ struct CKGOAP_API FCk_Fragment_Goap_WorldState_ParamsData
 
 public:
 	CK_GENERATED_BODY(FCk_Fragment_Goap_WorldState_ParamsData);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	TArray<FGameplayTag> _PreRegisteredKeys;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+		meta = (AllowPrivateAccess = true))
+	FCk_Handle_Goap_WorldState _FallbackParent;
+
+public:
+	CK_PROPERTY(_PreRegisteredKeys);
+	CK_PROPERTY(_FallbackParent);
+
+public:
+	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_WorldState_ParamsData, _PreRegisteredKeys, _FallbackParent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
