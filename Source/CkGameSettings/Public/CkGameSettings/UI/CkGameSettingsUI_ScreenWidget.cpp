@@ -167,6 +167,17 @@ auto
         _SessionBegun = UCk_Utils_GameSettings_UE::Request_BeginPendingChanges(this);
     }
 
+    // In session mode the Apply button tracks dirtiness: disabled until a row commits a change,
+    // driven by the wildcard change signal. Auto-apply mode leaves it alone.
+    if (_SessionBegun && ck::IsValid(_ApplyButton))
+    {
+        _ApplyButton->SetIsEnabled(false);
+
+        auto OnChanged = FCk_Delegate_GameSettings_OnSettingChanged{};
+        OnChanged.BindDynamic(this, &UCk_GameSettingsUI_ScreenWidget::HandleSettingChangedForApply);
+        UCk_Utils_GameSettings_UE::BindTo_OnSettingChanged(this, NAME_None, OnChanged);
+    }
+
     Request_RebuildRows();
 }
 
@@ -179,9 +190,24 @@ auto
     {
         UCk_Utils_GameSettings_UE::Request_RevertPendingChanges(this);
         _SessionBegun = false;
+
+        auto OnChanged = FCk_Delegate_GameSettings_OnSettingChanged{};
+        OnChanged.BindDynamic(this, &UCk_GameSettingsUI_ScreenWidget::HandleSettingChangedForApply);
+        UCk_Utils_GameSettings_UE::UnbindFrom_OnSettingChanged(this, NAME_None, OnChanged);
     }
 
     Super::NativeOnDeactivated();
+}
+
+auto
+    UCk_GameSettingsUI_ScreenWidget::
+    HandleSettingChangedForApply(
+        FName InKey,
+        const FString& InNewValue)
+    -> void
+{
+    if (ck::IsValid(_ApplyButton))
+    { _ApplyButton->SetIsEnabled(UCk_Utils_GameSettings_UE::Get_HasPendingChanges(this)); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -209,6 +235,9 @@ auto
 
     UCk_Utils_GameSettings_UE::Request_ApplyPendingChanges(this);
     _SessionBegun = UCk_Utils_GameSettings_UE::Request_BeginPendingChanges(this);
+
+    if (ck::IsValid(_ApplyButton))
+    { _ApplyButton->SetIsEnabled(false); }
 }
 
 auto
@@ -417,11 +446,16 @@ auto
         if (ck::Is_NOT_Valid(Row))
         { continue; }
 
-        // A pooled row keeps the slot it was created in, which is an ORDER from some earlier
-        // populate. Shift it to where this populate wants it, or the page renders in whatever
-        // sequence the pool happened to fill.
+        // Re-added in iteration order every populate: a pooled row keeps the slot it was created
+        // in otherwise, and ShiftChild is NOT an alternative — it reorders the UMG slot array
+        // without rebuilding the live Slate panel, so nothing moves on screen. Remove+Add
+        // rebuilds. Consequence: designed children of _RowContainer would end up ABOVE the rows —
+        // the container is documented rows-only, chrome goes in siblings.
         if (ck::IsValid(_RowContainer))
-        { _RowContainer->ShiftChild(_ActiveRowCount, Row); }
+        {
+            _RowContainer->RemoveChild(Row);
+            _RowContainer->AddChild(Row);
+        }
 
         Row->InjectSetting(this, Key);
         Row->SetVisibility(ESlateVisibility::Visible);

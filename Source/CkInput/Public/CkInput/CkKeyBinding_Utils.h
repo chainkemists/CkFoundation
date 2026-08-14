@@ -12,6 +12,7 @@
 #include "CkKeyBinding_Utils.generated.h"
 
 class UInputMappingContext;
+class UPlayerMappableKeySettings;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,8 +61,16 @@ enum class ECk_KeyConflictScope : uint8
     /** Flag any mapping that shares the key, regardless of category. */
     All,
 
-    /** Only flag mappings whose DisplayCategory matches the source mapping's category. */
-    SameCategory
+    /** Only flag mappings whose DisplayCategory matches the source mapping's category.
+     *  Compares localized DISPLAY text — self-consistent, but couples semantics to presentation;
+     *  prefer SameScopeTags for anything beyond a single-category setup. */
+    SameCategory,
+
+    /** Only flag mappings whose UCk_PlayerMappableKeySettings_UE scope tags INTERSECT the source
+     *  mapping's. The semantic scope: presentation renames cannot shift it, and tag hierarchy
+     *  works (Input.Scope.Station.Roulette never collides with Input.Scope.Gameplay). An untagged
+     *  mapping never matches — tag every mappable the game shows on its rebind screen. */
+    SameScopeTags
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -296,21 +305,37 @@ public:
      * Editor-authored contexts set this in the details panel; that authoring surface is
      * friend-gated in C++, so this is the code path for contexts built at runtime.
      *
-     * @param InContext        The context that owns the mapping (typically still being built)
-     * @param InAction         The mapped action
-     * @param InKey            The mapped key identifying WHICH of the action's mappings
-     * @param InMappingName    Unique mapping name the rebind system addresses (e.g. "IA_Move_Forward")
-     * @param InDisplayName    Player-facing name for rebind rows
-     * @return                 True if the mapping was found and marked
+     * @param InContext          The context that owns the mapping (typically still being built)
+     * @param InAction           The mapped action
+     * @param InKey              The mapped key identifying WHICH of the action's mappings
+     * @param InMappingName      Unique mapping name the rebind system addresses (e.g. "IA_Move_Forward")
+     * @param InDisplayName      Player-facing name for rebind rows
+     * @param InDisplayCategory  Section header category ("Gameplay", "Roulette"); empty = uncategorized
+     * @param InScopeTags        Semantic conflict scope (ECk_KeyConflictScope::SameScopeTags)
+     * @return                   True if the mapping was found and marked
      */
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Make Mapping Player Mappable")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Make Mapping Player Mappable",
+              meta = (AutoCreateRefTerm = "InDisplayCategory,InScopeTags"))
     static bool
     MakeMappingPlayerMappable(
         UInputMappingContext* InContext,
         const UInputAction* InAction,
         FKey InKey,
         FName InMappingName,
-        FText InDisplayName);
+        FText InDisplayName,
+        const FText& InDisplayCategory,
+        const FGameplayTagContainer& InScopeTags);
+
+    /**
+     * The mappable settings a mapping NAME resolves to, scanning the registered contexts —
+     * reaches per-mapping override settings the profile's own rows cannot (the profile stores
+     * copies of the display fields only). Null when no registered mapping carries settings under
+     * that name.
+     */
+    static auto
+    Get_MappableSettingsForMapping(
+        const APlayerController* InPlayerController,
+        FName InMappingName) -> const UPlayerMappableKeySettings*;
 
     // --- Reset ---
 

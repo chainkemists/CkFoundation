@@ -11,6 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class FCk_GameSettingsUI_KeyCaptureProcessor;
 class UCommonButtonBase;
 class UCommonInputSubsystem;
 class UImage;
@@ -97,6 +98,13 @@ private:
     void
     HandleInputMethodChanged(
         ECommonInputType InNewInputType);
+
+public:
+    /** Capturing: the key pill reads a press-a-key prompt. Not: the pill re-resolves normally.
+     *  Driven by the owning page around its capture window. */
+    auto
+    Request_SetCaptureDisplay(
+        bool InCapturing) -> void;
 
 private:
     auto DoResolveDisplayedSlot() -> void;
@@ -217,13 +225,41 @@ public:
     TArray<FName>
     Get_CuratedMappingNames();
 
+    /**
+     * Hidden mappings that FOLLOW InMappingName: on a successful rebind they are remapped to the
+     * same key/slot, and they are excluded from its conflict scan. Default: none.
+     *
+     * The shared-physical-key mechanism: a tap action whose hold twin rides the same key
+     * (Interact + InteractContinuous) links the twin here — the twin stays off the page, rebinds
+     * in lockstep, and never surfaces as a conflict of its own leader. Do NOT model this by
+     * giving two actions the same mappable name: registration pushes the second into the next
+     * slot and rebinds then move only the first.
+     */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|GameSettings|KeyBinding")
+    TArray<FName>
+    Get_LinkedMappingNames(
+        FName InMappingName);
+
 protected:
-    /** Fired for every row after it is injected, in category order — insert category headers here. */
+    /** Fired for every row after it is injected, in category order. */
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|GameSettings|KeyBinding")
     void
     OnRowCreated(
         UCk_GameSettingsUI_KeyBindingRowWidget* InRow,
+        const FText& InCategory);
+
+    /**
+     * Fired BEFORE the first row of each display category — add a section-header widget to
+     * _RowContainer here and it lands above that category's rows (rows are appended
+     * sequentially, so this is the only moment a header can precede them). Fires with empty
+     * text for uncategorized runs; ignore it to skip a header there.
+     */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|GameSettings|KeyBinding")
+    void
+    OnCategoryHeaderNeeded(
         const FText& InCategory);
 
     /** Conflict presentation is the game's choice: bind _ConflictOverlay for the inline treatment,
@@ -261,6 +297,13 @@ private:
     auto HandleOverwriteClicked() -> void;
     auto HandleConflictCancelClicked() -> void;
 
+public:
+    /** Capture-window key delivery from the registered input preprocessor — Escape cancels,
+     *  anything else attempts the rebind. Not part of the public rebinding API. */
+    auto
+    INTERNAL__HandleCapturedKey(
+        const FKey& InKey) -> void;
+
 private:
     auto DoBeginCapture(FName InMappingName, EPlayerMappableKeySlot InSlot) -> void;
     auto DoCancelCapture() -> void;
@@ -268,6 +311,8 @@ private:
     auto DoFinishRebind(bool InSucceeded, const FGameplayTagContainer& InFailureReason) -> void;
     auto DoSetStatus(const FText& InStatus) -> void;
     auto DoSetConflictOverlayVisible(bool InVisible) -> void;
+    auto DoSetPendingRowCaptureDisplay(bool InCapturing) -> void;
+    auto DoGet_MappingDisplayName(FName InMappingName) const -> FText;
 
 private:
     /** The panel key rows are injected into — required (rows have no injection point without it).
@@ -329,6 +374,15 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _ConfirmResetAll = false;
 
+    /** All: a rebind conflicts with ANY registered mappable sharing the key — including hidden
+     *  internals and actions from contexts that are never active together. SameCategory scopes
+     *  the scan to the pending mapping's DisplayCategory: the right choice once mappables are
+     *  categorized (gameplay vs per-station), since cross-context key reuse is not a conflict. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|GameSettings|KeyBinding",
+              meta = (AllowPrivateAccess = true))
+    ECk_KeyConflictScope _ConflictScope = ECk_KeyConflictScope::All;
+
 private:
     auto DoResetAllNow() -> void;
 
@@ -342,6 +396,8 @@ private:
     FName _PendingMappingName;
     EPlayerMappableKeySlot _PendingSlot = EPlayerMappableKeySlot::First;
     FKey _PendingKey;
+
+    TSharedPtr<FCk_GameSettingsUI_KeyCaptureProcessor> _CaptureProcessor;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
