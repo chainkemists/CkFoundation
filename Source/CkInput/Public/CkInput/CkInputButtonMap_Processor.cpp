@@ -32,6 +32,18 @@ namespace ck_input_button_map_processor
     };
 
     auto
+        Get_AnyMappedButtonHasKeys(
+            const TArray<FCk_Input_ButtonAssociation>& InAssociations)
+        -> bool
+    {
+        return ck::algo::AnyOf(InAssociations, [](const FCk_Input_ButtonAssociation& InAssociation) -> bool
+        {
+            return InAssociation.Get_ButtonId().Get_Tier() == ECk_Input_ButtonTier::Mapped &&
+                   NOT InAssociation.Get_Keys().IsEmpty();
+        });
+    }
+
+    auto
         Get_EveryKeyIsAnAxis(
             const TArray<FKey>& InKeys)
         -> bool
@@ -151,6 +163,26 @@ namespace ck
             return ECk_Request_OperationResult::Succeeded;
         }
 
+        const auto Mappings = UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(PlayerController);
+
+        // Read BEFORE the clearing pass, because the query answers EMPTY for a null settings object and a null
+        // profile exactly as it does for a player who really has no mappable keys — and those two absences are as
+        // transient as the missing PlayerController above. Clearing first would wipe every Mapped association for
+        // a frame, cancelling live episodes and Active level rows downstream over a profile that was there a frame
+        // ago and will be again. So the same treatment: leave it untouched and let the next re-derive do the work.
+        // A map that carries no Mapped keys yet has nothing to lose, so the FIRST derive still runs.
+        if (Mappings.IsEmpty() && ck_input_button_map_processor::Get_AnyMappedButtonHasKeys(InCurrent._Associations))
+        {
+            input::VeryVerbose
+            (
+                TEXT("InputButtonMap [{}] skipped a re-derive: local player [{}] reported no remappable keys while "
+                     "the map still holds some, so the profile is momentarily unreadable"),
+                InButtonMap, InSourceParams.Get_LocalPlayerIndex()
+            );
+
+            return ECk_Request_OperationResult::Succeeded;
+        }
+
         // Associations are rebuilt from the profile rather than patched against it, so a mapping that stopped
         // being player-mappable is left holding no keys instead of its last ones. Identities are never
         // touched here — that is the stability contract the whole tier exists for.
@@ -161,8 +193,6 @@ namespace ck
 
             Association.Set_Keys({});
         }
-
-        const auto Mappings = UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(PlayerController);
 
         // A mapping name owns one button but may own several slots — a keyboard binding in one and a gamepad
         // binding in another — and the association carries EVERY bound slot's key. Gathered before writing
