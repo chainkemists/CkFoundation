@@ -434,7 +434,8 @@ auto
 		ck::IsValid(WS) && Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth;
 		++Depth)
 	{
-		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>()) { return; }
+		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>())
+		{ return; }
 		auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
 		Subscribers._Subscribers.AddUnique(FCk_Handle{InAction});
 
@@ -456,7 +457,8 @@ auto
 		ck::IsValid(WS) && Depth < UCk_Utils_Goap_WorldState_UE::MaxParentChainDepth;
 		++Depth)
 	{
-		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>()) { return; }
+		if (NOT WS.template Has<FFragment_Goap_WorldState_Subscribers>())
+		{ return; }
 		auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
 		Subscribers._Subscribers.RemoveSwap(FCk_Handle{InAction});
 
