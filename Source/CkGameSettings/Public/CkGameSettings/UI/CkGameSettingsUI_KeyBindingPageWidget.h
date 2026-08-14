@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkInput/CkKeyBinding_Utils.h"
@@ -22,6 +23,23 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_GameSettingsUI_RebindRequested,
     FName, InMappingName,
     EPlayerMappableKeySlot, InSlot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_GameSettingsUI_ConflictResolution : uint8
+{
+    // Give the conflicting mapping this row's old key, take the new one.
+    Swap,
+
+    // Unbind the conflicting mapping, take the new key.
+    Overwrite,
+
+    // Keep everything as it was.
+    Cancel
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GameSettingsUI_ConflictResolution);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -77,9 +95,10 @@ private:
               meta = (BindWidgetOptional, AllowPrivateAccess = true))
     TObjectPtr<UTextBlock> _NameText;
 
-    /** Clicking it starts key capture on the owning page. */
+    /** Clicking it starts key capture on the owning page — required: without it the row cannot
+     *  initiate a rebind. (_KeyIconImage/_KeyText stay optional — either alone is a valid look.) */
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UCommonButtonBase> _KeyButton;
 
     /** Receives the platform glyph brush when one exists; collapsed otherwise. */
@@ -144,6 +163,15 @@ public:
     int32
     Get_GeneratedRowCount() const;
 
+    /** Resolves the pending conflict surfaced by OnConflictDetected (or the bound overlay).
+     *  Rejected when no conflict is pending. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|GameSettings|KeyBinding",
+              DisplayName = "[Ck][GameSettings] Request Resolve Conflict")
+    void
+    Request_ResolveConflict(
+        ECk_GameSettingsUI_ConflictResolution InResolution);
+
 protected:
     /** Fired for every row after it is injected, in category order — insert category headers here. */
     UFUNCTION(BlueprintImplementableEvent,
@@ -152,6 +180,15 @@ protected:
     OnRowCreated(
         UCk_GameSettingsUI_KeyBindingRowWidget* InRow,
         const FText& InCategory);
+
+    /** Conflict presentation is the game's choice: bind _ConflictOverlay for the inline treatment,
+     *  or leave it unbound and this fires instead — present your own modal (a Confirm dialog on a
+     *  modal layer) and answer with Request_ResolveConflict. */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|GameSettings|KeyBinding")
+    void
+    OnConflictDetected(
+        const FText& InDescription);
 
 protected:
     auto NativeConstruct() -> void override;
@@ -181,9 +218,10 @@ private:
     auto DoSetConflictOverlayVisible(bool InVisible) -> void;
 
 private:
-    /** The panel key rows are injected into. Required — rows have no injection point without it. */
+    /** The panel key rows are injected into — required (rows have no injection point without it).
+     *  WBP-compile-enforced; headless native instantiation still runs with it null. */
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UPanelWidget> _RowContainer;
 
     /** Receives rebind failure reasons and reset confirmations. */
@@ -236,6 +274,7 @@ private:
     TArray<TObjectPtr<UCk_GameSettingsUI_KeyBindingRowWidget>> _Rows;
 
     bool _CaptureActive = false;
+    bool _ConflictPending = false;
     FName _PendingMappingName;
     EPlayerMappableKeySlot _PendingSlot = EPlayerMappableKeySlot::First;
     FKey _PendingKey;

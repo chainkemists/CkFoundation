@@ -13,6 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class USoundClass;
+class UCk_GameSettingsUI_RowWidgetBase;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -192,6 +193,13 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_GameSettings_EditConditions _EditConditions;
 
+    /** Per-setting row widget class for the settings screen. Set, it wins over EVERY other
+     *  resolution source (the select override, per-type overrides, built-ins) — the escape hatch
+     *  for the one setting that needs bespoke presentation. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase> _OptionalRowClassOverride;
+
 public:
     CK_PROPERTY_GET(_Key);
     CK_PROPERTY_GET(_ValueType);
@@ -207,6 +215,7 @@ public:
     CK_PROPERTY(_MaxValue);
     CK_PROPERTY(_Options);
     CK_PROPERTY(_EditConditions);
+    CK_PROPERTY(_OptionalRowClassOverride);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_GameSettings_SettingDefinition, _Key, _ValueType, _DefaultValue);
