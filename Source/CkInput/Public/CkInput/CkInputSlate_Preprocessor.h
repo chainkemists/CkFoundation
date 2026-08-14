@@ -114,6 +114,11 @@ private:
 private:
     TWeakObjectPtr<UGameInstance> _GameInstance;
     TSet<TPair<FKey, int32>> _RecordedDownKeys;
+
+    // Wheel deltas arrive in notch UNITS — 2.0 from a coalesced flick, 0.33 from a high-resolution wheel — so
+    // whole notches are emitted and the fraction is banked here for the next event. Signed, so a reversal
+    // cancels against what is banked instead of arming a notch in the direction the player left.
+    float _WheelNotchRemainder = 0.0f;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

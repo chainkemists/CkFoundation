@@ -218,18 +218,40 @@ auto
 
     const auto RawDeviceUserIndex = static_cast<int32>(InWheelEvent.GetUserIndex());
 
+    // WheelDelta is in NOTCH UNITS, not "one notch": the OS coalesces a fast flick into a single event carrying
+    // 2.0 or more, and a high-resolution wheel or a precision trackpad reports fractions like 0.33. One pair per
+    // EVENT would therefore swallow most of a flick and fire a whole notch for a third of one. So the delta is
+    // banked and only the WHOLE part is emitted, with the fraction carried to the next event. One accumulator for
+    // the preprocessor rather than one per device: a second physical wheel is not a case this pipeline has, and a
+    // per-device table would be state to age out with no event that says a wheel went away.
+    _WheelNotchRemainder += WheelDelta;
+
+    const auto NotchSign = _WheelNotchRemainder > 0.0f ? 1.0f : -1.0f;
+    const auto WholeNotches = FMath::FloorToInt32(FMath::Abs(_WheelNotchRemainder));
+
+    _WheelNotchRemainder -= NotchSign * WholeNotches;
+
+    // Direction comes from the ACCUMULATOR, not from this event's delta: a small up-flick landing on a banked
+    // down remainder still resolves down, and the running sign is the only honest source for which it is.
+    const auto NotchKey = NotchSign > 0.0f ? EKeys::MouseScrollUp : EKeys::MouseScrollDown;
+
     // A notch has no duration — the engine surfaces MouseScrollUp/Down as a press and a release inside one
     // frame, and the record has to say the same thing. A press with no release would leave the button held for
-    // the rest of the session in every consumer that tracks the held set.
+    // the rest of the session in every consumer that tracks the held set. Each notch is its OWN pair, so the
+    // record's batch-split gives every one of them its own frame row rather than collapsing them into one edge.
     //
     // Pressed, Released, THEN the axis, matching the order `FSceneViewport::OnMouseWheel` writes to the viewport
     // client. Mouse events are recorded `SubFrameOrdered`, which is a promise that arrival order within the frame
     // is real — so writing the axis first would hand a consumer an order the engine's own pipeline never
     // produces.
-    const auto NotchKey = WheelDelta > 0.0f ? EKeys::MouseScrollUp : EKeys::MouseScrollDown;
-    DoRecordEvent(NotchKey, ECk_InputSource_EventType::Pressed, 0.0f, RawDeviceUserIndex);
-    DoRecordEvent(NotchKey, ECk_InputSource_EventType::Released, 0.0f, RawDeviceUserIndex);
+    for (auto Notch = 0; Notch < WholeNotches; ++Notch)
+    {
+        DoRecordEvent(NotchKey, ECk_InputSource_EventType::Pressed, 0.0f, RawDeviceUserIndex);
+        DoRecordEvent(NotchKey, ECk_InputSource_EventType::Released, 0.0f, RawDeviceUserIndex);
+    }
 
+    // The axis row carries this event's OWN delta, unaccumulated: it is the analog fact the device reported, and
+    // a sub-notch scroll that produced no pair still produced motion a consumer conditions and reads.
     DoRecordEvent(EKeys::MouseWheelAxis, ECk_InputSource_EventType::AnalogAxis, WheelDelta,
         RawDeviceUserIndex);
 
@@ -312,6 +334,10 @@ auto
     DoFlushRecordedDownKeys()
     -> void
 {
+    // A banked sub-notch fraction belongs to the gesture the player was making when focus left. Carrying it
+    // across the gap would let a half-notch from before an alt-tab complete a notch the player never asked for.
+    _WheelNotchRemainder = 0.0f;
+
     // DoWriteEvent removes each Released from the set, so the walk runs over a moved-out copy.
     const auto DownKeys = MoveTemp(_RecordedDownKeys);
 
