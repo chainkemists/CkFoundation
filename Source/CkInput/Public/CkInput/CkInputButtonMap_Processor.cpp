@@ -32,6 +32,31 @@ namespace ck_input_button_map_processor
     };
 
     auto
+        Get_EveryKeyIsAnAxis(
+            const TArray<FKey>& InKeys)
+        -> bool
+    {
+        return NOT InKeys.IsEmpty() && ck::algo::AllOf(InKeys, [](const FKey& InKey) -> bool
+        {
+            return InKey.IsAnalog();
+        });
+    }
+
+    auto
+        Get_KeyNamesForDisplay(
+            const TArray<FKey>& InKeys)
+        -> FString
+    {
+        auto Names = TArray<FString>{};
+        Names.Reserve(InKeys.Num());
+
+        for (const auto& Key : InKeys)
+        { Names.Emplace(Key.ToString()); }
+
+        return FString::Join(Names, TEXT(", "));
+    }
+
+    auto
         Get_IndexOfButton(
             const TArray<FCk_Input_ButtonAssociation>& InAssociations,
             const FCk_Input_ButtonId& InButtonId)
@@ -193,6 +218,22 @@ namespace ck
                 // Two slots may name one key; the association answers WHICH keys produce the button, not how
                 // many slots do, so the duplicate collapses.
                 Keys.AddUnique(SlotKey.Key);
+            }
+
+            // A button bound exclusively to axis keys passes every readiness gate a consumer has — it is minted,
+            // it reports keys, it answers a scalar query — and can still never fire, because an axis key emits
+            // analog samples and no press edge. The mint stands (dropping the identity would break the
+            // definitions naming it); this is the only place the shape is visible, so it is named here.
+            if (ck_input_button_map_processor::Get_EveryKeyIsAnAxis(Keys))
+            {
+                input::Warning
+                (
+                    TEXT("InputButtonMap [{}] derived Mapped button [{}] with only axis keys [{}] - it can never "
+                         "produce a press edge, so nothing naming it will ever complete"),
+                    InButtonMap,
+                    InCurrent._Associations[Kvp.Key].Get_ButtonId().Get_Name(),
+                    ck_input_button_map_processor::Get_KeyNamesForDisplay(Keys)
+                );
             }
 
             InCurrent._Associations[Kvp.Key].Set_Keys(MoveTemp(Keys));
