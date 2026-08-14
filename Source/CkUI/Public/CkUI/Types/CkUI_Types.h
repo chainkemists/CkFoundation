@@ -14,7 +14,6 @@
 class UCommonActivatableWidget;
 class AActor;
 class ULocalPlayer;
-class UCk_UI_Subsystem_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -193,82 +192,6 @@ enum class ECk_UI_CursorLock_Result : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_CursorLock_Result);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-/**
- * Opaque handle representing an active input suspension.
- *
- * Created via UCk_Utils_UI_UE::SuspendInput() or UCk_UI_Subsystem_UE::SuspendInput().
- * Must be explicitly resumed via Resume() or UCk_Utils_UI_UE::ResumeInput().
- *
- * The handle tracks:
- * - Unique ID for this suspension instance
- * - The underlying CommonInputSubsystem token
- * - Weak reference to the owning LocalPlayer
- *
- * Invalid handles (default constructed or already resumed) are safe to use -
- * Resume() will simply no-op.
- */
-USTRUCT(BlueprintType)
-struct CKUI_API FCk_Handle_InputSuspension
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Handle_InputSuspension);
-
-    FCk_Handle_InputSuspension() = default;
-
-    auto IsValid() const -> bool;
-    auto Resume() -> void;
-    auto Get_LocalPlayer() const -> const ULocalPlayer*;
-
-    auto operator==(const ThisType& Other) const -> bool;
-    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
-
-private:
-    friend class UCk_UI_Subsystem_UE;
-
-    static auto Create(
-        uint32 InId,
-        FName InReason,
-        FName InToken,
-        const ULocalPlayer* InLocalPlayer) -> FCk_Handle_InputSuspension;
-
-
-    auto DoMarkInvalid() -> void;
-
-private:
-    uint32 _Id = 0;
-
-    UPROPERTY()
-    FName _Reason = NAME_None;
-
-    UPROPERTY()
-    FName _Token = NAME_None;
-
-    UPROPERTY()
-    TWeakObjectPtr<const ULocalPlayer> _LocalPlayer;
-
-public:
-    CK_PROPERTY_GET(_Id);
-    CK_PROPERTY_GET(_Reason);
-    CK_PROPERTY_GET(_Token);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Handle_InputSuspension, [](const FCk_Handle_InputSuspension& InHandle)
-{
-    return ck::Format(TEXT("Id:[{}] | Reason:[{}]"), InHandle.Get_Id(), InHandle.Get_Reason());
-});
-
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_InputSuspension, IsValid_Policy_Default,
-[](const FCk_Handle_InputSuspension& InHandle)
-{
-    return InHandle.IsValid();
-});
 
 // --------------------------------------------------------------------------------------------------------------------
 // Delegates - Widget Operations

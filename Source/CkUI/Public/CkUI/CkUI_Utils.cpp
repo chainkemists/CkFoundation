@@ -7,7 +7,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkUI/Subsystem/CkUI_Subsystem.h"
+#include "CkUI/Subsystem/CkUI_Input_Subsystem.h"
 
 #include <Blueprint/UserWidget.h>
 #include <Blueprint/WidgetTree.h>
@@ -478,7 +478,7 @@ auto
     { return {}; }
 
     auto* MutableLocalPlayer = const_cast<ULocalPlayer*>(InLocalPlayer);
-    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Input_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(Subsystem))
     { return {}; }
@@ -513,7 +513,7 @@ auto
     { return; }
 
     auto* MutableLocalPlayer = const_cast<ULocalPlayer*>(InLocalPlayer);
-    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    auto* Subsystem = MutableLocalPlayer->GetSubsystem<UCk_UI_Input_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(Subsystem))
     { return; }

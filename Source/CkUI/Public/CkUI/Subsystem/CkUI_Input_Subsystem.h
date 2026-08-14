@@ -2,39 +2,114 @@
 
 #pragma once
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkUI/ScreenFade/CkScreenFade_Utils.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
 
-#include "CkUI_Subsystem.generated.h"
+#include "CkUI_Input_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class APlayerController;
-class SWidget;
+class ULocalPlayer;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
- * General per-player UI subsystem.
+ * Opaque handle representing an active input suspension.
  *
- * Responsibilities:
- * - Input suspension management with handle-based tracking
- * - Automatic input restoration during editor modal dialogs
- * - Screen fade effects
+ * Created via UCk_Utils_UI_UE::SuspendInput() or UCk_UI_Input_Subsystem_UE::SuspendInput().
+ * Must be explicitly resumed via Resume() or UCk_Utils_UI_UE::ResumeInput().
  *
- * Note: Layout management is handled by UCk_UI_Layout_Subsystem_UE.
- *       Context injection is handled by the ECS ContextReceiver system.
+ * The handle tracks:
+ * - Unique ID for this suspension instance
+ * - The underlying CommonInputSubsystem token
+ * - Weak reference to the owning LocalPlayer
+ *
+ * Invalid handles (default constructed or already resumed) are safe to use -
+ * Resume() will simply no-op.
  */
-UCLASS(DisplayName = "CkSubsystem_UI")
-class CKUI_API UCk_UI_Subsystem_UE : public ULocalPlayerSubsystem
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Handle_InputSuspension
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_UI_Subsystem_UE);
+    CK_GENERATED_BODY(FCk_Handle_InputSuspension);
+
+    FCk_Handle_InputSuspension() = default;
+
+    auto IsValid() const -> bool;
+    auto Resume() -> void;
+    auto Get_LocalPlayer() const -> const ULocalPlayer*;
+
+    auto operator==(const ThisType& Other) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+private:
+    friend class UCk_UI_Input_Subsystem_UE;
+
+    static auto Create(
+        uint32 InId,
+        FName InReason,
+        FName InToken,
+        const ULocalPlayer* InLocalPlayer) -> FCk_Handle_InputSuspension;
+
+
+    auto DoMarkInvalid() -> void;
+
+private:
+    uint32 _Id = 0;
+
+    UPROPERTY()
+    FName _Reason = NAME_None;
+
+    UPROPERTY()
+    FName _Token = NAME_None;
+
+    UPROPERTY()
+    TWeakObjectPtr<const ULocalPlayer> _LocalPlayer;
+
+public:
+    CK_PROPERTY_GET(_Id);
+    CK_PROPERTY_GET(_Reason);
+    CK_PROPERTY_GET(_Token);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Handle_InputSuspension, [](const FCk_Handle_InputSuspension& InHandle)
+{
+    return ck::Format(TEXT("Id:[{}] | Reason:[{}]"), InHandle.Get_Id(), InHandle.Get_Reason());
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_InputSuspension, IsValid_Policy_Default,
+[](const FCk_Handle_InputSuspension& InHandle)
+{
+    return InHandle.IsValid();
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Per-player input-policy subsystem.
+ *
+ * Responsibilities:
+ * - Input suspension management with handle-based tracking
+ * - Automatic input restoration during editor modal dialogs
+ *
+ * Note: Layout management is handled by UCk_UI_Layout_Subsystem_UE.
+ *       Screen fade is handled by UCk_ScreenFade_Subsystem_UE.
+ *       Context injection is handled by the ECS ContextReceiver system.
+ */
+UCLASS(DisplayName = "CkSubsystem_UI_Input")
+class CKUI_API UCk_UI_Input_Subsystem_UE : public ULocalPlayerSubsystem
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_UI_Input_Subsystem_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -85,23 +160,6 @@ public:
 
     // ----------------------------------------------------------------------------------------------------------------
 
-public:
-    auto Request_AddScreenFadeWidget(
-        const FCk_ScreenFade_Params& InFadeParams,
-        const APlayerController* InOwningPlayer = nullptr,
-        int32 InZOrder = 100) -> void;
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-private:
-    auto DoRemoveScreenFadeWidget(const APlayerController* InOwningPlayer, int32 InControllerID) -> void;
-    auto DoRemoveScreenFadeWidget(int32 InControllerID) -> void;
-
-    auto DoGet_PlayerControllerID(const APlayerController* PlayerController) const -> int32;
-    auto DoGet_PlayerControllerFromID(int32 ControllerID) const -> APlayerController*;
-
-    // ----------------------------------------------------------------------------------------------------------------
-
 private:
     auto DoApplyInputFilter(FName InToken, bool InShouldFilter) const -> void;
     auto DoGenerateSuspensionHandleName(FName InReason) const -> FName;
@@ -112,12 +170,6 @@ private:
     auto DoSuspendFiltersForModal() -> void;
     auto DoRestoreFiltersAfterModal() -> void;
 #endif
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-private:
-    TMap<int32, TWeakPtr<SWidget>> _FadeWidgetsForID;
-    static constexpr int32 _InvalidPlayerControllerID = INT_MIN;
 
     // ----------------------------------------------------------------------------------------------------------------
 
