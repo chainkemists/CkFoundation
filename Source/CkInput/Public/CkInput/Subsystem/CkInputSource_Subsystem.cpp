@@ -44,7 +44,12 @@ auto
                 if (auto* Settings = EISubsystem->GetUserSettings();
                     ck::IsValid(Settings))
                 {
+                    // Both, because `_BoundToSettings` is ONE flag over BOTH binds — leaving the registration
+                    // delegate on would make the flag's `false` a lie, and a re-initialized subsystem would then
+                    // add a second registration binding beside the surviving one.
                     Settings->OnSettingsChanged.RemoveDynamic(this, &UCk_InputSource_Subsystem::OnSettingsChanged);
+                    Settings->OnMappingContextRegistered.RemoveDynamic(
+                        this, &UCk_InputSource_Subsystem::OnMappingContextRegistered);
                 }
             }
         }
