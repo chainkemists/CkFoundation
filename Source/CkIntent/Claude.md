@@ -692,6 +692,15 @@ deferral verdict is a question about edge candidates and the level pass does not
 whose edge siblings are in a wait, the level row activates on the frame the press landed on. Zero-latency
 activation is what falls out of that, not a special case bolted beside it.
 
+**The level pass does NOT arbitrate — every level candidate on the terminal activates.** The edge scan stops at
+its first full match because a press means exactly one move; a level row is a statement about the present, and two
+of them on one button are two true statements, so both go `Active` and a consumer polling either sees it. The
+resolution row's priority order is walked but never used to stop, which is why the bake's priority-tie rejection
+is what actually forces two level intents sharing a terminal to declare distinct priorities — the total-order rule
+covers every index on the terminal, level and edge alike. Priority buys the two rows a deterministic activation
+ORDER (and therefore a deterministic signal order); it does not buy either of them exclusivity. Exclusivity is
+what `Request_Claim` is for.
+
 **The four ways it ends**, all of them `Active → Idle`:
 
 | Cause | Frame the transition names |
@@ -946,9 +955,10 @@ stack-constructed entry whose `TArray` never allocates.
   answer, read against the definition's `w=`. `ContiguityBroken` means a Strict move saw the stick pass through a
   direction it does not mention: a lenience answer.
 - **`Get_ScanDiagnostics` answers NEWEST FIRST**, the order a near-miss list is read in.
-- **Recorded at every scan site**, which is two call sites covering four paths: the immediate arbiter scan, and
-  the episode resolver that serves the chord branch, the hold branch and the final post-wait resolution. Both go
-  through one wrapper so the ring cannot end up describing only some of them.
+- **Recorded at every scan site**, which is three call sites covering five paths: the immediate arbiter scan, the
+  level pass's activation scan, and the episode resolver that serves the chord branch, the hold branch and the
+  final post-wait resolution. All three go through one wrapper so the ring cannot end up describing only some of
+  them.
 - **Deferral EPISODE outcomes are NOT entries.** A window that expired with no partner already appears as the
   chord candidate's failed scans, one per polled frame; a delivery-loss cancel ran no scan at all, so it has no
   steps and nothing the per-step shape could carry. A step-less entry in a per-step ring would make every reader
