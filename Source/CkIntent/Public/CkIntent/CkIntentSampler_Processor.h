@@ -94,6 +94,16 @@ namespace ck
             FFragment_IntentSampler_PendingEvents& InPending) const -> void;
 
     private:
+        // One row from one batch of claimed events. Separate from ForEachEntity because a batch carrying a second
+        // press of a key it already pressed has to become SEVERAL rows — the row's press set cannot hold that
+        // press twice.
+        static auto
+        DoSampleSegment(
+            HandleType InSampler,
+            const FFragment_IntentSampler_Params& InParams,
+            FFragment_IntentSampler_Current& InCurrent,
+            const TArray<FCk_InputLayer_RoutedEvent>& InClaimed) -> void;
+
         static auto
         DoRecordButtons(
             HandleType InSampler,
