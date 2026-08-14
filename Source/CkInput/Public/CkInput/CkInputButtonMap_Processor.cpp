@@ -175,7 +175,14 @@ namespace ck
             SlotKeys.Sort([](const ck_input_button_map_processor::FSlotKey& InA,
                              const ck_input_button_map_processor::FSlotKey& InB) -> bool
             {
-                return static_cast<uint8>(InA.Slot) < static_cast<uint8>(InB.Slot);
+                // Per-device slot allocation can hand two rows the SAME slot, and the sort is not stable, so slot
+                // alone would let the primary key change between two derives of an unmoved profile — and the
+                // primary is what every scalar query in this module answers with. The key's own name breaks the
+                // tie because it is the only totally ordered thing the row carries.
+                if (InA.Slot != InB.Slot)
+                { return static_cast<uint8>(InA.Slot) < static_cast<uint8>(InB.Slot); }
+
+                return InA.Key.GetFName().LexicalLess(InB.Key.GetFName());
             });
 
             auto Keys = TArray<FKey>{};
