@@ -313,9 +313,31 @@ auto
 
 auto
     UCk_GameSettingsUI_KeyBindingPageWidget::
+    Request_ResolveConflict(
+        ECk_GameSettingsUI_ConflictResolution InResolution)
+    -> void
+{
+    const auto ConflictIsPending = _ConflictPending;
+    CK_ENSURE_IF_NOT(ConflictIsPending, TEXT("Request_ResolveConflict on [{}] with no pending conflict"), this)
+    {}
+    if (NOT ConflictIsPending)
+    { return; }
+
+    switch (InResolution)
+    {
+        case ECk_GameSettingsUI_ConflictResolution::Swap:      { HandleSwapClicked(); return; }
+        case ECk_GameSettingsUI_ConflictResolution::Overwrite: { HandleOverwriteClicked(); return; }
+        case ECk_GameSettingsUI_ConflictResolution::Cancel:    { HandleConflictCancelClicked(); return; }
+    }
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
     HandleSwapClicked()
     -> void
 {
+    _ConflictPending = false;
+
     const auto PlayerController = GetOwningPlayer();
 
     if (ck::Is_NOT_Valid(PlayerController))
@@ -333,6 +355,8 @@ auto
     HandleOverwriteClicked()
     -> void
 {
+    _ConflictPending = false;
+
     const auto PlayerController = GetOwningPlayer();
 
     if (ck::Is_NOT_Valid(PlayerController))
@@ -350,6 +374,8 @@ auto
     HandleConflictCancelClicked()
     -> void
 {
+    _ConflictPending = false;
+
     DoSetConflictOverlayVisible(false);
 }
 
@@ -408,14 +434,22 @@ auto
 
     if (UCk_Utils_KeyBinding_UE::Get_HasKeyConflicts(PlayerController, InNewKey, {_PendingMappingName}, Conflicts))
     {
-        if (ck::IsValid(_ConflictText) && Conflicts.Num() > 0)
-        {
-            _ConflictText->SetText(FText::FromString(FString::Printf(TEXT("[%s] is already bound to [%s]"),
+        const auto Description = Conflicts.Num() > 0
+            ? FText::FromString(FString::Printf(TEXT("[%s] is already bound to [%s]"),
                 *InNewKey.GetDisplayName().ToString(),
-                *Conflicts[0].Get_DisplayName().ToString())));
-        }
+                *Conflicts[0].Get_DisplayName().ToString()))
+            : FText::GetEmpty();
 
-        DoSetConflictOverlayVisible(true);
+        if (ck::IsValid(_ConflictText))
+        { _ConflictText->SetText(Description); }
+
+        _ConflictPending = true;
+
+        if (ck::IsValid(_ConflictOverlay))
+        { DoSetConflictOverlayVisible(true); }
+        else
+        { OnConflictDetected(Description); }
+
         return;
     }
 

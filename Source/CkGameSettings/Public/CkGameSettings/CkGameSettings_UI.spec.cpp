@@ -79,6 +79,32 @@ bool FCkTest_GameSettings_UI_RowClassResolution::RunTest(const FString&)
         ck::game_settings_ui::Get_ResolvedRowClass(WithOptions, Overrides, SelectOverride).Get(),
         static_cast<UClass*>(UCk_GameSettingsUI_RowWidget_Toggle::StaticClass()));
 
+    // The shipped dropdown routes through the same hook; never a resolution default.
+    const auto DropdownOverride = TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>{UCk_GameSettingsUI_RowWidget_Dropdown::StaticClass()};
+
+    TestEqual(TEXT("Dropdown as the select override resolves for options-present settings"),
+        ck::game_settings_ui::Get_ResolvedRowClass(WithOptions, NoOverrides, DropdownOverride).Get(),
+        static_cast<UClass*>(UCk_GameSettingsUI_RowWidget_Dropdown::StaticClass()));
+
+    // ---- Per-SETTING override beats everything ----
+    const auto PerSettingBool = FCk_GameSettings_SettingDefinition{FName{TEXT("spec.ui.rowclass.bool")}, ECk_GameSettings_ValueType::Bool, TEXT("true")}
+        .Set_OptionalRowClassOverride(TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>{UCk_GameSettingsUI_RowWidget_Dropdown::StaticClass()});
+
+    TestEqual(TEXT("Definition _OptionalRowClassOverride beats the built-in default"),
+        Resolve(PerSettingBool), static_cast<UClass*>(UCk_GameSettingsUI_RowWidget_Dropdown::StaticClass()));
+
+    TestEqual(TEXT("Definition _OptionalRowClassOverride beats the per-type override"),
+        ck::game_settings_ui::Get_ResolvedRowClass(PerSettingBool, Overrides, NoSelectOverride).Get(),
+        static_cast<UClass*>(UCk_GameSettingsUI_RowWidget_Dropdown::StaticClass()));
+
+    const auto PerSettingOptions = FCk_GameSettings_SettingDefinition{FName{TEXT("spec.ui.rowclass.options")}, ECk_GameSettings_ValueType::String, TEXT("a")}
+        .Set_Options({FCk_GameSettings_SettingOption{FText::FromString(TEXT("A")), TEXT("a")}})
+        .Set_OptionalRowClassOverride(TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>{UCk_GameSettingsUI_RowWidget_Toggle::StaticClass()});
+
+    TestEqual(TEXT("Definition _OptionalRowClassOverride beats the select override for options-present settings"),
+        ck::game_settings_ui::Get_ResolvedRowClass(PerSettingOptions, Overrides, SelectOverride).Get(),
+        static_cast<UClass*>(UCk_GameSettingsUI_RowWidget_Toggle::StaticClass()));
+
     auto OptionsTypeOverrides = TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>>{};
     OptionsTypeOverrides.Emplace(ECk_GameSettings_ValueType::String,
         TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>{UCk_GameSettingsUI_RowWidget_Slider::StaticClass()});

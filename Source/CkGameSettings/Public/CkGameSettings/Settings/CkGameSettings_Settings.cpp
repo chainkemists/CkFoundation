@@ -72,6 +72,14 @@ auto
 
 auto
     UCk_Utils_GameSettings_Settings_UE::
+    Get_VideoPackCategoryTag()
+    -> const FGameplayTag&
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_VideoPackCategoryTag();
+}
+
+auto
+    UCk_Utils_GameSettings_Settings_UE::
     Get_RowClassOverrides()
     -> const TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>>&
 {

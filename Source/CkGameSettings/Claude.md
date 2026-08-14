@@ -68,22 +68,33 @@ from these).
 
 ### Widget layer (`UI/`, optional)
 The native widgets own PLUMBING only — the WBP owns every tree (no hidden code-built fallbacks,
-2026-08-06 maintainer directive; same doctrine applied to the Compass ribbon + Minimap frame):
-- Rows: `UCk_GameSettingsUI_RowWidget_{Toggle,Slider,Select}` — subclass in a WBP, bind
+2026-08-06 maintainer directive; same doctrine applied to the Compass ribbon + Minimap frame).
+Value CONTROLS and row containers are required `BindWidget`s (missing/mistyped = WBP compile
+error); labels, readouts and chrome are `BindWidgetOptional`. Enforcement is WBP-compile-time
+only — headless native instantiation (tests, gym) runs with null slots, so every slot stays
+null-guarded in C++:
+- Rows: `UCk_GameSettingsUI_RowWidget_{Toggle,Slider,Select,Dropdown}` — subclass in a WBP, bind
   `_DisplayNameText` + the control slots (`_ValueCheckBox` / `_ValueSlider`+`_ValueText` /
-  `_PrevButton`+`_NextButton`+`_ValueText`). `InjectSetting(ctx, key)` binds by key, rebind-safe.
-  Slider commits on capture release only; Select cycles options or steps rangeless numerics.
+  `_PrevButton`+`_NextButton`+`_ValueText` / `_ValueComboBox`). `InjectSetting(ctx, key)` binds by
+  key, rebind-safe. Slider commits on capture release only; Select cycles options or steps
+  rangeless numerics. Dropdown (ComboBoxString, mouse/keyboard) is NEVER a resolution default —
+  games opt in via `_SelectRowClassOverride`; it commits by index so duplicate labels stay
+  unambiguous, and renders display-only for definitions without options.
 - Screen: `UCk_GameSettingsUI_ScreenWidget` (ActivatableWidget layer participant) — bind
   `_RowContainer` (required), `_CategoryTabBar`, `_ApplyButton`/`_CancelButton`
   (UCommonButtonBase). Tabs = root segment of each setting's first category tag ("General" for
-  uncategorized); no tab bar = flat list. Row classes resolve per type via project-settings
+  uncategorized); no tab bar = flat list. Row classes resolve: the definition's own `_OptionalRowClassOverride`
+  (per-setting escape hatch, beats everything) → project-settings
   `_RowClassOverrides`/`_SelectRowClassOverride` → native defaults (soft classes async-loaded).
   `_AutoApplyMode` (default) writes live; off = pending-changes session (Apply/Cancel).
   `OnRowGenerated` event = the WBP's styling hook.
 - Keybinding page: `UCk_GameSettingsUI_KeyBindingPageWidget` + row — pure consumer of
   `UCk_Utils_KeyBinding_UE`/`UCk_Utils_KeyIcon_UE`. Bind `_RowContainer`, overlays, buttons; set
   `_RowWidgetClass` to the game's row WBP; `OnRowCreated` inserts category headers. Modal capture
-  (Esc cancels), swap/overwrite/cancel conflicts, save-on-close.
+  (Esc cancels), swap/overwrite/cancel conflicts, save-on-close. Conflict PRESENTATION is the
+  game's choice: `_ConflictOverlay` bound = inline treatment; unbound = `OnConflictDetected(Text)`
+  fires instead — show your own modal and answer via
+  `Request_ResolveConflict(Swap/Overwrite/Cancel)` (rejected when nothing is pending).
 - `UCk_InputActionWidget_UE` (CkUI) — CommonActionWidget that resolves its glyph through the
   player's mappable key profile, so a prompt still resolves while its Mapping Context is unapplied
   (every row of a rebinding screen) and refreshes on remap. Owned by CkUI, not this module.
