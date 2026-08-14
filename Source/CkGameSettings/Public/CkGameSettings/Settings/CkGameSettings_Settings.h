@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkGameSettings/CkGameSettings_Common.h"
+
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include <Engine/EngineTypes.h>
@@ -11,6 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GameSettings_StorageProvider_UE;
+class USoundMix;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,10 +51,34 @@ private:
               meta = (AllowPrivateAccess = true))
     TSoftClassPtr<UCk_GameSettings_StorageProvider_UE> _StorageProviderClass;
 
+    /** Registers the Audio pack (category volume settings driving SoundMix class overrides) at subsystem init. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Packs|Audio",
+              meta = (AllowPrivateAccess = true))
+    bool _EnableAudioPack = false;
+
+    /** The SoundMix every Audio-pack category volume is applied through. The plugin ships no assets — supply the game's own. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Packs|Audio",
+              meta = (AllowPrivateAccess = true, EditCondition = "_EnableAudioPack"))
+    TSoftObjectPtr<USoundMix> _AudioMix;
+
+    /** One Float volume setting is registered per category. The plugin ships no SoundClass assets — supply the game's own. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Packs|Audio",
+              meta = (AllowPrivateAccess = true, EditCondition = "_EnableAudioPack", TitleProperty = "_SettingKey"))
+    TArray<FCk_GameSettings_AudioCategory> _AudioCategories;
+
+    /** Registers the Video pack (UGameUserSettings bridge: window mode, resolution, vsync, fps cap, scalability) at subsystem init. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Packs|Video",
+              meta = (AllowPrivateAccess = true))
+    bool _EnableVideoPack = false;
+
 public:
     CK_PROPERTY_GET(_CollectionScanPaths);
     CK_PROPERTY_GET(_DeferredApplyTimeoutSeconds);
     CK_PROPERTY_GET(_StorageProviderClass);
+    CK_PROPERTY_GET(_EnableAudioPack);
+    CK_PROPERTY_GET(_AudioMix);
+    CK_PROPERTY_GET(_AudioCategories);
+    CK_PROPERTY_GET(_EnableVideoPack);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,6 +94,18 @@ public:
 
     static auto
     Get_StorageProviderClass() -> const TSoftClassPtr<UCk_GameSettings_StorageProvider_UE>&;
+
+    static auto
+    Get_EnableAudioPack() -> bool;
+
+    static auto
+    Get_AudioMix() -> const TSoftObjectPtr<USoundMix>&;
+
+    static auto
+    Get_AudioCategories() -> const TArray<FCk_GameSettings_AudioCategory>&;
+
+    static auto
+    Get_EnableVideoPack() -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
