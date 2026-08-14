@@ -795,7 +795,15 @@ namespace ck
         const auto Sampler = UCk_Utils_IntentSampler_UE::Cast(Source);
 
         if (ck::Is_NOT_Valid(Sampler))
-        { return; }
+        {
+            // No further row will ever be written, so no sweep can notice the release: a row left Active here
+            // stays Active — and CLAIMABLE — for the rest of the matcher's life, against a hold whose input has
+            // stopped existing. The last frame this matcher consumed is the honest one to name it on.
+            DoDeactivateAllLevelRows(InMatcher, InCurrent, InCurrent._LastScannedFrameIndex,
+                FString{TEXT("the input source no longer carries a frame record")});
+
+            return;
+        }
 
         const auto LatestFrameIndex = UCk_Utils_IntentSampler_UE::Get_LatestFrame(Sampler).Get_FrameIndex();
 
@@ -1158,6 +1166,21 @@ namespace ck
             TEXT("IntentMatcher [{}] released level intent [{}] on record frame [{}]: {}"),
             InMatcher, InCurrent._ActiveSet.Get_Intents()[IntentIndex].Get_Name(), InFrame, InReason
         );
+    }
+
+    auto
+        FProcessor_IntentMatcher_Match::
+        DoDeactivateAllLevelRows(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InFrame,
+            const FString& InReason)
+        -> void
+    {
+        for (auto Index = InCurrent._ActiveLevels.Num() - 1; Index >= 0; --Index)
+        {
+            DoDeactivateLevelRow(InMatcher, InCurrent, Index, InFrame, InReason);
+        }
     }
 
     auto
