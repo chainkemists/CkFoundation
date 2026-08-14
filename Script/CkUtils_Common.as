@@ -156,6 +156,13 @@ namespace GameplayTag
         Result.Add(InTag);
         return Result;
     }
+
+    FGameplayTagContainer MakeContainerFromTag(FGameplayTag InTag)
+    {
+        FGameplayTagContainer Result;
+        Result.AddTag(InTag);
+        return Result;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

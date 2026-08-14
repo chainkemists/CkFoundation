@@ -4,6 +4,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkGameSettings/CkGameSettings_Log.h"
+#include "CkGameSettings/Settings/CkGameSettings_Settings.h"
 #include "CkGameSettings/Subsystem/CkGameSettings_Subsystem.h"
 
 #include <Engine/Engine.h>
@@ -513,6 +514,11 @@ namespace ck::game_settings
             auto Definition = FCk_GameSettings_SettingDefinition{InKey, InValueType, InDefaultValue};
             Definition.Set_PersistencePolicy(ECk_GameSettings_PersistencePolicy::External);
             Definition.Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::Handler);
+
+            if (const auto& CategoryTag = UCk_Utils_GameSettings_Settings_UE::Get_VideoPackCategoryTag();
+                CategoryTag.IsValid())
+            { Definition.Set_CategoryTags(FGameplayTagContainer{CategoryTag}); }
+
             return Definition;
         };
 

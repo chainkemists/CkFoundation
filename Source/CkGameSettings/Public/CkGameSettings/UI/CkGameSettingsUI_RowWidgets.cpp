@@ -5,6 +5,7 @@
 #include "CkGameSettings/Subsystem/CkGameSettings_Utils.h"
 
 #include "Components/CheckBox.h"
+#include "Components/ComboBoxString.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 
@@ -195,6 +196,118 @@ auto
     { return; }
 
     DoRefreshFromRegistry();
+}
+
+auto
+    UCk_GameSettingsUI_RowWidgetBase::
+    DoCommitOptionValue(
+        const FCk_GameSettings_SettingDefinition& InDefinition,
+        const FString& InOptionValue)
+    -> void
+{
+    const auto WorldContext = Get_WorldContext();
+
+    if (ck::Is_NOT_Valid(WorldContext))
+    { return; }
+
+    switch (InDefinition.Get_ValueType())
+    {
+        case ECk_GameSettings_ValueType::Bool:
+        {
+            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Bool(WorldContext,
+                FCk_Request_GameSettings_SetValue_Bool{Get_Key(), InOptionValue.ToBool()});
+            return;
+        }
+        case ECk_GameSettings_ValueType::Int32:
+        {
+            auto Parsed = int32{};
+            const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
+            CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Int32"), InOptionValue, Get_Key())
+            {}
+            if (NOT OptionParses)
+            { return; }
+
+            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Int32(WorldContext,
+                FCk_Request_GameSettings_SetValue_Int32{Get_Key(), Parsed});
+            return;
+        }
+        case ECk_GameSettings_ValueType::Float:
+        {
+            auto Parsed = float{};
+            const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
+            CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Float"), InOptionValue, Get_Key())
+            {}
+            if (NOT OptionParses)
+            { return; }
+
+            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Float(WorldContext,
+                FCk_Request_GameSettings_SetValue_Float{Get_Key(), Parsed});
+            return;
+        }
+        case ECk_GameSettings_ValueType::String:
+        {
+            UCk_Utils_GameSettings_UE::Request_SetSettingValue_String(WorldContext,
+                FCk_Request_GameSettings_SetValue_String{Get_Key(), InOptionValue});
+            return;
+        }
+    }
+}
+
+auto
+    UCk_GameSettingsUI_RowWidgetBase::
+    Get_CurrentOptionIndex(
+        const FCk_GameSettings_SettingDefinition& InDefinition,
+        const FString& InValueString) const
+    -> int32
+{
+    using namespace ck_game_settings_ui_row_widgets;
+
+    const auto& Options = InDefinition.Get_Options();
+
+    for (auto Index = 0; Index < Options.Num(); ++Index)
+    {
+        const auto& OptionValue = Options[Index].Get_Value();
+
+        switch (InDefinition.Get_ValueType())
+        {
+            case ECk_GameSettings_ValueType::Bool:
+            {
+                if (OptionValue.ToBool() == InValueString.ToBool())
+                { return Index; }
+                break;
+            }
+            case ECk_GameSettings_ValueType::Int32:
+            {
+                auto OptionParsed = int32{};
+                auto ValueParsed = int32{};
+
+                if (LexTryParseString(OptionParsed, *OptionValue) &&
+                    LexTryParseString(ValueParsed, *InValueString) &&
+                    OptionParsed == ValueParsed)
+                { return Index; }
+                break;
+            }
+            case ECk_GameSettings_ValueType::Float:
+            {
+                auto OptionParsed = float{};
+                auto ValueParsed = float{};
+
+                if (LexTryParseString(OptionParsed, *OptionValue) &&
+                    LexTryParseString(ValueParsed, *InValueString) &&
+                    FMath::IsNearlyEqual(OptionParsed, ValueParsed, FloatOptionMatchTolerance))
+                { return Index; }
+                break;
+            }
+            case ECk_GameSettings_ValueType::String:
+            {
+                if (OptionValue == InValueString)
+                { return Index; }
+                break;
+            }
+        }
+    }
+
+    return INDEX_NONE;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -471,116 +584,77 @@ auto
     }
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
-    UCk_GameSettingsUI_RowWidget_Select::
-    DoCommitOptionValue(
+    UCk_GameSettingsUI_RowWidget_Dropdown::
+    DoRefreshControl(
         const FCk_GameSettings_SettingDefinition& InDefinition,
-        const FString& InOptionValue)
+        const FString& InValueString)
     -> void
 {
+    if (ck::Is_NOT_Valid(_ValueComboBox))
+    { return; }
+
+    // Unbound while mutating: ClearOptions/SetSelectedIndex fire OnSelectionChanged, and a refresh
+    // must never read as a user commit.
+    _ValueComboBox->OnSelectionChanged.RemoveDynamic(this, &UCk_GameSettingsUI_RowWidget_Dropdown::HandleSelectionChanged);
+
+    _ValueComboBox->ClearOptions();
+
+    const auto& Options = InDefinition.Get_Options();
+
+    for (const auto& Option : Options)
+    { _ValueComboBox->AddOption(Option.Get_Label().ToString()); }
+
+    if (Options.Num() == 0)
+    {
+        _ValueComboBox->AddOption(InValueString);
+        _ValueComboBox->SetSelectedIndex(0);
+        _ValueComboBox->SetIsEnabled(false);
+    }
+    else
+    {
+        const auto OptionIndex = Get_CurrentOptionIndex(InDefinition, InValueString);
+
+        if (OptionIndex == INDEX_NONE)
+        { _ValueComboBox->ClearSelection(); }
+        else
+        { _ValueComboBox->SetSelectedIndex(OptionIndex); }
+
+        _ValueComboBox->SetIsEnabled(true);
+    }
+
+    _ValueComboBox->OnSelectionChanged.AddDynamic(this, &UCk_GameSettingsUI_RowWidget_Dropdown::HandleSelectionChanged);
+}
+
+auto
+    UCk_GameSettingsUI_RowWidget_Dropdown::
+    HandleSelectionChanged(
+        FString InSelectedItem,
+        ESelectInfo::Type InSelectionType)
+    -> void
+{
+    if (_RefreshingControl || InSelectionType == ESelectInfo::Direct)
+    { return; }
+
     const auto WorldContext = Get_WorldContext();
 
     if (ck::Is_NOT_Valid(WorldContext))
     { return; }
 
-    switch (InDefinition.Get_ValueType())
-    {
-        case ECk_GameSettings_ValueType::Bool:
-        {
-            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Bool(WorldContext,
-                FCk_Request_GameSettings_SetValue_Bool{Get_Key(), InOptionValue.ToBool()});
-            return;
-        }
-        case ECk_GameSettings_ValueType::Int32:
-        {
-            auto Parsed = int32{};
-            const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
-            CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Int32"), InOptionValue, Get_Key())
-            {}
-            if (NOT OptionParses)
-            { return; }
+    auto Definition = FCk_GameSettings_SettingDefinition{};
 
-            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Int32(WorldContext,
-                FCk_Request_GameSettings_SetValue_Int32{Get_Key(), Parsed});
-            return;
-        }
-        case ECk_GameSettings_ValueType::Float:
-        {
-            auto Parsed = float{};
-            const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
-            CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Float"), InOptionValue, Get_Key())
-            {}
-            if (NOT OptionParses)
-            { return; }
+    if (NOT UCk_Utils_GameSettings_UE::Get_SettingDefinition(WorldContext, Get_Key(), Definition))
+    { return; }
 
-            UCk_Utils_GameSettings_UE::Request_SetSettingValue_Float(WorldContext,
-                FCk_Request_GameSettings_SetValue_Float{Get_Key(), Parsed});
-            return;
-        }
-        case ECk_GameSettings_ValueType::String:
-        {
-            UCk_Utils_GameSettings_UE::Request_SetSettingValue_String(WorldContext,
-                FCk_Request_GameSettings_SetValue_String{Get_Key(), InOptionValue});
-            return;
-        }
-    }
-}
+    const auto& Options = Definition.Get_Options();
+    const auto SelectedIndex = ck::IsValid(_ValueComboBox) ? _ValueComboBox->GetSelectedIndex() : INDEX_NONE;
 
-auto
-    UCk_GameSettingsUI_RowWidget_Select::
-    Get_CurrentOptionIndex(
-        const FCk_GameSettings_SettingDefinition& InDefinition,
-        const FString& InValueString) const
-    -> int32
-{
-    using namespace ck_game_settings_ui_row_widgets;
+    if (NOT Options.IsValidIndex(SelectedIndex))
+    { return; }
 
-    const auto& Options = InDefinition.Get_Options();
-
-    for (auto Index = 0; Index < Options.Num(); ++Index)
-    {
-        const auto& OptionValue = Options[Index].Get_Value();
-
-        switch (InDefinition.Get_ValueType())
-        {
-            case ECk_GameSettings_ValueType::Bool:
-            {
-                if (OptionValue.ToBool() == InValueString.ToBool())
-                { return Index; }
-                break;
-            }
-            case ECk_GameSettings_ValueType::Int32:
-            {
-                auto OptionParsed = int32{};
-                auto ValueParsed = int32{};
-
-                if (LexTryParseString(OptionParsed, *OptionValue) &&
-                    LexTryParseString(ValueParsed, *InValueString) &&
-                    OptionParsed == ValueParsed)
-                { return Index; }
-                break;
-            }
-            case ECk_GameSettings_ValueType::Float:
-            {
-                auto OptionParsed = float{};
-                auto ValueParsed = float{};
-
-                if (LexTryParseString(OptionParsed, *OptionValue) &&
-                    LexTryParseString(ValueParsed, *InValueString) &&
-                    FMath::IsNearlyEqual(OptionParsed, ValueParsed, FloatOptionMatchTolerance))
-                { return Index; }
-                break;
-            }
-            case ECk_GameSettings_ValueType::String:
-            {
-                if (OptionValue == InValueString)
-                { return Index; }
-                break;
-            }
-        }
-    }
-
-    return INDEX_NONE;
+    DoCommitOptionValue(Definition, Options[SelectedIndex].Get_Value());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -621,16 +695,19 @@ namespace ck::game_settings_ui
             const TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>& InSelectRowClassOverride)
         -> TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>
     {
+        if (ck::IsValid(InDefinition.Get_OptionalRowClassOverride()))
+        { return InDefinition.Get_OptionalRowClassOverride(); }
+
         if (InDefinition.Get_Options().Num() > 0)
         {
-            if (NOT InSelectRowClassOverride.IsNull())
+            if (ck::IsValid(InSelectRowClassOverride))
             { return InSelectRowClassOverride; }
 
             return TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>{UCk_GameSettingsUI_RowWidget_Select::StaticClass()};
         }
 
         if (const auto FoundOverride = InRowClassOverrides.Find(InDefinition.Get_ValueType());
-            FoundOverride != nullptr && NOT FoundOverride->IsNull())
+            ck::IsValid(FoundOverride, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*FoundOverride))
         { return *FoundOverride; }
 
         switch (InDefinition.Get_ValueType())

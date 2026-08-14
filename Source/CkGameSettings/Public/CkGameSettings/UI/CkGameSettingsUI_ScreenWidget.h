@@ -131,9 +131,10 @@ private:
     auto DoReportMisconfig(const TCHAR* InMessage) -> void;
 
 private:
-    /** The panel rows are injected into. Required — rows have no injection point without it. */
+    /** The panel rows are injected into — required (rows have no injection point without it).
+     *  WBP-compile-enforced; headless native instantiation still runs with it null. */
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UPanelWidget> _RowContainer;
 
     /** Category tabs. Absent, every category's rows render as one flat list. */

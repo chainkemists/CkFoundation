@@ -72,6 +72,12 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _EnableVideoPack = false;
 
+    /** Stamped as the category on every video.* setting the pack registers. Unset, the pack's rows
+     *  land on the settings screen's "General" tab. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Packs|Video",
+              meta = (AllowPrivateAccess = true, EditCondition = "_EnableVideoPack"))
+    FGameplayTag _VideoPackCategoryTag;
+
     /** Per-value-type row widget class for the settings screen. Unset types use the built-in rows. */
     UPROPERTY(Config, EditDefaultsOnly, Category = "UI",
               meta = (AllowPrivateAccess = true))
@@ -90,6 +96,7 @@ public:
     CK_PROPERTY_GET(_AudioMix);
     CK_PROPERTY_GET(_AudioCategories);
     CK_PROPERTY_GET(_EnableVideoPack);
+    CK_PROPERTY_GET(_VideoPackCategoryTag);
     CK_PROPERTY_GET(_RowClassOverrides);
     CK_PROPERTY_GET(_SelectRowClassOverride);
 };
@@ -119,6 +126,9 @@ public:
 
     static auto
     Get_EnableVideoPack() -> bool;
+
+    static auto
+    Get_VideoPackCategoryTag() -> const FGameplayTag&;
 
     static auto
     Get_RowClassOverrides() -> const TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>>&;

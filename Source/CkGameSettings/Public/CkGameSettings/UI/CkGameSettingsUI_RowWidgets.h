@@ -7,12 +7,14 @@
 #include "CkUI/UserWidget/CkUserWidget.h"
 
 #include <CommonButtonBase.h>
+#include <Types/SlateEnums.h>
 
 #include "CkGameSettingsUI_RowWidgets.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCheckBox;
+class UComboBoxString;
 class USlider;
 class UTextBlock;
 
@@ -21,7 +23,10 @@ class UTextBlock;
 /**
  * One settings-screen row bound to ONE registered setting by key. The row owns the MECHANISM
  * (subsystem change-subscription lifecycle, typed read/commit, disabled state from edit
- * conditions); the WBP owns the tree — author it and bind the subclass's optional widgets.
+ * conditions); the WBP owns the tree — author it and bind the subclass's widgets. Value CONTROLS
+ * are required bindings (a missing/mistyped one is a WBP compile error, never a silently dead
+ * row); labels and readouts are optional. Enforcement is WBP-compile-time only, so headless
+ * native instantiation (tests, gym) still runs with null slots — every slot stays null-guarded.
  *
  * Rows never cache the definition: it is re-queried by key on every refresh (the registry may
  * re-register a key with a different shape).
@@ -72,6 +77,11 @@ protected:
     auto Get_WorldContext() const -> const UObject*;
     auto Get_CurrentValueString(const FCk_GameSettings_SettingDefinition& InDefinition) const -> FString;
 
+protected:
+    /** Parses per the definition's value type and fires the matching Request_SetSettingValue_*. */
+    auto DoCommitOptionValue(const FCk_GameSettings_SettingDefinition& InDefinition, const FString& InOptionValue) -> void;
+    auto Get_CurrentOptionIndex(const FCk_GameSettings_SettingDefinition& InDefinition, const FString& InValueString) const -> int32;
+
 private:
     UFUNCTION()
     void
@@ -120,7 +130,7 @@ private:
 
 private:
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UCheckBox> _ValueCheckBox;
 };
 
@@ -162,9 +172,10 @@ private:
 
 private:
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<USlider> _ValueSlider;
 
+    /** Numeric readout beside the slider — legitimately absent. */
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidgetOptional, AllowPrivateAccess = true))
     TObjectPtr<UTextBlock> _ValueText;
@@ -196,21 +207,52 @@ private:
     auto HandleNextClicked() -> void;
 
     auto DoStep(int32 InDirection) -> void;
-    auto DoCommitOptionValue(const FCk_GameSettings_SettingDefinition& InDefinition, const FString& InOptionValue) -> void;
-    auto Get_CurrentOptionIndex(const FCk_GameSettings_SettingDefinition& InDefinition, const FString& InValueString) const -> int32;
 
 private:
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UCommonButtonBase> _PrevButton;
 
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UCommonButtonBase> _NextButton;
 
     UPROPERTY(BlueprintReadOnly,
-              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+              meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UTextBlock> _ValueText;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Classic dropdown (ComboBoxString) for options-carrying settings — the mouse/keyboard alternative
+ * to the Select spinner. NOT a resolution default: point the project-settings
+ * _SelectRowClassOverride (or a per-type override) at a WBP subclass to use it. Items are the
+ * option LABELS; commits go by index, so duplicate labels stay unambiguous. A definition without
+ * options renders display-only (the raw value, disabled). Designer slot: _ValueComboBox.
+ */
+UCLASS(BlueprintType, Blueprintable)
+class CKGAMESETTINGS_API UCk_GameSettingsUI_RowWidget_Dropdown : public UCk_GameSettingsUI_RowWidgetBase
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_GameSettingsUI_RowWidget_Dropdown);
+
+protected:
+    auto DoRefreshControl(const FCk_GameSettings_SettingDefinition& InDefinition, const FString& InValueString) -> void override;
+
+private:
+    UFUNCTION()
+    void
+    HandleSelectionChanged(
+        FString InSelectedItem,
+        ESelectInfo::Type InSelectionType);
+
+private:
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidget, AllowPrivateAccess = true))
+    TObjectPtr<UComboBoxString> _ValueComboBox;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -256,9 +298,10 @@ namespace ck::game_settings_ui
         const FCk_GameSettings_EditConditions& InEditConditions) -> EEditDisposition;
 
     /**
-     * Type→row-class mapping: options-present → _SelectRowClassOverride else built-in Select;
-     * otherwise per-type override else built-in default (Bool → Toggle; numeric with a FULL
-     * [min, max] range → Slider; everything else → Select).
+     * Type→row-class mapping: the definition's own _OptionalRowClassOverride wins over everything; then
+     * options-present → _SelectRowClassOverride else built-in Select; otherwise per-type override
+     * else built-in default (Bool → Toggle; numeric with a FULL [min, max] range → Slider;
+     * everything else → Select).
      */
     CKGAMESETTINGS_API auto
     Get_ResolvedRowClass(
