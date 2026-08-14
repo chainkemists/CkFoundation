@@ -15,7 +15,8 @@ exclusively — until the latch decays (see *The matcher* and *Two surfaces*). T
 
 **Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkInput`, `CkLog`, `CkSettings` — plus engine `InputCore` and
 `GameplayTags`.
-**Used by:** nothing in-repo yet; `CkTests` (`Script/CkInput/CkAutoTest_Intent_*.as`) exercises it.
+**Used by:** `CkIntentDebugger` (the editor debugger, CkGameplayDebugger plugin) reads every surface;
+`CkTests` (`Script/CkInput/CkAutoTest_Intent_*.as`) exercises it. No gameplay consumer yet.
 
 **The dependency on CkInput is one-way and must stay that way.** CkInput knows nothing about this module: the
 record is derived from what the raw layer already publishes, so a project can use the whole input stack without
@@ -184,8 +185,9 @@ That single pair of choices settles both failures:
 Under a hitch, several render frames' worth of input therefore collapses onto one frame index: the record
 still contains every edge, in order, but the sub-hitch spacing between them is gone. This is not a bug to
 route around — the machine genuinely did not observe those frames separately — and it is bounded by
-`MaxReplayedTicks`. A consumer that needs true sub-frame timing needs the timestamps the raw layer carries,
-not the record.
+`MaxReplayedTicks`. And the record is not hiding a finer reading: the raw layer carries no timestamps either —
+only `_OrderingFidelity`, a statement about event ORDER — so true sub-frame TIMING is not recoverable from this
+pipeline today.
 
 ---
 
