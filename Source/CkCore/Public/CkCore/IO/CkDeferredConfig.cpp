@@ -88,7 +88,7 @@ auto
     for (auto& WeakConfig : _PendingConfigs)
     {
         if (auto Config = WeakConfig.Get();
-            ck::IsValid(Config, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(Config))
         {
             Config->EnsureResolved();
         }

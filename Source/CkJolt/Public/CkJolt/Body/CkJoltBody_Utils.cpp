@@ -131,7 +131,7 @@ auto
     { return FVector::ZeroVector; }
 
     const auto JoltSubsystem = World->GetSubsystem<UCk_Jolt_Subsystem>();
-    if (ck::Is_NOT_Valid(JoltSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(JoltSubsystem))
     { return FVector::ZeroVector; }
 
     const auto PhysicsSystem = JoltSubsystem->Get_PhysicsSystem().Pin();

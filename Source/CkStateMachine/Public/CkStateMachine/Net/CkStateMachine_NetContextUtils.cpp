@@ -51,7 +51,7 @@ namespace ck::statemachine
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSm);
 
-            if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}) && World->IsNetMode(NM_Standalone))
+            if (ck::IsValid(World) && World->IsNetMode(NM_Standalone))
             { return ECk_Sm_NetContext::Standalone; }
 
             if (UCk_Utils_Net_UE::Get_HasAuthority(InSm))

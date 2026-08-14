@@ -122,7 +122,7 @@ namespace ck_tween
         float InTime)
         -> float
     {
-        if (ck::Is_NOT_Valid(InCurve, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InCurve))
         { return 0.0f; }
 
         return InCurve->GetFloatValue(InTime);
@@ -285,7 +285,7 @@ namespace ck
         if (InHandle.Has<FFragment_Tween_EasingCurve>())
         {
             if (const auto& EasingCurve = InHandle.Get<FFragment_Tween_EasingCurve>();
-                ck::IsValid(EasingCurve.Get_Curve().Get(), ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(EasingCurve.Get_Curve().Get()))
             {
                 // The curve REPLACES the easing table, so the table entry is bypassed (Linear).
                 // Interpolate takes a 0to1 range, so a curve that overshoots (an easeOutBack shape)

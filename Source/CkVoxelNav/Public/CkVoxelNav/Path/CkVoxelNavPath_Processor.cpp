@@ -121,9 +121,6 @@ namespace ck
         CK_ENSURE_IF_NOT(VolumeIsUsable,
             TEXT("VoxelNav Path [{}] was asked to plan against [{}], which is not a VoxelNav Volume"),
             InPathEntity, Volume)
-        {}
-
-        if (NOT VolumeIsUsable)
         {
             constexpr auto NoEpoch = 0;
             DoFailPath(ECk_VoxelNav_PathSearchOutcome::InvalidRequest, NoEpoch);

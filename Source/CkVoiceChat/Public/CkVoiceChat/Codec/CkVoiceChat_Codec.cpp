@@ -194,8 +194,6 @@ auto
     const auto FrameDurationIsValid = FrameDurationSeconds > 0.0;
     CK_ENSURE_IF_NOT(FrameDurationIsValid,
         TEXT("JitterParams FrameDuration [{}] must be positive"), InParams.Get_FrameDuration())
-    {}
-    if (NOT FrameDurationIsValid)
     { return 1; }
 
     const auto DepthSeconds = _JitterEwmaSeconds <= 0.0f
@@ -226,8 +224,6 @@ namespace ck::voice_chat::codec
         CK_ENSURE_IF_NOT(FramesAreInContract,
             TEXT("Pack_Bundle rejected: [{}] frames (max {}), each must be 1..{} bytes"),
             InFrames.Num(), MaxFramesPerBundle, MaxFrameBytes)
-        {}
-        if (NOT FramesAreInContract)
         { return {}; }
 
         auto TotalBytes = BundleHeaderBytes;

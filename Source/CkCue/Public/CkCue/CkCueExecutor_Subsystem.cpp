@@ -264,28 +264,32 @@ auto
                     case ECk_Cue_MulticastPolicy::ServerOnly:
                     case ECk_Cue_MulticastPolicy::ServerAndSelf:
                     {
-                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        if (IsReliable)
+                        { CueRelay->Server_RequestExecuteCue_ServerOnly_Reliable(OwnerEntity, CueName, SpawnParams); }
                         else            { CueRelay->Server_RequestExecuteCue_ServerOnly(OwnerEntity, CueName, SpawnParams); }
                         break;
                     }
                     case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
                     {
                         constexpr auto SkipServer = false;
-                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        if (IsReliable)
+                        { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
                         else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, SkipServer); }
                         break;
                     }
                     case ECk_Cue_MulticastPolicy::OtherClientsOnly:
                     {
                         constexpr auto SkipServer = true;
-                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
+                        if (IsReliable)
+                        { CueRelay->Server_RequestExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, SkipServer); }
                         else            { CueRelay->Server_RequestExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, SkipServer); }
                         break;
                     }
                     case ECk_Cue_MulticastPolicy::ServerAndAllClients:
                     default:
                     {
-                        if (IsReliable) { CueRelay->Server_RequestExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        if (IsReliable)
+                        { CueRelay->Server_RequestExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
                         else            { CueRelay->Server_RequestExecuteCue(OwnerEntity, CueName, SpawnParams); }
                         break;
                     }
@@ -324,21 +328,24 @@ auto
                     case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
                     {
                         constexpr auto SkipServer = false;
-                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        if (IsReliable)
+                        { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
                         else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
                         break;
                     }
                     case ECk_Cue_MulticastPolicy::OtherClientsOnly:
                     {
                         constexpr auto SkipServer = true;
-                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
+                        if (IsReliable)
+                        { CueRelay->Multicast_ExecuteCue_ExcludingSender_Reliable(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
                         else            { CueRelay->Multicast_ExecuteCue_ExcludingSender(OwnerEntity, CueName, SpawnParams, OriginatingPlayerState, SkipServer); }
                         break;
                     }
                     case ECk_Cue_MulticastPolicy::ServerAndAllClients:
                     default:
                     {
-                        if (IsReliable) { CueRelay->Multicast_ExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
+                        if (IsReliable)
+                        { CueRelay->Multicast_ExecuteCue_Reliable(OwnerEntity, CueName, SpawnParams); }
                         else            { CueRelay->Multicast_ExecuteCue(OwnerEntity, CueName, SpawnParams); }
                         break;
                     }

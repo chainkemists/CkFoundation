@@ -88,12 +88,12 @@ namespace ck_voice_chat_route_processor
         UWorld* InWorld,
         APlayerState* InPlayerState) -> ACk_VoiceChatRelay_UE*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(InPlayerState))
+        if (ck::Is_NOT_Valid(InWorld) || ck::Is_NOT_Valid(InPlayerState))
         { return nullptr; }
 
         auto* Subsystem = InWorld->GetSubsystem<UCk_VoiceChatRelay_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return nullptr; }
 
         auto Pending = Subsystem->Request_AcquireChannel_ForPlayer(InPlayerState);
@@ -380,8 +380,6 @@ namespace ck
                 TEXT("Malformed voice bundle ([{}] byte(s)) reached the routing inbox of Talker [{}] - "
                      "the pack side and RPC boundary should make this unreachable"),
                 Packed.Num(), InVoiceTalkerEntity)
-            {}
-            if (NOT BundleIsWellFormed)
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedMalformed);
                 ++DroppedMalformed;
@@ -413,8 +411,6 @@ namespace ck
             CK_ENSURE_IF_NOT(SenderMatchesTalker,
                 TEXT("Voice bundle for Talker [{}] arrived from player [{}] who does not own it - dropping (spoof shape)"),
                 InVoiceTalkerEntity, Sender->GetPlayerName())
-            {}
-            if (NOT SenderMatchesTalker)
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedSenderMismatch);
                 ++DroppedSenderMismatch;

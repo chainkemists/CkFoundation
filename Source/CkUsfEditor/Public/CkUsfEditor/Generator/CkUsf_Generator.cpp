@@ -391,7 +391,8 @@ namespace ck::usf_editor
                 if (P._DefaultTexturePath.IsEmpty() == false)
                 {
                     auto* Tex = LoadObject<UTexture>(nullptr, *P._DefaultTexturePath);
-                    if (ck::IsValid(Tex, ck::IsValid_Policy_NullptrOnly{})) { T->Texture = Tex; T->AutoSetSampleType(); }
+                    if (ck::IsValid(Tex))
+                    { T->Texture = Tex; T->AutoSetSampleType(); }
                     else { ck::usf_editor::Warning(TEXT("Look [{}] texture not found: [{}]"), InLookName, P._DefaultTexturePath); }
                 }
                 return T;
@@ -437,7 +438,8 @@ namespace ck::usf_editor
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
-        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
+        if (Package == nullptr)
+        { Package = CreatePackage(*PkgPath); }
 
         if (auto* Old = StaticFindObject(UMaterial::StaticClass(), Package, *AssetName))
         {
@@ -451,7 +453,8 @@ namespace ck::usf_editor
         Material->MaterialDomain = Config.Domain;
         Material->BlendMode = EffectiveBlend;
         Material->SetShadingModel(EffectiveShadingModel);
-        if (IsSurface) { Material->TwoSided = InDef->_TwoSided; }
+        if (IsSurface)
+        { Material->TwoSided = InDef->_TwoSided; }
 
         Material->bUsedWithInstancedStaticMeshes = InDef->_UsedWithInstancedStaticMeshes;
         Material->bUsedWithSkeletalMesh = InDef->_UsedWithSkeletalMesh;
@@ -461,7 +464,8 @@ namespace ck::usf_editor
         Material->bUsedWithNiagaraRibbons = InDef->_UsedWithNiagaraRibbons;
 
         // The Refraction pin is inert unless RefractionMethod is set; a look wanting no bend outputs 1.0 (air).
-        if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }
+        if (WantsRefraction)
+        { Material->RefractionMethod = RM_IndexOfRefraction; }
 
         if (IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit)
         {
@@ -650,7 +654,7 @@ namespace ck::usf_editor
         for (const auto& P : InDef->_Parameters)
         {
             auto* ParamExpr = Make_ParamExpression(Material, InDef, P, LookName, ParamRow * 120);
-            if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::IsValid(ParamExpr))
             {
                 UMaterialEditingLibrary::ConnectMaterialExpressions(
                     ParamExpr, FString(), Custom, P._Name.ToString());
@@ -683,10 +687,14 @@ namespace ck::usf_editor
             const auto IsClearCoat  = EffectiveShadingModel == MSM_ClearCoat;
             for (const auto& E : Get_ExtraOutputs())
             {
-                if (E.Prop == MP_Opacity         && NOT IsTranslucent && NOT IsSubsurface) { continue; }
-                if (E.Prop == MP_OpacityMask     && EffectiveBlend != BLEND_Masked)        { continue; }
-                if (E.Prop == MP_Refraction      && NOT WantsRefraction)                   { continue; }
-                if (E.Prop == MP_SubsurfaceColor && NOT IsSubsurface)                      { continue; }
+                if (E.Prop == MP_Opacity         && NOT IsTranslucent && NOT IsSubsurface)
+                { continue; }
+                if (E.Prop == MP_OpacityMask     && EffectiveBlend != BLEND_Masked)
+                { continue; }
+                if (E.Prop == MP_Refraction      && NOT WantsRefraction)
+                { continue; }
+                if (E.Prop == MP_SubsurfaceColor && NOT IsSubsurface)
+                { continue; }
                 if (E.Prop == MP_CustomData0     && NOT IsClearCoat)                       { continue; } // ClearCoat
                 if (E.Prop == MP_CustomData1     && NOT IsClearCoat)                       { continue; } // ClearCoatRoughness
                 UMaterialEditingLibrary::ConnectMaterialProperty(Custom, FString(E.Name), E.Prop);
@@ -738,7 +746,7 @@ namespace ck::usf_editor
             for (const auto& P : InDef->_Parameters)
             {
                 auto* ParamExpr = Make_ParamExpression(Material, InDef, P, LookName, 800 + WpoParamRow * 120);
-                if (ck::IsValid(ParamExpr, ck::IsValid_Policy_NullptrOnly{}))
+                if (ck::IsValid(ParamExpr))
                 {
                     UMaterialEditingLibrary::ConnectMaterialExpressions(
                         ParamExpr, FString(), Wpo, P._Name.ToString());
@@ -794,7 +802,7 @@ namespace ck::usf_editor
     auto Validate_LookShaderCompile(
         UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors, bool InForceSynchronousCompile) -> bool
     {
-        if (ck::Is_NOT_Valid(InMaterial, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InMaterial))
         { return true; }
 
         // A process that cannot render (-nullrhi CI) never builds shader maps, so the checks below would read EVERY look as failed.
@@ -858,7 +866,7 @@ namespace ck::usf_editor
         {
             auto* Def = Cast<UCkUsf_LookDefinition>(A.GetAsset());
             auto* Material = DoGenerate_LookMaterial(Def, Result, InPackageRootOverride);
-            if (ck::Is_NOT_Valid(Material, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Material))
             { ++Result.NumSkipped; continue; }
 
             ++Result.NumGenerated;

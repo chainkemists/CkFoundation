@@ -257,7 +257,7 @@ auto
 
     const auto MapSlot = Cast<UCanvasPanelSlot>(_MapImage->Slot);
 
-    if (ck::Is_NOT_Valid(MapSlot, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(MapSlot))
     { return; }
 
     const auto ProjectionMode = UCk_Utils_Minimap_UE::Get_ProjectionMode(_Minimap);
@@ -342,7 +342,7 @@ auto
 {
     const auto CanvasSlot = Cast<UCanvasPanelSlot>(InChild->Slot);
 
-    if (ck::Is_NOT_Valid(CanvasSlot, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(CanvasSlot))
     { return; }
 
     CanvasSlot->SetPosition(InPixelPosition);

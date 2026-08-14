@@ -49,7 +49,7 @@ auto
 {
     const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait))
     { return 0; }
 
     if (NOT Trait->Get_HasMaxStackSize())
@@ -68,7 +68,7 @@ auto
 {
     const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait))
     { return false; }
 
     return Trait->Get_HasMaxStackSize();
@@ -84,7 +84,7 @@ auto
 {
     const auto* Trait = UCk_ItemTrait::Get<UCk_ItemTrait_Stackable>(InItem);
 
-    if (ck::Is_NOT_Valid(Trait, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Trait))
     { return false; }
 
     if (NOT Trait->Get_HasMaxStackSize())
@@ -404,7 +404,7 @@ auto
 {
     const auto* StackableTrait = InDefinition->Get_ItemTrait<UCk_ItemTrait_Stackable>();
 
-    if (ck::Is_NOT_Valid(StackableTrait, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(StackableTrait))
     { return {}; }
 
     auto Filled = int32{0};

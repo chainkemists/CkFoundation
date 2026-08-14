@@ -498,14 +498,11 @@ namespace ck::usf::stylize
         if (InOverride < 0)
         { return {}; }
 
-        const auto EnumIsValid = ck::IsValid(InEnum, ck::IsValid_Policy_NullptrOnly{});
+        const auto EnumIsValid = ck::IsValid(InEnum);
 
         CK_ENSURE_IF_NOT(EnumIsValid,
             TEXT("[{}] was validated against a null UEnum; the setting's own value is used instead"),
             InCVarName)
-        {}
-
-        if (NOT EnumIsValid)
         { return {}; }
 
         const auto OverrideIsValid =
@@ -514,9 +511,6 @@ namespace ck::usf::stylize
         CK_ENSURE_IF_NOT(OverrideIsValid,
             TEXT("[{}] is [{}], which is not a [{}] value; the setting's own value is used instead"),
             InCVarName, InOverride, InEnum->GetName())
-        {}
-
-        if (NOT OverrideIsValid)
         { return {}; }
 
         return InOverride;

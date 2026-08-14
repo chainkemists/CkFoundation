@@ -25,8 +25,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to UCk_Utils_Nav_UE::Request_FindPath"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -56,7 +54,7 @@ auto
         const FCk_Handle& InHandle)
     -> FCk_Nav_PathResult
 {
-    if (NOT ck::IsValid(InHandle))
+    if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
 
     if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
@@ -73,7 +71,7 @@ auto
         const FCk_Handle& InHandle)
     -> ECk_Nav_PathStatus
 {
-    if (NOT ck::IsValid(InHandle))
+    if (ck::Is_NOT_Valid(InHandle))
     { return ECk_Nav_PathStatus::None; }
 
     if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
@@ -106,8 +104,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to Request_NavigationRebuild_ForTesting"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -153,7 +149,7 @@ auto
     { return false; }
 
     auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-    if (NOT ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { return false; }
 
     auto* NavSys = UNavigationSystemV1::GetCurrent(World);

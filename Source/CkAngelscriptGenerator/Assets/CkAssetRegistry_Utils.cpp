@@ -30,7 +30,7 @@ auto
     Get_AssetRegistrySubsystem()
     -> UCkAssetRegistrySubsystem*
 {
-    if (NOT ck::IsValid(GEditor))
+    if (ck::Is_NOT_Valid(GEditor))
     { return nullptr; }
 
     return GEditor->GetEditorSubsystem<UCkAssetRegistrySubsystem>();

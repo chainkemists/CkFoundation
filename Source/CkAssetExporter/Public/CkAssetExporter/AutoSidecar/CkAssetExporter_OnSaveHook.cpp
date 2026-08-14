@@ -39,7 +39,7 @@ namespace ck_asset_exporter_onsavehook
         if (IsRunningCommandlet() || InContext.IsProceduralSave())
         { return; }
 
-        if (ck::Is_NOT_Valid(InPackage, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InPackage))
         { return; }
 
         const auto PackageName = InPackage->GetName();
@@ -54,7 +54,7 @@ namespace ck_asset_exporter_onsavehook
         { return; }
 
         auto* Asset = InPackage->FindAssetInPackage();
-        if (ck::Is_NOT_Valid(Asset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Asset))
         { return; }
 
         if (NOT FCk_AssetExporter_Dispatch::Get_IsExportableClass(Asset->GetClass()))

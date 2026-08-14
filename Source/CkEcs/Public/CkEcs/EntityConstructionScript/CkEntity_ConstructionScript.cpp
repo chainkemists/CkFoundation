@@ -53,8 +53,6 @@ auto
     const auto ConstructionScriptIsValid = ck::IsValid(InConstructionScript);
     CK_ENSURE_IF_NOT(ConstructionScriptIsValid,
         TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
-    {}
-    if (NOT ConstructionScriptIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

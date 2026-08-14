@@ -34,7 +34,8 @@ namespace ck::inventory_handlers
 
             return [NativePredicate, DynamicPredicate](const FCk_Handle_Item& A, const FCk_Handle_Item& B) -> bool
             {
-                if (NativePredicate.IsBound()) { return NativePredicate.Execute(A, B); }
+                if (NativePredicate.IsBound())
+                { return NativePredicate.Execute(A, B); }
                 auto ABeforeB = false;
                 DynamicPredicate.ExecuteIfBound(A, B, ABeforeB);
                 return ABeforeB;

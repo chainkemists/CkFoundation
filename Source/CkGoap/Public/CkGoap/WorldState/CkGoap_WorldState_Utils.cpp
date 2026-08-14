@@ -129,8 +129,10 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_WS_GetValue);
 	INC_DWORD_STAT(STAT_Goap_WS_Reads);
 
-	if (NOT ck::IsValid(InWorldState)) { return false; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return false; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>())
+	{ return false; }
 
 	if (InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
 	{
@@ -147,7 +149,8 @@ auto
 
 	const auto& Registry = InWorldState.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 	const auto Key = Registry.Find(InKey);
-	if (Key == ck::goap::InvalidGoapKey) { return false; }
+	if (Key == ck::goap::InvalidGoapKey)
+	{ return false; }
 
 	const auto& Values = InWorldState.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values();
 	return Values.Get(Key);
@@ -158,8 +161,10 @@ auto
 	Has_Key(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
 	-> bool
 {
-	if (NOT ck::IsValid(InWorldState)) { return false; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return false; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>())
+	{ return false; }
 	const auto& Registry = InWorldState.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 	return Registry.Find(InKey) != ck::goap::InvalidGoapKey;
 }
@@ -189,12 +194,14 @@ namespace ck_goap_world_state_utils_impl
 		const auto& Layers = Stack.Get_Layers();
 		for (auto i = Layers.Num() - 1; i >= 0; --i)
 		{
-			if (const auto* V = Layers[i].Values.Find(InTag)) { return *V; }
+			if (const auto* V = Layers[i].Values.Find(InTag))
+			{ return *V; }
 		}
 
 		const auto& Registry = InWS.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 		const auto Key = Registry.Find(InTag);
-		if (Key == ck::goap::InvalidGoapKey) { return false; }
+		if (Key == ck::goap::InvalidGoapKey)
+		{ return false; }
 		const auto& Values = InWS.Get<ck::FFragment_Goap_WorldState_Values>().Get_Values();
 		return Values.Get(Key);
 	}
@@ -231,7 +238,8 @@ namespace ck_goap_world_state_utils_changelog
 		{
 			const auto Before = InBefore.FindRef(Tag);
 			const auto After = InAfter.FindRef(Tag);
-			if (Before == After) { continue; }
+			if (Before == After)
+			{ continue; }
 
 			AnyEffectiveChange = true;
 			InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_ChangeLog>().Record(
@@ -357,14 +365,16 @@ auto
 		FName InLayerName)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return InWorldState; }
 
 	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
 	const auto ExistingIdx = Stack._Layers.IndexOfByPredicate(
 		[&](const ck::FFragment_Goap_WorldState_OverrideStack::FLayer& InLayer)
 		{ return InLayer.Name == InLayerName; });
 
-	if (ExistingIdx == INDEX_NONE) { return InWorldState; }
+	if (ExistingIdx == INDEX_NONE)
+	{ return InWorldState; }
 
 	auto AffectedTags = TArray<FGameplayTag>{};
 	AffectedTags.Reserve(Stack._Layers[ExistingIdx].Values.Num());
@@ -391,10 +401,12 @@ auto
 		FCk_Handle_Goap_WorldState& InWorldState)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return InWorldState; }
 
 	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
-	if (Stack._Layers.IsEmpty()) { return InWorldState; }
+	if (Stack._Layers.IsEmpty())
+	{ return InWorldState; }
 
 	auto AffectedTags = TArray<FGameplayTag>{};
 	for (const auto& Layer : Stack._Layers)
@@ -422,8 +434,10 @@ auto
 	Get_OverrideDepth(const FCk_Handle_Goap_WorldState& InWorldState)
 	-> int32
 {
-	if (NOT ck::IsValid(InWorldState)) { return 0; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return 0; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return 0; }
 	return InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers().Num();
 }
 
@@ -433,8 +447,10 @@ auto
 	-> TArray<FName>
 {
 	auto Out = TArray<FName>{};
-	if (NOT ck::IsValid(InWorldState)) { return Out; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return Out; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return Out; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return Out; }
 
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	Out.Reserve(Layers.Num());
@@ -447,13 +463,16 @@ auto
 	Has_KeyOverride(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
 	-> bool
 {
-	if (NOT ck::IsValid(InWorldState)) { return false; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return false; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return false; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return false; }
 
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	for (const auto& Layer : Layers)
 	{
-		if (Layer.Values.Contains(InKey)) { return true; }
+		if (Layer.Values.Contains(InKey))
+		{ return true; }
 	}
 	return false;
 }
@@ -463,13 +482,16 @@ auto
 	Get_TopOverrideLayerForKey(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey)
 	-> FName
 {
-	if (NOT ck::IsValid(InWorldState)) { return NAME_None; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return NAME_None; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return NAME_None; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return NAME_None; }
 
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	for (auto i = Layers.Num() - 1; i >= 0; --i)
 	{
-		if (Layers[i].Values.Contains(InKey)) { return Layers[i].Name; }
+		if (Layers[i].Values.Contains(InKey))
+		{ return Layers[i].Name; }
 	}
 	return NAME_None;
 }
@@ -479,13 +501,16 @@ auto
 	Get_LayerValues(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName)
 	-> TMap<FGameplayTag, bool>
 {
-	if (NOT ck::IsValid(InWorldState)) { return {}; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return {}; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return {}; }
 
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	for (const auto& Layer : Layers)
 	{
-		if (Layer.Name == InLayerName) { return Layer.Values; }
+		if (Layer.Name == InLayerName)
+		{ return Layer.Values; }
 	}
 	return {};
 }
@@ -495,13 +520,16 @@ auto
 	Get_LayerKeyCount(const FCk_Handle_Goap_WorldState& InWorldState, FName InLayerName)
 	-> int32
 {
-	if (NOT ck::IsValid(InWorldState)) { return 0; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return 0; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
+	{ return 0; }
 
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	for (const auto& Layer : Layers)
 	{
-		if (Layer.Name == InLayerName) { return Layer.Values.Num(); }
+		if (Layer.Name == InLayerName)
+		{ return Layer.Values.Num(); }
 	}
 	return 0;
 }
@@ -513,8 +541,10 @@ auto
 	Get_RecentChanges(const FCk_Handle_Goap_WorldState& InWorldState)
 	-> TArray<FCk_Goap_WorldStateChange>
 {
-	if (NOT ck::IsValid(InWorldState)) { return {}; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_ChangeLog>()) { return {}; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return {}; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_ChangeLog>())
+	{ return {}; }
 
 	return InWorldState.Get<ck::FFragment_Goap_WorldState_ChangeLog>().Get_Entries();
 }
@@ -532,8 +562,6 @@ auto
 	const auto WorldStateIsValid = ck::IsValid(InWorldState);
 	CK_ENSURE_IF_NOT(WorldStateIsValid,
 		TEXT("Invalid WorldState handle when adding subscriber"))
-	{}
-	if (NOT WorldStateIsValid)
 	{
 		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InWorldState;
@@ -542,8 +570,6 @@ auto
 	const auto SubscriberIsValid = ck::IsValid(InSubscriber);
 	CK_ENSURE_IF_NOT(SubscriberIsValid,
 		TEXT("Invalid subscriber handle for WorldState [{}]"), InWorldState)
-	{}
-	if (NOT SubscriberIsValid)
 	{
 		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InWorldState;
@@ -566,7 +592,7 @@ auto
 		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InWorldState))
+	if (ck::Is_NOT_Valid(InWorldState))
 	{
 		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InWorldState;
@@ -586,13 +612,16 @@ auto
 	Get_SubscriberCount(const FCk_Handle_Goap_WorldState& InWorldState)
 	-> int32
 {
-	if (NOT ck::IsValid(InWorldState)) { return 0; }
-	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_Subscribers>()) { return 0; }
+	if (ck::Is_NOT_Valid(InWorldState))
+	{ return 0; }
+	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_Subscribers>())
+	{ return 0; }
 
 	auto Count = int32{0};
 	for (const auto& Subscriber : InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>().Get_Subscribers())
 	{
-		if (ck::IsValid(Subscriber)) { ++Count; }
+		if (ck::IsValid(Subscriber))
+		{ ++Count; }
 	}
 	return Count;
 }
@@ -638,7 +667,7 @@ auto
 	Find(const FCk_Handle& InHandle)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InHandle))
+	if (ck::Is_NOT_Valid(InHandle))
 	{ return {}; }
 
 	if (InHandle.Has<ck::FFragment_Goap_WorldState_Values>())
@@ -659,7 +688,7 @@ auto
 	Find_ByName(const FCk_Handle& InHandle, FGameplayTag InName)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InHandle))
+	if (ck::Is_NOT_Valid(InHandle))
 	{ return {}; }
 
 	if (NOT ck_goap_world_state_utils::FRecordOfGoapWorldStates_Utils::Has(InHandle))
@@ -704,8 +733,6 @@ auto
 {
 	const auto WorldStateIsValid = ck::IsValid(InWorldState);
 	CK_ENSURE_IF_NOT(WorldStateIsValid, TEXT("Invalid GOAP WorldState handle when adding request"))
-	{}
-	if (NOT WorldStateIsValid)
 	{
 		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InWorldState;
@@ -728,7 +755,7 @@ auto
 	for (auto Index = Subscribers._Subscribers.Num() - 1; Index >= 0; --Index)
 	{
 		auto& Subscriber = Subscribers._Subscribers[Index];
-		if (NOT ck::IsValid(Subscriber))
+		if (ck::Is_NOT_Valid(Subscriber))
 		{
 			Subscribers._Subscribers.RemoveAtSwap(Index);
 			continue;

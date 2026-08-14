@@ -84,8 +84,6 @@ auto
     const auto IsTextShape = InHandle.Has<ck::FFragment_Pmg_Text_Params>();
     CK_ENSURE_IF_NOT(IsTextShape,
         TEXT("Request_SetText called on a non-text PMG shape [{}]"), InHandle)
-    {}
-    if (NOT IsTextShape)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

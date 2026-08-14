@@ -72,7 +72,8 @@ bool FCkTest_AsSourceScanner_Parse_SimpleClass::RunTest(const FString&)
     TestTrue(TEXT("Found"), Result.Found);
     TestEqual(TEXT("BaseClassName"), Result.BaseClassName, FString{TEXT("UCk_GenericEntityScript_UE")});
     TestEqual(TEXT("exposed property count"), Result.ExposedProperties.Num(), 3);
-    if (Result.ExposedProperties.Num() != 3) { return false; }
+    if (Result.ExposedProperties.Num() != 3)
+    { return false; }
 
     TestEqual(TEXT("[0] type"), Result.ExposedProperties[0].TypeText, FString{TEXT("FTransform")});
     TestEqual(TEXT("[0] name (default stripped)"), Result.ExposedProperties[0].Name, FString{TEXT("SpawnTransform")});
@@ -170,7 +171,8 @@ bool FCkTest_AsSourceScanner_ScanShape_AsToAsChain::RunTest(const FString&)
     TestEqual(TEXT("root SourceFilePath is the derived class's file"),
         FPaths::GetCleanFilename(Shape.SourceFilePath), FString{TEXT("Derived.as")});
     TestEqual(TEXT("flattened count"), Shape.FlattenedProperties.Num(), 3);
-    if (Shape.FlattenedProperties.Num() != 3) { return false; }
+    if (Shape.FlattenedProperties.Num() != 3)
+    { return false; }
 
     // Positional Params(...) arg order depends on base-first, per-class order.
     TestEqual(TEXT("[0] = base.Params"),             Shape.FlattenedProperties[0].Name, FString{TEXT("Params")});
@@ -220,7 +222,8 @@ bool FCkTest_AsSourceScanner_ScanShape_CppBoundary::RunTest(const FString&)
 
     TestEqual(TEXT("flattened = C++ chain + own"),
         Shape.FlattenedProperties.Num(), CppProps.Num() + 1);
-    if (Shape.FlattenedProperties.Num() != CppProps.Num() + 1) { return false; }
+    if (Shape.FlattenedProperties.Num() != CppProps.Num() + 1)
+    { return false; }
 
     for (auto Index = 0; Index < CppProps.Num(); ++Index)
     {

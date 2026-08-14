@@ -98,7 +98,8 @@ public:
 
 	auto Set(FCk_GoapKey InKey, bool InValue) -> void
 	{
-		if (NOT IsKeyInRange(InKey)) { return; }
+		if (NOT IsKeyInRange(InKey))
+		{ return; }
 		_Values[InKey] = InValue ? uint8{1} : uint8{0};
 	}
 
@@ -112,7 +113,8 @@ public:
 
 	auto Satisfies(const FWorldStateCondition& InCondition) const -> bool
 	{
-		if (NOT IsKeyInRange(InCondition.Key)) { return false; }
+		if (NOT IsKeyInRange(InCondition.Key))
+		{ return false; }
 		return (_Values[InCondition.Key] != 0) == InCondition.Value;
 	}
 
@@ -201,7 +203,8 @@ public:
 
 	auto RemoveAllForKey(FCk_GoapKey InKey) -> void
 	{
-		if (NOT IsKeyInRange(InKey)) { return; }
+		if (NOT IsKeyInRange(InKey))
+		{ return; }
 		_Constraints[InKey] = static_cast<uint8>(EConstraint::None);
 	}
 
@@ -210,9 +213,11 @@ public:
 	// already filtered in Neighbors; kept here as a safety net.
 	auto RegressThroughEffect(const FWorldStateEffect& InEffect) -> void
 	{
-		if (NOT IsKeyInRange(InEffect.Key)) { return; }
+		if (NOT IsKeyInRange(InEffect.Key))
+		{ return; }
 		auto& Existing = _Constraints[InEffect.Key];
-		if (Existing == static_cast<uint8>(EConstraint::None)) { return; }
+		if (Existing == static_cast<uint8>(EConstraint::None))
+		{ return; }
 
 		const auto Required = Existing == static_cast<uint8>(EConstraint::MustBeTrue);
 		if (Required == InEffect.Value)
@@ -232,7 +237,8 @@ public:
 	{
 		for (const auto& C : _Constraints)
 		{
-			if (C != static_cast<uint8>(EConstraint::None)) { return false; }
+			if (C != static_cast<uint8>(EConstraint::None))
+			{ return false; }
 		}
 		return true;
 	}
@@ -241,14 +247,17 @@ public:
 
 	auto IsSatisfiedBy(const FWorldState& InGround) const -> bool
 	{
-		if (_Conflict) { return false; }
+		if (_Conflict)
+		{ return false; }
 		for (auto Key = 0; Key < WorldState_MaxKeys; ++Key)
 		{
 			const auto C = _Constraints[Key];
-			if (C == static_cast<uint8>(EConstraint::None)) { continue; }
+			if (C == static_cast<uint8>(EConstraint::None))
+			{ continue; }
 
 			const auto Required = (C == static_cast<uint8>(EConstraint::MustBeTrue));
-			if (InGround.Get(Key) != Required) { return false; }
+			if (InGround.Get(Key) != Required)
+			{ return false; }
 		}
 		return true;
 	}
@@ -259,24 +268,28 @@ public:
 		for (auto Key = 0; Key < WorldState_MaxKeys; ++Key)
 		{
 			const auto C = _Constraints[Key];
-			if (C == static_cast<uint8>(EConstraint::None)) { continue; }
+			if (C == static_cast<uint8>(EConstraint::None))
+			{ continue; }
 
 			const auto Required = (C == static_cast<uint8>(EConstraint::MustBeTrue));
-			if (InGround.Get(Key) != Required) { ++Count; }
+			if (InGround.Get(Key) != Required)
+			{ ++Count; }
 		}
 		return Count + (_Conflict ? 1 : 0);
 	}
 
 	auto HasAnyConstraintForKey(FCk_GoapKey InKey) const -> bool
 	{
-		if (NOT IsKeyInRange(InKey)) { return false; }
+		if (NOT IsKeyInRange(InKey))
+		{ return false; }
 		return _Constraints[InKey] != static_cast<uint8>(EConstraint::None);
 	}
 
 	// Returns EConstraint::None when the key is unconstrained or out of range.
 	auto Get(FCk_GoapKey InKey) const -> EConstraint
 	{
-		if (NOT IsKeyInRange(InKey)) { return EConstraint::None; }
+		if (NOT IsKeyInRange(InKey))
+		{ return EConstraint::None; }
 		return static_cast<EConstraint>(_Constraints[InKey]);
 	}
 
@@ -285,7 +298,8 @@ public:
 
 	auto operator==(const FConstraintSet& InOther) const -> bool
 	{
-		if (_Conflict != InOther._Conflict) { return false; }
+		if (_Conflict != InOther._Conflict)
+		{ return false; }
 		return FMemory::Memcmp(_Constraints.GetData(), InOther._Constraints.GetData(),
 			sizeof(uint8) * WorldState_MaxKeys) == 0;
 	}
@@ -324,9 +338,12 @@ struct FKeyRegistry
 public:
 	auto FindOrRegister(FGameplayTag InTag) -> FCk_GoapKey
 	{
-		if (NOT InTag.IsValid()) { return InvalidGoapKey; }
-		if (const auto* Found = _IndexByTag.Find(InTag)) { return *Found; }
-		if (_TagByIndex.Num() >= WorldState_MaxKeys) { return InvalidGoapKey; }
+		if (NOT InTag.IsValid())
+		{ return InvalidGoapKey; }
+		if (const auto* Found = _IndexByTag.Find(InTag))
+		{ return *Found; }
+		if (_TagByIndex.Num() >= WorldState_MaxKeys)
+		{ return InvalidGoapKey; }
 		const auto NewIndex = _TagByIndex.Num();
 		_TagByIndex.Add(InTag);
 		_IndexByTag.Add(InTag, NewIndex);
@@ -335,7 +352,8 @@ public:
 
 	auto Find(FGameplayTag InTag) const -> FCk_GoapKey
 	{
-		if (const auto* Found = _IndexByTag.Find(InTag)) { return *Found; }
+		if (const auto* Found = _IndexByTag.Find(InTag))
+		{ return *Found; }
 		return InvalidGoapKey;
 	}
 

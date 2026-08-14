@@ -55,8 +55,6 @@ auto
     const auto HasTransform = UCk_Utils_Transform_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HasTransform,
         TEXT("Cannot Add Aggro to Handle [{}] — it has no Transform feature (required for spatial scoring)"), InHandle)
-    {}
-    if (NOT HasTransform)
     { return {}; }
 
     // Clamps the TEMPLATE only; AggroTarget::Add re-clamps per target, so this is not the sole guard.
@@ -102,8 +100,6 @@ auto
     const auto TrackedIsValid = ck::IsValid(TrackedEntity);
     CK_ENSURE_IF_NOT(TrackedIsValid,
         TEXT("Cannot CreateTarget on Aggro [{}] — the tracked entity is INVALID"), InOwner)
-    {}
-    if (NOT TrackedIsValid)
     { return {}; }
 
     auto& TargetMap = InOwner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity;
@@ -141,8 +137,6 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Cannot CreateTarget — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     auto Params = InOwner.Get<ck::FFragment_Aggro_DefaultTargetParams>();
@@ -162,18 +156,21 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner) && Has(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Cannot CreateTarget_WithParams — Owner [{}] is invalid or is not an Aggro entity"), InOwner)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     auto Params = InOwner.Get<ck::FFragment_Aggro_DefaultTargetParams>();
     Params.Set_TrackedEntity(InTracked);
 
-    if (InOverrides.Get_OverrideThreat())   { Params.Set_ThreatParams(InOverrides.Get_ThreatParams()); }
-    if (InOverrides.Get_OverrideSpatial())  { Params.Set_SpatialParams(InOverrides.Get_SpatialParams()); }
-    if (InOverrides.Get_OverrideForget())   { Params.Set_ForgetParams(InOverrides.Get_ForgetParams()); }
-    if (InOverrides.Get_OverrideScore())    { Params.Set_ScoreParams(InOverrides.Get_ScoreParams()); }
-    if (InOverrides.Get_OverrideLifetime()) { Params.Set_LifetimeParams(InOverrides.Get_LifetimeParams()); }
+    if (InOverrides.Get_OverrideThreat())
+    { Params.Set_ThreatParams(InOverrides.Get_ThreatParams()); }
+    if (InOverrides.Get_OverrideSpatial())
+    { Params.Set_SpatialParams(InOverrides.Get_SpatialParams()); }
+    if (InOverrides.Get_OverrideForget())
+    { Params.Set_ForgetParams(InOverrides.Get_ForgetParams()); }
+    if (InOverrides.Get_OverrideScore())
+    { Params.Set_ScoreParams(InOverrides.Get_ScoreParams()); }
+    if (InOverrides.Get_OverrideLifetime())
+    { Params.Set_LifetimeParams(InOverrides.Get_LifetimeParams()); }
 
     return DoCreateTarget(InOwner, Params);
 }

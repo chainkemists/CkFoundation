@@ -50,7 +50,7 @@ namespace ck_ism_outline_processor
         // invalid weak ptr, so a nullptr Find inside Release_StencilFor can match an unrelated
         // expired entry (same guard as UCkUsf_OutlineSubsystem::Remove_Outline_From_Component).
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>();
-            ck::IsValid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}) && InApplied.Get_Preset().IsValid())
+            ck::IsValid(OutlineSubsystem) && InApplied.Get_Preset().IsValid())
         {
             OutlineSubsystem->Release_StencilFor(InApplied.Get_Preset().Get());
         }
@@ -87,7 +87,7 @@ namespace ck
 
         auto* Preset = InTarget.Get_Preset().Get();
 
-        if (ck::Is_NOT_Valid(Preset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Preset))
         { return; }
 
         if (InHandle.Has<FFragment_IsmProxy_OutlineApplied>())
@@ -111,8 +111,8 @@ namespace ck
         auto* OutlineSubsystem = _World->GetSubsystem<UCkUsf_OutlineSubsystem>();
         auto* IsmSubsystem = _World->GetSubsystem<UCk_IsmRenderer_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}) ||
-            ck::Is_NOT_Valid(IsmSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(OutlineSubsystem) ||
+            ck::Is_NOT_Valid(IsmSubsystem))
         { return; }
 
         const auto Stencil = OutlineSubsystem->Get_OrAllocate_StencilFor(Preset);

@@ -75,7 +75,7 @@ auto
     {
         const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO.Get()->GetOuter());
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor),
             TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), InRO, InHandle)
         { return; }
 

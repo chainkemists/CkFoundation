@@ -225,7 +225,8 @@ auto
                 MakeStat(
                     TAttribute<FText>::CreateWeakLambda(this, [this, Tag]() -> FText
                     {
-                        if (!Tag.IsValid()) { return FText::FromString(TEXT("---")); }
+                        if (!Tag.IsValid())
+                        { return FText::FromString(TEXT("---")); }
                         if (const UWorld* World = GetWorld())
                         {
                             if (const UCk_EcsWorld_Stats_Subsystem_UE* Sub =
@@ -404,11 +405,15 @@ auto
             const bool bCpp = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Cpp();
             const bool bBP  = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Blueprint();
             const bool bAS  = UCk_Utils_Ecs_Settings_UE::Get_CaptureCallstack_Angelscript();
-            if (!bCpp && !bBP && !bAS) { return FText::FromString(TEXT("---")); }
+            if (!bCpp && !bBP && !bAS)
+            { return FText::FromString(TEXT("---")); }
             FString Result;
-            if (bCpp) { Result += TEXT("C++"); }
-            if (bBP)  { Result += Result.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
-            if (bAS)  { Result += Result.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
+            if (bCpp)
+            { Result += TEXT("C++"); }
+            if (bBP)
+            { Result += Result.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
+            if (bAS)
+            { Result += Result.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
             return FText::FromString(Result);
         }),
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsCallstacks)
@@ -541,7 +546,8 @@ auto
 
             const bool IsActive =
                 BakedHead == FString(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]));
-            if (IsActive) { HeadMatchesAny = true; }
+            if (IsActive)
+            { HeadMatchesAny = true; }
 
             FCkWatermarkInfoBarEntry BranchEntry;
             BranchEntry.Key        = FText::FromString(BranchName);
@@ -1101,7 +1107,8 @@ auto
         TSharedRef<SHorizontalBox> HBox = SNew(SHorizontalBox);
         for (const FStatEntry& E : StatEntries)
         {
-            if (E.Row != RowIdx) { continue; }
+            if (E.Row != RowIdx)
+            { continue; }
 
             const TAttribute<EVisibility> PolicyVis = MakeVisForMinPolicy(E.MinPolicy);
 
@@ -1199,9 +1206,11 @@ auto
     // {0, 0} when there is no ECS world (e.g. front-end menu) — the stat then renders "---".
     auto QueryPumps = [](const UWorld* InWorld) -> TPair<int32, int32>
     {
-        if (!InWorld) { return {0, 0}; }
+        if (!InWorld)
+        { return {0, 0}; }
         const auto* Sub = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-        if (!Sub)     { return {0, 0}; }
+        if (!Sub)
+        { return {0, 0}; }
         return {Sub->Get_WorstFramePumpCount(), Sub->Get_MaxPumpIterations()};
     };
 
@@ -1235,7 +1244,8 @@ auto
                     TAttribute<FText>::CreateWeakLambda(this, [this, QueryPumps]() -> FText
                     {
                         const auto Info = QueryPumps(GetWorld());
-                        if (Info.Value <= 0) { return FText::FromString(TEXT("---")); }
+                        if (Info.Value <= 0)
+                        { return FText::FromString(TEXT("---")); }
                         return FText::FromString(FString::Printf(TEXT("%d / %d"), Info.Key, Info.Value));
                     }),
                     TAttribute<FSlateColor>::CreateWeakLambda(this, [this, QueryPumps]() -> FSlateColor
@@ -1287,7 +1297,8 @@ auto
             {
                 const auto* Subsystem = GetVersionSubsystem(GetWorld());
                 const FString ServerId = Subsystem ? Subsystem->Get_LocalServerBuildId() : FString();
-                if (ServerId.IsEmpty()) { return FText::FromString(TEXT("Server: ---")); }
+                if (ServerId.IsEmpty())
+                { return FText::FromString(TEXT("Server: ---")); }
                 const bool Match = ServerId == ck::Get_BuildId();
                 return FText::FromString(FString::Printf(TEXT("Server %s  %s"),
                     *ServerId, Match ? TEXT("[OK]") : TEXT("[VERSION MISMATCH]")));
@@ -1296,7 +1307,8 @@ auto
             {
                 const auto* Subsystem = GetVersionSubsystem(GetWorld());
                 const FString ServerId = Subsystem ? Subsystem->Get_LocalServerBuildId() : FString();
-                if (ServerId.IsEmpty()) { return PendingColor; }
+                if (ServerId.IsEmpty())
+                { return PendingColor; }
                 return FSlateColor(ServerId == ck::Get_BuildId()
                     ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_OkColor()
                     : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MismatchColor());
@@ -1353,9 +1365,11 @@ auto
                 .Text(TAttribute<FText>::CreateWeakLambda(this, [this, GetVersionSubsystem, RowIdx]() -> FText
                 {
                     const auto* Subsystem = GetVersionSubsystem(GetWorld());
-                    if (!Subsystem) { return FText::GetEmpty(); }
+                    if (!Subsystem)
+                    { return FText::GetEmpty(); }
                     const auto Reports = Subsystem->Get_RemoteClientReports();
-                    if (!Reports.IsValidIndex(RowIdx)) { return FText::GetEmpty(); }
+                    if (!Reports.IsValidIndex(RowIdx))
+                    { return FText::GetEmpty(); }
                     const auto* Report = Reports[RowIdx];
                     const auto* PC = Cast<APlayerController>(Report->GetOwner());
                     const FString Name = (PC && PC->PlayerState) ? PC->PlayerState->GetPlayerName() : FString(TEXT("Player"));
@@ -1369,11 +1383,14 @@ auto
                 .ColorAndOpacity(TAttribute<FSlateColor>::CreateWeakLambda(this, [this, GetVersionSubsystem, RowIdx, PendingColor]() -> FSlateColor
                 {
                     const auto* Subsystem = GetVersionSubsystem(GetWorld());
-                    if (!Subsystem) { return FSlateColor(FLinearColor::White); }
+                    if (!Subsystem)
+                    { return FSlateColor(FLinearColor::White); }
                     const auto Reports = Subsystem->Get_RemoteClientReports();
-                    if (!Reports.IsValidIndex(RowIdx)) { return FSlateColor(FLinearColor::White); }
+                    if (!Reports.IsValidIndex(RowIdx))
+                    { return FSlateColor(FLinearColor::White); }
                     const FString Id = Reports[RowIdx]->Get_ClientBuildId();
-                    if (Id.IsEmpty()) { return PendingColor; }
+                    if (Id.IsEmpty())
+                    { return PendingColor; }
                     return FSlateColor(Id == ck::Get_BuildId()
                         ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_OkColor()
                         : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MismatchColor());

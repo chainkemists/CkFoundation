@@ -99,9 +99,6 @@ namespace ck
         CK_ENSURE_IF_NOT(TransformIsComposed,
             TEXT("VoxelNav Occluder [{}] has no Transform feature. The occluder tracks the entity's own "
                  "transform, so compose Transform onto it before the occluder"), InOccluderEntity)
-        {}
-
-        if (NOT TransformIsComposed)
         { return; }
 
         InCurrent._TrackedBounds = Get_WorldBounds(

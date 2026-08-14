@@ -31,8 +31,6 @@ auto
         TEXT("Engine voice capture could not be created (sample rate [{}]). The engine Voice module "
              "is disabled or has no capture device - the host project needs [Voice] bEnabled=true "
              "in DefaultEngine.ini and a working microphone."), _SampleRate)
-    {}
-    if (NOT CaptureCreated)
     { return false; }
 
     return _Capture->Start();

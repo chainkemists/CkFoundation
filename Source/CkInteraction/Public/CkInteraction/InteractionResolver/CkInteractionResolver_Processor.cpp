@@ -141,7 +141,7 @@ namespace ck
     {
         const auto& Target = InRequest.Get_Target();
 
-        if (NOT ck::IsValid(Target))
+        if (ck::Is_NOT_Valid(Target))
         {
             ck::interaction::Warning(TEXT("Cannot add invalid InteractTarget to resolver [{}]"), InHandle);
             return;
@@ -255,7 +255,7 @@ namespace ck
         auto InvalidTargets = TArray<FCk_Handle_InteractTarget>{};
         for (const auto& Target : InCurrent.Get_AvailableTargets())
         {
-            if (NOT ck::IsValid(Target))
+            if (ck::Is_NOT_Valid(Target))
             {
                 InvalidTargets.Add(Target);
             }

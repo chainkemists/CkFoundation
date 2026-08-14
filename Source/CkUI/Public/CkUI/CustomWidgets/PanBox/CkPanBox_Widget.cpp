@@ -25,8 +25,6 @@ auto
 {
     const auto ZoomIsValid = InView.Get_Zoom() > 0.0f;
     CK_ENSURE_IF_NOT(ZoomIsValid, TEXT("PanBox Request_SetView rejected: Zoom [{}] must be > 0"), InView.Get_Zoom())
-    {}
-    if (NOT ZoomIsValid)
     { return; }
 
     const auto NewView = DoGet_ClampedView(InView);
@@ -78,8 +76,6 @@ auto
 {
     const auto TargetZoomIsValid = InTargetZoom > 0.0f;
     CK_ENSURE_IF_NOT(TargetZoomIsValid, TEXT("PanBox Get_ViewForZoomAt rejected: TargetZoom [{}] must be > 0"), InTargetZoom)
-    {}
-    if (NOT TargetZoomIsValid)
     { return _View; }
 
     // Clamp the target zoom BEFORE deriving the offset — computing the offset for an
@@ -147,8 +143,6 @@ auto
 {
     const auto ZoomRangeIsValid = InZoomRange.Get_Min() > 0.0 && InZoomRange.Get_Max() >= InZoomRange.Get_Min();
     CK_ENSURE_IF_NOT(ZoomRangeIsValid, TEXT("PanBox Request_SetZoomRange rejected: [{}] must have 0 < Min <= Max"), InZoomRange)
-    {}
-    if (NOT ZoomRangeIsValid)
     { return; }
 
     _ZoomRange = InZoomRange;

@@ -120,7 +120,7 @@ auto
     // Skip scheduler work while PIE is active: dynamic-fragment iteration here can dereference handles
     // whose registry a previous PIE teardown destroyed, which EnTT turns into a hard crash. The redraw
     // request below is still serviced so editor viewports refresh normally.
-    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(GEditor->PlayWorld))
+    if (ck::IsValid(GEditor) && ck::IsValid(GEditor->PlayWorld))
     {
         if (_PendingRedraw)
         {
@@ -167,7 +167,7 @@ auto
 #if WITH_EDITOR
     // PIE active: editor-world handles can briefly outlive their registry across the PIE start/stop
     // transition. Same condition the scheduler-tick guard checks in Tick().
-    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(GEditor->PlayWorld))
+    if (ck::IsValid(GEditor) && ck::IsValid(GEditor->PlayWorld))
     { return false; }
 #endif
 

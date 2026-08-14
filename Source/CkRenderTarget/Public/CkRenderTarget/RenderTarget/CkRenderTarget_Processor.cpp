@@ -76,12 +76,12 @@ namespace ck_render_target_processor
         UWorld* InWorld,
         APlayerState* InPlayerState) -> ACk_RenderTargetRelay_UE*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(InPlayerState))
+        if (ck::Is_NOT_Valid(InWorld) || ck::Is_NOT_Valid(InPlayerState))
         { return nullptr; }
 
         auto* Subsystem = InWorld->GetSubsystem<UCk_RenderTargetRelay_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return nullptr; }
 
         auto Pending = Subsystem->Request_AcquireChannel_ForPlayer(InPlayerState);
@@ -94,12 +94,12 @@ namespace ck_render_target_processor
     Get_LocalPlayerState(
         UWorld* InWorld) -> APlayerState*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorld))
         { return nullptr; }
 
         const auto* LocalController = InWorld->GetFirstPlayerController();
 
-        if (ck::Is_NOT_Valid(LocalController, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(LocalController))
         { return nullptr; }
 
         return LocalController->PlayerState;
@@ -225,7 +225,7 @@ namespace ck_render_target_processor
             {
                 const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
 
-                CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+                CK_ENSURE_IF_NOT(ck::IsValid(World),
                     TEXT("RenderTarget [{}] could not resolve a World to create its managed target in."),
                     InRenderTargetEntity)
                 { return nullptr; }
@@ -800,7 +800,7 @@ namespace ck
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
 
-        if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(World))
         { return; }
 
         auto Canvas = static_cast<UCanvas*>(nullptr);
@@ -1290,12 +1290,12 @@ namespace ck
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InRenderTargetEntity);
 
-        if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(World))
         { return; }
 
         const auto* GameState = World->GetGameState();
 
-        if (ck::Is_NOT_Valid(GameState, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(GameState))
         { return; }
 
         const auto Chunks = ck_render_target_processor::BuildChunks(
@@ -1314,7 +1314,7 @@ namespace ck
             // The listen-server host applied the pixels locally at capture time — and a Client
             // RPC on a locally-owned channel would execute locally, double-applying.
             if (const auto* Controller = Player->GetPlayerController();
-                ck::IsValid(Controller, ck::IsValid_Policy_NullptrOnly{}) && Controller->IsLocalController())
+                ck::IsValid(Controller) && Controller->IsLocalController())
             { continue; }
 
             auto& Stream = Streams._Streams.FindOrAdd(Player);
@@ -1497,11 +1497,11 @@ namespace ck
             auto& Stream = StreamIt->Value;
 
             // Out-of-range players lose their baseline — re-entry forces a FullSync before deltas.
-            if (ck::IsValid(OwningActor, ck::IsValid_Policy_NullptrOnly{})
+            if (ck::IsValid(OwningActor)
                 && OwningActor->GetNetCullDistanceSquared() > 0.0f)
             {
                 if (const auto* PlayerPawn = Player->GetPawn();
-                    ck::IsValid(PlayerPawn, ck::IsValid_Policy_NullptrOnly{}))
+                    ck::IsValid(PlayerPawn))
                 {
                     const auto DistSq = FVector::DistSquared(
                         PlayerPawn->GetActorLocation(), OwningActor->GetActorLocation());

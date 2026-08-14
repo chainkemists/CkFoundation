@@ -227,8 +227,6 @@ auto
     const auto IsGridValid = ck::IsValid(InGrid);
     CK_ENSURE_IF_NOT(IsGridValid,
         TEXT("Request_Place: grid handle is invalid"))
-    {}
-    if (NOT IsGridValid)
     {
         InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -237,8 +235,6 @@ auto
     const auto IsOccupantValid = ck::IsValid(InOccupant);
     CK_ENSURE_IF_NOT(IsOccupantValid,
         TEXT("Request_Place: occupant handle is invalid"))
-    {}
-    if (NOT IsOccupantValid)
     {
         InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -248,8 +244,6 @@ auto
     const auto IsObjectValid = ck::IsValid(Object);
     CK_ENSURE_IF_NOT(IsObjectValid,
         TEXT("Request_Place: occupant [{}] is not a 2dGridObject"), InOccupant)
-    {}
-    if (NOT IsObjectValid)
     {
         InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};

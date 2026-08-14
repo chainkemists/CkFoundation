@@ -122,9 +122,6 @@ namespace ck::jolt
 
         CK_ENSURE_IF_NOT(RequestIsValid,
             TEXT("Cooked Jolt query needs a non-empty root/map and finite optional bounds"))
-        {}
-
-        if (NOT RequestIsValid)
         {
             _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::InvalidRequest,
                 TEXT("Cooked Jolt query requires a non-empty root/map and finite optional bounds"));
@@ -134,12 +131,9 @@ namespace ck::jolt
         const auto IndexPath = Get_CookedIndexAssetPath(InRequest._CookedDataRootPath, InRequest._MapPackageName);
         const auto* Index = LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath);
 
-        const auto IndexLoaded = ck::IsValid(Index, ck::IsValid_Policy_NullptrOnly{});
+        const auto IndexLoaded = ck::IsValid(Index);
 
         CK_ENSURE_IF_NOT(IndexLoaded, TEXT("Cooked Jolt query found no index at [{}]"), IndexPath)
-        {}
-
-        if (NOT IndexLoaded)
         {
             _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::MissingIndex,
                 FString::Printf(TEXT("No cooked Jolt index at [%s]"), *IndexPath));
@@ -156,9 +150,6 @@ namespace ck::jolt
         CK_ENSURE_IF_NOT(IndexIsCurrent,
             TEXT("Cooked Jolt index [{}] is stale, was baked under different bake-filter settings, or names "
                  "a different map"), IndexPath)
-        {}
-
-        if (NOT IndexIsCurrent)
         {
             _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::StaleIndex,
                 FString::Printf(TEXT("Cooked Jolt index [%s] is stale or names a different map"), *IndexPath));
@@ -175,12 +166,9 @@ namespace ck::jolt
             { continue; }
 
             const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
-            const auto CellLoaded = ck::IsValid(CellAsset, ck::IsValid_Policy_NullptrOnly{});
+            const auto CellLoaded = ck::IsValid(CellAsset);
 
             CK_ENSURE_IF_NOT(CellLoaded, TEXT("Cooked Jolt query cell [{}] failed to load"), CellRef.Get_CellId())
-            {}
-
-            if (NOT CellLoaded)
             {
                 _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::MissingCell,
                     FString::Printf(TEXT("Cooked Jolt cell [%d,%d] failed to load"), CellRef.Get_CellId().X, CellRef.Get_CellId().Y));
@@ -191,9 +179,6 @@ namespace ck::jolt
                                             CellAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
             CK_ENSURE_IF_NOT(CellMatchesVersion, TEXT("Cooked Jolt query cell [{}] is stale"), CellRef.Get_CellId())
-            {}
-
-            if (NOT CellMatchesVersion)
             {
                 _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::StaleCell,
                     FString::Printf(TEXT("Cooked Jolt cell [%d,%d] is stale"), CellRef.Get_CellId().X, CellRef.Get_CellId().Y));
@@ -216,9 +201,6 @@ namespace ck::jolt
 
                 CK_ENSURE_IF_NOT(ShapeRestored, TEXT("Cooked Jolt query cell [{}] shape [{}] failed to restore"),
                     CellRef.Get_CellId(), ShapeIndex)
-                {}
-
-                if (NOT ShapeRestored)
                 {
                     _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::CorruptCell,
                         FString::Printf(TEXT("Cooked Jolt cell [%d,%d] has a corrupt shape blob"), CellRef.Get_CellId().X, CellRef.Get_CellId().Y));
@@ -236,9 +218,6 @@ namespace ck::jolt
 
                 CK_ENSURE_IF_NOT(ActorHashIsAccepted,
                     TEXT("Cooked Jolt query actor [{}] does not match its cooked runtime hash"), Group.Get_SourceActorName())
-                {}
-
-                if (NOT ActorHashIsAccepted)
                 {
                     _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::StaleActor,
                         FString::Printf(TEXT("Cooked Jolt actor [%s] is missing or stale"), *Group.Get_SourceActorName().ToString()));
@@ -252,9 +231,6 @@ namespace ck::jolt
                     CK_ENSURE_IF_NOT(ShapeIndexIsValid,
                         TEXT("Cooked Jolt query cell [{}] actor [{}] references shape [{}] outside [{}]"),
                         CellRef.Get_CellId(), Group.Get_SourceActorName(), Record.Get_ShapeIndex(), Shapes.Num())
-                    {}
-
-                    if (NOT ShapeIndexIsValid)
                     {
                         _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::CorruptCell,
                             FString::Printf(TEXT("Cooked Jolt cell [%d,%d] references an invalid shape"), CellRef.Get_CellId().X, CellRef.Get_CellId().Y));
@@ -265,9 +241,6 @@ namespace ck::jolt
                     const auto LayerIsValid = Layer != JPH::cObjectLayerInvalid;
 
                     CK_ENSURE_IF_NOT(LayerIsValid, TEXT("Cooked Jolt query ran out of collision layers"))
-                    {}
-
-                    if (NOT LayerIsValid)
                     {
                         _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::CorruptCell,
                             TEXT("Cooked Jolt query could not register a collision layer"));
@@ -284,9 +257,6 @@ namespace ck::jolt
                     const auto BodyCreated = !BodyId.IsInvalid();
 
                     CK_ENSURE_IF_NOT(BodyCreated, TEXT("Cooked Jolt query exhausted static body capacity"))
-                    {}
-
-                    if (NOT BodyCreated)
                     {
                         _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::BodyCapacityExceeded,
                             TEXT("Cooked Jolt query exhausted static body capacity"));

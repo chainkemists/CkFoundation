@@ -226,17 +226,21 @@ auto
 		FGameplayTag InPlannerTag) -> FCk_Handle_Goap_Planner
 {
 	auto Result = FCk_Handle_Goap_Planner{};
-	if (NOT ck::IsValid(InOwner)) { return Result; }
-	if (NOT InPlannerTag.IsValid()) { return Result; }
+	if (ck::Is_NOT_Valid(InOwner))
+	{ return Result; }
+	if (NOT InPlannerTag.IsValid())
+	{ return Result; }
 
 	auto MutableOwner = InOwner;
-	if (NOT MutableOwner.Has<ck::FFragment_RecordOfGoapPlanners>()) { return Result; }
+	if (NOT MutableOwner.Has<ck::FFragment_RecordOfGoapPlanners>())
+	{ return Result; }
 
 	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::ForEach_ValidEntry(
 		MutableOwner,
 		[&](FCk_Handle_Goap_Planner InPlanner)
 		{
-			if (NOT ck::IsValid(InPlanner)) { return; }
+			if (ck::Is_NOT_Valid(InPlanner))
+			{ return; }
 			const auto& Params = InPlanner.Get<ck::FFragment_Goap_Planner_Params>();
 			if (Params.Get_PlannerTag() == InPlannerTag)
 			{
@@ -260,8 +264,10 @@ auto
 		const FCk_Handle_Goap_Planner& InPlanner,
 		FGameplayTag InActionTag) -> FCk_Handle_Goap_Action
 {
-	if (NOT ck::IsValid(InPlanner)) { return {}; }
-	if (NOT InActionTag.IsValid()) { return {}; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return {}; }
+	if (NOT InActionTag.IsValid())
+	{ return {}; }
 
 	const auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 	const auto* Found = Index.Get_TagToAction().Find(InActionTag);
@@ -274,11 +280,14 @@ auto
 		const FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass) -> FCk_Handle_Goap_Action
 {
-	if (NOT ck::IsValid(InPlanner)) { return {}; }
-	if (NOT ck::IsValid(InActionClass)) { return {}; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return {}; }
+	if (ck::Is_NOT_Valid(InActionClass))
+	{ return {}; }
 
 	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InActionClass);
-	if (NOT ActionTag.IsValid()) { return {}; }
+	if (NOT ActionTag.IsValid())
+	{ return {}; }
 
 	return Find_Action(InPlanner, ActionTag);
 }
@@ -287,23 +296,27 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Get_ActiveChain(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_Handle_Goap_Action>
 {
-	if (NOT ck::IsValid(InPlanner)) { return {}; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return {}; }
 
 	auto Result = TArray<FCk_Handle_Goap_Action>{};
 
 	const auto& PlannerPlanState = InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>();
 	const auto& InitialPlan = PlannerPlanState.Get_Plan();
-	if (InitialPlan.IsEmpty()) { return Result; }
+	if (InitialPlan.IsEmpty())
+	{ return Result; }
 
 	auto Curr = InitialPlan[0];
-	if (NOT ck::IsValid(Curr)) { return Result; }
+	if (ck::Is_NOT_Valid(Curr))
+	{ return Result; }
 
 	// A sub-Planner first entry must be active; an atomic Action (no Activation fragment) is
 	// always included as the leaf chain step.
 	if (Curr.Has<ck::FFragment_Goap_Planner_Activation>())
 	{
 		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
-		if (NOT CurrActivation.Get_IsActive()) { return Result; }
+		if (NOT CurrActivation.Get_IsActive())
+		{ return Result; }
 	}
 
 	auto Seen = TSet<FCk_Handle_Goap_Action>{};
@@ -314,22 +327,30 @@ auto
 	for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 	{
 		// Only a composite AND active sub-Planner contributes a further step.
-		if (NOT Curr.Has<ck::FFragment_Goap_Action_Tree>()) { break; }
+		if (NOT Curr.Has<ck::FFragment_Goap_Action_Tree>())
+		{ break; }
 		const auto& CurrTree = Curr.Get<ck::FFragment_Goap_Action_Tree>();
-		if (CurrTree.Get_ChildActions().IsEmpty()) { break; }
+		if (CurrTree.Get_ChildActions().IsEmpty())
+		{ break; }
 
-		if (NOT Curr.Has<ck::FFragment_Goap_Planner_Activation>()) { break; }
+		if (NOT Curr.Has<ck::FFragment_Goap_Planner_Activation>())
+		{ break; }
 		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
-		if (NOT CurrActivation.Get_IsActive()) { break; }
+		if (NOT CurrActivation.Get_IsActive())
+		{ break; }
 
-		if (NOT Curr.Has<ck::FFragment_Goap_Planner_PlanState>()) { break; }
+		if (NOT Curr.Has<ck::FFragment_Goap_Planner_PlanState>())
+		{ break; }
 		const auto& PlanState = Curr.Get<ck::FFragment_Goap_Planner_PlanState>();
 		const auto& Plan = PlanState.Get_Plan();
-		if (Plan.IsEmpty()) { break; }
+		if (Plan.IsEmpty())
+		{ break; }
 
 		const auto Next = Plan[0];
-		if (NOT ck::IsValid(Next)) { break; }
-		if (Seen.Contains(Next)) { break; }
+		if (ck::Is_NOT_Valid(Next))
+		{ break; }
+		if (Seen.Contains(Next))
+		{ break; }
 
 		Seen.Add(Next);
 		Result.Add(Next);
@@ -343,7 +364,8 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Get_EnableToggle(const FCk_Handle_Goap_Planner& InPlanner) -> ECk_EnableDisable
 {
-	if (NOT ck::IsValid(InPlanner)) { return ECk_EnableDisable::Disable; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return ECk_EnableDisable::Disable; }
 	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_EnableToggle();
 }
 
@@ -351,7 +373,8 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Get_DependencyCycles(const FCk_Handle_Goap_Planner& InPlanner) -> TArray<FCk_GoapDiagnostic_DependencyCycle>
 {
-	if (NOT ck::IsValid(InPlanner)) { return {}; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return {}; }
 	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_DependencyCycles();
 }
 
@@ -422,7 +445,8 @@ auto
 
 	const auto& WSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 	const auto Resolved = WSSource.Get_Resolved();
-	if (ck::IsValid(Resolved)) { return Resolved; }
+	if (ck::IsValid(Resolved))
+	{ return Resolved; }
 	return WSSource.Get_WorldStateSource();
 }
 
@@ -533,7 +557,8 @@ auto
 		TEXT("Invalid Planner handle in Get_LastReplanCause"))
 	{ return {}; }
 
-	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_ReplanCause>()) { return {}; }
+	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_ReplanCause>())
+	{ return {}; }
 
 	return InPlanner.Get<ck::FFragment_Goap_Planner_ReplanCause>().Get_Info();
 }
@@ -583,29 +608,35 @@ auto
 	CK_ENSURE_IF_NOT(IsValidPlanner,
 		TEXT("Invalid Planner handle in TryGet_LastSearchDebug"))
 	{}
-	if (NOT IsValidPlanner) { return false; }
+	if (NOT IsValidPlanner)
+	{ return false; }
 
-	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>()) { return false; }
+	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>())
+	{ return false; }
 
 	const auto& Graph = InPlanner.Get<ck::FFragment_Goap_Planner_PlanContext>().Get_Graph();
 	const auto PoolSize = Graph.Get_StatePoolSize();
-	if (PoolSize <= 0) { return false; }
+	if (PoolSize <= 0)
+	{ return false; }
 
 	const auto HasActivation = InPlanner.Has<ck::FFragment_Goap_Planner_Activation>();
 	CK_ENSURE_IF_NOT(HasActivation,
 		TEXT("Planner [{}] has search state but no Activation fragment"), InPlanner)
 	{}
-	if (NOT HasActivation) { return false; }
+	if (NOT HasActivation)
+	{ return false; }
 
 	const auto IsPromotedPlanner = InPlanner.Has<ck::FFragment_Goap_Action_Definition>();
 	const auto IsActive = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>().Get_IsActive();
-	if (IsPromotedPlanner && NOT IsActive) { return false; }
+	if (IsPromotedPlanner && NOT IsActive)
+	{ return false; }
 
 	const auto HasWorldStateSource = InPlanner.Has<ck::FFragment_Goap_Planner_WorldStateSource>();
 	CK_ENSURE_IF_NOT(HasWorldStateSource,
 		TEXT("Planner [{}] has search state but no WorldStateSource fragment"), InPlanner)
 	{}
-	if (NOT HasWorldStateSource) { return false; }
+	if (NOT HasWorldStateSource)
+	{ return false; }
 
 	const auto WSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
 	const auto HasResolvedWorldState = ck::IsValid(WSSource)
@@ -613,7 +644,8 @@ auto
 	CK_ENSURE_IF_NOT(HasResolvedWorldState,
 		TEXT("Planner [{}] has search state but no resolved WorldState source"), InPlanner)
 	{}
-	if (NOT HasResolvedWorldState) { return false; }
+	if (NOT HasResolvedWorldState)
+	{ return false; }
 
 	const auto& Registry = WSSource.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();
 
@@ -641,7 +673,8 @@ auto
 		for (auto Key = 0; Key < Registry.Num(); ++Key)
 		{
 			const auto Constraint = ConstraintSet.Get(Key);
-			if (Constraint == ck::goap::EConstraint::None) { continue; }
+			if (Constraint == ck::goap::EConstraint::None)
+			{ continue; }
 
 			Row._Conditions.Add(FCk_GoapWS_Condition_Authored{
 				Registry.GetTag(Key), Constraint == ck::goap::EConstraint::MustBeTrue});
@@ -725,7 +758,7 @@ auto
 
 	auto ActionEntity = ck::goap::internal_planner::DoCreateOrFindActionEntity(InPlanner, InParams);
 
-	if (NOT ck::IsValid(ActionEntity))
+	if (ck::Is_NOT_Valid(ActionEntity))
 	{ return {}; }
 
 	const auto IsPromotedMidTier = InPlanner.Has<ck::FFragment_Goap_Action_Tree>();
@@ -845,8 +878,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid ActionSet handle in Request_SetEnableToggle"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -870,8 +901,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -916,8 +945,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetGoal"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -944,8 +971,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_Plan"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -970,8 +995,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_CancelPlan"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -997,8 +1020,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetReplanInterval"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1024,8 +1045,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetReplanPolicy"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1051,8 +1070,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetSearchBudget"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1078,8 +1095,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetCostThreshold"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1106,8 +1121,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetChildActionCost"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1133,8 +1146,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_RegisterActionCostProvider"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1160,8 +1171,6 @@ auto
 	const auto PlannerIsValid = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_RemoveAction"))
-	{}
-	if (NOT PlannerIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1170,8 +1179,6 @@ auto
 	const auto ChildActionClassIsValid = ck::IsValid(InChildActionClass);
 	CK_ENSURE_IF_NOT(ChildActionClassIsValid,
 		TEXT("Invalid ChildActionClass in Request_RemoveAction (Planner [{}])"), InPlanner)
-	{}
-	if (NOT ChildActionClassIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
@@ -1182,15 +1189,13 @@ auto
 	CK_ENSURE_IF_NOT(ActionTagIsValid,
 		TEXT("Could not derive a valid action tag for class [{}] in Request_RemoveAction (Planner [{}])"),
 		InChildActionClass, InPlanner)
-	{}
-	if (NOT ActionTagIsValid)
 	{
 		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
 	}
 
 	auto ChildAction = Find_Action(InPlanner, ActionTag);
-	if (NOT ck::IsValid(ChildAction))
+	if (ck::Is_NOT_Valid(ChildAction))
 	{
 		ck::goap::Warning(
 			TEXT("Request_RemoveAction: no Action with tag [{}] (class [{}]) registered on Planner [{}]; nothing to remove."),
@@ -1278,7 +1283,8 @@ namespace ck::goap::internal_planner
 	// A top-level Planner is always active and never fires them — binding on it is harmless.
 	static auto DoResolveBroadcastEntity_ForActivation(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle
 	{
-		if (NOT ck::IsValid(InPlanner)) { return {}; }
+		if (ck::Is_NOT_Valid(InPlanner))
+		{ return {}; }
 
 		if (InPlanner.Has<ck::FFragment_Goap_Action_Tree>())
 		{
@@ -1364,10 +1370,12 @@ auto
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnPlannerActivated& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return InPlanner; }
 
 	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
-	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+	if (ck::Is_NOT_Valid(BroadcastEntity))
+	{ return InPlanner; }
 
 	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Activated, BroadcastEntity, InDelegate);
 	return InPlanner;
@@ -1402,10 +1410,12 @@ auto
 		FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	if (NOT ck::IsValid(InPlanner)) { return InPlanner; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return InPlanner; }
 
 	auto BroadcastEntity = ck::goap::internal_planner::DoResolveBroadcastEntity_ForActivation(InPlanner);
-	if (NOT ck::IsValid(BroadcastEntity)) { return InPlanner; }
+	if (ck::Is_NOT_Valid(BroadcastEntity))
+	{ return InPlanner; }
 
 	CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnGoap_Planner_Deactivated, BroadcastEntity, InDelegate);
 	return InPlanner;

@@ -129,7 +129,7 @@ auto
         FCk_Handle InAnyHandleInWorld)
     -> TArray<FCk_PathNetwork_Ribbon>
 {
-    if (NOT ck::IsValid(InAnyHandleInWorld))
+    if (ck::Is_NOT_Valid(InAnyHandleInWorld))
     { return {}; }
 
     auto Ribbons = TArray<FCk_PathNetwork_Ribbon>{};
@@ -160,8 +160,6 @@ auto
     const auto NetworkIsValid = ck::IsValid(InNetwork);
     CK_ENSURE_IF_NOT(NetworkIsValid,
         TEXT("Invalid PathNetwork handle [{}] passed to Request_Rebuild"), InNetwork)
-    {}
-    if (NOT NetworkIsValid)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -171,8 +169,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Rebuild on PathNetwork [{}] dropped — caller does not have authority. "
              "The network is server-only."), InNetwork)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -200,8 +196,6 @@ auto
     const auto NetworkIsValid = ck::IsValid(InNetwork);
     CK_ENSURE_IF_NOT(NetworkIsValid,
         TEXT("Invalid PathNetwork handle [{}] passed to Request_RebuildFromDetector"), InNetwork)
-    {}
-    if (NOT NetworkIsValid)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -210,8 +204,6 @@ auto
     const auto DetectorIsValid = ck::IsValid(InDetector);
     CK_ENSURE_IF_NOT(DetectorIsValid,
         TEXT("Invalid detector passed to Request_RebuildFromDetector on PathNetwork [{}]"), InNetwork)
-    {}
-    if (NOT DetectorIsValid)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -223,8 +215,6 @@ auto
         TEXT("Request_RebuildFromDetector on [{}] rejected detection bounds: [{}]"),
         InNetwork,
         BoundsValidation.Get_FailureReason())
-    {}
-    if (NOT DetectorAcceptsBounds)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -265,8 +255,6 @@ auto
     CK_ENSURE_IF_NOT(GeneratedRibbonsWereProcessed,
         TEXT("Request_RebuildFromDetector on [{}] could not process generated detector output: [{}]"),
         InNetwork, Processed.Get_FailureReason())
-    {}
-    if (NOT GeneratedRibbonsWereProcessed)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -279,8 +267,6 @@ auto
     CK_ENSURE_IF_NOT(ProcessedSourcesAreGenerated,
         TEXT("Request_RebuildFromDetector on [{}] rejected detector processing output containing a non-Generated ribbon"),
         InNetwork)
-    {}
-    if (NOT ProcessedSourcesAreGenerated)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -292,8 +278,6 @@ auto
     CK_ENSURE_IF_NOT(GeneratedRibbonsAreValid,
         TEXT("Request_RebuildFromDetector on [{}] rejected generated detector output: [{}]"),
         InNetwork, Validation.Get_FailureReason())
-    {}
-    if (NOT GeneratedRibbonsAreValid)
     {
         InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InNetwork;
@@ -396,8 +380,6 @@ auto
     CK_ENSURE_IF_NOT(NetworkIsValid,
         TEXT("Invalid PathNetwork handle [{}] passed to TryGet_RecommendedFollowerTuning"),
         InNetwork)
-    {}
-    if (NOT NetworkIsValid)
     { return false; }
 
     const auto& Params = InNetwork.Get<ck::FFragment_PathNetwork_Params>();
@@ -410,8 +392,6 @@ auto
     CK_ENSURE_IF_NOT(RecommendationIsValid,
         TEXT("PathNetwork [{}] contains an invalid recommended follower tuning profile"),
         InNetwork)
-    {}
-    if (NOT RecommendationIsValid)
     { return false; }
 
     OutTuning = Recommendation;
@@ -471,23 +451,17 @@ auto
     const bool HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to UCk_Utils_PathNetworkFollower_UE::Add"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const bool FeatureIsAbsent = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(FeatureIsAbsent,
         TEXT("Entity [{}] already has the PathNetworkFollower feature"), InHandle)
-    {}
-    if (NOT FeatureIsAbsent)
     { return Cast(InHandle); }
 
     const auto Tuning = Get_Tuning(InParams);
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(Tuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("PathNetworkFollower parameters contain invalid tuning"))
-    {}
-    if (NOT TuningIsValid)
     { return {}; }
 
     InHandle.Add<ck::FFragment_PathNetworkFollower_Params>(InParams);
@@ -516,24 +490,18 @@ auto
     const bool HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to Try_AddOrAdoptByOwnerToken"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto OwnerToken = InParams.Get_OwnerToken();
     const bool OwnerTokenIsValid = NOT OwnerToken.IsNone();
     CK_ENSURE_IF_NOT(OwnerTokenIsValid,
         TEXT("Try_AddOrAdoptByOwnerToken requires a non-empty owner token"))
-    {}
-    if (NOT OwnerTokenIsValid)
     { return {}; }
 
     const auto Tuning = Get_Tuning(InParams);
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(Tuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("Try_AddOrAdoptByOwnerToken received invalid follower tuning"))
-    {}
-    if (NOT TuningIsValid)
     { return {}; }
 
     if (Has(InHandle))
@@ -552,7 +520,7 @@ auto
     }
 
     auto Follower = Add(InHandle, InParams);
-    if (NOT ck::IsValid(Follower))
+    if (ck::Is_NOT_Valid(Follower))
     { return {}; }
 
     OutResult = ECk_PathNetworkFollower_OwnershipResult::Added;
@@ -581,8 +549,6 @@ auto
     const bool FollowerIsValid = ck::IsValid(InFollower);
     CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Get_OwnerToken"), InFollower)
-    {}
-    if (NOT FollowerIsValid)
     { return NAME_None; }
 
     return InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Get_OwnerToken();
@@ -633,8 +599,6 @@ auto
     const auto FollowerIsValid = ck::IsValid(InFollower);
     CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_FindRoute"), InFollower)
-    {}
-    if (NOT FollowerIsValid)
     {
         InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InFollower;
@@ -644,8 +608,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_FindRoute on PathNetworkFollower [{}] dropped — caller does not have authority. "
              "Routing is server-only."), InFollower)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InFollower;
@@ -686,15 +648,11 @@ auto
     const bool FollowerIsValid = ck::IsValid(InFollower);
     CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_UpdateTuningAndReplan"), InFollower)
-    {}
-    if (NOT FollowerIsValid)
     { return InFollower; }
 
     const bool HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InFollower);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_UpdateTuningAndReplan on PathNetworkFollower [{}] dropped — caller does not have authority"), InFollower)
-    {}
-    if (NOT HasAuthority)
     { return InFollower; }
 
     const auto Multiplier = InTuning.Get_OffPathCostMultiplier();
@@ -721,8 +679,6 @@ auto
         Multiplier, NearEndpointMultiplier, NetworkGapMultiplier, JoinMaxDistance, TransferMaxDistance,
         LocalShortcutMaxDistance, DirectGraceDistance, DirectMinimumSavings,
         SideKeeping, Spacing, Smoothing, Clearance, ResolvedRibbonTolerance)
-    {}
-    if (NOT TuningIsValid)
     { return InFollower; }
 
     InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(
@@ -746,29 +702,21 @@ auto
     CK_ENSURE_IF_NOT(ContextIsValid,
         TEXT("Invalid world handle [{}] passed to Request_UpdateTuningAndReplanByOwnerToken"),
         InAnyHandleInWorld)
-    {}
-    if (NOT ContextIsValid)
     { return 0; }
 
     const bool OwnerTokenIsValid = NOT InOwnerToken.IsNone();
     CK_ENSURE_IF_NOT(OwnerTokenIsValid,
         TEXT("Request_UpdateTuningAndReplanByOwnerToken requires a non-empty owner token"))
-    {}
-    if (NOT OwnerTokenIsValid)
     { return 0; }
 
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(InTuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("Request_UpdateTuningAndReplanByOwnerToken received invalid tuning"))
-    {}
-    if (NOT TuningIsValid)
     { return 0; }
 
     const bool HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAnyHandleInWorld);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_UpdateTuningAndReplanByOwnerToken dropped — caller does not have authority"))
-    {}
-    if (NOT HasAuthority)
     { return 0; }
 
     // Snapshot matching handles before adding request fragments. This keeps the
@@ -809,8 +757,6 @@ auto
     const auto FollowerIsValid = ck::IsValid(InFollower);
     CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_SetNetwork"), InFollower)
-    {}
-    if (NOT FollowerIsValid)
     {
         InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InFollower;

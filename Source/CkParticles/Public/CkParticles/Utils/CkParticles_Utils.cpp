@@ -88,12 +88,14 @@ UNiagaraComponent*
     auto* Component = Spawn_BehaviorAtLocation(
         InWorldContextObject, InBehaviorId, InLocation, InRotation, InScale, InTextureName);
 
-    if (NOT IsValid(Component)) { return Component; }
+    if (NOT IsValid(Component))
+    { return Component; }
 
     // An explicit tuning OVERRIDES the behavior's convention asset, which the spawn path already applied. A null
     // one is not an identity request here — writing the identity would stomp that asset — so it falls through to
     // whatever the convention resolved.
-    if (NOT IsValid(InTuning)) { return Component; }
+    if (NOT IsValid(InTuning))
+    { return Component; }
 
     Request_ApplyTuning(Component, InTuning);
 
@@ -111,11 +113,14 @@ UNiagaraComponent*
         FVector         InScale,
         FName           InTextureName)
 {
-    if (NOT IsValid(InWorldContextObject)) { return nullptr; }
-    if (NOT IsValid(InSystem)) { return nullptr; }
+    if (NOT IsValid(InWorldContextObject))
+    { return nullptr; }
+    if (NOT IsValid(InSystem))
+    { return nullptr; }
 
     auto* World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
-    if (NOT IsValid(World)) { return nullptr; }
+    if (NOT IsValid(World))
+    { return nullptr; }
 
     constexpr auto bAutoDestroy   = false;
     constexpr auto bAutoActivate  = true;
@@ -176,8 +181,6 @@ void
     // not: there is nothing to write to and the caller's intent is silently lost.
     const auto ComponentIsValid = IsValid(InComponent);
     CK_ENSURE_IF_NOT(ComponentIsValid, TEXT("Invalid Niagara Component supplied to Request_ApplyTuning"))
-    {}
-    if (NOT ComponentIsValid)
     { return; }
 
     if (NOT IsValid(InTuning))
@@ -211,8 +214,6 @@ void
     CK_ENSURE_IF_NOT(BehaviorIdIsSet, TEXT("Niagara Component [{}] carries no [{}], so the part rows of tuning [{}] ")
         TEXT("address no behavior. Part tuning only applies to components spawned through UCk_Utils_Particles_UE."),
         InComponent->GetName(), ck::particles::Get_BehaviorIdParameterName(), InTuning->GetName())
-    {}
-    if (NOT BehaviorIdIsSet)
     { return; }
 
     Request_ApplyPartTuningBlock(InComponent, InTuning->Get_AsPartTuningBlock(BehaviorId));
@@ -229,8 +230,6 @@ void
 {
     const auto ComponentIsValid = IsValid(InComponent);
     CK_ENSURE_IF_NOT(ComponentIsValid, TEXT("Invalid Niagara Component supplied to Request_ApplyTuningValues"))
-    {}
-    if (NOT ComponentIsValid)
     { return; }
 
     InComponent->SetVariableVec4(ck::particles::Get_TuningParameterName(),
@@ -246,8 +245,6 @@ auto
 {
     const auto ComponentIsValid = IsValid(InComponent);
     CK_ENSURE_IF_NOT(ComponentIsValid, TEXT("Invalid Niagara Component supplied to Request_ApplyPartTuningBlock"))
-    {}
-    if (NOT ComponentIsValid)
     { return; }
 
     ck::particles::Set_PartTuningBlock(InComponent, InBlock);
@@ -261,8 +258,6 @@ auto
 {
     const auto ComponentIsValid = IsValid(InComponent);
     CK_ENSURE_IF_NOT(ComponentIsValid, TEXT("Invalid Niagara Component supplied to Request_ResetPartTuning"))
-    {}
-    if (NOT ComponentIsValid)
     { return; }
 
     ck::particles::Remove_PartTuningBlock(InComponent);

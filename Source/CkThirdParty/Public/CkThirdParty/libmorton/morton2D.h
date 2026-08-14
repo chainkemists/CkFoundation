@@ -62,7 +62,8 @@ inline morton m2D_e_LUT(const coord x, const coord y) {
 template<typename morton, typename coord>
 inline morton compute2D_ET_LUT_encode(const coord c, const coord *LUT) {
 	unsigned long maxbit = 0;
-	if (findFirstSetBit<coord>(c, &maxbit) == 0) { return 0; }
+	if (findFirstSetBit<coord>(c, &maxbit) == 0)
+	{ return 0; }
 	morton answer = 0;
 	unsigned int i = 0;
 	while (maxbit >= i) {
@@ -95,7 +96,8 @@ template<typename morton, typename coord>
 inline morton morton2D_SplitBy2Bits(const coord a) {
 	const morton* masks = (sizeof(morton) <= 4) ? reinterpret_cast<const morton*>(magicbit2D_masks32) : reinterpret_cast<const morton*>(magicbit2D_masks64);
 	morton x = a;
-	if (sizeof(morton) > 4) { x = (x | (uint_fast64_t) x << 32) & masks[0]; }
+	if (sizeof(morton) > 4)
+	{ x = (x | (uint_fast64_t) x << 32) & masks[0]; }
 	x = (x | x << 16) & masks[1];
 	x = (x | x << 8) & masks[2];
 	x = (x | x << 4) & masks[3];
@@ -173,7 +175,8 @@ template<typename morton, typename coord>
 inline void m2D_d_sLUT_ET(const morton m, coord& x, coord& y) {
 	x = 0; y = 0;
 	unsigned long firstbit_location = 0;
-	if (!findFirstSetBit<morton>(m, &firstbit_location)) { return; }
+	if (!findFirstSetBit<morton>(m, &firstbit_location))
+	{ return; }
 	unsigned int i = 0;
 	unsigned int shiftback = 0;
 	while (firstbit_location >= i) {
@@ -190,7 +193,8 @@ template<typename morton, typename coord>
 inline void m2D_d_LUT_ET(const morton m, coord& x, coord& y) {
 	x = 0; y = 0;
 	unsigned long firstbit_location = 0;
-	if (!findFirstSetBit<morton>(m, &firstbit_location)) { return; }
+	if (!findFirstSetBit<morton>(m, &firstbit_location))
+	{ return; }
 	unsigned int i = 0;
 	unsigned int shiftback = 0;
 	while (firstbit_location >= i) {

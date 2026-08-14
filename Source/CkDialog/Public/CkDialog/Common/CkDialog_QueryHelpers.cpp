@@ -80,8 +80,6 @@ namespace ck
             TEXT("Dialog condition entity [{}] has no valid UCk_DialogCondition_EntityScript — evaluated after the "
                  "registry reported ready. Treating as Fail (a line whose gate cannot be evaluated must not emit)."),
             InConditionEntity)
-        {}
-        if (NOT ConditionValid)
         { return ECk_Dialog_ConditionResult::Fail; }
 
         return Condition->Evaluate(InConditionEntity, InLine, InEmitter);

@@ -83,11 +83,9 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    const auto IsSkeletalMeshComponentValid = ck::IsValid(InSkeletalMeshComponent, ck::IsValid_Policy_NullptrOnly{});
+    const auto IsSkeletalMeshComponentValid = ck::IsValid(InSkeletalMeshComponent);
     CK_ENSURE_IF_NOT(IsSkeletalMeshComponentValid,
         TEXT("Rebinding MontagePlayer on Entity [{}] with an INVALID SkeletalMeshComponent!"), InMontagePlayer)
-    {}
-    if (NOT IsSkeletalMeshComponentValid)
     {
         InDelegate.ExecuteIfBound(InMontagePlayer, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InMontagePlayer;
@@ -159,8 +157,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Play called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -201,8 +197,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Stop called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -227,8 +221,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Pause called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -253,8 +245,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Resume called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -279,8 +269,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_JumpToSection called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

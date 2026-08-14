@@ -160,8 +160,6 @@ auto
     CK_ENSURE_IF_NOT(TargetStateClassIsValid,
         TEXT("Request_Transition on [{}] with an invalid target state class — request dropped"),
         InStateMachine)
-    {}
-    if (NOT TargetStateClassIsValid)
     {
         InDelegate.ExecuteIfBound(InStateMachine, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InStateMachine;
@@ -580,11 +578,11 @@ auto
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InStateMachine);
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { return {}; }
 
     auto* Subsystem = World->GetSubsystem<UCk_StateMachineRelay_Subsystem_UE>();
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return {}; }
 
     // The SM relay is a CLIENT→SERVER push: it must use the channel owned by the SM's OWNING player —

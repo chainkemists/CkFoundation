@@ -72,15 +72,11 @@ auto
     const auto WorldIsValid = ck::IsValid(InWorld);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
-    {}
-    if (NOT WorldIsValid)
     { return nullptr; }
 
     const auto MeshIsValid = ck::IsValid(InMesh);
     CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
-    {}
-    if (NOT MeshIsValid)
     { return nullptr; }
 
     auto CacheKey = FMeshOnlyKey{};
@@ -114,15 +110,11 @@ auto
     const auto WorldIsValid = ck::IsValid(InWorld);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
-    {}
-    if (NOT WorldIsValid)
     { return nullptr; }
 
     const auto MeshIsValid = ck::IsValid(InMesh);
     CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
-    {}
-    if (NOT MeshIsValid)
     { return nullptr; }
 
     FMeshMaterialKey CacheKey;
@@ -166,23 +158,17 @@ auto
     const auto WorldIsValid = ck::IsValid(InWorld);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
-    {}
-    if (NOT WorldIsValid)
     { return nullptr; }
 
     const auto MeshIsValid = ck::IsValid(InMesh);
     CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
-    {}
-    if (NOT MeshIsValid)
     { return nullptr; }
 
     const auto CustomDataCountIsValid = InNumCustomData >= 0;
     CK_ENSURE_IF_NOT(CustomDataCountIsValid,
         TEXT("Trying to create transient IsmRenderer_Data for Mesh [{}] with a NEGATIVE custom-data count [{}]"),
         InMesh, InNumCustomData)
-    {}
-    if (NOT CustomDataCountIsValid)
     { return nullptr; }
 
     FMeshMaterialKey CacheKey;
@@ -239,8 +225,6 @@ auto
     const auto NewDataIsValid = ck::IsValid(NewData);
     CK_ENSURE_IF_NOT(NewDataIsValid,
         TEXT("Failed to create transient IsmRenderer_Data for Mesh [{}]"), InMesh)
-    {}
-    if (NOT NewDataIsValid)
     { return nullptr; }
 
     // Needed for GetWorld() on a transient-package object. const_cast is safe: the destination is a
@@ -266,8 +250,6 @@ auto
     const auto WorldIsValid = ck::IsValid(InWorld);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to clear transient IsmRenderer_Data cache for an INVALID World"))
-    {}
-    if (NOT WorldIsValid)
     { return; }
 
     ck::ismrenderer::Verbose(TEXT("Clearing Transient ISM Renderer cache for World [{}]..."), InWorld);

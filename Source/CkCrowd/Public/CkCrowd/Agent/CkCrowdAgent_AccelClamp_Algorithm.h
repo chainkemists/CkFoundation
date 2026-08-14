@@ -41,8 +41,6 @@ namespace ck::ck_crowd_agent_accel_clamp_algorithm
             InMaxAcceleration,
             InMaxTurnRate,
             InDeltaSeconds)
-        {}
-        if (NOT InputsAreValid)
         { return FVector::ZeroVector; }
 
         const auto RequestedVelocity = InRequestedVelocity.GetClampedToMaxSize(InMaxSpeed);

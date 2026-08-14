@@ -113,7 +113,7 @@ auto
     -> void
 {
     auto* World = GetWorld();
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { return; }
 
     auto Leaked = TArray<ACk_IsmRenderer_Actor_UE*>{};
@@ -336,7 +336,7 @@ auto
         const TWeakObjectPtr<AActor>& InEditorSelectionOwner)
     -> TWeakObjectPtr<UInstancedStaticMeshComponent>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData) && ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData) && ck::IsValid(InPreset),
         TEXT("FindOrCreate_OutlineIsmComponent: INVALID renderer data [{}] or preset"), InRendererData)
     { return {}; }
 
@@ -464,7 +464,7 @@ auto
     {
         const auto& SourceMaterial = InSourceIsm->GetMaterial(MaterialIndex);
 
-        if (ck::Is_NOT_Valid(SourceMaterial, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(SourceMaterial))
         { continue; }
 
         if (IsTranslucentBlendMode(*SourceMaterial) && NOT SourceMaterial->IsTranslucencyWritingCustomDepth())

@@ -28,7 +28,8 @@ bool FCkTest_AsErrorParser_EntitySpawnParamsProbe::RunTest(const FString&)
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
     TestEqual(TEXT("error count"), Errors.Num(), 1);
-    if (Errors.Num() < 1) { return false; }
+    if (Errors.Num() < 1)
+    { return false; }
 
     const auto& E = Errors[0];
     TestEqual(TEXT("Kind"),            static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::NoMatchingSignatures));
@@ -59,7 +60,8 @@ bool FCkTest_AsErrorParser_AssetRegistryProbe::RunTest(const FString&)
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
     TestEqual(TEXT("error count"), Errors.Num(), 1);
-    if (Errors.Num() < 1) { return false; }
+    if (Errors.Num() < 1)
+    { return false; }
 
     const auto& E = Errors[0];
     TestEqual(TEXT("Kind"),            static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::NoMatchingSignatures));
@@ -96,7 +98,8 @@ bool FCkTest_AsErrorParser_DynamicHandleProbe::RunTest(const FString&)
     // Two recognized roots; the Compiling context and the Unknown/_Iterator lines
     // are cascade noise the parser must drop.
     TestEqual(TEXT("error count"), Errors.Num(), 2);
-    if (Errors.Num() < 2) { return false; }
+    if (Errors.Num() < 2)
+    { return false; }
 
     {
         const auto& E = Errors[0];
@@ -140,7 +143,8 @@ bool FCkTest_AsErrorParser_NoMatchingSignatures_MultiArg::RunTest(const FString&
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
     TestEqual(TEXT("error count"), Errors.Num(), 1);
-    if (Errors.Num() < 1) { return false; }
+    if (Errors.Num() < 1)
+    { return false; }
 
     const auto& E = Errors[0];
     TestEqual(TEXT("ArgsList"), E.ArgsList, FString{TEXT("const FTransform, UClass, int32")});
@@ -172,7 +176,8 @@ bool FCkTest_AsErrorParser_DeduplicateRoots::RunTest(const FString&)
 
     const auto Deduped = FCkAsErrorParser::DeduplicateRoots(Raw);
     TestEqual(TEXT("unique root count"), Deduped.Num(), 2);
-    if (Deduped.Num() < 2) { return false; }
+    if (Deduped.Num() < 2)
+    { return false; }
 
     // Preserves order of first appearance.
     TestEqual(TEXT("[0] MissingIdentifier"), Deduped[0].MissingIdentifier, FString{TEXT("FCk_Handle_X")});
@@ -205,7 +210,8 @@ bool FCkTest_AsErrorParser_AdjacentStringLiteralProbe::RunTest(const FString&)
     // The generic "Expected ')' or ','" companion is dropped — not a unique
     // enough signature to act on.
     TestEqual(TEXT("error count"), Errors.Num(), 1);
-    if (Errors.Num() < 1) { return false; }
+    if (Errors.Num() < 1)
+    { return false; }
 
     const auto& E = Errors[0];
     TestEqual(TEXT("Kind"),     static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::AdjacentStringLiteral));
@@ -278,7 +284,8 @@ bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
     TestEqual(TEXT("filtered to root only"), Errors.Num(), 1);
-    if (Errors.Num() != 1) { return false; }
+    if (Errors.Num() != 1)
+    { return false; }
 
     TestEqual(TEXT("survivor is IdentifierNotADataType"),
         static_cast<int32>(Errors[0].Kind),
@@ -314,7 +321,8 @@ bool FCkTest_AsErrorParser_BareCtorProbe::RunTest(const FString&)
 
     // The Compiling context and the 'not a member of Unknown' cascade are dropped.
     TestEqual(TEXT("error count"), Errors.Num(), 2);
-    if (Errors.Num() < 2) { return false; }
+    if (Errors.Num() < 2)
+    { return false; }
 
     {
         const auto& E = Errors[0];
@@ -357,7 +365,8 @@ bool FCkTest_AsErrorParser_BareCtor_CascadeAndDedup::RunTest(const FString&)
 
     const auto Deduped = FCkAsErrorParser::DeduplicateRoots(Errors);
     TestEqual(TEXT("identical bare-ctor roots dedup to one"), Deduped.Num(), 1);
-    if (Deduped.Num() < 1) { return false; }
+    if (Deduped.Num() < 1)
+    { return false; }
 
     TestEqual(TEXT("survivor identifier"),
         Deduped[0].MissingIdentifier, FString{TEXT("FBb_Foo_SpawnParams")});
@@ -392,7 +401,8 @@ bool FCkTest_AsErrorParser_NotAMemberOfStructProbe::RunTest(const FString&)
 
     // Compiling context lines and shadowing warnings are not roots.
     TestEqual(TEXT("error count"), Errors.Num(), 1);
-    if (Errors.Num() != 1) { return false; }
+    if (Errors.Num() != 1)
+    { return false; }
 
     const auto& E = Errors[0];
     TestEqual(TEXT("Kind"),   static_cast<int32>(E.Kind),
@@ -428,14 +438,16 @@ bool FCkTest_AsErrorParser_NotAMember_CascadeAndPerCanonicalDedup::RunTest(const
     // The 'Unknown' owner is cascade noise from an earlier root — dropped. Promoting it would
     // let unrelated author errors trigger a canonical DELETE.
     TestEqual(TEXT("Unknown-owner cascade filtered"), Errors.Num(), 3);
-    if (Errors.Num() != 3) { return false; }
+    if (Errors.Num() != 3)
+    { return false; }
 
     const auto Deduped = FCkAsErrorParser::DeduplicateRoots(Errors);
 
     // Recovery is per-CANONICAL, so the same dead field in two canonicals is two roots. A
     // dedup key without the file path collapses them and heals only one per cycle.
     TestEqual(TEXT("one root per canonical"), Deduped.Num(), 2);
-    if (Deduped.Num() != 2) { return false; }
+    if (Deduped.Num() != 2)
+    { return false; }
 
     TestEqual(TEXT("[0] FilePath"), Deduped[0].FilePath,
         FString{TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")});

@@ -35,8 +35,6 @@ auto
     const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
     CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_RunQuery called with invalid querier"))
-    {}
-    if (NOT QuerierIsValid)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQuerierEntity;
@@ -46,8 +44,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; query rejected."),
         InQuerierEntity)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQuerierEntity;
@@ -78,8 +74,6 @@ auto
     const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
     CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_RunQuery_Immediate called with invalid querier"))
-    {}
-    if (NOT QuerierIsValid)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -89,8 +83,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; immediate query rejected."),
         InQuerierEntity)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -160,8 +152,6 @@ auto
     const auto QueryIsValid = ck::IsValid(InQueryEntity);
     CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Request_CancelQuery called with invalid query handle"))
-    {}
-    if (NOT QueryIsValid)
     {
         InDelegate.ExecuteIfBound(InQueryEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueryEntity;
@@ -171,8 +161,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Query [{}] cancel rejected (not authoritative)."),
         InQueryEntity)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQueryEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueryEntity;
@@ -196,8 +184,6 @@ auto
     const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
     CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_CancelAllQueries called with invalid querier."))
-    {}
-    if (NOT QuerierIsValid)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return 0;
@@ -207,8 +193,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; cancel-all rejected."),
         InQuerierEntity)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return 0;

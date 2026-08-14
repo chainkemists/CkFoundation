@@ -213,8 +213,6 @@ auto
                 TEXT("Cannot add operation to [{}] as there are no VALID Phases after the current Phase for DataBundle [{}]. "
                     "The Phase [{}] has just been completed"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (NOT HasValidNextPhase)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;
@@ -225,8 +223,6 @@ auto
                 TEXT("Cannot add operation to [{}] because current opertions have NOT RESOLVED yet for DataBundle [{}]. "
                     "The Phase [{}] is currently underway with pending operations"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (NOT OperationsResolved)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;
@@ -277,8 +273,6 @@ auto
                 TEXT("Cannot add operation to [{}] as there are no VALID Phases after the current Phase for DataBundle [{}]. "
                     "The Phase [{}] has just been completed"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (NOT HasValidNextPhase)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;
@@ -289,8 +283,6 @@ auto
                 TEXT("Cannot add operation to [{}] because current opertions have NOT RESOLVED yet for DataBundle [{}]. "
                     "The Phase [{}] is currently underway with pending operations"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (NOT OperationsResolved)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;

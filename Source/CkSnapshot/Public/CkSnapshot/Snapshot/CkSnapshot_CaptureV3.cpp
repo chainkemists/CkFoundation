@@ -488,7 +488,7 @@ namespace ck::snapshot
                         if (const auto ScriptClass = Info.Get_ConstructionScript(); ck::IsValid(ScriptClass.Get()))
                         { Step.Set_ScriptClassPath(ScriptClass->GetPathName()); }
                         if (const auto* Archetype = Info.Get_ConstructionScriptArchetype().Get();
-                            ck::IsValid(Archetype, ck::IsValid_Policy_NullptrOnly{}))
+                            ck::IsValid(Archetype))
                         { Step.Set_ArchetypePath(Archetype->GetPathName()); }
                         Steps.Emplace(MoveTemp(Step));
                     }

@@ -27,7 +27,7 @@ auto
     {
         const auto* Property = *It;
 
-        if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Property))
         { continue; }
 
         const auto& ColumnName = Property->GetFName();

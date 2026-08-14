@@ -37,8 +37,6 @@ namespace ck::ck_crowd_agent_stationary_markup_algorithm
             InSampleEnd,
             InSampleSeconds,
             InSpeedThresholdUuPerSec)
-        {}
-        if (NOT InputsAreValid)
         { return false; }
 
         const auto WindowedSpeedUuPerSec =

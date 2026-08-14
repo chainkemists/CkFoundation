@@ -516,8 +516,10 @@ namespace ck
 
         ForEach_ValidEntry(InRecordHandle, [&](MaybeTypeSafeHandle InEntry)
         {
-            if (NOT AllPass) { return; }
-            if (NOT InPredicate(InEntry)) { AllPass = false; }
+            if (NOT AllPass)
+            { return; }
+            if (NOT InPredicate(InEntry))
+            { AllPass = false; }
         });
 
         return AllPass;
@@ -1062,8 +1064,6 @@ namespace ck
                 TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
                 InRecordHandle,
                 InRecordEntry)
-            {}
-            if (NOT RemovalSuccess)
             {
                 // The entry was already absent from the record — the caller's intent (disconnected)
                 // already holds, and retrying would never do more.
@@ -1086,8 +1086,6 @@ namespace ck
                     "Somehow the RecordEntry was out of sync with the Record."),
                 InRecordEntry,
                 InRecordHandle)
-            {}
-            if (NOT RemovalSuccess)
             {
                 // The record-side unlink above already succeeded, so this is a genuine bidirectional
                 // desync rather than an idempotent already-disconnected state — the operation could not

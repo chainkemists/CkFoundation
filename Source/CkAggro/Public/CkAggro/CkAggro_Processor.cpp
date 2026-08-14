@@ -101,8 +101,6 @@ namespace ck
         const auto TrackedValid = ck::IsValid(Tracked);
         CK_ENSURE_IF_NOT(TrackedValid,
             TEXT("Aggro [{}] AddThreat with an INVALID tracked entity — dropping"), InAggro)
-        {}
-        if (NOT TrackedValid)
         { return; }
 
         if (const auto Found = InTargetMap._TargetsByTrackedEntity.Find(Tracked))
@@ -116,8 +114,6 @@ namespace ck
         const auto CanCreate = InRequest.Get_CreatePolicy() == ECk_Aggro_TargetCreationPolicy::CreateIfMissing;
         CK_ENSURE_IF_NOT(CanCreate,
             TEXT("Aggro [{}] AddThreat (RequireExisting) for untracked entity [{}] — dropping"), InAggro, Tracked)
-        {}
-        if (NOT CanCreate)
         { return; }
 
         // Auto-create from the owner's DefaultTargetParams (the accelerant). Per-target customization is via the

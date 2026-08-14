@@ -73,7 +73,8 @@ auto
             while (Stack.Num() > 0)
             {
                 const FName Pkg = Stack.Pop();
-                if (Visited.Contains(Pkg)) { continue; }
+                if (Visited.Contains(Pkg))
+                { continue; }
                 Visited.Add(Pkg);
 
                 TArray<FName> Deps;
@@ -81,7 +82,8 @@ auto
 
                 for (const FName& Dep : Deps)
                 {
-                    if (Visited.Contains(Dep)) { continue; }
+                    if (Visited.Contains(Dep))
+                    { continue; }
 
                     TArray<FAssetData> Assets;
                     AssetRegistry.GetAssetsByPackageName(Dep, Assets);
@@ -129,17 +131,21 @@ auto
     -> void
 {
     OutTransforms.Reset();
-    if (!IsValid(Anim)) { return; }
+    if (!IsValid(Anim))
+    { return; }
 
     USkeleton* Skeleton = Anim->GetSkeleton();
-    if (!IsValid(Skeleton)) { return; }
+    if (!IsValid(Skeleton))
+    { return; }
 
     const IAnimationDataModel* Model = Anim->GetDataModel();
-    if (Model == nullptr) { return; }
+    if (Model == nullptr)
+    { return; }
 
     const FReferenceSkeleton& RefSkel = Skeleton->GetReferenceSkeleton();
     const int32 NumBones = RefSkel.GetNum();
-    if (NumBones == 0) { return; }
+    if (NumBones == 0)
+    { return; }
 
     // FCompactPose / FBlendedCurve / FStackAttributeContainer use TMemStackAllocator — requires
     // an FMemMark on the stack. Without it, SetBoneContainer crashes on the first allocation.
@@ -192,7 +198,8 @@ auto
     DoComputePoseDelta(const TArray<FTransform>& A, const TArray<FTransform>& B) const
     -> float
 {
-    if (A.Num() == 0 || A.Num() != B.Num()) { return 0.0f; }
+    if (A.Num() == 0 || A.Num() != B.Num())
+    { return 0.0f; }
 
     float Total = 0.0f;
     for (int32 i = 0; i < A.Num(); ++i)
@@ -216,13 +223,16 @@ auto
     OutInfo.MappedBoneCount   = 0;
     OutInfo.UnmappedBoneSample.Reset();
 
-    if (!IsValid(Anim)) { return; }
+    if (!IsValid(Anim))
+    { return; }
 
     const IAnimationDataModel* Model = Anim->GetDataModel();
-    if (Model == nullptr) { return; }
+    if (Model == nullptr)
+    { return; }
 
     USkeleton* Skeleton = Anim->GetSkeleton();
-    if (!IsValid(Skeleton)) { return; }
+    if (!IsValid(Skeleton))
+    { return; }
 
     const FReferenceSkeleton& RefSkel = Skeleton->GetReferenceSkeleton();
     TArray<FName> TrackNames;
@@ -401,7 +411,8 @@ auto
         };
         const int32 RA = Rank(A->Status);
         const int32 RB = Rank(B->Status);
-        if (RA != RB) { return RA < RB; }
+        if (RA != RB)
+        { return RA < RB; }
         return A->AssetName < B->AssetName;
     });
 

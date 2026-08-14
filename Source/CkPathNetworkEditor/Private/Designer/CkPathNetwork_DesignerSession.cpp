@@ -651,7 +651,7 @@ auto
     Fit_BoundsToSelection()
     -> bool
 {
-    if (ck::Is_NOT_Valid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEditor))
     {
         Set_Status(
             ECk_PathNetworkDesigner_Status::Error,
@@ -687,7 +687,7 @@ auto
     Load_SelectedPathNetwork()
     -> bool
 {
-    if (ck::Is_NOT_Valid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEditor))
     { return false; }
 
     auto* SelectedNetwork = static_cast<ACk_PathNetwork_UE*>(nullptr);
@@ -2027,7 +2027,7 @@ auto
     { Load_RouteWatch(0, false); }
     if (auto* Actor = Applied._Actor.Get();
         ck::IsValid(Actor)
-        && ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+        && ck::IsValid(GEditor))
     {
         GEditor->SelectNone(false, true, false);
         GEditor->SelectActor(Actor, true, true, true);
@@ -2179,7 +2179,7 @@ auto
 {
     auto* World = _World.Get();
     if (ck::Is_NOT_Valid(World)
-        || ck::Is_NOT_Valid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+        || ck::Is_NOT_Valid(GEditor))
     {
         Set_Status(
             ECk_PathNetworkDesigner_Status::Error,
@@ -2256,8 +2256,6 @@ auto
     CK_ENSURE_IF_NOT(TemplateIsValid,
         TEXT("Could not create path-network designer detector template [{}]"),
         InDetectorClass)
-    {}
-    if (NOT TemplateIsValid)
     {
         Set_Status(
             ECk_PathNetworkDesigner_Status::Error,

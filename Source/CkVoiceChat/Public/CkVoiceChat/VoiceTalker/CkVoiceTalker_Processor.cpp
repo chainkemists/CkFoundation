@@ -95,12 +95,12 @@ namespace ck_voice_talker_processor
     Get_LocalPlayerState(
         UWorld* InWorld) -> APlayerState*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorld))
         { return nullptr; }
 
         const auto* LocalController = InWorld->GetFirstPlayerController();
 
-        if (ck::Is_NOT_Valid(LocalController, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(LocalController))
         { return nullptr; }
 
         return LocalController->PlayerState;
@@ -111,12 +111,12 @@ namespace ck_voice_talker_processor
         UWorld* InWorld,
         APlayerState* InPlayerState) -> ACk_VoiceChatRelay_UE*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(InPlayerState))
+        if (ck::Is_NOT_Valid(InWorld) || ck::Is_NOT_Valid(InPlayerState))
         { return nullptr; }
 
         auto* Subsystem = InWorld->GetSubsystem<UCk_VoiceChatRelay_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return nullptr; }
 
         auto Pending = Subsystem->Request_AcquireChannel_ForPlayer(InPlayerState);
@@ -349,8 +349,6 @@ namespace ck
         const auto TransmitIsAllowed = InCurrent.Get_TransmitMode() != ECk_VoiceChat_TransmitMode::Disabled;
         CK_ENSURE_IF_NOT(TransmitIsAllowed,
             TEXT("StartTransmit on VoiceTalker [{}] whose transmit mode is Disabled"), InHandle)
-        {}
-        if (NOT TransmitIsAllowed)
         { return false; }
 
         const auto SampleRate = UCk_Utils_VoiceChat_Settings_UE::Get_SampleRate();
@@ -371,8 +369,6 @@ namespace ck
                 TEXT("Opus encoder could not be created for VoiceTalker [{}] - the engine Voice module "
                      "is disabled ([Voice] bEnabled=true missing in the host project's DefaultEngine.ini?)"),
                 InHandle)
-            {}
-            if (NOT EncoderCreated)
             { return false; }
 
             InCurrent._Encoder->SetBitrate(UCk_Utils_VoiceChat_Settings_UE::Get_BitrateBps());

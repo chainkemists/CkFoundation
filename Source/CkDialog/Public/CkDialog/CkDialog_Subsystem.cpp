@@ -36,8 +36,6 @@ auto
         const auto BankValid = ck::IsValid(Bank);
         CK_ENSURE_IF_NOT(BankValid,
             TEXT("Dialog settings bank [{}] failed to load — skipping"), SoftBank.ToString())
-        {}
-        if (NOT BankValid)
         { continue; }
 
         DoRegisterBank(Bank);
@@ -147,8 +145,6 @@ auto
 {
     const auto BankValid = ck::IsValid(InBank);
     CK_ENSURE_IF_NOT(BankValid, TEXT("Null bank passed to Dialog Request_RegisterBank"))
-    {}
-    if (NOT BankValid)
     { return; }
 
     DoRegisterBank(InBank);
@@ -186,16 +182,12 @@ auto
     const auto RootValid = ck::IsValid(_RegistryRoot);
     CK_ENSURE_IF_NOT(RootValid,
         TEXT("Dialog registry root invalid; cannot register line [{}]"), InLineData.Get_LineID())
-    {}
-    if (NOT RootValid)
     { return {}; }
 
     const auto LineID = InLineData.Get_LineID();
 
     const auto LineIDValid = NOT LineID.IsNone();
     CK_ENSURE_IF_NOT(LineIDValid, TEXT("Dialog line has an empty LineID — skipping registration"))
-    {}
-    if (NOT LineIDValid)
     { return {}; }
 
     // Prune BEFORE the duplicate check so an ID whose entity died out-of-band is not falsely rejected as a duplicate.

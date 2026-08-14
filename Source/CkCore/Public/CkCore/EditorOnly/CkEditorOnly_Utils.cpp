@@ -183,7 +183,7 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(GUnrealEd))
     { GUnrealEd->PlayWorld->bDebugPauseExecution = true; }
 #endif
 }
@@ -194,7 +194,7 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(GUnrealEd))
     { GUnrealEd->PlayWorld->bDebugPauseExecution = false; }
 #endif
 }
@@ -205,7 +205,7 @@ auto
     -> bool
 {
 #if WITH_EDITOR
-    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{})
+    if (ck::IsValid(GUnrealEd)
         && ck::IsValid(GUnrealEd->PlayWorld))
     { return GUnrealEd->PlayWorld->bDebugPauseExecution; }
 #endif
@@ -218,7 +218,7 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(GEditor))
     {
         constexpr auto InvalidateHitProxies = false;
         GEditor->RedrawLevelEditingViewports(InvalidateHitProxies);
@@ -344,12 +344,12 @@ auto
         }
     }
 
-    if (NOT ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEngine))
     { return TEXT("GEngine has been destroyed"); }
 
     const auto WorldContextFromPie = GEngine->GetWorldContextFromPIEInstance(UE::GetPlayInEditorID());
 
-    if (NOT ck::IsValid(WorldContextFromPie, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(WorldContextFromPie, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("GEngine is VALID but WorldContextFromPIE is NOT valid"); }
 
     return GetDebugStringForWorld(WorldContextFromPie->World());
@@ -364,12 +364,12 @@ auto
     -> bool
 {
 #if WITH_EDITOR
-    if (ck::Is_NOT_Valid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GUnrealEd))
     { return {}; }
 
     const auto& CookServer = GUnrealEd->CookServer.Get();
 
-    if (ck::Is_NOT_Valid(CookServer, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(CookServer))
     { return {}; }
 
     return CookServer->IsCookByTheBookRunning();

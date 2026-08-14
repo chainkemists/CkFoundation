@@ -203,7 +203,7 @@ auto
 
     const auto ButtonContent = SNew(SHorizontalBox);
 
-    const auto HasIcon = ck::IsValid(Config.Get_TabIcon().GetResourceObject(), ck::IsValid_Policy_NullptrOnly{}) ||
+    const auto HasIcon = ck::IsValid(Config.Get_TabIcon().GetResourceObject()) ||
         Config.Get_TabIcon().GetResourceName() != NAME_None;
 
     if (HasIcon)

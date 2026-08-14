@@ -76,8 +76,10 @@ namespace ck
         const auto MinPre = InHandle.template Has<MinPreClamp>() ? InHandle.template Get<MinPreClamp>().Get_Final() : Cur;
         const auto MaxPre = InHandle.template Has<MaxPreClamp>() ? InHandle.template Get<MaxPreClamp>().Get_Final() : Cur;
 
-        if (MinPre != Cur) { return MinPre; }
-        if (MaxPre != Cur) { return MaxPre; }
+        if (MinPre != Cur)
+        { return MinPre; }
+        if (MaxPre != Cur)
+        { return MaxPre; }
         return Cur;
     }
 

@@ -25,7 +25,7 @@ namespace ck_deferred_cmds_file
         if (NOT FParse::Value(FCommandLine::Get(), TEXT("CkDeferredCmdsFile="), FilePath))
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(GEngine),
             TEXT("-CkDeferredCmdsFile was passed but GEngine is not available at OnFEngineLoopInitComplete"))
         { return; }
 
@@ -35,8 +35,6 @@ namespace ck_deferred_cmds_file
         const auto FileLoaded = FFileHelper::LoadFileToStringArray(Lines, *FilePath);
         CK_ENSURE_IF_NOT(FileLoaded,
             TEXT("-CkDeferredCmdsFile was passed but the file [{}] could not be read"), FilePath)
-        {}
-        if (NOT FileLoaded)
         { return; }
 
         auto QueuedCount = int32{0};

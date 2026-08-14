@@ -103,7 +103,7 @@ namespace ck
 
         auto* IsmSubsystem = _World->GetSubsystem<UCk_IsmRenderer_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(IsmSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(IsmSubsystem))
         { return; }
 
         const auto ShadowIsm = IsmSubsystem->FindOrCreate_StylizeMaskIsmComponent(

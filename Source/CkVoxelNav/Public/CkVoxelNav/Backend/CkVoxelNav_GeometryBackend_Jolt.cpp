@@ -9,13 +9,10 @@ FCk_VoxelNav_GeometryBackend_Jolt::
     FCk_VoxelNav_GeometryBackend_Jolt(
         const UObject* InWorldContextObject)
 {
-    const auto WorldContextIsValid = ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{});
+    const auto WorldContextIsValid = ck::IsValid(InWorldContextObject);
 
     CK_ENSURE_IF_NOT(WorldContextIsValid,
         TEXT("Cannot resolve a VoxelNav geometry backend without a World Context Object"))
-    {}
-
-    if (NOT WorldContextIsValid)
     { return; }
 
     _Session = ck::jolt::FCk_Jolt_QuerySession{InWorldContextObject};

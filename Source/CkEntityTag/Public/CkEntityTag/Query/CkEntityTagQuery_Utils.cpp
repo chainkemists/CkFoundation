@@ -132,8 +132,6 @@ auto
     const auto QueryIsValid = ck::IsValid(InQuery);
     CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Invalid Query Handle [{}] passed to Request_AddRequirement"), InQuery)
-    {}
-    if (NOT QueryIsValid)
     {
         InDelegate.ExecuteIfBound(InQuery, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQuery;
@@ -159,8 +157,6 @@ auto
     const auto QueryIsValid = ck::IsValid(InQuery);
     CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Invalid Query Handle [{}] passed to Request_RemoveRequirement"), InQuery)
-    {}
-    if (NOT QueryIsValid)
     {
         InDelegate.ExecuteIfBound(InQuery, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQuery;

@@ -83,7 +83,7 @@ namespace ck::layout
         if (CurrentName.IsNone())
         {
             if (auto* Default = ck::entityspawner::TryResolveDefaultTransformProperty(ResolveOwningEntityScriptClass());
-                ck::IsValid(Default, ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(Default))
             {
                 return FText::Format(LOCTEXT("DefaultBinding", "{0} (default)"),
                     FText::FromName(Default->GetFName()));
@@ -109,14 +109,14 @@ namespace ck::layout
         for (auto PropIt = TFieldIterator<FProperty>(EntityScriptClass); PropIt; ++PropIt)
         {
             const auto* Property = *PropIt;
-            if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Property))
             { continue; }
 
             if (NOT Property->HasAnyPropertyFlags(CPF_Edit))
             { continue; }
 
             const auto* StructProp = CastField<FStructProperty>(Property);
-            if (ck::Is_NOT_Valid(StructProp, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(StructProp))
             { continue; }
 
             if (StructProp->Struct == TBaseStructure<FTransform>::Get())

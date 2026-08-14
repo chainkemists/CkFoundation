@@ -1140,8 +1140,10 @@ auto
             const auto& Node = Partition._Nodes[NodeIndex];
 
             auto Suffix = FString{};
-            if (Node._IsGhost)        { Suffix += TEXT(" (ghost)"); }
-            if (Node._HasDirtyMarker) { Suffix += TEXT(" (dirty)"); }
+            if (Node._IsGhost)
+            { Suffix += TEXT(" (ghost)"); }
+            if (Node._HasDirtyMarker)
+            { Suffix += TEXT(" (dirty)"); }
 
             Output += ck::Format_UE(TEXT("  {:>3}. {}{}\n"),
                 Step++,

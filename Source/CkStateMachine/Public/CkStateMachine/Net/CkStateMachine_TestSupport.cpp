@@ -38,7 +38,7 @@ int32
     Test_Get_LastPublishedFingerprint(
         FCk_Handle_StateMachine& InSm)
 {
-    if (NOT ck::IsValid(InSm))
+    if (ck::Is_NOT_Valid(InSm))
     { return 0; }
 
     if (InSm.Has<FCk_RepData_StateMachine_WithHistory>())
@@ -63,7 +63,7 @@ bool
     Test_Get_HasDeterminismFault(
         FCk_Handle_StateMachine& InSm)
 {
-    if (NOT ck::IsValid(InSm))
+    if (ck::Is_NOT_Valid(InSm))
     { return false; }
 
     return InSm.Has<ck::FTag_Sm_DeterminismFault>();
