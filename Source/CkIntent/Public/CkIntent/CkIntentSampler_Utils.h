@@ -96,6 +96,21 @@ public:
     Get_FrameCount(
         const FCk_Handle_IntentSampler& InSampler);
 
+    /**
+     * The physical keys currently down, as of the last sampling pass — the key-level fact the row's `_Held` set
+     * cannot carry, since that one is resolved to button identities.
+     *
+     * LIVE rather than per-row, the same reading the delivery check makes: a held key routes nothing after its
+     * press edge, so no row records that it is still down. Under catch-up several rows are matched against this
+     * one answer, which is the *Hitch attribution* cost showing through one more surface.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IntentSampler",
+              DisplayName = "[Ck][IntentSampler] Get Held Keys")
+    static TArray<FKey>
+    Get_HeldKeys(
+        const FCk_Handle_IntentSampler& InSampler);
+
     /** The most recently written row, or the no-such-frame row before the first sampling pass has run. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IntentSampler",

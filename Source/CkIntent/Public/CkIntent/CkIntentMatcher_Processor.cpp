@@ -127,6 +127,41 @@ namespace ck_intent_matcher_processor
         return NOT MaskedFromAbove;
     }
 
+    // Whether a hold on this key would still be reaching the layer right now: the player has it down, and nothing
+    // above declares a Consume that would end the walk for it.
+    auto
+        Get_IsKeyHeldAndDeliverable(
+            const ck::FIntentMatcher_ScanContext& InContext,
+            const TArray<FKey>& InHeldKeys,
+            const FKey& InKey)
+        -> bool
+    {
+        return InKey.IsValid() && InHeldKeys.Contains(InKey) && Get_IsKeyDeliverableToLayer(InContext, InKey);
+    }
+
+    /**
+     * The key a level row can be anchored to right now — invalid when the button has none, which is the only state
+     * that can end the row.
+     *
+     * PRIMARY FIRST, walking the map's own key order, so two matchers reading one profile re-home onto the same key
+     * and a re-anchor is not a function of which device the sweep happened to look at first.
+     */
+    auto
+        TryGet_AnchorableKey(
+            const ck::FIntentMatcher_ScanContext& InContext,
+            const TArray<FKey>& InHeldKeys,
+            const TArray<FKey>& InButtonKeys)
+        -> FKey
+    {
+        for (const auto& Key : InButtonKeys)
+        {
+            if (Get_IsKeyHeldAndDeliverable(InContext, InHeldKeys, Key))
+            { return Key; }
+        }
+
+        return FKey{EKeys::Invalid};
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
@@ -1020,32 +1055,59 @@ namespace ck
             }
         }
 
+        if (InCurrent._ActiveLevels.IsEmpty())
+        { return; }
+
+        const auto HeldKeys = UCk_Utils_IntentSampler_UE::Get_HeldKeys(InContext.Get_Sampler());
+
         // Backwards so a release cannot move an entry the sweep has not reached yet.
         for (auto Index = InCurrent._ActiveLevels.Num() - 1; Index >= 0; --Index)
         {
-            const auto& Active = InCurrent._ActiveLevels[Index];
+            auto& Active = InCurrent._ActiveLevels[Index];
 
-            const auto HeldUnionIsIntact = InRow.Get_Held().Contains(Active._Button);
+            // Cheapest first, and it subsumes everything below it: a button nothing holds has no key left to
+            // anchor to, so neither the map lookup nor the delivery walk has a question to answer.
+            if (NOT InRow.Get_Held().Contains(Active._Button))
+            {
+                DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
+                    FString{TEXT("the button is no longer held")});
+
+                continue;
+            }
 
             const auto ButtonKeys = ck::IsValid(InContext.Get_ButtonMap())
                 ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InContext.Get_ButtonMap(), Active._Button)
                 : TArray<FKey>{};
 
-            // The same per-key reading a pending episode's delivery check makes, for the same reason: a modal
-            // masking only one of several bound devices must release only the hold the player is actually on, and
-            // a rebind that moves the anchor off the button ends it because the key can never arrive again.
-            const auto DeliveryIsIntact = Active._AnchorKey.IsValid() &&
-                                          ButtonKeys.Contains(Active._AnchorKey) &&
-                                          ck_intent_matcher_processor::Get_IsKeyDeliverableToLayer(
-                                              InContext, Active._AnchorKey);
-
-            if (HeldUnionIsIntact && DeliveryIsIntact)
+            if (ButtonKeys.Contains(Active._AnchorKey) &&
+                ck_intent_matcher_processor::Get_IsKeyHeldAndDeliverable(InContext, HeldKeys, Active._AnchorKey))
             { continue; }
 
-            DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
-                NOT HeldUnionIsIntact
-                    ? FString{TEXT("the button is no longer held")}
-                    : FString{TEXT("this layer no longer receives its anchor key")});
+            // The anchor exists to make delivery-loss a PER-KEY question — a modal masking the gamepad must not
+            // release a keyboard hold — and it is NOT a second held-union. A player who let go of the anchor while
+            // still holding another bound key is still holding the button, so a mask or a rebind aimed at the key
+            // they already released must not end the hold they are actually on. The anchor therefore MOVES onto
+            // whichever bound key is both held and deliverable, and only a button with none left ends the row.
+            const auto ReAnchoredKey = ck_intent_matcher_processor::TryGet_AnchorableKey(
+                InContext, HeldKeys, ButtonKeys);
+
+            if (NOT ReAnchoredKey.IsValid())
+            {
+                DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
+                    FString{TEXT("this layer no longer receives any held key of the button")});
+
+                continue;
+            }
+
+            intent::Verbose
+            (
+                TEXT("IntentMatcher [{}] re-anchored level intent [{}] from key [{}] to key [{}] on record frame "
+                     "[{}]"),
+                InMatcher, InCurrent._ActiveSet.Get_Intents()[Active._IntentIndex].Get_Name(),
+                Active._AnchorKey.ToString(), ReAnchoredKey.ToString(), InRow.Get_FrameIndex()
+            );
+
+            Active._AnchorKey = ReAnchoredKey;
         }
     }
 
