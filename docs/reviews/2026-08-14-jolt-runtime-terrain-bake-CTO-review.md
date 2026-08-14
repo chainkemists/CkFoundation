@@ -185,12 +185,44 @@ thorough. Specific blockers tied to a phase/step/file, not vague concerns.
 
 ### Verdict
 
-`CHANGES REQUESTED` — the architecture is sound and both decisions the author flagged for
-scrutiny (D3 attribution reuse; sync-bake / deferred-update split) are **signed off as designed**.
-The four blockers are all small plan-text defects, dangerous only because the executor profile is
-zero-context and forbidden to redesign: each one either fails to compile as pre-designed, or
-specifies a behavior a literal executor would ship as a bug. All four are ~minutes of plan edits;
-no re-review needed once applied.
+`GREEN-LIGHT` — flipped from `CHANGES REQUESTED` at re-review (see addendum below; original
+verdict text preserved for the record).
+
+Original verdict: `CHANGES REQUESTED` — the architecture is sound and both decisions the author
+flagged for scrutiny (D3 attribution reuse; sync-bake / deferred-update split) are **signed off
+as designed**. The four blockers are all small plan-text defects, dangerous only because the
+executor profile is zero-context and forbidden to redesign: each one either fails to compile as
+pre-designed, or specifies a behavior a literal executor would ship as a bug. All four are
+~minutes of plan edits; no re-review needed once applied.
+
+### Re-review addendum (2026-08-14, same reviewer)
+
+Verified the implementer's plan edits against every sign-off condition:
+
+- **Blocker 1 (stale-entry liveness):** applied — the "Stale-entry rule" block
+  (PHASE_3.md § subsystem additions), LIVE-qualified guards in BOTH directions of the reciprocal
+  check, and the "each behind a liveness check" exit criterion. The pinning test case from
+  sign-off condition 1 was missing; **added by the reviewer during re-review** (one spec-comment
+  step at the end of `CrossRepresentationGuard`: destroy the attribution entity directly →
+  re-bake the component → succeeds, no expected error).
+- **Blocker 2 (Deinitialize reachability):** applied — `_HeightFieldEntities` flat drain list
+  alongside the keyed `_ManualHeightFields`, the Deinitialize paragraph extending the existing
+  drain in-style, and the deinit-reachability exit criterion.
+- **Blocker 3 (macro placement):** applied — `CK_REQUEST_DEFINE_DEBUG_NAME` moved inside the
+  struct after `CK_GENERATED_BODY` with a why-comment. (The `public:` specifier before
+  `CK_GENERATED_BODY` was not added; USTRUCT default access is public, so this is cosmetic
+  mold-mismatch only — not held against the green light.)
+- **Blocker 4 (cast fence):** applied — and correctly adapted: the create path converts to the
+  NEW feature's handle, so `UCk_Utils_JoltHeightField_UE::CastChecked` (not JoltStaticActor's) is
+  the right target; existing `StaticCast` sites fenced as leave-untouched.
+- **Non-blocking 1 and 2 also applied** (fire-once risk rewritten as resolved with the
+  `Occurrences=-1` pattern in PHASE_3 + VALIDATION; D2b re-ranked with the QueryOnly-trigger
+  vector in PROMPT + PHASE_1, `UShapeComponent` extraction spun off as a tracked follow-up
+  outside the campaign). Non-blocking 3–6 (`_BodyId` invalid-constant default, re-bake-replaces +
+  same-frame-batch spec additions, `_WorldHeights` copy note, local-machine doc sentence) were
+  not applied — they remain optional; none gates execution.
+
+**GREEN-LIGHT. The package is ready for the executor.**
 
 ### Blocking issues
 
