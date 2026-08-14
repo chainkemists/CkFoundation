@@ -36,7 +36,7 @@ auto FCkCueDiscovery::Request_DiscoverSubsystems() -> void
     {
         const auto Class = *ClassIterator;
 
-        if (NOT ck::IsValid(Class))
+        if (ck::Is_NOT_Valid(Class))
         { continue; }
 
         if (Class->HasAnyClassFlags(CLASS_Abstract))

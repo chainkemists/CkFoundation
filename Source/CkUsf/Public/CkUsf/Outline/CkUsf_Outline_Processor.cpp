@@ -30,7 +30,7 @@ namespace ck_usf_outline_processor
         { return; } // actor already gone — the subsystem reaps its dead components + stencil refcounts
 
         auto* Subsystem = UCkUsf_OutlineSubsystem::Get_OutlineSubsystem(Actor);
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return; }
 
         Subsystem->Remove_Outline_From_Actor(Actor);
@@ -53,7 +53,7 @@ namespace ck
         auto* Actor = InOwningActor.Get_EntityOwningActor().Get();
         auto* Preset = InTarget.Get_Preset().Get();
 
-        if (ck::Is_NOT_Valid(Actor) || ck::Is_NOT_Valid(Preset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Actor) || ck::Is_NOT_Valid(Preset))
         { return; }
 
         if (InHandle.Has<FFragment_Usf_OutlineApplied_Actor>())
@@ -67,7 +67,7 @@ namespace ck
         }
 
         auto* Subsystem = UCkUsf_OutlineSubsystem::Get_OutlineSubsystem(Actor);
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return; }
 
         Subsystem->Apply_Outline_To_Actor(Actor, Preset);

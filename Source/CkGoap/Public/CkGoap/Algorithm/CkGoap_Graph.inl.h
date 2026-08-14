@@ -36,7 +36,8 @@ inline auto
 
 	// Copy by value — the pool may reallocate as we append below.
 	const auto Current = _Shared->StatePool[InStateIndex];
-	if (Current.IsConflicted()) { return Result; }
+	if (Current.IsConflicted())
+	{ return Result; }
 
 	for (const auto& Action : _Actions)
 	{
@@ -46,14 +47,18 @@ inline auto
 		for (const auto& Effect : Action.Effects)
 		{
 			const auto C = Current.Get(Effect.Key);
-			if (C == EConstraint::None) { continue; }
+			if (C == EConstraint::None)
+			{ continue; }
 
 			const auto Required = (C == EConstraint::MustBeTrue);
-			if (Effect.Value == Required) { Helps = true; }
+			if (Effect.Value == Required)
+			{ Helps = true; }
 			else                          { Conflict = true; break; }
 		}
-		if (Conflict) { continue; }
-		if (NOT Helps) { continue; }
+		if (Conflict)
+		{ continue; }
+		if (NOT Helps)
+		{ continue; }
 
 		auto New = Current;
 
@@ -67,7 +72,8 @@ inline auto
 			New.Add(Pre);
 		}
 
-		if (New.IsConflicted()) { continue; }
+		if (New.IsConflicted())
+		{ continue; }
 
 		// Dedupe by content against StatePool.
 		const auto NewHash = New.GetHash();
@@ -143,13 +149,15 @@ inline auto
 	check(_Shared.IsValid());
 
 	const auto& State = _Shared->StatePool[InCurrent];
-	if (State.IsConflicted()) { return TNumericLimits<float>::Max() / 2.0f; }
+	if (State.IsConflicted())
+	{ return TNumericLimits<float>::Max() / 2.0f; }
 
 	auto Total = 0.0f;
 	for (auto Key = 0; Key < WorldState_MaxKeys; ++Key)
 	{
 		const auto C = State.Get(Key);
-		if (C == EConstraint::None) { continue; }
+		if (C == EConstraint::None)
+		{ continue; }
 
 		const auto Required = (C == EConstraint::MustBeTrue);
 		if (_CurrentWorldState.Get(Key) == Required) { continue; }  // already satisfied

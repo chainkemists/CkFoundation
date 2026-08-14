@@ -28,24 +28,18 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an IntentSampler onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto HandleIsAnInputSource = UCk_Utils_InputSource_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HandleIsAnInputSource,
         TEXT("Add: Handle [{}] is not an InputSource, so an IntentSampler on it would have no routed events to "
              "record"), InHandle)
-    {}
-    if (NOT HandleIsAnInputSource)
     { return {}; }
 
     const auto EntityHasNoSampler = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityHasNoSampler,
         TEXT("Add: Handle [{}] already carries an IntentSampler — one source has exactly one frame record, and a "
              "second would produce two disagreeing frame numberings for the same input"), InHandle)
-    {}
-    if (NOT EntityHasNoSampler)
     { return {}; }
 
     if (NOT DoGet_ParamsAreValid(InHandle, InParams))
@@ -130,8 +124,6 @@ auto
         TEXT("IntentSampler declaration on [{}] asks for a ring of [{}] rows — a record that retains nothing "
              "cannot be read back, and there is no meaning to give a non-positive capacity"),
         InContext, InParams.Get_RingCapacity())
-    {}
-    if (NOT CapacityIsPositive)
     { return false; }
 
     const auto AxisKeysAreValid = InParams.Get_AxisKeyX().IsValid() && InParams.Get_AxisKeyY().IsValid();
@@ -139,8 +131,6 @@ auto
         TEXT("IntentSampler declaration on [{}] names an invalid axis key in the pair [{}] / [{}] — an axis "
              "nothing reports would record a permanent zero indistinguishable from a centred stick"),
         InContext, InParams.Get_AxisKeyX(), InParams.Get_AxisKeyY())
-    {}
-    if (NOT AxisKeysAreValid)
     { return false; }
 
     const auto AxisKeysAreDistinct = InParams.Get_AxisKeyX() != InParams.Get_AxisKeyY();
@@ -148,8 +138,6 @@ auto
         TEXT("IntentSampler declaration on [{}] names axis key [{}] for BOTH halves of the pair — the two are "
              "the independent axes a direction is derived from, so one key can only be a mistake"),
         InContext, InParams.Get_AxisKeyX())
-    {}
-    if (NOT AxisKeysAreDistinct)
     { return false; }
 
     const auto NeutralRadius = InParams.Get_OctantNeutralRadius();
@@ -159,8 +147,6 @@ auto
              "fraction of full deflection, so a value at or above 1 would read every direction as neutral and "
              "a negative one names no band at all"),
         InContext, NeutralRadius)
-    {}
-    if (NOT NeutralRadiusIsInRange)
     { return false; }
 
     const auto HysteresisMargin = InParams.Get_OctantHysteresisMarginDegrees();
@@ -171,8 +157,6 @@ auto
              "clear zero and stay under half an octant ([{}] degrees), or an octant's hold band reaches past "
              "the centre of its neighbour and the neighbour can never be entered at all"),
         InContext, HysteresisMargin, ck::intent_sampler::HalfOctantDegrees)
-    {}
-    if (NOT HysteresisMarginIsInRange)
     { return false; }
 
     const auto& SocdQuad = InParams.Get_SocdQuad();
@@ -183,8 +167,6 @@ auto
              "OPPOSING PAIRS, so a partly named quad describes an axis with one end and there is no reading to "
              "give for it"),
         InContext)
-    {}
-    if (NOT SocdQuadIsWholeOrAbsent)
     { return false; }
 
     const auto SocdQuadIsDistinct = SocdQuad.Get_IsUnnamed() || SocdQuad.Get_HasDistinctButtons();
@@ -193,8 +175,6 @@ auto
              "the two opposing pairs a direction is cleaned from, so a repeat can only be a mistake and would "
              "read as an axis permanently opposing itself"),
         InContext)
-    {}
-    if (NOT SocdQuadIsDistinct)
     { return false; }
 
     return true;

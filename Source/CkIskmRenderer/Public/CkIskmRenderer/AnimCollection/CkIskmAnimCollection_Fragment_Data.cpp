@@ -345,7 +345,7 @@ auto
     ReleaseRenderResources()
     -> void
 {
-    if (NOT ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     // Game-thread ReleaseResource enqueues the render-thread ReleaseRHI; the _ReleaseResourcesFence (BeginDestroy)

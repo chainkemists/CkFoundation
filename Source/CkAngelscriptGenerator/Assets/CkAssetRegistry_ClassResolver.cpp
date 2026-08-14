@@ -118,7 +118,8 @@ namespace ck::angelscriptgenerator
         if (NOT TaggedParent)
         { TaggedParent = Try_ResolveTag(FBlueprintTags::ParentClassPath); }
 
-        if (NOT TaggedParent) { return Result; }
+        if (NOT TaggedParent)
+        { return Result; }
 
         TaggedParent = ck_asset_registry_class_resolver::Get_AsResolvableClass(TaggedParent);
 
@@ -165,23 +166,27 @@ namespace ck::angelscriptgenerator
         // ToImport() ALREADY returns the 0-based array index — do NOT apply `-X - 1` again.
         auto Resolve_ImportPath = [&Imports](FPackageIndex InIndex) -> FString
         {
-            if (NOT InIndex.IsImport()) { return FString{}; }
+            if (NOT InIndex.IsImport())
+            { return FString{}; }
 
             auto Names = TArray<FName>{};
             auto Cursor = InIndex;
             while (Cursor.IsImport())
             {
                 const auto ImportIdx = Cursor.ToImport();
-                if (NOT Imports.IsValidIndex(ImportIdx)) { return FString{}; }
+                if (NOT Imports.IsValidIndex(ImportIdx))
+                { return FString{}; }
                 const auto& Import = Imports[ImportIdx];
                 Names.Insert(Import.ObjectName, 0);
                 Cursor = Import.OuterIndex;
             }
-            if (Names.Num() < 2) { return FString{}; }
+            if (Names.Num() < 2)
+            { return FString{}; }
 
             // The package name may be stored with OR without its leading slash.
             auto PackageStr = Names[0].ToString();
-            if (NOT PackageStr.StartsWith(TEXT("/"))) { PackageStr = FString{TEXT("/Script/")} + PackageStr; }
+            if (NOT PackageStr.StartsWith(TEXT("/")))
+            { PackageStr = FString{TEXT("/Script/")} + PackageStr; }
 
             auto ClassStr = Names[1].ToString();
             for (int32 i = 2; i < Names.Num(); ++i)
@@ -197,9 +202,11 @@ namespace ck::angelscriptgenerator
         auto Derive_AsClassNameFromPath = [](const FString& InPath) -> FString
         {
             static const auto AsPrefix = FString{TEXT("/Script/Angelscript.")};
-            if (NOT InPath.StartsWith(AsPrefix)) { return FString{}; }
+            if (NOT InPath.StartsWith(AsPrefix))
+            { return FString{}; }
             const auto BaseName = InPath.Mid(AsPrefix.Len());
-            if (BaseName.IsEmpty()) { return FString{}; }
+            if (BaseName.IsEmpty())
+            { return FString{}; }
             return FString{TEXT("U")} + BaseName;
         };
 
@@ -208,11 +215,14 @@ namespace ck::angelscriptgenerator
         for (const auto& Export : Exports)
         {
             const auto NameStr = Export.ObjectName.ToString();
-            if (NOT NameStr.EndsWith(TEXT("_C"))) { continue; }
-            if (NOT Export.SuperIndex.IsImport()) { continue; }
+            if (NOT NameStr.EndsWith(TEXT("_C")))
+            { continue; }
+            if (NOT Export.SuperIndex.IsImport())
+            { continue; }
 
             const auto ParentPath = Resolve_ImportPath(Export.SuperIndex);
-            if (ParentPath.IsEmpty()) { continue; }
+            if (ParentPath.IsEmpty())
+            { continue; }
 
             if (auto* ParentClass = UClass::TryFindTypeSlow<UClass>(ParentPath))
             {
@@ -244,9 +254,11 @@ namespace ck::angelscriptgenerator
 
         auto Get_OuterPackageName = [&Imports](const FObjectImport& InImport) -> FString
         {
-            if (NOT InImport.OuterIndex.IsImport()) { return FString{}; }
+            if (NOT InImport.OuterIndex.IsImport())
+            { return FString{}; }
             const auto OuterIdx = InImport.OuterIndex.ToImport();
-            if (NOT Imports.IsValidIndex(OuterIdx)) { return FString{}; }
+            if (NOT Imports.IsValidIndex(OuterIdx))
+            { return FString{}; }
             return Imports[OuterIdx].ObjectName.ToString();
         };
 
@@ -256,12 +268,14 @@ namespace ck::angelscriptgenerator
             const auto ClassNameStr = Import.ClassName.ToString();
             const auto IsClassImport = ClassNameStr == TEXT("Class")
                                     || ClassNameStr.EndsWith(TEXT("Class"));
-            if (NOT IsClassImport) { continue; }
+            if (NOT IsClassImport)
+            { continue; }
 
             const auto OuterPkg = Get_OuterPackageName(Import);
             const auto IsAsPkg = OuterPkg == TEXT("/Script/Angelscript")
                               || OuterPkg == TEXT("Angelscript");
-            if (NOT IsAsPkg) { continue; }
+            if (NOT IsAsPkg)
+            { continue; }
 
             const auto FullPath = FString{TEXT("/Script/Angelscript.")} + Import.ObjectName.ToString();
             AsCandidates.Emplace(FullPath, Import.ObjectName.ToString());
@@ -270,7 +284,8 @@ namespace ck::angelscriptgenerator
         auto Try_ResolveAndEmit = [&](const FString& InPath) -> bool
         {
             auto* Cls = UClass::TryFindTypeSlow<UClass>(InPath);
-            if (NOT Cls) { return false; }
+            if (NOT Cls)
+            { return false; }
             Result.ResolvedClass = Cls;
             Result.ClassName     = UCkAssetRegistrySubsystem::Get_CorrectClassNameWithPrefix(Cls);
             Result.IsBlueprint   = true;
@@ -281,7 +296,8 @@ namespace ck::angelscriptgenerator
 
         if (AsCandidates.Num() == 1)
         {
-            if (Try_ResolveAndEmit(AsCandidates[0].Key)) { return Result; }
+            if (Try_ResolveAndEmit(AsCandidates[0].Key))
+            { return Result; }
         }
         else if (AsCandidates.Num() > 1)
         {
@@ -305,7 +321,8 @@ namespace ck::angelscriptgenerator
             }
             if (AsCandidates.IsValidIndex(BestIdx))
             {
-                if (Try_ResolveAndEmit(AsCandidates[BestIdx].Key)) { return Result; }
+                if (Try_ResolveAndEmit(AsCandidates[BestIdx].Key))
+                { return Result; }
             }
         }
 

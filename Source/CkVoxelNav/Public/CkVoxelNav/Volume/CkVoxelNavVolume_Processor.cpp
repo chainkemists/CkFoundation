@@ -345,9 +345,6 @@ namespace ck
             TEXT("VoxelNav Volume [{}] was handed degenerate dirty bounds [{}] - there is no region to "
                  "repair"),
             InVolumeEntity, InRequest.Get_DirtyBounds())
-        {}
-
-        if (NOT DirtyBoundsAreUsable)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -425,9 +422,6 @@ namespace ck
             TEXT("VoxelNav Volume [{}] was handed degenerate dirty bounds [{}] - there is no region to "
                  "repair"),
             InVolumeEntity, DirtyBounds)
-        {}
-
-        if (NOT DirtyBoundsAreUsable)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -510,9 +504,6 @@ namespace ck
                  "finest cell size [{}]uu, clearance [{}]uu"),
             InVolumeEntity, InParams.Get_VolumeBounds(), InParams.Get_FinestCellSizeUu(),
             InParams.Get_ClearanceUu())
-        {}
-
-        if (NOT ParamsAreBakeable)
         {
             DoFailBuild();
             return;
@@ -520,14 +511,11 @@ namespace ck
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        const auto WorldIsValid = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{});
+        const auto WorldIsValid = ck::IsValid(World);
 
         CK_ENSURE_IF_NOT(WorldIsValid,
             TEXT("VoxelNav Volume [{}] has no world, so there is no geometry to bake against"),
             InVolumeEntity)
-        {}
-
-        if (NOT WorldIsValid)
         {
             DoFailBuild();
             return;
@@ -544,9 +532,6 @@ namespace ck
                  "bake: an unresolved session reports every probe unoccupied, which would publish the whole "
                  "volume as free space"),
             InVolumeEntity, World->GetName())
-        {}
-
-        if (NOT BackendIsValid)
         {
             DoFailBuild();
             return;
@@ -576,9 +561,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(BackendIsHeld,
             TEXT("VoxelNav Volume [{}] is marked as building but holds no geometry backend"), InVolumeEntity)
-        {}
-
-        if (NOT BackendIsHeld)
         {
             voxelnav::Request_FailBuild(InBuildState._Build);
         }
@@ -685,14 +667,11 @@ namespace ck
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        const auto WorldIsValid = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{});
+        const auto WorldIsValid = ck::IsValid(World);
 
         CK_ENSURE_IF_NOT(WorldIsValid,
             TEXT("VoxelNav Volume [{}] has no world, so there is no geometry to repair against"),
             InVolumeEntity)
-        {}
-
-        if (NOT WorldIsValid)
         {
             DoFailRepair();
             return;
@@ -710,9 +689,6 @@ namespace ck
                  "repair: an unresolved session reports every probe unoccupied, which would free the space "
                  "the dirty region was raised for"),
             InVolumeEntity, World->GetName())
-        {}
-
-        if (NOT BackendIsValid)
         {
             DoFailRepair();
             return;
@@ -747,9 +723,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(BackendIsHeld,
             TEXT("VoxelNav Volume [{}] is marked as repairing but holds no geometry backend"), InVolumeEntity)
-        {}
-
-        if (NOT BackendIsHeld)
         {
             voxelnav::Request_FailRepair(InRepairState._Repair);
         }

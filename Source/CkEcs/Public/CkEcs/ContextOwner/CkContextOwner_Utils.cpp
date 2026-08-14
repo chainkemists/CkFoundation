@@ -25,8 +25,6 @@ auto
     const auto EntityIsValid = ck::IsValid(InEntity);
     CK_ENSURE_IF_NOT(EntityIsValid,
         TEXT("Cannot override context owner of invalid entity"))
-    {}
-    if (NOT EntityIsValid)
     {
         InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -35,8 +33,6 @@ auto
     const auto NewContextOwnerIsValid = ck::IsValid(InNewContextOwner);
     CK_ENSURE_IF_NOT(NewContextOwnerIsValid,
         TEXT("Cannot override context owner with invalid entity"))
-    {}
-    if (NOT NewContextOwnerIsValid)
     {
         InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

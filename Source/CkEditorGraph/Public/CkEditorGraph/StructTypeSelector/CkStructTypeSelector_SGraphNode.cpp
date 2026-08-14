@@ -17,10 +17,10 @@ namespace ck_struct_type_selector_s_graph_node
         { return ECk_CompactExpanded::Compact; }
 
         auto* Prop = CastField<FByteProperty>(InNode->GetClass()->FindPropertyByName(TEXT("_PayloadMode")));
-        if (ck::Is_NOT_Valid(Prop, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Prop))
         {
             auto* EnumProp = CastField<FEnumProperty>(InNode->GetClass()->FindPropertyByName(TEXT("_PayloadMode")));
-            if (ck::Is_NOT_Valid(EnumProp, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(EnumProp))
             { return ECk_CompactExpanded::Compact; }
 
             const auto* ValuePtr = EnumProp->ContainerPtrToValuePtr<uint8>(InNode.Get());

@@ -334,7 +334,7 @@ auto
     // _NewStateFingerprint = 0 (clients skip verify) — this backfill patches that payload after the
     // fact for the debugger and late joiners. Authority-only; local-only SMs skip via the gates below.
 
-    if (NOT ck::IsValid(_OwnerStateMachine))
+    if (ck::Is_NOT_Valid(_OwnerStateMachine))
     { return; }
 
     if (NOT _OwnerStateMachine.Has<ck::FFragment_Sm_Params>())

@@ -584,7 +584,7 @@ auto
 
     auto* Driver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>().Get();
 
-    if (NOT ck::IsValid(Driver))
+    if (ck::Is_NOT_Valid(Driver))
     { return nullptr; }
 
     auto* Entry = Driver->FindEntry(TDataStruct::StaticStruct());

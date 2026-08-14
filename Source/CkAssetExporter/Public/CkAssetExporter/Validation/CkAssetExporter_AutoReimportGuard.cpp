@@ -106,7 +106,7 @@ auto
         { continue; }
 
         const auto* Factory = Cast<UFactory>(Class->GetDefaultObject());
-        if (ck::Is_NOT_Valid(Factory, ck::IsValid_Policy_NullptrOnly{}) || NOT Factory->bEditorImport)
+        if (ck::Is_NOT_Valid(Factory) || NOT Factory->bEditorImport)
         { continue; }
 
         for (const auto& Format : Factory->Formats)
@@ -139,7 +139,7 @@ auto
     { return; }
 
     const auto* Settings = GetDefault<UEditorLoadingSavingSettings>();
-    if (ck::Is_NOT_Valid(Settings, ck::IsValid_Policy_NullptrOnly{}) || NOT Settings->bMonitorContentDirectories)
+    if (ck::Is_NOT_Valid(Settings) || NOT Settings->bMonitorContentDirectories)
     { return; }
 
     const auto SupportedExtensions = FCk_AssetExporter_AutoReimportGuard::Get_AllFactoryExtensions();

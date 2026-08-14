@@ -61,15 +61,15 @@ auto
     { return false; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { return false; }
 
     const auto GameInstance = World->GetGameInstance();
-    if (ck::Is_NOT_Valid(GameInstance, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GameInstance))
     { return false; }
 
     const auto Subsystem = GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>();
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return false; }
 
     return Subsystem->Get_IsLoadInProgress();
@@ -87,8 +87,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InAnyWorldHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Promise_OnLoadComplete requires a valid world-resolving handle"))
-    {}
-    if (NOT HandleIsValid)
     { return; }
 
     const auto FireImmediately = [&]() -> void
@@ -97,14 +95,14 @@ auto
     };
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     { FireImmediately(); return; }
 
     const auto GameInstance = World->GetGameInstance();
-    const auto Subsystem = ck::IsValid(GameInstance, ck::IsValid_Policy_NullptrOnly{})
+    const auto Subsystem = ck::IsValid(GameInstance)
         ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
         : nullptr;
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}) || NOT Subsystem->Get_IsLoadInProgress())
+    if (ck::Is_NOT_Valid(Subsystem) || NOT Subsystem->Get_IsLoadInProgress())
     { FireImmediately(); return; }
 
     // IgnorePayloadInFlight is load-bearing: an earlier load's completion payload may still be in flight on the

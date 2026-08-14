@@ -82,8 +82,10 @@ namespace ck::particles_editor
             UPackage* Package = FPackageName::DoesPackageExist(MatPkgPath)
                 ? LoadPackage(nullptr, MatPkgPath, LOAD_None)
                 : nullptr;
-            if (Package == nullptr) { Package = CreatePackage(MatPkgPath); }
-            if (Package == nullptr) { return nullptr; }
+            if (Package == nullptr)
+            { Package = CreatePackage(MatPkgPath); }
+            if (Package == nullptr)
+            { return nullptr; }
 
             if (auto* Old = StaticFindObject(UMaterial::StaticClass(), Package, MatName))
             {
@@ -92,7 +94,8 @@ namespace ck::particles_editor
             }
 
             auto* Mat = NewObject<UMaterial>(Package, MatName, RF_Public | RF_Standalone);
-            if (Mat == nullptr) { return nullptr; }
+            if (Mat == nullptr)
+            { return nullptr; }
 
             Mat->MaterialDomain = MD_Surface;
             Mat->BlendMode      = BLEND_Additive;
@@ -140,7 +143,8 @@ namespace ck::particles_editor
         // A spawn picks one per effect through the sprite renderer's user-param binding (SetVariableMaterial).
         static auto Build_TextureMaterialInstances(UMaterialInterface* InMaster) -> void
         {
-            if (InMaster == nullptr) { return; }
+            if (InMaster == nullptr)
+            { return; }
 
             static const TCHAR* TexNames[] = { TEXT("Glow"), TEXT("Flare"), TEXT("Smoke"), TEXT("Electric"), TEXT("Streak"), TEXT("Ring"), TEXT("SweepStreak"), TEXT("TileNoise") };
             for (const TCHAR* Tex : TexNames)
@@ -149,8 +153,10 @@ namespace ck::particles_editor
                 const FString MicPkgPath = FString::Printf(TEXT("/CkFoundation/CkParticles/Materials/%s"), *MicName);
 
                 UPackage* Package = FPackageName::DoesPackageExist(MicPkgPath) ? LoadPackage(nullptr, *MicPkgPath, LOAD_None) : nullptr;
-                if (Package == nullptr) { Package = CreatePackage(*MicPkgPath); }
-                if (Package == nullptr) { continue; }
+                if (Package == nullptr)
+                { Package = CreatePackage(*MicPkgPath); }
+                if (Package == nullptr)
+                { continue; }
 
                 if (auto* Old = StaticFindObject(UMaterialInstanceConstant::StaticClass(), Package, *MicName))
                 {
@@ -159,7 +165,8 @@ namespace ck::particles_editor
                 }
 
                 auto* Mic = NewObject<UMaterialInstanceConstant>(Package, *MicName, RF_Public | RF_Standalone);
-                if (Mic == nullptr) { continue; }
+                if (Mic == nullptr)
+                { continue; }
 
                 Mic->SetParentEditorOnly(InMaster);
                 if (auto* Tx = LoadObject<UTexture>(nullptr, *ck::particles::Get_VfxTextureObjectPath(FName(Tex))))
@@ -927,9 +934,12 @@ namespace ck::particles_editor
             const auto HasBurst = InBurstCount > 0;
             const auto HasRate  = InSpawnRate > 0.0f;
 
-            if (HasBurst && HasRate) { return FString::Printf(TEXT("burst %d + rate %g/s"), InBurstCount, InSpawnRate); }
-            if (HasBurst)            { return FString::Printf(TEXT("burst %d"), InBurstCount); }
-            if (HasRate)             { return FString::Printf(TEXT("rate %g/s"), InSpawnRate); }
+            if (HasBurst && HasRate)
+            { return FString::Printf(TEXT("burst %d + rate %g/s"), InBurstCount, InSpawnRate); }
+            if (HasBurst)
+            { return FString::Printf(TEXT("burst %d"), InBurstCount); }
+            if (HasRate)
+            { return FString::Printf(TEXT("rate %g/s"), InSpawnRate); }
             return TEXT("factory rate");
         }
 
@@ -1031,7 +1041,8 @@ namespace ck::particles_editor
             UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
                 ? LoadPackage(nullptr, PkgPath, LOAD_None)
                 : nullptr;
-            if (Package == nullptr) { Package = CreatePackage(PkgPath); }
+            if (Package == nullptr)
+            { Package = CreatePackage(PkgPath); }
 
             if (auto* Old = StaticFindObject(UNiagaraSystem::StaticClass(), Package, AssetName))
             {
@@ -1109,7 +1120,8 @@ namespace ck::particles_editor
 
             const FNiagaraVariable SpriteMatVar(FNiagaraTypeDefinition::GetUMaterialDef(), ck::particles::Get_SpriteMaterialParameterName());
             Exposed.AddParameter(SpriteMatVar);
-            if (InSpriteMaterial != nullptr) { Exposed.SetUObject(InSpriteMaterial, SpriteMatVar); }
+            if (InSpriteMaterial != nullptr)
+            { Exposed.SetUObject(InSpriteMaterial, SpriteMatVar); }
 
             // ---- Code-built behavior module (forked engine only; inert on stock via CK_WITH_PARTICLES) ----
 #if CK_WITH_PARTICLES

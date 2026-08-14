@@ -41,7 +41,7 @@ namespace ck_autotest_netstub_generator
     auto Read_NetModeByte(const UClass* InEntityScriptClass) -> uint8
     {
         const auto* CDO = InEntityScriptClass->GetDefaultObject();
-        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CDO))
         { return 0; }
 
         const auto* Property = InEntityScriptClass->FindPropertyByName(TEXT("_NetMode"));
@@ -77,7 +77,7 @@ namespace ck_autotest_netstub_generator
     auto Read_NetSubjectClassPath(const UClass* InEntityScriptClass) -> FString
     {
         const auto* CDO = InEntityScriptClass->GetDefaultObject();
-        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CDO))
         { return DefaultNetSubjectClassPath; }
 
         const auto* Property = InEntityScriptClass->FindPropertyByName(TEXT("_NetSubjectClass"));
@@ -86,7 +86,7 @@ namespace ck_autotest_netstub_generator
         { return DefaultNetSubjectClassPath; }
 
         auto* Resolved = Cast<UClass>(ClassProp->GetObjectPropertyValue_InContainer(CDO));
-        if (ck::Is_NOT_Valid(Resolved, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Resolved))
         { return DefaultNetSubjectClassPath; }
 
         return Resolved->GetPathName();
@@ -107,7 +107,7 @@ namespace ck_autotest_netstub_generator
     // Standalone, this keeps Net, and between them every subclass is covered exactly once.
     auto Is_IncludedNetClass(UClass* InClass, UClass* InAutoTestBase) -> bool
     {
-        if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InClass))
         { return false; }
 
         if (InClass == InAutoTestBase)
@@ -630,7 +630,7 @@ auto
     ck::angelscriptgenerator::Log(TEXT("[CkAS Net Stubs] === Generating net-mode AutoTest C++ stubs ==="));
 
     auto* AutoTestBase = ck_autotest_netstub_generator::Find_AutoTestBaseClass();
-    if (NOT ck::IsValid(AutoTestBase, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(AutoTestBase))
     {
         ck::angelscriptgenerator::Log(
             TEXT("[CkAS Net Stubs] Ck_AutoTest_Base not found in object table — ")

@@ -117,16 +117,20 @@ namespace ck_usf_look_validator
             const auto Next = Index + 1 < InSource.Len() ? InSource[Index + 1] : TEXT('\0');
             if (InLine)
             {
-                if (C == TEXT('\n')) { InLine = false; Out.AppendChar(C); }
+                if (C == TEXT('\n'))
+                { InLine = false; Out.AppendChar(C); }
                 continue;
             }
             if (InBlock)
             {
-                if (C == TEXT('*') && Next == TEXT('/')) { InBlock = false; ++Index; }
+                if (C == TEXT('*') && Next == TEXT('/'))
+                { InBlock = false; ++Index; }
                 continue;
             }
-            if (C == TEXT('/') && Next == TEXT('/')) { InLine = true; ++Index; continue; }
-            if (C == TEXT('/') && Next == TEXT('*')) { InBlock = true; ++Index; continue; }
+            if (C == TEXT('/') && Next == TEXT('/'))
+            { InLine = true; ++Index; continue; }
+            if (C == TEXT('/') && Next == TEXT('*'))
+            { InBlock = true; ++Index; continue; }
             Out.AppendChar(C);
         }
         return Out;

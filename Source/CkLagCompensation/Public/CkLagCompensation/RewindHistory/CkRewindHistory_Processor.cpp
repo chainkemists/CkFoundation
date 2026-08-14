@@ -79,7 +79,7 @@ namespace ck::rewind_history_detail
         const FCk_LagComp_FrameBuffer& InFrames,
         FCk_Time InDuration) -> void
     {
-        if (InFrames.Get_Count() == 0 || ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (InFrames.Get_Count() == 0 || ck::Is_NOT_Valid(InWorld))
         { return; }
 
         constexpr auto DepthPriority = 0;

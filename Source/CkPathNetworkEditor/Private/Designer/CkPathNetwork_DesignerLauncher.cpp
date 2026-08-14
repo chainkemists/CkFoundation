@@ -38,7 +38,7 @@ namespace ck::pathnetwork_editor::designer
     auto
     Can_OpenDesigner() -> bool
     {
-        if (ck::Is_NOT_Valid(GEditor, ck::IsValid_Policy_NullptrOnly{})
+        if (ck::Is_NOT_Valid(GEditor)
             || GEditor->PlayWorld != nullptr)
         { return false; }
 

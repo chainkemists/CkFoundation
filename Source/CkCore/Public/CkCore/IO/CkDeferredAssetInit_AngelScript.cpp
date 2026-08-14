@@ -93,7 +93,7 @@ namespace ck_deferred_asset_init_angelscript
     {
         auto* Class = InInstance->GetClass();
         auto* CDO   = Class->GetDefaultObject(ShouldCreateCDO);
-        if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}) || CDO == InInstance)
+        if (ck::Is_NOT_Valid(CDO) || CDO == InInstance)
         { return; }
 
         for (TFieldIterator<FProperty> PropIt(Class, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
@@ -178,10 +178,10 @@ namespace ck_deferred_asset_init_angelscript
 
             // (a) CDO default: a frame whose `this` class chain owns this DefaultsFunction.
             if (auto* ThisObj = static_cast<UObject*>(Context->GetThisPointer(Frame));
-                ck::IsValid(ThisObj, ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(ThisObj))
             {
                 for (auto* CheckClass = ThisObj->GetClass();
-                     ck::IsValid(CheckClass, ck::IsValid_Policy_NullptrOnly{});
+                     ck::IsValid(CheckClass);
                      CheckClass = CheckClass->GetSuperClass())
                 {
                     const auto* ASClass = Cast<UASClass>(CheckClass);
@@ -209,7 +209,7 @@ namespace ck_deferred_asset_init_angelscript
     // True only when EVERY DefaultsFunction in the chain ran cleanly.
     auto ReRunClassDefaultsFor(UASClass* InASClass) -> bool
     {
-        if (ck::Is_NOT_Valid(InASClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InASClass))
         { return false; }
 
         if (InASClass->DefaultsFunction == nullptr)
@@ -219,11 +219,11 @@ namespace ck_deferred_asset_init_angelscript
         { return false; }
 
         auto* CDO = InASClass->GetDefaultObject(ShouldCreateCDO);
-        if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CDO))
         { return false; }
 
         auto DefaultsFunctions = TArray<asIScriptFunction*, TFixedAllocator<32>>{};
-        for (auto* WalkClass = InASClass; ck::IsValid(WalkClass, ck::IsValid_Policy_NullptrOnly{}); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
+        for (auto* WalkClass = InASClass; ck::IsValid(WalkClass); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
         {
             if (WalkClass->DefaultsFunction != nullptr)
             { DefaultsFunctions.Add(WalkClass->DefaultsFunction); }
@@ -274,7 +274,7 @@ namespace ck_deferred_asset_init_angelscript
         for (const auto& WeakCdo : GDeferredLoadCDOs)
         {
             auto* CDO = WeakCdo.Get();
-            if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(CDO))
             { continue; }
 
             if (NOT CDO->HasAnyFlags(RF_ClassDefaultObject))
@@ -358,7 +358,7 @@ namespace ck_deferred_asset_init_angelscript
                     AssetInstance = *static_cast<UObject**>(Context->GetAddressOfReturnValue());
                 }
 
-                if (ck::Is_NOT_Valid(AssetInstance, ck::IsValid_Policy_NullptrOnly{}))
+                if (ck::Is_NOT_Valid(AssetInstance))
                 {
                     ck::core::Error(TEXT("[DeferredAssetInit] Literal asset '{}' — getter returned null/invalid instance"), AssetName);
                     return;

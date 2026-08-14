@@ -142,7 +142,7 @@ auto
 
     auto* Package = LoadPackage(nullptr, *InMapPackageName, LOAD_None);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Package, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Package),
         TEXT("CkJoltCook: failed to load map package [{}]"), InMapPackageName)
     { return false; }
 

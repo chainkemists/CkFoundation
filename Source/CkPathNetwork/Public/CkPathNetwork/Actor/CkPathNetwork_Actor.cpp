@@ -98,7 +98,7 @@ auto
     // Draws the AUTHORED ribbons; the BUILT graph is drawn in game worlds by ck.PathNetwork.DebugDraw.
     const auto* World = GetWorld();
 
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}) || World->IsGameWorld())
+    if (ck::Is_NOT_Valid(World) || World->IsGameWorld())
     { return; }
 
     if (NOT IsSelectedInEditor())
@@ -193,8 +193,6 @@ auto
         && InOwnedDetector->GetOuter() == this;
     CK_ENSURE_IF_NOT(DetectorIsOwned,
         TEXT("Set_EditorAuthoringConfiguration on [{}] requires a valid actor-owned detector"), this)
-    {}
-    if (NOT DetectorIsOwned)
     { return false; }
 
     const bool ExtentsAreValid =
@@ -205,8 +203,6 @@ auto
     CK_ENSURE_IF_NOT(ExtentsAreValid,
         TEXT("Set_EditorAuthoringConfiguration on [{}] requires finite positive extents, received [{}]"),
         this, InDetectionExtents)
-    {}
-    if (NOT ExtentsAreValid)
     { return false; }
 
     const bool RecommendationIsValid =
@@ -216,8 +212,6 @@ auto
     CK_ENSURE_IF_NOT(RecommendationIsValid,
         TEXT("Set_EditorAuthoringConfiguration on [{}] received invalid recommended follower tuning"),
         this)
-    {}
-    if (NOT RecommendationIsValid)
     { return false; }
 
     _BuildParams = InBuildParams;

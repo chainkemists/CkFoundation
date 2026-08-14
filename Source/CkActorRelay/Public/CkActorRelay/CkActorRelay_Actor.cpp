@@ -134,8 +134,6 @@ auto
     const auto GroupSubsystemIsValid = ck::IsValid(GroupSubsystem);
     CK_ENSURE_IF_NOT(GroupSubsystemIsValid,
         TEXT("Relay [{}]: cannot derive a SaveKey — registration reported success with no resolved group subsystem"), this)
-    {}
-    if (NOT GroupSubsystemIsValid)
     { return; }
 
     // Derived from the GROUP TAG alone: a channel has no identity beyond its group, and pool ordering/growth is

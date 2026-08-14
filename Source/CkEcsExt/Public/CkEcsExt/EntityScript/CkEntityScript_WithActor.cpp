@@ -94,7 +94,7 @@ auto
     const auto* WithActorScript =
         Cast<UCk_EntityScript_WithActor_UE>(InConstructedScript);
 
-    if (ck::Is_NOT_Valid(WithActorScript, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(WithActorScript))
     { return Super::Get_AreSpawnParamsMatching(InClientSpawnParams, InConstructedScript); }
 
     const auto* SpawnParams =

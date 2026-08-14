@@ -115,11 +115,11 @@ auto
     -> bool
 {
     if (ck::Is_NOT_Valid(InClientSpawnParams)
-        || ck::Is_NOT_Valid(InConstructedScript, ck::IsValid_Policy_NullptrOnly{}))
+        || ck::Is_NOT_Valid(InConstructedScript))
     { return true; }
 
     const auto* SpawnParamsStruct = InClientSpawnParams.GetScriptStruct();
-    if (ck::Is_NOT_Valid(SpawnParamsStruct, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(SpawnParamsStruct))
     { return true; }
 
     const auto* SpawnParamsData = InClientSpawnParams.GetMemory();
@@ -134,7 +134,7 @@ auto
         const auto* ScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(
             const_cast<UCk_EntityScript_UE*>(InConstructedScript), PropertyName);
 
-        if (ck::Is_NOT_Valid(ScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(ScriptProp))
         { continue; }
 
         const auto* SpawnParamAddr =

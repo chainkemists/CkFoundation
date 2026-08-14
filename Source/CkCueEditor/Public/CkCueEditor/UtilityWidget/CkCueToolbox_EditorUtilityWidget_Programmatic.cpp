@@ -308,7 +308,7 @@ auto UCkCueToolboxWidget::DoDiscoverSubsystems() -> void
 {
     DiscoveredSubsystems.Empty();
 
-    if (NOT ck::IsValid(SubsystemComboBox))
+    if (ck::Is_NOT_Valid(SubsystemComboBox))
     { return; }
 
     SubsystemComboBox->ClearOptions();
@@ -317,7 +317,7 @@ auto UCkCueToolboxWidget::DoDiscoverSubsystems() -> void
     {
         const auto Class = *ClassIterator;
 
-        if (NOT ck::IsValid(Class))
+        if (ck::Is_NOT_Valid(Class))
         { continue; }
 
         if (Class->HasAnyClassFlags(CLASS_Abstract))

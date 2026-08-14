@@ -153,7 +153,7 @@ auto
 
     return [FragmentNames = InFragmentNames](const FCk_Handle& InHandle) -> bool
     {
-        if (NOT ck::IsValid(InHandle))
+        if (ck::Is_NOT_Valid(InHandle))
         {
             return false;
         }

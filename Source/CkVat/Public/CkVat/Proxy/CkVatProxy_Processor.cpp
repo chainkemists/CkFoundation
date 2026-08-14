@@ -152,7 +152,7 @@ namespace ck
         { return; }
 
         auto* Subsystem = World->GetSubsystem<UCk_Vat_Subsystem_UE>();
-        CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
             TEXT("No UCk_Vat_Subsystem_UE for the world of entity [{}]"), InHandle)
         { return; }
 

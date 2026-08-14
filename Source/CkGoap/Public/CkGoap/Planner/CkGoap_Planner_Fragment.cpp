@@ -14,7 +14,8 @@ namespace ck
 		Result.Reserve(_Plan.Num());
 		for (const auto& ActionHandle : _Plan)
 		{
-			if (NOT ck::IsValid(ActionHandle)) { continue; }
+			if (ck::Is_NOT_Valid(ActionHandle))
+			{ continue; }
 			const auto& Params = ActionHandle.template Get<FFragment_Goap_Action_Params>();
 			Result.Add(Params.Get_ActionClass());
 		}

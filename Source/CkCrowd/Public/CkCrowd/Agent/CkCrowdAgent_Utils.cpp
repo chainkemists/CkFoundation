@@ -144,8 +144,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_MoveTo"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -155,8 +153,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_MoveTo on CrowdAgent [{}] dropped — caller does not have authority. "
              "Pathfinding is server-only."), InAgent)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -182,8 +178,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_FollowTarget"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -193,8 +187,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_FollowTarget on CrowdAgent [{}] dropped — caller does not have authority. "
              "Pathfinding is server-only."), InAgent)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -203,8 +195,6 @@ auto
     const auto TargetPointIsValid = ck::IsValid(InRequest.Get_TargetPoint());
     CK_ENSURE_IF_NOT(TargetPointIsValid,
         TEXT("Request_FollowTarget on CrowdAgent [{}] dropped — the target point handle is invalid"), InAgent)
-    {}
-    if (NOT TargetPointIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -229,8 +219,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_Stop"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -239,8 +227,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAgent);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Stop on CrowdAgent [{}] dropped — caller does not have authority."), InAgent)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -268,8 +254,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetMaxSpeed"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -279,8 +263,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_SetMaxSpeed on CrowdAgent [{}] dropped — caller does not have authority. "
              "Steering is server-only."), InAgent)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -290,8 +272,6 @@ auto
     CK_ENSURE_IF_NOT(MaxSpeedIsValid,
         TEXT("Request_SetMaxSpeed on CrowdAgent [{}] dropped — MaxSpeed [{}] must be >= 1"),
         InAgent, InMaxSpeed)
-    {}
-    if (NOT MaxSpeedIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -319,8 +299,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetNavQueryFilter"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -330,8 +308,6 @@ auto
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_SetNavQueryFilter on CrowdAgent [{}] dropped — caller does not have authority. "
              "Pathfinding is server-only."), InAgent)
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -517,8 +493,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_HasReachedActiveGoal"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     { return false; }
 
     // A queued MoveTo/Stop supersedes the retained result immediately from the caller's perspective, before the
@@ -640,7 +614,7 @@ auto
         const FCk_Handle_CrowdAgent& InAgent)
     -> FLinearColor
 {
-    if (NOT ck::IsValid(InAgent))
+    if (ck::Is_NOT_Valid(InAgent))
     { return FLinearColor::White; }
 
     if (InAgent.Has<ck::FFragment_CrowdAgent_DebugColor>())
@@ -662,8 +636,6 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetDebugOverride"), InAgent)
-    {}
-    if (NOT AgentIsValid)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -688,7 +660,7 @@ auto
         const FCk_Handle_CrowdAgent& InAgent)
     -> bool
 {
-    if (NOT ck::IsValid(InAgent))
+    if (ck::Is_NOT_Valid(InAgent))
     { return false; }
 
     return InAgent.Has<ck::FTag_CrowdAgent_DebugOverride>();

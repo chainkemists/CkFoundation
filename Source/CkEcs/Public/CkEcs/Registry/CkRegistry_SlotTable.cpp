@@ -40,7 +40,8 @@ namespace ck::registry_table
     static auto DoAdvance_SlotGeneration(FRegistryTable_Slot& InOutSlot) -> void
     {
         auto NextGen = static_cast<uint32>(InOutSlot.Generation) + 1u;
-        if (NextGen == 0u) { NextGen = 1u; }
+        if (NextGen == 0u)
+        { NextGen = 1u; }
         InOutSlot.Generation = static_cast<int32>(NextGen);
     }
 
@@ -260,15 +261,19 @@ namespace ck::registry_table
             TEXT("registry_table::Free called off the game thread — slot-table mutation is not thread-safe"))
         { return; }
 
-        if (NOT InHandle.IsSet()) { return; }
+        if (NOT InHandle.IsSet())
+        { return; }
 
         // Sentinel-dead: silent no-op — UObject destructors firing during DLL teardown must not
         // crash here just because the table's static is gone.
-        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
+        { return; }
 
         auto* State = Get_RegistryTableState();
-        if (State == nullptr) { return; }
-        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return; }
+        if (State == nullptr)
+        { return; }
+        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex))
+        { return; }
 
         auto& Slot = State->Slots[InHandle.SlotIndex];
 
@@ -302,15 +307,20 @@ namespace ck::registry_table
     {
         // No IsInGameThread ensure by design: TParallelProcessor bodies legitimately reach here
         // via FCk_Registry::Has/Get, so one would fire spuriously on every parallel processor.
-        if (NOT InHandle.IsSet()) { return nullptr; }
-        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
+        if (NOT InHandle.IsSet())
+        { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
+        { return nullptr; }
 
         auto* State = Get_RegistryTableState();
-        if (State == nullptr) { return nullptr; }
-        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return nullptr; }
+        if (State == nullptr)
+        { return nullptr; }
+        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex))
+        { return nullptr; }
 
         const auto& Slot = State->Slots[InHandle.SlotIndex];
-        if (Slot.Generation != InHandle.Generation) { return nullptr; }
+        if (Slot.Generation != InHandle.Generation)
+        { return nullptr; }
         return Slot.Registry.load(std::memory_order_acquire);
     }
 
@@ -325,10 +335,12 @@ namespace ck::registry_table
                 TEXT("Pre-migration the default ctor auto-allocated; post-migration the binding is the caller's responsibility."))
             { return nullptr; }
         }
-        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
+        { return nullptr; }
 
         auto* State = Get_RegistryTableState();
-        if (State == nullptr) { return nullptr; }
+        if (State == nullptr)
+        { return nullptr; }
 
         if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex))
         {
@@ -355,15 +367,20 @@ namespace ck::registry_table
 
     static auto Get_LiveSlot(FCk_RegistryHandle InHandle) -> FRegistryTable_Slot*
     {
-        if (NOT InHandle.IsSet()) { return nullptr; }
-        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire)) { return nullptr; }
+        if (NOT InHandle.IsSet())
+        { return nullptr; }
+        if (NOT GRegistryTable_StateAlive.load(std::memory_order_acquire))
+        { return nullptr; }
 
         auto* State = Get_RegistryTableState();
-        if (State == nullptr) { return nullptr; }
-        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex)) { return nullptr; }
+        if (State == nullptr)
+        { return nullptr; }
+        if (NOT State->Slots.IsValidIndex(InHandle.SlotIndex))
+        { return nullptr; }
 
         auto& Slot = State->Slots[InHandle.SlotIndex];
-        if (Slot.Generation != InHandle.Generation) { return nullptr; }
+        if (Slot.Generation != InHandle.Generation)
+        { return nullptr; }
         return &Slot;
     }
 
@@ -391,7 +408,8 @@ namespace ck::registry_table
     {
 #if !UE_BUILD_SHIPPING
         auto* Slot = Get_LiveSlot(InHandle);
-        if (Slot == nullptr) { return; }
+        if (Slot == nullptr)
+        { return; }
 
         CK_ENSURE_IF_NOT(NOT Slot->IsInParallelRegion,
             TEXT("THREAD-SAFETY VIOLATION: [{}] called during parallel processor execution. ")

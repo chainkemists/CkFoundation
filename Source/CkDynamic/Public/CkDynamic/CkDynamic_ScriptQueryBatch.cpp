@@ -45,8 +45,6 @@ namespace ck_dynamic_script_query_batch
             const auto StateIsClosed = NOT _LiveGenerations.Contains(&InState);
             CK_ENSURE_IF_NOT(StateIsClosed,
                 TEXT("Script query batch state was opened twice without being closed"))
-            {}
-            if (NOT StateIsClosed)
             { return 0; }
 
             const auto Generation = AllocateGeneration();
@@ -62,8 +60,6 @@ namespace ck_dynamic_script_query_batch
             const auto GenerationMatches = LiveGeneration != nullptr && *LiveGeneration == InGeneration;
             CK_ENSURE_IF_NOT(GenerationMatches,
                 TEXT("Script query batch state closed with stale generation [{}]"), InGeneration)
-            {}
-            if (NOT GenerationMatches)
             {
                 // Independent of the ensure above on purpose: ensures compile out.
                 ck::dynamic::Warning(
@@ -164,8 +160,6 @@ auto
         const auto TypeIsValid = ck::IsValid(Type);
         CK_ENSURE_IF_NOT(TypeIsValid,
             TEXT("Script query [{}] contains an invalid fragment type; rejecting the complete query"), InContext)
-        {}
-        if (NOT TypeIsValid)
         { return false; }
 
         const auto Schema = ck::dynamic::Validate_FragmentSchema(Type);
@@ -210,15 +204,11 @@ auto
     const auto StateIsLive = State != nullptr;
     CK_ENSURE_IF_NOT(StateIsLive,
         TEXT("Script query batch used past its ForEachBatch call (stale generation). Do not stash the batch."))
-    {}
-    if (NOT StateIsLive)
     { return FCk_Handle{}; }
 
     const auto IndexIsValid = State->_Entities.IsValidIndex(InIndex);
     CK_ENSURE_IF_NOT(IndexIsValid,
         TEXT("Script query batch GetHandle index [{}] out of range [0, {})"), InIndex, State->_Entities.Num())
-    {}
-    if (NOT IndexIsValid)
     { return FCk_Handle{}; }
 
     return State->_AnyHandle.Get_ValidHandle(State->_Entities[InIndex]);
@@ -240,15 +230,11 @@ auto
     const auto StateIsLive = State != nullptr;
     CK_ENSURE_IF_NOT(StateIsLive,
         TEXT("Script query batch used past its ForEachBatch call (stale generation). Do not stash the batch."))
-    {}
-    if (NOT StateIsLive)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto TypeIsValid = ck::IsValid(InType);
     CK_ENSURE_IF_NOT(TypeIsValid,
         TEXT("Script query batch Get called with an invalid fragment type"))
-    {}
-    if (NOT TypeIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto IndexIsValid = State->_Entities.IsValidIndex(InIndex);
@@ -266,8 +252,6 @@ auto
     const auto SlotIsMutable = Slot != nullptr && Slot->_Storage != nullptr;
     CK_ENSURE_IF_NOT(SlotIsMutable,
         TEXT("Fragment [{}] is not a mutable ReadWrite slot in this processor's query"), InType)
-    {}
-    if (NOT SlotIsMutable)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     // Kept in shipping: catches a fragment removed mid-batch by a Request_Remove inside ForEachBatch.
@@ -275,8 +259,6 @@ auto
     const auto FragmentExists = Slot->_Storage->contains(Entity);
     CK_ENSURE_IF_NOT(FragmentExists,
         TEXT("Entity no longer carries fragment [{}] (removed mid-batch)"), InType)
-    {}
-    if (NOT FragmentExists)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     auto& Fragment = Slot->_Storage->get(Entity);
@@ -297,15 +279,11 @@ auto
     const auto StateIsLive = State != nullptr;
     CK_ENSURE_IF_NOT(StateIsLive,
         TEXT("Script query batch used past its ForEachBatch call (stale generation). Do not stash the batch."))
-    {}
-    if (NOT StateIsLive)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto TypeIsValid = ck::IsValid(InType);
     CK_ENSURE_IF_NOT(TypeIsValid,
         TEXT("Script query batch GetReadOnly called with an invalid fragment type"))
-    {}
-    if (NOT TypeIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto IndexIsValid = State->_Entities.IsValidIndex(InIndex);
@@ -323,16 +301,12 @@ auto
     const auto SlotIsReadable = Slot != nullptr && Slot->_Storage != nullptr;
     CK_ENSURE_IF_NOT(SlotIsReadable,
         TEXT("Fragment [{}] is not a ReadOnly slot in this processor's query"), InType)
-    {}
-    if (NOT SlotIsReadable)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto Entity = State->_Entities[InIndex];
     const auto FragmentExists = Slot->_Storage->contains(Entity);
     CK_ENSURE_IF_NOT(FragmentExists,
         TEXT("Entity no longer carries fragment [{}] (removed mid-batch)"), InType)
-    {}
-    if (NOT FragmentExists)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto& Fragment = Slot->_Storage->get(Entity);

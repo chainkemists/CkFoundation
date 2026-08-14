@@ -57,7 +57,7 @@ namespace ck
         {
             const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
 
-            if (ck::Is_NOT_Valid(WidgetComponent, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(WidgetComponent))
             {
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
                 return;
@@ -111,7 +111,7 @@ namespace ck
         auto ProjectedScreenPosition = FVector2D{};
         auto ProjectionSuccess = false;
         auto ViewportSize = FVector2D::ZeroVector;
-        const auto HasViewport = ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}) && GEngine->GameViewport != nullptr;
+        const auto HasViewport = ck::IsValid(GEngine) && GEngine->GameViewport != nullptr;
         {
             SCOPE_CYCLE_COUNTER(STAT_CkWorldSpaceWidget_Projection);
 

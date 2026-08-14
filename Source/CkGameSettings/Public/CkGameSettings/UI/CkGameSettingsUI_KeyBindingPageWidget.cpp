@@ -114,8 +114,6 @@ auto
 
     const auto PlayerControllerIsUsable = ck::IsValid(InPlayerController);
     CK_ENSURE_IF_NOT(PlayerControllerIsUsable, TEXT("Invalid PlayerController passed to KeyBinding row [{}] for mapping [{}]"), this, InMappingName)
-    {}
-    if (NOT PlayerControllerIsUsable)
     { return; }
 
     if (auto* InputSubsystem = UCommonInputSubsystem::Get(InPlayerController->GetLocalPlayer());
@@ -288,7 +286,7 @@ auto
 
     const auto CurrentKey = UCk_Utils_KeyBinding_UE::Get_KeyForMapping(_PlayerController.Get(), _MappingName, _ResolvedSlot);
     const auto KeyBrush = UCk_Utils_KeyIcon_UE::Get_BrushForKey(_PlayerController.Get(), CurrentKey);
-    const auto BrushHasIcon = ck::IsValid(KeyBrush.GetResourceObject(), ck::IsValid_Policy_NullptrOnly{});
+    const auto BrushHasIcon = ck::IsValid(KeyBrush.GetResourceObject());
 
     // The glyph wins only when the WBP gave it somewhere to render — a text-only row (no icon
     // slot bound) keeps its text even for keys the platform has a glyph for, or every bound key
@@ -329,8 +327,6 @@ auto
 
     const auto RowClassIsUsable = ck::IsValid(_RowWidgetClass.Get());
     CK_ENSURE_IF_NOT(RowClassIsUsable, TEXT("KeyBinding page [{}] has no _RowWidgetClass"), this)
-    {}
-    if (NOT RowClassIsUsable)
     { return; }
 
     // ONE row per mapping NAME: the profile stores a mapping per (name, slot) — keyboard and
@@ -568,8 +564,6 @@ auto
 {
     const auto ResetIsPending = _ResetAllPending;
     CK_ENSURE_IF_NOT(ResetIsPending, TEXT("Request_CancelResetAll on [{}] with no pending reset"), this)
-    {}
-    if (NOT ResetIsPending)
     { return; }
 
     _ResetAllPending = false;
@@ -597,8 +591,6 @@ auto
 {
     const auto ConflictIsPending = _ConflictPending;
     CK_ENSURE_IF_NOT(ConflictIsPending, TEXT("Request_ResolveConflict on [{}] with no pending conflict"), this)
-    {}
-    if (NOT ConflictIsPending)
     { return; }
 
     switch (InResolution)

@@ -89,7 +89,7 @@ auto
         UObject* InOuter)
     -> UCk_K2NodeSpawner_UFunction_Base*
 {
-    if (ck::Is_NOT_Valid(InOuter, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InOuter))
     {
         InOuter = GetTransientPackage();
     }

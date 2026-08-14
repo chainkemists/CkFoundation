@@ -24,7 +24,7 @@ namespace ck_jolt_occupancy_session
     // once per query, and without the ECS world (occupancy never attributes hits to entities).
     static auto TryGet_JoltSubsystem(const UObject* InWorldContextObject) -> UCk_Jolt_Subsystem*
     {
-        if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorldContextObject))
         { return nullptr; }
 
         auto* World = InWorldContextObject->GetWorld();
@@ -111,7 +111,7 @@ namespace ck::jolt
         FCk_Jolt_QuerySession(
             UCk_Jolt_Subsystem* InJoltSubsystem)
     {
-        if (ck::Is_NOT_Valid(InJoltSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InJoltSubsystem))
         { return; }
 
         const auto PhysicsSystem = InJoltSubsystem->Get_PhysicsSystem().Pin();

@@ -128,8 +128,10 @@ public:
     // soft PATH, so naming a track never touches or forces a load.
     FName Get_TrackName() const
     {
-        if (_TrackName != NAME_None) { return _TrackName; }
-        if (NOT _Sound.IsNull()) { return _Sound.ToSoftObjectPath().GetAssetFName(); }
+        if (_TrackName != NAME_None)
+        { return _TrackName; }
+        if (NOT _Sound.IsNull())
+        { return _Sound.ToSoftObjectPath().GetAssetFName(); }
         return NAME_None;
     }
     CK_PROPERTY_GET(_Sound);

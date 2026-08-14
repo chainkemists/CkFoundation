@@ -193,7 +193,7 @@ namespace ck
         InHandle.Remove<MarkedDirtyBy>();
 
         auto MeshComponent = InCurrent._MeshComponent.Get();
-        if (ck::Is_NOT_Valid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         MeshComponent->ClearMeshSection(pmg_bake_lines_helpers::WireframeSectionIndex);
@@ -302,7 +302,7 @@ namespace ck
             UProceduralMeshComponent* InMesh)
             -> UMaterialInstanceDynamic*
         {
-            if (ck::Is_NOT_Valid(InMesh, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(InMesh))
             { return nullptr; }
             return Cast<UMaterialInstanceDynamic>(InMesh->GetMaterial(pmg_bake_lines_helpers::FilledSectionIndex));
         }
@@ -354,7 +354,7 @@ namespace ck
         }
 
         if (auto* MeshComponent = InCurrent._MeshComponent.Get();
-            ck::IsValid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(MeshComponent))
         {
             if (auto* WireframeMID = Cast<UMaterialInstanceDynamic>(
                     MeshComponent->GetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex)))

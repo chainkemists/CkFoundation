@@ -30,32 +30,24 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an IntentDebugHistory onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto HandleHasSampler = UCk_Utils_IntentSampler_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HandleHasSampler,
         TEXT("Add: Handle [{}] carries no IntentSampler — a debug history records rows out of the sampler's "
              "ring, so there is nothing here to record"), InHandle)
-    {}
-    if (NOT HandleHasSampler)
     { return {}; }
 
     const auto EntityHasNoHistory = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityHasNoHistory,
         TEXT("Add: Handle [{}] already carries an IntentDebugHistory — one recording per source; retune its "
              "capacity instead of composing a second"), InHandle)
-    {}
-    if (NOT EntityHasNoHistory)
     { return {}; }
 
     const auto CapacityIsPositive = InParams.Get_Capacity() > 0;
     CK_ENSURE_IF_NOT(CapacityIsPositive,
         TEXT("IntentDebugHistory declaration on [{}] asks for a capacity of [{}] frames — a recording that "
              "retains nothing cannot be read back"), InHandle, InParams.Get_Capacity())
-    {}
-    if (NOT CapacityIsPositive)
     { return {}; }
 
     InHandle.Add<ck::FFragment_IntentDebugHistory_Params>(InParams);
@@ -120,8 +112,6 @@ auto
     const auto HistoryIsValid = ck::IsValid(InHistory);
     CK_ENSURE_IF_NOT(HistoryIsValid,
         TEXT("Request_SetCapacity: invalid IntentDebugHistory Handle [{}]"), InHistory)
-    {}
-    if (NOT HistoryIsValid)
     {
         InDelegate.ExecuteIfBound(InHistory, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHistory;
@@ -131,8 +121,6 @@ auto
     CK_ENSURE_IF_NOT(CapacityIsPositive,
         TEXT("Request_SetCapacity on [{}] asks for a capacity of [{}] frames — a recording that retains nothing "
              "cannot be read back"), InHistory, InRequest.Get_Capacity())
-    {}
-    if (NOT CapacityIsPositive)
     {
         InDelegate.ExecuteIfBound(InHistory, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHistory;

@@ -90,8 +90,6 @@ auto
 
     CK_ENSURE_IF_NOT(InputsAreValid,
         TEXT("Invalid native Dynamic Fragment display schema registration for [{}]"), InFragmentTypePath)
-    {}
-    if (NOT InputsAreValid)
     { return false; }
 
     ck_dynamic_fragment_display_schema::GetRegistry().NativeSchemas.Add(
@@ -110,8 +108,6 @@ auto
     const auto InputsAreValid = IsInGameThread() && NOT InFragmentTypePath.IsEmpty();
     CK_ENSURE_IF_NOT(InputsAreValid,
         TEXT("Invalid native Dynamic Fragment display schema unregistration for [{}]"), InFragmentTypePath)
-    {}
-    if (NOT InputsAreValid)
     { return false; }
 
     return ck_dynamic_fragment_display_schema::GetRegistry().NativeSchemas.Remove(InFragmentTypePath) > 0;
@@ -169,8 +165,6 @@ auto
     const auto CanObserve = TypeIsValid && IsInGameThread();
 
     CK_ENSURE_IF_NOT(CanObserve, TEXT("Invalid Dynamic Fragment display-schema observation"))
-    {}
-    if (NOT CanObserve)
     { return false; }
 
     const auto FragmentTypePath = InFragmentType->GetPathName();
@@ -187,8 +181,6 @@ auto
             const auto SchemaIsValid = ck_dynamic_fragment_display_schema::IsSchemaValid(FragmentTypePath, Schema);
             CK_ENSURE_IF_NOT(SchemaIsValid,
                 TEXT("AngelScript produced an invalid Dynamic Fragment display schema for [{}]"), FragmentTypePath)
-            {}
-            if (NOT SchemaIsValid)
             { return false; }
 
             Registry.AngelscriptSchemas.Add(FragmentTypePath, MoveTemp(Schema));
@@ -284,8 +276,6 @@ auto
     }
 
     CK_ENSURE_IF_NOT(InputsAreValid, TEXT("Invalid AngelScript Dynamic Fragment display-schema replacement"))
-    {}
-    if (NOT InputsAreValid)
     { return false; }
 
     // One move is the publication point. Explicit native registrations live in a different map and cannot be erased.

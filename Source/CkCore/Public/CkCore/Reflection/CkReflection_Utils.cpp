@@ -68,7 +68,7 @@ auto
     {
         FProperty* Property = *PropertyIt;
 
-        if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Property))
         { continue; }
 
         const FString SanitizedCurrentPropertyName = Get_SanitizedUserDefinedPropertyName(Property);
@@ -109,8 +109,8 @@ auto
         const FProperty* InPropertyB)
     -> bool
 {
-    if (ck::Is_NOT_Valid(InPropertyA, ck::IsValid_Policy_NullptrOnly{}) ||
-        ck::Is_NOT_Valid(InPropertyB, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InPropertyA) ||
+        ck::Is_NOT_Valid(InPropertyB))
     { return {}; }
 
     if (InPropertyA->GetClass() != InPropertyB->GetClass())
@@ -254,7 +254,7 @@ auto
 
     for (auto* Property : InPropertiesA)
     {
-        if (ck::IsValid(Property, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(Property))
         {
             PropertiesA_Map.Add(*Get_SanitizedUserDefinedPropertyName(Property), Property);
         }
@@ -329,7 +329,7 @@ auto
         const FProperty* InProperty)
     -> bool
 {
-    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InProperty))
     { return false; }
 
     return CastField<FDelegateProperty>(InProperty) != nullptr
@@ -467,7 +467,7 @@ namespace ck_reflection_detail
         -> TOptional<FCk_PropertyDefaultValueLiteral>
     {
         auto* Struct = InStructProp->Struct.Get();
-        if (ck::Is_NOT_Valid(Struct, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Struct))
         { return {}; }
 
         // ---- Named constants and early-exit types --------------------------------
@@ -550,7 +550,7 @@ auto
         const void* InContainer)
     -> TOptional<FCk_PropertyDefaultValueLiteral>
 {
-    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InProperty))
     { return {}; }
 
     if (InContainer == nullptr)
@@ -568,7 +568,7 @@ auto
     {
         const auto* UnderlyingProp = EnumProp->GetUnderlyingProperty();
         const auto* Enum = EnumProp->GetEnum();
-        if (ck::Is_NOT_Valid(Enum, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Enum))
         { return {}; }
 
         const auto IntValue = UnderlyingProp->GetSignedIntPropertyValue(ValuePtr);
@@ -781,7 +781,7 @@ auto
 {
     auto Out = TArray<FCk_StructFieldOverride>{};
 
-    if (ck::Is_NOT_Valid(InStructProperty, ck::IsValid_Policy_NullptrOnly{}) || InContainer == nullptr)
+    if (ck::Is_NOT_Valid(InStructProperty) || InContainer == nullptr)
     { return Out; }
 
     auto* Struct = InStructProperty->Struct.Get();

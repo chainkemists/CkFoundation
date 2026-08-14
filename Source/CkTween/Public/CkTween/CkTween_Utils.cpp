@@ -285,7 +285,7 @@ auto
 
     for (const UCurveFloat* Curve : {InChannels.Get_X().Get(), InChannels.Get_Y().Get(), InChannels.Get_Z().Get()})
     {
-        if (ck::Is_NOT_Valid(Curve, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Curve))
         { continue; }
 
         auto CurveMinTime = 0.0f;
@@ -412,7 +412,7 @@ auto
         ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InCurve),
         TEXT("Cannot create a curve-driven float tween on [{}] with an invalid curve."), InOwner)
     { return {}; }
 
@@ -454,7 +454,7 @@ auto
         TEXT("Cannot set an easing curve on an invalid Tween handle."))
     { return InTween; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InCurve),
         TEXT("Cannot set an invalid easing curve on Tween [{}]."), InTween)
     { return InTween; }
 

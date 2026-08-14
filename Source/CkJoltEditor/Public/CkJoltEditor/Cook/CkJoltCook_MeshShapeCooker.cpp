@@ -130,7 +130,7 @@ auto
         const auto MeshPackagePath = Mesh->GetOutermost()->GetName();
         const auto* BodySetup = Mesh->GetBodySetup();
 
-        if (ck::Is_NOT_Valid(BodySetup, ck::IsValid_Policy_NullptrOnly{}) ||
+        if (ck::Is_NOT_Valid(BodySetup) ||
             NOT mesh_shape_utils::Get_IsWorthPreBaking(*BodySetup))
         {
             ++Stats._NumSkippedNotWorthBaking;

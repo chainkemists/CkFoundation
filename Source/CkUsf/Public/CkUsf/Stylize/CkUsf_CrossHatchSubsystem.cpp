@@ -81,7 +81,7 @@ auto
         const UObject* InWorldContextObject)
     -> UCkUsf_CrossHatchSubsystem*
 {
-    if (ck::Is_NOT_Valid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEngine))
     { return nullptr; }
 
     auto* World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::ReturnNull);
@@ -117,13 +117,10 @@ auto
         UCkUsf_CrossHatchPreset* InPreset)
     -> void
 {
-    const auto PresetIsValid = ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{});
+    const auto PresetIsValid = ck::IsValid(InPreset);
 
     CK_ENSURE_IF_NOT(PresetIsValid,
         TEXT("Apply_Preset: null CrossHatch preset; settings left untouched"))
-    {}
-
-    if (NOT PresetIsValid)
     { return; }
 
     Request_SetSettings(InPreset->Get_AsParams());
@@ -144,9 +141,6 @@ auto
              "engine's NO-STENCIL value 0; it would match every untagged pixel in the view or none at "
              "all. Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
-    {}
-
-    if (NOT MaskRangeIsAddressable)
     { return; }
 
     const auto MaskRangeAvoidsOutline =
@@ -156,9 +150,6 @@ auto
         TEXT("Request_SetSettings: CrossHatch effect-mask range [{}, {}] COLLIDES with the outline "
              "subsystem's allocated range; settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
-    {}
-
-    if (NOT MaskRangeAvoidsOutline)
     { return; }
 
     const auto MaskRangeAvoidsCelPatterns =
@@ -169,9 +160,6 @@ auto
              "per-object pattern span in this world; one stencil value cannot both select a cel pattern "
              "and gate this look. Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
-    {}
-
-    if (NOT MaskRangeAvoidsCelPatterns)
     { return; }
 
     _SettingsExplicitlySet = true;
@@ -218,7 +206,7 @@ auto
 
     const auto MasterPath = ck::usf::Get_GeneratedMasterObjectPath(kLookName);
     auto* Master = LoadObject<UMaterialInterface>(nullptr, *MasterPath);
-    if (ck::Is_NOT_Valid(Master, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Master))
     {
         if (NOT _WarnedMissingMaster)
         {
@@ -316,7 +304,7 @@ auto
 
     auto* Preset = SoftPreset.LoadSynchronous();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Preset, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Preset),
         TEXT("Project settings name [{}] as the default CrossHatch preset, but it could not be loaded"),
         SoftPreset.ToString())
     {}

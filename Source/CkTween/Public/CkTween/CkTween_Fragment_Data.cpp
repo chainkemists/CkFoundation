@@ -8,9 +8,9 @@
 
 auto FCk_TweenCurveChannels::Get_HasAnyCurve() const -> bool
 {
-    return ck::IsValid(_X.Get(), ck::IsValid_Policy_NullptrOnly{}) ||
-           ck::IsValid(_Y.Get(), ck::IsValid_Policy_NullptrOnly{}) ||
-           ck::IsValid(_Z.Get(), ck::IsValid_Policy_NullptrOnly{});
+    return ck::IsValid(_X.Get()) ||
+           ck::IsValid(_Y.Get()) ||
+           ck::IsValid(_Z.Get());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -107,7 +107,8 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
 
         const auto* Info = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
         TestNotNull(TEXT("type still registered after permissive update"), Info);
-        if (Info == nullptr) { return false; }
+        if (Info == nullptr)
+        { return false; }
         TestTrue(TEXT("permissive validator returns true"), Info->IsValidAsType(FCk_Handle{}));
         TestEqual(TEXT("RequiredFragments is empty"), Info->RequiredFragments.Num(), 0);
         TestEqual(TEXT("Description == 'permissive state'"), Info->Description, FString{TEXT("permissive state")});
@@ -124,7 +125,8 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
 
         const auto* Info = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
         TestNotNull(TEXT("type still registered after strict update"), Info);
-        if (Info == nullptr) { return false; }
+        if (Info == nullptr)
+        { return false; }
         TestFalse(TEXT("strict validator returns false"), Info->IsValidAsType(FCk_Handle{}));
         TestEqual(TEXT("RequiredFragments has 2 entries"), Info->RequiredFragments.Num(), 2);
         TestEqual(TEXT("RequiredFragments[0]"), Info->RequiredFragments[0], FString{TEXT("test_fragment_1")});
@@ -136,7 +138,8 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
     // The Cast lambdas capture the validator by value; Update rebuilds them with the new closure.
     {
         const auto* Info = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
-        if (Info == nullptr) { return false; }
+        if (Info == nullptr)
+        { return false; }
 
         const auto CastResult = Info->Cast(FCk_Handle{});
         TestFalse(TEXT("strict Cast returns invalid handle"), ck::IsValid(CastResult));
@@ -161,7 +164,8 @@ bool FCkTest_HandleRegistry_Update_PointerStability::RunTest(const FString&)
 
     const auto* BeforeUpdate = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
     TestNotNull(TEXT("type info before update"), BeforeUpdate);
-    if (BeforeUpdate == nullptr) { return false; }
+    if (BeforeUpdate == nullptr)
+    { return false; }
 
     FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle(
         TestTypeName,
@@ -172,7 +176,8 @@ bool FCkTest_HandleRegistry_Update_PointerStability::RunTest(const FString&)
 
     const auto* AfterUpdate = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
     TestNotNull(TEXT("type info after update"), AfterUpdate);
-    if (AfterUpdate == nullptr) { return false; }
+    if (AfterUpdate == nullptr)
+    { return false; }
 
     TestEqual(TEXT("TypeInfo pointer is stable across Update"),
         reinterpret_cast<UPTRINT>(BeforeUpdate),

@@ -33,7 +33,7 @@ namespace ck_k2node_cue
 auto UCk_K2Node_Cue_Base::PostEditChangeProperty(
     FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
-    const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property, ck::IsValid_Policy_NullptrOnly{})
+    const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property)
                                 ? PropertyChangedEvent.Property->GetFName()
                                 : NAME_None;
 

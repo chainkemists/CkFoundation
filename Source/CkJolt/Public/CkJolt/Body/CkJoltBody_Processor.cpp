@@ -174,13 +174,13 @@ namespace ck
             {
                 const UStaticMesh* Mesh = InParams.Get_StaticMesh();
 
-                CK_ENSURE_IF_NOT(ck::IsValid(Mesh, ck::IsValid_Policy_NullptrOnly{}),
+                CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
                     TEXT("JoltBody on Entity [{}] uses ShapeSource StaticMeshAsset but has NO StaticMesh set."), InHandle)
                 { return; }
 
                 auto* BodySetup = Mesh->GetBodySetup();
 
-                CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
+                CK_ENSURE_IF_NOT(ck::IsValid(BodySetup),
                     TEXT("JoltBody on Entity [{}]: StaticMesh [{}] has NO BodySetup (no collision geometry)."),
                     InHandle, Mesh->GetName())
                 { return; }
@@ -283,7 +283,7 @@ namespace ck
             case ECk_JoltBody_MassSource::FromStaticMesh:
             {
                 CK_ENSURE_IF_NOT(InParams.Get_ShapeSource() == ECk_JoltBody_ShapeSource::StaticMeshAsset &&
-                    ck::IsValid(MeshBodySetup, ck::IsValid_Policy_NullptrOnly{}),
+                    ck::IsValid(MeshBodySetup),
                     TEXT("JoltBody on Entity [{}] uses MassSource FromStaticMesh but has no StaticMesh BodySetup — "
                          "falling back to shape-calculated mass."), InHandle)
                 { break; }
@@ -307,7 +307,7 @@ namespace ck
             case ECk_JoltBody_SurfaceSource::PhysicalMaterial:
             {
                 const UPhysicalMaterial* PhysMat = InParams.Get_PhysicalMaterial().Get();
-                if (ck::IsValid(PhysMat, ck::IsValid_Policy_NullptrOnly{}))
+                if (ck::IsValid(PhysMat))
                 {
                     Settings.mFriction = PhysMat->Friction;
                     Settings.mRestitution = PhysMat->Restitution;

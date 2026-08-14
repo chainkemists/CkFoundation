@@ -24,7 +24,7 @@ namespace ck::jolt
     {
         const auto* CollisionProfiles = UCollisionProfile::Get();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CollisionProfiles, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(CollisionProfiles),
             TEXT("UCollisionProfile unavailable — the Jolt layer table cannot seed from profiles"))
         { return; }
 

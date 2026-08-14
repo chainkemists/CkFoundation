@@ -17,18 +17,12 @@ auto
 
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] supplied to UCk_Utils_VoxelNavOccluder_UE::Add"), InHandle)
-    {}
-
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto FeatureIsAbsent = NOT Has(InHandle);
 
     CK_ENSURE_IF_NOT(FeatureIsAbsent,
         TEXT("Entity [{}] already has the VoxelNavOccluder feature"), InHandle)
-    {}
-
-    if (NOT FeatureIsAbsent)
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_VoxelNavOccluder_Params>(InParams);

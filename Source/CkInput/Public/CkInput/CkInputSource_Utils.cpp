@@ -26,8 +26,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an InputSource onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     InHandle.Add<ck::FFragment_InputSource_Params>(InParams);
@@ -46,8 +44,6 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Create: invalid owner Handle [{}] — cannot create an InputSource under it"), InOwner)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -152,8 +148,6 @@ auto
     const auto SourceIsValid = ck::IsValid(InInputSource);
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("Request_InjectRawEvent: invalid InputSource handle [{}] — the event is dropped"), InInputSource)
-    {}
-    if (NOT SourceIsValid)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;
@@ -179,8 +173,6 @@ auto
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("Request_AssignDevice: invalid InputSource handle [{}] — a device may only be assigned to a "
              "source that exists"), InInputSource)
-    {}
-    if (NOT SourceIsValid)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;
@@ -192,8 +184,6 @@ auto
     CK_ENSURE_IF_NOT(UserIndexIsValid,
         TEXT("Request_AssignDevice: raw device user index [{}] on InputSource [{}] is negative and cannot "
              "identify a device"), RawDeviceUserIndex, InInputSource)
-    {}
-    if (NOT UserIndexIsValid)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;

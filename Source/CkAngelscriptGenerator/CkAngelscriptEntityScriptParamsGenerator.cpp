@@ -35,7 +35,7 @@ namespace ck_entity_script_params_generator
 
     auto Is_IncludedEntityScriptClass(UClass* InClass) -> bool
     {
-        if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InClass))
         { return false; }
 
         if (NOT InClass->IsChildOf(UCk_EntityScript_UE::StaticClass()))
@@ -47,7 +47,7 @@ namespace ck_entity_script_params_generator
         // Blueprint-asset entity scripts are excluded — their params are BP-authored and their
         // visibility depends on per-process load state. CLASS_CompiledFromBlueprint cannot be
         // used here: the AS engine fork sets that flag on AngelScript classes too.
-        if (ck::IsValid(Cast<UBlueprintGeneratedClass>(InClass), ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(Cast<UBlueprintGeneratedClass>(InClass)))
         { return false; }
 
         constexpr auto DisqualifyingFlags =
@@ -126,7 +126,7 @@ namespace ck_entity_script_params_generator
         Emission.DeclLine = ck::Format_UE(TEXT("    UPROPERTY({})\n    {} {}"), Specifiers, AsType, PropName);
 
         const auto* CDO = InClass->GetDefaultObject();
-        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CDO))
         {
             Emission.DeclLine += TEXT(";");
             return Emission;
@@ -209,7 +209,7 @@ namespace ck_entity_script_params_generator
         const auto AllProperties = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(InClass);
         const auto ValidProps = ck::algo::Filter(AllProperties, [](FProperty* InProp)
         {
-            return ck::IsValid(InProp, ck::IsValid_Policy_NullptrOnly{});
+            return ck::IsValid(InProp);
         });
         OutPropertyCount = ValidProps.Num();
 
@@ -598,7 +598,7 @@ auto
     -> FString
 {
     const auto ReflectedType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
-    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InProperty))
     { return ReflectedType; }
 
     // Weak/soft properties already carry an explicit retention policy, and they share

@@ -19,15 +19,11 @@ namespace ck_dynamic_script_query
         const auto TypeIsValid = ck::IsValid(InType);
         CK_ENSURE_IF_NOT(TypeIsValid,
             TEXT("Invalid fragment type passed to script processor query"))
-        {}
-        if (NOT TypeIsValid)
         { InQuery._AdmissionFailed = true; return; }
 
         const auto AcceptsSlots = NOT InQuery._NoEntities;
         CK_ENSURE_IF_NOT(AcceptsSlots,
             TEXT("Cannot add fragment [{}] to a script processor query after NoEntities()"), InType)
-        {}
-        if (NOT AcceptsSlots)
         { InQuery._AdmissionFailed = true; return; }
 
         const auto Schema = ck::dynamic::Validate_FragmentSchema(InType);
@@ -44,8 +40,6 @@ namespace ck_dynamic_script_query
         const auto SlotIsUnique = NOT AlreadyPresent;
         CK_ENSURE_IF_NOT(SlotIsUnique,
             TEXT("Fragment [{}] declared more than once in a script processor query. Keeping the first slot."), InType)
-        {}
-        if (NOT SlotIsUnique)
         { InQuery._AdmissionFailed = true; return; }
 
         auto Slot = FCk_ScriptQuerySlot{};
@@ -114,8 +108,6 @@ auto
     const auto HasNoSlots = InQuery._Slots.IsEmpty();
     CK_ENSURE_IF_NOT(HasNoSlots,
         TEXT("NoEntities() requires an empty slot list, but the query already has [{}] slot(s)"), InQuery._Slots.Num())
-    {}
-    if (NOT HasNoSlots)
     { InQuery._AdmissionFailed = true; return; }
 
     InQuery._NoEntities = true;

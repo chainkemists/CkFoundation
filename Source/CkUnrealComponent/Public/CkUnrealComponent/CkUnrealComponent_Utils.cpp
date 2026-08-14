@@ -112,8 +112,6 @@ auto
     const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
     CK_ENSURE_IF_NOT(UnrealComponentIsValid,
         TEXT("Cannot Remove invalid UnrealComponent"))
-    {}
-    if (NOT UnrealComponentIsValid)
     {
         InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -139,8 +137,6 @@ auto
     const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
     CK_ENSURE_IF_NOT(UnrealComponentIsValid,
         TEXT("Cannot disable transform-push on invalid UnrealComponent"))
-    {}
-    if (NOT UnrealComponentIsValid)
     {
         InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InUnrealComponent;
@@ -163,14 +159,12 @@ auto
 {
     auto* PrimitiveComponent = ::Cast<UPrimitiveComponent>(Get_Component(InUnrealComponent));
 
-    const auto ComponentIsBakeable = ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{});
+    const auto ComponentIsBakeable = ck::IsValid(PrimitiveComponent);
     CK_ENSURE_IF_NOT(ComponentIsBakeable,
         TEXT("Cannot bake UnrealComponent [{}] into the Jolt static world — it hosts no PRIMITIVE component "
              "(not set up yet, torn down, or a non-primitive class). Call this after the component is "
              "created AND configured (an ISM baked before its instances are added bakes nothing)."),
         InUnrealComponent)
-    {}
-    if (NOT ComponentIsBakeable)
     {
         InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InUnrealComponent;
@@ -201,8 +195,6 @@ auto
     const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
     CK_ENSURE_IF_NOT(UnrealComponentIsValid,
         TEXT("Cannot remove an invalid UnrealComponent from the Jolt static world"))
-    {}
-    if (NOT UnrealComponentIsValid)
     {
         InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InUnrealComponent;
@@ -213,7 +205,7 @@ auto
         InUnrealComponent.Remove<ck::FTag_UnrealComponent_BakedIntoStaticWorld>();
 
         if (auto* PrimitiveComponent = ::Cast<UPrimitiveComponent>(Get_Component(InUnrealComponent));
-            ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(PrimitiveComponent))
         { UCk_Utils_JoltStaticWorld_UE::Request_RemoveComponent(PrimitiveComponent); }
     }
 

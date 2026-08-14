@@ -146,7 +146,7 @@ auto
         USplineComponent* InSourceSpline)
     -> FCk_Handle_Spline
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InSourceSpline, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InSourceSpline),
         TEXT("Cannot Add a Spline feature with an invalid USplineComponent."))
     { return {}; }
 
@@ -178,7 +178,7 @@ auto
         USplineComponent* InSourceSpline)
     -> FCk_Handle_Spline
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InSourceSpline, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InSourceSpline),
         TEXT("Cannot Create a Spline with an invalid USplineComponent."))
     { return {}; }
 

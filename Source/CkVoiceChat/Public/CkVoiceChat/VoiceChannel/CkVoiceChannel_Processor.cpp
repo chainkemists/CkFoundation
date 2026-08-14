@@ -152,9 +152,6 @@ namespace ck
                 TEXT("VoiceChannel [{}] failed to resolve its authored audio config through CkResourceLoader "
                      "(Attenuation [{}], SourceEffectChain [{}]) - playback on this machine falls back to module defaults"),
                 InVoiceChannelEntity, Attenuation.ToSoftObjectPath(), SourceEffectChain.ToSoftObjectPath())
-            {}
-
-            if (NOT EveryAuthoredAssetResolved)
             {
                 InCurrent._LoadedAudioAssets = {};
                 InCurrent._ResolvedAttenuation = nullptr;
@@ -197,8 +194,6 @@ namespace ck
                  "unroutable. Indices are session-append-only by design: a stale wire ChannelIdx must resolve "
                  "to nothing, never to a different channel."),
             VoiceChannel_UnassignedIdx, InVoiceChannelEntity, InParams.Get_ChannelName())
-        {}
-        if (NOT IdxSpaceRemains)
         { return; }
 
         const auto NewIdx = static_cast<uint8>(Registry._NextIdx++);
@@ -259,8 +254,6 @@ namespace ck
         const auto TalkerIsValid = ck::IsValid(Talker);
         CK_ENSURE_IF_NOT(TalkerIsValid,
             TEXT("Join on VoiceChannel [{}] with an invalid Talker handle"), InHandle)
-        {}
-        if (NOT TalkerIsValid)
         { return false; }
 
         const auto WasAlreadyMember = InCurrent._Members.Contains(Talker);
@@ -309,8 +302,6 @@ namespace ck
         const auto IsMember = InCurrent._Members.Contains(Talker);
         CK_ENSURE_IF_NOT(IsMember,
             TEXT("SetMemberFlags on VoiceChannel [{}] for Talker [{}] who is not a member"), InHandle, Talker)
-        {}
-        if (NOT IsMember)
         { return false; }
 
         InCurrent._Members.Add(Talker, InRequest.Get_MemberFlags());
@@ -330,8 +321,6 @@ namespace ck
         const auto TalkerIsValid = ck::IsValid(Talker);
         CK_ENSURE_IF_NOT(TalkerIsValid,
             TEXT("ServerMute on VoiceChannel [{}] with an invalid Talker handle"), InHandle)
-        {}
-        if (NOT TalkerIsValid)
         { return false; }
 
         InCurrent._ServerMuted.Add(Talker);

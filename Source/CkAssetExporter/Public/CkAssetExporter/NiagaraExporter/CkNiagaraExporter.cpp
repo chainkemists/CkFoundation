@@ -988,13 +988,15 @@ auto
             auto Index = int32{0};
             for (const auto* Module : Modules)
             {
-                if (Module == nullptr) { continue; }
+                if (Module == nullptr)
+                { continue; }
                 Out += ck::Format_UE(TEXT("    {}. {}{}\n"), FString::FromInt(++Index),
                     Module->GetNodeTitle(ENodeTitleType::ListView).ToString(),
                     Module->IsNodeEnabled() ? TEXT("") : TEXT("  (DISABLED)"));
                 for (const auto& Input : DoGetModuleInputs(Module))
                 {
-                    if (Input.Value.IsEmpty()) { continue; }
+                    if (Input.Value.IsEmpty())
+                    { continue; }
                     Out += ck::Format_UE(TEXT("         {} = {}\n"), Input.Key, Input.Value);
                 }
 
@@ -1013,7 +1015,8 @@ auto
             auto bWroteUnattachedHeader = false;
             for (auto It = Overrides.CreateConstIterator(); It; ++It)
             {
-                if (ConsumedKeys.Contains(It.Key())) { continue; }
+                if (ConsumedKeys.Contains(It.Key()))
+                { continue; }
                 if (NOT bWroteUnattachedHeader)
                 { Out += TEXT("    [unattached overrides]\n"); bWroteUnattachedHeader = true; }
                 Out += ck::Format_UE(TEXT("       {}: {}\n"), It.Key(), DoFormatOverride_Text(It.Value()));
@@ -1024,7 +1027,8 @@ auto
             for (const auto& Var : Rip.ReadParameterVariables())
             {
                 const auto Formatted = ck::asset_exporter::niagara::FormatStoreValue(Rip, Var);
-                if (NOT Formatted.IsSet()) { continue; }
+                if (NOT Formatted.IsSet())
+                { continue; }
                 if (NOT bWroteValuesHeader)
                 { Out += TEXT("    [values]\n"); bWroteValuesHeader = true; }
                 auto VarName = Var.GetName().ToString();
@@ -1039,7 +1043,8 @@ auto
             Out += ck::Format_UE(TEXT("  Renderers ({}):\n"), FString::FromInt(Renderers.Num()));
             for (const auto* Renderer : Renderers)
             {
-                if (Renderer == nullptr) { continue; }
+                if (Renderer == nullptr)
+                { continue; }
                 Out += ck::Format_UE(TEXT("    - {}"), Renderer->GetClass()->GetName());
                 if (const auto* Sprite = Cast<UNiagaraSpriteRendererProperties>(Renderer))
                 {
@@ -1142,7 +1147,8 @@ auto
     auto Arr = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto* Module : Modules)
     {
-        if (Module == nullptr) { continue; }
+        if (Module == nullptr)
+        { continue; }
         auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
         constexpr auto MaintainOrder = true;
         Overrides.MultiFind(Module->GetFunctionName(), ModuleOverrides, MaintainOrder);
@@ -1171,7 +1177,8 @@ auto
     for (const auto& Var : Rip.ReadParameterVariables())
     {
         const auto Formatted = ck::asset_exporter::niagara::FormatStoreValue(Rip, Var);
-        if (NOT Formatted.IsSet()) { continue; }
+        if (NOT Formatted.IsSet())
+        { continue; }
         auto ValObj = MakeShared<FJsonObject>();
         auto VarName = Var.GetName().ToString();
         VarName.RemoveFromStart(TEXT("Constants."));
@@ -1385,7 +1392,8 @@ auto
     auto Renderers = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto* Renderer : InData->GetRenderers())
     {
-        if (Renderer == nullptr) { continue; }
+        if (Renderer == nullptr)
+        { continue; }
         Renderers.Add(MakeShared<FJsonValueObject>(DoSerializeRenderer_Json(Renderer)));
     }
     Obj->SetArrayField(TEXT("renderers"), Renderers);

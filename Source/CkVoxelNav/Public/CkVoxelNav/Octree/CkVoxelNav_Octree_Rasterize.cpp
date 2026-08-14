@@ -48,9 +48,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(HasLayers,
             TEXT("Cannot prepare rasterize scratch for a VoxelNav octree that has no layers"))
-        {}
-
-        if (NOT HasLayers)
         { return; }
 
         InOutScratch._BlockedNodes.SetNum(InOctree.Get_LayerCount() + 1);
@@ -99,9 +96,6 @@ namespace ck::voxelnav
             TEXT("Cannot rasterize layer 1 of a VoxelNav octree with [{}] layers against a scratch holding "
                  "[{}] blocked-node sets"),
             InOctree.Get_LayerCount(), InOutScratch._BlockedNodes.Num())
-        {}
-
-        if (NOT OctreeCarriesALayerOne)
         { return Result; }
 
         const auto& Layer = InOctree.Get_Layer(LeafParentLayerIndex);
@@ -142,9 +136,6 @@ namespace ck::voxelnav
             TEXT("Rasterize scratch holds [{}] blocked-node sets, which cannot carry a VoxelNav octree of "
                  "[{}] layers"),
             InOutScratch._BlockedNodes.Num(), LayerCount)
-        {}
-
-        if (NOT ScratchIsSized)
         { return; }
 
         for (auto LayerCursor = 1; LayerCursor < LayerCount; ++LayerCursor)
@@ -173,9 +164,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(ScratchIsInitialized,
             TEXT("Cannot allocate VoxelNav leaves from a rasterize scratch that holds no blocked-node sets"))
-        {}
-
-        if (NOT ScratchIsInitialized)
         { return; }
 
         const auto& BlockedParentCodes = InOutScratch._BlockedNodes[0];
@@ -359,9 +347,6 @@ namespace ck::voxelnav
             TEXT("Cannot rasterize VoxelNav layer [{}] - the octree has [{}] layers and the scratch holds "
                  "[{}] blocked-node sets"),
             static_cast<int32>(InLayerIndex), LayerCount, InOutScratch._BlockedNodes.Num())
-        {}
-
-        if (NOT LayerIsRasterizable)
         { return Result; }
 
         const auto& BlockedParentCodes = InOutScratch._BlockedNodes[InLayerIndex];
@@ -446,9 +431,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(LeafIsInRange,
                 TEXT("Cannot link leaf [{}] to its parent - the leaf store holds [{}] leaves"),
                 LeafIdx, InOutOctree.Get_LeafNodes().Get_LeafNodes().Num())
-            {}
-
-            if (NOT LeafIsInRange)
             { continue; }
 
             const auto ParentIndex = Get_NodeIndexFromMorton(
@@ -485,9 +467,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Cannot build neighbour links for VoxelNav layer [{}] - the octree has [{}] layers"),
             static_cast<int32>(InLayerIndex), LayerCount)
-        {}
-
-        if (NOT LayerIsInRange)
         { return Result; }
 
         // The topmost layer a climb may reach. An int32 cursor, because the upstream loop counted down
@@ -579,9 +558,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Layer [{}] is outside the VoxelNav octree's [{}] layers"),
             static_cast<int32>(InLayerIndex), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return Result; }
 
         const auto& Layer = InOctree.Get_Layer(InLayerIndex);
@@ -592,9 +568,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(NodeIsInRange,
             TEXT("Node [{}] is outside VoxelNav layer [{}]'s [{}] nodes"),
             InNodeIndex, static_cast<int32>(InLayerIndex), LayerNodes.Num())
-        {}
-
-        if (NOT NodeIsInRange)
         { return Result; }
 
         const auto DirectionIsInRange = InDirection < 6;
@@ -602,9 +575,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(DirectionIsInRange,
             TEXT("Neighbour direction [{}] is outside the six orthogonal faces"),
             static_cast<int32>(InDirection))
-        {}
-
-        if (NOT DirectionIsInRange)
         { return Result; }
 
         const auto& TargetNode = LayerNodes[InNodeIndex];

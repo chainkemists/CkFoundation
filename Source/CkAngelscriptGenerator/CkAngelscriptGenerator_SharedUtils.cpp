@@ -162,7 +162,7 @@ auto
         FProperty* InProperty)
     -> FString
 {
-    if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InProperty))
     { return TEXT("void"); }
 
     // Independent source of truth for retention: in some reinstancing states a runtime-generated

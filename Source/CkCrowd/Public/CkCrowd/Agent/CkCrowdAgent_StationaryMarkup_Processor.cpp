@@ -86,8 +86,6 @@ namespace ck
             SpeedThresholdIsValid,
             TEXT("Invalid stationary-markup speed threshold [{}]"),
             StationarySpeedThreshold)
-        {}
-        if (NOT SpeedThresholdIsValid)
         {
             Remove_Markup(InMarkup);
             return;

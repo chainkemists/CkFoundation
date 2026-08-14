@@ -39,9 +39,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(IndexIsInRange,
             TEXT("VoxelNav chunk index [{}] is outside the partition's [{}] chunks"),
             InChunkIndex, _ChunkBounds.Num())
-        {}
-
-        if (NOT IndexIsInRange)
         { return FBox{ForceInit}; }
 
         return _ChunkBounds[InChunkIndex];
@@ -68,9 +65,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(DivisionsAreUsable,
             TEXT("VoxelNav chunk divisions [{}] must be positive on every axis"), InDivisions)
-        {}
-
-        if (NOT DivisionsAreUsable)
         { return FIntVector::ZeroValue; }
 
         const auto Z = InChunkIndex % InDivisions.Z;
@@ -143,9 +137,12 @@ namespace ck::voxelnav
                     // Snapped rather than accumulated: repeated addition of a divided size leaves the last
                     // chunk short of the authored bound by a float's worth, and that sliver is space no
                     // chunk would ever bake.
-                    if (X == Divisions.X - 1) { ChunkMax.X = InParams._VolumeBounds.Max.X; }
-                    if (Y == Divisions.Y - 1) { ChunkMax.Y = InParams._VolumeBounds.Max.Y; }
-                    if (Z == Divisions.Z - 1) { ChunkMax.Z = InParams._VolumeBounds.Max.Z; }
+                    if (X == Divisions.X - 1)
+                    { ChunkMax.X = InParams._VolumeBounds.Max.X; }
+                    if (Y == Divisions.Y - 1)
+                    { ChunkMax.Y = InParams._VolumeBounds.Max.Y; }
+                    if (Z == Divisions.Z - 1)
+                    { ChunkMax.Z = InParams._VolumeBounds.Max.Z; }
 
                     Partition._ChunkBounds.Emplace(FBox{ChunkMin, ChunkMax});
                 }
@@ -174,9 +171,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(PortalIsUsable,
             TEXT("VoxelNav chunk portal [{}] -> [{}] does not name two distinct valid chunks"),
             FromIndex, ToIndex)
-        {}
-
-        if (NOT PortalIsUsable)
         { return; }
 
         _PortalsByPair.FindOrAdd(Get_PairKey(FromIndex, ToIndex)).Emplace(InPortal);

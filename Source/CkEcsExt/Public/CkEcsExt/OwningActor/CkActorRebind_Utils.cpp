@@ -16,7 +16,7 @@ auto
         AActor* InActor)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntity) && ck::IsValid(InActor, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity) && ck::IsValid(InActor),
         TEXT("Request_RebindActor: invalid entity [{}] or actor [{}]"), InEntity, InActor)
     { return; }
 

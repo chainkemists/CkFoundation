@@ -40,11 +40,11 @@ failure mode of incoming engineers and models — read them twice.
    Shipping (checks are NOT compiled out by default — see `ck-macros-and-codegen` skill).
 3. **Never silently handle an error.** A `Warning`/`Error` log-and-continue where validation failed
    is a review rejection: logs get ignored, ensures do not. Fire `CK_ENSURE_IF_NOT` with a
-   diagnostic, then use a separate ordinary `if` as the *correct* silent-failure path. No
-   fallbacks that hide problems, ever, unless explicitly requested.
+   diagnostic and put the *correct* recovery in its body. No fallbacks that hide problems, ever,
+   unless explicitly requested.
    The ensure condition itself must be safe for malformed, default, stale, and partially
    initialized input: validate outer prerequisites first, then deeper invariants in separate
-   guards. The separate ordinary failure branch may record an explicit failure/result state, but
+   guards. The failure body may record an explicit failure/result state, but
    must immediately terminate the operation. Never touch the rejected value, continue through a mutable sentinel,
    or leave accepted partial state runnable. Registration, admission, composition, and
    configuration are atomic: one rejected required declaration invalidates the whole sequence.
@@ -134,23 +134,59 @@ auto
 indent, CRLF, `#pragma once`; includes ordered own-header → Ck module paths → engine → `*.generated.h` last.
 `// ----…----` separator lines between top-level declarations.
 
-**Validation & flow.** Compute a side-effect-safe condition once, diagnose it with the ensure macro,
-then early-out through a separate ordinary branch:
+**Validation & flow.** Compute a side-effect-safe condition once, then diagnose AND recover in the
+ensure macro's own body — it is an inverted `if`, so that body IS the failure path:
 
 ```cpp
 const auto HandleIsValid = ck::IsValid(InHandle);
 CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Timer Handle [{}]"), InHandle)
-{}
-if (NOT HandleIsValid)
 { return {}; }
 
 if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
 { TimerChrono.Reset(); }
 ```
 
+Do **not** write the older `{}` + separate `if (NOT Cond)` shape. It exists in git history because
+`CK_ENSURE_IF_NOT` expands to `if constexpr(false)` under `CK_DISABLE_ENSURE_CHECKS`, which would
+delete a body containing the recovery. **That configuration is unreachable**: `CkBuildConfig.Build.cs`
+pins `BuildConfigurationOverride` to `MatchWithUnreal` as a compile-time `const` (the `Profile` case
+is dead code — the file even flags it unreachable), and every reachable branch sets
+`CK_DISABLE_ENSURE_CHECKS=0`.
+
+⚠️ **Before ever enabling `Profile`, change the macro first.** ~2,300 call sites now put recovery
+inside the ensure body; flipping that `const` without first making `CK_ENSURE_IF_NOT` preserve
+control flow (expand to `if (NOT (InExpression))`, exactly as the `CK_DISABLE_ENSURE_DEBUGGING`
+branch already does) would silently delete every one of those early-outs at once.
+
 `ck::IsValid` / `ck::Is_NOT_Valid` for all validity; `NOT` macro instead of `!`;
 `ck::IsValid_Policy_NullptrOnly{}` is for RAW pointers only (smart pointers have their own
 overloads — pass them bare).
+
+**Negated validity is `ck::Is_NOT_Valid(X)`, never `NOT ck::IsValid(X)`.** The two compile the same;
+only the first is greppable as a single token and reads as one predicate rather than a negation of
+another. Same rule for the typed variants.
+
+> **One exception — the two-argument `(entity, context)` overload.** `ck::IsValid(Entity, Context)`
+> validates an entity *against a context handle*; `Is_NOT_Valid`'s second parameter is the
+> validation **policy**, so a context handle silently binds as `T_Policy` and fails to compile
+> (or worse, resolves to the wrong check). Write `NOT ck::IsValid(Entity, Context)` there — see
+> `CkEntityLifetime_Utils.cpp:156`. A second argument that IS a policy (`IsValid_Policy_*{}`,
+> `T_ValidationPolicy{}`) is fine on either spelling.
+
+**Never put an `if` and its body on the same line.** The brace block goes on the next line at the
+same indent, even when the body is a single statement:
+
+```cpp
+// ✅
+if (Resolved.IsValid())
+{ Def.Preconditions.Add(Resolved); }
+
+// ❌
+if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
+```
+
+This keeps every branch body on a line of its own, so a diff shows which branch changed and a
+breakpoint can be set on the body independently of the condition.
 
 **Typesafe handle conversion: `UCk_Utils_X_UE::CastChecked` / `::Cast` — NEVER
 `ck::StaticCast<FCk_Handle_X>`.** `ck::StaticCast` is the unchecked primitive those two are built on;
@@ -269,10 +305,11 @@ Canonical reference: `CkTimer`. Every feature module carries the contract.
 `Succeeded`, not `Failed`. Reserve `Failed` for an intent that does not hold afterwards and that
 retrying will not fix (a terminal-state target, a missing asset, a rejected transition).
 
-**Never strand a caller.** A `Request_*` that early-returns must still complete. Do NOT fire from
-inside a `CK_ENSURE_IF_NOT` body — that body compiles out under `CK_DISABLE_ENSURE_CHECKS`. Use the
-non-negotiable-#3 shape instead: hoist the condition to a local, give the ensure an empty body, and
-early-out through a separate ordinary `if` that fires `Failed_NotEnqueued`.
+**Never strand a caller.** A `Request_*` that early-returns must still complete: hoist the condition
+to a local and fire `Failed_NotEnqueued` from inside the `CK_ENSURE_IF_NOT` body before returning.
+(Earlier revisions of this file forbade that on the grounds the body compiles out under
+`CK_DISABLE_ENSURE_CHECKS` — see *Validation & flow* above: that configuration is unreachable, and
+the split shape it prescribed has been removed from the codebase.)
 
 **Not every `Request_*` is in scope.** The contract applies to functions that enqueue an
 `FCk_Request_Base`-derived struct onto a `_Requests` fragment, plus immediate mutators on an entity
@@ -333,7 +370,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 | `CK_GENERATED_BODY(T)` | ThisType alias + formatter/AS plumbing | Must precede macros that need `ThisType` |
 | `CK_PROPERTY(_X)` / `CK_PROPERTY_GET(_X)` | Accessor generation (`Get`+`_X` by token-paste) | Member MUST start with `_` or names break |
 | `CK_DEFINE_CONSTRUCTORS(T, ...)` | Default + essential-param ctors | Structs only — never UObjects; max 9 params; 1-arg ctor is `explicit` |
-| `CK_ENSURE_IF_NOT(expr, fmt, ...)` | Diagnostic inverted-if syntax | May compile out; use a separate ordinary branch for validation and recovery |
+| `CK_ENSURE_IF_NOT(expr, fmt, ...)` | Diagnostic inverted-if syntax | Body IS the failure path — put the recovery in it; hoist `expr` to a local so it evaluates once |
 | `CK_DEFINE_ECS_TAG(_COUNTED)` | Tag fragment | Counted variant tracks add/remove depth |
 | `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE` | Signal + BP delegate + Bind/Unbind utils | PostFire `Unbind` is a distinct generated fragment type |
 | `CK_SIGNAL_BIND / CK_SIGNAL_UNBIND` | (Un)subscribe | Unbind + replay never connects — order matters |

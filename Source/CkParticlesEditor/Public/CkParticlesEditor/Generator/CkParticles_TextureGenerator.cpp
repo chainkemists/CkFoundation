@@ -731,10 +731,14 @@ namespace ck::particles_editor::TexGenLocal
 
         // The measured v anchors, verbatim; the strip dies between v 0.90 and 0.98.
         float Ramp;
-        if (V <= 0.25f)      { Ramp = FMath::Lerp(0.0f,   0.033f, Saturate(V / 0.25f)); }
-        else if (V <= 0.50f) { Ramp = FMath::Lerp(0.033f, 0.281f, (V - 0.25f) / 0.25f); }
-        else if (V <= 0.70f) { Ramp = FMath::Lerp(0.281f, 0.672f, (V - 0.50f) / 0.20f); }
-        else if (V <= 0.90f) { Ramp = FMath::Lerp(0.672f, 0.989f, (V - 0.70f) / 0.20f); }
+        if (V <= 0.25f)
+        { Ramp = FMath::Lerp(0.0f,   0.033f, Saturate(V / 0.25f)); }
+        else if (V <= 0.50f)
+        { Ramp = FMath::Lerp(0.033f, 0.281f, (V - 0.25f) / 0.25f); }
+        else if (V <= 0.70f)
+        { Ramp = FMath::Lerp(0.281f, 0.672f, (V - 0.50f) / 0.20f); }
+        else if (V <= 0.90f)
+        { Ramp = FMath::Lerp(0.672f, 0.989f, (V - 0.70f) / 0.20f); }
         else                 { Ramp = FMath::Lerp(0.989f, 0.015f, Saturate((V - 0.90f) / 0.08f)); }
 
         const float X    = FMath::Abs(U - 0.5f);
@@ -1229,8 +1233,10 @@ namespace ck::particles_editor::TexGenLocal
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
-        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
-        if (Package == nullptr) { return false; }
+        if (Package == nullptr)
+        { Package = CreatePackage(*PkgPath); }
+        if (Package == nullptr)
+        { return false; }
 
         if (auto* Old = StaticFindObject(UTexture2D::StaticClass(), Package, InName))
         {
@@ -1239,7 +1245,8 @@ namespace ck::particles_editor::TexGenLocal
         }
 
         auto* Texture = NewObject<UTexture2D>(Package, InName, RF_Public | RF_Standalone);
-        if (Texture == nullptr) { return false; }
+        if (Texture == nullptr)
+        { return false; }
 
         // FColor is laid out B,G,R,A in memory, matching TSF_BGRA8. Per-pixel functions always hand back LINEAR
         // colour, so the encode happens exactly once here and only for an sRGB texture.

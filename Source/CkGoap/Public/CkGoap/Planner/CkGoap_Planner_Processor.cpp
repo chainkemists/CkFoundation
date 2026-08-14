@@ -45,7 +45,8 @@ namespace ck_CkGoap_Planner_setup_internal
 		for (const auto& Pair : InAdj)
 		{
 			const auto& Root = Pair.Key;
-			if (Index.Contains(Root)) { continue; }
+			if (Index.Contains(Root))
+			{ continue; }
 
 			Index.Add(Root, NextIndex);
 			Lowlink.Add(Root, NextIndex);
@@ -89,7 +90,8 @@ namespace ck_CkGoap_Planner_setup_internal
 						const auto Popped = Stack.Pop();
 						OnStack.Remove(Popped);
 						Scc.Add(Popped);
-						if (Popped == NodeHandle) { break; }
+						if (Popped == NodeHandle)
+						{ break; }
 					}
 					Result.Add(MoveTemp(Scc));
 				}
@@ -139,7 +141,8 @@ auto
 		DirectChildren.Reserve(InCatalogIndex.Get_TagToAction().Num());
 		for (const auto& Pair : InCatalogIndex.Get_TagToAction())
 		{
-			if (ck::IsValid(Pair.Value)) { DirectChildren.Add(Pair.Value); }
+			if (ck::IsValid(Pair.Value))
+			{ DirectChildren.Add(Pair.Value); }
 		}
 	}
 
@@ -152,7 +155,8 @@ auto
 
 	for (const auto& Child : DirectChildren)
 	{
-		if (NOT ck::IsValid(Child)) { continue; }
+		if (ck::Is_NOT_Valid(Child))
+		{ continue; }
 		if (Child.template Has<FTag_Goap_Action_RequiresSetup>())
 		{
 			return;  // Defer, keeping RequiresSetup: the overlap pass below needs the child's _Definition.
@@ -165,20 +169,24 @@ auto
 
 	for (const auto& A : DirectChildren)
 	{
-		if (NOT ck::IsValid(A)) { continue; }
+		if (ck::Is_NOT_Valid(A))
+		{ continue; }
 		auto& Edges = Adj.Add(A);
 
 		const auto& DefA = A.template Get<FFragment_Goap_Action_Definition>();
 		const auto& EffectsA = DefA.Get_Effects();
-		if (EffectsA.IsEmpty()) { continue; }
+		if (EffectsA.IsEmpty())
+		{ continue; }
 
 		for (const auto& B : DirectChildren)
 		{
-			if (NOT ck::IsValid(B)) { continue; }
+			if (ck::Is_NOT_Valid(B))
+			{ continue; }
 
 			const auto& DefB = B.template Get<FFragment_Goap_Action_Definition>();
 			const auto& PreconditionsB = DefB.Get_Preconditions();
-			if (PreconditionsB.IsEmpty()) { continue; }
+			if (PreconditionsB.IsEmpty())
+			{ continue; }
 
 			auto MatchedKeys = TSet<FGameplayTag>{};
 			for (const auto& Eff : EffectsA)
@@ -209,7 +217,8 @@ auto
 		{
 			const auto* Edges = Adj.Find(Scc[0]);
 			const auto HasSelfLoop = (Edges != nullptr) && Edges->Contains(Scc[0]);
-			if (NOT HasSelfLoop) { continue; }
+			if (NOT HasSelfLoop)
+			{ continue; }
 		}
 
 		auto ActionsInCycle = TArray<TSubclassOf<UCk_GoapAction_EntityScript>>{};
@@ -219,7 +228,8 @@ auto
 
 		for (const auto& ActionHandleInScc : Scc)
 		{
-			if (NOT ck::IsValid(ActionHandleInScc)) { continue; }
+			if (ck::Is_NOT_Valid(ActionHandleInScc))
+			{ continue; }
 
 			const auto& Params = ActionHandleInScc.template Get<FFragment_Goap_Action_Params>();
 			ActionsInCycle.Add(Params.Get_ActionClass());
@@ -229,11 +239,13 @@ auto
 		for (const auto& Src : Scc)
 		{
 			const auto* Edges = Adj.Find(Src);
-			if (Edges == nullptr) { continue; }
+			if (Edges == nullptr)
+			{ continue; }
 
 			for (const auto& Dst : *Edges)
 			{
-				if (NOT SccNodeSet.Contains(Dst)) { continue; }
+				if (NOT SccNodeSet.Contains(Dst))
+				{ continue; }
 
 				if (const auto* Tags = EdgeConditions.Find(TPair<ActionHandle, ActionHandle>{Src, Dst}))
 				{
@@ -278,14 +290,17 @@ auto
 
 	const auto HasUnconditionalFallback = [&]() -> bool
 	{
-		if (InGoal._GoalAuthored.IsEmpty()) { return true; }
+		if (InGoal._GoalAuthored.IsEmpty())
+		{ return true; }
 
 		for (const auto& Child : DirectChildren)
 		{
-			if (NOT ck::IsValid(Child)) { continue; }
+			if (ck::Is_NOT_Valid(Child))
+			{ continue; }
 
 			const auto& Def = Child.template Get<FFragment_Goap_Action_Definition>();
-			if (NOT Def.Get_Preconditions().IsEmpty()) { continue; }
+			if (NOT Def.Get_Preconditions().IsEmpty())
+			{ continue; }
 
 			const auto& Effects = Def.Get_Effects();
 			auto AllGoalsCovered = true;
@@ -300,9 +315,11 @@ auto
 						break;
 					}
 				}
-				if (NOT Covered) { AllGoalsCovered = false; break; }
+				if (NOT Covered)
+				{ AllGoalsCovered = false; break; }
 			}
-			if (AllGoalsCovered) { return true; }
+			if (AllGoalsCovered)
+			{ return true; }
 		}
 		return false;
 	}();
@@ -332,7 +349,8 @@ namespace ck_goap_planner_processor
 {
 	auto Is_Composite(const FCk_Handle_Goap_Action& InAction) -> bool
 	{
-		if (NOT ck::IsValid(InAction)) { return false; }
+		if (ck::Is_NOT_Valid(InAction))
+		{ return false; }
 		const auto& Tree = InAction.template Get<FFragment_Goap_Action_Tree>();
 		return NOT Tree.Get_ChildActions().IsEmpty();
 	}
@@ -364,7 +382,7 @@ auto
 	}
 
 	const auto& WS = WSSource.Get_Resolved();
-	if (NOT ck::IsValid(WS))
+	if (ck::Is_NOT_Valid(WS))
 	{
 		for (const auto& Cond : Authored)
 		{
@@ -434,7 +452,8 @@ auto
 {
 	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	auto WS = WSSource._Resolved;
-	if (NOT ck::IsValid(WS)) { return; }
+	if (ck::Is_NOT_Valid(WS))
+	{ return; }
 
 	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
 	Subscribers._Subscribers.AddUnique(FCk_Handle{InAction});
@@ -448,7 +467,8 @@ auto
 {
 	auto& WSSource = InAction.template Get<FFragment_Goap_Planner_WorldStateSource>();
 	auto WS = WSSource._Resolved;
-	if (NOT ck::IsValid(WS)) { return; }
+	if (ck::Is_NOT_Valid(WS))
+	{ return; }
 
 	auto& Subscribers = WS.template Get<FFragment_Goap_WorldState_Subscribers>();
 	Subscribers._Subscribers.RemoveSwap(FCk_Handle{InAction});
@@ -462,7 +482,8 @@ auto
 		FCk_Handle_Goap_Action InPlanner,
 		FCk_Handle_Goap_Action InParent) -> void
 {
-	if (NOT ck::IsValid(InPlanner)) { return; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return; }
 
 	auto& Activation = InPlanner.template Get<FFragment_Goap_Planner_Activation>();
 	if (Activation._IsActive)
@@ -499,7 +520,8 @@ auto
 	FProcessor_Goap_Planner_UpdateActivation::
 	DoDeactivatePlanner(FCk_Handle_Goap_Action InPlanner) -> void
 {
-	if (NOT ck::IsValid(InPlanner)) { return; }
+	if (ck::Is_NOT_Valid(InPlanner))
+	{ return; }
 
 	auto& Activation = InPlanner.template Get<FFragment_Goap_Planner_Activation>();
 	if (NOT Activation._IsActive)
@@ -562,21 +584,25 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_UpdateActivation);
 
-	if (NOT InActivation._IsActive) { return; }
+	if (NOT InActivation._IsActive)
+	{ return; }
 
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
+	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	{ return; }
 
 	const auto PlanStatus = InPlanState.Get_PlanStatus();
 	const auto DecisionIsSettled = PlanStatus == ECk_GoapPlanStatus::PlanFound ||
 		PlanStatus == ECk_GoapPlanStatus::PlanFailed;
-	if (NOT DecisionIsSettled) { return; }
+	if (NOT DecisionIsSettled)
+	{ return; }
 
 	const auto OldStep0 = InActivation._LastActivatedPlan0;
 	const auto NewStep0 = InPlanState.Get_Plan().IsEmpty()
 		? FCk_Handle_Goap_Action{}
 		: InPlanState.Get_Plan()[0];
 
-	if (OldStep0 == NewStep0) { return; }
+	if (OldStep0 == NewStep0)
+	{ return; }
 
 	const auto IsPromotedMidTierPlanner = InHandle.template Has<FFragment_Goap_Action_Tree>();
 
@@ -596,7 +622,8 @@ auto
 			for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 			{
 				auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Walker);
-				if (NOT ck::IsValid(Owner)) { break; }
+				if (ck::Is_NOT_Valid(Owner))
+				{ break; }
 				if (UCk_Utils_Goap_Planner_UE::Has(Owner) &&
 					NOT Owner.template Has<FFragment_Goap_Action_Tree>())
 				{

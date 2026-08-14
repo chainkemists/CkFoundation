@@ -50,7 +50,8 @@ namespace ck_goap_action_processor
 		-> goap::FWorldStateCondition
 	{
 		const auto Key = InRegistry.Find(InRaw.Key);
-		if (Key == goap::InvalidGoapKey) { return {}; }
+		if (Key == goap::InvalidGoapKey)
+		{ return {}; }
 		return goap::FWorldStateCondition{Key, InRaw.Value};
 	}
 
@@ -58,7 +59,8 @@ namespace ck_goap_action_processor
 		-> goap::FWorldStateEffect
 	{
 		const auto Key = InRegistry.Find(InRaw.Key);
-		if (Key == goap::InvalidGoapKey) { return {}; }
+		if (Key == goap::InvalidGoapKey)
+		{ return {}; }
 		return goap::FWorldStateEffect{Key, InRaw.Value};
 	}
 
@@ -68,7 +70,8 @@ namespace ck_goap_action_processor
 		auto Set = goap::FConstraintSet{};
 		for (const auto& C : InConditions)
 		{
-			if (C.IsValid()) { Set.Add(C); }
+			if (C.IsValid())
+			{ Set.Add(C); }
 		}
 		return Set;
 	}
@@ -78,7 +81,8 @@ namespace ck_goap_action_processor
 	auto Goap_Planner_GetCandidateChildren(const FCk_Handle_Goap_Planner& InPlanner)
 		-> TArray<FCk_Handle_Goap_Action>
 	{
-		if (NOT ck::IsValid(InPlanner)) { return {}; }
+		if (ck::Is_NOT_Valid(InPlanner))
+		{ return {}; }
 
 		if (InPlanner.template Has<FFragment_Goap_Action_Tree>())
 		{
@@ -86,12 +90,14 @@ namespace ck_goap_action_processor
 		}
 
 		auto Result = TArray<FCk_Handle_Goap_Action>{};
-		if (NOT InPlanner.template Has<FFragment_Goap_Planner_ActionCatalogIndex>()) { return Result; }
+		if (NOT InPlanner.template Has<FFragment_Goap_Planner_ActionCatalogIndex>())
+		{ return Result; }
 		const auto& Index = InPlanner.template Get<FFragment_Goap_Planner_ActionCatalogIndex>();
 		Result.Reserve(Index.Get_TagToAction().Num());
 		for (const auto& Pair : Index.Get_TagToAction())
 		{
-			if (ck::IsValid(Pair.Value)) { Result.Add(Pair.Value); }
+			if (ck::IsValid(Pair.Value))
+			{ Result.Add(Pair.Value); }
 		}
 		return Result;
 	}
@@ -101,15 +107,18 @@ namespace ck_goap_action_processor
 	auto Goap_Planner_GetParentPlanner(const FCk_Handle_Goap_Planner& InPlanner)
 		-> FCk_Handle_Goap_Planner
 	{
-		if (NOT ck::IsValid(InPlanner)) { return {}; }
-		if (NOT InPlanner.template Has<FFragment_Goap_Action_Tree>()) { return {}; }
+		if (ck::Is_NOT_Valid(InPlanner))
+		{ return {}; }
+		if (NOT InPlanner.template Has<FFragment_Goap_Action_Tree>())
+		{ return {}; }
 
 		const auto& Tree = InPlanner.template Get<FFragment_Goap_Action_Tree>();
 		auto Walker = static_cast<FCk_Handle>(Tree.Get_ParentAction());
 		constexpr auto MaxDepth = 64;
 		for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 		{
-			if (NOT ck::IsValid(Walker)) { break; }
+			if (ck::Is_NOT_Valid(Walker))
+			{ break; }
 			if (UCk_Utils_Goap_Planner_UE::Has(Walker))
 			{
 				return UCk_Utils_Goap_Planner_UE::CastChecked(Walker);
@@ -136,7 +145,7 @@ auto
 	// Defer to the next frame WITHOUT removing the setup tag: the WS source is
 	// resolved at AddAction time (top-level) or at activation time (non-root).
 	const auto Source = InWSSource.Get_Resolved();
-	if (NOT ck::IsValid(Source))
+	if (ck::Is_NOT_Valid(Source))
 	{
 		return;
 	}
@@ -189,14 +198,16 @@ auto
 		for (const auto& Pre : InActionDef._Preconditions)
 		{
 			const auto Resolved = ck_goap_action_processor::ResolveCondition(SourceRegistry, Pre);
-			if (Resolved.IsValid()) { Def.Preconditions.Add(Resolved); }
+			if (Resolved.IsValid())
+			{ Def.Preconditions.Add(Resolved); }
 		}
 
 		Def.Effects.Reserve(InActionDef._Effects.Num());
 		for (const auto& Eff : InActionDef._Effects)
 		{
 			const auto Resolved = ck_goap_action_processor::ResolveEffect(SourceRegistry, Eff);
-			if (Resolved.IsValid()) { Def.Effects.Add(Resolved); }
+			if (Resolved.IsValid())
+			{ Def.Effects.Add(Resolved); }
 		}
 	}
 
@@ -245,14 +256,17 @@ auto
 
 	// Dirty / initial-plan tags stay set while disabled, so a re-enable resumes
 	// from the deferred state.
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
+	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	{ return; }
 
 	// Planner-side Setup (cycle detection + goal resolution) must land first.
-	if (InHandle.Has<FTag_Goap_Planner_RequiresSetup>()) { return; }
+	if (InHandle.Has<FTag_Goap_Planner_RequiresSetup>())
+	{ return; }
 
 	// A promoted mid-tier Planner has no _Resolved until its activation walk runs;
 	// without this gate a premature Plan request fires a spurious PlanFailed.
-	if (NOT ck::IsValid(InWSSource.Get_Resolved())) { return; }
+	if (ck::Is_NOT_Valid(InWSSource.Get_Resolved()))
+	{ return; }
 
 	InThrottle._SecondsSinceLastReplan += InDeltaT.Get_Seconds();
 
@@ -276,16 +290,20 @@ auto
 		>= InParams.Get_MinReplanIntervalSeconds();
 
 	const auto ShouldFire = IsInitialPlanPending || (PolicyAllowsReplan && ThrottleElapsed);
-	if (NOT ShouldFire) { return; }
+	if (NOT ShouldFire)
+	{ return; }
 
 	// Replan frequency across all Planners — #1 scaling risk (default replan throttle is 0).
 	INC_DWORD_STAT(STAT_Goap_ReplansRequested);
 
 	const auto Origin = [&]
 	{
-		if (IsInitialPlanPending)  { return ECk_Goap_ReplanOrigin::PlanOnStart; }
-		if (WSDirty && CostDirty)  { return ECk_Goap_ReplanOrigin::WorldStateAndCostDirty; }
-		if (CostDirty)             { return ECk_Goap_ReplanOrigin::CostDirty; }
+		if (IsInitialPlanPending)
+		{ return ECk_Goap_ReplanOrigin::PlanOnStart; }
+		if (WSDirty && CostDirty)
+		{ return ECk_Goap_ReplanOrigin::WorldStateAndCostDirty; }
+		if (CostDirty)
+		{ return ECk_Goap_ReplanOrigin::CostDirty; }
 		return ECk_Goap_ReplanOrigin::WorldStateDirty;
 	}();
 
@@ -319,14 +337,17 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_HandleRequestsProc);
 
 	(void)InParams;
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
+	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	{ return; }
 
 	const auto IsParentPlanInFlight = [&]() -> bool
 	{
 		const auto Parent = ck_goap_action_processor::Goap_Planner_GetParentPlanner(InHandle);
-		if (NOT ck::IsValid(Parent)) { return false; }
+		if (ck::Is_NOT_Valid(Parent))
+		{ return false; }
 
-		if (Parent.template Has<FTag_Goap_Planner_PlanInFlight>()) { return true; }
+		if (Parent.template Has<FTag_Goap_Planner_PlanInFlight>())
+		{ return true; }
 
 		const auto& ParentPlanState = Parent.template Get<FFragment_Goap_Planner_PlanState>();
 		switch (ParentPlanState.Get_PlanStatus())
@@ -399,7 +420,7 @@ auto
 				}
 
 				const auto Source = InWSSource.Get_Resolved();
-				if (NOT ck::IsValid(Source))
+				if (ck::Is_NOT_Valid(Source))
 				{
 					InPlanState._PlanStatus = ECk_GoapPlanStatus::PlanFailed;
 					InPlanState._Plan.Reset();
@@ -440,7 +461,8 @@ auto
 						for (const auto& Kv : Layer.Values)
 						{
 							const auto FlatKey = Registry.Find(Kv.Key);
-							if (FlatKey == goap::InvalidGoapKey) { continue; }
+							if (FlatKey == goap::InvalidGoapKey)
+							{ continue; }
 							SourceWorldState.Set(FlatKey, Kv.Value);
 						}
 					}
@@ -450,7 +472,8 @@ auto
 				{
 					for (const auto& C : InGoal._Goal)
 					{
-						if (NOT SourceWorldState.Satisfies(C)) { return false; }
+						if (NOT SourceWorldState.Satisfies(C))
+						{ return false; }
 					}
 					return true;
 				}();
@@ -486,7 +509,8 @@ auto
 				Candidates.Reserve(ChildHandles.Num());
 				for (const auto& ChildHandle : ChildHandles)
 				{
-					if (NOT ck::IsValid(ChildHandle)) { continue; }
+					if (ck::Is_NOT_Valid(ChildHandle))
+					{ continue; }
 					const auto& ChildDef = ChildHandle.template Get<FFragment_Goap_Action_Definition>();
 					auto Candidate = ChildDef.AsActionDef();
 					Candidate.ActionIndex = Candidates.Num();
@@ -528,7 +552,7 @@ auto
 				InGoal._InvalidGoal.Reset();
 
 				const auto Source = InWSSource.Get_Resolved();
-				if (NOT ck::IsValid(Source))
+				if (ck::Is_NOT_Valid(Source))
 				{
 					for (const auto& Cond : NewAuthored)
 					{
@@ -565,10 +589,12 @@ auto
 				const auto Candidates = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 				for (auto ChildHandle : Candidates)
 				{
-					if (NOT ck::IsValid(ChildHandle)) { continue; }
+					if (ck::Is_NOT_Valid(ChildHandle))
+					{ continue; }
 
 					const auto& ChildParams = ChildHandle.template Get<FFragment_Goap_Action_Params>();
-					if (ChildParams.Get_ActionClass() != TargetClass) { continue; }
+					if (ChildParams.Get_ActionClass() != TargetClass)
+					{ continue; }
 
 					auto& ChildDef = ChildHandle.template Get<FFragment_Goap_Action_Definition>();
 					ChildDef._Cost = NewCost;
@@ -585,10 +611,12 @@ auto
 				const auto Candidates = ck_goap_action_processor::Goap_Planner_GetCandidateChildren(InHandle);
 				for (auto ChildHandle : Candidates)
 				{
-					if (NOT ck::IsValid(ChildHandle)) { continue; }
+					if (ck::Is_NOT_Valid(ChildHandle))
+					{ continue; }
 
 					const auto& ChildParams = ChildHandle.template Get<FFragment_Goap_Action_Params>();
-					if (ChildParams.Get_ActionClass() != TargetClass) { continue; }
+					if (ChildParams.Get_ActionClass() != TargetClass)
+					{ continue; }
 
 					ChildHandle.template AddOrGet<FTag_Goap_Action_HasCostProvider>();
 					break;
@@ -644,7 +672,8 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_HandleResult);
 
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable) { return; }
+	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	{ return; }
 
 	InHandle.Remove<FTag_AStar_SearchComplete>();
 
@@ -669,7 +698,8 @@ auto
 			for (auto i = 0; i + 1 < Path.Num(); ++i)
 			{
 				const auto ActionIdx = Graph.Get_ActionForEdge(Path[i], Path[i + 1]);
-				if (NOT Actions.IsValidIndex(ActionIdx)) { continue; }
+				if (NOT Actions.IsValidIndex(ActionIdx))
+				{ continue; }
 
 				const auto& ActionDefOnEdge = Actions[ActionIdx];
 				const auto TargetClass = ActionDefOnEdge.ActionClass;
@@ -677,7 +707,8 @@ auto
 				const auto* MatchingChild = ChildHandles.FindByPredicate(
 					[&](const FCk_Handle_Goap_Action& InCandidate)
 					{
-						if (NOT ck::IsValid(InCandidate)) { return false; }
+						if (ck::Is_NOT_Valid(InCandidate))
+						{ return false; }
 						const auto& CandidateParams = InCandidate.template Get<FFragment_Goap_Action_Params>();
 						return CandidateParams.Get_ActionClass() == TargetClass;
 					});

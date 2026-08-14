@@ -103,7 +103,8 @@ auto
     using namespace ck::animation_editor::ColumnNames;
     using namespace ck::animation_editor::detail;
 
-    if (!_Info.IsValid()) { return SNullWidget::NullWidget; }
+    if (!_Info.IsValid())
+    { return SNullWidget::NullWidget; }
 
     if (ColumnName == Select)
     {
@@ -550,7 +551,8 @@ auto
             case ECk_AnimationToolbox_Status::Skipped:  ++Skipped;  break;
             default: break;
         }
-        if (I->UnmappedBoneCount > 0) { ++WithUnmapped; }
+        if (I->UnmappedBoneCount > 0)
+        { ++WithUnmapped; }
     }
     DoAppendLog(TEXT("INFO"),
         FString::Printf(TEXT("Scan complete: %d affected, %d clean, %d skipped"),
@@ -605,7 +607,8 @@ auto
     DoApplyFixToList(const TArray<TSharedPtr<FCk_AnimationToolbox_AnimInfo>>& ToFix)
     -> void
 {
-    if (ToFix.Num() == 0) { return; }
+    if (ToFix.Num() == 0)
+    { return; }
 
     DoAppendLog(TEXT("INFO"), FString::Printf(TEXT("Applying fix to %d animations (strategy: %s)"),
         ToFix.Num(), *ck::animation_editor::detail::StrategyToString(_Strategy)));
@@ -654,7 +657,8 @@ auto
     Request_RefreshListView()
     -> void
 {
-    if (_ListView.IsValid()) { _ListView->RequestListRefresh(); }
+    if (_ListView.IsValid())
+    { _ListView->RequestListRefresh(); }
 }
 
 auto
@@ -662,7 +666,8 @@ auto
     DoUpdateStatusText()
     -> void
 {
-    if (NOT _StatusText.IsValid()) { return; }
+    if (NOT _StatusText.IsValid())
+    { return; }
 
     int32 Affected = 0, Clean = 0, Fixed = 0, Skipped = 0, Failed = 0;
     for (const auto& I : _Infos)
@@ -723,13 +728,17 @@ auto
 {
     const FDateTime Now = FDateTime::Now();
     _LogEntries.Add({ InLevel, InMessage, Now });
-    if (_LogEntries.Num() > 200) { _LogEntries.RemoveAt(0, _LogEntries.Num() - 200); }
+    if (_LogEntries.Num() > 200)
+    { _LogEntries.RemoveAt(0, _LogEntries.Num() - 200); }
 
-    if (!_LogBox.IsValid()) { return; }
+    if (!_LogBox.IsValid())
+    { return; }
 
     FSlateColor Color = FSlateColor::UseForeground();
-    if (InLevel == TEXT("WARN"))  { Color = FLinearColor(1.0f, 0.75f, 0.2f); }
-    else if (InLevel == TEXT("ERROR")) { Color = FLinearColor(1.0f, 0.3f, 0.3f); }
+    if (InLevel == TEXT("WARN"))
+    { Color = FLinearColor(1.0f, 0.75f, 0.2f); }
+    else if (InLevel == TEXT("ERROR"))
+    { Color = FLinearColor(1.0f, 0.3f, 0.3f); }
 
     _LogBox->AddSlot().AutoHeight().Padding(2, 1)
     [

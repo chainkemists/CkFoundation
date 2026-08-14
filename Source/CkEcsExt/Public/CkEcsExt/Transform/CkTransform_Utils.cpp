@@ -124,7 +124,7 @@ auto
 #endif
 
     if (const auto* AttachToOwner = InAttachTo->GetOwner();
-        ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
+        ck::IsValid(AttachToOwner) && AttachToOwner->IsReplicatingMovement())
     {
         ck::ecs_extension::VeryVerbose
         (
@@ -188,7 +188,7 @@ auto
 #endif
 
     if (const auto* AttachToOwner = InAttachTo->GetOwner();
-        ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
+        ck::IsValid(AttachToOwner) && AttachToOwner->IsReplicatingMovement())
     {
         ck::ecs_extension::VeryVerbose
         (

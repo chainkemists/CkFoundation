@@ -28,7 +28,7 @@ namespace ck_input_action_widget
         if (InBrush.GetDrawType() == ESlateBrushDrawType::NoDrawType)
         { return false; }
 
-        return ck::IsValid(InBrush.GetResourceObject(), ck::IsValid_Policy_NullptrOnly{}) ||
+        return ck::IsValid(InBrush.GetResourceObject()) ||
                InBrush.GetResourceName() != NAME_None;
     }
 }

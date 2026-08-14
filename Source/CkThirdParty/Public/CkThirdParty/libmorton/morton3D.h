@@ -66,7 +66,8 @@ inline morton m3D_e_LUT(const coord x, const coord y, const coord z) {
 template<typename morton, typename coord>
 inline morton compute3D_ET_LUT_encode(const coord c, const coord *LUT) {
 	unsigned long maxbit = 0;
-	if (findFirstSetBit<coord>(c, &maxbit) == 0) { return 0; }
+	if (findFirstSetBit<coord>(c, &maxbit) == 0)
+	{ return 0; }
 	morton answer = 0;
 	for (int i = (int) ceil((maxbit + 1) / 8.0f) ; i >= 0; --i){
 		unsigned int shift = i* 8;
@@ -188,7 +189,8 @@ template<typename morton, typename coord>
 inline void m3D_d_sLUT_ET(const morton m, coord& x, coord& y, coord& z){
 	x = 0; y = 0; z = 0;
 	unsigned long firstbit_location = 0;
-	if (!findFirstSetBit<morton>(m, &firstbit_location)) { return; }
+	if (!findFirstSetBit<morton>(m, &firstbit_location))
+	{ return; }
 	unsigned int i = 0;
 	unsigned int shiftback = 0;
 	while (firstbit_location >= i) {
@@ -207,7 +209,8 @@ template<typename morton, typename coord>
 inline void m3D_d_LUT_ET(const morton m, coord& x, coord& y, coord& z){
 	x = 0; y = 0; z = 0;
 	unsigned long firstbit_location = 0;
-	if (!findFirstSetBit<uint_fast64_t>(m, &firstbit_location)) { return; }
+	if (!findFirstSetBit<uint_fast64_t>(m, &firstbit_location))
+	{ return; }
 	unsigned int i = 0;
 	unsigned int shiftback = 0;
 	while (i <= firstbit_location) {
@@ -229,7 +232,8 @@ static inline coord morton3D_GetThirdBits(const morton m) {
 	x = (x ^ (x >> 4)) & masks[3];
 	x = (x ^ (x >> 8)) & masks[2];
 	x = (x ^ (x >> 16)) & masks[1];
-	if (sizeof(morton) > 4) {x = (x ^ ((uint_fast64_t) x >> 32)) & masks[0];}
+	if (sizeof(morton) > 4)
+	{x = (x ^ ((uint_fast64_t) x >> 32)) & masks[0];}
 	return static_cast<coord>(x);
 }
 

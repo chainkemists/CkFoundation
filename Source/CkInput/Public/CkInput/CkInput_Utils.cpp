@@ -14,10 +14,14 @@ namespace ck_utils_input
 {
     auto Are_ChordModifiersHeld(const APlayerController* InPC, const FInputChord& InChord) -> bool
     {
-        if (InChord.NeedsAlt()     && NOT InPC->IsInputKeyDown(EKeys::LeftAlt)     && NOT InPC->IsInputKeyDown(EKeys::RightAlt))     { return false; }
-        if (InChord.NeedsShift()   && NOT InPC->IsInputKeyDown(EKeys::LeftShift)   && NOT InPC->IsInputKeyDown(EKeys::RightShift))   { return false; }
-        if (InChord.NeedsCommand() && NOT InPC->IsInputKeyDown(EKeys::LeftCommand) && NOT InPC->IsInputKeyDown(EKeys::RightCommand)) { return false; }
-        if (InChord.NeedsControl() && NOT InPC->IsInputKeyDown(EKeys::LeftControl) && NOT InPC->IsInputKeyDown(EKeys::RightControl)) { return false; }
+        if (InChord.NeedsAlt()     && NOT InPC->IsInputKeyDown(EKeys::LeftAlt)     && NOT InPC->IsInputKeyDown(EKeys::RightAlt))
+        { return false; }
+        if (InChord.NeedsShift()   && NOT InPC->IsInputKeyDown(EKeys::LeftShift)   && NOT InPC->IsInputKeyDown(EKeys::RightShift))
+        { return false; }
+        if (InChord.NeedsCommand() && NOT InPC->IsInputKeyDown(EKeys::LeftCommand) && NOT InPC->IsInputKeyDown(EKeys::RightCommand))
+        { return false; }
+        if (InChord.NeedsControl() && NOT InPC->IsInputKeyDown(EKeys::LeftControl) && NOT InPC->IsInputKeyDown(EKeys::RightControl))
+        { return false; }
         return true;
     }
 }

@@ -23,13 +23,13 @@ namespace ck_replication_leak_watch_world_subsystem
         {
             auto* Subsystem = *It;
 
-            if (NOT ck::IsValid(Subsystem))
+            if (ck::Is_NOT_Valid(Subsystem))
             { continue; }
 
             if (Subsystem->IsTemplate())
             { continue; }
 
-            if (NOT ck::IsValid(Subsystem->GetWorld()))
+            if (ck::Is_NOT_Valid(Subsystem->GetWorld()))
             { continue; }
 
             InFunc(Subsystem);
@@ -204,7 +204,7 @@ auto
 {
     Super::Tick(InDeltaSeconds);
 
-    if (NOT ck::IsValid(GetWorld()))
+    if (ck::Is_NOT_Valid(GetWorld()))
     { return; }
 
     if (IsMonitoringEnabledByCVar())
@@ -265,7 +265,7 @@ auto
     Request_SampleNow()
     -> void
 {
-    if (NOT ck::IsValid(GetWorld()))
+    if (ck::Is_NOT_Valid(GetWorld()))
     { return; }
 
     _TimeSinceLastSampleSeconds = 0.0;
@@ -299,7 +299,7 @@ auto
     Request_DumpReport()
     -> void
 {
-    if (NOT ck::IsValid(GetWorld()))
+    if (ck::Is_NOT_Valid(GetWorld()))
     { return; }
 
     if (_NumSamples == 0)
@@ -388,11 +388,11 @@ auto
     IsObjectInCurrentWorld(UObject* InObject) const
     -> bool
 {
-    if (NOT ck::IsValid(InObject))
+    if (ck::Is_NOT_Valid(InObject))
     { return false; }
 
     const auto* World = GetWorld();
-    if (NOT ck::IsValid(World))
+    if (ck::Is_NOT_Valid(World))
     { return false; }
 
     if (InObject->GetWorld() == World)
@@ -418,7 +418,7 @@ auto
     ResolveReplicatedOwner(UObject* InObject) const
     -> UObject*
 {
-    if (NOT ck::IsValid(InObject))
+    if (ck::Is_NOT_Valid(InObject))
     { return nullptr; }
 
     if (const auto* Actor = Cast<AActor>(InObject))
@@ -463,7 +463,7 @@ auto
     IsReplicatedOwner(UObject* InObject) const
     -> bool
 {
-    if (NOT ck::IsValid(InObject, ck::IsValid_Policy_IncludePendingKill{}))
+    if (ck::Is_NOT_Valid(InObject, ck::IsValid_Policy_IncludePendingKill{}))
     { return false; }
 
     if (const auto* Actor = Cast<AActor>(InObject))
@@ -501,7 +501,7 @@ auto
 {
     OutActors.Reset();
 
-    if (NOT ck::IsValid(GetWorld()))
+    if (ck::Is_NOT_Valid(GetWorld()))
     { return; }
 
     for (TActorIterator<AActor> It(GetWorld()); It; ++It)
@@ -525,7 +525,7 @@ auto
 
     for (const auto* Actor : InActors)
     {
-        if (NOT ck::IsValid(Actor))
+        if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
         auto Components = TArray<UActorComponent*>{};
@@ -552,7 +552,7 @@ auto
     {
         auto* Obj = *It;
 
-        if (NOT ck::IsValid(Obj, ck::IsValid_Policy_IncludePendingKill{}))
+        if (ck::Is_NOT_Valid(Obj, ck::IsValid_Policy_IncludePendingKill{}))
         { continue; }
 
         if (Obj->IsTemplate())
@@ -584,7 +584,7 @@ auto
         double InNowSeconds)
     -> void
 {
-    if (NOT ck::IsValid(InObject, ck::IsValid_Policy_IncludePendingKill{}))
+    if (ck::Is_NOT_Valid(InObject, ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
     auto& Tracked = _TrackedObjects.FindOrAdd(FObjectKey(InObject));
@@ -648,7 +648,7 @@ auto
 
     for (auto* Actor : ReplicatedActors)
     {
-        if (NOT ck::IsValid(Actor))
+        if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
         auto* Owner = ResolveReplicatedOwner(Actor);
@@ -659,7 +659,7 @@ auto
 
     for (auto* Component : ReplicatedComponents)
     {
-        if (NOT ck::IsValid(Component))
+        if (ck::Is_NOT_Valid(Component))
         { continue; }
 
         auto* Owner = ResolveReplicatedOwner(Component);
@@ -670,7 +670,7 @@ auto
 
     for (auto* Object : ReplicatedObjects)
     {
-        if (NOT ck::IsValid(Object))
+        if (ck::Is_NOT_Valid(Object))
         { continue; }
 
         auto* Owner = ResolveReplicatedOwner(Object);
@@ -691,7 +691,7 @@ auto
 {
     auto* World = GetWorld();
 
-    if (NOT ck::IsValid(World))
+    if (ck::Is_NOT_Valid(World))
     { return; }
 
     const auto* NetDriver = World->GetNetDriver();
@@ -782,11 +782,11 @@ auto
         const auto& Tracked = Pair.Value;
         const auto* Object = Tracked.Object.Get();
 
-        if (NOT ck::IsValid(Object, ck::IsValid_Policy_IncludePendingKill{}))
+        if (ck::Is_NOT_Valid(Object, ck::IsValid_Policy_IncludePendingKill{}))
         { continue; }
 
         const auto AgeSeconds = InNowSeconds - Tracked.FirstSeenAtSeconds;
-        const auto bOwnerInvalid = NOT ck::IsValid(Tracked.Owner.Get(), ck::IsValid_Policy_IncludePendingKill{});
+        const auto bOwnerInvalid = ck::Is_NOT_Valid(Tracked.Owner.Get(), ck::IsValid_Policy_IncludePendingKill{});
         const auto bOwnerNotReplicated = NOT Tracked.OwnerIsReplicated;
 
         const auto bSuspectByAge = AgeSeconds >= LeakAgeThresholdSeconds;

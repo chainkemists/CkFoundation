@@ -25,7 +25,7 @@ namespace ck::particles_editor
 {
     auto Generate_ParticleSystem(UCkParticles_ScriptDefinition* InDef) -> UNiagaraSystem*
     {
-        if (ck::Is_NOT_Valid(InDef, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InDef))
         {
             ck::particles_editor::Warning(TEXT("Null ScriptDefinition"));
             return nullptr;
@@ -35,11 +35,11 @@ namespace ck::particles_editor
 
         // ---- Resolve the template system to duplicate ----
         UNiagaraSystem* Template = InDef->_TemplateSystem.LoadSynchronous();
-        if (ck::Is_NOT_Valid(Template, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Template))
         {
             Template = LoadObject<UNiagaraSystem>(nullptr, *ck::particles::Get_DefaultTemplateSystemObjectPath());
         }
-        if (ck::Is_NOT_Valid(Template, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Template))
         {
             ck::particles_editor::Warning(
                 TEXT("ScriptDefinition [{}] has no template and the default template [{}] was not found. "
@@ -55,7 +55,8 @@ namespace ck::particles_editor
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
-        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
+        if (Package == nullptr)
+        { Package = CreatePackage(*PkgPath); }
 
         if (auto* Old = StaticFindObject(UNiagaraSystem::StaticClass(), Package, *AssetName))
         {
@@ -66,7 +67,7 @@ namespace ck::particles_editor
 
         auto* System = Cast<UNiagaraSystem>(
             StaticDuplicateObject(Template, Package, *AssetName, RF_Public | RF_Standalone));
-        if (ck::Is_NOT_Valid(System, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(System))
         {
             ck::particles_editor::Error(TEXT("Failed to duplicate template for [{}]"), ScriptName);
             return nullptr;
@@ -158,7 +159,7 @@ namespace ck::particles_editor
         {
             auto* Def = Cast<UCkParticles_ScriptDefinition>(A.GetAsset());
             auto* System = Generate_ParticleSystem(Def);
-            if (ck::Is_NOT_Valid(System, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(System))
             { ++Result.NumSkipped; continue; }
 
             ++Result.NumGenerated;

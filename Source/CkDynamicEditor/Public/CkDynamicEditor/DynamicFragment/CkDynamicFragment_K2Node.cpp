@@ -45,7 +45,7 @@ namespace ck_k2_node_dynamic_fragment
 auto UCkDynamicFragment_K2Node::PostEditChangeProperty(
     FPropertyChangedEvent& PropertyChangedEvent) -> void
 {
-    const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property, ck::IsValid_Policy_NullptrOnly{})
+    const auto PropertyName = ck::IsValid(PropertyChangedEvent.Property)
         ? PropertyChangedEvent.Property->GetFName()
         : NAME_None;
 

@@ -562,9 +562,6 @@ auto
 
     CK_ENSURE_IF_NOT(ContextIsValid,
         TEXT("ProbeTrace context is NOT valid. Unable to start trace using Handle [{}]"), InAnyHandle)
-    {}
-
-    if (NOT ContextIsValid)
     { return {}; }
 
     const auto& PhysicsSystem = *PinnedPhysicsSystem;
@@ -805,9 +802,6 @@ auto
 
     CK_ENSURE_IF_NOT(ContextIsValid,
         TEXT("ProbeTrace context is NOT valid. Unable to start shape trace using Handle [{}]"), InAnyHandle)
-    {}
-
-    if (NOT ContextIsValid)
     { return {}; }
 
     JPH::Ref<JPH::Shape> JoltShape;

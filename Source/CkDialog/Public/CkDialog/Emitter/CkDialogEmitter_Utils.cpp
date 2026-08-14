@@ -34,8 +34,6 @@ auto
 {
     const auto HandleValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleValid, TEXT("Invalid Handle [{}] passed to DialogEmitter Add"), InHandle)
-    {}
-    if (NOT HandleValid)
     { return {}; }
 
     const auto AlreadyHasEmitter = Has(InHandle);

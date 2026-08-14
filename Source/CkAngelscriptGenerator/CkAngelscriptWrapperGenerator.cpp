@@ -1247,7 +1247,7 @@ auto
         TEXT(""));
 
     auto* Settings = UCk_CVar_Settings_UE::Get();
-    if (ck::IsValid(Settings, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(Settings))
     {
         for (const auto& Name : Settings->GetAllRegisteredNames())
         {
@@ -1333,7 +1333,7 @@ auto
     -> void
 {
     auto* CollisionProfile = UCollisionProfile::Get();
-    if (ck::Is_NOT_Valid(CollisionProfile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(CollisionProfile))
     {
         ck::angelscriptgenerator::Warning(TEXT("Cannot generate collision constants — UCollisionProfile not available"));
         return;
@@ -1541,7 +1541,7 @@ auto
     -> void
 {
     auto* PhysicsSettings = UPhysicsSettings::Get();
-    if (ck::Is_NOT_Valid(PhysicsSettings, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(PhysicsSettings))
     {
         ck::angelscriptgenerator::Warning(TEXT("Cannot generate physical surface constants — UPhysicsSettings not available"));
         return;

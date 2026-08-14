@@ -152,7 +152,7 @@ auto
 
     return ck::algo::AnyOf(_RequestedPaths, [](const FSoftObjectPath& InPath)
     {
-        return ck::Is_NOT_Valid(InPath.ResolveObject(), ck::IsValid_Policy_NullptrOnly{});
+        return ck::Is_NOT_Valid(InPath.ResolveObject());
     });
 }
 

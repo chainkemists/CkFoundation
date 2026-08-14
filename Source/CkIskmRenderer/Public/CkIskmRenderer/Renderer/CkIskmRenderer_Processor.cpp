@@ -29,7 +29,7 @@ namespace ck
         { return; }
 
         auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
             TEXT("IskmRenderer Setup: no world for entity [{}]"), InHandle)
         { return; }
 

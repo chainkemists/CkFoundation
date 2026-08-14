@@ -111,7 +111,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         const auto Ok = PosTex->Source.GetSizeX() == BoneCount && PosTex->Source.GetSizeY() == TotalRows &&
                         RotTex->Source.GetSizeX() == BoneCount && RotTex->Source.GetSizeY() == TotalRows &&
                         Collection->Get_BakedData().Get_TextureWidth() == BoneCount && Collection->Get_BakedData().Get_TextureRows() == TotalRows;
-        if (Ok) { Pass(FString::Printf(TEXT("[A] texture shape %dx%d (bones x rows) + serialized dims"), BoneCount, TotalRows)); }
+        if (Ok)
+        { Pass(FString::Printf(TEXT("[A] texture shape %dx%d (bones x rows) + serialized dims"), BoneCount, TotalRows)); }
         else
         {
             Fail(FString::Printf(TEXT("[A] texture shape: got %dx%d / %dx%d (serialized %dx%d), expected %dx%d"),
@@ -161,7 +162,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
             const auto TErr = (TexelT[RenderBone] - ExpectedT).Size();
             // q and -q are the same rotation.
             const auto QErr = FMath::Min((TexelQ[RenderBone] - ExpectedQ).Size(), (TexelQ[RenderBone] + ExpectedQ).Size());
-            if (TErr > MaxTErr) { MaxTErr = TErr; WorstBone = RenderBone; }
+            if (TErr > MaxTErr)
+            { MaxTErr = TErr; WorstBone = RenderBone; }
             MaxQErr = FMath::Max(MaxQErr, QErr);
         }
 
@@ -190,7 +192,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
             TArray<FInfluence, TInlineAllocator<MAX_TOTAL_INFLUENCES>> Influences;
             for (int32 i = 0; i < MAX_TOTAL_INFLUENCES; ++i)
             {
-                if (Sv.InfluenceWeights[i] == 0) { continue; }
+                if (Sv.InfluenceWeights[i] == 0)
+                { continue; }
                 Influences.Add(FInfluence{Sv.InfluenceBones[i], Sv.InfluenceWeights[i]});
             }
             Influences.Sort([](const FInfluence& A, const FInfluence& B) { return A.Weight > B.Weight; });
@@ -252,7 +255,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
     ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [C] render verts [{}] uv channels [{}] color verts [{}]"),
         StorageName, NumRenderVerts, NumUVs, NumColors);
     const auto ExpectedUVs = UsesWeightTexture ? 2 : 3;
-    if (NumUVs < ExpectedUVs) { Fail(TEXT("[C] built mesh is missing lookup UV channels")); return; }
+    if (NumUVs < ExpectedUVs)
+    { Fail(TEXT("[C] built mesh is missing lookup UV channels")); return; }
     if (NOT UsesWeightTexture && NumColors != NumRenderVerts)
     { Fail(TEXT("[C] color buffer missing/short — weights are not reaching the GPU")); return; }
 
@@ -270,7 +274,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         const auto Quantized = FIntVector(
             FMath::RoundToInt(Pos.X * 64.0f), FMath::RoundToInt(Pos.Y * 64.0f), FMath::RoundToInt(Pos.Z * 64.0f));
         const auto* Expected = ExpectedByQuantizedPos.Find(Quantized);
-        if (Expected == nullptr) { ++PosMisses; continue; }
+        if (Expected == nullptr)
+        { ++PosMisses; continue; }
         ++Checked;
 
         float GpuIndices[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -318,7 +323,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         auto GpuSkinned = FVector3f::ZeroVector;
         for (int32 i = 0; i < 4; ++i)
         {
-            if (GpuWeights[i] <= 0.0001f) { continue; }
+            if (GpuWeights[i] <= 0.0001f)
+            { continue; }
             const auto Bone = FMath::Clamp(FMath::RoundToInt(GpuIndices[i]), 0, BoneCount - 1);
             GpuSkinned += GpuWeights[i] * (TexelQ[Bone].RotateVector(Pos) + TexelT[Bone]);
         }
@@ -326,17 +332,20 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         auto CpuSkinned = FVector3f::ZeroVector;
         for (int32 i = 0; i < 4; ++i)
         {
-            if (Expected->Weights[i] <= 0.0001f) { continue; }
+            if (Expected->Weights[i] <= 0.0001f)
+            { continue; }
             CpuSkinned += Expected->Weights[i] * ExpectedShaderMatrix[Expected->RenderBones[i]].TransformPosition(Expected->Position);
         }
 
         const auto Err = (GpuSkinned - CpuSkinned).Size();
-        if (Err > MaxReconstructionErr) { MaxReconstructionErr = Err; WorstVert = Vert; }
+        if (Err > MaxReconstructionErr)
+        { MaxReconstructionErr = Err; WorstVert = Vert; }
     }
 
     ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [C] checked [{}] verts (posMisses [{}]): indexMismatches [{}] weightMismatches [{}]"),
         StorageName, Checked, PosMisses, IndexMismatches, WeightMismatches);
-    if (IndexMismatches == 0 && WeightMismatches == 0 && Checked > 100) { Pass(TEXT("[C] per-vertex carriers")); }
+    if (IndexMismatches == 0 && WeightMismatches == 0 && Checked > 100)
+    { Pass(TEXT("[C] per-vertex carriers")); }
     else { Fail(TEXT("[C] per-vertex carriers (see counts above)")); }
 
     if (MaxReconstructionErr < 1.0f && Checked > 100)
@@ -352,7 +361,7 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         { ck::vat::Display(TEXT("[VAT-VERIFY] ({}) [E] skipped — no Vat subsystem on the editor world"), StorageName); return; }
 
         const auto RenderState = Subsystem->GetOrCreate_RenderState(Collection);
-        if (NOT RenderState.IsSet() || NOT ck::IsValid(RenderState->_Mid))
+        if (NOT RenderState.IsSet() || ck::Is_NOT_Valid(RenderState->_Mid))
         { Fail(TEXT("[E] no render state / MID")); return; }
 
         auto* Mid = RenderState->_Mid.Get();
@@ -387,7 +396,8 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
             Ok = Ok && FMath::RoundToInt(MidStorage) == 0;
         }
 
-        if (Ok) { Pass(TEXT("[E] MID uniforms match the collection")); }
+        if (Ok)
+        { Pass(TEXT("[E] MID uniforms match the collection")); }
         else { Fail(TEXT("[E] MID uniforms DO NOT match (values above)")); }
     }
 }

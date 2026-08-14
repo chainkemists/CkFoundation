@@ -108,7 +108,7 @@ namespace ck
             HostActor = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(World, InHandle);
 #endif
 
-            if (ck::Is_NOT_Valid(HostActor, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(HostActor))
             { HostActor = Host->Get_HostActor(); }
 
             if (ck::IsValid(HostActor))
@@ -153,7 +153,7 @@ namespace ck
         // is a quiet skip there, not an ensure. The utils-level ensure stays for EXPLICIT callers.
         auto* StaticWorldSubsystem = World->GetSubsystem<UCk_JoltStaticWorld_Subsystem_UE>();
 
-        if (ck::IsValid(StaticWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(StaticWorldSubsystem))
         {
             switch (InParams.Get_StaticWorldBakePolicy())
             {
@@ -164,7 +164,7 @@ namespace ck
                     // skip — NoCollision content and an ISM whose instances arrive after Add are legal
                     // here (the latter opts in via Request_BakeIntoJoltStaticWorld once configured).
                     auto* PrimitiveComponent = Cast<UPrimitiveComponent>(NewComponent);
-                    if (ck::Is_NOT_Valid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                    if (ck::Is_NOT_Valid(PrimitiveComponent))
                     { break; }
 
                     if (PrimitiveComponent->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
@@ -184,12 +184,12 @@ namespace ck
                     // component with zero extracted bodies means the policy was set on unbakeable content.
                     auto* PrimitiveComponent = Cast<UPrimitiveComponent>(NewComponent);
 
-                    CK_ENSURE_IF_NOT(ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}),
+                    CK_ENSURE_IF_NOT(ck::IsValid(PrimitiveComponent),
                         TEXT("UnrealComponent [{}] has StaticWorldBakePolicy BakeOnSetup but hosts a NON-PRIMITIVE "
                              "class [{}] — nothing can bake."), InHandle, ComponentClass->GetName())
                     {}
 
-                    if (ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                    if (ck::IsValid(PrimitiveComponent))
                     {
                         const auto NumBodies = StaticWorldSubsystem->Request_BakeComponent(*PrimitiveComponent);
 
@@ -255,7 +255,7 @@ namespace ck
                     InComponentHandle.Has<FTag_UnrealComponent_BakedIntoStaticWorld>())
                 {
                     if (auto* PrimitiveComponent = Cast<UPrimitiveComponent>(SceneComponent);
-                        ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                        ck::IsValid(PrimitiveComponent))
                     { UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent); }
                 }
             });
@@ -303,7 +303,7 @@ namespace ck
             if (InHandle.Has<FTag_UnrealComponent_BakedIntoStaticWorld>())
             {
                 if (auto* PrimitiveComponent = Cast<UPrimitiveComponent>(Component);
-                    ck::IsValid(PrimitiveComponent, ck::IsValid_Policy_NullptrOnly{}))
+                    ck::IsValid(PrimitiveComponent))
                 { UCk_Utils_JoltStaticWorld_UE::Request_RemoveComponent(PrimitiveComponent); }
             }
 

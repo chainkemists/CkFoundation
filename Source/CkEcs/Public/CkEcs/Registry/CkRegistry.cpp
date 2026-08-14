@@ -155,7 +155,8 @@ auto
     -> bool
 {
     const auto* Reg = Resolve();
-    if (Reg == nullptr) { return true; }
+    if (Reg == nullptr)
+    { return true; }
     return Reg->orphan(InEntity.Get_ID());
 }
 

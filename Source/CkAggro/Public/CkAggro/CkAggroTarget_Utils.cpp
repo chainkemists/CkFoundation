@@ -66,8 +66,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Cannot Add AggroTarget — the Handle is INVALID"))
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     DoAdd_Fragments(InHandle, InParams, FCk_Handle{});
@@ -85,8 +83,6 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Cannot Create an AggroTarget — Owner [{}] is INVALID"), InOwner)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner, [&](FCk_Handle InNewEntity)

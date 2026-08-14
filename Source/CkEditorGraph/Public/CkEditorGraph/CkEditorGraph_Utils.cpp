@@ -420,7 +420,7 @@ auto
     -> ECk_SucceededFailed
 {
     auto* Schema = InCompilerContext.GetSchema();
-    if (ck::Is_NOT_Valid(Schema, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Schema))
     {
         InCompilerContext.MessageLog.Error(*ck::Format_UE(TEXT("CompilerContext has an INVALID schema.")));
         return ECk_SucceededFailed::Failed;

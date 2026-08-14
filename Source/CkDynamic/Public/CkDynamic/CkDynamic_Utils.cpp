@@ -62,14 +62,10 @@ auto
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Handle passed. Unable to add Fragment"))
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto FragmentDataIsValid = ck::IsValid(InFragmentData);
     CK_ENSURE_IF_NOT(FragmentDataIsValid, TEXT("Invalid struct data in FInstancedStruct"))
-    {}
-    if (NOT FragmentDataIsValid)
     { return {}; }
 
     const auto Schema = ck::dynamic::Validate_FragmentSchema(InFragmentData.GetScriptStruct());
@@ -95,8 +91,6 @@ auto
         TEXT("Call AddOrGet_Fragment if you want replace-on-duplicate semantics, ")
         TEXT("or compose this feature on a child entity instead."),
         InFragmentData.GetScriptStruct(), InHandle)
-    {}
-    if (NOT FragmentDoesNotExist)
     { return {}; }
 
     Storage.emplace(Entity, MoveTemp(Fragment));
@@ -140,8 +134,6 @@ auto
 {
     const auto TypeIsValid = ck::IsValid(InStructType);
     CK_ENSURE_IF_NOT(TypeIsValid, TEXT("Invalid Dynamic Fragment type passed to AddOrGet"))
-    {}
-    if (NOT TypeIsValid)
     { return nullptr; }
 
     const auto Schema = ck::dynamic::Validate_FragmentSchema(InStructType);
@@ -155,8 +147,6 @@ auto
 
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid Handle passed to AddOrGet Dynamic Fragment [{}]"), InStructType)
-    {}
-    if (NOT HandleIsValid)
     { return nullptr; }
 
     if (NOT Has_Fragment(InHandle, InStructType))
@@ -165,8 +155,6 @@ auto
         const auto AddSucceeded = Has_Fragment(InHandle, InStructType);
         CK_ENSURE_IF_NOT(AddSucceeded,
             TEXT("AddOrGet Dynamic Fragment [{}] failed to create storage on [{}]"), InStructType, InHandle)
-        {}
-        if (NOT AddSucceeded)
         { return nullptr; }
     }
     else
@@ -206,8 +194,6 @@ auto
     const auto StructTypeIsValid = ck::IsValid(InStructType);
     CK_ENSURE_IF_NOT(StructTypeIsValid,
         TEXT("Invalid struct type passed. Unable to remove Dynamic Fragment from Handle [{}]"), InHandle)
-    {}
-    if (NOT StructTypeIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return ECk_SucceededFailed::Failed;
@@ -216,8 +202,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] passed. Unable to remove Dynamic Fragment [{}]"), InHandle, InStructType)
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return ECk_SucceededFailed::Failed;
@@ -279,8 +263,6 @@ auto
     const auto TypeIsValid = ck::IsValid(InStructType);
     CK_ENSURE_IF_NOT(TypeIsValid,
         TEXT("Invalid Dynamic Fragment type passed. Unable to get Dynamic Fragment from [{}]"), InHandle)
-    {}
-    if (NOT TypeIsValid)
     { return nullptr; }
 
     const auto Schema = ck::dynamic::Validate_FragmentSchema(InStructType);
@@ -294,8 +276,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] passed. Unable to get Dynamic Fragment [{}]"), InHandle, InStructType)
-    {}
-    if (NOT HandleIsValid)
     { return nullptr; }
 
     const auto StorageId = Get_StorageId(InStructType);
@@ -306,8 +286,6 @@ auto
     const auto FragmentExists = Storage.contains(Entity);
     CK_ENSURE_IF_NOT(FragmentExists,
         TEXT("Entity [{}] does NOT have the Dynamic Fragment [{}]! Cannot retrieve it"), InHandle, InStructType)
-    {}
-    if (NOT FragmentExists)
     { return nullptr; }
 
     auto& Fragment = Storage.get(Entity);
@@ -480,16 +458,12 @@ auto
 {
     const auto TypeIsValid = ck::IsValid(InStructType);
     CK_ENSURE_IF_NOT(TypeIsValid, TEXT("Invalid struct type"))
-    {}
-    if (NOT TypeIsValid)
     { return entt::id_type{}; }
 
     // Keyed by weak pointer so an AS live-reload — which replaces UScriptStruct objects, potentially at a
     // recycled address — re-computes instead of serving a stale id. Game-thread-only, matching every caller.
     const auto IsGameThreadLookup = IsInGameThread();
     CK_ENSURE_IF_NOT(IsGameThreadLookup, TEXT("Dynamic Fragment storage ids must be resolved on the game thread"))
-    {}
-    if (NOT IsGameThreadLookup)
     { return entt::id_type{}; }
 
     static TMap<TWeakObjectPtr<const UScriptStruct>, entt::id_type> Cache;
@@ -595,8 +569,6 @@ auto
         TEXT("properties (tag / size-0). Replicating it carries no data and is meaningless. Add it without ")
         TEXT("ECk_Replication::Replicates, or give the struct a replicated property."),
         StructType, InHandle)
-    {}
-    if (NOT HasReplicableData)
     { return false; }
 
     return HasReplicableData;
@@ -626,8 +598,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed to Request_MarkReplicationDirty"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -640,8 +610,6 @@ auto
         TEXT("Request_MarkReplicationDirty: Dynamic Fragment [{}] on Entity [{}] is NOT set up to replicate. ")
         TEXT("Add it with ECk_Replication::Replicates before marking it dirty."),
         InStructType, InHandle)
-    {}
-    if (NOT IsReplicated)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

@@ -82,7 +82,7 @@ auto
         const UObject* InWorldContextObject)
     -> UCkUsf_CelShadeSubsystem*
 {
-    if (ck::Is_NOT_Valid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEngine))
     { return nullptr; }
 
     auto* World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::ReturnNull);
@@ -118,13 +118,10 @@ auto
         UCkUsf_CelShadePreset* InPreset)
     -> void
 {
-    const auto PresetIsValid = ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{});
+    const auto PresetIsValid = ck::IsValid(InPreset);
 
     CK_ENSURE_IF_NOT(PresetIsValid,
         TEXT("Apply_Preset: null CelShade preset; settings left untouched"))
-    {}
-
-    if (NOT PresetIsValid)
     { return; }
 
     Request_SetSettings(InPreset->Get_AsParams());
@@ -143,9 +140,6 @@ auto
              "0 or below; every untagged pixel in the view would read as a tagged one. Settings left "
              "untouched"),
         InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
-    {}
-
-    if (NOT StencilRangeIsAddressable)
     { return; }
 
     const auto StencilRangeAvoidsOutline = DoGet_StencilRangeAvoidsOutline(InSettings);
@@ -154,9 +148,6 @@ auto
         TEXT("Request_SetSettings: CelShade stencil range [{}, {}] COLLIDES with the outline subsystem's "
              "allocated range; settings left untouched"),
         InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
-    {}
-
-    if (NOT StencilRangeAvoidsOutline)
     { return; }
 
     const auto BandEdgesAreValid = Get_BandEdgesAreValid(InSettings);
@@ -167,9 +158,6 @@ auto
              "list like that collapses one to zero width or hides it entirely. Settings left untouched"),
         FString::JoinBy(InSettings.Get_EffectiveBandEdges(), TEXT(", "),
             [](float InEdge) -> FString { return FString::SanitizeFloat(InEdge); }))
-    {}
-
-    if (NOT BandEdgesAreValid)
     { return; }
 
     const auto& Mask = InSettings.Get_Mask();
@@ -181,9 +169,6 @@ auto
              "NO-STENCIL value 0; it would match every untagged pixel in the view or none at all. "
              "Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
-    {}
-
-    if (NOT MaskRangeIsAddressable)
     { return; }
 
     const auto MaskRangeAvoidsOutline =
@@ -193,9 +178,6 @@ auto
         TEXT("Request_SetSettings: CelShade effect-mask range [{}, {}] COLLIDES with the outline "
              "subsystem's allocated range; settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
-    {}
-
-    if (NOT MaskRangeAvoidsOutline)
     { return; }
 
     // Against the INCOMING pattern span, not the stored one: both live in this same settings value, so a
@@ -209,9 +191,6 @@ auto
              "Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax(),
         InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
-    {}
-
-    if (NOT MaskRangeAvoidsCelSpan)
     { return; }
 
     // The same rule the other way round. A sibling's mask was validated against the cel span that existed
@@ -225,9 +204,6 @@ auto
              "range another stylize effect in this world already holds; one stencil value cannot both "
              "select a cel pattern and gate that look. Settings left untouched"),
         InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
-    {}
-
-    if (NOT CelSpanAvoidsSiblingMasks)
     { return; }
 
     _SettingsExplicitlySet = true;
@@ -325,7 +301,7 @@ auto
     // No outline subsystem in this world means nothing else is claiming stencil values through CkUsf.
     // Renderer modules that write stencil directly are out of reach of any check we could make here.
     const auto* Outline = UCkUsf_OutlineSubsystem::Get_OutlineSubsystem(GetWorld());
-    if (ck::Is_NOT_Valid(Outline, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Outline))
     { return true; }
 
     const auto OutlineMin = static_cast<int32>(Outline->Get_StencilMin());
@@ -373,7 +349,7 @@ auto
 
     const auto MasterPath = ck::usf::Get_GeneratedMasterObjectPath(kLookName);
     auto* Master = LoadObject<UMaterialInterface>(nullptr, *MasterPath);
-    if (ck::Is_NOT_Valid(Master, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Master))
     {
         if (NOT _WarnedMissingMaster)
         {
@@ -491,7 +467,7 @@ auto
 
     auto* Preset = SoftPreset.LoadSynchronous();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Preset, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Preset),
         TEXT("Project settings name [{}] as the default CelShade preset, but it could not be loaded"),
         SoftPreset.ToString())
     {}

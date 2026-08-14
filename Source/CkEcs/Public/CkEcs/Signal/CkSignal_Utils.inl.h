@@ -492,7 +492,7 @@ namespace ck
             auto Connection = Super::template Bind<&T_DerivedSignal_Delegate::DoBroadcast>(
                 DelegateFragment, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Delegate::PostFireBehavior);
 
-            if (NOT ck::IsValid(InHandle) || NOT InHandle.template Has<T_DerivedSignal_Delegate>())
+            if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.template Has<T_DerivedSignal_Delegate>())
             { return; }
 
             if (Connection)

@@ -27,8 +27,6 @@ namespace ck::pathnetwork_editor::designer
             && NOT InPreset._DisplayName.IsEmpty();
         CK_ENSURE_IF_NOT(IdentityIsValid,
             TEXT("Path-network designer preset requires owner, id, and display name"))
-        {}
-        if (NOT IdentityIsValid)
         { return false; }
 
         const bool DetectorClassIsValid =
@@ -36,8 +34,6 @@ namespace ck::pathnetwork_editor::designer
         CK_ENSURE_IF_NOT(DetectorClassIsValid,
             TEXT("Path-network designer preset [{}] requires a usable detector class"),
             InPreset._Id)
-        {}
-        if (NOT DetectorClassIsValid)
         { return false; }
 
         const bool RecommendationIsValid =
@@ -47,8 +43,6 @@ namespace ck::pathnetwork_editor::designer
         CK_ENSURE_IF_NOT(RecommendationIsValid,
             TEXT("Path-network designer preset [{}] contains invalid route preferences"),
             InPreset._Id)
-        {}
-        if (NOT RecommendationIsValid)
         { return false; }
 
         const bool IsUnique = NOT preset_detail::GPresets.ContainsByPredicate(
@@ -60,8 +54,6 @@ namespace ck::pathnetwork_editor::designer
         CK_ENSURE_IF_NOT(IsUnique,
             TEXT("Path-network designer preset [{}:{}] is already registered"),
             InPreset._Owner, InPreset._Id)
-        {}
-        if (NOT IsUnique)
         { return false; }
 
         preset_detail::GPresets.Add(InPreset);

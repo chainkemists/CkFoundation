@@ -12,7 +12,7 @@ auto
         const FCk_Time&    InTime)
     -> float
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve),
         TEXT("Invalid Float Curve when trying to get Value At Time"))
     { return {}; }
 
@@ -25,7 +25,7 @@ auto
         const UCurveFloat* InFloatCurve)
     -> FCk_FloatRange
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve),
         TEXT("Invalid Float Curve when trying to get Time Range"))
     { return {}; }
 
@@ -38,7 +38,7 @@ auto
         const UCurveFloat* InFloatCurve)
     -> FCk_FloatRange
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InFloatCurve),
         TEXT("Invalid Float Curve when trying to get Value Range"))
     { return {}; }
 

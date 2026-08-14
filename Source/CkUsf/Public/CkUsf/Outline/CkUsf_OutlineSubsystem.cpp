@@ -41,7 +41,7 @@ auto
         const UObject* InWorldContextObject)
     -> UCkUsf_OutlineSubsystem*
 {
-    if (ck::Is_NOT_Valid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEngine))
     { return nullptr; }
 
     auto* World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::ReturnNull);
@@ -58,7 +58,7 @@ auto
         UCkUsf_OutlinePreset* InPreset)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
         TEXT("Apply_Outline_To_Actor: null actor"))
     { return; }
 
@@ -75,8 +75,8 @@ auto
         UCkUsf_OutlinePreset* InPreset)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComponent, ck::IsValid_Policy_NullptrOnly{}) &&
-                     ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComponent) &&
+                     ck::IsValid(InPreset),
         TEXT("Apply_Outline_To_Component: null component or preset"))
     { return; }
 
@@ -104,7 +104,7 @@ auto
         AActor* InActor)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
         TEXT("Remove_Outline_From_Actor: null actor"))
     { return; }
 
@@ -120,7 +120,7 @@ auto
         UPrimitiveComponent* InComponent)
     -> void
 {
-    if (ck::Is_NOT_Valid(InComponent, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InComponent))
     { return; }
 
     auto* Applied = _AppliedComponents.Find(InComponent);
@@ -159,7 +159,7 @@ auto
         UCkUsf_OutlinePreset* InPreset)
     -> uint8
 {
-    if (ck::Is_NOT_Valid(InPreset, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InPreset))
     { return 0; }
 
     // External renderers (shadow ISM, ISKM SKMCs, batched clusters) allocate directly without ever calling
@@ -254,7 +254,7 @@ auto
     // ---- SolidOutline master -> MID ----
     const auto MasterPath = ck::usf::Get_GeneratedMasterObjectPath(FName(TEXT("SolidOutline")));
     auto* Master = LoadObject<UMaterialInterface>(nullptr, *MasterPath);
-    if (ck::Is_NOT_Valid(Master, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Master))
     {
         ck::usf::Warning(TEXT("SolidOutline master not found at [{}] — run Generate Look Materials"), MasterPath);
         return false;
@@ -307,7 +307,7 @@ auto
 {
     if (_LutData.IsValidIndex(kLutRow_Outline * kLutWidth + InSlot) == false ||
         _LutData.IsValidIndex(kLutRow_Fill * kLutWidth + InSlot) == false ||
-        ck::Is_NOT_Valid(InPreset, ck::IsValid_Policy_NullptrOnly{}))
+        ck::Is_NOT_Valid(InPreset))
     { return; }
 
     const auto Brightness = InPreset->_OutlineBrightness;

@@ -164,8 +164,6 @@ namespace ck
             const auto AdmissionSucceeded = NOT Query._AdmissionFailed;
             CK_ENSURE_IF_NOT(AdmissionSucceeded,
                 TEXT("Script processor descriptor [{}] rejected a partially admitted query"), InDevClass)
-            {}
-            if (NOT AdmissionSucceeded)
             { return Descriptor; }
 
             const auto QueryContext = BatchClass->GetPathName();

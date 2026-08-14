@@ -178,7 +178,7 @@ auto
     EditorOnly_OnLevelActorDeleted(AActor* InActor) -> void
 {
     if ((_PerOwnerRendererActors.IsEmpty() && _PerOwnerPreviewCrowds.IsEmpty()) ||
-        ck::Is_NOT_Valid(InActor, ck::IsValid_Policy_NullptrOnly{}))
+        ck::Is_NOT_Valid(InActor))
     { return; }
 
     constexpr auto EvenIfPendingKill = true;

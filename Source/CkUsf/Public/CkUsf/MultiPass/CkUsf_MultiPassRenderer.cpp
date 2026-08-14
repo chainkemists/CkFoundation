@@ -57,7 +57,7 @@ auto
         }
 
         auto* MID = UCk_Utils_Usf_UE::Create_MID_ForLook(Pass._Look, this);
-        if (ck::IsValid(MID, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(MID))
         { _PassMIDs.Add(Pass._Id, MID); }
 
         if (Pass._Id != ECk_Usf_PassId::Image)
@@ -95,7 +95,7 @@ auto
     for (const auto& Pass : _Definition->_Passes)
     {
         UMaterialInstanceDynamic* MID = _PassMIDs.FindRef(Pass._Id);
-        if (ck::Is_NOT_Valid(MID, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(MID))
         { continue; }
 
         MID->SetVectorParameterValue(TEXT("iResolution"), FLinearColor(Res, Res, 0.0f, 1.0f));
@@ -105,7 +105,7 @@ auto
         for (const auto& Binding : Pass._BufferChannels)
         {
             UTextureRenderTarget2D* SourceRt = _BufferRead.FindRef(Binding._Buffer);
-            if (ck::IsValid(SourceRt, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::IsValid(SourceRt))
             {
                 const auto ParamName = FName(*FString::Printf(TEXT("iChannel%d"), Binding._ChannelIndex));
                 MID->SetTextureParameterValue(ParamName, SourceRt);
@@ -116,7 +116,7 @@ auto
             ? _DisplayRT.Get()
             : _BufferWrite.FindRef(Pass._Id).Get();
 
-        if (ck::IsValid(Target, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(Target))
         { UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, Target, MID); }
     }
 

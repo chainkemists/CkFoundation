@@ -10,7 +10,7 @@ auto
         const UCk_IskmNotify_AnimInstance* InAnimInstance)
     -> FCk_Handle_IskmProxy
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAnimInstance, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InAnimInstance),
         TEXT("Invalid AnimInstance passed to [Ck][IskmNotify] Get Owning Proxy Handle"))
     { return {}; }
 

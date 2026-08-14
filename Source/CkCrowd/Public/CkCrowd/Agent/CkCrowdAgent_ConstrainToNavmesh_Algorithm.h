@@ -24,8 +24,6 @@ namespace ck::ck_crowd_agent_constrain_to_navmesh_algorithm
             TEXT("Invalid crowd navmesh constraint inputs (feet [{}], surface [{}])"),
             InFeetLocation,
             InSurfaceLocation)
-        {}
-        if (NOT InputsAreValid)
         { return FVector::ZeroVector; }
 
         return InSurfaceLocation - InFeetLocation;

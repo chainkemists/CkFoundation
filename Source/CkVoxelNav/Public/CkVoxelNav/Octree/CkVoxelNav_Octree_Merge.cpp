@@ -279,9 +279,12 @@ namespace ck_voxelnav_octree_merge
             const auto& Left = InLattice._Cells[InLeft];
             const auto& Right = InLattice._Cells[InRight];
 
-            if (Left._Min.Z != Right._Min.Z) { return Left._Min.Z < Right._Min.Z; }
-            if (Left._Min.Y != Right._Min.Y) { return Left._Min.Y < Right._Min.Y; }
-            if (Left._Min.X != Right._Min.X) { return Left._Min.X < Right._Min.X; }
+            if (Left._Min.Z != Right._Min.Z)
+            { return Left._Min.Z < Right._Min.Z; }
+            if (Left._Min.Y != Right._Min.Y)
+            { return Left._Min.Y < Right._Min.Y; }
+            if (Left._Min.X != Right._Min.X)
+            { return Left._Min.X < Right._Min.X; }
 
             return Left._Size < Right._Size;
         });
@@ -421,9 +424,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LeafStoreMatchesLayer,
             TEXT("VoxelNav layer-zero has [{}] nodes but its leaf store has [{}] entries; occupied debug cells are unavailable"),
             LayerZero.Get_NodeCount(), Leaves.Num())
-        {}
-
-        if (NOT LeafStoreMatchesLayer)
         { return; }
 
         for (auto LeafIndex = 0; LeafIndex < Leaves.Num(); ++LeafIndex)

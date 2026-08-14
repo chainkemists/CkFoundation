@@ -262,7 +262,7 @@ auto
         && NOT OutCandidates.IsEmpty())
     {
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Querier);
-        auto* NavSys = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
+        auto* NavSys = ck::IsValid(World)
             ? UNavigationSystemV1::GetCurrent(World)
             : nullptr;
 

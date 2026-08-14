@@ -404,7 +404,7 @@ auto
 
         auto CueName = DefaultObject->Get_CueName();
 
-        if (NOT ck::IsValid(CueName))
+        if (ck::Is_NOT_Valid(CueName))
         { continue; }
 
         if (CueName == TAG_Cue_DoNotExecute)

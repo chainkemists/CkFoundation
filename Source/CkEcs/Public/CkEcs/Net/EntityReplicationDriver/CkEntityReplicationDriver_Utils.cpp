@@ -216,15 +216,11 @@ auto
     const auto OwnerIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Unable to BuildAndReplicate using invalid owner [{}]"), InHandle)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     const auto OwnerHasNetParams = UCk_Utils_Net_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(OwnerHasNetParams,
         TEXT("Entity [{}] does NOT have Network Info. Unable to BuildAndReplicate."), InHandle)
-    {}
-    if (NOT OwnerHasNetParams)
     { return {}; }
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
@@ -248,8 +244,6 @@ auto
     CK_ENSURE_IF_NOT(HasRequiredReplicationDriver,
         TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication."),
         InHandle)
-    {}
-    if (NOT HasRequiredReplicationDriver)
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);

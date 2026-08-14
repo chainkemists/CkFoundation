@@ -185,7 +185,8 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent) -> void
     {
         auto MeshComponent = ck_pmg_processor_directional_shapes_impl::SetupMeshComponent_Directional(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
-        if (ck::Is_NOT_Valid(MeshComponent)) { return; }
+        if (ck::Is_NOT_Valid(MeshComponent))
+        { return; }
 
         ck_pmg_processor_directional_shapes::GenerateDebugShape_Arrow(MeshComponent, InParams.Get_Length(), InParams.Get_ShaftWidth(),
                                  InParams.Get_ArrowHeadRatio(), InParams.Get_ArrowHeadWidthMultiplier(), InParams.Get_Axis());
@@ -252,7 +253,8 @@ namespace ck
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
         InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_Composite>();
 
-        if (InHandle.Has<ck::FFragment_Transform>() == false) { return; }
+        if (InHandle.Has<ck::FFragment_Transform>() == false)
+        { return; }
 
         const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
         const auto Center = Transform.Get_Transform().GetLocation();
@@ -301,7 +303,8 @@ namespace ck
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
         InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_Composite>();
 
-        if (InHandle.Has<ck::FFragment_Transform>() == false) { return; }
+        if (InHandle.Has<ck::FFragment_Transform>() == false)
+        { return; }
 
         const auto& Transform = InHandle.Get<ck::FFragment_Transform>();
         const auto Start = Transform.Get_Transform().GetLocation();

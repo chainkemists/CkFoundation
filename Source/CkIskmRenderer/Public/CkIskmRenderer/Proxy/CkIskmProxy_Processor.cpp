@@ -105,7 +105,7 @@ namespace ck
         { return; }
 
         auto* World = _World.Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
             TEXT("IskmProxy Setup: cached world is invalid for [{}]"), InHandle)
         { return; }
 

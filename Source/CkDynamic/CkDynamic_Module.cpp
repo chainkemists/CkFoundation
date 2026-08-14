@@ -33,15 +33,11 @@ void FCkDynamicModule::StartupModule()
             const auto TypeIsValid = ck::IsValid(Type);
             CK_ENSURE_IF_NOT(TypeIsValid,
                 TEXT("Dynamic Fragment net hydration received payload without a valid struct type"))
-            {}
-            if (NOT TypeIsValid)
             { return ECk_Persistence_ApplyResult::Rejected; }
 
             const auto EntityIsValid = ck::IsValid(InEntity);
             CK_ENSURE_IF_NOT(EntityIsValid,
                 TEXT("Dynamic Fragment net hydration received an invalid entity [{}]"), InEntity)
-            {}
-            if (NOT EntityIsValid)
             { return ECk_Persistence_ApplyResult::Rejected; }
 
             auto* Storage = UCk_Utils_DynamicFragment_UE::TryAddOrGet_Fragment_TypeUnsafe(InEntity, Type);

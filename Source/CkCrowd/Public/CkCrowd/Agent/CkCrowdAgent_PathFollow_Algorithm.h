@@ -49,8 +49,6 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
             InWaypoints.Num(),
             InOutWaypointIndex,
             InProtectedLeadingWaypointCount)
-        {}
-        if (NOT InputsAreValid)
         { return 0; }
 
         const auto StartingWaypointIndex = InOutWaypointIndex;

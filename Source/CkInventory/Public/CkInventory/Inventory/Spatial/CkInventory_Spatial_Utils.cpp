@@ -96,8 +96,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_AddItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
-    {}
-    if (NOT HasAuthority)
     {
         InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -129,8 +127,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_SplitStack: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
-    {}
-    if (NOT HasAuthority)
     {
         InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -161,8 +157,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_RelocateItem: No authority over inventory [{}]"), InInventory)
-    {}
-    if (NOT HasAuthority)
     {
         InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInventory;
@@ -213,7 +207,8 @@ namespace ck_inventory
     auto YawToCardinalRotation(float InYaw) -> ECk_CardinalRotation
     {
         auto Yaw = FMath::Fmod(InYaw, 360.0f);
-        if (Yaw < 0.0f) { Yaw += 360.0f; }
+        if (Yaw < 0.0f)
+        { Yaw += 360.0f; }
 
         const auto Quantized = FMath::RoundToInt(Yaw / 90.0f) % 4;
 

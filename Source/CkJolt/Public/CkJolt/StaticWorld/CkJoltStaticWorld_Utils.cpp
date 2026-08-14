@@ -15,7 +15,7 @@ namespace ck_jolt_static_world_utils
 {
     static auto Get_Subsystem(const UObject* InWorldContextObject) -> UCk_JoltStaticWorld_Subsystem_UE*
     {
-        if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorldContextObject))
         { return nullptr; }
 
         const auto* World = InWorldContextObject->GetWorld();
@@ -39,7 +39,7 @@ auto
 
     auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InActor);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
         TEXT("No JoltStaticWorld subsystem for Actor [{}] — game worlds only"), InActor->GetName())
     { return 0; }
 
@@ -56,7 +56,7 @@ auto
     { return; }
 
     auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InActor);
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return; }
 
     Subsystem->Request_RemoveActor(*InActor);
@@ -73,7 +73,7 @@ auto
 
     auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InComponent);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
         TEXT("No JoltStaticWorld subsystem for Component [{}] — game worlds only"), InComponent->GetName())
     { return 0; }
 
@@ -90,7 +90,7 @@ auto
     { return; }
 
     auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InComponent);
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return; }
 
     Subsystem->Request_RemoveComponent(*InComponent);
@@ -103,7 +103,7 @@ auto
     -> int32
 {
     const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return 0; }
 
     return Subsystem->Get_NumStaticBodies();
@@ -116,7 +116,7 @@ auto
     -> int32
 {
     const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return 0; }
 
     return Subsystem->Get_NumUniqueShapes();
@@ -133,7 +133,7 @@ auto
     auto Result = FCk_Jolt_StaticWorldRayHit_Result{};
 
     const auto* Subsystem = ck_jolt_static_world_utils::Get_Subsystem(InWorldContextObject);
-    if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Subsystem))
     { return Result; }
 
     const auto Hit = Subsystem->Get_RayCastStaticWorld(InStart, InEnd);

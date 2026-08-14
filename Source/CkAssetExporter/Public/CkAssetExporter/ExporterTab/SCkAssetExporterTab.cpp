@@ -262,7 +262,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -336,7 +337,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -410,7 +412,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -484,7 +487,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -558,7 +562,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -632,7 +637,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -706,7 +712,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 
@@ -780,7 +787,8 @@ auto
     auto FailCount = int32{0};
     for (const auto& R : Results)
     {
-        if (R.Succeeded) { ++SuccessCount; }
+        if (R.Succeeded)
+        { ++SuccessCount; }
         else { ++FailCount; }
     }
 

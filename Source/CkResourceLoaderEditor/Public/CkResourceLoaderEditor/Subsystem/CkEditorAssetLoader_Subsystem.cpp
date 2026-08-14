@@ -102,7 +102,7 @@ auto
     Request_RefreshLoadingAssets()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(GEngine),
         TEXT("GEngine is INVALID. This function is being called too early."))
     { return; }
 

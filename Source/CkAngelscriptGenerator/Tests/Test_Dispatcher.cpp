@@ -372,7 +372,8 @@ bool FCkTest_Dispatcher_BuildActionPlan::RunTest(const FString&)
     const auto Plan = FCkAsRecoveryDispatcher::BuildActionPlan(Roots);
 
     TestEqual(TEXT("plan size matches roots"), Plan.Num(), 4);
-    if (Plan.Num() < 4) { return false; }
+    if (Plan.Num() < 4)
+    { return false; }
 
     TestEqual(TEXT("[0] strategy"), static_cast<int32>(Plan[0].Strategy), static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
     TestEqual(TEXT("[1] strategy"), static_cast<int32>(Plan[1].Strategy), static_cast<int32>(ECk_RecoveryStrategy::KickGenerator_DynamicHandle));

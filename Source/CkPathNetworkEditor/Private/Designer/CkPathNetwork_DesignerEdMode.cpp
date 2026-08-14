@@ -125,7 +125,7 @@ auto
     Super::Enter();
 
     auto* Session = GetOrCreate_Session();
-    auto* EditorWorld = ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{})
+    auto* EditorWorld = ck::IsValid(GEditor)
         ? GEditor->GetEditorWorldContext().World()
         : nullptr;
     Session->Initialize(EditorWorld);
@@ -490,7 +490,7 @@ auto
     { return; }
 
     _Session->Clear_Preview();
-    auto* EditorWorld = ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{})
+    auto* EditorWorld = ck::IsValid(GEditor)
         ? GEditor->GetEditorWorldContext().World()
         : nullptr;
     _Session->Initialize(EditorWorld);

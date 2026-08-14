@@ -90,8 +90,10 @@ namespace ck::particles_editor::MeshGenLocal
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
-        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
-        if (Package == nullptr) { return false; }
+        if (Package == nullptr)
+        { Package = CreatePackage(*PkgPath); }
+        if (Package == nullptr)
+        { return false; }
 
         if (auto* Old = StaticFindObject(UStaticMesh::StaticClass(), Package, InName))
         {
@@ -100,7 +102,8 @@ namespace ck::particles_editor::MeshGenLocal
         }
 
         auto* Mesh = NewObject<UStaticMesh>(Package, InName, RF_Public | RF_Standalone);
-        if (Mesh == nullptr) { return false; }
+        if (Mesh == nullptr)
+        { return false; }
 
         auto Description = FMeshDescription{};
         Build_GridDescription(Description, InSurface, InCols, InRows);
@@ -205,9 +208,12 @@ namespace ck::particles_editor::MeshGenLocal
         const float Q = S * 4.0f;
         auto Px = 0.0f;
         auto Py = 0.0f;
-        if      (Q < 1.0f) { Px =  1.0f;            Py = -1.0f + 2.0f * Q; }
-        else if (Q < 2.0f) { Px =  1.0f - 2.0f * (Q - 1.0f); Py =  1.0f; }
-        else if (Q < 3.0f) { Px = -1.0f;            Py =  1.0f - 2.0f * (Q - 2.0f); }
+        if      (Q < 1.0f)
+        { Px =  1.0f;            Py = -1.0f + 2.0f * Q; }
+        else if (Q < 2.0f)
+        { Px =  1.0f - 2.0f * (Q - 1.0f); Py =  1.0f; }
+        else if (Q < 3.0f)
+        { Px = -1.0f;            Py =  1.0f - 2.0f * (Q - 2.0f); }
         else               { Px = -1.0f + 2.0f * (Q - 3.0f); Py = -1.0f; }
 
         auto RadiusScale = 0.0f;
@@ -564,7 +570,8 @@ namespace ck::particles_editor
         const auto BakeOne = [&](const TCHAR* InName, FSurfaceFn InSurface, int32 InCols, int32 InRows, const FName InMaterial)
         {
             ++Total;
-            if (Bake_Mesh(InName, InSurface, InCols, InRows, InMaterial)) { ++Ok; }
+            if (Bake_Mesh(InName, InSurface, InCols, InRows, InMaterial))
+            { ++Ok; }
             else { Log(TEXT("Failed to bake VFX mesh: {}"), FString(InName)); }
         };
 

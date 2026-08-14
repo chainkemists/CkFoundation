@@ -27,12 +27,12 @@ namespace ck_voice_listener_processor
     Get_LocalPlayerState(
         UWorld* InWorld) -> APlayerState*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorld))
         { return nullptr; }
 
         const auto* LocalController = InWorld->GetFirstPlayerController();
 
-        if (ck::Is_NOT_Valid(LocalController, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(LocalController))
         { return nullptr; }
 
         return LocalController->PlayerState;
@@ -43,12 +43,12 @@ namespace ck_voice_listener_processor
         UWorld* InWorld,
         APlayerState* InPlayerState) -> ACk_VoiceChatControlRelay_UE*
     {
-        if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}) || ck::Is_NOT_Valid(InPlayerState))
+        if (ck::Is_NOT_Valid(InWorld) || ck::Is_NOT_Valid(InPlayerState))
         { return nullptr; }
 
         auto* Subsystem = InWorld->GetSubsystem<UCk_VoiceChatControlRelay_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return nullptr; }
 
         auto Pending = Subsystem->Request_AcquireChannel_ForPlayer(InPlayerState);
@@ -105,8 +105,6 @@ namespace ck
         const auto TalkerIsValid = ck::IsValid(Talker);
         CK_ENSURE_IF_NOT(TalkerIsValid,
             TEXT("MuteTalker on VoiceListener [{}] with an invalid Talker handle"), InHandle)
-        {}
-        if (NOT TalkerIsValid)
         { return false; }
 
         auto AlreadyMuted = false;
@@ -149,8 +147,6 @@ namespace ck
         const auto TalkerIsValid = ck::IsValid(Talker);
         CK_ENSURE_IF_NOT(TalkerIsValid,
             TEXT("SetTalkerVolume on VoiceListener [{}] with an invalid Talker handle"), InHandle)
-        {}
-        if (NOT TalkerIsValid)
         { return false; }
 
         InCurrent._TalkerVolumes.Add(Talker, InRequest.Get_Volume());

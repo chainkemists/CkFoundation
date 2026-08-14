@@ -389,7 +389,7 @@ auto
 
             const auto& CellRef = Index->Get_Cells()[ActorRef->Get_CellIndex()];
             const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
-            if (ck::Is_NOT_Valid(CellAsset, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(CellAsset))
             { ++StaleCount; continue; }
 
             const auto& Group = CellAsset->Get_ActorGroups()[ActorRef->Get_GroupIndex()];

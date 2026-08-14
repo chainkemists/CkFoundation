@@ -136,7 +136,7 @@ auto
         const AActor* InOwnerActor)
     -> void
 {
-    if (ck::Is_NOT_Valid(InOwnerActor, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InOwnerActor))
     { return; }
 
     ck_editor_selection_owner_utils::Get_OnRefreshRequested().Broadcast(InOwnerActor);

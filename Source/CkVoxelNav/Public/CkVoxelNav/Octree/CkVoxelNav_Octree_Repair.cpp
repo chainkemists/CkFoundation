@@ -77,9 +77,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Layer [{}] is outside the VoxelNav octree's [{}] layers"),
             static_cast<int32>(InLayerIndex), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return; }
 
         if (InBounds.IsValid == 0)
@@ -95,9 +92,6 @@ namespace ck::voxelnav
             TEXT("VoxelNav layer [{}] has a cell size of [{}]uu across [{}] cells per axis and cannot be "
                  "addressed by bounds"),
             static_cast<int32>(InLayerIndex), CellSize, EdgeCellCount)
-        {}
-
-        if (NOT CellsAreSized)
         { return; }
 
         const auto& NavigationBounds = InOctree.Get_NavigationBounds();
@@ -218,9 +212,6 @@ namespace ck::voxelnav
             TEXT("Cannot repair a VoxelNav octree that was never published - a local repair carries the "
                  "occupancy of everything OUTSIDE its dirty bounds over from the previous bake, and there is "
                  "none to carry"))
-        {}
-
-        if (NOT PublishedOctreeIsBuilt)
         {
             InOutState._Stage = ECk_VoxelNav_RepairStage::Failed;
             return false;
@@ -353,9 +344,6 @@ namespace ck::voxelnav
 
             CK_ENSURE_IF_NOT(RepairWasOpened,
                 TEXT("A VoxelNav repair was advanced without being opened against a published octree"))
-            {}
-
-            if (NOT RepairWasOpened)
             { return false; }
 
             const auto OctreeInitialized = Request_InitializeOctree(
@@ -376,9 +364,6 @@ namespace ck::voxelnav
                 TEXT("A VoxelNav repair sized to [{}] layers cannot carry occupancy over from a bake of [{}] "
                      "layers - the repair params must be the ones the volume was baked with"),
                 WorkingOctree.Get_LayerCount(), PublishedOctree.Get_LayerCount())
-            {}
-
-            if (NOT LatticesMatch)
             { return false; }
 
             const auto& PublishedLeafLayer = PublishedOctree.Get_Layer(LeafLayerIndex);

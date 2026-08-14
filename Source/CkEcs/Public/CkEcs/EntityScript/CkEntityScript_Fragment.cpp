@@ -67,7 +67,7 @@ namespace ck
         {
             auto& Entry = (*Pending)[Index];
 
-            if (ck::IsValid(InCDO, ck::IsValid_Policy_NullptrOnly{})
+            if (ck::IsValid(InCDO)
                 && NOT InCDO->Get_AreSpawnParamsMatching(Entry._SpawnParams, ConstructedScript))
             { continue; }
 

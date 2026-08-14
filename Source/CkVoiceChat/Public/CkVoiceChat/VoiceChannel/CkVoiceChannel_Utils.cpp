@@ -25,8 +25,6 @@ namespace ck_voice_channel_utils
             TEXT("[{}] on VoiceChannel [{}] called without authority - membership is server-authoritative "
                  "and replicates to clients via the control plane"),
             FString{InRequestName}, InVoiceChannel)
-        {}
-        if (NOT HasAuthority)
         {
             InDelegate.ExecuteIfBound(InVoiceChannel, ECk_Request_OperationResult::Failed_NotEnqueued);
             return false;
@@ -48,8 +46,6 @@ auto
     const auto ChannelNameIsValid = ck::IsValid(InParams.Get_ChannelName());
     CK_ENSURE_IF_NOT(ChannelNameIsValid,
         TEXT("Cannot add a VoiceChannel to Host [{}] - the ChannelName tag is invalid"), InChannelHost)
-    {}
-    if (NOT ChannelNameIsValid)
     { return {}; }
 
     ck::voice_chat::VeryVerbose(TEXT("Creating VoiceChannel [{}] under Host [{}]"),
@@ -295,8 +291,6 @@ auto
     CK_ENSURE_IF_NOT(TalkerIsMember,
         TEXT("Get_MemberFlags on VoiceChannel [{}] for Talker [{}] who is not a member"),
         InVoiceChannel, InTalker)
-    {}
-    if (NOT TalkerIsMember)
     { return {}; }
 
     return *Found;

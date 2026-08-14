@@ -95,8 +95,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_SetCelPattern: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -108,8 +106,6 @@ auto
     CK_ENSURE_IF_NOT(StencilIsFree,
         TEXT("Request_SetCelPattern on [{}]: entity already carries an OUTLINE target, which owns its "
              "Custom Stencil value; cel pattern NOT applied"), InHandle)
-    {}
-    if (NOT StencilIsFree)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -136,8 +132,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_ClearCelPattern: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

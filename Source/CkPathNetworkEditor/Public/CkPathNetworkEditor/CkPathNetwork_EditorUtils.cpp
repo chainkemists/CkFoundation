@@ -81,8 +81,6 @@ auto
     const bool ActorIsValid = ck::IsValid(InActor);
     CK_ENSURE_IF_NOT(ActorIsValid,
         TEXT("Bake_DetectorToActor requires a valid PathNetwork actor"))
-    {}
-    if (NOT ActorIsValid)
     {
         Result._FailureReason = TEXT("PathNetwork actor is invalid");
         return Result;
@@ -92,8 +90,6 @@ auto
     const bool DetectorIsValid = ck::IsValid(Detector);
     CK_ENSURE_IF_NOT(DetectorIsValid,
         TEXT("Bake_DetectorToActor on [{}] requires an assigned valid detector"), InActor)
-    {}
-    if (NOT DetectorIsValid)
     {
         Result._FailureReason = TEXT("No valid detector is assigned");
         return Result;
@@ -143,8 +139,6 @@ auto
     CK_ENSURE_IF_NOT(ProjectionExtentIsValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints requires a finite positive projection extent, received [{}]"),
         InProjectionExtent)
-    {}
-    if (NOT ProjectionExtentIsValid)
     {
         Result._FailureReason = TEXT("Projection extent must be finite and positive");
         return Result;
@@ -157,8 +151,6 @@ auto
     CK_ENSURE_IF_NOT(TolerancesAreValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints requires finite non-negative planar/vertical tolerances, received [{}, {}]"),
         InMaxPlanarProjectionDelta, InMaxVerticalProjectionDelta)
-    {}
-    if (NOT TolerancesAreValid)
     {
         Result._FailureReason = TEXT("Planar and vertical conformance tolerances must be finite and non-negative");
         return Result;
@@ -167,8 +159,6 @@ auto
     const bool ActorIsValid = ck::IsValid(InActor);
     CK_ENSURE_IF_NOT(ActorIsValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints requires a valid PathNetwork actor"))
-    {}
-    if (NOT ActorIsValid)
     {
         Result._FailureReason = TEXT("PathNetwork actor is invalid");
         return Result;
@@ -178,8 +168,6 @@ auto
     const bool WorldIsValid = ck::IsValid(World);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] requires a valid world"), InActor)
-    {}
-    if (NOT WorldIsValid)
     {
         Result._FailureReason = TEXT("PathNetwork actor has no valid world");
         return Result;
@@ -189,8 +177,6 @@ auto
     const bool NavSysIsValid = ck::IsValid(NavSys);
     CK_ENSURE_IF_NOT(NavSysIsValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found no navigation system"), InActor)
-    {}
-    if (NOT NavSysIsValid)
     {
         Result._FailureReason = TEXT("World has no navigation system");
         return Result;
@@ -201,8 +187,6 @@ auto
     const bool NavDataIsValid = ck::IsValid(NavData);
     CK_ENSURE_IF_NOT(NavDataIsValid,
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found no default Recast navigation data"), InActor)
-    {}
-    if (NOT NavDataIsValid)
     {
         Result._FailureReason = TEXT("World has no default Recast navigation data");
         return Result;
@@ -232,8 +216,6 @@ auto
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] requires matching relative/world ribbon counts; "
              "relative [{}], world [{}]"),
         InActor, RelativeRibbons.Num(), WorldRibbons.Num())
-    {}
-    if (NOT RibbonCountsMatch)
     {
         Result._FailureReason = TEXT("Relative and world ribbon counts do not match");
         return Result;
@@ -298,8 +280,6 @@ auto
         TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found [{}] internal nonconformant point(s); "
              "no ribbons were mutated"),
         InActor, Result._InternalUnprojectablePoints.Num())
-    {}
-    if (NOT HasNoInternalUnprojectablePoints)
     {
         Result._FailureReason = TEXT("Generated ribbons contain internal nonconformant points");
         return Result;
@@ -339,8 +319,6 @@ auto
     CK_ENSURE_IF_NOT(ProjectionExtentIsValid,
         TEXT("Validate_RibbonPointProjectability requires a finite positive projection extent, received [{}]"),
         InProjectionExtent)
-    {}
-    if (NOT ProjectionExtentIsValid)
     {
         Result._FailureReason = TEXT("Projection extent must be finite and positive");
         return Result;
@@ -353,8 +331,6 @@ auto
     CK_ENSURE_IF_NOT(TolerancesAreValid,
         TEXT("Validate_RibbonPointProjectability requires finite non-negative planar/vertical tolerances, received [{}, {}]"),
         InMaxPlanarProjectionDelta, InMaxVerticalProjectionDelta)
-    {}
-    if (NOT TolerancesAreValid)
     {
         Result._FailureReason = TEXT("Planar and vertical conformance tolerances must be finite and non-negative");
         return Result;
@@ -363,8 +339,6 @@ auto
     const bool ActorIsValid = ck::IsValid(InActor);
     CK_ENSURE_IF_NOT(ActorIsValid,
         TEXT("Validate_RibbonPointProjectability requires a valid PathNetwork actor"))
-    {}
-    if (NOT ActorIsValid)
     {
         Result._FailureReason = TEXT("PathNetwork actor is invalid");
         return Result;
@@ -374,8 +348,6 @@ auto
     const bool WorldIsValid = ck::IsValid(World);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Validate_RibbonPointProjectability on [{}] requires a valid world"), InActor)
-    {}
-    if (NOT WorldIsValid)
     {
         Result._FailureReason = TEXT("PathNetwork actor has no valid world");
         return Result;
@@ -385,8 +357,6 @@ auto
     const bool NavSysIsValid = ck::IsValid(NavSys);
     CK_ENSURE_IF_NOT(NavSysIsValid,
         TEXT("Validate_RibbonPointProjectability on [{}] found no navigation system"), InActor)
-    {}
-    if (NOT NavSysIsValid)
     {
         Result._FailureReason = TEXT("World has no navigation system");
         return Result;
@@ -397,8 +367,6 @@ auto
     const bool NavDataIsValid = ck::IsValid(NavData);
     CK_ENSURE_IF_NOT(NavDataIsValid,
         TEXT("Validate_RibbonPointProjectability on [{}] found no default Recast navigation data"), InActor)
-    {}
-    if (NOT NavDataIsValid)
     {
         Result._FailureReason = TEXT("World has no default Recast navigation data");
         return Result;

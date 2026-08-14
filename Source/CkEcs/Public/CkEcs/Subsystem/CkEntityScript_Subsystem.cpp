@@ -499,7 +499,7 @@ auto
             const auto& ExistingGuid = *FoundExistingGuid;
 
             if (const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(InStruct, ExistingGuid);
-                ck::IsValid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}) && NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, NewProperty))
+                ck::IsValid(ExistingProperty) && NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, NewProperty))
             {
                 PropertiesToChangeType.Emplace(ExistingGuid, NewPinType);
             }

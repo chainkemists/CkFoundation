@@ -982,7 +982,7 @@ auto
     // Synchronous on purpose — collision must exist the frame the level is visible (as it does for Chaos).
     const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(CellAsset, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(CellAsset),
         TEXT("Cooked Jolt cell [{}] failed to load from [{}]"),
         InCellIndex, CellRef.Get_CellAsset().ToString())
     { return nullptr; }

@@ -153,6 +153,10 @@ auto
     {
         // The owner's dependents array is deliberately never pruned (perf) — stale entries are
         // skipped here instead.
+        //
+        // NOT ck::IsValid(...) rather than ck::Is_NOT_Valid(...): this is the two-argument
+        // (entity, context) overload, which only ck::IsValid provides — Is_NOT_Valid's second
+        // parameter is the validation POLICY, so the handle would bind there instead.
         if (NOT ck::IsValid(Dependent, InHandle))
         { continue; }
 

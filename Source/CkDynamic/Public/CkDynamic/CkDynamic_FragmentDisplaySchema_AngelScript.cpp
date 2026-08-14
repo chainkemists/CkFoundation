@@ -175,8 +175,6 @@ auto
     const auto CanRefresh = IsInGameThread() && FAngelscriptManager::IsInitialized();
     CK_ENSURE_IF_NOT(CanRefresh,
         TEXT("AngelScript Dynamic Fragment display schemas must refresh on the game thread after initialization"))
-    {}
-    if (NOT CanRefresh)
     { return false; }
 
     const auto ObservedPaths = Get_ObservedFragmentDisplaySchemaPaths();

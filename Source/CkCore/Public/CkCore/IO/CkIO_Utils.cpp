@@ -564,7 +564,7 @@ auto
         {
             // An exact path skips scope validation — the caller already said where the asset is.
             auto ClassMatches = true;
-            if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::IsValid(AssetClass))
             {
                 if (NOT AssetData.GetClass()->IsChildOf(AssetClass))
                 {
@@ -576,7 +576,7 @@ auto
             if (ClassMatches)
             {
                 if (auto LoadedAsset = AssetData.GetAsset();
-                    ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+                    ck::IsValid(LoadedAsset))
                 {
                     auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
                     SingleResult._Asset = LoadedAsset;
@@ -605,7 +605,7 @@ auto
         // On-disk-only off the game thread — the path that crashed during threaded AS init.
         NameFilter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
-        if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(AssetClass))
         {
             NameFilter.ClassPaths.Add(AssetClass->GetClassPathName());
         }
@@ -646,7 +646,7 @@ auto
             continue;
         }
 
-        if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(AssetClass))
         {
             if (NOT AssetData.GetClass()->IsChildOf(AssetClass))
             { continue; }
@@ -658,7 +658,7 @@ auto
     for (const auto& AssetData : FilteredAssets)
     {
         if (auto LoadedAsset = AssetData.GetAsset();
-            ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(LoadedAsset))
         {
             auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
             SingleResult._Asset = LoadedAsset;
@@ -721,7 +721,7 @@ auto
     // On-disk-only off the game thread avoids the AssetRegistry's game-thread assert.
     Filter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
-    if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(AssetClass))
     {
         Filter.ClassPaths.Add(AssetClass->GetClassPathName());
     }
@@ -807,7 +807,7 @@ auto
 
     if (AssetsToLoad.Num() == 0)
     {
-        const auto& ClassFilter = ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{})
+        const auto& ClassFilter = ck::IsValid(AssetClass)
             ? FString::Printf(TEXT(" of class %s"), *AssetClass->GetName())
             : FString{};
 
@@ -818,7 +818,7 @@ auto
     for (const auto& AssetData : AssetsToLoad)
     {
         if (auto LoadedAsset = AssetData.GetAsset();
-            ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(LoadedAsset))
         {
             auto SingleResult = FCk_Utils_Object_AssetSearchResult_Single{};
             SingleResult._Asset = LoadedAsset;
@@ -851,7 +851,7 @@ auto
 
     if (Result._Results.Num() > 1)
     {
-        const auto& ClassFilter = ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{})
+        const auto& ClassFilter = ck::IsValid(AssetClass)
             ? FString::Printf(TEXT(" %s"), *AssetClass->GetName())
             : FString{};
 

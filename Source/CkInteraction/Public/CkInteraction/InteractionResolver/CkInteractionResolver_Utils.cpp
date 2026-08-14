@@ -228,7 +228,7 @@ auto
     {
         for (const auto& Target : InAvailableTargets)
         {
-            if (NOT ck::IsValid(Target))
+            if (ck::Is_NOT_Valid(Target))
             { continue; }
 
             if (NOT UCk_Utils_InteractTarget_UE::Get_InteractionChannel(Target).MatchesTagExact(Channel))

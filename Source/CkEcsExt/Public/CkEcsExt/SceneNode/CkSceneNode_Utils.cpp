@@ -210,8 +210,6 @@ auto
 
     CK_ENSURE_IF_NOT(SceneNodeIsValid,
         TEXT("InSceneNode [{}] is INVALID. Unable to detach"), InSceneNode)
-    {}
-    if (NOT SceneNodeIsValid)
     {
         InDelegate.ExecuteIfBound(InSceneNode, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InSceneNode;
@@ -278,16 +276,26 @@ auto
         const FCk_Handle& InHandle)
     -> TOptional<int32>
 {
-    if (InHandle.Has<ck::FTag_SceneNode_Layer0>()) { return 0; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer1>()) { return 1; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer2>()) { return 2; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer3>()) { return 3; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer4>()) { return 4; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer5>()) { return 5; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer6>()) { return 6; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer7>()) { return 7; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer8>()) { return 8; }
-    if (InHandle.Has<ck::FTag_SceneNode_Layer9>()) { return 9; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer0>())
+    { return 0; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer1>())
+    { return 1; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer2>())
+    { return 2; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer3>())
+    { return 3; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer4>())
+    { return 4; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer5>())
+    { return 5; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer6>())
+    { return 6; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer7>())
+    { return 7; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer8>())
+    { return 8; }
+    if (InHandle.Has<ck::FTag_SceneNode_Layer9>())
+    { return 9; }
     return {};
 }
 

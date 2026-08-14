@@ -960,7 +960,7 @@ auto
     if (ck::Is_NOT_Valid(InInventory))
     { return 0; }
 
-    if (ck::Is_NOT_Valid(InDefinition, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InDefinition))
     { return 0; }
 
     const auto SaturatingAdd = [](int32 InA, int32 InB) -> int32

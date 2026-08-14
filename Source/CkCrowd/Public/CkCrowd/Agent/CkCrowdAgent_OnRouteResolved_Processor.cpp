@@ -82,8 +82,6 @@ namespace ck
                     HasRouteWaypoints,
                     TEXT("CrowdAgent [{}] received a Ready PathNetwork route with no waypoints"),
                     InHandle)
-                {}
-                if (NOT HasRouteWaypoints)
                 {
                     if (IsPathPending &&
                         NOT InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
@@ -173,8 +171,6 @@ namespace ck
                         TEXT("CrowdAgent [{}] could not append its PathNetwork route after a "
                              "stationary-markup escape prefix"),
                         InHandle)
-                    {}
-                    if (NOT CombinedPathIsValid)
                     {
                         InPathFollow._ProtectedLeadingWaypointCount = 0;
                     }

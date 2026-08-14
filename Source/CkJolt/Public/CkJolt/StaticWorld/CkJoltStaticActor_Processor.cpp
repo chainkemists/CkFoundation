@@ -66,7 +66,7 @@ namespace ck
         -> void
     {
         auto* Subsystem = _StaticWorldSubsystem.Get();
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return; }
 
         Subsystem->Request_RemoveBodiesForEntity(InHandle);

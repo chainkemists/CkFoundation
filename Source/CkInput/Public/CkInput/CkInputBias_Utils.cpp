@@ -57,24 +57,18 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an InputBias onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto HandleIsAnInputSource = UCk_Utils_InputSource_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HandleIsAnInputSource,
         TEXT("Add: Handle [{}] is not an InputSource, so an InputBias on it would have no raw events to condition "
              "and nothing would ever sample its conditioned state"), InHandle)
-    {}
-    if (NOT HandleIsAnInputSource)
     { return {}; }
 
     const auto EntityIsNotAlreadyBiased = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityIsNotAlreadyBiased,
         TEXT("Add: Handle [{}] already carries an InputBias — one source has exactly one conditioning table"),
         InHandle)
-    {}
-    if (NOT EntityIsNotAlreadyBiased)
     { return {}; }
 
     if (NOT DoGet_AxisBiasesAreValid(InHandle, InParams.Get_AxisBiases()))
@@ -167,8 +161,6 @@ auto
     const auto BiasIsValid = ck::IsValid(InInputBias);
     CK_ENSURE_IF_NOT(BiasIsValid,
         TEXT("Request_SetAxisBias: invalid InputBias handle [{}] — the retune is dropped"), InInputBias)
-    {}
-    if (NOT BiasIsValid)
     {
         InDelegate.ExecuteIfBound(InInputBias, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputBias;
@@ -201,8 +193,6 @@ auto
     CK_ENSURE_IF_NOT(AxisKeyIsValid,
         TEXT("InputBias declaration on [{}] names an invalid axis key, so it could never condition anything"),
         InContext)
-    {}
-    if (NOT AxisKeyIsValid)
     { return false; }
 
     const auto Deadzone = InAxisBias.Get_Deadzone();
@@ -223,8 +213,6 @@ auto
         TEXT("InputBias declaration on [{}] gives axis [{}] an exponent of [{}] — it must be greater than zero, "
              "since zero flattens every deflection to full and a negative one inverts the response"),
         InContext, InAxisBias.Get_AxisKey(), Exponent)
-    {}
-    if (NOT ExponentIsPositive)
     { return false; }
 
     const auto Sensitivity = InAxisBias.Get_Sensitivity();
@@ -234,8 +222,6 @@ auto
         TEXT("InputBias declaration on [{}] gives axis [{}] a sensitivity of [{}] — it must be greater than zero; "
              "a flipped axis is asked for with inversion, which keeps the magnitude honest"),
         InContext, InAxisBias.Get_AxisKey(), Sensitivity)
-    {}
-    if (NOT SensitivityIsPositive)
     { return false; }
 
     return true;
@@ -262,8 +248,6 @@ auto
             TEXT("InputBias declaration on [{}] declares axis [{}] more than once — an axis has exactly one bias, "
                  "and silently keeping one of the two would make which one arbitrary"),
             InContext, AxisBias.Get_AxisKey())
-        {}
-        if (NOT AxisKeyIsUnclaimed)
         { return false; }
     }
 

@@ -45,24 +45,18 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an IntentMatcher onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto HandleIsAnInputLayer = UCk_Utils_InputLayer_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HandleIsAnInputLayer,
         TEXT("Add: Handle [{}] is not an InputLayer — a matcher off a layer would have no arbitration to answer "
              "to, and no way to tell an event it was allowed to see from one a layer above it consumed"), InHandle)
-    {}
-    if (NOT HandleIsAnInputLayer)
     { return {}; }
 
     const auto EntityHasNoMatcher = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityHasNoMatcher,
         TEXT("Add: Handle [{}] already carries an IntentMatcher — one layer runs one set, and a second matcher "
              "would register captures the first one believes it owns"), InHandle)
-    {}
-    if (NOT EntityHasNoMatcher)
     { return {}; }
 
     const auto DecayFramesArePositive = InParams.Get_LatchDecayFrames() > 0;
@@ -70,8 +64,6 @@ auto
         TEXT("Add: IntentMatcher declaration on [{}] asks for a latch decay of [{}] frames — a latch that expires "
              "the frame it is stamped cannot be polled at all, and one that never expires leaves a completion "
              "claimable for the rest of the session"), InHandle, InParams.Get_LatchDecayFrames())
-    {}
-    if (NOT DecayFramesArePositive)
     { return {}; }
 
     InHandle.Add<ck::FFragment_IntentMatcher_Params>(InParams);
@@ -287,8 +279,6 @@ auto
     const auto MatcherIsValid = ck::IsValid(InMatcher);
     CK_ENSURE_IF_NOT(MatcherIsValid,
         TEXT("Request_SwapSet: invalid IntentMatcher handle [{}] — the set is dropped"), InMatcher)
-    {}
-    if (NOT MatcherIsValid)
     {
         InDelegate.ExecuteIfBound(InMatcher, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InMatcher;
@@ -313,8 +303,6 @@ auto
     const auto MatcherIsValid = ck::IsValid(InMatcher);
     CK_ENSURE_IF_NOT(MatcherIsValid,
         TEXT("Request_Claim: invalid IntentMatcher handle [{}] — there is no row to claim"), InMatcher)
-    {}
-    if (NOT MatcherIsValid)
     {
         InDelegate.ExecuteIfBound(InMatcher, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InMatcher;
@@ -324,8 +312,6 @@ auto
     CK_ENSURE_IF_NOT(ClaimantIsValid,
         TEXT("Request_Claim: invalid claimant on IntentMatcher [{}] — exclusivity is expressed as WHO holds the "
              "intent, so a claim with nobody to name cannot exclude anyone"), InMatcher)
-    {}
-    if (NOT ClaimantIsValid)
     {
         InDelegate.ExecuteIfBound(InMatcher, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InMatcher;

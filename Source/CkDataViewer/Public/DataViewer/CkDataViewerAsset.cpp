@@ -108,14 +108,14 @@ auto
 {
     auto Blueprint = DoGet_Blueprint(InGuid);
 
-    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(Blueprint, ck::IsValid_Policy_NullptrOnly{}),
+    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(Blueprint),
         TEXT("Could not find a Blueprint with Guid [{}]."), InGuid, ck::Context(this))
     { return; }
 
     const auto  BlueprintGenClass = Blueprint->GeneratedClass;
 
     auto Property = BlueprintGenClass->FindPropertyByName(InPropertyName);
-    if (ck::IsValid(Property, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(Property))
     {
         FBlueprintEditorUtils::PropertyValueFromString(Property, InValue, reinterpret_cast<uint8*>(
             UCk_Utils_Object_UE::Get_ClassDefaultObject<UObject>(BlueprintGenClass)));
@@ -186,7 +186,7 @@ auto
 
     UPackage* Package = InBlueprint->GetOutermost();
 
-    if (ck::Is_NOT_Valid(Package, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Package))
     { return; }
 
     Package->SetDirtyFlag(false);
@@ -409,7 +409,7 @@ auto
             if (ck::Is_NOT_Valid(PinType))
             { continue; }
 
-            if (ck::Is_NOT_Valid(ClassBlueprint, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(ClassBlueprint))
             { continue; }
 
             const auto ClassBlueprintGenClass = ClassBlueprint->GeneratedClass;

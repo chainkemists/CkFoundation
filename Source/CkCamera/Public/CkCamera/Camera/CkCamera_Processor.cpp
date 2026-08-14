@@ -309,10 +309,10 @@ namespace ck
         if (InHandle.Get<FFragment_Camera_Params>().Get_Params().Get_DriveControllerControlRotation())
         {
             if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle));
-                ck::IsValid(Pawn, ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(Pawn))
             {
                 if (auto* PC = Cast<APlayerController>(Pawn->GetController());
-                    ck::IsValid(PC, ck::IsValid_Policy_NullptrOnly{}) && PC->IsLocalController())
+                    ck::IsValid(PC) && PC->IsLocalController())
                 {
                     PC->SetControlRotation(ViewInfo.Rotation);
                 }

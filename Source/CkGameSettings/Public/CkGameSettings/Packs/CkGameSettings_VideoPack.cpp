@@ -69,8 +69,6 @@ auto
     auto NewResolution = FIntPoint{};
     const auto ResolutionParses = ck::game_settings::TryParse_Resolution(InNewValue, NewResolution);
     CK_ENSURE_IF_NOT(ResolutionParses, TEXT("Video pack resolution value [{}] is not of the form WIDTHxHEIGHT, not applied"), InNewValue)
-    {}
-    if (NOT ResolutionParses)
     { return; }
 
     Settings->SetScreenResolution(NewResolution);
@@ -392,15 +390,11 @@ auto
 {
     const auto EngineIsValid = ck::IsValid(GEngine);
     CK_ENSURE_IF_NOT(EngineIsValid, TEXT("No GEngine, cannot resolve GameUserSettings for the Video pack"))
-    {}
-    if (NOT EngineIsValid)
     { return nullptr; }
 
     auto* Settings = GEngine->GetGameUserSettings();
     const auto SettingsAreValid = ck::IsValid(Settings);
     CK_ENSURE_IF_NOT(SettingsAreValid, TEXT("GEngine->GetGameUserSettings() returned null, Video pack cannot operate"))
-    {}
-    if (NOT SettingsAreValid)
     { return nullptr; }
 
     return Settings;

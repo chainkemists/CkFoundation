@@ -42,8 +42,10 @@ namespace ck::particles_editor::MatGenLocal
         UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
             ? LoadPackage(nullptr, *PkgPath, LOAD_None)
             : nullptr;
-        if (Package == nullptr) { Package = CreatePackage(*PkgPath); }
-        if (Package == nullptr) { return nullptr; }
+        if (Package == nullptr)
+        { Package = CreatePackage(*PkgPath); }
+        if (Package == nullptr)
+        { return nullptr; }
 
         if (auto* Old = StaticFindObject(UMaterial::StaticClass(), Package, InName))
         {
@@ -84,7 +86,8 @@ namespace ck::particles_editor::MatGenLocal
         int32        InY) -> UMaterialExpressionTextureSampleParameter2D*
     {
         auto* Sample = New_Expression<UMaterialExpressionTextureSampleParameter2D>(InMaterial, InX, InY);
-        if (Sample == nullptr) { return nullptr; }
+        if (Sample == nullptr)
+        { return nullptr; }
 
         Sample->ParameterName = InParamName;
         if (auto* Texture = LoadObject<UTexture2D>(nullptr, *ck::particles::Get_VfxTextureObjectPath(InVfxTextureName)))
@@ -100,7 +103,8 @@ namespace ck::particles_editor::MatGenLocal
     static auto New_DynamicParams(UMaterial* InMaterial, int32 InX, int32 InY) -> UMaterialExpressionDynamicParameter*
     {
         auto* Dyn = New_Expression<UMaterialExpressionDynamicParameter>(InMaterial, InX, InY);
-        if (Dyn == nullptr) { return nullptr; }
+        if (Dyn == nullptr)
+        { return nullptr; }
 
         Dyn->ParamNames = { TEXT("Dissolve"), TEXT("Distortion"), TEXT("PanOffset"), TEXT("Boost") };
         Dyn->DefaultValue = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -134,7 +138,8 @@ namespace ck::particles_editor::MatGenLocal
         auto* Softness = New_Expression<UMaterialExpressionConstant>(InMaterial, -700, 520);
         auto* MaxEdge  = New_Expression<UMaterialExpressionAdd>(InMaterial, -540, 480);
         auto* Erode    = New_Expression<UMaterialExpressionSmoothStep>(InMaterial, -380, 440);
-        if (Softness == nullptr || MaxEdge == nullptr || Erode == nullptr) { return nullptr; }
+        if (Softness == nullptr || MaxEdge == nullptr || Erode == nullptr)
+        { return nullptr; }
 
         Softness->R = InSoftness;
         UMaterialEditingLibrary::ConnectMaterialExpressions(InThreshold, InThresholdOutput, MaxEdge, TEXT("A"));
@@ -149,7 +154,8 @@ namespace ck::particles_editor::MatGenLocal
     static auto Build_SweepErode() -> bool
     {
         auto* Mat = Begin_Material(TEXT("M_CkParticles_SweepErode"));
-        if (Mat == nullptr) { return false; }
+        if (Mat == nullptr)
+        { return false; }
 
         constexpr auto TwoSided = true;
         Setup_TranslucentUnlit(Mat, TwoSided);
@@ -209,7 +215,8 @@ namespace ck::particles_editor::MatGenLocal
         Wire(WarpedUv, TEXT(""), MainTex, TEXT(""));
 
         auto* Erode = Build_ErodeChain(Mat, Dyn, TEXT("Dissolve"), DissolveTex, TEXT("R"), 0.25f);
-        if (Erode == nullptr) { return false; }
+        if (Erode == nullptr)
+        { return false; }
 
         // Emissive = MainTex.RGB x ParticleColor.RGB x (1 + Boost); Opacity = MainTex.R x Erode x Color.A, depth-faded.
         auto* One       = New_Expression<UMaterialExpressionConstant>(Mat, -280, 340);
@@ -249,7 +256,8 @@ namespace ck::particles_editor::MatGenLocal
     static auto Build_SoftSmoke() -> bool
     {
         auto* Mat = Begin_Material(TEXT("M_CkParticles_SoftSmoke"));
-        if (Mat == nullptr) { return false; }
+        if (Mat == nullptr)
+        { return false; }
 
         constexpr auto TwoSided = false;
         Setup_TranslucentUnlit(Mat, TwoSided);
@@ -257,17 +265,20 @@ namespace ck::particles_editor::MatGenLocal
         auto* Dyn     = New_DynamicParams(Mat, -1200, 300);
         auto* PColor  = New_Expression<UMaterialExpressionParticleColor>(Mat, -1200, 560);
         auto* MainTex = New_TextureParam(Mat, TEXT("MainTexture"), TEXT("Smoke"), -1200, 0);
-        if (Dyn == nullptr || PColor == nullptr || MainTex == nullptr) { return false; }
+        if (Dyn == nullptr || PColor == nullptr || MainTex == nullptr)
+        { return false; }
 
         // Smoke bakes density into RGB and an erosion mask into A — dissolve eats along the baked mask.
         auto* Erode = Build_ErodeChain(Mat, Dyn, TEXT("Dissolve"), MainTex, TEXT("A"), 0.35f);
-        if (Erode == nullptr) { return false; }
+        if (Erode == nullptr)
+        { return false; }
 
         auto* Emissive = New_Expression<UMaterialExpressionMultiply>(Mat, -200, 80);
         auto* OpacMulA = New_Expression<UMaterialExpressionMultiply>(Mat, -200, 420);
         auto* OpacMulB = New_Expression<UMaterialExpressionMultiply>(Mat, -60, 460);
         auto* Fade     = New_Expression<UMaterialExpressionDepthFade>(Mat, 80, 480);
-        if (Emissive == nullptr || OpacMulA == nullptr || OpacMulB == nullptr || Fade == nullptr) { return false; }
+        if (Emissive == nullptr || OpacMulA == nullptr || OpacMulB == nullptr || Fade == nullptr)
+        { return false; }
 
         Fade->FadeDistanceDefault = 45.0f;
 
@@ -291,7 +302,8 @@ namespace ck::particles_editor::MatGenLocal
     static auto Build_FresnelShell() -> bool
     {
         auto* Mat = Begin_Material(TEXT("M_CkParticles_FresnelShell"));
-        if (Mat == nullptr) { return false; }
+        if (Mat == nullptr)
+        { return false; }
         Mat->MaterialDomain = MD_Surface;
         Mat->BlendMode      = BLEND_Additive;
         Mat->SetShadingModel(MSM_Unlit);
@@ -319,7 +331,8 @@ namespace ck::particles_editor::MatGenLocal
         Wire(NoisePan, TEXT(""), NoiseTex, TEXT(""));
 
         auto* Erode = Build_ErodeChain(Mat, Dyn, TEXT("Dissolve"), NoiseTex, TEXT("R"), 0.30f);
-        if (Erode == nullptr) { return false; }
+        if (Erode == nullptr)
+        { return false; }
 
         auto* One       = New_Expression<UMaterialExpressionConstant>(Mat, -560, 120);
         auto* BoostPlus = New_Expression<UMaterialExpressionAdd>(Mat, -420, 140);
@@ -364,7 +377,8 @@ namespace ck::particles_editor
         const auto BuildOne = [&](const TCHAR* InName, bool (*InFn)())
         {
             ++Total;
-            if (InFn()) { ++Ok; }
+            if (InFn())
+            { ++Ok; }
             else { Log(TEXT("Failed to build VFX master material: {}"), FString(InName)); }
         };
 

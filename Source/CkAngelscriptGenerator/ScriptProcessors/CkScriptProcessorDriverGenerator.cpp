@@ -293,22 +293,30 @@ namespace ck::scriptprocessor_driver_generator
         UClass* InBase)
         -> bool
     {
-        if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))                     { return false; }
-        if (InClass == InBase)                                                               { return false; }
-        if (NOT InClass->IsChildOf(InBase))                                                  { return false; }
-        if (InClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists)) { return false; }
-        if (InClass->IsUnreachable() || InClass->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed)) { return false; }
+        if (ck::Is_NOT_Valid(InClass))
+        { return false; }
+        if (InClass == InBase)
+        { return false; }
+        if (NOT InClass->IsChildOf(InBase))
+        { return false; }
+        if (InClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+        { return false; }
+        if (InClass->IsUnreachable() || InClass->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+        { return false; }
 
 #if WITH_ANGELSCRIPT_CK
         if (auto* ASClass = UASClass::GetFirstASClass(InClass))
         {
-            if (ASClass->NewerVersion != nullptr) { return false; }
+            if (ASClass->NewerVersion != nullptr)
+            { return false; }
             const auto SourcePath = ASClass->GetSourceFilePath();
-            if (NOT SourcePath.IsEmpty() && NOT FPaths::FileExists(SourcePath)) { return false; }
+            if (NOT SourcePath.IsEmpty() && NOT FPaths::FileExists(SourcePath))
+            { return false; }
         }
 #endif
 
-        if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass)) { return false; }
+        if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass))
+        { return false; }
         return true;
     }
 
@@ -320,19 +328,25 @@ namespace ck::scriptprocessor_driver_generator
         -> bool
     {
         auto* Existing = FindFirstObject<UClass>(*InDriverBareName, EFindFirstObjectOptions::None);
-        if (ck::Is_NOT_Valid(Existing, ck::IsValid_Policy_NullptrOnly{})) { return false; }
+        if (ck::Is_NOT_Valid(Existing))
+        { return false; }
 
-        if (Existing->IsUnreachable() || Existing->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed)) { return false; }
-        if (Existing->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated))                    { return false; }
+        if (Existing->IsUnreachable() || Existing->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+        { return false; }
+        if (Existing->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated))
+        { return false; }
 
 #if WITH_ANGELSCRIPT_CK
         if (auto* ExistingAS = UASClass::GetFirstASClass(Existing))
         {
-            if (ExistingAS->NewerVersion != nullptr) { return false; }
+            if (ExistingAS->NewerVersion != nullptr)
+            { return false; }
 
             const auto SourcePath = ExistingAS->GetSourceFilePath();
-            if (NOT SourcePath.IsEmpty() && NOT FPaths::FileExists(SourcePath)) { return false; }
-            if (SourcePath.IsEmpty()) { return true; }
+            if (NOT SourcePath.IsEmpty() && NOT FPaths::FileExists(SourcePath))
+            { return false; }
+            if (SourcePath.IsEmpty())
+            { return true; }
 
             auto Normalized = FPaths::ConvertRelativePathToFull(SourcePath);
             FPaths::NormalizeFilename(Normalized);

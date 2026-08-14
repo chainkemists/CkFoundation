@@ -151,16 +151,12 @@ auto
 
     const auto TempFileSaved = FFileHelper::SaveStringToFile(Content, *TempFilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     CK_ENSURE_IF_NOT(TempFileSaved, TEXT("GameSettings ini flush could not write the temp file [{}], values remain unflushed"), TempFilePath)
-    {}
-    if (NOT TempFileSaved)
     { return; }
 
     constexpr auto ReplaceExisting = true;
     constexpr auto EvenIfReadOnly = true;
     const auto TempFileMoved = IFileManager::Get().Move(*FilePath, *TempFilePath, ReplaceExisting, EvenIfReadOnly);
     CK_ENSURE_IF_NOT(TempFileMoved, TEXT("GameSettings ini flush could not move the temp file into [{}], values remain unflushed"), FilePath)
-    {}
-    if (NOT TempFileMoved)
     { return; }
 
     _Dirty = false;

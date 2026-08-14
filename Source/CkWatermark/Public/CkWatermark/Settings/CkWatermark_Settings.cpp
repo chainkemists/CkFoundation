@@ -37,15 +37,18 @@ UCk_Watermark_ProjectSettings_UE::UCk_Watermark_ProjectSettings_UE(
 
 void UCk_Watermark_ProjectSettings_UE::ForceRebuildWatermark()
 {
-    if (!GEngine) { return; }
+    if (!GEngine)
+    { return; }
 
     for (const FWorldContext& Ctx : GEngine->GetWorldContexts())
     {
         const UWorld* World = Ctx.World();
-        if (!World) { continue; }
+        if (!World)
+        { continue; }
 
         const UGameInstance* GI = World->GetGameInstance();
-        if (!GI) { continue; }
+        if (!GI)
+        { continue; }
 
         for (ULocalPlayer* LP : GI->GetLocalPlayers())
         {

@@ -79,7 +79,8 @@ auto
     for (const FString& Token : Tokens)
     {
         const uint32 Codepoint = static_cast<uint32>(FCString::Strtoui64(*Token, nullptr, 16));
-        if (Codepoint == 0) { continue; }
+        if (Codepoint == 0)
+        { continue; }
         if (Codepoint <= 0xFFFF)
         {
             Result.AppendChar(static_cast<TCHAR>(Codepoint));

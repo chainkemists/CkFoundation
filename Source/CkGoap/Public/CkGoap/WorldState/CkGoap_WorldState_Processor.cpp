@@ -84,7 +84,8 @@ auto
 	const auto PreviousValue = InValues._Values.Get(Key);
 	InValues._Values.Set(Key, InRequest.Get_Value());
 
-	if (PreviousValue == InRequest.Get_Value()) { return ECk_Request_OperationResult::Succeeded; }
+	if (PreviousValue == InRequest.Get_Value())
+	{ return ECk_Request_OperationResult::Succeeded; }
 
 	InHandle.AddOrGet<FFragment_Goap_WorldState_ChangeLog>().Record(
 		FCk_Goap_WorldStateChange{InRequest.Get_Key(), PreviousValue, InRequest.Get_Value(),
@@ -97,7 +98,7 @@ auto
 	for (auto Index = InSubscribers._Subscribers.Num() - 1; Index >= 0; --Index)
 	{
 		auto& Subscriber = InSubscribers._Subscribers[Index];
-		if (NOT ck::IsValid(Subscriber))
+		if (ck::Is_NOT_Valid(Subscriber))
 		{
 			InSubscribers._Subscribers.RemoveAtSwap(Index);
 			continue;

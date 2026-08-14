@@ -117,7 +117,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoPopulatePropertyInfo(
 	for (const auto& VarDesc : VarDescs)
 	{
 		const auto* Prop = FStructureEditorUtils::GetPropertyByGuid(SpawnParamsStruct, VarDesc.VarGuid);
-		const auto TypeName = ck::IsValid(Prop, ck::IsValid_Policy_NullptrOnly{}) ? Prop->GetCPPType() : TEXT("Unknown");
+		const auto TypeName = ck::IsValid(Prop) ? Prop->GetCPPType() : TEXT("Unknown");
 
 		InEntry->StructProperties.Emplace(
 			VarDesc.FriendlyName,
@@ -227,7 +227,7 @@ auto FCkEntityScriptSpawnParamsDiscovery::DoCheckEntryMismatch(
 
 		const auto* ExistingProperty = FStructureEditorUtils::GetPropertyByGuid(SpawnParamsStruct, *FoundGuid);
 
-		if (ck::Is_NOT_Valid(ExistingProperty, ck::IsValid_Policy_NullptrOnly{}))
+		if (ck::Is_NOT_Valid(ExistingProperty))
 		{ return true; }
 
 		if (NOT UCk_Utils_Reflection_UE::Get_ArePropertiesCompatible(ExistingProperty, ExpProp))

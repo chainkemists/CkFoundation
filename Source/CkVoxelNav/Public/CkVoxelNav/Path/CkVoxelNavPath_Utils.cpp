@@ -21,18 +21,12 @@ auto
 
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] supplied to UCk_Utils_VoxelNavPath_UE::Add"), InHandle)
-    {}
-
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto FeatureIsAbsent = NOT Has(InHandle);
 
     CK_ENSURE_IF_NOT(FeatureIsAbsent,
         TEXT("Entity [{}] already has the VoxelNavPath feature"), InHandle)
-    {}
-
-    if (NOT FeatureIsAbsent)
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_VoxelNavPath_Params>(InParams);
@@ -71,9 +65,6 @@ auto
 
     CK_ENSURE_IF_NOT(PathIsValid,
         TEXT("Invalid VoxelNav Path Handle [{}] supplied to Request_FindPath"), InPath)
-    {}
-
-    if (NOT PathIsValid)
     {
         InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InPath;
@@ -101,9 +92,6 @@ auto
 
     CK_ENSURE_IF_NOT(PathIsValid,
         TEXT("Invalid VoxelNav Path Handle [{}] supplied to Request_SetVolume"), InPath)
-    {}
-
-    if (NOT PathIsValid)
     {
         InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InPath;

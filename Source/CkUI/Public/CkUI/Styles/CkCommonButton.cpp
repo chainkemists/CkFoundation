@@ -40,7 +40,7 @@ void UCkCommonButton::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    if (NOT ck::IsValid(TextBlock))
+    if (ck::Is_NOT_Valid(TextBlock))
     {
         return;
     }

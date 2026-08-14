@@ -171,20 +171,34 @@ auto
 {
     using namespace ck;
 
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Zero>>())       { return ECk_Team_ID::Zero; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::One>>())        { return ECk_Team_ID::One; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Two>>())        { return ECk_Team_ID::Two; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Three>>())      { return ECk_Team_ID::Three; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Four>>())       { return ECk_Team_ID::Four; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Five>>())       { return ECk_Team_ID::Five; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Six>>())        { return ECk_Team_ID::Six; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Seven>>())      { return ECk_Team_ID::Seven; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eight>>())      { return ECk_Team_ID::Eight; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Nine>>())       { return ECk_Team_ID::Nine; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Ten>>())        { return ECk_Team_ID::Ten; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eleven>>())     { return ECk_Team_ID::Eleven; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Twelve>>())     { return ECk_Team_ID::Twelve; }
-    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Unassigned>>()) { return ECk_Team_ID::Unassigned; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Zero>>())
+    { return ECk_Team_ID::Zero; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::One>>())
+    { return ECk_Team_ID::One; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Two>>())
+    { return ECk_Team_ID::Two; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Three>>())
+    { return ECk_Team_ID::Three; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Four>>())
+    { return ECk_Team_ID::Four; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Five>>())
+    { return ECk_Team_ID::Five; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Six>>())
+    { return ECk_Team_ID::Six; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Seven>>())
+    { return ECk_Team_ID::Seven; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eight>>())
+    { return ECk_Team_ID::Eight; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Nine>>())
+    { return ECk_Team_ID::Nine; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Ten>>())
+    { return ECk_Team_ID::Ten; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eleven>>())
+    { return ECk_Team_ID::Eleven; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Twelve>>())
+    { return ECk_Team_ID::Twelve; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Unassigned>>())
+    { return ECk_Team_ID::Unassigned; }
 
     CK_TRIGGER_ENSURE(TEXT("Entity [{}] has been assigned an out of range Team ID"), InHandle);
 

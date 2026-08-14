@@ -95,7 +95,7 @@ auto
         const UClass* InTraitClass) const
     -> bool
 {
-    return ck::IsValid(Get_ItemTrait(InTraitClass), ck::IsValid_Policy_NullptrOnly{});
+    return ck::IsValid(Get_ItemTrait(InTraitClass));
 }
 
 auto

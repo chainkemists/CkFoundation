@@ -17,7 +17,8 @@ auto
 	Request_CreateCellEntity()
 	-> FCk_Handle
 {
-	if (NOT _CellEcsWorld.IsValid()) { return {}; }
+	if (NOT _CellEcsWorld.IsValid())
+	{ return {}; }
 	return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_CellEcsWorld->Get_Registry());
 }
 
@@ -26,7 +27,8 @@ auto
 	Get_CellRegistry() const
 	-> FCk_Registry
 {
-	if (NOT _CellEcsWorld.IsValid()) { return {}; }
+	if (NOT _CellEcsWorld.IsValid())
+	{ return {}; }
 	return _CellEcsWorld->Get_Registry();
 }
 

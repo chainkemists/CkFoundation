@@ -86,8 +86,6 @@ namespace ck
         CK_ENSURE_IF_NOT(AdmissionSucceeded,
             TEXT("Script processor [{}] query admission failed. Disabling it instead of dispatching a partial query."),
             InDevClass)
-        {}
-        if (NOT AdmissionSucceeded)
         { _Disabled = true; return; }
 
         const auto QueryContext = InDevClass->GetPathName();

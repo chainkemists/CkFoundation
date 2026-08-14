@@ -68,8 +68,10 @@ auto
     -> bool
 {
     auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
-    if (MasterControl == 1) { return true; }
-    if (MasterControl == -1) { return false; }
+    if (MasterControl == 1)
+    { return true; }
+    if (MasterControl == -1)
+    { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllProbes;
 }
 
@@ -79,8 +81,10 @@ auto
     -> bool
 {
     auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
-    if (MasterControl == 1) { return true; }
-    if (MasterControl == -1) { return false; }
+    if (MasterControl == 1)
+    { return true; }
+    if (MasterControl == -1)
+    { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllLineTraces;
 }
 
@@ -90,8 +94,10 @@ auto
     -> bool
 {
     auto MasterControl = ck_spatial_query_settings::cvar::PreviewAllTraces;
-    if (MasterControl == 1) { return true; }
-    if (MasterControl == -1) { return false; }
+    if (MasterControl == 1)
+    { return true; }
+    if (MasterControl == -1)
+    { return false; }
     return ck_spatial_query_settings::cvar::PreviewAllProbesUsingJolt;
 }
 

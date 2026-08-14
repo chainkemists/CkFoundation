@@ -27,9 +27,12 @@ auto
     }
 
     FString Result;
-    if (bCpp) { Result += TEXT("C++"); }
-    if (bBP)  { Result += Result.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
-    if (bAS)  { Result += Result.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
+    if (bCpp)
+    { Result += TEXT("C++"); }
+    if (bBP)
+    { Result += Result.IsEmpty() ? TEXT("BP") : TEXT(" BP"); }
+    if (bAS)
+    { Result += Result.IsEmpty() ? TEXT("AS") : TEXT(" AS"); }
     return FText::FromString(Result);
 }
 

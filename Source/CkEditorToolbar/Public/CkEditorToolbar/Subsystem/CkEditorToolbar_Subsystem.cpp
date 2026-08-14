@@ -174,7 +174,7 @@ auto
 
     const auto& ToolbarMenu = UToolMenus::Get()->ExtendMenu(ExtensionPointName);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(ToolbarMenu, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(ToolbarMenu),
         TEXT("Failed to find Toolbar Menu [{}]"), ExtensionPointName)
     { return; }
 

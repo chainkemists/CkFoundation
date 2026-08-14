@@ -55,7 +55,7 @@ namespace ck_iskm_outline_processor
         { return; }
 
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>();
-            ck::IsValid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(OutlineSubsystem))
         {
             OutlineSubsystem->Release_StencilFor(InApplied.Get_Preset().Get());
         }
@@ -90,7 +90,7 @@ namespace ck
 
         auto* Preset = InTarget.Get_Preset().Get();
 
-        if (ck::Is_NOT_Valid(Preset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Preset))
         { return; }
 
         if (ck::Is_NOT_Valid(InCurrent.Get_BaseSKMC().Get()))
@@ -118,7 +118,7 @@ namespace ck
         { return; }
 
         auto* OutlineSubsystem = _World->GetSubsystem<UCkUsf_OutlineSubsystem>();
-        if (ck::Is_NOT_Valid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(OutlineSubsystem))
         { return; }
 
         const auto Stencil = OutlineSubsystem->Get_OrAllocate_StencilFor(Preset);

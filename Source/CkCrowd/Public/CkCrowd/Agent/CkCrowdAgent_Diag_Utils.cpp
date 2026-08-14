@@ -29,8 +29,6 @@ auto
     const auto IsValidAgent = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(IsValidAgent,
         TEXT("Invalid CrowdAgent handle [{}] passed to TrackWithSpatialCenter"), InAgent)
-    {}
-    if (NOT IsValidAgent)
     {
         return InAgent;
     }
@@ -127,7 +125,7 @@ auto
         const FCk_Handle_CrowdAgent& InAgent)
     -> bool
 {
-    if (NOT ck::IsValid(InAgent))
+    if (ck::Is_NOT_Valid(InAgent))
     { return false; }
     return InAgent.Has<ck::FTag_CrowdDiag_Tracked>();
 }
@@ -140,7 +138,7 @@ auto
         const FCk_Handle_CrowdAgent& InAgent)
     -> FCk_Fragment_CrowdAgent_DiagRecorderData
 {
-    if (NOT ck::IsValid(InAgent))
+    if (ck::Is_NOT_Valid(InAgent))
     { return {}; }
     if (NOT InAgent.Has<ck::FFragment_CrowdAgent_DiagRecorder>())
     { return {}; }
@@ -240,7 +238,7 @@ auto
         bool InEmitRecentPipeline)
     -> void
 {
-    if (NOT ck::IsValid(InAgent))
+    if (ck::Is_NOT_Valid(InAgent))
     { return; }
     if (NOT InAgent.Has<ck::FFragment_CrowdAgent_DiagRecorder>())
     { return; }

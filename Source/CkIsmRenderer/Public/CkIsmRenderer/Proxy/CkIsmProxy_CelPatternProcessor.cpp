@@ -76,7 +76,7 @@ namespace ck
 
         auto* CelShadeSubsystem = _World->GetSubsystem<UCkUsf_CelShadeSubsystem>();
 
-        if (ck::Is_NOT_Valid(CelShadeSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CelShadeSubsystem))
         { return; }
 
         // 0 means the stencil contract is switched off in this world's settings — a shadow carrying it would
@@ -104,7 +104,7 @@ namespace ck
 
         auto* IsmSubsystem = _World->GetSubsystem<UCk_IsmRenderer_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(IsmSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(IsmSubsystem))
         { return; }
 
         const auto ShadowIsm = IsmSubsystem->FindOrCreate_CelPatternIsmComponent(

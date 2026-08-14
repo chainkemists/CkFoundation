@@ -168,8 +168,6 @@ auto
 {
     const auto IsGridValid = ck::IsValid(InGrid);
     CK_ENSURE_IF_NOT(IsGridValid, TEXT("Cannot update pivot for invalid grid"))
-    {}
-    if (NOT IsGridValid)
     {
         InDelegate.ExecuteIfBound(FCk_Handle{InGrid}, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

@@ -118,8 +118,6 @@ auto
 {
     const auto IsCellValid = ck::IsValid(InCell);
     CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
-    {}
-    if (NOT IsCellValid)
     {
         InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -158,8 +156,6 @@ auto
 {
     const auto IsCellValid = ck::IsValid(InCell);
     CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
-    {}
-    if (NOT IsCellValid)
     {
         InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InCell;
@@ -167,8 +163,6 @@ auto
 
     const auto IsTagValid = InTag.IsValid();
     CK_ENSURE_IF_NOT(IsTagValid, TEXT("Request_AddTag: tag is invalid"))
-    {}
-    if (NOT IsTagValid)
     {
         InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InCell;
@@ -193,8 +187,6 @@ auto
 {
     const auto IsCellValid = ck::IsValid(InCell);
     CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
-    {}
-    if (NOT IsCellValid)
     {
         InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InCell;

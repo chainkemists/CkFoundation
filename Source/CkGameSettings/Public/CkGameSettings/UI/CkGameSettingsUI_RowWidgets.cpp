@@ -101,14 +101,10 @@ auto
 
     const auto ContextIsUsable = ck::IsValid(InWorldContextObject);
     CK_ENSURE_IF_NOT(ContextIsUsable, TEXT("Invalid WorldContextObject passed to GameSettings row [{}] for key [{}]"), this, InKey)
-    {}
-    if (NOT ContextIsUsable)
     { return; }
 
     const auto KeyIsRegistered = UCk_Utils_GameSettings_UE::Get_IsSettingRegistered(InWorldContextObject, InKey);
     CK_ENSURE_IF_NOT(KeyIsRegistered, TEXT("GameSettings row [{}] injected with unregistered key [{}]"), this, InKey)
-    {}
-    if (NOT KeyIsRegistered)
     { return; }
 
     UCk_Utils_GameSettings_UE::BindTo_OnSettingChanged(InWorldContextObject, InKey, Delegate);
@@ -281,8 +277,6 @@ auto
             auto Parsed = int32{};
             const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
             CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Int32"), InOptionValue, Get_Key())
-            {}
-            if (NOT OptionParses)
             { return; }
 
             UCk_Utils_GameSettings_UE::Request_SetSettingValue_Int32(WorldContext,
@@ -294,8 +288,6 @@ auto
             auto Parsed = float{};
             const auto OptionParses = LexTryParseString(Parsed, *InOptionValue);
             CK_ENSURE_IF_NOT(OptionParses, TEXT("GameSettings option value [{}] on key [{}] does not parse as Float"), InOptionValue, Get_Key())
-            {}
-            if (NOT OptionParses)
             { return; }
 
             UCk_Utils_GameSettings_UE::Request_SetSettingValue_Float(WorldContext,

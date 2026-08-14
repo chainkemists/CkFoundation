@@ -645,29 +645,21 @@ auto
 {
     const auto ContextIsValid = ck::IsValid(InWorldContextObject);
     CK_ENSURE_IF_NOT(ContextIsValid, TEXT("Invalid WorldContextObject, cannot resolve the GameSettings Subsystem"))
-    {}
-    if (NOT ContextIsValid)
     { return nullptr; }
 
     const auto* World = InWorldContextObject->GetWorld();
     const auto WorldIsValid = ck::IsValid(World);
     CK_ENSURE_IF_NOT(WorldIsValid, TEXT("WorldContextObject has no UWorld, cannot resolve the GameSettings Subsystem"))
-    {}
-    if (NOT WorldIsValid)
     { return nullptr; }
 
     const auto* GameInstance = World->GetGameInstance();
     const auto GameInstanceIsValid = ck::IsValid(GameInstance);
     CK_ENSURE_IF_NOT(GameInstanceIsValid, TEXT("World has no GameInstance, cannot resolve the GameSettings Subsystem"))
-    {}
-    if (NOT GameInstanceIsValid)
     { return nullptr; }
 
     auto* Subsystem = GameInstance->GetSubsystem<UCk_GameSettings_Subsystem_UE>();
     const auto SubsystemIsValid = ck::IsValid(Subsystem);
     CK_ENSURE_IF_NOT(SubsystemIsValid, TEXT("GameSettings Subsystem not found on the GameInstance"))
-    {}
-    if (NOT SubsystemIsValid)
     { return nullptr; }
 
     return Subsystem;

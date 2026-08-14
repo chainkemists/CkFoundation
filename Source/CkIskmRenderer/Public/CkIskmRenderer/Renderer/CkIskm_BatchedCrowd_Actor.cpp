@@ -28,7 +28,7 @@ namespace ck_iskm_batched_crowd
         IsNonPieEditorWorld(const UWorld* InWorld)
         -> bool
     {
-        return ck::IsValid(InWorld, ck::IsValid_Policy_NullptrOnly{}) &&
+        return ck::IsValid(InWorld) &&
             (InWorld->WorldType == EWorldType::Editor || InWorld->WorldType == EWorldType::EditorPreview);
     }
 }
@@ -792,7 +792,7 @@ void
     {
         // First member with this preset: one stencil refcount per group + a highlight cluster at the origin.
         auto* World = GetWorld();
-        auto* OutlineSubsystem = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
+        auto* OutlineSubsystem = ck::IsValid(World)
             ? World->GetSubsystem<UCkUsf_OutlineSubsystem>()
             : nullptr;
 
@@ -806,7 +806,7 @@ void
         { return; }
 
         auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmOutlineCluster"));
-        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Comp))
         {
             OutlineSubsystem->Release_StencilFor(InPreset);
             return;
@@ -861,7 +861,7 @@ void
     { Comp->DestroyComponent(); }
 
     if (auto* World = GetWorld();
-        ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+        ck::IsValid(World))
     {
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>())
         {
@@ -920,12 +920,10 @@ void
     CK_ENSURE_IF_NOT(StencilIsFree,
         TEXT("[CkIskm] Set_MemberCelPattern on crowd [{}] member [{}]: the member already carries an "
              "OUTLINE, which owns its Custom Stencil value; cel pattern NOT applied"), this, InIndex)
-    {}
-    if (NOT StencilIsFree)
     { return; }
 
     auto* World = GetWorld();
-    auto* CelShadeSubsystem = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
+    auto* CelShadeSubsystem = ck::IsValid(World)
         ? World->GetSubsystem<UCkUsf_CelShadeSubsystem>()
         : nullptr;
 
@@ -940,8 +938,6 @@ void
     CK_ENSURE_IF_NOT(StencilIsAddressable,
         TEXT("[CkIskm] Set_MemberCelPattern: the cel stencil contract resolves pattern [{}] to [{}] — "
              "cel pattern dropped"), InPattern, StencilValue)
-    {}
-    if (NOT StencilIsAddressable)
     { return; }
 
     const auto Stencil = static_cast<uint8>(StencilValue);
@@ -958,7 +954,7 @@ void
     if (Group == nullptr)
     {
         auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmCelPatternCluster"));
-        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Comp))
         { return; }
 
         auto NewGroup = FHighlightGroup{};
@@ -1056,8 +1052,6 @@ void
     const auto IndexIsValid = _Members.IsValidIndex(InIndex);
     CK_ENSURE_IF_NOT(IndexIsValid,
         TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
-    {}
-    if (NOT IndexIsValid)
     { return; }
 
     // The mask is the LAST of the three claims on the member's Custom-Stencil byte, so accepting this would
@@ -1067,8 +1061,6 @@ void
     CK_ENSURE_IF_NOT(StencilIsFree,
         TEXT("[CkIskm] Set_MemberStylizeMask on crowd [{}] member [{}]: the member already carries an "
              "OUTLINE or a CEL PATTERN, which owns its Custom Stencil value; stylize mask NOT applied"), this, InIndex)
-    {}
-    if (NOT StencilIsFree)
     { return; }
 
     // Project config rather than a per-world subsystem: there is exactly ONE mask value per project. 0 is
@@ -1081,8 +1073,6 @@ void
     CK_ENSURE_IF_NOT(StencilIsAddressable,
         TEXT("[CkIskm] Set_MemberStylizeMask: the project's stylize mask stencil value is [{}], which is "
              "outside the addressable range [1..{}]; stylize mask dropped"), StencilValue, MAX_uint8)
-    {}
-    if (NOT StencilIsAddressable)
     { return; }
 
     const auto Stencil = static_cast<uint8>(StencilValue);
@@ -1100,7 +1090,7 @@ void
     if (Group == nullptr)
     {
         auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmStylizeMaskCluster"));
-        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Comp))
         { return; }
 
         auto NewGroup = FHighlightGroup{};
@@ -1262,7 +1252,7 @@ void
 {
     // Release the outline groups' stencil refcounts (components die with the actor).
     if (auto* World = GetWorld();
-        ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+        ck::IsValid(World))
     {
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>())
         {

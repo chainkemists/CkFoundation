@@ -247,8 +247,10 @@ namespace ck::angelscriptgenerator::self_heal
                         const auto DeclChar = InBlanked[DeclEnd];
                         if (DeclChar == TEXT('('))      { ++InnerParen; }
                         else if (DeclChar == TEXT(')')) { --InnerParen; }
-                        else if (DeclChar == TEXT(';') && InnerParen == 0) { break; }
-                        else if (DeclChar == TEXT('{') || DeclChar == TEXT('}')) { break; }
+                        else if (DeclChar == TEXT(';') && InnerParen == 0)
+                        { break; }
+                        else if (DeclChar == TEXT('{') || DeclChar == TEXT('}'))
+                        { break; }
                         ++DeclEnd;
                     }
 
@@ -295,13 +297,13 @@ namespace ck::angelscriptgenerator::self_heal
             { return false; }
 
             auto* Class = FindFirstObject<UClass>(*InClassName.RightChop(1), EFindFirstObjectOptions::None);
-            if (ck::Is_NOT_Valid(Class, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Class))
             { return false; }
 
             const auto Props = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(Class);
             for (auto* Prop : Props)
             {
-                if (ck::Is_NOT_Valid(Prop, ck::IsValid_Policy_NullptrOnly{}))
+                if (ck::Is_NOT_Valid(Prop))
                 { continue; }
 
                 auto TypeText = FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(Prop);

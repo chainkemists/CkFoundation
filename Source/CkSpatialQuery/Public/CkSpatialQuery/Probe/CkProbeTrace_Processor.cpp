@@ -91,9 +91,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(TraceContextIsValid,
             TEXT("ProbeTrace context is NOT valid. Unable to start trace using Handle [{}]"), InHandle)
-        {}
-
-        if (NOT TraceContextIsValid)
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;
@@ -225,9 +222,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(TraceContextIsValid,
             TEXT("ProbeTrace context is NOT valid. Unable to start shape trace using Handle [{}]"), InHandle)
-        {}
-
-        if (NOT TraceContextIsValid)
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;

@@ -107,7 +107,7 @@ auto
 {
     Super::PreDestroyFromReplication();
 
-    if (NOT ck::IsValid(Get_AssociatedEntity()))
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);

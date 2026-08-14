@@ -53,7 +53,7 @@ namespace ck_autotest_wrapper_generator
 
     auto Is_IncludedAutoTestClass(UClass* InClass, UClass* InAutoTestBase) -> bool
     {
-        if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InClass))
         { return false; }
 
         if (InClass == InAutoTestBase)
@@ -128,7 +128,7 @@ namespace ck_autotest_wrapper_generator
     auto Has_HandAuthoredWrapper(const FString& InWrapperBareName) -> bool
     {
         auto* Existing = FindFirstObject<UClass>(*InWrapperBareName, EFindFirstObjectOptions::None);
-        if (NOT ck::IsValid(Existing, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Existing))
         { return false; }
 
         // A just-deleted wrapper lingers until GC; without this it keeps tripping the collision
@@ -175,7 +175,7 @@ namespace ck_autotest_wrapper_generator
         constexpr auto HarnessDefault = 5.0f;
 
         const auto* CDO = InEntityScriptClass->GetDefaultObject();
-        if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(CDO))
         { return {}; }
 
         const auto* Property = InEntityScriptClass->FindPropertyByName(TEXT("_TimeoutSeconds"));
@@ -426,7 +426,7 @@ auto
     ck::angelscriptgenerator::Log(TEXT("[CkAS AutoTest Wrappers] === Generating AutoTest actor wrappers ==="));
 
     auto* AutoTestBase = ck_autotest_wrapper_generator::Find_AutoTestBaseClass();
-    if (NOT ck::IsValid(AutoTestBase, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(AutoTestBase))
     {
         // Normal during early startup. Log rather than VeryVerbose so the silent-no-write case
         // stays diagnosable.

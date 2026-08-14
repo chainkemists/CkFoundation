@@ -142,7 +142,7 @@ namespace ck
             for (auto i = ck_nav_processor::GDeferredNavRequests.Num() - 1; i >= 0; --i)
             {
                 auto& Entry = ck_nav_processor::GDeferredNavRequests[i];
-                if (NOT ck::IsValid(Entry.Handle))
+                if (ck::Is_NOT_Valid(Entry.Handle))
                 {
                     // The owner died while the request sat in this process-wide deferral queue — it
                     // never reaches FProcessor_Nav_CancelPendingRequests (the request already left
@@ -301,7 +301,7 @@ namespace ck
         auto* NavData = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
 
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-        if (NOT ck::IsValid(TransformHandle))
+        if (ck::Is_NOT_Valid(TransformHandle))
         {
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._RequestRevision = LatestRequestRevision;
