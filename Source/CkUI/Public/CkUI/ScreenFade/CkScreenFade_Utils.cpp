@@ -2,7 +2,7 @@
 
 #include "CkScreenFade_Utils.h"
 
-#include "CkUI/Subsystem/CkUI_Subsystem.h"
+#include "CkUI/ScreenFade/CkScreenFade_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,12 +23,12 @@ auto
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }
 
-    const auto& UISubsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+    const auto& ScreenFadeSubsystem = LocalPlayer->GetSubsystem<UCk_ScreenFade_Subsystem_UE>();
 
-    if (ck::Is_NOT_Valid(UISubsystem))
+    if (ck::Is_NOT_Valid(ScreenFadeSubsystem))
     { return; }
 
-    UISubsystem->Request_AddScreenFadeWidget(InFadeParams, InOwningPlayer, ZOrder);
+    ScreenFadeSubsystem->Request_AddScreenFadeWidget(InFadeParams, InOwningPlayer, ZOrder);
 }
 
 auto

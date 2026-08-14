@@ -9,6 +9,7 @@
 
 #include "CkEcs/ContextReceiver/CkContextReceiver.h"
 #include "CkUI/Layout/CkUI_LayerWidget.h"
+#include "CkUI/Subsystem/CkUI_Input_Subsystem.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include <Blueprint/UserWidget.h>
