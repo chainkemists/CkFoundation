@@ -33,7 +33,7 @@ because a sampler on a child entity would have no routed events to read.
 | Group | Functions |
 |---|---|
 | Compose | `Add`, `Has` (C++ only), `Cast`/`CastChecked` (`DoCast`/`DoCastChecked` in BP/AS), `Get_InvalidHandle` |
-| Read | `Get_FrameCount`, `Get_LatestFrame`, `TryGet_FrameAtOffset` |
+| Read | `Get_FrameCount`, `Get_LatestFrame`, `TryGet_FrameAtOffset`, `Get_HeldKeys` |
 
 `FCk_Fragment_IntentSampler_ParamsData` is (`_RingCapacity` default 120, `_AxisKeyX` default
 `EKeys::Gamepad_LeftX`, `_AxisKeyY` default `EKeys::Gamepad_LeftY`, `_OctantNeutralRadius` default `0.25`,
@@ -697,21 +697,33 @@ activation is what falls out of that, not a special case bolted beside it.
 | Cause | Frame the transition names |
 |---|---|
 | the button left the row's held union | the release row's |
-| the ANCHOR key stopped being deliverable to this layer (a modal `Consume` or `CatchAll` above it) | the row it was noticed on |
-| a rebind moved the anchor key off the button | the row it was noticed on |
+| NO key of the button is both held and deliverable to this layer any more | the row it was noticed on |
+| the source stopped carrying a frame record (the sampler, or the source itself, is gone) | the last frame this matcher consumed |
 | a set swap | `INDEX_NONE` — it rides the existing swap sweep, which signals every non-`Idle` row out before discarding it |
 
-**The ANCHOR is the key the activating press arrived on** — the same reading a pending episode makes of its
-`_PressKey`, for the same reason: with several devices bound to one button, delivery-loss is per-key, and a modal
-masking only the gamepad must not release a keyboard hold. **The asymmetry is real and worth stating plainly:
-masking a bound key that is NOT the anchor does not release the row.** In practice a modal captures every key of
-the buttons it means to take, or declares `CatchAll`, so both readings agree; the divergence surfaces under a
-synthetic single-key mask and nowhere else. The alternative — releasing when ANY of the button's keys is masked —
-would cancel the hold the player is actually on because a device they are not touching was silenced.
+The third is the one that cannot be noticed by a sweep, because there is no row left to sweep against: the matcher
+releases every Active row on the pass that finds the record missing rather than early-outing over them. A row left
+Active there would stay Active — and CLAIMABLE — for the rest of the matcher's life, against a hold whose input has
+stopped existing.
+
+**The ANCHOR is the key the hold is currently arriving on.** It starts as the key the activating press arrived on
+— the same reading a pending episode makes of its `_PressKey`, for the same reason: with several devices bound to
+one button, delivery-loss is per-key, and a modal masking only the gamepad must not release a keyboard hold.
+
+**But it MOVES, and that is the whole of the release rule.** Each sweep, if the anchor is no longer among the
+button's held keys, or is no longer deliverable, the row RE-ANCHORS onto whichever bound key is both held and
+deliverable — primary first, walking the map's own key order, so two matchers reading one profile agree on the
+choice. Only a button with no such key left ends the row, and one `Verbose` line names each move. The anchor is
+therefore a statement about the key the player is on right now, never a second held-union: a player who released
+the anchor while still holding another bound key is still holding the button, so masking or rebinding the key
+they already let go of changes nothing. Masking the key they ARE holding still releases, which is the property
+the per-key reading exists for. The rejected alternative — a fixed anchor — inverted its own purpose: a partial
+release left it naming a key nobody held, and a mask aimed at that dead key killed a live hold.
 
 **No re-activation while `Active`.** A second press of a button that is still down cannot restart a hold that
-never ended, and the anchor cannot move mid-hold — re-entering would restamp the very frame a consumer measures
-the hold from. **After any deactivation the policy is `RequireRePress`**, the same one the hold accumulator
+never ended — re-entering would restamp the very frame a consumer measures the hold from. (Re-anchoring is not
+re-activation: it moves which key the row watches and touches neither the phase nor the activation frame.)
+**After any deactivation the policy is `RequireRePress`**, the same one the hold accumulator
 applies and for the same reason: a modal closing re-activates nothing, because a button that is merely still
 physically down is not a fresh input. Only a new visible press edge activates.
 
