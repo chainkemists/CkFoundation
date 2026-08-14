@@ -298,6 +298,11 @@ namespace ck
 
         int32 _LastScannedFrameIndex = INDEX_NONE;
 
+        // Answered once when the set is activated rather than per row: the level pass allocates before it can
+        // discover it has nothing to match, and a set is immutable for as long as it is active, so the answer
+        // cannot go stale under it.
+        bool _SetHasLevelIntent = false;
+
     public:
         CK_PROPERTY_GET(_ActiveSet);
         CK_PROPERTY_GET(_PhaseRows);
