@@ -197,7 +197,24 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    InButtonMap.AddOrGet<ck::FFragment_InputButtonMap_Requests>()._Requests.Emplace(InRequest);
+    auto& Requests = InButtonMap.AddOrGet<ck::FFragment_InputButtonMap_Requests>()._Requests;
+
+    // A rederive carries no payload — it rebuilds the whole mapped tier from the profile — so a second one queued
+    // behind a first does the identical work twice, and a load that registers a dozen mapping contexts enqueues
+    // one per context. A pending entry already answers this caller's intent, so this one folds into it. Only a
+    // request with NOTHING to report is foldable: one carrying a completion delegate has to be enqueued, or that
+    // delegate would never fire.
+    const auto IsFoldable = NOT InRequest.Get_HasCompletionDelegate() &&
+        Requests.ContainsByPredicate(
+        [](const ck::FFragment_InputButtonMap_Requests::RequestType& InPending) -> bool
+        {
+            return std::holds_alternative<FCk_Request_InputButtonMap_Rederive>(InPending);
+        });
+
+    if (IsFoldable)
+    { return InButtonMap; }
+
+    Requests.Emplace(InRequest);
 
     return InButtonMap;
 }
