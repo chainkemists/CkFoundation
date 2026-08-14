@@ -1,7 +1,7 @@
 ﻿#include "CkCueToolbox_EditorUtilityWidget_Programmatic.h"
 
-#include "CkUI/Styles/CkCommonTextStyle_Header.h"
-#include "CkUI/Styles/CkCommonTextStyle_Body.h"
+#include "CkWidgets/Styles/CkCommonTextStyle_Header.h"
+#include "CkWidgets/Styles/CkCommonTextStyle_Body.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "Blueprint/WidgetTree.h"

@@ -2,7 +2,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "CkCue/CkCueSubsystem_Base.h"
-#include "CkUI/Styles/CkCommonButton.h"
+#include "CkWidgets/Styles/CkCommonButton.h"
 
 #include "Components/ComboBoxString.h"
 #include "Components/EditableTextBox.h"

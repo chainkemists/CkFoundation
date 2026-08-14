@@ -58,7 +58,8 @@ public class CkCueEditor : CkModuleRules
             "CkEditorGraph",
             "CkEditorStyle",
             "CkLog",
-            "CkUI"
+            "CkUICore",
+            "CkWidgets"
         });
     }
 }

@@ -101,6 +101,7 @@ Before writing any code, navigate the documentation in this order:
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer (layer stack, layout, HUD, extension points) | `CkUI` |
 | derive a widget, UI types/utils, input suspension, screen fade | `CkUICore` |
+| a custom widget primitive, a Common* style, rasterize a widget, project to screen | `CkWidgets` |
 | drive a UMG widget from an entity's world transform (screen projection, clamping, distance scale/fade, occlusion) | `CkWorldSpaceWidget` (+ `UCk_WidgetComponent_UE` for the world-component path) |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
 | Enhanced Input IMC lifecycle | `CkInput` |
@@ -120,7 +121,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **78 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **79 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -229,7 +230,8 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
 | CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
 | CkUICore | Core,Ecs,Log,ThirdParty (extracted from CkUI 2026-08-14 — widget bases, UI types, cursor-lock/nav-config utils, input suspension, screen fade; sibling-base for CkUI and CkWidgets, NOT a layer they stack on) |
-| CkUI | Core,Ecs,Graphics,Input,Log,Settings,ThirdParty,UICore (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; Input added 2026-08-08 for `UCk_InputActionWidget_UE` — T4→T2, and CkInput does NOT depend on CkUI; GameSession dropped 2026-08-14 as a dead dep; base layer split out to CkUICore same day) |
+| CkUI | Core,Ecs,Log,Settings,ThirdParty,UICore (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; GameSession dropped 2026-08-14 as a dead dep; base layer split out to CkUICore and the widget primitives to CkWidgets same day, which took Graphics and Input with them) |
+| CkWidgets | Core,Graphics,Input,Log,ThirdParty,UICore (split from CkUI 2026-08-14 — custom widgets, the 29 Common* styles, widget rasterizer, screen-projection utils; SIBLING of CkUI on CkUICore, never a layer under it) |
 | CkUnrealComponent | Core,Ecs,EcsExt,Jolt,Label,Log,Record,Settings (Jolt added 2026-08-11 for the static-world bake opt-in — same-tier dep) |
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
