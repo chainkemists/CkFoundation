@@ -30,7 +30,7 @@ public class CkGameSettings : CkModuleRules
             "EnhancedInput",
             "InputCore",
             "CkEcs",
-            "CkUI",
+            "CkWidgets",
             "CkUICore",
             "CkInput",
         });
