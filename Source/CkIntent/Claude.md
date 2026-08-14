@@ -136,6 +136,21 @@ button space declares them as Physical buttons on the map.
 
 **Key → button is one-to-many**, so a key that several mappings share contributes EVERY holder to the row.
 
+### The record shape guarantee — one press edge per physical press event
+
+`_Pressed` is a SET of button identities, so it can say a key went down and cannot say it went down twice. That
+is fine for a keyboard, where the OS sends one down per physical press, and wrong for anything that batches: a
+mouse wheel routinely delivers several notches of the same key into one claim, and a set would answer all of
+them as one press.
+
+**So a claim carrying a second press of a key it has already pressed is SPLIT, and each segment writes its own
+row with its own frame index.** The cut falls on the duplicate press. A batch with no repeated press — the
+overwhelming common case — is detected in one pass and written as one row with nothing copied.
+
+Several rows per logic tick is not a new shape: catch-up replay already produces it. What it means for a
+consumer is only that `Get_LatestFrame().Get_FrameIndex()` can advance by more than one per tick, which every
+reader already handles because the matcher's own backlog is computed as a frame-index difference.
+
 ---
 
 ## Cadence — one row per logic frame, bounded
