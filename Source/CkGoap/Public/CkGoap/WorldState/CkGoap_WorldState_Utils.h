@@ -22,6 +22,11 @@ public:
 	CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Goap_WorldState);
 
 public:
+	// Walk bound for every ParentLink chain traversal; exceeding it trips an ensure (cycle or
+	// over-deep chain — authoring error either way).
+	static constexpr int32 MaxParentChainDepth = 8;
+
+public:
 // --------------------------------------------------------------------------------------------------------------------
 	// Add stamps the WorldState fragments directly on InOwner (the owner IS the WorldState);
 	// Create spawns a named child entity instead, for owners hosting more than one. Either
@@ -74,6 +79,45 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		FGameplayTag InKey,
 		const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+// --------------------------------------------------------------------------------------------------------------------
+	// Parent-fallback (import-aliasing): a WS composed with _FallbackParent defers keys it doesn't
+	// own to the parent chain — Get_Value reads through, SetValue forwards to the owning ancestor,
+	// and Action setup classifies residency. Dead parent => imported keys read false, writes drop.
+
+	// Invalid handle when this WS has no fallback parent.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Fallback Parent")
+	static FCk_Handle_Goap_WorldState
+	Get_FallbackParent(const FCk_Handle_Goap_WorldState& InWorldState);
+
+	// True when the key is registered anywhere in this WS's parent chain (self included).
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Has Key In Chain")
+	static bool
+	Has_Key_InChain(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
+
+	// Keys aliased locally whose truth lives in the parent chain.
+	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
+		DisplayName = "[Ck][GOAP|WS] Get Imported Keys")
+	static TArray<FGameplayTag>
+	Get_ImportedKeys(const FCk_Handle_Goap_WorldState& InWorldState);
+
+	// C++ only — Action-setup residency classification: local hit => that key; ancestor-resident
+	// => registers a local alias, marks it imported, returns the alias; miss everywhere =>
+	// registers a fresh local key (Verbose log when under a parent). InvalidGoapKey at capacity.
+	static auto
+	Register_Key_WithResidencyClassification(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		FGameplayTag InKey) -> int32;
+
+	// C++ only — SetValue drain routing: the WS whose Values own this key. Self when locally
+	// resident or nowhere-resident-yet (caller registers fresh); an ancestor when imported;
+	// INVALID when an import mark exists but the chain dies before an owner (dead parent => drop).
+	static auto
+	Get_OwningWorldStateForKey(
+		const FCk_Handle_Goap_WorldState& InWorldState,
+		FGameplayTag InKey) -> FCk_Handle_Goap_WorldState;
 
 // --------------------------------------------------------------------------------------------------------------------
 	// Named override layers shadow the base store on READ only — Set_Value always writes the base.
@@ -248,6 +292,12 @@ private:
 	// Subscribers fragment's private _Subscribers.
 	static auto
 	DoTagSubscribersDirty(FCk_Handle_Goap_WorldState& InWorldState) -> void;
+
+	// Friend access to ParentLink's private _Parent — set once at composition, no re-parenting.
+	static auto
+	DoApplyParentLink(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		const FCk_Fragment_Goap_WorldState_ParamsData& InParams) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

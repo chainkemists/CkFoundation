@@ -89,6 +89,30 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Present only on a sub-WS composed with a _FallbackParent. _ImportedTags marks keys whose truth
+// lives in an ancestor: the local registry index is a per-plan snapshot alias; Get_Value and
+// SetValue route through to the owning ancestor. Dead parent => imported keys degrade to miss
+// semantics (reads false, writes dropped) — the stale alias slot is never served as truth.
+
+struct CKGOAP_API FFragment_Goap_WorldState_ParentLink
+{
+public:
+	CK_GENERATED_BODY(FFragment_Goap_WorldState_ParentLink);
+
+	friend class ::UCk_Utils_Goap_WorldState_UE;
+
+private:
+	FCk_Handle_Goap_WorldState _Parent;
+	TSet<FGameplayTag> _ImportedTags;
+
+public:
+	CK_PROPERTY_GET(_Parent);
+
+	auto Get_IsImported(FGameplayTag InTag) const -> bool { return _ImportedTags.Contains(InTag); }
+	auto Get_ImportedTags() const -> const TSet<FGameplayTag>& { return _ImportedTags; }
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 struct CKGOAP_API FFragment_Goap_WorldState_OverrideStack
 {
