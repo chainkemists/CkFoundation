@@ -87,6 +87,49 @@ bool FCkTest_ParamsGen_PreservesWeakAndSoftObjectWrappers::RunTest(const FString
         TEXT("WeakSounds"),
         TEXT("TArray<TWeakObjectPtr<USoundBase>>"),
         FArrayProperty::StaticClass());
+
+    // A strong UObject leaf is untraced inside a container too, and the runtime safety check walks
+    // in — so the retained mirror weakens the ELEMENT while preserving the container spelling.
+    auto CheckRetainedType = [this, HostClass](
+        const TCHAR* InPropertyName,
+        const FString& InExpectedRetainedType) -> bool
+    {
+        auto* Property = HostClass->FindPropertyByName(FName{InPropertyName});
+        if (NOT TestNotNull(
+                *FString::Printf(TEXT("%s property reflected"), InPropertyName),
+                Property))
+        { return false; }
+
+        return TestEqual(
+            *FString::Printf(TEXT("%s weakens its strong element for retention"), InPropertyName),
+            FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(Property),
+            InExpectedRetainedType);
+    };
+
+    Result &= CheckRetainedType(
+        TEXT("StrongSounds"),
+        TEXT("TArray<TWeakObjectPtr<USoundBase>>"));
+
+    // TArray is the ONLY container weakened automatically, and these two pin that boundary
+    // deliberately. Weakening is half a contract; the other half is TryInjectEntityScriptSpawnParams
+    // resolving the weak element back to strong on the way into the script, and that resolve exists
+    // for scalars and TArray only. Weakening a TSet/TMap/TOptional without it would hand the
+    // injector's generic CopyCompleteValue a weak-vs-strong element mismatch that byte-copies
+    // cleanly into garbage pointers — silently worse than the loud runtime ensure. The generator
+    // logs an actionable Warning for these instead; widen ONLY together with the injector.
+    Result &= CheckRetainedType(
+        TEXT("OptionalStrongSound"),
+        TEXT("TOptional<TObjectPtr<USoundBase>>"));
+    Result &= CheckRetainedType(
+        TEXT("StrongSoundsByName"),
+        TEXT("TMap<FName, TObjectPtr<USoundBase>>"));
+
+    // Already-weak containers must be left exactly as authored — weakening is idempotent, and a
+    // second pass must not rewrite the spelling.
+    Result &= CheckRetainedType(
+        TEXT("WeakSounds"),
+        TEXT("TArray<TWeakObjectPtr<USoundBase>>"));
+
     return Result;
 }
 
