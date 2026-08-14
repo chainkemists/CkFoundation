@@ -737,6 +737,11 @@ namespace ck
         InCurrent._RegisteredCaptures = MoveTemp(Desired);
         InCurrent._ActiveSet = Set;
         InCurrent._LastScannedFrameIndex = INDEX_NONE;
+        InCurrent._SetHasLevelIntent = Set.Get_Intents().ContainsByPredicate(
+        [](const FCk_Intent_CompiledIntent& InIntent) -> bool
+        {
+            return ck_intent_matcher_processor::Get_IsLevelIntent(InIntent);
+        });
 
         // Episodes are indices into the set that just went away, so they cannot survive it — and nothing is
         // reported for them: a swap is not an answer to the press that was waiting, it is the question being
@@ -1032,6 +1037,12 @@ namespace ck
             int32 InOffset)
         -> void
     {
+        // A set with no level intent can neither activate one nor be holding one — a swap clears `_ActiveLevels` —
+        // so every press of every row below would pay a map lookup and a resolution-row copy to discover there was
+        // never any work. Answered at swap time, because the set cannot change while it is active.
+        if (NOT InCurrent._SetHasLevelIntent)
+        { return; }
+
         const auto& Set = InCurrent._ActiveSet;
 
         for (const auto& PressedButton : InRow.Get_Pressed())
