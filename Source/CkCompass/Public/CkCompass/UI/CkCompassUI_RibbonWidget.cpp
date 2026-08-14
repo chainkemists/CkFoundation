@@ -3,22 +3,11 @@
 #include "CkCompass/CkCompass_Log.h"
 #include "CkCompass/UI/CkCompassUI_MarkerWidget.h"
 
-#include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
-#include "Components/TextBlock.h"
 
 #include "Materials/MaterialInstanceDynamic.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck_compass_ui_ribbon_widget
-{
-    constexpr int32 NumCardinalLabels = 8;
-
-    const TCHAR* CardinalLabelTexts[NumCardinalLabels] = { TEXT("N"), TEXT("NE"), TEXT("E"), TEXT("SE"), TEXT("S"), TEXT("SW"), TEXT("W"), TEXT("NW") };
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -69,7 +58,7 @@ auto
 {
     Super::NativePreConstruct();
 
-    DoResolvePresentation();
+    DoResolveBindings();
 
     if (IsDesignTime())
     {
@@ -139,107 +128,23 @@ auto
 
 auto
     UCk_CompassUI_RibbonWidget::
-    DoResolvePresentation()
+    DoResolveBindings()
     -> void
 {
-    using namespace ck_compass_ui_ribbon_widget;
-
-    const auto& RootWidget = WidgetTree->RootWidget;
-    const auto TreeIsOursOrEmpty = ck::Is_NOT_Valid(RootWidget) || RootWidget == _RootCanvas;
-
-    if (_Presentation == ECk_CompassRibbon_Presentation::CodeBuilt)
+    if (ck::IsValid(_MarkerWidgetClass) && ck::Is_NOT_Valid(_MarkerCanvas))
     {
-        // ---- CodeBuilt owns the tree — an authored tree is a misconfiguration, not an override ----
-        if (NOT TreeIsOursOrEmpty)
-        {
-            DoReportMisconfig(TEXT("CompassRibbon [{}] is CodeBuilt but its WBP authors a widget tree — "
-                "switch _Presentation to Custom (bind _RibbonImage/_MarkerCanvas) or empty the tree"));
-            return;
-        }
-
-        if (ck::Is_NOT_Valid(_RootCanvas))
-        {
-            _RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("CompassRibbon_RootCanvas"));
-            WidgetTree->RootWidget = _RootCanvas;
-        }
-
-        if (ck::IsValid(_RibbonMaterial) && ck::Is_NOT_Valid(_FallbackRibbonImage))
-        {
-            _FallbackRibbonImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("CompassRibbon_Ribbon"));
-
-            auto RibbonSlot = _RootCanvas->AddChildToCanvas(_FallbackRibbonImage);
-            RibbonSlot->SetAnchors(FAnchors{0.0f, 0.0f, 1.0f, 1.0f});
-            RibbonSlot->SetOffsets(FMargin{0.0f});
-
-            _RibbonMID = UMaterialInstanceDynamic::Create(_RibbonMaterial, this);
-            _FallbackRibbonImage->SetBrushFromMaterial(_RibbonMID);
-        }
-    }
-    else
-    {
-        // ---- Custom: the WBP owns the tree; the widget only feeds bound pieces ----
-        if (TreeIsOursOrEmpty)
-        {
-            // At design time the tree is legitimately mid-authoring — stay silent
-            if (NOT IsDesignTime())
-            {
-                DoReportMisconfig(TEXT("CompassRibbon [{}] is Custom but its WBP authors no widget tree — "
-                    "author one (bind _RibbonImage/_MarkerCanvas) or switch _Presentation to CodeBuilt"));
-            }
-            return;
-        }
-
-        if (ck::IsValid(_MarkerWidgetClass) && ck::Is_NOT_Valid(_MarkerCanvas))
-        {
-            DoReportMisconfig(TEXT("CompassRibbon [{}] sets _MarkerWidgetClass but binds no _MarkerCanvas — "
-                "markers have no injection point. Bind a CanvasPanel named _MarkerCanvas"));
-            // Fall through — the ribbon material path still works
-        }
-
-        if (ck::IsValid(_RibbonImage) && ck::Is_NOT_Valid(_RibbonMID))
-        {
-            if (const auto BrushMaterial = Cast<UMaterialInterface>(_RibbonImage->GetBrush().GetResourceObject());
-                ck::IsValid(BrushMaterial))
-            {
-                _RibbonMID = _RibbonImage->GetDynamicMaterial();
-            }
-        }
+        DoReportMisconfig(TEXT("CompassRibbon [{}] sets _MarkerWidgetClass but binds no _MarkerCanvas — "
+            "markers have no injection point. Bind a CanvasPanel named _MarkerCanvas"));
+        // Fall through — the ribbon material path still works
     }
 
-    // ---- Cardinal letters ----
-    const auto EffectiveCanvas = Get_EffectiveCanvas();
-
-    if (ck::IsValid(EffectiveCanvas) && _ShowCardinals)
+    if (ck::IsValid(_RibbonImage) && ck::Is_NOT_Valid(_RibbonMID))
     {
-        if (_CardinalLabels.Num() == 0)
+        if (const auto BrushMaterial = Cast<UMaterialInterface>(_RibbonImage->GetBrush().GetResourceObject());
+            ck::IsValid(BrushMaterial))
         {
-            _CardinalLabels.Reset(NumCardinalLabels);
-
-            for (auto Index = 0; Index < NumCardinalLabels; ++Index)
-            {
-                auto Label = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-                Label->SetText(FText::FromString(CardinalLabelTexts[Index]));
-
-                auto LabelSlot = EffectiveCanvas->AddChildToCanvas(Label);
-                LabelSlot->SetAutoSize(true);
-                LabelSlot->SetAlignment(FVector2D{0.5, 0.5});
-
-                _CardinalLabels.Emplace(Label);
-            }
+            _RibbonMID = _RibbonImage->GetDynamicMaterial();
         }
-
-        for (const auto& Label : _CardinalLabels)
-        {
-            if (_CardinalFont.HasValidFont())
-            { Label->SetFont(_CardinalFont); }
-
-            Label->SetColorAndOpacity(_CardinalColor);
-        }
-    }
-    else
-    {
-        for (const auto& Label : _CardinalLabels)
-        { Label->SetVisibility(ESlateVisibility::Collapsed); }
     }
 }
 
@@ -270,16 +175,12 @@ auto
         Marker->SetVisibility(ESlateVisibility::HitTestInvisible);
         DoPositionChildAtOffset(Marker, NormalizedOffset, _MarkerBandY);
 
-        if (const auto MarkerWidget = Cast<UCk_CompassUI_MarkerWidget>(Marker);
-            ck::IsValid(MarkerWidget))
-        {
-            // Invalid Poi handle on purpose — the marker leaves designer-authored icon defaults alone
-            const auto PreviewEntry = FCk_Compass_Entry{
-                FCk_Handle_Poi{}, FGameplayTag{}, NormalizedOffset * _PreviewArcDegrees * 0.5f, NormalizedOffset,
-                ECk_Compass_EntryArcState::InsideArc, static_cast<float>(Index + 1) * 2500.0f, 0.0f, 0, 1.0f};
+        // Invalid Poi handle on purpose — the marker leaves designer-authored icon defaults alone
+        const auto PreviewEntry = FCk_Compass_Entry{
+            FCk_Handle_Poi{}, FGameplayTag{}, NormalizedOffset * _PreviewArcDegrees * 0.5f, NormalizedOffset,
+            ECk_Compass_EntryArcState::InsideArc, static_cast<float>(Index + 1) * 2500.0f, 0.0f, 0, 1.0f};
 
-            MarkerWidget->InjectEntry(PreviewEntry);
-        }
+        Marker->InjectEntry(PreviewEntry);
     }
 
     DoHideMarkersFromIndex(_PreviewMarkerCount);
@@ -294,8 +195,11 @@ auto
 
     if (NOT CompassIsValid)
     {
-        for (const auto& Label : _CardinalLabels)
-        { Label->SetVisibility(ESlateVisibility::Hidden); }
+        for (const auto& Cardinal : Get_CardinalWidgets())
+        {
+            if (ck::IsValid(Cardinal))
+            { Cardinal->SetVisibility(ESlateVisibility::Hidden); }
+        }
 
         DoHideMarkersFromIndex(0);
         _PendingShownPois.Reset();
@@ -331,19 +235,10 @@ auto
         Marker->SetRenderOpacity(Entry.Get_FadeAlpha() * (IsClamped ? _ClampedEntryOpacity : 1.0f));
         DoPositionChildAtOffset(Marker, Entry.Get_NormalizedOffset(), _MarkerBandY);
 
-        if (const auto MarkerWidget = Cast<UCk_CompassUI_MarkerWidget>(Marker);
-            ck::IsValid(MarkerWidget))
-        {
-            MarkerWidget->InjectEntry(Entry);
+        Marker->InjectEntry(Entry);
 
-            if (_PendingShownPois.Remove(Entry.Get_Poi()) > 0)
-            { MarkerWidget->NotifyShown(); }
-        }
-        else if (const auto Icon = Cast<UImage>(Marker);
-                 ck::IsValid(Icon))
-        {
-            Icon->SetColorAndOpacity(_IconTint);
-        }
+        if (_PendingShownPois.Remove(Entry.Get_Poi()) > 0)
+        { Marker->NotifyShown(); }
     }
 
     DoHideMarkersFromIndex(Entries.Num());
@@ -356,25 +251,27 @@ auto
         float InArcDegrees)
     -> void
 {
-    if (NOT _ShowCardinals)
-    { return; }
-
     const auto HalfArc = InArcDegrees * 0.5f;
+    const auto CardinalWidgets = Get_CardinalWidgets();
 
-    for (auto Index = 0; Index < _CardinalLabels.Num(); ++Index)
+    for (auto Index = 0; Index < CardinalWidgets.Num(); ++Index)
     {
-        const auto& Label = _CardinalLabels[Index];
+        const auto& Cardinal = CardinalWidgets[Index];
+
+        if (ck::Is_NOT_Valid(Cardinal))
+        { continue; }
+
         const auto CardinalWorldYaw = static_cast<float>(Index) * 45.0f;
         const auto SignedDelta = FRotator::NormalizeAxis(CardinalWorldYaw - InHeading);
 
         if (FMath::Abs(SignedDelta) > HalfArc)
         {
-            Label->SetVisibility(ESlateVisibility::Hidden);
+            Cardinal->SetVisibility(ESlateVisibility::Hidden);
             continue;
         }
 
-        Label->SetVisibility(ESlateVisibility::HitTestInvisible);
-        DoPositionChildAtOffset(Label, SignedDelta / HalfArc, _CardinalBandY);
+        Cardinal->SetVisibility(ESlateVisibility::HitTestInvisible);
+        DoPositionChildAtOffset(Cardinal, SignedDelta / HalfArc, _CardinalBandY);
     }
 }
 
@@ -401,13 +298,44 @@ auto
 
 auto
     UCk_CompassUI_RibbonWidget::
-    Get_EffectiveCanvas() const
-    -> UCanvasPanel*
+    Get_CardinalWidgets() const
+    -> TArray<UWidget*, TInlineAllocator<8>>
 {
-    if (_Presentation == ECk_CompassRibbon_Presentation::Custom)
-    { return _MarkerCanvas; }
+    // Index order matches world yaw: Index * 45 degrees, 0 = North
+    return {_CardinalN, _CardinalNE, _CardinalE, _CardinalSE, _CardinalS, _CardinalSW, _CardinalW, _CardinalNW};
+}
 
-    return _RootCanvas;
+auto
+    UCk_CompassUI_RibbonWidget::
+    Get_MarkerAt(
+        int32 InIndex)
+    -> UCk_CompassUI_MarkerWidget*
+{
+    if (ck::Is_NOT_Valid(_MarkerCanvas) || ck::Is_NOT_Valid(_MarkerWidgetClass))
+    { return {}; }
+
+    while (_MarkerPool.Num() <= InIndex)
+    {
+        const auto Marker = CreateWidget<UCk_CompassUI_MarkerWidget>(this, _MarkerWidgetClass);
+
+        if (ck::Is_NOT_Valid(Marker))
+        { return {}; }
+
+        _MarkerCanvas->AddChildToCanvas(Marker);
+        _MarkerPool.Emplace(Marker);
+    }
+
+    return _MarkerPool[InIndex];
+}
+
+auto
+    UCk_CompassUI_RibbonWidget::
+    DoHideMarkersFromIndex(
+        int32 InFirstHiddenIndex)
+    -> void
+{
+    for (auto Index = InFirstHiddenIndex; Index < _MarkerPool.Num(); ++Index)
+    { _MarkerPool[Index]->SetVisibility(ESlateVisibility::Hidden); }
 }
 
 auto
@@ -428,58 +356,6 @@ auto
     {
         CK_TRIGGER_ENSURE(InMessage, this);
     }
-}
-
-auto
-    UCk_CompassUI_RibbonWidget::
-    Get_MarkerAt(
-        int32 InIndex)
-    -> UWidget*
-{
-    const auto EffectiveCanvas = Get_EffectiveCanvas();
-
-    if (ck::Is_NOT_Valid(EffectiveCanvas))
-    { return {}; }
-
-    if (ck::IsValid(_MarkerWidgetClass))
-    {
-        while (_MarkerPool.Num() <= InIndex)
-        {
-            const auto Marker = CreateWidget<UCk_CompassUI_MarkerWidget>(this, _MarkerWidgetClass);
-
-            if (ck::Is_NOT_Valid(Marker))
-            { return {}; }
-
-            EffectiveCanvas->AddChildToCanvas(Marker);
-            _MarkerPool.Emplace(Marker);
-        }
-
-        return _MarkerPool[InIndex];
-    }
-
-    while (_IconPool.Num() <= InIndex)
-    {
-        auto Icon = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-        Icon->SetDesiredSizeOverride(_IconSize);
-
-        EffectiveCanvas->AddChildToCanvas(Icon);
-        _IconPool.Emplace(Icon);
-    }
-
-    return _IconPool[InIndex];
-}
-
-auto
-    UCk_CompassUI_RibbonWidget::
-    DoHideMarkersFromIndex(
-        int32 InFirstHiddenIndex)
-    -> void
-{
-    for (auto Index = InFirstHiddenIndex; Index < _MarkerPool.Num(); ++Index)
-    { _MarkerPool[Index]->SetVisibility(ESlateVisibility::Hidden); }
-
-    for (auto Index = InFirstHiddenIndex; Index < _IconPool.Num(); ++Index)
-    { _IconPool[Index]->SetVisibility(ESlateVisibility::Hidden); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

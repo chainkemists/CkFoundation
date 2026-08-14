@@ -14,18 +14,19 @@
 
 class UCanvasPanel;
 class UImage;
-class UTextBlock;
 class UTexture2D;
 class UMaterialInstanceDynamic;
-class UMaterialInterface;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Reference consumer of the CkMinimap delivery contract, fully self-contained (ZERO asset dependencies):
-// POI blips are pooled Images positioned in ONE loop per frame from the pull API (Get_Entries), the observer
-// marker is a text glyph, and the optional map background is a game-supplied texture (Set_MapTexture) panned/
-// zoomed/rotated purely through UMG render transforms — no material required. An optional frame material
-// receives the view yaw as a scalar parameter for GPU-drawn frames/masks.
+// Reference consumer of the CkMinimap delivery contract. The widget owns the MECHANISM (pull-in-tick
+// projection consumption, blip pooling + positioning, background pan/zoom/rotate via UMG render
+// transforms, frame-material yaw feed); the WBP owns the TREE — author it and bind:
+//  - _BlipCanvas (required for blips/observer/background positioning; everything below lives in it)
+//  - _MapImage → receives the game-supplied map texture (Set_MapTexture), panned/zoomed/rotated
+//  - _FrameImage → its brush material is wrapped in a MID receiving _ViewYawParameterName
+//  - _ObserverMarker → any styled widget, centered + yaw-rotated
+// Blips are pooled instances of _BlipWidgetClass, positioned + rotated by the widget.
 // Design notes (the pull-in-NativeTick shape, rectangle-only frames, fog, editor verification):
 // CkMinimap/CLAUDE.md § "Reference widget".
 UCLASS(Blueprintable, BlueprintType)
@@ -94,9 +95,9 @@ private:
         FCk_Handle_Poi InPoi);
 
 private:
-    auto DoBuildWidgetTree() -> void;
     auto DoRefreshLayout(const FGeometry& InGeometry) -> void;
     auto DoRefreshBackground(const FVector2D& InPanelCenter, float InFrameSize, float InViewYaw, bool InRotateWithObserver) -> void;
+    auto Get_BlipAt(int32 InIndex) -> UUserWidget*;
     auto DoPositionChildAt(UWidget* InChild, const FVector2D& InPixelPosition) const -> void;
 
     // Screen-space rotation (UMG convention: +Y down, positive angle = clockwise — same sense as
@@ -104,27 +105,36 @@ private:
     static auto DoRotate2D(const FVector2D& InVector, float InAngleDegrees) -> FVector2D;
 
 private:
-    // Optional — a frame/mask material; receives the view yaw (degrees, 0-360) on _ViewYawParameterName
-    // every frame via a dynamic instance. Leave unset for the pure-widget presentation.
+    /** The canvas everything is positioned in: _MapImage, _ObserverMarker, and the pooled blips. Required. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UCanvasPanel> _BlipCanvas;
+
+    /** Receives the game-supplied map texture; panned/zoomed/rotated by the widget. Must live in _BlipCanvas. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UImage> _MapImage;
+
+    /** Frame/mask image; its brush material is wrapped in a MID receiving _ViewYawParameterName every frame. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UImage> _FrameImage;
+
+    /** Any styled widget, centered in the frame and yaw-rotated. Must live in _BlipCanvas. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UWidget> _ObserverMarker;
+
+    /** One instance per POI entry, pooled into _BlipCanvas, positioned + yaw-rotated by the widget. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "Ck|UI|Minimap",
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UMaterialInterface> _FrameMaterial;
+    TSubclassOf<UUserWidget> _BlipWidgetClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "Ck|UI|Minimap",
               meta = (AllowPrivateAccess = true))
     FName _ViewYawParameterName = TEXT("ViewYaw");
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Minimap",
-              meta = (AllowPrivateAccess = true))
-    FVector2D _BlipSize = FVector2D{12.0, 12.0};
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-              Category = "Ck|UI|Minimap",
-              meta = (AllowPrivateAccess = true))
-    FLinearColor _BlipTint = FLinearColor::White;
 
     // Clamped-to-edge entries render with this opacity multiplier so off-frame waypoints read as pinned
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -143,26 +153,14 @@ private:
     FCk_Minimap_WorldBounds _MapBounds;
 
     UPROPERTY(Transient)
-    TObjectPtr<UCanvasPanel> _RootCanvas;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UImage> _MapImage;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UImage> _FrameImage;
-
-    UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> _FrameMID;
 
     UPROPERTY(Transient)
-    TObjectPtr<UTextBlock> _ObserverArrow;
-
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<UImage>> _BlipPool;
+    TArray<TObjectPtr<UUserWidget>> _BlipPool;
 
 public:
-    CK_PROPERTY_GET(_FrameMaterial);
     CK_PROPERTY_GET(_ViewYawParameterName);
+    CK_PROPERTY_GET(_BlipWidgetClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
