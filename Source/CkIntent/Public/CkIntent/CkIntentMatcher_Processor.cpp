@@ -1141,10 +1141,13 @@ namespace ck
             int32 InFrame)
         -> void
     {
+        // Entry first, broadcast second. `Set_Phase` fires `OnIntentPhaseChanged` from inside itself, and a handler
+        // that reads back through the matcher must not see a phase the active-level bookkeeping does not yet agree
+        // with.
+        InCurrent._ActiveLevels.Emplace(FIntentMatcher_ActiveLevel{InIntentIndex, InButton, InAnchorKey});
+
         FIntentMatcher_PhaseWriter::Set_Phase(
             InMatcher, InCurrent, InIntentIndex, ECk_Intent_Phase::Active, InFrame);
-
-        InCurrent._ActiveLevels.Emplace(FIntentMatcher_ActiveLevel{InIntentIndex, InButton, InAnchorKey});
 
         intent::Verbose
         (
@@ -1167,10 +1170,12 @@ namespace ck
     {
         const auto IntentIndex = InCurrent._ActiveLevels[InActiveLevelIndex]._IntentIndex;
 
+        // Removal first, broadcast second — the same reason activation emplaces first: a handler reading back
+        // through the matcher would otherwise see `Idle` beside a row still listed as active.
+        InCurrent._ActiveLevels.RemoveAt(InActiveLevelIndex);
+
         FIntentMatcher_PhaseWriter::Set_Phase(
             InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
-
-        InCurrent._ActiveLevels.RemoveAt(InActiveLevelIndex);
 
         intent::Verbose
         (

@@ -476,6 +476,22 @@ Related caveat: `UnregisterInputMappingContext` never removes key-profile rows, 
 keeps its keys after its IMC is gone — `Get_IsMappedButtonMinted`-style gates can be satisfied by a
 stale key.
 
+**Re-registering the SAME IMC OBJECT broadcasts nothing, so it produces no re-derive.**
+`UEnhancedInputUserSettings::RegisterInputMappingContext` returns `false` immediately when its
+`RegisteredMappingContexts` set already holds that object, before it reaches the
+`OnMappingContextRegistered.Broadcast` at the end of the internal path. The consequence bites the
+re-engage case that motivated the second bind in the first place: a station that pushes the same IMC
+asset a second time gets a rederive on the FIRST engage only, so a consumer relying on re-engagement
+to refresh the map is relying on something that does not happen. Anything that needs a rederive
+without a genuinely new IMC has to enqueue `Request_Rederive` explicitly. (An IMC built fresh at
+runtime is a different object each time and does broadcast — which is why the original bug's fix
+worked and this gap stayed hidden.)
+
+**Both triggers are also cheap to fire repeatedly.** A rederive carries no payload, so
+`Request_Rederive` folds into one already pending on the same map when the incoming request has no
+completion delegate — a load that registers a dozen contexts in one frame therefore does one derive,
+not a dozen.
+
 ---
 
 ## The Slate writer — what actually reaches an inbox
