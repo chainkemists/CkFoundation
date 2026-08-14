@@ -76,7 +76,7 @@ auto
 	const auto& Self = InHandle;
 	auto Owner = UCk_Utils_Goap_WorldState_UE::Get_OwningWorldStateForKey(Self, InRequest.Get_Key());
 
-	if (NOT ck::IsValid(Owner))
+	if (ck::Is_NOT_Valid(Owner))
 	{
 		// Imported key whose parent chain no longer resolves: drop rather than write the stale
 		// local alias slot — reads for this key are false, so a local write could never be read
@@ -103,7 +103,8 @@ auto
 		const auto PreviousValue = OwnerValues._Values.Get(OwnerKey);
 		OwnerValues._Values.Set(OwnerKey, InRequest.Get_Value());
 
-		if (PreviousValue == InRequest.Get_Value()) { return ECk_Request_OperationResult::Succeeded; }
+		if (PreviousValue == InRequest.Get_Value())
+		{ return ECk_Request_OperationResult::Succeeded; }
 
 		Owner.AddOrGet<FFragment_Goap_WorldState_ChangeLog>().Record(
 			FCk_Goap_WorldStateChange{InRequest.Get_Key(), PreviousValue, InRequest.Get_Value(),
@@ -117,7 +118,7 @@ auto
 		for (auto Index = OwnerSubscribers._Subscribers.Num() - 1; Index >= 0; --Index)
 		{
 			auto& Subscriber = OwnerSubscribers._Subscribers[Index];
-			if (NOT ck::IsValid(Subscriber))
+			if (ck::Is_NOT_Valid(Subscriber))
 			{
 				OwnerSubscribers._Subscribers.RemoveAtSwap(Index);
 				continue;

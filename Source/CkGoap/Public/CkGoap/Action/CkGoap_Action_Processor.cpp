@@ -166,7 +166,8 @@ auto
 		if (ck::IsValid(Owner) && Owner.Has<FFragment_Goap_Planner_WorldStateSource>())
 		{
 			const auto& OwnerWS = Owner.Get<FFragment_Goap_Planner_WorldStateSource>();
-			if (ck::IsValid(OwnerWS.Get_Resolved())) { return OwnerWS.Get_Resolved(); }
+			if (ck::IsValid(OwnerWS.Get_Resolved()))
+			{ return OwnerWS.Get_Resolved(); }
 			return OwnerWS.Get_WorldStateSource();
 		}
 
@@ -177,7 +178,7 @@ auto
 
 	// Defer to the next frame WITHOUT removing the setup tag: the searching planner's WS is
 	// resolved at AddAction time (top-level) or at activation time (non-root).
-	if (NOT ck::IsValid(Source))
+	if (ck::Is_NOT_Valid(Source))
 	{
 		return;
 	}
@@ -501,7 +502,8 @@ auto
 					for (const auto& ImportedTag : ParentLink.Get_ImportedTags())
 					{
 						const auto FlatKey = ImportRegistry.Find(ImportedTag);
-						if (FlatKey == goap::InvalidGoapKey) { continue; }
+						if (FlatKey == goap::InvalidGoapKey)
+						{ continue; }
 						SourceWorldState.Set(FlatKey,
 							UCk_Utils_Goap_WorldState_UE::Get_Value(ParentLink.Get_Parent(), ImportedTag));
 					}
