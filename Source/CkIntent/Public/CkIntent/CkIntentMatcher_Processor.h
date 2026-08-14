@@ -253,6 +253,13 @@ namespace ck
             const FString& InReason) -> void;
 
         static auto
+        DoDeactivateAllLevelRows(
+            HandleType InMatcher,
+            FFragment_IntentMatcher_Current& InCurrent,
+            int32 InFrame,
+            const FString& InReason) -> void;
+
+        static auto
         Get_IsLevelActive(
             const FFragment_IntentMatcher_Current& InCurrent,
             int32 InIntentIndex) -> bool;
