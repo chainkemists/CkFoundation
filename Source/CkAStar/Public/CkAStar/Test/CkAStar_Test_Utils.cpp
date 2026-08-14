@@ -61,8 +61,6 @@ auto
 {
 	const auto HandleIsValid = ck::IsValid(InHandle);
 	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_StartSearch"))
-	{}
-	if (NOT HandleIsValid)
 	{
 		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InHandle;
@@ -108,8 +106,6 @@ auto
 {
 	const auto HandleIsValid = ck::IsValid(InHandle);
 	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_BlockCell"))
-	{}
-	if (NOT HandleIsValid)
 	{
 		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return;
@@ -136,8 +132,6 @@ auto
 {
 	const auto HandleIsValid = ck::IsValid(InHandle);
 	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_UnblockCell"))
-	{}
-	if (NOT HandleIsValid)
 	{
 		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return;

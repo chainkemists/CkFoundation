@@ -118,7 +118,7 @@ namespace ck
         { return; }
 
         auto* Subsystem = UCkUsf_CelShadeSubsystem::Get_CelShadeSubsystem(Actor);
-        if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Subsystem))
         { return; }
 
         // 0 means the stencil contract is switched off in this world's settings — writing it would mark the

@@ -706,8 +706,6 @@ auto
              "exporting UNRESOLVED sentinel instead of its CPP type"),
         InProperty ? InProperty->GetName() : TEXT("<null>"),
         InProperty ? InProperty->GetOwnerVariant().GetName() : TEXT("<null>"))
-    {}
-    if (NOT TypeIsResolvable)
     { return ck::Format_UE(TEXT("UNRESOLVED({})"), InProperty ? InProperty->GetName() : TEXT("<null>")); }
 
     return InProperty->GetCPPType();

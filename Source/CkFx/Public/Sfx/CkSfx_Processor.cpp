@@ -77,9 +77,6 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup Sfx [{}] - loading its SoundCue [{}] (or a settings asset) through CkResourceLoader failed"),
             InHandle, Params.Get_SoundCue().ToSoftObjectPath())
-        {}
-
-        if (NOT AssetsAreLoaded)
         { InCurrent._LoadedAssets = {}; }
 
         InHandle.Try_Remove<FTag_Sfx_PendingAssetLoad>();
@@ -135,9 +132,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(SoundCueIsResolved, TEXT("Sfx [{}] cannot play - its SoundCue is not resolved "
             "(the asset load failed at Setup, or the loader-rooted asset was lost)"), InHandle)
-        {}
-
-        if (NOT SoundCueIsResolved)
         { return ECk_Request_OperationResult::Failed; }
 
         // The attach component may legitimately die between enqueue and drain — a Failed completion,
@@ -199,9 +193,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(SoundCueIsResolved, TEXT("Sfx [{}] cannot play - its SoundCue is not resolved "
             "(the asset load failed at Setup, or the loader-rooted asset was lost)"), InHandle)
-        {}
-
-        if (NOT SoundCueIsResolved)
         { return ECk_Request_OperationResult::Failed; }
 
         // The outer may legitimately die between enqueue and drain — a Failed completion, not an ensure.

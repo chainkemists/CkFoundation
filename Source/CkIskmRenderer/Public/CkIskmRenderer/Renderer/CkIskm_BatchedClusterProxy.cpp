@@ -203,7 +203,7 @@ auto
     WriteInstanceBuffer()
     -> void
 {
-    if (NOT ck::IsValid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
     FInstanceSceneDataBuffers::FAccessTag AT(666);
@@ -308,7 +308,7 @@ auto
     DrawStaticElements(FStaticPrimitiveDrawInterface* PDI)
     -> void
 {
-    if (NOT ck::IsValid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}) || Mesh == nullptr || AnimCollection == nullptr)
+    if (ck::Is_NOT_Valid(DynData.Get(), ck::IsValid_Policy_NullptrOnly{}) || Mesh == nullptr || AnimCollection == nullptr)
     { return; }
     if (StableInstanceRuns.Num() == 0)
     { return; }

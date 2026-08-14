@@ -212,8 +212,6 @@ void
     const auto HasAuthorityWorld = ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World);
     CK_ENSURE_IF_NOT(HasAuthorityWorld,
         TEXT("Request_Save refused: World [{}] is invalid or this is a client (no authority)"), World)
-    {}
-    if (NOT HasAuthorityWorld)
     {
         InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_IO);
         return;
@@ -222,8 +220,6 @@ void
     const auto CanStartSnapshot = NOT _SnapshotInProgress && NOT _LoadInProgress;
     CK_ENSURE_IF_NOT(CanStartSnapshot,
         TEXT("Request_Save refused: a snapshot operation is already in progress"))
-    {}
-    if (NOT CanStartSnapshot)
     {
         InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_IO);
         return;
@@ -263,8 +259,6 @@ void
     const auto HasSaveGame = ck::IsValid(SaveGame);
     CK_ENSURE_IF_NOT(HasSaveGame,
         TEXT("Request_Save: failed to create UCk_Snapshot_SaveGame"))
-    {}
-    if (NOT HasSaveGame)
     {
         DoFinish(ECk_SnapshotResult::Failed_IO);
         return;
@@ -306,8 +300,6 @@ void
     const auto HasAuthorityWorld = ck::IsValid(World) && ck_snapshot_subsystem::DoGet_HasWorldAuthority(World);
     CK_ENSURE_IF_NOT(HasAuthorityWorld,
         TEXT("Request_Load refused: World [{}] is invalid or this is a client (no authority)"), World)
-    {}
-    if (NOT HasAuthorityWorld)
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
@@ -316,8 +308,6 @@ void
     const auto CanStartSnapshot = NOT _SnapshotInProgress && NOT _LoadInProgress;
     CK_ENSURE_IF_NOT(CanStartSnapshot,
         TEXT("Request_Load refused: a snapshot operation is already in progress"))
-    {}
-    if (NOT CanStartSnapshot)
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IO));
         return;
@@ -392,7 +382,8 @@ void
                 case ECk_Snapshot_V3_Provenance::ConstructSpawned: ++ConstructSpawned; break;
                 case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
                     ++RuntimeSpawned;
-                    if (NOT Entry.Get_ActorClassPath().IsEmpty()) { ++Bridged; }
+                    if (NOT Entry.Get_ActorClassPath().IsEmpty())
+                    { ++Bridged; }
                     break;
             }
         }
@@ -469,7 +460,7 @@ auto
     // Seamless ServerTravel is connection-preserving but heavier — with no remote clients, OpenLevel is correct.
     auto* NetDriver = World->GetNetDriver();
     const auto HasConnectedClients =
-        ck::IsValid(NetDriver, ck::IsValid_Policy_NullptrOnly{}) && NetDriver->ClientConnections.Num() > 0;
+        ck::IsValid(NetDriver) && NetDriver->ClientConnections.Num() > 0;
 
     if (World->GetNetMode() == ENetMode::NM_Standalone || NOT HasConnectedClients)
     {
@@ -1183,8 +1174,10 @@ auto
             // Owner unmapped — its payloads drop. Which bucket says WHY: a skipped owner is deliberate, an orphaned
             // one is lost state, and neither means the owner id is absent from the entity table or its mapped handle
             // died between rebuild and here.
-            if (_SkippedIds.Contains(OwnerSavedId))    { ++PayloadsOnSkipped; }
-            else if (OrphanIds.Contains(OwnerSavedId)) { ++PayloadsOnOrphaned; }
+            if (_SkippedIds.Contains(OwnerSavedId))
+            { ++PayloadsOnSkipped; }
+            else if (OrphanIds.Contains(OwnerSavedId))
+            { ++PayloadsOnOrphaned; }
             else                                       { ++PayloadsOnUnresolvedOwner; }
             continue;
         }
@@ -1196,8 +1189,6 @@ auto
             TEXT("v3 load: hydration payload for type [{}] (owner saved-id [{}]) failed to deserialize — dropped "
                  "(empty bytes, or the type is absent since the save)"),
             Payload.Get_TypePath(), Payload.Get_OwnerSavedId())
-        {}
-        if (NOT HasHydrationData)
         {
             ++PayloadsDropped;
             continue;
@@ -1241,13 +1232,15 @@ auto
             case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
             {
                 if (NOT Entry.Get_ActorClassPath().IsEmpty()) { Reason = TEXT("bridge-never-linked"); } // actor spawned, bridge never linked
-                else if (bOwnerOrphaned)                      { Reason = TEXT("owner-orphaned"); }
+                else if (bOwnerOrphaned)
+                { Reason = TEXT("owner-orphaned"); }
                 else                                          { Reason = TEXT("unresolved-other"); }
                 break;
             }
             case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
             {
-                if (bOwnerOrphaned) { Reason = TEXT("owner-orphaned"); }
+                if (bOwnerOrphaned)
+                { Reason = TEXT("owner-orphaned"); }
                 else                { Reason = TEXT("unresolved-other"); }
                 break;
             }
@@ -1704,15 +1697,11 @@ bool
     const auto KeyIsValid = InKey.IsValid();
     CK_ENSURE_IF_NOT(KeyIsValid,
         TEXT("Cannot publish an invalid Snapshot SaveKey for Entity [{}]"), InHandle)
-    {}
-    if (NOT KeyIsValid)
     { return false; }
 
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Cannot publish Snapshot SaveKey [{}] for an invalid Entity Handle"), InKey)
-    {}
-    if (NOT HandleIsValid)
     { return false; }
 
     if (const auto* Existing = _SaveKeyResolverMap.Find(InKey))

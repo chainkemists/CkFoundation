@@ -463,9 +463,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(OctreeIsBuilt,
             TEXT("Cannot raycast against a VoxelNav octree that has not been built"))
-        {}
-
-        if (NOT OctreeIsBuilt)
         { return Result; }
 
         const auto Delta = InTo - InFrom;

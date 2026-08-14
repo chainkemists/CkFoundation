@@ -22,7 +22,7 @@ auto
         const UCkUsf_LookDefinition* InLook)
     -> UMaterialInterface*
 {
-    if (ck::Is_NOT_Valid(InLook, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InLook))
     {
         ck::usf::Warning(TEXT("Null look passed to Get_LookMasterMaterial"));
         return nullptr;
@@ -31,7 +31,7 @@ auto
     const auto ObjPath = ck::usf::Get_GeneratedMasterObjectPath(InLook->Get_EffectiveLookName());
     auto* Mat = LoadObject<UMaterialInterface>(nullptr, *ObjPath);
 
-    if (ck::Is_NOT_Valid(Mat, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Mat))
     {
         ck::usf::Warning(TEXT("No generated master for look [{}] at [{}] - run Generate Look Materials"),
             InLook->Get_EffectiveLookName(), ObjPath);
@@ -62,7 +62,7 @@ auto
     -> UMaterialInstanceDynamic*
 {
     auto* Master = Get_LookMasterMaterial(InLook);
-    if (ck::Is_NOT_Valid(Master, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Master))
     { return nullptr; }
 
     auto* MID = UMaterialInstanceDynamic::Create(Master, InOuter);
@@ -97,7 +97,7 @@ auto
         UMaterialInstanceDynamic* InMID, FName InName, float InValue)
     -> void
 {
-    if (ck::IsValid(InMID, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(InMID))
     { InMID->SetScalarParameterValue(InName, InValue); }
 }
 
@@ -107,7 +107,7 @@ auto
         UMaterialInstanceDynamic* InMID, FName InName, FLinearColor InValue)
     -> void
 {
-    if (ck::IsValid(InMID, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(InMID))
     { InMID->SetVectorParameterValue(InName, InValue); }
 }
 
@@ -117,7 +117,7 @@ auto
         UMaterialInstanceDynamic* InMID, FName InName, UTexture* InValue)
     -> void
 {
-    if (ck::IsValid(InMID, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::IsValid(InMID))
     { InMID->SetTextureParameterValue(InName, InValue); }
 }
 
@@ -128,14 +128,14 @@ auto
         const UCkUsf_LookDefinition* InLook)
     -> UMaterialInstanceDynamic*
 {
-    if (ck::Is_NOT_Valid(InCamera, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InCamera))
     {
         ck::usf::Warning(TEXT("Apply_PostProcess_ToCamera: null camera"));
         return nullptr;
     }
 
     auto* MID = Create_MID_ForLook(InLook, InCamera);
-    if (ck::Is_NOT_Valid(MID, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(MID))
     { return nullptr; }
 
     constexpr auto Weight = 1.0f;
@@ -150,14 +150,14 @@ auto
         const UCkUsf_LookDefinition* InLook)
     -> UMaterialInstanceDynamic*
 {
-    if (ck::Is_NOT_Valid(InPostProcess, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InPostProcess))
     {
         ck::usf::Warning(TEXT("Apply_PostProcess_ToComponent: null post-process component"));
         return nullptr;
     }
 
     auto* MID = Create_MID_ForLook(InLook, InPostProcess);
-    if (ck::Is_NOT_Valid(MID, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(MID))
     { return nullptr; }
 
     constexpr auto Weight = 1.0f;

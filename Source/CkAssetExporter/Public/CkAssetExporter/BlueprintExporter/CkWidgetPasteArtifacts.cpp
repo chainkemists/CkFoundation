@@ -97,7 +97,7 @@ auto
     auto Result = FCk_WidgetPasteArtifactsResult{};
 
     auto* WidgetBlueprint = Cast<UWidgetBlueprint>(InBlueprint);
-    if (ck::Is_NOT_Valid(WidgetBlueprint, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(WidgetBlueprint))
     {
         Result.Succeeded = true;
         return Result;

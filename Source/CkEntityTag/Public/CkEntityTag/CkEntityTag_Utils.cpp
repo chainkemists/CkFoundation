@@ -344,8 +344,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return ECk_SucceededFailed::Failed;
@@ -424,8 +422,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return ECk_SucceededFailed::Failed;
@@ -506,8 +502,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to restore the EntityTag set on the Entity"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

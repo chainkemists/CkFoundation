@@ -54,9 +54,16 @@ namespace ck::ensure
             ? (PLATFORM_BREAK(), false)                                                                                                    \
             : false))
 
-// CK_ENSURE_IF_NOT is diagnostic syntax, not load-bearing recovery control flow. Callers handling invalid external
-// input must evaluate a side-effect-safe condition once and branch explicitly outside this macro; ensure checks may
-// compile out, but recovery must not.
+// CK_ENSURE_IF_NOT is an inverted if: the body IS the failure path, and the recovery belongs in it. Evaluate a
+// side-effect-safe condition once (hoist it to a local) so the message and the branch share one evaluation.
+//
+// The CK_DISABLE_ENSURE_CHECKS expansion below is `if constexpr(false)`, which WOULD discard that recovery — but
+// that configuration is unreachable: CkBuildConfig.Build.cs pins BuildConfigurationOverride to MatchWithUnreal as a
+// compile-time const, so only the two expansions that preserve control flow are ever compiled.
+//
+// WARNING: ~2,300 call sites now rely on that. If BuildConfiguration::Profile is ever enabled, change this
+// expansion to `if (NOT (InExpression))` (matching CK_DISABLE_ENSURE_DEBUGGING) FIRST, or every one of those
+// early-outs vanishes silently and simultaneously.
 #if CK_DISABLE_ENSURE_CHECKS
 #define CK_ENSURE_IF_NOT(InExpression, InFormat, ...)\
 if constexpr(false)

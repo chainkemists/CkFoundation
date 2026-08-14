@@ -172,16 +172,26 @@ auto
 {
     using namespace ck;
 
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Zero>>())       { return ECk_Player_ID::Zero; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::One>>())        { return ECk_Player_ID::One; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Two>>())        { return ECk_Player_ID::Two; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Three>>())      { return ECk_Player_ID::Three; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Four>>())       { return ECk_Player_ID::Four; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Five>>())       { return ECk_Player_ID::Five; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Six>>())        { return ECk_Player_ID::Six; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Seven>>())      { return ECk_Player_ID::Seven; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Eight>>())      { return ECk_Player_ID::Eight; }
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Unassigned>>()) { return ECk_Player_ID::Unassigned; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Zero>>())
+    { return ECk_Player_ID::Zero; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::One>>())
+    { return ECk_Player_ID::One; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Two>>())
+    { return ECk_Player_ID::Two; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Three>>())
+    { return ECk_Player_ID::Three; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Four>>())
+    { return ECk_Player_ID::Four; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Five>>())
+    { return ECk_Player_ID::Five; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Six>>())
+    { return ECk_Player_ID::Six; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Seven>>())
+    { return ECk_Player_ID::Seven; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Eight>>())
+    { return ECk_Player_ID::Eight; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Unassigned>>())
+    { return ECk_Player_ID::Unassigned; }
 
     CK_TRIGGER_ENSURE(TEXT("Entity [{}] has been assigned an out of range Player ID"), InHandle);
 

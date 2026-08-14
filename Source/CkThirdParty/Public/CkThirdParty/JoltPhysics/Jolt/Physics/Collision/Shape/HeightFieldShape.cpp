@@ -970,14 +970,18 @@ void HeightFieldShape::SetHeights(uint inX, uint inY, uint inSizeX, uint inSizeY
 	uint affected_y = inY;
 	uint affected_size_x = inSizeX;
 	uint affected_size_y = inSizeY;
-	if (inX > 0) { affected_x -= mBlockSize; affected_size_x += mBlockSize; need_temp_heights = true; }
-	if (inY > 0) { affected_y -= mBlockSize; affected_size_y += mBlockSize; need_temp_heights = true; }
+	if (inX > 0)
+	{ affected_x -= mBlockSize; affected_size_x += mBlockSize; need_temp_heights = true; }
+	if (inY > 0)
+	{ affected_y -= mBlockSize; affected_size_y += mBlockSize; need_temp_heights = true; }
 
 	// If we have a block in positive x/y direction, our ranges are affected by it so we need to take it into account
 	uint heights_size_x = affected_size_x;
 	uint heights_size_y = affected_size_y;
-	if (inX + inSizeX < mSampleCount) { heights_size_x += mBlockSize; need_temp_heights = true; }
-	if (inY + inSizeY < mSampleCount) { heights_size_y += mBlockSize; need_temp_heights = true; }
+	if (inX + inSizeX < mSampleCount)
+	{ heights_size_x += mBlockSize; need_temp_heights = true; }
+	if (inY + inSizeY < mSampleCount)
+	{ heights_size_y += mBlockSize; need_temp_heights = true; }
 
 	// Get heights for affected area
 	const float *heights;
@@ -1131,8 +1135,10 @@ void HeightFieldShape::SetHeights(uint inX, uint inY, uint inSizeX, uint inSizeY
 		sGetRangeBlockOffsetAndStride(num_blocks >> 1, max_level - 1, dst_range_block_offset, dst_range_block_stride);
 
 		// We'll be processing 2x2 blocks below so we need the start coordinates to be even and we extend the number of blocks to correct for that
-		if (block_start_x & 1) { --block_start_x; ++num_blocks_x; }
-		if (block_start_y & 1) { --block_start_y; ++num_blocks_y; }
+		if (block_start_x & 1)
+		{ --block_start_x; ++num_blocks_x; }
+		if (block_start_y & 1)
+		{ --block_start_y; ++num_blocks_y; }
 
 		// Loop over all affected blocks
 		uint block_end_x = block_start_x + num_blocks_x;

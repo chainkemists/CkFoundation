@@ -463,8 +463,6 @@ namespace ck
 
         CK_ENSURE_IF_NOT(OverrideClassIsValid,
             TEXT("FCk_Request_Sm_AddOverrideState on [{}] has invalid override state class"), InHandle)
-        {}
-        if (NOT OverrideClassIsValid)
         { return ECk_Request_OperationResult::Failed; }
 
         auto* CDO = OverrideClass->GetDefaultObject<UCk_SmState_EntityScript>();
@@ -475,8 +473,6 @@ namespace ck
         CK_ENSURE_IF_NOT(HasStatesToOverride,
             TEXT("FCk_Request_Sm_AddOverrideState on [{}]: override class [{}] returns empty Get_StatesToOverride()"),
             InHandle, *OverrideClass->GetName())
-        {}
-        if (NOT HasStatesToOverride)
         { return ECk_Request_OperationResult::Failed; }
 
         auto& Overrides = InHandle.AddOrGet<FFragment_Sm_StateOverrides>();
@@ -1131,7 +1127,7 @@ namespace ck
         // AutonomousProxy). Right after Start the channel can still be a SimulatedProxy and UE would
         // silently DROP the RPC, so treat "not RPC-ready" like "no relay yet" and retry with the
         // batch retained.
-        if (ck::Is_NOT_Valid(RelayActor, ck::IsValid_Policy_NullptrOnly{})
+        if (ck::Is_NOT_Valid(RelayActor)
             || RelayActor->GetNetConnection() == nullptr)
         {
             ck::sm::VeryVerbose(TEXT("PushOwningClientBatch: relay not RPC-ready for [{}], deferring"),

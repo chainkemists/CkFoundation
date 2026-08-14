@@ -37,14 +37,14 @@ auto
         bool InEnsureWorldIsValid)
     -> bool
 {
-    if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InWorldContextObject))
     {
         InWorldContextObject = UGameplayStatics::GetGameInstance(nullptr);
     }
 
     const auto& World = Get_WorldForObject(InWorldContextObject);
 
-    if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(World))
     {
         CK_TRIGGER_ENSURE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
         return false;
@@ -67,7 +67,7 @@ auto
     -> bool
 {
 #if WITH_EDITOR
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject),
         TEXT("Unable to get the World. InContextObject is INVALID."))
     { return {}; }
 
@@ -122,16 +122,16 @@ auto
         const UObject* InContextObject)
     -> UWorld*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InContextObject, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InContextObject),
         TEXT("Unable to get the World. InContextObject is INVALID."))
     { return {}; }
 
     if (auto* World = InContextObject->GetWorld();
-        ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+        ck::IsValid(World))
     { return World; }
 
     if (const auto& ContextObjectOuter = InContextObject->GetOuter();
-        ck::IsValid(ContextObjectOuter, ck::IsValid_Policy_NullptrOnly{}))
+        ck::IsValid(ContextObjectOuter))
     { return ContextObjectOuter->GetWorld(); }
 
     return {};
@@ -155,19 +155,19 @@ auto
         TEXT("INVALID InContextObject passed to Get_GameInstance! Attempting to retrieve GameInstance from the GEngine list of WorldContexts."))
     {}
 
-    if (const auto* World = Get_WorldForObject(InWorldContextObject); ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (const auto* World = Get_WorldForObject(InWorldContextObject); ck::IsValid(World))
     {
         return World->GetGameInstance();
     }
 
-    if (ck::Is_NOT_Valid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(GEngine))
     { return {}; }
 
     for (auto& Context : GEngine->GetWorldContexts())
     {
         const auto& ContextWorld = Context.World();
 
-        if (ck::Is_NOT_Valid(ContextWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(ContextWorld))
         { continue; }
 
         if (auto* GameInstance = ContextWorld->GetGameInstance();

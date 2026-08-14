@@ -69,19 +69,19 @@ namespace ck
         }
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        if (NOT ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(World))
         {
             EnqueueOffset(Displacement);
             return;
         }
 
         const auto NavSys = UNavigationSystemV1::GetCurrent(World);
-        const auto NavData = ck::IsValid(NavSys, ck::IsValid_Policy_NullptrOnly{})
+        const auto NavData = ck::IsValid(NavSys)
             ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
             : static_cast<ANavigationData*>(nullptr);
 
         // A world without nav data has nothing to constrain against — legitimate absence, not an error.
-        if (NOT ck::IsValid(NavData, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(NavData))
         {
             EnqueueOffset(Displacement);
             return;

@@ -318,9 +318,12 @@ namespace ck::angelscriptgenerator::self_heal
         const auto IsLoad  = InError.TargetNamespace.EndsWith(TEXT("::load"));
         const auto IsClass = InError.FunctionName.EndsWith(TEXT("_Class"));
 
-        if (IsLoad && IsClass) { return ECk_AssetAccessorFlavor::BlockingLoadClass; }
-        if (IsLoad)            { return ECk_AssetAccessorFlavor::BlockingLoad; }
-        if (IsClass)           { return ECk_AssetAccessorFlavor::SoftClass; }
+        if (IsLoad && IsClass)
+        { return ECk_AssetAccessorFlavor::BlockingLoadClass; }
+        if (IsLoad)
+        { return ECk_AssetAccessorFlavor::BlockingLoad; }
+        if (IsClass)
+        { return ECk_AssetAccessorFlavor::SoftClass; }
         return ECk_AssetAccessorFlavor::SoftRef;
     }
 

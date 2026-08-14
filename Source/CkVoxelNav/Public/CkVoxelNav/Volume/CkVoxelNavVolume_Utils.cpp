@@ -137,9 +137,6 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
 
     CK_ENSURE_IF_NOT(OwnerIsValid, TEXT("Invalid owner Handle [{}] supplied to UCk_Utils_VoxelNavVolume_UE::Add"), InOwner)
-    {}
-
-    if (NOT OwnerIsValid)
     { return {}; }
 
     auto NewVolumeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_VoxelNavVolume>(InOwner);
@@ -224,9 +221,6 @@ auto
 
     CK_ENSURE_IF_NOT(VolumeIsValid,
         TEXT("Invalid VoxelNav Volume Handle [{}] supplied to Request_Build"), InVolume)
-    {}
-
-    if (NOT VolumeIsValid)
     {
         InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InVolume;
@@ -254,9 +248,6 @@ auto
 
     CK_ENSURE_IF_NOT(VolumeIsValid,
         TEXT("Invalid VoxelNav Volume Handle [{}] supplied to Request_CancelBuild"), InVolume)
-    {}
-
-    if (NOT VolumeIsValid)
     {
         InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InVolume;
@@ -284,9 +275,6 @@ auto
 
     CK_ENSURE_IF_NOT(VolumeIsValid,
         TEXT("Invalid VoxelNav Volume Handle [{}] supplied to Request_MarkDirty"), InVolume)
-    {}
-
-    if (NOT VolumeIsValid)
     {
         InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InVolume;
@@ -548,9 +536,6 @@ auto
     CK_ENSURE_IF_NOT(IndexIsInRange,
         TEXT("VoxelNav Volume [{}] has [{}] chunks, so chunk index [{}] names none of them"),
         InVolume, Chunks.Num(), InChunkIndex)
-    {}
-
-    if (NOT IndexIsInRange)
     { return {}; }
 
     return Chunks[InChunkIndex];
@@ -606,9 +591,6 @@ auto
 
     CK_ENSURE_IF_NOT(VolumeIsUsable,
         TEXT("Cannot build a VoxelNav debug snapshot from incomplete Volume [{}]"), InVolume)
-    {}
-
-    if (NOT VolumeIsUsable)
     {
         OutSnapshot = MoveTemp(Snapshot);
         return false;

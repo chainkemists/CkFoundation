@@ -66,12 +66,12 @@ namespace ck_jolt_bake_extraction
     {
         auto PhysMaterial = static_cast<UPhysicalMaterial*>(nullptr);
 
-        if (ck::IsValid(InComponent.BodyInstance.GetPhysMaterialOverride(), ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(InComponent.BodyInstance.GetPhysMaterialOverride()))
         { PhysMaterial = InComponent.BodyInstance.GetPhysMaterialOverride(); }
-        else if (ck::IsValid(InBodySetup, ck::IsValid_Policy_NullptrOnly{}))
+        else if (ck::IsValid(InBodySetup))
         { PhysMaterial = InBodySetup->GetPhysMaterial(); }
 
-        if (ck::Is_NOT_Valid(PhysMaterial) && ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(PhysMaterial) && ck::IsValid(GEngine))
         { PhysMaterial = GEngine->DefaultPhysMaterial; }
 
         if (ck::Is_NOT_Valid(PhysMaterial))
@@ -303,8 +303,6 @@ namespace ck_jolt_bake_extraction
                      "Every Jolt half extent must be finite and positive."),
                 InDebugName, BoxElem.X, BoxElem.Y, BoxElem.Z, InScale, HalfExtents,
                 JoltHalfExtents.GetX(), JoltHalfExtents.GetY(), JoltHalfExtents.GetZ())
-            {}
-            if (NOT HalfExtentsArePositive)
             { return false; }
 
             constexpr auto MaximumConvexRadiusFraction = 0.5f;
@@ -464,11 +462,11 @@ namespace ck::jolt::bake
         {
             auto* Resolved = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
 
-            CK_ENSURE_IF_NOT(ck::IsValid(Resolved, ck::IsValid_Policy_NullptrOnly{}),
+            CK_ENSURE_IF_NOT(ck::IsValid(Resolved),
                 TEXT("Bake-filter excluded actor class [{}] is unset or failed to load — the entry is IGNORED. "
                      "Fix or remove the row in Project Settings > Jolt > Bake Filter."), SoftClass.ToString())
             {}
-            if (ck::Is_NOT_Valid(Resolved, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Resolved))
             { continue; }
 
             Filter._ExcludedActorClasses.Emplace(TStrongObjectPtr{Resolved});
@@ -739,7 +737,7 @@ namespace ck::jolt::bake
             const auto DebugName = ck::Format_UE(TEXT("{} on {}"),
                 GetNameSafe(SplineMesh->GetStaticMesh()), InComponent.GetPathName());
 
-            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
+            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup),
                 TEXT("SplineMeshComponent [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
@@ -756,7 +754,7 @@ namespace ck::jolt::bake
             const auto* BodySetup = Mesh->GetBodySetup();
             const auto DebugName = ck::Format_UE(TEXT("{} on {}"), Mesh->GetName(), InComponent.GetPathName());
 
-            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
+            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup),
                 TEXT("Instanced mesh [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
@@ -830,7 +828,7 @@ namespace ck::jolt::bake
             const auto* BodySetup = Mesh->GetBodySetup();
             const auto DebugName = ck::Format_UE(TEXT("{} on {}"), Mesh->GetName(), InComponent.GetPathName());
 
-            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}),
+            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup),
                 TEXT("StaticMesh [{}] has collision enabled but no BodySetup"), DebugName)
             { return 0; }
 
@@ -842,7 +840,7 @@ namespace ck::jolt::bake
         {
             const auto* BodySetup = Brush->BrushBodySetup.Get();
 
-            if (NOT ck::IsValid(BodySetup, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(BodySetup))
             {
                 ck::jolt::Verbose(TEXT("Static bake skipping BrushComponent [{}] on [{}] — no BrushBodySetup (Chaos creates no physics state for it either)"),
                     InComponent.GetName(), GetNameSafe(InComponent.GetOwner()));
@@ -899,7 +897,7 @@ namespace ck::jolt::bake
                 { continue; }
 
                 const auto* CollisionComponent = LandscapeComponent->GetCollisionComponent();
-                CK_ENSURE_IF_NOT(ck::IsValid(CollisionComponent, ck::IsValid_Policy_NullptrOnly{}),
+                CK_ENSURE_IF_NOT(ck::IsValid(CollisionComponent),
                     TEXT("Landscape component [{}] has no heightfield collision component — skipping (Chaos would have no physics state for it either)"),
                     LandscapeComponent->GetName())
                 { continue; }
@@ -1083,7 +1081,7 @@ namespace ck::jolt::bake
 
             const auto HashBodySetup = [&](const UBodySetup* InBodySetup) -> void
             {
-                if (ck::Is_NOT_Valid(InBodySetup, ck::IsValid_Policy_NullptrOnly{}))
+                if (ck::Is_NOT_Valid(InBodySetup))
                 { return; }
 
                 Builder.Update(&InBodySetup->BodySetupGuid, sizeof(FGuid));

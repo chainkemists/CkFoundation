@@ -65,12 +65,18 @@ namespace ck_voxelnav_chunk_adjacency
 
         auto Mask = uint8{0};
 
-        if (Get_ReachesFace(InCenter.X, InExtent, InChunkBounds.Max.X, true))  { Mask |= static_cast<uint8>(EChunkFace::MaxX); }
-        if (Get_ReachesFace(InCenter.X, InExtent, InChunkBounds.Min.X, false)) { Mask |= static_cast<uint8>(EChunkFace::MinX); }
-        if (Get_ReachesFace(InCenter.Y, InExtent, InChunkBounds.Max.Y, true))  { Mask |= static_cast<uint8>(EChunkFace::MaxY); }
-        if (Get_ReachesFace(InCenter.Y, InExtent, InChunkBounds.Min.Y, false)) { Mask |= static_cast<uint8>(EChunkFace::MinY); }
-        if (Get_ReachesFace(InCenter.Z, InExtent, InChunkBounds.Max.Z, true))  { Mask |= static_cast<uint8>(EChunkFace::MaxZ); }
-        if (Get_ReachesFace(InCenter.Z, InExtent, InChunkBounds.Min.Z, false)) { Mask |= static_cast<uint8>(EChunkFace::MinZ); }
+        if (Get_ReachesFace(InCenter.X, InExtent, InChunkBounds.Max.X, true))
+        { Mask |= static_cast<uint8>(EChunkFace::MaxX); }
+        if (Get_ReachesFace(InCenter.X, InExtent, InChunkBounds.Min.X, false))
+        { Mask |= static_cast<uint8>(EChunkFace::MinX); }
+        if (Get_ReachesFace(InCenter.Y, InExtent, InChunkBounds.Max.Y, true))
+        { Mask |= static_cast<uint8>(EChunkFace::MaxY); }
+        if (Get_ReachesFace(InCenter.Y, InExtent, InChunkBounds.Min.Y, false))
+        { Mask |= static_cast<uint8>(EChunkFace::MinY); }
+        if (Get_ReachesFace(InCenter.Z, InExtent, InChunkBounds.Max.Z, true))
+        { Mask |= static_cast<uint8>(EChunkFace::MaxZ); }
+        if (Get_ReachesFace(InCenter.Z, InExtent, InChunkBounds.Min.Z, false))
+        { Mask |= static_cast<uint8>(EChunkFace::MinZ); }
 
         return Mask;
     }
@@ -253,12 +259,18 @@ namespace ck::voxelnav
 
         const auto FaceTolerance = InLeafNodeSizeUu * FaceToleranceInLeafSizes;
 
-        if (FMath::IsNearlyEqual(InBoundsA.Max.X, InBoundsB.Min.X, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MaxX); }
-        if (FMath::IsNearlyEqual(InBoundsB.Max.X, InBoundsA.Min.X, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MinX); }
-        if (FMath::IsNearlyEqual(InBoundsA.Max.Y, InBoundsB.Min.Y, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MaxY); }
-        if (FMath::IsNearlyEqual(InBoundsB.Max.Y, InBoundsA.Min.Y, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MinY); }
-        if (FMath::IsNearlyEqual(InBoundsA.Max.Z, InBoundsB.Min.Z, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MaxZ); }
-        if (FMath::IsNearlyEqual(InBoundsB.Max.Z, InBoundsA.Min.Z, FaceTolerance)) { return static_cast<uint8>(EChunkFace::MinZ); }
+        if (FMath::IsNearlyEqual(InBoundsA.Max.X, InBoundsB.Min.X, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MaxX); }
+        if (FMath::IsNearlyEqual(InBoundsB.Max.X, InBoundsA.Min.X, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MinX); }
+        if (FMath::IsNearlyEqual(InBoundsA.Max.Y, InBoundsB.Min.Y, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MaxY); }
+        if (FMath::IsNearlyEqual(InBoundsB.Max.Y, InBoundsA.Min.Y, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MinY); }
+        if (FMath::IsNearlyEqual(InBoundsA.Max.Z, InBoundsB.Min.Z, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MaxZ); }
+        if (FMath::IsNearlyEqual(InBoundsB.Max.Z, InBoundsA.Min.Z, FaceTolerance))
+        { return static_cast<uint8>(EChunkFace::MinZ); }
 
         return 0;
     }

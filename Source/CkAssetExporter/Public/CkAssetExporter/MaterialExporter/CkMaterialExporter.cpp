@@ -62,8 +62,6 @@ auto
                  "cannot model it ({}), so the texture list could silently export wrong. Export it through an "
                  "open editor."),
             InMaterial->GetName(), Walk.UnsupportedReason)
-        {}
-        if (NOT WalkServesThisMaterial)
         {
             Result.ErrorMessage = ck::Format_UE(
                 TEXT("Material export requires a render-capable context for [{}] ({}) — it was NOT exported; "
@@ -171,11 +169,16 @@ auto
         if (const auto* EditorOnly = BaseMaterial->GetEditorOnlyData())
         {
             auto Connected = TArray<TSharedPtr<FJsonValue>>{};
-            if (EditorOnly->EmissiveColor.IsConnected()) { Connected.Add(MakeShared<FJsonValueString>(TEXT("EmissiveColor"))); }
-            if (EditorOnly->BaseColor.IsConnected())     { Connected.Add(MakeShared<FJsonValueString>(TEXT("BaseColor"))); }
-            if (EditorOnly->Opacity.IsConnected())       { Connected.Add(MakeShared<FJsonValueString>(TEXT("Opacity"))); }
-            if (EditorOnly->OpacityMask.IsConnected())   { Connected.Add(MakeShared<FJsonValueString>(TEXT("OpacityMask"))); }
-            if (EditorOnly->Normal.IsConnected())        { Connected.Add(MakeShared<FJsonValueString>(TEXT("Normal"))); }
+            if (EditorOnly->EmissiveColor.IsConnected())
+            { Connected.Add(MakeShared<FJsonValueString>(TEXT("EmissiveColor"))); }
+            if (EditorOnly->BaseColor.IsConnected())
+            { Connected.Add(MakeShared<FJsonValueString>(TEXT("BaseColor"))); }
+            if (EditorOnly->Opacity.IsConnected())
+            { Connected.Add(MakeShared<FJsonValueString>(TEXT("Opacity"))); }
+            if (EditorOnly->OpacityMask.IsConnected())
+            { Connected.Add(MakeShared<FJsonValueString>(TEXT("OpacityMask"))); }
+            if (EditorOnly->Normal.IsConnected())
+            { Connected.Add(MakeShared<FJsonValueString>(TEXT("Normal"))); }
             Root->SetArrayField(TEXT("connectedOutputs"), Connected);
         }
 

@@ -37,9 +37,6 @@ namespace ck::voxelnav
                  "form allows Layer 0-{}, Node 0-{}, SubNode 0-{}"),
             static_cast<int32>(InLayerIndex), InNodeIndex, static_cast<int32>(InSubNodeIndex),
             static_cast<int32>(MaxLayerIndex), MaxNodeIndex, static_cast<int32>(MaxSubNodeIndex))
-        {}
-
-        if (NOT FieldsAreInRange)
         { return FNodeAddress{}; }
 
         auto Address = FNodeAddress{};
@@ -70,9 +67,6 @@ namespace ck::voxelnav
             TEXT("Packed value [{}] does not encode a VoxelNav node address - its layer nibble is [{}], "
                  "which is reserved"),
             InPacked, static_cast<int32>(LayerNibble))
-        {}
-
-        if (NOT LayerIsAddressable)
         { return FNodeAddress{}; }
 
         auto Address = FNodeAddress{};
@@ -92,9 +86,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(NodeIndexIsInRange,
             TEXT("Node index [{}] does not fit the 22-bit node field of a VoxelNav node address"),
             InNodeIndex)
-        {}
-
-        if (NOT NodeIndexIsInRange)
         { return *this; }
 
         _Packed = (_Packed & ~(0x3FFFFFu << 6)) | ((static_cast<uint32>(InNodeIndex) & 0x3FFFFFu) << 6);
@@ -113,9 +104,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(SubNodeIndexIsInRange,
             TEXT("Sub-node index [{}] does not fit the 6-bit sub-node field of a VoxelNav node address"),
             static_cast<int32>(InSubNodeIndex))
-        {}
-
-        if (NOT SubNodeIndexIsInRange)
         { return *this; }
 
         _Packed = (_Packed & ~0x3Fu) | (static_cast<uint32>(InSubNodeIndex) & 0x3Fu);
@@ -155,9 +143,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(InputsAreValid,
             TEXT("Cannot make a VoxelNav cell id from Volume [{}] and packed address [{}]"),
             InVolume.Get_Value(), InAddress.Get_Packed())
-        {}
-
-        if (NOT InputsAreValid)
         { return FCellId{}; }
 
         auto Cell = FCellId{};
@@ -183,9 +168,6 @@ namespace ck::voxelnav
             TEXT("Cannot make a merged VoxelNav cell id from Volume [{}] and merged index [{}] - the index "
                  "must be within 0-{}"),
             InVolume.Get_Value(), InMergedIndex, MaxMergedIndex)
-        {}
-
-        if (NOT InputsAreValid)
         { return FCellId{}; }
 
         auto Cell = FCellId{};
@@ -226,9 +208,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(IsOctreeNodeCell,
             TEXT("VoxelNav cell [{}] on Volume [{}] is not an octree-node cell, so it has no node address"),
             _Packed, _Volume)
-        {}
-
-        if (NOT IsOctreeNodeCell)
         { return FNodeAddress{}; }
 
         return FNodeAddress::Make_FromPacked(_Packed);
@@ -244,9 +223,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(IsMergedCell,
             TEXT("VoxelNav cell [{}] on Volume [{}] is not a merged cell, so it has no merged index"),
             _Packed, _Volume)
-        {}
-
-        if (NOT IsMergedCell)
         { return INDEX_NONE; }
 
         return static_cast<int32>(_Packed & 0x0FFFFFFFu);
@@ -374,9 +350,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(MappingIsInRange,
             TEXT("Cannot map VoxelNav cell [{}] onto merged cell [{}] - the table holds [{}] merged cells"),
             InAddress.Get_Packed(), InMergedIndex, _Cells.Num())
-        {}
-
-        if (NOT MappingIsInRange)
         { return; }
 
         _CellToMerged.Add(InAddress.Get_Packed(), InMergedIndex);
@@ -467,9 +440,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(SubNodeIndexIsInRange,
             TEXT("Cannot mark sub-node [{}] occluded - it is outside a leaf node's 4x4x4 occupancy"),
             static_cast<int32>(InSubNodeIndex))
-        {}
-
-        if (NOT SubNodeIndexIsInRange)
         { return; }
 
         _SubNodes |= 1ULL << InSubNodeIndex;
@@ -508,9 +478,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(DirectionIsInRange,
             TEXT("Neighbour direction [{}] is outside the six orthogonal faces"),
             static_cast<int32>(InDirection))
-        {}
-
-        if (NOT DirectionIsInRange)
         { return FNodeAddress{}; }
 
         return _Neighbours[InDirection];
@@ -558,9 +525,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(DirectionIsInRange,
             TEXT("Cannot set neighbour in direction [{}] - it is outside the six orthogonal faces"),
             static_cast<int32>(InDirection))
-        {}
-
-        if (NOT DirectionIsInRange)
         { return *this; }
 
         _Neighbours[InDirection] = InNeighbour;
@@ -627,9 +591,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(LeafCountIsInRange,
             TEXT("Cannot size a VoxelNav leaf store to [{}] leaves"), InLeafCount)
-        {}
-
-        if (NOT LeafCountIsInRange)
         { return; }
 
         _LeafNodes.SetNum(InLeafCount);
@@ -692,9 +653,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(HasLayers,
             TEXT("Cannot publish a VoxelNav octree that has no layers"))
-        {}
-
-        if (NOT HasLayers)
         { return; }
 
         InOutOctree._IsValid = true;
@@ -716,9 +674,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(CellSizeIsPositive,
             TEXT("Cannot initialize a VoxelNav octree with a finest cell size of [{}]uu"),
             InFinestCellSizeUu)
-        {}
-
-        if (NOT CellSizeIsPositive)
         { return false; }
 
         const auto VolumeSize = InVolumeBounds.IsValid != 0
@@ -729,9 +684,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(VolumeIsSized,
             TEXT("Cannot initialize a VoxelNav octree over degenerate bounds [{}]"), InVolumeBounds)
-        {}
-
-        if (NOT VolumeIsSized)
         { return false; }
 
         const auto LeafNodeSize = InFinestCellSizeUu * LeafSubdivision;
@@ -745,9 +697,6 @@ namespace ck::voxelnav
             TEXT("VoxelNav volume bounds [{}] are smaller than a single leaf node - a finest cell size of "
                  "[{}]uu needs a volume of at least [{}]uu across"),
             InVolumeBounds, InFinestCellSizeUu, LeafNodeSize * 2.0f)
-        {}
-
-        if (NOT VolumeHoldsMoreThanOneLeaf)
         { return false; }
 
         const auto VolumeFitsTheAddressableCube = VoxelExponent <= MaxVoxelExponent;
@@ -756,9 +705,6 @@ namespace ck::voxelnav
             TEXT("VoxelNav volume bounds [{}] need [{}] subdivision levels at a finest cell size of [{}]uu, "
                  "which overflows a layer's node capacity - the limit is [{}]"),
             InVolumeBounds, VoxelExponent, InFinestCellSizeUu, MaxVoxelExponent)
-        {}
-
-        if (NOT VolumeFitsTheAddressableCube)
         { return false; }
 
         InOutOctree._VolumeBounds = InVolumeBounds;

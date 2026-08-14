@@ -364,7 +364,8 @@ auto
     -> bool
 {
     const auto* Reg = Resolve();
-    if (Reg == nullptr) { return false; }
+    if (Reg == nullptr)
+    { return false; }
 
     const auto* Storage = Reg->template storage<T_Fragment>();
     if (Storage == nullptr)
@@ -379,7 +380,8 @@ auto
     -> bool
 {
     const auto* Reg = Resolve();
-    if (Reg == nullptr) { return false; }
+    if (Reg == nullptr)
+    { return false; }
 
     // The const view overload does not create a missing pool, and single-storage views skip in_place
     // tombstones — so begin() == end() means zero LIVE entities regardless of tombstone residue.
@@ -426,7 +428,8 @@ auto
 {
     // TryResolve, not Resolve: callers (including Get_TransientEntity) rely on this staying non-noisy.
     const auto* Reg = ck::registry_table::TryResolve(_RegistryHandle);
-    if (Reg == nullptr) { return nullptr; }
+    if (Reg == nullptr)
+    { return nullptr; }
     return Reg->ctx().find<const T_Context>();
 }
 

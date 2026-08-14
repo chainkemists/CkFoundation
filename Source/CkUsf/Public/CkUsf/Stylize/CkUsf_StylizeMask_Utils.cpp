@@ -146,8 +146,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_AddToStylizeMask: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -160,8 +158,6 @@ auto
     CK_ENSURE_IF_NOT(StencilIsFree,
         TEXT("Request_AddToStylizeMask on [{}]: entity already carries an OUTLINE or CEL-PATTERN target, "
              "which owns its Custom Stencil value; stylize mask NOT applied"), InHandle)
-    {}
-    if (NOT StencilIsFree)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -179,9 +175,6 @@ auto
              "unaddressable or COLLIDES with the outline subsystem's allocated range or the CelShade "
              "pattern span in this world; stylize mask NOT applied"),
         InHandle, UCk_Utils_Usf_Stylize_Settings_UE::Get_MaskStencilValue())
-    {}
-
-    if (NOT MaskValueIsFree)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -208,8 +201,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_RemoveFromStylizeMask: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -295,7 +286,7 @@ auto
     // No outline subsystem in this world means nothing else is claiming stencil values through CkUsf.
     // Renderer modules that write stencil directly are out of reach of any check we could make here.
     const auto* Outline = UCkUsf_OutlineSubsystem::Get_OutlineSubsystem(InWorldContextObject);
-    if (ck::Is_NOT_Valid(Outline, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Outline))
     { return true; }
 
     const auto OutlineMin = static_cast<int32>(Outline->Get_StencilMin());
@@ -333,7 +324,7 @@ auto
     { return true; }
 
     const auto* CelShade = UCkUsf_CelShadeSubsystem::Get_CelShadeSubsystem(InWorldContextObject);
-    if (ck::Is_NOT_Valid(CelShade, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(CelShade))
     { return true; }
 
     return Get_MaskRangeAvoidsCelSpan(InMask, CelShade->Get_Settings());
@@ -389,17 +380,17 @@ auto
     // so it is checked against the INCOMING span by Request_SetSettings directly. Reading the stored one
     // here would judge the wrong pair.
     if (const auto* ScreenDither = UCkUsf_ScreenDitherSubsystem::Get_ScreenDitherSubsystem(InWorldContextObject);
-        ck::IsValid(ScreenDither, ck::IsValid_Policy_NullptrOnly{}) &&
+        ck::IsValid(ScreenDither) &&
         NOT CelAvoids(ScreenDither->Get_Settings().Get_Mask()))
     { return false; }
 
     if (const auto* HandDrawn = UCkUsf_HandDrawnSubsystem::Get_HandDrawnSubsystem(InWorldContextObject);
-        ck::IsValid(HandDrawn, ck::IsValid_Policy_NullptrOnly{}) &&
+        ck::IsValid(HandDrawn) &&
         NOT CelAvoids(HandDrawn->Get_Settings().Get_Mask()))
     { return false; }
 
     if (const auto* CrossHatch = UCkUsf_CrossHatchSubsystem::Get_CrossHatchSubsystem(InWorldContextObject);
-        ck::IsValid(CrossHatch, ck::IsValid_Policy_NullptrOnly{}) &&
+        ck::IsValid(CrossHatch) &&
         NOT CelAvoids(CrossHatch->Get_Settings().Get_Mask()))
     { return false; }
 

@@ -53,7 +53,7 @@ namespace ck::layout
             { continue; }
 
             const auto* ChildProperty = ChildHandle->GetProperty();
-            if (ck::Is_NOT_Valid(ChildProperty, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(ChildProperty))
             { continue; }
 
             auto SpawnerWeak = TWeakObjectPtr<ACk_EntitySpawner_UE>{Spawner};

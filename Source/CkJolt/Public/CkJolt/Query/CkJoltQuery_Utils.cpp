@@ -36,7 +36,7 @@ namespace ck_jolt_query_utils
     {
         auto Context = FQueryContext{};
 
-        if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(InWorldContextObject))
         { return Context; }
 
         Context._World = InWorldContextObject->GetWorld();
@@ -44,7 +44,7 @@ namespace ck_jolt_query_utils
         { return Context; }
 
         Context._JoltSubsystem = Context._World->GetSubsystem<UCk_Jolt_Subsystem>();
-        if (ck::Is_NOT_Valid(Context._JoltSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Context._JoltSubsystem))
         { return Context; }
 
         Context._PhysicsSystem = Context._JoltSubsystem->Get_PhysicsSystem().Pin();
@@ -55,7 +55,7 @@ namespace ck_jolt_query_utils
     static auto TryResolve_Entity(const FQueryContext& InContext, uint64 InUserData) -> FCk_Handle
     {
         const auto* EcsWorldSubsystem = InContext._World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-        if (ck::Is_NOT_Valid(EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(EcsWorldSubsystem))
         { return {}; }
 
         // UserData 0 = NO entity. Raw entity id 0 is always the registry's live transient root — resolving

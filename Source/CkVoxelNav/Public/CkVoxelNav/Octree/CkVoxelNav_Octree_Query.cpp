@@ -65,9 +65,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Layer [{}] is outside the VoxelNav octree's [{}] layers"),
             static_cast<int32>(InLayerIndex), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return 0.0f; }
 
         return InOctree.Get_Layer(InLayerIndex).Get_NodeSize();
@@ -94,9 +91,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(HasLayers,
             TEXT("Cannot compute a layer ratio on a VoxelNav octree that has no layers"))
-        {}
-
-        if (NOT HasLayers)
         { return 0.0f; }
 
         return static_cast<float>(InLayerIndex) / static_cast<float>(LayerCount);
@@ -144,9 +138,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Layer [{}] is outside the VoxelNav octree's [{}] layers"),
             static_cast<int32>(InLayerIndex), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return FVector::ZeroVector; }
 
         const auto& Layer = InOctree.Get_Layer(InLayerIndex);
@@ -171,9 +162,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(AddressIsValid,
             TEXT("Cannot resolve a position from the invalid VoxelNav node address [{}]"),
             InAddress.Get_Packed())
-        {}
-
-        if (NOT AddressIsValid)
         { return FVector::ZeroVector; }
 
         const auto LayerIdx = InAddress.Get_LayerIndex();
@@ -182,9 +170,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("VoxelNav node address [{}] names layer [{}], outside the octree's [{}] layers"),
             InAddress.Get_Packed(), static_cast<int32>(LayerIdx), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return FVector::ZeroVector; }
 
         const auto& Layer = InOctree.Get_Layer(LayerIdx);
@@ -194,9 +179,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(NodeIsInRange,
             TEXT("VoxelNav node address [{}] names node [{}], outside layer [{}]'s [{}] nodes"),
             InAddress.Get_Packed(), NodeIdx, static_cast<int32>(LayerIdx), Layer.Get_NodeCount())
-        {}
-
-        if (NOT NodeIsInRange)
         { return FVector::ZeroVector; }
 
         const auto& Node = Layer.Get_Node(NodeIdx);
@@ -210,9 +192,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LeafIsInRange,
             TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
             NodeIdx, LeafNodes.Get_LeafNodes().Num())
-        {}
-
-        if (NOT LeafIsInRange)
         { return FVector::ZeroVector; }
 
         const auto& LeafNode = LeafNodes.Get_LeafNode(NodeIdx);
@@ -221,9 +200,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(LeafParentIsValid,
             TEXT("Leaf node [{}] has no parent link"), NodeIdx)
-        {}
-
-        if (NOT LeafParentIsValid)
         { return FVector::ZeroVector; }
 
         const auto ParentLayerIsInRange = LeafParent.Get_LayerIndex() < InOctree.Get_LayerCount();
@@ -231,9 +207,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(ParentLayerIsInRange,
             TEXT("Leaf node [{}] names parent layer [{}], outside the octree's [{}] layers"),
             NodeIdx, static_cast<int32>(LeafParent.Get_LayerIndex()), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT ParentLayerIsInRange)
         { return FVector::ZeroVector; }
 
         const auto ParentNodeIsInRange = InOctree
@@ -244,9 +217,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(ParentNodeIsInRange,
             TEXT("Leaf node [{}] names parent node [{}], outside its layer"),
             NodeIdx, LeafParent.Get_NodeIndex())
-        {}
-
-        if (NOT ParentNodeIsInRange)
         { return FVector::ZeroVector; }
 
         const auto NodePosition = Get_LeafNodePositionFromMorton(InOctree, Node.Get_MortonCode());
@@ -272,9 +242,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("VoxelNav node address [{}] does not name a layer of this octree"),
             InAddress.Get_Packed())
-        {}
-
-        if (NOT LayerIsInRange)
         { return 0.0f; }
 
         const auto NodeIdx = InAddress.Get_NodeIndex();
@@ -287,9 +254,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(NodeIsInRange,
                 TEXT("VoxelNav node address [{}] names node [{}], outside its layer"),
                 InAddress.Get_Packed(), NodeIdx)
-            {}
-
-            if (NOT NodeIsInRange)
             { return 0.0f; }
 
             return Layer.Get_NodeExtent();
@@ -301,9 +265,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LeafIsInRange,
             TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
             NodeIdx, LeafNodes.Get_LeafNodes().Num())
-        {}
-
-        if (NOT LeafIsInRange)
         { return 0.0f; }
 
         return LeafNodes.Get_LeafNode(NodeIdx).Get_IsFullyFree()
@@ -327,9 +288,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LayerIsInRange,
             TEXT("Layer [{}] is outside the VoxelNav octree's [{}] layers"),
             static_cast<int32>(InLayerIndex), InOctree.Get_LayerCount())
-        {}
-
-        if (NOT LayerIsInRange)
         { return INDEX_NONE; }
 
         return Algo::BinarySearch(InOctree.Get_Layer(InLayerIndex).Get_Nodes(), FNode{InMortonCode});
@@ -420,9 +378,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(LayerIsSized,
                 TEXT("VoxelNav layer [{}] has a node size of [{}]"),
                 static_cast<int32>(LayerIdx), LayerNodeSize)
-            {}
-
-            if (NOT LayerIsSized)
             { break; }
 
             // The bounds test above admits positions up to a tolerance outside the volume, so the lattice
@@ -468,9 +423,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(LeafIsInRange,
                 TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
                 NodeIdx, LeafNodes.Get_LeafNodes().Num())
-            {}
-
-            if (NOT LeafIsInRange)
             { break; }
 
             const auto& LeafNode = LeafNodes.Get_LeafNode(NodeIdx);
@@ -594,9 +546,6 @@ namespace ck::voxelnav
                 CK_ENSURE_IF_NOT(LeafIsInRange,
                     TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
                     NodeIdx, LeafNodes.Get_LeafNodes().Num())
-                {}
-
-                if (NOT LeafIsInRange)
                 { continue; }
 
                 const auto& LeafNode = LeafNodes.Get_LeafNode(NodeIdx);
@@ -661,9 +610,6 @@ namespace ck::voxelnav
 
             CK_ENSURE_IF_NOT(LayerIsSized,
                 TEXT("VoxelNav layer [{}] has a node size of [{}]"), LayerCursor, LayerNodeSize)
-            {}
-
-            if (NOT LayerIsSized)
             { continue; }
 
             if (LayerNodeSize >= AgentDiameter)
@@ -717,9 +663,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(LayerIsSized,
                 TEXT("VoxelNav layer [{}] has a node size of [{}]"),
                 static_cast<int32>(LayerIdx), LayerNodeSize)
-            {}
-
-            if (NOT LayerIsSized)
             { return false; }
 
             const auto MaxCoord = Layer.Get_EdgeNodeCount() - 1;
@@ -751,9 +694,6 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(LeafIsInRange,
                 TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
                 NodeIdx, LeafNodes.Get_LeafNodes().Num())
-            {}
-
-            if (NOT LeafIsInRange)
             { return false; }
 
             const auto LeafOrigin = Get_LeafNodePositionFromMorton(InOctree, Node.Get_MortonCode()) -
@@ -954,12 +894,18 @@ namespace ck::voxelnav
             { continue; }
 
             // The step left this leaf on exactly one axis; wrap that axis onto the abutting leaf's face.
-            if (NeighbourCoords.X < 0)                          { NeighbourCoords.X = LeafSubNodeEdgeCount - 1; }
-            else if (NeighbourCoords.X >= LeafSubNodeEdgeCount) { NeighbourCoords.X = 0; }
-            else if (NeighbourCoords.Y < 0)                     { NeighbourCoords.Y = LeafSubNodeEdgeCount - 1; }
-            else if (NeighbourCoords.Y >= LeafSubNodeEdgeCount) { NeighbourCoords.Y = 0; }
-            else if (NeighbourCoords.Z < 0)                     { NeighbourCoords.Z = LeafSubNodeEdgeCount - 1; }
-            else if (NeighbourCoords.Z >= LeafSubNodeEdgeCount) { NeighbourCoords.Z = 0; }
+            if (NeighbourCoords.X < 0)
+            { NeighbourCoords.X = LeafSubNodeEdgeCount - 1; }
+            else if (NeighbourCoords.X >= LeafSubNodeEdgeCount)
+            { NeighbourCoords.X = 0; }
+            else if (NeighbourCoords.Y < 0)
+            { NeighbourCoords.Y = LeafSubNodeEdgeCount - 1; }
+            else if (NeighbourCoords.Y >= LeafSubNodeEdgeCount)
+            { NeighbourCoords.Y = 0; }
+            else if (NeighbourCoords.Z < 0)
+            { NeighbourCoords.Z = LeafSubNodeEdgeCount - 1; }
+            else if (NeighbourCoords.Z >= LeafSubNodeEdgeCount)
+            { NeighbourCoords.Z = 0; }
 
             const auto SubNodeIdx = static_cast<SubNodeIndex>(Get_MortonFromCoords(NeighbourCoords));
 
@@ -982,9 +928,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(NodeResolves,
             TEXT("VoxelNav node address [{}] names no node of this octree"), InAddress.Get_Packed())
-        {}
-
-        if (NOT NodeResolves)
         { return; }
 
         const auto LayerIdx = InAddress.Get_LayerIndex();
@@ -1019,9 +962,6 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(LeafIsInRange,
             TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
             NodeIdx, LeafNodes.Get_LeafNodes().Num())
-        {}
-
-        if (NOT LeafIsInRange)
         { return; }
 
         const auto& LeafNode = LeafNodes.Get_LeafNode(NodeIdx);
@@ -1057,9 +997,6 @@ namespace ck::voxelnav
 
         CK_ENSURE_IF_NOT(HasLayers,
             TEXT("Cannot sample a free point from a VoxelNav octree that has no layers"))
-        {}
-
-        if (NOT HasLayers)
         { return {}; }
 
         // The coarsest layer, NOT one past it: an octree with N layers indexes them 0..N-1.

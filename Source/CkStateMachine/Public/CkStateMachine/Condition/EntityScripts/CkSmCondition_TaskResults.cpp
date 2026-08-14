@@ -52,7 +52,7 @@ auto
 {
     for (auto& BoundTask : _BoundTasks)
     {
-        if (NOT ck::IsValid(BoundTask))
+        if (ck::Is_NOT_Valid(BoundTask))
         { continue; }
 
         auto Delegate = FCk_Delegate_SmTask_OnFinished{};

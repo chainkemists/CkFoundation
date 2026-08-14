@@ -94,8 +94,6 @@ namespace ck
             TEXT("Request_AssignDevice on InputSource [{}] rejected: device [{}|{}] is already owned by "
                  "InputSource [{}] and ownership is exclusive"),
             InInputSource, DeviceId.Get_DeviceClass(), DeviceId.Get_RawDeviceUserIndex(), ExistingOwner)
-        {}
-        if (NOT DeviceIsUnowned)
         { return ECk_Request_OperationResult::Failed; }
 
         InCurrent._OwnedDevices.Emplace(DeviceId);

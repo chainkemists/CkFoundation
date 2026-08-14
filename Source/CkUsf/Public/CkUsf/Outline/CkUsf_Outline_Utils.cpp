@@ -81,18 +81,14 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_ApplyOutline: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
 
-    const auto PresetIsValid = ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{});
+    const auto PresetIsValid = ck::IsValid(InPreset);
     CK_ENSURE_IF_NOT(PresetIsValid,
         TEXT("Request_ApplyOutline on [{}]: null preset"), InHandle)
-    {}
-    if (NOT PresetIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
@@ -119,8 +115,6 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_RemoveOutline: INVALID handle"))
-    {}
-    if (NOT HandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

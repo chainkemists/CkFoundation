@@ -14,7 +14,7 @@ namespace ck_jolt_cook_editor_subsystem
 {
     static auto Get_EditorWorld() -> UWorld*
     {
-        if (ck::Is_NOT_Valid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(GEditor))
         { return nullptr; }
 
         return GEditor->GetEditorWorldContext().World();

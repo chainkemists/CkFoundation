@@ -429,7 +429,7 @@ auto
         auto ObjectClass = InObject->GetClass();
         auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ObjectClass);
 
-        while (ck::IsValid(BlueprintGeneratedClass, ck::IsValid_Policy_NullptrOnly{}))
+        while (ck::IsValid(BlueprintGeneratedClass))
         {
             ObjectClass = ObjectClass->GetSuperClass();
             BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ObjectClass);
@@ -637,20 +637,26 @@ namespace ck_asgcdiag
                 Outer != nullptr ? *DescribeGcFlags(Outer) : TEXT("(none)"));
 
             ++Total;
-            if (bGarbage) { ++Garbage; }
+            if (bGarbage)
+            { ++Garbage; }
             if (NOT bRooted)
             {
                 ++NotRooted;
 
                 const auto* SelfItem = GUObjectArray.ObjectToObjectItem(O);
-                if (SelfItem != nullptr && SelfItem->GetOwnerIndex() > 0) { ++NotRooted_SelfClusterMember; }
+                if (SelfItem != nullptr && SelfItem->GetOwnerIndex() > 0)
+                { ++NotRooted_SelfClusterMember; }
 
                 if (Outer != nullptr)
                 {
-                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::ClusterRoot))   { ++NotRooted_OwnerClusterRoot; }
-                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::Native))        { ++NotRooted_OwnerNative; }
-                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::LoaderImport))  { ++NotRooted_OwnerLoaderImport; }
-                    if (GUObjectArray.IsDisregardForGC(Outer))                           { ++NotRooted_OwnerDisregard; }
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::ClusterRoot))
+                    { ++NotRooted_OwnerClusterRoot; }
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::Native))
+                    { ++NotRooted_OwnerNative; }
+                    if (Outer->HasAnyInternalFlags(EInternalObjectFlags::LoaderImport))
+                    { ++NotRooted_OwnerLoaderImport; }
+                    if (GUObjectArray.IsDisregardForGC(Outer))
+                    { ++NotRooted_OwnerDisregard; }
                 }
             }
         }, bIncludeNestedObjects);
@@ -696,7 +702,8 @@ namespace ck_asgcdiag
 
             ++CdoTotal;
             const auto bCdoDisregard = GUObjectArray.IsDisregardForGC(CDO);
-            if (bCdoDisregard) { ++CdoDisregard; }
+            if (bCdoDisregard)
+            { ++CdoDisregard; }
 
             // Only disregard CDOs can trip the verifier; normal-pool CDOs are traced normally.
             if (NOT bCdoDisregard)

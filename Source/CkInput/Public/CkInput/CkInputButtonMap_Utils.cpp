@@ -44,24 +44,18 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an InputButtonMap onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto HandleIsAnInputSource = UCk_Utils_InputSource_UE::Has(InHandle);
     CK_ENSURE_IF_NOT(HandleIsAnInputSource,
         TEXT("Add: Handle [{}] is not an InputSource, so an InputButtonMap on it would have no local player "
              "whose resolved mappings the mapped tier could derive from"), InHandle)
-    {}
-    if (NOT HandleIsAnInputSource)
     { return {}; }
 
     const auto EntityHasNoButtonMap = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityHasNoButtonMap,
         TEXT("Add: Handle [{}] already carries an InputButtonMap — one source has exactly one button space, and "
              "a second would mint identities nothing could tell apart"), InHandle)
-    {}
-    if (NOT EntityHasNoButtonMap)
     { return {}; }
 
     if (NOT DoGet_PhysicalButtonsAreValid(InHandle, InParams.Get_PhysicalButtons()))
@@ -187,8 +181,6 @@ auto
     const auto ButtonMapIsValid = ck::IsValid(InButtonMap);
     CK_ENSURE_IF_NOT(ButtonMapIsValid,
         TEXT("Request_Rederive: invalid InputButtonMap handle [{}] — the derivation is dropped"), InButtonMap)
-    {}
-    if (NOT ButtonMapIsValid)
     {
         InDelegate.ExecuteIfBound(InButtonMap, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InButtonMap;
@@ -231,8 +223,6 @@ auto
     CK_ENSURE_IF_NOT(ButtonMapIsValid,
         TEXT("Request_RegisterPhysicalButton: invalid InputButtonMap handle [{}] — the registration is dropped"),
         InButtonMap)
-    {}
-    if (NOT ButtonMapIsValid)
     {
         InDelegate.ExecuteIfBound(InButtonMap, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InButtonMap;
@@ -242,8 +232,6 @@ auto
     CK_ENSURE_IF_NOT(KeyIsValid,
         TEXT("Request_RegisterPhysicalButton on [{}] names an invalid key, which would mint a button nothing "
              "could ever press"), InButtonMap)
-    {}
-    if (NOT KeyIsValid)
     {
         InDelegate.ExecuteIfBound(InButtonMap, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InButtonMap;
@@ -274,8 +262,6 @@ auto
         CK_ENSURE_IF_NOT(KeyIsValid,
             TEXT("InputButtonMap declaration on [{}] names an invalid physical key, which would mint a button "
                  "nothing could ever press"), InContext)
-        {}
-        if (NOT KeyIsValid)
         { return false; }
 
         const auto FirstIndexForKey = InPhysicalButtons.IndexOfByKey(PhysicalButton);
@@ -285,8 +271,6 @@ auto
             TEXT("InputButtonMap declaration on [{}] declares physical key [{}] more than once — a key mints "
                  "exactly one physical button, so the duplicate can only be a mistake"),
             InContext, PhysicalButton)
-        {}
-        if (NOT KeyIsUnclaimed)
         { return false; }
     }
 

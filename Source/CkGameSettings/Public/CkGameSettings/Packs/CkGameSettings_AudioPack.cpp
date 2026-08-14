@@ -80,8 +80,6 @@ auto
         _Category.Get_SettingKey(),
         _AudioMix.ToString(), ck::IsValid(AudioMix),
         _Category.Get_SoundClass().ToString(), ck::IsValid(SoundClass))
-    {}
-    if (NOT AssetsAreValid)
     { return; }
 
     constexpr auto Pitch = 1.0f;
@@ -142,8 +140,6 @@ namespace ck::game_settings
 
             const auto CategoryIsUsable = NOT SettingKey.IsNone() && NOT Category.Get_SoundClass().IsNull();
             CK_ENSURE_IF_NOT(CategoryIsUsable, TEXT("Audio pack category with key [{}] has no key or no SoundClass, skipped"), SettingKey)
-            {}
-            if (NOT CategoryIsUsable)
             { continue; }
 
             if (InSubsystem.Get_IsSettingRegistered(SettingKey))

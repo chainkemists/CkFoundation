@@ -103,13 +103,13 @@ namespace ck::pathnetwork_editor::authoring::detail
         Snapshot._WorldPackageWasDirty = InWorld.GetPackage()->IsDirty();
         for (auto* Level : InWorld.GetLevels())
         {
-            if (ck::Is_NOT_Valid(Level, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Level))
             { continue; }
             auto* Package = Level->GetPackage();
             Snapshot._LevelPackageDirtyStates.Add(Package, Package->IsDirty());
         }
 
-        if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(GEditor))
         {
             if (auto* Selection = GEditor->GetSelectedActors())
             {
@@ -121,7 +121,7 @@ namespace ck::pathnetwork_editor::authoring::detail
             }
 
             if (auto* Transactions = GEditor->Trans.Get();
-                ck::IsValid(Transactions, ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(Transactions))
             {
                 Snapshot._TransactionQueueLength = Transactions->GetQueueLength();
                 Snapshot._TransactionUndoCount = Transactions->GetUndoCount();
@@ -149,13 +149,13 @@ namespace ck::pathnetwork_editor::authoring::detail
         for (const auto& Kvp : InBefore._LevelPackageDirtyStates)
         {
             const auto* Package = Kvp.Key.Get();
-            if (ck::Is_NOT_Valid(Package, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Package))
             { return TEXT("Detector violated preview purity by invalidating a level package"); }
             if (Package->IsDirty() != Kvp.Value)
             { return TEXT("Detector violated preview purity by changing a level package dirty state"); }
         }
 
-        if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::IsValid(GEditor))
         {
             auto SelectedActors = TSet<FObjectKey>{};
             if (auto* Selection = GEditor->GetSelectedActors())
@@ -175,7 +175,7 @@ namespace ck::pathnetwork_editor::authoring::detail
             }
 
             if (auto* Transactions = GEditor->Trans.Get();
-                ck::IsValid(Transactions, ck::IsValid_Policy_NullptrOnly{}))
+                ck::IsValid(Transactions))
             {
                 if (Transactions->GetQueueLength() != InBefore._TransactionQueueLength
                     || Transactions->GetUndoCount() != InBefore._TransactionUndoCount
@@ -325,7 +325,7 @@ namespace ck::pathnetwork_editor::authoring
     Is_UsableDetectorClass(
         const UClass* InClass) -> bool
     {
-        return ck::IsValid(InClass, ck::IsValid_Policy_NullptrOnly{})
+        return ck::IsValid(InClass)
             && InClass->IsChildOf(UCk_PathNetwork_Detector_UE::StaticClass())
             && NOT InClass->HasAnyClassFlags(
                 CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists
@@ -390,8 +390,6 @@ namespace ck::pathnetwork_editor::authoring
             && NOT InRequest._World->bIsTearingDown;
         CK_ENSURE_IF_NOT(WorldIsUsable,
             TEXT("Path-network preview requires a non-PIE editor world"))
-        {}
-        if (NOT WorldIsUsable)
         {
             Result._FailureReason = TEXT("Editor world is invalid, tearing down, or running PIE");
             return Result;
@@ -401,8 +399,6 @@ namespace ck::pathnetwork_editor::authoring
             && Is_UsableDetectorClass(InRequest._DetectorTemplate->GetClass());
         CK_ENSURE_IF_NOT(DetectorIsValid,
             TEXT("Path-network preview requires a valid concrete detector"))
-        {}
-        if (NOT DetectorIsValid)
         {
             Result._FailureReason = TEXT("Detector is invalid, abstract, or deprecated");
             return Result;
@@ -411,8 +407,6 @@ namespace ck::pathnetwork_editor::authoring
         const bool BoundsAreValid = detail::Get_AreBoundsValid(InRequest._DetectionBounds);
         CK_ENSURE_IF_NOT(BoundsAreValid,
             TEXT("Path-network preview requires finite ordered detection bounds"))
-        {}
-        if (NOT BoundsAreValid)
         {
             Result._FailureReason = TEXT("Detection bounds are invalid");
             return Result;
@@ -422,8 +416,6 @@ namespace ck::pathnetwork_editor::authoring
             detail::Get_AreVectorizeParamsValid(InRequest._VectorizeParams);
         CK_ENSURE_IF_NOT(VectorizeParamsAreValid,
             TEXT("Path-network preview requires valid vectorize parameters"))
-        {}
-        if (NOT VectorizeParamsAreValid)
         {
             Result._FailureReason = TEXT("Vectorize parameters are invalid");
             return Result;
@@ -436,8 +428,6 @@ namespace ck::pathnetwork_editor::authoring
                 && InRequest._DetectorTemplate == InRequest._SourceActor->Get_Detector());
         CK_ENSURE_IF_NOT(SourceActorMatches,
             TEXT("Path-network preview source actor must own the supplied detector in the supplied world"))
-        {}
-        if (NOT SourceActorMatches)
         {
             Result._FailureReason = TEXT("Source actor does not own the supplied detector in this world");
             return Result;
@@ -458,8 +448,6 @@ namespace ck::pathnetwork_editor::authoring
         CK_ENSURE_IF_NOT(PreviewDetectorIsValid,
             TEXT("Path-network preview could not duplicate detector [{}]"),
             InRequest._DetectorTemplate)
-        {}
-        if (NOT PreviewDetectorIsValid)
         {
             Result._FailureReason = TEXT("Could not create transient preview detector");
             return Result;
@@ -545,8 +533,6 @@ namespace ck::pathnetwork_editor::authoring
             == Compute_DetectorConfigurationFingerprint(InRequest._DetectorTemplate);
         CK_ENSURE_IF_NOT(TemplateIsUnchanged,
             TEXT("Detector violated preview purity by changing its source template"))
-        {}
-        if (NOT TemplateIsUnchanged)
         {
             Result._FailureReason =
                 TEXT("Detector violated preview purity by changing its source template");
@@ -569,8 +555,6 @@ namespace ck::pathnetwork_editor::authoring
         const bool ActorIsValid = ck::IsValid(InActor);
         CK_ENSURE_IF_NOT(ActorIsValid,
             TEXT("ApplyPreview_ToExistingActor requires a valid actor"))
-        {}
-        if (NOT ActorIsValid)
         {
             Result._FailureReason = TEXT("Path-network actor is invalid");
             return Result;
@@ -590,8 +574,6 @@ namespace ck::pathnetwork_editor::authoring
                 == Compute_DetectorConfigurationFingerprint(ActorDetector);
         CK_ENSURE_IF_NOT(PreviewIsCurrent,
             TEXT("ApplyPreview_ToExistingActor on [{}] rejected a failed or stale preview"), InActor)
-        {}
-        if (NOT PreviewIsCurrent)
         {
             Result._FailureReason = TEXT("Preview is failed, stale, or from different actor settings");
             return Result;
@@ -607,8 +589,6 @@ namespace ck::pathnetwork_editor::authoring
             Result._FailureReason);
         CK_ENSURE_IF_NOT(PreviewOutputIsCurrent,
             TEXT("ApplyPreview_ToExistingActor on [{}] detected changed source output"), InActor)
-        {}
-        if (NOT PreviewOutputIsCurrent)
         { return Result; }
 
         const auto AuthoredWorldRibbons = detail::Collect_AuthoredWorldRibbons(*InActor);
@@ -636,8 +616,6 @@ namespace ck::pathnetwork_editor::authoring
             && InRequest._Preview->_Succeeded;
         CK_ENSURE_IF_NOT(PreviewIsValid,
             TEXT("ApplyPreview_ToLevel requires a successful preview"))
-        {}
-        if (NOT PreviewIsValid)
         {
             Result._FailureReason = TEXT("A successful preview is required");
             return Result;
@@ -646,8 +624,6 @@ namespace ck::pathnetwork_editor::authoring
         const bool TargetLevelIsValid = ck::IsValid(InRequest._TargetLevel);
         CK_ENSURE_IF_NOT(TargetLevelIsValid,
             TEXT("ApplyPreview_ToLevel requires a valid target level"))
-        {}
-        if (NOT TargetLevelIsValid)
         {
             Result._FailureReason = TEXT("Target level is invalid");
             return Result;
@@ -662,8 +638,6 @@ namespace ck::pathnetwork_editor::authoring
             && World->GetLevels().Contains(InRequest._TargetLevel);
         CK_ENSURE_IF_NOT(WorldIsUsable,
             TEXT("ApplyPreview_ToLevel requires a loaded level in a non-PIE editor world"))
-        {}
-        if (NOT WorldIsUsable)
         {
             Result._FailureReason = TEXT("Target level is not loaded in a usable editor world");
             return Result;
@@ -674,8 +648,6 @@ namespace ck::pathnetwork_editor::authoring
             && Is_UsableDetectorClass(InRequest._DetectorTemplate->GetClass());
         CK_ENSURE_IF_NOT(DetectorIsValid,
             TEXT("ApplyPreview_ToLevel requires a valid concrete detector template"))
-        {}
-        if (NOT DetectorIsValid)
         {
             Result._FailureReason = TEXT("Detector template is invalid, abstract, or deprecated");
             return Result;
@@ -690,8 +662,6 @@ namespace ck::pathnetwork_editor::authoring
                     InRequest._RecommendedFollowerTuning));
         CK_ENSURE_IF_NOT(ConfigurationIsValid,
             TEXT("ApplyPreview_ToLevel requires valid bounds, vectorize parameters, build parameters, and route preferences"))
-        {}
-        if (NOT ConfigurationIsValid)
         {
             Result._FailureReason = TEXT("Authoring configuration is invalid");
             return Result;
@@ -708,8 +678,6 @@ namespace ck::pathnetwork_editor::authoring
                 Preview._VectorizeParams, InRequest._VectorizeParams);
         CK_ENSURE_IF_NOT(PreviewIsCurrent,
             TEXT("ApplyPreview_ToLevel rejected a stale preview"))
-        {}
-        if (NOT PreviewIsCurrent)
         {
             Result._FailureReason = TEXT("Preview is stale or belongs to different settings/world");
             return Result;
@@ -725,13 +693,11 @@ namespace ck::pathnetwork_editor::authoring
             Result._FailureReason);
         CK_ENSURE_IF_NOT(PreviewOutputIsCurrent,
             TEXT("ApplyPreview_ToLevel detected changed source output"))
-        {}
-        if (NOT PreviewOutputIsCurrent)
         { return Result; }
 
         auto* TargetActor = InRequest._ExplicitTargetActor;
         if (InRequest._ExplicitTargetActor != nullptr
-            && NOT ck::IsValid(InRequest._ExplicitTargetActor))
+            && ck::Is_NOT_Valid(InRequest._ExplicitTargetActor))
         {
             Result._FailureReason = TEXT("Explicit target actor is invalid");
             return Result;
@@ -779,7 +745,7 @@ namespace ck::pathnetwork_editor::authoring
             NSLOCTEXT("CkPathNetworkEditor", "ApplyPreviewToLevelTransaction",
                 "Path Network: Apply Preview To Level")};
 
-        if (NOT ck::IsValid(TargetActor))
+        if (ck::Is_NOT_Valid(TargetActor))
         {
             auto SpawnParams = FActorSpawnParameters{};
             SpawnParams.OverrideLevel = InRequest._TargetLevel;
@@ -791,7 +757,7 @@ namespace ck::pathnetwork_editor::authoring
                 ACk_PathNetwork_UE::StaticClass(),
                 FTransform{InRequest._DetectionBounds.GetCenter()},
                 SpawnParams);
-            if (NOT ck::IsValid(TargetActor))
+            if (ck::Is_NOT_Valid(TargetActor))
             {
                 Transaction.Cancel();
                 Result._FailureReason = TEXT("Could not create path-network actor in target level");
@@ -802,7 +768,7 @@ namespace ck::pathnetwork_editor::authoring
 
         auto* OwnedDetector = detail::Duplicate_AppliedDetector(
             *InRequest._DetectorTemplate, *TargetActor);
-        if (NOT ck::IsValid(OwnedDetector))
+        if (ck::Is_NOT_Valid(OwnedDetector))
         {
             if (Result._CreatedActor)
             { World->DestroyActor(TargetActor, true, true); }

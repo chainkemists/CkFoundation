@@ -36,7 +36,7 @@ namespace ck_actor_utils
         {
             auto* World = *It;
 
-            if (NOT ck::IsValid(World))
+            if (ck::Is_NOT_Valid(World))
             { continue; }
 
             if (World->WorldType != EWorldType::Game && World->WorldType != EWorldType::PIE)
@@ -675,7 +675,7 @@ auto
     {
         auto* ReplicatedObject = *It;
 
-        if (NOT ck::IsValid(ReplicatedObject))
+        if (ck::Is_NOT_Valid(ReplicatedObject))
         { continue; }
 
         if (ReplicatedObject->IsTemplate())
@@ -706,7 +706,7 @@ auto
     for (TActorIterator<AActor> ActorIt(World); ActorIt; ++ActorIt)
     {
         auto* Actor = *ActorIt;
-        if (NOT ck::IsValid(Actor))
+        if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
         auto Components = TArray<UActorComponent*>{};
@@ -758,7 +758,7 @@ namespace ck_actor_utils_impl
 
         for (auto* Item : InItems)
         {
-            if (NOT ck::IsValid(Item))
+            if (ck::Is_NOT_Valid(Item))
             { continue; }
 
             auto* Owner = InGetOwnerFn(Item);
@@ -963,7 +963,7 @@ auto
 
     for (auto* ReplicatedObject : ReplicatedObjects)
     {
-        if (NOT ck::IsValid(ReplicatedObject))
+        if (ck::Is_NOT_Valid(ReplicatedObject))
         { continue; }
 
         ObjectsByClass.FindOrAdd(ReplicatedObject->GetClass()) += 1;
@@ -972,7 +972,7 @@ auto
 
     for (auto* ReplicatedComponent : ReplicatedComponents)
     {
-        if (NOT ck::IsValid(ReplicatedComponent))
+        if (ck::Is_NOT_Valid(ReplicatedComponent))
         { continue; }
 
         ComponentsByClass.FindOrAdd(ReplicatedComponent->GetClass()) += 1;

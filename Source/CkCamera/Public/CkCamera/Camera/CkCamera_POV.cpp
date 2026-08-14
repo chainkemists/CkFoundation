@@ -14,8 +14,10 @@ namespace ck::camera
         {
             if (InRotation.ContainsNaN())
             {
-                if (FMath::IsNaN(InRotation.Yaw))   { InRotation.Yaw = 0.0f; }
-                if (FMath::IsNaN(InRotation.Pitch)) { InRotation.Pitch = 0.0f; }
+                if (FMath::IsNaN(InRotation.Yaw))
+                { InRotation.Yaw = 0.0f; }
+                if (FMath::IsNaN(InRotation.Pitch))
+                { InRotation.Pitch = 0.0f; }
             }
             InRotation.Roll = 0.0f;
         }

@@ -159,7 +159,7 @@ auto
     if (NOT _IsInitialized)
     { return; }
 
-    if (ck::Is_NOT_Valid(InOwnerActor, ck::IsValid_Policy_NullptrOnly{}) || InOwnerActor->GetWorld() != GetWorld())
+    if (ck::Is_NOT_Valid(InOwnerActor) || InOwnerActor->GetWorld() != GetWorld())
     { return; }
 
     _QueuedOwners.Add(InOwnerActor);
@@ -238,7 +238,7 @@ auto
             [this](const FCk_Entity /*InEntity*/, const ck::FFragment_EditorSelectionOwner& InOwner)
             {
                 if (const auto* OwnerActor = InOwner.Get_OwnerActor().Get();
-                    ck::IsValid(OwnerActor, ck::IsValid_Policy_NullptrOnly{}))
+                    ck::IsValid(OwnerActor))
                 { _QueuedOwners.Add(OwnerActor); }
             });
         RefreshOwnerlessVisuals = true;

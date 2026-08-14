@@ -32,53 +32,39 @@ void
 
     const auto LayoutIsValid = ck::IsValid(Layout);
     CK_ENSURE_IF_NOT(LayoutIsValid, TEXT("HUD [{}] cannot refresh context without a primary layout"), this)
-    {}
-    if (NOT LayoutIsValid)
     { return; }
 
     const auto ContextIsValid = ck::IsValid(InContextEntity);
     CK_ENSURE_IF_NOT(ContextIsValid, TEXT("HUD [{}] cannot refresh an invalid context"), this)
-    {}
-    if (NOT ContextIsValid)
     { return; }
 
     auto* const GameLayer = Layout->Get_Layer(TAG_UI_Layer_Game);
     const auto GameLayerIsValid = ck::IsValid(GameLayer);
     CK_ENSURE_IF_NOT(GameLayerIsValid, TEXT("HUD [{}] cannot refresh context without the Game layer"), this)
-    {}
-    if (NOT GameLayerIsValid)
     { return; }
 
     auto* const ActiveGameWidget = GameLayer->GetActiveWidget();
     const auto ActiveGameWidgetIsValid = ck::IsValid(ActiveGameWidget);
     CK_ENSURE_IF_NOT(ActiveGameWidgetIsValid,
         TEXT("HUD [{}] cannot refresh context without an active Game-layer widget"), this)
-    {}
-    if (NOT ActiveGameWidgetIsValid)
     { return; }
 
     const auto LayoutHasContextReceiver =
         UCk_Utils_ContextReceiver_UE::HasContextReceiverPropertyOnObject(Layout);
     CK_ENSURE_IF_NOT(LayoutHasContextReceiver,
         TEXT("HUD [{}] cannot refresh a primary layout without a context receiver"), this)
-    {}
-    if (NOT LayoutHasContextReceiver)
     { return; }
 
     const auto GameWidgetHasContextReceiver =
         UCk_Utils_ContextReceiver_UE::HasContextReceiverPropertyOnObject(ActiveGameWidget);
     CK_ENSURE_IF_NOT(GameWidgetHasContextReceiver,
         TEXT("HUD [{}] cannot refresh an active Game-layer widget without a context receiver"), this)
-    {}
-    if (NOT GameWidgetHasContextReceiver)
     { return; }
 
     const auto LayoutResult = UCk_Utils_ContextReceiver_UE::RefreshContextIntoObject(Layout, InContextEntity);
     const auto LayoutRefreshed = LayoutResult == ECk_ContextReceiver_InjectResult::Success;
     CK_ENSURE_IF_NOT(LayoutRefreshed, TEXT("HUD [{}] failed to refresh primary-layout context with result [{}]"),
         this, LayoutResult)
-    {}
-    if (NOT LayoutRefreshed)
     { return; }
 
     const auto GameWidgetResult =
@@ -86,8 +72,6 @@ void
     const auto GameWidgetRefreshed = GameWidgetResult == ECk_ContextReceiver_InjectResult::Success;
     CK_ENSURE_IF_NOT(GameWidgetRefreshed,
         TEXT("HUD [{}] failed to refresh active Game-layer widget context with result [{}]"), this, GameWidgetResult)
-    {}
-    if (NOT GameWidgetRefreshed)
     { return; }
 }
 

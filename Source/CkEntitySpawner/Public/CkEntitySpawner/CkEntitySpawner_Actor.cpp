@@ -39,11 +39,11 @@ namespace ck::entityspawner
         const auto TryFind = [InEntityScriptClass](FName InName) -> FProperty*
         {
             auto* Property = InEntityScriptClass->FindPropertyByName(InName);
-            if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(Property))
             { return nullptr; }
 
             const auto* StructProp = CastField<FStructProperty>(Property);
-            if (ck::Is_NOT_Valid(StructProp, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(StructProp))
             { return nullptr; }
 
             if (StructProp->Struct != TBaseStructure<FTransform>::Get())
@@ -52,14 +52,14 @@ namespace ck::entityspawner
             return Property;
         };
 
-        if (auto* Public = TryFind(FName{TEXT("SpawnTransform")}); ck::IsValid(Public, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto* Public = TryFind(FName{TEXT("SpawnTransform")}); ck::IsValid(Public))
         { return Public; }
 
-        if (auto* Private = TryFind(FName{TEXT("_SpawnTransform")}); ck::IsValid(Private, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto* Private = TryFind(FName{TEXT("_SpawnTransform")}); ck::IsValid(Private))
         { return Private; }
 
         // Gym-authored scripts name it InitialTransform; unresolved, editor previews compose at world origin.
-        if (auto* PublicInitial = TryFind(FName{TEXT("InitialTransform")}); ck::IsValid(PublicInitial, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto* PublicInitial = TryFind(FName{TEXT("InitialTransform")}); ck::IsValid(PublicInitial))
         { return PublicInitial; }
 
         return TryFind(FName{TEXT("_InitialTransform")});
@@ -377,11 +377,11 @@ auto
         return ScriptClass->FindPropertyByName(PropertyName);
     }();
 
-    if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Property))
     { return; }
 
     const auto* StructProp = CastField<FStructProperty>(Property);
-    if (ck::Is_NOT_Valid(StructProp, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(StructProp))
     { return; }
 
     if (StructProp->Struct != TBaseStructure<FTransform>::Get())

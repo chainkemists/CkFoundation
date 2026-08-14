@@ -1457,8 +1457,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("Inspect_SaveFile [{}] must be called on the game thread — the envelope route creates a USaveGame UObject"),
             InAbsolutePath)
-        {}
-        if (NOT IsOnGameThread)
         { return ck_snapshot_inspection::DoMake_OffGameThreadDocument(ECk_SnapshotInspection_SourceKind::File, InAbsolutePath); }
 
         auto Document = FCk_SnapshotInspection_Document{};
@@ -1496,8 +1494,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("Inspect_SaveSlot [{}] must be called on the game thread — the slot route creates a USaveGame UObject"),
             InSlotName)
-        {}
-        if (NOT IsOnGameThread)
         { return ck_snapshot_inspection::DoMake_OffGameThreadDocument(ECk_SnapshotInspection_SourceKind::Slot, SlotName); }
 
         auto Document = FCk_SnapshotInspection_Document{};
@@ -1534,8 +1530,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("Inspect_SaveBytes [{}] must be called on the game thread — the envelope route creates a USaveGame UObject"),
             InSourceDescription)
-        {}
-        if (NOT IsOnGameThread)
         { return ck_snapshot_inspection::DoMake_OffGameThreadDocument(ECk_SnapshotInspection_SourceKind::Bytes, InSourceDescription); }
 
         return ck_snapshot_inspection::DoInspect_Bytes(InBytes, ECk_SnapshotInspection_SourceKind::Bytes, InSourceDescription);
@@ -1553,8 +1547,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("Inspect_SaveGameObject [{}] must be called on the game thread — it resolves reflected types"),
             InSourceDescription)
-        {}
-        if (NOT IsOnGameThread)
         { return ck_snapshot_inspection::DoMake_OffGameThreadDocument(ECk_SnapshotInspection_SourceKind::SaveGameObject, InSourceDescription); }
 
         auto Document = FCk_SnapshotInspection_Document{};
@@ -1583,8 +1575,6 @@ namespace ck::snapshot
         const auto IsOnGameThread = IsInGameThread();
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("TryDecode_Payload must be called on the game thread — it resolves (and may load) a UScriptStruct"))
-        {}
-        if (NOT IsOnGameThread)
         {
             return ck_snapshot_inspection::DoMake_FailedDecodeResult(
                 ECk_SnapshotInspection_DecodeStatus::DeserializeFailed, TEXT("called off the game thread"));
@@ -1594,8 +1584,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IndexIsInRange,
             TEXT("TryDecode_Payload: payload index [{}] is out of range ([{}] payload rows)"),
             InPayloadIndex, InDocument.Get_Payloads().Num())
-        {}
-        if (NOT IndexIsInRange)
         {
             return ck_snapshot_inspection::DoMake_FailedDecodeResult(
                 ECk_SnapshotInspection_DecodeStatus::DeserializeFailed, TEXT("payload index out of range"));
@@ -1617,8 +1605,6 @@ namespace ck::snapshot
         const auto IsOnGameThread = IsInGameThread();
         CK_ENSURE_IF_NOT(IsOnGameThread,
             TEXT("TryDecode_SpawnParams must be called on the game thread — it resolves (and may load) a UScriptStruct"))
-        {}
-        if (NOT IsOnGameThread)
         {
             return ck_snapshot_inspection::DoMake_FailedDecodeResult(
                 ECk_SnapshotInspection_DecodeStatus::DeserializeFailed, TEXT("called off the game thread"));
@@ -1628,8 +1614,6 @@ namespace ck::snapshot
         CK_ENSURE_IF_NOT(IndexIsInRange,
             TEXT("TryDecode_SpawnParams: entity index [{}] is out of range ([{}] entity rows)"),
             InEntityIndex, InDocument.Get_Entities().Num())
-        {}
-        if (NOT IndexIsInRange)
         {
             return ck_snapshot_inspection::DoMake_FailedDecodeResult(
                 ECk_SnapshotInspection_DecodeStatus::DeserializeFailed, TEXT("entity index out of range"));

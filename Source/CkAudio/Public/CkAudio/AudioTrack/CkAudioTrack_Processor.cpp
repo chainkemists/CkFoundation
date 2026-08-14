@@ -64,9 +64,6 @@ namespace ck
         {
             const auto SoundIsAuthored = ck::IsValid(InParams.Get_Sound());
             CK_ENSURE_IF_NOT(SoundIsAuthored, TEXT("Cannot setup AudioTrack [{}] - its Sound soft reference is unset"), InHandle)
-            {}
-
-            if (NOT SoundIsAuthored)
             {
                 InHandle.Remove<MarkedDirtyBy>();
                 return;
@@ -99,9 +96,6 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup AudioTrack [{}] - loading its Sound [{}] (or a library setting) through CkResourceLoader failed"),
             InHandle, InParams.Get_Sound().ToSoftObjectPath())
-        {}
-
-        if (NOT AssetsAreLoaded)
         {
             InCurrent._LoadedAssets = {};
             InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
@@ -509,9 +503,6 @@ namespace ck
 
             CK_ENSURE_IF_NOT(SoundIsResolved, TEXT("Cannot play AudioTrack [{}] - its resolved Sound is missing. "
                 "Setup completed, so the loader-rooted asset should still be alive; this should be unreachable."), InHandle)
-            {}
-
-            if (NOT SoundIsResolved)
             { return; }
 
             InCurrent._AudioComponent->SetSound(ResolvedSound);
@@ -714,7 +705,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Audio_SpatialUpdate);
 
-        if (NOT ck::IsValid(InCurrent._AudioComponent))
+        if (ck::Is_NOT_Valid(InCurrent._AudioComponent))
         { return; }
 
         auto HandleTransform = UCk_Utils_Transform_UE::Cast(InHandle);

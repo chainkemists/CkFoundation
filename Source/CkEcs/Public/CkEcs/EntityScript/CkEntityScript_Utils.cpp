@@ -126,7 +126,7 @@ auto
         UWorld* InWorld)
     -> int32
 {
-    if (ck::Is_NOT_Valid(InWorld, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InWorld))
     { return 0; }
 
     auto* EcsWorld = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
@@ -177,8 +177,6 @@ auto
     CK_ENSURE_IF_NOT(EntityScriptClassIsValid,
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClass, InLifetimeOwner)
-    {}
-    if (NOT EntityScriptClassIsValid)
     {
         InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -188,8 +186,6 @@ auto
     CK_ENSURE_IF_NOT(LifetimeOwnerIsValid,
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClass)
-    {}
-    if (NOT LifetimeOwnerIsValid)
     {
         InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -272,8 +268,6 @@ auto
     CK_ENSURE_IF_NOT(ArchetypeIsValid,
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClassArchetype, InLifetimeOwner)
-    {}
-    if (NOT ArchetypeIsValid)
     {
         InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -283,8 +277,6 @@ auto
     CK_ENSURE_IF_NOT(LifetimeOwnerIsValid,
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClassArchetype)
-    {}
-    if (NOT LifetimeOwnerIsValid)
     {
         InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
@@ -443,7 +435,7 @@ auto
             const auto& PropertyName = UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp);
             const auto* EntityScriptProp = UCk_Utils_Reflection_UE::Get_PropertyBySanitizedName(InEntityScript, PropertyName);
 
-            if (ck::Is_NOT_Valid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::Is_NOT_Valid(EntityScriptProp))
             {
                 // BP must have all properties in struct; code-authored (C++/AS) classes may legitimately receive
                 // a shared struct and ignore extra fields. CLASS_CompiledFromBlueprint cannot be used to tell
@@ -514,7 +506,7 @@ auto
     if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_ReplicateEntityScript"), InSpawnParams))
     { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript),
         TEXT("Cannot replicate EntityScript for [{}]: the EntityScript instance is invalid"), InHandle)
     { return; }
 

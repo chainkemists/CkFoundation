@@ -29,8 +29,6 @@ auto
     CK_ENSURE_IF_NOT(PriorityIsAvailable,
         TEXT("Add: priority [{}] is reserved for the global-action layer and cannot be claimed by an ordinary "
              "InputLayer on Handle [{}]"), InParams.Get_Priority(), InHandle)
-    {}
-    if (NOT PriorityIsAvailable)
     { return {}; }
 
     return DoAddLayer(InHandle, InParams);
@@ -47,8 +45,6 @@ auto
     CK_ENSURE_IF_NOT(PriorityIsAvailable,
         TEXT("Create: priority [{}] is reserved for the global-action layer and cannot be claimed by an ordinary "
              "InputLayer under owner [{}]"), InParams.Get_Priority(), InOwner)
-    {}
-    if (NOT PriorityIsAvailable)
     { return {}; }
 
     return DoCreateLayer(InOwner, InParams);
@@ -240,8 +236,6 @@ auto
     const auto LayerIsValid = ck::IsValid(InLayer);
     CK_ENSURE_IF_NOT(LayerIsValid,
         TEXT("Request_AddCapture: invalid InputLayer handle [{}] — the capture is dropped"), InLayer)
-    {}
-    if (NOT LayerIsValid)
     {
         InDelegate.ExecuteIfBound(InLayer, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InLayer;
@@ -254,8 +248,6 @@ auto
     CK_ENSURE_IF_NOT(CaptureNamesAnInput,
         TEXT("Request_AddCapture: capture on InputLayer [{}] matches a specific key but names an invalid key, so "
              "it could never match anything"), InLayer)
-    {}
-    if (NOT CaptureNamesAnInput)
     {
         InDelegate.ExecuteIfBound(InLayer, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InLayer;
@@ -280,8 +272,6 @@ auto
     const auto LayerIsValid = ck::IsValid(InLayer);
     CK_ENSURE_IF_NOT(LayerIsValid,
         TEXT("Request_RemoveCapture: invalid InputLayer handle [{}] — nothing to remove a capture from"), InLayer)
-    {}
-    if (NOT LayerIsValid)
     {
         InDelegate.ExecuteIfBound(InLayer, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InLayer;
@@ -307,8 +297,6 @@ auto
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("Request_AddGlobalAction: invalid InputSource handle [{}] — a global action needs a stack to sit at "
              "the bottom of"), InInputSource)
-    {}
-    if (NOT SourceIsValid)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;
@@ -318,8 +306,6 @@ auto
     CK_ENSURE_IF_NOT(KeyIsValid,
         TEXT("Request_AddGlobalAction: invalid key on InputSource [{}] — a global action must name a real key"),
         InInputSource)
-    {}
-    if (NOT KeyIsValid)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;
@@ -339,8 +325,6 @@ auto
     CK_ENSURE_IF_NOT(GlobalActionLayerExists,
         TEXT("Request_AddGlobalAction: the reserved global-action layer for InputSource [{}] could not be created"),
         InInputSource)
-    {}
-    if (NOT GlobalActionLayerExists)
     {
         InDelegate.ExecuteIfBound(InInputSource, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InInputSource;
@@ -402,8 +386,6 @@ auto
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("InputLayer registration for [{}] names an invalid InputSource [{}] — a layer with no stack could "
              "never be routed to"), InContext, InParams.Get_InputSource())
-    {}
-    if (NOT SourceIsValid)
     { return false; }
 
     const auto CollidingLayer = TryGet_LayerWithPriority(InParams.Get_InputSource(), InParams.Get_Priority());
@@ -413,8 +395,6 @@ auto
         TEXT("InputLayer priority collision: priority [{}] on InputSource [{}] is already held by layer [{}], so "
              "the registration for [{}] is rejected — arbitration order must be unambiguous"),
         InParams.Get_Priority(), InParams.Get_InputSource(), CollidingLayer, InContext)
-    {}
-    if (NOT PriorityIsFree)
     { return false; }
 
     return true;
@@ -430,15 +410,11 @@ auto
     const auto HandleIsValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Add: invalid Handle [{}] — cannot compose an InputLayer onto it"), InHandle)
-    {}
-    if (NOT HandleIsValid)
     { return {}; }
 
     const auto EntityIsNotAlreadyALayer = NOT Has(InHandle);
     CK_ENSURE_IF_NOT(EntityIsNotAlreadyALayer,
         TEXT("Add: Handle [{}] is already an InputLayer — one entity holds at most one place in a stack"), InHandle)
-    {}
-    if (NOT EntityIsNotAlreadyALayer)
     { return {}; }
 
     if (NOT DoGet_RegistrationIsValid(InHandle, InParams))
@@ -466,8 +442,6 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Create: invalid owner Handle [{}] — cannot create an InputLayer under it"), InOwner)
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     if (NOT DoGet_RegistrationIsValid(InOwner, InParams))

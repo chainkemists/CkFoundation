@@ -22,7 +22,8 @@ namespace ck::pmg
     {
 #if CK_PMG_WITH_FREETYPE
         FT_Library Library = nullptr;
-        if (FT_Init_FreeType(&Library) != 0) { return false; }
+        if (FT_Init_FreeType(&Library) != 0)
+        { return false; }
         FT_Done_FreeType(Library);
         return true;
 #else
@@ -56,7 +57,8 @@ namespace ck::pmg
         {
             auto* C = static_cast<FDecomposeCtx*>(User);
             C->Pen = FtToVec(To);
-            if (C->Contours->Num() > 0) { C->Contours->Last().Add(C->Pen); }
+            if (C->Contours->Num() > 0)
+            { C->Contours->Last().Add(C->Pen); }
             return 0;
         }
         int Decomp_ConicTo(const FT_Vector* Control, const FT_Vector* To, void* User)
@@ -110,14 +112,16 @@ namespace ck::pmg
                 { Clean.Pop(); }
 
                 const int32 N = Clean.Num();
-                if (N < 3) { continue; }
+                if (N < 3)
+                { continue; }
 
                 const int32 Start = Delaunay.Vertices.Num();
                 for (const FVector2D& P : Clean) { Delaunay.Vertices.Add(FVector2d(P.X, P.Y)); }
                 for (int32 a = N - 1, b = 0; b < N; a = b++)
                 { Delaunay.Edges.Add(FIndex2i(Start + a, Start + b)); }
             }
-            if (Delaunay.Vertices.Num() < 3 || !Delaunay.Triangulate()) { return; }
+            if (Delaunay.Vertices.Num() < 3 || !Delaunay.Triangulate())
+            { return; }
 
             OutVerts.Reserve(Delaunay.Vertices.Num());
             for (const FVector2d& V : Delaunay.Vertices) { OutVerts.Add(FVector2D(static_cast<float>(V.X), static_cast<float>(V.Y))); }
@@ -155,19 +159,22 @@ namespace ck::pmg
     int32 FFontGlyphCache::EnsureFace(const TArray<uint8>& InFontBytes)
     {
 #if CK_PMG_WITH_FREETYPE
-        if (InFontBytes.Num() == 0) { return INDEX_NONE; }
+        if (InFontBytes.Num() == 0)
+        { return INDEX_NONE; }
 
         const uint32 Hash = FCrc::MemCrc32(InFontBytes.GetData(), InFontBytes.Num());
         if (const int32* Found = _FaceKeyByHash.Find(Hash))
         {
             // Guard the (astronomically rare) CRC32 collision: only reuse on exact bytes.
-            if (_Faces.IsValidIndex(*Found) && _Faces[*Found]->Bytes == InFontBytes) { return *Found; }
+            if (_Faces.IsValidIndex(*Found) && _Faces[*Found]->Bytes == InFontBytes)
+            { return *Found; }
         }
 
         if (_FtLibrary == nullptr)
         {
             FT_Library Lib = nullptr;
-            if (FT_Init_FreeType(&Lib) != 0) { return INDEX_NONE; }
+            if (FT_Init_FreeType(&Lib) != 0)
+            { return INDEX_NONE; }
             _FtLibrary = Lib;
         }
 
@@ -188,9 +195,11 @@ namespace ck::pmg
     const FCachedGlyph& FFontGlyphCache::GetOrBuildGlyph(int32 InFaceKey, uint32 InCodepoint)
     {
 #if CK_PMG_WITH_FREETYPE
-        if (!_Faces.IsValidIndex(InFaceKey)) { return _EmptyGlyph; }
+        if (!_Faces.IsValidIndex(InFaceKey))
+        { return _EmptyGlyph; }
         FFaceEntry& Entry = *_Faces[InFaceKey];
-        if (const TUniquePtr<FCachedGlyph>* Cached = Entry.Glyphs.Find(InCodepoint)) { return **Cached; }
+        if (const TUniquePtr<FCachedGlyph>* Cached = Entry.Glyphs.Find(InCodepoint))
+        { return **Cached; }
 
         SCOPE_CYCLE_COUNTER(STAT_Pmg_BuildGlyph);
 
@@ -230,7 +239,8 @@ namespace ck::pmg
     float FFontGlyphCache::Get_LineHeightEm(int32 InFaceKey) const
     {
 #if CK_PMG_WITH_FREETYPE
-        if (!_Faces.IsValidIndex(InFaceKey)) { return 1.0f; }
+        if (!_Faces.IsValidIndex(InFaceKey))
+        { return 1.0f; }
         const FFaceEntry& Entry = *_Faces[InFaceKey];
         const float Em = Entry.UnitsPerEm;
         return Entry.Face->height != 0 ? static_cast<float>(Entry.Face->height) / Em : 1.2f;
@@ -242,7 +252,8 @@ namespace ck::pmg
     bool FFontGlyphCache::FaceHasCodepoint(int32 InFaceKey, uint32 InCodepoint) const
     {
 #if CK_PMG_WITH_FREETYPE
-        if (!_Faces.IsValidIndex(InFaceKey)) { return false; }
+        if (!_Faces.IsValidIndex(InFaceKey))
+        { return false; }
         return FT_Get_Char_Index(_Faces[InFaceKey]->Face, InCodepoint) != 0;
 #else
         return false;

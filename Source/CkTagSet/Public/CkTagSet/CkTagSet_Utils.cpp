@@ -170,8 +170,6 @@ auto
     const auto TagSetIsValid = ck::IsValid(InTagSet);
     CK_ENSURE_IF_NOT(TagSetIsValid,
         TEXT("Request_AddTags: Invalid TagSet handle [{}].{}"), InTagSet, ck::Context(InTagSet))
-    {}
-    if (NOT TagSetIsValid)
     {
         InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -180,8 +178,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InTagSet);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_AddTags: No authority over entity [{}].{}"), InTagSet, ck::Context(InTagSet))
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -223,8 +219,6 @@ auto
     const auto TagSetIsValid = ck::IsValid(InTagSet);
     CK_ENSURE_IF_NOT(TagSetIsValid,
         TEXT("Request_RemoveTags: Invalid TagSet handle [{}].{}"), InTagSet, ck::Context(InTagSet))
-    {}
-    if (NOT TagSetIsValid)
     {
         InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -233,8 +227,6 @@ auto
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InTagSet);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_RemoveTags: No authority over entity [{}].{}"), InTagSet, ck::Context(InTagSet))
-    {}
-    if (NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

@@ -97,15 +97,11 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 CK_ENSURE_IF_NOT(WrapperTypeIsValid,
                     TEXT("Dynamic Fragment hydration received the wrong wrapper type [{}]"),
                     InNew.GetScriptStruct())
-                {}
-                if (NOT WrapperTypeIsValid)
                 { return ECk_Persistence_ApplyResult::Rejected; }
 
                 const auto EntityIsValid = ck::IsValid(InEntity);
                 CK_ENSURE_IF_NOT(EntityIsValid,
                     TEXT("Dynamic Fragment hydration received an invalid entity [{}]"), InEntity)
-                {}
-                if (NOT EntityIsValid)
                 { return ECk_Persistence_ApplyResult::Rejected; }
 
                 const auto& SaveData = InNew.Get<FCk_SaveData_DynamicFragments>();

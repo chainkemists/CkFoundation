@@ -73,7 +73,8 @@ namespace ck::pmg
 
     auto ResolveTextFontChain(UFontFace* InOverride, TArray<const TArray<uint8>*>& OutChain) -> void
     {
-        if (const auto* Primary = ResolveTextFontBytes(InOverride)) { OutChain.Add(Primary); }
+        if (const auto* Primary = ResolveTextFontBytes(InOverride))
+        { OutChain.Add(Primary); }
 
         static TArray<uint8> EmojiBytes;   static bool EmojiTried = false;
         if (const auto* Emoji = ck_pmg_processor_text_shapes::LoadResourceFontBytes_Cached(TEXT("NotoEmoji-Medium.ttf"), EmojiBytes, EmojiTried))
@@ -200,12 +201,14 @@ namespace ck_pmg_processor_text_shapes_impl
             }
             ++i; ++Count;
 
-            if (Codepoint == static_cast<uint32>('\n')) { Lines.AddDefaulted(); LineWidths.Add(0.0f); continue; }
+            if (Codepoint == static_cast<uint32>('\n'))
+            { Lines.AddDefaulted(); LineWidths.Add(0.0f); continue; }
 
             int32 ChosenFace = PrimaryFace;
             for (int32 Fk : InFaceChain)
             {
-                if (Cache.FaceHasCodepoint(Fk, Codepoint)) { ChosenFace = Fk; break; }
+                if (Cache.FaceHasCodepoint(Fk, Codepoint))
+                { ChosenFace = Fk; break; }
             }
 
             const auto& G = Cache.GetOrBuildGlyph(ChosenFace, Codepoint);
@@ -255,9 +258,11 @@ namespace ck
         TArray<int32> FaceChain;
         for (const TArray<uint8>* Bytes : FontChain)
         {
-            if (Bytes == nullptr || Bytes->Num() == 0) { continue; }
+            if (Bytes == nullptr || Bytes->Num() == 0)
+            { continue; }
             const int32 Fk = Cache.EnsureFace(*Bytes);
-            if (Fk != INDEX_NONE) { FaceChain.Add(Fk); }
+            if (Fk != INDEX_NONE)
+            { FaceChain.Add(Fk); }
         }
         if (FaceChain.Num() == 0)
         {
@@ -279,7 +284,8 @@ namespace ck
             TArray<FVector> Vertices; TArray<int32> Triangles; TArray<FVector> Normals; TArray<FVector2D> UVs;
             for (const ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text& P : Placed)
             {
-                if (P.Glyph == nullptr || P.Glyph->TessTris.Num() == 0) { continue; }
+                if (P.Glyph == nullptr || P.Glyph->TessTris.Num() == 0)
+                { continue; }
                 const int32 Base = Vertices.Num();
                 for (const FVector2D& V : P.Glyph->TessVerts)
                 {
@@ -337,10 +343,12 @@ namespace ck
 
             for (const ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text& P : Placed)
             {
-                if (P.Glyph == nullptr) { continue; }
+                if (P.Glyph == nullptr)
+                { continue; }
                 for (const TArray<FVector2D>& Contour : P.Glyph->Contours)
                 {
-                    if (Contour.Num() < 2) { continue; }
+                    if (Contour.Num() < 2)
+                    { continue; }
                     TArray<FVector> World; World.Reserve(Contour.Num());
                     for (const FVector2D& V : Contour)
                     {

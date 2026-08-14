@@ -92,7 +92,7 @@ auto
     { return {}; }
 
     auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
-    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Profile))
     { return {}; }
 
     auto FindArgs = FMapPlayerKeyArgs{};
@@ -138,7 +138,7 @@ auto
     { return {}; }
 
     auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
-    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Profile))
     { return {}; }
 
     auto Result = TArray<FName>{};
@@ -471,7 +471,7 @@ auto
     { return {}; }
 
     auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
-    if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(Profile))
     { return {}; }
 
     auto SourceCategory = FText::GetEmpty();
@@ -678,7 +678,7 @@ auto
     { return {}; }
 
     auto* Profile = ck_key_binding_utils::Get_CurrentProfile(Settings);
-    CK_ENSURE_IF_NOT(ck::IsValid(Profile, ck::IsValid_Policy_NullptrOnly{}), TEXT("No active key profile found"))
+    CK_ENSURE_IF_NOT(ck::IsValid(Profile), TEXT("No active key profile found"))
     { return {}; }
 
     // Find and unbind all conflicting mappings that use InNewKey

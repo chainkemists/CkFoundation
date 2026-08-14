@@ -137,7 +137,7 @@ namespace ck::jolt::bake::mesh_shape_utils
         };
 
         const auto* BodySetup = InMesh.GetBodySetup();
-        if (ck::Is_NOT_Valid(BodySetup, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(BodySetup))
         { return Memoize({}); }
 
         const auto AssetPath = Get_CookedMeshShapeAssetPath(
@@ -152,7 +152,7 @@ namespace ck::jolt::bake::mesh_shape_utils
             ? nullptr
             : LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
 
-        if (ck::Is_NOT_Valid(ShapeAsset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(ShapeAsset))
         {
             // Loud ONLY for a mesh the pre-bake should have covered, in a context that expected
             // cooked data — everything else is an expected miss.

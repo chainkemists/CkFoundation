@@ -34,7 +34,7 @@ auto
     IsNavigationRelevant() const
     -> bool
 {
-    return ck::IsValid(_AreaClass.Get(), ck::IsValid_Policy_NullptrOnly{});
+    return ck::IsValid(_AreaClass.Get());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,12 +48,12 @@ auto
         TSubclassOf<UNavArea> InAreaClass)
     -> UCk_NavAreaMarkup_UE*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAreaClass.Get(), ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(InAreaClass.Get()),
         TEXT("NavAreaMarkup Request_Create on [{}] requires a valid AreaClass"), InOwnerEntity)
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InOwnerEntity);
-    CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
         TEXT("NavAreaMarkup Request_Create: no World for entity [{}]"), InOwnerEntity)
     { return {}; }
 
@@ -72,7 +72,7 @@ auto
         UCk_NavAreaMarkup_UE* InMarkup)
     -> void
 {
-    if (ck::Is_NOT_Valid(InMarkup, ck::IsValid_Policy_NullptrOnly{}))
+    if (ck::Is_NOT_Valid(InMarkup))
     { return; }
 
     UNavigationSystemV1::OnNavRelevantObjectUnregistered(*InMarkup);

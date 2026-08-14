@@ -132,7 +132,7 @@ auto
     BeginDebuggerCapture(FCk_Handle_StateMachine& InStateMachine)
     -> void
 {
-    if (NOT Get_IsDebuggerCaptureVisible() || NOT ck::IsValid(InStateMachine))
+    if (NOT Get_IsDebuggerCaptureVisible() || ck::Is_NOT_Valid(InStateMachine))
     { return; }
 
     const auto CaptureGeneration = Get_DebuggerCaptureGeneration();
@@ -163,7 +163,7 @@ auto
     Get_IsDebuggerCaptureActive(const FCk_Handle_StateMachine& InStateMachine)
     -> bool
 {
-    if (NOT Get_IsDebuggerCaptureVisible() || NOT ck::IsValid(InStateMachine))
+    if (NOT Get_IsDebuggerCaptureVisible() || ck::Is_NOT_Valid(InStateMachine))
     { return false; }
 
     return InStateMachine.Has<ck::FFragment_Sm_Debug>()

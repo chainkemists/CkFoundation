@@ -76,8 +76,6 @@ auto
     const auto IsDeferred = Get_IsDeferred(InDeferredEntity);
     CK_ENSURE_IF_NOT(IsDeferred,
         TEXT("Entity [{}] is not a deferred entity. Cannot complete setup."), InDeferredEntity)
-    {}
-    if (NOT IsDeferred)
     {
         InDelegate.ExecuteIfBound(InDeferredEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

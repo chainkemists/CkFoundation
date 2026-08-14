@@ -247,7 +247,7 @@ auto
     if (InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>().Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
     {
         if (const auto WidgetComponent = Current.Get_WidgetComponent().Get();
-            ck::IsValid(WidgetComponent, ck::IsValid_Policy_NullptrOnly{}))
+            ck::IsValid(WidgetComponent))
         {
             WidgetComponent->SetVisibility(InEnabled);
             WidgetComponent->SetHiddenInGame(NOT InEnabled);

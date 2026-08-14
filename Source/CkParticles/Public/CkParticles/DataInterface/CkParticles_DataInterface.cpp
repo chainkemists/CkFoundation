@@ -220,11 +220,16 @@ namespace NDICkParticlesLocal
         const float Q = InV * (1.0f - InS * F);
         const float T = InV * (1.0f - InS * (1.0f - F));
 
-        if (Sector < 1.0f) { return FVector3f(InV, T, P); }
-        if (Sector < 2.0f) { return FVector3f(Q, InV, P); }
-        if (Sector < 3.0f) { return FVector3f(P, InV, T); }
-        if (Sector < 4.0f) { return FVector3f(P, Q, InV); }
-        if (Sector < 5.0f) { return FVector3f(T, P, InV); }
+        if (Sector < 1.0f)
+        { return FVector3f(InV, T, P); }
+        if (Sector < 2.0f)
+        { return FVector3f(Q, InV, P); }
+        if (Sector < 3.0f)
+        { return FVector3f(P, InV, T); }
+        if (Sector < 4.0f)
+        { return FVector3f(P, Q, InV); }
+        if (Sector < 5.0f)
+        { return FVector3f(T, P, InV); }
         return FVector3f(InV, P, Q);
     }
 
@@ -600,38 +605,67 @@ namespace NDICkParticlesLocal
     {
         if (InVariant == ExpVariantGround)
         {
-            if (InSlot <  1) { return ExpLayerBubble;      }
-            if (InSlot <  2) { return ExpLayerFlare;       }
-            if (InSlot <  4) { return ExpLayerGlow01;      }
-            if (InSlot < 11) { return ExpLayerSpark02;     }
-            if (InSlot < 31) { return ExpLayerSpark01;     }
-            if (InSlot < 36) { return ExpLayerSmokes;      }
-            if (InSlot < 41) { return ExpLayerSmokeCenter; }
-            if (InSlot < 46) { return ExpLayerSpike;       }
-            if (InSlot < 49) { return ExpLayerGlow02;      }
-            if (InSlot < 50) { return ExpLayerRing;        }
-            if (InSlot < 60) { return ExpLayerSpark02001;  }
-            if (InSlot < 61) { return ExpLayerGlow03;      }
-            if (InSlot < 62) { return ExpLayerGlow04;      }
-            if (InSlot < 63) { return ExpLayerMark;        }
-            if (InSlot < 64) { return ExpLayerRainbow;     }
-            if (InSlot < 65) { return ExpLayerLight;       }
+            if (InSlot <  1)
+            { return ExpLayerBubble;      }
+            if (InSlot <  2)
+            { return ExpLayerFlare;       }
+            if (InSlot <  4)
+            { return ExpLayerGlow01;      }
+            if (InSlot < 11)
+            { return ExpLayerSpark02;     }
+            if (InSlot < 31)
+            { return ExpLayerSpark01;     }
+            if (InSlot < 36)
+            { return ExpLayerSmokes;      }
+            if (InSlot < 41)
+            { return ExpLayerSmokeCenter; }
+            if (InSlot < 46)
+            { return ExpLayerSpike;       }
+            if (InSlot < 49)
+            { return ExpLayerGlow02;      }
+            if (InSlot < 50)
+            { return ExpLayerRing;        }
+            if (InSlot < 60)
+            { return ExpLayerSpark02001;  }
+            if (InSlot < 61)
+            { return ExpLayerGlow03;      }
+            if (InSlot < 62)
+            { return ExpLayerGlow04;      }
+            if (InSlot < 63)
+            { return ExpLayerMark;        }
+            if (InSlot < 64)
+            { return ExpLayerRainbow;     }
+            if (InSlot < 65)
+            { return ExpLayerLight;       }
             return ExpLayerFlames;
         }
 
-        if (InSlot <  1) { return ExpLayerBubble;      }
-        if (InSlot <  2) { return ExpLayerFlare;       }
-        if (InSlot <  9) { return ExpLayerSpark02;     }
-        if (InSlot < 29) { return ExpLayerSpark01;     }
-        if (InSlot < 32) { return ExpLayerSmokes;      }
-        if (InSlot < 37) { return ExpLayerSmokeCenter; }
-        if (InSlot < 42) { return ExpLayerSpike;       }
-        if (InSlot < 43) { return ExpLayerRing;        }
-        if (InSlot < 53) { return ExpLayerSpark02001;  }
-        if (InSlot < 55) { return ExpLayerGlow03;      }
-        if (InSlot < 58) { return ExpLayerGlow04;      }
-        if (InSlot < 59) { return ExpLayerRainbow;     }
-        if (InSlot < 60) { return ExpLayerLight;       }
+        if (InSlot <  1)
+        { return ExpLayerBubble;      }
+        if (InSlot <  2)
+        { return ExpLayerFlare;       }
+        if (InSlot <  9)
+        { return ExpLayerSpark02;     }
+        if (InSlot < 29)
+        { return ExpLayerSpark01;     }
+        if (InSlot < 32)
+        { return ExpLayerSmokes;      }
+        if (InSlot < 37)
+        { return ExpLayerSmokeCenter; }
+        if (InSlot < 42)
+        { return ExpLayerSpike;       }
+        if (InSlot < 43)
+        { return ExpLayerRing;        }
+        if (InSlot < 53)
+        { return ExpLayerSpark02001;  }
+        if (InSlot < 55)
+        { return ExpLayerGlow03;      }
+        if (InSlot < 58)
+        { return ExpLayerGlow04;      }
+        if (InSlot < 59)
+        { return ExpLayerRainbow;     }
+        if (InSlot < 60)
+        { return ExpLayerLight;       }
         return ExpLayerFlames;
     }
 
@@ -5792,14 +5826,22 @@ namespace NDICkParticlesLocal
                 {
                     const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
 
-                    if (S == 0)  { return LayerGlow01; }
-                    if (S == 1)  { return LayerGlow02; }
-                    if (S == 2)  { return LayerRainbow; }
-                    if (S == 3)  { return LayerRing; }
-                    if (S < 7)   { return LayerSparkles; }
-                    if (S < 12)  { return LayerStretch; }
-                    if (S == 12) { return LayerStar01; }
-                    if (S == 13) { return LayerStar02; }
+                    if (S == 0)
+                    { return LayerGlow01; }
+                    if (S == 1)
+                    { return LayerGlow02; }
+                    if (S == 2)
+                    { return LayerRainbow; }
+                    if (S == 3)
+                    { return LayerRing; }
+                    if (S < 7)
+                    { return LayerSparkles; }
+                    if (S < 12)
+                    { return LayerStretch; }
+                    if (S == 12)
+                    { return LayerStar01; }
+                    if (S == 13)
+                    { return LayerStar02; }
                     return LayerLens;
                 };
 
@@ -5807,10 +5849,14 @@ namespace NDICkParticlesLocal
                 {
                     const auto R = Rand(InS, 0) * RateTotal;
 
-                    if (R < CumSparkles) { return LayerSparkles; }
-                    if (R < CumStretch)  { return LayerStretch; }
-                    if (R < CumStar01)   { return LayerStar01; }
-                    if (R < CumStar02)   { return LayerStar02; }
+                    if (R < CumSparkles)
+                    { return LayerSparkles; }
+                    if (R < CumStretch)
+                    { return LayerStretch; }
+                    if (R < CumStar01)
+                    { return LayerStar01; }
+                    if (R < CumStar02)
+                    { return LayerStar02; }
                     return LayerLens;
                 };
 
@@ -6111,11 +6157,16 @@ namespace NDICkParticlesLocal
                 {
                     const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
 
-                    if (S == 0) { return LayerBigArrow; }
-                    if (S < 8)  { return LayerSparkDark; }
-                    if (S < 11) { return LayerRing; }
-                    if (S < 18) { return LayerSparkBr; }
-                    if (S < 23) { return LayerFlames; }
+                    if (S == 0)
+                    { return LayerBigArrow; }
+                    if (S < 8)
+                    { return LayerSparkDark; }
+                    if (S < 11)
+                    { return LayerRing; }
+                    if (S < 18)
+                    { return LayerSparkBr; }
+                    if (S < 23)
+                    { return LayerFlames; }
                     return LayerSlash;
                 };
 
@@ -6123,9 +6174,12 @@ namespace NDICkParticlesLocal
                 {
                     const auto R = Rand(InS, 0) * RateTotal;
 
-                    if (R < CumSparkDark) { return LayerSparkDark; }
-                    if (R < CumRing)      { return LayerRing; }
-                    if (R < CumSparkBr)   { return LayerSparkBr; }
+                    if (R < CumSparkDark)
+                    { return LayerSparkDark; }
+                    if (R < CumRing)
+                    { return LayerRing; }
+                    if (R < CumSparkBr)
+                    { return LayerSparkBr; }
                     return LayerSlash;
                 };
 
@@ -7624,23 +7678,40 @@ namespace NDICkParticlesLocal
                 {
                     const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
 
-                    if (S == 0)  { return LayerGlow01; }
-                    if (S == 1)  { return LayerGlow02; }
-                    if (S == 2)  { return LayerGlow03; }
-                    if (S == 3)  { return LayerRaimbow; }
-                    if (S == 4)  { return LayerRing; }
-                    if (S < 15)  { return LayerSparkles; }
-                    if (S == 15) { return LayerFlare01; }
-                    if (S == 16) { return LayerFlare02; }
-                    if (S == 17) { return LayerBigStar; }
-                    if (S == 18) { return LayerFlares01; }
-                    if (S == 19) { return LayerFlares02; }
-                    if (S == 20) { return LayerFlares03; }
-                    if (S == 21) { return LayerFlares04; }
-                    if (S == 22) { return LayerStar01; }
-                    if (S == 23) { return LayerStar02; }
-                    if (S < 27)  { return LayerLightning; }
-                    if (S < 29)  { return LayerFlare03; }
+                    if (S == 0)
+                    { return LayerGlow01; }
+                    if (S == 1)
+                    { return LayerGlow02; }
+                    if (S == 2)
+                    { return LayerGlow03; }
+                    if (S == 3)
+                    { return LayerRaimbow; }
+                    if (S == 4)
+                    { return LayerRing; }
+                    if (S < 15)
+                    { return LayerSparkles; }
+                    if (S == 15)
+                    { return LayerFlare01; }
+                    if (S == 16)
+                    { return LayerFlare02; }
+                    if (S == 17)
+                    { return LayerBigStar; }
+                    if (S == 18)
+                    { return LayerFlares01; }
+                    if (S == 19)
+                    { return LayerFlares02; }
+                    if (S == 20)
+                    { return LayerFlares03; }
+                    if (S == 21)
+                    { return LayerFlares04; }
+                    if (S == 22)
+                    { return LayerStar01; }
+                    if (S == 23)
+                    { return LayerStar02; }
+                    if (S < 27)
+                    { return LayerLightning; }
+                    if (S < 29)
+                    { return LayerFlare03; }
                     return LayerFlare04;
                 };
 
@@ -8092,12 +8163,18 @@ namespace NDICkParticlesLocal
                 {
                     const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
 
-                    if (S == 0)  { return LayerSecondGlow; }
-                    if (S < 6)   { return LayerFlames; }
-                    if (S < 11)  { return LayerSmokes; }
-                    if (S == 11) { return LayerFirstGlow; }
-                    if (S == 12) { return LayerProj01; }
-                    if (S == 13) { return LayerProj02; }
+                    if (S == 0)
+                    { return LayerSecondGlow; }
+                    if (S < 6)
+                    { return LayerFlames; }
+                    if (S < 11)
+                    { return LayerSmokes; }
+                    if (S == 11)
+                    { return LayerFirstGlow; }
+                    if (S == 12)
+                    { return LayerProj01; }
+                    if (S == 13)
+                    { return LayerProj02; }
                     return LayerProj03;
                 };
 
@@ -8105,9 +8182,12 @@ namespace NDICkParticlesLocal
                 {
                     const auto R = Rand(InS, 0) * RateTotal;
 
-                    if (R < CumSecondGlow) { return LayerSecondGlow; }
-                    if (R < CumFlames)     { return LayerFlames; }
-                    if (R < CumSmokes)     { return LayerSmokes; }
+                    if (R < CumSecondGlow)
+                    { return LayerSecondGlow; }
+                    if (R < CumFlames)
+                    { return LayerFlames; }
+                    if (R < CumSmokes)
+                    { return LayerSmokes; }
                     return LayerFirstGlow;
                 };
 
@@ -8125,8 +8205,10 @@ namespace NDICkParticlesLocal
                 {
                     Layer = BurstLayer(InSeed);
 
-                    if (Layer == LayerSmokes)         { LayerDelay = DelaySmokes; }
-                    else if (Layer == LayerFirstGlow) { LayerDelay = DelayFirstGlow; }
+                    if (Layer == LayerSmokes)
+                    { LayerDelay = DelaySmokes; }
+                    else if (Layer == LayerFirstGlow)
+                    { LayerDelay = DelayFirstGlow; }
                 }
                 else
                 {
@@ -10410,9 +10492,12 @@ namespace NDICkParticlesLocal
                 {
                     const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
 
-                    if (S == 0) { return LayerTube; }
-                    if (S < 5)  { return LayerSmokes; }
-                    if (S == 5) { return LayerCone; }
+                    if (S == 0)
+                    { return LayerTube; }
+                    if (S < 5)
+                    { return LayerSmokes; }
+                    if (S == 5)
+                    { return LayerCone; }
                     return LayerLines;
                 };
 

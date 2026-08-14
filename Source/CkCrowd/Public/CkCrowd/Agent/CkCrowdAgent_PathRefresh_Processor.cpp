@@ -138,8 +138,6 @@ namespace ck
             InSelfLocation,
             InGoal,
             InAgentRadius)
-        {}
-        if (NOT InputsAreValid)
         { return {}; }
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
@@ -342,8 +340,6 @@ namespace ck
             InSelfLocation,
             InEscapedLocation,
             InParams.Get_Radius())
-        {}
-        if (NOT InputsAreValid)
         { return false; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);

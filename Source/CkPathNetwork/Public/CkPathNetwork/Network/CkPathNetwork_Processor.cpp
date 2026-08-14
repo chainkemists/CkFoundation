@@ -2038,8 +2038,6 @@ namespace ck
             LocalShortcutMaxDistance, DirectGraceDistance,
             DirectMinimumSavings,
             SideKeeping, Spacing, Smoothing, Clearance, ResolvedRibbonTolerance)
-        {}
-        if (NOT TuningIsValid)
         { return; }
 
         InParams.Set_OffPathCostMultiplier(Multiplier);
