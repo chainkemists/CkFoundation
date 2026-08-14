@@ -147,7 +147,26 @@ These three land → GREEN-LIGHT, including the BB pilot sequencing as specced (
 
 ---
 
+## CTO Review Response — Second Pass (spec revision `4488936d6`)
+
+### Verdict
+
+`GREEN-LIGHT` — implementation may start, in the §8 order (resolver unification first), framework pass then Brainwash pilot.
+
+All three sign-off conditions are met and were verified against the revised text, not just the changelog:
+
+1. **§3.2/§6 rewrite** — the determinism claim is gone, replaced with the eager-resolution facts (correctly cited) and synchronous `_PreRegisteredKeys` at WS composition as the primary guarantee. The "airtight by construction" argument was re-derived independently and holds: `Create` returns only after registration; a sub-WS requires the parent handle to exist; any action setup referencing the shared WS requires its handle resolved — so pre-registered keys precede every possible setup pass. The guarantee is conditional on the declared key list being complete; the Verbose log, cold-path audit, and test 9 make an omission findable, which was accepted in pass one.
+2. **§3.9 dead-parent contract + test 10** — present and coherent. **The deviation from my parenthetical is correct and I concede it**: with reads defined as miss-semantics `false`, a write that falls through to the local alias slot could never be read back — fall-through would contradict "the stale alias slot is never served as truth." Dropping with the Verbose diagnostic is the coherent contract. The revised spec is better than my recommendation on this point.
+3. **Test 9 (adversarial ordering)** — present, and correctly framed as pinning the §6 hazard.
+
+All seven non-blocking suggestions from pass one were also folded in (checked individually: §5 cross-handle ordering caveat, resolver unification as §8 step 1, chain-aware unsubscribe in §3.6/step 7, `CK_ENSURE` on cycle, chain generality kept, cold-path audit with the `FRecordOfGoapWorldStates` reverse walk, test 3's alias-leak assert, plus the friend-spelling and never-touch-ancestor-`Requests` notes).
+
+### New notes from this pass (non-blocking, for the implementation)
+
+1. **Pre-registration rejections at composition must be loud.** §6 doesn't say what happens if a `_PreRegisteredKeys` entry is rejected (invalid tag, or a >64 list). A silent `FindOrRegister` reject at `Add`/`Create` time would be exactly the silent-drop class this campaign exists to kill — and unlike the runtime paths, this one is a composition-time authoring error, so the house rule applies: `CK_ENSURE` it, don't Verbose it. One line in the pre-registration loop.
+2. **Test 9 authoring hazard: keep the probe tag out of every top-level action.** The "misclassification is observable" half is only deterministic if *nothing else* registers the probe tag in the parent before the sub-action's setup runs. If a top-level action in the test fixture references the same tag, the outcome depends on setup iteration order and the test goes flaky — the exact class of nondeterminism it exists to pin. The fixture must reference the probe tag from the sub-action only.
+
 ### Reviewer
 
 - **Name:** CTO review (Claude Fable 5, on behalf of Adam)
-- **Date:** 2026-08-13
+- **Date:** 2026-08-13 (pass 1: verdict CHANGES REQUESTED, commit `56cd98692` · pass 2: verdict GREEN-LIGHT, against spec revision `4488936d6`)
