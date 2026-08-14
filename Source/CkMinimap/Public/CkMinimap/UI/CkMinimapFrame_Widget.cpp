@@ -3,21 +3,12 @@
 #include "CkMinimap/CkMinimap_Log.h"
 #include "CkMinimap/CkMinimap_Utils.h"
 
-#include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
-#include "Components/TextBlock.h"
 
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInstanceDynamic.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck_minimap_frame_widget
-{
-    const TCHAR* ObserverArrowGlyph = TEXT("▲");
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -92,7 +83,19 @@ auto
 {
     Super::NativeOnInitialized();
 
-    DoBuildWidgetTree();
+    if (ck::IsValid(_FrameImage) && ck::Is_NOT_Valid(_FrameMID))
+    {
+        if (const auto BrushMaterial = Cast<UMaterialInterface>(_FrameImage->GetBrush().GetResourceObject());
+            ck::IsValid(BrushMaterial))
+        {
+            _FrameMID = _FrameImage->GetDynamicMaterial();
+        }
+    }
+
+    if (ck::IsValid(_MapImage) && ck::IsValid(_MapTexture))
+    {
+        _MapImage->SetBrushFromTexture(_MapTexture);
+    }
 }
 
 auto
@@ -155,60 +158,10 @@ auto
 
 auto
     UCk_MinimapFrame_Widget::
-    DoBuildWidgetTree()
-    -> void
-{
-    using namespace ck_minimap_frame_widget;
-
-    const auto HasDesignerAuthoredTree = ck::IsValid(WidgetTree->RootWidget);
-
-    if (HasDesignerAuthoredTree)
-    { return; }
-
-    _RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("MinimapFrame_RootCanvas"));
-    WidgetTree->RootWidget = _RootCanvas;
-
-    _MapImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("MinimapFrame_Map"));
-
-    auto MapSlot = _RootCanvas->AddChildToCanvas(_MapImage);
-    MapSlot->SetAutoSize(false);
-    MapSlot->SetAlignment(FVector2D{0.5, 0.5});
-
-    if (ck::IsValid(_MapTexture))
-    {
-        _MapImage->SetBrushFromTexture(_MapTexture);
-    }
-
-    if (ck::IsValid(_FrameMaterial))
-    {
-        _FrameImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("MinimapFrame_Frame"));
-        _FrameMID = UMaterialInstanceDynamic::Create(_FrameMaterial, this);
-        _FrameImage->SetBrushFromMaterial(_FrameMID);
-
-        auto FrameSlot = _RootCanvas->AddChildToCanvas(_FrameImage);
-        FrameSlot->SetAutoSize(false);
-        FrameSlot->SetAlignment(FVector2D{0.5, 0.5});
-    }
-
-    _ObserverArrow = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("MinimapFrame_Observer"));
-    _ObserverArrow->SetText(FText::FromString(ObserverArrowGlyph));
-
-    auto ArrowSlot = _RootCanvas->AddChildToCanvas(_ObserverArrow);
-    ArrowSlot->SetAutoSize(true);
-    ArrowSlot->SetAlignment(FVector2D{0.5, 0.5});
-}
-
-auto
-    UCk_MinimapFrame_Widget::
     DoRefreshLayout(
         const FGeometry& InGeometry)
     -> void
 {
-    const auto OwnsBuiltInTree = ck::IsValid(_RootCanvas);
-
-    if (NOT OwnsBuiltInTree)
-    { return; }
-
     const auto MinimapIsValid = ck::IsValid(_Minimap);
 
     if (NOT MinimapIsValid)
@@ -216,8 +169,8 @@ auto
         if (ck::IsValid(_MapImage))
         { _MapImage->SetVisibility(ESlateVisibility::Hidden); }
 
-        if (ck::IsValid(_ObserverArrow))
-        { _ObserverArrow->SetVisibility(ESlateVisibility::Hidden); }
+        if (ck::IsValid(_ObserverMarker))
+        { _ObserverMarker->SetVisibility(ESlateVisibility::Hidden); }
 
         for (const auto& Blip : _BlipPool)
         { Blip->SetVisibility(ESlateVisibility::Hidden); }
@@ -243,63 +196,40 @@ auto
         _FrameMID->SetScalarParameterValue(_ViewYawParameterName, ViewYaw);
     }
 
-    if (ck::IsValid(_FrameImage))
-    {
-        const auto FrameSlot = Cast<UCanvasPanelSlot>(_FrameImage->Slot);
-        if (ck::IsValid(FrameSlot, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            FrameSlot->SetPosition(PanelCenter);
-            FrameSlot->SetSize(FVector2D{FrameSize, FrameSize});
-        }
-    }
-
     DoRefreshBackground(PanelCenter, FrameSize, ViewYaw, RotateWithObserver);
 
-    if (ck::IsValid(_ObserverArrow))
+    if (ck::IsValid(_ObserverMarker))
     {
-        _ObserverArrow->SetVisibility(ESlateVisibility::HitTestInvisible);
-        _ObserverArrow->SetRenderTransformAngle(RotateWithObserver ? 0.0f : ViewYaw);
-        DoPositionChildAt(_ObserverArrow, PanelCenter);
+        _ObserverMarker->SetVisibility(ESlateVisibility::HitTestInvisible);
+        _ObserverMarker->SetRenderTransformAngle(RotateWithObserver ? 0.0f : ViewYaw);
+        DoPositionChildAt(_ObserverMarker, PanelCenter);
     }
 
     const auto Entries = UCk_Utils_Minimap_UE::Get_Entries(_Minimap);
 
-    for (auto Index = _BlipPool.Num(); Index < Entries.Num(); ++Index)
+    for (auto Index = 0; Index < Entries.Num(); ++Index)
     {
-        auto Blip = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-        Blip->SetDesiredSizeOverride(_BlipSize);
+        const auto Blip = Get_BlipAt(Index);
 
-        auto BlipSlot = _RootCanvas->AddChildToCanvas(Blip);
-        BlipSlot->SetAutoSize(true);
-        BlipSlot->SetAlignment(FVector2D{0.5, 0.5});
-
-        _BlipPool.Emplace(Blip);
-    }
-
-    for (auto Index = 0; Index < _BlipPool.Num(); ++Index)
-    {
-        const auto& Blip = _BlipPool[Index];
-
-        if (Index >= Entries.Num())
-        {
-            Blip->SetVisibility(ESlateVisibility::Hidden);
-            continue;
-        }
+        if (ck::Is_NOT_Valid(Blip))
+        { break; }
 
         const auto& Entry = Entries[Index];
         const auto IsClamped = Entry.Get_EdgeState() == ECk_Minimap_EntryEdgeState::ClampedToEdge;
-
-        auto Tint = _BlipTint;
-        Tint.A *= IsClamped ? _ClampedBlipOpacity : 1.0f;
 
         const auto BlipAngle = RotateWithObserver
             ? Entry.Get_WorldYawDegrees() - ViewYaw
             : Entry.Get_WorldYawDegrees();
 
         Blip->SetVisibility(ESlateVisibility::HitTestInvisible);
-        Blip->SetColorAndOpacity(Tint);
+        Blip->SetRenderOpacity(IsClamped ? _ClampedBlipOpacity : 1.0f);
         Blip->SetRenderTransformAngle(BlipAngle);
         DoPositionChildAt(Blip, PanelCenter + Entry.Get_MapPosition() * HalfFrame);
+    }
+
+    for (auto Index = Entries.Num(); Index < _BlipPool.Num(); ++Index)
+    {
+        _BlipPool[Index]->SetVisibility(ESlateVisibility::Hidden);
     }
 }
 
@@ -375,6 +305,32 @@ auto
     MapSlot->SetPosition(InPanelCenter + Translate);
     MapSlot->SetSize(ImageSize);
     _MapImage->SetRenderTransformAngle(Angle);
+}
+
+auto
+    UCk_MinimapFrame_Widget::
+    Get_BlipAt(
+        int32 InIndex)
+    -> UUserWidget*
+{
+    if (ck::Is_NOT_Valid(_BlipCanvas) || ck::Is_NOT_Valid(_BlipWidgetClass))
+    { return {}; }
+
+    while (_BlipPool.Num() <= InIndex)
+    {
+        const auto Blip = CreateWidget<UUserWidget>(this, _BlipWidgetClass);
+
+        if (ck::Is_NOT_Valid(Blip))
+        { return {}; }
+
+        auto BlipSlot = _BlipCanvas->AddChildToCanvas(Blip);
+        BlipSlot->SetAutoSize(true);
+        BlipSlot->SetAlignment(FVector2D{0.5, 0.5});
+
+        _BlipPool.Emplace(Blip);
+    }
+
+    return _BlipPool[InIndex];
 }
 
 auto

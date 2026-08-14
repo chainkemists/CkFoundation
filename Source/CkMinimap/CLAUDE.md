@@ -116,8 +116,12 @@ editor module (scene capture → these assets) is planned, not shipped.
 
 ## Reference widget (`UCk_MinimapFrame_Widget`)
 
-Shipped as the worked example of the delivery contract, not as production HUD furniture. Design notes
-that used to live in its class comment:
+Shipped as the worked example of the delivery contract, not as production HUD furniture. The widget
+owns the MECHANISM only — the WBP owns the tree (2026-08-06 maintainer directive: no hidden
+code-built fallback trees anywhere in the accelerant widgets). Bind `_BlipCanvas` (required),
+`_MapImage`, `_FrameImage` (its brush material gets the yaw MID), `_ObserverMarker`, and set
+`_BlipWidgetClass` for pooled POI blips. An unstyled instance renders nothing — that is by design.
+Design notes that used to live in its class comment:
 
 - **Pull-in-NativeTick is the documented exception.** CkUI doctrine routes per-frame widget updates
   through processors (see WorldSpaceWidget). This widget is the edge-consumer of the minimap PULL API —

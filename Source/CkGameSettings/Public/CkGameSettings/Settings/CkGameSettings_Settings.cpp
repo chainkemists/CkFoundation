@@ -70,4 +70,20 @@ auto
     return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_EnableVideoPack();
 }
 
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_RowClassOverrides()
+    -> const TMap<ECk_GameSettings_ValueType, TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>>&
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_RowClassOverrides();
+}
+
+auto
+    UCk_Utils_GameSettings_Settings_UE::
+    Get_SelectRowClassOverride()
+    -> const TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase>&
+{
+    return GetDefault<UCk_GameSettings_ProjectSettings_UE>()->Get_SelectRowClassOverride();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

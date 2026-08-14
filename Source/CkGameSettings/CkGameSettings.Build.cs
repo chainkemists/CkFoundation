@@ -20,6 +20,17 @@ public class CkGameSettings : CkModuleRules
             "CkCVar",
             "CkLog",
             "CkSettings",
+
+            // Widget layer only (settings screen + keybinding page) — the core registry must never include from these.
+            "UMG",
+            "Slate",
+            "SlateCore",
+            "CommonUI",
+            "EnhancedInput",
+            "InputCore",
+            "CkEcs",
+            "CkUI",
+            "CkInput",
         });
     }
 }
