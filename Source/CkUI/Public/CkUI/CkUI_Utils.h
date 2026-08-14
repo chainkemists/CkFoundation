@@ -6,6 +6,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkUI/Subsystem/CkUI_Input_Subsystem.h"
 #include "CkUI/Types/CkUI_Types.h"
 
 #include "Widgets/CommonActivatableWidgetContainer.h"
@@ -29,7 +30,6 @@ class UUserWidget;
 class UNamedSlot;
 class UPanelSlot;
 struct FCk_Handle;
-struct FCk_Handle_InputSuspension;
 
 // --------------------------------------------------------------------------------------------------------------------
 

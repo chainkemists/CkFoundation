@@ -1,23 +1,100 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI_Subsystem.h"
+#include "CkUI_Input_Subsystem.h"
 
 #include "CommonInputSubsystem.h"
 #include "Framework/Application/SlateApplication.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-
-#include "CkUI/ScreenFade/CkScreenFade_Slate.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Subsystem_UE::
+    FCk_Handle_InputSuspension::
+    Create(
+        uint32 InId,
+        FName InReason,
+        FName InToken,
+        const ULocalPlayer* InLocalPlayer)
+    -> FCk_Handle_InputSuspension
+{
+    FCk_Handle_InputSuspension Handle;
+    Handle._Id = InId;
+    Handle._Reason = InReason;
+    Handle._Token = InToken;
+    Handle._LocalPlayer = InLocalPlayer;
+    return Handle;
+}
+
+auto
+    FCk_Handle_InputSuspension::
+    IsValid() const
+    -> bool
+{
+    return _Id != 0
+        && _Token != NAME_None
+        && _LocalPlayer.IsValid();
+}
+
+auto
+    FCk_Handle_InputSuspension::
+    Resume()
+    -> void
+{
+    if (NOT IsValid())
+    {
+        return;
+    }
+
+    auto* LocalPlayer = const_cast<ULocalPlayer*>(_LocalPlayer.Get());
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    {
+        return;
+    }
+
+    auto* Subsystem = LocalPlayer->GetSubsystem<UCk_UI_Input_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    {
+        return;
+    }
+
+    Subsystem->ResumeInput(*this);
+}
+
+auto
+    FCk_Handle_InputSuspension::
+    Get_LocalPlayer() const
+    -> const ULocalPlayer*
+{
+    return _LocalPlayer.Get();
+}
+
+auto
+    FCk_Handle_InputSuspension::
+    DoMarkInvalid()
+    -> void
+{
+    _Id = 0;
+    _Token = NAME_None;
+    _LocalPlayer.Reset();
+}
+
+auto
+    FCk_Handle_InputSuspension::
+    operator==(const ThisType& Other) const
+    -> bool
+{
+    return _Id == Other._Id && _Token == Other._Token;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_UI_Input_Subsystem_UE::
     Initialize(
         FSubsystemCollectionBase& InCollection)
     -> void
@@ -35,7 +112,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     Deinitialize()
     -> void
 {
@@ -49,11 +126,10 @@ auto
     Super::Deinitialize();
 }
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     SuspendInput(
         FName InReason)
     -> FCk_Handle_InputSuspension
@@ -80,7 +156,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     ResumeInput(
         FCk_Handle_InputSuspension& InSuspensionHandle)
     -> void
@@ -103,7 +179,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     ResumeAllInput()
     -> void
 {
@@ -117,7 +193,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     IsInputSuspended() const
     -> bool
 {
@@ -125,7 +201,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     Get_ActiveSuspensionCount() const
     -> int32
 {
@@ -135,128 +211,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UI_Subsystem_UE::
-    Request_AddScreenFadeWidget(
-        const FCk_ScreenFade_Params& InFadeParams,
-        const APlayerController* InOwningPlayer,
-        int32 InZOrder)
-    -> void
-{
-    const auto ControllerID = DoGet_PlayerControllerID(InOwningPlayer);
-
-    if (_FadeWidgetsForID.Contains(ControllerID))
-    {
-        DoRemoveScreenFadeWidget(InOwningPlayer, ControllerID);
-    }
-
-    auto OnFadeFinished = FCk_Delegate_OnScreenFadeFinished{};
-
-    if (InFadeParams.Get_ToColor().A <= 0.0f)
-    {
-        OnFadeFinished.BindUObject(this, &ThisType::DoRemoveScreenFadeWidget, ControllerID);
-    }
-
-    TSharedRef<SCk_ScreenFade> FadeWidget = SNew(SCk_ScreenFade)
-        .FadeParams(InFadeParams)
-        .OnFadeFinished(OnFadeFinished);
-
-    auto* GameViewport = GetWorld()->GetGameViewport();
-
-    if (ck::Is_NOT_Valid(GameViewport))
-    { return; }
-
-    if (ck::IsValid(InOwningPlayer))
-    {
-        GameViewport->AddViewportWidgetForPlayer(InOwningPlayer->GetLocalPlayer(), FadeWidget, InZOrder);
-    }
-    else
-    {
-        GameViewport->AddViewportWidgetContent(FadeWidget, InZOrder + 10);
-    }
-
-    _FadeWidgetsForID.Emplace(ControllerID, FadeWidget);
-    FadeWidget->StartFade();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_UI_Subsystem_UE::
-    DoRemoveScreenFadeWidget(
-        const APlayerController* InOwningPlayer,
-        int32 InControllerID)
-    -> void
-{
-    const auto FadeWidget = _FadeWidgetsForID[InControllerID].Pin().ToSharedRef();
-    _FadeWidgetsForID.Remove(InControllerID);
-
-    auto* GameViewport = GetWorld()->GetGameViewport();
-
-    if (ck::Is_NOT_Valid(GameViewport))
-    { return; }
-
-    if (ck::IsValid(InOwningPlayer))
-    {
-        GameViewport->RemoveViewportWidgetForPlayer(InOwningPlayer->GetLocalPlayer(), FadeWidget);
-    }
-    else
-    {
-        GameViewport->RemoveViewportWidgetContent(FadeWidget);
-    }
-}
-
-auto
-    UCk_UI_Subsystem_UE::
-    DoRemoveScreenFadeWidget(
-        int32 InControllerID)
-    -> void
-{
-    DoRemoveScreenFadeWidget(DoGet_PlayerControllerFromID(InControllerID), InControllerID);
-}
-
-auto
-    UCk_UI_Subsystem_UE::
-    DoGet_PlayerControllerID(
-        const APlayerController* PlayerController) const
-    -> int32
-{
-    if (ck::IsValid(PlayerController))
-    {
-        if (const auto* LocalPlayer = PlayerController->GetLocalPlayer();
-            ck::IsValid(LocalPlayer))
-        {
-            return LocalPlayer->GetControllerId();
-        }
-    }
-
-    return _InvalidPlayerControllerID;
-}
-
-auto
-    UCk_UI_Subsystem_UE::
-    DoGet_PlayerControllerFromID(
-        const int32 ControllerID) const
-    -> APlayerController*
-{
-    if (ControllerID == _InvalidPlayerControllerID)
-    { return nullptr; }
-
-    for (auto Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
-    {
-        if (auto* PlayerController = Iterator->Get();
-            DoGet_PlayerControllerID(PlayerController) == ControllerID)
-        {
-            return PlayerController;
-        }
-    }
-
-    return nullptr;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoApplyInputFilter(
         FName InToken,
         bool InShouldFilter) const
@@ -278,7 +233,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoGenerateSuspensionHandleName(
         FName InReason) const
     -> FName
@@ -290,7 +245,7 @@ auto
 
 #if WITH_EDITOR
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoHandleModalLoopTick(
         float InDeltaTime)
     -> void
@@ -326,7 +281,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoCheckAndRestoreFiltersAfterModal()
     -> void
 {
@@ -348,7 +303,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoSuspendFiltersForModal()
     -> void
 {
@@ -366,7 +321,7 @@ auto
 }
 
 auto
-    UCk_UI_Subsystem_UE::
+    UCk_UI_Input_Subsystem_UE::
     DoRestoreFiltersAfterModal()
     -> void
 {
