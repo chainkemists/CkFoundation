@@ -516,7 +516,7 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleMouseMoveEvent` | the cursor delta split into `EKeys::MouseX` / `EKeys::MouseY` `AnalogAxis` rows; a component that did not move writes no row rather than a zero one |
 | `HandleMouseButtonDownEvent` / `HandleMouseButtonUpEvent` | `Pressed` / `Released` on the effecting button |
 | `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click |
-| `HandleMouseWheelOrGestureEvent` | one `AnalogAxis` row on `EKeys::MouseWheelAxis` carrying the signed delta, then a `Pressed` **and** `Released` pair on `EKeys::MouseScrollUp`/`MouseScrollDown` in the same call. A notch has no duration, so the pair is what the engine itself produces and what the record must say — a press with no release would leave the notch key held for the rest of the session. Trackpad gestures write nothing: a gesture is surfaced by its type and has no wheel key to be recorded under. Zero-delta events write nothing |
+| `HandleMouseWheelOrGestureEvent` | `Pressed` **and** `Released` pairs on `EKeys::MouseScrollUp`/`MouseScrollDown`, then one `AnalogAxis` row on `EKeys::MouseWheelAxis` carrying this event's signed delta. See *The wheel* below. Trackpad gestures write nothing at all. Zero-delta events write nothing |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
 **DIRECT viewport focus** (`GetGameViewportWidget()->HasAnyUserFocus()` on THIS game instance — what
@@ -535,6 +535,30 @@ router press-owners, the intent record's held set, the device debugger. The writ
 equivalent of the engine's `FlushPressedKeys`. Consequence: a hold does NOT survive a focus gap; a key
 still physically held when focus returns reads as up until it is re-pressed (the OS resends no edge, and
 auto-repeat is dropped). Analog axes are not flushed — they hold their last conditioned value.
+
+### The wheel — notch UNITS, banked, one pair per notch
+
+`FPointerEvent::GetWheelDelta()` is a count of notches, not a notch. A fast flick reaches Slate coalesced
+into ONE event carrying `2.0` or more; a high-resolution wheel or a precision trackpad reports fractions
+like `0.33`. So the writer keeps a signed accumulator, adds each event's delta to it, emits `floor(|acc|)`
+independent `Pressed`+`Released` pairs, and carries the fraction to the next event. One pair per event
+would have swallowed most of a flick and fired a whole notch for a third of one.
+
+- **Each notch is its OWN pair**, which is what lets `CkIntent`'s record split them into one frame row
+  each rather than collapsing several presses of one key into a single edge.
+- **Direction comes from the ACCUMULATOR's sign**, not from the current event's — a small up-flick landing
+  on a banked down remainder resolves down.
+- **The axis row carries this event's own delta, unaccumulated.** It is the analog fact the device
+  reported, and a sub-notch scroll that emitted no pair still emitted motion.
+- **The order is `Pressed`, `Released`, then the axis**, matching `FSceneViewport::OnMouseWheel`. Mouse
+  rows are `SubFrameOrdered`, which promises within-frame order is real, so the record must not invent one
+  the engine never produces.
+- **The remainder resets on the focus-loss flush**, with the held keys: a half-notch banked before an
+  alt-tab must not complete a notch after it.
+- **A gesture-sourced scroll writes NOTHING** — not the pair and not the axis. A gesture is surfaced by
+  its type and carries no wheel key to record under, and the early-out precedes both writes. On a platform
+  that routes all scrolling through gestures (a macOS trackpad) the wheel is therefore absent from the
+  record entirely.
 
 Device class is derived from the KEY, not from which handler fired: `IsGamepadKey()` → Gamepad, else
 `IsMouseButton()` → Mouse, else Keyboard. Ordering fidelity follows from the class — Gamepad is
