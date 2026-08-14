@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <CommonActivatableWidget.h>
 #include <GameplayTagContainer.h>

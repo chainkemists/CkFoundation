@@ -6,7 +6,7 @@
 #include "CkInput/CkKeyBinding_Utils.h"
 #include "CkInput/CkKeyIcon_Utils.h"
 
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <CommonInputSubsystem.h>
 #include <CommonUITypes.h>

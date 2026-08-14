@@ -28,7 +28,7 @@ public class CkWatermark : CkModuleRules
                 "SlateCore",
                 "UMG",
                 "CkCore",
-                "CkUI",
+                "CkUICore",
                 "CkMemory",
                 "CkEcs",
                 "CkJolt",

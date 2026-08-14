@@ -60,7 +60,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKUI_API UCk_Utils_ScreenFade_UE : public UBlueprintFunctionLibrary
+class CKUICORE_API UCk_Utils_ScreenFade_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

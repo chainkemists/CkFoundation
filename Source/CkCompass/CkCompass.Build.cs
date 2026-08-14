@@ -36,7 +36,7 @@ public class CkCompass : CkModuleRules
             // (priority/offscreen/display asset) from CkPoiDisplayDefinition, keyed by the Compass consumer tag.
             "CkPoiDisplayDefinition",
             "CkVisibleRange",
-            "CkUI",
+            "CkUICore",
         });
     }
 }

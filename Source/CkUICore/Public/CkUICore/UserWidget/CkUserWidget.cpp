@@ -1,10 +1,10 @@
 // Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
-#include "CkUI/CkUI_Utils.h"
+#include "CkUICore/CkUI_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Context

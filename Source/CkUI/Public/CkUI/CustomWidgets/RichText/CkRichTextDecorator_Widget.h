@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkCore/Macros/CkMacros.h"
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CkUI/ScreenFade/CkScreenFade_Utils.h"
+#include "CkUICore/ScreenFade/CkScreenFade_Utils.h"
 
 #include <CoreMinimal.h>
 #include <Widgets/Images/SImage.h>

@@ -6,7 +6,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include "CkUI/CkUI_Utils.h"
+#include "CkUICore/CkUI_Utils.h"
 
 #include "Components/CanvasPanel.h"
 #include "Components/SizeBox.h"

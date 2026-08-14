@@ -6,8 +6,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Format/CkFormat.h"
 
-#include "CkUI/Subsystem/CkUI_Input_Subsystem.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Subsystem/CkUI_Input_Subsystem.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include "Widgets/CommonActivatableWidgetContainer.h"
 #include "CommonActivatableWidget.h"
@@ -45,7 +45,7 @@ struct FCk_Handle;
  * - Widget iteration templates
  */
 UCLASS(NotBlueprintable)
-class CKUI_API UCk_Utils_UI_UE : public UBlueprintFunctionLibrary
+class CKUICORE_API UCk_Utils_UI_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
