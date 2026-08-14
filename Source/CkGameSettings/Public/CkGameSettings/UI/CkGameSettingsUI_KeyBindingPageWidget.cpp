@@ -10,6 +10,8 @@
 #include "Components/TextBlock.h"
 
 #include <CommonButtonBase.h>
+#include <CommonInputSubsystem.h>
+#include <CommonInputBaseTypes.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,7 +27,6 @@ auto
     InjectMapping(
         APlayerController* InPlayerController,
         FName InMappingName,
-        EPlayerMappableKeySlot InSlot,
         const FText& InDisplayName)
     -> void
 {
@@ -37,7 +38,6 @@ auto
 
     _PlayerController = InPlayerController;
     _MappingName = InMappingName;
-    _Slot = InSlot;
 
     if (ck::IsValid(_NameText))
     { _NameText->SetText(InDisplayName); }
@@ -52,11 +52,13 @@ auto
     if (NOT PlayerControllerIsUsable)
     { return; }
 
-    auto OnChanged = FCk_OnMappingKeyChanged{};
-    OnChanged.BindDynamic(this, &UCk_GameSettingsUI_KeyBindingRowWidget::HandleMappingKeyChanged);
-
-    _ChangeListener = UCk_Utils_KeyBinding_UE::BindTo_OnMappingKeyChanged(InPlayerController, InMappingName, InSlot, OnChanged);
-    _ListenerBound = true;
+    if (auto* InputSubsystem = UCommonInputSubsystem::Get(InPlayerController->GetLocalPlayer());
+        ck::IsValid(InputSubsystem) && NOT _InputMethodChangedHandle.IsValid())
+    {
+        _InputSubsystem = InputSubsystem;
+        _InputMethodChangedHandle = InputSubsystem->OnInputMethodChangedNative.AddUObject(
+            this, &UCk_GameSettingsUI_KeyBindingRowWidget::HandleInputMethodChanged);
+    }
 
     DoRefreshKeyDisplay();
 }
@@ -72,6 +74,12 @@ auto
         _ListenerBound = false;
     }
 
+    if (_InputMethodChangedHandle.IsValid() && _InputSubsystem.IsValid())
+    {
+        _InputSubsystem->OnInputMethodChangedNative.Remove(_InputMethodChangedHandle);
+        _InputMethodChangedHandle.Reset();
+    }
+
     Super::NativeDestruct();
 }
 
@@ -80,7 +88,7 @@ auto
     HandleKeyClicked()
     -> void
 {
-    OnRebindRequested.Broadcast(_MappingName, _Slot);
+    OnRebindRequested.Broadcast(_MappingName, _ResolvedSlot);
 }
 
 auto
@@ -107,27 +115,109 @@ auto
 
 auto
     UCk_GameSettingsUI_KeyBindingRowWidget::
+    HandleInputMethodChanged(
+        ECommonInputType InNewInputType)
+    -> void
+{
+    DoRefreshKeyDisplay();
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingRowWidget::
+    DoResolveDisplayedSlot()
+    -> void
+{
+    if (NOT _PlayerController.IsValid())
+    { return; }
+
+    const auto WantsGamepad = _InputSubsystem.IsValid() &&
+        _InputSubsystem->GetCurrentInputType() == ECommonInputType::Gamepad;
+
+    // The DEFAULT key classifies the binding's device — the current key loses that identity the
+    // moment the binding is unbound.
+    const auto Get_IsGamepadBinding = [](const FPlayerKeyMapping& InMapping)
+    {
+        const auto& ClassifyingKey = InMapping.GetDefaultKey().IsValid()
+            ? InMapping.GetDefaultKey()
+            : InMapping.GetCurrentKey();
+        return ClassifyingKey.IsGamepadKey();
+    };
+
+    auto MatchedSlot = TOptional<EPlayerMappableKeySlot>{};
+    auto MatchedUnboundSlot = TOptional<EPlayerMappableKeySlot>{};
+    auto FallbackSlot = TOptional<EPlayerMappableKeySlot>{};
+
+    for (const auto& Mapping : UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(_PlayerController.Get()))
+    {
+        if (Mapping.GetMappingName() != _MappingName)
+        { continue; }
+
+        if (NOT FallbackSlot.IsSet())
+        { FallbackSlot = Mapping.GetSlot(); }
+
+        if (Get_IsGamepadBinding(Mapping) != WantsGamepad)
+        { continue; }
+
+        if (Mapping.GetCurrentKey().IsValid() && NOT MatchedSlot.IsSet())
+        { MatchedSlot = Mapping.GetSlot(); }
+
+        if (NOT MatchedUnboundSlot.IsSet())
+        { MatchedUnboundSlot = Mapping.GetSlot(); }
+    }
+
+    const auto ResolvedSlot = MatchedSlot.IsSet() ? MatchedSlot
+        : MatchedUnboundSlot.IsSet() ? MatchedUnboundSlot
+        : FallbackSlot;
+
+    if (NOT ResolvedSlot.IsSet())
+    { return; }
+
+    if (ResolvedSlot.GetValue() == _ResolvedSlot && _ListenerBound)
+    { return; }
+
+    _ResolvedSlot = ResolvedSlot.GetValue();
+
+    // The change listener follows the displayed binding, so a rebind of THIS slot refreshes the row.
+    if (_ListenerBound)
+    { UCk_Utils_KeyBinding_UE::UnbindFrom_OnMappingKeyChanged(_PlayerController.Get(), _ChangeListener); }
+
+    auto OnChanged = FCk_OnMappingKeyChanged{};
+    OnChanged.BindDynamic(this, &UCk_GameSettingsUI_KeyBindingRowWidget::HandleMappingKeyChanged);
+
+    _ChangeListener = UCk_Utils_KeyBinding_UE::BindTo_OnMappingKeyChanged(_PlayerController.Get(), _MappingName, _ResolvedSlot, OnChanged);
+    _ListenerBound = true;
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingRowWidget::
     DoRefreshKeyDisplay()
     -> void
 {
     if (NOT _PlayerController.IsValid())
     { return; }
 
-    const auto CurrentKey = UCk_Utils_KeyBinding_UE::Get_KeyForMapping(_PlayerController.Get(), _MappingName, _Slot);
+    DoResolveDisplayedSlot();
+
+    const auto CurrentKey = UCk_Utils_KeyBinding_UE::Get_KeyForMapping(_PlayerController.Get(), _MappingName, _ResolvedSlot);
     const auto KeyBrush = UCk_Utils_KeyIcon_UE::Get_BrushForKey(_PlayerController.Get(), CurrentKey);
     const auto BrushHasIcon = ck::IsValid(KeyBrush.GetResourceObject(), ck::IsValid_Policy_NullptrOnly{});
 
+    // The glyph wins only when the WBP gave it somewhere to render — a text-only row (no icon
+    // slot bound) keeps its text even for keys the platform has a glyph for, or every bound key
+    // would collapse the text and display NOTHING.
+    const auto ShowIcon = BrushHasIcon && ck::IsValid(_KeyIconImage);
+
     if (ck::IsValid(_KeyIconImage))
     {
-        _KeyIconImage->SetVisibility(BrushHasIcon ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+        _KeyIconImage->SetVisibility(ShowIcon ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 
-        if (BrushHasIcon)
+        if (ShowIcon)
         { _KeyIconImage->SetBrush(KeyBrush); }
     }
 
     if (ck::IsValid(_KeyText))
     {
-        _KeyText->SetVisibility(BrushHasIcon ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+        _KeyText->SetVisibility(ShowIcon ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
         _KeyText->SetText(CurrentKey.GetDisplayName());
     }
 }
@@ -155,45 +245,92 @@ auto
     if (NOT RowClassIsUsable)
     { return; }
 
+    // ONE row per mapping NAME: the profile stores a mapping per (name, slot) — keyboard and
+    // gamepad defaults, plus unbound placeholder slots — and a row per entry renders as duplicate
+    // and empty rows. The first entry carries the display metadata; the row itself resolves which
+    // slot to show per input method.
     const auto AllMappings = UCk_Utils_KeyBinding_UE::Get_AllRemappableKeys(PlayerController);
 
-    auto CategoryOrder = TArray<FString>{};
-    auto MappingsByCategory = TMap<FString, TArray<FPlayerKeyMapping>>{};
+    auto NameOrder = TArray<FName>{};
+    auto FirstMappingByName = TMap<FName, FPlayerKeyMapping>{};
 
     for (const auto& Mapping : AllMappings)
     {
-        const auto Category = Mapping.GetDisplayCategory().ToString();
+        const auto MappingName = Mapping.GetMappingName();
 
-        if (NOT MappingsByCategory.Contains(Category))
-        {
-            CategoryOrder.Emplace(Category);
-            MappingsByCategory.Emplace(Category);
-        }
+        if (FirstMappingByName.Contains(MappingName))
+        { continue; }
 
-        MappingsByCategory[Category].Emplace(Mapping);
+        NameOrder.Emplace(MappingName);
+        FirstMappingByName.Emplace(MappingName, Mapping);
     }
 
-    for (const auto& Category : CategoryOrder)
-    {
-        for (const auto& Mapping : MappingsByCategory[Category])
-        {
-            const auto Row = CreateWidget<UCk_GameSettingsUI_KeyBindingRowWidget>(this, _RowWidgetClass);
+    auto NamesToShow = TArray<FName>{};
 
-            if (ck::Is_NOT_Valid(Row))
+    if (const auto CuratedNames = Get_CuratedMappingNames();
+        NOT CuratedNames.IsEmpty())
+    {
+        for (const auto& CuratedName : CuratedNames)
+        {
+            CK_ENSURE_IF_NOT(FirstMappingByName.Contains(CuratedName),
+                TEXT("KeyBinding page [{}] curates mapping [{}], which the key profile does not know. It was skipped."),
+                this, CuratedName)
             { continue; }
 
-            Row->OnRebindRequested.AddUniqueDynamic(this, &UCk_GameSettingsUI_KeyBindingPageWidget::HandleRebindRequested);
-
-            if (ck::IsValid(_RowContainer))
-            { _RowContainer->AddChild(Row); }
-
-            _Rows.Emplace(Row);
-
-            Row->InjectMapping(PlayerController, Mapping.GetMappingName(), Mapping.GetSlot(), Mapping.GetDisplayName());
-
-            OnRowCreated(Row, Mapping.GetDisplayCategory());
+            NamesToShow.Emplace(CuratedName);
         }
     }
+    else
+    {
+        // Uncurated: every mapping, grouped by display category in first-seen order
+        auto CategoryOrder = TArray<FString>{};
+        auto NamesByCategory = TMap<FString, TArray<FName>>{};
+
+        for (const auto& MappingName : NameOrder)
+        {
+            const auto Category = FirstMappingByName[MappingName].GetDisplayCategory().ToString();
+
+            if (NOT NamesByCategory.Contains(Category))
+            {
+                CategoryOrder.Emplace(Category);
+                NamesByCategory.Emplace(Category);
+            }
+
+            NamesByCategory[Category].Emplace(MappingName);
+        }
+
+        for (const auto& Category : CategoryOrder)
+        { NamesToShow.Append(NamesByCategory[Category]); }
+    }
+
+    for (const auto& MappingName : NamesToShow)
+    {
+        const auto& Mapping = FirstMappingByName[MappingName];
+
+        const auto Row = CreateWidget<UCk_GameSettingsUI_KeyBindingRowWidget>(this, _RowWidgetClass);
+
+        if (ck::Is_NOT_Valid(Row))
+        { continue; }
+
+        Row->OnRebindRequested.AddUniqueDynamic(this, &UCk_GameSettingsUI_KeyBindingPageWidget::HandleRebindRequested);
+
+        if (ck::IsValid(_RowContainer))
+        { _RowContainer->AddChild(Row); }
+
+        _Rows.Emplace(Row);
+
+        Row->InjectMapping(PlayerController, MappingName, Mapping.GetDisplayName());
+
+        OnRowCreated(Row, Mapping.GetDisplayCategory());
+    }
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    Get_CuratedMappingNames_Implementation()
+    -> TArray<FName>
+{
+    return {};
 }
 
 auto
@@ -300,6 +437,47 @@ auto
 auto
     UCk_GameSettingsUI_KeyBindingPageWidget::
     HandleResetAllClicked()
+    -> void
+{
+    if (_ConfirmResetAll)
+    {
+        _ResetAllPending = true;
+        OnResetAllRequested();
+        return;
+    }
+
+    DoResetAllNow();
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    Request_ConfirmResetAll()
+    -> void
+{
+    CK_ENSURE_IF_NOT(_ResetAllPending, TEXT("Request_ConfirmResetAll on [{}] with no pending reset"), this)
+    { return; }
+
+    _ResetAllPending = false;
+    DoResetAllNow();
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    Request_CancelResetAll()
+    -> void
+{
+    const auto ResetIsPending = _ResetAllPending;
+    CK_ENSURE_IF_NOT(ResetIsPending, TEXT("Request_CancelResetAll on [{}] with no pending reset"), this)
+    {}
+    if (NOT ResetIsPending)
+    { return; }
+
+    _ResetAllPending = false;
+}
+
+auto
+    UCk_GameSettingsUI_KeyBindingPageWidget::
+    DoResetAllNow()
     -> void
 {
     const auto PlayerController = GetOwningPlayer();

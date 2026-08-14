@@ -73,6 +73,12 @@ auto
         FName InCategory)
     -> bool
 {
+    // Remembered even when the category does not exist YET: a game selecting its opening tab from
+    // Construct runs before the first gather, and the request must survive to it (and to every
+    // later rebuild) instead of silently degrading to the flat every-category list.
+    _RequestedCategory = InCategory;
+    _CategoryFilterActive = true;
+
     const auto CategoryIndex = _TabCategories.IndexOfByKey(InCategory);
 
     if (CategoryIndex == INDEX_NONE)
@@ -90,6 +96,17 @@ auto
     DoPopulateActiveTab();
 
     return true;
+}
+
+auto
+    UCk_GameSettingsUI_ScreenWidget::
+    Request_ShowAllCategories()
+    -> void
+{
+    _CategoryFilterActive = false;
+    _RequestedCategory = NAME_None;
+
+    DoPopulateActiveTab();
 }
 
 auto
@@ -235,7 +252,41 @@ auto
         _KeysByCategory[Category].Emplace(Key);
     }
 
+    for (const auto& Category : _TabCategories)
+    {
+        const auto CuratedKeys = Get_CuratedKeysForCategory(Category);
+
+        if (CuratedKeys.IsEmpty())
+        { continue; }
+
+        auto& CategoryKeys = _KeysByCategory[Category];
+        CategoryKeys.Reset();
+
+        for (const auto& Key : CuratedKeys)
+        {
+            CK_ENSURE_IF_NOT(UCk_Utils_GameSettings_UE::Get_IsSettingRegistered(this, Key),
+                TEXT("Settings screen [{}] curates key [{}] for category [{}], which is not registered. It was skipped."),
+                this, Key, Category)
+            { continue; }
+
+            CategoryKeys.Emplace(Key);
+        }
+    }
+
+    if (const auto RequestedIndex = _TabCategories.IndexOfByKey(_RequestedCategory);
+        RequestedIndex != INDEX_NONE)
+    { _ActiveTabIndex = RequestedIndex; }
+
     _ActiveTabIndex = FMath::Clamp(_ActiveTabIndex, 0, FMath::Max(0, _TabCategories.Num() - 1));
+}
+
+auto
+    UCk_GameSettingsUI_ScreenWidget::
+    Get_CuratedKeysForCategory_Implementation(
+        FName InCategory)
+    -> TArray<FName>
+{
+    return {};
 }
 
 auto
@@ -279,12 +330,14 @@ auto
     Get_KeysToShow() const
     -> TArray<FName>
 {
-    if (ck::IsValid(_CategoryTabBar) && _TabCategories.IsValidIndex(_ActiveTabIndex))
+    // Filtering follows the SELECTION, not the tab-bar widget: a game driving its own rail through
+    // Request_SetActiveCategory filters identically to one binding _CategoryTabBar.
+    if ((ck::IsValid(_CategoryTabBar) || _CategoryFilterActive) && _TabCategories.IsValidIndex(_ActiveTabIndex))
     {
         return _KeysByCategory[_TabCategories[_ActiveTabIndex]];
     }
 
-    // No tab bar: every category's rows render as one flat list
+    // No tab bar and no explicit selection: every category's rows render as one flat list
     auto AllKeys = TArray<FName>{};
 
     for (const auto& Category : _TabCategories)
@@ -363,6 +416,12 @@ auto
 
         if (ck::Is_NOT_Valid(Row))
         { continue; }
+
+        // A pooled row keeps the slot it was created in, which is an ORDER from some earlier
+        // populate. Shift it to where this populate wants it, or the page renders in whatever
+        // sequence the pool happened to fill.
+        if (ck::IsValid(_RowContainer))
+        { _RowContainer->ShiftChild(_ActiveRowCount, Row); }
 
         Row->InjectSetting(this, Key);
         Row->SetVisibility(ESlateVisibility::Visible);
