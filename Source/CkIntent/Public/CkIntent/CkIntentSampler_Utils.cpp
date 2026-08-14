@@ -77,6 +77,15 @@ auto
 
 auto
     UCk_Utils_IntentSampler_UE::
+    Get_HeldKeys(
+        const FCk_Handle_IntentSampler& InSampler)
+    -> TArray<FKey>
+{
+    return InSampler.Get<ck::FFragment_IntentSampler_Current>().Get_HeldKeys();
+}
+
+auto
+    UCk_Utils_IntentSampler_UE::
     Get_LatestFrame(
         const FCk_Handle_IntentSampler& InSampler)
     -> FCk_Intent_FrameRecord
