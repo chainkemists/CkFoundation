@@ -20,6 +20,37 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IntentSampler_Sample);
 
 namespace ck_intent_sampler_processor
 {
+    /**
+     * The index of the first press that a row starting at `InFrom` could not represent — the second press of a key
+     * already pressed in that stretch — or `INDEX_NONE` when there is none.
+     *
+     * That index is exactly where the batch has to be cut: everything before it fits in one row's press set, and
+     * the duplicate opens the next one.
+     */
+    auto
+        Get_IndexOfCollapsingPress(
+            const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
+            int32 InFrom)
+        -> int32
+    {
+        auto PressedSoFar = TArray<FKey, TInlineAllocator<8>>{};
+
+        for (auto Index = InFrom; Index < InClaimed.Num(); ++Index)
+        {
+            const auto& Event = InClaimed[Index].Get_Event();
+
+            if (Event.Get_EventType() != ECk_InputSource_EventType::Pressed)
+            { continue; }
+
+            if (PressedSoFar.Contains(Event.Get_Key()))
+            { return Index; }
+
+            PressedSoFar.Emplace(Event.Get_Key());
+        }
+
+        return INDEX_NONE;
+    }
+
     // A key can produce SEVERAL buttons — two mappings in different categories legitimately share one — so every
     // holder is appended rather than an arbitrary first. A source with no button map appends nothing at all.
     auto
@@ -158,18 +189,56 @@ namespace ck
         const auto Claimed = InPending._Pending;
         InPending._Pending.Reset();
 
+        // ONE PRESS EDGE PER PHYSICAL PRESS EVENT. The row's `_Pressed` is a set of button identities, so a batch
+        // holding two presses of one key can only say that the key went down — not that it went down twice — and a
+        // consumer would answer at most one of them. A mouse wheel makes that the ordinary case rather than an
+        // exotic one: several notches routinely land in a single claim.
+        //
+        // So the batch is CUT where the second press of a key falls, and each segment writes its own row with its
+        // own frame index. Several rows per tick is a shape the catch-up replay already produces, so every
+        // downstream contract holds unchanged. A batch with no repeated press — the overwhelming common case —
+        // detects that in one pass over the claim and takes the single-row path with nothing copied.
+        if (ck_intent_sampler_processor::Get_IndexOfCollapsingPress(Claimed, 0) == INDEX_NONE)
+        {
+            DoSampleSegment(InSampler, InParams, InCurrent, Claimed);
+            return;
+        }
+
+        auto SegmentStart = 0;
+
+        while (SegmentStart < Claimed.Num())
+        {
+            const auto CutAt = ck_intent_sampler_processor::Get_IndexOfCollapsingPress(Claimed, SegmentStart);
+            const auto SegmentEnd = CutAt != INDEX_NONE ? CutAt : Claimed.Num();
+
+            DoSampleSegment(InSampler, InParams, InCurrent,
+                TArray<FCk_InputLayer_RoutedEvent>{Claimed.GetData() + SegmentStart, SegmentEnd - SegmentStart});
+
+            SegmentStart = SegmentEnd;
+        }
+    }
+
+    auto
+        FProcessor_IntentSampler_Sample::
+        DoSampleSegment(
+            HandleType InSampler,
+            const FFragment_IntentSampler_Params& InParams,
+            FFragment_IntentSampler_Current& InCurrent,
+            const TArray<FCk_InputLayer_RoutedEvent>& InClaimed)
+        -> void
+    {
         auto Row = FCk_Intent_FrameRecord{InCurrent._NextFrameIndex};
         ++InCurrent._NextFrameIndex;
 
-        Row.Set_RoutedEvents(Claimed);
+        Row.Set_RoutedEvents(InClaimed);
 
-        DoRecordButtons(InSampler, InCurrent, Claimed, Row);
-        DoRecordAxes(InSampler, InParams, InCurrent, Claimed, Row);
+        DoRecordButtons(InSampler, InCurrent, InClaimed, Row);
+        DoRecordAxes(InSampler, InParams, InCurrent, InClaimed, Row);
 
         // Both derivations read what the two passes above just wrote into the row — the octant from its axis
         // pair, SOCD from its held set — so they run after them and never re-read the fragments themselves.
         DoRecordOctant(InParams, InCurrent, Row);
-        DoRecordSocd(InSampler, InParams, InCurrent, Claimed, Row);
+        DoRecordSocd(InSampler, InParams, InCurrent, InClaimed, Row);
 
         DoAppendRow(InParams, InCurrent, Row);
     }
