@@ -19,6 +19,64 @@ namespace ck_game_settings_ui_row_widgets
     constexpr auto FloatOptionMatchTolerance = 1.e-4f;
     constexpr auto SliderFallbackMin = 0.0f;
     constexpr auto SliderFallbackMax = 1.0f;
+    constexpr auto DefaultFloatPrecision = 2;
+    constexpr auto AutoStepFractionOfRange = 0.01f;
+
+    auto
+        Get_StepSize(
+            const FCk_GameSettings_SettingDefinition& InDefinition,
+            float InMin,
+            float InMax)
+        -> float
+    {
+        if (const auto AuthoredStep = InDefinition.Get_OptionalStepSize();
+            AuthoredStep > 0.0f)
+        { return AuthoredStep; }
+
+        return InDefinition.Get_ValueType() == ECk_GameSettings_ValueType::Int32
+            ? 1.0f
+            : (InMax - InMin) * AutoStepFractionOfRange;
+    }
+
+    auto
+        Get_SnappedValue(
+            float InValue,
+            const FCk_GameSettings_SettingDefinition& InDefinition)
+        -> float
+    {
+        auto MinValue = SliderFallbackMin;
+        auto MaxValue = SliderFallbackMax;
+        LexTryParseString(MinValue, *InDefinition.Get_MinValue());
+        LexTryParseString(MaxValue, *InDefinition.Get_MaxValue());
+
+        const auto StepSize = Get_StepSize(InDefinition, MinValue, MaxValue);
+
+        if (StepSize <= 0.0f)
+        { return InValue; }
+
+        return MinValue + FMath::RoundToFloat((InValue - MinValue) / StepSize) * StepSize;
+    }
+
+    /** Fixed-precision then trailing-zeros trimmed: 90.00 -> "90", 1.50 -> "1.5", 0.30000001 -> "0.3". */
+    auto
+        Format_Readout(
+            float InValue,
+            int32 InPrecision)
+        -> FString
+    {
+        auto Formatted = FString::Printf(TEXT("%.*f"), FMath::Max(0, InPrecision), InValue);
+
+        if (NOT Formatted.Contains(TEXT(".")))
+        { return Formatted; }
+
+        while (Formatted.EndsWith(TEXT("0")))
+        { Formatted.LeftChopInline(1); }
+
+        if (Formatted.EndsWith(TEXT(".")))
+        { Formatted.LeftChopInline(1); }
+
+        return Formatted;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -371,15 +429,13 @@ auto
 
     _ValueSlider->SetMinValue(MinValue);
     _ValueSlider->SetMaxValue(MaxValue);
-    _ValueSlider->SetStepSize(InDefinition.Get_ValueType() == ECk_GameSettings_ValueType::Int32
-        ? 1.0f
-        : (MaxValue - MinValue) * 0.01f);
+    _ValueSlider->SetStepSize(Get_StepSize(InDefinition, MinValue, MaxValue));
 
     auto CurrentValue = MinValue;
     LexTryParseString(CurrentValue, *InValueString);
 
     _ValueSlider->SetValue(CurrentValue);
-    DoUpdateReadout(CurrentValue, InDefinition.Get_ValueType());
+    DoUpdateReadout(CurrentValue, InDefinition);
 }
 
 auto
@@ -401,7 +457,7 @@ auto
     if (NOT UCk_Utils_GameSettings_UE::Get_SettingDefinition(WorldContext, Get_Key(), Definition))
     { return; }
 
-    DoUpdateReadout(InNewValue, Definition.Get_ValueType());
+    DoUpdateReadout(InNewValue, Definition);
 
     if (NOT _DragInProgress)
     { DoCommitValue(InNewValue); }
@@ -430,15 +486,23 @@ auto
     UCk_GameSettingsUI_RowWidget_Slider::
     DoUpdateReadout(
         float InValue,
-        ECk_GameSettings_ValueType InValueType)
+        const FCk_GameSettings_SettingDefinition& InDefinition)
     -> void
 {
+    using namespace ck_game_settings_ui_row_widgets;
+
     if (ck::Is_NOT_Valid(_ValueText))
     { return; }
 
-    _ValueText->SetText(InValueType == ECk_GameSettings_ValueType::Int32
-        ? FText::FromString(FString::FromInt(FMath::RoundToInt32(InValue)))
-        : FText::FromString(FString::Printf(TEXT("%.2f"), InValue)));
+    const auto AuthoredPrecision = InDefinition.Get_OptionalDisplayPrecision();
+    const auto Precision = AuthoredPrecision >= 0
+        ? AuthoredPrecision
+        : (InDefinition.Get_ValueType() == ECk_GameSettings_ValueType::Int32 ? 0 : DefaultFloatPrecision);
+
+    const auto DisplayScale = InDefinition.Get_OptionalDisplayScale();
+    const auto DisplayValue = Get_SnappedValue(InValue, InDefinition) * (DisplayScale > 0.0f ? DisplayScale : 1.0f);
+
+    _ValueText->SetText(FText::FromString(Format_Readout(DisplayValue, Precision)));
 }
 
 auto
@@ -457,15 +521,17 @@ auto
     if (NOT UCk_Utils_GameSettings_UE::Get_SettingDefinition(WorldContext, Get_Key(), Definition))
     { return; }
 
+    const auto SnappedValue = ck_game_settings_ui_row_widgets::Get_SnappedValue(InValue, Definition);
+
     if (Definition.Get_ValueType() == ECk_GameSettings_ValueType::Int32)
     {
         UCk_Utils_GameSettings_UE::Request_SetSettingValue_Int32(WorldContext,
-            FCk_Request_GameSettings_SetValue_Int32{Get_Key(), FMath::RoundToInt32(InValue)});
+            FCk_Request_GameSettings_SetValue_Int32{Get_Key(), FMath::RoundToInt32(SnappedValue)});
         return;
     }
 
     UCk_Utils_GameSettings_UE::Request_SetSettingValue_Float(WorldContext,
-        FCk_Request_GameSettings_SetValue_Float{Get_Key(), InValue});
+        FCk_Request_GameSettings_SetValue_Float{Get_Key(), SnappedValue});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -12,10 +12,13 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCommonButtonBase;
+class UCommonInputSubsystem;
 class UImage;
 class UPanelWidget;
 class UTextBlock;
 class UWidget;
+
+enum class ECommonInputType : uint8;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,6 +51,11 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GameSettingsUI_ConflictResolution);
  * one, key name otherwise) + per-row reset. The WBP owns the tree — bind _NameText, _KeyButton
  * (with _KeyIconImage/_KeyText inside it), and _ResetButton. Refreshes live on remap via the
  * KeyBinding subsystem's per-mapping listener.
+ *
+ * One row represents a MAPPING NAME, not a slot: the displayed key follows the player's current
+ * input method (the gamepad binding while on gamepad, the keyboard/mouse one otherwise — the
+ * interact-prompt treatment), re-resolving on input-method change. Rebinds target the displayed
+ * binding's slot; the per-row reset restores every slot of the mapping.
  */
 UCLASS(BlueprintType, Blueprintable)
 class CKGAMESETTINGS_API UCk_GameSettingsUI_KeyBindingRowWidget : public UCk_UserWidget_UE
@@ -65,7 +73,6 @@ public:
     InjectMapping(
         APlayerController* InPlayerController,
         FName InMappingName,
-        EPlayerMappableKeySlot InSlot,
         const FText& InDisplayName);
 
 public:
@@ -87,7 +94,12 @@ private:
         FKey InOldKey,
         FKey InNewKey);
 
+    void
+    HandleInputMethodChanged(
+        ECommonInputType InNewInputType);
+
 private:
+    auto DoResolveDisplayedSlot() -> void;
     auto DoRefreshKeyDisplay() -> void;
 
 private:
@@ -121,10 +133,14 @@ private:
     UPROPERTY(Transient)
     FName _MappingName;
 
-    EPlayerMappableKeySlot _Slot = EPlayerMappableKeySlot::First;
+    /** The slot the row currently DISPLAYS — re-resolved per input method. */
+    EPlayerMappableKeySlot _ResolvedSlot = EPlayerMappableKeySlot::First;
 
     FCk_Handle_KeybindListener _ChangeListener;
     bool _ListenerBound = false;
+
+    TWeakObjectPtr<UCommonInputSubsystem> _InputSubsystem;
+    FDelegateHandle _InputMethodChangedHandle;
 
 public:
     CK_PROPERTY_GET(_MappingName);
@@ -172,6 +188,35 @@ public:
     Request_ResolveConflict(
         ECk_GameSettingsUI_ConflictResolution InResolution);
 
+    /** Performs the page-wide reset a pending OnResetAllRequested asked about.
+     *  Rejected when no reset is pending. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|GameSettings|KeyBinding",
+              DisplayName = "[Ck][GameSettings] Request Confirm Reset All")
+    void
+    Request_ConfirmResetAll();
+
+    /** Abandons the pending OnResetAllRequested. Rejected when no reset is pending. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|GameSettings|KeyBinding",
+              DisplayName = "[Ck][GameSettings] Request Cancel Reset All")
+    void
+    Request_CancelResetAll();
+
+    /**
+     * Which mapping names this page shows, in this order. Returning empty (the default) keeps the
+     * enumerate-everything-in-category-order behavior.
+     *
+     * The curation hook, mirroring the settings screen's: the key profile aggregates EVERY
+     * registered mappable mapping — including internal ones a game keeps mappable only so prompt
+     * glyphs resolve — and only the game knows which of those a player should see. Names the
+     * profile does not know are reported and skipped.
+     */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|GameSettings|KeyBinding")
+    TArray<FName>
+    Get_CuratedMappingNames();
+
 protected:
     /** Fired for every row after it is injected, in category order — insert category headers here. */
     UFUNCTION(BlueprintImplementableEvent,
@@ -189,6 +234,13 @@ protected:
     void
     OnConflictDetected(
         const FText& InDescription);
+
+    /** Fired instead of resetting when _ConfirmResetAll is set — present your own confirmation
+     *  and answer with Request_ConfirmResetAll / Request_CancelResetAll. */
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|GameSettings|KeyBinding")
+    void
+    OnResetAllRequested();
 
 protected:
     auto NativeConstruct() -> void override;
@@ -269,12 +321,24 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_GameSettingsUI_KeyBindingRowWidget> _RowWidgetClass = UCk_GameSettingsUI_KeyBindingRowWidget::StaticClass();
 
+    /** Set: Reset All fires OnResetAllRequested (the game presents its confirmation) instead of
+     *  resetting immediately. Reset-all confirmation presentation is the game's choice, like
+     *  conflict presentation. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              Category = "Ck|UI|GameSettings|KeyBinding",
+              meta = (AllowPrivateAccess = true))
+    bool _ConfirmResetAll = false;
+
+private:
+    auto DoResetAllNow() -> void;
+
 private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_GameSettingsUI_KeyBindingRowWidget>> _Rows;
 
     bool _CaptureActive = false;
     bool _ConflictPending = false;
+    bool _ResetAllPending = false;
     FName _PendingMappingName;
     EPlayerMappableKeySlot _PendingSlot = EPlayerMappableKeySlot::First;
     FKey _PendingKey;

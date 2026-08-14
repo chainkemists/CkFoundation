@@ -13,6 +13,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_game_settings_audio_pack
+{
+    constexpr auto VolumePercentScale = 100.0f;
+    constexpr auto VolumePercentStep = 0.01f;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_GameSettings_AudioCategoryHandler_UE::
     Initialize_Handler(
@@ -68,7 +76,10 @@ auto
     auto* SoundClass = _Category.Get_SoundClass().LoadSynchronous();
 
     const auto AssetsAreValid = ck::IsValid(AudioMix) && ck::IsValid(SoundClass);
-    CK_ENSURE_IF_NOT(AssetsAreValid, TEXT("Audio pack category [{}] has an unset or unloadable SoundMix/SoundClass, volume not applied"), _Category.Get_SettingKey())
+    CK_ENSURE_IF_NOT(AssetsAreValid, TEXT("Audio pack category [{}] cannot apply its volume — SoundMix [{}] resolved [{}], SoundClass [{}] resolved [{}]"),
+        _Category.Get_SettingKey(),
+        _AudioMix.ToString(), ck::IsValid(AudioMix),
+        _Category.Get_SoundClass().ToString(), ck::IsValid(SoundClass))
     {}
     if (NOT AssetsAreValid)
     { return; }
@@ -121,6 +132,8 @@ namespace ck::game_settings
             TArray<TObjectPtr<UObject>>& InOutOwnedObjects)
         -> int32
     {
+        using namespace ck_game_settings_audio_pack;
+
         auto RegisteredCount = int32{0};
 
         for (const auto& Category : InCategories)
@@ -140,6 +153,13 @@ namespace ck::game_settings
             Definition.Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::Handler);
             Definition.Set_MinValue(TEXT("0"));
             Definition.Set_MaxValue(TEXT("1"));
+
+            // A volume is a 0..1 multiplier everywhere except in front of a player, who reads percent.
+            Definition.Set_OptionalDisplayScale(VolumePercentScale);
+            Definition.Set_OptionalStepSize(VolumePercentStep);
+
+            if (NOT Category.Get_DisplayName().IsEmpty())
+            { Definition.Set_DisplayName(Category.Get_DisplayName()); }
 
             auto CategoryTags = FGameplayTagContainer{};
             if (Category.Get_CategoryTag().IsValid())

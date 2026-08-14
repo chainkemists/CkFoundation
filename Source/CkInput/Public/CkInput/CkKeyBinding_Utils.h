@@ -11,6 +11,8 @@
 
 #include "CkKeyBinding_Utils.generated.h"
 
+class UInputMappingContext;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 /** Core info extracted from a UPlayerMappableKeySettings on an Input Action. */
@@ -282,6 +284,33 @@ public:
         EPlayerMappableKeySlot InSlot,
         FKey InNewKey,
         FGameplayTagContainer& OutFailureReason);
+
+    // --- Authoring (runtime-built contexts) ---
+
+    /**
+     * Marks ONE (action, key) mapping of a runtime-built context player-mappable under its own
+     * name — the per-mapping override Enhanced Input uses to expose multiple rebind rows for a
+     * single Input Action (each WASD direction of one Axis2d move action). Call BEFORE the
+     * context is applied; registration reads the settings at apply time.
+     *
+     * Editor-authored contexts set this in the details panel; that authoring surface is
+     * friend-gated in C++, so this is the code path for contexts built at runtime.
+     *
+     * @param InContext        The context that owns the mapping (typically still being built)
+     * @param InAction         The mapped action
+     * @param InKey            The mapped key identifying WHICH of the action's mappings
+     * @param InMappingName    Unique mapping name the rebind system addresses (e.g. "IA_Move_Forward")
+     * @param InDisplayName    Player-facing name for rebind rows
+     * @return                 True if the mapping was found and marked
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Make Mapping Player Mappable")
+    static bool
+    MakeMappingPlayerMappable(
+        UInputMappingContext* InContext,
+        const UInputAction* InAction,
+        FKey InKey,
+        FName InMappingName,
+        FText InDisplayName);
 
     // --- Reset ---
 

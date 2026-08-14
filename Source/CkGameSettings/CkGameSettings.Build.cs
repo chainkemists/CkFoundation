@@ -26,6 +26,7 @@ public class CkGameSettings : CkModuleRules
             "Slate",
             "SlateCore",
             "CommonUI",
+            "CommonInput",
             "EnhancedInput",
             "InputCore",
             "CkEcs",

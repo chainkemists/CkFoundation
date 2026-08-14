@@ -453,6 +453,32 @@ namespace ck::game_settings
     }
 
     auto
+        Get_VideoKeyDisplayName(
+            FName InKey)
+        -> FText
+    {
+        static const auto DisplayNames = TMap<FName, FText>
+        {
+            {Key_Video_WindowMode,       NSLOCTEXT("CkGameSettings", "Video_WindowMode",   "Window Mode")},
+            {Key_Video_Resolution,       NSLOCTEXT("CkGameSettings", "Video_Resolution",   "Resolution")},
+            {Key_Video_VSync,            NSLOCTEXT("CkGameSettings", "Video_VSync",        "V-Sync")},
+            {Key_Video_FpsCap,           NSLOCTEXT("CkGameSettings", "Video_FpsCap",       "Frame Rate Limit")},
+            {Key_Video_QualityPreset,    NSLOCTEXT("CkGameSettings", "Video_QualityPreset","Quality Preset")},
+            {Key_Video_Sg_ViewDistance,  NSLOCTEXT("CkGameSettings", "Video_ViewDistance", "View Distance")},
+            {Key_Video_Sg_AntiAliasing,  NSLOCTEXT("CkGameSettings", "Video_AntiAliasing", "Anti-Aliasing")},
+            {Key_Video_Sg_Shadow,        NSLOCTEXT("CkGameSettings", "Video_Shadow",       "Shadows")},
+            {Key_Video_Sg_PostProcess,   NSLOCTEXT("CkGameSettings", "Video_PostProcess",  "Post Processing")},
+            {Key_Video_Sg_Texture,       NSLOCTEXT("CkGameSettings", "Video_Texture",      "Textures")},
+            {Key_Video_Sg_Effects,       NSLOCTEXT("CkGameSettings", "Video_Effects",      "Effects")},
+            {Key_Video_Sg_Foliage,       NSLOCTEXT("CkGameSettings", "Video_Foliage",      "Foliage")},
+        };
+
+        const auto* Found = DisplayNames.Find(InKey);
+
+        return ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}) ? *Found : FText::FromName(InKey);
+    }
+
+    auto
         TryParse_Resolution(
             const FString& InResolution,
             FIntPoint& OutResolution)
@@ -514,6 +540,7 @@ namespace ck::game_settings
             auto Definition = FCk_GameSettings_SettingDefinition{InKey, InValueType, InDefaultValue};
             Definition.Set_PersistencePolicy(ECk_GameSettings_PersistencePolicy::External);
             Definition.Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::Handler);
+            Definition.Set_DisplayName(ck::game_settings::Get_VideoKeyDisplayName(InKey));
 
             if (const auto& CategoryTag = UCk_Utils_GameSettings_Settings_UE::Get_VideoPackCategoryTag();
                 CategoryTag.IsValid())
@@ -522,17 +549,52 @@ namespace ck::game_settings
             return Definition;
         };
 
+        // A game that wants to own a video key's PRESENTATION (label, options, category, ordering)
+        // registers it before calling the pack; the pack then contributes only the
+        // UGameUserSettings bridge. Such a definition must still carry the pack's contract —
+        // External persistence with a Handler binding — or its accessors would fight the store.
+        const auto Get_PreRegisteredKeyIsUsable = [&](FName InKey)
+        {
+            auto Definition = FCk_GameSettings_SettingDefinition{};
+
+            if (NOT InSubsystem.Get_SettingDefinition(InKey, Definition))
+            { return false; }
+
+            const auto ContractHolds =
+                Definition.Get_PersistencePolicy() == ECk_GameSettings_PersistencePolicy::External &&
+                Definition.Get_ApplyBindingType() == ECk_GameSettings_ApplyBindingType::Handler;
+
+            CK_ENSURE_IF_NOT(ContractHolds, TEXT("Video pack key [{}] was pre-registered with persistence [{}] and apply binding [{}], the pack requires External + Handler. Its accessors were NOT bound."),
+                InKey, Definition.Get_PersistencePolicy(), Definition.Get_ApplyBindingType())
+            {}
+
+            return ContractHolds;
+        };
+
+        // True when InKey is ready for its accessors: newly registered from the pack's own
+        // definition, or already owned by the game and honoring the pack's contract.
+        const auto AcquireKey = [&](const FCk_GameSettings_SettingDefinition& InDefinition)
+        {
+            const auto Key = InDefinition.Get_Key();
+
+            if (InSubsystem.Get_IsSettingRegistered(Key))
+            { return Get_PreRegisteredKeyIsUsable(Key); }
+
+            if (NOT InSubsystem.Request_RegisterSetting(InDefinition))
+            { return false; }
+
+            ++RegisteredCount;
+            return true;
+        };
+
         const auto RegisterInt32 = [&](FName InKey, const FString& InDefault, const FString& InMin, const FString& InMax,
             FName InGetterName, FName InSetterName)
         {
-            if (InSubsystem.Get_IsSettingRegistered(InKey))
-            { return; }
-
             auto Definition = MakeExternalDefinition(InKey, ECk_GameSettings_ValueType::Int32, InDefault);
             Definition.Set_MinValue(InMin);
             Definition.Set_MaxValue(InMax);
 
-            if (NOT InSubsystem.Request_RegisterSetting(Definition))
+            if (NOT AcquireKey(Definition))
             { return; }
 
             auto Getter = FCk_Delegate_GameSettings_ExternalGetter_Int32{};
@@ -540,48 +602,37 @@ namespace ck::game_settings
             auto Setter = FCk_Delegate_GameSettings_ApplyHandler_Int32{};
             Setter.BindUFunction(Handlers, InSetterName);
             InSubsystem.Request_RegisterExternalAccessors_Int32(InKey, Getter, Setter);
-            ++RegisteredCount;
         };
 
-        if (NOT InSubsystem.Get_IsSettingRegistered(Key_Video_Resolution))
+        if (AcquireKey(MakeExternalDefinition(Key_Video_Resolution, ECk_GameSettings_ValueType::String, TEXT("1920x1080"))))
         {
-            if (InSubsystem.Request_RegisterSetting(MakeExternalDefinition(Key_Video_Resolution, ECk_GameSettings_ValueType::String, TEXT("1920x1080"))))
-            {
-                auto Getter = FCk_Delegate_GameSettings_ExternalGetter_String{};
-                Getter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Get_Resolution);
-                auto Setter = FCk_Delegate_GameSettings_ApplyHandler_String{};
-                Setter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Set_Resolution);
-                InSubsystem.Request_RegisterExternalAccessors_String(Key_Video_Resolution, Getter, Setter);
-                ++RegisteredCount;
-            }
+            auto Getter = FCk_Delegate_GameSettings_ExternalGetter_String{};
+            Getter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Get_Resolution);
+            auto Setter = FCk_Delegate_GameSettings_ApplyHandler_String{};
+            Setter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Set_Resolution);
+            InSubsystem.Request_RegisterExternalAccessors_String(Key_Video_Resolution, Getter, Setter);
         }
 
-        if (NOT InSubsystem.Get_IsSettingRegistered(Key_Video_VSync))
+        if (AcquireKey(MakeExternalDefinition(Key_Video_VSync, ECk_GameSettings_ValueType::Bool, TEXT("false"))))
         {
-            if (InSubsystem.Request_RegisterSetting(MakeExternalDefinition(Key_Video_VSync, ECk_GameSettings_ValueType::Bool, TEXT("false"))))
-            {
-                auto Getter = FCk_Delegate_GameSettings_ExternalGetter_Bool{};
-                Getter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Get_VSync);
-                auto Setter = FCk_Delegate_GameSettings_ApplyHandler_Bool{};
-                Setter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Set_VSync);
-                InSubsystem.Request_RegisterExternalAccessors_Bool(Key_Video_VSync, Getter, Setter);
-                ++RegisteredCount;
-            }
+            auto Getter = FCk_Delegate_GameSettings_ExternalGetter_Bool{};
+            Getter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Get_VSync);
+            auto Setter = FCk_Delegate_GameSettings_ApplyHandler_Bool{};
+            Setter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Set_VSync);
+            InSubsystem.Request_RegisterExternalAccessors_Bool(Key_Video_VSync, Getter, Setter);
         }
 
-        if (NOT InSubsystem.Get_IsSettingRegistered(Key_Video_FpsCap))
         {
             auto Definition = MakeExternalDefinition(Key_Video_FpsCap, ECk_GameSettings_ValueType::Float, TEXT("0"));
             Definition.Set_MinValue(TEXT("0"));
 
-            if (InSubsystem.Request_RegisterSetting(Definition))
+            if (AcquireKey(Definition))
             {
                 auto Getter = FCk_Delegate_GameSettings_ExternalGetter_Float{};
                 Getter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Get_FpsCap);
                 auto Setter = FCk_Delegate_GameSettings_ApplyHandler_Float{};
                 Setter.BindDynamic(Handlers, &UCk_GameSettings_VideoPackHandlers_UE::Set_FpsCap);
                 InSubsystem.Request_RegisterExternalAccessors_Float(Key_Video_FpsCap, Getter, Setter);
-                ++RegisteredCount;
             }
         }
 
