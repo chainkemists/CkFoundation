@@ -392,13 +392,14 @@ auto
 		return;
 	}
 
-	auto& Registry = const_cast<FCk_Handle_Goap_WorldState&>(WS)
-		.template Get<FFragment_Goap_WorldState_KeyRegistry>().Get_MutableRegistry();
-
+	// Residency-classified, not raw FindOrRegister: the planner's resolved WS may be a parented
+	// sub-WS, and a goal key owned by an ancestor must become an import alias, not a local shadow.
+	auto MutableWS = WS;
 	Goal._Goal.Reserve(Authored.Num());
 	for (const auto& Cond : Authored)
 	{
-		const auto Key = Registry.FindOrRegister(Cond.Get_Key());
+		const auto Key = UCk_Utils_Goap_WorldState_UE::Register_Key_WithResidencyClassification(
+			MutableWS, Cond.Get_Key());
 		if (Key == goap::InvalidGoapKey)
 		{
 			Goal._InvalidGoal.Add(Cond);
