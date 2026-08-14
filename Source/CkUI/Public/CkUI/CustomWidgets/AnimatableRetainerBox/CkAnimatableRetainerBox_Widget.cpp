@@ -1,6 +1,6 @@
 ﻿#include "CkAnimatableRetainerBox_Widget.h"
 
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include "Slate/SRetainerWidget.h"
 

@@ -4,7 +4,7 @@
 
 #include "CkGameSettings/CkGameSettings_Common.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include <CommonButtonBase.h>
 #include <Types/SlateEnums.h>

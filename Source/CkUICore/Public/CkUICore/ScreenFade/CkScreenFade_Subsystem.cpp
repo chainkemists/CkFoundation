@@ -5,7 +5,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkUI/ScreenFade/CkScreenFade_Slate.h"
+#include "CkUICore/ScreenFade/CkScreenFade_Slate.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

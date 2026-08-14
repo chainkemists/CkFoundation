@@ -4,7 +4,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

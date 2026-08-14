@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkUI/CustomWidgets/WidgetStack/CkStack_Widget.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <GameplayTagContainer.h>
 

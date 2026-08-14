@@ -1,9 +1,9 @@
 using System;
 using UnrealBuildTool;
 
-public class CkUI : CkModuleRules
+public class CkUICore : CkModuleRules
 {
-    public CkUI(ReadOnlyTargetRules Target) : base(Target)
+    public CkUICore(ReadOnlyTargetRules Target) : base(Target)
     {
         PublicIncludePaths.AddRange(
             new string[] {
@@ -19,40 +19,28 @@ public class CkUI : CkModuleRules
             new string[]
             {
                 "Core",
+                "CoreUObject",
+                "Engine",
+                // Public headers expose these directly: CkUI_Types.h -> InputCoreTypes/GameplayTagContainer,
+                // CkUI_Utils.h -> Blueprint/UserWidget.h + CommonActivatableWidget + CommonInputTypeEnum.
+                "InputCore",
+                "GameplayTags",
+                "UMG",
                 "CommonUI",
                 "CommonInput",
-                // Public: CkInputAction_Widget.h exposes EPlayerMappableKeySlot in its reflected surface.
-                "EnhancedInput",
+                "Slate",
+                "SlateCore",
                 "CkCore",
                 "CkEcs",
-                "CkUICore",
-                "CkGraphics",
-                "CkInput",
             }
             );
 
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "CoreUObject",
-                "Engine",
-                "InputCore",
-                "Slate",
-                "SlateCore",
-                "GameplayTags",
-                "DeveloperSettings",
-                "UMG",
-                "CommonUI",
-                "CommonInput",
-                "Paper2D",
-                "RenderCore",
-
                 "CkThirdParty",
-                "CkCore",
-                "CkEcs",
-                "CkUICore",
                 "CkLog",
-                "CkSettings",}
+            }
             );
 
         if (Target.bBuildEditor)

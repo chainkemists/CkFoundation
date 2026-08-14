@@ -10,7 +10,7 @@
 #include "CkResourceLoader/CkResourceLoader_Processor.h"
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
 
-#include "CkUI/CkUI_Utils.h"
+#include "CkUICore/CkUI_Utils.h"
 
 #include <EditorUtilityWidget.h>
 #include <LevelEditor.h>

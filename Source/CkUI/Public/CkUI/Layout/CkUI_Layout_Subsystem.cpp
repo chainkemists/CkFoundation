@@ -5,7 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
-#include "CkUI/CkUI_Utils.h"
+#include "CkUICore/CkUI_Utils.h"
 #include "CkUI/Extension/CkUI_Extension_Subsystem.h"
 #include "CkUI/Layout/CkUI_PrimaryGameLayout.h"
 #include "CkUI/Layout/CkUI_LayoutConfigAsset.h"

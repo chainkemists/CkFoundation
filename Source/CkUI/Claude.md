@@ -1,34 +1,33 @@
 # CkUI
 
-**Purpose:** UI framework — layer stack and primary game layout, HUD, extension points, the widget
-base classes, per-player UI policy (input suspension, cursor lock, navigation config), and screen fade.
+**Purpose:** UI *framework* — layer stack and primary game layout, HUD, and extension points.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkGameSession`, `CkGraphics`, `CkInput`, `CkLog`, `CkSettings`, `CkThirdParty`.
-**Used by:** `CkCompass`, `CkCueEditor`, `CkDynamicEditor`, `CkEditorToolbar`, `CkMinimap`, `CkUIDebugger`,
-`CkUIEditor`, `CkWatermark`, `CkWorldSpaceWidget`.
+**Depends on:** `CkCore`, `CkEcs`, `CkGraphics`, `CkInput`, `CkLog`, `CkSettings`, `CkThirdParty`, `CkUICore`.
+**Used by:** `CkCueEditor`, `CkDynamicEditor`, `CkUIDebugger`, `CkUIEditor`, BusterBlock.
+
+The widget base classes, shared UI types, per-player UI policy (cursor lock, navigation config, input
+mode, named slots), input suspension and screen fade moved out to **`CkUICore`**, so that deriving a
+widget no longer drags in this layout framework. `CkUICore`, `CkUI` and `CkWidgets` are **siblings on
+the base, not a stack** — a custom widget must never pull in the layer stack.
+
+This module kept the name because it kept the asset-facing half: content records class paths such as
+`/Script/CkUI.Ck_UI_LayerStack_ContextProvider_UE`, while the base layer is overwhelmingly derived-from
+and therefore free to re-point.
 
 The world-space widget feature moved out to `CkWorldSpaceWidget` — it was the only ECS feature quartet
 here, and the only reason this module depended on `CkEcsExt`.
+
+Extension points live here rather than in their own module on purpose: `UCk_UI_Layout_Subsystem_UE`
+*owns* `TArray<FCk_UI_ExtensionHandle>` and drives registration. Layout does not *use* the extension
+system, it *drives* it — one feature, no seam.
 
 ---
 
 ## Key API
 
 - `ECk_LinePlaneIntersectionStatus` — result of 3D projection queries.
-- `UCk_Utils_UI_UE::Request_LockCursorToWidget` / `Request_UnlockCursor` — confine the mouse cursor
-  to a `UWidget`'s screen bounds. Slate owns the lock afterwards (rect follows layout changes, auto-
-  releases when the widget leaves the screen), so there is no per-frame upkeep and no teardown unlock.
-  Returns `ECk_UI_CursorLock_Result` — a lock is silently dropped by the platform when the widget's
-  window is not foreground, and that case is reported rather than swallowed.
 - `ACk_HUD_UE::Refresh_Context` — explicit rebuild-completion refresh for the primary layout and active Game-layer
   HUD root. It bypasses first-push `OnlyIfMissing` only at that owned root; unrelated menu layers keep their context.
-- `UCk_Utils_UI_UE::Request_SetNavigationConfig` / `Get_NavigationConfig` — read/replace Slate's navigation policy
-  via `FCk_UI_NavigationConfig` (mirrors the tunable public fields of `FNavigationConfig`). Needed by any game that
-  binds a navigation key as a gameplay/UI input: `FNavigationConfig::GetNavigationDirectionFromKey` consumes Tab and
-  the arrow keys before the event can bubble to the game viewport, so a CommonUI action-router binding on Tab never
-  fires while Escape and gamepad face buttons do (gamepad routes through the `FCommonAnalogCursor` *preprocessor*,
-  which runs ahead of navigation). `FSlateApplication` is **process-global** — a caller that narrows navigation for
-  gameplay must restore defaults on EndPlay or the editor's own UI keeps the narrowed config after PIE.
 - `UCk_InputActionWidget_UE` — `UCommonActionWidget` that resolves its glyph through the player's mappable
   key profile instead of the applied Mapping Contexts, so it still shows a binding on a rebinding screen
   where no gameplay context is applied. Adds `_Slot` (secondary bindings), `_UnboundPolicy` (the parent
@@ -48,12 +47,6 @@ registers those elements as extension-point contributions.
 ---
 
 ## Implementation notes
-
-**Cursor lock goes through the platform cursor, not `FSlateUser`.** `FSlateUser::LockCursor` /
-`UnlockCursor` / `GetCursor` all sit below `SLATE_SCOPE` in `SlateUser.h`, which expands to
-`protected` outside the Slate module — that API is Slate-internal. `Request_LockCursorToWidget`
-therefore recomputes the clip rect `FSlateUser::LockCursorInternal` would have produced, including
-the fullscreen display-distortion correction `FSlateUser` applies.
 
 **`UCk_AnimatableRetainerBox::bShowEffectsPreview` must NOT be renamed to match the parent's
 `URetainerBox::bShowEffectsInDesigner`.** The parent's is `WITH_EDITORONLY_DATA` (absent in game

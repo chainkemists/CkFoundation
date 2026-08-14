@@ -99,7 +99,8 @@ Before writing any code, navigate the documentation in this order:
 | data-driven dialogue / bark lines (event-tag-queried, condition-gated, per-emitter cooldowns; returns ALL matches with states) | `CkDialog` |
 | save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
-| CommonUI-based UI layer | `CkUI` |
+| CommonUI-based UI layer (layer stack, layout, HUD, extension points) | `CkUI` |
+| derive a widget, UI types/utils, input suspension, screen fade | `CkUICore` |
 | drive a UMG widget from an entity's world transform (screen projection, clamping, distance scale/fade, occlusion) | `CkWorldSpaceWidget` (+ `UCk_WidgetComponent_UE` for the world-component path) |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
 | Enhanced Input IMC lifecycle | `CkInput` |
@@ -119,7 +120,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **77 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **78 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -179,7 +180,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
-| CkCompass | Camera,Core,Ecs,EcsExt,EntityTag,Log,Poi,PoiDisplayDefinition,Record,UI,VisibleRange |
+| CkCompass | Camera,Core,Ecs,EcsExt,EntityTag,Log,Poi,PoiDisplayDefinition,Record,UICore,VisibleRange (UI→UICore 2026-08-14 — needs only the widget base) |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
 | CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
@@ -204,7 +205,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkMinimap | Camera,Core,Ecs,EcsExt,EntityTag,Label,Log,Poi,PoiDisplayDefinition,Record,UI,VisibleRange |
+| CkMinimap | Camera,Core,Ecs,EcsExt,EntityTag,Label,Log,Poi,PoiDisplayDefinition,Record,UICore,VisibleRange (UI→UICore 2026-08-14) |
 | CkNavigation | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkPathNetwork | AStar,Core,Ecs,EcsExt,Label,Log,Navigation,Record,Settings |
 | CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
@@ -227,7 +228,8 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkTargeting | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
 | CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
-| CkUI | Core,Ecs,GameSession,Graphics,Input,Log,Settings,ThirdParty (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; Input added 2026-08-08 for `UCk_InputActionWidget_UE` — T4→T2, and CkInput does NOT depend on CkUI) |
+| CkUICore | Core,Ecs,Log,ThirdParty (extracted from CkUI 2026-08-14 — widget bases, UI types, cursor-lock/nav-config utils, input suspension, screen fade; sibling-base for CkUI and CkWidgets, NOT a layer they stack on) |
+| CkUI | Core,Ecs,Graphics,Input,Log,Settings,ThirdParty,UICore (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer; Input added 2026-08-08 for `UCk_InputActionWidget_UE` — T4→T2, and CkInput does NOT depend on CkUI; GameSession dropped 2026-08-14 as a dead dep; base layer split out to CkUICore same day) |
 | CkUnrealComponent | Core,Ecs,EcsExt,Jolt,Label,Log,Record,Settings (Jolt added 2026-08-11 for the static-world bake opt-in — same-tier dep) |
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
@@ -235,8 +237,8 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
 | CkVoiceChat | ActorRelay,Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings,Shapes,SpatialQuery (P4 2026-08-04 — feature-complete; engine deps AudioMixer/DeveloperSettings/GameplayTags/NetCore/Voice; never Relationship) |
 | CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
-| CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
-| CkWorldSpaceWidget | Core,Ecs,EcsExt,Log,Settings,ThirdParty,UI (extracted from CkUI 2026-08-08; hosts `UCk_WidgetComponent_UE`) |
+| CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UICore (UI→UICore 2026-08-14) |
+| CkWorldSpaceWidget | Core,Ecs,EcsExt,Log,Settings,ThirdParty,UICore (extracted from CkUI 2026-08-08; hosts `UCk_WidgetComponent_UE`; UI→UICore 2026-08-14) |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
 

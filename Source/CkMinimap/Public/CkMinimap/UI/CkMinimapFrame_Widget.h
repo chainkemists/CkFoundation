@@ -6,7 +6,7 @@
 #include "CkMinimap/CkMinimap_Utils.h"
 #include "CkMinimap/CkMinimap_WorldBounds.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkMinimapFrame_Widget.generated.h"
 

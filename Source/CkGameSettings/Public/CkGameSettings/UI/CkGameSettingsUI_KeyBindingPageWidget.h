@@ -5,7 +5,7 @@
 
 #include "CkInput/CkKeyBinding_Utils.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkGameSettingsUI_KeyBindingPageWidget.generated.h"
 

@@ -31,6 +31,7 @@ public class CkGameSettings : CkModuleRules
             "InputCore",
             "CkEcs",
             "CkUI",
+            "CkUICore",
             "CkInput",
         });
     }

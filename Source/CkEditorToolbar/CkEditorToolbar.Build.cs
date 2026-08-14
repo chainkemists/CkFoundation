@@ -40,7 +40,7 @@ public class CkEditorToolbar : CkModuleRules
             "CkLog",
             "CkResourceLoader",
             "CkSettings",
-            "CkUI"
+            "CkUICore"
         });
     }
 }

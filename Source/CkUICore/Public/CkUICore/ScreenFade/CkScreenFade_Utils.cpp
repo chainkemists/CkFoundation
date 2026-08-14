@@ -2,7 +2,7 @@
 
 #include "CkScreenFade_Utils.h"
 
-#include "CkUI/ScreenFade/CkScreenFade_Subsystem.h"
+#include "CkUICore/ScreenFade/CkScreenFade_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

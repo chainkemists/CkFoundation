@@ -34,7 +34,7 @@ public class CkMinimap : CkModuleRules
             "CkPoiDisplayDefinition",
             "CkRecord",
             "CkVisibleRange",
-            "CkUI",
+            "CkUICore",
         });
     }
 }

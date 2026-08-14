@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 

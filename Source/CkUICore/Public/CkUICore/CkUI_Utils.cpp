@@ -1,13 +1,13 @@
 ﻿// Copyright 2025 CkFoundation. All Rights Reserved.
 
-#include "CkUI/CkUI_Utils.h"
+#include "CkUICore/CkUI_Utils.h"
 
 #include "CommonActivatableWidget.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkUI/Subsystem/CkUI_Input_Subsystem.h"
+#include "CkUICore/Subsystem/CkUI_Input_Subsystem.h"
 
 #include <Blueprint/UserWidget.h>
 #include <Blueprint/WidgetTree.h>
@@ -575,8 +575,8 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 #include "CkEcs/ContextReceiver/CkContextReceiver_Utils.h"
-#include "CkUI/UserWidget/CkUserWidget.h"
-#include "CkUI/UserWidget/CkActivatableWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkActivatableWidget.h"
 
 auto
     UCk_Utils_UI_UE::

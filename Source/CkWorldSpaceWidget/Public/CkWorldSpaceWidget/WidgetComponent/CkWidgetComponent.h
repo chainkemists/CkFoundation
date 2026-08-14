@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Format/CkFormat.h"
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include <Components/WidgetComponent.h>
 

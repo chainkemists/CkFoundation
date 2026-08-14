@@ -3,7 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Time/CkTime_Utils.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <Engine/World.h>
 #include <TimerManager.h>

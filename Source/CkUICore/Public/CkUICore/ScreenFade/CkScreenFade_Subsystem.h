@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUI/ScreenFade/CkScreenFade_Utils.h"
+#include "CkUICore/ScreenFade/CkScreenFade_Utils.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
 
@@ -24,7 +24,7 @@ class SWidget;
  * A fade that ends fully transparent removes its own widget on completion.
  */
 UCLASS(DisplayName = "CkSubsystem_ScreenFade")
-class CKUI_API UCk_ScreenFade_Subsystem_UE : public ULocalPlayerSubsystem
+class CKUICORE_API UCk_ScreenFade_Subsystem_UE : public ULocalPlayerSubsystem
 {
     GENERATED_BODY()
 

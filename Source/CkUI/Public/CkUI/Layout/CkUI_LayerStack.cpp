@@ -3,7 +3,7 @@
 #include "CkUI/Layout/CkUI_LayerStack.h"
 
 #include "CommonActivatableWidget.h"
-#include "CkUI/Interfaces/CkUI_Interfaces.h"
+#include "CkUICore/Interfaces/CkUI_Interfaces.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Layer Configuration

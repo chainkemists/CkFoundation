@@ -6,7 +6,7 @@
 
 #include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Fragment_Data.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkCompassUI_MarkerWidget.generated.h"
 

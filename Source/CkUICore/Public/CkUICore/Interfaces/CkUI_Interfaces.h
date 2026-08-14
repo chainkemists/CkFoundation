@@ -17,7 +17,7 @@
  */
 UINTERFACE(MinimalAPI, Blueprintable, BlueprintType)
 class UCk_UI_LayerParticipant : public UInterface { GENERATED_BODY() };
-class CKUI_API ICk_UI_LayerParticipant
+class CKUICORE_API ICk_UI_LayerParticipant
 {
     GENERATED_BODY()
 
