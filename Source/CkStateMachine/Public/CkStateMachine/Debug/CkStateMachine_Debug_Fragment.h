@@ -157,10 +157,24 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    enum class ECk_SmDebug_BreakpointHitKind : uint8
+    {
+        None,
+        StateEntry,
+        StateExit,
+        Transition,
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_BreakpointHit
     {
         CK_GENERATED_BODY(FFragment_Sm_Debug_BreakpointHit);
 
+        ECk_SmDebug_BreakpointHitKind Kind = ECk_SmDebug_BreakpointHitKind::None;
+        TSubclassOf<UCk_SmState_EntityScript> StateClass;
+        TSubclassOf<UCk_SmState_EntityScript> SourceStateClass;
+        TSubclassOf<UCk_SmState_EntityScript> TargetStateClass;
         FString Description;
         double RealTimeSeconds = 0.0;
     };

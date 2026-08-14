@@ -38,10 +38,14 @@ auto
     if (NOT InStateMachine.Get<ck::FFragment_Sm_Breakpoints>().Get_TransitionBreakpoints().Contains(TransitionKey))
     { return; }
 
-    auto& [Description, RealTimeSeconds] = InStateMachine.AddOrGet<ck::FFragment_Sm_Debug_BreakpointHit>();
-    Description = ck::Format_UE(TEXT("Transition: {} \u2192 {}"),
+    auto& Hit = InStateMachine.AddOrGet<ck::FFragment_Sm_Debug_BreakpointHit>();
+    Hit.Kind = ck::ECk_SmDebug_BreakpointHitKind::Transition;
+    Hit.StateClass = nullptr;
+    Hit.SourceStateClass = SmCurrent.Get_CurrentStateClass();
+    Hit.TargetStateClass = InTargetStateClass;
+    Hit.Description = ck::Format_UE(TEXT("Transition: {} \u2192 {}"),
         SmCurrent.Get_CurrentStateClass()->GetName(), InTargetStateClass->GetName());
-    RealTimeSeconds = FPlatformTime::Seconds();
+    Hit.RealTimeSeconds = FPlatformTime::Seconds();
     UCk_Utils_EditorOnly_UE::Request_DebugPauseExecution();
 #endif
 }

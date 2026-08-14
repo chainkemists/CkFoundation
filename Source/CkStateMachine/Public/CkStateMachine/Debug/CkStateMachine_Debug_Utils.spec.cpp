@@ -1,4 +1,5 @@
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 
 #include "Misc/AutomationTest.h"
 
@@ -40,6 +41,33 @@ bool FCkTest_StateMachine_DebugCaptureVisibilityGeneration::RunTest(const FStrin
         InitialGeneration + 2);
 
     UCk_Utils_StateMachineDebug_UE::Set_IsDebuggerCaptureVisible(false);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_StateMachine_BreakpointHitMetadata,
+    "Ck.StateMachine.Breakpoints.HitMetadata",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_StateMachine_BreakpointHitMetadata::RunTest(const FString&)
+{
+    const auto DefaultHit = ck::FFragment_Sm_Debug_BreakpointHit{};
+    TestEqual(TEXT("breakpoint metadata fails closed by default"),
+        DefaultHit.Kind,
+        ck::ECk_SmDebug_BreakpointHitKind::None);
+    TestNull(TEXT("default state target is empty"), DefaultHit.StateClass.Get());
+    TestNull(TEXT("default transition source is empty"), DefaultHit.SourceStateClass.Get());
+    TestNull(TEXT("default transition target is empty"), DefaultHit.TargetStateClass.Get());
+
+    auto TransitionHit = ck::FFragment_Sm_Debug_BreakpointHit{};
+    TransitionHit.Kind = ck::ECk_SmDebug_BreakpointHitKind::Transition;
+    TransitionHit.SourceStateClass = UCk_SmState_EntityScript::StaticClass();
+    TransitionHit.TargetStateClass = UCk_SmState_EntityScript::StaticClass();
+    TestEqual(TEXT("transition kind is retained"),
+        TransitionHit.Kind,
+        ck::ECk_SmDebug_BreakpointHitKind::Transition);
+    TestNotNull(TEXT("transition source is retained"), TransitionHit.SourceStateClass.Get());
+    TestNotNull(TEXT("transition target is retained"), TransitionHit.TargetStateClass.Get());
     return true;
 }
 
