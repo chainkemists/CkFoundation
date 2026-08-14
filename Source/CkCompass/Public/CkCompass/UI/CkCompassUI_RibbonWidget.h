@@ -5,7 +5,7 @@
 #include "CkCompass/CkCompass_Fragment_Data.h"
 #include "CkCompass/CkCompass_Utils.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include "CkCompassUI_RibbonWidget.generated.h"
 

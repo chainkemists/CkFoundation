@@ -2,7 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkGraphics/CkGraphics_Utils.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <Materials/MaterialInterface.h>
 #include <Materials/MaterialInstanceDynamic.h>

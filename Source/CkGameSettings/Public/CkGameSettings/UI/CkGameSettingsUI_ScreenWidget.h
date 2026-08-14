@@ -5,7 +5,7 @@
 #include "CkGameSettings/CkGameSettings_Common.h"
 #include "CkGameSettings/UI/CkGameSettingsUI_RowWidgets.h"
 
-#include "CkUI/UserWidget/CkActivatableWidget.h"
+#include "CkUICore/UserWidget/CkActivatableWidget.h"
 
 #include <Engine/StreamableManager.h>
 

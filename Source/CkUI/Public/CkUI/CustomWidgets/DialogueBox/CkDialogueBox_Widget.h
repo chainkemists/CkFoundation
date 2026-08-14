@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 #include <CoreMinimal.h>
 #include <Components/RichTextBlock.h>

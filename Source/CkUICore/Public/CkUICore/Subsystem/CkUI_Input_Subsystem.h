@@ -31,7 +31,7 @@ class ULocalPlayer;
  * Resume() will simply no-op.
  */
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Handle_InputSuspension
+struct CKUICORE_API FCk_Handle_InputSuspension
 {
     GENERATED_BODY()
 
@@ -104,7 +104,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Handle_InputSuspension, IsValid_Policy_Defa
  *       Context injection is handled by the ECS ContextReceiver system.
  */
 UCLASS(DisplayName = "CkSubsystem_UI_Input")
-class CKUI_API UCk_UI_Input_Subsystem_UE : public ULocalPlayerSubsystem
+class CKUICORE_API UCk_UI_Input_Subsystem_UE : public ULocalPlayerSubsystem
 {
     GENERATED_BODY()
 

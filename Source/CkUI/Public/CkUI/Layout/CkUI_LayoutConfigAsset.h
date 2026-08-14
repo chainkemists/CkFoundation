@@ -7,7 +7,7 @@
 
 #include "CkUI/Extension/CkUI_Extension_Types.h"
 #include "CkUI/Layout/CkUI_LayerStack.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <CommonActivatableWidget.h>
 #include <Engine/DataAsset.h>

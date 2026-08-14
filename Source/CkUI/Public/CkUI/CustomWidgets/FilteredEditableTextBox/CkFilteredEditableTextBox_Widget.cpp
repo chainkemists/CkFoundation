@@ -1,6 +1,6 @@
 #include "CkFilteredEditableTextBox_Widget.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUICore/UserWidget/CkUserWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

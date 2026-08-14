@@ -22,7 +22,7 @@ public class CkWorldSpaceWidget : CkModuleRules
                 "CkCore",
                 "CkEcs",
                 "CkEcsExt",
-                "CkUI",
+                "CkUICore",
             }
             );
 
@@ -41,7 +41,7 @@ public class CkWorldSpaceWidget : CkModuleRules
                 "CkEcsExt",
                 "CkLog",
                 "CkSettings",
-                "CkUI"
+                "CkUICore"
             }
             );
     }

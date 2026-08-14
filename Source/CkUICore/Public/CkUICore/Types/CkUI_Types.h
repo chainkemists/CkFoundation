@@ -70,7 +70,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_Widget_ViewportOperation);
  * PREPROCESSOR that runs ahead of navigation).
  */
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_UI_NavigationConfig
+struct CKUICORE_API FCk_UI_NavigationConfig
 {
     GENERATED_BODY()
 

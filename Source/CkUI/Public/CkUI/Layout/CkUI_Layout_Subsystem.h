@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkUI/Extension/CkUI_Extension_Types.h"
-#include "CkUI/Types/CkUI_Types.h"
+#include "CkUICore/Types/CkUI_Types.h"
 
 #include <Subsystems/LocalPlayerSubsystem.h>
 
