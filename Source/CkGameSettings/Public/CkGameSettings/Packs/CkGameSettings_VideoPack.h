@@ -119,6 +119,11 @@ namespace ck::game_settings
     CKGAMESETTINGS_API auto
     Get_VideoSettingKeys() -> const TArray<FName>&;
 
+    /** Player-facing label for a Video-pack key ("Window Mode"). Unknown key = the key itself. */
+    CKGAMESETTINGS_API auto
+    Get_VideoKeyDisplayName(
+        FName InKey) -> FText;
+
     /** "1920x1080" (case-insensitive separator) -> point; both dimensions must be positive integers. */
     CKGAMESETTINGS_API auto
     TryParse_Resolution(

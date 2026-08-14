@@ -73,13 +73,22 @@ public:
     int32
     Get_CategoryTabCount() const;
 
-    /** Switches to the named category tab (root category name, e.g. "General"). Returns false when no such tab exists. */
+    /** Switches to the named category tab (root category name, e.g. "General"). Returns whether
+     *  that tab exists RIGHT NOW — the request is remembered either way and re-resolved after every
+     *  rebuild, so selecting an opening tab before the categories are gathered still lands. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|UI|GameSettings|Screen",
               DisplayName = "[Ck][GameSettings] Request Set Active Category")
     bool
     Request_SetActiveCategory(
         FName InCategory);
+
+    /** Drops back to the flat every-category list (the no-tab-bar default). */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|GameSettings|Screen",
+              DisplayName = "[Ck][GameSettings] Request Show All Categories")
+    void
+    Request_ShowAllCategories();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|UI|GameSettings|Screen")
@@ -93,6 +102,21 @@ public:
     TSubclassOf<UCk_GameSettingsUI_RowWidgetBase>
     Get_RowClassForKey(
         FName InKey) const;
+
+    /**
+     * Which keys InCategory shows, in this order. Returning empty (the default) keeps the
+     * registry's own every-registered-key-in-registration-order behavior for that category.
+     *
+     * This is the curation hook: a hand-authored settings page decides its own contents, so a
+     * pack that registers more than the game wants to show, or an order that does not match the
+     * design, costs a list here instead of a fork. Keys the registry does not know are reported
+     * and skipped.
+     */
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|UI|GameSettings|Screen")
+    TArray<FName>
+    Get_CuratedKeysForCategory(
+        FName InCategory);
 
 protected:
     /** Fired for every row after it is injected during a populate — style hooks (alternating
@@ -158,6 +182,13 @@ private:
               Category = "Ck|UI|GameSettings|Screen",
               meta = (AllowPrivateAccess = true))
     bool _AutoApplyMode = true;
+
+    /** Set by Request_SetActiveCategory — makes a game-built rail filter without a bound tab bar. */
+    bool _CategoryFilterActive = false;
+
+    /** The last category asked for, re-resolved after every gather so a selection made before the
+     *  categories exist (or held across a rebuild) is not lost. */
+    FName _RequestedCategory;
 
 private:
     UPROPERTY(Transient)

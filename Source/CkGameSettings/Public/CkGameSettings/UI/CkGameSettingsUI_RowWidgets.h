@@ -167,7 +167,7 @@ private:
     HandleCaptureEnd();
 
 private:
-    auto DoUpdateReadout(float InValue, ECk_GameSettings_ValueType InValueType) -> void;
+    auto DoUpdateReadout(float InValue, const FCk_GameSettings_SettingDefinition& InDefinition) -> void;
     auto DoCommitValue(float InValue) -> void;
 
 private:

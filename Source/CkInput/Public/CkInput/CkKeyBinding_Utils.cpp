@@ -6,6 +6,7 @@
 
 #include <EnhancedInputSubsystems.h>
 #include <InputAction.h>
+#include <InputMappingContext.h>
 #include <PlayerMappableKeySettings.h>
 #include <UserSettings/EnhancedInputUserSettings.h>
 
@@ -310,6 +311,71 @@ auto
     }
 
     return OutFailureReason.IsEmpty();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    MakeMappingPlayerMappable(
+        UInputMappingContext* InContext,
+        const UInputAction* InAction,
+        FKey InKey,
+        FName InMappingName,
+        FText InDisplayName)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InContext), TEXT("Invalid Input Mapping Context"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InAction), TEXT("Invalid Input Action passed for context [{}]"), InContext)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(NOT InMappingName.IsNone(), TEXT("Mapping name for [{}] key [{}] is None"), InAction, InKey.GetFName())
+    { return {}; }
+
+    const auto& Mappings = InContext->GetMappings();
+    auto MappingIndex = int32{INDEX_NONE};
+
+    for (auto Index = 0; Index < Mappings.Num(); ++Index)
+    {
+        if (Mappings[Index].Action == InAction && Mappings[Index].Key == InKey)
+        {
+            MappingIndex = Index;
+            break;
+        }
+    }
+
+    CK_ENSURE_IF_NOT(MappingIndex != INDEX_NONE, TEXT("Context [{}] has no mapping of [{}] to key [{}] — map the key first, then mark it mappable"),
+        InContext, InAction, InKey.GetFName())
+    { return {}; }
+
+    // SettingBehavior/PlayerMappableKeySettings are the editor customization's friend-gated
+    // authoring surface — reflection is the sanctioned-shape write for runtime-built contexts.
+    // Both properties resolve or nothing is written.
+    const auto* MappingStruct = FEnhancedActionKeyMapping::StaticStruct();
+    auto* BehaviorProperty = CastField<FEnumProperty>(MappingStruct->FindPropertyByName(TEXT("SettingBehavior")));
+    auto* SettingsProperty = CastField<FObjectProperty>(MappingStruct->FindPropertyByName(TEXT("PlayerMappableKeySettings")));
+
+    CK_ENSURE_IF_NOT(BehaviorProperty != nullptr && SettingsProperty != nullptr,
+        TEXT("FEnhancedActionKeyMapping no longer exposes SettingBehavior/PlayerMappableKeySettings — engine drift, re-verify this write path"))
+    { return {}; }
+
+    auto* MappableSettings = NewObject<UPlayerMappableKeySettings>(InContext);
+    MappableSettings->Name = InMappingName;
+    MappableSettings->DisplayName = InDisplayName;
+
+    auto& Mapping = InContext->GetMapping(MappingIndex);
+
+    BehaviorProperty->GetUnderlyingProperty()->SetIntPropertyValue(
+        BehaviorProperty->ContainerPtrToValuePtr<void>(&Mapping),
+        static_cast<int64>(EPlayerMappableKeySettingBehaviors::OverrideSettings));
+
+    SettingsProperty->SetObjectPropertyValue(
+        SettingsProperty->ContainerPtrToValuePtr<void>(&Mapping),
+        MappableSettings);
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

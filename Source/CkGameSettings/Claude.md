@@ -22,6 +22,11 @@ from these).
   `Set_MinValue/MaxValue` (strings; empty = unbounded; numeric only), `Set_Options`
   (value must match one), `Set_EditConditions` (platform-trait tags + player-facing
   `_DisabledReason`).
+- Numeric PRESENTATION knobs (row rendering only, never the stored value):
+  `Set_OptionalDisplayPrecision` (max decimals — trailing zeros are always trimmed, so `90.00`
+  reads `90` and `1.50` reads `1.5`; negative = by type), `Set_OptionalDisplayScale` (readout
+  multiplier — a 0..1 volume shown as 0..100 sets 100), `Set_OptionalStepSize` (snap granularity
+  for both readout and commit; non-positive = Int32 1 / Float a hundredth of the range).
 - `Request_RegisterSetting(s)` — batch registration is ATOMIC: one invalid definition rejects the
   whole batch (ensure + nothing registered). `Request_RegisterCollection` /
   `UCk_GameSettings_Collection_PDA` assets listed in project-settings scan paths auto-register at
@@ -59,10 +64,17 @@ from these).
   `Request_ApplyPendingChanges` (commit + flush) / `Request_RevertPendingChanges` (re-apply
   priors). Single session at a time.
 - `Request_RegisterAudioPack` (config: SoundMix + per-category SoundClass/key/default) — one Float
-  volume setting per category driving `SetSoundMixClassOverride`. `Request_RegisterVideoPack` —
-  12 External `video.*` keys over `GEngine->GetGameUserSettings()` (window mode, resolution,
-  vsync, fps cap, resolution scale, the classic seven `sg.*` groups). Both idempotent; auto-run at
-  init when the project-settings toggles are on.
+  volume setting per category driving `SetSoundMixClassOverride`, stamped 0..100 percent for
+  display. `Request_RegisterVideoPack` — 12 External `video.*` keys over
+  `GEngine->GetGameUserSettings()` (window mode, resolution, vsync, fps cap, quality preset, the
+  classic seven `sg.*` groups). Both idempotent; auto-run at init when the project-settings
+  toggles are on.
+- **A game may own a video key's presentation**: register `video.<key>` yourself (label, options,
+  category, ordering) BEFORE calling `Request_RegisterVideoPack`, and the pack contributes only
+  its accessor bridge. Such a definition must carry the pack's contract — `PersistencePolicy::External`
+  + `ApplyBindingType::Handler` — or the pack ensures and leaves that key unbound. Doing this
+  means turning the init-time toggle OFF and calling the pack explicitly, so the game registers
+  first (BusterBlock's `BB_GameSettings_Video.as` is the reference adopter).
 - `Request_RunHardwareBenchmark` (headless no-op), `Request_SetResolutionWithConfirmWindow` +
   `Request_ConfirmResolution` (expiry reverts; nothing saved until confirm/revert).
 
@@ -88,6 +100,10 @@ null-guarded in C++:
   `_RowClassOverrides`/`_SelectRowClassOverride` → native defaults (soft classes async-loaded).
   `_AutoApplyMode` (default) writes live; off = pending-changes session (Apply/Cancel).
   `OnRowGenerated` event = the WBP's styling hook.
+  `Get_CuratedKeysForCategory(Category)` (BlueprintNativeEvent) is the CURATION hook: return the
+  keys that category shows, in order; empty (the default) keeps every registered key in
+  registration order. This is how a hand-authored page declines rows a pack registers — they stay
+  live and driven, just off the screen — and how it fixes an order the registry cannot know.
 - Keybinding page: `UCk_GameSettingsUI_KeyBindingPageWidget` + row — pure consumer of
   `UCk_Utils_KeyBinding_UE`/`UCk_Utils_KeyIcon_UE`. Bind `_RowContainer`, overlays, buttons; set
   `_RowWidgetClass` to the game's row WBP; `OnRowCreated` inserts category headers. Modal capture

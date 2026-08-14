@@ -200,6 +200,24 @@ private:
               meta = (AllowPrivateAccess = true))
     TSoftClassPtr<UCk_GameSettingsUI_RowWidgetBase> _OptionalRowClassOverride;
 
+    /** Maximum decimal places in a numeric row's readout — trailing zeros are always trimmed, so
+     *  this is a rounding guard, not a fixed width. Negative = by type (Int32 → 0, Float → 2). */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "-1", ClampMax = "4"))
+    int32 _OptionalDisplayPrecision = -1;
+
+    /** Readout multiplier — PRESENTATION ONLY, the stored value is untouched. A 0..1 volume shown
+     *  as 0..100 wants 100. Non-positive = unscaled. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _OptionalDisplayScale = 1.0f;
+
+    /** Granularity a numeric row snaps its value to (FOV by 5, volume by 1/100). Non-positive =
+     *  by type (Int32 → 1, Float → a hundredth of the range). */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _OptionalStepSize = 0.0f;
+
 public:
     CK_PROPERTY_GET(_Key);
     CK_PROPERTY_GET(_ValueType);
@@ -216,6 +234,9 @@ public:
     CK_PROPERTY(_Options);
     CK_PROPERTY(_EditConditions);
     CK_PROPERTY(_OptionalRowClassOverride);
+    CK_PROPERTY(_OptionalDisplayPrecision);
+    CK_PROPERTY(_OptionalDisplayScale);
+    CK_PROPERTY(_OptionalStepSize);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_GameSettings_SettingDefinition, _Key, _ValueType, _DefaultValue);
@@ -375,6 +396,11 @@ private:
               meta = (AllowPrivateAccess = true))
     TSoftObjectPtr<USoundClass> _SoundClass;
 
+    /** Player-facing label for this volume's row. Empty = the setting key. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FText _DisplayName;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
     float _DefaultVolume = 1.0f;
@@ -384,6 +410,7 @@ public:
     CK_PROPERTY(_CategoryTag);
     CK_PROPERTY(_SoundClass);
     CK_PROPERTY(_DefaultVolume);
+    CK_PROPERTY(_DisplayName);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_GameSettings_AudioCategory, _SettingKey);
