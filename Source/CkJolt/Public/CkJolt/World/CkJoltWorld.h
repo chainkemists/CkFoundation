@@ -325,6 +325,10 @@ namespace ck
         // safely while this value has not moved — a sleeping body is invisible to both of its body passes.
         auto Request_NoteBodyRemoved() -> void;
 
+        // Jolt operations that need scratch memory (HeightFieldShape::SetHeights) borrow the world's
+        // allocator rather than standing up their own. Null once the world has shut down.
+        auto Get_TempAllocator() const -> JPH::TempAllocatorImpl*;
+
     private:
         TWeakPtr<JPH::PhysicsSystem>                     _PhysicsSystem;
         JPH::TempAllocatorImpl*                          _TempAllocator = nullptr;
