@@ -10,7 +10,6 @@
 #include "CkWatermark/Settings/CkWatermark_Settings.h"
 #include "CkCore/Generated/CkCore_BuildId.h"
 #include "CkWatermark/Subsystem/CkWatermark_Subsystem.h"
-#include "CkWatermark/CkWatermark_ActivityBar_Widget.h"
 #include "CkMemory/CkMemory_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorldStats_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -1145,59 +1144,6 @@ auto
             .Padding(0.f, RowVPad)
             .HAlign(HAlign_Right)
             [ HBox ];
-    }
-
-    // ---- Activity bar (above stat rows in the stats group) ------------------
-    {
-        TWeakObjectPtr<const UCkWatermark_Panel_UWidget_UE> WeakThis(this);
-
-        const TAttribute<FSlateColor> ActiveColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
-        {
-            return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_ActiveColor());
-        });
-        const TAttribute<FLinearColor> HeldAccentColorAttr = TAttribute<FLinearColor>::CreateLambda([]() -> FLinearColor
-        {
-            return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_HeldAccentColor();
-        });
-        const TAttribute<FSlateColor> InactiveColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
-        {
-            return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_ActivityBar_InactiveColor());
-        });
-
-        auto ActivityGetter = [WeakThis]() -> TPair<uint32, const TArray<FCkWatermarkActivityState>*>
-        {
-            if (!WeakThis.IsValid())
-            { return {0, nullptr}; }
-
-            const auto* Outer = WeakThis->GetTypedOuter<ULocalPlayer>();
-            if (!Outer)
-            { return {0, nullptr}; }
-
-            const auto* Sub = Outer->GetSubsystem<UCk_Watermark_Subsystem_UE>();
-            if (!Sub)
-            { return {0, nullptr}; }
-
-            return {Sub->Get_ActivityVersion(), &Sub->Get_ActivityStates()};
-        };
-
-        StatsGroupBox->InsertSlot(0)
-            .AutoHeight()
-            .Padding(0.f, RowVPad)
-            .HAlign(HAlign_Right)
-            [
-                SNew(SCkWatermarkActivityBar)
-                .ActivityGetter(MoveTemp(ActivityGetter))
-                .Font(ValueFont)
-                .BracketOpen(BracketOpen)
-                .BracketClose(BracketClose)
-                .BracketInnerPadding(InnerPad)
-                .ActiveColor(ActiveColorAttr)
-                .HeldAccentColor(HeldAccentColorAttr)
-                .InactiveColor(InactiveColorAttr)
-                .ShadowOffset(ShadowOffsetAttr)
-                .ShadowColorAndOpacity(ShadowColorAttr)
-                .Visibility(VisMain)
-            ];
     }
 
     // ---- Center group (bottom-center) — ECS pump pressure -------------------

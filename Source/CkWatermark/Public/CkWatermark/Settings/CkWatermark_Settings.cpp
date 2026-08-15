@@ -559,38 +559,6 @@ auto
     return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_Row_RepObjects();
 }
 
-auto
-    UCk_Utils_Watermark_ProjectSettings_UE::
-    Get_Watermark_ActivityBar_MaxHistory()
-    -> int32
-{
-    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_MaxHistory();
-}
-
-auto
-    UCk_Utils_Watermark_ProjectSettings_UE::
-    Get_Watermark_ActivityBar_ActiveColor()
-    -> FLinearColor
-{
-    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_ActiveColor();
-}
-
-auto
-    UCk_Utils_Watermark_ProjectSettings_UE::
-    Get_Watermark_ActivityBar_HeldAccentColor()
-    -> FLinearColor
-{
-    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_HeldAccentColor();
-}
-
-auto
-    UCk_Utils_Watermark_ProjectSettings_UE::
-    Get_Watermark_ActivityBar_InactiveColor()
-    -> FLinearColor
-{
-    return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_ActivityBar_InactiveColor();
-}
-
 // ---- Custom Field accessors -------------------------------------------------
 
 auto UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CustomField()        -> ECk_Watermark_DisplayPolicy { return GetDefault<UCk_Watermark_ProjectSettings_UE>()->Get_Watermark_MinPolicy_CustomField(); }

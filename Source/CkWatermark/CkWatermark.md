@@ -7,7 +7,6 @@ In-game debug HUD showing performance metrics: FPS, ping, memory, VRAM, CPU, net
 - **Display Policy** — Four levels: Hidden, Minimal, Regular, Detailed. Controls how much info is shown.
 - **Stat Quality** — Color-coded: VeryGood (green) → Bad (red). Thresholds configurable per stat via color band structs.
 - **Modular Widgets** — 20+ stat widgets (FPS, Ping, Memory, VRAM, CPU, FrameTime, etc.) that auto-query engine systems.
-- **Activity Bar** — Visual indicator of current system activity.
 
 ## Example: Toggling Debug Overlay
 
