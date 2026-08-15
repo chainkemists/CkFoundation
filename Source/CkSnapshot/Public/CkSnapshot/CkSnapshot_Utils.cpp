@@ -11,8 +11,10 @@
 
 #include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"
 
+#include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Subsystem.h"
 
+#include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
@@ -150,4 +152,57 @@ auto
     { return false; }
 
     return InHandle.Has<FFragment_SaveKey>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Get_SlotScreenshotTexture(
+        const FCk_Snapshot_SlotMeta& InMeta)
+    -> UTexture2D*
+{
+    return ck::snapshot::slot_meta::Decode_PngAsTexture(InMeta.Get_ScreenshotPng());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Get_IsSlotMetaPopulated(
+        const FCk_Snapshot_SlotMeta& InMeta)
+    -> bool
+{
+    return InMeta.Get_IsPopulated();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Get_SlotCustomField(
+        const FCk_Snapshot_SlotMeta& InMeta,
+        FName InKey,
+        const FString& InFallback)
+    -> FString
+{
+    const auto* Found = InMeta.Get_CustomFields().Find(InKey);
+
+    return ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}) ? *Found : InFallback;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Capture_ViewportThumbnail(
+        const UObject* InWorldContextObject,
+        int32 InMaxWidth)
+    -> TArray<uint8>
+{
+    const auto* World = ck::IsValid(InWorldContextObject)
+        ? GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::ReturnNull)
+        : nullptr;
+
+    return ck::snapshot::slot_meta::Capture_ViewportPng(World, InMaxWidth);
 }

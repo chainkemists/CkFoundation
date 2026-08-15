@@ -32,6 +32,51 @@ owned by `CkEcs` (`CkEcs/Persistence/CkPersistenceHandlerRegistry.h` + the net +
 
 ---
 
+## Slot metadata (the save/load MENU surface)
+
+The snapshot itself carries no player-facing description — `FCk_Snapshot_HeaderV3` has engine version,
+timestamp, world path and provenance counts, and reading even those costs a full `LoadGameFromSlot`
+that deserializes `_SnapshotBytesV3` (the whole world) to return six fields. A nine-slot menu drawn off
+`Get_SaveSlotHeader` deserializes nine worlds.
+
+So a menu reads `FCk_Snapshot_SlotMeta` (`SaveGame/CkSnapshot_SlotMeta.h`) instead — title, timestamp,
+world path, PNG thumbnail, and a `TMap<FName, FString>` of game-defined fields CkSnapshot round-trips
+opaquely. It lives in a **sidecar slot**, `<Slot>.meta`, written by the same `Request_Save_WithMetadata`
+that wrote the snapshot.
+
+| Call | Use |
+|---|---|
+| `Request_Save_WithMetadata` | the save path any listing UI should use — a bare `Request_Save` leaves NO sidecar, and the slot lists untitled and thumbnail-less |
+| `Get_AllSaveSlotNames` | enumerate (sidecars filtered out; see below) |
+| `Get_SaveSlotMeta` | one row's metadata, payload untouched |
+| `Request_DeleteSaveSlot` | deletes snapshot + sidecar |
+| `Get_IsSaveInProgress` | the save-side twin of `Get_IsLoadInProgress` |
+
+Three things bite:
+
+- **Sidecars share the slot namespace.** `ISaveGameSystem::GetSaveGameNames` returns `Slot0` *and*
+  `Slot0.meta`; every enumeration must filter with `ck::snapshot::slot_meta::Get_IsMetaSlotName` or the
+  menu shows every save twice. `Get_AllSaveSlotNames` already does.
+- **A missing sidecar is normal, not an error.** Saves written by `Request_Save`, or before this
+  existed, are occupied slots with a default-constructed meta. `Get_IsPopulated()` is the
+  discriminator — treat it as "no details to show", never as "not loadable".
+- **The automatic screenshot photographs the menu.** `Capture_ViewportPng` reads the back buffer as-is,
+  UI included, and a game saves *from* a menu — so the thumbnail is a picture of the save screen. The
+  fix is `FCk_Snapshot_SaveMetadata::_ScreenshotPng`: capture with
+  `UCk_Utils_Snapshot_UE::Capture_ViewportThumbnail` at the moment the menu OPENS (a widget's
+  `Construct` runs before its first paint) and hand the bytes in. BusterBlock's esc menu does exactly
+  this. The capture is synchronous — it flushes the render thread — because `Request_Save` is
+  synchronous and an async screenshot request would make the whole save frame-spanning.
+
+## A load travels to the SAVED world, not the current one
+
+`DoInitiate_Travel` opens `_V3Header._WorldAssetPath`, falling back to the current map when the save
+records none. This is what lets a **frontend** Load button work: re-opening the current map would
+re-open the main menu and then rebuild a gameplay world into it, and a cross-map save would restore
+into the wrong level.
+
+---
+
 ## Authoring a persistence handler (the load-bearing recipe)
 
 To make a feature survive save/load, add a handler alongside its replication wiring. Copy the smallest matching
