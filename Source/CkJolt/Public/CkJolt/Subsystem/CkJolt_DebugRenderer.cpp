@@ -228,7 +228,7 @@ namespace ck_jolt_debug_renderer
 
         InOutBucket._Ism = Ism;
 
-        static auto TranslucentMaterial = LoadObject<UMaterial>(
+        auto TranslucentMaterial = LoadObject<UMaterial>(
             nullptr,
             TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 
