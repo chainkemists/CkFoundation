@@ -1601,6 +1601,66 @@ auto
 
 auto
     FCk_Jolt_DebugDrawTarget::
+    Set_InternalBodyKeys(
+        TSet<uint64> InBodyKeys)
+    -> void
+{
+    if (_Impl->_InternalBodyKeys.Num() == InBodyKeys.Num() &&
+        _Impl->_InternalBodyKeys.Includes(InBodyKeys))
+    { return; }
+
+    // A body that BECAME internal may already be drawn — releasing its slots here is what makes it disappear on
+    // the spot rather than at whatever capture happens to walk it next (a static or sleeping body: possibly never).
+    for (const auto InternalKey : InBodyKeys)
+    {
+        if (_Impl->_InternalBodyKeys.Contains(InternalKey))
+        { continue; }
+
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl, InternalKey,
+            ck::jolt::debug_draw::EStatCounting::Excluded);
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl, ck::jolt::debug_draw::Make_HighlightKey(InternalKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl, ck::jolt::debug_draw::Make_HoverKey(InternalKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
+
+        _Impl->_StaticBodyKeys.Remove(InternalKey);
+        _Impl->_SleepingBodyKeys.Remove(InternalKey);
+        _Impl->_PrevActiveBodyKeys.Remove(InternalKey);
+        _Impl->_InactiveBodyRecords.Remove(InternalKey);
+    }
+
+    _Impl->_InternalBodyKeys = MoveTemp(InBodyKeys);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_InternalBodyKeys() const
+    -> const TSet<uint64>&
+{
+    return _Impl->_InternalBodyKeys;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_WorldStats() const
+    -> const FCk_Jolt_DebugDraw_WorldStats&
+{
+    return _Impl->_WorldStats;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_StepStats(
+        float InLastStepDurationMs,
+        int32 InContactPairsLastStep)
+    -> void
+{
+    _Impl->_WorldStats.Set_LastStepDurationMs(InLastStepDurationMs);
+    _Impl->_WorldStats.Set_ContactPairsLastStep(InContactPairsLastStep);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
     TryPick_Body(
         const FVector& InOrigin,
         const FVector& InDirection) const
@@ -1618,6 +1678,12 @@ auto
 
     for (const auto& Kvp : _Impl->_BodySlots)
     {
+        // The capture never draws an internal body, so there should be no slot here to reject — this is the second
+        // half of the guarantee rather than the first: a facility-owned body must be unpickable even if one of its
+        // instances ever survived a capture.
+        if (_Impl->_InternalBodyKeys.Contains(Kvp.Key))
+        { continue; }
+
         for (const auto& Slot : Kvp.Value)
         {
             // Neither overlay is pickable: they trace a body that is already pickable in its own right, and a

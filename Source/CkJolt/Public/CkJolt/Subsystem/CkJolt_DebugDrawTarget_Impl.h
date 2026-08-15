@@ -318,6 +318,10 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     // While non-empty, the capture draws ONLY these keys and releases every other body's instances.
     TSet<uint64> _IsolatedBodyKeys;
 
+    // Bodies the facility itself owns (the drag anchor). Never drawn, never picked — unlike isolation, this is not
+    // a view filter a user can turn off.
+    TSet<uint64> _InternalBodyKeys;
+
     // Sampled by the capture for the PRIMARY selection only, and re-sampled from scratch every capture: a value
     // the current capture did not produce would be reported as live state it no longer is.
     TOptional<FCk_Jolt_DebugDraw_BodySample> _BodySample;
@@ -349,6 +353,11 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
 
     FCk_Jolt_DebugDrawPalette _Palette;
     ck::jolt::debug_draw::FDebugDrawStats _LastCaptureStats;
+    FCk_Jolt_DebugDraw_WorldStats _WorldStats;
+
+    // Captures since the expensive half of _WorldStats was refreshed; mirrored into the struct's _SampleAge so a
+    // consumer can see the staleness without knowing the cadence.
+    int32 _CapturesSinceWorldStatsSample = 0;
 
     ECk_Jolt_DebugDraw_RenderMode _RenderMode = ECk_Jolt_DebugDraw_RenderMode::Solid;
 

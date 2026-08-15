@@ -162,6 +162,13 @@ namespace ck::jolt::debug_draw
     inline constexpr uint8 DistinctColorPaletteSize = 16;
 
     /*
+     * How many captures pass between two refreshes of the expensive half of FCk_Jolt_DebugDraw_WorldStats
+     * (P5-D61/S10 — a CONSTANT, deliberately not a knob). GetBodyStats is documented in Jolt's own header as
+     * "slow, iterates through all bodies", so at 100k bodies a per-frame sample would dominate the capture.
+     */
+    inline constexpr int32 WorldStatsSampleInterval = 30;
+
+    /*
      * ObjectLayer mode names one class per registered layer. 62 indices are available, so index 61 is the
      * catch-all: a body whose object layer is 61 or higher lands there. P5-D42 phrased the cut as "> 61 → Other";
      * with Highlight and Hover reserved there is no 63rd index to put Other in, so the top NAMED index doubles
@@ -382,6 +389,71 @@ public:
     CK_PROPERTY(_NumContactPoints);
     CK_PROPERTY(_PenetrationDepth);
     CK_PROPERTY(_ContactPoints);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * What the world itself is doing, for a stats panel — filled BY THE CAPTURE from the physics system, in the same
+ * async-safe window it draws from, so a consumer never reads JPH::PhysicsSystem for a count either (P6-D48).
+ *
+ * The fields split into three groups by what they COST:
+ *
+ *  - SAMPLED (`_NumBodies` .. `_NumConstraints`): PhysicsSystem::GetBodyStats walks every body and GetConstraints
+ *    returns the constraint array BY VALUE with a refcount bump per element. Both are refreshed only every
+ *    `WorldStatsSampleInterval` captures, so at the campaign's 100k bar they cost nothing per frame. `_SampleAge`
+ *    is how many captures ago that happened — 0 on the capture that refreshed them. A UI labels them "(sampled)".
+ *  - LIVE (`_NumActiveRigidBodies`, `_NumActiveSoftBodies`): plain counters, read every capture. Jolt's body stats
+ *    carry an active-soft-body count too; it is deliberately NOT mirrored into the sampled block, because the live
+ *    one means the same thing and is always fresher.
+ *  - PUSHED (`_LastStepDurationMs`, `_ContactPairsLastStep`): owned by the Jolt world rather than the physics
+ *    system, so the capture cannot reach them — whoever pumps the capture pushes them in (Set_StepStats).
+ */
+struct CKJOLT_API FCk_Jolt_DebugDraw_WorldStats
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDraw_WorldStats);
+
+private:
+    int32 _NumBodies = 0;
+    int32 _MaxBodies = 0;
+    int32 _NumStaticBodies = 0;
+    int32 _NumDynamicBodies = 0;
+    int32 _NumActiveDynamicBodies = 0;
+    int32 _NumKinematicBodies = 0;
+    int32 _NumActiveKinematicBodies = 0;
+    int32 _NumSoftBodies = 0;
+    int32 _NumConstraints = 0;
+
+    int32 _NumActiveRigidBodies = 0;
+    int32 _NumActiveSoftBodies = 0;
+
+    /// Captures since the sampled block was refreshed. Zero on the capture that refreshed it.
+    int32 _SampleAge = 0;
+
+    int32 _ContactPairsLastStep = 0;
+
+    float _LastStepDurationMs = 0.0f;
+
+    /// False until the first capture has taken a sample, so a consumer can tell "no bodies" from "not yet asked".
+    bool _HasSample = false;
+
+public:
+    CK_PROPERTY(_NumBodies);
+    CK_PROPERTY(_MaxBodies);
+    CK_PROPERTY(_NumStaticBodies);
+    CK_PROPERTY(_NumDynamicBodies);
+    CK_PROPERTY(_NumActiveDynamicBodies);
+    CK_PROPERTY(_NumKinematicBodies);
+    CK_PROPERTY(_NumActiveKinematicBodies);
+    CK_PROPERTY(_NumSoftBodies);
+    CK_PROPERTY(_NumConstraints);
+    CK_PROPERTY(_NumActiveRigidBodies);
+    CK_PROPERTY(_NumActiveSoftBodies);
+    CK_PROPERTY(_SampleAge);
+    CK_PROPERTY(_ContactPairsLastStep);
+    CK_PROPERTY(_LastStepDurationMs);
+    CK_PROPERTY(_HasSample);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -820,6 +892,36 @@ public:
     /// selected. Empty otherwise — including for a character selection, which has no shape query behind it.
     auto
     Get_SelectionContacts() const -> const TArray<FCk_Jolt_DebugDraw_ContactEntry>&;
+
+    /*
+     * Bodies the Jolt world created for its OWN internal use — today exactly the debug-drag anchor, a raw JPH
+     * kinematic body with no entity behind it. The capture draws none of them and TryPick_Body returns none of
+     * them, so an internal body is invisible to every consumer surface rather than merely uninteresting.
+     *
+     * Pushed in by whoever pumps the capture (the capture processor, the subsystem's own Tick) from
+     * FJoltWorld::Get_DebugInternalBodyKeys — the capture itself only ever sees a PhysicsSystem, which does not
+     * know which of its bodies the facility owns.
+     */
+    auto
+    Set_InternalBodyKeys(
+        TSet<uint64> InBodyKeys) -> void;
+
+    auto
+    Get_InternalBodyKeys() const -> const TSet<uint64>&;
+
+    /*
+     * What the world is doing, filled by the capture (physics-derived counts) and by whoever pumps it (the two
+     * fields the physics system does not own). See FCk_Jolt_DebugDraw_WorldStats for which fields are throttled.
+     */
+    auto
+    Get_WorldStats() const -> const FCk_Jolt_DebugDraw_WorldStats&;
+
+    /// The two world stats the capture cannot reach for itself: both belong to the Jolt world, not to its
+    /// PhysicsSystem. Pushed before the capture, so a consumer reading the stats sees one consistent frame.
+    auto
+    Set_StepStats(
+        float InLastStepDurationMs,
+        int32 InContactPairsLastStep) -> void;
 
     /*
      * Nearest live instance a ray hits, as the body key that drew it. Tests the ray against each instance's
