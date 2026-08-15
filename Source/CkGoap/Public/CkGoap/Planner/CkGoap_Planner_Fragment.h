@@ -330,21 +330,25 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Accumulator for the Planner's replan-interval window.
+// World-time stamp of the Planner's last replan. A stamp rather than a per-frame accumulator so the
+// throttle survives AutoReplan not visiting this planner every frame. Stamped with the CURRENT world
+// time where the fragment is added, which reproduces the old accumulator exactly (it started at 0 on
+// add); the very first plan bypasses the throttle anyway via FTag_Goap_Planner_RequiresInitialPlan.
 
 	struct CKGOAP_API FFragment_Goap_Planner_ReplanThrottle
 	{
 	public:
 		CK_GENERATED_BODY(FFragment_Goap_Planner_ReplanThrottle);
 
+		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Planner_AutoReplan;
 		friend class FProcessor_Goap_Planner_HandleRequests;
 
 	private:
-		float _SecondsSinceLastReplan = 0.0f;
+		double _LastReplanWorldTimeSeconds = 0.0;
 
 	public:
-		CK_PROPERTY_GET(_SecondsSinceLastReplan);
+		CK_PROPERTY_GET(_LastReplanWorldTimeSeconds);
 	};
 
 // --------------------------------------------------------------------------------------------------------------------

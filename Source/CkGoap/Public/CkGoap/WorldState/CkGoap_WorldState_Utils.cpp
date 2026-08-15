@@ -961,6 +961,7 @@ auto
 			continue;
 		}
 		Subscriber.AddOrGet<ck::FTag_Goap_Dirty_WorldState>();
+		ck::goap::MarkReplanCandidate(Subscriber);
 	}
 }
 
