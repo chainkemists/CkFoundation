@@ -131,6 +131,8 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
+        _LastTickVisitedCount = 0;
+
         if (_Disabled)
         { return; }
 
@@ -149,12 +151,18 @@ namespace ck
             _BatchState._Slots.Reset();
             _BatchState._Entities.Reset();
             _BatchState._AnyHandle = _Instance->Get_Handle();
+
+            constexpr auto VisitedCountUnknown = -1;
+            _LastTickVisitedCount = VisitedCountUnknown;
+
             DoDispatchBatch(InDeltaT);
             return;
         }
 
         if (NOT DoResolveAndJoin())
         { return; }   // empty-join early-out — no VM call
+
+        _LastTickVisitedCount = _BatchState._Entities.Num();
 
         DoDispatchBatch(InDeltaT);
     }
@@ -167,10 +175,7 @@ namespace ck
         -> int32
     {
         Tick(TimeType::ZeroSecond());
-
-        // Script side effects are not inspectable (see FTickable_Concept::Pump).
-        constexpr auto VisitedCountUnknown = -1;
-        return VisitedCountUnknown;
+        return _LastTickVisitedCount;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

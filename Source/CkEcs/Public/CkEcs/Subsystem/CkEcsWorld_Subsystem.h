@@ -290,6 +290,24 @@ public:
         const UObject* InWorldContextObject);
 
 public:
+    // Test/diagnostic hooks over the scheduler's per-frame debug history (ck.Scheduler.DebugTiming,
+    // default on; 300-frame ring). -1 when the frame or processor is not in the history.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EcsWorld|Debug",
+              DisplayName="[Ck][EcsWorld] Get Debug Processor Pump Count For Frame")
+    static int32
+    Get_Debug_ProcessorPumpCountForFrame(const UObject* InWorldContextObject, FName InProcessorName, int64 InFrameNumber);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EcsWorld|Debug",
+              DisplayName="[Ck][EcsWorld] Get Debug Processor Main Pass Entity Count For Frame")
+    static int32
+    Get_Debug_ProcessorMainPassEntityCountForFrame(const UObject* InWorldContextObject, FName InProcessorName, int64 InFrameNumber);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EcsWorld|Debug",
+              DisplayName="[Ck][EcsWorld] Get Debug Frame Pump Iteration Count")
+    static int32
+    Get_Debug_FramePumpIterationCount(const UObject* InWorldContextObject, int64 InFrameNumber);
+
+public:
     template <typename T_SubsystemClass>
     [[nodiscard]]
     static auto

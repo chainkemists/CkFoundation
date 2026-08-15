@@ -519,6 +519,27 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
+    Has_AnyLiveEntityWith_Fragment(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructType)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InAnyHandle) || ck::Is_NOT_Valid(InStructType))
+    { return false; }
+
+    const auto StorageId = Get_StorageId(InStructType);
+    auto MutableHandle = InAnyHandle;
+    auto& Storage = MutableHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
+
+    // A single-storage view skips in_place tombstones, so begin() == end() means zero LIVE entities.
+    const auto View = entt::basic_view{Storage};
+    return View.begin() != View.end();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_DynamicFragment_UE::
     Get_AllFragments(
         const FCk_Handle& InHandle)
     -> TArray<FInstancedStruct>
