@@ -11,6 +11,7 @@
 #include "CkJolt/Character/CkJoltCharacter_Fragment.h"
 #include "CkJolt/Character/CkJoltCharacter_Utils.h"
 #include "CkJolt/Character/CkJoltCharacterContactListener.h"
+#include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
 
@@ -310,6 +311,70 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FJoltWorld::
+        Request_SetDebugPaused(
+            bool InIsDebugPaused)
+        -> void
+    {
+        _IsDebugPaused = InIsDebugPaused;
+
+        // A one-shot armed during a pause must not survive the resume and fire at the START of the next one —
+        // the user asked for a step in a session that has ended.
+        if (NOT InIsDebugPaused)
+        { _StepOnceRequested = false; }
+    }
+
+    auto
+        FJoltWorld::
+        Request_StepOnce()
+        -> void
+    {
+        if (NOT _IsDebugPaused)
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt Request_StepOnce: the world is not debug-paused"));
+            return;
+        }
+
+        _StepOnceRequested = true;
+    }
+
+    auto
+        FJoltWorld::
+        TryConsume_DebugPauseGate()
+        -> bool
+    {
+        _StepOnceGrantedThisFrame = false;
+
+        if (NOT _IsDebugPaused)
+        { return false; }
+
+        if (NOT _StepOnceRequested)
+        { return true; }
+
+        _StepOnceRequested = false;
+        _StepOnceGrantedThisFrame = true;
+
+        return false;
+    }
+
+    auto
+        FJoltWorld::
+        Set_LastStepDurationMs(
+            float InDurationMs)
+        -> void
+    {
+        _LastStepDurationMs.store(InDurationMs, std::memory_order_relaxed);
+    }
+
+    auto
+        FJoltWorld::
+        Get_LastStepDurationMs() const
+        -> float
+    {
+        return _LastStepDurationMs.load(std::memory_order_relaxed);
+    }
 
     auto
         FJoltWorld::

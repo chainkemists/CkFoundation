@@ -10,6 +10,8 @@
 
 #include <CoreMinimal.h>
 
+#include <atomic>
+
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Character/CharacterBase.h>
 
@@ -207,6 +209,32 @@ namespace ck
         // (the debug-draw capture) treat an unchanged value as "the static scene did not move" and skip work.
         auto Request_NoteStaticSceneChanged() -> void;
 
+        // ---- Debug pause / single step (game-thread only) ----
+        /*
+         * A pause of the JOLT world, independent of UWorld::IsPaused() — the engine's pause is set by the
+         * PlayerController and stops the whole game, while this one freezes physics alone so a debugger can
+         * inspect it. Both are honoured by the same two step guards.
+         */
+        auto Request_SetDebugPaused(bool InIsDebugPaused) -> void;
+
+        /*
+         * Permits exactly ONE step while debug-paused, after which the world re-pauses itself. Ignored (Verbose)
+         * while the world is not debug-paused: stepping once has no meaning when it is already stepping.
+         */
+        auto Request_StepOnce() -> void;
+
+        /*
+         * The gate, CONSUMED once per frame by FProcessor_JoltWorld_PlanStep and nothing else. Answers true while
+         * the world must plan zero steps, and eats the step-once one-shot in the process — which is why it lives
+         * in PlanStep: a flag the Step processor interpreted instead would bypass the accumulator model entirely.
+         * Get_StepOnceGrantedThisFrame is how the Step processor reads the same decision without re-consuming it.
+         */
+        auto TryConsume_DebugPauseGate() -> bool;
+
+        // ---- Step duration (written on the step thread, read anywhere) ----
+        auto Set_LastStepDurationMs(float InDurationMs) -> void;
+        auto Get_LastStepDurationMs() const -> float;
+
         // ---- Body-removed change token (game-thread only) ----
         // Bumped by the JoltBody EndPlay funnel for EVERY body it destroys, whatever its motion type. The
         // debug-draw capture's sweep for destroyed SLEEPING bodies is O(sleeping) and can only be skipped
@@ -234,6 +262,15 @@ namespace ck
         uint64 _StaticSceneRevision = 0;
         uint64 _BodyRemovedRevision = 0;
         TFuture<void> _AsyncFuture;
+
+        // ---- Debug pause state (game thread only) ----
+        bool _IsDebugPaused = false;
+        bool _StepOnceRequested = false;
+        bool _StepOnceGrantedThisFrame = false;
+
+        // Written by the step loop, which runs on a TASK GRAPH thread in async mode, and read by the game thread
+        // whenever a consumer asks. Relaxed: it is a lone diagnostic scalar that orders nothing.
+        std::atomic<float> _LastStepDurationMs{0.0f};
 
         // ---- Pose buffer, keyed by BodyID index+sequence (stable while a body is alive) ----
         TMap<uint32, FCk_Jolt_StepPoseEntry> _PoseBuffer;
@@ -268,6 +305,8 @@ namespace ck
         CK_PROPERTY_GET(_BodyRemovedRevision);
         CK_PROPERTY_GET(_AsyncFuture);
         CK_PROPERTY_GET(_Debug_NumPersistedContactEventsTotal);
+        CK_PROPERTY_GET(_IsDebugPaused);
+        CK_PROPERTY_GET(_StepOnceGrantedThisFrame);
     };
 }
 

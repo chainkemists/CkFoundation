@@ -154,6 +154,26 @@ public:
     Get_DefaultDebugDrawTarget() const -> TSharedPtr<FCk_Jolt_DebugDrawTarget>;
 #endif
 
+    /*
+     * Debug pause of the JOLT world alone — the engine's own pause stops the whole game, this one freezes
+     * physics so a debugger can inspect it. Request_StepOnce permits exactly one step and then re-pauses; it
+     * is ignored while the world is not debug-paused.
+     */
+    auto
+    Request_SetDebugPaused(
+        bool InIsDebugPaused) -> void;
+
+    auto
+    Request_StepOnce() -> void;
+
+    auto
+    Get_IsDebugPaused() const -> bool;
+
+    /// Wall time the last frame's Jolt solve took, in milliseconds. Zero before the first step, and unchanged
+    /// while the world is paused — a paused world's last step time is still the last step's.
+    auto
+    Get_LastStepDurationMs() const -> float;
+
     /// Bumps the Jolt world's static-scene change token. Called by every static-body add/remove funnel.
     auto
     Request_NoteStaticSceneChanged() -> void;

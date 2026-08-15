@@ -854,6 +854,51 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
+    Request_SetDebugPaused(
+        bool InIsDebugPaused)
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_SetDebugPaused(InIsDebugPaused);
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_StepOnce()
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_StepOnce();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_IsDebugPaused() const
+        -> bool
+{
+    if (NOT _JoltWorld.IsValid())
+    { return false; }
+
+    return _JoltWorld->Get_IsDebugPaused();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_LastStepDurationMs() const
+        -> float
+{
+    if (NOT _JoltWorld.IsValid())
+    { return 0.0f; }
+
+    return _JoltWorld->Get_LastStepDurationMs();
+}
+
+auto
+    UCk_Jolt_Subsystem::
     Request_NoteStaticSceneChanged()
         -> void
 {
