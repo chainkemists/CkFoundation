@@ -4,11 +4,16 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h" // FCk_Delegate_Snapshot_OnLoadComplete
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "CkSnapshot_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UTexture2D;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -119,4 +124,54 @@ public:
     static bool
     Get_HasSaveKey(
         const FCk_Handle& InHandle);
+
+    /**
+     * Decode a slot's thumbnail into a transient texture, or null when the slot recorded none.
+     * The texture is NOT rooted — store it in a UPROPERTY (a widget field) or the next GC collects
+     * it. Decoding is not free; decode once per slot row, not per paint.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Slot Screenshot Texture")
+    static UTexture2D*
+    Get_SlotScreenshotTexture(
+        const FCk_Snapshot_SlotMeta& InMeta);
+
+    /**
+     * True when the slot has a sidecar on disk, as opposed to the default Get_SaveSlotMeta returns
+     * for a slot without one. Script-facing twin of FCk_Snapshot_SlotMeta::Get_IsPopulated — a
+     * plain USTRUCT method has no reflected surface, so only CK_PROPERTY accessors reach script.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Slot Meta Populated")
+    static bool
+    Get_IsSlotMetaPopulated(
+        const FCk_Snapshot_SlotMeta& InMeta);
+
+    /** One game-defined summary field off a slot, or InFallback when the slot never recorded it. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Slot Custom Field")
+    static FString
+    Get_SlotCustomField(
+        const FCk_Snapshot_SlotMeta& InMeta,
+        FName InKey,
+        const FString& InFallback);
+
+    /**
+     * PNG thumbnail of the current viewport, for handing to Request_Save_WithMetadata.
+     *
+     * Call it BEFORE pushing a save/pause menu: the read takes the back buffer as-is, menus
+     * included, so capturing during the save itself thumbnails the save screen. Empty (not an
+     * error) with no viewport — headless, -nullrhi and dedicated servers all take that path.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Capture Viewport Thumbnail",
+              meta = (WorldContext = "InWorldContextObject"))
+    static TArray<uint8>
+    Capture_ViewportThumbnail(
+        const UObject* InWorldContextObject,
+        int32 InMaxWidth = 480);
 };
