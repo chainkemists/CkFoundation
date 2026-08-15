@@ -3,7 +3,6 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkWatermark/CkWatermark_Panel_Widget.h"
-#include "CkWatermark/CkWatermark_ActivityBar_Types.h"
 
 #include <Styling/SlateColor.h>
 #include <Subsystems/LocalPlayerSubsystem.h>
@@ -80,36 +79,6 @@ public:
     auto Get_CustomFieldKeyColorOverride()   const -> const TOptional<FSlateColor>&;
     auto Get_CustomFieldValueColorOverride() const -> const TOptional<FSlateColor>&;
 
-    // ---- Activity Bar API --------------------------------------------------------
-
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DisplayName = "[Ck][Watermark] Request Activity Active"))
-    void Request_ActivityActive(FName InActivityId, const FText& InDisplayLabel);
-
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DisplayName = "[Ck][Watermark] Request Activity Inactive"))
-    void Request_ActivityInactive(FName InActivityId);
-
-    auto Get_ActivityStates()  const -> const TArray<FCkWatermarkActivityState>&;
-    auto Get_ActivityVersion() const -> uint32;
-
-    // ---- Static convenience helpers (single-node Blueprint call) -----------------
-
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DefaultToSelf = "InPlayerController",
-                      DisplayName = "[Ck][Watermark] Notify Activity Active"))
-    static void NotifyActivityActive(
-        APlayerController* InPlayerController,
-        FName              InActivityId,
-        const FText&       InDisplayLabel);
-
-    UFUNCTION(BlueprintCallable, Category = "Watermark|Activity",
-              meta = (DefaultToSelf = "InPlayerController",
-                      DisplayName = "[Ck][Watermark] Notify Activity Inactive"))
-    static void NotifyActivityInactive(
-        APlayerController* InPlayerController,
-        FName              InActivityId);
-
     // ---- Static Custom Field convenience helpers ---------------------------------
 
     UFUNCTION(BlueprintCallable, Category = "Watermark|Custom Field",
@@ -129,8 +98,6 @@ public:
 private:
     auto DoCreateAndSetWatermarkWidget(APlayerController* InPlayerController) -> void;
     auto DoLogStaticInfo(const APlayerController* InPlayerController) const -> void;
-    auto DoSortActivityStates() -> void;
-    auto DoTrimActivityHistory() -> void;
 
 private:
     UPROPERTY(Transient)
@@ -144,12 +111,6 @@ private:
     bool  _bCustomFieldSet = false;
     TOptional<FSlateColor> _CustomFieldKeyColorOverride;
     TOptional<FSlateColor> _CustomFieldValueColorOverride;
-
-    // ---- Activity Bar state ------------------------------------------------------
-    TArray<FCkWatermarkActivityState> _ActivityStates;
-    uint32 _ActivityVersion = 0;
-
-    TMap<FName, int32> _ActivitySequenceCounters;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

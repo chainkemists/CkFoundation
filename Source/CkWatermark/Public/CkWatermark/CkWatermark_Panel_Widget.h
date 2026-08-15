@@ -62,7 +62,7 @@ public:
 
 private:
     // ---- Placement -----------------------------------------------------------
-    // Bottom-right by default: the activity bar and the settings-driven stat rows.
+    // Bottom-right by default: the settings-driven stat rows.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Watermark|Placement",
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_GroupPlacement _StatsGroupPlacement;
