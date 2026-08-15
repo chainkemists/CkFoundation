@@ -13,6 +13,7 @@
 #include "CkShapes/Sphere/CkShapeSphere_Utils.h"
 
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
+#include "CkJolt/World/CkJoltWorld.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Stats.h"
@@ -71,6 +72,19 @@ CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateShape);
 
 namespace ck_probe
 {
+    // An absent context is legal (a world with no Jolt subsystem never publishes one) — callers return silently.
+    auto
+        TryResolve_JoltWorld(
+            const FCk_Handle& InTransientEntity)
+        -> ck::FJoltWorld*
+    {
+        const auto* WorldPtr = InTransientEntity.Get_RegistryView().TryGetContext<TSharedPtr<ck::FJoltWorld>>();
+        if (WorldPtr == nullptr || NOT WorldPtr->IsValid())
+        { return nullptr; }
+
+        return WorldPtr->Get();
+    }
+
     auto
         OnBoxDimensionsChanged(
             FCk_Handle_ShapeBox InHandle,
@@ -1160,6 +1174,17 @@ namespace ck
 
     auto
         FProcessor_Probe_EndPlay::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _JoltWorld = ck_probe::TryResolve_JoltWorld(_TransientEntity);
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_Probe_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -1214,6 +1239,18 @@ namespace ck
         }
 
         BodyInterface.DestroyBody(BodyId);
+
+        if (_JoltWorld != nullptr)
+        {
+            // The debug draw's sweep for destroyed SLEEPING bodies is gated on this token, and a probe is not
+            // a JoltBody — nothing else in its teardown reaches that funnel.
+            _JoltWorld->Request_NoteBodyRemoved();
+
+            // A Static probe is inactive forever, so the capture files it under the STATIC keys the sweep never
+            // walks. Only the revision-keyed full pass releases those slots.
+            if (InParams.Get_MotionType() == ECk_MotionType::Static)
+            { _JoltWorld->Request_NoteStaticSceneChanged(); }
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

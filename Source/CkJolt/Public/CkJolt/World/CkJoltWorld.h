@@ -207,6 +207,12 @@ namespace ck
         // (the debug-draw capture) treat an unchanged value as "the static scene did not move" and skip work.
         auto Request_NoteStaticSceneChanged() -> void;
 
+        // ---- Body-removed change token (game-thread only) ----
+        // Bumped by the JoltBody EndPlay funnel for EVERY body it destroys, whatever its motion type. The
+        // debug-draw capture's sweep for destroyed SLEEPING bodies is O(sleeping) and can only be skipped
+        // safely while this value has not moved — a sleeping body is invisible to both of its body passes.
+        auto Request_NoteBodyRemoved() -> void;
+
     private:
         TWeakPtr<JPH::PhysicsSystem>                     _PhysicsSystem;
         JPH::TempAllocatorImpl*                          _TempAllocator = nullptr;
@@ -226,6 +232,7 @@ namespace ck
         float _PendingSimTime = 0.0f;                    // sim time the current step batch advances; quartet uses it later
         bool  _OptimizeBroadPhaseRequested = false;
         uint64 _StaticSceneRevision = 0;
+        uint64 _BodyRemovedRevision = 0;
         TFuture<void> _AsyncFuture;
 
         // ---- Pose buffer, keyed by BodyID index+sequence (stable while a body is alive) ----
@@ -258,6 +265,7 @@ namespace ck
         CK_PROPERTY(_PendingSimTime);
         CK_PROPERTY_GET(_OptimizeBroadPhaseRequested);
         CK_PROPERTY_GET(_StaticSceneRevision);
+        CK_PROPERTY_GET(_BodyRemovedRevision);
         CK_PROPERTY_GET(_AsyncFuture);
         CK_PROPERTY_GET(_Debug_NumPersistedContactEventsTotal);
     };

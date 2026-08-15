@@ -672,7 +672,8 @@ auto
         return;
     }
 
-    ck::jolt::debug_draw::Release_SlotsForKey(*Target->_Impl, BodyKey);
+    ck::jolt::debug_draw::Release_SlotsForKey(*Target->_Impl, BodyKey,
+        ck::jolt::debug_draw::EStatCounting::Counted);
 
     auto NewSlots = TArray<ck::jolt::debug_draw::FBodySlot>{};
     NewSlots.Reserve(Pending.Num());
@@ -718,8 +719,10 @@ auto
 
     auto& TargetImpl = *_Impl->_ActiveTarget->_Impl;
 
-    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, InBodyKey);
-    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey));
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, InBodyKey,
+        ck::jolt::debug_draw::EStatCounting::Counted);
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
+        ck::jolt::debug_draw::EStatCounting::Counted);
 }
 
 auto

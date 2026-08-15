@@ -284,7 +284,8 @@ namespace ck::jolt::debug_draw
     auto
         Release_SlotsForKey(
             FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
-            uint64 InSlotKey)
+            uint64 InSlotKey,
+            EStatCounting InStatCounting)
         -> void
     {
         auto* Slots = InOutTargetImpl._BodySlots.Find(InSlotKey);
@@ -302,8 +303,10 @@ namespace ck::jolt::debug_draw
             { continue; }
 
             Ism->RemoveInstanceById(Slot._InstanceId);
-            ++InOutTargetImpl._LastCaptureStats._InstancesRemoved;
             Bucket->_SlotCount = FMath::Max(0, Bucket->_SlotCount - 1);
+
+            if (InStatCounting == EStatCounting::Counted)
+            { ++InOutTargetImpl._LastCaptureStats._InstancesRemoved; }
         }
 
         InOutTargetImpl._BodySlots.Remove(InSlotKey);
@@ -392,7 +395,9 @@ auto
     _Impl->_PrevActiveBodyKeys.Reset();
     _Impl->_SleepingBodyKeys.Reset();
     _Impl->_CharacterKeys.Reset();
+    _Impl->_InactiveBodyRecords.Reset();
     _Impl->_FullPassEverRan = false;
+    _Impl->_SweepEverRan = false;
     _Impl->_AnyLive = false;
 }
 
@@ -505,8 +510,11 @@ auto
 
     if (_Impl->_HighlightedBodyKey.IsSet())
     {
+        // Excluded from the stats: this runs BETWEEN captures, and counting it would rewrite the last
+        // capture's reported removals after the fact.
         ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
-            ck::jolt::debug_draw::Make_HighlightKey(*_Impl->_HighlightedBodyKey));
+            ck::jolt::debug_draw::Make_HighlightKey(*_Impl->_HighlightedBodyKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
     }
 
     _Impl->_HighlightedBodyKey = InBodyKey;
@@ -637,6 +645,9 @@ auto
 {
     _Impl->_Palette = InPalette;
 
+    // Re-arming the pass is not enough on its own: it skips bodies whose pose is unchanged, and every one of
+    // them still has to be repainted through the new palette.
+    _Impl->_InactiveBodyRecords.Reset();
     _Impl->_FullPassEverRan = false;
     _Impl->_AppliedOpacity = -1.0f;
 
