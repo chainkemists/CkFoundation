@@ -29,7 +29,11 @@ enum class ECk_Jolt_DebugDraw_ColorClass : uint8
     Dynamic_Sleeping,
     Sensor,
     BakedStatic,
-    Character
+    Character,
+
+    // Sentinel. The visibility mask packs one bit per class into a uint8, so the class count is capped —
+    // see the static_assert beside Get_ClassBit.
+    Count
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -140,6 +144,23 @@ public:
     auto
     Set_Palette(
         const FCk_Jolt_DebugDrawPalette& InPalette) -> FCk_Jolt_DebugDrawTarget&;
+
+    /// Show/hide one colour class. Component-level only — the class keeps capturing while hidden, so the
+    /// toggle costs one SetVisibility per affected bucket and unhiding shows current poses, never stale ones.
+    auto
+    Set_ClassVisibility(
+        ECk_Jolt_DebugDraw_ColorClass InColorClass,
+        bool InIsVisible) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_IsClassVisible(
+        ECk_Jolt_DebugDraw_ColorClass InColorClass) const -> bool;
+
+    /// World-space bounds of everything this target currently DRAWS — hidden classes are excluded, because the
+    /// caller is a camera framing what the viewer can see. Invalid (`IsValid == 0`) when nothing is drawn.
+    /// Derived from the bucket components' own bounds, so it is conservative, not a tight fit.
+    auto
+    Get_ContentBounds() const -> FBox;
 
     auto
     Get_World() const -> TWeakObjectPtr<UWorld>;

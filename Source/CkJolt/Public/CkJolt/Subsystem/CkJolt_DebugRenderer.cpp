@@ -465,7 +465,8 @@ auto
     // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
     Ism->RegisterComponentWithWorld(World);
 
-    Ism->SetVisibility(true);
+    // A bucket born into a hidden class must not flash into view before the next toggle.
+    Ism->SetVisibility(InTarget.Get_IsClassVisible(InKey._ColorClass));
     Ism->SetHiddenInGame(false);
     Ism->SetStaticMesh(Mesh);
 
