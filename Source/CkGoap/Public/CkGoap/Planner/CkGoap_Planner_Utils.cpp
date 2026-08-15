@@ -12,10 +12,26 @@
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 #include "CkAStar/CkAStar_Fragment.h"
 
+#include "CkCore/Time/CkTime_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Signal/CkSignal_Utils.inl.h"
 
 #include "CkLabel/CkLabel_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_goap_planner_utils
+{
+	// Mirrors ck_goap_action_processor::Get_NowSeconds — the AutoReplan processor compares its stamp
+	// against exactly this clock.
+	auto Get_NowSeconds(const FCk_Handle& InHandle)
+		-> double
+	{
+		const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+		const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+		return UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time().Get_Seconds();
+	}
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -132,7 +148,10 @@ auto
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Result>();
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_PlanContext>();
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Requests>();
-	InPlannerEntity.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+	{
+		auto& Throttle = InPlannerEntity.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+		Throttle._LastReplanWorldTimeSeconds = ck_goap_planner_utils::Get_NowSeconds(InPlannerEntity);
+	}
 
 	InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
@@ -155,6 +174,12 @@ auto
 	{
 		InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresInitialPlan>();
 	}
+
+	// Seeds both view-narrowing gates for a freshly stamped top-level Planner: the initial-plan tag,
+	// _EnableToggle and _IsActive were all written above, and a policy-ignores-dirty planner still
+	// needs one AutoReplan visit to drop back out of the candidate view.
+	ck::goap::MarkReplanCandidate(InPlannerEntity);
+	ck::goap::MarkActivationDirty(InPlannerEntity);
 }
 
 auto
@@ -840,6 +865,7 @@ auto
 
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanState>();
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_Activation>();
+	ck::goap::MarkActivationDirty(InAction);
 
 	// _GoalAuthored comes from InParams, never from the Action role's effects — the Planner's
 	// authored goal is independent of them.
@@ -871,7 +897,10 @@ auto
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_Result>();
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanContext>();
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	InAction.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+	{
+		auto& Throttle = InAction.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
+		Throttle._LastReplanWorldTimeSeconds = ck_goap_planner_utils::Get_NowSeconds(InAction);
+	}
 
 	// Re-run setup so cycle detection and goal resolution see the new Planner-role config.
 	InAction.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
@@ -898,6 +927,11 @@ auto
 
 	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InToggle;
+
+	// Both gated processors early-out on Disable and resume on re-enable, so a toggle in either
+	// direction has to put the planner back in front of them.
+	ck::goap::MarkActivationDirty(InPlanner);
+	ck::goap::MarkReplanCandidate(InPlanner);
 
 	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
 	InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Succeeded);

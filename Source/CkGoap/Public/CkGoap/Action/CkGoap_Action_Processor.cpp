@@ -9,6 +9,7 @@
 #include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"  // residency classification + parent effective reads
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Time/CkTime_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -127,6 +128,14 @@ namespace ck_goap_action_processor
 			Walker = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Walker);
 		}
 		return {};
+	}
+
+	auto Get_NowSeconds(const FCk_Handle& InHandle)
+		-> double
+	{
+		const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+		const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+		return UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time().Get_Seconds();
 	}
 }
 
@@ -293,6 +302,8 @@ auto
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_AutoReplan);
 
+	(void)InDeltaT;
+
 	// Dirty / initial-plan tags stay set while disabled, so a re-enable resumes
 	// from the deferred state.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
@@ -306,8 +317,6 @@ auto
 	// without this gate a premature Plan request fires a spurious PlanFailed.
 	if (ck::Is_NOT_Valid(InWSSource.Get_Resolved()))
 	{ return; }
-
-	InThrottle._SecondsSinceLastReplan += InDeltaT.Get_Seconds();
 
 	const auto IsInitialPlanPending = InHandle.Has<FTag_Goap_Planner_RequiresInitialPlan>();
 	const auto WSDirty   = InHandle.Has<FTag_Goap_Dirty_WorldState>();
@@ -325,12 +334,21 @@ auto
 		return false;
 	}();
 
-	const auto ThrottleElapsed = InThrottle._SecondsSinceLastReplan
-		>= InParams.Get_MinReplanIntervalSeconds();
+	const auto Now = ck_goap_action_processor::Get_NowSeconds(InHandle);
+	const auto ThrottleElapsed = (Now - InThrottle._LastReplanWorldTimeSeconds)
+		>= static_cast<double>(InParams.Get_MinReplanIntervalSeconds());
 
 	const auto ShouldFire = IsInitialPlanPending || (PolicyAllowsReplan && ThrottleElapsed);
 	if (NOT ShouldFire)
-	{ return; }
+	{
+		// Throttled planners must stay in the view so the deferred replan still fires once the
+		// window elapses. Everything else (policy ignores the dirty tags, or Explicit) has nothing
+		// left to do until a later Add re-marks it.
+		if (NOT IsInitialPlanPending && NOT PolicyAllowsReplan)
+		{ InHandle.Try_Remove<FTag_Goap_Planner_ReplanCandidate>(); }
+
+		return;
+	}
 
 	// Replan frequency across all Planners — #1 scaling risk (default replan throttle is 0).
 	INC_DWORD_STAT(STAT_Goap_ReplansRequested);
@@ -349,10 +367,11 @@ auto
 	auto& Requests = InHandle.AddOrGet<FFragment_Goap_Planner_Requests>();
 	Requests._Requests.Add(FCk_Request_Goap_Planner_Plan{}.Set_Origin(Origin));
 
-	InThrottle._SecondsSinceLastReplan = 0.0f;
+	InThrottle._LastReplanWorldTimeSeconds = Now;
 	InHandle.Try_Remove<FTag_Goap_Dirty_WorldState>();
 	InHandle.Try_Remove<FTag_Goap_Dirty_Cost>();
 	InHandle.Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
+	InHandle.Try_Remove<FTag_Goap_Planner_ReplanCandidate>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -425,11 +444,15 @@ auto
 					// MarkedDirtyBy = FFragment_Goap_Planner_Requests, so rewriting the
 					// fragment re-runs this processor until the pump limit fires.
 					InHandle.AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
+					goap::MarkReplanCandidate(InHandle);
 					return;
 				}
 
 				InHandle.Try_Remove<FTag_AStar_SearchActive>();
 				InHandle.Try_Remove<FTag_AStar_SearchComplete>();
+
+				// Every exit below writes PlanState (PlanFailed / PlanFound / Planning).
+				goap::MarkActivationDirty(InHandle);
 
 				++InPlanState._PlanAttemptCount;
 
@@ -603,6 +626,7 @@ auto
 				InPlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
 				InPlanState._Plan.Reset();
 				InPlanState._PlanCost = 0.0f;
+				goap::MarkActivationDirty(InHandle);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetGoal>)
 			{
@@ -640,6 +664,7 @@ auto
 				}
 
 				InHandle.AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
+				goap::MarkReplanCandidate(InHandle);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_SetActionCost>)
 			{
@@ -664,6 +689,7 @@ auto
 				}
 
 				InHandle.AddOrGet<FTag_Goap_Dirty_Cost>();
+				goap::MarkReplanCandidate(InHandle);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_RegisterActionCostProvider>)
 			{
@@ -740,6 +766,10 @@ auto
 
 	// Any terminal status releases the parent-plan gate for our children.
 	InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
+
+	// Every switch arm below writes PlanState; this runs only on search completion, so marking it
+	// unconditionally costs one activation visit per completed search.
+	goap::MarkActivationDirty(InHandle);
 
 	switch (InResult._SearchStatus)
 	{

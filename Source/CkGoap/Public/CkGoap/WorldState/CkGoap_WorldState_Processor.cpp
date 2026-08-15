@@ -124,6 +124,7 @@ auto
 				continue;
 			}
 			Subscriber.AddOrGet<FTag_Goap_Dirty_WorldState>();
+			goap::MarkReplanCandidate(Subscriber);
 		}
 
 		return ECk_Request_OperationResult::Succeeded;
@@ -162,6 +163,7 @@ auto
 			continue;
 		}
 		Subscriber.template AddOrGet<FTag_Goap_Dirty_WorldState>();
+		goap::MarkReplanCandidate(Subscriber);
 	}
 
 	return ECk_Request_OperationResult::Succeeded;

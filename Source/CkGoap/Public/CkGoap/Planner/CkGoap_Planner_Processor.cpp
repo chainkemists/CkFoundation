@@ -494,8 +494,10 @@ auto
 	DoSubscribeActionToWorldState(InPlanner);
 
 	InPlanner.template AddOrGet<FTag_Goap_Planner_RequiresInitialPlan>();
+	goap::MarkReplanCandidate(InPlanner);
 
 	Activation._IsActive = true;
+	goap::MarkActivationDirty(InPlanner);
 
 	{
 		auto PlannerCast = UCk_Utils_Goap_Planner_UE::Has(InPlanner)
@@ -546,6 +548,7 @@ auto
 	WSSource._Resolved = {};
 	PlanState._Plan.Reset();
 	PlanState._PlanStatus = ECk_GoapPlanStatus::Idle;
+	goap::MarkActivationDirty(InPlanner);
 
 	// A Planner leaving the chain never broadcasts a terminal status, so nothing else drops these.
 	InPlanner.template Try_Remove<FTag_Goap_Planner_RequiresInitialPlan>();
@@ -577,8 +580,13 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_UpdateActivation);
 
 	if (NOT InActivation._IsActive)
-	{ return; }
+	{
+		InHandle.template Try_Remove<FTag_Goap_Planner_ActivationDirty>();
+		return;
+	}
 
+	// The one path that KEEPS the tag: a disabled Planner must be revisited on re-enable, and the
+	// enable toggle is not the only thing that can have changed while it sat disabled.
 	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
 	{ return; }
 
@@ -586,7 +594,10 @@ auto
 	const auto DecisionIsSettled = PlanStatus == ECk_GoapPlanStatus::PlanFound ||
 		PlanStatus == ECk_GoapPlanStatus::PlanFailed;
 	if (NOT DecisionIsSettled)
-	{ return; }
+	{
+		InHandle.template Try_Remove<FTag_Goap_Planner_ActivationDirty>();
+		return;
+	}
 
 	const auto OldStep0 = InActivation._LastActivatedPlan0;
 	const auto NewStep0 = InPlanState.Get_Plan().IsEmpty()
@@ -594,7 +605,10 @@ auto
 		: InPlanState.Get_Plan()[0];
 
 	if (OldStep0 == NewStep0)
-	{ return; }
+	{
+		InHandle.template Try_Remove<FTag_Goap_Planner_ActivationDirty>();
+		return;
+	}
 
 	const auto IsPromotedMidTierPlanner = InHandle.template Has<FFragment_Goap_Action_Tree>();
 
@@ -661,6 +675,8 @@ auto
 			TopLevelPlanner, ck::MakePayload(TopLevelPlanner,
 				FCk_Goap_Payload_OnActiveChainChanged{OldChainSnapshot}));
 	}
+
+	InHandle.template Try_Remove<FTag_Goap_Planner_ActivationDirty>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
