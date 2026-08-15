@@ -13,13 +13,19 @@ struct FCkTest_ParamsGenerator_MixedFields
 {
     GENERATED_BODY()
 
-    UPROPERTY() bool        Flag = false;
-    UPROPERTY() FVector     Offset = FVector::ZeroVector;
-    UPROPERTY() FRotator    Rotation = FRotator::ZeroRotator;
+    UPROPERTY()
+    bool Flag = false;
+
+    UPROPERTY()
+    FVector Offset = FVector::ZeroVector;
+
+    UPROPERTY()
+    FRotator Rotation = FRotator::ZeroRotator;
 
     // The trap field: a nullptr UObject default is safe in field-decl position, not in a
     // positional-ctor argument (AS rejects the bare nullptr as `<null handle>`).
-    UPROPERTY() TObjectPtr<USoundBase> Sound = nullptr;
+    UPROPERTY()
+    TObjectPtr<USoundBase> Sound = nullptr;
 };
 
 USTRUCT()
@@ -27,8 +33,11 @@ struct FCkTest_ParamsGenerator_PodOnly
 {
     GENERATED_BODY()
 
-    UPROPERTY() bool    Flag = false;
-    UPROPERTY() FVector Offset = FVector::ZeroVector;
+    UPROPERTY()
+    bool Flag = false;
+
+    UPROPERTY()
+    FVector Offset = FVector::ZeroVector;
 };
 
 UCLASS()
@@ -36,13 +45,23 @@ class UCkTest_ParamsGenerator_Host : public UObject
 {
     GENERATED_BODY()
 public:
-    UPROPERTY() FCkTest_ParamsGenerator_MixedFields Params;
+    UPROPERTY()
+    FCkTest_ParamsGenerator_MixedFields Params;
 
-    UPROPERTY() TObjectPtr<USoundBase> StrongSound;
-    UPROPERTY() TWeakObjectPtr<USoundBase> WeakSound;
-    UPROPERTY() TSoftObjectPtr<USoundBase> SoftSound;
-    UPROPERTY() TSoftClassPtr<USoundBase> SoftSoundClass;
-    UPROPERTY() TArray<TWeakObjectPtr<USoundBase>> WeakSounds;
+    UPROPERTY()
+    TObjectPtr<USoundBase> StrongSound;
+
+    UPROPERTY()
+    TWeakObjectPtr<USoundBase> WeakSound;
+
+    UPROPERTY()
+    TSoftObjectPtr<USoundBase> SoftSound;
+
+    UPROPERTY()
+    TSoftClassPtr<USoundBase> SoftSoundClass;
+
+    UPROPERTY()
+    TArray<TWeakObjectPtr<USoundBase>> WeakSounds;
 };
 
 UCLASS(NotBlueprintable, BlueprintType)
@@ -56,7 +75,8 @@ struct FCkTest_ParamsGenerator_WeakInjectionParams
 {
     GENERATED_BODY()
 
-    UPROPERTY() TWeakObjectPtr<UObject> InjectedObject;
+    UPROPERTY()
+    TWeakObjectPtr<UObject> InjectedObject;
 };
 
 UCLASS(NotBlueprintable, BlueprintType)
@@ -64,5 +84,6 @@ class UCkTest_ParamsGenerator_WeakInjectionTarget : public UCk_EntityScript_UE
 {
     GENERATED_BODY()
 public:
-    UPROPERTY() TObjectPtr<UObject> InjectedObject;
+    UPROPERTY()
+    TObjectPtr<UObject> InjectedObject;
 };

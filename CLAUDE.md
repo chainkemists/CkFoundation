@@ -264,6 +264,31 @@ public:
 };
 ```
 
+**`UPROPERTY()` goes on its OWN line — never inline with the member, and never column-aligned.**
+One property per two lines, declaration order preserved:
+
+```cpp
+// ✅ Correct
+UPROPERTY()
+FName _SlotName;
+
+UPROPERTY()
+TArray<uint8> _ScreenshotPng;
+
+// ❌ Wrong — inline specifier, padded to a phantom column
+UPROPERTY() FName               _SlotName;
+UPROPERTY() TArray<uint8>       _ScreenshotPng;
+```
+
+This holds for a bare `UPROPERTY()` too, not just the multi-specifier ones that obviously need
+wrapping. The alignment padding is the worse half: any new member whose type is wider than the
+current column re-pads the whole block, so a one-line change lands as a twenty-line diff and the
+real edit vanishes into the noise.
+
+Some older headers still carry the inline form (`CkSnapshot/SaveGame/CkSnapshot_Header.h`,
+`CkSnapshot/Snapshot/CkSnapshot_LoadReport.h`). They are the exception, not the pattern — do not
+copy from them.
+
 **Requests.** One struct per request type; essentials in the `CK_DEFINE_CONSTRUCTORS` ctor,
 optionals via the fluent `Set_*` setters; `CK_REQUEST_DEFINE_DEBUG_NAME` on every request.
 UFUNCTION surface takes `UPARAM(ref) FCk_Handle_X&` + the request struct and returns the handle

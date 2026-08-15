@@ -36,10 +36,17 @@ public:
 private:
     void DoSetup();
 
-    UPROPERTY(Transient) TMap<ECk_Usf_PassId, TObjectPtr<UTextureRenderTarget2D>> _BufferRead;
-    UPROPERTY(Transient) TMap<ECk_Usf_PassId, TObjectPtr<UTextureRenderTarget2D>> _BufferWrite;
-    UPROPERTY(Transient) TMap<ECk_Usf_PassId, TObjectPtr<UMaterialInstanceDynamic>> _PassMIDs;
-    UPROPERTY(Transient) TObjectPtr<UTextureRenderTarget2D> _DisplayRT;
+    UPROPERTY(Transient)
+    TMap<ECk_Usf_PassId, TObjectPtr<UTextureRenderTarget2D>> _BufferRead;
+
+    UPROPERTY(Transient)
+    TMap<ECk_Usf_PassId, TObjectPtr<UTextureRenderTarget2D>> _BufferWrite;
+
+    UPROPERTY(Transient)
+    TMap<ECk_Usf_PassId, TObjectPtr<UMaterialInstanceDynamic>> _PassMIDs;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextureRenderTarget2D> _DisplayRT;
 
     int32 _Frame = 0;
     bool _Initialized = false;

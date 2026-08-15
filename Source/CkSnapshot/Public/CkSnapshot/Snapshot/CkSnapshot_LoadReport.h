@@ -54,13 +54,22 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_OrphanRecord);
 
 private:
-    UPROPERTY() uint32                     _SavedId = 0xFFFFFFFFu;
-    UPROPERTY() ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+    UPROPERTY()
+    uint32 _SavedId = 0xFFFFFFFFu;
+
+    UPROPERTY()
+    ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+
     // label / script-or-actor class path / save-key / player id — whichever the provenance carries.
-    UPROPERTY() FString                    _Identity;
-    UPROPERTY() uint32                     _OwnerSavedId = 0xFFFFFFFFu;
+    UPROPERTY()
+    FString _Identity;
+
+    UPROPERTY()
+    uint32 _OwnerSavedId = 0xFFFFFFFFu;
+
     // Reason bucket string — the set is enumerated in CkSnapshot/CLAUDE.md.
-    UPROPERTY() FString                    _Reason;
+    UPROPERTY()
+    FString _Reason;
 
 public:
     CK_PROPERTY(_SavedId);
@@ -79,12 +88,21 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_SkipRecord);
 
 private:
-    UPROPERTY() uint32                     _SavedId = 0xFFFFFFFFu;
-    UPROPERTY() ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+    UPROPERTY()
+    uint32 _SavedId = 0xFFFFFFFFu;
+
+    UPROPERTY()
+    ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+
     // label / script-or-actor class path / save-key / player id — whichever the provenance carries.
-    UPROPERTY() FString                    _Identity;
-    UPROPERTY() uint32                     _OwnerSavedId = 0xFFFFFFFFu;
-    UPROPERTY() ECk_Snapshot_SkipReason    _Reason = ECk_Snapshot_SkipReason::ClassUnloadable;
+    UPROPERTY()
+    FString _Identity;
+
+    UPROPERTY()
+    uint32 _OwnerSavedId = 0xFFFFFFFFu;
+
+    UPROPERTY()
+    ECk_Snapshot_SkipReason _Reason = ECk_Snapshot_SkipReason::ClassUnloadable;
 
 public:
     CK_PROPERTY(_SavedId);
@@ -103,38 +121,77 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_LoadReport);
 
 private:
-    UPROPERTY() ECk_SnapshotResult _Result = ECk_SnapshotResult::Failed_IO;
+    UPROPERTY()
+    ECk_SnapshotResult _Result = ECk_SnapshotResult::Failed_IO;
+
     // Rows in the save's entity table. Restored + Skipped + Orphaned partitions it exactly.
-    UPROPERTY() int32              _EntitiesTotal = 0;
-    UPROPERTY() int32              _EntitiesRestored = 0;
-    UPROPERTY() int32              _EntitiesSkipped = 0;
-    UPROPERTY() int32              _EntitiesOrphaned = 0;
-    UPROPERTY() int32              _EntitiesPartiallyRestored = 0;
+    UPROPERTY()
+    int32 _EntitiesTotal = 0;
+
+    UPROPERTY()
+    int32 _EntitiesRestored = 0;
+
+    UPROPERTY()
+    int32 _EntitiesSkipped = 0;
+
+    UPROPERTY()
+    int32 _EntitiesOrphaned = 0;
+
+    UPROPERTY()
+    int32 _EntitiesPartiallyRestored = 0;
+
     // Rows in the save's payload table. Enqueued + OnSkipped + OnOrphaned + OnUnresolvedOwner + Dropped
     // partitions it exactly.
-    UPROPERTY() int32              _PayloadsTotal = 0;
-    UPROPERTY() int32              _PayloadsEnqueued = 0;
+    UPROPERTY()
+    int32 _PayloadsTotal = 0;
+
+    UPROPERTY()
+    int32 _PayloadsEnqueued = 0;
+
     // Payloads whose owner entity the loader deliberately did not rebuild — see _Skips for the per-entity reason.
-    UPROPERTY() int32              _PayloadsOnSkippedEntities = 0;
+    UPROPERTY()
+    int32 _PayloadsOnSkippedEntities = 0;
+
     // Payloads whose owner entity never mapped and was not skipped — see _Orphans.
-    UPROPERTY() int32              _PayloadsOnOrphanedEntities = 0;
+    UPROPERTY()
+    int32 _PayloadsOnOrphanedEntities = 0;
+
     // Payloads whose owner saved-id is neither mapped-to-a-live-handle, skipped, nor orphaned: an owner id absent
     // from the entity table, or one mapped to a handle that has since gone invalid.
-    UPROPERTY() int32              _PayloadsOnUnresolvedOwner = 0;
+    UPROPERTY()
+    int32 _PayloadsOnUnresolvedOwner = 0;
+
     // Payloads that failed to deserialize: empty bytes, or a type absent since the save (content drift).
-    UPROPERTY() int32              _PayloadsDropped = 0;
-    UPROPERTY() TArray<FString>    _SkippedFragmentTypes;
-    UPROPERTY() TArray<FString>    _SkippedDynamicTypes;
-    UPROPERTY() TArray<FString>    _SkippedScriptClasses;
-    UPROPERTY() TArray<FCk_Snapshot_OrphanRecord> _Orphans;
-    UPROPERTY() TArray<FCk_Snapshot_SkipRecord>   _Skips;
-    UPROPERTY() FCk_Snapshot_Header _LoadedHeader;
+    UPROPERTY()
+    int32 _PayloadsDropped = 0;
+
+    UPROPERTY()
+    TArray<FString> _SkippedFragmentTypes;
+
+    UPROPERTY()
+    TArray<FString> _SkippedDynamicTypes;
+
+    UPROPERTY()
+    TArray<FString> _SkippedScriptClasses;
+
+    UPROPERTY()
+    TArray<FCk_Snapshot_OrphanRecord> _Orphans;
+
+    UPROPERTY()
+    TArray<FCk_Snapshot_SkipRecord> _Skips;
+
+    UPROPERTY()
+    FCk_Snapshot_Header _LoadedHeader;
+
     // The rebuild kernel quiesced with unresolved rows and the loader ran full-scope ticks to let
     // multi-stage constructions (and the identity they stamp on completion) finish. Not a failure.
-    UPROPERTY() bool               _UsedEscalatedRebuild = false;
+    UPROPERTY()
+    bool _UsedEscalatedRebuild = false;
+
     // Rows that stayed unresolved even after the escalated full scope quiesced — real losses (content
     // drift, or an identity the fresh world never re-creates). Per-row detail is in _Orphans.
-    UPROPERTY() int32              _UnresolvedAfterEscalation = 0;
+    UPROPERTY()
+    int32 _UnresolvedAfterEscalation = 0;
 
 public:
     CK_PROPERTY(_Result);

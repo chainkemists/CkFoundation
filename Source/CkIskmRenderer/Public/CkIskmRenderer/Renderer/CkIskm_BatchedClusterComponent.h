@@ -82,10 +82,17 @@ public:
     virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 
 private:
-    UPROPERTY(Transient) TObjectPtr<UCk_IskmAnimCollection_Data> _AnimCollection;
-    UPROPERTY(Transient) TObjectPtr<USkeletalMesh> _Mesh;
-    UPROPERTY(Transient) TObjectPtr<UMaterialInterface> _OverrideMaterial;
-    UPROPERTY(Transient) TArray<TObjectPtr<UMaterialInterface>> _SlotOverrideMaterials;
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_IskmAnimCollection_Data> _AnimCollection;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USkeletalMesh> _Mesh;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UMaterialInterface> _OverrideMaterial;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UMaterialInterface>> _SlotOverrideMaterials;
 
     TArray<FInstance> _Instances;
     FBox _LocalBounds = FBox(ForceInit);
