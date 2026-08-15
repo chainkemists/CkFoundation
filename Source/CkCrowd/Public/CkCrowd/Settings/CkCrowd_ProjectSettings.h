@@ -155,18 +155,28 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1,
-            ToolTip = "Seconds between position samples for the no-progress detector. Mirrors UE's BlockDetectionInterval (0.5s)."))
+            ToolTip = "Seconds between progress samples for the no-progress detector. Mirrors UE's BlockDetectionInterval (0.5s)."))
     float _BlockDetectionInterval = 0.5f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
-        meta = (AllowPrivateAccess = true, ClampMin = 3, UIMin = 3, ClampMax = 10, UIMax = 10,
-            ToolTip = "How many samples must all sit within BlockDetectionDistance of their centroid before the agent counts as going nowhere. 6 samples x 0.5s = a 3s window. UE uses 10 (5s); a crowd-tier detector can afford to be quicker."))
-    int32 _BlockDetectionSampleCount = 6;
+        meta = (AllowPrivateAccess = true, ClampMin = 0.5, UIMin = 0.5,
+            ToolTip = "Seconds the agent may go without improving its best REMAINING path distance before it counts as stalled. Replaces the feet-sample centroid ring, which an agent sliding laterally along a wall (exactly what the navmesh constraint's surface walk produces) evaded forever while its velocity stayed nonzero. Progress along the path cannot be faked by sliding, and the same measure also catches corner orbiting."))
+    float _BlockDetectionNoProgressWindowSeconds = 3.0f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0,
-            ToolTip = "Radius (cm) around the sample centroid within which every sample must fall for the agent to count as making no progress. Mirrors UE's BlockDetectionDistance (10cm)."))
-    float _BlockDetectionDistance = 15.0f;
+            ToolTip = "How much (cm) the best remaining path distance must improve within the no-progress window to count as progress. Too small and push-apart jitter reads as forward motion; too large and a legitimately slow agent (heavy crowd, tight corridor) is declared stalled."))
+    float _BlockDetectionProgressEpsilonCm = 30.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0, UIMin = 0, ClampMax = 8, UIMax = 8,
+            ToolTip = "Internal re-paths a stalled agent may spend before the stall is escalated to a block. The frozen Recast polyline is the usual culprit — the world changed after the path was planned — so re-planning at the same goal is the cheap fix. 0 escalates on the first stall."))
+    int32 _BlockDetectionMaxStallRepaths = 2;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "How far (cm, XY) the agent may drift from its current path segment before it is re-pathed. Heals teleports, saves restores, and external shoves, which otherwise leave steering chasing a waypoint the agent can no longer reach along the installed corridor. 0 disables the check."))
+    float _BlockDetectionOffPathRepathThresholdCm = 300.0f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
@@ -177,6 +187,11 @@ private:
         meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1,
             ToolTip = "Seconds between re-checks for a HoldAndRetry agent waiting on a blocked goal. When the goal clears it re-paths and resumes."))
     float _BlockedRecheckInterval = 1.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0, UIMin = 0, ClampMax = 20, UIMax = 20,
+            ToolTip = "How many HoldAndRetry re-check cycles a NoProgress block may spend re-pathing before the move is failed outright. Applies ONLY to NoProgress: a goal occupied by another AGENT keeps the unbounded hold (a queue wait is not a failure), while static geometry never clears and retrying it forever is a silent hang no caller can observe."))
+    int32 _BlockedMaxRetries = 3;
 
     // ---- Navmesh constraint ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
@@ -246,10 +261,13 @@ public:
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
-    CK_PROPERTY_GET(_BlockDetectionSampleCount);
-    CK_PROPERTY_GET(_BlockDetectionDistance);
+    CK_PROPERTY_GET(_BlockDetectionNoProgressWindowSeconds);
+    CK_PROPERTY_GET(_BlockDetectionProgressEpsilonCm);
+    CK_PROPERTY_GET(_BlockDetectionMaxStallRepaths);
+    CK_PROPERTY_GET(_BlockDetectionOffPathRepathThresholdCm);
     CK_PROPERTY_GET(_BlockedStationarySpeedThreshold);
     CK_PROPERTY_GET(_BlockedRecheckInterval);
+    CK_PROPERTY_GET(_BlockedMaxRetries);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

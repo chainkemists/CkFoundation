@@ -250,13 +250,16 @@ namespace ck
     // Cleared by any external MoveTo or Stop.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalBlocked);
 
-    // Feet-sample ring mirroring UPathFollowingComponent's block detection
-    // (PathFollowingComponent.cpp:1556-1608).
+    // Progress-along-path stall detection plus the escalation ladder that answers it.
+    // UPathFollowingComponent's feet-sample centroid ring (PathFollowingComponent.cpp:1556-1608)
+    // used to live here; it was blind to an agent sliding laterally along a wall, which is exactly
+    // the motion ConstrainToNavmesh's surface walk produces.
     struct CKCROWD_API FFragment_CrowdAgent_BlockDetect
     {
         friend class FProcessor_CrowdAgent_BlockDetect;
         friend class FProcessor_CrowdAgent_BlockedRecheck;
         friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class FProcessor_CrowdAgent_OnPathResolved;
         friend class FProcessor_CrowdAgent_PathRefresh;
         friend class ::UCk_Utils_CrowdAgent_UE;
 
@@ -264,18 +267,40 @@ namespace ck
         CK_GENERATED_BODY(FFragment_CrowdAgent_BlockDetect);
 
     private:
-        TArray<FVector, TInlineAllocator<10>> _FeetSamples;
-        int32 _NextSampleIdx = 0;
+        // Best remaining path distance (agent -> current waypoint, plus the polyline tail) seen
+        // since the last improvement worth the epsilon. Only ever lowered while a path is walked,
+        // so it IS the windowed minimum; the resets below are what re-seed it.
+        float _BestRemainingPathDistanceCm = TNumericLimits<float>::Max();
+        float _SecondsWithoutProgress = 0.0f;
         float _SampleAccumulatorSec = 0.0f;
         float _RecheckAccumulatorSec = 0.0f;
+
+        // Internal re-paths already spent on this stall episode. A re-path that then makes real
+        // progress zeroes it; an exhausted count is what promotes a stall to a block.
+        int32 _StallRepathCount = 0;
+
+        // BlockedRecheck cycles spent re-pathing a NoProgress block. Bounded, because static
+        // geometry never clears — unlike an agent-occupied goal, which is a queue wait.
+        int32 _BlockedRetryCount = 0;
+
+        ECk_CrowdAgent_BlockedReason _BlockedCause = ECk_CrowdAgent_BlockedReason::GoalOccupied;
 
         // OnGoalBlocked fires ONCE per blocked episode, not once per re-check.
         bool _BlockedSignalSent = false;
 
         FCk_Handle _BlockedBy;
 
+        auto
+        DoResetProgressWindow() -> void
+        {
+            _BestRemainingPathDistanceCm = TNumericLimits<float>::Max();
+            _SecondsWithoutProgress = 0.0f;
+            _SampleAccumulatorSec = 0.0f;
+        }
+
     public:
         CK_PROPERTY_GET(_BlockedBy);
+        CK_PROPERTY_GET(_BlockedCause);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

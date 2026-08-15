@@ -49,7 +49,9 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CrowdAgent);
 
 // Why an agent could not reach its goal. GoalOccupied: another agent stands on the destination, so
 // the closest this agent can physically get is (SelfRadius + BlockerRadius) out — further than its
-// arrival radius. NoProgress: the agent has been going nowhere for a while, for any other reason.
+// arrival radius; _BlockedBy names it. NoProgress: the agent stopped making progress along its path
+// and re-planning did not help, so the obstruction is static and there is no blocker handle.
+// The two causes retry differently — see ECk_CrowdAgent_BlockedPolicy.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_BlockedReason : uint8
 {
@@ -61,7 +63,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedReason);
 // What an agent does when it discovers its goal is unreachable.
 //
 // HoldAndRetry (default): stop, report OnGoalBlocked once, then re-check on a cadence and resume
-// automatically the moment the goal clears — the caller needs no failure handling at all.
+// automatically the moment the goal clears. For a GoalOccupied block that hold is UNBOUNDED — the
+// blocker is another agent and waiting it out is the whole point (a queue), so the caller needs no
+// failure handling. For a NoProgress block the obstruction is static and never clears on its own,
+// so the re-checks are bounded by _BlockedMaxRetries and OnGoalFailed fires when they run out.
 // FailMove: report OnGoalBlocked, then OnGoalFailed, then go Idle — the caller owns recovery.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_BlockedPolicy : uint8
@@ -275,6 +280,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
     friend class ck::FProcessor_CrowdAgent_OnVoxelPathResolved;
+    friend class ck::FProcessor_CrowdAgent_BlockDetect;
     friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
     friend class ck::FProcessor_CrowdAgent_PathRefresh;
     friend class ::UCk_Utils_CrowdAgent_UE;
@@ -436,11 +442,18 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     int32 _CorrelationId = 0;
 
+    // Skips the same-goal no-op so a caller can demand a fresh path to the goal it is already
+    // walking to. The guard exists to stop a noisy re-issuer resetting the waypoint cursor forever;
+    // this is the explicit lever for the caller who knows the world changed under the frozen path.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    bool _ForceRepath = false;
+
 public:
     CK_PROPERTY_GET(_Target);
     CK_PROPERTY(_ArrivalRadiusOverrideMode);
     CK_PROPERTY(_ArrivalRadiusOverrideValue);
     CK_PROPERTY(_CorrelationId);
+    CK_PROPERTY(_ForceRepath);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_MoveTo, _Target);
