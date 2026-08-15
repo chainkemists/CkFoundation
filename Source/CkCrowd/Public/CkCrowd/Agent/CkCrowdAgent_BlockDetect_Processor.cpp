@@ -1,7 +1,5 @@
 #include "CkCrowdAgent_BlockDetect_Processor.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
-
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -66,6 +64,38 @@ namespace ck
 
             return FCk_Handle{};
         }
+
+        // What the agent still has to walk: the leg to its current waypoint plus the polyline tail.
+        // Lateral sliding along a wall — the exact motion FindMoveAlongSurface produces when an
+        // agent presses into one — leaves this untouched, and so does orbiting a corner.
+        auto Get_RemainingPathDistance(
+            const FVector& InSelfLoc,
+            const TArray<FVector>& InWaypoints,
+            int32 InWaypointIndex) -> float
+        {
+            if (InWaypoints.IsEmpty())
+            { return 0.0f; }
+
+            const auto FirstIdx = FMath::Clamp(InWaypointIndex, 0, InWaypoints.Num() - 1);
+
+            auto Remaining = FVector::Dist(InSelfLoc, InWaypoints[FirstIdx]);
+            for (auto Idx = FirstIdx; Idx < InWaypoints.Num() - 1; ++Idx)
+            { Remaining += FVector::Dist(InWaypoints[Idx], InWaypoints[Idx + 1]); }
+
+            return static_cast<float>(Remaining);
+        }
+
+        auto Get_DistanceFromCurrentSegment2D(
+            const FVector& InSelfLoc,
+            const FVector& InSegmentStart,
+            const FVector& InSegmentEnd) -> float
+        {
+            const auto Self2D = FVector2D{InSelfLoc};
+            const auto Closest = FMath::ClosestPointOnSegment2D(
+                Self2D, FVector2D{InSegmentStart}, FVector2D{InSegmentEnd});
+
+            return static_cast<float>(FVector2D::Distance(Self2D, Closest));
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -77,7 +107,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
@@ -140,42 +170,115 @@ namespace ck
             }
         }
 
-        // ---- No-progress detector (safety net) ---------------------------------------------------
-        const auto SampleCount = Settings->Get_BlockDetectionSampleCount();
-        const auto SampleInterval = Settings->Get_BlockDetectionInterval();
-
+        // ---- Sampling cadence --------------------------------------------------------------------
         InBlockDetect._SampleAccumulatorSec += static_cast<float>(InDeltaT.Get_Seconds());
-        if (InBlockDetect._SampleAccumulatorSec < SampleInterval)
+        if (InBlockDetect._SampleAccumulatorSec < Settings->Get_BlockDetectionInterval())
         { return; }
 
+        const auto SecondsSinceLastSample = InBlockDetect._SampleAccumulatorSec;
         InBlockDetect._SampleAccumulatorSec = 0.0f;
 
-        if (InBlockDetect._FeetSamples.Num() < SampleCount)
+        // ---- Off-path re-path --------------------------------------------------------------------
+        // Nothing in the pipeline notices that the agent is no longer near the corridor it is
+        // following: a teleport, a save restore or an external shove leaves Steering aiming at a
+        // waypoint the installed polyline no longer connects to.
+        const auto OffPathThreshold = Settings->Get_BlockDetectionOffPathRepathThresholdCm();
+        if (OffPathThreshold > 0.0f)
         {
-            InBlockDetect._FeetSamples.Add(SelfLoc);
+            const auto TargetIdx =
+                FMath::Clamp(InPathFollow.Get_WaypointIndex(), 0, Waypoints.Num() - 1);
+            const auto OffPathDistance =
+                ck_crowdagent_blockdetect::Get_DistanceFromCurrentSegment2D(
+                    SelfLoc, InPathFollow.Get_CurrentSegmentStart(), Waypoints[TargetIdx]);
+
+            if (OffPathDistance > OffPathThreshold)
+            {
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] drifted {}cm off its path segment — re-pathing to {}"),
+                    InHandle, OffPathDistance, InPathFollow.Get_ActiveGoal());
+
+                // Being displaced is not a stall, so the escalation ladder's budget is untouched.
+                DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect);
+                return;
+            }
+        }
+
+        // ---- No-progress detector (safety net) ---------------------------------------------------
+        const auto RemainingPathDistance = ck_crowdagent_blockdetect::Get_RemainingPathDistance(
+            SelfLoc, Waypoints, InPathFollow.Get_WaypointIndex());
+
+        // The first sample after a window reset only SEEDS the baseline. Treating it as progress
+        // would refund the stall ladder's budget on every re-path — the re-path itself resets the
+        // window — and the ladder would never escalate to a block.
+        if (InBlockDetect._BestRemainingPathDistanceCm == TNumericLimits<float>::Max())
+        {
+            InBlockDetect._BestRemainingPathDistanceCm = RemainingPathDistance;
             return;
         }
 
-        InBlockDetect._FeetSamples[InBlockDetect._NextSampleIdx] = SelfLoc;
-        InBlockDetect._NextSampleIdx = (InBlockDetect._NextSampleIdx + 1) % SampleCount;
-
-        auto Centroid = FVector::ZeroVector;
-        for (const auto& Sample : InBlockDetect._FeetSamples)
-        { Centroid += Sample; }
-        Centroid /= static_cast<float>(InBlockDetect._FeetSamples.Num());
-
-        const auto BlockRadius = Settings->Get_BlockDetectionDistance();
-        const auto GoingNowhere = ck::algo::AllOf(InBlockDetect._FeetSamples,
-            [&](const FVector& InSample) -> bool
-            {
-                return FVector::Dist(InSample, Centroid) <= BlockRadius;
-            });
-
-        if (GoingNowhere)
+        const auto MadeProgress = RemainingPathDistance <=
+            InBlockDetect._BestRemainingPathDistanceCm - Settings->Get_BlockDetectionProgressEpsilonCm();
+        if (MadeProgress)
         {
-            DoBlock(InHandle, InParams, InBlockDetect,
-                ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
+            InBlockDetect._BestRemainingPathDistanceCm = RemainingPathDistance;
+            InBlockDetect._SecondsWithoutProgress = 0.0f;
+            InBlockDetect._StallRepathCount = 0;
+
+            // Genuine advance along THIS corridor means the earlier wedge is behind us: a long
+            // move that clears one obstruction and later meets an unrelated second one deserves a
+            // fresh blocked-retry budget, not a premature fail on spent budget.
+            InBlockDetect._BlockedRetryCount = 0;
+            return;
         }
+
+        InBlockDetect._SecondsWithoutProgress += SecondsSinceLastSample;
+        if (InBlockDetect._SecondsWithoutProgress <
+            Settings->Get_BlockDetectionNoProgressWindowSeconds())
+        { return; }
+
+        // A frozen polyline planned against geometry that has since changed is the common cause, so
+        // spend the re-path budget before declaring a goal unreachable.
+        if (InBlockDetect._StallRepathCount < Settings->Get_BlockDetectionMaxStallRepaths())
+        {
+            ++InBlockDetect._StallRepathCount;
+
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] made no path progress for {}s — re-path attempt {} of {} to {}"),
+                InHandle,
+                InBlockDetect._SecondsWithoutProgress,
+                InBlockDetect._StallRepathCount,
+                Settings->Get_BlockDetectionMaxStallRepaths(),
+                InPathFollow.Get_ActiveGoal());
+
+            DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect);
+            return;
+        }
+
+        DoBlock(InHandle, InParams, InBlockDetect,
+            ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_BlockDetect::
+        DoRepathAtActiveGoal(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+        -> void
+    {
+        auto NonConstHandle = InHandle;
+
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+
+        InPathFollow._WaypointIndex = 0;
+        InBlockDetect.DoResetProgressWindow();
+
+        FProcessor_CrowdAgent_HandleRequests::RequestPathForActiveGoal(
+            NonConstHandle, InParams, InPathFollow);
     }
 
     auto
@@ -198,10 +301,13 @@ namespace ck
         NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalBlocked>();
 
         InBlockDetect._BlockedBy = InBlocker;
-        InBlockDetect._FeetSamples.Reset();
-        InBlockDetect._NextSampleIdx = 0;
-        InBlockDetect._SampleAccumulatorSec = 0.0f;
+        InBlockDetect._BlockedCause = InReason;
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
+
+        // The stall ladder is per Walking stretch: a resumed agent gets its re-path budget back,
+        // while BlockedRecheck's own budget is what bounds the episode as a whole.
+        InBlockDetect._StallRepathCount = 0;
+        InBlockDetect.DoResetProgressWindow();
 
         // Once per blocked EPISODE, not once per re-check — a holding agent re-blocks every cadence.
         if (NOT InBlockDetect._BlockedSignalSent)
@@ -269,6 +375,28 @@ namespace ck
         if (ck::IsValid(Blocker))
         { return; }  // still taken — keep holding
 
+        // A GoalOccupied block holds for as long as the blocker stands there: that IS the queue
+        // behaviour callers depend on, and it is not a failure. A NoProgress block has no blocker
+        // to wait out — the obstruction is static — so each re-check spends one bounded attempt
+        // instead of resuming into the same wedge forever.
+        if (InBlockDetect.Get_BlockedCause() == ECk_CrowdAgent_BlockedReason::NoProgress)
+        {
+            if (InBlockDetect._BlockedRetryCount >= Settings->Get_BlockedMaxRetries())
+            {
+                DoFailMove(InHandle, InPathFollow, InBlockDetect);
+                return;
+            }
+
+            ++InBlockDetect._BlockedRetryCount;
+
+            // This re-check IS the retry's re-path attempt, so the resumed walk gets no fresh
+            // stall ladder on top — re-granting it would multiply every retry cycle by the full
+            // ladder (each rung a wasted pathfind at a goal this re-check just probed) and
+            // stretch a bounded failure into tens of seconds. One window of no progress after
+            // this resume re-blocks directly; genuine progress still refunds everything.
+            InBlockDetect._StallRepathCount = Settings->Get_BlockDetectionMaxStallRepaths();
+        }
+
         // The goal is free: a FULL re-path, not a resumed cursor — the agent may have been shoved
         // around while it held.
         auto NonConstHandle = InHandle;
@@ -280,9 +408,7 @@ namespace ck
         InPathFollow._WaypointIndex = 0;
 
         InBlockDetect._BlockedBy = FCk_Handle{};
-        InBlockDetect._FeetSamples.Reset();
-        InBlockDetect._NextSampleIdx = 0;
-        InBlockDetect._SampleAccumulatorSec = 0.0f;
+        InBlockDetect.DoResetProgressWindow();
 
         // _BlockedSignalSent is deliberately NOT reset: same goal means same episode. Only an
         // external MoveTo/Stop starts a new one.
@@ -327,6 +453,40 @@ namespace ck
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"), InHandle, Goal);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_BlockedRecheck::
+        DoFailMove(
+            HandleType InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+        -> void
+    {
+        auto NonConstHandle = InHandle;
+
+        // GoalBlocked goes with the hold it ends; the agent is already Idle from DoBlock.
+        NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
+        NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+
+        InPathFollow._WaypointIndex = 0;
+        InPathFollow._ProtectedLeadingWaypointCount = 0;
+
+        InBlockDetect._BlockedBy = FCk_Handle{};
+        InBlockDetect._RecheckAccumulatorSec = 0.0f;
+        InBlockDetect.DoResetProgressWindow();
+
+        // Log, not Warning: an unreachable goal is a legitimate gameplay outcome (a player can
+        // wall off any destination), and the caller is informed through OnGoalFailed.
+        ck::crowd::Log(
+            TEXT("CrowdAgent [{}] made no progress toward {} across {} re-path attempts — reporting OnGoalFailed"),
+            InHandle, InPathFollow.Get_ActiveGoal(), InBlockDetect._BlockedRetryCount);
+
+        UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
+            NonConstHandle,
+            MakePayload(NonConstHandle));
     }
 }
 

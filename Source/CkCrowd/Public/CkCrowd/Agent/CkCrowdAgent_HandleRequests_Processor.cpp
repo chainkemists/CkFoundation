@@ -106,13 +106,16 @@ namespace ck
         // Re-issuing the goal we are already walking to resets the waypoint cursor, so a noisy
         // re-issuer would stop the final-stop ever latching and the agent would orbit its goal.
         constexpr auto SameGoalEpsilonCm = 20.0f;
-        if (InHandle.Has<FTag_CrowdAgent_Walking>() &&
+        if (NOT InRequest.Get_ForceRepath() &&
+            InHandle.Has<FTag_CrowdAgent_Walking>() &&
             FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm &&
             (InRequest.Get_CorrelationId() == 0 ||
              InRequest.Get_CorrelationId() == InPathFollow.Get_ActiveMoveCorrelationId()))
         {
-            ck::crowd::Verbose(
-                TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal without a new nonzero correlation {}, already walking)"),
+            // Log, not Verbose: this silently swallows a caller's recovery attempt, and a caller
+            // that meant it has _ForceRepath.
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal without a new nonzero correlation {} or ForceRepath, already walking)"),
                 InHandle, Goal, InRequest.Get_CorrelationId());
             return;
         }
@@ -345,11 +348,12 @@ namespace ck
 
         auto& BlockDetect = InAgent.AddOrGet<FFragment_CrowdAgent_BlockDetect>();
         BlockDetect._BlockedBy = FCk_Handle{};
-        BlockDetect._FeetSamples.Reset();
-        BlockDetect._NextSampleIdx = 0;
-        BlockDetect._SampleAccumulatorSec = 0.0f;
+        BlockDetect._BlockedCause = ECk_CrowdAgent_BlockedReason::GoalOccupied;
         BlockDetect._RecheckAccumulatorSec = 0.0f;
         BlockDetect._BlockedSignalSent = false;
+        BlockDetect._StallRepathCount = 0;
+        BlockDetect._BlockedRetryCount = 0;
+        BlockDetect.DoResetProgressWindow();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
