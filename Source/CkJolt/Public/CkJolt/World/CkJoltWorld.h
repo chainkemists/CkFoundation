@@ -202,6 +202,11 @@ namespace ck
         auto Set_PendingAsyncStep(TFuture<void>&& InFuture) -> void;
         auto WaitForAsyncStep() -> void;
 
+        // ---- Static-scene change token (game-thread only) ----
+        // Bumped by every funnel that adds or removes a Static-motion or baked-static-world body. Consumers
+        // (the debug-draw capture) treat an unchanged value as "the static scene did not move" and skip work.
+        auto Request_NoteStaticSceneChanged() -> void;
+
     private:
         TWeakPtr<JPH::PhysicsSystem>                     _PhysicsSystem;
         JPH::TempAllocatorImpl*                          _TempAllocator = nullptr;
@@ -220,6 +225,7 @@ namespace ck
         int32 _NumStepsLastFrame = 0;
         float _PendingSimTime = 0.0f;                    // sim time the current step batch advances; quartet uses it later
         bool  _OptimizeBroadPhaseRequested = false;
+        uint64 _StaticSceneRevision = 0;
         TFuture<void> _AsyncFuture;
 
         // ---- Pose buffer, keyed by BodyID index+sequence (stable while a body is alive) ----
@@ -251,6 +257,7 @@ namespace ck
         CK_PROPERTY(_NumStepsLastFrame);
         CK_PROPERTY(_PendingSimTime);
         CK_PROPERTY_GET(_OptimizeBroadPhaseRequested);
+        CK_PROPERTY_GET(_StaticSceneRevision);
         CK_PROPERTY_GET(_AsyncFuture);
         CK_PROPERTY_GET(_Debug_NumPersistedContactEventsTotal);
     };

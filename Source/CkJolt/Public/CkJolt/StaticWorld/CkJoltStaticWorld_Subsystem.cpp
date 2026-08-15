@@ -414,7 +414,10 @@ auto
     _BodyChurnSinceOptimize += BodyIds.Num();
 
     if (ck::IsValid(_JoltSubsystem))
-    { _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate(); }
+    {
+        _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
+        _JoltSubsystem->Request_NoteStaticSceneChanged();
+    }
 
     Fragment._BodyIds.Empty();
 }
@@ -823,6 +826,9 @@ auto
 
     const auto AddState = BodyInterface->AddBodiesPrepare(BodyIds.GetData(), BodyIds.Num());
     BodyInterface->AddBodiesFinalize(BodyIds.GetData(), BodyIds.Num(), AddState, JPH::EActivation::DontActivate);
+
+    if (ck::IsValid(_JoltSubsystem))
+    { _JoltSubsystem->Request_NoteStaticSceneChanged(); }
 }
 
 auto

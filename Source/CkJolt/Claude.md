@@ -19,7 +19,9 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   listeners, filters, debug renderer). It no longer steps the simulation: the step lives in ECS
   processors driving a `ck::FJoltWorld` (World/CkJoltWorld.h) published as a
   `TSharedPtr<ck::FJoltWorld>` registry context. Subsystem Tick now does only `Super::Tick` + the
-  gated debug draw (skipped in async mode; may lag the step by one frame — group order is unpinned).
+  gated in-world debug draw (skipped in async mode; may lag the step by one frame — group order is
+  unpinned). Consumer-registered debug-draw targets do NOT go through Tick — they are pumped by
+  `FProcessor_JoltDebugDraw_Capture` inside the async-safe window (see § Debug draw + stats).
 - **Step processors** (World/CkJoltWorld_Processor.h), all in `FGroup_Transform`, chained after
   `FProcessor_Transform_HandleRequests`: `FProcessor_JoltWorld_WaitForAsync` (consume prior async
   step + apply pose buffer) → `FProcessor_JoltWorld_DrainEvents` (drain contact queue, route to
@@ -57,8 +59,11 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 - `UCk_Jolt_ProjectSettings_UE` (settings UI section "Jolt") — MaxBodies/pairs/constraints, temp
   allocator size, collision steps, threading knobs. CVar overrides `jolt.EnableParallelPhysics` /
   `jolt.EnableAsyncPhysicsUpdate` (startup-only, cmdline-first).
-- Debug draw: consumers install an opt-in via `Set_DebugDrawGate` (CkSpatialQuery gates on its
-  `PreviewAllProbesUsingJolt` user setting). No gate = no draw.
+- Debug draw, two surfaces: the in-world draw takes a consumer opt-in via `Set_DebugDrawGate`
+  (CkSpatialQuery gates on its `PreviewAllProbesUsingJolt` user setting) — no gate = no draw; a
+  presentation consumer instead owns an `FCk_Jolt_DebugDrawTarget` and registers it with
+  `Register_DebugDrawTarget` / `Unregister_DebugDrawTarget`. Targets are demand-driven, bindable to
+  any world, and never touch `JPH::PhysicsSystem` (see § Debug draw + stats).
 
 ### Static world (Phase 1)
 
@@ -268,53 +273,144 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 
 ### Debug draw + stats (Phase 5)
 
-- CVars `ck.Jolt.DebugDraw.Enabled` (draw ALL bodies, static + dynamic, motion-type colors)
-  and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics yellow, sleeping
-  red). The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
-  `ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so. Skipped in
-  async frames. The `ck.Jolt.DebugDraw.*` CVars follow the house C++ pattern —
-  `FAutoConsoleVariableRef` over a static in a filename-derived named namespace (exemplar:
-  `ck.SpatialQuery.PreviewAllProbesUsingJolt` in `CkSpatialQuery_Settings.cpp`) — and are read on
-  the game thread in Tick; there is no body filter. `jolt.EnableParallelPhysics` /
-  `jolt.EnableAsyncPhysicsUpdate` are startup-only because the JobSystem is created once in
-  `Initialize` (cmdline form: `-jolt.EnableParallelPhysics=0`).
-- The renderer (`CkJoltDebugger`, CkJolt_DebugRenderer.h) is a BATCHED `JPH::DebugRenderer`,
-  not `DebugRendererSimple`: triangle batches become transient UStaticMeshes (built once per
-  unique geometry — Jolt shapes cache their GeometryRef), instanced per (geometry, color)
-  bucket into `UInstancedStaticMeshComponent`s and reconciled per frame; unchanged buckets
-  (static + sleeping bodies) cost nothing. Translucent unlit tint via
-  `ck.Jolt.DebugDraw.Opacity` (live). `ck.Jolt.DebugDraw.Velocity` (default on) and
-  `ck.Jolt.DebugDraw.WorldTransform` (default OFF — line-heavy at stress counts) gate the
-  remaining immediate-mode lines. Both windings are emitted per triangle (Conv is a
-  handedness passthrough, so one winding renders inside-out).
+**Front-end / target split.** Jolt permits exactly ONE `JPH::DebugRenderer` per process
+(`JPH_ASSERT(sInstance == nullptr)` in its ctor), so the facility is split in two:
+
+- `FCk_Jolt_DebugRenderer` (Subsystem/CkJolt_DebugRenderer.h) — the single instance, reached ONLY
+  via `Get_OrCreate()` (module-level `TUniquePtr`, reset on `FCoreDelegates::OnEnginePreExit`).
+  It owns nothing world-shaped: just the world-agnostic geometry/batch cache and a transient
+  "active target" pointer for the current draw session.
+- `FCk_Jolt_DebugDrawTarget` (Subsystem/CkJolt_DebugDrawTarget.h) — per-world retained state:
+  the bucket map, its `UInstancedStaticMeshComponent`s and MIDs, render mode, palette, demand flag,
+  and the persistent body→slot maps. Its public header contains **no JPH type at all** — it is
+  `TPimplPtr`-pimpl'd exactly like `FCk_Jolt_QuerySession`, so a presentation module binds a target,
+  flips demand/mode and reads counts without seeing Jolt. The Jolt-shaped guts live in
+  `CkJolt_DebugDrawTarget_Impl.h`, included by the three debug-draw TUs and nothing else: CkJolt has
+  no `Private/` dir (even .cpp files sit under `Public/`), so **inclusion, not path, is the privacy
+  boundary**. Non-copyable; the dtor destroys its components.
+
+**Capture pipeline.** `FProcessor_JoltDebugDraw_Capture` (Subsystem/CkJoltDebugDraw_Processor.h),
+`FGroup_Transform`, `RunAfter` WaitForAsync + `FProcessor_JoltBody_SleepStateMirror`, `RunBefore`
+`FProcessor_JoltWorld_Step` — the only window where Jolt state is stable in BOTH sync and async
+physics modes (unlike the legacy subsystem-Tick draw below, which stays sync-only). It early-outs
+when no registered target is demanding, so a closed debugger costs one map walk. The capture is a
+`ck::Technique` pipeline whose step names carry the model:
+
+- `DrawInactiveBodiesOnSceneRevisionChange` — the revision-keyed FULL pass over every **inactive**
+  body: statics AND sleeping dynamics. Sleeping dynamics belong here because neither the active pass
+  nor the sleep diff can see a body that was already asleep when the target began capturing — without
+  them a settled pile is invisible until something wakes it. Keys not re-found are released.
+- `DrawActiveBodies` — per frame, `GetActiveBodies`; O(active), not O(all).
+- `RecolorBodiesThatFellAsleep` — diff against the previous frame's active set (bounded by that
+  count); skips keys the full pass already drew this capture, so nothing double-counts.
+- `ReleaseDestroyedSleepingBodies` — a sleeping body is invisible to both passes, so its slots would
+  outlive its destruction; one bounds-checked `TryGetBody` per sleeping body, no draw.
+- `DrawCharacters` — `ck::FFragment_JoltCharacter_Current` via the registry view; each
+  `CharacterVirtual`'s own shape drawn through the shared cache (no per-frame geometry). Characters
+  have no BodyID, so their slot keys are lifted clear of the BodyID keyspace.
+
+Buckets hold **persistent body→instance slots** (`BodyID::GetIndexAndSequenceNumber()` → N
+`FPrimitiveInstanceId`, N because a compound emits one DrawGeometry per child). An unchanged body
+re-captures as `UpdateInstanceTransformById` only; a body whose colour class changed releases and
+re-adds, moving it between buckets. Any slot that fails `IsValidId` drops the whole body to the
+rebuild path.
+
+**Static-scene revision** (`FJoltWorld::_StaticSceneRevision`, bumped via
+`UCk_Jolt_Subsystem::Request_NoteStaticSceneChanged`) is the full pass's change token. Funnels:
+JoltBody Setup (Static motion type, or any body spawned `InitialSleepState::Asleep`), JoltBody
+EndPlay (Static), the static-world subsystem's batch add and its removal funnel, and a Teleport
+request on a Static body (it never activates, so only the full pass can notice it moved).
+
+**Consumers.** `UCk_Jolt_Subsystem::Register_DebugDrawTarget` / `Unregister_DebugDrawTarget` (weak
+storage, game thread). A target binds to ANY `UWorld`, including an `FPreviewScene` world: its ISMs
+are plain `NewObject` + `RegisterComponentWithWorld`, owned by a `TStrongObjectPtr` on the bucket —
+no ObjectPooling subsystem dependency, because preview/transient worlds host none and an actorless
+component has no owner to root it. Each target subscribes once to `FWorldDelegates::OnWorldCleanup`
+(the shared funnel for BOTH PIE end and map unload) and releases its components there, so it never
+roots a dying world and stays reusable. Dropping demand (`Set_IsDesired(false)`) calls `HideAll`,
+which clears instances AND invalidates the retained sets — a re-open rebuilds against fresh world
+state rather than showing a frozen snapshot.
+
+**Colour + wireframe.** Buckets are per-(geometry, **colour class**) — the class rides the bucket key
+alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
+still land in distinct buckets. `FCk_Jolt_DebugDrawPalette` maps the class enum (Static, Kinematic,
+Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character) to a colour, with a dim factor
+applied to the sleeping variant and the opacity the tint uses; `Set_Palette` invalidates the retained
+capture so the next one repaints everything. Solid mode = `M_SimpleUnlitTranslucent`, wireframe =
+`/Engine/EngineDebugMaterials/WireframeMaterial` — both loaded by direct `LoadObject` and held in a
+`TStrongObjectPtr` (a bare function-local `UMaterial*` static dangles after the GC that collects it).
+**Never** `GEngine->WireframeMaterial`: it is null whenever the platform `RequiresCookedData`.
+`Set_RenderMode` swaps each bucket's material 0 between the two MIDs — zero geometry rebuild.
+BakedStatic is distinguished from a Static-motion JoltBody by attribution entity, not by layer: both
+share the Static object-layer DOMAIN, and only a baked body's user-data resolves to a
+`FFragment_JoltStaticActor_Current`.
+
+**The legacy in-world draw is unchanged.** CVars `ck.Jolt.DebugDraw.Enabled` (draw ALL bodies, static
++ dynamic, motion-type colors) and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics
+yellow, sleeping red) gate the subsystem's own Tick draw — NOT registered targets, which are
+demand-driven. The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
+`ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so; skipped in async frames.
+Every `ck.Jolt.DebugDraw.*` CVar now lives in the subsystem TU's `ck_jolt_subsystem::cvar` namespace
+(including `Opacity`, which the Tick writes into the default target's palette before each
+`BeginFrame`), following the house pattern — `FAutoConsoleVariableRef` over a static in a
+filename-derived named namespace. `ck.Jolt.DebugDraw.Velocity` (default on) and
+`ck.Jolt.DebugDraw.WorldTransform` (default OFF — line-heavy at stress counts) gate the remaining
+immediate-mode lines. `jolt.EnableParallelPhysics` / `jolt.EnableAsyncPhysicsUpdate` are startup-only
+because the JobSystem is created once in `Initialize` (cmdline form: `-jolt.EnableParallelPhysics=0`).
+
+**Multi-world:** every Jolt subsystem now builds its OWN default target, so a server+client PIE
+session draws both worlds under the same CVars. The old first-world-only behaviour was an artifact of
+gating construction on `JPH::DebugRenderer::sInstance` and is gone.
+
 - WHY batched: `DebugRendererSimple`'s `DrawGeometry` fallback decomposes EVERY triangle of EVERY
   body into individual `DrawDebugLine` calls EVERY frame — hundreds of thousands of one-frame line
   submissions per frame on the game thread at stress-gym body counts. Instead `CreateTriangleBatch`
   runs ONCE per unique geometry (Jolt shapes cache their `GeometryRef` — HeightField/Mesh/ConvexHull
   hold a mutable `mGeometry`; primitives share unit geometry), triangle data is held CPU-side and
   lazily built into the transient UStaticMesh on first draw, `DrawGeometry` only accumulates
-  (batch, transform, color) into per-(geometry, color) buckets, and EndFrame reconciles each bucket
-  into one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay immediate-mode — velocity
-  vectors, transform axes and contact normals are genuinely line-shaped and low-count.
-- Stale-bucket pruning: EndFrame drops a bucket whose `FBatch` refcount is 1 (only the bucket still
-  holds it) — every Jolt geometry that referenced it is gone (shapes re-cooked across gym restarts,
-  static-world re-bakes). Without the prune, the transient mesh + ISM component leak once per
-  re-cook for the rest of the session.
+  (batch, transform, colour class) into buckets, and EndFrame/EndCapture reconciles each bucket into
+  one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay immediate-mode — velocity vectors,
+  transform axes and contact normals are genuinely line-shaped and low-count. Both windings are
+  emitted per triangle (Conv is a handedness passthrough, so one winding renders inside-out).
+- Stale-bucket pruning is a HOLDER CENSUS, not a refcount-of-1 test: the front end tracks, per
+  `FBatch`, how many live buckets across ALL targets hold a keep-alive, and a bucket is dropped only
+  when `Get_RefCount() == that count` — i.e. no Jolt geometry references it any more. The census is
+  what lets two targets share one batch without either pruning it out from under the other. It
+  applies ONLY to per-shape geometry (ConvexHull / Mesh / HeightField / TaperedCapsule); box, sphere
+  and capsule primitives draw through the renderer's shared unit geometry, which it holds for its
+  whole lifetime, so their batches are deliberately never prunable. Without the prune the transient
+  mesh + ISM component leak once per re-cook for the rest of the session.
 - Cycle stats under `STATGROUP_CkJolt` (`stat CkJolt` / Insights): `JoltWorld_Step` (whole
-  fixed-step pump), `JoltPhysics_Update(_Async)` (the Update loop), `JoltBody_
+  fixed-step pump), `JoltPhysics_Update(_Async)` (the Update loop), `Jolt_DebugDraw_Capture` (one
+  whole capture), `Jolt_DebugDraw_Reconcile` (bucket reconcile, both draw paths), `JoltBody_
   WritebackInterpolated`, `JoltBody_KinematicPush`, contact queue/drain stats.
+
+**Specs** (`CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_TargetReconcile.cpp`, all headless — a
+standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry):
+
+| Spec | Pins |
+|---|---|
+| `Ck.Jolt.DebugDraw.TargetReconcile.StaticPassIsIdempotent` | full pass runs on first capture; an unchanged revision skips it entirely (0 visited/added/updated); a bumped revision re-runs it and REUSES slots (added 0, removed 0, updated N) |
+| `Ck.Jolt.DebugDraw.SleepTransitionRecolors` | a body already asleep before the FIRST capture still draws, coloured sleeping; a body falling asleep later moves buckets (1 removed + 1 added, instance count stable) |
+| `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every bucket's material 0 between the solid and wireframe base materials and back, instance counts unchanged |
+| `Ck.Jolt.DebugDraw.ClassPalette` | one body per colour class on ONE shared shape → one bucket per class, so the split is provably by class and not by geometry |
+| `Ck.Jolt.DebugDraw.PreviewWorldCompat` | an `EWorldType::EditorPreview` world gets registered ISMs with correct instance counts, and zero ensures |
+| `Ck.Jolt.DebugDraw.MultiTargetBatchPrune` | two targets sharing one batch: destroying one leaves the other's bucket and instances intact and still slot-reusing; the batch is pruned only once every Jolt geometry reference is gone |
 
 ---
 
 ## Processor order (FGroup_Transform, after FProcessor_Transform_HandleRequests)
 
 ```
-WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─┐
-     │                                                          ├─> KinematicPush ─┐
-     ├──> JoltBody_Setup ──> JoltBody_HandleRequests ───────────┘                  ├─> Step ──> WritebackInterpolated
-     └──> JoltCharacter_Setup ──> JoltCharacter_HandleRequests ──> Character_PreStep ┘
+WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─┬─> DebugDraw_Capture ─┐
+     │                                                          ├─> KinematicPush ─────┤
+     ├──> JoltBody_Setup ──> JoltBody_HandleRequests ───────────┘                      ├─> Step ──> WritebackInterpolated
+     └──> JoltCharacter_Setup ──> JoltCharacter_HandleRequests ──> Character_PreStep ──┘
 ```
 
+- `DebugDraw_Capture` is the one processor that only READS Jolt: it sits after SleepStateMirror (so
+  the frame's activation events are already reflected) and `RunBefore` Step, which is what makes it
+  correct in async mode too. No demanding target = immediate early-out.
 - Every body/character Setup + HandleRequests carries an explicit `RunAfter
   FProcessor_JoltWorld_WaitForAsync` edge: the scheduler's Kahn tie-break is LEXICAL by
   processor name, so without the edge a mutation processor can run while the PREVIOUS
@@ -399,6 +495,13 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
 - Don't call `PhysicsSystem::Update` yourself; `FProcessor_JoltWorld_Step` owns the step.
 - Don't resolve entities inside Jolt callbacks — queue and resolve at the drain point.
 - Don't bypass `Conv`/axis-correction with hand-rolled conversions.
+- Don't construct a second `FCk_Jolt_DebugRenderer` — Jolt asserts on a second `JPH::DebugRenderer`.
+  Always `FCk_Jolt_DebugRenderer::Get_OrCreate()`; per-world state belongs on a target, not a
+  renderer.
+- Don't read `JPH::PhysicsSystem` from a debugger/UI tick to build debug geometry — register an
+  `FCk_Jolt_DebugDrawTarget` and let the capture processor fill it, or you race the async step.
+- Don't include `CkJolt_DebugDrawTarget_Impl.h` outside the debug-draw TUs — it is what keeps the
+  target's public header JPH-free for presentation consumers.
 
 ---
 

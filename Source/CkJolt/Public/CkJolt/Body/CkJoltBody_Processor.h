@@ -79,6 +79,7 @@ namespace ck
     private:
         TWeakPtr<JPH::PhysicsSystem>          _PhysicsSystem;
         ck::jolt::FCk_Jolt_CollisionLayerTable* _LayerTable = nullptr;
+        FJoltWorld* _JoltWorld = nullptr;
 
         // Split by initial activation because Jolt's AddBodiesFinalize takes ONE EActivation per batch.
         TArray<FPendingBody> _PendingActivate;

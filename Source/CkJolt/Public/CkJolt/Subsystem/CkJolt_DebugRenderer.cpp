@@ -4,19 +4,16 @@
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
-#include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Engine/StaticMesh.h>
 #include <Engine/World.h>
-#include <HAL/IConsoleManager.h>
-#include <Materials/Material.h>
 #include <Materials/MaterialInstanceDynamic.h>
 #include <MeshDescription.h>
+#include <Misc/CoreDelegates.h>
 #include <StaticMeshAttributes.h>
 #include <UObject/Package.h>
 #include <UObject/StrongObjectPtr.h>
@@ -29,16 +26,8 @@ DECLARE_CYCLE_STAT(TEXT("Jolt_DebugDraw_Reconcile"), STAT_CkJolt_DebugDrawReconc
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_jolt_debug_renderer
+namespace ck::jolt::debug_draw
 {
-    namespace cvar
-    {
-        static float DebugDrawOpacity = 0.5f;
-        static FAutoConsoleVariableRef CVar_DebugDrawOpacity(TEXT("ck.Jolt.DebugDraw.Opacity"),
-            DebugDrawOpacity,
-            TEXT("Opacity of the batched Jolt debug-draw meshes (0..1). Applies live."));
-    }
-
     class FBatch : public JPH::RefTargetVirtual
     {
     public:
@@ -138,46 +127,17 @@ namespace ck_jolt_debug_renderer
         _Mesh = TStrongObjectPtr{Mesh};
         return Mesh;
     }
+}
 
-    // ----------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
-    struct FBucketKey
-    {
-        FBatch* _Batch = nullptr;
-        uint32 _ColorU32 = 0;
+namespace ck_jolt_debug_renderer
+{
+    static TUniquePtr<FCk_Jolt_DebugRenderer> GRenderer;
+    static bool GExitHandlerRegistered = false;
 
-        auto operator==(const FBucketKey& InOther) const -> bool
-        {
-            return _Batch == InOther._Batch && _ColorU32 == InOther._ColorU32;
-        }
-
-        friend auto GetTypeHash(const FBucketKey& InKey) -> uint32
-        {
-            return HashCombine(GetTypeHash(InKey._Batch), GetTypeHash(InKey._ColorU32));
-        }
-    };
-
-    struct FBucket
-    {
-        JPH::DebugRenderer::Batch _BatchKeepAlive;
-        FLinearColor _BaseColor = FLinearColor::White;
-        TWeakObjectPtr<UInstancedStaticMeshComponent> _Ism;
-        TWeakObjectPtr<UMaterialInstanceDynamic> _Mid;
-        TArray<FTransform> _Desired;
-        TArray<FTransform> _Applied;
-        bool _Touched = false;
-        bool _IsmCreateFailed = false;
-    };
-
-    auto
-        Get_TintedColor(
-            const FLinearColor& InBaseColor)
-        -> FLinearColor
-    {
-        auto Color = InBaseColor;
-        Color.A = FMath::Clamp(cvar::DebugDrawOpacity, 0.0f, 1.0f);
-        return Color;
-    }
+    // Per-batch live-bucket census across EVERY target; see Note_BucketHolder* in the impl header.
+    static TMap<JPH::RefTargetVirtual*, int32> GBucketHolderCounts;
 
     auto
         Get_AreTransformsEqual(
@@ -197,106 +157,126 @@ namespace ck_jolt_debug_renderer
         return true;
     }
 
-    auto
-        Create_BucketIsm(
-            FBucket& InOutBucket,
-            UWorld& InWorld,
-            UStaticMesh& InMesh)
-        -> bool
+    struct FPendingDraw
     {
-        auto* Ism = UCk_Utils_Object_UE::Request_CreateNewObject<UInstancedStaticMeshComponent>(
-            &InWorld, UInstancedStaticMeshComponent::StaticClass(), nullptr,
-            FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease), nullptr);
+        ck::jolt::debug_draw::FBucketKey _Key;
+        FTransform _Transform;
+    };
+}
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Ism),
-            TEXT("Failed to create an InstancedStaticMeshComponent for the Jolt debug renderer"))
-        { return false; }
+// --------------------------------------------------------------------------------------------------------------------
 
-        Ism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Ism->SetCanEverAffectNavigation(false);
-        Ism->SetCastShadow(false);
-        Ism->SetMobility(EComponentMobility::Movable);
+namespace ck::jolt::debug_draw
+{
+    auto
+        Note_BucketHolderAdded(
+            JPH::RefTargetVirtual* InBatch)
+        -> void
+    {
+        if (InBatch == nullptr)
+        { return; }
 
-        // Registered at identity so component space == world space; Add/BatchUpdate pass WorldSpace=false.
-        Ism->SetWorldLocation(FVector::ZeroVector);
-        // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
-        Ism->RegisterComponentWithWorld(&InWorld);
+        ++ck_jolt_debug_renderer::GBucketHolderCounts.FindOrAdd(InBatch);
+    }
 
-        Ism->SetVisibility(true);
-        Ism->SetHiddenInGame(false);
-        Ism->SetStaticMesh(&InMesh);
+    auto
+        Note_BucketHolderRemoved(
+            JPH::RefTargetVirtual* InBatch)
+        -> void
+    {
+        if (InBatch == nullptr)
+        { return; }
 
-        InOutBucket._Ism = Ism;
+        auto* Count = ck_jolt_debug_renderer::GBucketHolderCounts.Find(InBatch);
+        if (Count == nullptr)
+        { return; }
 
-        auto TranslucentMaterial = LoadObject<UMaterial>(
-            nullptr,
-            TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
+        *Count = FMath::Max(0, *Count - 1);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(TranslucentMaterial),
-            TEXT("Failed to load M_SimpleUnlitTranslucent for the Jolt debug renderer — bodies will draw untinted with the default material"))
-        { return true; }
+        if (*Count == 0)
+        { ck_jolt_debug_renderer::GBucketHolderCounts.Remove(InBatch); }
+    }
 
-        auto DynamicMaterial = UMaterialInstanceDynamic::Create(TranslucentMaterial, Ism);
-        if (ck::IsValid(DynamicMaterial))
-        {
-            DynamicMaterial->SetVectorParameterValue(FName{TEXT("Color")}, Get_TintedColor(InOutBucket._BaseColor));
-            Ism->SetMaterial(0, DynamicMaterial);
-            InOutBucket._Mid = DynamicMaterial;
-        }
+    auto
+        Get_BucketHolderCount(
+            JPH::RefTargetVirtual* InBatch)
+        -> int32
+    {
+        if (InBatch == nullptr)
+        { return 0; }
 
-        return true;
+        const auto* Count = ck_jolt_debug_renderer::GBucketHolderCounts.Find(InBatch);
+        return Count != nullptr ? *Count : 0;
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct CkJoltDebugger::FImpl
+struct FCk_Jolt_DebugRenderer::FImpl
 {
-    TMap<ck_jolt_debug_renderer::FBucketKey, ck_jolt_debug_renderer::FBucket> _Buckets;
-    float _AppliedOpacity = -1.0f;
-    bool _AnyLive = false;
+    FCk_Jolt_DebugDrawTarget* _ActiveTarget = nullptr;
+
+    TArray<ck_jolt_debug_renderer::FPendingDraw> _PendingBodyDraws;
+    uint64 _CaptureBodyKey = 0;
+    ECk_Jolt_DebugDraw_ColorClass _ActiveColorClass = ECk_Jolt_DebugDraw_ColorClass::Static;
+    bool _CaptureBodyOpen = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CkJoltDebugger::CkJoltDebugger()
+FCk_Jolt_DebugRenderer::FCk_Jolt_DebugRenderer()
     : _Impl(MakePimpl<FImpl>())
 {
     // Base-class contract: builds the shared unit-geometry batches through our CreateTriangleBatch overrides.
     Initialize();
 }
 
-CkJoltDebugger::~CkJoltDebugger()
-{
-    for (auto& Kvp : _Impl->_Buckets)
-    {
-        auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { continue; }
+FCk_Jolt_DebugRenderer::~FCk_Jolt_DebugRenderer() = default;
 
-        // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
-        UCk_Utils_Object_UE::TryReleaseToPool(Ism);
-        Ism->DestroyComponent();
+auto
+    FCk_Jolt_DebugRenderer::
+    Get_OrCreate()
+    -> FCk_Jolt_DebugRenderer&
+{
+    if (NOT ck_jolt_debug_renderer::GRenderer.IsValid())
+    {
+        ck_jolt_debug_renderer::GRenderer = MakeUnique<FCk_Jolt_DebugRenderer>();
+
+        if (NOT ck_jolt_debug_renderer::GExitHandlerRegistered)
+        {
+            ck_jolt_debug_renderer::GExitHandlerRegistered = true;
+
+            FCoreDelegates::OnEnginePreExit.AddLambda([]() -> void
+            {
+                ck_jolt_debug_renderer::GRenderer.Reset();
+            });
+        }
     }
+
+    return *ck_jolt_debug_renderer::GRenderer;
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     DrawLine(
         JPH::RVec3Arg inFrom,
         JPH::RVec3Arg inTo,
         JPH::ColorArg inColor)
     -> void
 {
-    if (ck::Is_NOT_Valid(_World))
+    if (_Impl->_ActiveTarget == nullptr)
     { return; }
 
-    UCk_Utils_DebugDraw_UE::DrawDebugLine(_World.Get(), ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo),
+    auto* World = _Impl->_ActiveTarget->Get_World().Get();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo),
         ck::jolt::Conv(inColor));
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     DrawTriangle(
         JPH::RVec3Arg inV1,
         JPH::RVec3Arg inV2,
@@ -312,7 +292,7 @@ auto
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     DrawText3D(
         JPH::RVec3Arg inPosition,
         const JPH::string_view& inString,
@@ -320,21 +300,25 @@ auto
         float inHeight)
     -> void
 {
-    if (ck::Is_NOT_Valid(_World))
+    if (_Impl->_ActiveTarget == nullptr)
     { return; }
 
-    UCk_Utils_DebugDraw_UE::DrawDebugString(_World.Get(), ck::jolt::Conv(inPosition),
+    auto* World = _Impl->_ActiveTarget->Get_World().Get();
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    UCk_Utils_DebugDraw_UE::DrawDebugString(World, ck::jolt::Conv(inPosition),
         FString{static_cast<int32>(inString.length()), inString.data()}, ck::jolt::Conv(inColor));
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     CreateTriangleBatch(
         const Triangle* inTriangles,
         int inTriangleCount)
     -> Batch
 {
-    auto* NewBatch = new ck_jolt_debug_renderer::FBatch{};
+    auto* NewBatch = new ck::jolt::debug_draw::FBatch{};
 
     if (inTriangles != nullptr && inTriangleCount > 0)
     {
@@ -356,7 +340,7 @@ auto
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     CreateTriangleBatch(
         const Vertex* inVertices,
         int inVertexCount,
@@ -364,7 +348,7 @@ auto
         int inIndexCount)
     -> Batch
 {
-    auto* NewBatch = new ck_jolt_debug_renderer::FBatch{};
+    auto* NewBatch = new ck::jolt::debug_draw::FBatch{};
 
     if (inVertices != nullptr && inVertexCount > 0 && inIndices != nullptr && inIndexCount > 0)
     {
@@ -383,7 +367,7 @@ auto
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     DrawGeometry(
         JPH::RMat44Arg inModelMatrix,
         const JPH::AABox& inWorldSpaceBounds,
@@ -395,6 +379,10 @@ auto
         EDrawMode inDrawMode)
     -> void
 {
+    auto* Target = _Impl->_ActiveTarget;
+    if (Target == nullptr)
+    { return; }
+
     if (inGeometry.GetPtr() == nullptr || inGeometry->mLODs.empty())
     { return; }
 
@@ -403,29 +391,104 @@ auto
     if (TriangleBatch.GetPtr() == nullptr)
     { return; }
 
-    auto* BatchImpl = static_cast<ck_jolt_debug_renderer::FBatch*>(TriangleBatch.GetPtr());
+    auto* BatchImpl = static_cast<ck::jolt::debug_draw::FBatch*>(TriangleBatch.GetPtr());
     if (BatchImpl->_Indices.IsEmpty())
     { return; }
 
-    const auto Key = ck_jolt_debug_renderer::FBucketKey{BatchImpl, inModelColor.mU32};
-    auto& Bucket = _Impl->_Buckets.FindOrAdd(Key);
+    const auto Key = ck::jolt::debug_draw::FBucketKey{BatchImpl, inModelColor.mU32, _Impl->_ActiveColorClass};
+    auto& Bucket = Target->_Impl->_Buckets.FindOrAdd(Key);
 
     if (Bucket._BatchKeepAlive.GetPtr() == nullptr)
     {
         Bucket._BatchKeepAlive = TriangleBatch;
         Bucket._BaseColor = ck::jolt::Conv(inModelColor);
+        ck::jolt::debug_draw::Note_BucketHolderAdded(BatchImpl);
     }
 
-    Bucket._Desired.Emplace(FTransform{ck::jolt::Conv(inModelMatrix)});
+    const auto Transform = FTransform{ck::jolt::Conv(inModelMatrix)};
+
+    if (_Impl->_CaptureBodyOpen)
+    {
+        _Impl->_PendingBodyDraws.Emplace(ck_jolt_debug_renderer::FPendingDraw{Key, Transform});
+        return;
+    }
+
+    Bucket._Desired.Emplace(Transform);
     Bucket._Touched = true;
 }
 
 auto
-    CkJoltDebugger::
-    BeginFrame()
+    FCk_Jolt_DebugRenderer::
+    TryEnsure_BucketIsm(
+        FCk_Jolt_DebugDrawTarget& InTarget,
+        const ck::jolt::debug_draw::FBucketKey& InKey,
+        ck::jolt::debug_draw::FBucket& InOutBucket)
+    -> bool
+{
+    if (ck::IsValid(InOutBucket._Ism.Get()))
+    { return true; }
+
+    if (InOutBucket._IsmCreateFailed)
+    { return false; }
+
+    auto* World = InTarget._Impl->_World.Get();
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    auto* Mesh = InKey._Batch->GetOrBuild_Mesh();
+    if (Mesh == nullptr)
+    {
+        // Empty batch or a build failure (the latter already ensured, loudly, once).
+        InOutBucket._IsmCreateFailed = true;
+        return false;
+    }
+
+    // Plain NewObject, not the pooling wrapper: the pool's DestroyOnRelease policy only ever provided pinning,
+    // which the bucket's TStrongObjectPtr now provides — and preview/transient worlds host no pooling subsystem.
+    auto* Ism = NewObject<UInstancedStaticMeshComponent>(World,
+        MakeUniqueObjectName(World, UInstancedStaticMeshComponent::StaticClass(), TEXT("CkJoltDebugDrawIsm")));
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Ism),
+        TEXT("Failed to create an InstancedStaticMeshComponent for the Jolt debug renderer"))
+    {
+        InOutBucket._IsmCreateFailed = true;
+        return false;
+    }
+
+    Ism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Ism->SetCanEverAffectNavigation(false);
+    Ism->SetCastShadow(false);
+    Ism->SetMobility(EComponentMobility::Movable);
+
+    // Registered at identity so component space == world space; Add/BatchUpdate pass WorldSpace=false.
+    Ism->SetWorldLocation(FVector::ZeroVector);
+    // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
+    Ism->RegisterComponentWithWorld(World);
+
+    Ism->SetVisibility(true);
+    Ism->SetHiddenInGame(false);
+    Ism->SetStaticMesh(Mesh);
+
+    InOutBucket._Ism.Reset(Ism);
+    InOutBucket._SlotCount = 0;
+    InOutBucket._Applied.Reset();
+
+    ck::jolt::debug_draw::Apply_BucketMaterial(InOutBucket, InTarget._Impl->_Palette, InTarget._Impl->_RenderMode);
+
+    return true;
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    BeginFrame(
+        FCk_Jolt_DebugDrawTarget& InTarget)
     -> void
 {
-    for (auto& Kvp : _Impl->_Buckets)
+    _Impl->_ActiveTarget = &InTarget;
+    _Impl->_CaptureBodyOpen = false;
+    _Impl->_PendingBodyDraws.Reset();
+
+    for (auto& Kvp : InTarget._Impl->_Buckets)
     {
         Kvp.Value._Desired.Reset();
         Kvp.Value._Touched = false;
@@ -433,39 +496,40 @@ auto
 }
 
 auto
-    CkJoltDebugger::
+    FCk_Jolt_DebugRenderer::
     EndFrame()
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_DebugDrawReconcile);
 
-    auto* World = _World.Get();
+    auto* Target = _Impl->_ActiveTarget;
+    _Impl->_ActiveTarget = nullptr;
+
+    if (Target == nullptr)
+    { return; }
+
+    auto* World = Target->_Impl->_World.Get();
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    const auto Opacity = FMath::Clamp(ck_jolt_debug_renderer::cvar::DebugDrawOpacity, 0.0f, 1.0f);
-    const auto OpacityChanged = NOT FMath::IsNearlyEqual(Opacity, _Impl->_AppliedOpacity);
+    const auto Opacity = FMath::Clamp(Target->_Impl->_Palette.Get_Opacity(), 0.0f, 1.0f);
+    const auto OpacityChanged = NOT FMath::IsNearlyEqual(Opacity, Target->_Impl->_AppliedOpacity);
 
     auto AnyLive = false;
-    auto StaleKeys = TArray<ck_jolt_debug_renderer::FBucketKey>{};
+    auto StaleKeys = TArray<ck::jolt::debug_draw::FBucketKey>{};
 
-    for (auto& Kvp : _Impl->_Buckets)
+    for (auto& Kvp : Target->_Impl->_Buckets)
     {
         auto& Bucket = Kvp.Value;
 
         if (NOT Bucket._Touched)
         {
-            const auto OnlyTheBucketStillHoldsThisBatch = Kvp.Key._Batch->Get_RefCount() == 1;
-            if (OnlyTheBucketStillHoldsThisBatch)
-            {
-                auto* StaleIsm = Bucket._Ism.Get();
-                if (ck::IsValid(StaleIsm))
-                {
-                    // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
-                    UCk_Utils_Object_UE::TryReleaseToPool(StaleIsm);
-                    StaleIsm->DestroyComponent();
-                }
+            const auto OnlyBucketsStillHoldThisBatch =
+                Kvp.Key._Batch->Get_RefCount() == static_cast<uint32>(ck::jolt::debug_draw::Get_BucketHolderCount(Kvp.Key._Batch));
 
+            if (OnlyBucketsStillHoldThisBatch)
+            {
+                ck::jolt::debug_draw::Destroy_BucketIsm(Bucket);
                 StaleKeys.Add(Kvp.Key);
                 continue;
             }
@@ -482,37 +546,13 @@ auto
             continue;
         }
 
+        if (NOT TryEnsure_BucketIsm(*Target, Kvp.Key, Bucket))
+        { continue; }
+
         auto* Ism = Bucket._Ism.Get();
 
-        if (ck::Is_NOT_Valid(Ism))
-        {
-            if (Bucket._IsmCreateFailed)
-            { continue; }
-
-            auto* Mesh = Kvp.Key._Batch->GetOrBuild_Mesh();
-            if (Mesh == nullptr)
-            {
-                // Empty batch or a build failure (the latter already ensured, loudly, once).
-                Bucket._IsmCreateFailed = true;
-                continue;
-            }
-
-            if (NOT ck_jolt_debug_renderer::Create_BucketIsm(Bucket, *World, *Mesh))
-            {
-                Bucket._IsmCreateFailed = true;
-                continue;
-            }
-
-            Ism = Bucket._Ism.Get();
-            Bucket._Applied.Reset();
-        }
-
-        auto* Mid = Bucket._Mid.Get();
-        if (OpacityChanged && ck::IsValid(Mid))
-        {
-            Mid->SetVectorParameterValue(FName{TEXT("Color")},
-                ck_jolt_debug_renderer::Get_TintedColor(Bucket._BaseColor));
-        }
+        if (OpacityChanged)
+        { ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Target->_Impl->_RenderMode); }
 
         if (NOT ck_jolt_debug_renderer::Get_AreTransformsEqual(Bucket._Desired, Bucket._Applied))
         {
@@ -538,34 +578,224 @@ auto
     }
 
     for (const auto& StaleKey : StaleKeys)
-    { _Impl->_Buckets.Remove(StaleKey); }
+    { Target->_Impl->_Buckets.Remove(StaleKey); }
 
-    _Impl->_AppliedOpacity = Opacity;
-    _Impl->_AnyLive = AnyLive;
+    Target->_Impl->_AppliedOpacity = Opacity;
+    Target->_Impl->_AnyLive = AnyLive;
 }
 
 auto
-    CkJoltDebugger::
-    HideAll()
+    FCk_Jolt_DebugRenderer::
+    BeginCapture(
+        FCk_Jolt_DebugDrawTarget& InTarget)
     -> void
 {
-    if (NOT _Impl->_AnyLive)
+    _Impl->_ActiveTarget = &InTarget;
+    _Impl->_CaptureBodyOpen = false;
+    _Impl->_PendingBodyDraws.Reset();
+
+    InTarget._Impl->_LastCaptureStats = ck::jolt::debug_draw::FDebugDrawStats{};
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    BeginBody(
+        uint64 InBodyKey,
+        ECk_Jolt_DebugDraw_ColorClass InColorClass)
+    -> void
+{
+    _Impl->_CaptureBodyKey = InBodyKey;
+    _Impl->_ActiveColorClass = InColorClass;
+    _Impl->_CaptureBodyOpen = true;
+    _Impl->_PendingBodyDraws.Reset();
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    EndBody()
+    -> void
+{
+    _Impl->_CaptureBodyOpen = false;
+
+    auto* Target = _Impl->_ActiveTarget;
+    if (Target == nullptr)
+    {
+        _Impl->_PendingBodyDraws.Reset();
+        return;
+    }
+
+    const auto BodyKey = _Impl->_CaptureBodyKey;
+    const auto& Pending = _Impl->_PendingBodyDraws;
+
+    auto* ExistingSlots = Target->_Impl->_BodySlots.Find(BodyKey);
+
+    // Every slot must still be addressable before ANY in-place update runs: a bucket whose ISM was destroyed
+    // or whose instance id was invalidated has to fall through to the rebuild path, which re-creates the ISM.
+    const auto SlotsStillMatch = [&]() -> bool
+    {
+        if (ExistingSlots == nullptr || ExistingSlots->Num() != Pending.Num())
+        { return false; }
+
+        for (auto Index = 0; Index < Pending.Num(); ++Index)
+        {
+            const auto& Slot = (*ExistingSlots)[Index];
+
+            if (NOT (Slot._Bucket == Pending[Index]._Key))
+            { return false; }
+
+            auto* Bucket = Target->_Impl->_Buckets.Find(Slot._Bucket);
+            if (Bucket == nullptr)
+            { return false; }
+
+            auto* Ism = Bucket->_Ism.Get();
+            if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(Slot._InstanceId))
+            { return false; }
+        }
+
+        return true;
+    }();
+
+    if (SlotsStillMatch)
+    {
+        for (auto Index = 0; Index < Pending.Num(); ++Index)
+        {
+            const auto& Slot = (*ExistingSlots)[Index];
+            auto* Ism = Target->_Impl->_Buckets.Find(Slot._Bucket)->_Ism.Get();
+
+            constexpr auto WorldSpace = false;
+            Ism->UpdateInstanceTransformById(Slot._InstanceId, Pending[Index]._Transform, WorldSpace);
+            ++Target->_Impl->_LastCaptureStats._InstancesUpdated;
+        }
+
+        _Impl->_PendingBodyDraws.Reset();
+        return;
+    }
+
+    DoRelease_BodySlots(*Target, BodyKey);
+
+    auto NewSlots = TArray<ck::jolt::debug_draw::FBodySlot>{};
+    NewSlots.Reserve(Pending.Num());
+
+    for (const auto& Draw : Pending)
+    {
+        auto* Bucket = Target->_Impl->_Buckets.Find(Draw._Key);
+        if (Bucket == nullptr)
+        { continue; }
+
+        if (NOT TryEnsure_BucketIsm(*Target, Draw._Key, *Bucket))
+        { continue; }
+
+        auto* Ism = Bucket->_Ism.Get();
+
+        constexpr auto WorldSpace = false;
+        const auto InstanceId = Ism->AddInstanceById(Draw._Transform, WorldSpace);
+
+        ++Bucket->_SlotCount;
+        ++Target->_Impl->_LastCaptureStats._InstancesAdded;
+
+        NewSlots.Emplace(ck::jolt::debug_draw::FBodySlot{Draw._Key, InstanceId});
+    }
+
+    if (NewSlots.IsEmpty())
+    {
+        _Impl->_PendingBodyDraws.Reset();
+        return;
+    }
+
+    Target->_Impl->_BodySlots.Add(BodyKey, MoveTemp(NewSlots));
+    _Impl->_PendingBodyDraws.Reset();
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    DoRelease_BodySlots(
+        FCk_Jolt_DebugDrawTarget& InTarget,
+        uint64 InBodyKey)
+    -> void
+{
+    auto* Slots = InTarget._Impl->_BodySlots.Find(InBodyKey);
+    if (Slots == nullptr)
     { return; }
 
-    for (auto& Kvp : _Impl->_Buckets)
+    for (const auto& Slot : *Slots)
+    {
+        auto* Bucket = InTarget._Impl->_Buckets.Find(Slot._Bucket);
+        if (Bucket == nullptr)
+        { continue; }
+
+        auto* Ism = Bucket->_Ism.Get();
+        if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(Slot._InstanceId))
+        { continue; }
+
+        Ism->RemoveInstanceById(Slot._InstanceId);
+        ++InTarget._Impl->_LastCaptureStats._InstancesRemoved;
+        Bucket->_SlotCount = FMath::Max(0, Bucket->_SlotCount - 1);
+    }
+
+    InTarget._Impl->_BodySlots.Remove(InBodyKey);
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    Release_BodySlots(
+        uint64 InBodyKey)
+    -> void
+{
+    if (_Impl->_ActiveTarget == nullptr)
+    { return; }
+
+    DoRelease_BodySlots(*_Impl->_ActiveTarget, InBodyKey);
+}
+
+auto
+    FCk_Jolt_DebugRenderer::
+    EndCapture()
+    -> void
+{
+    SCOPE_CYCLE_COUNTER(STAT_CkJolt_DebugDrawReconcile);
+
+    auto* Target = _Impl->_ActiveTarget;
+    _Impl->_ActiveTarget = nullptr;
+    _Impl->_CaptureBodyOpen = false;
+    _Impl->_PendingBodyDraws.Reset();
+
+    if (Target == nullptr)
+    { return; }
+
+    const auto Opacity = FMath::Clamp(Target->_Impl->_Palette.Get_Opacity(), 0.0f, 1.0f);
+    const auto OpacityChanged = NOT FMath::IsNearlyEqual(Opacity, Target->_Impl->_AppliedOpacity);
+
+    auto AnyLive = false;
+    auto StaleKeys = TArray<ck::jolt::debug_draw::FBucketKey>{};
+
+    for (auto& Kvp : Target->_Impl->_Buckets)
     {
         auto& Bucket = Kvp.Value;
 
-        auto* Ism = Bucket._Ism.Get();
-        if (ck::IsValid(Ism))
-        { Ism->ClearInstances(); }
+        if (Bucket._SlotCount == 0 && Bucket._Applied.IsEmpty())
+        {
+            const auto OnlyBucketsStillHoldThisBatch =
+                Kvp.Key._Batch->Get_RefCount() == static_cast<uint32>(ck::jolt::debug_draw::Get_BucketHolderCount(Kvp.Key._Batch));
 
-        Bucket._Applied.Reset();
-        Bucket._Desired.Reset();
-        Bucket._Touched = false;
+            if (OnlyBucketsStillHoldThisBatch)
+            {
+                ck::jolt::debug_draw::Destroy_BucketIsm(Bucket);
+                StaleKeys.Add(Kvp.Key);
+                continue;
+            }
+        }
+
+        if (OpacityChanged)
+        { ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Target->_Impl->_RenderMode); }
+
+        AnyLive |= Bucket._SlotCount > 0;
     }
 
-    _Impl->_AnyLive = false;
+    for (const auto& StaleKey : StaleKeys)
+    { Target->_Impl->_Buckets.Remove(StaleKey); }
+
+    Target->_Impl->_AppliedOpacity = Opacity;
+    Target->_Impl->_AnyLive = AnyLive;
 }
 
 #endif

@@ -216,6 +216,19 @@ namespace ck::jolt
 
     auto
         Conv(
+            const FLinearColor& InColor)
+        -> JoltColor
+    {
+        const auto ToByte = [](float InChannel) -> JPH::uint8
+        {
+            return static_cast<JPH::uint8>(FMath::Clamp(FMath::RoundToInt(InChannel * 255.0f), 0, 255));
+        };
+
+        return JoltColor{ToByte(InColor.R), ToByte(InColor.G), ToByte(InColor.B), ToByte(InColor.A)};
+    }
+
+    auto
+        Conv(
             ECk_MotionType InMotionType)
         -> JPH::EMotionType
     {
