@@ -64,6 +64,10 @@ namespace ck::jolt
         auto Get_Domain(
             uint16 InLayer) const -> ECk_Jolt_BodyDomain;
 
+        /// True when bodies on this layer occupy SOLID space rather than being trigger volumes.
+        auto Get_LayerIsSolidObstacle(
+            uint16 InLayer) const -> bool;
+
     private:
         TArray<FCk_Jolt_CollisionSignature> _Signatures;
         TMap<FCk_Jolt_CollisionSignature, uint16> _SignatureToLayer;
@@ -195,6 +199,17 @@ namespace ck::jolt
     /// Static-motion-type JoltBodies. Both are immovable world obstacles, which is what an occupancy or
     /// navigation bake wants. Fixed rather than parameterized (unlike FCk_Jolt_DomainQueryFilter) so a
     /// per-cell query in a tight loop cannot be handed the wrong domain.
+    ///
+    /// Domain alone is NOT sufficient: the static domain also holds trigger volumes (overlap-only
+    /// components bake by default — see the Jolt bake filter's _BakeExcludeOverlapOnlyComponents), and
+    /// counting those as occupied makes a trigger read as SOLID, silently carving navigable space out of
+    /// a nav bake. So a body must also be a solid obstacle (see Get_IsSolidObstacle: physics-enabled AND
+    /// blocking, where the physics half does the real separating).
+    ///
+    /// Deliberately channel-AGNOSTIC rather than "blocks Pawn": it keeps the filter free of per-query
+    /// state. Consequence worth knowing — Get_IsSegmentBlocked is a line-of-sight test sharing this
+    /// filter, so a QueryOnly visibility blocker no longer stops that segment. A caller needing true
+    /// per-channel semantics wants FCk_Jolt_ChannelQueryFilter.
     class CKJOLT_API FCk_Jolt_StaticOccupancyFilter final : public JPH::ObjectLayerFilter
     {
     public:
@@ -204,7 +219,8 @@ namespace ck::jolt
 
         auto ShouldCollide(JPH::ObjectLayer inLayer) const -> bool override
         {
-            return _Table.Get_Domain(inLayer) == ECk_Jolt_BodyDomain::Static;
+            return _Table.Get_Domain(inLayer) == ECk_Jolt_BodyDomain::Static
+                && _Table.Get_LayerIsSolidObstacle(inLayer);
         }
 
     private:
@@ -212,6 +228,10 @@ namespace ck::jolt
     };
 
     /// Broadphase companion to FCk_Jolt_StaticOccupancyFilter: the dynamic tree is never descended at all.
+    /// NOTE: broadphase filtering is by AABB and layer only, so this stays deliberately conservative — it
+    /// admits Overlap-only bodies that the object filter above then rejects. Get_BodiesInAABox is documented
+    /// as a conservative whole-region early-out for exactly this reason; do not "tighten" it into a
+    /// substitute for the narrow-phase occupancy test.
     /// The scene-query wrappers pass an accept-all JPH::BroadPhaseLayerFilter, which is the right default
     /// for a handful of gameplay traces and the wrong one for grid-scale query counts.
     class CKJOLT_API FCk_Jolt_StaticBroadPhaseQueryFilter final : public JPH::BroadPhaseLayerFilter

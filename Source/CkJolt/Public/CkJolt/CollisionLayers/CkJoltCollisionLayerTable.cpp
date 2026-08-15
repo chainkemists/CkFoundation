@@ -175,6 +175,20 @@ namespace ck::jolt
 
         return _Signatures[InLayer].Get_Domain();
     }
+
+    auto
+        FCk_Jolt_CollisionLayerTable::
+        Get_LayerIsSolidObstacle(
+            uint16 InLayer) const
+        -> bool
+    {
+        // Unpublished layer: report "not solid", matching how the sibling readers answer
+        // conservatively rather than indexing past the published count.
+        if (InLayer >= Get_NumLayers())
+        { return false; }
+
+        return _Signatures[InLayer].Get_IsSolidObstacle();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
