@@ -134,7 +134,7 @@ namespace ck_pmg_processor_text_shapes_impl
         InMeshComponent->SetRenderInMainPass(true);
         InMeshComponent->SetRenderInDepthPass(true);
 
-        static auto TranslucentMaterial = LoadObject<UMaterial>(
+        auto TranslucentMaterial = LoadObject<UMaterial>(
             nullptr,
             TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 
