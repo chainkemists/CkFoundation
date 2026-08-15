@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkGoap/CkGoap_Fragment.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
@@ -55,6 +56,7 @@ class CKGOAP_API FProcessor_Goap_Planner_AutoReplan : public ck_exp::TProcessor<
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_WorldStateSource>,
 	ck::TReadWrite<FFragment_Goap_Planner_ReplanThrottle>,
+	FTag_Goap_Planner_ReplanCandidate,
 	CK_IGNORE_PENDING_KILL>
 {
 public:

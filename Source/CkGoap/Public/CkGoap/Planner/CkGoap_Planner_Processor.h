@@ -55,6 +55,7 @@ class CKGOAP_API FProcessor_Goap_Planner_UpdateActivation : public ck_exp::TProc
 	ck::TReadOnly<FFragment_Goap_Planner_Current>,
 	ck::TReadOnly<FFragment_Goap_Planner_PlanState>,
 	ck::TReadWrite<FFragment_Goap_Planner_Activation>,
+	FTag_Goap_Planner_ActivationDirty,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
