@@ -14,6 +14,7 @@
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
 #include "CkJolt/Subsystem/CkJolt_DebugRenderer.h"
 
 #include <HAL/IConsoleManager.h>
@@ -344,6 +345,11 @@ namespace ck_jolt_subsystem
                  "the per-body arrow lines are immediate-mode and dominate the line batcher at "
                  "stress-gym body counts."));
 
+        static float DebugDrawOpacity = 0.5f;
+        static FAutoConsoleVariableRef CVar_DebugDrawOpacity(TEXT("ck.Jolt.DebugDraw.Opacity"),
+            DebugDrawOpacity,
+            TEXT("Opacity of the batched Jolt debug-draw meshes (0..1). Applies live."));
+
         static bool DebugDrawConstraints = true;
         static FAutoConsoleVariableRef CVar_DebugDrawConstraints(TEXT("ck.Jolt.DebugDraw.Constraints"),
             DebugDrawConstraints,
@@ -534,11 +540,8 @@ auto
         });
 
 #if JPH_DEBUG_RENDERER
-    if (ck::Is_NOT_Valid(JPH::DebugRenderer::sInstance, ck::IsValid_Policy_NullptrOnly{}))
-    {
-        _Debugger = MakePimpl<CkJoltDebugger>();
-        _Debugger->_World = GetWorld();
-    }
+    FCk_Jolt_DebugRenderer::Get_OrCreate();
+    _DefaultDebugDrawTarget = MakeShared<FCk_Jolt_DebugDrawTarget>(GetWorld());
 #endif
 }
 
@@ -611,23 +614,27 @@ auto
         const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
         const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
 
-        if (ck::IsValid(_Debugger, ck::IsValid_Policy_NullptrOnly{}))
+        if (_DefaultDebugDrawTarget.IsValid())
         {
             if (ConsumerGateOpen || CVarDrawEnabled)
             {
-                _Debugger->BeginFrame();
-                _PhysicsSystem->DrawBodies(DrawSettings, _Debugger.Get());
+                auto& Renderer = FCk_Jolt_DebugRenderer::Get_OrCreate();
+
+                _DefaultDebugDrawTarget->Set_Opacity(ck_jolt_subsystem::cvar::DebugDrawOpacity);
+
+                Renderer.BeginFrame(*_DefaultDebugDrawTarget);
+                _PhysicsSystem->DrawBodies(DrawSettings, &Renderer);
 
                 if (ck_jolt_subsystem::cvar::DebugDrawConstraints)
-                { _PhysicsSystem->DrawConstraints(_Debugger.Get()); }
+                { _PhysicsSystem->DrawConstraints(&Renderer); }
 
-                _Debugger->EndFrame();
-                _Debugger->NextFrame();
+                Renderer.EndFrame();
+                Renderer.NextFrame();
             }
             else
             {
                 // Without this the last frame's instanced meshes linger frozen once the gate closes.
-                _Debugger->HideAll();
+                _DefaultDebugDrawTarget->HideAll();
             }
         }
     }
@@ -648,8 +655,9 @@ auto
     _DebugDrawGate = {};
 
 #if JPH_DEBUG_RENDERER
-    // Destroyed while the world is still valid so the renderer can release its instanced components.
-    _Debugger.Reset();
+    // Destroyed while the world is still valid so the target can release its instanced components.
+    _DefaultDebugDrawTarget.Reset();
+    _RegisteredDebugDrawTargets.Reset();
 #endif
 
     _ContactListener.Reset();
@@ -745,6 +753,88 @@ auto
         -> ck::jolt::FCk_Jolt_CollisionLayerTable&
 {
     return *_LayerTable;
+}
+
+#if JPH_DEBUG_RENDERER
+auto
+    UCk_Jolt_Subsystem::
+    Register_DebugDrawTarget(
+        const TSharedRef<FCk_Jolt_DebugDrawTarget>& InTarget)
+        -> void
+{
+    const auto* TargetPtr = &InTarget.Get();
+
+    const auto AlreadyRegistered = _RegisteredDebugDrawTargets.ContainsByPredicate(
+        [&](const TWeakPtr<FCk_Jolt_DebugDrawTarget>& InExisting) -> bool
+        {
+            return InExisting.Pin().Get() == TargetPtr;
+        });
+
+    CK_ENSURE_IF_NOT(NOT AlreadyRegistered,
+        TEXT("The same Jolt debug-draw target was registered twice — ignoring the second registration"))
+    { return; }
+
+    _RegisteredDebugDrawTargets.Emplace(TWeakPtr<FCk_Jolt_DebugDrawTarget>{InTarget});
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Unregister_DebugDrawTarget(
+        const TSharedRef<FCk_Jolt_DebugDrawTarget>& InTarget)
+        -> void
+{
+    const auto* TargetPtr = &InTarget.Get();
+
+    _RegisteredDebugDrawTargets.RemoveAll(
+        [&](const TWeakPtr<FCk_Jolt_DebugDrawTarget>& InExisting) -> bool
+        {
+            const auto Pinned = InExisting.Pin();
+            return NOT Pinned.IsValid() || Pinned.Get() == TargetPtr;
+        });
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_DemandingDebugDrawTargets(
+        TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>& OutTargets)
+        -> void
+{
+    OutTargets.Reset();
+
+    _RegisteredDebugDrawTargets.RemoveAll(
+        [](const TWeakPtr<FCk_Jolt_DebugDrawTarget>& InExisting) -> bool
+        {
+            return NOT InExisting.IsValid();
+        });
+
+    for (const auto& WeakTarget : _RegisteredDebugDrawTargets)
+    {
+        const auto Target = WeakTarget.Pin();
+        if (NOT Target.IsValid())
+        { continue; }
+
+        if (NOT Target->Get_IsDesired())
+        {
+            // Belt-and-braces for demand dropping through some path other than Set_IsDesired: a target that is
+            // no longer pumped must not leave a frozen snapshot of the world behind it. Self-early-outs.
+            Target->HideAll();
+            continue;
+        }
+
+        OutTargets.Emplace(Target);
+    }
+}
+#endif
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_NoteStaticSceneChanged()
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_NoteStaticSceneChanged();
 }
 
 auto

@@ -268,6 +268,14 @@ namespace ck
 
     auto
         FJoltWorld::
+        Request_NoteStaticSceneChanged()
+        -> void
+    {
+        ++_StaticSceneRevision;
+    }
+
+    auto
+        FJoltWorld::
         DoOptimizeBroadPhase()
         -> void
     {

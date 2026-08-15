@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CkJoltDebugger;
+class FCk_Jolt_DebugDrawTarget;
 class CkContactListener;
 class CkBodyActivationListener;
 
@@ -80,7 +80,11 @@ private:
     TFunction<bool()> _DebugDrawGate;
 
 #if JPH_DEBUG_RENDERER
-    TPimplPtr<CkJoltDebugger> _Debugger;
+    // The in-world draw the subsystem Tick owns. Consumer-registered targets are separate and are pumped by
+    // FProcessor_JoltDebugDraw_Capture, never from here.
+    TSharedPtr<FCk_Jolt_DebugDrawTarget> _DefaultDebugDrawTarget;
+
+    TArray<TWeakPtr<FCk_Jolt_DebugDrawTarget>> _RegisteredDebugDrawTargets;
 #endif
 
 public:
@@ -126,6 +130,27 @@ public:
     auto
     Set_DebugDrawGate(
         TFunction<bool()> InGate) -> void;
+
+#if JPH_DEBUG_RENDERER
+    /// Register a consumer-owned debug-draw target. Held WEAKLY — the consumer's TSharedRef is the lifetime.
+    /// Game thread only. FProcessor_JoltDebugDraw_Capture pumps every registered target that is desired.
+    auto
+    Register_DebugDrawTarget(
+        const TSharedRef<FCk_Jolt_DebugDrawTarget>& InTarget) -> void;
+
+    auto
+    Unregister_DebugDrawTarget(
+        const TSharedRef<FCk_Jolt_DebugDrawTarget>& InTarget) -> void;
+
+    /// Live registered targets whose consumer currently wants them drawn; also compacts dead registrations.
+    auto
+    Get_DemandingDebugDrawTargets(
+        TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>& OutTargets) -> void;
+#endif
+
+    /// Bumps the Jolt world's static-scene change token. Called by every static-body add/remove funnel.
+    auto
+    Request_NoteStaticSceneChanged() -> void;
 
     CK_PROPERTY_GET(_ParallelPhysicsEnabled);
     CK_PROPERTY_GET(_PhysicsThreadCount);
