@@ -2,6 +2,7 @@
 
 #include "CkWorldSpaceWidget/CkWorldSpaceWidget_Fragment_Data.h"
 
+#include "Components/SlateWrapperTypes.h"
 #include "Components/WidgetComponent.h"
 
 #include <GameFramework/PlayerController.h>
@@ -54,6 +55,9 @@ namespace ck
         TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
         TWeakObjectPtr<UWidgetComponent> _WidgetComponent;
         bool _Enabled = true;
+        // ScreenOverlay only: the wrapper's visibility as it was before the disable that
+        // Collapsed it, so re-enabling restores what the widget actually had.
+        TOptional<ESlateVisibility> _PreDisableVisibility;
 
     public:
         CK_PROPERTY_GET(_WidgetOwningPlayer);

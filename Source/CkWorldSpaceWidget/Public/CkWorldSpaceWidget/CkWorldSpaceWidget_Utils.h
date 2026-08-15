@@ -122,6 +122,15 @@ public:
     Get_IsAnchorOccluded(
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
 
+    // Test/diagnostic hook: true iff the ScreenOverlay wrapper exists and is Collapsed.
+    // Always false for WorldComponent mode.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|WorldSpaceWidget|Debug",
+              DisplayName="[Ck][WorldSpaceWidget] Get Debug Is Wrapper Collapsed")
+    static bool
+    Get_Debug_IsWrapperCollapsed(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WorldSpaceWidget",
