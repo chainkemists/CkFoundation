@@ -1403,6 +1403,9 @@ auto
 
     _Impl->_HighlightedBodyKeys = MoveTemp(InBodyKeys);
 
+    _Impl->_HighlightedBodyKeySet.Reset();
+    _Impl->_HighlightedBodyKeySet.Append(_Impl->_HighlightedBodyKeys);
+
     // The old selection's samples must not survive as the new one's: the next capture is what fills them.
     _Impl->_BodySample.Reset();
     _Impl->_CharacterSample.Reset();

@@ -273,6 +273,21 @@ namespace ck::jolt
         }
     }
 
+    auto
+        Conv(
+            JPH::CharacterBase::EGroundState InGroundState)
+        -> ECk_JoltCharacter_GroundState
+    {
+        switch (InGroundState)
+        {
+            case JPH::CharacterBase::EGroundState::OnGround:      return ECk_JoltCharacter_GroundState::OnGround;
+            case JPH::CharacterBase::EGroundState::OnSteepGround: return ECk_JoltCharacter_GroundState::OnSteepSlope;
+            case JPH::CharacterBase::EGroundState::NotSupported:  return ECk_JoltCharacter_GroundState::NotSupported;
+            case JPH::CharacterBase::EGroundState::InAir:         return ECk_JoltCharacter_GroundState::InAir;
+        }
+        return ECk_JoltCharacter_GroundState::InAir;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // Shape Axis Correction
     // ----------------------------------------------------------------------------------------------------------------

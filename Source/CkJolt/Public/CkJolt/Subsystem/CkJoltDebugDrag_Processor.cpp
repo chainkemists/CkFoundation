@@ -1,8 +1,10 @@
 #include "CkJoltDebugDrag_Processor.h"
 
-#include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/Registry/CkRegistry.h"
+#if !UE_BUILD_SHIPPING
+
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+
+#include "CkJolt/World/CkJoltWorld_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,15 +27,16 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // An absent context is legal — a world with no Jolt subsystem never publishes one.
-        const auto* WorldPtr = _TransientEntity.Get_RegistryView().TryGetContext<TSharedPtr<FJoltWorld>>();
-
-        if (WorldPtr == nullptr || NOT WorldPtr->IsValid())
+        auto* JoltWorld = ck::jolt::TryResolve_JoltWorld(_TransientEntity);
+        if (JoltWorld == nullptr)
         { return; }
 
-        // Self-early-outs on an empty queue, which is every frame nobody is dragging.
-        (*WorldPtr)->Apply_DragRequests();
+        // Unconditional: the drain is only half of what this does. It also re-reads the live drag, which is how a
+        // body destroyed under one takes its constraint with it.
+        JoltWorld->Apply_DragRequests();
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#endif
