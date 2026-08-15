@@ -98,8 +98,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Each FindRoute runs the full plan: overlay candidates -> A* over FRouteGraph -> navmesh
-    // validation/reprice loop -> corridor compile (side-keeping offsets) -> signals. Requests past
-    // the per-frame budget (_MaxRouteQueriesPerFrame) are re-queued verbatim and retried next tick.
+    // validation/reprice loop -> corridor compile (side-keeping offsets) -> signals. The budget
+    // (_MaxRouteQueriesPerFrame) spans the whole FRAME, main pass and pump passes together; a
+    // follower left out of budget keeps its pending requests untouched until the next frame.
     class CKPATHNETWORK_API FProcessor_PathNetworkFollower_HandleRequests : public ck_exp::TProcessor<
         FProcessor_PathNetworkFollower_HandleRequests,
         FCk_Handle_PathNetworkFollower,
@@ -144,6 +145,7 @@ namespace ck
 
     private:
         mutable int32 _BudgetRemainingThisTick = 0;
+        mutable uint64 _BudgetFrame = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
