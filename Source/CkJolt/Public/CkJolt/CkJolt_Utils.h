@@ -66,6 +66,7 @@ namespace ck::jolt
     CKJOLT_API auto Conv(const FQuat& InQuat) -> JoltQuat;
     CKJOLT_API auto Conv(JoltQuat InQuad) -> FQuat;
     CKJOLT_API auto Conv(JoltColor InColor) -> FLinearColor;
+    CKJOLT_API auto Conv(const FLinearColor& InColor) -> JoltColor;
     CKJOLT_API auto Conv(ECk_MotionType InMotionType) -> JPH::EMotionType;
     CKJOLT_API auto Conv(ECk_MotionQuality InMotionQuality) -> JPH::EMotionQuality;
     CKJOLT_API auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;

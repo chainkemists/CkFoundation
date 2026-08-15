@@ -120,6 +120,7 @@ namespace ck
 
         _PhysicsSystem = ck_jolt_body_processor::TryResolve_PhysicsSystem(_TransientEntity);
         _LayerTable = LayerCtx != nullptr ? LayerCtx->_Table : nullptr;
+        _JoltWorld = ck_jolt_body_processor::TryResolve_JoltWorld(_TransientEntity);
 
         const auto PinnedPhysicsSystem = _PhysicsSystem.Pin();
         if (ck::Is_NOT_Valid(PinnedPhysicsSystem) || _LayerTable == nullptr)
@@ -351,6 +352,14 @@ namespace ck
                 .Set_PrevRotation(EntityRotation)
                 .Set_CurrLocation(EntityLocation)
                 .Set_CurrRotation(EntityRotation);
+
+        // A body that never activates is invisible to the debug draw's per-frame active pass, so it has to
+        // arrive through the revision-keyed full pass — statics always, and anything spawned already asleep.
+        const auto BodyStartsInactive = InParams.Get_MotionType() == ECk_MotionType::Static ||
+            InParams.Get_InitialSleepState() == ECk_Jolt_SleepState::Asleep;
+
+        if (BodyStartsInactive && _JoltWorld != nullptr)
+        { _JoltWorld->Request_NoteStaticSceneChanged(); }
 
         const auto Pending = FPendingBody{InHandle.Get_Entity(), Body->GetID()};
         if (InParams.Get_InitialSleepState() == ECk_Jolt_SleepState::Awake)
@@ -688,6 +697,11 @@ namespace ck
             }
         }
 
+        // A Static body never activates, so the debug draw's per-frame active pass will not notice it moved —
+        // only the revision-keyed full pass can.
+        if (_JoltWorld != nullptr && InHandle.Has<ck::FTag_JoltBody_MotionType_Static>())
+        { _JoltWorld->Request_NoteStaticSceneChanged(); }
+
         auto& TransformFragment = InHandle.Get<ck::FFragment_Transform>();
         auto& PrevTransformFragment = InHandle.Get<ck::FFragment_Transform_Previous>();
 
@@ -948,6 +962,9 @@ namespace ck
         if (_JoltWorld != nullptr)
         {
             _JoltWorld->Remove_PoseBufferEntry(BodyId.GetIndexAndSequenceNumber());
+
+            if (InParams.Get_MotionType() == ECk_MotionType::Static)
+            { _JoltWorld->Request_NoteStaticSceneChanged(); }
         }
     }
 
