@@ -324,6 +324,24 @@ namespace ck_jolt_debugdraw_capture
                NOT InTargetImpl._IsolatedBodyKeys.Contains(InBodyKey);
     }
 
+    /*
+     * A body the FACILITY owns — today only the debug-drag anchor. Unlike isolation this is not a view the user
+     * chose: an anchor is a raw JPH body with no entity, so drawing it would show a body no outliner can name and
+     * picking it would hand a consumer a key it cannot resolve.
+     *
+     * Checked in the three BODY steps only. Characters are keyed clear of the BodyID keyspace by
+     * Make_CharacterBodyKey, so a facility-owned rigid body can never appear in the character pass.
+     */
+    auto
+        Get_IsInternalBody(
+            const FCk_Jolt_DebugDrawTarget::FImpl& InTargetImpl,
+            uint64 InBodyKey)
+        -> bool
+    {
+        return NOT InTargetImpl._InternalBodyKeys.IsEmpty() &&
+               InTargetImpl._InternalBodyKeys.Contains(InBodyKey);
+    }
+
     auto
         Get_IsPrimarySelection(
             const FCk_Jolt_DebugDrawTarget::FImpl& InTargetImpl,
@@ -727,6 +745,58 @@ namespace ck_jolt_debugdraw_capture
         ++InCtx._TargetImpl->_LastCaptureStats._BodiesCaptured;
     }
 
+    /*
+     * P6-D48: the world's own counts, taken here because a presentation consumer must never read the physics system
+     * itself — the same rule that puts the body sample here.
+     *
+     * The cadence is the whole point. GetBodyStats is documented in Jolt's own header as "slow, iterates through
+     * all bodies", and GetConstraints returns the constraint array BY VALUE (a refcount bump per element), so both
+     * are refreshed once every WorldStatsSampleInterval captures and their staleness is PUBLISHED (_SampleAge)
+     * rather than hidden. The two active-body counters are plain reads and stay per-capture.
+     */
+    auto
+        Sample_WorldStats(
+            FContext_Capture& InCtx)
+        -> void
+    {
+        auto& TargetImpl = *InCtx._TargetImpl;
+        auto& Stats = TargetImpl._WorldStats;
+
+        Stats.Set_NumActiveRigidBodies(
+            static_cast<int32>(InCtx._PhysicsSystem->GetNumActiveBodies(JPH::EBodyType::RigidBody)));
+        Stats.Set_NumActiveSoftBodies(
+            static_cast<int32>(InCtx._PhysicsSystem->GetNumActiveBodies(JPH::EBodyType::SoftBody)));
+
+        // Counted BEFORE the test, so the refresh lands on exactly the Nth capture after the last one rather than
+        // the N+1th.
+        ++TargetImpl._CapturesSinceWorldStatsSample;
+
+        const auto NeedsSample = NOT Stats.Get_HasSample() ||
+            TargetImpl._CapturesSinceWorldStatsSample >= ck::jolt::debug_draw::WorldStatsSampleInterval;
+
+        if (NeedsSample)
+        {
+            const auto BodyStats = InCtx._PhysicsSystem->GetBodyStats();
+
+            Stats.Set_NumBodies(static_cast<int32>(BodyStats.mNumBodies));
+            Stats.Set_MaxBodies(static_cast<int32>(BodyStats.mMaxBodies));
+            Stats.Set_NumStaticBodies(static_cast<int32>(BodyStats.mNumBodiesStatic));
+            Stats.Set_NumDynamicBodies(static_cast<int32>(BodyStats.mNumBodiesDynamic));
+            Stats.Set_NumActiveDynamicBodies(static_cast<int32>(BodyStats.mNumActiveBodiesDynamic));
+            Stats.Set_NumKinematicBodies(static_cast<int32>(BodyStats.mNumBodiesKinematic));
+            Stats.Set_NumActiveKinematicBodies(static_cast<int32>(BodyStats.mNumActiveBodiesKinematic));
+            Stats.Set_NumSoftBodies(static_cast<int32>(BodyStats.mNumSoftBodies));
+
+            // By value, with a refcount bump per element — taken for its size alone and never held.
+            Stats.Set_NumConstraints(static_cast<int32>(InCtx._PhysicsSystem->GetConstraints().size()));
+
+            Stats.Set_HasSample(true);
+            TargetImpl._CapturesSinceWorldStatsSample = 0;
+        }
+
+        Stats.Set_SampleAge(TargetImpl._CapturesSinceWorldStatsSample);
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     struct FTechnique_CaptureJoltWorld : ck::Technique<FTechnique_CaptureJoltWorld, FContext_Capture&>
@@ -800,9 +870,10 @@ namespace ck_jolt_debugdraw_capture
 
             const auto Key = Get_BodyKey(BodyId);
 
-            // Isolated out: no record, no key retained — the stale-key loop below is what releases whatever it
-            // was drawn as, so the body leaves the screen entirely rather than merely stopping to update.
-            if (Get_IsIsolatedOut(TargetImpl, Key))
+            // Isolated out, or facility-owned: no record, no key retained — the stale-key loop below is what
+            // releases whatever it was drawn as, so the body leaves the screen entirely rather than merely
+            // stopping to update.
+            if (Get_IsIsolatedOut(TargetImpl, Key) || Get_IsInternalBody(TargetImpl, Key))
             { continue; }
 
             const auto Record = Make_InactiveRecord(InCtx, *Body);
@@ -869,6 +940,12 @@ namespace ck_jolt_debugdraw_capture
 
             const auto Key = Get_BodyKey(BodyId);
 
+            // A facility-owned body leaves no trace at all, not even in the active set: the drag anchor is
+            // kinematic and therefore active every frame it exists, so a key retained here would keep reappearing
+            // in the sleep diff for the life of the drag.
+            if (Get_IsInternalBody(TargetImpl, Key))
+            { continue; }
+
             // The key still counts as ACTIVE while isolated out — the sleep diff below is a diff against the
             // active SET, and dropping it there would make the next capture treat the body as freshly asleep.
             if (Get_IsIsolatedOut(TargetImpl, Key))
@@ -911,7 +988,8 @@ namespace ck_jolt_debugdraw_capture
             const auto BodyId = JPH::BodyID{static_cast<JPH::uint32>(FellAsleepKey)};
             const auto* Body = InCtx._LockInterface->TryGetBody(BodyId);
 
-            if (Body == nullptr || Get_IsIsolatedOut(TargetImpl, FellAsleepKey))
+            if (Body == nullptr || Get_IsIsolatedOut(TargetImpl, FellAsleepKey) ||
+                Get_IsInternalBody(TargetImpl, FellAsleepKey))
             {
                 InCtx._Renderer->Release_BodySlots(FellAsleepKey, ck::jolt::debug_draw::EStatCounting::Counted);
                 continue;
@@ -1078,6 +1156,8 @@ auto
 
     static auto Technique = FTechnique_CaptureJoltWorld{};
     Technique.ProcessAllSteps(Context);
+
+    Sample_WorldStats(Context);
 
     // Outside every body scope on purpose: constraint drawing is whole-world and line-shaped, so it belongs to
     // the line channel rather than to any one body's instance slots. Still inside the active-target scope, which

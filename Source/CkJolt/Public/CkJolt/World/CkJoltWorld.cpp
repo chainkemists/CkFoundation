@@ -13,22 +13,53 @@
 #include "CkJolt/Character/CkJoltCharacterContactListener.h"
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Utils.h"
+#include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 #include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyLockInterface.h>
 #include <Jolt/Physics/Body/BodyType.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/ShapeFilter.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_jolt_world
 {
+    // The drag spring, per P6-D47: soft limits at zero separation, so ANY distance between the grab point and the
+    // anchor is over the limit and the spring is what closes it. 2 Hz / critical damping is a hand that follows the
+    // cursor without whipping the body past it.
+    constexpr auto DragSpringFrequencyHz = 2.0f;
+    constexpr auto DragSpringDamping = 1.0f;
+
+    // The anchor draws nothing and collides with nothing; it exists to be a constraint end-point, so its shape is
+    // as close to a point as Jolt will accept.
+    constexpr auto DragAnchorRadius = 1.0f;
+
+    /*
+     * The anchor's object layer (RATIFIED, P5-D61/S2): a DEFAULT-CONSTRUCTED signature has an all-zero response
+     * mask, so its pair interaction against every other layer is Ignore and Jolt's pair filter refuses every pair —
+     * and a channel query, which reads the same mask, cannot see it either. The Dynamic domain is what keeps
+     * ObjectVsBroadPhaseLayerFilter from culling it out of the dynamic tree, where the dragged body lives.
+     */
+    auto
+        Get_DragAnchorSignature()
+        -> FCk_Jolt_CollisionSignature
+    {
+        auto Signature = FCk_Jolt_CollisionSignature{};
+        Signature.Set_Domain(ECk_Jolt_BodyDomain::Dynamic);
+        return Signature;
+    }
+
     // Jolt's ground-state enum ordering differs from the Ck mirror's — convert explicitly (never a cast).
     auto
         Conv_GroundState(
@@ -98,6 +129,7 @@ namespace ck
         , _DrainQueueFn(MoveTemp(InParams.DrainQueueFn))
         , _DrainActivationQueueFn(MoveTemp(InParams.DrainActivationQueueFn))
         , _SetPersistedContactsWantedFn(MoveTemp(InParams.SetPersistedContactsWantedFn))
+        , _LayerTable(InParams.LayerTable)
     {
         _CharacterContactListener = MakeUnique<CkJoltCharacterContactListener>(this);
     }
@@ -105,6 +137,10 @@ namespace ck
     FJoltWorld::
         ~FJoltWorld()
     {
+        // Belt to Shutdown's braces again: a world destroyed mid-drag would otherwise leave an anchor body and a
+        // constraint in a PhysicsSystem that outlives it.
+        DoEnd_Drag();
+
 #if JPH_DEBUG_RENDERER
         // Belt to Shutdown's braces: a world torn down without Shutdown would leave its contact buffers keyed by
         // an address a later PhysicsSystem can be allocated at, and inherit a dead world's contacts once.
@@ -124,6 +160,11 @@ namespace ck
             _AsyncFuture = {};
         }
 
+        // BEFORE the Jolt pointers are nulled below — the teardown needs the PhysicsSystem it created the anchor
+        // and the constraint in.
+        _DragRequests.Reset();
+        DoEnd_Drag();
+
 #if JPH_DEBUG_RENDERER
         if (const auto PhysicsSystem = _PhysicsSystem.Pin(); PhysicsSystem.IsValid())
         { ck::jolt::debug_draw::Forget_ContactRecord(PhysicsSystem.Get()); }
@@ -132,6 +173,7 @@ namespace ck
         _PhysicsSystem = nullptr;
         _TempAllocator = nullptr;
         _JobSystem = nullptr;
+        _LayerTable = nullptr;
         _DrainQueueFn = {};
         _DrainActivationQueueFn = {};
         _SetPersistedContactsWantedFn = {};
@@ -376,6 +418,305 @@ namespace ck
         return _LastStepDurationMs.load(std::memory_order_relaxed);
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FJoltWorld::
+        Request_BeginDrag(
+            uint64 InBodyKey,
+            const FVector& InWorldGrabPoint)
+        -> void
+    {
+        _DragRequests.Emplace(FDragRequest{FDragRequest::EType::Begin, InBodyKey, InWorldGrabPoint});
+    }
+
+    auto
+        FJoltWorld::
+        Request_UpdateDrag(
+            const FVector& InWorldTargetPoint)
+        -> void
+    {
+        _DragRequests.Emplace(FDragRequest{FDragRequest::EType::Update, 0, InWorldTargetPoint});
+    }
+
+    auto
+        FJoltWorld::
+        Request_EndDrag()
+        -> void
+    {
+        _DragRequests.Emplace(FDragRequest{FDragRequest::EType::End, 0, FVector::ZeroVector});
+    }
+
+    auto
+        FJoltWorld::
+        Apply_DragRequests()
+        -> void
+    {
+        if (_DragRequests.IsEmpty())
+        { return; }
+
+        // Drained by MOVE rather than iterated in place: a handler may not enqueue, but the array must be empty
+        // before the next frame whatever a handler does.
+        const auto Requests = MoveTemp(_DragRequests);
+        _DragRequests.Reset();
+
+        for (const auto& Request : Requests)
+        {
+            switch (Request._Type)
+            {
+                case FDragRequest::EType::Begin:
+                { DoBegin_Drag(Request._BodyKey, Request._Point); break; }
+
+                case FDragRequest::EType::Update:
+                { DoUpdate_Drag(Request._Point); break; }
+
+                case FDragRequest::EType::End:
+                default:
+                { DoEnd_Drag(); break; }
+            }
+        }
+    }
+
+    auto
+        FJoltWorld::
+        DoBegin_Drag(
+            uint64 InBodyKey,
+            const FVector& InWorldGrabPoint)
+        -> void
+    {
+        // One drag at a time: a second Begin is a new grab, not a second spring on the same hand.
+        DoEnd_Drag();
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (NOT PhysicsSystem.IsValid())
+        { return; }
+
+        const auto LayerTableIsAvailable = _LayerTable != nullptr;
+
+        CK_ENSURE_IF_NOT(LayerTableIsAvailable,
+            TEXT("Cannot begin a Jolt debug drag: this world was built without a collision-layer table, so its "
+                 "anchor body has no non-colliding layer to live on"))
+        { return; }
+
+        const auto BodyId = JPH::BodyID{static_cast<JPH::uint32>(InBodyKey)};
+
+        // NoLock mirrors every other read this module makes outside the solve: Apply runs on the game thread,
+        // before the step is kicked and after the previous one was consumed, so no worker is mutating bodies.
+        auto* Body = PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(BodyId);
+
+        if (Body == nullptr)
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt debug drag: body key [{}] names no live body"), InBodyKey);
+            return;
+        }
+
+        // Dynamic ONLY. A static or kinematic body is driven by something else — the level, or the ECS transform —
+        // and a spring on it either does nothing or fights the writer that owns it.
+        if (NOT Body->IsDynamic())
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt debug drag: body key [{}] is not a DYNAMIC body"), InBodyKey);
+            return;
+        }
+
+        if (NOT _DragAnchorLayerRegistered)
+        {
+            const auto Layer = _LayerTable->Get_OrRegisterLayer(ck_jolt_world::Get_DragAnchorSignature());
+
+            // Already ensured by the table itself on exhaustion; the drag simply does not happen rather than
+            // spawning an anchor on a layer that collides with the world.
+            if (Layer == JPH::cObjectLayerInvalid)
+            { return; }
+
+            _DragAnchorLayer = Layer;
+            _DragAnchorLayerRegistered = true;
+        }
+
+        const auto GrabPoint = JPH::RVec3{ck::jolt::Conv(InWorldGrabPoint)};
+
+        auto AnchorShape = JPH::Ref<JPH::Shape>{new JPH::SphereShape{ck_jolt_world::DragAnchorRadius}};
+
+        auto AnchorSettings = JPH::BodyCreationSettings{
+            AnchorShape.GetPtr(),
+            GrabPoint,
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            JPH::ObjectLayer{_DragAnchorLayer}};
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        const auto AnchorId = BodyInterface.CreateAndAddBody(AnchorSettings, JPH::EActivation::Activate);
+
+        if (AnchorId.IsInvalid())
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt debug drag: the anchor body could not be created "
+                                   "(body budget exhausted?)"));
+            return;
+        }
+
+        auto* Anchor = PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(AnchorId);
+
+        if (Anchor == nullptr)
+        {
+            BodyInterface.RemoveBody(AnchorId);
+            BodyInterface.DestroyBody(AnchorId);
+            return;
+        }
+
+        auto ConstraintSettings = JPH::DistanceConstraintSettings{};
+        ConstraintSettings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        ConstraintSettings.mPoint1 = GrabPoint;
+        ConstraintSettings.mPoint2 = GrabPoint;
+        ConstraintSettings.mMinDistance = 0.0f;
+        ConstraintSettings.mMaxDistance = 0.0f;
+        ConstraintSettings.mLimitsSpringSettings = JPH::SpringSettings{
+            JPH::ESpringMode::FrequencyAndDamping,
+            ck_jolt_world::DragSpringFrequencyHz,
+            ck_jolt_world::DragSpringDamping};
+
+        _DragConstraint = ConstraintSettings.Create(*Body, *Anchor);
+        PhysicsSystem->AddConstraint(_DragConstraint.GetPtr());
+
+        _DraggedBodyId = BodyId.GetIndexAndSequenceNumber();
+        _DragAnchorBodyId = AnchorId.GetIndexAndSequenceNumber();
+        _DragGrabPointLocal = ck::jolt::Conv(
+            Body->GetWorldTransform().InversedRotationTranslation() * JPH::Vec3{GrabPoint});
+        _DragAnchorPointWorld = InWorldGrabPoint;
+        _IsDragging = true;
+
+#if JPH_DEBUG_RENDERER
+        _DebugInternalBodyKeys.Emplace(ck::jolt::debug_draw::Make_BodyKey(_DragAnchorBodyId));
+#endif
+
+        // A body that fell asleep before the grab would otherwise ignore the spring entirely.
+        BodyInterface.ActivateBody(BodyId);
+    }
+
+    auto
+        FJoltWorld::
+        DoUpdate_Drag(
+            const FVector& InWorldTargetPoint)
+        -> void
+    {
+        if (NOT _IsDragging)
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt debug drag update: nothing is being dragged"));
+            return;
+        }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (NOT PhysicsSystem.IsValid())
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // SetPosition rather than MoveKinematic: the anchor carries no momentum of its own — the spring is what
+        // produces the force, and a kinematic velocity would add a second one nobody asked for.
+        BodyInterface.SetPosition(JPH::BodyID{_DragAnchorBodyId},
+            JPH::RVec3{ck::jolt::Conv(InWorldTargetPoint)}, JPH::EActivation::Activate);
+
+        // Every update, not just the first: a body dragged slowly enough can settle back to sleep mid-drag and
+        // would then hang off a spring it no longer responds to.
+        BodyInterface.ActivateBody(JPH::BodyID{_DraggedBodyId});
+
+        _DragAnchorPointWorld = InWorldTargetPoint;
+    }
+
+    auto
+        FJoltWorld::
+        DoEnd_Drag()
+        -> void
+    {
+        if (NOT _IsDragging)
+        { return; }
+
+        if (const auto PhysicsSystem = _PhysicsSystem.Pin(); PhysicsSystem.IsValid())
+        {
+            if (_DragConstraint.GetPtr() != nullptr)
+            { PhysicsSystem->RemoveConstraint(_DragConstraint.GetPtr()); }
+
+            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+            const auto AnchorId = JPH::BodyID{_DragAnchorBodyId};
+
+            if (BodyInterface.IsAdded(AnchorId))
+            { BodyInterface.RemoveBody(AnchorId); }
+
+            BodyInterface.DestroyBody(AnchorId);
+        }
+
+        // AFTER RemoveConstraint: the manager holds the only other reference, and dropping ours first would free a
+        // constraint it still has registered.
+        _DragConstraint = nullptr;
+
+        _DebugInternalBodyKeys.Reset();
+        _DragAnchorBodyId = 0;
+        _DraggedBodyId = 0;
+        _DragGrabPointLocal = FVector::ZeroVector;
+        _DragAnchorPointWorld = FVector::ZeroVector;
+        _IsDragging = false;
+    }
+
+    auto
+        FJoltWorld::
+        Get_IsDragging() const
+        -> bool
+    {
+        return _IsDragging;
+    }
+
+    auto
+        FJoltWorld::
+        Get_DragState() const
+        -> TOptional<ck::jolt::FCk_Jolt_DebugDragState>
+    {
+        if (NOT _IsDragging)
+        { return {}; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (NOT PhysicsSystem.IsValid())
+        { return {}; }
+
+        const auto* Body = PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(JPH::BodyID{_DraggedBodyId});
+        if (Body == nullptr)
+        { return {}; }
+
+        auto State = ck::jolt::FCk_Jolt_DebugDragState{};
+
+#if JPH_DEBUG_RENDERER
+        State.Set_BodyKey(ck::jolt::debug_draw::Make_BodyKey(_DraggedBodyId));
+#endif
+
+        State.Set_GrabPointWorld(ck::jolt::Conv(
+            Body->GetWorldTransform() * ck::jolt::Conv(_DragGrabPointLocal)));
+        State.Set_AnchorPointWorld(_DragAnchorPointWorld);
+
+        return State;
+    }
+
+    auto
+        FJoltWorld::
+        Get_DebugInternalBodyKeys() const
+        -> const TSet<uint64>&
+    {
+        return _DebugInternalBodyKeys;
+    }
+
+    auto
+        FJoltWorld::
+        Note_ContactPair()
+        -> void
+    {
+        _ContactPairsThisStep.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    auto
+        FJoltWorld::
+        Get_ContactPairsLastStep() const
+        -> int32
+    {
+        return _ContactPairsThisStep.load(std::memory_order_relaxed);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FJoltWorld::
         DoPhysicsUpdate(
@@ -385,6 +726,10 @@ namespace ck
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (NOT PhysicsSystem.IsValid())
         { return; }
+
+        // Per STEP, not per frame: a frame that runs four sub-steps would otherwise report four steps' worth of
+        // pairs as one step's, which is exactly the number a stats panel would misread as a spike.
+        _ContactPairsThisStep.store(0, std::memory_order_relaxed);
 
 #if JPH_DEBUG_RENDERER
         // Contacts exist ONLY inside the solve — there is nothing left to read once Update returns — so this is

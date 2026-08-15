@@ -610,6 +610,86 @@ are honoured by the same two step guards.
   stored in a `std::atomic<float>` with RELAXED ordering because that loop is off the game thread and
   the value orders nothing.
 
+### Debug drag (dev-only, sim-mutating)
+
+⚠ **The ONLY part of this facility that changes what the simulation does.** Everything else reads. It is a
+development tool — a physics sandbox's "grab and throw" — and it is **AUTHORITY ONLY**: a drag taken on a client
+moves a body the server corrects on the next replication, which reads as a bug rather than as a tool.
+
+`UCk_Jolt_Subsystem::Request_BeginDrag(BodyKey, WorldGrabPoint)` / `Request_UpdateDrag(WorldTargetPoint)` /
+`Request_EndDrag()`, plus `Get_IsDragging()` and `Get_DragState()`, forwarding to the same names on `FJoltWorld`.
+`InBodyKey` is the **debug-draw body key** — the one `TryPick_Body` returns — so a click picks and drags the same
+body with nothing to convert in between.
+
+- **The three requests QUEUE.** They arrive from a Slate click, and `FProcessor_JoltDebugDrag_Apply`
+  (`FGroup_Transform`, `RunAfter` WaitForAsync + `FProcessor_JoltBody_KinematicPush`, `RunBefore`
+  `FProcessor_JoltWorld_Step`) is what drains them — the same window the capture uses, which is the only point
+  where mutating Jolt is safe in both sync and async modes. After KinematicPush for the same reason the Step
+  processor is: the anchor is kinematic and that pass owns the kinematic writes.
+- **The mechanism** is a kinematic ANCHOR body plus a `DistanceConstraint` between the grab point on the body and
+  the anchor, with `mMinDistance = mMaxDistance = 0` and soft limits (`FrequencyAndDamping`, 2 Hz, damping 1). The
+  zero range is what makes the spring load-bearing: any separation at all is over the limit, so
+  `mLimitsSpringSettings` is what closes it. `WorldSpace` at creation, because `LocalToBodyCOM` would mean
+  subtracting `Shape::GetCenterOfMass()` for no gain.
+- **The anchor's object layer is registered LAZILY, on the first drag** (P5-D61/S2), from a **default-constructed
+  `FCk_Jolt_CollisionSignature`**: an all-zero response mask makes its pair interaction `Ignore` against
+  everything, so Jolt's pair filter refuses every pair AND a channel query — which reads the same mask — cannot
+  see it. `_Domain = Dynamic` is what keeps `ObjectVsBroadPhaseLayerFilter` from culling it out of the dynamic
+  tree the dragged body lives in. Lazy because a world that is never dragged must not spend one of the layer
+  table's fixed 1024 slots; exhaustion (`cObjectLayerInvalid`) drops the drag rather than putting the anchor on a
+  colliding layer.
+- **Dynamic bodies only.** A static or kinematic body is driven by the level or by the ECS transform, and a spring
+  on it either does nothing or fights the writer that owns it — refused at Verbose, with no side effect.
+- **The dragged body is activated on Begin AND on every Update**, not once: a body dragged slowly enough settles
+  back to sleep mid-drag and would then hang off a spring it no longer responds to.
+- **The anchor moves by `SetPosition`, not `MoveKinematic`.** It carries no momentum of its own — the spring is
+  what produces the force, and a kinematic velocity would add a second one nobody asked for.
+- **It is impossible to leave an anchor or a constraint behind.** `DoEnd_Drag` is idempotent and is the single
+  teardown path: `Request_EndDrag`, a second `Request_BeginDrag` (one drag at a time), `FJoltWorld::Shutdown`
+  (before the Jolt pointers are nulled) and the destructor all funnel through it.
+
+**The anchor is a raw JPH body with NO entity**, so it must be invisible to every consumer surface —
+`FJoltWorld::Get_DebugInternalBodyKeys()` publishes its debug-draw key and whoever pumps a capture pushes that set
+onto the target (`Set_InternalBodyKeys`). The capture then skips it in all three BODY steps and `TryPick_Body`
+refuses to return it, so it is never drawn, never picked, never listed. (The character pass needs no guard:
+`Make_CharacterBodyKey` lifts characters clear of the BodyID keyspace, so a rigid body can never appear there.)
+Becoming internal RELEASES a body's slots immediately rather than at the next capture — a static or sleeping body
+might otherwise never be walked again. **A visible anchor is a bug, not a cosmetic issue.**
+
+The drag LINE is not drawn by the facility: a consumer draws it through an External sub-channel (P7-D54), which is
+what `Get_DragState()`'s grab point (recomputed every read from the body's live transform, so it tracks rotation)
+and anchor point exist for.
+
+### World stats
+
+`FCk_Jolt_DebugDraw_WorldStats`, on the target, via `Get_WorldStats()`. Filled BY THE CAPTURE for everything the
+physics system owns — the same rule that puts the body sample there — and split by what each field COSTS:
+
+| Group | Fields | Cadence |
+|---|---|---|
+| SAMPLED | `_NumBodies`, `_MaxBodies`, `_NumStaticBodies`, `_NumDynamicBodies`, `_NumActiveDynamicBodies`, `_NumKinematicBodies`, `_NumActiveKinematicBodies`, `_NumSoftBodies`, `_NumConstraints` | every `WorldStatsSampleInterval` = **30** captures |
+| LIVE | `_NumActiveRigidBodies`, `_NumActiveSoftBodies` (`GetNumActiveBodies`) | every capture |
+| PUSHED | `_LastStepDurationMs`, `_ContactPairsLastStep` | pushed by whoever pumps the capture |
+
+- **The cadence is a CONSTANT** (P5-D61/S10), not a knob. `GetBodyStats()` is documented in Jolt's own header as
+  "slow, iterates through all bodies" and `GetConstraints()` returns the constraint array **by value** with a
+  refcount bump per element; at the campaign's 100k bar a per-frame sample would dominate the capture.
+- **The staleness is published, not hidden**: `_SampleAge` is how many captures ago the sampled block was
+  refreshed (0 on the capture that refreshed it), and a UI labels those fields "(sampled)". A throttled count is
+  allowed to be LATE, never wrong.
+- `_HasSample` distinguishes "no bodies" from "not asked yet".
+- Jolt's body stats carry an active-soft-body count too; it is deliberately NOT mirrored into the sampled block,
+  because the live one means the same thing and is always fresher.
+- **The two PUSHED fields belong to the Jolt WORLD, not to its PhysicsSystem**, so the capture cannot reach them.
+  `FProcessor_JoltDebugDraw_Capture` pushes them (`Set_StepStats`) before its captures, and the subsystem Tick does
+  the same for the in-world target — which matters because the capture processor early-outs whenever no registered
+  target is demanding, i.e. exactly when the in-world draw is the only thing capturing.
+- **`_ContactPairsLastStep` is per STEP, not per frame.** The atomic lives on `FJoltWorld` — the object that owns
+  the step that resets it, at the top of every `DoPhysicsUpdate` — and `CkContactListener` bumps it from
+  `OnContactAdded`/`OnContactPersisted`, which run on Jolt WORKER threads. Relaxed on both sides: a lone
+  diagnostic scalar that orders nothing. A frame running four sub-steps therefore reports the LAST sub-step's
+  pairs; reporting all four as one step's is the number a stats panel would misread as a spike.
+
 ### Contact recording
 
 Contacts exist ONLY during `PhysicsSystem::Update` — there is nothing left to read once it returns — so
@@ -807,6 +887,9 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.HoverOverlay` | hover and highlight are independent — two bodies, two overlays, two distinct always-visible classes; the hover class cannot be hidden; a body that is BOTH carries both overlays; clearing releases the hover overlay immediately |
 | `Ck.Jolt.DebugDraw.ContactRecordingReplays` | a step with nothing demanding contacts records none and leaves Jolt's statics off; a target's `ContactPoints` flag arms the process-wide demand and writes `sDrawContactPoint` (leaving `sDrawSupportingFaces` off), and after the replay that target has contact lines while a second target that did not ask stays empty; a second target's `SupportingFaces` flag proves the union is over ALL live targets; dropping the last contact flag clears both statics and EMPTIES the channel rather than leaving stale contacts. The only case that steps — `FScopedJoltWorld::Step()` exists for it |
 | `Ck.Jolt.DebugDraw.DrawFlagsGatePerBodyExtras` | `Shape` alone emits no lines even for a moving body; enabling `Velocity` emits some; adding `BoundingBox` emits strictly more; clearing back to `Shape` returns the count to zero with both bodies still drawn; dropping `Shape` releases every instanced-mesh instance while the line extras keep drawing |
+| `Ck.Jolt.DebugDraw.DragMovesDynamicBody` | a queued drag request does NOT begin the drag — applying the queue does; the drag adds exactly one anchor body and one constraint and publishes one internal key; over 120 fixed steps the body ends at least HALFWAY closer to where it is being pulled (the discriminating leg — "the call did not crash" would pass with no spring at all), and the state names the dragged body and the anchor point; ending it returns the body count and the constraint count to their pre-drag values, empties the internal-key set and leaves no drag state; a STATIC body is refused with no anchor and no constraint left behind |
+| `Ck.Jolt.DebugDraw.InternalBodiesAreInvisible` | the SAME world and the SAME ray, twice: without the internal set the anchor draws like any other body and a ray straight through it picks it BY KEY; with it, becoming internal releases its instances at once (no capture needed), a capture never draws it again, and the ray picks nothing |
+| `Ck.Jolt.DebugDraw.StatsSampled` | nothing is sampled before the first capture; the first one samples (age 0) and its counts are the fixture's own population and budget; the pushed contact-pair field is zero until pushed and non-zero after, over two touching bodies actually stepped; then a body is added and for the next 29 captures the SAMPLED count stays stale (never wrong) while the un-throttled active count follows immediately, and the 30th refreshes it back to the truth |
 | `Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix` (`Test_JoltDebugDraw_Benchmark.cpp`) | measurement with loose sanity gates at N ∈ {1k, 10k, 100k}: first pass, steady state, revision re-run, pick, and a selection-change re-armed pass, logged as `[JoltDebugDrawBench] N=… case=… ms=…`. The numbers are the product; the assertions are deliberately wide bounds (steady state < 50 ms, everything else < 2000 ms) that only an algorithmic-class regression trips, so they gate without flaking. A sixth run repeats N=100k with EVERY per-body draw flag on (`allflags_*` cases) — **measured, not gated**, because redrawing every body every capture is a different algorithmic class by construction |
 
 ---
@@ -814,12 +897,15 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 ## Processor order (FGroup_Transform, after FProcessor_Transform_HandleRequests)
 
 ```
-WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─┬─> DebugDraw_Capture ─┐
-     │                                                          ├─> KinematicPush ─────┤
-     ├──> JoltBody_Setup ──> JoltBody_HandleRequests ───────────┘                      ├─> Step ──> WritebackInterpolated
-     └──> JoltCharacter_Setup ──> JoltCharacter_HandleRequests ──> Character_PreStep ──┘
+WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─┬─> DebugDraw_Capture ────────────────┐
+     │                                                          ├─> KinematicPush ──> DebugDrag_Apply ┤
+     ├──> JoltBody_Setup ──> JoltBody_HandleRequests ───────────┘                                     ├─> Step ──> WritebackInterpolated
+     └──> JoltCharacter_Setup ──> JoltCharacter_HandleRequests ──> Character_PreStep ─────────────────┘
 ```
 
+- `DebugDrag_Apply` is the one processor that MUTATES Jolt on the debug facility's behalf. Same window as the
+  capture (`RunBefore` Step, `RunAfter` WaitForAsync) plus `RunAfter` KinematicPush, so the drag anchor — itself a
+  kinematic body — never lands in the middle of the kinematic writer's pass. Empty queue = immediate early-out.
 - `DebugDraw_Capture` is the one processor that only READS Jolt: it sits after SleepStateMirror (so
   the frame's activation events are already reflected) and `RunBefore` Step, which is what makes it
   correct in async mode too. No demanding target = immediate early-out.
@@ -926,6 +1012,12 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   across every Jolt bump — a ruling, not a bug fix.
 - Don't call `GetBodyStats()` or `GetConstraints()` per frame — both walk every body (and the latter
   returns the constraint array BY VALUE, refcount bump per element).
+- Don't take a debug drag on a CLIENT world. It mutates the simulation, so the server corrects the body on the
+  next replication and the tool reads as a bug. Authority only, and dev-only.
+- Don't draw, pick or list a body from `Get_DebugInternalBodyKeys()`. The drag anchor has no entity behind it, so
+  a consumer that shows one is showing a body nothing can name and handing back a key nothing can resolve.
+- Don't apply a drag request anywhere but `FProcessor_JoltDebugDrag_Apply`. The requests exist BECAUSE a debugger
+  click arrives on the Slate tick, and mutating Jolt from there races the step the capture is careful not to.
 - Don't consume the debug-pause gate anywhere but `FProcessor_JoltWorld_PlanStep`. A second consumer
   eats the step-once one-shot and the single step silently never happens.
 - Don't draw debug lines for a target through `UCk_Utils_DebugDraw_UE` / `DrawDebugLine`. Those go to the

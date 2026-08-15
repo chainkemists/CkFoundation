@@ -174,6 +174,44 @@ public:
     auto
     Get_LastStepDurationMs() const -> float;
 
+    /// Contact pairs (added + persisted) the LAST sub-step produced. Reset per step, so it is a rate, not a total.
+    auto
+    Get_ContactPairsLastStep() const -> int32;
+
+    /*
+     * Debug drag (P6-D47) — DEV-ONLY and SIM-MUTATING, unlike every other debug surface on this subsystem. The
+     * requests queue and are applied by FProcessor_JoltDebugDrag_Apply before the next step; only DYNAMIC bodies
+     * can be dragged (anything else is dropped at Verbose). AUTHORITY ONLY: a drag on a client moves a body the
+     * server will correct on the next replication.
+     *
+     * InBodyKey is the debug-draw body key — the same one TryPick_Body returns, so a click picks and drags the
+     * same body without the caller converting anything.
+     */
+    auto
+    Request_BeginDrag(
+        uint64 InBodyKey,
+        const FVector& InWorldGrabPoint) -> void;
+
+    auto
+    Request_UpdateDrag(
+        const FVector& InWorldTargetPoint) -> void;
+
+    auto
+    Request_EndDrag() -> void;
+
+    auto
+    Get_IsDragging() const -> bool;
+
+    /// Where the drag's spring is attached and where it is pulling to, for a consumer that draws the drag line.
+    /// Unset while nothing is being dragged.
+    auto
+    Get_DragState() const -> TOptional<ck::jolt::FCk_Jolt_DebugDragState>;
+
+    /// Debug-draw keys of the bodies the facility owns (the drag anchor). Every consumer surface must skip them —
+    /// the capture and TryPick_Body already do.
+    auto
+    Get_DebugInternalBodyKeys() const -> const TSet<uint64>&;
+
     /// Bumps the Jolt world's static-scene change token. Called by every static-body add/remove funnel.
     auto
     Request_NoteStaticSceneChanged() -> void;

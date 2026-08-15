@@ -72,6 +72,17 @@ namespace ck_jolt_contactlistener
 class CkContactListener : public JPH::ContactListener
 {
 public:
+    /*
+     * The per-step contact-pair counter this listener feeds (P6-D48). The counter itself lives on the Jolt WORLD
+     * rather than here, because the world is what owns the step that resets it — this listener only ever knows
+     * that a pair happened. Null until the world exists (it is built after the listener) and again after it dies.
+     */
+    auto Set_ContactPairSink(ck::FJoltWorld* InSink) -> void
+    {
+        _ContactPairSink = InSink;
+    }
+
+public:
     auto
         OnContactValidate(
             const JPH::Body& inBody1,
@@ -94,6 +105,9 @@ public:
         ck::jolt::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] NEW Contact"),
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
+
+        if (_ContactPairSink != nullptr)
+        { _ContactPairSink->Note_ContactPair(); }
 
         auto Event = FCk_Jolt_ContactEvent{};
         Event.Type = FCk_Jolt_ContactEvent::EType::Added;
@@ -148,6 +162,9 @@ public:
         ck::jolt::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] PERSISTED Contact"),
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
+
+        if (_ContactPairSink != nullptr)
+        { _ContactPairSink->Note_ContactPair(); }
 
         auto Event = FCk_Jolt_ContactEvent{};
         Event.Type = FCk_Jolt_ContactEvent::EType::Persisted;
@@ -235,6 +252,10 @@ private:
     // Populated on ContactAdded, read on ContactRemoved (which carries no bodies). Entries persist for the
     // listener's lifetime: per-contact removal would break a body's other simultaneous end-overlaps.
     TMap<uint32, uint64> _BodyIdToUserData;
+
+    // Non-owning, and outlives this listener by construction: the subsystem destroys the listener BEFORE the
+    // world. Touched from worker threads, but only to bump an atomic on the far side.
+    ck::FJoltWorld* _ContactPairSink = nullptr;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -554,6 +575,7 @@ auto
         .TempAllocator = _TempAllocator.Get(),
         .JobSystem = _JobSystem,
         .World = GetWorld(),
+        .LayerTable = _LayerTable.Get(),
         .CollisionSteps = _CollisionSteps,
         .AsyncMode = _AsyncPhysicsUpdate,
         .DrainQueueFn = [this](TArray<FCk_Jolt_ContactEvent>& OutEvents)
@@ -571,6 +593,10 @@ auto
     });
 
     _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
+
+    // The world is built after the listener, so the counter it feeds can only be wired here. Cleared in
+    // Deinitialize is unnecessary — the listener is destroyed first.
+    _ContactListener->Set_ContactPairSink(_JoltWorld.Get());
 
     // Weak self-capture so a torn-down subsystem is never invoked by the router registry; the transient
     // entity is resolved at drain time, game-thread, inside FProcessor_JoltWorld_DrainEvents.
@@ -625,6 +651,13 @@ auto
             if (ConsumerGateOpen || CVarDrawEnabled)
             {
                 auto& Renderer = FCk_Jolt_DebugRenderer::Get_OrCreate();
+
+                // The capture processor pushes these too, but it early-outs whenever no registered target is
+                // demanding — which is exactly the case where the in-world draw is the only thing capturing, and
+                // the drag anchor still has to be invisible in it.
+                _DefaultDebugDrawTarget->Set_InternalBodyKeys(_JoltWorld->Get_DebugInternalBodyKeys());
+                _DefaultDebugDrawTarget->Set_StepStats(_JoltWorld->Get_LastStepDurationMs(),
+                    _JoltWorld->Get_ContactPairsLastStep());
 
                 _DefaultDebugDrawTarget->Set_Opacity(ck_jolt_subsystem::cvar::DebugDrawOpacity);
                 _DefaultDebugDrawTarget->Set_DrawFlags(ck_jolt_subsystem::Get_InWorldDrawFlags());
@@ -895,6 +928,89 @@ auto
     { return 0.0f; }
 
     return _JoltWorld->Get_LastStepDurationMs();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_ContactPairsLastStep() const
+        -> int32
+{
+    if (NOT _JoltWorld.IsValid())
+    { return 0; }
+
+    return _JoltWorld->Get_ContactPairsLastStep();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_BeginDrag(
+        uint64 InBodyKey,
+        const FVector& InWorldGrabPoint)
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_BeginDrag(InBodyKey, InWorldGrabPoint);
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_UpdateDrag(
+        const FVector& InWorldTargetPoint)
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_UpdateDrag(InWorldTargetPoint);
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Request_EndDrag()
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_EndDrag();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_IsDragging() const
+        -> bool
+{
+    if (NOT _JoltWorld.IsValid())
+    { return false; }
+
+    return _JoltWorld->Get_IsDragging();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_DragState() const
+        -> TOptional<ck::jolt::FCk_Jolt_DebugDragState>
+{
+    if (NOT _JoltWorld.IsValid())
+    { return {}; }
+
+    return _JoltWorld->Get_DragState();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_DebugInternalBodyKeys() const
+        -> const TSet<uint64>&
+{
+    if (NOT _JoltWorld.IsValid())
+    {
+        static const auto Empty = TSet<uint64>{};
+        return Empty;
+    }
+
+    return _JoltWorld->Get_DebugInternalBodyKeys();
 }
 
 auto
