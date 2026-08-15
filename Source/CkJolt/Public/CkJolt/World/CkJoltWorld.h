@@ -235,9 +235,10 @@ namespace ck
         // ---- Persisted-contact interest votes, OR-ed once per drain ----
         TArray<TPair<FName, TFunction<bool()>>> _PersistedContactInterestProviders;
 
-        // Diagnostic only: how many Persisted events the last DrainEventsAndRoute consumed. Reset every
-        // call (including the early-return paths), so a stale count can never be read back.
-        int32 _Debug_NumPersistedContactEventsLastDrain = 0;
+        // Diagnostic only: how many Persisted events this world has consumed since it was created. Never
+        // reset, so a reader can diff two samples over a window instead of racing a single drain that may
+        // legitimately have seen no sub-step.
+        uint64 _Debug_NumPersistedContactEventsTotal = 0;
 
     private:
         auto Find_CharacterEntry(uint64 InUserData) -> FCk_Jolt_CharacterEntry*;
@@ -251,7 +252,7 @@ namespace ck
         CK_PROPERTY(_PendingSimTime);
         CK_PROPERTY_GET(_OptimizeBroadPhaseRequested);
         CK_PROPERTY_GET(_AsyncFuture);
-        CK_PROPERTY_GET(_Debug_NumPersistedContactEventsLastDrain);
+        CK_PROPERTY_GET(_Debug_NumPersistedContactEventsTotal);
     };
 }
 

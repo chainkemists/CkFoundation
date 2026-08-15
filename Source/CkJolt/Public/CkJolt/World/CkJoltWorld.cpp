@@ -214,8 +214,6 @@ namespace ck
             _SetPersistedContactsWantedFn(Wanted);
         }
 
-        _Debug_NumPersistedContactEventsLastDrain = 0;
-
         if (NOT _DrainQueueFn)
         { return; }
 
@@ -225,7 +223,7 @@ namespace ck
         for (const auto& Event : Events)
         {
             if (Event.Type == FCk_Jolt_ContactEvent::EType::Persisted)
-            { ++_Debug_NumPersistedContactEventsLastDrain; }
+            { ++_Debug_NumPersistedContactEventsTotal; }
         }
 
         if (Events.IsEmpty())
