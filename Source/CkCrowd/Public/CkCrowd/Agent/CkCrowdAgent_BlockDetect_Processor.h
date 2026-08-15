@@ -19,8 +19,9 @@
 namespace ck
 {
     // Detects that an agent cannot reach its goal and reports it, via two non-redundant detectors —
-    // geometric (occupied goal) and no-progress (everything else). Rationale and the catches/misses
-    // table: CkCrowd/CLAUDE.md § "Blocked goals".
+    // geometric (occupied goal) and no-progress-along-path (everything else) — and answers a stall
+    // with a bounded re-path ladder before escalating it to a block. Rationale and the
+    // catches/misses table: CkCrowd/CLAUDE.md § "Blocked goals".
     class CKCROWD_API FProcessor_CrowdAgent_BlockDetect : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_BlockDetect,
             FCk_Handle_CrowdAgent,
@@ -28,7 +29,7 @@ namespace ck
             FTag_CrowdAgent_Walking,
             FTag_CrowdAgent_HasProbe,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
-            ck::TReadOnly<FFragment_CrowdAgent_PathFollow>,
+            ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
@@ -50,7 +51,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
@@ -64,12 +65,23 @@ namespace ck
             ECk_CrowdAgent_BlockedReason InReason,
             FCk_Handle InBlocker,
             float InDistanceToGoal) const -> void;
+
+        // Replans at the goal already active, bypassing the caller-facing same-goal guard. The
+        // frozen Recast polyline is what most stalls are actually about: the geometry the planner
+        // saw is not the geometry the agent is pressing against.
+        auto
+        DoRepathAtActiveGoal(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     // The other half of HoldAndRetry: re-checks on a cadence and resumes the moment the goal clears,
-    // which is what keeps "blocked" from being terminal.
+    // which is what keeps a GoalOccupied block from being terminal. A NoProgress block has no
+    // blocker that can clear, so its re-checks are bounded and end in OnGoalFailed.
     class CKCROWD_API FProcessor_CrowdAgent_BlockedRecheck : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_BlockedRecheck,
             FCk_Handle_CrowdAgent,
@@ -96,6 +108,15 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
+
+    private:
+        // Terminal end of a NoProgress hold: the retry budget is spent, so the caller is told the
+        // move failed instead of the agent waiting on an obstruction that will never move.
+        auto
+        DoFailMove(
+            HandleType InHandle,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
     };

@@ -55,6 +55,16 @@ namespace ck
 		static auto
 		AdvanceNavigationRequestRevision(FFragment_CrowdAgent_PathFollow& InPathFollow) -> int32;
 
+		// Dispatches a fresh query at _ActiveGoal through whichever provider owns this agent, and
+		// is the ONLY sanctioned way for a framework-internal re-path to reach one — the caller-side
+		// same-goal guard would otherwise swallow it. The caller owns the tag transition into
+		// PathPending; this advances the request revision and parks the result slot.
+		static auto
+		RequestPathForActiveGoal(
+			HandleType InHandle,
+			const FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+
     private:
         static auto
         DoHandleRequest(
@@ -85,12 +95,6 @@ namespace ck
         static auto
 		DoClearBlockedState(
 			FCk_Handle_CrowdAgent& InAgent) -> void;
-
-		static auto
-		RequestPathForActiveGoal(
-			HandleType InHandle,
-			const FFragment_CrowdAgent_Params& InParams,
-			FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
 
 		static auto
 		DoForceReplan(

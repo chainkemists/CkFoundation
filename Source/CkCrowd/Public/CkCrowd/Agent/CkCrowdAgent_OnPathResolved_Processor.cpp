@@ -31,7 +31,8 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_PathTrouble& InPathTrouble)
+            FFragment_CrowdAgent_PathTrouble& InPathTrouble,
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnPathResolvedProc);
@@ -109,6 +110,12 @@ namespace ck
                 InHandle.AddOrGet<FTag_CrowdAgent_Walking>();
 
                 const auto& Wps = InPathResult.Get_Waypoints();
+
+                // Remaining distance is measured against THIS polyline, so a window straddling two
+                // corridors would compare lengths of different routes. The stall re-path counter is
+                // deliberately NOT reset here: the escalation ladder's own re-paths land in this
+                // branch, and zeroing it here would make the ladder unbounded.
+                InBlockDetect.DoResetProgressWindow();
 
                 // ExtractWaypoints strips the path's start point, so the incoming direction for
                 // Waypoints[0] has to come from the agent's own location at install time.
