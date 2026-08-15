@@ -1,5 +1,7 @@
 #include "CkSpatialQuery_Subsystem.h"
 
+#include "CkEcs/Registry/CkRegistry.h"
+
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Stats.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
@@ -70,6 +72,18 @@ auto
             { Self->ProcessQueuedContacts(InEvents); }
         });
 
+    // Probes opt into Persisted contacts implicitly (BindTo_OnOverlapUpdated adds the tag, the last
+    // unbind removes it), so this is re-asked every frame rather than refcounted.
+    _JoltSubsystem->Register_PersistedContactInterestProvider(TEXT("SpatialQuery.ProbePersistContacts"),
+        [WeakThis]() -> bool
+        {
+            auto* Self = WeakThis.Get();
+            if (Self == nullptr || ck::Is_NOT_Valid(Self->_EcsWorldSubsystem))
+            { return false; }
+
+            return Self->_EcsWorldSubsystem->Get_Registry().Has_AnyLiveEntityWith<ck::FTag_Probe_PersistContacts>();
+        });
+
     _JoltSubsystem->Set_DebugDrawGate([]()
     {
         return UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbesUsingJolt();
@@ -84,6 +98,7 @@ auto
     if (_JoltSubsystem.IsValid())
     {
         _JoltSubsystem->UnregisterContactRouter(TEXT("SpatialQuery.ProbeBridge"));
+        _JoltSubsystem->Unregister_PersistedContactInterestProvider(TEXT("SpatialQuery.ProbePersistContacts"));
         _JoltSubsystem->Set_DebugDrawGate({});
     }
 

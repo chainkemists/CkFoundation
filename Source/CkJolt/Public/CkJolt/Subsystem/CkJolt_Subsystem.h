@@ -98,6 +98,20 @@ public:
     UnregisterContactRouter(
         FName InName) -> void;
 
+    /// Register a named vote for "something in this world wants Persisted contact events".
+    /// Votes are re-asked and OR-ed once per frame during the contact drain and the result is
+    /// published to the Jolt contact listener, which skips generating Persisted events entirely
+    /// when nobody votes yes. Re-asking (rather than refcounting) means a consumer cannot leak a
+    /// stale interest, and disconnecting opts out on its own. Names must be unique.
+    auto
+    Register_PersistedContactInterestProvider(
+        FName InName,
+        TFunction<bool()> InProvider) -> void;
+
+    auto
+    Unregister_PersistedContactInterestProvider(
+        FName InName) -> void;
+
     /// Signature-driven layer table (one JPH::ObjectLayer per unique collision signature).
     /// Registration is game-thread only; Jolt filters read it lock-free from workers.
     auto

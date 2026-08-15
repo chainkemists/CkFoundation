@@ -2,7 +2,10 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/Registry/CkRegistry.h"
+
 #include "CkJolt/CkJolt_Log.h"
+#include "CkJolt/World/CkJoltWorld.h"
 
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
@@ -307,6 +310,26 @@ namespace ck::jolt
 
         return InSelf.Get_ValidHandle(Entity);
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Jolt_UE::
+    Get_Debug_NumPersistedContactEventsLastDrain(
+        const FCk_Handle& InAnyHandleInWorld)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InAnyHandleInWorld))
+    { return 0; }
+
+    // An absent context is legal (a world with no Jolt subsystem never publishes one).
+    const auto* WorldPtr = InAnyHandleInWorld.Get_RegistryView().TryGetContext<TSharedPtr<ck::FJoltWorld>>();
+
+    if (WorldPtr == nullptr || NOT WorldPtr->IsValid())
+    { return 0; }
+
+    return WorldPtr->Get()->Get_Debug_NumPersistedContactEventsLastDrain();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
