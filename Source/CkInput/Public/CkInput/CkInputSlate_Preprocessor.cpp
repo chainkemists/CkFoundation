@@ -297,6 +297,15 @@ auto
         int32 InRawDeviceUserIndex)
     -> void
 {
+    // One physical press records ONCE. Slate can deliver the SECOND press of a double click through two
+    // routes — the double-click handler and a regular button-down — and a button cannot go down twice
+    // without a release between, so a Pressed for a key this writer already recorded down is the same
+    // physical edge arriving again, not a new one. Without this, every consumer of the record sees two
+    // concurrent presses of one button on every double click.
+    if (InEventType == ECk_InputSource_EventType::Pressed &&
+        _RecordedDownKeys.Contains({InKey, InRawDeviceUserIndex}))
+    { return; }
+
     const auto DeviceClass = ck_input_slate_preprocessor::Get_DeviceClassForKey(InKey);
     const auto OrderingFidelity = ck_input_slate_preprocessor::Get_OrderingFidelityForDeviceClass(DeviceClass);
 
