@@ -9,6 +9,7 @@
 #include "CkJolt/StaticWorld/CkJoltMeshShape_Utils.h"
 
 #include <Components/BrushComponent.h>
+#include <Components/DynamicMeshComponent.h>
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Components/SplineMeshComponent.h>
 #include <Components/StaticMeshComponent.h>
@@ -643,6 +644,17 @@ namespace ck::jolt::bake
             const FVector2D& InScaleXY)
         -> JPH::Ref<JPH::Shape>
     {
+        return CreateHeightFieldShape_Updatable(InWorldHeights, InSampleCount, InScaleXY, {})._Shape;
+    }
+
+    auto
+        CreateHeightFieldShape_Updatable(
+            const TArray<float>& InWorldHeights,
+            int32 InSampleCount,
+            const FVector2D& InScaleXY,
+            const TOptional<FFloatInterval>& InDeformationEnvelope)
+        -> FCk_Jolt_UpdatableHeightField
+    {
         CK_ENSURE_IF_NOT(InSampleCount >= 2, TEXT("Heightfield needs at least 2x2 samples, got [{}]"), InSampleCount)
         { return {}; }
 
@@ -670,8 +682,24 @@ namespace ck::jolt::bake
         const auto Offset = JPH::Vec3{0.0f, 0.0f, -static_cast<float>((SampleCount - 1) * InScaleXY.Y)};
         const auto Scale = JPH::Vec3{static_cast<float>(InScaleXY.X), 1.0f, static_cast<float>(InScaleXY.Y)};
 
-        const auto HeightFieldSettings = JPH::HeightFieldShapeSettings{
+        auto HeightFieldSettings = JPH::HeightFieldShapeSettings{
             Samples.GetData(), Offset, Scale, static_cast<JPH::uint32>(SampleCount)};
+
+        if (InDeformationEnvelope.IsSet())
+        {
+            const auto& Envelope = *InDeformationEnvelope;
+
+            CK_ENSURE_IF_NOT(Envelope.Min < Envelope.Max,
+                TEXT("Heightfield deformation envelope is INVERTED or empty: [{}, {}]. Declare Min < Max, "
+                     "or leave it unset to encode exactly the initial samples' range."),
+                Envelope.Min, Envelope.Max)
+            { return {}; }
+
+            // Heights are stored with scale.Y = 1 and no Y offset, so envelope values ARE world
+            // heights. Jolt widens this by the initial samples, never narrows below them.
+            HeightFieldSettings.mMinHeightValue = Envelope.Min;
+            HeightFieldSettings.mMaxHeightValue = Envelope.Max;
+        }
 
         auto HeightFieldShape = Create_ShapeFromSettings(HeightFieldSettings, TEXT("HeightField"));
         if (ck::Is_NOT_Valid(HeightFieldShape))
@@ -679,7 +707,144 @@ namespace ck::jolt::bake
 
         const auto UprightSettings = JPH::RotatedTranslatedShapeSettings{
             JPH::Vec3::sZero(), Get_ShapeAxisCorrection_YToZ(), HeightFieldShape.GetPtr()};
-        return Create_ShapeFromSettings(UprightSettings, TEXT("HeightField"));
+
+        auto UprightShape = Create_ShapeFromSettings(UprightSettings, TEXT("HeightField"));
+        if (ck::Is_NOT_Valid(UprightShape))
+        { return {}; }
+
+        auto Result = FCk_Jolt_UpdatableHeightField{};
+        Result._Shape = UprightShape;
+        // Known-exact type: these settings produce a HeightFieldShape and nothing else.
+        Result._HeightField = static_cast<JPH::HeightFieldShape*>(HeightFieldShape.GetPtr());
+
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        ComputeHeightFieldRegionPlan(
+            int32 InLogicalSampleCount,
+            int32 InShapeSampleCount,
+            int32 InBlockSize,
+            int32 InUeX,
+            int32 InUeY,
+            int32 InUeSizeX,
+            int32 InUeSizeY)
+        -> TOptional<FCk_Jolt_HeightFieldRegionPlan>
+    {
+        if (InBlockSize <= 0 || InLogicalSampleCount <= 0 || InShapeSampleCount < InLogicalSampleCount)
+        { return {}; }
+
+        if (InUeSizeX <= 0 || InUeSizeY <= 0)
+        { return {}; }
+
+        if (InUeX < 0 || InUeY < 0 ||
+            InUeX + InUeSizeX > InLogicalSampleCount ||
+            InUeY + InUeSizeY > InLogicalSampleCount)
+        { return {}; }
+
+        const auto RoundDown = [InBlockSize](int32 InValue) -> int32
+        {
+            return (InValue / InBlockSize) * InBlockSize;
+        };
+
+        const auto RoundUp = [InBlockSize](int32 InValue) -> int32
+        {
+            return ((InValue + InBlockSize - 1) / InBlockSize) * InBlockSize;
+        };
+
+        // Same row flip as creation: UE row y lives at Jolt row N-1-y, so the UE row RANGE
+        // [UeY, UeY+SizeY) reverses into [N-UeY-SizeY, N-UeY).
+        const auto JoltRowBegin = InLogicalSampleCount - InUeY - InUeSizeY;
+        const auto JoltRowEnd = InLogicalSampleCount - InUeY;
+
+        const auto AlignedX = RoundDown(InUeX);
+        const auto AlignedRight = RoundUp(InUeX + InUeSizeX);
+        const auto AlignedY = RoundDown(JoltRowBegin);
+        const auto AlignedTop = RoundUp(JoltRowEnd);
+
+        // The shape's sample count is the logical count rounded UP to a block multiple, so an
+        // outward-aligned rect over in-bounds input always fits. A violation would mean the two
+        // roundings disagree — report rather than clamp, which would silently edit the wrong cells.
+        if (AlignedRight > InShapeSampleCount || AlignedTop > InShapeSampleCount)
+        { return {}; }
+
+        auto Plan = FCk_Jolt_HeightFieldRegionPlan{};
+        Plan._JoltX = AlignedX;
+        Plan._JoltY = AlignedY;
+        Plan._SizeX = AlignedRight - AlignedX;
+        Plan._SizeY = AlignedTop - AlignedY;
+
+        return Plan;
+    }
+
+    auto
+        ApplyHeightFieldRegionUpdate(
+            JPH::HeightFieldShape& InOutHeightField,
+            int32 InLogicalSampleCount,
+            int32 InUeX,
+            int32 InUeY,
+            int32 InUeSizeX,
+            int32 InUeSizeY,
+            const TArray<float>& InWorldHeights,
+            JPH::TempAllocator& InTempAllocator)
+        -> ECk_Jolt_HeightFieldRegionUpdateResult
+    {
+        if (InWorldHeights.Num() != InUeSizeX * InUeSizeY)
+        { return ECk_Jolt_HeightFieldRegionUpdateResult::OutOfBounds; }
+
+        const auto ShapeSampleCount = static_cast<int32>(InOutHeightField.GetSampleCount());
+        const auto BlockSize = static_cast<int32>(InOutHeightField.GetBlockSize());
+
+        const auto MaybePlan = ComputeHeightFieldRegionPlan(InLogicalSampleCount, ShapeSampleCount,
+            BlockSize, InUeX, InUeY, InUeSizeX, InUeSizeY);
+
+        if (NOT MaybePlan.IsSet())
+        { return ECk_Jolt_HeightFieldRegionUpdateResult::OutOfBounds; }
+
+        const auto& Plan = *MaybePlan;
+
+        // Validate BEFORE reading or writing anything: Jolt CLAMPS out-of-range heights silently,
+        // and a partially applied crater is worse than a rejected one.
+        const auto NoCollision = HeightFieldNoCollisionValue();
+        const auto MinEncodable = InOutHeightField.GetMinHeightValue();
+        const auto MaxEncodable = InOutHeightField.GetMaxHeightValue();
+
+        for (const auto& Height : InWorldHeights)
+        {
+            if (Height == NoCollision)
+            { continue; }
+
+            if (Height < MinEncodable || Height > MaxEncodable)
+            { return ECk_Jolt_HeightFieldRegionUpdateResult::OutOfEnvelope; }
+        }
+
+        auto AlignedHeights = TArray<float>{};
+        AlignedHeights.SetNumUninitialized(Plan._SizeX * Plan._SizeY);
+
+        // Read the aligned rect first so the expansion border keeps its current heights AND its
+        // holes; only the caller's own cells are then overwritten.
+        InOutHeightField.GetHeights(Plan._JoltX, Plan._JoltY, Plan._SizeX, Plan._SizeY,
+            AlignedHeights.GetData(), Plan._SizeX);
+
+        for (auto LocalRow = 0; LocalRow < InUeSizeY; ++LocalRow)
+        {
+            const auto JoltRow = (InLogicalSampleCount - 1) - (InUeY + LocalRow);
+            const auto BufferRow = JoltRow - Plan._JoltY;
+
+            for (auto LocalColumn = 0; LocalColumn < InUeSizeX; ++LocalColumn)
+            {
+                const auto BufferColumn = (InUeX + LocalColumn) - Plan._JoltX;
+                AlignedHeights[BufferRow * Plan._SizeX + BufferColumn] =
+                    InWorldHeights[LocalRow * InUeSizeX + LocalColumn];
+            }
+        }
+
+        InOutHeightField.SetHeights(Plan._JoltX, Plan._JoltY, Plan._SizeX, Plan._SizeY,
+            AlignedHeights.GetData(), Plan._SizeX, InTempAllocator);
+
+        return ECk_Jolt_HeightFieldRegionUpdateResult::Applied;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -852,6 +1017,37 @@ namespace ck::jolt::bake
             const auto Shape = BuildShape_FromBodySetup(*BodySetup, ComponentTransform.GetScale3D(),
                 DebugName);
             EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
+        }
+        else if (const auto* DynamicMesh = Cast<UDynamicMeshComponent>(&InComponent))
+        {
+            // The CONST overload returns MeshBodySetup as-is — a never-cooked component reads null
+            // here instead of conjuring an empty setup that would bake as silently-absent collision.
+            const auto* BodySetup = DynamicMesh->GetBodySetup();
+            const auto DebugName = ck::Format_UE(TEXT("DynamicMesh on {}"), InComponent.GetPathName());
+
+            CK_ENSURE_IF_NOT(ck::IsValid(BodySetup),
+                TEXT("DynamicMeshComponent [{}] has collision enabled but no BodySetup — its collision was "
+                     "never cooked. Call UpdateCollision after authoring the mesh; with bUseAsyncCooking the "
+                     "cook may still be in flight, which this bake cannot wait for."), DebugName)
+            { return 0; }
+
+            // Runtime-recooked geometry: UpdateCollision assigns a FRESH BodySetupGuid on every sync
+            // recook, so the guid-keyed shared cache would leak one entry per edit. Build directly —
+            // the same reason the SplineMesh branch above bypasses the cache.
+            const auto Shape = BuildShape_FromBodySetup(*BodySetup, ComponentTransform.GetScale3D(),
+                DebugName);
+            EmitBody(Shape, ComponentTransform.GetLocation(), ComponentTransform.GetRotation(), BodySetup);
+        }
+        else
+        {
+            // Loudness belongs to the CALLER, not here. Request_BakeComponent always extracts under
+            // ExplicitActor, so ensuring on this branch also fires for CkUnrealComponent's Automatic
+            // policy — whose contract is an explicit QUIET skip on zero bodies. The callers that did
+            // declare complete collision (BakeOnSetup) already ensure on a zero-body result, so the
+            // unsupported-class case stays diagnosable without spamming every map that hosts a shape
+            // component on a baked entity.
+            ck::jolt::Verbose(TEXT("Static bake skipping [{}] ([{}]) — no extraction path for this component class"),
+                InComponent.GetName(), InComponent.GetClass()->GetName());
         }
 
         const auto NumExtracted = OutBodies.Num() - StartingCount;

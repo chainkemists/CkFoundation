@@ -14,7 +14,9 @@
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Reference.h>
+#include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -191,6 +193,76 @@ namespace ck::jolt::bake
         const FVector2D& InScaleXY) -> JPH::Ref<JPH::Shape>;
 
     CKJOLT_API auto HeightFieldNoCollisionValue() -> float;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Updatable heightfields (runtime deformation)
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /// The axis-corrected wrapper a body is built from, plus the INNER heightfield the region-update
+    /// path edits. Both reference the same storage, so a region update is visible through _Shape
+    /// immediately — no rebuild, no new body.
+    struct CKJOLT_API FCk_Jolt_UpdatableHeightField
+    {
+        JPH::Ref<JPH::Shape>            _Shape;
+        JPH::Ref<JPH::HeightFieldShape> _HeightField;
+    };
+
+    /// Same geometry contract as CreateHeightFieldShape, plus a deformation ENVELOPE: heights are
+    /// stored 16-bit-quantized over a range fixed at construction, so an edit outside that range is
+    /// unrepresentable. Unset = the range is exactly the initial samples' min/max. Set = the caller
+    /// declares the range up front so later craters can dig below (or debris pile above) the initial
+    /// surface. Jolt ignores whichever bound the initial samples already exceed.
+    CKJOLT_API auto CreateHeightFieldShape_Updatable(
+        const TArray<float>& InWorldHeights,
+        int32 InSampleCount,
+        const FVector2D& InScaleXY,
+        const TOptional<FFloatInterval>& InDeformationEnvelope) -> FCk_Jolt_UpdatableHeightField;
+
+    /// A block-aligned Jolt-space rect (Jolt requires SetHeights rects to be block multiples).
+    struct CKJOLT_API FCk_Jolt_HeightFieldRegionPlan
+    {
+        int32 _JoltX = 0;
+        int32 _JoltY = 0;
+        int32 _SizeX = 0;
+        int32 _SizeY = 0;
+    };
+
+    /// Pure UE-rect -> Jolt-rect planning: applies the SAME row flip creation uses (jolt row =
+    /// N-1-y) and expands OUTWARD to block alignment. Unset = the rect is empty or out of bounds;
+    /// the caller diagnoses, so this stays a testable primitive.
+    CKJOLT_API auto ComputeHeightFieldRegionPlan(
+        int32 InLogicalSampleCount,
+        int32 InShapeSampleCount,
+        int32 InBlockSize,
+        int32 InUeX,
+        int32 InUeY,
+        int32 InUeSizeX,
+        int32 InUeSizeY) -> TOptional<FCk_Jolt_HeightFieldRegionPlan>;
+
+    enum class ECk_Jolt_HeightFieldRegionUpdateResult : uint8
+    {
+        Applied,
+        OutOfBounds,
+        OutOfEnvelope
+    };
+
+    /// Expand-and-overlay region edit: plans the aligned rect, reads the CURRENT heights for it,
+    /// overlays the caller's UE-row-major values (row flip applied), and writes it back. Reading
+    /// first is what keeps the alignment border — and any holes in it — intact; writing an expanded
+    /// rect from caller data alone would silently erase geometry the caller never addressed.
+    /// Every value is validated against the shape's encodable range BEFORE anything is written,
+    /// because Jolt's SetHeights CLAMPS out-of-range values silently. HeightFieldNoCollisionValue()
+    /// is a legal incoming value (punching a hole) and is exempt from that validation.
+    /// Reports rather than ensures: the loud boundary is the public bake/update API.
+    CKJOLT_API auto ApplyHeightFieldRegionUpdate(
+        JPH::HeightFieldShape& InOutHeightField,
+        int32 InLogicalSampleCount,
+        int32 InUeX,
+        int32 InUeY,
+        int32 InUeSizeX,
+        int32 InUeSizeY,
+        const TArray<float>& InWorldHeights,
+        JPH::TempAllocator& InTempAllocator) -> ECk_Jolt_HeightFieldRegionUpdateResult;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Source hashing (staleness detection for cooked data)
