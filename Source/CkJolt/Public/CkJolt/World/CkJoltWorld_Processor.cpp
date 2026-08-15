@@ -124,9 +124,13 @@ namespace ck
         { return; }
 
         // Invalid or paused: freeze the accumulator and zero the plan, so the executor runs no sub-steps
-        // and KinematicPush (PendingSimTime <= 0) early-outs.
+        // and KinematicPush (PendingSimTime <= 0) early-outs. The DEBUG pause is consumed here and only here —
+        // a step-once granted at this point plans exactly one step through the same accumulator every other
+        // frame goes through, which is why it cannot be a flag the Step processor interprets for itself.
         const auto World = JoltWorld->Get_World();
-        if (ck::Is_NOT_Valid(World) || World->IsPaused())
+        const auto DebugPauseBlocksStep = JoltWorld->TryConsume_DebugPauseGate();
+
+        if (ck::Is_NOT_Valid(World) || World->IsPaused() || DebugPauseBlocksStep)
         {
             JoltWorld->Set_NumStepsLastFrame(0);
             JoltWorld->Set_PendingSimTime(0.0f);
@@ -170,9 +174,13 @@ namespace ck
         if (JoltWorld == nullptr)
         { return; }
 
-        // Paused skips the broadphase optimize too — PlanStep already zeroed the plan, but not this.
+        // Paused skips the broadphase optimize too — PlanStep already zeroed the plan, but not this. The debug
+        // pause is READ here, never consumed: PlanStep owns the one-shot, and this is the frame it granted.
         const auto World = JoltWorld->Get_World();
-        if (ck::Is_NOT_Valid(World) || World->IsPaused())
+        const auto DebugPauseBlocksStep = JoltWorld->Get_IsDebugPaused() &&
+            NOT JoltWorld->Get_StepOnceGrantedThisFrame();
+
+        if (ck::Is_NOT_Valid(World) || World->IsPaused() || DebugPauseBlocksStep)
         { return; }
 
         SCOPE_CYCLE_COUNTER(STAT_CkJolt_WorldStep);
@@ -191,14 +199,28 @@ namespace ck
         const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
 
         // Characters advance BEFORE the rigid-body Update within each sub-step.
+        //
+        // The measured span is the frame's SOLVE — every DoPhysicsUpdate this frame runs, character stepping and
+        // pose capture excluded — because that is the number a stats panel means by "step time". It is taken
+        // inside the loop rather than around the dispatch so the async branch measures the task-graph thread's
+        // own work instead of the cost of handing it off.
         const auto StepLoop = [JoltWorld, FixedDt, NumSteps]()
         {
+            auto UpdateSeconds = 0.0;
+
             for (auto Step = 0; Step < NumSteps; ++Step)
             {
                 JoltWorld->DoStepCharacters_AnyThread(FixedDt);
+
+                const auto UpdateStartSeconds = FPlatformTime::Seconds();
                 JoltWorld->DoPhysicsUpdate(FixedDt);
+                UpdateSeconds += FPlatformTime::Seconds() - UpdateStartSeconds;
+
                 JoltWorld->DoCapturePoses_AnyThread();
             }
+
+            constexpr auto MillisecondsPerSecond = 1000.0;
+            JoltWorld->Set_LastStepDurationMs(static_cast<float>(UpdateSeconds * MillisecondsPerSecond));
         };
 
         if (JoltWorld->Get_AsyncMode())

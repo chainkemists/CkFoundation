@@ -308,15 +308,23 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     // Pose+shape of every body the last full pass drew, its change oracle for the next one.
     TMap<uint64, ck::jolt::debug_draw::FInactiveBodyRecord> _InactiveBodyRecords;
 
-    // The selected body's key in its OWN keyspace (a plain body or character key); its overlay slots live
-    // under Make_HighlightKey of it. The hovered body is the same idea under Make_HoverKey, and the two are
-    // independent — a body may be selected AND hovered.
-    TOptional<uint64> _HighlightedBodyKey;
+    // The selected bodies' keys in their OWN keyspace (plain body or character keys); each one's overlay slots
+    // live under Make_HighlightKey of it, which is what lets N coexist. The FIRST is the primary — the only one
+    // sampled and the only one whose contacts are queried. The hovered body is the same idea under
+    // Make_HoverKey, and the two are independent — a body may be selected AND hovered.
+    TArray<uint64> _HighlightedBodyKeys;
     TOptional<uint64> _HoveredBodyKey;
 
-    // Sampled by the capture for the highlighted RIGID body only, and re-sampled from scratch every capture:
-    // a value the current capture did not produce would be reported as live state it no longer is.
-    TOptional<FVector> _HighlightedBodyLinearVelocity;
+    // While non-empty, the capture draws ONLY these keys and releases every other body's instances.
+    TSet<uint64> _IsolatedBodyKeys;
+
+    // Sampled by the capture for the PRIMARY selection only, and re-sampled from scratch every capture: a value
+    // the current capture did not produce would be reported as live state it no longer is.
+    TOptional<FCk_Jolt_DebugDraw_BodySample> _BodySample;
+    TOptional<FCk_Jolt_DebugDraw_CharacterSample> _CharacterSample;
+
+    // Refilled every capture while contacts are wanted, from the primary selection's own shape query.
+    TArray<FCk_Jolt_DebugDraw_ContactEntry> _SelectionContacts;
 
     // STRONG for the same reason the bucket ISMs are: an actorless component has no owner to root it, and the
     // preview/transient worlds this target binds to host no pooling subsystem either. Created on first line.
@@ -362,6 +370,7 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     bool _SweepEverRan = false;
     bool _AnyLive = false;
     bool _IsDesired = false;
+    bool _WantsSelectionContacts = false;
 };
 
 #endif

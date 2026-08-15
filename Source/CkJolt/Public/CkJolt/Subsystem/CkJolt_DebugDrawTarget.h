@@ -2,6 +2,9 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkJolt/CkJolt_Common.h"
+#include "CkJolt/Character/CkJoltCharacter_Fragment_Data.h"
+
 #include <CoreMinimal.h>
 #include <Misc/EnumClassFlags.h>
 #include <Misc/Optional.h>
@@ -118,7 +121,6 @@ enum class ECk_Jolt_DebugDrawColorMode : uint8
     BodyClass,
     SleepState,
     ObjectLayer,
-    Island,
     ShapeType
 };
 
@@ -155,10 +157,9 @@ namespace ck::jolt::debug_draw
     inline constexpr uint8 HighlightClassIndex = 62;
     inline constexpr uint8 HoverClassIndex = 63;
 
-    /// Islands churn every step, so their indices are hashed into a small fixed palette rather than shown raw.
-    /// Index 0 is "no island" (static, kinematic and sleeping bodies); 1..IslandPaletteSize are the hashes.
-    inline constexpr uint8 IslandPaletteSize = 16;
-    inline constexpr uint8 IslandClassCount = IslandPaletteSize + 1;
+    /// The wheel every "identity" mode (object layer, shape type) draws its colours from — a number whose value
+    /// means nothing beyond "not the same as its neighbour".
+    inline constexpr uint8 DistinctColorPaletteSize = 16;
 
     /*
      * ObjectLayer mode names one class per registered layer. 62 indices are available, so index 61 is the
@@ -251,6 +252,136 @@ public:
     CK_PROPERTY(_ClassIndex);
     CK_PROPERTY(_Name);
     CK_PROPERTY(_Color);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * Everything a presentation consumer wants to know about the PRIMARY selected rigid body, sampled by the capture
+ * in the same async-safe window it draws from — never by reading JPH::PhysicsSystem from Slate, which this module
+ * bans outright (CkJolt/Claude.md § Anti-patterns).
+ *
+ * JPH-free by construction: Jolt scalars are plain floats, its enums are mirrored onto the module's own ECk_ ones,
+ * and the shape's type/sub-type arrive as display strings because a consumer only ever prints them.
+ */
+struct CKJOLT_API FCk_Jolt_DebugDraw_BodySample
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDraw_BodySample);
+
+private:
+    FVector _LinearVelocity = FVector::ZeroVector;
+    FVector _AngularVelocity = FVector::ZeroVector;
+
+    /// World-space AABB Jolt keeps for the body, not a bound derived from the drawn instances.
+    FBox _WorldBounds = FBox{ForceInit};
+
+    /// The scale a JPH::ScaledShape wraps its child in; unit for every shape that is not one.
+    FVector _ShapeScale = FVector::OneVector;
+
+    FString _ShapeType;
+    FString _ShapeSubType;
+
+    /// ZERO MEANS INFINITE — Jolt stores an inverse mass, and a static (or explicitly infinite-mass) body has an
+    /// inverse of 0, which has no finite reciprocal.
+    float _Mass = 0.0f;
+
+    float _Friction = 0.0f;
+    float _Restitution = 0.0f;
+    float _GravityFactor = 0.0f;
+
+    uint64 _UserData = 0;
+    uint16 _ObjectLayer = 0;
+    uint8 _BroadPhaseLayer = 0;
+
+    ECk_MotionType _MotionType = ECk_MotionType::Static;
+    ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
+
+    bool _IsSensor = false;
+
+    /// UNSET for a static body, and only for one: Body::GetAllowSleeping dereferences its MotionProperties
+    /// without a guard, so a static body must never be asked (JPH_ENABLE_ASSERTS is on in every configuration).
+    TOptional<bool> _AllowsSleeping;
+
+public:
+    CK_PROPERTY(_LinearVelocity);
+    CK_PROPERTY(_AngularVelocity);
+    CK_PROPERTY(_WorldBounds);
+    CK_PROPERTY(_ShapeScale);
+    CK_PROPERTY(_ShapeType);
+    CK_PROPERTY(_ShapeSubType);
+    CK_PROPERTY(_Mass);
+    CK_PROPERTY(_Friction);
+    CK_PROPERTY(_Restitution);
+    CK_PROPERTY(_GravityFactor);
+    CK_PROPERTY(_UserData);
+    CK_PROPERTY(_ObjectLayer);
+    CK_PROPERTY(_BroadPhaseLayer);
+    CK_PROPERTY(_MotionType);
+    CK_PROPERTY(_MotionQuality);
+    CK_PROPERTY(_IsSensor);
+    CK_PROPERTY(_AllowsSleeping);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * The character equivalent of FCk_Jolt_DebugDraw_BodySample. A CharacterVirtual has no JPH::Body, so none of the
+ * rigid-body fields exist for it — what it has instead is a ground contact, which is the whole question a
+ * character debugger is opened to answer.
+ */
+struct CKJOLT_API FCk_Jolt_DebugDraw_CharacterSample
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDraw_CharacterSample);
+
+private:
+    FVector _Velocity = FVector::ZeroVector;
+    FVector _GroundNormal = FVector::ZeroVector;
+    FVector _GroundVelocity = FVector::ZeroVector;
+    FVector _Up = FVector::UpVector;
+
+    /// The ground body in the SAME keyspace the capture draws in (Make_BodyKey), so a consumer can select it.
+    /// Unset while the character is unsupported — 0 is a valid body key and would name the first body created.
+    TOptional<uint64> _GroundBodyKey;
+
+    ECk_JoltCharacter_GroundState _GroundState = ECk_JoltCharacter_GroundState::InAir;
+
+public:
+    CK_PROPERTY(_Velocity);
+    CK_PROPERTY(_GroundNormal);
+    CK_PROPERTY(_GroundVelocity);
+    CK_PROPERTY(_Up);
+    CK_PROPERTY(_GroundBodyKey);
+    CK_PROPERTY(_GroundState);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * One body the selection is currently touching, from the capture's on-demand NarrowPhaseQuery::CollideShape of the
+ * selected body's own shape. Not a ContactListener record: the listener's manifolds exist only inside the solve,
+ * while this is a query the capture can run whenever a consumer asks for it.
+ *
+ * A negative penetration depth is a SEPARATED pair found within the query's separation distance (the resting case),
+ * not an error.
+ */
+struct CKJOLT_API FCk_Jolt_DebugDraw_ContactEntry
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDraw_ContactEntry);
+
+private:
+    uint64 _OtherBodyKey = 0;
+    int32 _NumContactPoints = 0;
+    float _PenetrationDepth = 0.0f;
+    TArray<FVector> _ContactPoints;
+
+public:
+    CK_PROPERTY(_OtherBodyKey);
+    CK_PROPERTY(_NumContactPoints);
+    CK_PROPERTY(_PenetrationDepth);
+    CK_PROPERTY(_ContactPoints);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -600,17 +731,47 @@ public:
     Get_NumContactLines() const -> int32;
 
     /*
-     * Select one drawn body (or character, keyed through Make_CharacterBodyKey) for the Highlight overlay. The
-     * body keeps its normal instance and gains a SECOND one in the Highlight colour class, which follows it
-     * every capture. The previous selection's overlay instance is released here rather than at the next
-     * capture, so a cleared selection stops drawing immediately. An unset key clears the selection.
+     * Select any number of drawn bodies (or characters, keyed through Make_CharacterBodyKey) for the Highlight
+     * overlay. Each keeps its normal instance and gains a SECOND one in the Highlight colour class, which follows
+     * it every capture; the overlays coexist because each is slotted under its own Make_HighlightKey. Only the
+     * overlays of bodies that LEFT the selection are released here — releasing all of them would make every
+     * addition to a multi-selection flicker the ones already in it.
+     *
+     * The FIRST key is the PRIMARY: it alone is sampled (Get_BodySample / Get_CharacterSample) and it alone is
+     * asked for its contacts, because both are per-body reads a debugger renders one of.
      */
+    auto
+    Set_HighlightedBodies(
+        TArray<uint64> InBodyKeys) -> FCk_Jolt_DebugDrawTarget&;
+
+    /// The single-selection convenience over Set_HighlightedBodies. An unset key clears the selection.
     auto
     Set_HighlightedBody(
         TOptional<uint64> InBodyKey) -> FCk_Jolt_DebugDrawTarget&;
 
     auto
+    Get_HighlightedBodies() const -> const TArray<uint64>&;
+
+    /// The PRIMARY selection — the first highlighted key, unset when nothing is selected.
+    auto
     Get_HighlightedBody() const -> TOptional<uint64>;
+
+    /*
+     * Isolation: while the set is non-empty, the capture draws ONLY the bodies (and characters) it names and
+     * RELEASES the instances of everything else — a hidden colour class keeps its instances, an isolated-out body
+     * does not exist on screen at all. Both this and Clear_Isolation re-arm the full inactive-body pass, so a
+     * static or long-asleep body appears and disappears on the very next capture rather than waiting for the
+     * scene to change.
+     */
+    auto
+    Set_IsolatedBodies(
+        TSet<uint64> InBodyKeys) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Clear_Isolation() -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_IsolatedBodies() const -> const TSet<uint64>&;
 
     /*
      * The subdued sibling of the selection, for a hover preview: the same overlay mechanism in its own always-
@@ -624,20 +785,41 @@ public:
     auto
     Get_HoveredBody() const -> TOptional<uint64>;
 
-    /// World-space bounds of the highlighted body's NORMAL instances. Unset when nothing is highlighted, or
-    /// when the selected body has not been drawn yet.
+    /// World-space bounds of the highlighted bodies' NORMAL instances — the UNION over a multi-selection. Unset
+    /// when nothing is highlighted, or when none of the selected bodies has been drawn yet.
     auto
     Get_HighlightedBodyBounds() const -> TOptional<FBox>;
 
     /*
-     * World-space linear velocity of the highlighted body, sampled by the capture in the same async-safe window
-     * it draws from. Unset when nothing is highlighted, when the highlighted key belongs to a character (a
-     * CharacterVirtual has no rigid-body velocity), and when the last capture did not draw the body — a
-     * sleeping or static body is only drawn on a scene-revision pass. A consumer reads this instead of querying
-     * the physics system, which it must never touch.
+     * Full sample of the PRIMARY selected rigid body, taken by the capture in the same async-safe window it draws
+     * from. Unset when nothing is highlighted, when the primary key belongs to a character (which has no
+     * JPH::Body), and when the last capture did not draw the body — a sleeping or static body is only drawn on a
+     * scene-revision pass. A consumer reads this instead of querying the physics system, which it must never touch.
      */
     auto
-    Get_HighlightedBodyLinearVelocity() const -> TOptional<FVector>;
+    Get_BodySample() const -> TOptional<FCk_Jolt_DebugDraw_BodySample>;
+
+    /// The character twin of Get_BodySample, filled by the capture's character pass for a primary selection that
+    /// IS a character. The two are mutually exclusive — a key is one or the other.
+    auto
+    Get_CharacterSample() const -> TOptional<FCk_Jolt_DebugDraw_CharacterSample>;
+
+    /*
+     * Demand switch for the selection's contacts. OFF by default and deliberately so: the query is a
+     * NarrowPhaseQuery::CollideShape of the selected body's own shape, which nothing should pay for while no
+     * consumer is showing the result. Turning it off empties the list at the next capture.
+     */
+    auto
+    Set_WantsSelectionContacts(
+        bool InWantsContacts) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_WantsSelectionContacts() const -> bool;
+
+    /// Bodies the PRIMARY selection is touching, refilled every capture while contacts are wanted and a body is
+    /// selected. Empty otherwise — including for a character selection, which has no shape query behind it.
+    auto
+    Get_SelectionContacts() const -> const TArray<FCk_Jolt_DebugDraw_ContactEntry>&;
 
     /*
      * Nearest live instance a ray hits, as the body key that drew it. Tests the ray against each instance's
