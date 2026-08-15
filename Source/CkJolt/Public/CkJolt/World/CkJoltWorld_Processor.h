@@ -9,6 +9,18 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::jolt
+{
+    /*
+     * The one way a processor reaches the Jolt world. An absent context is LEGAL — a world with no Jolt subsystem
+     * never publishes one — so a null answer is the correct silent path, not an error.
+     */
+    CKJOLT_API auto TryResolve_JoltWorld(
+        const FCk_Handle& InTransientEntity) -> ck::FJoltWorld*;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // Forward-declared for FProcessor_JoltWorld_Step's RunAfter edge only: the scheduler resolves

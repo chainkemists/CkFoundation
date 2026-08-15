@@ -941,6 +941,8 @@ auto
     return _JoltWorld->Get_ContactPairsLastStep();
 }
 
+#if !UE_BUILD_SHIPPING
+
 auto
     UCk_Jolt_Subsystem::
     Request_BeginDrag(
@@ -998,6 +1000,8 @@ auto
 
     return _JoltWorld->Get_DragState();
 }
+
+#endif
 
 auto
     UCk_Jolt_Subsystem::

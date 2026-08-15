@@ -364,7 +364,7 @@ namespace ck_jolt_debugdraw_capture
             JPH::RMat44Arg InCenterOfMassTransform)
         -> void
     {
-        if (InCtx._TargetImpl->_HighlightedBodyKeys.Contains(InBodyKey))
+        if (InCtx._TargetImpl->_HighlightedBodyKeySet.Contains(InBodyKey))
         {
             Draw_Shape(InCtx, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
                 ck::jolt::debug_draw::HighlightClassIndex, InShape, InCenterOfMassTransform,
@@ -404,19 +404,6 @@ namespace ck_jolt_debugdraw_capture
             : ECk_MotionQuality::Discrete;
     }
 
-    auto
-        Conv_GroundState(
-            JPH::CharacterBase::EGroundState InGroundState)
-        -> ECk_JoltCharacter_GroundState
-    {
-        switch (InGroundState)
-        {
-            case JPH::CharacterBase::EGroundState::OnGround:      return ECk_JoltCharacter_GroundState::OnGround;
-            case JPH::CharacterBase::EGroundState::OnSteepGround: return ECk_JoltCharacter_GroundState::OnSteepSlope;
-            case JPH::CharacterBase::EGroundState::NotSupported:  return ECk_JoltCharacter_GroundState::NotSupported;
-            default:                                              return ECk_JoltCharacter_GroundState::InAir;
-        }
-    }
 
     auto
         Get_ShapeTypeName(
@@ -523,7 +510,7 @@ namespace ck_jolt_debugdraw_capture
         Sample.Set_GroundNormal(ck::jolt::Conv(InCharacter.GetGroundNormal()));
         Sample.Set_GroundVelocity(ck::jolt::Conv(InCharacter.GetGroundVelocity()));
         Sample.Set_Up(ck::jolt::Conv(InCharacter.GetUp()));
-        Sample.Set_GroundState(Conv_GroundState(InCharacter.GetGroundState()));
+        Sample.Set_GroundState(ck::jolt::Conv(InCharacter.GetGroundState()));
 
         if (const auto GroundBodyId = InCharacter.GetGroundBodyID(); NOT GroundBodyId.IsInvalid())
         { Sample.Set_GroundBodyKey(TOptional<uint64>{Get_BodyKey(GroundBodyId)}); }
@@ -565,17 +552,32 @@ namespace ck_jolt_debugdraw_capture
         const auto SelfFilter = JPH::IgnoreSingleBodyFilter{InBody.GetID()};
         auto Collector = JPH::AllHitCollisionCollector<JPH::CollideShapeCollector>{};
 
+        // The SELECTION's own layer filters, not accept-all ones. An accept-all query reports every body whose
+        // bounds the shape touches — a probe sensor, the drag anchor, a layer this body could never collide with —
+        // as a "contact", which is a lie: the panel's question is what this body is touching in the SIM's terms.
+        // The physics system hands back the same two filters it was initialised with.
+        const auto SelectedLayer = InBody.GetObjectLayer();
+
         InCtx._PhysicsSystem->GetNarrowPhaseQuery().CollideShape(Shape, JPH::Vec3::sReplicate(1.0f),
             InBody.GetCenterOfMassTransform(), Settings, JPH::RVec3::sZero(), Collector,
-            JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{}, SelfFilter);
+            InCtx._PhysicsSystem->GetDefaultBroadPhaseLayerFilter(SelectedLayer),
+            InCtx._PhysicsSystem->GetDefaultLayerFilter(SelectedLayer), SelfFilter);
 
         const auto DrawPoints = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactPoints);
         const auto DrawNormals = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactNormals);
 
         for (const auto& Hit : Collector.mHits)
         {
+            const auto OtherBodyKey = Get_BodyKey(Hit.mBodyID2);
+
+            // A facility-owned body is not a contact the user can act on: it has no entity, no name, and the key
+            // would resolve to nothing. The drag anchor's layer already refuses every pair, so this is the second
+            // half of the guarantee rather than the first.
+            if (Get_IsInternalBody(TargetImpl, OtherBodyKey))
+            { continue; }
+
             auto Entry = FCk_Jolt_DebugDraw_ContactEntry{};
-            Entry.Set_OtherBodyKey(Get_BodyKey(Hit.mBodyID2));
+            Entry.Set_OtherBodyKey(OtherBodyKey);
             Entry.Set_PenetrationDepth(Hit.mPenetrationDepth);
 
             const auto Normal = -Hit.mPenetrationAxis.Normalized();
@@ -883,7 +885,7 @@ namespace ck_jolt_debugdraw_capture
             // for the whole scene. A selected or hovered body is never skipped — its overlay is produced by this
             // draw path, and re-arming the pass is the only way a static or long-asleep body ever gains one.
             const auto* PreviousRecord = PreviousRecords.Find(Key);
-            const auto IsOverlaid = TargetImpl._HighlightedBodyKeys.Contains(Key) ||
+            const auto IsOverlaid = TargetImpl._HighlightedBodyKeySet.Contains(Key) ||
                 (TargetImpl._HoveredBodyKey.IsSet() && *TargetImpl._HoveredBodyKey == Key);
             const auto IsUnchanged = PreviousRecord != nullptr && *PreviousRecord == Record &&
                 NOT IsOverlaid && NOT ExtrasDemandRedraw;
@@ -949,7 +951,16 @@ namespace ck_jolt_debugdraw_capture
             // The key still counts as ACTIVE while isolated out — the sleep diff below is a diff against the
             // active SET, and dropping it there would make the next capture treat the body as freshly asleep.
             if (Get_IsIsolatedOut(TargetImpl, Key))
-            { InCtx._Renderer->Release_BodySlots(Key, ck::jolt::debug_draw::EStatCounting::Counted); }
+            {
+                // Counted only on the capture that actually removes something. An isolated-out ACTIVE body is
+                // walked again every capture for as long as the isolation holds, and reporting a removal on each
+                // of them would describe a settled view as continuous churn.
+                const auto StatCounting = TargetImpl._BodySlots.Contains(Key)
+                    ? ck::jolt::debug_draw::EStatCounting::Counted
+                    : ck::jolt::debug_draw::EStatCounting::Excluded;
+
+                InCtx._Renderer->Release_BodySlots(Key, StatCounting);
+            }
             else
             { Draw_Body(InCtx, *Body); }
 

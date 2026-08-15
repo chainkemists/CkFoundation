@@ -32,10 +32,8 @@ DECLARE_CYCLE_STAT(TEXT("JoltWorld_Step"), STAT_CkJolt_WorldStep, STATGROUP_CkJo
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_jolt_world_processor
+namespace ck::jolt
 {
-    // An absent context is legal (a world with no Jolt subsystem never publishes one) — callers return
-    // silently; this is the correct silent path, not an error.
     auto
         TryResolve_JoltWorld(
             const FCk_Handle& InTransientEntity)
@@ -66,7 +64,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        auto* JoltWorld = ck_jolt_world_processor::TryResolve_JoltWorld(_TransientEntity);
+        auto* JoltWorld = ck::jolt::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld == nullptr)
         { return; }
 
@@ -96,7 +94,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        auto* JoltWorld = ck_jolt_world_processor::TryResolve_JoltWorld(_TransientEntity);
+        auto* JoltWorld = ck::jolt::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld == nullptr)
         { return; }
 
@@ -119,21 +117,38 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        auto* JoltWorld = ck_jolt_world_processor::TryResolve_JoltWorld(_TransientEntity);
+        auto* JoltWorld = ck::jolt::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld == nullptr)
         { return; }
 
         // Invalid or paused: freeze the accumulator and zero the plan, so the executor runs no sub-steps
-        // and KinematicPush (PendingSimTime <= 0) early-outs. The DEBUG pause is consumed here and only here —
-        // a step-once granted at this point plans exactly one step through the same accumulator every other
-        // frame goes through, which is why it cannot be a flag the Step processor interprets for itself.
+        // and KinematicPush (PendingSimTime <= 0) early-outs.
+        //
+        // The world's own block is decided FIRST and the DEBUG gate is consumed only when it does not apply: a
+        // step-once spent on a frame the ENGINE is already pausing would step nothing and the click would be
+        // silently lost. The gate is consumed here and only here — a step-once granted at this point plans
+        // exactly one step, which is why it cannot be a flag the Step processor interprets for itself.
         const auto World = JoltWorld->Get_World();
-        const auto DebugPauseBlocksStep = JoltWorld->TryConsume_DebugPauseGate();
+        const auto WorldBlocksStep = ck::Is_NOT_Valid(World) || World->IsPaused();
+        const auto DebugPauseBlocksStep = NOT WorldBlocksStep && JoltWorld->TryConsume_DebugPauseGate();
 
-        if (ck::Is_NOT_Valid(World) || World->IsPaused() || DebugPauseBlocksStep)
+        if (WorldBlocksStep || DebugPauseBlocksStep)
         {
             JoltWorld->Set_NumStepsLastFrame(0);
             JoltWorld->Set_PendingSimTime(0.0f);
+            return;
+        }
+
+        // A GRANTED step-once is exactly one fixed step, not floor(accumulator / dt) of them: the user asked to
+        // advance the sim by one step, and the accumulator holds whatever real time piled up while they were
+        // reading the screen. It is left untouched, so resuming continues from where the pause began.
+        if (JoltWorld->Get_StepOnceGrantedThisFrame())
+        {
+            const auto GrantedFixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
+            const auto GrantedFixedDt = 1.0f / static_cast<float>(GrantedFixedHz);
+
+            JoltWorld->Set_NumStepsLastFrame(1);
+            JoltWorld->Set_PendingSimTime(GrantedFixedDt);
             return;
         }
 
@@ -170,7 +185,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        auto* JoltWorld = ck_jolt_world_processor::TryResolve_JoltWorld(_TransientEntity);
+        auto* JoltWorld = ck::jolt::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld == nullptr)
         { return; }
 
