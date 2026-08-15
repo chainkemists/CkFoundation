@@ -8,6 +8,7 @@
 #include "CkJolt/CkJolt_Common.h"
 
 #include <Chaos/Vector.h>
+#include <Kismet/BlueprintFunctionLibrary.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Color.h>
@@ -18,6 +19,8 @@
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Body/MotionQuality.h>
 #include <Jolt/Physics/Collision/BackFaceMode.h>
+
+#include "CkJolt_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -105,5 +108,26 @@ namespace ck::jolt
         const JPH::BodyInterface& InBodyInterface,
         JPH::BodyID InHitBodyId) -> FCk_Handle;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKJOLT_API UCk_Utils_Jolt_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Jolt_UE);
+
+public:
+    // Returns how many Persisted contact events the world's last DrainEventsAndRoute consumed.
+    // Test/diagnostic hook for the interest gate; 0 when the world has no Jolt subsystem.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Jolt|Debug",
+              DisplayName="[Ck][Jolt] Get Debug Num Persisted Contact Events Last Drain")
+    static int32
+    Get_Debug_NumPersistedContactEventsLastDrain(
+        const FCk_Handle& InAnyHandleInWorld);
+};
 
 // --------------------------------------------------------------------------------------------------------------------

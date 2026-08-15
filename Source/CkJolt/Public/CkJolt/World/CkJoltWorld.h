@@ -127,6 +127,7 @@ namespace ck
             bool                                                   AsyncMode = false;
             TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>        DrainQueueFn;
             TFunction<void(TArray<FCk_Jolt_ActivationEvent>&)>     DrainActivationQueueFn;
+            TFunction<void(bool)>                                  SetPersistedContactsWantedFn;
         };
 
     public:
@@ -141,6 +142,14 @@ namespace ck
         auto RegisterContactRouter(FName InName, FCk_Jolt_ContactEventRouter InRouter) -> void;
         auto UnregisterContactRouter(FName InName) -> void;
         auto DrainEventsAndRoute() -> void;
+
+        // ---- Persisted-contact interest (game-thread only) ----
+        // A named vote for "something wants Persisted contact events". Every vote is re-asked once
+        // per DrainEventsAndRoute and the OR is published to the contact listener, so a consumer that
+        // stops wanting them (or unregisters) opts out on its own — there is no refcount to leak, and
+        // a leak here would silently keep the per-manifold allocation cost alive forever.
+        auto Register_PersistedContactInterestProvider(FName InName, TFunction<bool()> InProvider) -> void;
+        auto Unregister_PersistedContactInterestProvider(FName InName) -> void;
 
         // ---- Activation events (game-thread only) ----
         // Handed back rather than routed: FProcessor_JoltBody_SleepStateMirror resolves the entities and
@@ -203,6 +212,7 @@ namespace ck
 
         TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>     _DrainQueueFn;
         TFunction<void(TArray<FCk_Jolt_ActivationEvent>&)>  _DrainActivationQueueFn;
+        TFunction<void(bool)>                               _SetPersistedContactsWantedFn;
 
         // ---- Step state ----
         float _Accumulator = 0.0f;
@@ -222,6 +232,13 @@ namespace ck
         // ---- Contact routers, invoked in registration order ----
         TArray<TPair<FName, FCk_Jolt_ContactEventRouter>> _ContactRouters;
 
+        // ---- Persisted-contact interest votes, OR-ed once per drain ----
+        TArray<TPair<FName, TFunction<bool()>>> _PersistedContactInterestProviders;
+
+        // Diagnostic only: how many Persisted events the last DrainEventsAndRoute consumed. Reset every
+        // call (including the early-return paths), so a stale count can never be read back.
+        int32 _Debug_NumPersistedContactEventsLastDrain = 0;
+
     private:
         auto Find_CharacterEntry(uint64 InUserData) -> FCk_Jolt_CharacterEntry*;
 
@@ -234,6 +251,7 @@ namespace ck
         CK_PROPERTY(_PendingSimTime);
         CK_PROPERTY_GET(_OptimizeBroadPhaseRequested);
         CK_PROPERTY_GET(_AsyncFuture);
+        CK_PROPERTY_GET(_Debug_NumPersistedContactEventsLastDrain);
     };
 }
 
