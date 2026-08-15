@@ -143,7 +143,7 @@ namespace ck_pmg_processor_directional_shapes_impl
         InMeshComponent->SetCollisionEnabled(
             InCommon.Get_EnableCollision() ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
-        static auto TranslucentMaterial = LoadObject<UMaterial>(
+        auto TranslucentMaterial = LoadObject<UMaterial>(
             nullptr,
             TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 

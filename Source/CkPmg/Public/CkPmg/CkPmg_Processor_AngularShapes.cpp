@@ -69,7 +69,7 @@ namespace ck_pmg_processor_angular_shapes
         InMeshComponent->SetVisibility(true);
         InMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-        static auto TranslucentMaterial = LoadObject<UMaterial>(
+        auto TranslucentMaterial = LoadObject<UMaterial>(
             nullptr,
             TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 
