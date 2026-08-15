@@ -16,6 +16,7 @@
 #include <HAL/FileManager.h>
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
+#include <Templates/Function.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -544,6 +545,130 @@ auto
     { return {}; }
 
     return Get_TransientEntity(InWorldContextObject->GetWorld());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_ecs_world_subsystem
+{
+#if !UE_BUILD_SHIPPING
+    auto
+        DoVisitSchedulerFrameSnapshots(
+            const UObject* InWorldContextObject,
+            int64 InFrameNumber,
+            const TFunctionRef<void(const ck::FSchedulerDebug_FrameSnapshot&)>& InVisitor)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InWorldContextObject))
+        { return; }
+
+        const auto* World = InWorldContextObject->GetWorld();
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        const auto* Subsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(Subsystem))
+        { return; }
+
+        for (const auto& [TickGroup, Actor] : Subsystem->Get_WorldActors())
+        {
+            if (NOT Actor.IsValid())
+            { continue; }
+
+            const auto& SchedulerOpt = Actor->Get_Scheduler();
+            if (NOT SchedulerOpt.IsSet())
+            { continue; }
+
+            for (const auto& Snapshot : SchedulerOpt.GetValue().Get_DebugFrameHistory())
+            {
+                if (Snapshot.FrameNumber != static_cast<uint64>(InFrameNumber))
+                { continue; }
+
+                InVisitor(Snapshot);
+            }
+        }
+    }
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_Debug_ProcessorPumpCountForFrame(
+        const UObject* InWorldContextObject,
+        FName InProcessorName,
+        int64 InFrameNumber)
+    -> int32
+{
+    auto Result = int32{-1};
+
+#if !UE_BUILD_SHIPPING
+    ck_ecs_world_subsystem::DoVisitSchedulerFrameSnapshots(InWorldContextObject, InFrameNumber,
+        [&](const ck::FSchedulerDebug_FrameSnapshot& InSnapshot) -> void
+        {
+            for (const auto& Timing : InSnapshot.ProcessorTimings)
+            {
+                if (Timing.ProcessorName != InProcessorName)
+                { continue; }
+
+                Result = FMath::Max(Result, Timing.PumpCountThisFrame);
+            }
+        });
+#endif
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_Debug_ProcessorMainPassEntityCountForFrame(
+        const UObject* InWorldContextObject,
+        FName InProcessorName,
+        int64 InFrameNumber)
+    -> int32
+{
+    auto Result = int32{-1};
+
+#if !UE_BUILD_SHIPPING
+    ck_ecs_world_subsystem::DoVisitSchedulerFrameSnapshots(InWorldContextObject, InFrameNumber,
+        [&](const ck::FSchedulerDebug_FrameSnapshot& InSnapshot) -> void
+        {
+            for (const auto& Timing : InSnapshot.ProcessorTimings)
+            {
+                if (Timing.ProcessorName != InProcessorName)
+                { continue; }
+
+                Result = FMath::Max(Result, Timing.MainPassEntityCount);
+            }
+        });
+#endif
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_Debug_FramePumpIterationCount(
+        const UObject* InWorldContextObject,
+        int64 InFrameNumber)
+    -> int32
+{
+    auto Result = int32{-1};
+
+#if !UE_BUILD_SHIPPING
+    ck_ecs_world_subsystem::DoVisitSchedulerFrameSnapshots(InWorldContextObject, InFrameNumber,
+        [&](const ck::FSchedulerDebug_FrameSnapshot& InSnapshot) -> void
+        {
+            Result = FMath::Max(Result, InSnapshot.PumpIterationCount);
+        });
+#endif
+
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

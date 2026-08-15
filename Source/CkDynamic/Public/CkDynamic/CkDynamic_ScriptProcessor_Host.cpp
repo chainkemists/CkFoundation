@@ -127,7 +127,7 @@ namespace ck
                         const auto TransientHandle =
                             UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
 
-                        return UCk_Utils_DynamicFragment_UE::Has_AnyEntityWith_Fragment(TransientHandle, Struct);
+                        return UCk_Utils_DynamicFragment_UE::Has_AnyLiveEntityWith_Fragment(TransientHandle, Struct);
                     };
             }
         }

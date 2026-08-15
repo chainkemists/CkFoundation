@@ -65,6 +65,11 @@ namespace ck
         FCk_ScriptQueryBatchState                      _BatchState;     // per-tick native state handed to script
         bool                                           _Disabled = false;
 
+        // What the last Tick actually handed to the VM, so Pump() can report real work instead of the
+        // pessimistic -1 sentinel. -1 stays for the NoEntities query shape: that body runs with no join
+        // and may mutate state, so it is not inspectable.
+        int32                                          _LastTickVisitedCount = 0;
+
         // Covers the native join AND the ForEachBatch VM call; without it the cost hides in Dispatch self-time.
         TStatId                                        _TickStatId;
     };
