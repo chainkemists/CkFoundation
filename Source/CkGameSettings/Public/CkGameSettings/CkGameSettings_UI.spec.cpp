@@ -155,4 +155,36 @@ bool FCkTest_GameSettings_UI_RowClassResolution::RunTest(const FString&)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_GameSettings_UI_ToggleStateText,
+    "Ck.CkGameSettings.UI.ToggleStateText",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_GameSettings_UI_ToggleStateText::RunTest(const FString&)
+{
+    using ck::game_settings_ui::Get_ToggleStateText;
+
+    const auto Bare = FCk_GameSettings_SettingDefinition{FName{TEXT("spec.ui.toggle")}, ECk_GameSettings_ValueType::Bool, TEXT("false")};
+
+    TestEqual(TEXT("No options, checked => localized On"),
+        Get_ToggleStateText(Bare, true).ToString(), TEXT("On"));
+    TestEqual(TEXT("No options, unchecked => localized Off"),
+        Get_ToggleStateText(Bare, false).ToString(), TEXT("Off"));
+
+    // Authored options relabel the states; matching is by the option's parsed BOOL, not its
+    // position, so a definition may list true first.
+    const auto Relabelled = FCk_GameSettings_SettingDefinition{FName{TEXT("spec.ui.toggle.opts")}, ECk_GameSettings_ValueType::Bool, TEXT("false")}
+        .Set_Options({FCk_GameSettings_SettingOption{FText::FromString(TEXT("Inverted")), TEXT("true")},
+                      FCk_GameSettings_SettingOption{FText::FromString(TEXT("Normal")),   TEXT("false")}});
+
+    TestEqual(TEXT("Authored options, checked => the true option's label"),
+        Get_ToggleStateText(Relabelled, true).ToString(), TEXT("Inverted"));
+    TestEqual(TEXT("Authored options, unchecked => the false option's label"),
+        Get_ToggleStateText(Relabelled, false).ToString(), TEXT("Normal"));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif // WITH_DEV_AUTOMATION_TESTS

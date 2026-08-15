@@ -110,7 +110,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/** Bool setting → checkbox. Designer slot: _ValueCheckBox. */
+/** Bool setting → checkbox + optional state readout. Designer slots: _ValueCheckBox, _ValueText. */
 UCLASS(BlueprintType, Blueprintable)
 class CKGAMESETTINGS_API UCk_GameSettingsUI_RowWidget_Toggle : public UCk_GameSettingsUI_RowWidgetBase
 {
@@ -132,6 +132,12 @@ private:
     UPROPERTY(BlueprintReadOnly,
               meta = (BindWidget, AllowPrivateAccess = true))
     TObjectPtr<UCheckBox> _ValueCheckBox;
+
+    /** On/Off readout beside the checkbox — same slot name as the Slider/Select readout.
+     *  Legitimately absent when the checkbox alone carries the state. */
+    UPROPERTY(BlueprintReadOnly,
+              meta = (BindWidgetOptional, AllowPrivateAccess = true))
+    TObjectPtr<UTextBlock> _ValueText;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -296,6 +302,15 @@ namespace ck::game_settings_ui
     CKGAMESETTINGS_API auto
     Get_EditDisposition(
         const FCk_GameSettings_EditConditions& InEditConditions) -> EEditDisposition;
+
+    /**
+     * The Toggle row's state readout. A Bool definition MAY author two options to relabel its
+     * states (Off/On -> "Normal"/"Inverted"); when it authors none, the localized On/Off is used.
+     */
+    CKGAMESETTINGS_API auto
+    Get_ToggleStateText(
+        const FCk_GameSettings_SettingDefinition& InDefinition,
+        bool InIsChecked) -> FText;
 
     /**
      * Type→row-class mapping: the definition's own _OptionalRowClassOverride wins over everything; then
