@@ -369,11 +369,16 @@ auto
         const FString& InValueString)
     -> void
 {
-    if (ck::Is_NOT_Valid(_ValueCheckBox))
-    { return; }
+    const auto IsChecked = InValueString.ToBool();
 
-    _ValueCheckBox->OnCheckStateChanged.AddUniqueDynamic(this, &UCk_GameSettingsUI_RowWidget_Toggle::HandleCheckStateChanged);
-    _ValueCheckBox->SetIsChecked(InValueString.ToBool());
+    if (ck::IsValid(_ValueCheckBox))
+    {
+        _ValueCheckBox->OnCheckStateChanged.AddUniqueDynamic(this, &UCk_GameSettingsUI_RowWidget_Toggle::HandleCheckStateChanged);
+        _ValueCheckBox->SetIsChecked(IsChecked);
+    }
+
+    if (ck::IsValid(_ValueText))
+    { _ValueText->SetText(ck::game_settings_ui::Get_ToggleStateText(InDefinition, IsChecked)); }
 }
 
 auto
@@ -744,6 +749,23 @@ namespace ck::game_settings_ui
         -> EEditDisposition
     {
         return Get_EditDisposition(InEditConditions, ICommonUIModule::GetSettings().GetPlatformTraits());
+    }
+
+    auto
+        Get_ToggleStateText(
+            const FCk_GameSettings_SettingDefinition& InDefinition,
+            bool InIsChecked)
+        -> FText
+    {
+        for (const auto& Option : InDefinition.Get_Options())
+        {
+            if (Option.Get_Value().ToBool() == InIsChecked)
+            { return Option.Get_Label(); }
+        }
+
+        return InIsChecked
+            ? NSLOCTEXT("CkGameSettings", "ToggleOn", "On")
+            : NSLOCTEXT("CkGameSettings", "ToggleOff", "Off");
     }
 
     auto
