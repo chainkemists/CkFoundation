@@ -76,6 +76,14 @@ failure mode of incoming engineers and models — read them twice.
    that grew Category/Priority/VisibleRange/DisplayAsset fields directly couldn't express "one Poi,
    multiple projector-specific presentations"; those fields belonged in `CkLabel`, `CkEntityTag`, a
    new `CkVisibleRange`, and a new `CkPoiDisplayDefinition` all along.
+10. **The Resilience Tenets bind all gameplay-system work.** [docs/RESILIENCE_TENETS.md](docs/RESILIENCE_TENETS.md)
+   is the doctrine for building and fixing anything entities wait on or hold (claims, queues, locks,
+   lifecycles): no silent early-returns, no band-aids without declared consent, cleanup scope-bound
+   through the StateMachine (RAII — cross-cutting modes are transitions, never side-channel flags),
+   waited-on resources must converge from arbitrary state (lease + reconciliation), no split-brain
+   mirrors without a reconciler, fail-closed only with a bounded escape, systemic fixes over one-off
+   patches. Read it before touching any such system; violations require the maintainer's explicit,
+   informed consent.
 
 ## Lingo
 
