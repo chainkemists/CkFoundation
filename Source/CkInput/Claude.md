@@ -515,7 +515,7 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleAnalogInputEvent` | `AnalogAxis` carrying the analog value |
 | `HandleMouseMoveEvent` | the cursor delta split into `EKeys::MouseX` / `EKeys::MouseY` `AnalogAxis` rows; a component that did not move writes no row rather than a zero one |
 | `HandleMouseButtonDownEvent` / `HandleMouseButtonUpEvent` | `Pressed` / `Released` on the effecting button |
-| `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click |
+| `HandleMouseButtonDoubleClickEvent` | `Pressed` — the OS classifies the SECOND press of a rapid double click as its own event type and Slate routes it here, not to the down handler; the record wants the physical fact (the button went down again), so it lands as an ordinary `Pressed` row. Without this row a fast double click records as one click. Slate can also deliver that same press through the regular down handler, so `DoWriteEvent` drops a `Pressed` for a (key, user) already in `_RecordedDownKeys` — one physical press records once no matter how many routes deliver it |
 | `HandleMouseWheelOrGestureEvent` | `Pressed` **and** `Released` pairs on `EKeys::MouseScrollUp`/`MouseScrollDown`, then one `AnalogAxis` row on `EKeys::MouseWheelAxis` carrying this event's signed delta. See *The wheel* below. Trackpad gestures write nothing at all. Zero-delta events write nothing |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
