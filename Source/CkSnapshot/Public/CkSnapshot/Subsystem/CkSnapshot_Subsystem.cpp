@@ -34,6 +34,8 @@
 #include "HAL/IConsoleManager.h"    // Ck.Snapshot.DumpSlot census command
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
+#include "PlatformFeatures.h"       // ISaveGameSystem::GetSaveGameNames — slot enumeration
+#include "SaveGameSystem.h"
 #include "Serialization/BufferArchive.h"
 #include "Serialization/MemoryReader.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
@@ -167,6 +169,13 @@ bool
     return _LoadInProgress;
 }
 
+bool
+    UCk_Snapshot_Subsystem_UE::
+    Get_IsSaveInProgress() const
+{
+    return _SnapshotInProgress;
+}
+
 FCk_Snapshot_LoadReport
     UCk_Snapshot_Subsystem_UE::
     Get_LastLoadReport() const
@@ -206,6 +215,34 @@ void
     Request_Save(
         FName InSlotName,
         const FCk_Delegate_OnSaveComplete& InDelegate)
+{
+    constexpr auto WriteSidecar = false;
+    DoRequest_Save(InSlotName, FCk_Snapshot_SaveMetadata{}, WriteSidecar, InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_Snapshot_Subsystem_UE::
+    Request_Save_WithMetadata(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        const FCk_Delegate_OnSaveComplete& InDelegate)
+{
+    constexpr auto WriteSidecar = true;
+    DoRequest_Save(InSlotName, InMetadata, WriteSidecar, InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRequest_Save(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        bool InWriteSidecar,
+        const FCk_Delegate_OnSaveComplete& InDelegate)
+    -> void
 {
     const auto World = GetWorld();
 
@@ -275,9 +312,52 @@ void
         return;
     }
 
+    if (InWriteSidecar)
+    { DoWrite_SlotMeta(InSlotName, InMetadata, HeaderV3); }
+
     ck::snapshot::Display(TEXT("Request_Save: saved [{}] v3 bytes to slot [{}]"),
         SaveGame->_SnapshotBytesV3.Num(), InSlotName);
     DoFinish(ECk_SnapshotResult::Success);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoWrite_SlotMeta(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        const FCk_Snapshot_HeaderV3& InHeader) const
+    -> void
+{
+    auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(
+        UGameplayStatics::CreateSaveGameObject(UCk_Snapshot_SlotMetaSaveGame::StaticClass()));
+
+    if (ck::Is_NOT_Valid(MetaSaveGame))
+    {
+        ck::snapshot::Error(TEXT("DoWrite_SlotMeta: failed to create the sidecar SaveGame for slot [{}]"), InSlotName);
+        return;
+    }
+
+    // A caller-supplied thumbnail wins outright — see FCk_Snapshot_SaveMetadata::_ScreenshotPng for
+    // why the automatic capture is the fallback and not the other way round.
+    auto ScreenshotPng = InMetadata.Get_ScreenshotPng();
+
+    if (ScreenshotPng.IsEmpty() && InMetadata.Get_CaptureScreenshot())
+    { ScreenshotPng = ck::snapshot::slot_meta::Capture_ViewportPng(GetWorld(), InMetadata.Get_ScreenshotMaxWidth()); }
+
+    MetaSaveGame->_Meta.Set_SlotName(InSlotName)
+                       .Set_Title(InMetadata.Get_Title())
+                       .Set_TimestampUTC(InHeader.Get_TimestampUTC())
+                       .Set_WorldAssetPath(InHeader.Get_WorldAssetPath())
+                       .Set_ScreenshotPng(ScreenshotPng)
+                       .Set_CustomFields(InMetadata.Get_CustomFields());
+
+    // A sidecar failure must not fail the save — the snapshot is already on disk and is the thing
+    // that matters; the slot simply lists untitled until it is saved over.
+    if (NOT UGameplayStatics::SaveGameToSlot(MetaSaveGame,
+            ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName), ck_snapshot_subsystem::UserIndex))
+    { ck::snapshot::Error(TEXT("DoWrite_SlotMeta: SaveGameToSlot failed for the sidecar of slot [{}]"), InSlotName); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -453,7 +533,27 @@ auto
     { return; }
 
     _PreTravelWorld = World;
-    _TravelMapName  = World->RemovePIEPrefix(World->GetOutermost()->GetName());
+
+    // Travel to the world the SNAPSHOT was captured in, not the one we happen to be standing in.
+    // Re-opening the current map is only correct for the save-then-load-in-place case; loading from
+    // a frontend map (the main menu's Load button) would otherwise re-open the MAIN MENU and then
+    // rebuild a gameplay world into it, and cross-map saves would restore into the wrong level.
+    // The current world stays the fallback for a save with no recorded path (pre-v4 rows).
+    const auto CurrentMapName = World->RemovePIEPrefix(World->GetOutermost()->GetName());
+    const auto& SavedWorldPath = _V3Header.Get_WorldAssetPath();
+
+    _TravelMapName = SavedWorldPath.IsValid()
+        ? World->RemovePIEPrefix(SavedWorldPath.GetLongPackageName())
+        : CurrentMapName;
+
+    if (_TravelMapName.IsEmpty())
+    { _TravelMapName = CurrentMapName; }
+
+    if (_TravelMapName != CurrentMapName)
+    {
+        ck::snapshot::Display(TEXT("Request_Load travel — snapshot was captured in map [{}]; travelling there from [{}]"),
+            _TravelMapName, CurrentMapName);
+    }
 
     constexpr auto AbsoluteTravel = true;
 
@@ -1632,6 +1732,88 @@ bool
         FName InSlotName) const
 {
     return UGameplayStatics::DoesSaveGameExist(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+TArray<FName>
+    UCk_Snapshot_Subsystem_UE::
+    Get_AllSaveSlotNames() const
+{
+    auto* SaveSystem = IPlatformFeaturesModule::Get().GetSaveGameSystem();
+
+    if (ck::Is_NOT_Valid(SaveSystem, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    auto FoundSlots = TArray<FString>{};
+
+    // Platforms that cannot enumerate return false; that is indistinguishable from "no saves" here,
+    // which is why a fixed-slot menu should drive off its own slot names and use this only to
+    // discover what exists.
+    if (NOT SaveSystem->GetSaveGameNames(FoundSlots, ck_snapshot_subsystem::UserIndex))
+    { return {}; }
+
+    auto Result = TArray<FName>{};
+    Result.Reserve(FoundSlots.Num());
+
+    for (const auto& SlotName : FoundSlots)
+    {
+        if (ck::snapshot::slot_meta::Get_IsMetaSlotName(SlotName))
+        { continue; }
+
+        Result.Emplace(FName{*SlotName});
+    }
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_Snapshot_SlotMeta
+    UCk_Snapshot_Subsystem_UE::
+    Get_SaveSlotMeta(
+        FName InSlotName) const
+{
+    auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(UGameplayStatics::LoadGameFromSlot(
+        ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName), ck_snapshot_subsystem::UserIndex));
+
+    if (ck::Is_NOT_Valid(MetaSaveGame))
+    { return {}; }
+
+    return MetaSaveGame->_Meta;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+bool
+    UCk_Snapshot_Subsystem_UE::
+    Request_DeleteSaveSlot(
+        FName InSlotName)
+{
+    const auto CanDelete = NOT _SnapshotInProgress && NOT _LoadInProgress;
+    CK_ENSURE_IF_NOT(CanDelete,
+        TEXT("Request_DeleteSaveSlot refused for slot [{}]: a snapshot operation is in progress"), InSlotName)
+    { return false; }
+
+    // Sidecar first: a snapshot with no sidecar lists as untitled, whereas a sidecar with no
+    // snapshot would list a slot that cannot be loaded.
+    if (UGameplayStatics::DoesSaveGameExist(ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName), ck_snapshot_subsystem::UserIndex))
+    { UGameplayStatics::DeleteGameInSlot(ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName), ck_snapshot_subsystem::UserIndex); }
+
+    if (NOT UGameplayStatics::DoesSaveGameExist(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex))
+    {
+        ck::snapshot::Warning(TEXT("Request_DeleteSaveSlot: slot [{}] does not exist"), InSlotName);
+        return false;
+    }
+
+    const auto Deleted = UGameplayStatics::DeleteGameInSlot(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex);
+
+    if (NOT Deleted)
+    { ck::snapshot::Error(TEXT("Request_DeleteSaveSlot: DeleteGameInSlot failed for slot [{}]"), InSlotName); }
+    else
+    { ck::snapshot::Display(TEXT("Request_DeleteSaveSlot: deleted slot [{}]"), InSlotName); }
+
+    return Deleted;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
+#include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Delegates.h"
 
@@ -57,6 +58,29 @@ public:
         FName InSlotName,
         const FCk_Delegate_OnLoadComplete& InDelegate);
 
+    // As Request_Save, plus a menu-facing sidecar (title / screenshot / game fields) written to the
+    // same slot. Prefer this from any UI that lists slots — a plain Request_Save leaves the slot
+    // with no sidecar, and it will list as untitled and thumbnail-less.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Save With Metadata",
+              meta = (AutoCreateRefTerm = "InMetadata,InDelegate"))
+    void
+    Request_Save_WithMetadata(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        const FCk_Delegate_OnSaveComplete& InDelegate);
+
+    // Deletes the snapshot AND its sidecar. Returns false when the snapshot slot did not exist or
+    // the platform refused the delete; a missing sidecar is not a failure. Refused while a save or
+    // load is in flight.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Delete Save Slot")
+    bool
+    Request_DeleteSaveSlot(
+        FName InSlotName);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Has Save Slot")
@@ -64,6 +88,25 @@ public:
     Get_HasSaveSlot(
         FName InSlotName) const;
 
+    // Every snapshot slot on disk, sidecar slots filtered out. Unordered — a menu that wants
+    // most-recent-first sorts on Get_SaveSlotMeta's timestamp.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get All Save Slot Names")
+    TArray<FName>
+    Get_AllSaveSlotNames() const;
+
+    // The slot's menu sidecar. Cheap — it never touches the world payload. Default-constructed
+    // (Get_IsPopulated() false) when the slot has no sidecar.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Save Slot Meta")
+    FCk_Snapshot_SlotMeta
+    Get_SaveSlotMeta(
+        FName InSlotName) const;
+
+    // WARNING: this deserializes the ENTIRE world payload to return six fields. For menu listing use
+    // Get_SaveSlotMeta instead; this remains for diagnostics that genuinely want the capture header.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Save Slot Header")
@@ -97,6 +140,15 @@ public:
     bool
     Get_IsLoadInProgress() const;
 
+    // True only for the duration of the SYNCHRONOUS Request_Save call, so it never reads true from
+    // a caller on the game thread that is not itself inside the save. A menu uses it to disable
+    // slot interaction from the OnPreSave/OnSaveComplete signals, not by polling.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Save In Progress")
+    bool
+    Get_IsSaveInProgress() const;
+
     // The report of the most recently FINISHED load (success or abort). Default-constructed (Result=Failed_IO)
     // until the first load completes. The delegate/signal remain the push channel; this is the pull channel for
     // consumers that were not party to the Request_Load call (gates, diagnostics UI).
@@ -119,6 +171,13 @@ public:
 private:
     auto DoTryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle, bool InDiagnoseCollision) -> bool;
     auto DoGet_SnapshotSource() const -> FCk_Handle;
+
+    // Shared body of Request_Save / Request_Save_WithMetadata. InMetadata is written to the sidecar
+    // only when InWriteSidecar is set, so the metadata-free entry point leaves no sidecar behind.
+    auto DoRequest_Save(FName InSlotName, const FCk_Snapshot_SaveMetadata& InMetadata, bool InWriteSidecar,
+                        const FCk_Delegate_OnSaveComplete& InDelegate) -> void;
+    auto DoWrite_SlotMeta(FName InSlotName, const FCk_Snapshot_SaveMetadata& InMetadata,
+                          const FCk_Snapshot_HeaderV3& InHeader) const -> void;
 
     // ---- v3 rebuild+hydrate load orchestration ------------------------------------------------------------------
     // Hydrating is ATOMIC (one ticker callback): enqueue payloads + queue reconcile-destroys + open the gate, so no
