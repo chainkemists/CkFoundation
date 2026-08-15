@@ -2,6 +2,7 @@
 
 #include "CkSnapshot/Inspection/CkSnapshot_Inspection_Sha256.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
+#include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
@@ -1186,6 +1187,76 @@ namespace ck::snapshot
             return Document;
         }
 
+        // Projects an already-loaded sidecar object onto the document. Shared by the file and slot routes so both
+        // report identical fields for the same sidecar.
+        auto
+            DoProject_SlotMeta(
+                FCk_SnapshotInspection_Document& InOutDocument,
+                const UCk_Snapshot_SlotMetaSaveGame* InMetaSaveGame,
+                const FString& InSourceDescription)
+            -> void
+        {
+            if (ck::Is_NOT_Valid(InMetaSaveGame))
+            { return; }
+
+            const auto& Meta = InMetaSaveGame->_Meta;
+
+            auto Projected = FCk_SnapshotInspection_SlotMeta{};
+            Projected.Set_Found(true)
+                     .Set_SourceDescription(InSourceDescription)
+                     .Set_Title(Meta.Get_Title())
+                     .Set_TimestampUTC(Meta.Get_TimestampUTC())
+                     .Set_WorldAssetPath(Meta.Get_WorldAssetPath().ToString())
+                     .Set_CustomFields(Meta.Get_CustomFields())
+                     .Set_ScreenshotPng(Meta.Get_ScreenshotPng())
+                     .Set_ScreenshotByteCount(Meta.Get_ScreenshotPng().Num())
+                     .Set_ScreenshotHashHex(Get_Sha256Hex(Meta.Get_ScreenshotPng()));
+
+            InOutDocument.Set_SlotMeta(Projected);
+        }
+
+        auto
+            DoAttach_SlotMeta_FromFile(
+                FCk_SnapshotInspection_Document& InOutDocument,
+                const FString& InAbsolutePath)
+            -> void
+        {
+            // Slot "<Name>.meta" lands on disk as "<Name>.meta.sav", so the sidecar of any save file is its own
+            // path with the extension swapped. Works for a file picked from anywhere, not just the save directory.
+            const auto SidecarPath = FPaths::Combine(
+                FPaths::GetPath(InAbsolutePath),
+                FPaths::GetBaseFilename(InAbsolutePath) + ck::snapshot::slot_meta::MetaSlotSuffix + TEXT(".sav"));
+
+            if (NOT FPaths::FileExists(SidecarPath))
+            { return; }
+
+            auto SidecarBytes = TArray<uint8>{};
+            if (NOT FFileHelper::LoadFileToArray(SidecarBytes, *SidecarPath))
+            { return; }
+
+            const auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(
+                UGameplayStatics::LoadGameFromMemory(SidecarBytes));
+
+            DoProject_SlotMeta(InOutDocument, MetaSaveGame, SidecarPath);
+        }
+
+        auto
+            DoAttach_SlotMeta_FromSlot(
+                FCk_SnapshotInspection_Document& InOutDocument,
+                FName InSlotName)
+            -> void
+        {
+            const auto SidecarSlot = ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName);
+
+            if (NOT UGameplayStatics::DoesSaveGameExist(SidecarSlot, k_UserIndex))
+            { return; }
+
+            const auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(
+                UGameplayStatics::LoadGameFromSlot(SidecarSlot, k_UserIndex));
+
+            DoProject_SlotMeta(InOutDocument, MetaSaveGame, SidecarSlot);
+        }
+
         auto
             DoMake_FailedDecodeResult(
                 ECk_SnapshotInspection_DecodeStatus InStatus,
@@ -1478,7 +1549,12 @@ namespace ck::snapshot
             return Document;
         }
 
-        return ck_snapshot_inspection::DoInspect_Bytes(Bytes, ECk_SnapshotInspection_SourceKind::File, InAbsolutePath);
+        auto FileDocument = ck_snapshot_inspection::DoInspect_Bytes(Bytes, ECk_SnapshotInspection_SourceKind::File, InAbsolutePath);
+
+        // The sidecar sits beside the save the user picked, so opening a .sav brings its metadata along without a
+        // second file prompt. Absent is ordinary — see FCk_SnapshotInspection_SlotMeta.
+        ck_snapshot_inspection::DoAttach_SlotMeta_FromFile(FileDocument, InAbsolutePath);
+        return FileDocument;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1515,7 +1591,10 @@ namespace ck::snapshot
             return Document;
         }
 
-        return ck_snapshot_inspection::DoInspect_Bytes(Bytes, ECk_SnapshotInspection_SourceKind::Slot, SlotName);
+        auto SlotDocument = ck_snapshot_inspection::DoInspect_Bytes(Bytes, ECk_SnapshotInspection_SourceKind::Slot, SlotName);
+
+        ck_snapshot_inspection::DoAttach_SlotMeta_FromSlot(SlotDocument, InSlotName);
+        return SlotDocument;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

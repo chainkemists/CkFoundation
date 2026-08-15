@@ -292,6 +292,50 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/** The menu sidecar that sits beside a save, projected for offline reading.
+ *
+ *  The sidecar is a SEPARATE file (`<Slot>.meta`) — deliberately, so a menu listing N slots does not deserialize
+ *  N world blobs to draw N rows — which means a reader that only opens the `.sav` never sees it. The Inspect_*
+ *  file and slot routes resolve it automatically; the bytes and object routes cannot, because neither carries a
+ *  location to resolve FROM.
+ *
+ *  A save with no sidecar is ORDINARY, not damaged: a bare Request_Save writes none, and neither did any build
+ *  predating it. `_Found` false means "nothing to show", never "something is wrong". */
+class CKSNAPSHOT_API FCk_SnapshotInspection_SlotMeta
+{
+public:
+    CK_GENERATED_BODY(FCk_SnapshotInspection_SlotMeta);
+
+private:
+    bool    _Found = false;
+    // Where the sidecar was resolved from — a sibling path or a slot name. Empty when none was looked for.
+    FString _SourceDescription;
+
+    FText     _Title;
+    FDateTime _TimestampUTC = FDateTime{};
+    FString   _WorldAssetPath;
+    TMap<FName, FString> _CustomFields;
+
+    // Raw PNG. Carried whole rather than as a decoded texture: this layer creates no UObjects, so the
+    // presentation layer decodes it (ck::snapshot::slot_meta::Decode_PngAsTexture) and owns the result.
+    TArray<uint8> _ScreenshotPng;
+    int64   _ScreenshotByteCount = 0;
+    FString _ScreenshotHashHex;
+
+public:
+    CK_PROPERTY(_Found);
+    CK_PROPERTY(_SourceDescription);
+    CK_PROPERTY(_Title);
+    CK_PROPERTY(_TimestampUTC);
+    CK_PROPERTY(_WorldAssetPath);
+    CK_PROPERTY(_CustomFields);
+    CK_PROPERTY(_ScreenshotPng);
+    CK_PROPERTY(_ScreenshotByteCount);
+    CK_PROPERTY(_ScreenshotHashHex);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /** Everything an offline reader can learn about one save without instantiating any of it.
  *
  *  Built once by an Inspect_* entry point and thereafter read-only by convention: decode results are returned
@@ -325,6 +369,7 @@ private:
     TArray<FCk_SnapshotInspection_PayloadSummary> _Payloads;
     TArray<FCk_SnapshotInspection_Diagnostic>     _Diagnostics;
     FCk_SnapshotInspection_Census                 _Census;
+    FCk_SnapshotInspection_SlotMeta               _SlotMeta;
 
     TMap<uint32, int32> _SavedIdToEntityIndex;
 
@@ -346,6 +391,7 @@ public:
     CK_PROPERTY(_Payloads);
     CK_PROPERTY(_Diagnostics);
     CK_PROPERTY(_Census);
+    CK_PROPERTY(_SlotMeta);
     CK_PROPERTY(_SavedIdToEntityIndex);
 
 public:
