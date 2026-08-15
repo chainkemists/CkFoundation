@@ -316,9 +316,9 @@ namespace ck::jolt
 
 auto
     UCk_Utils_Jolt_UE::
-    Get_Debug_NumPersistedContactEventsLastDrain(
+    Get_Debug_NumPersistedContactEventsTotal(
         const FCk_Handle& InAnyHandleInWorld)
-    -> int32
+    -> int64
 {
     if (ck::Is_NOT_Valid(InAnyHandleInWorld))
     { return 0; }
@@ -329,7 +329,7 @@ auto
     if (WorldPtr == nullptr || NOT WorldPtr->IsValid())
     { return 0; }
 
-    return WorldPtr->Get()->Get_Debug_NumPersistedContactEventsLastDrain();
+    return static_cast<int64>(WorldPtr->Get()->Get_Debug_NumPersistedContactEventsTotal());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

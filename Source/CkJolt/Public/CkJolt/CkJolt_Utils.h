@@ -120,13 +120,15 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Jolt_UE);
 
 public:
-    // Returns how many Persisted contact events the world's last DrainEventsAndRoute consumed.
-    // Test/diagnostic hook for the interest gate; 0 when the world has no Jolt subsystem.
+    // Returns how many Persisted contact events this world has consumed since it was created. Cumulative
+    // on purpose: a single drain can legitimately see zero events (the fixed-step pump may not sub-step
+    // between two drains), so interest is observed by diffing two samples over a window, never by reading
+    // one drain. Test/diagnostic hook for the interest gate; 0 when the world has no Jolt subsystem.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Jolt|Debug",
-              DisplayName="[Ck][Jolt] Get Debug Num Persisted Contact Events Last Drain")
-    static int32
-    Get_Debug_NumPersistedContactEventsLastDrain(
+              DisplayName="[Ck][Jolt] Get Debug Num Persisted Contact Events Total")
+    static int64
+    Get_Debug_NumPersistedContactEventsTotal(
         const FCk_Handle& InAnyHandleInWorld);
 };
 
