@@ -70,6 +70,16 @@ public:
     auto Get_ResponseToChannel(ECollisionChannel InChannel) const -> ECk_Jolt_PairInteraction;
     auto Set_ResponseToChannel(ECollisionChannel InChannel, ECk_Jolt_PairInteraction InResponse) -> void;
 
+    /// True when this signature describes SOLID space — something an agent would be stopped by — rather
+    /// than a trigger volume that merely reports overlaps. Occupancy and navigation ask this.
+    ///
+    /// The test is physics-enabled collision AND blocking something, and the physics half is what does
+    /// the real work: a "blocks anything" test alone does NOT separate the two, because a UE profile's
+    /// CustomResponses only override the channels it NAMES and every unlisted channel keeps the
+    /// template's Block default — so OverlapAll still Blocks every project-defined custom channel.
+    /// QueryOnly volumes (OverlapAll, Trigger) have no physical presence; QueryAndPhysics ones do.
+    auto Get_IsSolidObstacle() const -> bool;
+
     /// Built from the component's EFFECTIVE collision setup, including per-component custom response edits.
     static auto Make_FromComponent(
         const class UPrimitiveComponent& InComponent,

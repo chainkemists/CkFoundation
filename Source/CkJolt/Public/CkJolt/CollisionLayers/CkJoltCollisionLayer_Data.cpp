@@ -57,6 +57,25 @@ auto
 
 auto
     FCk_Jolt_CollisionSignature::
+    Get_IsSolidObstacle() const
+    -> bool
+{
+    // A QueryOnly volume reports overlaps but nothing ever collides with it, so it is not solid space
+    // no matter what its responses say.
+    if (NOT CollisionEnabledHasPhysics(_CollisionEnabled))
+    { return false; }
+
+    // Block (2) is the only response whose 2-bit group has the high bit set, so one masked test
+    // answers all 32 channels at once — this runs per body inside per-cell query loops.
+    static_assert(static_cast<uint64>(ECk_Jolt_PairInteraction::Block) == 0b10,
+        "The high-bit test assumes Block is the only response with bit 1 set");
+
+    constexpr auto BlockBitOfEveryChannel = 0xAAAAAAAAAAAAAAAAull;
+    return (_ResponseMask & BlockBitOfEveryChannel) != 0;
+}
+
+auto
+    FCk_Jolt_CollisionSignature::
     Make_FromComponent(
         const UPrimitiveComponent& InComponent,
         ECk_Jolt_BodyDomain InDomain)
