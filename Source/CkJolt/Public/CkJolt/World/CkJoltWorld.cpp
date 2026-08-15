@@ -1168,6 +1168,14 @@ namespace ck
         _AsyncFuture.Wait();
         _AsyncFuture = {};
     }
+
+    auto
+        FJoltWorld::
+        Get_TempAllocator() const
+        -> JPH::TempAllocatorImpl*
+    {
+        return _TempAllocator;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
