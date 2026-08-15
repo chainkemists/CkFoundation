@@ -391,6 +391,39 @@ and remains O(live instances). The 100k first pass and re-run are both far insid
 bounds (2000 ms), which are deliberately loose: the numbers are the product, and the bounds only catch
 a change of algorithmic class.
 
+**Phase-5 re-run (default flags), same machine, same day.** Colour modes, the class-index widening, the
+hover class and the contact recorder cost nothing measurable on the default `Shape`-only path — every
+case is within noise of, or faster than, the Phase-4 column above:
+
+| Case | N=1k | N=10k | N=100k |
+|---|---|---|---|
+| first full pass | 1.12 | 4.39 | 56.4 |
+| steady state (1k active) | 1.82 | 1.94 | 1.82 |
+| scene-revision re-run | 2.01 | 2.89 | 16.9 |
+| `TryPick_Body` ×1 | 0.23 | 1.56 | 13.1 |
+| selection change (re-armed pass) | 2.06 | 2.81 | 17.6 |
+
+⚠ **All per-body extras on, at 100k, is a different algorithmic class — say so rather than tune it.**
+Same scene, `Shape | Velocity | AngularVelocity | WorldTransform | CenterOfMassTransform | BoundingBox |
+MassAndInertia`:
+
+| Case | N=100k, default flags | N=100k, ALL body flags |
+|---|---|---|
+| first full pass | 56.4 | **330.3** |
+| steady state (1k active) | 1.82 | **307.6** |
+| scene-revision re-run | 16.9 | **318.2** |
+| `TryPick_Body` ×1 | 13.1 | 13.4 |
+| selection change (re-armed pass) | 17.6 | **321.7** |
+
+The steady-state row is the one that matters: **1.8 ms → 308 ms**, a ~170x jump, because extras are
+LINES and lines are cleared every capture — so while any extra is on, the incremental pass cannot skip
+a single body and every capture redraws all 100k. Pick is untouched (it walks instances, not flags).
+This is not a regression to fix; it is the cost the pre-Phase-5 in-world `DrawBodies` path paid
+unconditionally, now opt-in per flag. The practical guidance is the honest one: **per-body extras are
+for a scene you are inspecting, not for a 100k world you are flying around in** — use the isolate and
+selection tools first. The all-flags row is measured but NOT gated (`EBudgetPolicy::MeasureOnly`), since
+holding it to the same sanity bound would either fail the gate or widen the bound past usefulness.
+
 **Consumers.** `UCk_Jolt_Subsystem::Register_DebugDrawTarget` / `Unregister_DebugDrawTarget` (weak
 storage, game thread). A target binds to ANY `UWorld`, including an `FPreviewScene` world: its ISMs
 are plain `NewObject` + `RegisterComponentWithWorld`, owned by a `TStrongObjectPtr` on the bucket —
@@ -415,6 +448,15 @@ facility does the rest:
   selection can never be hidden, and `TryPick_Body` skips overlay instances so a pick never returns a
   key no consumer can resolve. Unset clears the selection AND releases the overlay immediately, rather
   than at the next capture.
+- `Set_HoveredBody(TOptional<uint64>)` is its subdued sibling, for a hover preview: same mechanism, its
+  own always-visible `Hover` class, half alpha and a smaller swell. Independent of the highlight — a
+  body may be both, and then it carries both overlays.
+- **Both overlays are drawn at a SCALE about the body's centre of mass** (1.03 highlight, 1.02 hover),
+  their buckets sit at `TranslucencySortPriority = 1`, and the highlight bucket ignores the palette's
+  opacity entirely. Without all three an overlay is co-planar, half-transparent geometry behind
+  half-transparent geometry, which is exactly the "I selected it and nothing looks different" the user
+  reported (P5-D41). The highlight colour is `{1.00, 0.15, 0.85}` — magenta, chosen to be near no entry
+  of any mode's palette, which the `HighlightAddsOverlayInstance` spec asserts mode by mode.
 - `Get_HighlightedBodyBounds()` reads the body's NORMAL instances, so a consumer can frame a selection
   on the same click that made it, with no capture in between.
 - `Get_HighlightedBodyLinearVelocity()` is sampled BY THE CAPTURE, for the highlighted rigid body only,
@@ -432,12 +474,12 @@ to change. The cost is one O(all bodies) WALK per selection change, deselect inc
 that pass now draws is the newly selected one. Accepted and closed; the alternative is a selection that
 silently fails to highlight the exact bodies a physics debugger is most often opened for.
 
-**Colour + wireframe.** Buckets are per-(geometry, **colour class**) — the class rides the bucket key
-alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
-still land in distinct buckets. `FCk_Jolt_DebugDrawPalette` maps the class enum (Static, Kinematic,
-Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character, Highlight) to a colour, with a dim factor
-applied to the sleeping variant and the opacity the tint uses; `Set_Palette` invalidates the retained
-capture so the next one repaints everything. Solid mode = `M_SimpleUnlitTranslucent`, wireframe =
+**Colour + wireframe.** Buckets are per-(geometry, **colour-class INDEX**) — the index rides the bucket
+key alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
+still land in distinct buckets. `FCk_Jolt_DebugDrawPalette::Get_Color(Mode, ClassIndex)` maps an index
+to a colour, with a dim factor applied to the sleeping variant and the opacity the tint uses;
+`Set_Palette` invalidates the retained capture so the next one repaints everything. Solid mode =
+`M_SimpleUnlitTranslucent`, wireframe =
 `/Engine/EngineDebugMaterials/WireframeMaterial` — both loaded by direct `LoadObject` and held in a
 `TStrongObjectPtr` (a bare function-local `UMaterial*` static dangles after the GC that collects it).
 **Never** `GEngine->WireframeMaterial`: it is null whenever the platform `RequiresCookedData`.
@@ -462,18 +504,205 @@ trivial `.ush`, an AS asset declaration, and a regen commit) replacing the engin
 mode has no fallback — a cook that drops `M_SimpleUnlitTranslucent` breaks the in-world draw too, which
 is a project-wide cook-settings problem, not a debug-draw one.
 
-**The legacy in-world draw is unchanged.** CVars `ck.Jolt.DebugDraw.Enabled` (draw ALL bodies, static
-+ dynamic, motion-type colors) and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics
-yellow, sleeping red) gate the subsystem's own Tick draw — NOT registered targets, which are
-demand-driven. The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
-`ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so; skipped in async frames.
-Every `ck.Jolt.DebugDraw.*` CVar now lives in the subsystem TU's `ck_jolt_subsystem::cvar` namespace
-(including `Opacity`, which the Tick writes into the default target's palette before each
-`BeginFrame`), following the house pattern — `FAutoConsoleVariableRef` over a static in a
-filename-derived named namespace. `ck.Jolt.DebugDraw.Velocity` (default on) and
-`ck.Jolt.DebugDraw.WorldTransform` (default OFF — line-heavy at stress counts) gate the remaining
-immediate-mode lines. `jolt.EnableParallelPhysics` / `jolt.EnableAsyncPhysicsUpdate` are startup-only
-because the JobSystem is created once in `Initialize` (cmdline form: `-jolt.EnableParallelPhysics=0`).
+### Colour modes + legend
+
+Colour is a **mode**, per target: `ECk_Jolt_DebugDrawColorMode { BodyClass (default), SleepState,
+ObjectLayer, Island, ShapeType }` via `Set_ColorMode` / `Get_ColorMode`. A mode decides which class
+INDEX a body lands in, and the index decides the bucket — so changing the mode re-buckets everything.
+`Set_ColorMode` therefore invalidates the retained capture exactly as `Set_Palette` does, and clears the
+hidden-class mask (an index means something different in the new mode, so nothing hidden should stay
+hidden) — **and re-applies `SetVisibility(true)` to every surviving bucket**, because visibility lives on
+the COMPONENT and a bucket the old mode hid would otherwise stay invisible under a mask that hides
+nothing (`TryEnsure_BucketIsm` only reads the mask when it CREATES a component).
+
+**One index space, shared by every mode**, packed one bit per index into a `uint64` visibility mask —
+so **64 classes is the ceiling**, `static_assert`ed. `HighlightClassIndex = 62` and
+`HoverClassIndex = 63` are **mode-independent**: they are the same two indices whatever the mode, they
+answer `Get_IsClassVisible` with `true` always, and `Set_ClassVisibility` ignores them.
+
+| Mode | Classes | Notes |
+|---|---|---|
+| `BodyClass` | `ECk_Jolt_DebugDraw_ColorClass` — Static, Kinematic, Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character | the pre-Phase-5 behaviour, unchanged |
+| `SleepState` | `ESleepStateClass` — Static, Kinematic, Awake, Asleep | what `ck.Jolt.DebugDraw.SleepColoring` selects for the in-world target |
+| `ObjectLayer` | one per registered Jolt object layer, capped at index 61 | see the naming note below |
+| `Island` | 0 = "no island" (static, kinematic, sleeping, or never stepped), 1..16 = the island index hashed into a 16-colour wheel | islands churn every step; the absolute number is meaningless, the grouping is not |
+| `ShapeType` | `EShapeTypeClass` — a COMPACT re-indexing of `JPH::EShapeSubType` | never index a table by the raw sub-type: it reserves `User1..8`/`UserConvex1..8` mid-range and appends `Plane`/`TaperedCylinder`/`Empty` at the end |
+
+`Get_LegendEntries(Mode)` returns `{ClassIndex, Name, Color}` per class, with Highlight ("Selected")
+and Hover ("Hovered") appended in every mode — that is the whole surface a debugger's legend needs, and
+it is why `Get_BucketColorClasses()` returns bare indices (they mean nothing without the mode).
+`Get_BucketColorClasses()` reports **live** buckets only: a previous mode's bucket survives in the map
+whenever its geometry is one of the renderer's never-prunable shared unit primitives, and naming a class
+nothing is drawn in would be a lie.
+
+**Object layers have no names of their own** (P5-D61/S6). They are allocated one per unique
+`FCk_Jolt_CollisionSignature`, so the legend borrows the **object channel** of the signature registered
+at each layer — and the PROJECT's name for that channel (`UCollisionProfile::
+ReturnChannelNameFromContainerIndex`), because `ECC_GameTraceChannel3` tells a reader nothing. The
+capture publishes them with `Set_ObjectLayerNames` through a strictly READ-ONLY reverse lookup
+(`Get_NumLayers` + `Get_Signature`; nothing there can register a layer), only while the target is
+actually colouring by layer and only when the layer count moved. A layer with no name reads `Layer N`.
+Index 61 is the catch-all and reads `Layer 61+`: P5-D42 phrased the cut as "> 61 → Other", but with the
+two reserved indices there is no 63rd slot for a separate "Other", so the top named index doubles as it.
+**When nothing has published any name** — no layer context reachable, which is every headless fixture and
+any world whose Jolt subsystem never published one — the ObjectLayer legend would otherwise be a single
+`Layer 61+` row beside a viewport visibly drawing layer-coloured bodies. So it also emits a bare
+`Layer N` row for **every index a live bucket is currently using**, and only while the target's own mode
+IS ObjectLayer (a bucket index means nothing in any other mode).
+
+⚠ **`Island` mode is INERT on the vendored Jolt 5.2.1** — verified 2026-08-15, not inferred:
+`MotionProperties::mIslandIndex` is only ever *initialised* to `cInactiveIndex` and *reset* to it
+(`Physics/Body/BodyManager.cpp:607`); `SetIslandIndexInternal` has **zero call sites** in the whole
+library, and `IslandBuilder` keeps its island indices on its own `BodyLink` array instead. So
+`GetIslandIndexInternal()` answers `cInactiveIndex` for every body no matter how much the world has
+stepped, and every body lands in class 0 "No island". Jolt's own `EShapeColor::IslandColor`
+(`BodyManager.cpp:993`) is equally dead in this version. **Awaiting a ruling** (drop the mode / keep it
+documented as inert / carry a patch); the `ColorModesAndLegend` spec asserts only the un-stepped case,
+which is the same as the stepped one today.
+
+**A character keeps the BodyClass `Character` index in every mode.** A `CharacterVirtual` has no
+`JPH::Body`, so object layer, island and sleep state do not exist for it; the alternative is a capsule
+that vanishes into a meaningless bucket the moment the mode changes.
+
+### Contact recording
+
+Contacts exist ONLY during `PhysicsSystem::Update` — there is nothing left to read once it returns — so
+they are the one draw the capture cannot do for itself. The shape (P5-D40 as refined by P5-D61/S1):
+
+- **Demand is the UNION over every LIVE target's contact flags**, recomputed on target construction,
+  destruction and every `Set_DrawFlags`, and written into `JPH::ContactConstraintManager::
+  sDrawContactPoint` / `sDrawContactManifolds` / `sDrawSupportingFaces`
+  (`ContactPoints` / `ContactNormals` / `SupportingFaces` respectively).
+- **The record scope lives inside `FJoltWorld::DoPhysicsUpdate`**, wrapped around `Update` — not in
+  `FProcessor_JoltWorld_Step`, which never calls it. `Begin_ContactRecord` is a no-op when nothing
+  demands contacts, so the whole feature costs one **acquire** atomic load per step when it is off.
+- **Buffers are PER WORLD**, keyed by `JPH::PhysicsSystem*` and passed to `Begin`/`End`/`Replay`; a
+  world drops its buffers in `FJoltWorld::Shutdown` and its destructor, so a PhysicsSystem later
+  allocated at the same address can never inherit a dead world's contacts. **Only ONE world may record
+  per step**: a `compare_exchange` on a single "recording world" pointer decides, and a second world
+  whose solve overlaps SKIPS its own record for that step (one `Verbose` line) rather than feeding its
+  targets a mixed one. A `DrawLine` carries no world, so this bounds the damage to the losing world's
+  targets seeing nothing — it cannot stop the winner's buffer from also catching the loser's lines.
+- **While recording, `FCk_Jolt_DebugRenderer::DrawLine` appends to an `FCriticalSection`-guarded
+  buffer** instead of drawing. The recording atomic is tested **BEFORE** the bound target, and that
+  order is the fix for the race it replaces: a bound target is a game-thread capture, but in async mode
+  a *different* world's solve may be running right now, and appending to the target's unguarded line
+  array from a solve worker tears it. Accepted consequence: a capture that overlaps another world's
+  async solve loses its own lines to that record for the frame. Cap **200,000 lines/frame**, one
+  `Display` warning when it bites.
+- **`End_ContactRecord` double-buffers**: that world's filled buffer is swapped aside whole.
+- **`FProcessor_JoltDebugDraw_Capture` is the ONE consumer per world**, on the game thread, already
+  after `WaitForAsync`. It calls `Replay_RecordedContacts` BEFORE its captures (a capture flushes the
+  line component), assigning the lines to every **demanding** target whose flags ask for contacts and
+  CLEARING the channel of every target that does not — so a target that stops asking is emptied rather
+  than left showing a step that has been superseded. The record is `MoveTemp`d into the LAST demanding
+  target; only the ones before it copy. **Nothing replays from the Step processor.**
+
+Two disclosures that are contracts, not caveats:
+
+⚠ **Contact toggles are PROCESS-WIDE, unlike every other draw flag.** Jolt's contact draw switches are
+plain `static bool`s on `ContactConstraintManager` with no per-`PhysicsSystem` variant. Turning contacts
+off in one target turns Jolt's emission off for the whole process — including the in-world draw and
+every other preview target. Per-target *replay* still holds (a target that did not ask receives
+nothing), but per-target *emission* does not.
+
+⚠ **Under async physics the contacts lag the shapes by one frame.** The record belongs to the step
+consumed at the start of the frame that replays it. Accepted (P5-D61/S1) rather than fixed: the
+alternative is reading Jolt from the Slate tick, which this module bans outright.
+
+**The in-world draw gets contacts through `ck.Jolt.DebugDraw.Contacts`** (P5-D63 v). Its target is the
+subsystem's own, pumped from `Tick` rather than registered with `Register_DebugDrawTarget` — and since
+the replay has exactly one consumer per world, the capture processor feeds that target too
+(`Get_DefaultDebugDrawTarget`) even though it never captures it. Closing the in-world gate resets those
+flags to `Shape` on purpose: the contact flags drive process-wide statics, so a switched-off in-world
+draw must stop declaring a demand or every world keeps recording manifolds nothing will draw.
+
+⚠ **Open perf item (P5-D64/F6, DEFERRED, unmeasured):** `TryRecord_ContactLine` takes the record lock
+**per line**, from inside the parallel solve. At manifold counts that reach the 200k cap that is a
+contended lock on every Jolt worker for the duration of `Update`. It has never been measured. The
+candidate fix is thread-local batching (append to a per-thread chunk, splice under the lock once at
+`End_ContactRecord`) — **measure before redesigning**.
+
+### Draw channels (lines, labels, External)
+
+A target owns three non-mesh channels beside its bucket map:
+
+- **Lines** — one `ULineBatchComponent` created on first line and registered with the target's world, owned
+  by a `TStrongObjectPtr` exactly like the bucket ISMs (no pooling subsystem, so preview and transient
+  worlds host it too). `FCk_Jolt_DebugRenderer::DrawLine` appends to the ACTIVE target's line buffer and
+  `DrawTriangle` is three of those, so every non-virtual `DebugRenderer` helper — `DrawArrow`,
+  `DrawCoordinateSystem`, `DrawWireBox`, `DrawWireSphere`, the constraint helpers — lands there for free.
+  **Nothing goes through `DrawDebugLine` any more**: a line drawn for the preview target must not appear in
+  the game world. `BeginCapture` `Flush()`es the component; `EndCapture` pushes the whole frame in ONE
+  `DrawLines` call, because `ULineBatchComponent::DrawLine` marks the render state dirty per line.
+- **Labels** — `DrawText3D` stores `FCk_Jolt_DebugDrawLabel {WorldPosition, Text, Color}` rather than
+  rendering; `Get_Labels()` is refilled every capture. Jolt's `inHeight` is dropped: each consumer sizes
+  text in its own space (a viewport `OnPaint` projection, or `DrawDebugString`).
+- **External** — `Draw_ExternalLine/Box/Sphere/Arrow(FName Channel, …)` for line work this facility does
+  not produce (probe results, a grid, a drag line). Sub-channels are **RETAINED and named**: a capture
+  re-emits them into the line component **without clearing them**, and only `Clear_External(Name)` empties
+  one. The asymmetry is the point — JPH output is per-frame, but a contributor pushes on its own schedule
+  (a Slate tick), so a per-capture clear would drop anything pushed between captures and flicker anything
+  pushed before one.
+
+### Draw flags
+
+`ECk_Jolt_DebugDrawFlags` (bitmask, `Set_DrawFlags` / `Get_DrawFlags` / `Get_IsDrawFlagSet`, default
+`Shape`) decides what a capture emits into THAT target: `Shape`, `Velocity`, `AngularVelocity`,
+`WorldTransform`, `CenterOfMassTransform`, `BoundingBox`, `MassAndInertia`, `Constraints`,
+`ConstraintLimits`, `ConstraintReferenceFrames`, `ContactPoints`, `ContactNormals`, `SupportingFaces`,
+`Labels`. The capture draws the per-body items itself — it never calls `DrawBodies`, because it needs one
+`BeginBody`/`EndBody` scope per body to reconcile instance slots. Constraint draws
+(`DrawConstraints` / `DrawConstraintLimits` / `DrawConstraintReferenceFrame`) run once per capture,
+outside every body scope.
+
+Three things worth knowing:
+
+- **`Labels` gates TEXT, not a body item of its own.** The only label the capture emits today is the
+  numeric mass beside the `MassAndInertia` wire box, and it needs BOTH flags: the box is
+  `MassAndInertia`'s output, the number is text and text is `Labels`'. Without that gate `Labels` is
+  dead and every `Get_Labels()` consumer is fed per-body strings it never asked for.
+- **`SleepStats` is deliberately absent.** Jolt draws it from `MotionProperties`' internal sleep-test
+  spheres, which sit below that header's `FOR INTERNAL USE ONLY` banner with no public accessor, and the
+  capture does not call `DrawBodies`. There is no cheap way to get it — dropped, not deferred.
+- **Assert-safety.** `JPH_ENABLE_ASSERTS` is on in every configuration (`CkThirdParty.build.cs`), so a
+  static body must never touch a checked `MotionProperties` accessor. The extras use
+  `Body::GetMotionPropertiesUnchecked()` and `MotionProperties::GetInverseMassUnchecked()`, gate
+  `GetInverseInertiaDiagonal()` behind `IsDynamic()`, and never call `Body::GetAllowSleeping()` (it
+  dereferences `mMotionProperties` unguarded).
+- **Any per-body extra defeats the incremental skip.** Extras are LINES and lines are cleared every
+  capture, so while one is on, the inactive-body pass runs every capture and re-draws every body rather
+  than skipping the unchanged ones. That is exactly the cost the old in-world `DrawBodies` path paid
+  unconditionally, so the in-world default is no worse; a target with the default `Shape`-only flags keeps
+  the measured incremental behaviour intact.
+- **Sizes are Jolt's own constants ×100.** Jolt's samples are metres and this world is centimetres, so the
+  0.1 arrow-head / 0.2 axis constants are two millimetres of screen space. The pre-Phase-5 in-world draw
+  passed them through unconverted, which is why `ck.Jolt.DebugDraw.WorldTransform` drew axes nobody could
+  see. Same ×100 rule the module applies to every other Jolt scalar.
+
+**The in-world draw is re-hosted onto the same capture.** The subsystem's Tick no longer builds a
+`JPH::BodyManager::DrawSettings` and calls `DrawBodies`; it sets the default target's opacity and draw
+flags from the CVars and calls `Capture_JoltWorld`, the same entry point the capture processor uses for
+registered targets. The gate, the `HideAll()` on gate-close and `NextFrame()` are unchanged, and the CVars
+remain the in-world source of truth:
+
+| CVar | Effect after the re-host |
+|---|---|
+| `ck.Jolt.DebugDraw.Enabled` | unchanged — draws ALL bodies, static + dynamic; OR'd with the consumer gate (`Set_DebugDrawGate`, e.g. `ck.SpatialQuery.PreviewAllProbesUsingJolt`); skipped in async frames |
+| `ck.Jolt.DebugDraw.Opacity` | unchanged — written into the default target's palette before each capture |
+| `ck.Jolt.DebugDraw.Velocity` (default on) | sets **both** `Velocity` and `AngularVelocity`: Jolt's single `mDrawVelocity` emitted the linear AND the angular arrow, so mapping only one would silently drop a line this CVar has always drawn |
+| `ck.Jolt.DebugDraw.WorldTransform` (default off) | sets `WorldTransform` — now at a visible size (see the ×100 note above) |
+| `ck.Jolt.DebugDraw.Constraints` (default on) | sets `Constraints` |
+| `ck.Jolt.DebugDraw.Contacts` (default off) | sets **both** `ContactPoints` and `ContactNormals` — "contacts" is one question to a user and Jolt emits the manifold normal from the same solve pass as the point. **PROCESS-WIDE**: this arms Jolt's contact emission for every world and every debugger preview at once (see § Contact recording). The lines reach the in-world target through the capture processor's replay, not through the subsystem Tick |
+| `ck.Jolt.DebugDraw.SleepColoring` | selects the in-world target's **colour mode** — `SleepState` on, `BodyClass` off — rather than a draw flag, because it was always a colour question (`EShapeColor::SleepColor` vs `MotionTypeColor`). With it on, statics and kinematics collapse to one neutral colour each and the only distinction drawn is awake vs asleep |
+
+⚠ **Body colours changed with the re-host.** `DrawBodies`' `MotionTypeColor` gave every dynamic body
+`Color::sGetDistinctColor(index)` — a per-body colour with no meaning beyond identity. The capture colours
+by the facility's palette instead (grey static, green kinematic, yellow awake, dimmed red sleeping, blue
+sensor, tan baked-static, magenta character), which is the same vocabulary the debugger's legend reads.
+
+`jolt.EnableParallelPhysics` / `jolt.EnableAsyncPhysicsUpdate` are startup-only because the JobSystem is
+created once in `Initialize` (cmdline form: `-jolt.EnableParallelPhysics=0`).
 
 **Multi-world:** every Jolt subsystem now builds its OWN default target, so a server+client PIE
 session draws both worlds under the same CVars. The old first-world-only behaviour was an artifact of
@@ -485,10 +714,12 @@ gating construction on `JPH::DebugRenderer::sInstance` and is gone.
   runs ONCE per unique geometry (Jolt shapes cache their `GeometryRef` — HeightField/Mesh/ConvexHull
   hold a mutable `mGeometry`; primitives share unit geometry), triangle data is held CPU-side and
   lazily built into the transient UStaticMesh on first draw, `DrawGeometry` only accumulates
-  (batch, transform, colour class) into buckets, and EndFrame/EndCapture reconciles each bucket into
-  one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay immediate-mode — velocity vectors,
-  transform axes and contact normals are genuinely line-shaped and low-count. Both windings are
-  emitted per triangle (Conv is a handedness passthrough, so one winding renders inside-out).
+  (batch, transform, colour class) against the open body's slots, and `EndCapture` reconciles each bucket
+  into one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay line/text-shaped and go to the
+  target's line and label channels — velocity vectors, transform axes and contact normals are genuinely
+  line-shaped and low-count. Both windings are emitted per triangle (Conv is a handedness passthrough, so
+  one winding renders inside-out). `DrawGeometry` outside a body scope is DROPPED: instanced geometry only
+  exists inside one, and nothing that runs outside a body scope (constraints, contacts) emits geometry.
 - Stale-bucket pruning is a HOLDER CENSUS, not a refcount-of-1 test: the front end tracks, per
   `FBatch`, how many live buckets across ALL targets hold a keep-alive, and a bucket is dropped only
   when `Get_RefCount() == that count` — i.e. no Jolt geometry references it any more. The census is
@@ -502,8 +733,9 @@ gating construction on `JPH::DebugRenderer::sInstance` and is gone.
   whole capture), `Jolt_DebugDraw_Reconcile` (bucket reconcile, both draw paths), `JoltBody_
   WritebackInterpolated`, `JoltBody_KinematicPush`, contact queue/drain stats.
 
-**Specs** (`CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_TargetReconcile.cpp`, all headless — a
-standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry):
+**Specs**, all headless — a standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS
+registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_TargetReconcile.cpp`
+**except `Benchmark.ScaleMatrix`, which is its own file** (`Test_JoltDebugDraw_Benchmark.cpp`):
 
 | Spec | Pins |
 |---|---|
@@ -520,7 +752,12 @@ standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry)
 | `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns |
 | `Ck.Jolt.DebugDraw.HighlightedBodyLinearVelocity` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
 | `Ck.Jolt.DebugDraw.DestroyedSleepingBodyReleasesBothSlots` | the sweep is revision-gated (runs on the first capture, skipped while the body-removed token holds) and a destroyed SLEEPING body releases its own instance AND its selection overlay with the static-scene revision held still — so the full pass is provably not what covers it |
-| `Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix` | measurement with loose sanity gates at N ∈ {1k, 10k, 100k}: first pass, steady state, revision re-run, pick, and a selection-change re-armed pass, logged as `[JoltDebugDrawBench] N=… case=… ms=…`. The numbers are the product; the assertions are deliberately wide bounds (steady state < 50 ms, everything else < 2000 ms) that only an algorithmic-class regression trips, so they gate without flaking |
+| `Ck.Jolt.DebugDraw.LineAndLabelChannels` | a JPH `DrawLine` during a capture lands in the target's line channel and the count RESETS on the next capture (so the per-capture `Flush` is real); a `DrawText3D` lands in `Get_Labels()` at the body it describes, and dropping the flag that produced it empties the channel; an External sub-channel SURVIVES two captures, a second sub-channel does not disturb the first, and `Clear_External` empties exactly one |
+| `Ck.Jolt.DebugDraw.ColorModesAndLegend` | a mode change RE-BUCKETS: three bodies split three ways by body class collapse to two under `ShapeType` (the two boxes share a sub-type) and to two under `Island` (nothing stepped, so nothing has one), and switching back restores the body-class split; `SleepState` splits the awake box from the asleep one, which differ in nothing else. Every mode's legend is non-empty, its names unique, and carries "Selected" and "Hovered"; with NO names published the ObjectLayer legend still carries a bare `Layer N` row for the index the bodies are actually drawn in, and once names are published it reads `Layer 0 — WorldStatic` for a named layer and a bare `Layer 1` for an unnamed one |
+| `Ck.Jolt.DebugDraw.HoverOverlay` | hover and highlight are independent — two bodies, two overlays, two distinct always-visible classes; the hover class cannot be hidden; a body that is BOTH carries both overlays; clearing releases the hover overlay immediately |
+| `Ck.Jolt.DebugDraw.ContactRecordingReplays` | a step with nothing demanding contacts records none and leaves Jolt's statics off; a target's `ContactPoints` flag arms the process-wide demand and writes `sDrawContactPoint` (leaving `sDrawSupportingFaces` off), and after the replay that target has contact lines while a second target that did not ask stays empty; a second target's `SupportingFaces` flag proves the union is over ALL live targets; dropping the last contact flag clears both statics and EMPTIES the channel rather than leaving stale contacts. The only case that steps — `FScopedJoltWorld::Step()` exists for it |
+| `Ck.Jolt.DebugDraw.DrawFlagsGatePerBodyExtras` | `Shape` alone emits no lines even for a moving body; enabling `Velocity` emits some; adding `BoundingBox` emits strictly more; clearing back to `Shape` returns the count to zero with both bodies still drawn; dropping `Shape` releases every instanced-mesh instance while the line extras keep drawing |
+| `Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix` (`Test_JoltDebugDraw_Benchmark.cpp`) | measurement with loose sanity gates at N ∈ {1k, 10k, 100k}: first pass, steady state, revision re-run, pick, and a selection-change re-armed pass, logged as `[JoltDebugDrawBench] N=… case=… ms=…`. The numbers are the product; the assertions are deliberately wide bounds (steady state < 50 ms, everything else < 2000 ms) that only an algorithmic-class regression trips, so they gate without flaking. A sixth run repeats N=100k with EVERY per-body draw flag on (`allflags_*` cases) — **measured, not gated**, because redrawing every body every capture is a different algorithmic class by construction |
 
 ---
 
@@ -571,7 +808,8 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
 - **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,
   `ck.Jolt.DebugDraw.Opacity`, `ck.Jolt.DebugDraw.Velocity`, `ck.Jolt.DebugDraw.WorldTransform`,
-  `ck.Jolt.DebugDraw.Constraints` (default on — anchors/axes/limits via `DrawConstraints`).
+  `ck.Jolt.DebugDraw.Constraints` (default on — anchors/axes/limits via `DrawConstraints`),
+  `ck.Jolt.DebugDraw.Contacts` (default off — points + manifold normals; PROCESS-WIDE).
 - **Unit conversion**: Jolt's `PhysicsSettings` defaults are METRES-tuned and this world is
   CENTIMETRES, so every length/velocity field is ×100 (squared manifold tolerances ×100²); ratios
   (`mBaumgarte`, `mLinearCast*`), iteration counts and times keep their defaults. Left unconverted,
@@ -628,8 +866,22 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   processor fill it, or you race the async step. A value a presentation consumer needs live belongs on
   the target's JPH-free surface, sampled inside the capture, the way
   `Get_HighlightedBodyLinearVelocity` is.
+- Don't draw debug lines for a target through `UCk_Utils_DebugDraw_UE` / `DrawDebugLine`. Those go to the
+  world's own line batcher, so a line drawn for the debugger's preview target would appear in the game
+  world and vice versa. Every line belongs to a target's line channel — JPH primitives get there through
+  `FCk_Jolt_DebugRenderer::DrawLine`, everything else through `Draw_External*`.
+- Don't clear an External sub-channel from the capture. Its contributor owns it; a capture re-emits it and
+  only `Clear_External(Name)` empties it. Clearing per capture is what makes probe results, the grid and
+  the drag line flicker.
 - Don't re-derive the debug-draw keyspace. `Make_BodyKey` / `Make_CharacterBodyKey` are its only
   definitions, and a hand-rolled cast will drift from the capture the first time either changes.
+- Don't treat a colour-class INDEX as meaningful without the mode that produced it. `Get_LegendEntries`
+  is the only thing that turns an index into a name and a colour, and index 5 is `BakedStatic` in one
+  mode and `Cylinder` in another.
+- Don't assume the contact flags are per-target the way every other draw flag is — Jolt's contact draw
+  switches are process-wide statics, so the facility takes the union and discloses it.
+- Don't replay recorded contacts from anywhere but `FProcessor_JoltDebugDraw_Capture`. The record scope
+  runs on the step thread; every touch of a target belongs to the game thread.
 - Don't include `CkJolt_DebugDrawTarget_Impl.h` outside the debug-draw TUs — it is what keeps the
   target's public header JPH-free for presentation consumers.
 

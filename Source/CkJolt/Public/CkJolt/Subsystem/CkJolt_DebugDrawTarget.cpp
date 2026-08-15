@@ -12,12 +12,21 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkJolt/CkJolt_Log.h"
+
 #include <Components/InstancedStaticMeshComponent.h>
+#include <Components/LineBatchComponent.h>
 #include <Engine/StaticMesh.h>
 #include <Engine/World.h>
+#include <HAL/CriticalSection.h>
 #include <Materials/Material.h>
 #include <Materials/MaterialInstanceDynamic.h>
+#include <Misc/ScopeLock.h>
 #include <UObject/StrongObjectPtr.h>
+
+#include <Jolt/Physics/Constraints/ContactConstraintManager.h>
+
+#include <atomic>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,16 +34,109 @@ namespace ck_jolt_debug_draw_target
 {
     const auto ColorParameterName = FName{TEXT("Color")};
 
-    static_assert(static_cast<int32>(ECk_Jolt_DebugDraw_ColorClass::Count) <= 8,
-        "The hidden-class mask is a uint8 bitfield. Adding a ninth colour class shifts the bit out of range and "
+    static_assert(static_cast<int32>(ECk_Jolt_DebugDraw_ColorClass::Count) <=
+        ck::jolt::debug_draw::HighlightClassIndex,
+        "BodyClass mode's classes must fit UNDER the two reserved mode-independent indices, or a body would be "
+        "drawn in the Highlight bucket and become unhideable.");
+
+    static_assert(ck::jolt::debug_draw::HoverClassIndex < ck::jolt::debug_draw::MaxColorClasses,
+        "The hidden-class mask is a uint64 bitfield. A class index of 64 or more shifts the bit out of range and "
         "silently makes that class permanently visible — widen _HiddenClassMask before adding one.");
 
     auto
         Get_ClassBit(
-            ECk_Jolt_DebugDraw_ColorClass InColorClass)
-        -> uint8
+            uint8 InColorClassIndex)
+        -> uint64
     {
-        return static_cast<uint8>(1u << static_cast<uint8>(InColorClass));
+        return uint64{1} << InColorClassIndex;
+    }
+
+    /*
+     * The shared distinct-colour wheel every "identity" mode draws from — island, object layer and shape type
+     * all colour by a number whose value carries no meaning beyond "not the same as its neighbour". Sixteen
+     * entries, hand-picked to stay apart at the debug draw's default half opacity rather than generated, so two
+     * adjacent layers are never two shades of the same hue.
+     */
+    auto
+        Get_DistinctColor(
+            uint8 InIndex)
+        -> FLinearColor
+    {
+        static const FLinearColor Colors[ck::jolt::debug_draw::IslandPaletteSize] =
+        {
+            FLinearColor{0.90f, 0.25f, 0.25f, 1.0f}, FLinearColor{0.25f, 0.70f, 0.95f, 1.0f},
+            FLinearColor{0.35f, 0.85f, 0.35f, 1.0f}, FLinearColor{0.95f, 0.75f, 0.20f, 1.0f},
+            FLinearColor{0.80f, 0.35f, 0.90f, 1.0f}, FLinearColor{0.20f, 0.85f, 0.80f, 1.0f},
+            FLinearColor{0.95f, 0.50f, 0.20f, 1.0f}, FLinearColor{0.55f, 0.60f, 0.95f, 1.0f},
+            FLinearColor{0.70f, 0.90f, 0.25f, 1.0f}, FLinearColor{0.95f, 0.40f, 0.60f, 1.0f},
+            FLinearColor{0.30f, 0.55f, 0.45f, 1.0f}, FLinearColor{0.85f, 0.85f, 0.85f, 1.0f},
+            FLinearColor{0.60f, 0.40f, 0.20f, 1.0f}, FLinearColor{0.45f, 0.30f, 0.75f, 1.0f},
+            FLinearColor{0.20f, 0.45f, 0.85f, 1.0f}, FLinearColor{0.75f, 0.95f, 0.75f, 1.0f},
+        };
+
+        return Colors[InIndex % ck::jolt::debug_draw::IslandPaletteSize];
+    }
+
+    auto
+        Get_BodyClassName(
+            uint8 InClassIndex)
+        -> FText
+    {
+        switch (static_cast<ECk_Jolt_DebugDraw_ColorClass>(InClassIndex))
+        {
+            case ECk_Jolt_DebugDraw_ColorClass::Static:           return FText::FromString(TEXT("Static"));
+            case ECk_Jolt_DebugDraw_ColorClass::Kinematic:        return FText::FromString(TEXT("Kinematic"));
+            case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Awake:    return FText::FromString(TEXT("Awake"));
+            case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Sleeping: return FText::FromString(TEXT("Asleep"));
+            case ECk_Jolt_DebugDraw_ColorClass::Sensor:           return FText::FromString(TEXT("Sensor"));
+            case ECk_Jolt_DebugDraw_ColorClass::BakedStatic:      return FText::FromString(TEXT("Baked Static"));
+            case ECk_Jolt_DebugDraw_ColorClass::Character:        return FText::FromString(TEXT("Character"));
+            default:                                              return FText::FromString(TEXT("Unknown"));
+        }
+    }
+
+    auto
+        Get_SleepStateName(
+            uint8 InClassIndex)
+        -> FText
+    {
+        switch (static_cast<ck::jolt::debug_draw::ESleepStateClass>(InClassIndex))
+        {
+            case ck::jolt::debug_draw::ESleepStateClass::Static:    return FText::FromString(TEXT("Static"));
+            case ck::jolt::debug_draw::ESleepStateClass::Kinematic: return FText::FromString(TEXT("Kinematic"));
+            case ck::jolt::debug_draw::ESleepStateClass::Awake:     return FText::FromString(TEXT("Awake"));
+            case ck::jolt::debug_draw::ESleepStateClass::Asleep:    return FText::FromString(TEXT("Asleep"));
+            default:                                               return FText::FromString(TEXT("Unknown"));
+        }
+    }
+
+    auto
+        Get_ShapeTypeName(
+            uint8 InClassIndex)
+        -> FText
+    {
+        switch (static_cast<ck::jolt::debug_draw::EShapeTypeClass>(InClassIndex))
+        {
+            case ck::jolt::debug_draw::EShapeTypeClass::Sphere:             return FText::FromString(TEXT("Sphere"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Box:                return FText::FromString(TEXT("Box"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Triangle:           return FText::FromString(TEXT("Triangle"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Capsule:            return FText::FromString(TEXT("Capsule"));
+            case ck::jolt::debug_draw::EShapeTypeClass::TaperedCapsule:     return FText::FromString(TEXT("Tapered Capsule"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Cylinder:           return FText::FromString(TEXT("Cylinder"));
+            case ck::jolt::debug_draw::EShapeTypeClass::TaperedCylinder:    return FText::FromString(TEXT("Tapered Cylinder"));
+            case ck::jolt::debug_draw::EShapeTypeClass::ConvexHull:         return FText::FromString(TEXT("Convex Hull"));
+            case ck::jolt::debug_draw::EShapeTypeClass::StaticCompound:     return FText::FromString(TEXT("Static Compound"));
+            case ck::jolt::debug_draw::EShapeTypeClass::MutableCompound:    return FText::FromString(TEXT("Mutable Compound"));
+            case ck::jolt::debug_draw::EShapeTypeClass::RotatedTranslated:  return FText::FromString(TEXT("Rotated/Translated"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Scaled:             return FText::FromString(TEXT("Scaled"));
+            case ck::jolt::debug_draw::EShapeTypeClass::OffsetCenterOfMass: return FText::FromString(TEXT("Offset COM"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Mesh:               return FText::FromString(TEXT("Mesh"));
+            case ck::jolt::debug_draw::EShapeTypeClass::HeightField:        return FText::FromString(TEXT("Height Field"));
+            case ck::jolt::debug_draw::EShapeTypeClass::SoftBody:           return FText::FromString(TEXT("Soft Body"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Plane:              return FText::FromString(TEXT("Plane"));
+            case ck::jolt::debug_draw::EShapeTypeClass::Empty:              return FText::FromString(TEXT("Empty"));
+            default:                                                        return FText::FromString(TEXT("Other"));
+        }
     }
 
     // Rooted, not a bare static UMaterial*: a function-local raw pointer survives the GC that collects the
@@ -147,6 +249,43 @@ namespace ck_jolt_debug_draw_target
 
         return EntryDistance;
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Contact recorder state. Jolt's contact draw switches are process-wide statics with no per-PhysicsSystem
+    // variant, so the DEMAND is the union over every live target; the record BUFFERS are per world, because a
+    // PIE session runs N of them and one world's manifolds replayed into another world's targets is a lie.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Every constructed target, not only the ones registered with a subsystem: the subsystem's own in-world
+    // default target is never "registered", and its contact flags count towards the union just the same.
+    static TSet<FCk_Jolt_DebugDrawTarget*> GLiveTargets;
+
+    struct FContactRecordBuffers
+    {
+        // Appended from Jolt worker threads during the solve; swapped into _Ready whole at End_ContactRecord.
+        TArray<FBatchedLine> _Recording;
+        TArray<FBatchedLine> _Ready;
+    };
+
+    static FCriticalSection GContactRecordLock;
+    static TMap<const JPH::PhysicsSystem*, FContactRecordBuffers> GContactRecordBuffers;
+
+    /*
+     * The world whose solve currently owns the recorder, or null. Read on Jolt worker threads from inside
+     * DrawLine; written by Begin/End_ContactRecord.
+     *
+     * ONE world at a time, by compare-exchange: a DrawLine carries no world, so two overlapping solves cannot be
+     * told apart from inside the renderer. A second world's Begin therefore SKIPS its own record for that step
+     * rather than letting its targets be fed a mixed one (P5-D64/F3).
+     */
+    static std::atomic<const JPH::PhysicsSystem*> GRecordingWorld{nullptr};
+    static std::atomic<bool> GContactDemand{false};
+
+    // One frame of a 100k-body pile can emit far more contact lines than a line batcher can carry, and the
+    // failure mode is a hitch rather than a message. Cap and say so once.
+    constexpr int32 MaxContactLinesPerFrame = 200000;
+    static bool GContactCapWarned = false;
+    static bool GConcurrentRecordSkipLogged = false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -183,6 +322,219 @@ namespace ck::jolt::debug_draw
         return Make_CharacterBodyKey_FromEntityId(
             static_cast<uint64>(InCharacterEntity.Get_Entity().Get_ID()));
     }
+
+    auto
+        Get_ClassOpacity(
+            uint8 InColorClassIndex,
+            float InPaletteOpacity)
+        -> float
+    {
+        if (InColorClassIndex == HighlightClassIndex)
+        { return 1.0f; }
+
+        if (InColorClassIndex == HoverClassIndex)
+        { return 0.5f; }
+
+        return InPaletteOpacity;
+    }
+
+    auto
+        Recompute_ContactDrawDemand()
+        -> void
+    {
+        auto WantsPoints = false;
+        auto WantsNormals = false;
+        auto WantsFaces = false;
+
+        for (const auto* Target : ck_jolt_debug_draw_target::GLiveTargets)
+        {
+            const auto Flags = Target->Get_DrawFlags();
+
+            WantsPoints |= EnumHasAnyFlags(Flags, ECk_Jolt_DebugDrawFlags::ContactPoints);
+            WantsNormals |= EnumHasAnyFlags(Flags, ECk_Jolt_DebugDrawFlags::ContactNormals);
+            WantsFaces |= EnumHasAnyFlags(Flags, ECk_Jolt_DebugDrawFlags::SupportingFaces);
+        }
+
+        // Process-wide by Jolt's own design (plain statics on ContactConstraintManager), so this is the ONE
+        // draw flag a target cannot own privately — disclosed in CkJolt/Claude.md rather than papered over.
+        JPH::ContactConstraintManager::sDrawContactPoint = WantsPoints;
+        JPH::ContactConstraintManager::sDrawContactManifolds = WantsNormals;
+        JPH::ContactConstraintManager::sDrawSupportingFaces = WantsFaces;
+
+        const auto AnyDemand = WantsPoints || WantsNormals || WantsFaces;
+        ck_jolt_debug_draw_target::GContactDemand.store(AnyDemand, std::memory_order_release);
+
+        if (AnyDemand)
+        { return; }
+
+        // Nothing wants contacts any more: drop whatever is still buffered, for every world, so a later
+        // re-enable never replays a record from a step that has long since been superseded.
+        auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+        ck_jolt_debug_draw_target::GContactRecordBuffers.Reset();
+    }
+
+    auto
+        Get_IsAnyTargetDemandingContacts()
+        -> bool
+    {
+        return ck_jolt_debug_draw_target::GContactDemand.load(std::memory_order_acquire);
+    }
+
+    auto
+        Begin_ContactRecord(
+            const JPH::PhysicsSystem* InPhysicsSystem)
+        -> void
+    {
+        if (NOT Get_IsAnyTargetDemandingContacts())
+        { return; }
+
+        auto NoWorldRecording = static_cast<const JPH::PhysicsSystem*>(nullptr);
+
+        if (NOT ck_jolt_debug_draw_target::GRecordingWorld.compare_exchange_strong(NoWorldRecording,
+            InPhysicsSystem, std::memory_order_acq_rel, std::memory_order_acquire))
+        {
+            // Another world's solve owns the recorder for this step. Its lines and ours are indistinguishable
+            // inside DrawLine, so this world records nothing rather than showing the other one's manifolds.
+            if (NOT ck_jolt_debug_draw_target::GConcurrentRecordSkipLogged)
+            {
+                ck_jolt_debug_draw_target::GConcurrentRecordSkipLogged = true;
+                ck::jolt::Verbose(TEXT("Jolt debug-draw contact recording SKIPPED for a world whose solve "
+                    "overlapped another recording world's. Contacts are process-wide in Jolt, so only one world "
+                    "may record per step."));
+            }
+
+            return;
+        }
+
+        auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+        ck_jolt_debug_draw_target::GContactRecordBuffers.FindOrAdd(InPhysicsSystem)._Recording.Reset();
+    }
+
+    auto
+        End_ContactRecord(
+            const JPH::PhysicsSystem* InPhysicsSystem)
+        -> void
+    {
+        auto ThisWorld = InPhysicsSystem;
+
+        // Only the world that WON the Begin closes the scope; a skipped world's End must not release someone
+        // else's ownership, and must not publish the record it never filled.
+        if (NOT ck_jolt_debug_draw_target::GRecordingWorld.compare_exchange_strong(ThisWorld, nullptr,
+            std::memory_order_acq_rel, std::memory_order_acquire))
+        { return; }
+
+        // Double-buffered: the filled buffer is swapped aside whole, so the game thread's replay never contends
+        // with the next step's appends and never sees a half-written frame.
+        auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+
+        auto& Buffers = ck_jolt_debug_draw_target::GContactRecordBuffers.FindOrAdd(InPhysicsSystem);
+        Swap(Buffers._Ready, Buffers._Recording);
+        Buffers._Recording.Reset();
+    }
+
+    auto
+        Forget_ContactRecord(
+            const JPH::PhysicsSystem* InPhysicsSystem)
+        -> void
+    {
+        auto ThisWorld = InPhysicsSystem;
+        ck_jolt_debug_draw_target::GRecordingWorld.compare_exchange_strong(ThisWorld, nullptr,
+            std::memory_order_acq_rel, std::memory_order_acquire);
+
+        auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+        ck_jolt_debug_draw_target::GContactRecordBuffers.Remove(InPhysicsSystem);
+    }
+
+    auto
+        TryRecord_ContactLine(
+            const FVector& InFrom,
+            const FVector& InTo,
+            const FLinearColor& InColor)
+        -> bool
+    {
+        const auto* RecordingWorld = ck_jolt_debug_draw_target::GRecordingWorld.load(std::memory_order_acquire);
+
+        if (RecordingWorld == nullptr)
+        { return false; }
+
+        // Jolt's solve is multi-threaded whenever jolt.EnableParallelPhysics is on, so every append is guarded.
+        auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+
+        auto& Recording = ck_jolt_debug_draw_target::GContactRecordBuffers.FindOrAdd(RecordingWorld)._Recording;
+
+        if (Recording.Num() >= ck_jolt_debug_draw_target::MaxContactLinesPerFrame)
+        {
+            if (NOT ck_jolt_debug_draw_target::GContactCapWarned)
+            {
+                ck_jolt_debug_draw_target::GContactCapWarned = true;
+                ck::jolt::Display(TEXT("Jolt debug-draw contact recording hit its [{}] lines/frame cap — the "
+                    "rest of this frame's contacts are dropped. Isolate or reduce the bodies in contact."),
+                    ck_jolt_debug_draw_target::MaxContactLinesPerFrame);
+            }
+
+            return true;
+        }
+
+        Recording.Emplace(Make_DebugDrawLine(InFrom, InTo, InColor));
+        return true;
+    }
+
+    auto
+        Replay_RecordedContacts(
+            const JPH::PhysicsSystem* InPhysicsSystem,
+            TArrayView<const TSharedPtr<FCk_Jolt_DebugDrawTarget>> InTargets)
+        -> void
+    {
+        auto Recorded = TArray<FBatchedLine>{};
+
+        {
+            auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
+
+            if (auto* Buffers = ck_jolt_debug_draw_target::GContactRecordBuffers.Find(InPhysicsSystem))
+            { Recorded = MoveTemp(Buffers->_Ready); }
+        }
+
+        // The LAST target that wants the record takes it by move; everyone before it copies. At the contact
+        // counts this can reach, a deep copy per target is the whole cost of the replay.
+        auto LastDemandingIndex = int32{INDEX_NONE};
+
+        const auto& Get_WantsContacts = [](const TSharedPtr<FCk_Jolt_DebugDrawTarget>& InTarget) -> bool
+        {
+            return InTarget.IsValid() && InTarget->Get_IsDrawFlagSet(
+                ECk_Jolt_DebugDrawFlags::ContactPoints |
+                ECk_Jolt_DebugDrawFlags::ContactNormals |
+                ECk_Jolt_DebugDrawFlags::SupportingFaces);
+        };
+
+        for (auto Index = 0; Index < InTargets.Num(); ++Index)
+        {
+            if (Get_WantsContacts(InTargets[Index]))
+            { LastDemandingIndex = Index; }
+        }
+
+        for (auto Index = 0; Index < InTargets.Num(); ++Index)
+        {
+            const auto& Target = InTargets[Index];
+
+            if (NOT Target.IsValid())
+            { continue; }
+
+            // Assigned, never appended: a target keeps the contacts of the LAST step until this replay writes
+            // the next ones, and a target that stops asking is emptied rather than left showing stale geometry.
+            if (NOT Get_WantsContacts(Target))
+            {
+                Target->_Impl->_ContactLines.Reset();
+                continue;
+            }
+
+            // Spelled as a branch, not a ternary: a `cond ? MoveTemp(X) : X` collapses to a common VALUE type
+            // and copies on both arms, which is the exact copy this is here to avoid.
+            if (Index == LastDemandingIndex)
+            { Target->_Impl->_ContactLines = MoveTemp(Recorded); }
+            else
+            { Target->_Impl->_ContactLines = Recorded; }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -190,39 +542,69 @@ namespace ck::jolt::debug_draw
 auto
     FCk_Jolt_DebugDrawPalette::
     Get_Color(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass) const
+        ECk_Jolt_DebugDrawColorMode InColorMode,
+        uint8 InClassIndex) const
     -> FLinearColor
 {
-    switch (InColorClass)
-    {
-        case ECk_Jolt_DebugDraw_ColorClass::Static:
-        { return _StaticColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Kinematic:
-        { return _KinematicColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Awake:
-        { return _DynamicAwakeColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Sleeping:
-        {
-            const auto Dim = FMath::Clamp(_SleepingDimFactor, 0.0f, 1.0f);
-            return FLinearColor{
-                _DynamicSleepingColor.R * Dim,
-                _DynamicSleepingColor.G * Dim,
-                _DynamicSleepingColor.B * Dim,
-                _DynamicSleepingColor.A};
-        }
-        case ECk_Jolt_DebugDraw_ColorClass::Sensor:
-        { return _SensorColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::BakedStatic:
-        { return _BakedStaticColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Character:
-        { return _CharacterColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Highlight:
-        { return _HighlightColor; }
-        case ECk_Jolt_DebugDraw_ColorClass::Count:
-        { break; }
-    }
+    // Mode-independent, and answered before the mode is even looked at: a selection must read the same whatever
+    // the bodies around it are coloured by.
+    if (InClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+        InClassIndex == ck::jolt::debug_draw::HoverClassIndex)
+    { return _HighlightColor; }
 
-    return _StaticColor;
+    const auto& Get_SleepingColor = [this]() -> FLinearColor
+    {
+        const auto Dim = FMath::Clamp(_SleepingDimFactor, 0.0f, 1.0f);
+        return FLinearColor{
+            _DynamicSleepingColor.R * Dim,
+            _DynamicSleepingColor.G * Dim,
+            _DynamicSleepingColor.B * Dim,
+            _DynamicSleepingColor.A};
+    };
+
+    switch (InColorMode)
+    {
+        case ECk_Jolt_DebugDrawColorMode::BodyClass:
+        {
+            switch (static_cast<ECk_Jolt_DebugDraw_ColorClass>(InClassIndex))
+            {
+                case ECk_Jolt_DebugDraw_ColorClass::Static:           return _StaticColor;
+                case ECk_Jolt_DebugDraw_ColorClass::Kinematic:        return _KinematicColor;
+                case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Awake:    return _DynamicAwakeColor;
+                case ECk_Jolt_DebugDraw_ColorClass::Dynamic_Sleeping: return Get_SleepingColor();
+                case ECk_Jolt_DebugDraw_ColorClass::Sensor:           return _SensorColor;
+                case ECk_Jolt_DebugDraw_ColorClass::BakedStatic:      return _BakedStaticColor;
+                case ECk_Jolt_DebugDraw_ColorClass::Character:        return _CharacterColor;
+                default:                                              return _StaticColor;
+            }
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::SleepState:
+        {
+            switch (static_cast<ck::jolt::debug_draw::ESleepStateClass>(InClassIndex))
+            {
+                case ck::jolt::debug_draw::ESleepStateClass::Kinematic: return _KinematicColor;
+                case ck::jolt::debug_draw::ESleepStateClass::Awake:     return _DynamicAwakeColor;
+                case ck::jolt::debug_draw::ESleepStateClass::Asleep:    return Get_SleepingColor();
+                default:                                               return _StaticColor;
+            }
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::Island:
+        {
+            // Index 0 is "no island" — a static, kinematic or sleeping body belongs to none, and painting them
+            // all one neutral grey is what makes the coloured islands legible.
+            if (InClassIndex == 0)
+            { return _StaticColor; }
+
+            return ck_jolt_debug_draw_target::Get_DistinctColor(static_cast<uint8>(InClassIndex - 1));
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::ObjectLayer:
+        case ECk_Jolt_DebugDrawColorMode::ShapeType:
+        default:
+        { return ck_jolt_debug_draw_target::Get_DistinctColor(InClassIndex); }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -233,6 +615,11 @@ FCk_Jolt_DebugDrawTarget::
     : _Impl(MakePimpl<FImpl>())
 {
     _Impl->_World = InWorld;
+
+    // The contact demand is the union over every LIVE target, so membership of that set is the target's own
+    // lifetime — a target that is constructed with contact flags already set must arm Jolt's statics at once.
+    ck_jolt_debug_draw_target::GLiveTargets.Emplace(this);
+    ck::jolt::debug_draw::Recompute_ContactDrawDemand();
 
     // OnWorldCleanup is the one delegate that fires for BOTH PIE end and map unload (UWorld::CleanupWorld is
     // the shared funnel), and it runs before components are torn down, so releasing here is ordered.
@@ -248,16 +635,23 @@ FCk_Jolt_DebugDrawTarget::
             { ck::jolt::debug_draw::Destroy_BucketIsm(Kvp.Value); }
 
             _Impl->_Buckets.Reset();
+
+            ck::jolt::debug_draw::Destroy_LineBatcher(*_Impl);
         });
 }
 
 FCk_Jolt_DebugDrawTarget::
     ~FCk_Jolt_DebugDrawTarget()
 {
+    ck_jolt_debug_draw_target::GLiveTargets.Remove(this);
+    ck::jolt::debug_draw::Recompute_ContactDrawDemand();
+
     FWorldDelegates::OnWorldCleanup.Remove(_Impl->_WorldCleanupHandle);
 
     for (auto& Kvp : _Impl->_Buckets)
     { ck::jolt::debug_draw::Destroy_BucketIsm(Kvp.Value); }
+
+    ck::jolt::debug_draw::Destroy_LineBatcher(*_Impl);
 }
 
 namespace ck::jolt::debug_draw
@@ -279,6 +673,109 @@ namespace ck::jolt::debug_draw
         InOutBucket._WireframeMid = nullptr;
         InOutBucket._SlotCount = 0;
         InOutBucket._BatchKeepAlive = nullptr;
+    }
+
+    auto
+        TryEnsure_LineBatcher(
+            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
+        -> ULineBatchComponent*
+    {
+        if (auto* Existing = InOutTargetImpl._Lines.Get(); ck::IsValid(Existing))
+        { return Existing; }
+
+        if (InOutTargetImpl._LineBatcherCreateFailed)
+        { return nullptr; }
+
+        auto* World = InOutTargetImpl._World.Get();
+        if (ck::Is_NOT_Valid(World))
+        { return nullptr; }
+
+        // Same ownership shape as the bucket ISMs: plain NewObject + RegisterComponentWithWorld, pinned by a
+        // TStrongObjectPtr, so a preview or transient world with no pooling subsystem hosts it just as well.
+        auto* Lines = NewObject<ULineBatchComponent>(World,
+            MakeUniqueObjectName(World, ULineBatchComponent::StaticClass(), TEXT("CkJoltDebugDrawLines")));
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Lines),
+            TEXT("Failed to create a LineBatchComponent for the Jolt debug renderer — no line, label or External "
+                 "channel content will be drawn for this target"))
+        {
+            InOutTargetImpl._LineBatcherCreateFailed = true;
+            return nullptr;
+        }
+
+        // Lifetime 0 is what makes a line last exactly one capture, so the component must never expire one
+        // itself; the capture's Flush owns that.
+        Lines->DefaultLifeTime = 0.0f;
+        Lines->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Lines->SetCanEverAffectNavigation(false);
+        Lines->SetCastShadow(false);
+        Lines->SetMobility(EComponentMobility::Movable);
+        Lines->SetWorldLocation(FVector::ZeroVector);
+        Lines->RegisterComponentWithWorld(World);
+        Lines->SetHiddenInGame(false);
+
+        InOutTargetImpl._Lines.Reset(Lines);
+
+        return Lines;
+    }
+
+    auto
+        Destroy_LineBatcher(
+            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
+        -> void
+    {
+        auto* Lines = InOutTargetImpl._Lines.Get();
+        if (ck::IsValid(Lines))
+        { Lines->DestroyComponent(); }
+
+        InOutTargetImpl._Lines.Reset();
+    }
+
+    auto
+        Reset_LineChannels(
+            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
+        -> void
+    {
+        InOutTargetImpl._JphLines.Reset();
+        InOutTargetImpl._Labels.Reset();
+
+        auto* Lines = InOutTargetImpl._Lines.Get();
+        if (ck::IsValid(Lines))
+        { Lines->Flush(); }
+    }
+
+    auto
+        Flush_LineChannels(
+            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
+        -> void
+    {
+        auto AnyExternal = false;
+
+        for (const auto& Kvp : InOutTargetImpl._ExternalChannels)
+        { AnyExternal |= NOT Kvp.Value.IsEmpty(); }
+
+        if (InOutTargetImpl._JphLines.IsEmpty() && InOutTargetImpl._ContactLines.IsEmpty() && NOT AnyExternal)
+        { return; }
+
+        auto* Lines = TryEnsure_LineBatcher(InOutTargetImpl);
+        if (ck::Is_NOT_Valid(Lines))
+        { return; }
+
+        if (NOT InOutTargetImpl._JphLines.IsEmpty())
+        { Lines->DrawLines(InOutTargetImpl._JphLines); }
+
+        // Recorded around the previous step rather than produced by this capture, but flushed with it: the
+        // contacts of a frame belong on screen beside the bodies of that frame.
+        if (NOT InOutTargetImpl._ContactLines.IsEmpty())
+        { Lines->DrawLines(InOutTargetImpl._ContactLines); }
+
+        for (auto& Kvp : InOutTargetImpl._ExternalChannels)
+        {
+            if (Kvp.Value.IsEmpty())
+            { continue; }
+
+            Lines->DrawLines(Kvp.Value);
+        }
     }
 
     auto
@@ -316,6 +813,7 @@ namespace ck::jolt::debug_draw
         Apply_BucketMaterial(
             FBucket& InOutBucket,
             const FCk_Jolt_DebugDrawPalette& InPalette,
+            uint8 InColorClassIndex,
             ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode)
         -> void
     {
@@ -323,7 +821,8 @@ namespace ck::jolt::debug_draw
         if (ck::Is_NOT_Valid(Ism))
         { return; }
 
-        const auto TintedColor = Get_TintedColor(InOutBucket._BaseColor, InPalette.Get_Opacity());
+        const auto TintedColor = Get_TintedColor(InOutBucket._BaseColor,
+            Get_ClassOpacity(InColorClassIndex, InPalette.Get_Opacity()));
 
         const auto& Get_OrCreate_Mid = [&](TWeakObjectPtr<UMaterialInstanceDynamic>& InOutMid, UMaterial* InBase)
             -> UMaterialInstanceDynamic*
@@ -384,11 +883,14 @@ auto
         if (ck::IsValid(Ism))
         { Ism->ClearInstances(); }
 
-        Bucket._Applied.Reset();
-        Bucket._Desired.Reset();
         Bucket._SlotCount = 0;
-        Bucket._Touched = false;
     }
+
+    // The External sub-channels survive: they belong to their contributors, and nothing draws while the target
+    // is hidden anyway — the next capture re-emits them. The contact channel does NOT: it describes a step that
+    // will have been superseded by the time this target draws again.
+    ck::jolt::debug_draw::Reset_LineChannels(*_Impl);
+    _Impl->_ContactLines.Reset();
 
     _Impl->_BodySlots.Reset();
     _Impl->_StaticBodyKeys.Reset();
@@ -430,21 +932,31 @@ auto
     _Impl->_RenderMode = InRenderMode;
 
     for (auto& Kvp : _Impl->_Buckets)
-    { ck::jolt::debug_draw::Apply_BucketMaterial(Kvp.Value, _Impl->_Palette, _Impl->_RenderMode); }
+    {
+        ck::jolt::debug_draw::Apply_BucketMaterial(Kvp.Value, _Impl->_Palette, Kvp.Key._ColorClassIndex,
+            _Impl->_RenderMode);
+    }
 }
 
 auto
     FCk_Jolt_DebugDrawTarget::
     Set_ClassVisibility(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass,
+        uint8 InClassIndex,
         bool InIsVisible)
     -> FCk_Jolt_DebugDrawTarget&
 {
-    const auto ClassBit = ck_jolt_debug_draw_target::Get_ClassBit(InColorClass);
+    const auto IsHideable = InClassIndex != ck::jolt::debug_draw::HighlightClassIndex &&
+                            InClassIndex != ck::jolt::debug_draw::HoverClassIndex &&
+                            InClassIndex < ck::jolt::debug_draw::MaxColorClasses;
+
+    if (NOT IsHideable)
+    { return *this; }
+
+    const auto ClassBit = ck_jolt_debug_draw_target::Get_ClassBit(InClassIndex);
 
     const auto NewMask = InIsVisible
-        ? static_cast<uint8>(_Impl->_HiddenClassMask & ~ClassBit)
-        : static_cast<uint8>(_Impl->_HiddenClassMask | ClassBit);
+        ? _Impl->_HiddenClassMask & ~ClassBit
+        : _Impl->_HiddenClassMask | ClassBit;
 
     if (_Impl->_HiddenClassMask == NewMask)
     { return *this; }
@@ -453,7 +965,7 @@ auto
 
     for (auto& Kvp : _Impl->_Buckets)
     {
-        if (Kvp.Key._ColorClass != InColorClass)
+        if (Kvp.Key._ColorClassIndex != InClassIndex)
         { continue; }
 
         auto* Ism = Kvp.Value._Ism.Get();
@@ -469,10 +981,389 @@ auto
 auto
     FCk_Jolt_DebugDrawTarget::
     Get_IsClassVisible(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass) const
+        uint8 InClassIndex) const
     -> bool
 {
-    return (_Impl->_HiddenClassMask & ck_jolt_debug_draw_target::Get_ClassBit(InColorClass)) == 0;
+    if (InClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+        InClassIndex == ck::jolt::debug_draw::HoverClassIndex)
+    { return true; }
+
+    if (InClassIndex >= ck::jolt::debug_draw::MaxColorClasses)
+    { return true; }
+
+    return (_Impl->_HiddenClassMask & ck_jolt_debug_draw_target::Get_ClassBit(InClassIndex)) == 0;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_ColorMode(
+        ECk_Jolt_DebugDrawColorMode InColorMode)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_ColorMode == InColorMode)
+    { return *this; }
+
+    _Impl->_ColorMode = InColorMode;
+
+    // A class index means something different in every mode, so nothing the old mode hid should stay hidden —
+    // and every body has to be re-bucketed, which the records would otherwise let the full pass skip.
+    _Impl->_HiddenClassMask = 0;
+    _Impl->_InactiveBodyRecords.Reset();
+    _Impl->_FullPassEverRan = false;
+
+    // Clearing the mask is not enough on its own: visibility lives on the COMPONENT, and TryEnsure_BucketIsm
+    // only reads the mask when it creates one. A bucket that survives the mode change keeps the SetVisibility
+    // (false) the old mode's hidden class gave it, so its bodies stay invisible under a mask that hides nothing.
+    for (auto& Kvp : _Impl->_Buckets)
+    {
+        auto* Ism = Kvp.Value._Ism.Get();
+        if (ck::Is_NOT_Valid(Ism))
+        { continue; }
+
+        constexpr auto Visible = true;
+        Ism->SetVisibility(Visible);
+    }
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_ColorMode() const
+    -> ECk_Jolt_DebugDrawColorMode
+{
+    return _Impl->_ColorMode;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_ObjectLayerNames(
+        TArray<FString> InLayerNames)
+    -> void
+{
+    _Impl->_ObjectLayerNames = MoveTemp(InLayerNames);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_ObjectLayerNames() const
+    -> const TArray<FString>&
+{
+    return _Impl->_ObjectLayerNames;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_LegendEntries(
+        ECk_Jolt_DebugDrawColorMode InColorMode) const
+    -> TArray<FCk_Jolt_DebugDrawLegendEntry>
+{
+    using namespace ck::jolt::debug_draw;
+
+    auto Entries = TArray<FCk_Jolt_DebugDrawLegendEntry>{};
+
+    const auto& Add_Entry = [&](uint8 InClassIndex, FText InName) -> void
+    {
+        Entries.Emplace(FCk_Jolt_DebugDrawLegendEntry{InClassIndex, MoveTemp(InName),
+            _Impl->_Palette.Get_Color(InColorMode, InClassIndex)});
+    };
+
+    switch (InColorMode)
+    {
+        case ECk_Jolt_DebugDrawColorMode::BodyClass:
+        {
+            for (auto Index = uint8{0}; Index < static_cast<uint8>(ECk_Jolt_DebugDraw_ColorClass::Count); ++Index)
+            { Add_Entry(Index, ck_jolt_debug_draw_target::Get_BodyClassName(Index)); }
+            break;
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::SleepState:
+        {
+            for (auto Index = uint8{0}; Index < static_cast<uint8>(ESleepStateClass::Count); ++Index)
+            { Add_Entry(Index, ck_jolt_debug_draw_target::Get_SleepStateName(Index)); }
+            break;
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::ShapeType:
+        {
+            for (auto Index = uint8{0}; Index < static_cast<uint8>(EShapeTypeClass::Count); ++Index)
+            { Add_Entry(Index, ck_jolt_debug_draw_target::Get_ShapeTypeName(Index)); }
+            break;
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::Island:
+        {
+            Add_Entry(0, FText::FromString(TEXT("No island")));
+
+            for (auto Index = uint8{1}; Index < IslandClassCount; ++Index)
+            { Add_Entry(Index, FText::FromString(ck::Format_UE(TEXT("Island group {}"), Index))); }
+            break;
+        }
+
+        case ECk_Jolt_DebugDrawColorMode::ObjectLayer:
+        {
+            // The S6 reverse lookup, read out of what the capture published: the layer table is signature-keyed
+            // and its layers carry no names of their own, so a layer is named after the object channel of the
+            // signature registered at it. Nothing here can register a layer.
+            const auto NamedLayers = FMath::Min(_Impl->_ObjectLayerNames.Num(),
+                static_cast<int32>(MaxNamedObjectLayer));
+
+            auto LayerIndices = TSet<int32>{};
+
+            for (auto Index = 0; Index < NamedLayers; ++Index)
+            { LayerIndices.Emplace(Index); }
+
+            // Names are published only while a layer TABLE is reachable — the capture needs a live layer context
+            // to read one. Without it (a headless fixture, a world whose Jolt subsystem published none) the
+            // legend would name nothing at all while the viewport is visibly drawing layer-coloured bodies, so
+            // every index a live bucket is actually using earns a bare `Layer N` row of its own.
+            // Only when the asked-for mode IS the live one: a bucket index is meaningless in any other mode, so
+            // reading the buckets while colouring by body class would invent layers out of body classes.
+            if (_Impl->_ColorMode == ECk_Jolt_DebugDrawColorMode::ObjectLayer)
+            {
+                for (const auto ClassIndex : Get_BucketColorClasses())
+                {
+                    if (ClassIndex >= MaxNamedObjectLayer)
+                    { continue; }
+
+                    LayerIndices.Emplace(static_cast<int32>(ClassIndex));
+                }
+            }
+
+            auto SortedLayerIndices = LayerIndices.Array();
+            SortedLayerIndices.Sort();
+
+            for (const auto Index : SortedLayerIndices)
+            {
+                const auto* ChannelName = _Impl->_ObjectLayerNames.IsValidIndex(Index)
+                    ? &_Impl->_ObjectLayerNames[Index]
+                    : nullptr;
+
+                Add_Entry(static_cast<uint8>(Index),
+                    FText::FromString(ChannelName == nullptr || ChannelName->IsEmpty()
+                        ? ck::Format_UE(TEXT("Layer {}"), Index)
+                        : ck::Format_UE(TEXT("Layer {} — {}"), Index, *ChannelName)));
+            }
+
+            Add_Entry(MaxNamedObjectLayer,
+                FText::FromString(ck::Format_UE(TEXT("Layer {}+"), MaxNamedObjectLayer)));
+            break;
+        }
+    }
+
+    // Mode-independent and always last, so a legend reads its bodies first and its selection markers after.
+    Add_Entry(HighlightClassIndex, FText::FromString(TEXT("Selected")));
+    Add_Entry(HoverClassIndex, FText::FromString(TEXT("Hovered")));
+
+    return Entries;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_DrawFlags(
+        ECk_Jolt_DebugDrawFlags InFlags)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_DrawFlags == InFlags)
+    { return *this; }
+
+    _Impl->_DrawFlags = InFlags;
+
+    // Same reasoning as Set_Palette: re-arming the pass alone would skip every body whose pose is unchanged, and
+    // those are exactly the bodies whose extras have to appear (or whose shape instances have to be released).
+    _Impl->_InactiveBodyRecords.Reset();
+    _Impl->_FullPassEverRan = false;
+
+    // The contact flags are the one part of this that is NOT private to the target: they drive Jolt's own
+    // process-wide statics, so every change re-derives the union across every live target.
+    ck::jolt::debug_draw::Recompute_ContactDrawDemand();
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_DrawFlags() const
+    -> ECk_Jolt_DebugDrawFlags
+{
+    return _Impl->_DrawFlags;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_IsDrawFlagSet(
+        ECk_Jolt_DebugDrawFlags InFlag) const
+    -> bool
+{
+    return EnumHasAnyFlags(_Impl->_DrawFlags, InFlag);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_Labels() const
+    -> const TArray<FCk_Jolt_DebugDrawLabel>&
+{
+    return _Impl->_Labels;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_NumLines() const
+    -> int32
+{
+    const auto* Lines = _Impl->_Lines.Get();
+    if (ck::Is_NOT_Valid(Lines))
+    { return 0; }
+
+    return Lines->BatchedLines.Num();
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Draw_ExternalLine(
+        FName InChannel,
+        const FVector& InFrom,
+        const FVector& InTo,
+        const FLinearColor& InColor)
+    -> void
+{
+    _Impl->_ExternalChannels.FindOrAdd(InChannel).Emplace(
+        ck::jolt::debug_draw::Make_DebugDrawLine(InFrom, InTo, InColor));
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Draw_ExternalBox(
+        FName InChannel,
+        const FBox& InLocalBox,
+        const FTransform& InTransform,
+        const FLinearColor& InColor)
+    -> void
+{
+    const auto Min = InLocalBox.Min;
+    const auto Max = InLocalBox.Max;
+
+    const FVector LocalCorners[8] =
+    {
+        FVector{Min.X, Min.Y, Min.Z}, FVector{Max.X, Min.Y, Min.Z},
+        FVector{Max.X, Max.Y, Min.Z}, FVector{Min.X, Max.Y, Min.Z},
+        FVector{Min.X, Min.Y, Max.Z}, FVector{Max.X, Min.Y, Max.Z},
+        FVector{Max.X, Max.Y, Max.Z}, FVector{Min.X, Max.Y, Max.Z},
+    };
+
+    auto Corners = TArray<FVector>{};
+    Corners.Reserve(8);
+
+    for (const auto& LocalCorner : LocalCorners)
+    { Corners.Emplace(InTransform.TransformPosition(LocalCorner)); }
+
+    const int32 Edges[12][2] =
+    {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0},
+        {4, 5}, {5, 6}, {6, 7}, {7, 4},
+        {0, 4}, {1, 5}, {2, 6}, {3, 7},
+    };
+
+    auto& Channel = _Impl->_ExternalChannels.FindOrAdd(InChannel);
+
+    for (const auto& Edge : Edges)
+    { Channel.Emplace(ck::jolt::debug_draw::Make_DebugDrawLine(Corners[Edge[0]], Corners[Edge[1]], InColor)); }
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Draw_ExternalSphere(
+        FName InChannel,
+        const FVector& InCenter,
+        float InRadius,
+        const FLinearColor& InColor)
+    -> void
+{
+    constexpr auto NumSegments = 16;
+
+    auto& Channel = _Impl->_ExternalChannels.FindOrAdd(InChannel);
+
+    const auto& Add_Circle = [&](const FVector& InAxisU, const FVector& InAxisV) -> void
+    {
+        auto Previous = InCenter + InAxisU * InRadius;
+
+        for (auto Segment = 1; Segment <= NumSegments; ++Segment)
+        {
+            const auto Angle = 2.0 * UE_DOUBLE_PI * static_cast<double>(Segment) / NumSegments;
+            const auto Current = InCenter +
+                (InAxisU * FMath::Cos(Angle) + InAxisV * FMath::Sin(Angle)) * InRadius;
+
+            Channel.Emplace(ck::jolt::debug_draw::Make_DebugDrawLine(Previous, Current, InColor));
+            Previous = Current;
+        }
+    };
+
+    Add_Circle(FVector::XAxisVector, FVector::YAxisVector);
+    Add_Circle(FVector::YAxisVector, FVector::ZAxisVector);
+    Add_Circle(FVector::ZAxisVector, FVector::XAxisVector);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Draw_ExternalArrow(
+        FName InChannel,
+        const FVector& InFrom,
+        const FVector& InTo,
+        const FLinearColor& InColor)
+    -> void
+{
+    auto& Channel = _Impl->_ExternalChannels.FindOrAdd(InChannel);
+    Channel.Emplace(ck::jolt::debug_draw::Make_DebugDrawLine(InFrom, InTo, InColor));
+
+    const auto Direction = InTo - InFrom;
+    const auto Length = Direction.Size();
+
+    if (FMath::IsNearlyZero(Length))
+    { return; }
+
+    const auto Forward = Direction / Length;
+    const auto HeadSize = FMath::Min(Length * 0.25, 25.0);
+
+    auto Right = FVector::CrossProduct(Forward, FVector::ZAxisVector);
+
+    if (Right.IsNearlyZero())
+    { Right = FVector::CrossProduct(Forward, FVector::XAxisVector); }
+
+    Right.Normalize();
+    const auto Up = FVector::CrossProduct(Forward, Right);
+
+    for (const auto& Offset : {Right, -Right, Up, -Up})
+    {
+        Channel.Emplace(ck::jolt::debug_draw::Make_DebugDrawLine(
+            InTo, InTo - Forward * HeadSize + Offset * HeadSize * 0.5, InColor));
+    }
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Clear_External(
+        FName InChannel)
+    -> void
+{
+    _Impl->_ExternalChannels.Remove(InChannel);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_NumExternalLines(
+        FName InChannel) const
+    -> int32
+{
+    const auto* Channel = _Impl->_ExternalChannels.Find(InChannel);
+    return Channel != nullptr ? Channel->Num() : 0;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_NumContactLines() const
+    -> int32
+{
+    return _Impl->_ContactLines.Num();
 }
 
 auto
@@ -484,7 +1375,7 @@ auto
 
     for (const auto& Kvp : _Impl->_Buckets)
     {
-        if (NOT Get_IsClassVisible(Kvp.Key._ColorClass))
+        if (NOT Get_IsClassVisible(Kvp.Key._ColorClassIndex))
         { continue; }
 
         const auto* Ism = Kvp.Value._Ism.Get();
@@ -536,6 +1427,40 @@ auto
     -> TOptional<uint64>
 {
     return _Impl->_HighlightedBodyKey;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_HoveredBody(
+        TOptional<uint64> InBodyKey)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_HoveredBodyKey == InBodyKey)
+    { return *this; }
+
+    if (_Impl->_HoveredBodyKey.IsSet())
+    {
+        // Excluded from the stats for the same reason the highlight's release is: this runs BETWEEN captures.
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
+            ck::jolt::debug_draw::Make_HoverKey(*_Impl->_HoveredBodyKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
+    }
+
+    _Impl->_HoveredBodyKey = InBodyKey;
+
+    // Same reason Set_HighlightedBody re-arms it: the overlay is produced by the capture's draw path, so a
+    // static or long-asleep body would not gain one until the scene happened to change.
+    _Impl->_FullPassEverRan = false;
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_HoveredBody() const
+    -> TOptional<uint64>
+{
+    return _Impl->_HoveredBodyKey;
 }
 
 auto
@@ -597,10 +1522,13 @@ auto
     {
         for (const auto& Slot : Kvp.Value)
         {
-            if (Slot._Bucket._ColorClass == ECk_Jolt_DebugDraw_ColorClass::Highlight)
+            // Neither overlay is pickable: they trace a body that is already pickable in its own right, and a
+            // pick that returned an overlay key would name a slot no consumer can resolve to a body.
+            if (Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+                Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
             { continue; }
 
-            if (NOT Get_IsClassVisible(Slot._Bucket._ColorClass))
+            if (NOT Get_IsClassVisible(Slot._Bucket._ColorClassIndex))
             { continue; }
 
             const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
@@ -744,13 +1672,22 @@ auto
 auto
     FCk_Jolt_DebugDrawTarget::
     Get_BucketColorClasses() const
-    -> TArray<ECk_Jolt_DebugDraw_ColorClass>
+    -> TArray<uint8>
 {
-    auto ColorClasses = TArray<ECk_Jolt_DebugDraw_ColorClass>{};
+    auto ColorClasses = TArray<uint8>{};
     ColorClasses.Reserve(_Impl->_Buckets.Num());
 
     for (const auto& Kvp : _Impl->_Buckets)
-    { ColorClasses.Emplace(Kvp.Key._ColorClass); }
+    {
+        // LIVE buckets only. A bucket whose instances have all been released — the previous colour mode's, or a
+        // population that has left the world — survives in the map whenever its geometry is one of the
+        // renderer's shared unit primitives, which is never prunable. Reporting it would name a class nothing
+        // on screen is drawn in.
+        if (Kvp.Value._SlotCount == 0)
+        { continue; }
+
+        ColorClasses.Emplace(Kvp.Key._ColorClassIndex);
+    }
 
     return ColorClasses;
 }

@@ -146,6 +146,12 @@ public:
     auto
     Get_DemandingDebugDrawTargets(
         TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>& OutTargets) -> void;
+
+    /// The subsystem's OWN in-world target — never registered, captured from Tick rather than by the capture
+    /// processor. Exposed because the contact replay has exactly one consumer per world (the capture
+    /// processor), so this target has to be fed there or ck.Jolt.DebugDraw.Contacts could never draw anything.
+    auto
+    Get_DefaultDebugDrawTarget() const -> TSharedPtr<FCk_Jolt_DebugDrawTarget>;
 #endif
 
     /// Bumps the Jolt world's static-scene change token. Called by every static-body add/remove funnel.

@@ -3,15 +3,27 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <CoreMinimal.h>
+#include <Misc/EnumClassFlags.h>
 #include <Misc/Optional.h>
 #include <Templates/PimplPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UInstancedStaticMeshComponent;
+class ULineBatchComponent;
 class UWorld;
 class FCk_Jolt_DebugRenderer;
+class FCk_Jolt_DebugDrawTarget;
 struct FCk_Handle;
+
+// The contact recorder is keyed by the physics world whose solve produced the record, and a world is named by
+// its PhysicsSystem address alone — declared, never defined here, so this header still pulls in no Jolt header
+// and a presentation consumer still binds a target without seeing Jolt.
+// ReSharper disable once CppInconsistentNaming
+namespace JPH
+{
+    class PhysicsSystem;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,6 +35,97 @@ enum class ECk_Jolt_DebugDraw_RenderMode : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/*
+ * Which of Jolt's debug-draw vocabulary a capture emits into THIS target. Per-target, so the preview viewport and
+ * the in-world draw never fight over one set of toggles — with the sole exception of the contact flags, whose JPH
+ * statics are process-wide (see CkJolt/Claude.md § "Debug draw + stats").
+ *
+ * `Shape` is the batched instanced-mesh path; every other member produces LINES, which the target's line channel
+ * clears and re-emits every capture. Enabling any per-body extra therefore also defeats the incremental full
+ * pass's skip (an inactive body it skipped would emit no lines and its extras would vanish the next capture).
+ *
+ * Named ECk_ rather than the ruling's FCk_ spelling because this is an enum and every other enum in the module
+ * carries the house prefix. SleepStats is deliberately absent: Jolt draws it from MotionProperties' internal
+ * sleep-test spheres, which sit below that header's FOR INTERNAL USE ONLY banner and have no public accessor.
+ */
+enum class ECk_Jolt_DebugDrawFlags : uint32
+{
+    None                      = 0,
+    Shape                     = 1u << 0,
+    Velocity                  = 1u << 1,
+    AngularVelocity           = 1u << 2,
+    WorldTransform            = 1u << 3,
+    CenterOfMassTransform     = 1u << 4,
+    BoundingBox               = 1u << 5,
+    MassAndInertia            = 1u << 6,
+    Constraints               = 1u << 7,
+    ConstraintLimits          = 1u << 8,
+    ConstraintReferenceFrames = 1u << 9,
+    ContactPoints             = 1u << 10,
+    ContactNormals            = 1u << 11,
+    SupportingFaces           = 1u << 12,
+    Labels                    = 1u << 13,
+};
+
+ENUM_CLASS_FLAGS(ECk_Jolt_DebugDrawFlags);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * One JPH DrawText3D, held for the frame that produced it. The facility does not render text itself — a consumer
+ * projects these to screen (the preview viewport) or hands them to DrawDebugString (the in-world draw).
+ */
+struct CKJOLT_API FCk_Jolt_DebugDrawLabel
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDrawLabel);
+
+public:
+    FCk_Jolt_DebugDrawLabel() = default;
+
+    FCk_Jolt_DebugDrawLabel(
+        FVector InWorldPosition,
+        FString InText,
+        FLinearColor InColor)
+        : _WorldPosition(InWorldPosition)
+        , _Text(MoveTemp(InText))
+        , _Color(InColor)
+    {
+    }
+
+private:
+    FVector _WorldPosition = FVector::ZeroVector;
+    FString _Text;
+    FLinearColor _Color = FLinearColor::White;
+
+public:
+    CK_PROPERTY(_WorldPosition);
+    CK_PROPERTY(_Text);
+    CK_PROPERTY(_Color);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * What a target colours its bodies BY. The mode decides which class index a body lands in, and therefore which
+ * bucket draws it; changing it re-buckets everything the next capture touches.
+ *
+ * Highlight and Hover are deliberately NOT modes: they are the two mode-independent class indices below, so a
+ * selection stays magenta whatever the bodies around it are coloured by.
+ */
+enum class ECk_Jolt_DebugDrawColorMode : uint8
+{
+    BodyClass,
+    SleepState,
+    ObjectLayer,
+    Island,
+    ShapeType
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// The classes of ECk_Jolt_DebugDrawColorMode::BodyClass — the default mode. Every other mode computes its own
+/// class indices, which are NOT these values (see ck::jolt::debug_draw's per-mode class counts).
 enum class ECk_Jolt_DebugDraw_ColorClass : uint8
 {
     Static,
@@ -33,13 +136,121 @@ enum class ECk_Jolt_DebugDraw_ColorClass : uint8
     BakedStatic,
     Character,
 
-    // The selection overlay: a SECOND instance of the highlighted body's geometry, drawn alongside the body's
-    // normal instance rather than replacing it. Its own class so a population toggle can never hide it.
-    Highlight,
-
-    // Sentinel. The visibility mask packs one bit per class into a uint8, so the class count is capped —
-    // see the static_assert beside Get_ClassBit.
     Count
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::jolt::debug_draw
+{
+    /*
+     * ONE class-index space, shared by every colour mode. The visibility mask packs one bit per index into a
+     * uint64, so 64 is the hard ceiling and every per-mode class count below has to fit under the two reserved
+     * indices.
+     *
+     * Highlight and Hover sit at the TOP two indices in every mode: a selection must never change colour, or be
+     * hideable, because the viewer switched to colouring by island.
+     */
+    inline constexpr uint8 MaxColorClasses = 64;
+    inline constexpr uint8 HighlightClassIndex = 62;
+    inline constexpr uint8 HoverClassIndex = 63;
+
+    /// Islands churn every step, so their indices are hashed into a small fixed palette rather than shown raw.
+    /// Index 0 is "no island" (static, kinematic and sleeping bodies); 1..IslandPaletteSize are the hashes.
+    inline constexpr uint8 IslandPaletteSize = 16;
+    inline constexpr uint8 IslandClassCount = IslandPaletteSize + 1;
+
+    /*
+     * ObjectLayer mode names one class per registered layer. 62 indices are available, so index 61 is the
+     * catch-all: a body whose object layer is 61 or higher lands there. P5-D42 phrased the cut as "> 61 → Other";
+     * with Highlight and Hover reserved there is no 63rd index to put Other in, so the top NAMED index doubles
+     * as it and the legend reads "Layer 61+".
+     */
+    inline constexpr uint8 MaxNamedObjectLayer = 61;
+
+    /// The classes of ECk_Jolt_DebugDrawColorMode::SleepState.
+    enum class ESleepStateClass : uint8
+    {
+        Static,
+        Kinematic,
+        Awake,
+        Asleep,
+
+        Count
+    };
+
+    /*
+     * The classes of ECk_Jolt_DebugDrawColorMode::ShapeType. A COMPACT re-indexing of JPH::EShapeSubType rather
+     * than the raw enum value: that enum reserves User1..User8 and UserConvex1..UserConvex8 in the middle and
+     * appends Plane/TaperedCylinder/Empty at the end, so indexing a name table by its value would both waste 16
+     * indices and mislabel the three appended types.
+     */
+    enum class EShapeTypeClass : uint8
+    {
+        Sphere,
+        Box,
+        Triangle,
+        Capsule,
+        TaperedCapsule,
+        Cylinder,
+        TaperedCylinder,
+        ConvexHull,
+        StaticCompound,
+        MutableCompound,
+        RotatedTranslated,
+        Scaled,
+        OffsetCenterOfMass,
+        Mesh,
+        HeightField,
+        SoftBody,
+        Plane,
+        Empty,
+
+        // Every user-defined sub-type, which a game may define and this facility cannot name.
+        Other,
+
+        Count
+    };
+
+    inline constexpr auto
+        Get_ClassIndex(
+            ECk_Jolt_DebugDraw_ColorClass InColorClass)
+        -> uint8
+    {
+        return static_cast<uint8>(InColorClass);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// One row of a colour legend: what a class index is called in the current mode, and the colour it draws in.
+struct CKJOLT_API FCk_Jolt_DebugDrawLegendEntry
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDrawLegendEntry);
+
+public:
+    FCk_Jolt_DebugDrawLegendEntry() = default;
+
+    FCk_Jolt_DebugDrawLegendEntry(
+        uint8 InClassIndex,
+        FText InName,
+        FLinearColor InColor)
+        : _ClassIndex(InClassIndex)
+        , _Name(MoveTemp(InName))
+        , _Color(InColor)
+    {
+    }
+
+private:
+    uint8 _ClassIndex = 0;
+    FText _Name;
+    FLinearColor _Color = FLinearColor::White;
+
+public:
+    CK_PROPERTY(_ClassIndex);
+    CK_PROPERTY(_Name);
+    CK_PROPERTY(_Color);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,9 +261,12 @@ public:
     CK_GENERATED_BODY(FCk_Jolt_DebugDrawPalette);
 
 public:
+    /// The colour of one class index IN ONE MODE. Highlight and Hover answer the same in every mode; every other
+    /// index is interpreted by the mode that produced it.
     auto
     Get_Color(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass) const -> FLinearColor;
+        ECk_Jolt_DebugDrawColorMode InColorMode,
+        uint8 InClassIndex) const -> FLinearColor;
 
 private:
     FLinearColor _StaticColor          = FLinearColor{0.35f, 0.35f, 0.38f, 1.0f};
@@ -62,7 +276,10 @@ private:
     FLinearColor _SensorColor          = FLinearColor{0.15f, 0.55f, 0.95f, 1.0f};
     FLinearColor _BakedStaticColor     = FLinearColor{0.55f, 0.45f, 0.30f, 1.0f};
     FLinearColor _CharacterColor       = FLinearColor{0.85f, 0.35f, 0.85f, 1.0f};
-    FLinearColor _HighlightColor       = FLinearColor{1.00f, 0.85f, 0.10f, 1.0f};
+
+    // Magenta, and deliberately not near any other entry: the old amber sat between the awake yellow and the
+    // baked tan, which is what made a selection unreadable in PIE (P5-D41).
+    FLinearColor _HighlightColor       = FLinearColor{1.00f, 0.15f, 0.85f, 1.0f};
 
     float _SleepingDimFactor = 0.55f;
     float _Opacity = 0.5f;
@@ -132,18 +349,73 @@ namespace ck::jolt::debug_draw
     CKJOLT_API auto
     Make_CharacterBodyKey(
         const FCk_Handle& InCharacterEntity) -> uint64;
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Contact recording (P5-D40). Contacts exist only DURING PhysicsSystem::Update, so they cannot be captured
+    // the way bodies are — they are recorded around the step and replayed on the game thread afterwards.
+    //
+    // Jolt's contact draw switches are process-wide `static bool`s with no per-system variant, so the demand is
+    // the UNION of every live target's contact flags: turning contacts off in one target turns them off for the
+    // whole process. That is disclosed rather than worked around; every other draw flag stays per-target.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /// True while at least one live target asks for contacts. The recorder and the JPH statics are both driven
+    /// from this, so nothing is recorded — and Jolt emits nothing — when no consumer wants it.
+    CKJOLT_API auto
+    Get_IsAnyTargetDemandingContacts() -> bool;
+
+    /*
+     * Opens the record scope around one world's PhysicsSystem::Update. Every DrawLine that arrives while the
+     * scope is open (i.e. from inside the solve, on any thread) is appended to a lock-guarded per-world buffer
+     * instead of being dropped. A no-op when nothing demands contacts.
+     *
+     * Buffers are PER WORLD, but only ONE world may record at a time: Jolt's contact draw is process-wide and a
+     * DrawLine carries no world, so a second world whose solve overlaps the first is SKIPPED (Verbose, once)
+     * rather than having its manifolds mixed into the recording world's record and replayed into its targets.
+     * End_ContactRecord swaps that world's filled buffer aside for the game thread.
+     */
+    CKJOLT_API auto
+    Begin_ContactRecord(
+        const JPH::PhysicsSystem* InPhysicsSystem) -> void;
+
+    CKJOLT_API auto
+    End_ContactRecord(
+        const JPH::PhysicsSystem* InPhysicsSystem) -> void;
+
+    /// Drops a world's record buffers. Called when the world goes away, so a PhysicsSystem allocated at the same
+    /// address later can never inherit a dead world's contacts.
+    CKJOLT_API auto
+    Forget_ContactRecord(
+        const JPH::PhysicsSystem* InPhysicsSystem) -> void;
+
+    /*
+     * Game-thread consumption: takes ONE world's last completed record and writes it into every one of that
+     * world's targets that asks for contacts, clearing the channel of every target that does not. Called once
+     * per frame by FProcessor_JoltDebugDraw_Capture BEFORE it captures, so the replayed lines are flushed by the
+     * same capture that draws the bodies they belong to.
+     *
+     * Under async physics the record belongs to the step consumed at the start of THIS frame, so the contacts
+     * lag the shapes by one frame. Accepted (P5-D61/S1) and documented.
+     */
+    CKJOLT_API auto
+    Replay_RecordedContacts(
+        const JPH::PhysicsSystem* InPhysicsSystem,
+        TArrayView<const TSharedPtr<FCk_Jolt_DebugDrawTarget>> InTargets) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
  * Per-world retained state of the batched Jolt debug draw: the (geometry, colour-class) bucket map and the
- * UInstancedStaticMeshComponents behind it, the material mode, and the palette. The geometry cache itself is
- * world-agnostic and lives on the single FCk_Jolt_DebugRenderer, which reconciles into whichever target is
- * active for the current draw session.
+ * UInstancedStaticMeshComponents behind it, the material mode, the palette, the draw flags, and the three
+ * non-mesh channels (a ULineBatchComponent for lines, a per-frame label array, and the retained named External
+ * sub-channels). The geometry cache itself is world-agnostic and lives on the single FCk_Jolt_DebugRenderer,
+ * which reconciles into whichever target is active for the current draw session.
  *
- * NO Jolt type appears in this header — a presentation consumer binds a target, flips demand and render mode,
- * and reads counts, without ever seeing JPH. Everything Jolt-shaped lives behind the opaque impl.
+ * No Jolt type appears anywhere on this class — a presentation consumer binds a target, flips demand and render
+ * mode, and reads counts, without ever seeing JPH. Everything Jolt-shaped lives behind the opaque impl. (The
+ * free-function contact recorder above names a `JPH::PhysicsSystem*` as its world key, but only as an opaque
+ * forward-declared address; no Jolt header is pulled in and no presentation consumer calls it.)
  *
  * The target reacts to its world being torn down (PIE end, map change) by releasing its components, so it
  * never roots a dying world; it stays reusable afterwards.
@@ -157,6 +429,12 @@ public:
 
 public:
     friend class ::FCk_Jolt_DebugRenderer;
+
+    // The contact replay writes a channel no public setter exposes — FBatchedLine is an engine render type this
+    // header deliberately does not name, and the channel has exactly one legitimate writer.
+    friend auto ck::jolt::debug_draw::Replay_RecordedContacts(
+        const JPH::PhysicsSystem* InPhysicsSystem,
+        TArrayView<const TSharedPtr<FCk_Jolt_DebugDrawTarget>> InTargets) -> void;
 
 public:
     explicit FCk_Jolt_DebugDrawTarget(
@@ -193,16 +471,133 @@ public:
     Set_Palette(
         const FCk_Jolt_DebugDrawPalette& InPalette) -> FCk_Jolt_DebugDrawTarget&;
 
-    /// Show/hide one colour class. Component-level only — the class keeps capturing while hidden, so the
-    /// toggle costs one SetVisibility per affected bucket and unhiding shows current poses, never stale ones.
+    /*
+     * Show/hide one colour class INDEX of the current mode. Component-level only — the class keeps capturing
+     * while hidden, so the toggle costs one SetVisibility per affected bucket and unhiding shows current poses,
+     * never stale ones.
+     *
+     * The Highlight and Hover indices are not hideable: a selection the viewer cannot see is indistinguishable
+     * from no selection. Asking to hide one is ignored, and Get_IsClassVisible always answers true for them.
+     */
     auto
     Set_ClassVisibility(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass,
+        uint8 InClassIndex,
         bool InIsVisible) -> FCk_Jolt_DebugDrawTarget&;
 
     auto
     Get_IsClassVisible(
-        ECk_Jolt_DebugDraw_ColorClass InColorClass) const -> bool;
+        uint8 InClassIndex) const -> bool;
+
+    /*
+     * What bodies are coloured BY. Changing it invalidates the retained capture the same way Set_Palette does,
+     * because every body has to be re-bucketed through the new mode — including the static and long-asleep ones
+     * the incremental pass would otherwise skip.
+     */
+    auto
+    Set_ColorMode(
+        ECk_Jolt_DebugDrawColorMode InColorMode) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_ColorMode() const -> ECk_Jolt_DebugDrawColorMode;
+
+    /*
+     * The legend of one mode: every class index it can produce, its display name and its colour. Highlight and
+     * Hover are present in every mode. ObjectLayer's names come from the layer names the capture published
+     * (Set_ObjectLayerNames) and degrade to a bare `Layer N` when none are known.
+     */
+    auto
+    Get_LegendEntries(
+        ECk_Jolt_DebugDrawColorMode InColorMode) const -> TArray<FCk_Jolt_DebugDrawLegendEntry>;
+
+    /*
+     * Display names of the Jolt object layers, indexed by layer. Published by the capture from the world's
+     * collision-layer table (a read-only reverse lookup — it never registers a layer) so the ObjectLayer legend
+     * can read `Layer N — <object channel>` instead of a bare number. An empty entry falls back to `Layer N`.
+     */
+    auto
+    Set_ObjectLayerNames(
+        TArray<FString> InLayerNames) -> void;
+
+    auto
+    Get_ObjectLayerNames() const -> const TArray<FString>&;
+
+    /*
+     * Which parts of the Jolt debug-draw vocabulary the next capture emits into this target. Changing them
+     * invalidates the retained capture the same way Set_Palette does, so a flag flip takes effect on the very
+     * next capture for static and long-asleep bodies too, not only for the ones that happen to be awake.
+     */
+    auto
+    Set_DrawFlags(
+        ECk_Jolt_DebugDrawFlags InFlags) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_DrawFlags() const -> ECk_Jolt_DebugDrawFlags;
+
+    auto
+    Get_IsDrawFlagSet(
+        ECk_Jolt_DebugDrawFlags InFlag) const -> bool;
+
+    // ---- Line + label + External channels ----
+
+    /*
+     * Labels the last capture produced, in capture order. Cleared and refilled every capture, so a consumer
+     * reading them between captures sees exactly what the current frame drew.
+     */
+    auto
+    Get_Labels() const -> const TArray<FCk_Jolt_DebugDrawLabel>&;
+
+    /// Lines currently live in the target's line component — JPH output for this capture plus every retained
+    /// External sub-channel. Zero before the first capture and whenever the target has nothing to draw.
+    auto
+    Get_NumLines() const -> int32;
+
+    /*
+     * The External channel: line work this facility does NOT produce (probe results, a grid, a drag line). Each
+     * named sub-channel is owned by its contributor and RETAINED — a capture re-emits it into the line component
+     * without clearing it, because a contributor's push rate has nothing to do with the capture rate and a
+     * per-capture clear would make anything pushed between captures flicker. Clear_External empties exactly one
+     * sub-channel; nothing else ever does.
+     */
+    auto
+    Draw_ExternalLine(
+        FName InChannel,
+        const FVector& InFrom,
+        const FVector& InTo,
+        const FLinearColor& InColor) -> void;
+
+    auto
+    Draw_ExternalBox(
+        FName InChannel,
+        const FBox& InLocalBox,
+        const FTransform& InTransform,
+        const FLinearColor& InColor) -> void;
+
+    auto
+    Draw_ExternalSphere(
+        FName InChannel,
+        const FVector& InCenter,
+        float InRadius,
+        const FLinearColor& InColor) -> void;
+
+    auto
+    Draw_ExternalArrow(
+        FName InChannel,
+        const FVector& InFrom,
+        const FVector& InTo,
+        const FLinearColor& InColor) -> void;
+
+    auto
+    Clear_External(
+        FName InChannel) -> void;
+
+    auto
+    Get_NumExternalLines(
+        FName InChannel) const -> int32;
+
+    /// Contact lines the last replay wrote into this target. Zero when the target's flags do not ask for
+    /// contacts, and zero for a frame in which the solve produced none.
+    auto
+    Get_NumContactLines() const -> int32;
 
     /*
      * Select one drawn body (or character, keyed through Make_CharacterBodyKey) for the Highlight overlay. The
@@ -216,6 +611,18 @@ public:
 
     auto
     Get_HighlightedBody() const -> TOptional<uint64>;
+
+    /*
+     * The subdued sibling of the selection, for a hover preview: the same overlay mechanism in its own always-
+     * visible class, at half alpha and a smaller swell, so hovering a body can never be mistaken for selecting
+     * it. Independent of the highlight — a body may be both, in which case both overlays draw.
+     */
+    auto
+    Set_HoveredBody(
+        TOptional<uint64> InBodyKey) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_HoveredBody() const -> TOptional<uint64>;
 
     /// World-space bounds of the highlighted body's NORMAL instances. Unset when nothing is highlighted, or
     /// when the selected body has not been drawn yet.
@@ -275,8 +682,10 @@ public:
     auto
     Get_Isms() const -> TArray<UInstancedStaticMeshComponent*>;
 
+    /// The class INDEX behind every live bucket, in the current mode. A consumer that wants names or colours
+    /// reads Get_LegendEntries instead — the indices alone mean nothing without the mode that produced them.
     auto
-    Get_BucketColorClasses() const -> TArray<ECk_Jolt_DebugDraw_ColorClass>;
+    Get_BucketColorClasses() const -> TArray<uint8>;
 
 public:
     // Opaque by design: the declaration is public only so the module's own debug-draw translation units can

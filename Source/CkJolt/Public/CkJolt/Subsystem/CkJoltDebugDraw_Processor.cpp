@@ -71,7 +71,12 @@ namespace ck
         auto Targets = TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>{};
         Subsystem->Get_DemandingDebugDrawTargets(Targets);
 
-        if (Targets.IsEmpty())
+        // A closed debugger still costs one map walk and no more, unless something asks for contacts — the
+        // in-world target is captured from the subsystem's Tick, so the replay is the only thing this processor
+        // owes it.
+        const auto AnyContactDemand = ck::jolt::debug_draw::Get_IsAnyTargetDemandingContacts();
+
+        if (Targets.IsEmpty() && NOT AnyContactDemand)
         { return; }
 
         const auto PhysicsSystem = Subsystem->Get_PhysicsSystem().Pin();
@@ -83,6 +88,19 @@ namespace ck
         const auto Revisions = ck::jolt::debug_draw::FCaptureRevisions{
             JoltWorld->Get_StaticSceneRevision(),
             JoltWorld->Get_BodyRemovedRevision()};
+
+        // BEFORE the captures, because a capture flushes the target's line component: the contacts recorded
+        // around the step have to be in the channel by the time the capture that draws this frame's bodies
+        // pushes it. This processor is the ONE consumer of this world's buffer — the step never replays it,
+        // which is what keeps every touch of a target on the game thread. That single-consumer rule is also why
+        // the subsystem's own in-world target is fed here rather than from its Tick: a second drain point would
+        // race this one for the same record.
+        auto ReplayTargets = Targets;
+
+        if (const auto DefaultTarget = Subsystem->Get_DefaultDebugDrawTarget(); DefaultTarget.IsValid())
+        { ReplayTargets.AddUnique(DefaultTarget); }
+
+        ck::jolt::debug_draw::Replay_RecordedContacts(PhysicsSystem.Get(), ReplayTargets);
 
         for (const auto& Target : Targets)
         { Renderer.Capture_JoltWorld(*Target, *PhysicsSystem, Revisions, _TransientEntity); }
