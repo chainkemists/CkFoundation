@@ -7,6 +7,7 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkJolt/Body/CkJoltBody_ContactRouter.h"
+#include "CkJolt/Body/CkJoltBody_Fragment.h"
 #include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
 #include "CkJolt/CkJolt_ActivationEvent.h"
 #include "CkJolt/CkJolt_Log.h"
@@ -26,6 +27,8 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+
+#include <atomic>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -135,6 +138,13 @@ public:
             JPH::ContactSettings& ioSettings)
             -> void override
     {
+        // Persisted fires per still-touching manifold per sub-step on the Jolt workers. With nobody
+        // interested every event below is built, locked, queued and then discarded on the game
+        // thread — so bail before the log and before the first allocation. Reading the registry
+        // here would be illegal (worker thread); only this pre-published atomic is.
+        if (NOT _PersistedContactsWanted.load(std::memory_order_relaxed))
+        { return; }
+
         ck::jolt::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] PERSISTED Contact"),
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
@@ -208,9 +218,19 @@ public:
         _ContactEventQueue.Reset();
     }
 
+    // Written on the game thread in DrainEventsAndRoute, which orders before this frame's step, so
+    // the workers never see a value from their own frame. One frame of staleness on a persisted
+    // stream is immaterial; relaxed is therefore sufficient.
+    auto Set_PersistedContactsWanted(bool InWanted) -> void
+    {
+        _PersistedContactsWanted.store(InWanted, std::memory_order_relaxed);
+    }
+
 private:
     FCriticalSection _QueueLock;
     TArray<FCk_Jolt_ContactEvent> _ContactEventQueue;
+
+    std::atomic<bool> _PersistedContactsWanted{false};
 
     // Populated on ContactAdded, read on ContactRemoved (which carries no bodies). Entries persist for the
     // listener's lifetime: per-contact removal would break a body's other simultaneous end-overlaps.
@@ -482,6 +502,10 @@ auto
         {
             _BodyActivationListener->DrainQueue(OutEvents);
         },
+        .SetPersistedContactsWantedFn = [this](bool InWanted)
+        {
+            _ContactListener->Set_PersistedContactsWanted(InWanted);
+        },
     });
 
     _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
@@ -497,6 +521,16 @@ auto
             { return; }
 
             ck::jolt_body::RouteContactEvents(Self->_EcsWorldSubsystem->Get_TransientEntity(), InEvents);
+        });
+
+    Register_PersistedContactInterestProvider(TEXT("JoltBody.PersistContacts"),
+        [WeakThis]() -> bool
+        {
+            auto* Self = WeakThis.Get();
+            if (Self == nullptr || ck::Is_NOT_Valid(Self->_EcsWorldSubsystem))
+            { return false; }
+
+            return Self->_EcsWorldSubsystem->Get_Registry().Has_AnyLiveEntityWith<ck::FTag_JoltBody_PersistContacts>();
         });
 
 #if JPH_DEBUG_RENDERER
@@ -668,6 +702,32 @@ auto
     { return; }
 
     _JoltWorld->UnregisterContactRouter(InName);
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Register_PersistedContactInterestProvider(
+        FName InName,
+        TFunction<bool()> InProvider)
+        -> void
+{
+    CK_ENSURE_IF_NOT(_JoltWorld.IsValid(),
+        TEXT("Cannot register persisted-contact interest provider [{}] — the Jolt world does not exist (called before Initialize or after Deinitialize?)"), InName)
+    { return; }
+
+    _JoltWorld->Register_PersistedContactInterestProvider(InName, MoveTemp(InProvider));
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Unregister_PersistedContactInterestProvider(
+        FName InName)
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Unregister_PersistedContactInterestProvider(InName);
 }
 
 auto

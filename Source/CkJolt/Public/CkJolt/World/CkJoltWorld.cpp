@@ -95,6 +95,7 @@ namespace ck
         , _AsyncMode(InParams.AsyncMode)
         , _DrainQueueFn(MoveTemp(InParams.DrainQueueFn))
         , _DrainActivationQueueFn(MoveTemp(InParams.DrainActivationQueueFn))
+        , _SetPersistedContactsWantedFn(MoveTemp(InParams.SetPersistedContactsWantedFn))
     {
         _CharacterContactListener = MakeUnique<CkJoltCharacterContactListener>(this);
     }
@@ -118,8 +119,10 @@ namespace ck
         _JobSystem = nullptr;
         _DrainQueueFn = {};
         _DrainActivationQueueFn = {};
+        _SetPersistedContactsWantedFn = {};
         _World = nullptr;
         _ContactRouters.Empty();
+        _PersistedContactInterestProviders.Empty();
         _PoseBuffer.Empty();
         _CharacterRegistry.Empty();
     }
@@ -159,14 +162,71 @@ namespace ck
 
     auto
         FJoltWorld::
+        Register_PersistedContactInterestProvider(
+            FName InName,
+            TFunction<bool()> InProvider)
+        -> void
+    {
+        const auto ExistingIndex = _PersistedContactInterestProviders.IndexOfByPredicate([&](const auto& InPair)
+        {
+            return InPair.Key == InName;
+        });
+
+        CK_ENSURE_IF_NOT(ExistingIndex == INDEX_NONE,
+            TEXT("A persisted-contact interest provider named [{}] is already registered on the Jolt world."), InName)
+        { return; }
+
+        _PersistedContactInterestProviders.Emplace(InName, MoveTemp(InProvider));
+    }
+
+    auto
+        FJoltWorld::
+        Unregister_PersistedContactInterestProvider(
+            FName InName)
+        -> void
+    {
+        _PersistedContactInterestProviders.RemoveAll([&](const auto& InPair)
+        {
+            return InPair.Key == InName;
+        });
+    }
+
+    auto
+        FJoltWorld::
         DrainEventsAndRoute()
         -> void
     {
+        // Unconditional and BEFORE every early-out below: the flag would otherwise go stale exactly
+        // when the queue is empty. This runs on the game thread, ordered before this frame's
+        // PlanStep/Step (RunAfter chain), so the value is committed before the workers are kicked.
+        if (_SetPersistedContactsWantedFn)
+        {
+            auto Wanted = false;
+            for (const auto& Provider : _PersistedContactInterestProviders)
+            {
+                if (Provider.Value && Provider.Value())
+                {
+                    Wanted = true;
+                    break;
+                }
+            }
+
+            _SetPersistedContactsWantedFn(Wanted);
+        }
+
+        _Debug_NumPersistedContactEventsLastDrain = 0;
+
         if (NOT _DrainQueueFn)
         { return; }
 
         auto Events = TArray<FCk_Jolt_ContactEvent>{};
         _DrainQueueFn(Events);
+
+        for (const auto& Event : Events)
+        {
+            if (Event.Type == FCk_Jolt_ContactEvent::EType::Persisted)
+            { ++_Debug_NumPersistedContactEventsLastDrain; }
+        }
 
         if (Events.IsEmpty())
         { return; }
