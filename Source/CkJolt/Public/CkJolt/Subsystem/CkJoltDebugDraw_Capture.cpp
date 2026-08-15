@@ -30,12 +30,6 @@ DECLARE_CYCLE_STAT(TEXT("Jolt_DebugDraw_Capture"), STAT_CkJolt_DebugDrawCapture,
 
 namespace ck_jolt_debugdraw_capture
 {
-    // Bodies and characters share one slot map; a CharacterVirtual has no BodyID, so its key is its entity id
-    // lifted clear of the 32-bit BodyID (index + sequence) keyspace.
-    constexpr uint64 CharacterKeyBit = uint64{1} << 40;
-
-    // ----------------------------------------------------------------------------------------------------------------
-
     struct FContext_Capture
     {
         FCk_Jolt_DebugRenderer* _Renderer = nullptr;
@@ -55,7 +49,7 @@ namespace ck_jolt_debugdraw_capture
             const JPH::BodyID& InBodyId)
         -> uint64
     {
-        return static_cast<uint64>(InBodyId.GetIndexAndSequenceNumber());
+        return ck::jolt::debug_draw::Make_BodyKey(InBodyId.GetIndexAndSequenceNumber());
     }
 
     auto
@@ -124,22 +118,76 @@ namespace ck_jolt_debugdraw_capture
     }
 
     auto
+        Draw_Shape(
+            FContext_Capture& InCtx,
+            uint64 InSlotKey,
+            ECk_Jolt_DebugDraw_ColorClass InColorClass,
+            const JPH::Shape& InShape,
+            JPH::RMat44Arg InCenterOfMassTransform)
+        -> void
+    {
+        const auto Color = ck::jolt::Conv(InCtx._TargetImpl->_Palette.Get_Color(InColorClass));
+
+        InCtx._Renderer->BeginBody(InSlotKey, InColorClass);
+
+        constexpr auto UseMaterialColors = false;
+        constexpr auto DrawWireframe = false;
+        InShape.Draw(InCtx._Renderer, InCenterOfMassTransform, JPH::Vec3::sReplicate(1.0f), Color,
+            UseMaterialColors, DrawWireframe);
+
+        InCtx._Renderer->EndBody();
+    }
+
+    // The overlay rides the SAME draw path as the thing it traces, so it follows a moving body for free and its
+    // slot is reconciled, released and rebuilt exactly like any other body's.
+    auto
+        Draw_SelectionOverlay(
+            FContext_Capture& InCtx,
+            uint64 InBodyKey,
+            const JPH::Shape& InShape,
+            JPH::RMat44Arg InCenterOfMassTransform)
+        -> void
+    {
+        const auto& HighlightedKey = InCtx._TargetImpl->_HighlightedBodyKey;
+
+        if (NOT HighlightedKey.IsSet() || *HighlightedKey != InBodyKey)
+        { return; }
+
+        Draw_Shape(InCtx, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
+            ECk_Jolt_DebugDraw_ColorClass::Highlight, InShape, InCenterOfMassTransform);
+    }
+
+    // Velocity is the one live body scalar a presentation consumer needs and cannot safely read for itself, so
+    // the capture samples it here — for the selected body alone, inside the window where Jolt state is stable.
+    auto
+        Sample_SelectionVelocity(
+            FContext_Capture& InCtx,
+            uint64 InBodyKey,
+            const JPH::Body& InBody)
+        -> void
+    {
+        const auto& HighlightedKey = InCtx._TargetImpl->_HighlightedBodyKey;
+
+        if (NOT HighlightedKey.IsSet() || *HighlightedKey != InBodyKey)
+        { return; }
+
+        InCtx._TargetImpl->_HighlightedBodyLinearVelocity = ck::jolt::Conv(InBody.GetLinearVelocity());
+    }
+
+    auto
         Draw_Body(
             FContext_Capture& InCtx,
             const JPH::Body& InBody)
         -> void
     {
         const auto ColorClass = Get_ColorClass(InBody, InCtx._TransientEntity);
-        const auto Color = ck::jolt::Conv(InCtx._TargetImpl->_Palette.Get_Color(ColorClass));
+        const auto BodyKey = Get_BodyKey(InBody.GetID());
+        const auto& Shape = *InBody.GetShape();
+        const auto CenterOfMassTransform = InBody.GetCenterOfMassTransform();
 
-        InCtx._Renderer->BeginBody(Get_BodyKey(InBody.GetID()), ColorClass);
-
-        constexpr auto UseMaterialColors = false;
-        constexpr auto DrawWireframe = false;
-        InBody.GetShape()->Draw(InCtx._Renderer, InBody.GetCenterOfMassTransform(), JPH::Vec3::sReplicate(1.0f),
-            Color, UseMaterialColors, DrawWireframe);
-
-        InCtx._Renderer->EndBody();
+        Draw_Shape(InCtx, BodyKey, ColorClass, Shape, CenterOfMassTransform);
+        Draw_SelectionOverlay(InCtx, BodyKey, Shape, CenterOfMassTransform);
+        Sample_SelectionVelocity(InCtx, BodyKey, InBody);
 
         ++InCtx._TargetImpl->_LastCaptureStats._BodiesCaptured;
     }
@@ -345,9 +393,6 @@ namespace ck_jolt_debugdraw_capture
 
         if (ck::IsValid(InCtx._TransientEntity))
         {
-            const auto CharacterColor = ck::jolt::Conv(
-                TargetImpl._Palette.Get_Color(ECk_Jolt_DebugDraw_ColorClass::Character));
-
             // A handle is a value over (entity id + registry), so the copy addresses the same entity. It exists
             // because FCk_Handle::View() has no usable const overload.
             auto TransientEntity = InCtx._TransientEntity;
@@ -359,17 +404,15 @@ namespace ck_jolt_debugdraw_capture
                 if (Character == nullptr)
                 { return; }
 
-                const auto Key = CharacterKeyBit | static_cast<uint64>(InEntity.Get_ID());
+                const auto Key = ck::jolt::debug_draw::Make_CharacterBodyKey_FromEntityId(
+                    static_cast<uint64>(InEntity.Get_ID()));
                 LiveCharacterKeys.Emplace(Key);
 
-                InCtx._Renderer->BeginBody(Key, ECk_Jolt_DebugDraw_ColorClass::Character);
+                const auto& Shape = *Character->GetShape();
+                const auto CenterOfMassTransform = Character->GetCenterOfMassTransform();
 
-                constexpr auto UseMaterialColors = false;
-                constexpr auto DrawWireframe = false;
-                Character->GetShape()->Draw(InCtx._Renderer, Character->GetCenterOfMassTransform(),
-                    JPH::Vec3::sReplicate(1.0f), CharacterColor, UseMaterialColors, DrawWireframe);
-
-                InCtx._Renderer->EndBody();
+                Draw_Shape(InCtx, Key, ECk_Jolt_DebugDraw_ColorClass::Character, Shape, CenterOfMassTransform);
+                Draw_SelectionOverlay(InCtx, Key, Shape, CenterOfMassTransform);
 
                 ++TargetImpl._LastCaptureStats._BodiesCaptured;
             });
@@ -413,6 +456,10 @@ auto
     Context._LockInterface = &InPhysicsSystem.GetBodyLockInterfaceNoLock();
     Context._TransientEntity = InTransientEntity;
     Context._StaticSceneRevision = InStaticSceneRevision;
+
+    // Re-sampled from scratch: a selection this capture does not draw reads as unknown rather than as a value
+    // that has since gone stale.
+    InTarget._Impl->_HighlightedBodyLinearVelocity.Reset();
 
     static auto Technique = FTechnique_CaptureJoltWorld{};
     Technique.ProcessAllSteps(Context);

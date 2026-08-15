@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <CoreMinimal.h>
+#include <Misc/Optional.h>
 #include <Templates/PimplPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -10,6 +11,7 @@
 class UInstancedStaticMeshComponent;
 class UWorld;
 class FCk_Jolt_DebugRenderer;
+struct FCk_Handle;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,6 +32,10 @@ enum class ECk_Jolt_DebugDraw_ColorClass : uint8
     Sensor,
     BakedStatic,
     Character,
+
+    // The selection overlay: a SECOND instance of the highlighted body's geometry, drawn alongside the body's
+    // normal instance rather than replacing it. Its own class so a population toggle can never hide it.
+    Highlight,
 
     // Sentinel. The visibility mask packs one bit per class into a uint8, so the class count is capped —
     // see the static_assert beside Get_ClassBit.
@@ -56,6 +62,7 @@ private:
     FLinearColor _SensorColor          = FLinearColor{0.15f, 0.55f, 0.95f, 1.0f};
     FLinearColor _BakedStaticColor     = FLinearColor{0.55f, 0.45f, 0.30f, 1.0f};
     FLinearColor _CharacterColor       = FLinearColor{0.85f, 0.35f, 0.85f, 1.0f};
+    FLinearColor _HighlightColor       = FLinearColor{1.00f, 0.85f, 0.10f, 1.0f};
 
     float _SleepingDimFactor = 0.55f;
     float _Opacity = 0.5f;
@@ -68,6 +75,7 @@ public:
     CK_PROPERTY(_SensorColor);
     CK_PROPERTY(_BakedStaticColor);
     CK_PROPERTY(_CharacterColor);
+    CK_PROPERTY(_HighlightColor);
     CK_PROPERTY(_SleepingDimFactor);
     CK_PROPERTY(_Opacity);
 };
@@ -84,6 +92,28 @@ namespace ck::jolt::debug_draw
         int32 _InstancesRemoved = 0;
         bool  _FullPassRan = false;
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /*
+     * The debug-draw slot key of a rigid body, from its BodyID's index+sequence number. This is the single
+     * definition of that widening — the capture keys every body it draws through it, so a consumer holding a
+     * body id names the same body to Set_HighlightedBody / reads it back from TryPick_Body without having to
+     * know how the keyspace is laid out.
+     */
+    CKJOLT_API auto
+    Make_BodyKey(
+        uint32 InIndexAndSequenceNumber) -> uint64;
+
+    /*
+     * The debug-draw slot key of a JoltCharacter entity. A CharacterVirtual has no BodyID, so its key is its
+     * entity id lifted clear of the BodyID keyspace — this is the single definition of that convention, and the
+     * only way a presentation consumer can name a character to Set_HighlightedBody without seeing Jolt.
+     * An invalid handle yields 0, which matches no drawn character.
+     */
+    CKJOLT_API auto
+    Make_CharacterBodyKey(
+        const FCk_Handle& InCharacterEntity) -> uint64;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -155,6 +185,46 @@ public:
     auto
     Get_IsClassVisible(
         ECk_Jolt_DebugDraw_ColorClass InColorClass) const -> bool;
+
+    /*
+     * Select one drawn body (or character, keyed through Make_CharacterBodyKey) for the Highlight overlay. The
+     * body keeps its normal instance and gains a SECOND one in the Highlight colour class, which follows it
+     * every capture. The previous selection's overlay instance is released here rather than at the next
+     * capture, so a cleared selection stops drawing immediately. An unset key clears the selection.
+     */
+    auto
+    Set_HighlightedBody(
+        TOptional<uint64> InBodyKey) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_HighlightedBody() const -> TOptional<uint64>;
+
+    /// World-space bounds of the highlighted body's NORMAL instances. Unset when nothing is highlighted, or
+    /// when the selected body has not been drawn yet.
+    auto
+    Get_HighlightedBodyBounds() const -> TOptional<FBox>;
+
+    /*
+     * World-space linear velocity of the highlighted body, sampled by the capture in the same async-safe window
+     * it draws from. Unset when nothing is highlighted, when the highlighted key belongs to a character (a
+     * CharacterVirtual has no rigid-body velocity), and when the last capture did not draw the body — a
+     * sleeping or static body is only drawn on a scene-revision pass. A consumer reads this instead of querying
+     * the physics system, which it must never touch.
+     */
+    auto
+    Get_HighlightedBodyLinearVelocity() const -> TOptional<FVector>;
+
+    /*
+     * Nearest live instance a ray hits, as the body key that drew it. Tests the ray against each instance's
+     * ORIENTED mesh bounds (the ray is pushed into instance space and tested against the local box), which is
+     * tighter than a world-space AABB and needs no per-instance box rebuild. Hidden colour classes and the
+     * Highlight overlay are not pickable. O(live instances) per call — this is a click handler, not a tick.
+     * InDirection needs no normalization; hit ordering is parametric along it.
+     */
+    auto
+    TryPick_Body(
+        const FVector& InOrigin,
+        const FVector& InDirection) const -> TOptional<uint64>;
 
     /// World-space bounds of everything this target currently DRAWS — hidden classes are excluded, because the
     /// caller is a camera framing what the viewer can see. Invalid (`IsValid == 0`) when nothing is drawn.
