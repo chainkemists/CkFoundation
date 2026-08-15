@@ -22,10 +22,15 @@
 #include <Jolt/Core/StringTools.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLockInterface.h>
 #include <Jolt/Physics/Body/MassProperties.h>
 #include <Jolt/Physics/Body/MotionProperties.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -179,33 +184,6 @@ namespace ck_jolt_debugdraw_capture
         }
     }
 
-    /*
-     * Island indices are Jolt's own internal solver bookkeeping (GetIslandIndexInternal sits below
-     * MotionProperties' FOR INTERNAL USE ONLY banner). We read it, never write it, and only to colour a debug
-     * draw — a body's island is otherwise unobservable, and "which bodies are solved together" is one of the
-     * two questions a physics debugger exists to answer.
-     *
-     * They also churn every step, which is why they are hashed into a small palette rather than shown raw: the
-     * absolute number is meaningless, only the grouping is.
-     */
-    auto
-        Get_IslandClassIndex(
-            const JPH::Body& InBody)
-        -> uint8
-    {
-        const auto* MotionProperties = InBody.GetMotionPropertiesUnchecked();
-
-        if (MotionProperties == nullptr || NOT InBody.IsActive())
-        { return 0; }
-
-        const auto IslandIndex = MotionProperties->GetIslandIndexInternal();
-
-        if (IslandIndex == JPH::MotionProperties::cInactiveIndex)
-        { return 0; }
-
-        return static_cast<uint8>(1 + (IslandIndex % ck::jolt::debug_draw::IslandPaletteSize));
-    }
-
     auto
         Get_ObjectLayerClassIndex(
             const JPH::Body& InBody)
@@ -238,9 +216,6 @@ namespace ck_jolt_debugdraw_capture
 
             case ECk_Jolt_DebugDrawColorMode::ObjectLayer:
             { return Get_ObjectLayerClassIndex(InBody); }
-
-            case ECk_Jolt_DebugDrawColorMode::Island:
-            { return Get_IslandClassIndex(InBody); }
 
             case ECk_Jolt_DebugDrawColorMode::ShapeType:
             {
@@ -337,6 +312,28 @@ namespace ck_jolt_debugdraw_capture
         InCtx._Renderer->EndBody();
     }
 
+    // Isolation is a CAPTURE filter, unlike class visibility which is a component flag: an isolated-out body has
+    // no instances at all, so nothing about it can be read off the target while it is hidden.
+    auto
+        Get_IsIsolatedOut(
+            const FCk_Jolt_DebugDrawTarget::FImpl& InTargetImpl,
+            uint64 InBodyKey)
+        -> bool
+    {
+        return NOT InTargetImpl._IsolatedBodyKeys.IsEmpty() &&
+               NOT InTargetImpl._IsolatedBodyKeys.Contains(InBodyKey);
+    }
+
+    auto
+        Get_IsPrimarySelection(
+            const FCk_Jolt_DebugDrawTarget::FImpl& InTargetImpl,
+            uint64 InBodyKey)
+        -> bool
+    {
+        return NOT InTargetImpl._HighlightedBodyKeys.IsEmpty() &&
+               InTargetImpl._HighlightedBodyKeys[0] == InBodyKey;
+    }
+
     // The overlays ride the SAME draw path as the thing they trace, so they follow a moving body for free and
     // their slots are reconciled, released and rebuilt exactly like any other body's. Both classes are
     // mode-independent and unhideable, so a selection reads the same whatever the bodies around it are
@@ -349,9 +346,7 @@ namespace ck_jolt_debugdraw_capture
             JPH::RMat44Arg InCenterOfMassTransform)
         -> void
     {
-        const auto& HighlightedKey = InCtx._TargetImpl->_HighlightedBodyKey;
-
-        if (HighlightedKey.IsSet() && *HighlightedKey == InBodyKey)
+        if (InCtx._TargetImpl->_HighlightedBodyKeys.Contains(InBodyKey))
         {
             Draw_Shape(InCtx, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
                 ck::jolt::debug_draw::HighlightClassIndex, InShape, InCenterOfMassTransform,
@@ -368,21 +363,233 @@ namespace ck_jolt_debugdraw_capture
         }
     }
 
-    // Velocity is the one live body scalar a presentation consumer needs and cannot safely read for itself, so
-    // the capture samples it here — for the selected body alone, inside the window where Jolt state is stable.
     auto
-        Sample_SelectionVelocity(
+        Conv_MotionType(
+            JPH::EMotionType InMotionType)
+        -> ECk_MotionType
+    {
+        switch (InMotionType)
+        {
+            case JPH::EMotionType::Kinematic: return ECk_MotionType::Kinematic;
+            case JPH::EMotionType::Dynamic:   return ECk_MotionType::Dynamic;
+            default:                          return ECk_MotionType::Static;
+        }
+    }
+
+    auto
+        Conv_MotionQuality(
+            JPH::EMotionQuality InMotionQuality)
+        -> ECk_MotionQuality
+    {
+        return InMotionQuality == JPH::EMotionQuality::LinearCast
+            ? ECk_MotionQuality::LinearCast
+            : ECk_MotionQuality::Discrete;
+    }
+
+    auto
+        Conv_GroundState(
+            JPH::CharacterBase::EGroundState InGroundState)
+        -> ECk_JoltCharacter_GroundState
+    {
+        switch (InGroundState)
+        {
+            case JPH::CharacterBase::EGroundState::OnGround:      return ECk_JoltCharacter_GroundState::OnGround;
+            case JPH::CharacterBase::EGroundState::OnSteepGround: return ECk_JoltCharacter_GroundState::OnSteepSlope;
+            case JPH::CharacterBase::EGroundState::NotSupported:  return ECk_JoltCharacter_GroundState::NotSupported;
+            default:                                              return ECk_JoltCharacter_GroundState::InAir;
+        }
+    }
+
+    auto
+        Get_ShapeTypeName(
+            JPH::EShapeType InShapeType)
+        -> FString
+    {
+        switch (InShapeType)
+        {
+            case JPH::EShapeType::Convex:      return TEXT("Convex");
+            case JPH::EShapeType::Compound:    return TEXT("Compound");
+            case JPH::EShapeType::Decorated:   return TEXT("Decorated");
+            case JPH::EShapeType::Mesh:        return TEXT("Mesh");
+            case JPH::EShapeType::HeightField: return TEXT("HeightField");
+            case JPH::EShapeType::SoftBody:    return TEXT("SoftBody");
+            case JPH::EShapeType::Plane:       return TEXT("Plane");
+            case JPH::EShapeType::Empty:       return TEXT("Empty");
+            default:                           return TEXT("User");
+        }
+    }
+
+    /*
+     * The full per-body sample, taken for the PRIMARY selection alone and only from inside the capture window —
+     * a presentation consumer must never read a body scalar off the physics system for itself.
+     *
+     * Assert-safety is the whole difficulty here: JPH_ENABLE_ASSERTS is on in every configuration, so every
+     * MotionProperties read goes through an Unchecked accessor, and Body::GetAllowSleeping is NEVER called for a
+     * static body (it dereferences mMotionProperties without a guard).
+     */
+    auto
+        Sample_Selection(
             FContext_Capture& InCtx,
             uint64 InBodyKey,
             const JPH::Body& InBody)
         -> void
     {
-        const auto& HighlightedKey = InCtx._TargetImpl->_HighlightedBodyKey;
-
-        if (NOT HighlightedKey.IsSet() || *HighlightedKey != InBodyKey)
+        if (NOT Get_IsPrimarySelection(*InCtx._TargetImpl, InBodyKey))
         { return; }
 
-        InCtx._TargetImpl->_HighlightedBodyLinearVelocity = ck::jolt::Conv(InBody.GetLinearVelocity());
+        auto Sample = FCk_Jolt_DebugDraw_BodySample{};
+
+        Sample.Set_LinearVelocity(ck::jolt::Conv(InBody.GetLinearVelocity()));
+        Sample.Set_AngularVelocity(ck::jolt::Conv(InBody.GetAngularVelocity()));
+        Sample.Set_Friction(InBody.GetFriction());
+        Sample.Set_Restitution(InBody.GetRestitution());
+        Sample.Set_ObjectLayer(static_cast<uint16>(InBody.GetObjectLayer()));
+        Sample.Set_BroadPhaseLayer(static_cast<uint8>(InBody.GetBroadPhaseLayer().GetValue()));
+        Sample.Set_IsSensor(InBody.IsSensor());
+        Sample.Set_UserData(InBody.GetUserData());
+        Sample.Set_MotionType(Conv_MotionType(InBody.GetMotionType()));
+
+        const auto& WorldBounds = InBody.GetWorldSpaceBounds();
+        Sample.Set_WorldBounds(FBox{ck::jolt::Conv(WorldBounds.mMin), ck::jolt::Conv(WorldBounds.mMax)});
+
+        if (const auto* Shape = InBody.GetShape(); Shape != nullptr)
+        {
+            Sample.Set_ShapeType(Get_ShapeTypeName(Shape->GetType()));
+            Sample.Set_ShapeSubType(FString{ANSI_TO_TCHAR(
+                JPH::sSubShapeTypeNames[static_cast<int32>(Shape->GetSubType())])});
+
+            // A Jolt shape carries no scale of its own — only a ScaledShape wraps one, and every other shape is
+            // authored at the size it draws at.
+            if (Shape->GetSubType() == JPH::EShapeSubType::Scaled)
+            {
+                Sample.Set_ShapeScale(ck::jolt::Conv(
+                    static_cast<const JPH::ScaledShape*>(Shape)->GetScale()));
+            }
+        }
+
+        const auto* MotionProperties = InBody.GetMotionPropertiesUnchecked();
+
+        if (MotionProperties != nullptr)
+        {
+            Sample.Set_MotionQuality(Conv_MotionQuality(MotionProperties->GetMotionQuality()));
+            Sample.Set_GravityFactor(MotionProperties->GetGravityFactor());
+
+            // Jolt stores the INVERSE mass, so an infinite-mass body has 0 and no finite reciprocal. The sample
+            // reports 0 for it and says so, rather than dividing and publishing an infinity.
+            const auto InverseMass = MotionProperties->GetInverseMassUnchecked();
+            Sample.Set_Mass(InverseMass > 0.0f ? 1.0f / InverseMass : 0.0f);
+        }
+
+        // Only ever asked of a body that HAS motion properties: the getter dereferences them unguarded.
+        if (NOT InBody.IsStatic())
+        { Sample.Set_AllowsSleeping(TOptional<bool>{InBody.GetAllowSleeping()}); }
+
+        InCtx._TargetImpl->_BodySample = MoveTemp(Sample);
+    }
+
+    // A CharacterVirtual has no JPH::Body, so none of the rigid-body sample exists for it. What it has is a
+    // ground contact, and every getter for one lives on the CharacterBase base rather than on CharacterVirtual.
+    auto
+        Sample_CharacterSelection(
+            FContext_Capture& InCtx,
+            uint64 InCharacterKey,
+            const JPH::CharacterVirtual& InCharacter)
+        -> void
+    {
+        if (NOT Get_IsPrimarySelection(*InCtx._TargetImpl, InCharacterKey))
+        { return; }
+
+        auto Sample = FCk_Jolt_DebugDraw_CharacterSample{};
+
+        Sample.Set_Velocity(ck::jolt::Conv(InCharacter.GetLinearVelocity()));
+        Sample.Set_GroundNormal(ck::jolt::Conv(InCharacter.GetGroundNormal()));
+        Sample.Set_GroundVelocity(ck::jolt::Conv(InCharacter.GetGroundVelocity()));
+        Sample.Set_Up(ck::jolt::Conv(InCharacter.GetUp()));
+        Sample.Set_GroundState(Conv_GroundState(InCharacter.GetGroundState()));
+
+        if (const auto GroundBodyId = InCharacter.GetGroundBodyID(); NOT GroundBodyId.IsInvalid())
+        { Sample.Set_GroundBodyKey(TOptional<uint64>{Get_BodyKey(GroundBodyId)}); }
+
+        InCtx._TargetImpl->_CharacterSample = MoveTemp(Sample);
+    }
+
+    /*
+     * P6-D45: the selection's contacts, as a NarrowPhaseQuery::CollideShape of its own shape at its own centre-of-
+     * mass transform. This is a QUERY, not the ContactListener's manifold — the listener's contacts exist only
+     * inside the solve, while this can be run whenever a consumer asks, which is what makes it on-demand.
+     *
+     * Two settings carry the whole behaviour: faces must be collected explicitly (the default is NoFaces, and
+     * without them there are no contact POINTS to report), and a small positive separation distance is what makes
+     * the resting-on-the-floor case — the one a user always means — show up at all, since a resting pair is not
+     * penetrating. The self hit is excluded by the body filter rather than skipped afterwards, so it never costs
+     * a narrow-phase test.
+     */
+    auto
+        Query_SelectionContacts(
+            FContext_Capture& InCtx,
+            const JPH::Body& InBody)
+        -> void
+    {
+        constexpr auto SeparationDistance = 2.0f;
+        constexpr auto NormalLength = 25.0f;
+        constexpr auto PointMarkerSize = 4.0f;
+
+        auto& TargetImpl = *InCtx._TargetImpl;
+
+        const auto* Shape = InBody.GetShape();
+        if (Shape == nullptr)
+        { return; }
+
+        auto Settings = JPH::CollideShapeSettings{};
+        Settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
+        Settings.mMaxSeparationDistance = SeparationDistance;
+
+        const auto SelfFilter = JPH::IgnoreSingleBodyFilter{InBody.GetID()};
+        auto Collector = JPH::AllHitCollisionCollector<JPH::CollideShapeCollector>{};
+
+        InCtx._PhysicsSystem->GetNarrowPhaseQuery().CollideShape(Shape, JPH::Vec3::sReplicate(1.0f),
+            InBody.GetCenterOfMassTransform(), Settings, JPH::RVec3::sZero(), Collector,
+            JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{}, SelfFilter);
+
+        const auto DrawPoints = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactPoints);
+        const auto DrawNormals = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactNormals);
+
+        for (const auto& Hit : Collector.mHits)
+        {
+            auto Entry = FCk_Jolt_DebugDraw_ContactEntry{};
+            Entry.Set_OtherBodyKey(Get_BodyKey(Hit.mBodyID2));
+            Entry.Set_PenetrationDepth(Hit.mPenetrationDepth);
+
+            const auto Normal = -Hit.mPenetrationAxis.Normalized();
+
+            auto Points = TArray<FVector>{};
+
+            const auto& Collect_Point = [&](JPH::Vec3Arg InPoint) -> void
+            {
+                Points.Emplace(ck::jolt::Conv(InPoint));
+
+                if (DrawPoints)
+                { InCtx._Renderer->DrawMarker(InPoint, JPH::Color::sYellow, PointMarkerSize); }
+
+                if (DrawNormals)
+                { InCtx._Renderer->DrawLine(InPoint, InPoint + Normal * NormalLength, JPH::Color::sCyan); }
+            };
+
+            // The colliding FACE is the contact patch; a pair whose faces were not resolved still has the single
+            // deepest point, which is what a point-only consumer would have shown anyway.
+            if (Hit.mShape2Face.empty())
+            { Collect_Point(Hit.mContactPointOn2); }
+            else
+            {
+                for (const auto& FacePoint : Hit.mShape2Face)
+                { Collect_Point(FacePoint); }
+            }
+
+            Entry.Set_NumContactPoints(Points.Num());
+            Entry.Set_ContactPoints(Points);
+
+            TargetImpl._SelectionContacts.Emplace(MoveTemp(Entry));
+        }
     }
 
     auto
@@ -510,7 +717,12 @@ namespace ck_jolt_debugdraw_capture
         }
 
         Draw_BodyExtras(InCtx, InBody);
-        Sample_SelectionVelocity(InCtx, BodyKey, InBody);
+        Sample_Selection(InCtx, BodyKey, InBody);
+
+        // On demand only, and for the primary selection only: the shape query is the most expensive thing this
+        // capture can be asked to do, and it answers a panel nobody has open most of the time.
+        if (InCtx._TargetImpl->_WantsSelectionContacts && Get_IsPrimarySelection(*InCtx._TargetImpl, BodyKey))
+        { Query_SelectionContacts(InCtx, InBody); }
 
         ++InCtx._TargetImpl->_LastCaptureStats._BodiesCaptured;
     }
@@ -587,6 +799,12 @@ namespace ck_jolt_debugdraw_capture
             { continue; }
 
             const auto Key = Get_BodyKey(BodyId);
+
+            // Isolated out: no record, no key retained — the stale-key loop below is what releases whatever it
+            // was drawn as, so the body leaves the screen entirely rather than merely stopping to update.
+            if (Get_IsIsolatedOut(TargetImpl, Key))
+            { continue; }
+
             const auto Record = Make_InactiveRecord(InCtx, *Body);
 
             // The incremental half: a body whose pose, shape and colour class are exactly what the last full
@@ -594,8 +812,7 @@ namespace ck_jolt_debugdraw_capture
             // for the whole scene. A selected or hovered body is never skipped — its overlay is produced by this
             // draw path, and re-arming the pass is the only way a static or long-asleep body ever gains one.
             const auto* PreviousRecord = PreviousRecords.Find(Key);
-            const auto IsOverlaid =
-                (TargetImpl._HighlightedBodyKey.IsSet() && *TargetImpl._HighlightedBodyKey == Key) ||
+            const auto IsOverlaid = TargetImpl._HighlightedBodyKeys.Contains(Key) ||
                 (TargetImpl._HoveredBodyKey.IsSet() && *TargetImpl._HoveredBodyKey == Key);
             const auto IsUnchanged = PreviousRecord != nullptr && *PreviousRecord == Record &&
                 NOT IsOverlaid && NOT ExtrasDemandRedraw;
@@ -650,9 +867,15 @@ namespace ck_jolt_debugdraw_capture
             if (Body->GetMotionType() == JPH::EMotionType::Static)
             { continue; }
 
-            Draw_Body(InCtx, *Body);
-
             const auto Key = Get_BodyKey(BodyId);
+
+            // The key still counts as ACTIVE while isolated out — the sleep diff below is a diff against the
+            // active SET, and dropping it there would make the next capture treat the body as freshly asleep.
+            if (Get_IsIsolatedOut(TargetImpl, Key))
+            { InCtx._Renderer->Release_BodySlots(Key, ck::jolt::debug_draw::EStatCounting::Counted); }
+            else
+            { Draw_Body(InCtx, *Body); }
+
             InCtx._ActiveKeys.Emplace(Key);
             TargetImpl._SleepingBodyKeys.Remove(Key);
 
@@ -688,7 +911,7 @@ namespace ck_jolt_debugdraw_capture
             const auto BodyId = JPH::BodyID{static_cast<JPH::uint32>(FellAsleepKey)};
             const auto* Body = InCtx._LockInterface->TryGetBody(BodyId);
 
-            if (Body == nullptr)
+            if (Body == nullptr || Get_IsIsolatedOut(TargetImpl, FellAsleepKey))
             {
                 InCtx._Renderer->Release_BodySlots(FellAsleepKey, ck::jolt::debug_draw::EStatCounting::Counted);
                 continue;
@@ -772,7 +995,15 @@ namespace ck_jolt_debugdraw_capture
 
                 const auto Key = ck::jolt::debug_draw::Make_CharacterBodyKey_FromEntityId(
                     static_cast<uint64>(InEntity.Get_ID()));
+
+                // Not added to the live set: the release loop below is what takes an isolated-out character's
+                // instances away, exactly as the stale-key loop does for a body.
+                if (Get_IsIsolatedOut(TargetImpl, Key))
+                { return; }
+
                 LiveCharacterKeys.Emplace(Key);
+
+                Sample_CharacterSelection(InCtx, Key, *Character);
 
                 // Counted before the Shape gate so the character path agrees with Draw_Body's: both report a
                 // body the capture VISITED and reconciled, whether or not the Shape flag left it any instances.
@@ -838,8 +1069,10 @@ auto
     Context._Revisions = InRevisions;
 
     // Re-sampled from scratch: a selection this capture does not draw reads as unknown rather than as a value
-    // that has since gone stale.
-    InTarget._Impl->_HighlightedBodyLinearVelocity.Reset();
+    // that has since gone stale. The contacts go with them — a manifold from a superseded step is not live state.
+    InTarget._Impl->_BodySample.Reset();
+    InTarget._Impl->_CharacterSample.Reset();
+    InTarget._Impl->_SelectionContacts.Reset();
 
     TryRefresh_ObjectLayerNames(Context);
 

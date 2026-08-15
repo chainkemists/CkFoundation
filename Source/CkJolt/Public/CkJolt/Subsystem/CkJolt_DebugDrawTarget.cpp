@@ -62,7 +62,7 @@ namespace ck_jolt_debug_draw_target
             uint8 InIndex)
         -> FLinearColor
     {
-        static const FLinearColor Colors[ck::jolt::debug_draw::IslandPaletteSize] =
+        static const FLinearColor Colors[ck::jolt::debug_draw::DistinctColorPaletteSize] =
         {
             FLinearColor{0.90f, 0.25f, 0.25f, 1.0f}, FLinearColor{0.25f, 0.70f, 0.95f, 1.0f},
             FLinearColor{0.35f, 0.85f, 0.35f, 1.0f}, FLinearColor{0.95f, 0.75f, 0.20f, 1.0f},
@@ -74,7 +74,7 @@ namespace ck_jolt_debug_draw_target
             FLinearColor{0.20f, 0.45f, 0.85f, 1.0f}, FLinearColor{0.75f, 0.95f, 0.75f, 1.0f},
         };
 
-        return Colors[InIndex % ck::jolt::debug_draw::IslandPaletteSize];
+        return Colors[InIndex % ck::jolt::debug_draw::DistinctColorPaletteSize];
     }
 
     auto
@@ -590,16 +590,6 @@ auto
             }
         }
 
-        case ECk_Jolt_DebugDrawColorMode::Island:
-        {
-            // Index 0 is "no island" — a static, kinematic or sleeping body belongs to none, and painting them
-            // all one neutral grey is what makes the coloured islands legible.
-            if (InClassIndex == 0)
-            { return _StaticColor; }
-
-            return ck_jolt_debug_draw_target::Get_DistinctColor(static_cast<uint8>(InClassIndex - 1));
-        }
-
         case ECk_Jolt_DebugDrawColorMode::ObjectLayer:
         case ECk_Jolt_DebugDrawColorMode::ShapeType:
         default:
@@ -898,6 +888,13 @@ auto
     _Impl->_SleepingBodyKeys.Reset();
     _Impl->_CharacterKeys.Reset();
     _Impl->_InactiveBodyRecords.Reset();
+
+    // The samples describe what a capture drew, and nothing is drawn any more. The SELECTION itself survives —
+    // a re-opened target shows the same body highlighted.
+    _Impl->_BodySample.Reset();
+    _Impl->_CharacterSample.Reset();
+    _Impl->_SelectionContacts.Reset();
+
     _Impl->_FullPassEverRan = false;
     _Impl->_SweepEverRan = false;
     _Impl->_AnyLive = false;
@@ -1088,15 +1085,6 @@ auto
         {
             for (auto Index = uint8{0}; Index < static_cast<uint8>(EShapeTypeClass::Count); ++Index)
             { Add_Entry(Index, ck_jolt_debug_draw_target::Get_ShapeTypeName(Index)); }
-            break;
-        }
-
-        case ECk_Jolt_DebugDrawColorMode::Island:
-        {
-            Add_Entry(0, FText::FromString(TEXT("No island")));
-
-            for (auto Index = uint8{1}; Index < IslandClassCount; ++Index)
-            { Add_Entry(Index, FText::FromString(ck::Format_UE(TEXT("Island group {}"), Index))); }
             break;
         }
 
@@ -1392,26 +1380,33 @@ auto
 
 auto
     FCk_Jolt_DebugDrawTarget::
-    Set_HighlightedBody(
-        TOptional<uint64> InBodyKey)
+    Set_HighlightedBodies(
+        TArray<uint64> InBodyKeys)
     -> FCk_Jolt_DebugDrawTarget&
 {
-    if (_Impl->_HighlightedBodyKey == InBodyKey)
+    if (_Impl->_HighlightedBodyKeys == InBodyKeys)
     { return *this; }
 
-    if (_Impl->_HighlightedBodyKey.IsSet())
+    // Only the set DIFFERENCE is released. Releasing every overlay and letting the next capture rebuild them
+    // would make each addition to a multi-selection blink the bodies already in it.
+    for (const auto DroppedKey : _Impl->_HighlightedBodyKeys)
     {
+        if (InBodyKeys.Contains(DroppedKey))
+        { continue; }
+
         // Excluded from the stats: this runs BETWEEN captures, and counting it would rewrite the last
         // capture's reported removals after the fact.
         ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
-            ck::jolt::debug_draw::Make_HighlightKey(*_Impl->_HighlightedBodyKey),
+            ck::jolt::debug_draw::Make_HighlightKey(DroppedKey),
             ck::jolt::debug_draw::EStatCounting::Excluded);
     }
 
-    _Impl->_HighlightedBodyKey = InBodyKey;
+    _Impl->_HighlightedBodyKeys = MoveTemp(InBodyKeys);
 
-    // The old selection's sample must not survive as the new one's: the next capture is what fills it.
-    _Impl->_HighlightedBodyLinearVelocity.Reset();
+    // The old selection's samples must not survive as the new one's: the next capture is what fills them.
+    _Impl->_BodySample.Reset();
+    _Impl->_CharacterSample.Reset();
+    _Impl->_SelectionContacts.Reset();
 
     // The overlay is produced by the capture's own draw path, so a body only the revision-keyed full pass ever
     // draws — a static, or one asleep since before this target opened — would not gain its overlay until the
@@ -1423,10 +1418,68 @@ auto
 
 auto
     FCk_Jolt_DebugDrawTarget::
+    Set_HighlightedBody(
+        TOptional<uint64> InBodyKey)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    return InBodyKey.IsSet()
+        ? Set_HighlightedBodies(TArray<uint64>{*InBodyKey})
+        : Set_HighlightedBodies(TArray<uint64>{});
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_HighlightedBodies() const
+    -> const TArray<uint64>&
+{
+    return _Impl->_HighlightedBodyKeys;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
     Get_HighlightedBody() const
     -> TOptional<uint64>
 {
-    return _Impl->_HighlightedBodyKey;
+    if (_Impl->_HighlightedBodyKeys.IsEmpty())
+    { return {}; }
+
+    return _Impl->_HighlightedBodyKeys[0];
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_IsolatedBodies(
+        TSet<uint64> InBodyKeys)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_IsolatedBodyKeys.Num() == InBodyKeys.Num() &&
+        _Impl->_IsolatedBodyKeys.Includes(InBodyKeys))
+    { return *this; }
+
+    _Impl->_IsolatedBodyKeys = MoveTemp(InBodyKeys);
+
+    // Same reasoning as Set_Palette: re-arming the pass alone would skip every body whose pose is unchanged, and
+    // those are exactly the bodies that have to be released (or drawn again once isolation lifts).
+    _Impl->_InactiveBodyRecords.Reset();
+    _Impl->_FullPassEverRan = false;
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Clear_Isolation()
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    return Set_IsolatedBodies(TSet<uint64>{});
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_IsolatedBodies() const
+    -> const TSet<uint64>&
+{
+    return _Impl->_IsolatedBodyKeys;
 }
 
 auto
@@ -1468,23 +1521,25 @@ auto
     Get_HighlightedBodyBounds() const
     -> TOptional<FBox>
 {
-    if (NOT _Impl->_HighlightedBodyKey.IsSet())
-    { return {}; }
-
-    const auto* Slots = _Impl->_BodySlots.Find(*_Impl->_HighlightedBodyKey);
-    if (Slots == nullptr)
-    { return {}; }
-
     auto Bounds = FBox{ForceInit};
 
-    for (const auto& Slot : *Slots)
+    // The UNION over the whole selection: a consumer framing a multi-selection wants one camera move that shows
+    // all of it, not the first body's box.
+    for (const auto HighlightedKey : _Impl->_HighlightedBodyKeys)
     {
-        const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
-
-        if (NOT Placement.IsSet())
+        const auto* Slots = _Impl->_BodySlots.Find(HighlightedKey);
+        if (Slots == nullptr)
         { continue; }
 
-        Bounds += Placement->_LocalBounds.TransformBy(Placement->_Transform);
+        for (const auto& Slot : *Slots)
+        {
+            const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
+
+            if (NOT Placement.IsSet())
+            { continue; }
+
+            Bounds += Placement->_LocalBounds.TransformBy(Placement->_Transform);
+        }
     }
 
     if (Bounds.IsValid == 0)
@@ -1495,10 +1550,53 @@ auto
 
 auto
     FCk_Jolt_DebugDrawTarget::
-    Get_HighlightedBodyLinearVelocity() const
-    -> TOptional<FVector>
+    Get_BodySample() const
+    -> TOptional<FCk_Jolt_DebugDraw_BodySample>
 {
-    return _Impl->_HighlightedBodyLinearVelocity;
+    return _Impl->_BodySample;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_CharacterSample() const
+    -> TOptional<FCk_Jolt_DebugDraw_CharacterSample>
+{
+    return _Impl->_CharacterSample;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_WantsSelectionContacts(
+        bool InWantsContacts)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_WantsSelectionContacts == InWantsContacts)
+    { return *this; }
+
+    _Impl->_WantsSelectionContacts = InWantsContacts;
+
+    // Dropping the demand empties the list here rather than at the next capture: a consumer that stopped asking
+    // must not keep reading a manifold from a frame that has been superseded.
+    if (NOT InWantsContacts)
+    { _Impl->_SelectionContacts.Reset(); }
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_WantsSelectionContacts() const
+    -> bool
+{
+    return _Impl->_WantsSelectionContacts;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_SelectionContacts() const
+    -> const TArray<FCk_Jolt_DebugDraw_ContactEntry>&
+{
+    return _Impl->_SelectionContacts;
 }
 
 auto

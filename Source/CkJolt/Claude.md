@@ -443,11 +443,22 @@ facility does the rest:
   JoltStaticActor fragment) names the same body without knowing the layout. Characters have no BodyID
   and are lifted clear by their own bit. **A key of 0 is a VALID body key** — consumers that need
   "no body" must use an unset optional, never a sentinel.
-- `Set_HighlightedBody(TOptional<uint64>)` draws a SECOND instance of that body in the dedicated
-  `Highlight` colour class, alongside its normal one. Highlight has no population toggle, so a
-  selection can never be hidden, and `TryPick_Body` skips overlay instances so a pick never returns a
-  key no consumer can resolve. Unset clears the selection AND releases the overlay immediately, rather
-  than at the next capture.
+- `Set_HighlightedBodies(TArray<uint64>)` draws a SECOND instance of EACH named body in the dedicated
+  `Highlight` colour class, alongside its normal one — N coexist because each overlay is slotted under
+  its own `Make_HighlightKey`. Highlight has no population toggle, so a selection can never be hidden,
+  and `TryPick_Body` skips overlay instances so a pick never returns a key no consumer can resolve.
+  Only the bodies that LEFT the selection have their overlays released (immediately, not at the next
+  capture); releasing all of them would blink every body already in a multi-selection each time one
+  more is added. `Set_HighlightedBody(TOptional<uint64>)` is the 1-element convenience over it, and an
+  unset key clears the selection.
+- **The FIRST key is the PRIMARY.** It alone is sampled and it alone is asked for its contacts: both
+  are per-body reads a debugger renders exactly one of.
+- `Set_IsolatedBodies(TSet<uint64>)` / `Clear_Isolation()` — while the set is non-empty the capture
+  draws ONLY those keys and RELEASES every other body's instances, across all four technique steps
+  (inactive pass, active pass, sleep re-colour, characters). This is NOT class visibility: a hidden
+  class keeps its instances and unhides instantly, an isolated-out body has none at all. Both calls
+  re-arm the full pass, so a static or long-asleep body leaves and re-enters on the very next
+  capture. Isolation and highlight COMPOSE — an isolated body keeps its overlay.
 - `Set_HoveredBody(TOptional<uint64>)` is its subdued sibling, for a hover preview: same mechanism, its
   own always-visible `Hover` class, half alpha and a smaller swell. Independent of the highlight — a
   body may be both, and then it carries both overlays.
@@ -457,17 +468,40 @@ facility does the rest:
   half-transparent geometry, which is exactly the "I selected it and nothing looks different" the user
   reported (P5-D41). The highlight colour is `{1.00, 0.15, 0.85}` — magenta, chosen to be near no entry
   of any mode's palette, which the `HighlightAddsOverlayInstance` spec asserts mode by mode.
-- `Get_HighlightedBodyBounds()` reads the body's NORMAL instances, so a consumer can frame a selection
-  on the same click that made it, with no capture in between.
-- `Get_HighlightedBodyLinearVelocity()` is sampled BY THE CAPTURE, for the highlighted rigid body only,
-  in the same async-safe window it draws from — this exists precisely so a Slate consumer never reads
-  `PhysicsSystem` for it. Re-sampled from scratch every capture: unset when nothing is highlighted,
-  when the key is a character, and when the last capture did not draw the body (a static or sleeping
-  body is only drawn on a revision pass).
+- `Get_HighlightedBodyBounds()` reads the highlighted bodies' NORMAL instances — the UNION over a
+  multi-selection — so a consumer can frame a selection on the same click that made it, with no capture
+  in between.
+- `Get_BodySample()` / `Get_CharacterSample()` are sampled BY THE CAPTURE, for the PRIMARY selection
+  only, in the same async-safe window it draws from — they exist precisely so a Slate consumer never
+  reads `PhysicsSystem` for a body scalar. Both are re-sampled from scratch every capture: unset when
+  nothing is highlighted, and when the last capture did not draw the body (a static or sleeping body is
+  only drawn on a revision pass). They are mutually exclusive — a key is a rigid body or a character.
+  - `FCk_Jolt_DebugDraw_BodySample`: linear + angular velocity, mass (**0 = INFINITE** — Jolt stores an
+    inverse mass and a static body's is 0), friction, restitution, gravity factor, motion type, motion
+    quality, object layer, broadphase layer, sensor flag, `AllowsSleeping` (a `TOptional<bool>`, UNSET
+    for a static body and only for one — `Body::GetAllowSleeping` dereferences `mMotionProperties`
+    without a guard), world AABB, shape type + sub-type as display strings, and shape scale (unit for
+    everything that is not a `ScaledShape`, which is the only Jolt shape carrying one).
+  - `FCk_Jolt_DebugDraw_CharacterSample`: ground state, ground normal, ground velocity, ground body KEY
+    (in the same `Make_BodyKey` space, so a consumer can select it), character velocity and up vector.
+    Every ground getter lives on `CharacterBase`, not on `CharacterVirtual`.
+- `Set_WantsSelectionContacts(bool)` + `Get_SelectionContacts()` — the primary selection's contacts, as
+  a `NarrowPhaseQuery::CollideShape` of its own shape at its own centre-of-mass transform, run by the
+  capture ON DEMAND and only while a rigid body is selected. Each entry is
+  `{other body key, num contact points, penetration depth, contact points}`; the points and their
+  normals are also drawn through the LINE channel under the `ContactPoints` / `ContactNormals` flags.
+  Three settings carry the whole behaviour and none is a default: faces are collected explicitly (the
+  default `NoFaces` would leave no contact POINTS to report), a small positive `mMaxSeparationDistance`
+  is what makes the resting-on-the-floor case appear at all (a resting pair is not penetrating, and a
+  NEGATIVE penetration depth is exactly that case, not an error), and an `IgnoreSingleBodyFilter`
+  excludes the selection itself before the narrow phase ever runs. Dropping the demand empties the list
+  at once rather than leaving a superseded manifold readable. **This is not the ContactListener's
+  record** (§ Contact recording) — that one exists only inside the solve; this is a query.
 - `TryPick_Body(Origin, Direction)` — oriented-box test in instance space over live instances, nearest
   parametric hit wins; hidden classes are not pickable. O(live instances), for a click handler.
 
-⚠ **`Set_HighlightedBody` re-arms the full inactive-body pass** (`_FullPassEverRan = false`), so a
+⚠ **Changing the selection or the isolation set re-arms the full inactive-body pass**
+(`_FullPassEverRan = false`), so a
 static or long-asleep body gains its overlay on the very next capture instead of waiting for the scene
 to change. The cost is one O(all bodies) WALK per selection change, deselect included — **measured at
 23.6 ms for 100k bodies** (it was 250 ms before the pass became incremental), because the only body
@@ -507,7 +541,7 @@ is a project-wide cook-settings problem, not a debug-draw one.
 ### Colour modes + legend
 
 Colour is a **mode**, per target: `ECk_Jolt_DebugDrawColorMode { BodyClass (default), SleepState,
-ObjectLayer, Island, ShapeType }` via `Set_ColorMode` / `Get_ColorMode`. A mode decides which class
+ObjectLayer, ShapeType }` via `Set_ColorMode` / `Get_ColorMode`. A mode decides which class
 INDEX a body lands in, and the index decides the bucket — so changing the mode re-buckets everything.
 `Set_ColorMode` therefore invalidates the retained capture exactly as `Set_Palette` does, and clears the
 hidden-class mask (an index means something different in the new mode, so nothing hidden should stay
@@ -525,7 +559,6 @@ answer `Get_IsClassVisible` with `true` always, and `Set_ClassVisibility` ignore
 | `BodyClass` | `ECk_Jolt_DebugDraw_ColorClass` — Static, Kinematic, Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character | the pre-Phase-5 behaviour, unchanged |
 | `SleepState` | `ESleepStateClass` — Static, Kinematic, Awake, Asleep | what `ck.Jolt.DebugDraw.SleepColoring` selects for the in-world target |
 | `ObjectLayer` | one per registered Jolt object layer, capped at index 61 | see the naming note below |
-| `Island` | 0 = "no island" (static, kinematic, sleeping, or never stepped), 1..16 = the island index hashed into a 16-colour wheel | islands churn every step; the absolute number is meaningless, the grouping is not |
 | `ShapeType` | `EShapeTypeClass` — a COMPACT re-indexing of `JPH::EShapeSubType` | never index a table by the raw sub-type: it reserves `User1..8`/`UserConvex1..8` mid-range and appends `Plane`/`TaperedCylinder`/`Empty` at the end |
 
 `Get_LegendEntries(Mode)` returns `{ClassIndex, Name, Color}` per class, with Highlight ("Selected")
@@ -550,19 +583,32 @@ any world whose Jolt subsystem never published one — the ObjectLayer legend wo
 `Layer N` row for **every index a live bucket is currently using**, and only while the target's own mode
 IS ObjectLayer (a bucket index means nothing in any other mode).
 
-⚠ **`Island` mode is INERT on the vendored Jolt 5.2.1** — verified 2026-08-15, not inferred:
-`MotionProperties::mIslandIndex` is only ever *initialised* to `cInactiveIndex` and *reset* to it
-(`Physics/Body/BodyManager.cpp:607`); `SetIslandIndexInternal` has **zero call sites** in the whole
-library, and `IslandBuilder` keeps its island indices on its own `BodyLink` array instead. So
-`GetIslandIndexInternal()` answers `cInactiveIndex` for every body no matter how much the world has
-stepped, and every body lands in class 0 "No island". Jolt's own `EShapeColor::IslandColor`
-(`BodyManager.cpp:993`) is equally dead in this version. **Awaiting a ruling** (drop the mode / keep it
-documented as inert / carry a patch); the `ColorModesAndLegend` spec asserts only the un-stepped case,
-which is the same as the stepped one today.
-
 **A character keeps the BodyClass `Character` index in every mode.** A `CharacterVirtual` has no
 `JPH::Body`, so object layer, island and sleep state do not exist for it; the alternative is a capsule
 that vanishes into a meaningless bucket the moment the mode changes.
+
+### Debug pause, single step, step duration
+
+A pause of the JOLT world alone, independent of `UWorld::IsPaused()` — the engine's pause is set by the
+PlayerController and stops the whole game, this one freezes physics so a debugger can inspect it. Both
+are honoured by the same two step guards.
+
+- `FJoltWorld::Request_SetDebugPaused(bool)` / `Get_IsDebugPaused()`, forwarded on
+  `UCk_Jolt_Subsystem` as `Request_SetDebugPaused` / `Get_IsDebugPaused`.
+- `Request_StepOnce()` permits **exactly one** step and then re-pauses. It is **ignored (Verbose) while
+  the world is not debug-paused**, and a one-shot left unconsumed is DISCARDED on resume — otherwise it
+  would fire at the start of the next pause and step a world the user had just frozen.
+- **The one-shot is consumed in `FProcessor_JoltWorld_PlanStep`, never in the Step processor.**
+  `TryConsume_DebugPauseGate()` answers "this frame plans zero steps" and eats the one-shot in the
+  process; the Step processor READS the decision through `Get_StepOnceGrantedThisFrame()` instead of
+  re-consuming it. A flag the Step processor interpreted for itself would bypass the accumulator model
+  (`_Accumulator` / `_PendingSimTime` / `_NumStepsLastFrame`) entirely. A paused frame never reaches
+  `ComputeStepPlan`, so a long pause cannot bank real time and burst on resume.
+- `Get_LastStepDurationMs()` (world and subsystem) is the wall time of the frame's SOLVE — every
+  `DoPhysicsUpdate` the frame ran, character stepping and pose capture excluded. Measured INSIDE the
+  step loop so the async branch times the task-graph thread's own work rather than the hand-off, and
+  stored in a `std::atomic<float>` with RELAXED ordering because that loop is off the game thread and
+  the value orders nothing.
 
 ### Contact recording
 
@@ -750,10 +796,14 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.HighlightAddsOverlayInstance` | the selection ADDS an instance in its own Highlight bucket rather than moving one; hiding the body's own class leaves the overlay visible; a moving selection updates body and overlay in place (0 added / 0 removed); clearing releases the overlay immediately |
 | `Ck.Jolt.DebugDraw.HighlightedBodyBounds` | an already-drawn body yields selection bounds with NO re-capture, excluding the unselected body; a never-drawn body has none; clearing clears them |
 | `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns |
-| `Ck.Jolt.DebugDraw.HighlightedBodyLinearVelocity` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
+| `Ck.Jolt.DebugDraw.SelectionSampleIsCaptureOwned` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
+| `Ck.Jolt.DebugDraw.PauseAndStepOnce` | a debug-paused world plans zero steps frame after frame; one `Request_StepOnce` makes EXACTLY one frame plan steps and grants the Step processor that frame, after which the world is blocked again and still paused; a request made while running is not banked for the next pause and an unconsumed one is discarded on resume; the accumulator is untouched by a pause; the step duration reads back what the step loop wrote |
+| `Ck.Jolt.DebugDraw.BodySampleFields` | the sampled fields are the SELECTED body's own — friction, restitution, gravity factor, object layer, shape type/sub-type, unit shape scale, a finite positive mass and a readable sleeping permission for a dynamic body; a static body reports INFINITE mass as 0 and its sleeping permission is never read (the assert-safety leg); a sensor reports itself as one; a rigid-body selection produces no character sample |
+| `Ck.Jolt.DebugDraw.SelectionContacts` | nothing is queried until a consumer asks; two touching boxes then produce an entry naming the OTHER body and never the selection itself, carrying as many points as it counts; separating them empties the list and bringing them back refills it; dropping the demand empties it immediately, and with nothing selected there is nothing to query |
+| `Ck.Jolt.DebugDraw.MultiHighlightAndIsolate` | N highlighted bodies add N overlay instances (not one), the primary is the FIRST key, and dropping one releases exactly one overlay immediately; the selection bounds cover the UNION; isolating one body releases every other body's instances and composes with the highlight (normal + overlay survive), and clearing isolation restores the whole population |
 | `Ck.Jolt.DebugDraw.DestroyedSleepingBodyReleasesBothSlots` | the sweep is revision-gated (runs on the first capture, skipped while the body-removed token holds) and a destroyed SLEEPING body releases its own instance AND its selection overlay with the static-scene revision held still — so the full pass is provably not what covers it |
 | `Ck.Jolt.DebugDraw.LineAndLabelChannels` | a JPH `DrawLine` during a capture lands in the target's line channel and the count RESETS on the next capture (so the per-capture `Flush` is real); a `DrawText3D` lands in `Get_Labels()` at the body it describes, and dropping the flag that produced it empties the channel; an External sub-channel SURVIVES two captures, a second sub-channel does not disturb the first, and `Clear_External` empties exactly one |
-| `Ck.Jolt.DebugDraw.ColorModesAndLegend` | a mode change RE-BUCKETS: three bodies split three ways by body class collapse to two under `ShapeType` (the two boxes share a sub-type) and to two under `Island` (nothing stepped, so nothing has one), and switching back restores the body-class split; `SleepState` splits the awake box from the asleep one, which differ in nothing else. Every mode's legend is non-empty, its names unique, and carries "Selected" and "Hovered"; with NO names published the ObjectLayer legend still carries a bare `Layer N` row for the index the bodies are actually drawn in, and once names are published it reads `Layer 0 — WorldStatic` for a named layer and a bare `Layer 1` for an unnamed one |
+| `Ck.Jolt.DebugDraw.ColorModesAndLegend` | a mode change RE-BUCKETS: three bodies split three ways by body class collapse to two under `ShapeType` (the two boxes share a sub-type), and switching back restores the body-class split; `SleepState` splits the awake box from the asleep one, which differ in nothing else. Every mode's legend is non-empty, its names unique, and carries "Selected" and "Hovered"; with NO names published the ObjectLayer legend still carries a bare `Layer N` row for the index the bodies are actually drawn in, and once names are published it reads `Layer 0 — WorldStatic` for a named layer and a bare `Layer 1` for an unnamed one |
 | `Ck.Jolt.DebugDraw.HoverOverlay` | hover and highlight are independent — two bodies, two overlays, two distinct always-visible classes; the hover class cannot be hidden; a body that is BOTH carries both overlays; clearing releases the hover overlay immediately |
 | `Ck.Jolt.DebugDraw.ContactRecordingReplays` | a step with nothing demanding contacts records none and leaves Jolt's statics off; a target's `ContactPoints` flag arms the process-wide demand and writes `sDrawContactPoint` (leaving `sDrawSupportingFaces` off), and after the replay that target has contact lines while a second target that did not ask stays empty; a second target's `SupportingFaces` flag proves the union is over ALL live targets; dropping the last contact flag clears both statics and EMPTIES the channel rather than leaving stale contacts. The only case that steps — `FScopedJoltWorld::Step()` exists for it |
 | `Ck.Jolt.DebugDraw.DrawFlagsGatePerBodyExtras` | `Shape` alone emits no lines even for a moving body; enabling `Velocity` emits some; adding `BoundingBox` emits strictly more; clearing back to `Shape` returns the count to zero with both bodies still drawn; dropping `Shape` releases every instanced-mesh instance while the line extras keep drawing |
@@ -865,7 +915,19 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   scalar (velocity, pose, sleep state) — register an `FCk_Jolt_DebugDrawTarget` and let the capture
   processor fill it, or you race the async step. A value a presentation consumer needs live belongs on
   the target's JPH-free surface, sampled inside the capture, the way
-  `Get_HighlightedBodyLinearVelocity` is.
+  `Get_BodySample` is.
+- Don't ask for an `Island` colour mode — it was DROPPED (P5-D66), and re-adding it against the vendored
+  Jolt 5.2.1 would ship a mode that paints every body one colour. `MotionProperties::mIslandIndex` is
+  only ever initialised and reset to `cInactiveIndex`; `SetIslandIndexInternal` has zero call sites in
+  the whole library, and `IslandBuilder` keeps its indices on its own `BodyLink` array — so
+  `GetIslandIndexInternal()` answers `cInactiveIndex` for every body however long the world has stepped
+  (Jolt's own `EShapeColor::IslandColor` is equally dead there). Colouring by island needs a vendored
+  patch calling `SetIslandIndexInternal` from `IslandBuilder`, i.e. a third-party divergence carried
+  across every Jolt bump — a ruling, not a bug fix.
+- Don't call `GetBodyStats()` or `GetConstraints()` per frame — both walk every body (and the latter
+  returns the constraint array BY VALUE, refcount bump per element).
+- Don't consume the debug-pause gate anywhere but `FProcessor_JoltWorld_PlanStep`. A second consumer
+  eats the step-once one-shot and the single step silently never happens.
 - Don't draw debug lines for a target through `UCk_Utils_DebugDraw_UE` / `DrawDebugLine`. Those go to the
   world's own line batcher, so a line drawn for the debugger's preview target would appear in the game
   world and vice versa. Every line belongs to a target's line channel — JPH primitives get there through
