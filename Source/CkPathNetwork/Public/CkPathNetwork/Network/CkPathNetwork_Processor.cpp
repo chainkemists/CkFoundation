@@ -174,7 +174,8 @@ namespace ck_pathnetwork_processor
     }
 
     // Direct FindPathSync (bypassing the CkNavigation request path) is safe here: every caller drains
-    // under the route processor's per-frame budget (_MaxRouteQueriesPerFrame).
+    // under the route processor's budget (_MaxRouteQueriesPerFrame), which is spent once per FRAME
+    // across the main pass and every pump pass, not re-armed per Tick.
     auto
     Resolve_OffPathLeg(
         UWorld* InWorld,
@@ -996,7 +997,15 @@ namespace ck
         SCOPE_CYCLE_COUNTER(
             STAT_CkPathNetwork_FollowerHandleRequests);
 
-        _BudgetRemainingThisTick = UCk_Utils_PathNetwork_Settings_UE::Get_MaxRouteQueriesPerFrame();
+        // The budget is per FRAME, not per Tick: this processor is pump-eligible and Pump() calls
+        // Tick(0) -> DoTick, so re-arming unconditionally would hand every pump pass a fresh
+        // allowance — up to budget x _MaxPumpIterations synchronous route plans in a single frame.
+        if (GFrameCounter != _BudgetFrame)
+        {
+            _BudgetFrame = GFrameCounter;
+            _BudgetRemainingThisTick = UCk_Utils_PathNetwork_Settings_UE::Get_MaxRouteQueriesPerFrame();
+        }
+
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -1011,6 +1020,22 @@ namespace ck
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_PlanRoute);
+
+        if (_BudgetRemainingThisTick <= 0)
+        {
+            // Out of route budget for this frame. Leave the fragment untouched — draining and
+            // re-queueing would bump the dirty-marker version, which re-dispatches this processor
+            // on the next pump pass and never converges. UpdateTuning is exempt: it costs no route
+            // query, and a tuning change withheld for a frame would stall the caller's replan.
+            const auto HasTuningRequest = InRequests.Get_Requests().ContainsByPredicate(
+                [](const FFragment_PathNetworkFollower_Requests::RequestType& InPending) -> bool
+                {
+                    return std::holds_alternative<FCk_Request_PathNetworkFollower_UpdateTuning>(InPending);
+                });
+
+            if (NOT HasTuningRequest)
+            { return; }
+        }
 
         InHandle.CopyAndRemove(InRequests, [&](const auto& InSnapshot)
         {
