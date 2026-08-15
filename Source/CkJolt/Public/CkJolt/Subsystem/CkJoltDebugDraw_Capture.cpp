@@ -37,7 +37,7 @@ namespace ck_jolt_debugdraw_capture
         JPH::PhysicsSystem* _PhysicsSystem = nullptr;
         const JPH::BodyLockInterfaceNoLock* _LockInterface = nullptr;
         FCk_Handle _TransientEntity;
-        uint64 _StaticSceneRevision = 0;
+        ck::jolt::debug_draw::FCaptureRevisions _Revisions;
         TSet<uint64> _ActiveKeys;
         bool _FullPassRanThisCapture = false;
     };
@@ -175,6 +175,20 @@ namespace ck_jolt_debugdraw_capture
     }
 
     auto
+        Make_InactiveRecord(
+            const JPH::Body& InBody)
+        -> ck::jolt::debug_draw::FInactiveBodyRecord
+    {
+        auto Record = ck::jolt::debug_draw::FInactiveBodyRecord{};
+        Record._Position = InBody.GetPosition();
+        Record._Rotation = InBody.GetRotation();
+        Record._Shape = InBody.GetShape();
+        Record._MotionType = InBody.GetMotionType();
+        Record._IsSensor = InBody.IsSensor();
+        return Record;
+    }
+
+    auto
         Draw_Body(
             FContext_Capture& InCtx,
             const JPH::Body& InBody)
@@ -227,7 +241,7 @@ namespace ck_jolt_debugdraw_capture
         auto& TargetImpl = *InCtx._TargetImpl;
 
         const auto SceneChanged = NOT TargetImpl._FullPassEverRan ||
-            TargetImpl._CapturedStaticSceneRevision != InCtx._StaticSceneRevision;
+            TargetImpl._CapturedStaticSceneRevision != InCtx._Revisions._StaticScene;
 
         if (NOT SceneChanged)
         { return ck::EStepResult::Continue; }
@@ -235,8 +249,12 @@ namespace ck_jolt_debugdraw_capture
         auto PreviouslyRetainedKeys = MoveTemp(TargetImpl._StaticBodyKeys);
         PreviouslyRetainedKeys.Append(MoveTemp(TargetImpl._SleepingBodyKeys));
 
+        auto PreviousRecords = MoveTemp(TargetImpl._InactiveBodyRecords);
+
         TargetImpl._StaticBodyKeys.Reset();
         TargetImpl._SleepingBodyKeys.Reset();
+        TargetImpl._InactiveBodyRecords.Reset();
+        TargetImpl._InactiveBodyRecords.Reserve(PreviousRecords.Num());
 
         auto AllBodyIds = JPH::BodyIDVector{};
         InCtx._PhysicsSystem->GetBodies(AllBodyIds);
@@ -252,9 +270,22 @@ namespace ck_jolt_debugdraw_capture
             if (Body->IsActive())
             { continue; }
 
-            Draw_Body(InCtx, *Body);
-
             const auto Key = Get_BodyKey(BodyId);
+            const auto Record = Make_InactiveRecord(*Body);
+
+            // The incremental half: a body whose pose and shape are exactly what the last full pass already
+            // drew is skipped outright, which is what a streaming-in cell or a re-bake must not pay for the
+            // whole scene. The selected body is never skipped — its overlay is produced by this draw path, and
+            // re-arming the pass is the only way a static or long-asleep body ever gains one.
+            const auto* PreviousRecord = PreviousRecords.Find(Key);
+            const auto IsHighlighted = TargetImpl._HighlightedBodyKey.IsSet() &&
+                *TargetImpl._HighlightedBodyKey == Key;
+            const auto IsUnchanged = PreviousRecord != nullptr && *PreviousRecord == Record && NOT IsHighlighted;
+
+            if (NOT IsUnchanged)
+            { Draw_Body(InCtx, *Body); }
+
+            TargetImpl._InactiveBodyRecords.Emplace(Key, Record);
 
             if (Body->GetMotionType() == JPH::EMotionType::Static)
             { TargetImpl._StaticBodyKeys.Emplace(Key); }
@@ -270,7 +301,7 @@ namespace ck_jolt_debugdraw_capture
             InCtx._Renderer->Release_BodySlots(StaleKey);
         }
 
-        TargetImpl._CapturedStaticSceneRevision = InCtx._StaticSceneRevision;
+        TargetImpl._CapturedStaticSceneRevision = InCtx._Revisions._StaticScene;
         TargetImpl._FullPassEverRan = true;
         TargetImpl._LastCaptureStats._FullPassRan = true;
         InCtx._FullPassRanThisCapture = true;
@@ -306,6 +337,11 @@ namespace ck_jolt_debugdraw_capture
             const auto Key = Get_BodyKey(BodyId);
             InCtx._ActiveKeys.Emplace(Key);
             TargetImpl._SleepingBodyKeys.Remove(Key);
+
+            // The body now lives in an ACTIVE bucket, so the inactive record no longer describes what is on
+            // screen. Left behind, a body that woke and settled again at its old pose would match its stale
+            // record and be skipped by the next full pass — staying awake-coloured forever.
+            TargetImpl._InactiveBodyRecords.Remove(Key);
         }
 
         return ck::EStepResult::Continue;
@@ -349,8 +385,9 @@ namespace ck_jolt_debugdraw_capture
         return ck::EStepResult::Continue;
     }
 
-    // A sleeping body is invisible to both body passes, so its slots would outlive its destruction. The check
-    // is a bounds-checked array read per sleeping body — no draw, no allocation.
+    // A sleeping body is invisible to both body passes, so its slots would outlive its destruction. The walk is
+    // O(sleeping bodies), so it is gated on the world's body-removed revision: no body has died since the last
+    // sweep means there is nothing here to find.
     auto
         FTechnique_CaptureJoltWorld::
         ReleaseDestroyedSleepingBodies(
@@ -359,6 +396,12 @@ namespace ck_jolt_debugdraw_capture
         -> ck::EStepResult
     {
         auto& TargetImpl = *InCtx._TargetImpl;
+
+        const auto BodiesWereRemoved = NOT TargetImpl._SweepEverRan ||
+            TargetImpl._CapturedBodyRemovedRevision != InCtx._Revisions._BodyRemoved;
+
+        if (NOT BodiesWereRemoved)
+        { return ck::EStepResult::Continue; }
 
         auto DeadSleepingKeys = TArray<uint64>{};
 
@@ -374,7 +417,12 @@ namespace ck_jolt_debugdraw_capture
         {
             InCtx._Renderer->Release_BodySlots(DeadKey);
             TargetImpl._SleepingBodyKeys.Remove(DeadKey);
+            TargetImpl._InactiveBodyRecords.Remove(DeadKey);
         }
+
+        TargetImpl._CapturedBodyRemovedRevision = InCtx._Revisions._BodyRemoved;
+        TargetImpl._SweepEverRan = true;
+        TargetImpl._LastCaptureStats._SweepRan = true;
 
         return ck::EStepResult::Continue;
     }
@@ -437,7 +485,7 @@ auto
     Capture_JoltWorld(
         FCk_Jolt_DebugDrawTarget& InTarget,
         JPH::PhysicsSystem& InPhysicsSystem,
-        uint64 InStaticSceneRevision,
+        const ck::jolt::debug_draw::FCaptureRevisions& InRevisions,
         const FCk_Handle& InTransientEntity)
     -> void
 {
@@ -455,7 +503,7 @@ auto
     // step was consumed and before the next one is kicked, so no worker is mutating bodies.
     Context._LockInterface = &InPhysicsSystem.GetBodyLockInterfaceNoLock();
     Context._TransientEntity = InTransientEntity;
-    Context._StaticSceneRevision = InStaticSceneRevision;
+    Context._Revisions = InRevisions;
 
     // Re-sampled from scratch: a selection this capture does not draw reads as unknown rather than as a value
     // that has since gone stale.

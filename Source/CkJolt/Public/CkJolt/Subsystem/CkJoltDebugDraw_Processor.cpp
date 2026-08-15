@@ -79,10 +79,13 @@ namespace ck
         { return; }
 
         auto& Renderer = FCk_Jolt_DebugRenderer::Get_OrCreate();
-        const auto StaticSceneRevision = JoltWorld->Get_StaticSceneRevision();
+
+        const auto Revisions = ck::jolt::debug_draw::FCaptureRevisions{
+            JoltWorld->Get_StaticSceneRevision(),
+            JoltWorld->Get_BodyRemovedRevision()};
 
         for (const auto& Target : Targets)
-        { Renderer.Capture_JoltWorld(*Target, *PhysicsSystem, StaticSceneRevision, _TransientEntity); }
+        { Renderer.Capture_JoltWorld(*Target, *PhysicsSystem, Revisions, _TransientEntity); }
 #endif
     }
 }

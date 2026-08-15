@@ -152,6 +152,11 @@ public:
     auto
     Request_NoteStaticSceneChanged() -> void;
 
+    /// Bumps the Jolt world's body-removed change token. Called by every funnel that destroys a body, whatever
+    /// its motion type — the debug draw's sweep for destroyed SLEEPING bodies is gated on it.
+    auto
+    Request_NoteBodyRemoved() -> void;
+
     CK_PROPERTY_GET(_ParallelPhysicsEnabled);
     CK_PROPERTY_GET(_PhysicsThreadCount);
     CK_PROPERTY_GET(_AsyncPhysicsUpdate);

@@ -276,6 +276,14 @@ namespace ck
 
     auto
         FJoltWorld::
+        Request_NoteBodyRemoved()
+        -> void
+    {
+        ++_BodyRemovedRevision;
+    }
+
+    auto
+        FJoltWorld::
         DoOptimizeBroadPhase()
         -> void
     {

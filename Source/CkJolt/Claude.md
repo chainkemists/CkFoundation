@@ -300,11 +300,14 @@ when no registered target is demanding, so a closed debugger costs one map walk.
   body: statics AND sleeping dynamics. Sleeping dynamics belong here because neither the active pass
   nor the sleep diff can see a body that was already asleep when the target began capturing — without
   them a settled pile is invisible until something wakes it. Keys not re-found are released.
+  **The pass is INCREMENTAL** (see § Incremental full pass): it walks every body but only DRAWS the
+  ones whose pose, shape or colour-class flags changed since the last pass.
 - `DrawActiveBodies` — per frame, `GetActiveBodies`; O(active), not O(all).
 - `RecolorBodiesThatFellAsleep` — diff against the previous frame's active set (bounded by that
   count); skips keys the full pass already drew this capture, so nothing double-counts.
 - `ReleaseDestroyedSleepingBodies` — a sleeping body is invisible to both passes, so its slots would
-  outlive its destruction; one bounds-checked `TryGetBody` per sleeping body, no draw.
+  outlive its destruction; one bounds-checked `TryGetBody` per sleeping body, no draw. **Gated on the
+  body-removed revision** — an unchanged token means no body has died, so the walk is skipped whole.
 - `DrawCharacters` — `ck::FFragment_JoltCharacter_Current` via the registry view; each
   `CharacterVirtual`'s own shape drawn through the shared cache (no per-frame geometry). Characters
   have no BodyID, so their slot keys are lifted clear of the BodyID keyspace.
@@ -315,11 +318,78 @@ re-captures as `UpdateInstanceTransformById` only; a body whose colour class cha
 re-adds, moving it between buckets. Any slot that fails `IsValidId` drops the whole body to the
 rebuild path.
 
-**Static-scene revision** (`FJoltWorld::_StaticSceneRevision`, bumped via
-`UCk_Jolt_Subsystem::Request_NoteStaticSceneChanged`) is the full pass's change token. Funnels:
-JoltBody Setup (Static motion type, or any body spawned `InitialSleepState::Asleep`), JoltBody
-EndPlay (Static), the static-world subsystem's batch add and its removal funnel, and a Teleport
-request on a Static body (it never activates, so only the full pass can notice it moved).
+**Two change tokens**, both owned by `FJoltWorld`, both monotonic, both passed to a capture as
+`ck::jolt::debug_draw::FCaptureRevisions`:
+
+- **Static-scene revision** (`_StaticSceneRevision`, bumped via
+  `UCk_Jolt_Subsystem::Request_NoteStaticSceneChanged`) gates the full pass. Funnels: JoltBody Setup
+  (Static motion type, or any body spawned `InitialSleepState::Asleep`), JoltBody EndPlay (Static),
+  the static-world subsystem's batch add and its removal funnel, and a Teleport request on a Static
+  body (it never activates, so only the full pass can notice it moved).
+- **Body-removed revision** (`_BodyRemovedRevision`, bumped via `FJoltWorld::Request_NoteBodyRemoved`,
+  or `UCk_Jolt_Subsystem::Request_NoteBodyRemoved` from a UObject-side caller) gates the dead-sleeping
+  sweep. Every funnel that destroys a body bumps it, whatever the body's motion type — a sleeping
+  dynamic is exactly the case the sweep exists for, and a static-only funnel would not cover it. The
+  funnel set is `FProcessor_JoltBody_EndPlay` and CkSpatialQuery's `FProcessor_Probe_EndPlay` (a probe
+  body is not a JoltBody, so nothing else in its teardown reaches here). The static-world subsystem's
+  removals are deliberately NOT in this set: baked bodies are Static, so they are released by the full
+  pass their static-revision bump re-arms, never by the sweep. **Any new site that destroys a Jolt body
+  must bump this token**, and must bump the static-scene revision as well if the body is Static —
+  `FProcessor_Probe_EndPlay` bumps both for a Static-motion probe. A target that has never swept sweeps
+  once regardless, so a body destroyed before the target existed is still reconciled.
+
+### Incremental full pass
+
+The full pass keeps a `position + rotation + shape pointer (+ sensor flag + motion type)` record per
+inactive body it drew. On the next pass a body whose record matches exactly is **not drawn at all** —
+no `Shape::Draw`, no bucket lookup, no `UpdateInstanceTransformById`. So a scene-revision bump (a
+streaming cell, a re-bake, an asleep-spawn) costs one cheap comparison per body plus real work only for
+what changed. Pose equality is EXACT: any difference at all re-draws.
+
+The sensor flag and motion type are in the record because they are the colour class's inputs — a record
+that compared pose alone would skip a body whose class had changed and leave it painted the old colour.
+Consequence for the stats: **`_BodiesCaptured` counts bodies DRAWN, not bodies walked**, so a re-run
+over an unchanged scene reports zero while still visiting every body.
+
+Three things deliberately defeat the skip, because each would otherwise show stale state:
+
+- the **highlighted** body is always re-drawn, since the full pass is also what produces its overlay
+  (`Set_HighlightedBody` re-arms the pass precisely for that);
+- `DrawActiveBodies` **erases the record** of any body it draws, so a body that woke, moved and
+  settled back at its old pose cannot match a record written while it was in a different colour bucket;
+- `Set_Palette` **clears every record**, because re-arming the pass alone would skip the very bodies
+  that need repainting.
+
+One colour input is deliberately NOT in the record: BakedStatic attribution, which is resolved through
+the body's `FFragment_JoltStaticActor_Current` entity. It can only flip when that entity dies, and that
+already routes the body through the static-revision funnel — an accepted, documented gap rather than a
+per-body registry lookup on every comparison.
+
+The record is only ever compared against the same BodyID, because the map is rebuilt wholesale each
+pass. A recycled id landing on a body at an identical position, rotation, shape address and flags would
+alias onto the dead body's record and be skipped — accepted.
+
+### Measured cost (Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix, 2026-08-15)
+
+Headless Development editor, standalone `JPH::PhysicsSystem` + transient `UWorld`, N static boxes
+sharing one shape + 1000 awake dynamics. Milliseconds, single sample except steady-state (mean of 10).
+BEFORE = the pre-Phase-4 full pass (every inactive body re-drawn every pass); AFTER = incremental.
+
+| Case | N=1k before → after | N=10k before → after | N=100k before → after |
+|---|---|---|---|
+| first full pass | 1.67 → 1.54 | 4.93 → 6.52 | 57.6 → 69.8 |
+| steady state (1k active) | 2.06 → 2.73 | 2.28 → 2.72 | 2.07 → 2.59 |
+| scene-revision re-run | 5.63 → 2.83 | 22.7 → 3.93 | **260.5 → 22.9** |
+| `TryPick_Body` ×1 | 0.31 → 0.32 | 1.08 → 1.79 | 13.4 → 14.0 |
+| selection change (re-armed pass) | 4.63 → 3.04 | 26.5 → 4.14 | **249.9 → 23.6** |
+
+Read it this way: the two cases that were O(all bodies) of real reconcile work are now ~11x cheaper at
+100k and are bounded by the WALK (GetBodies + a hash lookup + a compare per body), not by drawing. The
+first pass is unchanged-to-slightly-worse by design — nothing is cached yet, and it now also writes a
+record per body. Steady state was already O(active) and stays flat in N. `TryPick_Body` is untouched
+and remains O(live instances). The 100k first pass and re-run are both far inside the spec's sanity
+bounds (2000 ms), which are deliberately loose: the numbers are the product, and the bounds only catch
+a change of algorithmic class.
 
 **Consumers.** `UCk_Jolt_Subsystem::Register_DebugDrawTarget` / `Unregister_DebugDrawTarget` (weak
 storage, game thread). A target binds to ANY `UWorld`, including an `FPreviewScene` world: its ISMs
@@ -357,10 +427,10 @@ facility does the rest:
 
 ⚠ **`Set_HighlightedBody` re-arms the full inactive-body pass** (`_FullPassEverRan = false`), so a
 static or long-asleep body gains its overlay on the very next capture instead of waiting for the scene
-to change. The cost is one O(all bodies) pass **per selection change, deselect included**. That is the
-accepted trade — the alternative is a selection that silently fails to highlight the exact bodies a
-physics debugger is most often opened for. Named here so a profiling pass can find it without
-re-deriving it.
+to change. The cost is one O(all bodies) WALK per selection change, deselect included — **measured at
+23.6 ms for 100k bodies** (it was 250 ms before the pass became incremental), because the only body
+that pass now draws is the newly selected one. Accepted and closed; the alternative is a selection that
+silently fails to highlight the exact bodies a physics debugger is most often opened for.
 
 **Colour + wireframe.** Buckets are per-(geometry, **colour class**) — the class rides the bucket key
 alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
@@ -375,6 +445,22 @@ capture so the next one repaints everything. Solid mode = `M_SimpleUnlitTransluc
 BakedStatic is distinguished from a Static-motion JoltBody by attribution entity, not by layer: both
 share the Static object-layer DOMAIN, and only a baked body's user-data resolves to a
 `FFragment_JoltStaticActor_Current`.
+
+⚠ **`[PACKAGED-VERIFY]` — both engine debug materials in a packaged build.** Whether
+`/Engine/EngineDebugMaterials/` survives a cook is UNPROVEN, and it is unproven identically for the
+solid material this facility has always used, so it is a standing risk rather than a regression. It
+cannot be closed headlessly. Exact acceptance step:
+
+1. Package a **Development** build (DeveloperTool modules are included there, Test/Shipping exclude them).
+2. Run it, open the Jolt debugger window, and confirm bodies render **solid**.
+3. Flip the wireframe toggle and confirm they render **wireframe**, not untinted-default and not invisible.
+4. Check the log for `Failed to load WireframeMaterial` — the facility degrades to Solid and ensures
+   loudly rather than drawing nothing, so a silent-looking pass with that line in the log is a FAIL.
+
+On failure the fallback is P1-D13 branch (b): a CkUsf-generated wireframe look (a `_Wireframe` flag, a
+trivial `.ush`, an AS asset declaration, and a regen commit) replacing the engine material load. Solid
+mode has no fallback — a cook that drops `M_SimpleUnlitTranslucent` breaks the in-world draw too, which
+is a project-wide cook-settings problem, not a debug-draw one.
 
 **The legacy in-world draw is unchanged.** CVars `ck.Jolt.DebugDraw.Enabled` (draw ALL bodies, static
 + dynamic, motion-type colors) and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics
@@ -421,7 +507,7 @@ standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry)
 
 | Spec | Pins |
 |---|---|
-| `Ck.Jolt.DebugDraw.TargetReconcile.StaticPassIsIdempotent` | full pass runs on first capture; an unchanged revision skips it entirely (0 visited/added/updated); a bumped revision re-runs it and REUSES slots (added 0, removed 0, updated N) |
+| `Ck.Jolt.DebugDraw.TargetReconcile.StaticPassIsIdempotent` | full pass runs on first capture; an unchanged revision skips it entirely; a bumped revision re-runs it and touches NOTHING for unchanged bodies (0 added / 0 removed / 0 updated / 0 drawn) while a body that MOVED is re-drawn into the slot it already had (1 updated, 0 added, 0 removed) and the content bounds follow it |
 | `Ck.Jolt.DebugDraw.SleepTransitionRecolors` | a body already asleep before the FIRST capture still draws, coloured sleeping; a body falling asleep later moves buckets (1 removed + 1 added, instance count stable) |
 | `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every bucket's material 0 between the solid and wireframe base materials and back, instance counts unchanged |
 | `Ck.Jolt.DebugDraw.ClassPalette` | one body per colour class on ONE shared shape → one bucket per class, so the split is provably by class and not by geometry |
@@ -433,6 +519,8 @@ standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry)
 | `Ck.Jolt.DebugDraw.HighlightedBodyBounds` | an already-drawn body yields selection bounds with NO re-capture, excluding the unselected body; a never-drawn body has none; clearing clears them |
 | `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns |
 | `Ck.Jolt.DebugDraw.HighlightedBodyLinearVelocity` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
+| `Ck.Jolt.DebugDraw.DestroyedSleepingBodyReleasesBothSlots` | the sweep is revision-gated (runs on the first capture, skipped while the body-removed token holds) and a destroyed SLEEPING body releases its own instance AND its selection overlay with the static-scene revision held still — so the full pass is provably not what covers it |
+| `Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix` | measurement with loose sanity gates at N ∈ {1k, 10k, 100k}: first pass, steady state, revision re-run, pick, and a selection-change re-armed pass, logged as `[JoltDebugDrawBench] N=… case=… ms=…`. The numbers are the product; the assertions are deliberately wide bounds (steady state < 50 ms, everything else < 2000 ms) that only an algorithmic-class regression trips, so they gate without flaking |
 
 ---
 

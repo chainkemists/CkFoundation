@@ -839,6 +839,17 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
+    Request_NoteBodyRemoved()
+        -> void
+{
+    if (NOT _JoltWorld.IsValid())
+    { return; }
+
+    _JoltWorld->Request_NoteBodyRemoved();
+}
+
+auto
+    UCk_Jolt_Subsystem::
     Request_OptimizeBroadPhaseBeforeNextUpdate()
         -> void
 {
