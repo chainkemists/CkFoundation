@@ -55,7 +55,7 @@ namespace ck
             (OutDescriptor._DirtyMarkerNames.Add(Get_ProcessorCanonicalName<T_Markers>()), ...);
             OutDescriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
             {
-                return (InRegistry.Has_AnyEntityWith<T_Markers>() || ...);
+                return (InRegistry.Has_AnyLiveEntityWith<T_Markers>() || ...);
             };
         }
 
@@ -229,7 +229,7 @@ namespace ck
             Descriptor._DirtyMarkerNames.Add(FName{static_cast<int32>(DirtyMarkerTypeName.size()), DirtyMarkerTypeName.data()});
             Descriptor._IsDirtyChecker = [](const FCk_Registry& InRegistry) -> bool
             {
-                return InRegistry.Has_AnyEntityWith<DirtyFragment>();
+                return InRegistry.Has_AnyLiveEntityWith<DirtyFragment>();
             };
         }
         else if constexpr (requires { typename T_Processor::MarkedDirtyByAnyOf; })

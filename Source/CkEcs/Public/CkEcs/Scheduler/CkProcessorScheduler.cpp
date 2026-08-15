@@ -26,6 +26,13 @@ static TAutoConsoleVariable<bool> CVar_SchedulerDebugTiming(
     TEXT("the 2x QueryPerformanceCounter-per-processor cost that otherwise shows as Scheduler::Dispatch self-time."),
     ECVF_Default);
 
+static TAutoConsoleVariable<int32> CVar_SchedulerMaxPumpIterations(
+    TEXT("ck.Scheduler.MaxPumpIterations"),
+    30,
+    TEXT("Per-frame pump-pass budget. Read at the top of every scheduler tick, so A/B measurements of ")
+    TEXT("pump-cascade behaviour need no rebuild."),
+    ECVF_Default);
+
 static TAutoConsoleVariable<bool> CVar_SchedulerVerifyEmptyViewSkip(
     TEXT("ck.Scheduler.VerifyEmptyViewSkip"),
     false,
@@ -98,6 +105,7 @@ auto
 
 #if !UE_BUILD_SHIPPING
     const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+    _MaxPumpIterations = FMath::Max(1, CVar_SchedulerMaxPumpIterations.GetValueOnGameThread());
     DoDebugBeginFrame();
     const auto FrameStartTime = FPlatformTime::Seconds();
 #endif
@@ -342,13 +350,17 @@ auto
         double InNow)
     -> void
 {
+    // _PumpOrder, not _ExecutionOrder: a SkipPump processor can never be pumped, so counting it inflates
+    // "Still dirty" into a feature-coverage number instead of a pump-pressure one.
     auto StillDirtyNames = TArray<FName>{};
-    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    auto StillDirtyNodeIndices = TArray<int32>{};
+    for (const auto NodeIndex : _PumpOrder)
     {
         const auto& Node = _Partition._Nodes[NodeIndex];
-        if (Node._HasDirtyMarker and Node._IsDirtyChecker(InRegistry))
+        if (Node._IsDirtyChecker(InRegistry))
         {
             StillDirtyNames.Add(Node._ProcessorName);
+            StillDirtyNodeIndices.Add(NodeIndex);
         }
     }
 
@@ -364,13 +376,22 @@ auto
     // The breakdown must ride INSIDE the header's message: log-suppression consumers match one
     // Contains pattern against a whole entry, and a separate "  - [Name]" line slips the pattern.
     auto Breakdown = FString{};
-    constexpr auto ApproxCharsPerEntry = 48;
+    constexpr auto ApproxCharsPerEntry = 60;
     Breakdown.Reserve(StillDirtyNames.Num() * ApproxCharsPerEntry);
-    for (const auto& Name : StillDirtyNames)
+    for (auto Index = 0; Index < StillDirtyNames.Num(); ++Index)
     {
         Breakdown += TEXT("\n  - [");
-        Breakdown += Name.ToString();
+        Breakdown += StillDirtyNames[Index].ToString();
         Breakdown += TEXT("]");
+
+#if !UE_BUILD_SHIPPING
+        // The warning is emitted BEFORE DoDebugEndFrame, so the current-frame snapshot is still the live one.
+        if (const auto NodeIndex = StillDirtyNodeIndices[Index];
+            _DebugCurrentFrame.ProcessorTimings.IsValidIndex(NodeIndex))
+        {
+            Breakdown += ck::Format_UE(TEXT(" pumps={}"), _DebugCurrentFrame.ProcessorTimings[NodeIndex].PumpCountThisFrame);
+        }
+#endif
     }
 
     ck::ecs::Warning(TEXT("Pump limit [{}] reached. Still dirty: [{}]{}"),

@@ -204,6 +204,14 @@ public:
         const FCk_Handle& InAnyHandle,
         const UScriptStruct* InStructType) -> bool;
 
+    // Tombstone-aware counterpart of Has_AnyEntityWith_Fragment, mirroring FCk_Registry::Has_AnyLiveEntityWith.
+    // Dynamic-fragment storage is in_place_delete like every Ck pool, so the storage stays non-empty forever
+    // once anything has been removed from it — O(leading holes), so keep it to change-gated checks.
+    static auto
+    Has_AnyLiveEntityWith_Fragment(
+        const FCk_Handle& InAnyHandle,
+        const UScriptStruct* InStructType) -> bool;
+
 public:
 #if WITH_ANGELSCRIPT_CK
     static auto
