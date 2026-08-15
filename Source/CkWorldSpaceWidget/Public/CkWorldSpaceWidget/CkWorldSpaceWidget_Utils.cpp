@@ -17,6 +17,8 @@
 
 #include "Camera/PlayerCameraManager.h"
 
+#include "Components/SlateWrapperTypes.h"
+
 #include "Engine/World.h"
 
 #include "GameFramework/Pawn.h"
@@ -153,12 +155,13 @@ auto
         }
     }
 
-    if (ck::IsValid(WrapperWidget))
-    {
-        WrapperWidget->SetRenderOpacity(Current._Enabled ? 1.0f : 0.0f);
-    }
+    auto TypedHandle = Cast(InHandle);
 
-    return Cast(InHandle);
+    // Routed through Request_SetEnabled so a born-disabled widget is Collapsed from birth
+    // rather than merely transparent (mirrors DoAdd_WorldComponent).
+    Request_SetEnabled(TypedHandle, Current._Enabled, {});
+
+    return TypedHandle;
 }
 
 auto
@@ -258,10 +261,31 @@ auto
         return InWorldSpaceWidgetHandle;
     }
 
+    // Collapsed, not merely transparent: an opacity-0 wrapper still lays out, paints, hit-tests
+    // and takes a SetPositionInViewport write every frame for as long as the entity lives.
     if (const auto WrapperWidget = Current.Get_WrapperWidget().Get();
         ck::IsValid(WrapperWidget))
     {
-        WrapperWidget->SetRenderOpacity(InEnabled ? 1.0f : 0.0f);
+        if (InEnabled)
+        {
+            if (Current._PreDisableVisibility.IsSet())
+            {
+                WrapperWidget->SetVisibility(*Current._PreDisableVisibility);
+                Current._PreDisableVisibility.Reset();
+            }
+
+            // NOT 1.0: the next UpdateLocation pass writes the correct position AND recomputes
+            // opacity, so staying transparent until then avoids a frame at the stale position.
+            WrapperWidget->SetRenderOpacity(0.0f);
+        }
+        else
+        {
+            // Guarded so a double-disable never stashes Collapsed over the real visibility.
+            if (NOT Current._PreDisableVisibility.IsSet())
+            { Current._PreDisableVisibility = WrapperWidget->GetVisibility(); }
+
+            WrapperWidget->SetVisibility(ESlateVisibility::Collapsed);
+        }
     }
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
@@ -396,6 +420,20 @@ auto
         QueryParams);
 
     return Hit.IsValidBlockingHit();
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Get_Debug_IsWrapperCollapsed(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
+    -> bool
+{
+    const auto WrapperWidget = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>().Get_WrapperWidget().Get();
+
+    if (ck::Is_NOT_Valid(WrapperWidget))
+    { return false; }
+
+    return WrapperWidget->GetVisibility() == ESlateVisibility::Collapsed;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

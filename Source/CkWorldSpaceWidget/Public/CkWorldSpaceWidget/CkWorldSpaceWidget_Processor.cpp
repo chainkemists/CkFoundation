@@ -77,6 +77,11 @@ namespace ck
             return;
         }
 
+        // A disabled wrapper is Collapsed — projection, occlusion tracing and the UMG writes
+        // below would all be spent on something that neither lays out nor paints.
+        if (NOT InCurrent.Get_Enabled())
+        { return; }
+
         const auto& LocationInfo = InParams.Get_LocationInfo();
         const auto AnchorWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
         const auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
@@ -233,6 +238,10 @@ namespace ck
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;
         }
+
+        // Same reasoning as UpdateLocation: nothing downstream is observable while Collapsed.
+        if (NOT InCurrent.Get_Enabled())
+        { return; }
 
         auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(PlayerController), TEXT("Invalid PlayerController"))
