@@ -141,6 +141,10 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
 
     ECk_Jolt_DebugDraw_RenderMode _RenderMode = ECk_Jolt_DebugDraw_RenderMode::Solid;
 
+    // One bit per colour class. Visibility is a component-level flag, never a capture filter: a hidden class
+    // keeps capturing so unhiding it is instant and its instances are never stale.
+    uint8 _HiddenClassMask = 0;
+
     FDelegateHandle _WorldCleanupHandle;
 
     uint64 _CapturedStaticSceneRevision = 0;

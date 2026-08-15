@@ -21,6 +21,18 @@ namespace ck_jolt_debug_draw_target
 {
     const auto ColorParameterName = FName{TEXT("Color")};
 
+    static_assert(static_cast<int32>(ECk_Jolt_DebugDraw_ColorClass::Count) <= 8,
+        "The hidden-class mask is a uint8 bitfield. Adding a ninth colour class shifts the bit out of range and "
+        "silently makes that class permanently visible — widen _HiddenClassMask before adding one.");
+
+    auto
+        Get_ClassBit(
+            ECk_Jolt_DebugDraw_ColorClass InColorClass)
+        -> uint8
+    {
+        return static_cast<uint8>(1u << static_cast<uint8>(InColorClass));
+    }
+
     // Rooted, not a bare static UMaterial*: a function-local raw pointer survives the GC that collects the
     // material it points at, and the next dereference is on freed memory.
     // Loaded directly rather than through GEngine->WireframeMaterial, which is null whenever the platform
@@ -96,6 +108,8 @@ auto
         { return _BakedStaticColor; }
         case ECk_Jolt_DebugDraw_ColorClass::Character:
         { return _CharacterColor; }
+        case ECk_Jolt_DebugDraw_ColorClass::Count:
+        { break; }
     }
 
     return _StaticColor;
@@ -274,6 +288,72 @@ auto
 
     for (auto& Kvp : _Impl->_Buckets)
     { ck::jolt::debug_draw::Apply_BucketMaterial(Kvp.Value, _Impl->_Palette, _Impl->_RenderMode); }
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_ClassVisibility(
+        ECk_Jolt_DebugDraw_ColorClass InColorClass,
+        bool InIsVisible)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    const auto ClassBit = ck_jolt_debug_draw_target::Get_ClassBit(InColorClass);
+
+    const auto NewMask = InIsVisible
+        ? static_cast<uint8>(_Impl->_HiddenClassMask & ~ClassBit)
+        : static_cast<uint8>(_Impl->_HiddenClassMask | ClassBit);
+
+    if (_Impl->_HiddenClassMask == NewMask)
+    { return *this; }
+
+    _Impl->_HiddenClassMask = NewMask;
+
+    for (auto& Kvp : _Impl->_Buckets)
+    {
+        if (Kvp.Key._ColorClass != InColorClass)
+        { continue; }
+
+        auto* Ism = Kvp.Value._Ism.Get();
+        if (ck::Is_NOT_Valid(Ism))
+        { continue; }
+
+        Ism->SetVisibility(InIsVisible);
+    }
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_IsClassVisible(
+        ECk_Jolt_DebugDraw_ColorClass InColorClass) const
+    -> bool
+{
+    return (_Impl->_HiddenClassMask & ck_jolt_debug_draw_target::Get_ClassBit(InColorClass)) == 0;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_ContentBounds() const
+    -> FBox
+{
+    auto Bounds = FBox{ForceInit};
+
+    for (const auto& Kvp : _Impl->_Buckets)
+    {
+        if (NOT Get_IsClassVisible(Kvp.Key._ColorClass))
+        { continue; }
+
+        const auto* Ism = Kvp.Value._Ism.Get();
+        if (ck::Is_NOT_Valid(Ism) || Ism->GetInstanceCount() == 0)
+        { continue; }
+
+        // CalcBounds, not the cached Bounds: the cache is refreshed by the deferred render-state update, so a
+        // component whose instances were added this frame still reports its registration-time (empty) box.
+        Bounds += Ism->CalcBounds(Ism->GetComponentTransform()).GetBox();
+    }
+
+    return Bounds;
 }
 
 auto
