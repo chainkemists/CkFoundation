@@ -33,6 +33,30 @@ namespace ck::jolt::debug_draw
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Bodies, characters and selection overlays all live in ONE slot map, so the three keyspaces have to be
+    // disjoint. A BodyID key occupies the low 32 bits (index + sequence); a character has no BodyID, and a
+    // highlight overlay traces a key that is already taken, so both are lifted clear by their own bit.
+    constexpr uint64 CharacterKeyBit = uint64{1} << 40;
+    constexpr uint64 HighlightKeyBit = uint64{1} << 41;
+
+    constexpr auto
+        Make_CharacterBodyKey_FromEntityId(
+            uint64 InEntityId)
+        -> uint64
+    {
+        return CharacterKeyBit | InEntityId;
+    }
+
+    constexpr auto
+        Make_HighlightKey(
+            uint64 InBodyKey)
+        -> uint64
+    {
+        return HighlightKeyBit | InBodyKey;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // Colour class rides the key alongside the packed colour: two classes whose palette entries quantise to the
     // same 8-bit colour must still land in distinct buckets, or the bucket's reported class is a coin flip.
     struct FBucketKey
@@ -111,6 +135,14 @@ namespace ck::jolt::debug_draw
     Destroy_BucketIsm(
         FBucket& InOutBucket) -> void;
 
+    /// Removes every instance held for ONE slot key and forgets it. Exactly one key: pairing a body with its
+    /// highlight overlay is the caller's decision, because the capture's rebuild path releases a body's slots
+    /// mid-draw and must not take the overlay with it.
+    CKJOLT_API auto
+    Release_SlotsForKey(
+        FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
+        uint64 InSlotKey) -> void;
+
     /// Creates the mode's MID on first use and assigns it to material slot 0. InOutRenderMode is written back
     /// when the wireframe material is unavailable and the target degrades to Solid.
     CKJOLT_API auto
@@ -135,6 +167,14 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     TSet<uint64> _PrevActiveBodyKeys;
     TSet<uint64> _SleepingBodyKeys;
     TSet<uint64> _CharacterKeys;
+
+    // The selected body's key in its OWN keyspace (a plain body or character key); its overlay slots live
+    // under Make_HighlightKey of it.
+    TOptional<uint64> _HighlightedBodyKey;
+
+    // Sampled by the capture for the highlighted RIGID body only, and re-sampled from scratch every capture:
+    // a value the current capture did not produce would be reported as live state it no longer is.
+    TOptional<FVector> _HighlightedBodyLinearVelocity;
 
     FCk_Jolt_DebugDrawPalette _Palette;
     ck::jolt::debug_draw::FDebugDrawStats _LastCaptureStats;

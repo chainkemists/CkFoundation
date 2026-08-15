@@ -331,10 +331,41 @@ roots a dying world and stays reusable. Dropping demand (`Set_IsDesired(false)`)
 which clears instances AND invalidates the retained sets — a re-open rebuilds against fresh world
 state rather than showing a frozen snapshot.
 
+**Selection surface (JPH-free, for presentation consumers).** A consumer names ONE drawn body and the
+facility does the rest:
+
+- `ck::jolt::debug_draw::Make_BodyKey(uint32 IndexAndSequenceNumber)` and `Make_CharacterBodyKey(Handle)`
+  are the ONLY definitions of the slot keyspace. The capture keys every body it draws through
+  `Make_BodyKey`, so a consumer holding a `BodyID`'s index+sequence (or a `_BodyIds` entry off a
+  JoltStaticActor fragment) names the same body without knowing the layout. Characters have no BodyID
+  and are lifted clear by their own bit. **A key of 0 is a VALID body key** — consumers that need
+  "no body" must use an unset optional, never a sentinel.
+- `Set_HighlightedBody(TOptional<uint64>)` draws a SECOND instance of that body in the dedicated
+  `Highlight` colour class, alongside its normal one. Highlight has no population toggle, so a
+  selection can never be hidden, and `TryPick_Body` skips overlay instances so a pick never returns a
+  key no consumer can resolve. Unset clears the selection AND releases the overlay immediately, rather
+  than at the next capture.
+- `Get_HighlightedBodyBounds()` reads the body's NORMAL instances, so a consumer can frame a selection
+  on the same click that made it, with no capture in between.
+- `Get_HighlightedBodyLinearVelocity()` is sampled BY THE CAPTURE, for the highlighted rigid body only,
+  in the same async-safe window it draws from — this exists precisely so a Slate consumer never reads
+  `PhysicsSystem` for it. Re-sampled from scratch every capture: unset when nothing is highlighted,
+  when the key is a character, and when the last capture did not draw the body (a static or sleeping
+  body is only drawn on a revision pass).
+- `TryPick_Body(Origin, Direction)` — oriented-box test in instance space over live instances, nearest
+  parametric hit wins; hidden classes are not pickable. O(live instances), for a click handler.
+
+⚠ **`Set_HighlightedBody` re-arms the full inactive-body pass** (`_FullPassEverRan = false`), so a
+static or long-asleep body gains its overlay on the very next capture instead of waiting for the scene
+to change. The cost is one O(all bodies) pass **per selection change, deselect included**. That is the
+accepted trade — the alternative is a selection that silently fails to highlight the exact bodies a
+physics debugger is most often opened for. Named here so a profiling pass can find it without
+re-deriving it.
+
 **Colour + wireframe.** Buckets are per-(geometry, **colour class**) — the class rides the bucket key
 alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
 still land in distinct buckets. `FCk_Jolt_DebugDrawPalette` maps the class enum (Static, Kinematic,
-Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character) to a colour, with a dim factor
+Dynamic_Awake, Dynamic_Sleeping, Sensor, BakedStatic, Character, Highlight) to a colour, with a dim factor
 applied to the sleeping variant and the opacity the tint uses; `Set_Palette` invalidates the retained
 capture so the next one repaints everything. Solid mode = `M_SimpleUnlitTranslucent`, wireframe =
 `/Engine/EngineDebugMaterials/WireframeMaterial` — both loaded by direct `LoadObject` and held in a
@@ -396,6 +427,12 @@ standalone `JPH::PhysicsSystem` + a transient `UWorld`, no PIE, no ECS registry)
 | `Ck.Jolt.DebugDraw.ClassPalette` | one body per colour class on ONE shared shape → one bucket per class, so the split is provably by class and not by geometry |
 | `Ck.Jolt.DebugDraw.PreviewWorldCompat` | an `EWorldType::EditorPreview` world gets registered ISMs with correct instance counts, and zero ensures |
 | `Ck.Jolt.DebugDraw.MultiTargetBatchPrune` | two targets sharing one batch: destroying one leaves the other's bucket and instances intact and still slot-reusing; the batch is pruned only once every Jolt geometry reference is gone |
+| `Ck.Jolt.DebugDraw.ClassVisibility` | hiding a class is component visibility, not a capture skip: buckets and instances survive, a capture while hidden still updates the class, unhiding restores every visible component |
+| `Ck.Jolt.DebugDraw.ContentBounds` | bounds track drawn content off the origin, widen with a far body, EXCLUDE a hidden class, and restore exactly on unhide without a re-capture |
+| `Ck.Jolt.DebugDraw.HighlightAddsOverlayInstance` | the selection ADDS an instance in its own Highlight bucket rather than moving one; hiding the body's own class leaves the overlay visible; a moving selection updates body and overlay in place (0 added / 0 removed); clearing releases the overlay immediately |
+| `Ck.Jolt.DebugDraw.HighlightedBodyBounds` | an already-drawn body yields selection bounds with NO re-capture, excluding the unselected body; a never-drawn body has none; clearing clears them |
+| `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns |
+| `Ck.Jolt.DebugDraw.HighlightedBodyLinearVelocity` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
 
 ---
 
@@ -498,8 +535,13 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
 - Don't construct a second `FCk_Jolt_DebugRenderer` — Jolt asserts on a second `JPH::DebugRenderer`.
   Always `FCk_Jolt_DebugRenderer::Get_OrCreate()`; per-world state belongs on a target, not a
   renderer.
-- Don't read `JPH::PhysicsSystem` from a debugger/UI tick to build debug geometry — register an
-  `FCk_Jolt_DebugDrawTarget` and let the capture processor fill it, or you race the async step.
+- Don't read `JPH::PhysicsSystem` from a debugger/UI tick to build debug geometry OR to read a body
+  scalar (velocity, pose, sleep state) — register an `FCk_Jolt_DebugDrawTarget` and let the capture
+  processor fill it, or you race the async step. A value a presentation consumer needs live belongs on
+  the target's JPH-free surface, sampled inside the capture, the way
+  `Get_HighlightedBodyLinearVelocity` is.
+- Don't re-derive the debug-draw keyspace. `Make_BodyKey` / `Make_CharacterBodyKey` are its only
+  definitions, and a hand-rolled cast will drift from the capture the first time either changes.
 - Don't include `CkJolt_DebugDrawTarget_Impl.h` outside the debug-draw TUs — it is what keeps the
   target's public header JPH-free for presentation consumers.
 

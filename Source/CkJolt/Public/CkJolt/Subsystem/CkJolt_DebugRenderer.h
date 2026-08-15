@@ -114,7 +114,8 @@ public:
     auto
     EndBody() -> void;
 
-    /// Releases every instance slot held for a body that no longer exists.
+    /// Releases every instance slot held for a body that no longer exists — including the selection overlay
+    /// tracing it, which is keyed separately and would otherwise outlive the body it traces.
     auto
     Release_BodySlots(
         uint64 InBodyKey) -> void;
@@ -144,11 +145,6 @@ private:
         FCk_Jolt_DebugDrawTarget& InTarget,
         const ck::jolt::debug_draw::FBucketKey& InKey,
         ck::jolt::debug_draw::FBucket& InOutBucket) -> bool;
-
-    auto
-    DoRelease_BodySlots(
-        FCk_Jolt_DebugDrawTarget& InTarget,
-        uint64 InBodyKey) -> void;
 
 private:
     struct FImpl;
