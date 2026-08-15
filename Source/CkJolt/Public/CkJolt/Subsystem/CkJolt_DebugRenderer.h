@@ -115,7 +115,8 @@ public:
     EndBody() -> void;
 
     /// Releases every instance slot held for a body that no longer exists — including the selection overlay
-    /// tracing it, which is keyed separately and would otherwise outlive the body it traces.
+    /// tracing it, which is keyed separately and would otherwise outlive the body it traces. Counts into the
+    /// active capture's stats: every caller is a capture step.
     auto
     Release_BodySlots(
         uint64 InBodyKey) -> void;
@@ -135,7 +136,7 @@ public:
     Capture_JoltWorld(
         FCk_Jolt_DebugDrawTarget& InTarget,
         JPH::PhysicsSystem& InPhysicsSystem,
-        uint64 InStaticSceneRevision,
+        const ck::jolt::debug_draw::FCaptureRevisions& InRevisions,
         const FCk_Handle& InTransientEntity) -> void;
 
 private:

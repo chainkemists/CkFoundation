@@ -86,11 +86,29 @@ namespace ck::jolt::debug_draw
 {
     struct FDebugDrawStats
     {
+        // Bodies the capture DREW, not bodies it walked. The full pass skips every inactive body whose pose,
+        // shape and colour inputs are unchanged, so a re-run over an unchanged scene reports zero here while
+        // still visiting every body.
         int32 _BodiesCaptured = 0;
         int32 _InstancesAdded = 0;
         int32 _InstancesUpdated = 0;
         int32 _InstancesRemoved = 0;
         bool  _FullPassRan = false;
+        bool  _SweepRan = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /*
+     * The two change tokens a capture reconciles against, both owned by the Jolt world and both monotonic.
+     * _StaticScene gates the full pass over inactive bodies; _BodyRemoved gates the sweep that releases the
+     * slots of a destroyed SLEEPING body, which neither body pass can see. A capture that carried no token
+     * would have to do both O(all) walks every frame.
+     */
+    struct FCaptureRevisions
+    {
+        uint64 _StaticScene = 0;
+        uint64 _BodyRemoved = 0;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

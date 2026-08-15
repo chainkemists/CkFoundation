@@ -963,6 +963,10 @@ namespace ck
         {
             _JoltWorld->Remove_PoseBufferEntry(BodyId.GetIndexAndSequenceNumber());
 
+            // Every motion type, not just Static: a SLEEPING dynamic body is invisible to both of the debug
+            // draw's body passes, so its released slots would outlive it unless the sweep is told to run.
+            _JoltWorld->Request_NoteBodyRemoved();
+
             if (InParams.Get_MotionType() == ECk_MotionType::Static)
             { _JoltWorld->Request_NoteStaticSceneChanged(); }
         }

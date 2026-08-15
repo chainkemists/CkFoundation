@@ -17,11 +17,18 @@
 
 #if JPH_DEBUG_RENDERER
 
+#include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Renderer/DebugRenderer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UMaterialInstanceDynamic;
+
+// ReSharper disable once CppInconsistentNaming
+namespace JPH
+{
+    class Shape;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -115,6 +122,50 @@ namespace ck::jolt::debug_draw
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // What the revision-keyed full pass last drew ONE inactive body as. A body whose pose, shape and colour
+    // inputs all match its record is already on screen exactly as it would be re-drawn, so the pass skips it
+    // entirely — that is what keeps a scene-revision bump O(changed) instead of O(all bodies). Pose is compared
+    // exactly: any difference at all, however small, is a body that moved.
+    //
+    // Sensor-ness and motion type ride along because they are the colour class's inputs: a record that omitted
+    // them would skip a body whose class changed and leave it painted the old colour. The one input NOT
+    // recorded is BakedStatic attribution — it can only flip when the body's JoltStaticActor entity dies, and
+    // that routes the body through the static-revision funnel already.
+    //
+    // The map is rebuilt wholesale each pass, so a record is only ever compared against the SAME BodyID. A
+    // recycled id landing on a body at an identical position, rotation, shape address and flags would alias
+    // onto the dead body's record and be skipped — accepted.
+    struct FInactiveBodyRecord
+    {
+        JPH::RVec3 _Position = JPH::RVec3::sZero();
+        JPH::Quat _Rotation = JPH::Quat::sIdentity();
+        const JPH::Shape* _Shape = nullptr;
+        JPH::EMotionType _MotionType = JPH::EMotionType::Static;
+        bool _IsSensor = false;
+
+        auto operator==(const FInactiveBodyRecord& InOther) const -> bool
+        {
+            return _Shape == InOther._Shape &&
+                   _MotionType == InOther._MotionType &&
+                   _IsSensor == InOther._IsSensor &&
+                   _Position == InOther._Position &&
+                   _Rotation == InOther._Rotation;
+        }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Whether releasing a slot belongs to the capture the stats describe. A release driven from a consumer
+    // (clearing a selection) happens BETWEEN captures, so counting it would rewrite the last capture's reported
+    // numbers after the fact.
+    enum class EStatCounting : uint8
+    {
+        Counted,
+        Excluded
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // Per-batch count of live buckets holding a keep-alive, across EVERY target. A batch is prunable only when
     // its refcount has fallen to exactly that count — i.e. no Jolt geometry references it any more. Owned by
     // the renderer TU but reached through free functions so a target destructing after the renderer is gone
@@ -141,7 +192,8 @@ namespace ck::jolt::debug_draw
     CKJOLT_API auto
     Release_SlotsForKey(
         FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
-        uint64 InSlotKey) -> void;
+        uint64 InSlotKey,
+        EStatCounting InStatCounting) -> void;
 
     /// Creates the mode's MID on first use and assigns it to material slot 0. InOutRenderMode is written back
     /// when the wireframe material is unavailable and the target degrades to Solid.
@@ -168,6 +220,9 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     TSet<uint64> _SleepingBodyKeys;
     TSet<uint64> _CharacterKeys;
 
+    // Pose+shape of every body the last full pass drew, its change oracle for the next one.
+    TMap<uint64, ck::jolt::debug_draw::FInactiveBodyRecord> _InactiveBodyRecords;
+
     // The selected body's key in its OWN keyspace (a plain body or character key); its overlay slots live
     // under Make_HighlightKey of it.
     TOptional<uint64> _HighlightedBodyKey;
@@ -188,8 +243,10 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     FDelegateHandle _WorldCleanupHandle;
 
     uint64 _CapturedStaticSceneRevision = 0;
+    uint64 _CapturedBodyRemovedRevision = 0;
     float _AppliedOpacity = -1.0f;
     bool _FullPassEverRan = false;
+    bool _SweepEverRan = false;
     bool _AnyLive = false;
     bool _IsDesired = false;
 };

@@ -24,6 +24,11 @@ namespace JPH
     class PhysicsSystem;
 }
 
+namespace ck
+{
+    struct FJoltWorld;
+}
+
 namespace ck::details
 {
     // --------------------------------------------------------------------------------------------------------------------
@@ -446,6 +451,8 @@ namespace ck
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 
     public:
+        auto DoTick(TimeType InDeltaT) -> void;
+
         auto
         ForEachEntity(
             TimeType InDeltaT,
@@ -455,6 +462,7 @@ namespace ck
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+        FJoltWorld* _JoltWorld = nullptr;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
