@@ -313,6 +313,12 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     // sampled and the only one whose contacts are queried. The hovered body is the same idea under
     // Make_HoverKey, and the two are independent — a body may be selected AND hovered.
     TArray<uint64> _HighlightedBodyKeys;
+
+    // The same keys as a SET, kept in lockstep with the array by Set_HighlightedBodies. The array carries the
+    // order (the primary is its first element); every membership test in a per-body loop goes through this,
+    // because a linear scan per body is O(selection) on a walk that is already O(all bodies).
+    TSet<uint64> _HighlightedBodyKeySet;
+
     TOptional<uint64> _HoveredBodyKey;
 
     // While non-empty, the capture draws ONLY these keys and releases every other body's instances.

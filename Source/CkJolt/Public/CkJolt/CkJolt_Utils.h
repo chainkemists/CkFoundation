@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkJolt/CkJolt_Common.h"
+#include "CkJolt/Character/CkJoltCharacter_Fragment_Data.h"
 
 #include <Chaos/Vector.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
@@ -18,6 +19,7 @@
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Body/MotionQuality.h>
+#include <Jolt/Physics/Character/CharacterBase.h>
 #include <Jolt/Physics/Collision/BackFaceMode.h>
 
 #include "CkJolt_Utils.generated.h"
@@ -70,6 +72,9 @@ namespace ck::jolt
     CKJOLT_API auto Conv(ECk_MotionType InMotionType) -> JPH::EMotionType;
     CKJOLT_API auto Conv(ECk_MotionQuality InMotionQuality) -> JPH::EMotionQuality;
     CKJOLT_API auto Conv(ECk_BackFaceMode InBackFaceMode) -> JPH::EBackFaceMode;
+
+    /// Jolt's ground-state ordering differs from the Ck mirror's, so this is an explicit map and never a cast.
+    CKJOLT_API auto Conv(JPH::CharacterBase::EGroundState InGroundState) -> ECk_JoltCharacter_GroundState;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Shape Axis Correction

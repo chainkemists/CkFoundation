@@ -35,6 +35,7 @@
 
 namespace ck_jolt_world
 {
+#if !UE_BUILD_SHIPPING
     // The drag spring, per P6-D47: soft limits at zero separation, so ANY distance between the grab point and the
     // anchor is over the limit and the spring is what closes it. 2 Hz / critical damping is a hand that follows the
     // cursor without whipping the body past it.
@@ -44,6 +45,9 @@ namespace ck_jolt_world
     // The anchor draws nothing and collides with nothing; it exists to be a constraint end-point, so its shape is
     // as close to a point as Jolt will accept.
     constexpr auto DragAnchorRadius = 1.0f;
+
+    // A debug-draw key wider than a BodyID's index+sequence names a CHARACTER or an overlay, not a rigid body.
+    constexpr auto DragBodyKeyMask = uint64{0xFFFFFFFF};
 
     /*
      * The anchor's object layer (RATIFIED, P5-D61/S2): a DEFAULT-CONSTRUCTED signature has an all-zero response
@@ -59,22 +63,7 @@ namespace ck_jolt_world
         Signature.Set_Domain(ECk_Jolt_BodyDomain::Dynamic);
         return Signature;
     }
-
-    // Jolt's ground-state enum ordering differs from the Ck mirror's — convert explicitly (never a cast).
-    auto
-        Conv_GroundState(
-            JPH::CharacterBase::EGroundState InState)
-        -> ECk_JoltCharacter_GroundState
-    {
-        switch (InState)
-        {
-            case JPH::CharacterBase::EGroundState::OnGround:      return ECk_JoltCharacter_GroundState::OnGround;
-            case JPH::CharacterBase::EGroundState::OnSteepGround: return ECk_JoltCharacter_GroundState::OnSteepSlope;
-            case JPH::CharacterBase::EGroundState::NotSupported:  return ECk_JoltCharacter_GroundState::NotSupported;
-            case JPH::CharacterBase::EGroundState::InAir:         return ECk_JoltCharacter_GroundState::InAir;
-        }
-        return ECk_JoltCharacter_GroundState::InAir;
-    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -137,9 +126,11 @@ namespace ck
     FJoltWorld::
         ~FJoltWorld()
     {
+#if !UE_BUILD_SHIPPING
         // Belt to Shutdown's braces again: a world destroyed mid-drag would otherwise leave an anchor body and a
         // constraint in a PhysicsSystem that outlives it.
         DoEnd_Drag();
+#endif
 
 #if JPH_DEBUG_RENDERER
         // Belt to Shutdown's braces: a world torn down without Shutdown would leave its contact buffers keyed by
@@ -160,10 +151,12 @@ namespace ck
             _AsyncFuture = {};
         }
 
+#if !UE_BUILD_SHIPPING
         // BEFORE the Jolt pointers are nulled below — the teardown needs the PhysicsSystem it created the anchor
         // and the constraint in.
         _DragRequests.Reset();
         DoEnd_Drag();
+#endif
 
 #if JPH_DEBUG_RENDERER
         if (const auto PhysicsSystem = _PhysicsSystem.Pin(); PhysicsSystem.IsValid())
@@ -420,6 +413,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
+
     auto
         FJoltWorld::
         Request_BeginDrag(
@@ -427,6 +422,15 @@ namespace ck
             const FVector& InWorldGrabPoint)
         -> void
     {
+        // A key carrying any bit above the BodyID's 32 is a character or an overlay key. Truncating it to a
+        // BodyID would grab an unrelated rigid body, which is worse than refusing.
+        if ((InBodyKey & ~ck_jolt_world::DragBodyKeyMask) != 0)
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt Request_BeginDrag: body key [{}] is not a rigid-body key"),
+                InBodyKey);
+            return;
+        }
+
         _DragRequests.Emplace(FDragRequest{FDragRequest::EType::Begin, InBodyKey, InWorldGrabPoint});
     }
 
@@ -452,8 +456,10 @@ namespace ck
         Apply_DragRequests()
         -> void
     {
-        if (_DragRequests.IsEmpty())
-        { return; }
+        // Runs whether or not anything was queued: the dragged body can be destroyed under the drag (its entity
+        // dies, a level streams out) with no request behind it, and this is the only game-thread window that
+        // would notice. The constraint has to go BEFORE the body it references does.
+        DoEnd_DragIfBodyIsGone();
 
         // Drained by MOVE rather than iterated in place: a handler may not enqueue, but the array must be empty
         // before the next frame whatever a handler does.
@@ -475,6 +481,50 @@ namespace ck
                 { DoEnd_Drag(); break; }
             }
         }
+
+        DoRefresh_DragGrabPoint();
+    }
+
+    auto
+        FJoltWorld::
+        DoEnd_DragIfBodyIsGone()
+        -> void
+    {
+        if (NOT _IsDragging)
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        if (NOT PhysicsSystem.IsValid())
+        {
+            DoEnd_Drag();
+            return;
+        }
+
+        if (PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(JPH::BodyID{_DraggedBodyId}) == nullptr)
+        {
+            ck::jolt::Verbose(TEXT("Ending the Jolt debug drag: the dragged body was destroyed under it"));
+            DoEnd_Drag();
+        }
+    }
+
+    auto
+        FJoltWorld::
+        DoRefresh_DragGrabPoint()
+        -> void
+    {
+        if (NOT _IsDragging)
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (NOT PhysicsSystem.IsValid())
+        { return; }
+
+        const auto* Body = PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(JPH::BodyID{_DraggedBodyId});
+        if (Body == nullptr)
+        { return; }
+
+        _DragGrabPointWorld = ck::jolt::Conv(Body->GetWorldTransform() * ck::jolt::Conv(_DragGrabPointLocal));
     }
 
     auto
@@ -579,12 +629,11 @@ namespace ck
         _DragAnchorBodyId = AnchorId.GetIndexAndSequenceNumber();
         _DragGrabPointLocal = ck::jolt::Conv(
             Body->GetWorldTransform().InversedRotationTranslation() * JPH::Vec3{GrabPoint});
+        _DragGrabPointWorld = InWorldGrabPoint;
         _DragAnchorPointWorld = InWorldGrabPoint;
         _IsDragging = true;
 
-#if JPH_DEBUG_RENDERER
         _DebugInternalBodyKeys.Emplace(ck::jolt::debug_draw::Make_BodyKey(_DragAnchorBodyId));
-#endif
 
         // A body that fell asleep before the grab would otherwise ignore the spring entirely.
         BodyInterface.ActivateBody(BodyId);
@@ -650,6 +699,7 @@ namespace ck
         _DragAnchorBodyId = 0;
         _DraggedBodyId = 0;
         _DragGrabPointLocal = FVector::ZeroVector;
+        _DragGrabPointWorld = FVector::ZeroVector;
         _DragAnchorPointWorld = FVector::ZeroVector;
         _IsDragging = false;
     }
@@ -670,26 +720,17 @@ namespace ck
         if (NOT _IsDragging)
         { return {}; }
 
-        const auto PhysicsSystem = _PhysicsSystem.Pin();
-        if (NOT PhysicsSystem.IsValid())
-        { return {}; }
-
-        const auto* Body = PhysicsSystem->GetBodyLockInterfaceNoLock().TryGetBody(JPH::BodyID{_DraggedBodyId});
-        if (Body == nullptr)
-        { return {}; }
-
+        // Cached values ONLY. A consumer of this is a Slate tick, and reading a JPH body from there races the
+        // step every other part of this facility is careful not to.
         auto State = ck::jolt::FCk_Jolt_DebugDragState{};
-
-#if JPH_DEBUG_RENDERER
         State.Set_BodyKey(ck::jolt::debug_draw::Make_BodyKey(_DraggedBodyId));
-#endif
-
-        State.Set_GrabPointWorld(ck::jolt::Conv(
-            Body->GetWorldTransform() * ck::jolt::Conv(_DragGrabPointLocal)));
+        State.Set_GrabPointWorld(_DragGrabPointWorld);
         State.Set_AnchorPointWorld(_DragAnchorPointWorld);
 
         return State;
     }
+
+#endif
 
     auto
         FJoltWorld::
@@ -1092,7 +1133,7 @@ namespace ck
             Current.Set_GroundNormalMirror(Entry.OutGroundNormal);
             Current.Set_GroundVelocityMirror(Entry.OutGroundVelocity);
 
-            const auto NewGroundState = ck_jolt_world::Conv_GroundState(Entry.OutGroundState);
+            const auto NewGroundState = ck::jolt::Conv(Entry.OutGroundState);
             if (Current.Get_GroundStateMirror() != NewGroundState)
             {
                 Current.Set_GroundStateMirror(NewGroundState);

@@ -178,14 +178,17 @@ public:
     auto
     Get_ContactPairsLastStep() const -> int32;
 
+#if !UE_BUILD_SHIPPING
     /*
-     * Debug drag (P6-D47) — DEV-ONLY and SIM-MUTATING, unlike every other debug surface on this subsystem. The
-     * requests queue and are applied by FProcessor_JoltDebugDrag_Apply before the next step; only DYNAMIC bodies
-     * can be dragged (anything else is dropped at Verbose). AUTHORITY ONLY: a drag on a client moves a body the
-     * server will correct on the next replication.
+     * Debug drag (P6-D47) — DEV-ONLY and SIM-MUTATING, unlike every other debug surface on this subsystem, and
+     * therefore compiled out of Shipping entirely. The requests queue and are applied by
+     * FProcessor_JoltDebugDrag_Apply before the next step; only DYNAMIC bodies can be dragged (anything else is
+     * dropped at Verbose). AUTHORITY ONLY: a drag on a client moves a body the server will correct on the next
+     * replication.
      *
      * InBodyKey is the debug-draw body key — the same one TryPick_Body returns, so a click picks and drags the
-     * same body without the caller converting anything.
+     * same body without the caller converting anything. A key outside the rigid-body keyspace (a character, an
+     * overlay) is refused rather than truncated.
      */
     auto
     Request_BeginDrag(
@@ -203,9 +206,10 @@ public:
     Get_IsDragging() const -> bool;
 
     /// Where the drag's spring is attached and where it is pulling to, for a consumer that draws the drag line.
-    /// Unset while nothing is being dragged.
+    /// Unset while nothing is being dragged; both points are cached, so this never reads a JPH body.
     auto
     Get_DragState() const -> TOptional<ck::jolt::FCk_Jolt_DebugDragState>;
+#endif
 
     /// Debug-draw keys of the bodies the facility owns (the drag anchor). Every consumer surface must skip them —
     /// the capture and TryPick_Body already do.
