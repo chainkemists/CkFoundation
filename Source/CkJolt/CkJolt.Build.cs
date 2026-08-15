@@ -18,10 +18,13 @@ public class CkJolt : CkModuleRules
 
             // Static-world baking reads Chaos's own cooked collision (BodySetup AggGeom +
             // TriMeshGeometries) and landscape heightmaps — parity with Chaos by construction.
+            // GeometryFramework is the same story for runtime-generated meshes: the explicit
+            // DynamicMeshComponent bake reads the BodySetup its own cook produced.
             "PhysicsCore",
             "Chaos",
             "ChaosCore",
             "Landscape",
+            "GeometryFramework",
 
             // The batched debug renderer builds transient UStaticMeshes from Jolt triangle batches.
             "MeshDescription",
