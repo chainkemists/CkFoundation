@@ -672,7 +672,7 @@ auto
         return;
     }
 
-    DoRelease_BodySlots(*Target, BodyKey);
+    ck::jolt::debug_draw::Release_SlotsForKey(*Target->_Impl, BodyKey);
 
     auto NewSlots = TArray<ck::jolt::debug_draw::FBodySlot>{};
     NewSlots.Reserve(Pending.Num());
@@ -709,35 +709,6 @@ auto
 
 auto
     FCk_Jolt_DebugRenderer::
-    DoRelease_BodySlots(
-        FCk_Jolt_DebugDrawTarget& InTarget,
-        uint64 InBodyKey)
-    -> void
-{
-    auto* Slots = InTarget._Impl->_BodySlots.Find(InBodyKey);
-    if (Slots == nullptr)
-    { return; }
-
-    for (const auto& Slot : *Slots)
-    {
-        auto* Bucket = InTarget._Impl->_Buckets.Find(Slot._Bucket);
-        if (Bucket == nullptr)
-        { continue; }
-
-        auto* Ism = Bucket->_Ism.Get();
-        if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(Slot._InstanceId))
-        { continue; }
-
-        Ism->RemoveInstanceById(Slot._InstanceId);
-        ++InTarget._Impl->_LastCaptureStats._InstancesRemoved;
-        Bucket->_SlotCount = FMath::Max(0, Bucket->_SlotCount - 1);
-    }
-
-    InTarget._Impl->_BodySlots.Remove(InBodyKey);
-}
-
-auto
-    FCk_Jolt_DebugRenderer::
     Release_BodySlots(
         uint64 InBodyKey)
     -> void
@@ -745,7 +716,10 @@ auto
     if (_Impl->_ActiveTarget == nullptr)
     { return; }
 
-    DoRelease_BodySlots(*_Impl->_ActiveTarget, InBodyKey);
+    auto& TargetImpl = *_Impl->_ActiveTarget->_Impl;
+
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, InBodyKey);
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey));
 }
 
 auto

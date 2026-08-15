@@ -7,9 +7,13 @@
 #include "CkJolt/Subsystem/CkJolt_DebugDrawTarget_Impl.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat_Defaults.h"
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include <Components/InstancedStaticMeshComponent.h>
+#include <Engine/StaticMesh.h>
 #include <Engine/World.h>
 #include <Materials/Material.h>
 #include <Materials/MaterialInstanceDynamic.h>
@@ -59,6 +63,90 @@ namespace ck_jolt_debug_draw_target
 
         return Material.Get();
     }
+
+    // Where one instance sits and how big its geometry is, in the instance's OWN space. Keeping the box local
+    // and the transform beside it is what lets the pick test be an oriented-box test instead of a world AABB
+    // one, at no extra cost.
+    struct FInstancePlacement
+    {
+        FTransform _Transform;
+        FBox _LocalBounds = FBox{ForceInit};
+    };
+
+    auto
+        TryGet_InstancePlacement(
+            const TMap<ck::jolt::debug_draw::FBucketKey, ck::jolt::debug_draw::FBucket>& InBuckets,
+            const ck::jolt::debug_draw::FBodySlot& InSlot)
+        -> TOptional<FInstancePlacement>
+    {
+        const auto* Bucket = InBuckets.Find(InSlot._Bucket);
+        if (Bucket == nullptr)
+        { return {}; }
+
+        auto* Ism = Bucket->_Ism.Get();
+        if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(InSlot._InstanceId))
+        { return {}; }
+
+        const UStaticMesh* Mesh = Ism->GetStaticMesh();
+        if (ck::Is_NOT_Valid(Mesh))
+        { return {}; }
+
+        const auto InstanceIndex = Ism->GetInstanceIndexForId(InSlot._InstanceId);
+        if (InstanceIndex == INDEX_NONE)
+        { return {}; }
+
+        auto Placement = FInstancePlacement{};
+        Placement._LocalBounds = Mesh->GetBounds().GetBox();
+
+        constexpr auto WorldSpace = true;
+        if (NOT Ism->GetInstanceTransform(InstanceIndex, Placement._Transform, WorldSpace))
+        { return {}; }
+
+        return Placement;
+    }
+
+    // Slab test. The returned distance is PARAMETRIC along InDirection, which is all a nearest-hit comparison
+    // needs and spares every caller a normalize. A ray whose origin is already inside the box hits at 0.
+    auto
+        TryIntersect_RayBox(
+            const FVector& InOrigin,
+            const FVector& InDirection,
+            const FBox& InBox)
+        -> TOptional<double>
+    {
+        auto EntryDistance = 0.0;
+        auto ExitDistance = TNumericLimits<double>::Max();
+
+        for (auto Axis = 0; Axis < 3; ++Axis)
+        {
+            const auto AxisDirection = InDirection[Axis];
+            const auto AxisOrigin = InOrigin[Axis];
+
+            if (FMath::IsNearlyZero(AxisDirection))
+            {
+                if (AxisOrigin < InBox.Min[Axis] || AxisOrigin > InBox.Max[Axis])
+                { return {}; }
+
+                continue;
+            }
+
+            const auto InverseDirection = 1.0 / AxisDirection;
+
+            auto NearDistance = (InBox.Min[Axis] - AxisOrigin) * InverseDirection;
+            auto FarDistance = (InBox.Max[Axis] - AxisOrigin) * InverseDirection;
+
+            if (NearDistance > FarDistance)
+            { Swap(NearDistance, FarDistance); }
+
+            EntryDistance = FMath::Max(EntryDistance, NearDistance);
+            ExitDistance = FMath::Min(ExitDistance, FarDistance);
+
+            if (EntryDistance > ExitDistance)
+            { return {}; }
+        }
+
+        return EntryDistance;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,6 +162,26 @@ namespace ck::jolt::debug_draw
         auto Color = InBaseColor;
         Color.A = FMath::Clamp(InOpacity, 0.0f, 1.0f);
         return Color;
+    }
+
+    auto
+        Make_BodyKey(
+            uint32 InIndexAndSequenceNumber)
+        -> uint64
+    {
+        return static_cast<uint64>(InIndexAndSequenceNumber);
+    }
+
+    auto
+        Make_CharacterBodyKey(
+            const FCk_Handle& InCharacterEntity)
+        -> uint64
+    {
+        if (ck::Is_NOT_Valid(InCharacterEntity))
+        { return 0; }
+
+        return Make_CharacterBodyKey_FromEntityId(
+            static_cast<uint64>(InCharacterEntity.Get_Entity().Get_ID()));
     }
 }
 
@@ -108,6 +216,8 @@ auto
         { return _BakedStaticColor; }
         case ECk_Jolt_DebugDraw_ColorClass::Character:
         { return _CharacterColor; }
+        case ECk_Jolt_DebugDraw_ColorClass::Highlight:
+        { return _HighlightColor; }
         case ECk_Jolt_DebugDraw_ColorClass::Count:
         { break; }
     }
@@ -169,6 +279,34 @@ namespace ck::jolt::debug_draw
         InOutBucket._WireframeMid = nullptr;
         InOutBucket._SlotCount = 0;
         InOutBucket._BatchKeepAlive = nullptr;
+    }
+
+    auto
+        Release_SlotsForKey(
+            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
+            uint64 InSlotKey)
+        -> void
+    {
+        auto* Slots = InOutTargetImpl._BodySlots.Find(InSlotKey);
+        if (Slots == nullptr)
+        { return; }
+
+        for (const auto& Slot : *Slots)
+        {
+            auto* Bucket = InOutTargetImpl._Buckets.Find(Slot._Bucket);
+            if (Bucket == nullptr)
+            { continue; }
+
+            auto* Ism = Bucket->_Ism.Get();
+            if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(Slot._InstanceId))
+            { continue; }
+
+            Ism->RemoveInstanceById(Slot._InstanceId);
+            ++InOutTargetImpl._LastCaptureStats._InstancesRemoved;
+            Bucket->_SlotCount = FMath::Max(0, Bucket->_SlotCount - 1);
+        }
+
+        InOutTargetImpl._BodySlots.Remove(InSlotKey);
     }
 
     auto
@@ -354,6 +492,132 @@ auto
     }
 
     return Bounds;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_HighlightedBody(
+        TOptional<uint64> InBodyKey)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    if (_Impl->_HighlightedBodyKey == InBodyKey)
+    { return *this; }
+
+    if (_Impl->_HighlightedBodyKey.IsSet())
+    {
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
+            ck::jolt::debug_draw::Make_HighlightKey(*_Impl->_HighlightedBodyKey));
+    }
+
+    _Impl->_HighlightedBodyKey = InBodyKey;
+
+    // The old selection's sample must not survive as the new one's: the next capture is what fills it.
+    _Impl->_HighlightedBodyLinearVelocity.Reset();
+
+    // The overlay is produced by the capture's own draw path, so a body only the revision-keyed full pass ever
+    // draws — a static, or one asleep since before this target opened — would not gain its overlay until the
+    // scene happened to change. Re-arming the full pass makes the very next capture produce it.
+    _Impl->_FullPassEverRan = false;
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_HighlightedBody() const
+    -> TOptional<uint64>
+{
+    return _Impl->_HighlightedBodyKey;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_HighlightedBodyBounds() const
+    -> TOptional<FBox>
+{
+    if (NOT _Impl->_HighlightedBodyKey.IsSet())
+    { return {}; }
+
+    const auto* Slots = _Impl->_BodySlots.Find(*_Impl->_HighlightedBodyKey);
+    if (Slots == nullptr)
+    { return {}; }
+
+    auto Bounds = FBox{ForceInit};
+
+    for (const auto& Slot : *Slots)
+    {
+        const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
+
+        if (NOT Placement.IsSet())
+        { continue; }
+
+        Bounds += Placement->_LocalBounds.TransformBy(Placement->_Transform);
+    }
+
+    if (Bounds.IsValid == 0)
+    { return {}; }
+
+    return Bounds;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_HighlightedBodyLinearVelocity() const
+    -> TOptional<FVector>
+{
+    return _Impl->_HighlightedBodyLinearVelocity;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    TryPick_Body(
+        const FVector& InOrigin,
+        const FVector& InDirection) const
+    -> TOptional<uint64>
+{
+    const auto DirectionIsUsable = NOT InDirection.IsNearlyZero();
+
+    CK_ENSURE_IF_NOT(DirectionIsUsable,
+        TEXT("TryPick_Body was given a degenerate ray direction [{}] — no body can be picked from it"),
+        InDirection)
+    { return {}; }
+
+    auto NearestKey = TOptional<uint64>{};
+    auto NearestDistance = TNumericLimits<double>::Max();
+
+    for (const auto& Kvp : _Impl->_BodySlots)
+    {
+        for (const auto& Slot : Kvp.Value)
+        {
+            if (Slot._Bucket._ColorClass == ECk_Jolt_DebugDraw_ColorClass::Highlight)
+            { continue; }
+
+            if (NOT Get_IsClassVisible(Slot._Bucket._ColorClass))
+            { continue; }
+
+            const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
+
+            if (NOT Placement.IsSet())
+            { continue; }
+
+            // The ray goes into instance space rather than the box coming out of it: an affine transform
+            // preserves the parametric distance, so the test stays an oriented-box one and the hits from
+            // differently-rotated instances remain directly comparable.
+            const auto LocalOrigin = Placement->_Transform.InverseTransformPosition(InOrigin);
+            const auto LocalDirection = Placement->_Transform.InverseTransformVector(InDirection);
+
+            const auto HitDistance = ck_jolt_debug_draw_target::TryIntersect_RayBox(
+                LocalOrigin, LocalDirection, Placement->_LocalBounds);
+
+            if (NOT HitDistance.IsSet() || *HitDistance >= NearestDistance)
+            { continue; }
+
+            NearestDistance = *HitDistance;
+            NearestKey = Kvp.Key;
+        }
+    }
+
+    return NearestKey;
 }
 
 auto
