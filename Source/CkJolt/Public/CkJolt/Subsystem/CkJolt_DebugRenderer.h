@@ -26,10 +26,10 @@ namespace JPH
 // --------------------------------------------------------------------------------------------------------------------
 
 // Batched JPH::DebugRenderer: geometry becomes transient UStaticMeshes instanced per (geometry, colour-class)
-// bucket; line/text primitives stay immediate-mode. Jolt allows exactly ONE DebugRenderer instance per process
-// (JPH_ASSERT in DebugRenderer's constructor), so this owns only the world-agnostic geometry/batch cache and
-// reconciles into whichever FCk_Jolt_DebugDrawTarget is active for the current draw session. Game-thread only.
-// Rationale: CkJolt/CLAUDE.md § "Debug draw + stats".
+// bucket; lines and text route into the active target's line and label channels. Jolt allows exactly ONE
+// DebugRenderer instance per process (JPH_ASSERT in DebugRenderer's constructor), so this owns only the
+// world-agnostic geometry/batch cache and reconciles into whichever FCk_Jolt_DebugDrawTarget is active for the
+// current draw session. Game-thread only. Rationale: CkJolt/Claude.md § "Debug draw + stats".
 class CKJOLT_API FCk_Jolt_DebugRenderer : public JPH::DebugRenderer
 {
 public:
@@ -87,49 +87,45 @@ public:
         EDrawMode inDrawMode) -> void override;
 
 public:
-    // ---- Whole-array draw session (the subsystem's in-world DrawBodies path) ----
+    // ---- Persistent-slot capture session: the ONLY draw session shape ----
 
-    /// Bind the target and reset its per-frame accumulation. Call before DrawBodies.
-    auto
-    BeginFrame(
-        FCk_Jolt_DebugDrawTarget& InTarget) -> void;
-
-    /// Reconcile the active target's accumulated draws into its instanced components, then unbind it.
-    auto
-    EndFrame() -> void;
-
-    // ---- Persistent-slot capture session (the debug-draw capture processor) ----
-
+    /// Binds the target, resets its stats, and flushes its line + label channels for this capture.
     auto
     BeginCapture(
         FCk_Jolt_DebugDrawTarget& InTarget) -> void;
 
-    /// Opens one body's draw. Every DrawGeometry until EndBody belongs to this body key.
+    /// Opens one body's draw. Every DrawGeometry until EndBody belongs to this body key, in this colour-class
+    /// index of the target's current colour mode.
     auto
     BeginBody(
         uint64 InBodyKey,
-        ECk_Jolt_DebugDraw_ColorClass InColorClass) -> void;
+        uint8 InColorClassIndex) -> void;
 
     /// Reconciles the body's accumulated draws against its persistent instance slots.
     auto
     EndBody() -> void;
 
-    /// Releases every instance slot held for a body that no longer exists — including the selection overlay
-    /// tracing it, which is keyed separately and would otherwise outlive the body it traces. Counts into the
-    /// active capture's stats: every caller is a capture step.
+    /// Releases every instance slot held for a body that no longer exists — including the selection and hover
+    /// overlays tracing it, which are keyed separately and would otherwise outlive the body they trace.
+    /// The counting mode is the caller's: a body that DIED is a removal this capture performed, while a body
+    /// merely dropping its Shape flag is bookkeeping the stats must not report as churn.
     auto
     Release_BodySlots(
-        uint64 InBodyKey) -> void;
+        uint64 InBodyKey,
+        ck::jolt::debug_draw::EStatCounting InStatCounting) -> void;
 
-    /// Prunes dead buckets and refreshes materials, then unbinds the target.
+    /// Prunes dead buckets, refreshes materials, pushes the line + External channels into the target's line
+    /// component, then unbinds the target.
     auto
     EndCapture() -> void;
 
     /*
      * One whole capture into the target: a revision-keyed full pass over every INACTIVE body, a per-frame
-     * active-body pass with sleep/activation recolouring, and a character pass. The capture processor is the
-     * only caller — a presentation consumer drives demand and render mode through the target alone and never
-     * names JPH::PhysicsSystem, so it can never race the step.
+     * active-body pass with sleep/activation recolouring, a character pass, the flag-gated per-body extras and
+     * the flag-gated constraint draws. Only two callers: the capture processor (for registered targets) and the
+     * Jolt subsystem's Tick (for its own in-world default target) — a presentation consumer drives demand,
+     * render mode and draw flags through the target alone and never names JPH::PhysicsSystem, so it can never
+     * race the step.
      * An INVALID transient entity degrades gracefully: no baked-static classification, no characters.
      */
     auto

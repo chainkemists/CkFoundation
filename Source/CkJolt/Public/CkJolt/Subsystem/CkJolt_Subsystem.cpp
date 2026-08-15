@@ -1,7 +1,6 @@
 #include "CkJolt_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -329,8 +328,9 @@ namespace ck_jolt_subsystem
         static bool DebugDrawSleepColoring = false;
         static FAutoConsoleVariableRef CVar_DebugDrawSleepColoring(TEXT("ck.Jolt.DebugDraw.SleepColoring"),
             DebugDrawSleepColoring,
-            TEXT("When drawing the Jolt world, color bodies by sleep state (JPH SleepColor: static grey, "
-                 "keyframed green, dynamic yellow, sleeping red) instead of motion type (MotionTypeColor)."));
+            TEXT("Color bodies by sleep state rather than by body class. Selects the in-world target's colour "
+                 "mode (SleepState vs BodyClass): with it on, static and kinematic bodies fall back to one "
+                 "neutral colour each and the only distinction drawn is awake vs asleep."));
 
         static bool DebugDrawVelocity = true;
         static FAutoConsoleVariableRef CVar_DebugDrawVelocity(TEXT("ck.Jolt.DebugDraw.Velocity"),
@@ -354,7 +354,63 @@ namespace ck_jolt_subsystem
         static FAutoConsoleVariableRef CVar_DebugDrawConstraints(TEXT("ck.Jolt.DebugDraw.Constraints"),
             DebugDrawConstraints,
             TEXT("When drawing the Jolt world, also draw constraints (anchors, hinge axes, limits)."));
+
+        static bool DebugDrawContacts = false;
+        static FAutoConsoleVariableRef CVar_DebugDrawContacts(TEXT("ck.Jolt.DebugDraw.Contacts"),
+            DebugDrawContacts,
+            TEXT("When drawing the Jolt world, also draw contact points and manifold normals.\n")
+            TEXT("PROCESS-WIDE, unlike every other draw CVar: Jolt's contact draw switches are statics with no "
+                 "per-world variant, so this arms emission for every Jolt world and every debugger preview at "
+                 "once. Off by default — a dense pile emits contact lines by the hundred thousand."));
     }
+
+#if JPH_DEBUG_RENDERER
+    /*
+     * The CVars remain the in-world draw's source of truth; the draw flags are how they reach the shared capture
+     * code. Everything not listed stays off, matching what the deleted DrawSettings aggregate hard-coded to
+     * false. AngularVelocity rides ck.Jolt.DebugDraw.Velocity because Jolt's single mDrawVelocity emitted BOTH
+     * the linear and the angular arrow — splitting them into two flags without mapping both would silently drop
+     * one of the two lines this CVar has always drawn.
+     *
+     * SleepColoring is deliberately absent HERE: it selected EShapeColor::SleepColor vs MotionTypeColor, which
+     * is a COLOUR question, not a draw-vocabulary one. It drives the target's colour mode instead — see
+     * Get_InWorldColorMode.
+     */
+    auto
+        Get_InWorldDrawFlags()
+        -> ECk_Jolt_DebugDrawFlags
+    {
+        auto Flags = ECk_Jolt_DebugDrawFlags::Shape;
+
+        if (cvar::DebugDrawVelocity)
+        { Flags |= ECk_Jolt_DebugDrawFlags::Velocity | ECk_Jolt_DebugDrawFlags::AngularVelocity; }
+
+        if (cvar::DebugDrawWorldTransform)
+        { Flags |= ECk_Jolt_DebugDrawFlags::WorldTransform; }
+
+        if (cvar::DebugDrawConstraints)
+        { Flags |= ECk_Jolt_DebugDrawFlags::Constraints; }
+
+        // Points AND normals together: "contacts" is one question to a user, and Jolt emits the manifold normal
+        // from the same solve pass as the point, so splitting them into two CVars would only ever be turned on
+        // together (P5-D63 v).
+        if (cvar::DebugDrawContacts)
+        { Flags |= ECk_Jolt_DebugDrawFlags::ContactPoints | ECk_Jolt_DebugDrawFlags::ContactNormals; }
+
+        return Flags;
+    }
+
+    /// The other half of the CVar mapping: ck.Jolt.DebugDraw.SleepColoring is a COLOUR question, so it selects
+    /// the in-world target's colour mode rather than a draw flag (P5-D62).
+    auto
+        Get_InWorldColorMode()
+        -> ECk_Jolt_DebugDrawColorMode
+    {
+        return cvar::DebugDrawSleepColoring
+            ? ECk_Jolt_DebugDrawColorMode::SleepState
+            : ECk_Jolt_DebugDrawColorMode::BodyClass;
+    }
+#endif
 
     static auto ResolveCVarOverride(const TCHAR* InCVarName, int32 InCVarValue, bool InProjectSettingValue, const TCHAR* InSettingName) -> bool
     {
@@ -561,56 +617,6 @@ auto
     // Async mode: the step is in flight and physics state is not stable, so skip the draw entirely.
     if (_JoltWorld.IsValid() && NOT _JoltWorld->Get_AsyncMode())
     {
-        constexpr auto DrawGetSupportFeatures = false;
-        constexpr auto DrawSupportDirection = false;
-        constexpr auto DrawGetSupportingFace = false;
-        constexpr auto DrawShape = true;
-        // The batched renderer draws real instanced meshes; the EDrawMode wireframe hint is ignored there.
-        constexpr auto DrawShapeWireframe = false;
-        const auto DrawShapeColor = ck_jolt_subsystem::cvar::DebugDrawSleepColoring
-            ? JPH::BodyManager::EShapeColor::SleepColor
-            : JPH::BodyManager::EShapeColor::MotionTypeColor;
-        constexpr auto DrawBoundingBox = false;
-        constexpr auto DrawCenterOfMassTransform = false;
-        const auto DrawWorldTransform = ck_jolt_subsystem::cvar::DebugDrawWorldTransform;
-        const auto DrawVelocity = ck_jolt_subsystem::cvar::DebugDrawVelocity;
-        constexpr auto DrawMassAndInertia = false;
-        constexpr auto DrawSleepStats = false;
-        constexpr auto DrawSoftBodyVertices = false;
-        constexpr auto DrawSoftBodyVertexVelocities = false;
-        constexpr auto DrawSoftBodyEdgeConstraints = false;
-        constexpr auto DrawSoftBodyBendConstraints = false;
-        constexpr auto DrawSoftBodyVolumeConstraints = false;
-        constexpr auto DrawSoftBodySkinConstraints = false;
-        constexpr auto DrawSoftBodyLraConstraints = false;
-        constexpr auto DrawSoftBodyPredictedBounds = false;
-        constexpr auto DrawSoftBodyConstraintColor = JPH::ESoftBodyConstraintColor::ConstraintType;
-
-        const auto DrawSettings = JPH::BodyManager::DrawSettings
-        {
-            DrawGetSupportFeatures,
-            DrawSupportDirection,
-            DrawGetSupportingFace,
-            DrawShape,
-            DrawShapeWireframe,
-            DrawShapeColor,
-            DrawBoundingBox,
-            DrawCenterOfMassTransform,
-            DrawWorldTransform,
-            DrawVelocity,
-            DrawMassAndInertia,
-            DrawSleepStats,
-            DrawSoftBodyVertices,
-            DrawSoftBodyVertexVelocities,
-            DrawSoftBodyEdgeConstraints,
-            DrawSoftBodyBendConstraints,
-            DrawSoftBodyVolumeConstraints,
-            DrawSoftBodySkinConstraints,
-            DrawSoftBodyLraConstraints,
-            DrawSoftBodyPredictedBounds,
-            DrawSoftBodyConstraintColor
-        };
-
         const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
         const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
 
@@ -621,18 +627,30 @@ auto
                 auto& Renderer = FCk_Jolt_DebugRenderer::Get_OrCreate();
 
                 _DefaultDebugDrawTarget->Set_Opacity(ck_jolt_subsystem::cvar::DebugDrawOpacity);
+                _DefaultDebugDrawTarget->Set_DrawFlags(ck_jolt_subsystem::Get_InWorldDrawFlags());
+                _DefaultDebugDrawTarget->Set_ColorMode(ck_jolt_subsystem::Get_InWorldColorMode());
 
-                Renderer.BeginFrame(*_DefaultDebugDrawTarget);
-                _PhysicsSystem->DrawBodies(DrawSettings, &Renderer);
+                const auto Revisions = ck::jolt::debug_draw::FCaptureRevisions{
+                    _JoltWorld->Get_StaticSceneRevision(),
+                    _JoltWorld->Get_BodyRemovedRevision()};
 
-                if (ck_jolt_subsystem::cvar::DebugDrawConstraints)
-                { _PhysicsSystem->DrawConstraints(&Renderer); }
+                // The same transient entity the capture processor passes: it is what resolves a baked static's
+                // attribution entity and what the character pass iterates. Absent outside a live ECS world,
+                // which the capture degrades on gracefully.
+                const auto TransientEntity = ck::IsValid(_EcsWorldSubsystem)
+                    ? _EcsWorldSubsystem->Get_TransientEntity()
+                    : FCk_Handle{};
 
-                Renderer.EndFrame();
+                Renderer.Capture_JoltWorld(*_DefaultDebugDrawTarget, *_PhysicsSystem, Revisions, TransientEntity);
                 Renderer.NextFrame();
             }
             else
             {
+                // Flags first: the contact ones drive Jolt's PROCESS-WIDE statics, so an in-world draw that has
+                // been switched off must stop declaring a contact demand or every world keeps recording
+                // manifolds nothing will ever draw.
+                _DefaultDebugDrawTarget->Set_DrawFlags(ECk_Jolt_DebugDrawFlags::Shape);
+
                 // Without this the last frame's instanced meshes linger frozen once the gate closes.
                 _DefaultDebugDrawTarget->HideAll();
             }
@@ -823,6 +841,14 @@ auto
 
         OutTargets.Emplace(Target);
     }
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_DefaultDebugDrawTarget() const
+        -> TSharedPtr<FCk_Jolt_DebugDrawTarget>
+{
+    return _DefaultDebugDrawTarget;
 }
 #endif
 

@@ -12,6 +12,7 @@
 #include "CkJolt/Character/CkJoltCharacter_Utils.h"
 #include "CkJolt/Character/CkJoltCharacterContactListener.h"
 #include "CkJolt/CkJolt_Utils.h"
+#include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -101,7 +102,15 @@ namespace ck
     }
 
     FJoltWorld::
-        ~FJoltWorld() = default;
+        ~FJoltWorld()
+    {
+#if JPH_DEBUG_RENDERER
+        // Belt to Shutdown's braces: a world torn down without Shutdown would leave its contact buffers keyed by
+        // an address a later PhysicsSystem can be allocated at, and inherit a dead world's contacts once.
+        if (const auto PhysicsSystem = _PhysicsSystem.Pin(); PhysicsSystem.IsValid())
+        { ck::jolt::debug_draw::Forget_ContactRecord(PhysicsSystem.Get()); }
+#endif
+    }
 
     auto
         FJoltWorld::
@@ -113,6 +122,11 @@ namespace ck
             _AsyncFuture.Wait();
             _AsyncFuture = {};
         }
+
+#if JPH_DEBUG_RENDERER
+        if (const auto PhysicsSystem = _PhysicsSystem.Pin(); PhysicsSystem.IsValid())
+        { ck::jolt::debug_draw::Forget_ContactRecord(PhysicsSystem.Get()); }
+#endif
 
         _PhysicsSystem = nullptr;
         _TempAllocator = nullptr;
@@ -307,7 +321,24 @@ namespace ck
         if (NOT PhysicsSystem.IsValid())
         { return; }
 
+#if JPH_DEBUG_RENDERER
+        // Contacts exist ONLY inside the solve — there is nothing left to read once Update returns — so this is
+        // the one draw the capture cannot do for itself. The scope is a no-op unless some debug-draw target asks
+        // for contacts; when one does, Jolt's own contact draw emits lines through the singleton renderer, which
+        // has no bound target here and appends them to a lock-guarded frame buffer instead.
+        //
+        // This runs on the task-graph thread in async mode and Jolt's solve is itself multi-threaded, which is
+        // exactly why the buffer is guarded and why the REPLAY happens elsewhere, on the game thread.
+        // Keyed by THIS world: a PIE session runs several, and one world's manifolds replayed into another's
+        // targets would be a lie. Only one world may hold the scope per step (P5-D64/F3).
+        ck::jolt::debug_draw::Begin_ContactRecord(PhysicsSystem.Get());
+#endif
+
         PhysicsSystem->Update(InFixedDt, _CollisionSteps, _TempAllocator, _JobSystem);
+
+#if JPH_DEBUG_RENDERER
+        ck::jolt::debug_draw::End_ContactRecord(PhysicsSystem.Get());
+#endif
     }
 
     auto

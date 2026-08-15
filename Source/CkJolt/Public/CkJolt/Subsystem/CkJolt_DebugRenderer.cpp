@@ -2,7 +2,6 @@
 
 #if JPH_DEBUG_RENDERER
 
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkJolt/CkJolt_Stats.h"
@@ -139,24 +138,6 @@ namespace ck_jolt_debug_renderer
     // Per-batch live-bucket census across EVERY target; see Note_BucketHolder* in the impl header.
     static TMap<JPH::RefTargetVirtual*, int32> GBucketHolderCounts;
 
-    auto
-        Get_AreTransformsEqual(
-            const TArray<FTransform>& InA,
-            const TArray<FTransform>& InB)
-        -> bool
-    {
-        if (InA.Num() != InB.Num())
-        { return false; }
-
-        for (auto Index = 0; Index < InA.Num(); ++Index)
-        {
-            if (NOT InA[Index].Equals(InB[Index]))
-            { return false; }
-        }
-
-        return true;
-    }
-
     struct FPendingDraw
     {
         ck::jolt::debug_draw::FBucketKey _Key;
@@ -218,7 +199,7 @@ struct FCk_Jolt_DebugRenderer::FImpl
 
     TArray<ck_jolt_debug_renderer::FPendingDraw> _PendingBodyDraws;
     uint64 _CaptureBodyKey = 0;
-    ECk_Jolt_DebugDraw_ColorClass _ActiveColorClass = ECk_Jolt_DebugDraw_ColorClass::Static;
+    uint8 _ActiveColorClassIndex = 0;
     bool _CaptureBodyOpen = false;
 };
 
@@ -264,15 +245,25 @@ auto
         JPH::ColorArg inColor)
     -> void
 {
-    if (_Impl->_ActiveTarget == nullptr)
+    const auto From = ck::jolt::Conv(inFrom);
+    const auto To = ck::jolt::Conv(inTo);
+    const auto Color = ck::jolt::Conv(inColor);
+
+    // The recorder is tested FIRST, before the bound target, and that order is load-bearing. A bound target is a
+    // game-thread capture, but Jolt's solve is multi-threaded and — in async mode — belongs to a DIFFERENT world
+    // that may be stepping right now; appending to the target's unguarded line array from a solve worker is a
+    // data race. The recording atomic is the only discriminator available inside DrawLine, so while any world is
+    // recording, every line goes to the guarded buffer. When nothing records this is one acquire load and a
+    // return. Accepted consequence: a capture that overlaps another world's async solve loses its own lines to
+    // that record for the frame — a missing line beats a torn TArray.
+    if (ck::jolt::debug_draw::TryRecord_ContactLine(From, To, Color))
     { return; }
 
-    auto* World = _Impl->_ActiveTarget->Get_World().Get();
-    if (ck::Is_NOT_Valid(World))
+    auto* Target = _Impl->_ActiveTarget;
+    if (Target == nullptr)
     { return; }
 
-    UCk_Utils_DebugDraw_UE::DrawDebugLine(World, ck::jolt::Conv(inFrom), ck::jolt::Conv(inTo),
-        ck::jolt::Conv(inColor));
+    Target->_Impl->_JphLines.Emplace(ck::jolt::debug_draw::Make_DebugDrawLine(From, To, Color));
 }
 
 auto
@@ -300,15 +291,16 @@ auto
         float inHeight)
     -> void
 {
-    if (_Impl->_ActiveTarget == nullptr)
+    auto* Target = _Impl->_ActiveTarget;
+    if (Target == nullptr)
     { return; }
 
-    auto* World = _Impl->_ActiveTarget->Get_World().Get();
-    if (ck::Is_NOT_Valid(World))
-    { return; }
-
-    UCk_Utils_DebugDraw_UE::DrawDebugString(World, ck::jolt::Conv(inPosition),
-        FString{static_cast<int32>(inString.length()), inString.data()}, ck::jolt::Conv(inColor));
+    // inHeight is dropped on purpose: the facility stores labels rather than rendering them, and each consumer
+    // (a viewport OnPaint projection, DrawDebugString) sizes text in its own space.
+    Target->_Impl->_Labels.Emplace(FCk_Jolt_DebugDrawLabel{
+        ck::jolt::Conv(inPosition),
+        FString{static_cast<int32>(inString.length()), inString.data()},
+        ck::jolt::Conv(inColor)});
 }
 
 auto
@@ -383,6 +375,11 @@ auto
     if (Target == nullptr)
     { return; }
 
+    // Instanced geometry only exists inside a body scope — that is what names the slot it reconciles against.
+    // Constraint and contact drawing run outside one and are line-shaped; nothing there emits geometry.
+    if (NOT _Impl->_CaptureBodyOpen)
+    { return; }
+
     if (inGeometry.GetPtr() == nullptr || inGeometry->mLODs.empty())
     { return; }
 
@@ -395,7 +392,7 @@ auto
     if (BatchImpl->_Indices.IsEmpty())
     { return; }
 
-    const auto Key = ck::jolt::debug_draw::FBucketKey{BatchImpl, inModelColor.mU32, _Impl->_ActiveColorClass};
+    const auto Key = ck::jolt::debug_draw::FBucketKey{BatchImpl, inModelColor.mU32, _Impl->_ActiveColorClassIndex};
     auto& Bucket = Target->_Impl->_Buckets.FindOrAdd(Key);
 
     if (Bucket._BatchKeepAlive.GetPtr() == nullptr)
@@ -407,14 +404,7 @@ auto
 
     const auto Transform = FTransform{ck::jolt::Conv(inModelMatrix)};
 
-    if (_Impl->_CaptureBodyOpen)
-    {
-        _Impl->_PendingBodyDraws.Emplace(ck_jolt_debug_renderer::FPendingDraw{Key, Transform});
-        return;
-    }
-
-    Bucket._Desired.Emplace(Transform);
-    Bucket._Touched = true;
+    _Impl->_PendingBodyDraws.Emplace(ck_jolt_debug_renderer::FPendingDraw{Key, Transform});
 }
 
 auto
@@ -465,124 +455,25 @@ auto
     // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
     Ism->RegisterComponentWithWorld(World);
 
+    // The overlays are translucent geometry drawn on top of the translucent body they trace, so without a
+    // higher sort priority the painter's-algorithm order between them is arbitrary — which is exactly the
+    // "I selected it and nothing looks different" report P5-D41 came from.
+    if (InKey._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+        InKey._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
+    { Ism->SetTranslucentSortPriority(1); }
+
     // A bucket born into a hidden class must not flash into view before the next toggle.
-    Ism->SetVisibility(InTarget.Get_IsClassVisible(InKey._ColorClass));
+    Ism->SetVisibility(InTarget.Get_IsClassVisible(InKey._ColorClassIndex));
     Ism->SetHiddenInGame(false);
     Ism->SetStaticMesh(Mesh);
 
     InOutBucket._Ism.Reset(Ism);
     InOutBucket._SlotCount = 0;
-    InOutBucket._Applied.Reset();
 
-    ck::jolt::debug_draw::Apply_BucketMaterial(InOutBucket, InTarget._Impl->_Palette, InTarget._Impl->_RenderMode);
+    ck::jolt::debug_draw::Apply_BucketMaterial(InOutBucket, InTarget._Impl->_Palette, InKey._ColorClassIndex,
+        InTarget._Impl->_RenderMode);
 
     return true;
-}
-
-auto
-    FCk_Jolt_DebugRenderer::
-    BeginFrame(
-        FCk_Jolt_DebugDrawTarget& InTarget)
-    -> void
-{
-    _Impl->_ActiveTarget = &InTarget;
-    _Impl->_CaptureBodyOpen = false;
-    _Impl->_PendingBodyDraws.Reset();
-
-    for (auto& Kvp : InTarget._Impl->_Buckets)
-    {
-        Kvp.Value._Desired.Reset();
-        Kvp.Value._Touched = false;
-    }
-}
-
-auto
-    FCk_Jolt_DebugRenderer::
-    EndFrame()
-    -> void
-{
-    SCOPE_CYCLE_COUNTER(STAT_CkJolt_DebugDrawReconcile);
-
-    auto* Target = _Impl->_ActiveTarget;
-    _Impl->_ActiveTarget = nullptr;
-
-    if (Target == nullptr)
-    { return; }
-
-    auto* World = Target->_Impl->_World.Get();
-    if (ck::Is_NOT_Valid(World))
-    { return; }
-
-    const auto Opacity = FMath::Clamp(Target->_Impl->_Palette.Get_Opacity(), 0.0f, 1.0f);
-    const auto OpacityChanged = NOT FMath::IsNearlyEqual(Opacity, Target->_Impl->_AppliedOpacity);
-
-    auto AnyLive = false;
-    auto StaleKeys = TArray<ck::jolt::debug_draw::FBucketKey>{};
-
-    for (auto& Kvp : Target->_Impl->_Buckets)
-    {
-        auto& Bucket = Kvp.Value;
-
-        if (NOT Bucket._Touched)
-        {
-            const auto OnlyBucketsStillHoldThisBatch =
-                Kvp.Key._Batch->Get_RefCount() == static_cast<uint32>(ck::jolt::debug_draw::Get_BucketHolderCount(Kvp.Key._Batch));
-
-            if (OnlyBucketsStillHoldThisBatch)
-            {
-                ck::jolt::debug_draw::Destroy_BucketIsm(Bucket);
-                StaleKeys.Add(Kvp.Key);
-                continue;
-            }
-
-            if (Bucket._Applied.Num() > 0)
-            {
-                auto* StaleIsm = Bucket._Ism.Get();
-                if (ck::IsValid(StaleIsm))
-                { StaleIsm->ClearInstances(); }
-
-                Bucket._Applied.Reset();
-            }
-
-            continue;
-        }
-
-        if (NOT TryEnsure_BucketIsm(*Target, Kvp.Key, Bucket))
-        { continue; }
-
-        auto* Ism = Bucket._Ism.Get();
-
-        if (OpacityChanged)
-        { ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Target->_Impl->_RenderMode); }
-
-        if (NOT ck_jolt_debug_renderer::Get_AreTransformsEqual(Bucket._Desired, Bucket._Applied))
-        {
-            if (Bucket._Desired.Num() == Bucket._Applied.Num())
-            {
-                constexpr auto WorldSpace = false;
-                constexpr auto MarkRenderStateDirty = true;
-                constexpr auto Teleport = true;
-                Ism->BatchUpdateInstancesTransforms(0, Bucket._Desired, WorldSpace, MarkRenderStateDirty, Teleport);
-            }
-            else
-            {
-                Ism->ClearInstances();
-
-                constexpr auto ReturnIndices = false;
-                Ism->AddInstances(Bucket._Desired, ReturnIndices);
-            }
-
-            Bucket._Applied = Bucket._Desired;
-        }
-
-        AnyLive |= Bucket._Applied.Num() > 0;
-    }
-
-    for (const auto& StaleKey : StaleKeys)
-    { Target->_Impl->_Buckets.Remove(StaleKey); }
-
-    Target->_Impl->_AppliedOpacity = Opacity;
-    Target->_Impl->_AnyLive = AnyLive;
 }
 
 auto
@@ -596,17 +487,21 @@ auto
     _Impl->_PendingBodyDraws.Reset();
 
     InTarget._Impl->_LastCaptureStats = ck::jolt::debug_draw::FDebugDrawStats{};
+
+    // JPH line and label output is per-frame, so the component is flushed here and refilled by this capture. The
+    // retained External sub-channels are deliberately NOT cleared — EndCapture re-emits them as they stand.
+    ck::jolt::debug_draw::Reset_LineChannels(*InTarget._Impl);
 }
 
 auto
     FCk_Jolt_DebugRenderer::
     BeginBody(
         uint64 InBodyKey,
-        ECk_Jolt_DebugDraw_ColorClass InColorClass)
+        uint8 InColorClassIndex)
     -> void
 {
     _Impl->_CaptureBodyKey = InBodyKey;
-    _Impl->_ActiveColorClass = InColorClass;
+    _Impl->_ActiveColorClassIndex = InColorClassIndex;
     _Impl->_CaptureBodyOpen = true;
     _Impl->_PendingBodyDraws.Reset();
 }
@@ -711,7 +606,8 @@ auto
 auto
     FCk_Jolt_DebugRenderer::
     Release_BodySlots(
-        uint64 InBodyKey)
+        uint64 InBodyKey,
+        ck::jolt::debug_draw::EStatCounting InStatCounting)
     -> void
 {
     if (_Impl->_ActiveTarget == nullptr)
@@ -719,10 +615,11 @@ auto
 
     auto& TargetImpl = *_Impl->_ActiveTarget->_Impl;
 
-    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, InBodyKey,
-        ck::jolt::debug_draw::EStatCounting::Counted);
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, InBodyKey, InStatCounting);
     ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
-        ck::jolt::debug_draw::EStatCounting::Counted);
+        InStatCounting);
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HoverKey(InBodyKey),
+        InStatCounting);
 }
 
 auto
@@ -750,7 +647,7 @@ auto
     {
         auto& Bucket = Kvp.Value;
 
-        if (Bucket._SlotCount == 0 && Bucket._Applied.IsEmpty())
+        if (Bucket._SlotCount == 0)
         {
             const auto OnlyBucketsStillHoldThisBatch =
                 Kvp.Key._Batch->Get_RefCount() == static_cast<uint32>(ck::jolt::debug_draw::Get_BucketHolderCount(Kvp.Key._Batch));
@@ -764,13 +661,20 @@ auto
         }
 
         if (OpacityChanged)
-        { ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Target->_Impl->_RenderMode); }
+        {
+            ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Kvp.Key._ColorClassIndex,
+                Target->_Impl->_RenderMode);
+        }
 
         AnyLive |= Bucket._SlotCount > 0;
     }
 
     for (const auto& StaleKey : StaleKeys)
     { Target->_Impl->_Buckets.Remove(StaleKey); }
+
+    // One DrawLines per channel rather than one per line: ULineBatchComponent::DrawLine marks the render state
+    // dirty on every call, which at per-body-extra line counts is the whole cost.
+    ck::jolt::debug_draw::Flush_LineChannels(*Target->_Impl);
 
     Target->_Impl->_AppliedOpacity = Opacity;
     Target->_Impl->_AnyLive = AnyLive;
