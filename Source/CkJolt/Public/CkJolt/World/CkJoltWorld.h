@@ -13,7 +13,9 @@
 #include <atomic>
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Core/Reference.h>
 #include <Jolt/Physics/Character/CharacterBase.h>
+#include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,6 +30,11 @@ namespace JPH
     class JobSystem;
     class CharacterVirtual;
     class CharacterContactListener;
+}
+
+namespace ck::jolt
+{
+    class FCk_Jolt_CollisionLayerTable;
 }
 
 namespace ck
@@ -54,6 +61,29 @@ namespace ck::jolt
         float InDeltaTSeconds,
         int32 InFixedTimestepHz,
         int32 InMaxStepsPerFrame) -> FCk_Jolt_StepPlan;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /*
+     * What a debugger needs to DRAW an in-flight drag: where the spring is attached on the body (world space, and
+     * therefore recomputed every frame from the body's live transform) and where it is being pulled to. The body is
+     * named by its debug-draw KEY, the same one the capture draws it under.
+     */
+    struct CKJOLT_API FCk_Jolt_DebugDragState
+    {
+    public:
+        CK_GENERATED_BODY(FCk_Jolt_DebugDragState);
+
+    private:
+        uint64 _BodyKey = 0;
+        FVector _GrabPointWorld = FVector::ZeroVector;
+        FVector _AnchorPointWorld = FVector::ZeroVector;
+
+    public:
+        CK_PROPERTY(_BodyKey);
+        CK_PROPERTY(_GrabPointWorld);
+        CK_PROPERTY(_AnchorPointWorld);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -125,6 +155,9 @@ namespace ck
             JPH::TempAllocatorImpl*                                TempAllocator = nullptr;
             JPH::JobSystem*                                        JobSystem = nullptr;
             TWeakObjectPtr<UWorld>                                 World;
+            // Needed only by the debug-drag facility, which registers its own non-colliding anchor layer lazily on
+            // the first drag. Absent (headless fixtures, a world built for the step math alone) = no drag.
+            ck::jolt::FCk_Jolt_CollisionLayerTable*                LayerTable = nullptr;
             int32                                                  CollisionSteps = 1;
             bool                                                   AsyncMode = false;
             TFunction<void(TArray<FCk_Jolt_ContactEvent>&)>        DrainQueueFn;
@@ -235,6 +268,44 @@ namespace ck
         auto Set_LastStepDurationMs(float InDurationMs) -> void;
         auto Get_LastStepDurationMs() const -> float;
 
+        /*
+         * ---- Debug drag (P6-D47) — DEV-ONLY and SIM-MUTATING, unlike everything else the debug facility does ----
+         *
+         * A spring drag of one DYNAMIC body, the way a physics sandbox lets you grab and throw. The three requests
+         * QUEUE and are applied by FProcessor_JoltDebugDrag_Apply on the game thread, before the step: a mutation
+         * issued from a Slate click must not land in the middle of a solve. One drag at a time — a Begin while
+         * another is live ends that one first.
+         *
+         * It mutates the simulation, so it belongs on the authority only: a drag taken on a client moves a body the
+         * server will correct on the next replication, which reads as a bug rather than a tool.
+         */
+        auto Request_BeginDrag(uint64 InBodyKey, const FVector& InWorldGrabPoint) -> void;
+        auto Request_UpdateDrag(const FVector& InWorldTargetPoint) -> void;
+        auto Request_EndDrag() -> void;
+
+        /// Drains the queued drag requests. Game thread, BEFORE the step, and nowhere else.
+        auto Apply_DragRequests() -> void;
+
+        auto Get_IsDragging() const -> bool;
+        auto Get_DragState() const -> TOptional<ck::jolt::FCk_Jolt_DebugDragState>;
+
+        /*
+         * Debug-draw KEYS of the bodies this world created for its own internal use — today exactly the drag anchor,
+         * which is a raw JPH kinematic body with NO entity behind it. Every consumer surface (the capture's four
+         * technique steps, TryPick_Body, the outliner) must skip them: an anchor a user can see, click or select is
+         * a bug, not a cosmetic issue. Empty whenever nothing is dragging.
+         */
+        auto Get_DebugInternalBodyKeys() const -> const TSet<uint64>&;
+
+        /*
+         * ---- Contact-pair counter (P6-D48) ----
+         * Bumped from Jolt's contact callbacks, which run on WORKER threads during the solve, and RESET at the top
+         * of every DoPhysicsUpdate — so a game-thread read after the frame's steps reports the LAST sub-step's pair
+         * count, not an unbounded accumulation. Relaxed: a lone diagnostic scalar that orders nothing.
+         */
+        auto Note_ContactPair() -> void;
+        auto Get_ContactPairsLastStep() const -> int32;
+
         // ---- Body-removed change token (game-thread only) ----
         // Bumped by the JoltBody EndPlay funnel for EVERY body it destroys, whatever its motion type. The
         // debug-draw capture's sweep for destroyed SLEEPING bodies is O(sleeping) and can only be skipped
@@ -272,6 +343,49 @@ namespace ck
         // whenever a consumer asks. Relaxed: it is a lone diagnostic scalar that orders nothing.
         std::atomic<float> _LastStepDurationMs{0.0f};
 
+        // ---- Debug drag (game thread only; the anchor body and constraint are the solve's after that) ----
+        struct FDragRequest
+        {
+            enum class EType : uint8
+            {
+                Begin,
+                Update,
+                End
+            };
+
+            EType _Type = EType::End;
+            uint64 _BodyKey = 0;
+            FVector _Point = FVector::ZeroVector;
+        };
+
+        TArray<FDragRequest> _DragRequests;
+
+        JPH::Ref<JPH::TwoBodyConstraint> _DragConstraint;
+
+        // BodyID index+sequence numbers. A BodyID of 0 is VALID, so _IsDragging is the presence test — never a
+        // sentinel id.
+        uint32 _DragAnchorBodyId = 0;
+        uint32 _DraggedBodyId = 0;
+
+        // Body-LOCAL, so the grab point tracks the body as it rotates; Jolt stores the same thing internally, but
+        // it is not readable back off a DistanceConstraint.
+        FVector _DragGrabPointLocal = FVector::ZeroVector;
+        FVector _DragAnchorPointWorld = FVector::ZeroVector;
+
+        bool _IsDragging = false;
+
+        // Registered LAZILY on the first drag, never at world init: a world that is never dragged must not spend a
+        // layer out of the table's fixed 1024 (P5-D61/S2).
+        uint16 _DragAnchorLayer = 0;
+        bool _DragAnchorLayerRegistered = false;
+
+        ck::jolt::FCk_Jolt_CollisionLayerTable* _LayerTable = nullptr;
+
+        TSet<uint64> _DebugInternalBodyKeys;
+
+        // Written by Jolt's contact callbacks on worker threads, reset by the step thread, read by the game thread.
+        std::atomic<int32> _ContactPairsThisStep{0};
+
         // ---- Pose buffer, keyed by BodyID index+sequence (stable while a body is alive) ----
         TMap<uint32, FCk_Jolt_StepPoseEntry> _PoseBuffer;
 
@@ -292,6 +406,13 @@ namespace ck
 
     private:
         auto Find_CharacterEntry(uint64 InUserData) -> FCk_Jolt_CharacterEntry*;
+
+        auto DoBegin_Drag(uint64 InBodyKey, const FVector& InWorldGrabPoint) -> void;
+        auto DoUpdate_Drag(const FVector& InWorldTargetPoint) -> void;
+
+        /// Idempotent, and the ONLY teardown path: Shutdown and the destructor both funnel through it so an
+        /// orphaned anchor body or constraint is impossible.
+        auto DoEnd_Drag() -> void;
 
     public:
         CK_PROPERTY_GET(_World);

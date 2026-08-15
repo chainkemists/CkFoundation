@@ -102,6 +102,20 @@ namespace ck
 
         ck::jolt::debug_draw::Replay_RecordedContacts(PhysicsSystem.Get(), ReplayTargets);
 
+        // Both belong to the WORLD, not to its physics system, so the capture cannot reach them for itself. Pushed
+        // BEFORE the captures, so everything a consumer reads off a target afterwards belongs to one frame. The
+        // in-world target is captured from the subsystem's Tick rather than here, but the drag anchor has to be
+        // invisible there too — hence ReplayTargets, which already includes it.
+        const auto& InternalBodyKeys = JoltWorld->Get_DebugInternalBodyKeys();
+        const auto LastStepDurationMs = JoltWorld->Get_LastStepDurationMs();
+        const auto ContactPairsLastStep = JoltWorld->Get_ContactPairsLastStep();
+
+        for (const auto& Target : ReplayTargets)
+        {
+            Target->Set_InternalBodyKeys(InternalBodyKeys);
+            Target->Set_StepStats(LastStepDurationMs, ContactPairsLastStep);
+        }
+
         for (const auto& Target : Targets)
         { Renderer.Capture_JoltWorld(*Target, *PhysicsSystem, Revisions, _TransientEntity); }
 #endif
