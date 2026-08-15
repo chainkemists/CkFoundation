@@ -15,14 +15,25 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_Header_FragmentManifestEntry);
 
 private:
-    UPROPERTY() FString  _DisplayName;
-    UPROPERTY() uint32   _EnttTypeHash = 0;
+    UPROPERTY()
+    FString _DisplayName;
+
+    UPROPERTY()
+    uint32 _EnttTypeHash = 0;
+
     // Equals _EnttTypeHash except for CkDynamic's NAMED per-AS-struct storages, which all share one value type —
     // those entries share _EnttTypeHash but carry distinct _StorageId. Restore replays each onto ITS storage id.
-    UPROPERTY() uint32   _StorageId    = 0;
-    UPROPERTY() int32    _EntityCount  = 0;
-    UPROPERTY() int64    _ByteLength   = 0;
-    UPROPERTY() int64    _ByteOffset   = 0;
+    UPROPERTY()
+    uint32 _StorageId = 0;
+
+    UPROPERTY()
+    int32 _EntityCount = 0;
+
+    UPROPERTY()
+    int64 _ByteLength = 0;
+
+    UPROPERTY()
+    int64 _ByteOffset = 0;
 
 public:
     CK_PROPERTY(_DisplayName);
@@ -47,20 +58,37 @@ public:
     static constexpr uint16 CurrentFormatVersion = 2;
 
 private:
-    UPROPERTY() uint16              _FormatVersion = CurrentFormatVersion;
+    UPROPERTY()
+    uint16 _FormatVersion = CurrentFormatVersion;
+
     // String because FEngineVersion is not a USTRUCT and cannot be a UPROPERTY.
-    UPROPERTY() FString             _EngineVersion;
-    UPROPERTY() FGuid               _PluginBuildHash;
-    UPROPERTY() FDateTime           _TimestampUTC;
-    UPROPERTY() FSoftObjectPath     _WorldAssetPath;
-    UPROPERTY() TArray<FCk_Snapshot_Header_FragmentManifestEntry> _Manifest;
-    UPROPERTY() int32               _EntityCount = 0;
+    UPROPERTY()
+    FString _EngineVersion;
+
+    UPROPERTY()
+    FGuid _PluginBuildHash;
+
+    UPROPERTY()
+    FDateTime _TimestampUTC;
+
+    UPROPERTY()
+    FSoftObjectPath _WorldAssetPath;
+
+    UPROPERTY()
+    TArray<FCk_Snapshot_Header_FragmentManifestEntry> _Manifest;
+
+    UPROPERTY()
+    int32 _EntityCount = 0;
+
     // Raw entt id of the registry's transient entity at capture; 0xFFFFFFFF == entt::null (a registry-core capture
     // has no transient ctx and never adopts). Consumed only by the live-world restore.
-    UPROPERTY() uint32              _TransientEntityId = 0xFFFFFFFFu;
+    UPROPERTY()
+    uint32 _TransientEntityId = 0xFFFFFFFFu;
+
     // Byte offset of the self-describing tag section — restore Seeks here rather than trusting the stream
     // position, since the fragment manifest byte-jumps.
-    UPROPERTY() int64               _TagSectionByteOffset = 0;
+    UPROPERTY()
+    int64 _TagSectionByteOffset = 0;
 
 public:
     CK_PROPERTY(_FormatVersion);
@@ -97,7 +125,9 @@ public:
 private:
     // FStrings, not FSoftObjectPath: the v3 tables serialize through a plain FArchive, which cannot carry one.
     // Reconstructed into a soft path on load. Mirrors _ScriptClassPath / _ActorClassPath.
-    UPROPERTY() FString _ScriptClassPath;
+    UPROPERTY()
+    FString _ScriptClassPath;
+
     UPROPERTY() FString _ArchetypePath; // asset path; empty when the step carries no archetype
 
 public:
@@ -118,11 +148,15 @@ public:
 private:
     // Raw entt id (underlying uint32) of this entity in the saving world — the key every intra-save reference uses
     // (lifetime/context owner, payload owner, handles inside params). The loader builds a saved→live map.
-    UPROPERTY() uint32                      _SavedId = 0xFFFFFFFFu;
-    UPROPERTY() ECk_Snapshot_V3_Provenance  _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
+    UPROPERTY()
+    uint32 _SavedId = 0xFFFFFFFFu;
+
+    UPROPERTY()
+    ECk_Snapshot_V3_Provenance _Provenance = ECk_Snapshot_V3_Provenance::RuntimeSpawned;
 
     // Saved-id of the lifetime owner (ConstructSpawned + RuntimeSpawned). 0xFFFFFFFF == none.
-    UPROPERTY() uint32                      _LifetimeOwnerSavedId = 0xFFFFFFFFu;
+    UPROPERTY()
+    uint32 _LifetimeOwnerSavedId = 0xFFFFFFFFu;
 
     // ---- Stable identity / EngineOwned rendezvous ----
     // SaveKey is orthogonal to provenance: EngineOwned level actors rendezvous through it, while explicitly
@@ -134,26 +168,35 @@ private:
     UPROPERTY() FString                     _Label;      // GameplayLabel under the owner (unique by record contract)
 
     // ---- RuntimeSpawned recipe ----
-    UPROPERTY() FString                     _ScriptClassPath;
+    UPROPERTY()
+    FString _ScriptClassPath;
+
     UPROPERTY() TArray<uint8>               _SpawnParamsBytes;      // FInstancedStruct::Serialize + handle-remap
-    UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
+    UPROPERTY()
+    uint32 _ContextOwnerSavedId = 0xFFFFFFFFu;
+
     UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
     // Tagged-property bytes of the bridged actor's UPROPERTY(SaveGame) fields (ArIsSaveGame capture). Applied between
     // SpawnActorDeferred and FinishSpawning so BeginPlay — and the entity Construct it drives — sees the saved values
     // rather than class defaults. Empty when the actor class declares no SaveGame property.
-    UPROPERTY() TArray<uint8>               _ActorSaveFieldBytes;
+    UPROPERTY()
+    TArray<uint8> _ActorSaveFieldBytes;
+
     // Spawn seed for a bridged (_ActorClassPath set) RuntimeSpawned entity: the entity Transform is seeded from the
     // actor at Construct, so hydrating it instead would be stomped by FProcessor_Transform_SyncFromActor.
-    UPROPERTY() FTransform                  _ActorSpawnTransform;
+    UPROPERTY()
+    FTransform _ActorSpawnTransform;
 
     // ---- All-provenance world transform ----
     // CURRENT world transform of every persisted entity carrying a Transform fragment, so the loader restores its
     // post-settle world position. Unlike _ActorSpawnTransform (a spawn seed for BRIDGED actors only) this corrects
     // post-spawn drift for everyone else; the loader skips bridged actors here. Identity == no Transform fragment.
-    UPROPERTY() FTransform                  _SavedWorldTransform;
+    UPROPERTY()
+    FTransform _SavedWorldTransform;
 
     // ---- DefinitionBuilt recipe ----
-    UPROPERTY() TArray<FCk_Snapshot_V3_BuildStep> _BuildRecipe;
+    UPROPERTY()
+    TArray<FCk_Snapshot_V3_BuildStep> _BuildRecipe;
 
 public:
     CK_PROPERTY(_SavedId);
@@ -200,8 +243,11 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_V3_Tables);
 
 private:
-    UPROPERTY() TArray<FCk_Snapshot_V3_EntityEntry>  _Entities;
-    UPROPERTY() TArray<FCk_Snapshot_V3_PayloadEntry> _Payloads;
+    UPROPERTY()
+    TArray<FCk_Snapshot_V3_EntityEntry> _Entities;
+
+    UPROPERTY()
+    TArray<FCk_Snapshot_V3_PayloadEntry> _Payloads;
 
 public:
     CK_PROPERTY(_Entities);
@@ -230,21 +276,48 @@ public:
     static constexpr uint16 CurrentFormatVersion = 6;
 
 private:
-    UPROPERTY() uint16          _FormatVersion = CurrentFormatVersion;
-    UPROPERTY() FString         _EngineVersion;
-    UPROPERTY() FGuid           _PluginBuildHash;
-    UPROPERTY() FDateTime       _TimestampUTC;
-    UPROPERTY() FSoftObjectPath _WorldAssetPath;
-    UPROPERTY() int32           _EntityCount = 0;
-    UPROPERTY() int32           _EngineOwnedCount = 0;
-    UPROPERTY() int32           _ConstructSpawnedCount = 0;
-    UPROPERTY() int32           _RuntimeSpawnedCount = 0;
-    UPROPERTY() int32           _DefinitionBuiltCount = 0;
-    UPROPERTY() int32           _PayloadCount = 0;
+    UPROPERTY()
+    uint16 _FormatVersion = CurrentFormatVersion;
+
+    UPROPERTY()
+    FString _EngineVersion;
+
+    UPROPERTY()
+    FGuid _PluginBuildHash;
+
+    UPROPERTY()
+    FDateTime _TimestampUTC;
+
+    UPROPERTY()
+    FSoftObjectPath _WorldAssetPath;
+
+    UPROPERTY()
+    int32 _EntityCount = 0;
+
+    UPROPERTY()
+    int32 _EngineOwnedCount = 0;
+
+    UPROPERTY()
+    int32 _ConstructSpawnedCount = 0;
+
+    UPROPERTY()
+    int32 _RuntimeSpawnedCount = 0;
+
+    UPROPERTY()
+    int32 _DefinitionBuiltCount = 0;
+
+    UPROPERTY()
+    int32 _PayloadCount = 0;
+
     // Capture rules 3 and 5 (both skipped outright); the audit count flags unlabeled children that had a payload.
-    UPROPERTY() int32           _UnlabeledConstructSkippedCount = 0;
-    UPROPERTY() int32           _AnonymousSkippedCount = 0;
-    UPROPERTY() int32           _UnlabeledWithPayloadAuditCount = 0;
+    UPROPERTY()
+    int32 _UnlabeledConstructSkippedCount = 0;
+
+    UPROPERTY()
+    int32 _AnonymousSkippedCount = 0;
+
+    UPROPERTY()
+    int32 _UnlabeledWithPayloadAuditCount = 0;
 
 public:
     CK_PROPERTY(_FormatVersion);
