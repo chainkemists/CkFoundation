@@ -65,7 +65,8 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
        ▼
 [CkCrowd: per-frame steering loop]   (the REAL, registered processors)
   FProcessor_CrowdAgent_NeighborSync    ← reads probe overlaps → NeighborCache
-  FProcessor_CrowdAgent_BlockDetect     ← is the goal unreachable? → Idle + GoalBlocked + OnGoalBlocked
+  FProcessor_CrowdAgent_BlockDetect     ← is the goal unreachable? re-path first, then
+                                          → Idle + GoalBlocked + OnGoalBlocked
   FProcessor_CrowdAgent_Separation      ← reactive repulsion force (only within _SeparationRadius)
   FProcessor_CrowdAgent_Steering        ← path-follow + lateral-clamped separation → desired velocity
   FProcessor_CrowdAgent_AvoidanceSample ← THE avoidance layer: velocity-obstacle sampler,
@@ -290,6 +291,14 @@ auto Request = FCk_Request_CrowdAgent_MoveTo{TargetWorldLoc};
 UCk_Utils_CrowdAgent_UE::Request_MoveTo(Agent, Request, OnReachedDelegate, OnFailedDelegate);
 ```
 
+A MoveTo to (within 20cm of) the goal a Walking agent is ALREADY heading to is silently dropped — the
+guard exists so a noisy re-issuer cannot reset the waypoint cursor every frame and stop the
+final-stop ever latching. A caller who knows the world changed under the frozen polyline says so:
+
+```cpp
+Request.Set_ForceRepath(true);   // skips the same-goal guard, keeps the same goal/episode
+```
+
 ### Stop it cleanly
 
 ```cpp
@@ -317,10 +326,31 @@ point came within arrival radius. Nothing in the system was aware.
 | detector | how | catches | misses |
 |---|---|---|---|
 | **Geometric** (primary) | a *stationary* neighbour sits on the final waypoint such that `SelfRadius + NbrRadius` exceeds the arrival radius — so the closest the agent can physically get is further out than "arrived" | agent-occupied goals, **exactly and immediately**, naming the blocker | walls, props, multi-agent plugs |
-| **No-progress** (safety net) | UE's feet-sample ring: N samples on a cadence, all within a small radius of their centroid (`_BlockDetectionSampleCount`/`Interval`/`Distance`) | everything else | an agent that **orbits** the blocker — its samples smear round a ~168cm circle and the centroid test never trips |
+| **No-progress** (safety net) | REMAINING PATH DISTANCE (agent → current waypoint + the polyline tail) sampled every `_BlockDetectionInterval`; a stall is `_BlockDetectionNoProgressWindowSeconds` without the windowed minimum improving by `_BlockDetectionProgressEpsilonCm` | everything else — walls, fixtures, multi-agent plugs, **and orbiting** | nothing the geometric detector is for (it names the blocker, which this cannot) |
 
-That last row is why both exist. Geometry catches the orbit; the ring catches the wall. The
-no-progress ring is UE's own mechanism (`PathFollowingComponent.cpp:1556-1608`), re-implemented.
+**The no-progress detector measures progress along the path, not displacement.** It used to be UE's
+feet-sample centroid ring (`PathFollowingComponent.cpp:1556-1608`) — N samples all within a small
+radius of their centroid — and that ring had a hole big enough to hide the module's worst failure
+mode in: `ConstrainToNavmesh`'s `FindMoveAlongSurface` walk turns a wall press into a lateral
+*slide*, so a wall-blocked agent moves several metres along the wall with nonzero velocity while
+getting no closer to its goal. Every sample lands far from the centroid, the ring never trips, and
+the agent stays `Walking` forever with nothing in the system aware. Path progress cannot be faked by
+sliding, and it subsumes the orbit case the ring also missed, so the ring is gone rather than kept
+alongside.
+
+**A stall is answered before it is escalated.** The overwhelmingly common cause is that the Recast
+polyline is FROZEN at plan time (`CkNav_Algorithm`) while the world it was planned against moved. So
+a stall first spends up to `_BlockDetectionMaxStallRepaths` internal re-paths at the same goal —
+issued through `FProcessor_CrowdAgent_HandleRequests::RequestPathForActiveGoal`, which is the only
+sanctioned way for framework-internal code to reach a re-path, because the caller-facing same-goal
+guard would swallow it. Real progress (the windowed minimum improving by the epsilon) refunds the
+budget; an exhausted budget is what promotes the stall to a block.
+
+**Off-path drift is healed on the same cadence.** If the agent is more than
+`_BlockDetectionOffPathRepathThresholdCm` (XY) from the segment it is currently following, it is
+re-pathed outright. A teleport, a save restore or an external shove otherwise leaves Steering
+chasing waypoints on a corridor the agent no longer stands near, and nothing else in the pipeline
+notices. Being displaced is not a stall, so this does not consume the stall budget.
 
 The geometric detector's **engagement range is derived, not a knob**:
 `(2 * SelfRadius) + ArrivalRadius + BrakingDistance + 20cm` slack, where
@@ -337,6 +367,16 @@ queue manager needs to send the NPC somewhere else instead of having it wait.
   re-path and resume the moment the goal clears**. Right default for a shop: an NPC that waits a metre
   from a taken shelf and slides in when it frees needs no gameplay changes at all.
 - **`FailMove`** — `OnGoalBlocked`, then `OnGoalFailed`, then Idle. UE's semantics; the caller owns recovery.
+
+**Under `HoldAndRetry` the two block CAUSES retry differently, and the split is load-bearing:**
+
+| cause | retry | why |
+|---|---|---|
+| `GoalOccupied` | **unbounded**, exactly as before | the blocker is another AGENT and it will move. Queue NPCs sit here for as long as the line takes; making a long wait emit `OnGoalFailed` would break every gameplay-side queue that deliberately defers to `HoldAndRetry` |
+| `NoProgress` | bounded by `_BlockedMaxRetries`, then `OnGoalFailed` + `GoalBlocked` cleared + Idle | the obstruction is static — a wall, a fixture, a plug the planner cannot see. It never clears, so the old behaviour (`BlockedRecheck` finds no agent blocker, re-paths, re-enters the same wedge, forever) was a silent hang no caller could observe |
+
+`BlockedRecheck` still tests for an agent blocker FIRST for both causes, so a `NoProgress` agent that
+happens to have someone standing on its goal holds without spending a retry.
 
 **What is deliberately NOT offered: silently widening the arrival radius to declare "arrived".** It
 lies to a caller who asked for "within `_ArrivalRadius` of X" and may range-check against it — and it
@@ -431,8 +471,9 @@ rationale lives):
 **If you are tempted to add an impatience timer, a stagnation term, a minimum-speed floor, or
 randomised jitter to break a deadlock: don't.** dtCrowd has none of these, and reaching for one means
 the cost function is broken somewhere above. UE's answer to a genuinely blocked agent is a *higher
-tier* (block detection → abort the move → let the behaviour tree decide), which this module does not
-have.
+tier* — block detection → re-path → abort the move → let the caller decide — and this module HAS
+that tier (`BlockDetect` / `BlockedRecheck`, see "Blocked goals"). Stagnation belongs there, where it
+sees the whole path, and never in the per-frame velocity scoring.
 
 ---
 

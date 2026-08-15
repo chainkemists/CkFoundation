@@ -798,10 +798,9 @@ namespace ck
         InPathFollow._WaypointIndex = 0;
         FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
 
-        // A feet-sample ring straddling the re-path would smear two corridors into one centroid test.
-        InBlockDetect._FeetSamples.Reset();
-        InBlockDetect._NextSampleIdx = 0;
-        InBlockDetect._SampleAccumulatorSec = 0.0f;
+        // A detour is longer than the path it replaces, so carrying the old remaining-distance
+        // baseline across would read the re-route itself as lost progress.
+        InBlockDetect.DoResetProgressWindow();
 
         if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
         {
