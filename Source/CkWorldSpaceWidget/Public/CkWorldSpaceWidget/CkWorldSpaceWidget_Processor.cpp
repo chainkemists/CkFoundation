@@ -325,7 +325,7 @@ namespace ck
             return;
         }
 
-        InHandle.Remove<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
+        InHandle.Try_Remove<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
 
         // Reset the scale box so it does not stay stuck at the last distance-driven scale.
         if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
