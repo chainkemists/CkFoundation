@@ -162,6 +162,7 @@ this tier exists to make unnecessary.
 | `FFragment_CrowdAgent_PathFollow` | Current waypoint index, arrival radii | `Add()` |
 | `FFragment_CrowdAgent_DesiredVelocity` | Steering output | `Add()` |
 | `FFragment_CrowdAgent_NeighborCache` | Per-frame trimmed list of nearby agents | NeighborSync |
+| `FFragment_CrowdAgent_LocalBoundary` | Cached navmesh boundary walls (dtCrowd's `dtLocalBoundary`) | `Add()`; refreshed by AvoidanceSample |
 | `FFragment_CrowdAgent_SeparationForce` | Computed force vector | Separation |
 | `FFragment_CrowdAgent_ProbeRef` | Handle to the probe child entity | Setup |
 | `FFragment_CrowdAgent_FaceAngle` | Current/target yaw | Add() |
@@ -346,11 +347,23 @@ sanctioned way for framework-internal code to reach a re-path, because the calle
 guard would swallow it. Real progress (the windowed minimum improving by the epsilon) refunds the
 budget; an exhausted budget is what promotes the stall to a block.
 
-**Off-path drift is healed on the same cadence.** If the agent is more than
-`_BlockDetectionOffPathRepathThresholdCm` (XY) from the segment it is currently following, it is
-re-pathed outright. A teleport, a save restore or an external shove otherwise leaves Steering
+**A re-path brakes the agent.** `DoRepathAtActiveGoal` swaps `Walking` for `PathPending`, which
+drops the agent from Steering's view but not from AccelClamp's or VelocityBridge's — it used to
+keep shipping the velocity it stalled with and walk-cycle into the obstruction for the whole
+re-path window. It now zeroes **both** `_Velocity` and `_LastVelocity` (AccelClamp's target
+self-feeds from `_Velocity`, so zeroing that alone buys one `MaxAccel` step and then plateaus at
+what it just wrote back), and resets `_ProtectedLeadingWaypointCount` like every other re-path
+site. A caller-driven `DoForceReplan` keeps its momentum on purpose and is untouched.
+
+**Off-path drift is healed on the same cadence, and the heal is bounded.** If the agent is more
+than `_BlockDetectionOffPathRepathThresholdCm` (XY) from the segment it is currently following, it
+is re-pathed outright. A teleport, a save restore or an external shove otherwise leaves Steering
 chasing waypoints on a corridor the agent no longer stands near, and nothing else in the pipeline
-notices. Being displaced is not a stall, so this does not consume the stall budget.
+notices. The heal spends a rung of the SAME `_BlockDetectionMaxStallRepaths` ladder a stall does
+and falls through to a `NoProgress` block once that budget is gone — an agent that keeps drifting
+or being clipped must terminate boundedly instead of re-pathing every cadence forever. A one-off
+displacement still heals for free: walking the re-planned corridor makes progress, and progress
+refunds the whole budget.
 
 The geometric detector's **engagement range is derived, not a knob**:
 `(2 * SelfRadius) + ArrivalRadius + BrakingDistance + 20cm` slack, where
@@ -468,6 +481,66 @@ rationale lives):
 - **Penalty-weight defaults** (`_AvoidanceWeightDesVel`/`CurVel`/`Side`/`Toi`) mirror dtCrowd's —
   `DetourObstacleAvoidance.cpp:471-475`.
 
+### Navmesh walls are obstacles too — the local boundary
+
+The sampler used to score candidates against neighbouring **agents only**, which is half of what
+dtCrowd scores: dtCrowd also feeds the obstacle query the navmesh boundary walls it keeps in a
+per-agent `dtLocalBoundary` (`DetourCrowd.cpp:1557-1564`). Without them a candidate aimed straight
+at a wall or a `UNavArea_Null` fixture hole costs *nothing*, so under neighbour pressure it is
+routinely the cheapest one — `ConstrainToNavmesh` then eats the whole displacement and the agent
+walks on the spot. Measured on an identical 14-NPC soak: walkers with a near-zero desired velocity
+329 → 1 and into-wall pinned samples 33 → 2 once the sampler was taken out of the picture, which is
+what identified the cost function rather than the clamp as the cause.
+
+`FFragment_CrowdAgent_LocalBoundary` is the port of `dtLocalBoundary`: the nearest
+`MAX_LOCAL_SEGS = 8` wall segments within the collision query range, re-queried once the agent has
+travelled a quarter of that range from the cached centre (`DetourCrowd.cpp:1284-1286`). The query
+runs **inside `AvoidanceSample`'s `ForEachEntity`**, so an agent that never samples never pays for
+it, and it goes through `ARecastNavMesh::FindEdges` — UE's `findWallsInNeighbourhood` is
+`findLocalNeighbourhood` fused with per-poly `getPolyWallSegments`, already converted to Unreal
+space, so the module needs no `Navmesh` module dependency and no hand-rolled coordinate conversion
+(`PathRefresh` already reaches `ARecastNavMesh` the same way). Doing a navmesh query inside a
+`TParallelProcessor` is safe because `INITIALIZE_NAVQUERY` uses a **stack-local** `dtNavMeshQuery`
+off the game thread and the shared one only on it (`RecastNavMesh.cpp:49-52`); the `dtNavMesh` is
+only read.
+
+Scoring is `processSample`'s segment loop verbatim (`DetourObstacleAvoidance.cpp:369-405`): per
+segment either the `touch` special case or `isectRaySeg`, then `htmin *= 2` ("avoid less when facing
+walls") into the SAME `tmin` the neighbour sweeps lower, so a wall and a neighbour compete for the
+one time-to-impact term. Two per-frame filters read the agent's current position while the segments
+themselves stay cached — dtCrowd's back-face filter (`DetourCrowd.cpp:1561`, only walls whose
+walkable side faces the agent) and `prepare()`'s `touch` precompute, which is per agent and never
+per candidate.
+
+**The query range is not the influence radius, and the gap is deliberate.** `isectRaySeg` bounds its
+ray parameter to `[0, 1]`, and the ray direction is a candidate VELOCITY, so a wall further away than
+`_MaxSpeed × 1s` (240uu at defaults) is never intersected by any candidate and contributes nothing.
+The 504uu query range exists so the CACHE still holds the walls the agent will care about after it
+has moved, not because walls that far away are scored. Practical consequence when reading the
+existing crowd suite: only agents within ~240uu of a navmesh boundary can behave differently at all,
+which is why fixtures parked 250uu+ inside a ±1000uu volume are unaffected by this change.
+
+**The side semantics are derived, not assumed** (`MakeWallOutwardNormal`, and the derivation lives
+in that comment because getting it backwards would penalise exactly the candidates that escape a
+wall): a segment is emitted in its source polygon's vertex winding, Recast winds a polygon so the
+interior is the `area2 < 0` side, and `Unreal2RecastPoint` negates *both* horizontal axes — so
+`(-(End - Start).Y, (End - Start).X)` is Detour's `snorm` exactly, and the 2D dot and cross are
+sign-identical across the two spaces. Not ported: UE's own `TooCloseToSegmentDistPct` sample
+rejection (returns a `-1` penalty that invalidates the candidate outright) — stock Detour has no
+such branch and it would need a candidate-invalidation channel through `FCandidateScore`. Ported
+from UE rather than stock Detour: `dtLocalBoundary`'s 50uu height filter, so a wall at the far end
+of a ramp cannot act as a wall right here.
+
+Settings: `_AvoidanceWallSegments` (default `Enabled`; `Disabled` restores the old agent-only
+scoring in one config line, for A/B only) and `_AvoidanceWallQueryRangeMultiplier` (default 12.0 ×
+agent radius, dtCrowd's `collisionQueryRange`, `CrowdFollowingComponent.cpp:43`). The sampler's
+existing zero-neighbour early-out is unchanged, so a lone agent walking a corridor still does no
+wall query — walls only matter here because neighbour pressure is what makes an into-wall candidate
+look cheap. `DiagAvoidanceScoreTap` scores against the same walls so its trace still matches the
+sampler's choice, but it runs `RunBefore AvoidanceSample` and therefore reads the boundary as the
+PREVIOUS sampled frame left it; on a refresh frame its penalties can differ slightly from the ones
+the sampler actually used.
+
 **If you are tempted to add an impatience timer, a stagnation term, a minimum-speed floor, or
 randomised jitter to break a deadlock: don't.** dtCrowd has none of these, and reaching for one means
 the cost function is broken somewhere above. UE's answer to a genuinely blocked agent is a *higher
@@ -568,6 +641,25 @@ magnitude only and left direction free to snap.
   **final** waypoint is deliberately excluded (`Num()-1` bound) — an older loop could silently consume
   a final waypoint inside the arrival radius, leaving the cursor past the end with `OnGoalReached`
   never fired (agent stuck Walking at zero velocity, goal never reported).
+- **A corner is only given up once the chord onward from the agent is navigable.** Both retirement
+  tests are laterally BLIND — the plane through the corner is unbounded, and proximity says nothing
+  about which side of the corridor the agent stands on — so an agent a few uu inside a corner
+  retires it and re-aims at `Waypoints[k+1]` along a chord that cuts the `UNavArea_Null` hole the
+  planner routed around. `ConstrainToNavmesh` then eats the whole displacement (measured: `clipFrac`
+  1.00 against a 240uu/s desired velocity, 2.8s walking on the spot) until BlockDetect notices.
+  Detour never has this problem because `dtPathCorridor` re-string-pulls from the agent's CURRENT
+  position each frame; a FROZEN polyline must instead prove the next chord walkable, so both legs
+  now gate on `ANavigationData::Raycast(agentPos → Waypoints[k+1])` and hold the corner (on-mesh by
+  construction) when it is blocked. The raycast runs only on frames a retirement condition already
+  fired, i.e. at corners. Within 3uu of the waypoint retirement is unconditional — there the chord
+  IS the path segment and a ray along a boundary edge can flicker. The same gate is applied at
+  install time in `SkipAlreadyPassedLeadingWaypoints` (`OnPathResolved`, `OnRouteResolved`), whose
+  projection-only test has the identical blindness. **A `FTag_CrowdAgent_Flying` agent is excluded
+  outright**, as is `OnVoxelPathResolved` — a volumetric corridor is not planned against Recast, so
+  a Recast ray through free space would strand a flyer on a waypoint it can reach perfectly well.
+  Master switch `_WaypointRetirementLineOfSight` (default `Enabled`; `Disabled` restores the
+  laterally-blind behaviour, for A/B only). Worlds with no nav data are unaffected either way.
+  Coverage: `CkAutoTest_Crowd_Steering_CornerRetirementKeepsAgentOnMesh`.
 
 ### Navmesh constraint, escape, and stationary markup
 
@@ -662,6 +754,41 @@ magnitude only and left direction free to snap.
 - **`ck.Crowd.RDPEpsilon` default 8cm** — chosen so a straight head-on test yields ~2-3 keypoints and a
   curving cluster path ~10-20: enough to read the path shape, light enough to grep without paging.
   Lower = more keypoints retained; higher = more aggressive collapse.
+
+### `ck.Crowd.DiagNavClip` — why an agent's movement is not landing
+
+`FProcessor_CrowdAgent_DiagNavClip` (default 0, `ECVF_Cheat`) answers "is the navmesh clamp eating
+this agent, and which wedge is it in" without touching the clamp. It sits in `FGroup_Physics`
+between PushApart and ConstrainToNavmesh — it MUST read `FFragment_CrowdAgent_PendingDisplacement`
+before the clamp zeroes it — and replicates the clamp's math read-only (same NavData, same
+projection extents including the 4x recovery widening, same `FindMoveAlongSurface` walk). Walking
+AND PathPending agents are sampled; Idle, Asleep and Flying are not. Its state fragment
+(`FFragment_CrowdAgent_DiagNavClip`) is added lazily on the first enabled frame, so an off CVar
+costs one CVar read and nothing else.
+
+A frame counts as clipped when `staged >= 0.5uu` and either the surface walk ate it
+(`clipFrac >= 0.75`, or the walk/projection failed) or the walk was demonstrably fine yet almost
+nothing landed (`applied < 0.15 * staged` with `clipFrac < 0.5`) — the latter is `ExternalHold`, and
+it accuses a second Transform writer rather than the clamp. `applied` is measured against the
+position held at the PREVIOUS sample, so it is one frame stale; irrelevant at the half-second
+granularity an episode needs. 0.5s of consecutive clipped frames opens an episode (`START`),
+which re-reports every 2s (`HOLD`) and closes on the first unclipped frame (`END`, carrying the
+duration and the per-agent episode count). One `Log`-verbosity line each, prefixed `[CrowdNavClip]`:
+
+```
+[CrowdNavClip] START agent=<handle> state=<Walking|PathPending> pos=X= Y= Z= staged=X= Y= (uu)
+  desired=X= Y= Z= (uu/s) projectOk=<0|1> recoveryOk=<0|1> moveOk=<0|1> clipUu= clipFrac= applied=
+  wp=<idx>/<num> curWp=X= Y= Z= segStart=X= Y= Z= goal=X= Y= Z= pathStatus=<Ready|Partial|Pending|Failed|None>
+  rayAgentToWp=<blocked|clear|na> raySegStartToWp=<...> rayAgentToGoal=<...>
+  class=<OffMesh|SurfaceWalkFailed|ExternalHold|PathCrossesBoundary|SteeringOffPath|Other>
+[CrowdNavClip] HOLD  <same fields> dur=<s>
+[CrowdNavClip] END agent= state= pos=X= Y= Z= staged= applied= dur=<s> episodes=<n>
+```
+
+The three rays are `ANavigationData::Raycast` on the same NavData (true == BLOCKED, `na` when the
+waypoint index is invalid or the agent has no path result); they are what separates "the planner's
+corridor crosses a navmesh boundary" (both agent→wp and segStart→wp blocked) from "steering has
+wandered off the corridor" (agent→wp blocked, segStart→wp clear).
 
 ## See also
 
