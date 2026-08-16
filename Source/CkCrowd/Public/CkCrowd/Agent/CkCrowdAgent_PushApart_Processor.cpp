@@ -93,7 +93,7 @@ namespace ck
                         constexpr auto AngleBucketCount = 3600;
                         constexpr auto RadiansPerAngleBucket = PI / 1800.0f;
 
-                        const auto SelfHash  = GetTypeHash(static_cast<const FCk_Handle&>(InHandle));
+                        const auto SelfHash  = GetTypeHash(InHandle);
                         const auto NbrHash   = GetTypeHash(Nbr.Get_Handle());
                         const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % AngleBucketCount) * RadiansPerAngleBucket;
                         const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);

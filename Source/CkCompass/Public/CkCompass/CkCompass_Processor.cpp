@@ -158,7 +158,7 @@ namespace ck
 
         InCurrent._Observer = ck::IsValid(InRequest.Get_Observer())
             ? InRequest.Get_Observer()
-            : static_cast<const FCk_Handle&>(InCompassEntity);
+            : InCompassEntity;
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
