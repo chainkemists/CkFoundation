@@ -243,6 +243,8 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
+    // Enabling an already-enabled widget is a legitimate no-op (every speech line re-enables its
+    // bubble); a plain Remove ensures on the absent tag.
     if (InEnabled)
     { InWorldSpaceWidgetHandle.Try_Remove<ck::FTag_WorldSpaceWidget_Disabled>(); }
     else
