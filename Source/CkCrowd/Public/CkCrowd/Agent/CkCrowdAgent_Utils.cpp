@@ -475,7 +475,7 @@ auto
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_NavQueryFilter"), InAgent)
     { return {}; }
 
-    return InAgent.Get<ck::FFragment_CrowdAgent_Params>().Get_NavQueryFilter();
+    return InAgent.Get<ck::FFragment_CrowdAgent_Tunables>().Get_NavQueryFilter();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
