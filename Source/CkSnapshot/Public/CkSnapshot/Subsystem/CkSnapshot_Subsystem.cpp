@@ -235,6 +235,47 @@ void
 
 // --------------------------------------------------------------------------------------------------------------------
 
+void
+    UCk_Snapshot_Subsystem_UE::
+    Request_Save_WithFreshThumbnail(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        const FCk_Delegate_OnSaveComplete& InDelegate,
+        int32 InThumbnailMaxWidth)
+{
+    if (NOT InMetadata.Get_ScreenshotPng().IsEmpty())
+    {
+        Request_Save_WithMetadata(InSlotName, InMetadata, InDelegate);
+        return;
+    }
+
+    // Weak self-capture: the capture resolves a frame later, and the subsystem can be torn down by a
+    // travel in between. The completion always runs, so a dead subsystem must drop the save rather
+    // than write into a destroyed world.
+    ck::snapshot::slot_meta::Request_CaptureViewportPng(GetWorld(), InThumbnailMaxWidth,
+        [WeakSelf = TWeakObjectPtr<UCk_Snapshot_Subsystem_UE>{this}, InSlotName, InMetadata, InDelegate]
+        (TArray<uint8> InPng) -> void
+        {
+            auto* Self = WeakSelf.Get();
+
+            if (ck::Is_NOT_Valid(Self))
+            {
+                ck::snapshot::Warning(TEXT("Request_Save_WithFreshThumbnail: the snapshot subsystem went away while the "
+                    "thumbnail was in flight — slot [{}] was NOT saved."), InSlotName);
+                InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_NotQuiescent);
+                return;
+            }
+
+            // An empty capture is not a save failure — the slot simply gets no picture.
+            auto Metadata = InMetadata;
+            Metadata.Set_ScreenshotPng(InPng);
+
+            Self->Request_Save_WithMetadata(InSlotName, Metadata, InDelegate);
+        });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Snapshot_Subsystem_UE::
     DoRequest_Save(
@@ -339,18 +380,13 @@ auto
         return;
     }
 
-    // A caller-supplied thumbnail wins outright — see FCk_Snapshot_SaveMetadata::_ScreenshotPng for
-    // why the automatic capture is the fallback and not the other way round.
-    auto ScreenshotPng = InMetadata.Get_ScreenshotPng();
-
-    if (ScreenshotPng.IsEmpty() && InMetadata.Get_CaptureScreenshot())
-    { ScreenshotPng = ck::snapshot::slot_meta::Capture_ViewportPng(GetWorld(), InMetadata.Get_ScreenshotMaxWidth()); }
-
+    // The thumbnail is supplied by the caller or absent — there is no capture here. A viewport read is
+    // frame-deferred, and this save is synchronous; see FCk_Snapshot_SaveMetadata::_ScreenshotPng.
     MetaSaveGame->_Meta.Set_SlotName(InSlotName)
                        .Set_Title(InMetadata.Get_Title())
                        .Set_TimestampUTC(InHeader.Get_TimestampUTC())
                        .Set_WorldAssetPath(InHeader.Get_WorldAssetPath())
-                       .Set_ScreenshotPng(ScreenshotPng)
+                       .Set_ScreenshotPng(InMetadata.Get_ScreenshotPng())
                        .Set_CustomFields(InMetadata.Get_CustomFields());
 
     // A sidecar failure must not fail the save — the snapshot is already on disk and is the thing

@@ -71,6 +71,35 @@ public:
         const FCk_Snapshot_SaveMetadata& InMetadata,
         const FCk_Delegate_OnSaveComplete& InDelegate);
 
+    /**
+     * As Request_Save_WithMetadata, but captures the thumbnail itself and saves once it arrives —
+     * for saves triggered from GAMEPLAY, where the frame you want is the one on screen right now and
+     * there is no menu-open moment to capture at.
+     *
+     * The capture is frame-deferred (a synchronous viewport read returns black in a packaged build —
+     * see Request_CaptureViewportPng), so the SAVE is deferred with it: this returns immediately and
+     * the world is captured on the next rendered frame, not this one. Two consequences worth knowing:
+     * a UI element pushed between the call and the save does NOT appear in the thumbnail (the engine
+     * reads the viewport before Slate composites UMG), and anything that would make the save illegal
+     * in the intervening frame is not re-checked.
+     *
+     * A menu-driven save should NOT use this — it would photograph the menu. Capture at menu-open
+     * with UCk_Utils_Snapshot_UE::Request_CaptureViewportThumbnail and pass the bytes through
+     * InMetadata to Request_Save_WithMetadata instead.
+     *
+     * Any thumbnail already on InMetadata is respected and no capture is taken.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Save With Fresh Thumbnail",
+              meta = (AutoCreateRefTerm = "InMetadata,InDelegate"))
+    void
+    Request_Save_WithFreshThumbnail(
+        FName InSlotName,
+        const FCk_Snapshot_SaveMetadata& InMetadata,
+        const FCk_Delegate_OnSaveComplete& InDelegate,
+        int32 InThumbnailMaxWidth = 480);
+
     // Deletes the snapshot AND its sidecar. Returns false when the snapshot slot did not exist or
     // the platform refused the delete; a missing sidecar is not a failure. Refused while a save or
     // load is in flight.
