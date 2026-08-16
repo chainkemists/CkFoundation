@@ -28,6 +28,18 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_OperationsResolved);
     CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_CalculateDone);
 
+    // Positive readiness marker for FProcessor_ResolverDataBundle_Calculate: stamped by
+    // FProcessor_ResolverDataBundle_StartNewPhase when it opens a valid phase, consumed by Calculate.
+    //
+    // It exists so Calculate can declare a `MarkedDirtyBy`. Calculate is otherwise gated purely by
+    // EXCLUDES, and the scheduler's pump gate tests a marker's PRESENCE (FProcessorScheduler::DoPump)
+    // — an absence-shaped condition cannot be expressed as one. Without a marker Calculate never
+    // enters _PumpOrder and runs only in the main pass: exactly once per frame. Since Calculate is
+    // also what advances the phase (DoTryStartNewPhase), that re-gates the ENTIRE phase cascade to one
+    // phase per frame while every other processor in the chain drains inside the pump. Do not drop the
+    // tag without giving Calculate another positive marker.
+    CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_NeedsCalculate);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKRESOLVER_API FFragment_ResolverDataBundle_Params
