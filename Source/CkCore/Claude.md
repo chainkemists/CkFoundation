@@ -103,6 +103,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | `FCk_Meter` (value range + normalized current) | `Meter` | `CkMeter.h`, `CkMeter_Utils.h` | health/mana meters |
 | Reflection over `FProperty` (sanitized name, user-defined struct GUIDs, property-compat checks, placeholder-class detection) | `Reflection` | `CkReflection_Utils.h` | `UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName` |
 | Generic type conversion template | `TypeConverter` | `CkTypeConverter.h` | convert between related types |
+| Declare/query asset references the package graph cannot see (script accessors, config paths) | `Reference` | `CkAssetReferenceProvider.h` | `FCk_AssetReferenceProviderRegistry::Get().Get_ExternalReferences(Path)` |
 | `FCk_Condition` rule system (`Pass`/`Fail`) | `Logic` | `CkCondition.h` | data-driven conditions |
 
 ### GameplayTags
@@ -197,6 +198,8 @@ const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
 …bundle args for a signal payload    → Payload/     (ck::MakePayload)
 …write a chained step pipeline       → Technique/
 …scan assets by scope/strategy       → IO/
+…ask who references an asset from    → Reference/  (FCk_AssetReferenceProviderRegistry)
+  script/config (no package edge)
 …write a GameWorldSubsystem base     → Subsystems/
 …define a Blueprint-visible shared value (bool/float/int) | SharedValues/
 …draw debug lines / progress bars    → Debug/DebugDraw
@@ -305,6 +308,25 @@ Diagnostic-only scaffolding, no behavior change. It drove the root-cause investi
 - `Get_PropertyDefaultValueLiteral` emits bare `nullptr` for UObject-ish properties, deliberately. An earlier fix emitted a typed-null cast `<Class>(nullptr)` to disambiguate positional-ctor overload resolution (the OpenSign-class deadlock: bare `nullptr` reports as `<null handle>` and AS can't bind it). That was REVERTED — AngelScript rejects `<UClass>(nullptr)` in struct field-default declarations ("Data type can't be '<Class>'"); UObject types cannot be constructed via type-constructor syntax at all, not just `AActor`/`UActorComponent`. One emit path serves both the field-default and positional-ctor-arg contexts, so the typed cast cannot be applied only in the safe context without splitting the literal representation. Proper fix = Fix #2 of `codegen-bug-positional-ctor-null-uobject.md` (field-assignment-style emit instead of positional ctor for structs with `UObject*` fields); until it lands, adding a `default Params.X = Y` override on an entity-script subclass whose Params struct holds a `UObject*` field can re-open the OpenSign deadlock.
 - `ck_reflection_detail::Get_StructLiteral` is two-tier by design. Tier 1 (named constants / early exits): `FTransform` and `FGameplayTag` return `{}` for non-constant values rather than an expression, because their constructor argument order differs from `TFieldIterator` order — a general decomposition would emit a wrong expression; `FVector`/`FRotator` emit a named alias when one applies and otherwise fall through. Tier 2 (general decomposition): for a struct whose every non-parm `UPROPERTY` field is representable, emit `StructName(expr1, ...)`, or `StructName()` when all fields equal their `InitializeStruct` defaults. Any unrepresentable field makes the whole struct return `{}` — never a partial expression.
 - `Get_StructFieldOverrides` descends into a nested struct only when that struct itself contains a `UObject*` field AND has diffs (building longer dotted paths), because its positional ctor would carry the same `<null handle>` hazard. A nested struct with diffs but no `UObject*` stops the recursion and emits its own positional-ctor expression at that path — safe because that ctor takes no `nullptr`.
+
+### Reference — why the registry, and the one rule
+
+`IAssetRegistry::GetReferencers` answers only from serialized package edges. An asset reached through an AngelScript
+generated accessor (`assets::Get_Foo()`), a config-driven soft path, or a runtime-assembled string leaves no edge — so
+a tool asking the graph alone reports it as unreferenced and offers it for deletion, and the engine's own delete dialog
+derives its referencer list from the *same* graph and agrees with the mistake.
+
+`FCk_AssetReferenceProviderRegistry` inverts that: a module CREATING such references registers a query
+(`CkAngelscriptGenerator`'s asset subsystem does, under `"AngelScript"`), and a tool reasoning about reachability asks
+the registry. Neither links the other — which is what lets an *Editor*-type codegen module inform a *DeveloperTool*
+auditor without either becoming undeployable.
+
+**The one rule:** `Get_HasAnyProvider()` is not the same question as an empty result. "Nobody could answer" and
+"everybody answered no" are different statements, and a consumer that collapses them reports a project it never asked
+about as clean. Ask it, and say which of the two you got.
+
+Game thread only, unsynchronized by design (registration is module startup, queries are inside a scan); an
+`IsInGameThread` ensure pins it.
 
 ### Validation — `CkUntracedStructSafety` and `FCk_Entity`
 

@@ -7,6 +7,7 @@
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
+#include "CkCore/Reference/CkAssetReferenceProvider.h"
 #include "CkCore/Reflection/CkReflection_Utils.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -281,6 +282,17 @@ auto
     SeedMapsFromGeneratedFiles();
     ScanScriptFilesForUsage();
 
+    // Declares this module's script references to anything that reasons about whether an asset is reachable. The
+    // lambda is weak on purpose: the registry outlives an editor subsystem, and a stale binding would be a query
+    // answering from a dead `this` at exactly the moment a tool is deciding whether to delete something.
+    FCk_AssetReferenceProviderRegistry::Get().Request_Register(
+        Get_ScriptReferenceProviderId(),
+        FCk_Delegate_AssetReference_Query::CreateWeakLambda(this,
+            [this](const FSoftObjectPath& InAsset) -> TArray<FString>
+            {
+                return Get_ScriptReferencersOfAsset(InAsset);
+            }));
+
     ck::angelscriptgenerator::Log(TEXT("Asset registry callbacks registered for real-time config discovery"));
 }
 
@@ -297,6 +309,11 @@ auto
     PendingGenerationQueue.Empty();
 
     FEditorDelegates::OnAssetsPreDelete.Remove(PreDeleteDelegateHandle);
+
+    // Unregistered EXPLICITLY rather than left to the weak binding. A weak lambda whose owner died answers "no script
+    // referencers", which is indistinguishable from a correct negative — so a consumer would read `Get_HasAnyProvider`
+    // as true and trust an answer nobody is giving. Removing the entry makes the silence visible.
+    FCk_AssetReferenceProviderRegistry::Get().Request_Unregister(Get_ScriptReferenceProviderId());
 
 #if WITH_ANGELSCRIPT_CK
     if (FModuleManager::Get().IsModuleLoaded("AngelscriptCode"))
@@ -1350,6 +1367,55 @@ auto
     }
 
     return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    Get_ScriptReferenceProviderId()
+    -> FName
+{
+    return FName{TEXT("AngelScript")};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkAssetRegistrySubsystem::
+    Get_ScriptReferencersOfAsset(
+        const FSoftObjectPath& InAsset) const
+    -> TArray<FString>
+{
+    if (InAsset.IsNull())
+    { return {}; }
+
+    // `AssetPathToFunctionName` is keyed on the object path string `UObject::GetPathName` produces, which is what
+    // `FSoftObjectPath::ToString` produces for a top-level asset. Keeping ONE key shape is what lets this query and
+    // the pre-delete warning agree — they read the same map, so they cannot disagree about an asset.
+    const auto* FunctionName = AssetPathToFunctionName.Find(InAsset.ToString());
+
+    if (FunctionName == nullptr)
+    { return {}; }
+
+    const auto* UsageFiles = FunctionUsageMap.Find(*FunctionName);
+
+    if (UsageFiles == nullptr)
+    { return {}; }
+
+    auto Referencers = *UsageFiles;
+
+    // Project-relative and sorted. Absolute paths carry the machine's checkout root, which makes two readers'
+    // copies of the same list differ in a way neither of them caused.
+    for (auto& Referencer : Referencers)
+    { FPaths::MakePathRelativeTo(Referencer, *FPaths::ProjectDir()); }
+
+    Referencers.Sort([](const FString& InLhs, const FString& InRhs) -> bool
+    {
+        return InLhs.Compare(InRhs, ESearchCase::IgnoreCase) < 0;
+    });
+
+    return Referencers;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

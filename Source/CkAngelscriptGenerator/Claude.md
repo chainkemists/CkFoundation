@@ -22,7 +22,56 @@ Four loosely-coupled responsibilities under one module:
 
 3. **Drift-detection commandlet** *(not yet re-introduced in Rev 10; preserved as unwired reference on `archive/rev9-as-attempt-2026-05-11`)* — CI guardrail that runs the deterministic Tier 1+2 generators and lets `git diff --exit-code` flag drift between committed and freshly-regenerated files.
 
-4. **Cross-process single-writer ownership (Rev 12)** — `FCkAngelscriptGenerator_RegenOwnership`: an OS file lock guaranteeing only ONE editor/commandlet instance per project mutates `Script/Generated`. See *Cross-process single-writer ownership* below.
+4. **External asset-reference provider** — `UCkAssetRegistrySubsystem` declares the references it CREATES to
+   `FCk_AssetReferenceProviderRegistry` (`CkCore/Reference/`). See *Script references are invisible to the package
+   graph* below.
+
+5. **Cross-process single-writer ownership (Rev 12)** — `FCkAngelscriptGenerator_RegenOwnership`: an OS file lock guaranteeing only ONE editor/commandlet instance per project mutates `Script/Generated`. See *Cross-process single-writer ownership* below.
+
+---
+
+## Script references are invisible to the package graph
+
+A generated `assets::Get_Foo()` accessor resolves its path **from text at runtime**. It serializes no package
+dependency, so `IAssetRegistry::GetReferencers` cannot see it and any tool that asks the graph alone concludes the
+asset is unreferenced. That is not merely incomplete — it is confidently wrong, and the engine's own delete dialog
+derives its referencer list from the same graph, so the user's usual safety net agrees with the mistake.
+
+This module already held the answer and used it in exactly one place. Two maps, rebuilt on every successful AS compile
+(`HandleAngelscriptPostCompile` → `ScanScriptFilesForUsage`) and after every registry generation:
+
+| Map | Contents |
+|---|---|
+| `AssetPathToFunctionName` | asset object path → the generated accessor name |
+| `FunctionUsageMap` | accessor name → the `.as` files that call it |
+
+`HandleAssetsPreDelete` (on `FEditorDelegates::OnAssetsPreDelete`) reads them to raise the **"AngelScript Asset
+Reference Warning"** dialog. That fires at the last possible moment — after the user has already been told the asset is
+unreferenced, selected it, and pressed a button.
+
+`Get_ScriptReferencersOfAsset` exposes the same lookup, and `Initialize` registers it with
+`FCk_AssetReferenceProviderRegistry` under `Get_ScriptReferenceProviderId()` (`"AngelScript"`), so a tool can consult
+it **while deciding** rather than after. Points worth keeping:
+
+- **One map, two consumers.** The query and the pre-delete dialog read the same two maps, so they cannot disagree
+  about an asset. A consumer re-implementing the `.as` text scan would be a second copy of the rule and the two would
+  drift.
+- **The key shape is `UObject::GetPathName`**, which is what `FSoftObjectPath::ToString` produces for a top-level
+  asset. Keeping ONE key shape is what makes the above true.
+- **The registered lambda is weak** (`CreateWeakLambda`) — the registry outlives an editor subsystem — **and
+  `Deinitialize` still unregisters explicitly.** A weak lambda whose owner died answers "no script referencers", which
+  is indistinguishable from a correct negative; the consumer would read `Get_HasAnyProvider()` as true and trust an
+  answer nobody is giving. Removing the entry makes the silence visible. Both halves are required.
+- **Referencer paths come back project-relative and sorted.** Absolute paths carry the machine's checkout root, and
+  `FunctionUsageMap`'s order is a directory-scan detail — either would make two readers' copies of one list differ for
+  a reason neither caused.
+- **The accessor is keyed on the asset NAME, and collisions are resolved silently.** Two assets whose cleaned names
+  match produce one clean accessor and one `<Name>_DUP1` (`CkAssetRegistrySubsystem.cpp:676-687`), and which one wins
+  follows asset-registry iteration order — so `assets::Get_Foo()` can resolve to a different asset on a different
+  machine. `CkOptimizationDebugger`'s **Name collisions** cleanup category is what surfaces that; there is no fix here
+  because the resolution is a rename.
+
+Consumer side, the registry contract, and the three-state honesty rule: `CkCore/Public/CkCore/Reference/README.md`.
 
 ---
 
