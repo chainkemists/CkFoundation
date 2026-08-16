@@ -34,7 +34,7 @@ auto
     InHandle.Add<ck::FFragment_Compass_Current>();
     InHandle.Add<ck::FTag_Compass_NeedsSetup>();
 
-    return ck::StaticCast<FCk_Handle_Compass>(InHandle);
+    return UCk_Utils_Compass_UE::CastChecked(InHandle);
 }
 
 auto

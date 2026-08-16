@@ -701,7 +701,7 @@ auto
         InAttributeRefillEntity.Add<ck::FTag_IsRefillRunning>();
     }
 
-    return ck::StaticCast<FCk_Handle_IntegerAttributeRefill>(InAttributeRefillEntity);
+    return UCk_Utils_IntegerAttributeRefill_UE::CastChecked(InAttributeRefillEntity);
 }
 
 auto
