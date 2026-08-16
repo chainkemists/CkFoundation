@@ -5,6 +5,9 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
+#include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Processor.h"
@@ -16,7 +19,11 @@ namespace ck
 {
     // dtCrowd-style penalty-scored velocity sampling; overwrites _DesiredVelocity with the
     // lowest-penalty candidate. PARALLEL-SAFE: every cross-entity access is a read (the zone-tag
-    // walk), and the only write is the agent's own DesiredVelocity.
+    // walk and the navmesh wall query), and the only writes are the agent's own DesiredVelocity and
+    // its own LocalBoundary cache. The navmesh query is worker-thread safe by construction:
+    // ARecastNavMesh reaches Detour through INITIALIZE_NAVQUERY, which uses a STACK-LOCAL
+    // dtNavMeshQuery off the game thread and the shared one only on it (RecastNavMesh.cpp:49-52),
+    // and the dtNavMesh itself is only read.
     //
     // A flying agent is excluded: the velocity-obstacle quadratic, its penalties and its side
     // preference are all FVector2D, so sampling would flatten a 3D route's desired velocity onto the
@@ -26,9 +33,11 @@ namespace ck
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_Walking,
             FTag_CrowdAgent_HasProbe,
+            TReadOnly<FFragment_Transform>,
             TReadOnly<FFragment_CrowdAgent_Params>,
             TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
+            TReadWrite<FFragment_CrowdAgent_LocalBoundary>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
@@ -45,9 +54,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
-            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            FFragment_CrowdAgent_LocalBoundary& InBoundary) const -> void;
+
+    private:
+        static auto
+        DoRefreshLocalBoundary(
+            const FCk_Handle& InAgent,
+            const FVector& InAgentLocation,
+            float InQueryRange,
+            const FVector& InProjectionExtent,
+            FFragment_CrowdAgent_LocalBoundary& InOutBoundary) -> void;
     };
 }
 
