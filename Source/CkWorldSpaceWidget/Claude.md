@@ -47,6 +47,12 @@ mirrors `bShouldBeOccluded`; `ECk_WorldSpaceWidget_RenderMode::WorldComponent` m
 - EndPlay must remove the WRAPPER from the viewport, not the content widget: the wrapper is what
   `Request_WrapWidget` added, and removing it takes its content child with it. Removing only the
   content leaked the wrapper into the viewport forever.
+- Enabled/disabled is the `FTag_WorldSpaceWidget_Disabled` tag, not a fragment field —
+  `Get_EnableDisable` derives from tag presence and both PostTransform processors `TExclude` it, so a disabled
+  widget is never iterated. Two consequences: the widget-went-away-destroy-the-entity safety net in
+  `UpdateLocation`/`UpdateScaling` does not run while disabled (it fires on re-enable instead), and
+  the `WorldComponent` transform push stops — `Request_SetEnabled` pushes the transform once on
+  re-enable so an anchor that moved while hidden does not pop for a frame.
 
 **Profiling.** Counters live under `STATGROUP_CkWorldSpaceWidget` (`stat CkWorldSpaceWidget`). They
 were under `STATGROUP_CkUI` before the extraction.

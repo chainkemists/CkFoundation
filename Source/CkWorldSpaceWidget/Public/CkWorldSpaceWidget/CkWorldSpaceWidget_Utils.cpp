@@ -130,36 +130,35 @@ auto
         InHandle.Add<ck::FTag_WorldSpaceWidget_NeedsUpdateScaling>();
     }
 
-    auto& Current = InHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
-
     // Request_WrapWidget already added the wrapper (which parents the content widget under its
     // ScalingBox) to the viewport, and visibility rides the wrapper's RenderOpacity. Do NOT
     // add/remove the content widget here — that re-parents it out of the wrapper.
-    switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
+    const auto InitiallyEnabled = [&]() -> bool
     {
-        case ECk_UI_Widget_ViewportOperation::DoNothing:
-        case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
+        switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
         {
-            Current._Enabled = false;
-            break;
+            case ECk_UI_Widget_ViewportOperation::DoNothing:
+            case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
+            {
+                return false;
+            }
+            case ECk_UI_Widget_ViewportOperation::AddToViewport:
+            {
+                return true;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(ViewportOperation);
+                return false;
+            }
         }
-        case ECk_UI_Widget_ViewportOperation::AddToViewport:
-        {
-            Current._Enabled = true;
-            break;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(ViewportOperation);
-            break;
-        }
-    }
+    }();
 
     auto TypedHandle = Cast(InHandle);
 
     // Routed through Request_SetEnabled so a born-disabled widget is Collapsed from birth
     // rather than merely transparent (mirrors DoAdd_WorldComponent).
-    Request_SetEnabled(TypedHandle, Current._Enabled, {});
+    Request_SetEnabled(TypedHandle, InitiallyEnabled, {});
 
     return TypedHandle;
 }
@@ -244,14 +243,29 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
-    auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
-    Current._Enabled = InEnabled;
+    if (InEnabled)
+    { InWorldSpaceWidgetHandle.Remove<ck::FTag_WorldSpaceWidget_Disabled>(); }
+    else
+    { InWorldSpaceWidgetHandle.AddOrGet<ck::FTag_WorldSpaceWidget_Disabled>(); }
 
-    if (InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>().Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
+    auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
+    const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
+
+    if (Params.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
     {
         if (const auto WidgetComponent = Current.Get_WidgetComponent().Get();
             ck::IsValid(WidgetComponent))
         {
+            // The Disabled tag drops the entity out of UpdateLocation's view, so an anchor that
+            // moved while hidden leaves the component at a stale transform. Push it before it
+            // becomes visible again rather than popping for a frame.
+            if (InEnabled)
+            {
+                auto WorldTransform = InWorldSpaceWidgetHandle.Get<ck::FFragment_Transform>().Get_Transform();
+                WorldTransform.AddToTranslation(Params.Get_LocationInfo().Get_WorldSpaceOffset());
+                WidgetComponent->SetWorldTransform(WorldTransform);
+            }
+
             WidgetComponent->SetVisibility(InEnabled);
             WidgetComponent->SetHiddenInGame(NOT InEnabled);
         }
@@ -363,6 +377,17 @@ auto
     InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(Request);
 
     return InWorldSpaceWidgetHandle;
+}
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Get_EnableDisable(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
+    -> ECk_EnableDisable
+{
+    return InWorldSpaceWidgetHandle.Has<ck::FTag_WorldSpaceWidget_Disabled>()
+        ? ECk_EnableDisable::Disable
+        : ECk_EnableDisable::Enable;
 }
 
 auto
