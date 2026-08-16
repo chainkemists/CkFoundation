@@ -1743,12 +1743,32 @@ auto
         const FVector& InDirection) const
     -> TOptional<uint64>
 {
+    auto Key = uint64{0};
+    auto HitPoint = FVector::ZeroVector;
+    auto Distance = 0.0f;
+
+    if (NOT TryPick_BodyHit(InOrigin, InDirection, Key, HitPoint, Distance))
+    { return {}; }
+
+    return Key;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    TryPick_BodyHit(
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        uint64&        OutKey,
+        FVector&       OutHitPointWorld,
+        float&         OutDistance) const
+    -> bool
+{
     const auto DirectionIsUsable = NOT InDirection.IsNearlyZero();
 
     CK_ENSURE_IF_NOT(DirectionIsUsable,
-        TEXT("TryPick_Body was given a degenerate ray direction [{}] — no body can be picked from it"),
+        TEXT("TryPick_BodyHit was given a degenerate ray direction [{}] — no body can be picked from it"),
         InDirection)
-    { return {}; }
+    { return false; }
 
     auto NearestKey = TOptional<uint64>{};
     auto NearestDistance = TNumericLimits<double>::Max();
@@ -1794,7 +1814,19 @@ auto
         }
     }
 
-    return NearestKey;
+    if (NOT NearestKey.IsSet())
+    { return false; }
+
+    OutKey = *NearestKey;
+
+    // The slab distance is PARAMETRIC along InDirection, and an affine instance transform preserves that
+    // parameter — which is why the local-space test can be turned back into a world point by simply walking
+    // the ORIGINAL ray. The reported distance is the world one, so an unnormalized direction cannot make two
+    // picks incomparable.
+    OutHitPointWorld = InOrigin + InDirection * NearestDistance;
+    OutDistance      = static_cast<float>(NearestDistance * InDirection.Size());
+
+    return true;
 }
 
 auto
