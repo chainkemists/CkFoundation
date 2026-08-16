@@ -60,13 +60,35 @@ Three things bite:
 - **A missing sidecar is normal, not an error.** Saves written by `Request_Save`, or before this
   existed, are occupied slots with a default-constructed meta. `Get_IsPopulated()` is the
   discriminator — treat it as "no details to show", never as "not loadable".
-- **The automatic screenshot photographs the menu.** `Capture_ViewportPng` reads the back buffer as-is,
-  UI included, and a game saves *from* a menu — so the thumbnail is a picture of the save screen. The
-  fix is `FCk_Snapshot_SaveMetadata::_ScreenshotPng`: capture with
-  `UCk_Utils_Snapshot_UE::Capture_ViewportThumbnail` at the moment the menu OPENS (a widget's
-  `Construct` runs before its first paint) and hand the bytes in. BusterBlock's esc menu does exactly
-  this. The capture is synchronous — it flushes the render thread — because `Request_Save` is
-  synchronous and an async screenshot request would make the whole save frame-spanning.
+- **The thumbnail capture is frame-deferred, and there is deliberately no synchronous one.**
+  `Request_CaptureViewportThumbnail` routes through the engine's screenshot pipeline
+  (`FScreenshotRequest` + `UGameViewportClient::OnScreenshotCaptured`), whose readback runs INSIDE the
+  render frame.
+
+  A synchronous capture cannot be written correctly, which is why the one that used to exist was
+  deleted (2026-08-16) rather than fixed. Reading the viewport's render target from the game thread
+  only works while Slate composites the viewport into its own buffer — i.e. the editor. A packaged
+  game builds its viewport widget with `RenderDirectlyToWindow`, so `FSceneViewport` holds the
+  backbuffer only between `BeginRenderFrame` and `EndRenderFrame` on the RENDER thread and the
+  game-thread ref is permanently null. Reading it anyway does not fail: D3D12's `RHIReadSurfaceData`
+  **memzeroes the output for a null texture**, so `ReadPixels` returns success with an all-black
+  bitmap. That was the QA-reported "editor screenshots fine, packaged is always black" bug.
+
+  Consequences for callers:
+  - **The save never captures for you.** `Request_Save_WithMetadata` stores
+    `FCk_Snapshot_SaveMetadata::_ScreenshotPng` verbatim or leaves the slot pictureless; the old
+    `_CaptureScreenshot` / `_ScreenshotMaxWidth` fallback fields are gone. Folding a frame-deferred
+    capture into a synchronous save would make the whole save span frames.
+  - **Request it as the menu OPENS**, not when Save is clicked — the readback happens before Slate
+    composites UMG, so the shot is the gameplay frame rather than the save screen. BusterBlock's esc
+    menu does this from its `Construct`.
+  - The callback fires **exactly once**: with bytes, or empty on a 2s timeout (no viewport, nothing
+    rendering).
+  - **HDR is handled.** `ProcessScreenShots` only broadcasts `OnScreenshotCaptured` when it produced an
+    LDR bitmap; an HDR viewport writes an `.exr` and fires only `OnScreenshotRequestProcessed`. Both
+    are bound, and the file path is captured at REQUEST time because `FScreenshotRequest::Reset()` runs
+    before that second broadcast. (SPUD, the 5.5 save plugin, solved it the same way — worth reading
+    `SpudSubsystem.cpp:314-416` if this area needs changing.)
 
 ## A load travels to the SAVED world, not the current one
 
@@ -197,10 +219,26 @@ BOTH sides: `Produce` strips these before saving, `HydrationApply` skips them on
 fragment's ENTIRE content is rebuilt by `DoConstruct` replay: cached child-entity handles, `_Signals`, `_Requests`,
 `_NeedsSetup` tags. ~25 BB script files already do (`BB_Door_Feature.as`, `BB_CombatReceiver_Feature.as`).
 
+**Automatic — delegate fields.** Since 2026-08-16 hydration ALSO preserves every top-level delegate and
+multicast-delegate field, with no opt-in (`Get_IsLiveSessionField`, `CkDynamic_Fragment.cpp`). A delegate binds
+UObject + FunctionName, so across a rebuild+hydrate its saved form is stale or empty *by construction* — the
+object it named belonged to the torn-down world — while the live value is the set of subscribers that bound
+during the rebuild. Copying the saved list over them silently unsubscribes everyone, and the failure is quiet in
+the worst way: the feature keeps its state and its one-shot reads still work, so it looks healthy, but it never
+notifies again. **"Correct initial value, then frozen"** is the signature (dead HUD counters, prompts that never
+re-show). Found 2026-08-16 across 46 unmarked BB `_Signals` fragments. No fragment needs to opt in, and no
+future one can forget.
+
+Its limit: **top-level fields only**, matching the `CPF_Transient` rule it sits beside. A delegate nested inside
+a struct- or array-typed member is still copied wholesale — "preserve the live one" has no meaning once the
+saved and live arrays differ in length. A fragment shaped that way (`FBb_Fragment_Interactable_Signals`, whose
+channeled bindings are `TArray<{FGameplayTag, delegate}>`) wants the whole-fragment marker instead. The two
+mechanisms divide cleanly: the guard covers delegate FIELDS, the marker covers subscriber-list FRAGMENTS.
+
 **Per-field — `UPROPERTY(Transient)`.** The persistent archive never writes a `CPF_Transient` property
 (`FProperty::ShouldSerializeValue`), and hydration copies the payload back onto the rebuilt entity field-by-field
-via `CopyFragment_PreservingTransientFields` (`CkDynamic_Fragment.cpp:34-58`): if the struct carries ANY
-`CPF_Transient` field, every OTHER field copies from the saved payload and every Transient field is left
+via `CopyFragment_PreservingLiveSessionFields` (`CkDynamic_Fragment.cpp`): if the struct carries ANY preserved
+field, every OTHER field copies from the saved payload and each preserved field is left
 untouched, so the rebuilt world's freshly-CONSTRUCTED value survives instead of being stomped by the saved
 default. Reach for it when one fragment mixes durable state with runtime-only children (`FBb_Fragment_Shelf_State`
 — `Inventory`/`StockedSku`/`NextProxyID` persist while probe/interactable/outline/cosmetic-proxy handles are
@@ -212,8 +250,23 @@ a reordered struct attributes a durable saved value to the wrong field.
 whole-fragment assign runs AFTER `DoConstruct` has already composed the entity fresh — so a Transient-worthy
 runtime handle a construction script just built (a child probe entity, a signal binding, an AI task handle) gets
 overwritten by the SAVED value for that field, which typically remaps to `entt::null` because the referenced
-child was never independently persisted. Door commit `52309113c` and the BusterBlock NPC freeze-after-load
-incident are both this shape: construct-fresh handles stomped by stale hydrated values from the previous session.
+child was never independently persisted. Door commit `52309113c`, the BusterBlock NPC freeze-after-load
+incident, and the 2026-08-16 QA pair (a ChangeablePoster that focuses but never changes texture; a checkout
+counter whose settle offered no cash/credit option because its presented-hand SceneNodes came back as
+tombstones) are all this shape: construct-fresh handles stomped by stale hydrated values.
+
+The recurring driver is that **`utils_scene_node::Create` gives its child a debug name, never a
+GameplayLabel** — so every SceneNode / probe-node child is an unlabeled `FTag_ConstructSpawned` entity, which
+capture rule 3 classifies save-transient. A handle to one can NEVER round-trip. Treat any fragment field naming
+a SceneNode, probe, Interactable, UnrealComponent or Tween child as `UPROPERTY(Transient)` by default.
+
+**Backstop:** since 2026-08-16 `CkDynamic`'s `HydrationApply` refuses to DOWNGRADE a live handle — after the
+field copy, any handle the save could not resolve is restored from the construction-fresh value
+(`Restore_UnresolvedHandles`, `CkDynamic_Fragment.cpp`). It stands down when the saved and fresh layouts hold
+different numbers of handle slots, because positional correspondence no longer holds there; and a field the
+save deliberately CLEARED keeps its construction-fresh value, since an empty saved handle and an unresolvable
+one are the same value by the time hydration sees them. It is a safety net for unaudited fields, **not a
+substitute for the opt-out** — a marked field also keeps the dead reference out of the save entirely.
 
 Don't try to express either contract with USTRUCT `meta=(...)` metadata — Game and cooked targets strip metadata
 behind `WITH_METADATA` (`CkDynamic/CLAUDE.md`), so a metadata-only opt-out is silently inert in a packaged build.
