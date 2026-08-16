@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_Utils.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_DebugColor_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 
@@ -35,6 +36,7 @@ auto
     InOwner.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
     InOwner.Add<ck::FFragment_CrowdAgent_FaceAngle>();
     InOwner.Add<ck::FFragment_CrowdAgent_NeighborCache>();
+    InOwner.Add<ck::FFragment_CrowdAgent_LocalBoundary>();
     InOwner.Add<ck::FFragment_CrowdAgent_SeparationForce>();
     InOwner.Add<ck::FFragment_CrowdAgent_ProbeRef>();
     InOwner.Add<ck::FFragment_CrowdAgent_BlockDetect>();
