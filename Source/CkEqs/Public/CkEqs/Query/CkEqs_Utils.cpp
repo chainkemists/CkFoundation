@@ -93,7 +93,7 @@ auto
     auto& State = QueryEntity.Add<FFragment_EqsQuery_State>();
     auto& DebugInfo = QueryEntity.Add<FFragment_EqsQuery_DebugInfo>();
 
-    auto TypedQuery = ck::StaticCast<FCk_Handle_EqsQuery>(QueryEntity);
+    auto TypedQuery = UCk_Utils_Eqs_UE::CastChecked(QueryEntity);
     UCk_Utils_Handle_UE::Set_DebugName(QueryEntity,
         FName{*ck::Format_UE(TEXT("EqsQueryImmediate_{}"), InQuerierEntity)});
 

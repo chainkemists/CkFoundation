@@ -1,5 +1,7 @@
 #include "CkInventory/UI/CkInventoryUI_SpatialPanel.h"
 
+#include "CkInventory/Item/CkItem_Utils.h"
+
 #include "CkInventory/UI/CkInventoryUI_ItemSlotEntry.h"
 
 #include "CkInventory/Inventory/CkInventory_Utils.h"
@@ -125,7 +127,7 @@ auto
         if (ck::Is_NOT_Valid(StoredEntity))
         { return; }
 
-        const auto ItemHandle = ck::StaticCast<FCk_Handle_Item>(StoredEntity);
+        const auto ItemHandle = UCk_Utils_Item_UE::CastChecked(StoredEntity);
         const auto Coordinate = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
 
         // ---- Map coordinate to slot index ----

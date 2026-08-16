@@ -97,7 +97,7 @@ namespace ck
         if (WasVisible != IsVisible)
         {
             UUtils_Signal_OnVisibleRange_HiddenChanged::Broadcast(InHandle,
-                MakePayload(ck::StaticCast<FCk_Handle_VisibleRange>(InHandle), NOT IsVisible));
+                MakePayload(UCk_Utils_VisibleRange_UE::CastChecked(InHandle), NOT IsVisible));
         }
     }
 
@@ -128,7 +128,7 @@ namespace ck
         if (WasVisible != IsVisible)
         {
             UUtils_Signal_OnVisibleRange_HiddenChanged::Broadcast(InHandle,
-                MakePayload(ck::StaticCast<FCk_Handle_VisibleRange>(InHandle), NOT IsVisible));
+                MakePayload(UCk_Utils_VisibleRange_UE::CastChecked(InHandle), NOT IsVisible));
         }
     }
 

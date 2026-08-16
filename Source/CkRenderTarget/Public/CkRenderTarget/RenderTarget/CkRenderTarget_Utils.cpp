@@ -47,7 +47,7 @@ auto
         InNewEntity.Add<ck::FTag_RenderTarget_NeedsSetup>();
     });
 
-    auto NewRenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(NewEntity);
+    auto NewRenderTargetEntity = UCk_Utils_RenderTarget_UE::CastChecked(NewEntity);
 
     RecordOfRenderTargets_Utils::AddIfMissing(InOwnerEntity, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfRenderTargets_Utils::Request_Connect(InOwnerEntity, NewRenderTargetEntity, ECk_Record_LabelRequirementPolicy::Optional);

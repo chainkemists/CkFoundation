@@ -406,7 +406,7 @@ namespace ck
         }
 
         // Past every NotReady gate: everything below runs exactly once per load.
-        auto  RenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(InChild);
+        auto  RenderTargetEntity = UCk_Utils_RenderTarget_UE::CastChecked(InChild);
         auto& Current            = InChild.Get<FFragment_RenderTarget_Current>();
         auto& AuthoredLog        = InChild.Get<FFragment_RenderTarget_AuthoredLog>();
         const auto& Batches      = InChannel.Get_Batches();

@@ -715,7 +715,7 @@ auto
         InAttributeRefillEntity.Add<ck::FTag_IsRefillRunning>();
     }
 
-    return ck::StaticCast<FCk_Handle_FloatAttributeRefill>(InAttributeRefillEntity);
+    return UCk_Utils_FloatAttributeRefill_UE::CastChecked(InAttributeRefillEntity);
 }
 
 auto

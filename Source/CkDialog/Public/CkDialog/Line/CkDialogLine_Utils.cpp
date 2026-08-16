@@ -151,7 +151,7 @@ auto
         UCk_Utils_EntityTag_UE::Add_UsingGameplayTag(InNewEntity, InLineData.Get_EventTag());
     });
 
-    auto NewLine = ck::StaticCast<FCk_Handle_DialogLine>(NewEntity);
+    auto NewLine = UCk_Utils_DialogLine_UE::CastChecked(NewEntity);
 
     if (NumValidConditions == 0)
     { return NewLine; }

@@ -41,14 +41,14 @@ auto
         TEXT("Entity [{}] already has a DialogEmitter — one emitter per entity. Returning the existing one."), InHandle)
     {}
     if (AlreadyHasEmitter)
-    { return ck::StaticCast<FCk_Handle_DialogEmitter>(InHandle); }
+    { return UCk_Utils_DialogEmitter_UE::CastChecked(InHandle); }
 
     InHandle.Add<ck::FFragment_DialogEmitter_Params>(InParams);
     InHandle.Add<ck::FFragment_DialogEmitter_Cooldowns>();
     InHandle.Add<ck::FFragment_DialogEmitter_Debug>();
     InHandle.Add<ck::FTag_DialogEmitter>();
 
-    return ck::StaticCast<FCk_Handle_DialogEmitter>(InHandle);
+    return UCk_Utils_DialogEmitter_UE::CastChecked(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

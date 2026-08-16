@@ -35,7 +35,7 @@ auto
 {
     Super::BeginPlay();
 
-    auto Self = ck::StaticCast<FCk_Handle_CameraLayer>(Get_AssociatedEntity());
+    auto Self = UCk_Utils_CameraLayer_UE::CastChecked(Get_AssociatedEntity());
     if (ck::Is_NOT_Valid(Self))
     { return; }
 
@@ -49,7 +49,7 @@ auto
 {
     // Fallback for cascade-destroyed layers whose processor-driven Exit never runs. Deduped via
     // FTag_CameraLayer_Active inside ExitLayer — a no-op if the processor already handled it.
-    if (auto Self = ck::StaticCast<FCk_Handle_CameraLayer>(Get_AssociatedEntity());
+    if (auto Self = UCk_Utils_CameraLayer_UE::CastChecked(Get_AssociatedEntity());
         ck::IsValid(Self))
     {
         ExitLayer(Self);

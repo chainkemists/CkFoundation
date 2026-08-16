@@ -719,7 +719,7 @@ auto
     Registry.View<ck::FFragment_VoxelNavVolume_Params>().ForEach(
         [&](FCk_Entity InEntity, const ck::FFragment_VoxelNavVolume_Params&)
         {
-            auto Volume = ck::StaticCast<FCk_Handle_VoxelNavVolume>(ck::MakeHandle(InEntity, TransientEntity));
+            auto Volume = UCk_Utils_VoxelNavVolume_UE::CastChecked(ck::MakeHandle(InEntity, TransientEntity));
             auto Snapshot = ck::voxelnav::FDebugSnapshot{};
             if (TryBuild_DebugSnapshot(Volume, InParams, Snapshot))
             { OutSnapshots.Emplace(MoveTemp(Snapshot)); }

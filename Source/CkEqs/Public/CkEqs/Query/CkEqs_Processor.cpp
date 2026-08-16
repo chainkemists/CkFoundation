@@ -1,5 +1,7 @@
 #include "CkEqs/Query/CkEqs_Processor.h"
 
+#include "CkEqs/Query/CkEqs_Utils.h"
+
 #include "CkEqs/CkEqs_Log.h"
 #include "CkEqs/Query/CkEqs_Algorithm.h"
 #include "CkEqs/Settings/CkEqs_ProjectSettings.h"
@@ -104,7 +106,7 @@ namespace ck
                 QueryEntity,
                 FName{*ck::Format_UE(TEXT("EqsQuery_{}"), InHandle)});
 
-            auto TypedQueryHandle = ck::StaticCast<FCk_Handle_EqsQuery>(QueryEntity);
+            auto TypedQueryHandle = UCk_Utils_Eqs_UE::CastChecked(QueryEntity);
 
             const auto& OnComplete = Request.Get_OnComplete();
             if (OnComplete.IsBound())
