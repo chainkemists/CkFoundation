@@ -297,7 +297,7 @@ private:
 	static auto
 	DoApplyParentLink(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams) -> void;
+		const FCk_Goap_WorldState_Spec& InParams) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
