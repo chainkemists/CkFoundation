@@ -152,16 +152,19 @@ namespace ck
         FCk_Handle_ResolverDataBundle,
         ck::TReadOnly<FFragment_ResolverDataBundle_Params>,
         ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        FTag_ResolverDataBundle_NeedsCalculate,
         ck::TExclude<FFragment_ResolverDataBundle_Requests>,
         ck::TExclude<FFragment_ResolverDataBundle_PendingOperations>,
         ck::TExclude<FTag_ResolverDataBundle_CalculateDone>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
-        ck::TExclude<FFragment_ResolverDataBundle_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay;
         using RunAfter = TDepList<FProcessor_ResolverDataBundle_ResolveOperations>;
+        // Without this the whole phase cascade is gated to one phase per frame — see the tag's
+        // declaration in CkResolverDataBundle_Fragment.h.
+        using MarkedDirtyBy = FTag_ResolverDataBundle_NeedsCalculate;
         using TProcessor::TProcessor;
 
     public:
