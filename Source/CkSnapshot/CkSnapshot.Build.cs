@@ -12,6 +12,7 @@ public class CkSnapshot : CkModuleRules
             "CoreOnline", // FUniqueNetIdWrapper::ToString — v3 EngineOwned player rendezvous (spec §4.2)
             "Engine",
             "DeveloperSettings", // UCk_Snapshot_Settings : UDeveloperSettings
+            "ImageCore",         // FImage::ChangeFormat — reading back the HDR screenshot path's .exr
 
             "CkCore",
             "CkEcs",

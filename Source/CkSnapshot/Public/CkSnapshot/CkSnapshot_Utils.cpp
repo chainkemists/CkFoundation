@@ -195,14 +195,19 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
-    Capture_ViewportThumbnail(
+    Request_CaptureViewportThumbnail(
         const UObject* InWorldContextObject,
+        const FCk_Delegate_Snapshot_OnThumbnailCaptured& InDelegate,
         int32 InMaxWidth)
-    -> TArray<uint8>
+    -> void
 {
     const auto* World = ck::IsValid(InWorldContextObject)
         ? GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::ReturnNull)
         : nullptr;
 
-    return ck::snapshot::slot_meta::Capture_ViewportPng(World, InMaxWidth);
+    ck::snapshot::slot_meta::Request_CaptureViewportPng(World, InMaxWidth,
+        [Delegate = InDelegate](TArray<uint8> InPng) -> void
+        {
+            Delegate.ExecuteIfBound(InPng);
+        });
 }
