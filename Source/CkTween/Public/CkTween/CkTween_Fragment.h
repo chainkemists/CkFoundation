@@ -99,7 +99,7 @@ namespace ck
     //
     // TStrongObjectPtr and not TObjectPtr/raw: CkFoundation fragments are NOT GC-traced (see
     // CkEcs/Claude.md), so a curve reachable only from here would be collected and dangle. That
-    // also rules out carrying these in FCk_Fragment_Tween_ParamsData -- it is the ECS fragment
+    // also rules out carrying these in FCk_Tween_Spec -- it is the ECS fragment
     // itself, so a UPROPERTY on it buys no tracing either.
     struct CKTWEEN_API FFragment_Tween_CurveDrive
     {

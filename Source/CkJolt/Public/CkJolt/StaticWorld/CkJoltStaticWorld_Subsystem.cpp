@@ -1379,9 +1379,9 @@ auto
     if (ck::Is_NOT_Valid(NewEntity))
     { return {}; }
 
-    NewEntity.Add<ck::FFragment_JoltStaticActor_Current>();
+    NewEntity.Add<ck::FFragment_JoltStaticActor>();
 
-    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor>();
     // Attribution names the COMPONENT (a shared host actor can own many baked components); the
     // source actor stays reachable for consumers that walk up.
     Fragment._SourceActor = InSourceComponent.GetOwner();
