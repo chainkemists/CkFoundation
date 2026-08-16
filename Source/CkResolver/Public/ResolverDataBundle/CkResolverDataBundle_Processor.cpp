@@ -70,6 +70,11 @@ namespace ck
             InHandle.Try_Remove<FTag_ResolverDataBundle_CalculateDone>();
             InHandle.Try_Remove<FTag_ResolverDataBundle_OperationsResolved>();
 
+            // Arm Calculate for this phase. Stamped BEFORE the PhaseStart broadcast on purpose: a
+            // listener may synchronously enqueue operations on the bundle, and Calculate excludes
+            // Requests/PendingOperations, so it still waits for those to drain either way.
+            InHandle.AddOrGet<FTag_ResolverDataBundle_NeedsCalculate>();
+
             const auto& PhaseName = InParams.Get_Params().Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
             UUtils_Signal_ResolverDataBundle_PhaseStart::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName));
         }
@@ -325,6 +330,11 @@ namespace ck
             .Set_Causer(ResolverCause)
             .Set_FinalValue(CalculatedFinalValue)
             .Set_Metadata(InCurrent.Get_MetadataTags());
+
+        // Consume the readiness marker before advancing: DoTryStartNewPhase re-arms StartNewPhase,
+        // which stamps a fresh NeedsCalculate for the next phase. Leaving this one in place would let
+        // a later pump pass re-Calculate the phase we just finished.
+        InHandle.Try_Remove<FTag_ResolverDataBundle_NeedsCalculate>();
 
         UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsOperationsResolved(InHandle);
         UCk_Utils_ResolverDataBundle_UE::DoTryStartNewPhase(InHandle);
