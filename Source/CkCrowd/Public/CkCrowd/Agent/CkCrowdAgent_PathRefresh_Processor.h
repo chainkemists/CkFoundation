@@ -129,7 +129,7 @@ namespace ck
             const FVector& InEscapedLocation,
             const FVector& InGoal,
             float InArrivalRadius,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints) -> ECk_CrowdAgent_StationaryMarkupPathResult;
