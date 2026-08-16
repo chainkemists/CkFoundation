@@ -336,6 +336,12 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     // Refilled every capture while contacts are wanted, from the primary selection's own shape query.
     TArray<FCk_Jolt_DebugDraw_ContactEntry> _SelectionContacts;
 
+    // The health scan's arming and its verdict (P8-D57). Unset thresholds mean the scan does not run at all,
+    // and the map is refilled from scratch by every capture that does run it — a stale flag is a lie about
+    // live state, so nothing here is ever carried forward.
+    TOptional<FCk_Jolt_DebugDraw_ProblemThresholds> _ProblemThresholds;
+    TMap<uint64, ECk_Jolt_DebugDraw_ProblemFlags> _ProblemBodies;
+
     // STRONG for the same reason the bucket ISMs are: an actorless component has no owner to root it, and the
     // preview/transient worlds this target binds to host no pooling subsystem either. Created on first line.
     TStrongObjectPtr<ULineBatchComponent> _Lines;
