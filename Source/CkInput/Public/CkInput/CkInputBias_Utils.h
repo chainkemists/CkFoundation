@@ -52,7 +52,7 @@ public:
     static FCk_Handle_InputBias
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_InputBias_ParamsData& InParams);
+        const FCk_InputBias_Spec& InParams);
 
 public:
     static bool

@@ -96,13 +96,13 @@ namespace ck_intent_matcher_processor
 
         Source.View<
             ck::FFragment_InputLayer_Params,
-            ck::FFragment_InputLayer_Current,
+            ck::FFragment_InputLayer,
             ck::TExclude<ck::FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>().ForEach(
             [&](
                 FCk_Entity InEntity,
                 const ck::FFragment_InputLayer_Params& InLayerParams,
-                const ck::FFragment_InputLayer_Current& InLayerCurrent)
+                const ck::FFragment_InputLayer& InLayerComp)
             {
                 if (MaskedFromAbove)
                 { return; }
@@ -113,7 +113,7 @@ namespace ck_intent_matcher_processor
                 if (InLayerParams.Get_Priority() <= InContext.Get_LayerPriority())
                 { return; }
 
-                MaskedFromAbove = InLayerCurrent.Get_Captures().ContainsByPredicate(
+                MaskedFromAbove = InLayerComp.Get_Captures().ContainsByPredicate(
                 [&](const FCk_InputLayer_Capture& InCapture) -> bool
                 {
                     if (InCapture.Get_Behavior() != ECk_InputLayer_CaptureBehavior::Consume)
@@ -601,16 +601,16 @@ namespace ck
         FIntentMatcher_PhaseWriter::
         Set_Phase(
             FCk_Handle_IntentMatcher InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             ECk_Intent_Phase InNewPhase,
             int32 InFrame)
         -> void
     {
-        if (NOT InCurrent._PhaseRows.IsValidIndex(InIntentIndex))
+        if (NOT InMatcherComp._PhaseRows.IsValidIndex(InIntentIndex))
         { return; }
 
-        auto& PhaseRow = InCurrent._PhaseRows[InIntentIndex];
+        auto& PhaseRow = InMatcherComp._PhaseRows[InIntentIndex];
 
         const auto PreviousPhase = PhaseRow._Phase;
 
@@ -627,7 +627,7 @@ namespace ck
         PhaseRow._ClaimedBy = {};
         PhaseRow._ClaimedFrame = INDEX_NONE;
 
-        const auto& Intent = InCurrent._ActiveSet.Get_Intents()[InIntentIndex];
+        const auto& Intent = InMatcherComp._ActiveSet.Get_Intents()[InIntentIndex];
 
         UUtils_Signal_OnIntentPhaseChanged::Broadcast(InMatcher, MakePayload(
             InMatcher, Intent.Get_Name(), Intent.Get_IntentTag(), PreviousPhase, InNewPhase, InFrame));
@@ -647,7 +647,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             FFragment_IntentMatcher_Requests& InRequests) const
         -> void
     {
@@ -660,7 +660,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InMatcher, Result);
 
-            Result = DoHandleRequest(InMatcher, InParams, InCurrent, InRequest);
+            Result = DoHandleRequest(InMatcher, InParams, InMatcherComp, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -674,7 +674,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Request_IntentMatcher_SwapSet& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -718,7 +718,7 @@ namespace ck
             }
         }
 
-        const auto OldKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(InCurrent._RegisteredCaptures);
+        const auto OldKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(InMatcherComp._RegisteredCaptures);
         const auto NewKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(Desired);
 
         ck_intent_matcher_processor::ApplyCaptureEdits(Layer, InParams.Get_CaptureBehavior(), OldKeys, NewKeys);
@@ -726,18 +726,18 @@ namespace ck
         // The outgoing set's rows are about to stop existing, and a poller reads an intent the set no longer
         // carries as Idle — so the phase observably moved and the signal owes an account of it. Done BEFORE the
         // set is replaced, because the payload names the intent and only the outgoing set can still name it.
-        for (auto Index = 0; Index < InCurrent._PhaseRows.Num(); ++Index)
+        for (auto Index = 0; Index < InMatcherComp._PhaseRows.Num(); ++Index)
         {
-            if (InCurrent._PhaseRows[Index].Get_Phase() == ECk_Intent_Phase::Idle)
+            if (InMatcherComp._PhaseRows[Index].Get_Phase() == ECk_Intent_Phase::Idle)
             { continue; }
 
-            FIntentMatcher_PhaseWriter::Set_Phase(InMatcher, InCurrent, Index, ECk_Intent_Phase::Idle, INDEX_NONE);
+            FIntentMatcher_PhaseWriter::Set_Phase(InMatcher, InMatcherComp, Index, ECk_Intent_Phase::Idle, INDEX_NONE);
         }
 
-        InCurrent._RegisteredCaptures = MoveTemp(Desired);
-        InCurrent._ActiveSet = Set;
-        InCurrent._LastScannedFrameIndex = INDEX_NONE;
-        InCurrent._SetHasLevelIntent = Set.Get_Intents().ContainsByPredicate(
+        InMatcherComp._RegisteredCaptures = MoveTemp(Desired);
+        InMatcherComp._ActiveSet = Set;
+        InMatcherComp._LastScannedFrameIndex = INDEX_NONE;
+        InMatcherComp._SetHasLevelIntent = Set.Get_Intents().ContainsByPredicate(
         [](const FCk_Intent_CompiledIntent& InIntent) -> bool
         {
             return ck_intent_matcher_processor::Get_IsLevelIntent(InIntent);
@@ -747,12 +747,12 @@ namespace ck
         // reported for them: a swap is not an answer to the press that was waiting, it is the question being
         // withdrawn. Active levels go the same way, and their Active -> Idle signal already rode the non-Idle
         // sweep above.
-        InCurrent._PendingEpisodes.Reset();
-        InCurrent._HoldAccumulators.Reset();
-        InCurrent._ActiveLevels.Reset();
+        InMatcherComp._PendingEpisodes.Reset();
+        InMatcherComp._HoldAccumulators.Reset();
+        InMatcherComp._ActiveLevels.Reset();
 
-        InCurrent._PhaseRows.Reset();
-        InCurrent._PhaseRows.SetNum(Set.Get_Intents().Num());
+        InMatcherComp._PhaseRows.Reset();
+        InMatcherComp._PhaseRows.SetNum(Set.Get_Intents().Num());
 
         intent::Verbose
         (
@@ -784,7 +784,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent) const
+            FFragment_IntentMatcher& InMatcherComp) const
         -> void
     {
         auto Layer = UCk_Utils_InputLayer_UE::CastChecked(InMatcher);
@@ -792,9 +792,9 @@ namespace ck
         const auto Source = UCk_Utils_InputLayer_UE::Get_InputSource(Layer);
         const auto ButtonMap = UCk_Utils_InputButtonMap_UE::Cast(Source);
 
-        DoRefreshCaptureResolutions(Layer, ButtonMap, InParams, InCurrent);
+        DoRefreshCaptureResolutions(Layer, ButtonMap, InParams, InMatcherComp);
 
-        if (InCurrent._ActiveSet.Get_IsEmpty())
+        if (InMatcherComp._ActiveSet.Get_IsEmpty())
         { return; }
 
         const auto Sampler = UCk_Utils_IntentSampler_UE::Cast(Source);
@@ -804,7 +804,7 @@ namespace ck
             // No further row will ever be written, so no sweep can notice the release: a row left Active here
             // stays Active — and CLAIMABLE — for the rest of the matcher's life, against a hold whose input has
             // stopped existing. The last frame this matcher consumed is the honest one to name it on.
-            DoDeactivateAllLevelRows(InMatcher, InCurrent, InCurrent._LastScannedFrameIndex,
+            DoDeactivateAllLevelRows(InMatcher, InMatcherComp, InMatcherComp._LastScannedFrameIndex,
                 FString{TEXT("the input source no longer carries a frame record")});
 
             return;
@@ -820,11 +820,11 @@ namespace ck
         // A matcher that has never scanned takes only the newest row: a set activated now must not complete on
         // presses the player made before it existed. Afterwards the gap between the record's frame index and the
         // last one consumed is exactly how many rows arrived, clamped to what the ring still holds.
-        const auto UnscannedRows = InCurrent._LastScannedFrameIndex == INDEX_NONE
+        const auto UnscannedRows = InMatcherComp._LastScannedFrameIndex == INDEX_NONE
             ? 1
-            : FMath::Min(LatestFrameIndex - InCurrent._LastScannedFrameIndex, RetainedRows);
+            : FMath::Min(LatestFrameIndex - InMatcherComp._LastScannedFrameIndex, RetainedRows);
 
-        InCurrent._LastScannedFrameIndex = LatestFrameIndex;
+        InMatcherComp._LastScannedFrameIndex = LatestFrameIndex;
 
         const auto Context = FIntentMatcher_ScanContext
         {
@@ -837,7 +837,7 @@ namespace ck
         // needs the same order for a different reason — a hold is counted in rows.
         for (auto Offset = UnscannedRows - 1; Offset >= 0; --Offset)
         {
-            DoProcessRow(InMatcher, InCurrent, Context, Offset);
+            DoProcessRow(InMatcher, InMatcherComp, Context, Offset);
         }
     }
 
@@ -847,18 +847,18 @@ namespace ck
             FCk_Handle_InputLayer& InLayer,
             const FCk_Handle_InputButtonMap& InButtonMap,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent)
+            FFragment_IntentMatcher& InMatcherComp)
         -> void
     {
-        if (InCurrent._RegisteredCaptures.IsEmpty())
+        if (InMatcherComp._RegisteredCaptures.IsEmpty())
         { return; }
 
         auto Refreshed = TArray<FIntentMatcher_RegisteredCapture>{};
-        Refreshed.Reserve(InCurrent._RegisteredCaptures.Num());
+        Refreshed.Reserve(InMatcherComp._RegisteredCaptures.Num());
 
         auto AnyAssociationMoved = false;
 
-        for (const auto& Registered : InCurrent._RegisteredCaptures)
+        for (const auto& Registered : InMatcherComp._RegisteredCaptures)
         {
             const auto FreshKeys = ck::IsValid(InButtonMap)
                 ? UCk_Utils_InputButtonMap_UE::Get_KeysForButton(InButtonMap, Registered.Get_Button())
@@ -886,19 +886,19 @@ namespace ck
         if (NOT AnyAssociationMoved)
         { return; }
 
-        const auto OldKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(InCurrent._RegisteredCaptures);
+        const auto OldKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(InMatcherComp._RegisteredCaptures);
         const auto NewKeys = ck_intent_matcher_processor::Get_DistinctValidKeys(Refreshed);
 
         ck_intent_matcher_processor::ApplyCaptureEdits(InLayer, InParams.Get_CaptureBehavior(), OldKeys, NewKeys);
 
-        InCurrent._RegisteredCaptures = MoveTemp(Refreshed);
+        InMatcherComp._RegisteredCaptures = MoveTemp(Refreshed);
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoProcessRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             int32 InOffset)
         -> void
@@ -913,35 +913,35 @@ namespace ck
 
         // Live episodes first: a chord's partner and a hold's threshold both land on THIS row, and a press that
         // is already being waited on must not open a second episode below.
-        for (auto Index = InCurrent._PendingEpisodes.Num() - 1; Index >= 0; --Index)
+        for (auto Index = InMatcherComp._PendingEpisodes.Num() - 1; Index >= 0; --Index)
         {
-            auto& Episode = InCurrent._PendingEpisodes[Index];
+            auto& Episode = InMatcherComp._PendingEpisodes[Index];
 
             ButtonsSpokenFor.AddUnique(Episode._Button);
 
-            if (NOT DoAdvanceEpisode(InMatcher, InCurrent, InContext, Row, InOffset, Episode, CompletedThisRow))
+            if (NOT DoAdvanceEpisode(InMatcher, InMatcherComp, InContext, Row, InOffset, Episode, CompletedThisRow))
             { continue; }
 
-            DoDropHoldAccumulator(InCurrent, Episode._Button);
-            InCurrent._PendingEpisodes.RemoveAt(Index);
+            DoDropHoldAccumulator(InMatcherComp, Episode._Button);
+            InMatcherComp._PendingEpisodes.RemoveAt(Index);
         }
 
-        DoScanRowForNewPresses(InMatcher, InCurrent, InContext, Row, InOffset, ButtonsSpokenFor, CompletedThisRow);
+        DoScanRowForNewPresses(InMatcher, InMatcherComp, InContext, Row, InOffset, ButtonsSpokenFor, CompletedThisRow);
 
         // Deliberately outside the spoken-for bookkeeping: a level row is not an episode candidate and a press
         // that opened an episode for its edge siblings still activates the level move on the same button.
-        DoUpdateLevelRows(InMatcher, InCurrent, InContext, Row, InOffset);
+        DoUpdateLevelRows(InMatcher, InMatcherComp, InContext, Row, InOffset);
 
-        DoPurgeEpisodesResolvedElsewhere(InMatcher, InCurrent, CompletedThisRow, Row.Get_FrameIndex());
+        DoPurgeEpisodesResolvedElsewhere(InMatcher, InMatcherComp, CompletedThisRow, Row.Get_FrameIndex());
 
-        DoDecayLatches(InMatcher, InCurrent, InContext, Row.Get_FrameIndex());
+        DoDecayLatches(InMatcher, InMatcherComp, InContext, Row.Get_FrameIndex());
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoScanRowForNewPresses(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset,
@@ -949,7 +949,7 @@ namespace ck
             TArray<int32>& OutCompletedThisRow)
         -> void
     {
-        const auto& Set = InCurrent._ActiveSet;
+        const auto& Set = InMatcherComp._ActiveSet;
 
         for (const auto& PressedButton : InRow.Get_Pressed())
         {
@@ -989,17 +989,17 @@ namespace ck
                 if (EdgeCandidates.IsEmpty())
                 { continue; }
 
-                DoOpenEpisode(InMatcher, InCurrent, InRow, PressedButton, PressKey, Verdict, EdgeCandidates);
+                DoOpenEpisode(InMatcher, InMatcherComp, InRow, PressedButton, PressKey, Verdict, EdgeCandidates);
 
                 // A chord whose partner was ALREADY down completes on the press row itself, so the freshly opened
                 // episode gets one advance against the row that opened it rather than waiting for the next one.
-                const auto OpenedIndex = InCurrent._PendingEpisodes.Num() - 1;
+                const auto OpenedIndex = InMatcherComp._PendingEpisodes.Num() - 1;
 
-                if (DoAdvanceEpisode(InMatcher, InCurrent, InContext, InRow, InOffset,
-                        InCurrent._PendingEpisodes[OpenedIndex], OutCompletedThisRow))
+                if (DoAdvanceEpisode(InMatcher, InMatcherComp, InContext, InRow, InOffset,
+                        InMatcherComp._PendingEpisodes[OpenedIndex], OutCompletedThisRow))
                 {
-                    DoDropHoldAccumulator(InCurrent, InCurrent._PendingEpisodes[OpenedIndex]._Button);
-                    InCurrent._PendingEpisodes.RemoveAt(OpenedIndex);
+                    DoDropHoldAccumulator(InMatcherComp, InMatcherComp._PendingEpisodes[OpenedIndex]._Button);
+                    InMatcherComp._PendingEpisodes.RemoveAt(OpenedIndex);
                 }
 
                 continue;
@@ -1009,7 +1009,7 @@ namespace ck
             // second sort here that could disagree with the one the bake settled.
             for (const auto IntentIndex : ResolutionRow.Get_IntentIndices())
             {
-                if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+                if (NOT InMatcherComp._PhaseRows.IsValidIndex(IntentIndex))
                 { continue; }
 
                 if (ck_intent_matcher_processor::Get_IsLevelIntent(Set.Get_Intents()[IntentIndex]))
@@ -1018,10 +1018,10 @@ namespace ck
                 if (OutCompletedThisRow.Contains(IntentIndex))
                 { break; }
 
-                if (NOT DoRunScan(InCurrent, InContext, Set.Get_Intents()[IntentIndex], InOffset))
+                if (NOT DoRunScan(InMatcherComp, InContext, Set.Get_Intents()[IntentIndex], InOffset))
                 { continue; }
 
-                DoCompleteIntent(InMatcher, InCurrent, IntentIndex, InRow.Get_FrameIndex(), OutCompletedThisRow);
+                DoCompleteIntent(InMatcher, InMatcherComp, IntentIndex, InRow.Get_FrameIndex(), OutCompletedThisRow);
                 break;
             }
         }
@@ -1031,7 +1031,7 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoUpdateLevelRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset)
@@ -1040,10 +1040,10 @@ namespace ck
         // A set with no level intent can neither activate one nor be holding one — a swap clears `_ActiveLevels` —
         // so every press of every row below would pay a map lookup and a resolution-row copy to discover there was
         // never any work. Answered at swap time, because the set cannot change while it is active.
-        if (NOT InCurrent._SetHasLevelIntent)
+        if (NOT InMatcherComp._SetHasLevelIntent)
         { return; }
 
-        const auto& Set = InCurrent._ActiveSet;
+        const auto& Set = InMatcherComp._ActiveSet;
 
         for (const auto& PressedButton : InRow.Get_Pressed())
         {
@@ -1056,7 +1056,7 @@ namespace ck
 
             for (const auto IntentIndex : ResolutionRow.Get_IntentIndices())
             {
-                if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+                if (NOT InMatcherComp._PhaseRows.IsValidIndex(IntentIndex))
                 { continue; }
 
                 if (NOT ck_intent_matcher_processor::Get_IsLevelIntent(Set.Get_Intents()[IntentIndex]))
@@ -1064,31 +1064,31 @@ namespace ck
 
                 // Already active: a second press of a button that is still down cannot start a hold that never
                 // ended, and re-entering would restamp a phase frame the consumer measures the hold from.
-                if (Get_IsLevelActive(InCurrent, IntentIndex))
+                if (Get_IsLevelActive(InMatcherComp, IntentIndex))
                 { continue; }
 
-                if (NOT DoRunScan(InCurrent, InContext, Set.Get_Intents()[IntentIndex], InOffset))
+                if (NOT DoRunScan(InMatcherComp, InContext, Set.Get_Intents()[IntentIndex], InOffset))
                 { continue; }
 
-                DoActivateLevelRow(InMatcher, InCurrent, IntentIndex, PressedButton, PressKey, InRow.Get_FrameIndex());
+                DoActivateLevelRow(InMatcher, InMatcherComp, IntentIndex, PressedButton, PressKey, InRow.Get_FrameIndex());
             }
         }
 
-        if (InCurrent._ActiveLevels.IsEmpty())
+        if (InMatcherComp._ActiveLevels.IsEmpty())
         { return; }
 
         const auto HeldKeys = UCk_Utils_IntentSampler_UE::Get_HeldKeys(InContext.Get_Sampler());
 
         // Backwards so a release cannot move an entry the sweep has not reached yet.
-        for (auto Index = InCurrent._ActiveLevels.Num() - 1; Index >= 0; --Index)
+        for (auto Index = InMatcherComp._ActiveLevels.Num() - 1; Index >= 0; --Index)
         {
-            auto& Active = InCurrent._ActiveLevels[Index];
+            auto& Active = InMatcherComp._ActiveLevels[Index];
 
             // Cheapest first, and it subsumes everything below it: a button nothing holds has no key left to
             // anchor to, so neither the map lookup nor the delivery walk has a question to answer.
             if (NOT InRow.Get_Held().Contains(Active._Button))
             {
-                DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
+                DoDeactivateLevelRow(InMatcher, InMatcherComp, Index, InRow.Get_FrameIndex(),
                     FString{TEXT("the button is no longer held")});
 
                 continue;
@@ -1112,7 +1112,7 @@ namespace ck
 
             if (NOT ReAnchoredKey.IsValid())
             {
-                DoDeactivateLevelRow(InMatcher, InCurrent, Index, InRow.Get_FrameIndex(),
+                DoDeactivateLevelRow(InMatcher, InMatcherComp, Index, InRow.Get_FrameIndex(),
                     FString{TEXT("this layer no longer receives any held key of the button")});
 
                 continue;
@@ -1122,7 +1122,7 @@ namespace ck
             (
                 TEXT("IntentMatcher [{}] re-anchored level intent [{}] from key [{}] to key [{}] on record frame "
                      "[{}]"),
-                InMatcher, InCurrent._ActiveSet.Get_Intents()[Active._IntentIndex].Get_Name(),
+                InMatcher, InMatcherComp._ActiveSet.Get_Intents()[Active._IntentIndex].Get_Name(),
                 Active._AnchorKey.ToString(), ReAnchoredKey.ToString(), InRow.Get_FrameIndex()
             );
 
@@ -1134,7 +1134,7 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoActivateLevelRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             const FCk_Input_ButtonId& InButton,
             const FKey& InAnchorKey,
@@ -1144,16 +1144,16 @@ namespace ck
         // Entry first, broadcast second. `Set_Phase` fires `OnIntentPhaseChanged` from inside itself, and a handler
         // that reads back through the matcher must not see a phase the active-level bookkeeping does not yet agree
         // with.
-        InCurrent._ActiveLevels.Emplace(FIntentMatcher_ActiveLevel{InIntentIndex, InButton, InAnchorKey});
+        InMatcherComp._ActiveLevels.Emplace(FIntentMatcher_ActiveLevel{InIntentIndex, InButton, InAnchorKey});
 
         FIntentMatcher_PhaseWriter::Set_Phase(
-            InMatcher, InCurrent, InIntentIndex, ECk_Intent_Phase::Active, InFrame);
+            InMatcher, InMatcherComp, InIntentIndex, ECk_Intent_Phase::Active, InFrame);
 
         intent::Verbose
         (
             TEXT("IntentMatcher [{}] activated level intent [{}] on button [{}|{}] anchored to key [{}] on record "
                  "frame [{}]"),
-            InMatcher, InCurrent._ActiveSet.Get_Intents()[InIntentIndex].Get_Name(),
+            InMatcher, InMatcherComp._ActiveSet.Get_Intents()[InIntentIndex].Get_Name(),
             InButton.Get_Tier(), InButton.Get_Name(), InAnchorKey.ToString(), InFrame
         );
     }
@@ -1162,25 +1162,25 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoDeactivateLevelRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InActiveLevelIndex,
             int32 InFrame,
             const FString& InReason)
         -> void
     {
-        const auto IntentIndex = InCurrent._ActiveLevels[InActiveLevelIndex]._IntentIndex;
+        const auto IntentIndex = InMatcherComp._ActiveLevels[InActiveLevelIndex]._IntentIndex;
 
         // Removal first, broadcast second — the same reason activation emplaces first: a handler reading back
         // through the matcher would otherwise see `Idle` beside a row still listed as active.
-        InCurrent._ActiveLevels.RemoveAt(InActiveLevelIndex);
+        InMatcherComp._ActiveLevels.RemoveAt(InActiveLevelIndex);
 
         FIntentMatcher_PhaseWriter::Set_Phase(
-            InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
+            InMatcher, InMatcherComp, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
 
         intent::Verbose
         (
             TEXT("IntentMatcher [{}] released level intent [{}] on record frame [{}]: {}"),
-            InMatcher, InCurrent._ActiveSet.Get_Intents()[IntentIndex].Get_Name(), InFrame, InReason
+            InMatcher, InMatcherComp._ActiveSet.Get_Intents()[IntentIndex].Get_Name(), InFrame, InReason
         );
     }
 
@@ -1188,25 +1188,25 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoDeactivateAllLevelRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InFrame,
             const FString& InReason)
         -> void
     {
-        for (auto Index = InCurrent._ActiveLevels.Num() - 1; Index >= 0; --Index)
+        for (auto Index = InMatcherComp._ActiveLevels.Num() - 1; Index >= 0; --Index)
         {
-            DoDeactivateLevelRow(InMatcher, InCurrent, Index, InFrame, InReason);
+            DoDeactivateLevelRow(InMatcher, InMatcherComp, Index, InFrame, InReason);
         }
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         Get_IsLevelActive(
-            const FFragment_IntentMatcher_Current& InCurrent,
+            const FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex)
         -> bool
     {
-        return InCurrent._ActiveLevels.ContainsByPredicate(
+        return InMatcherComp._ActiveLevels.ContainsByPredicate(
         [&](const FIntentMatcher_ActiveLevel& InActive) -> bool
         {
             return InActive.Get_IntentIndex() == InIntentIndex;
@@ -1217,7 +1217,7 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoAdvanceEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset,
@@ -1250,7 +1250,7 @@ namespace ck
                 InMatcher, InEpisode._Button.Get_Tier(), InEpisode._Button.Get_Name()
             );
 
-            DoFailEpisode(InMatcher, InCurrent, InEpisode, InRow.Get_FrameIndex());
+            DoFailEpisode(InMatcher, InMatcherComp, InEpisode, InRow.Get_FrameIndex());
             return true;
         }
 
@@ -1260,9 +1260,9 @@ namespace ck
         // The press row is elapsed-zero, so only the rows AFTER it add to the count. That is what makes a
         // threshold of N mean "still down N frames later" and makes the completion frame press + N exactly.
         if (ButtonIsDown && InRow.Get_FrameIndex() > InEpisode._PressFrame)
-        { DoAdvanceHoldAccumulator(InCurrent, InEpisode._Button); }
+        { DoAdvanceHoldAccumulator(InMatcherComp, InEpisode._Button); }
 
-        const auto HeldFrames = DoGet_AccumulatedHoldFrames(InCurrent, InEpisode._Button);
+        const auto HeldFrames = DoGet_AccumulatedHoldFrames(InMatcherComp, InEpisode._Button);
         const auto ElapsedFrames = InRow.Get_FrameIndex() - InEpisode._PressFrame;
         const auto PressOffset = InContext.Get_LatestFrameIndex() - InEpisode._PressFrame;
 
@@ -1276,7 +1276,7 @@ namespace ck
                 return ck_intent_matcher_processor::Get_TerminalButtonAtomCount(InIntent) > 1;
             };
 
-            if (DoTryResolveEpisode(InMatcher, InCurrent, InContext, InEpisode, ChordCandidates,
+            if (DoTryResolveEpisode(InMatcher, InMatcherComp, InContext, InEpisode, ChordCandidates,
                     InOffset, InRow.Get_FrameIndex(), OutCompletedThisRow))
             { return true; }
         }
@@ -1288,7 +1288,7 @@ namespace ck
                 return InIntent.Get_HoldFrames() > 0 && HeldFrames >= InIntent.Get_HoldFrames();
             };
 
-            if (DoTryResolveEpisode(InMatcher, InCurrent, InContext, InEpisode, HoldCandidatesAtThreshold,
+            if (DoTryResolveEpisode(InMatcher, InMatcherComp, InContext, InEpisode, HoldCandidatesAtThreshold,
                     PressOffset, InRow.Get_FrameIndex(), OutCompletedThisRow))
             { return true; }
         }
@@ -1311,11 +1311,11 @@ namespace ck
             return InIntent.Get_HoldFrames() == 0;
         };
 
-        if (DoTryResolveEpisode(InMatcher, InCurrent, InContext, InEpisode, UnconditionalCandidates,
+        if (DoTryResolveEpisode(InMatcher, InMatcherComp, InContext, InEpisode, UnconditionalCandidates,
                 PressOffset, InRow.Get_FrameIndex(), OutCompletedThisRow))
         { return true; }
 
-        DoFailEpisode(InMatcher, InCurrent, InEpisode, InRow.Get_FrameIndex());
+        DoFailEpisode(InMatcher, InMatcherComp, InEpisode, InRow.Get_FrameIndex());
         return true;
     }
 
@@ -1323,7 +1323,7 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoTryResolveEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FIntentMatcher_PendingEpisode& InEpisode,
             TFunctionRef<bool(const FCk_Intent_CompiledIntent&)> InCandidateFilter,
@@ -1332,21 +1332,21 @@ namespace ck
             TArray<int32>& OutCompletedThisRow)
         -> bool
     {
-        const auto& Intents = InCurrent._ActiveSet.Get_Intents();
+        const auto& Intents = InMatcherComp._ActiveSet.Get_Intents();
 
         for (const auto IntentIndex : InEpisode._Candidates)
         {
-            if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+            if (NOT InMatcherComp._PhaseRows.IsValidIndex(IntentIndex))
             { continue; }
 
             if (NOT InCandidateFilter(Intents[IntentIndex]))
             { continue; }
 
-            if (NOT DoRunScan(InCurrent, InContext, Intents[IntentIndex], InTerminalOffset))
+            if (NOT DoRunScan(InMatcherComp, InContext, Intents[IntentIndex], InTerminalOffset))
             { continue; }
 
-            DoCompleteIntent(InMatcher, InCurrent, IntentIndex, InResolutionFrame, OutCompletedThisRow);
-            DoSettleLosingRows(InMatcher, InCurrent, InEpisode, InResolutionFrame);
+            DoCompleteIntent(InMatcher, InMatcherComp, IntentIndex, InResolutionFrame, OutCompletedThisRow);
+            DoSettleLosingRows(InMatcher, InMatcherComp, InEpisode, InResolutionFrame);
 
             return true;
         }
@@ -1358,7 +1358,7 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoOpenEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Intent_FrameRecord& InRow,
             const FCk_Input_ButtonId& InButton,
             const FKey& InPressKey,
@@ -1380,13 +1380,13 @@ namespace ck
         for (const auto IntentIndex : Episode._Candidates)
         {
             FIntentMatcher_PhaseWriter::Set_Phase(
-                InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Pending, Episode._PressFrame);
+                InMatcher, InMatcherComp, IntentIndex, ECk_Intent_Phase::Pending, Episode._PressFrame);
         }
 
         // RequireRePress, the gain half of [D15]'s default pair: the count belongs to THIS press and starts at
         // zero, whatever the button happened to be doing before the layer was allowed to see it.
-        DoDropHoldAccumulator(InCurrent, InButton);
-        InCurrent._HoldAccumulators.Emplace(FIntentMatcher_HoldAccumulator{InButton, 0});
+        DoDropHoldAccumulator(InMatcherComp, InButton);
+        InMatcherComp._HoldAccumulators.Emplace(FIntentMatcher_HoldAccumulator{InButton, 0});
 
         intent::Verbose
         (
@@ -1396,14 +1396,14 @@ namespace ck
             Episode._HoldSiblingFrames, Episode._ChordWindowFrames
         );
 
-        InCurrent._PendingEpisodes.Emplace(MoveTemp(Episode));
+        InMatcherComp._PendingEpisodes.Emplace(MoveTemp(Episode));
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoPurgeEpisodesResolvedElsewhere(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const TArray<int32>& InCompletedThisRow,
             int32 InFrame)
         -> void
@@ -1411,9 +1411,9 @@ namespace ck
         if (InCompletedThisRow.IsEmpty())
         { return; }
 
-        for (auto Index = InCurrent._PendingEpisodes.Num() - 1; Index >= 0; --Index)
+        for (auto Index = InMatcherComp._PendingEpisodes.Num() - 1; Index >= 0; --Index)
         {
-            const auto& Episode = InCurrent._PendingEpisodes[Index];
+            const auto& Episode = InMatcherComp._PendingEpisodes[Index];
 
             // An intent that just completed answers every episode that was waiting on it: the same press cannot
             // still be ambiguous between candidates one of which has already been decided.
@@ -1426,10 +1426,10 @@ namespace ck
             if (NOT WasAnsweredElsewhere)
             { continue; }
 
-            DoSettleLosingRows(InMatcher, InCurrent, Episode, InFrame);
-            DoDropHoldAccumulator(InCurrent, Episode._Button);
+            DoSettleLosingRows(InMatcher, InMatcherComp, Episode, InFrame);
+            DoDropHoldAccumulator(InMatcherComp, Episode._Button);
 
-            InCurrent._PendingEpisodes.RemoveAt(Index);
+            InMatcherComp._PendingEpisodes.RemoveAt(Index);
         }
     }
 
@@ -1437,21 +1437,21 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoCompleteIntent(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             int32 InFrame,
             TArray<int32>& OutCompletedThisRow)
         -> void
     {
         FIntentMatcher_PhaseWriter::Set_Phase(
-            InMatcher, InCurrent, InIntentIndex, ECk_Intent_Phase::Completed, InFrame);
+            InMatcher, InMatcherComp, InIntentIndex, ECk_Intent_Phase::Completed, InFrame);
 
         OutCompletedThisRow.AddUnique(InIntentIndex);
 
         intent::Verbose
         (
             TEXT("IntentMatcher [{}] completed intent [{}] on record frame [{}]"),
-            InMatcher, InCurrent._ActiveSet.Get_Intents()[InIntentIndex].Get_Name(), InFrame
+            InMatcher, InMatcherComp._ActiveSet.Get_Intents()[InIntentIndex].Get_Name(), InFrame
         );
     }
 
@@ -1459,23 +1459,23 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoFailEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_PendingEpisode& InEpisode,
             int32 InFrame)
         -> void
     {
         for (const auto IntentIndex : InEpisode._Candidates)
         {
-            if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+            if (NOT InMatcherComp._PhaseRows.IsValidIndex(IntentIndex))
             { continue; }
 
             // Only the rows THIS episode put into the wait are its to answer; one that has since been completed
             // by another press keeps its latch.
-            if (InCurrent._PhaseRows[IntentIndex].Get_Phase() != ECk_Intent_Phase::Pending)
+            if (InMatcherComp._PhaseRows[IntentIndex].Get_Phase() != ECk_Intent_Phase::Pending)
             { continue; }
 
             FIntentMatcher_PhaseWriter::Set_Phase(
-                InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Failed, InFrame);
+                InMatcher, InMatcherComp, IntentIndex, ECk_Intent_Phase::Failed, InFrame);
         }
 
         intent::Verbose
@@ -1490,32 +1490,32 @@ namespace ck
         FProcessor_IntentMatcher_Match::
         DoSettleLosingRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_PendingEpisode& InEpisode,
             int32 InFrame)
         -> void
     {
         for (const auto IntentIndex : InEpisode._Candidates)
         {
-            if (NOT InCurrent._PhaseRows.IsValidIndex(IntentIndex))
+            if (NOT InMatcherComp._PhaseRows.IsValidIndex(IntentIndex))
             { continue; }
 
-            if (InCurrent._PhaseRows[IntentIndex].Get_Phase() != ECk_Intent_Phase::Pending)
+            if (InMatcherComp._PhaseRows[IntentIndex].Get_Phase() != ECk_Intent_Phase::Pending)
             { continue; }
 
             FIntentMatcher_PhaseWriter::Set_Phase(
-                InMatcher, InCurrent, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
+                InMatcher, InMatcherComp, IntentIndex, ECk_Intent_Phase::Idle, InFrame);
         }
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoAdvanceHoldAccumulator(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton)
         -> void
     {
-        const auto Index = InCurrent._HoldAccumulators.IndexOfByPredicate(
+        const auto Index = InMatcherComp._HoldAccumulators.IndexOfByPredicate(
         [&](const FIntentMatcher_HoldAccumulator& InAccumulator) -> bool
         {
             return InAccumulator.Get_Button() == InButton;
@@ -1524,17 +1524,17 @@ namespace ck
         if (Index == INDEX_NONE)
         { return; }
 
-        ++InCurrent._HoldAccumulators[Index]._HeldFrames;
+        ++InMatcherComp._HoldAccumulators[Index]._HeldFrames;
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoDropHoldAccumulator(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton)
         -> void
     {
-        InCurrent._HoldAccumulators.RemoveAll(
+        InMatcherComp._HoldAccumulators.RemoveAll(
         [&](const FIntentMatcher_HoldAccumulator& InAccumulator) -> bool
         {
             return InAccumulator.Get_Button() == InButton;
@@ -1544,11 +1544,11 @@ namespace ck
     auto
         FProcessor_IntentMatcher_Match::
         DoGet_AccumulatedHoldFrames(
-            const FFragment_IntentMatcher_Current& InCurrent,
+            const FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton)
         -> int32
     {
-        const auto Index = InCurrent._HoldAccumulators.IndexOfByPredicate(
+        const auto Index = InMatcherComp._HoldAccumulators.IndexOfByPredicate(
         [&](const FIntentMatcher_HoldAccumulator& InAccumulator) -> bool
         {
             return InAccumulator.Get_Button() == InButton;
@@ -1557,13 +1557,13 @@ namespace ck
         if (Index == INDEX_NONE)
         { return 0; }
 
-        return InCurrent._HoldAccumulators[Index].Get_HeldFrames();
+        return InMatcherComp._HoldAccumulators[Index].Get_HeldFrames();
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoRunScan(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_CompiledIntent& InIntent,
             int32 InTerminalOffset)
@@ -1577,7 +1577,7 @@ namespace ck
             InIntent, InTerminalOffset, InContext, Diagnostic);
 
         if (InContext.Get_RecordDiagnostics())
-        { DoPushScanDiagnostic(InCurrent, MoveTemp(Diagnostic)); }
+        { DoPushScanDiagnostic(InMatcherComp, MoveTemp(Diagnostic)); }
 
         return Matched;
     }
@@ -1585,36 +1585,36 @@ namespace ck
     auto
         FProcessor_IntentMatcher_Match::
         DoPushScanDiagnostic(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             FCk_Intent_ScanDiagnostic InDiagnostic)
         -> void
     {
         // The write index and the array length advance together while the ring fills, so one branch grows the
         // storage and the other overwrites — never both.
-        if (InCurrent._ScanDiagnostics.Num() < intent_matcher::ScanDiagnosticsCapacity)
-        { InCurrent._ScanDiagnostics.Emplace(MoveTemp(InDiagnostic)); }
+        if (InMatcherComp._ScanDiagnostics.Num() < intent_matcher::ScanDiagnosticsCapacity)
+        { InMatcherComp._ScanDiagnostics.Emplace(MoveTemp(InDiagnostic)); }
         else
-        { InCurrent._ScanDiagnostics[InCurrent._ScanDiagnosticsNextWrite] = MoveTemp(InDiagnostic); }
+        { InMatcherComp._ScanDiagnostics[InMatcherComp._ScanDiagnosticsNextWrite] = MoveTemp(InDiagnostic); }
 
-        InCurrent._ScanDiagnosticsNextWrite =
-            (InCurrent._ScanDiagnosticsNextWrite + 1) % intent_matcher::ScanDiagnosticsCapacity;
+        InMatcherComp._ScanDiagnosticsNextWrite =
+            (InMatcherComp._ScanDiagnosticsNextWrite + 1) % intent_matcher::ScanDiagnosticsCapacity;
 
-        InCurrent._ScanDiagnosticsCount =
-            FMath::Min(InCurrent._ScanDiagnosticsCount + 1, intent_matcher::ScanDiagnosticsCapacity);
+        InMatcherComp._ScanDiagnosticsCount =
+            FMath::Min(InMatcherComp._ScanDiagnosticsCount + 1, intent_matcher::ScanDiagnosticsCapacity);
     }
 
     auto
         FProcessor_IntentMatcher_Match::
         DoDecayLatches(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             int32 InFrame)
         -> void
     {
-        for (auto Index = 0; Index < InCurrent._PhaseRows.Num(); ++Index)
+        for (auto Index = 0; Index < InMatcherComp._PhaseRows.Num(); ++Index)
         {
-            const auto& PhaseRow = InCurrent._PhaseRows[Index];
+            const auto& PhaseRow = InMatcherComp._PhaseRows[Index];
 
             // Only a RESOLVED latch expires. `Pending` carries its own windows and would be cut short by a second
             // clock it knows nothing about; `Idle` has nothing to expire.
@@ -1631,7 +1631,7 @@ namespace ck
             // a transition against, and a row's stored frame is never read as a completion frame — the poll gates
             // on the PHASE, so an Idle row carrying the frame it went idle on leaks nothing and says something.
             FIntentMatcher_PhaseWriter::Set_Phase(
-                InMatcher, InCurrent, Index, ECk_Intent_Phase::Idle, InFrame);
+                InMatcher, InMatcherComp, Index, ECk_Intent_Phase::Idle, InFrame);
         }
     }
 }

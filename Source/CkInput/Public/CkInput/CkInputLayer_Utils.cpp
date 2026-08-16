@@ -14,7 +14,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_InputLayer_UE,
     FCk_Handle_InputLayer,
     ck::FFragment_InputLayer_Params,
-    ck::FFragment_InputLayer_Current);
+    ck::FFragment_InputLayer);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ auto
     UCk_Utils_InputLayer_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputLayer_ParamsData& InParams)
+        const FCk_InputLayer_Spec& InParams)
     -> FCk_Handle_InputLayer
 {
     const auto PriorityIsAvailable = InParams.Get_Priority() != ck::input_layer::GlobalActionPriority;
@@ -38,7 +38,7 @@ auto
     UCk_Utils_InputLayer_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_InputLayer_ParamsData& InParams)
+        const FCk_InputLayer_Spec& InParams)
     -> FCk_Handle_InputLayer
 {
     const auto PriorityIsAvailable = InParams.Get_Priority() != ck::input_layer::GlobalActionPriority;
@@ -97,7 +97,7 @@ auto
         const FCk_Handle_InputLayer& InLayer)
     -> TArray<FCk_InputLayer_Capture>
 {
-    return InLayer.Get<ck::FFragment_InputLayer_Current>().Get_Captures();
+    return InLayer.Get<ck::FFragment_InputLayer>().Get_Captures();
 }
 
 auto
@@ -106,7 +106,7 @@ auto
         const FCk_Handle_InputLayer& InLayer)
     -> int32
 {
-    return InLayer.Get<ck::FFragment_InputLayer_Current>().Get_Captures().Num();
+    return InLayer.Get<ck::FFragment_InputLayer>().Get_Captures().Num();
 }
 
 auto
@@ -117,7 +117,7 @@ auto
         const FKey& InKey)
     -> bool
 {
-    return InLayer.Get<ck::FFragment_InputLayer_Current>().Get_Captures().ContainsByPredicate(
+    return InLayer.Get<ck::FFragment_InputLayer>().Get_Captures().ContainsByPredicate(
     [&](const FCk_InputLayer_Capture& InCapture) -> bool
     {
         return InCapture.Get_MatchMode() == InMatchMode && InCapture.Get_Key() == InKey;
@@ -148,13 +148,13 @@ auto
 
     InInputSource.View<
         ck::FFragment_InputLayer_Params,
-        ck::FFragment_InputLayer_Current,
+        ck::FFragment_InputLayer,
         ck::TExclude<ck::FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>().ForEach(
         [&](
             FCk_Entity InEntity,
             const ck::FFragment_InputLayer_Params& InParams,
-            const ck::FFragment_InputLayer_Current&)
+            const ck::FFragment_InputLayer&)
         {
             if (ck::IsValid(FoundLayer))
             { return; }
@@ -318,7 +318,7 @@ auto
         auto SourceAsOwner = InInputSource.ConvertToHandle();
 
         GlobalActionLayer = DoCreateLayer(SourceAsOwner,
-            FCk_Fragment_InputLayer_ParamsData{InInputSource, ck::input_layer::GlobalActionPriority});
+            FCk_InputLayer_Spec{InInputSource, ck::input_layer::GlobalActionPriority});
     }
 
     const auto GlobalActionLayerExists = ck::IsValid(GlobalActionLayer);
@@ -379,7 +379,7 @@ auto
     UCk_Utils_InputLayer_UE::
     DoGet_RegistrationIsValid(
         const FCk_Handle& InContext,
-        const FCk_Fragment_InputLayer_ParamsData& InParams)
+        const FCk_InputLayer_Spec& InParams)
     -> bool
 {
     const auto SourceIsValid = ck::IsValid(InParams.Get_InputSource());
@@ -404,7 +404,7 @@ auto
     UCk_Utils_InputLayer_UE::
     DoAddLayer(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputLayer_ParamsData& InParams)
+        const FCk_InputLayer_Spec& InParams)
     -> FCk_Handle_InputLayer
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -421,7 +421,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_InputLayer_Params>(InParams);
-    InHandle.Add<ck::FFragment_InputLayer_Current>();
+    InHandle.Add<ck::FFragment_InputLayer>();
 
     ck::input::Verbose
     (
@@ -436,7 +436,7 @@ auto
     UCk_Utils_InputLayer_UE::
     DoCreateLayer(
         FCk_Handle& InOwner,
-        const FCk_Fragment_InputLayer_ParamsData& InParams)
+        const FCk_InputLayer_Spec& InParams)
     -> FCk_Handle_InputLayer
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);

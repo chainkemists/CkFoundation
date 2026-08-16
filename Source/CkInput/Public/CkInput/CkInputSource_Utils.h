@@ -38,7 +38,7 @@ public:
     static FCk_Handle_InputSource
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_InputSource_ParamsData& InParams);
+        const FCk_InputSource_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InputSource",
@@ -46,7 +46,7 @@ public:
     static FCk_Handle_InputSource
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_InputSource_ParamsData& InParams);
+        const FCk_InputSource_Spec& InParams);
 
 public:
     static bool

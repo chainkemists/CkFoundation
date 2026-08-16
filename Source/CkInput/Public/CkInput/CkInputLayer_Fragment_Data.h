@@ -154,12 +154,12 @@ public:
 // entities have no inherent order; two layers on the same source may not share one, and the collision is rejected
 // at registration rather than tie-broken silently.
 USTRUCT(BlueprintType)
-struct CKINPUT_API FCk_Fragment_InputLayer_ParamsData
+struct CKINPUT_API FCk_InputLayer_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InputLayer_ParamsData);
+    CK_GENERATED_BODY(FCk_InputLayer_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -175,7 +175,7 @@ public:
     CK_PROPERTY_GET(_Priority);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InputLayer_ParamsData, _InputSource, _Priority);
+    CK_DEFINE_CONSTRUCTORS(FCk_InputLayer_Spec, _InputSource, _Priority);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

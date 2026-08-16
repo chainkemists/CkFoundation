@@ -67,7 +67,7 @@ namespace ck
             FProcessor_IntentSampler_Sample,
             FCk_Handle_IntentSampler,
             ck::TReadOnly<FFragment_IntentSampler_Params>,
-            ck::TReadWrite<FFragment_IntentSampler_Current>,
+            ck::TReadWrite<FFragment_IntentSampler>,
             ck::TReadWrite<FFragment_IntentSampler_PendingEvents>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -90,7 +90,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             FFragment_IntentSampler_PendingEvents& InPending) const -> void;
 
     private:
@@ -101,13 +101,13 @@ namespace ck
         DoSampleSegment(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed) -> void;
 
         static auto
         DoRecordButtons(
             HandleType InSampler,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow) -> void;
 
@@ -115,28 +115,28 @@ namespace ck
         DoRecordAxes(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow) -> void;
 
         static auto
         DoRecordOctant(
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             FCk_Intent_FrameRecord& OutRow) -> void;
 
         static auto
         DoRecordSocd(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow) -> void;
 
         static auto
         DoAppendRow(
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const FCk_Intent_FrameRecord& InRow) -> void;
     };
 }
