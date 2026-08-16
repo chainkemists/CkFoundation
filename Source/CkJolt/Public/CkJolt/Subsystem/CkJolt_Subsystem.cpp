@@ -152,6 +152,11 @@ public:
             JPH::ContactSettings& ioSettings)
             -> void override
     {
+        // Counted before the interest gate below: the debug-draw step stat wants every touching manifold,
+        // and this is a lone relaxed atomic increment — none of the build/lock/queue cost the gate exists to skip.
+        if (_ContactPairSink != nullptr)
+        { _ContactPairSink->Note_ContactPair(); }
+
         // Persisted fires per still-touching manifold per sub-step on the Jolt workers. With nobody
         // interested every event below is built, locked, queued and then discarded on the game
         // thread — so bail before the log and before the first allocation. Reading the registry
@@ -162,9 +167,6 @@ public:
         ck::jolt::VeryVerbose(TEXT("Body [{}] and Body [{}] and SUB-SHAPE [{}] and SUB-SHAPE [{}] PERSISTED Contact"),
             inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(),
             inManifold.mSubShapeID1.GetValue(), inManifold.mSubShapeID2.GetValue());
-
-        if (_ContactPairSink != nullptr)
-        { _ContactPairSink->Note_ContactPair(); }
 
         auto Event = FCk_Jolt_ContactEvent{};
         Event.Type = FCk_Jolt_ContactEvent::EType::Persisted;
