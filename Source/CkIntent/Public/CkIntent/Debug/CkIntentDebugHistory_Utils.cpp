@@ -12,7 +12,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_IntentDebugHistory_UE,
     FCk_Handle_IntentDebugHistory,
     ck::FFragment_IntentDebugHistory_Params,
-    ck::FFragment_IntentDebugHistory_Current);
+    ck::FFragment_IntentDebugHistory);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ auto
     UCk_Utils_IntentDebugHistory_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_IntentDebugHistory_ParamsData& InParams)
+        const FCk_IntentDebugHistory_Spec& InParams)
     -> FCk_Handle_IntentDebugHistory
 {
 #if UE_BUILD_SHIPPING
@@ -51,7 +51,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IntentDebugHistory_Params>(InParams);
-    auto& Current = InHandle.Add<ck::FFragment_IntentDebugHistory_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_IntentDebugHistory>();
     Current._Capacity = InParams.Get_Capacity();
 
     ck::intent::Verbose
@@ -72,7 +72,7 @@ auto
         const FCk_Handle_IntentDebugHistory& InHistory)
     -> int32
 {
-    return InHistory.Get<ck::FFragment_IntentDebugHistory_Current>().Get_Capacity();
+    return InHistory.Get<ck::FFragment_IntentDebugHistory>().Get_Capacity();
 }
 
 auto
@@ -81,7 +81,7 @@ auto
         const FCk_Handle_IntentDebugHistory& InHistory)
     -> int32
 {
-    return InHistory.Get<ck::FFragment_IntentDebugHistory_Current>().Get_Rows().Num();
+    return InHistory.Get<ck::FFragment_IntentDebugHistory>().Get_Rows().Num();
 }
 
 auto
@@ -91,7 +91,7 @@ auto
         int32 InOffset)
     -> FCk_Intent_FrameRecord
 {
-    const auto& Rows = InHistory.Get<ck::FFragment_IntentDebugHistory_Current>().Get_Rows();
+    const auto& Rows = InHistory.Get<ck::FFragment_IntentDebugHistory>().Get_Rows();
 
     if (InOffset < 0 || InOffset >= Rows.Num())
     { return {}; }
@@ -126,7 +126,7 @@ auto
         return InHistory;
     }
 
-    auto& Current = InHistory.Get<ck::FFragment_IntentDebugHistory_Current>();
+    auto& Current = InHistory.Get<ck::FFragment_IntentDebugHistory>();
     Current._Capacity = InRequest.Get_Capacity();
 
     if (const auto Excess = Current._Rows.Num() - Current._Capacity; Excess > 0)

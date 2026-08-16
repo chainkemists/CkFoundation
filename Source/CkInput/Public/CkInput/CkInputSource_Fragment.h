@@ -16,17 +16,17 @@ class UCk_Utils_InputSource_UE;
 
 namespace ck
 {
-    using FFragment_InputSource_Params = FCk_Fragment_InputSource_ParamsData;
+    using FFragment_InputSource_Params = FCk_InputSource_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
     // The inbox. Producers append rows through the request queue; a later router drains them. Events are plain
     // rows in one array rather than entities of their own — they arrive at device frequency, live for a frame,
     // and carry no identity anything outside this fragment could hold on to.
-    struct CKINPUT_API FFragment_InputSource_Current
+    struct CKINPUT_API FFragment_InputSource
     {
     public:
-        CK_GENERATED_BODY(FFragment_InputSource_Current);
+        CK_GENERATED_BODY(FFragment_InputSource);
 
     public:
         friend class FProcessor_InputSource_HandleRequests;

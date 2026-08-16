@@ -18,7 +18,7 @@ namespace ck
     class CKINPUT_API FProcessor_InputBias_HandleRequests : public ck_exp::TProcessor<
             FProcessor_InputBias_HandleRequests,
             FCk_Handle_InputBias,
-            ck::TReadWrite<FFragment_InputBias_Params>,
+            ck::TReadWrite<FFragment_InputBias_Tunables>,
             ck::TReadWrite<FFragment_InputBias_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -35,14 +35,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputBias,
-            FFragment_InputBias_Params& InParams,
+            FFragment_InputBias_Tunables& InTunables,
             FFragment_InputBias_Requests& InRequests) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InInputBias,
-            FFragment_InputBias_Params& InParams,
+            FFragment_InputBias_Tunables& InTunables,
             const FCk_Request_InputBias_SetAxisBias& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -79,9 +79,9 @@ namespace ck
     class CKINPUT_API FProcessor_InputBias_Condition : public ck_exp::TProcessor<
             FProcessor_InputBias_Condition,
             FCk_Handle_InputBias,
-            ck::TReadOnly<FFragment_InputBias_Params>,
-            ck::TReadWrite<FFragment_InputBias_Current>,
-            ck::TReadOnly<FFragment_InputSource_Current>,
+            ck::TReadOnly<FFragment_InputBias_Tunables>,
+            ck::TReadWrite<FFragment_InputBias>,
+            ck::TReadOnly<FFragment_InputSource>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -96,16 +96,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputBias,
-            const FFragment_InputBias_Params& InParams,
-            FFragment_InputBias_Current& InCurrent,
-            const FFragment_InputSource_Current& InSourceCurrent) const -> void;
+            const FFragment_InputBias_Tunables& InTunables,
+            FFragment_InputBias& InInputBiasComp,
+            const FFragment_InputSource& InSourceComp) const -> void;
 
     private:
         static auto
         DoConditionAxis(
             HandleType InInputBias,
-            const FFragment_InputBias_Params& InParams,
-            FFragment_InputBias_Current& InCurrent,
+            const FFragment_InputBias_Tunables& InTunables,
+            FFragment_InputBias& InInputBiasComp,
             const FCk_InputSource_RawEvent& InEvent) -> void;
     };
 }

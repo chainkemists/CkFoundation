@@ -20,8 +20,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHistory,
             const FFragment_IntentDebugHistory_Params& InParams,
-            FFragment_IntentDebugHistory_Current& InCurrent,
-            const FFragment_IntentSampler_Current& InSamplerCurrent)
+            FFragment_IntentDebugHistory& InHistoryComp,
+            const FFragment_IntentSampler& InSamplerComp)
         -> void
     {
         const auto Sampler = UCk_Utils_IntentSampler_UE::CastChecked(InHistory);
@@ -33,15 +33,15 @@ namespace ck
         {
             const auto Row = UCk_Utils_IntentSampler_UE::TryGet_FrameAtOffset(Sampler, Offset);
 
-            if (Row.Get_FrameIndex() <= InCurrent._LastRecordedFrame)
+            if (Row.Get_FrameIndex() <= InHistoryComp._LastRecordedFrame)
             { continue; }
 
-            InCurrent._Rows.Add(Row);
-            InCurrent._LastRecordedFrame = Row.Get_FrameIndex();
+            InHistoryComp._Rows.Add(Row);
+            InHistoryComp._LastRecordedFrame = Row.Get_FrameIndex();
         }
 
-        if (const auto Excess = InCurrent._Rows.Num() - InCurrent._Capacity; Excess > 0)
-        { InCurrent._Rows.RemoveAt(0, Excess); }
+        if (const auto Excess = InHistoryComp._Rows.Num() - InHistoryComp._Capacity; Excess > 0)
+        { InHistoryComp._Rows.RemoveAt(0, Excess); }
     }
 }
 

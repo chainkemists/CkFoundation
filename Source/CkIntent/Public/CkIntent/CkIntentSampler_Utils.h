@@ -52,7 +52,7 @@ public:
     static FCk_Handle_IntentSampler
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_IntentSampler_ParamsData& InParams);
+        const FCk_IntentSampler_Spec& InParams);
 
 public:
     static bool
@@ -142,7 +142,7 @@ private:
     static auto
     DoGet_ParamsAreValid(
         const FCk_Handle& InContext,
-        const FCk_Fragment_IntentSampler_ParamsData& InParams) -> bool;
+        const FCk_IntentSampler_Spec& InParams) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

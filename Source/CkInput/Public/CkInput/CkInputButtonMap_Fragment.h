@@ -16,7 +16,7 @@ class UCk_Utils_InputButtonMap_UE;
 
 namespace ck
 {
-    using FFragment_InputButtonMap_Params = FCk_Fragment_InputButtonMap_ParamsData;
+    using FFragment_InputButtonMap_Params = FCk_InputButtonMap_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -28,10 +28,10 @@ namespace ck
     // that reason: two mappings in different categories legitimately share a key, and duplicate bindings exist
     // in shipped profiles. A reverse lookup therefore has to answer with every holder, which a scan does
     // honestly and a key-indexed map only does by storing the same list again.
-    struct CKINPUT_API FFragment_InputButtonMap_Current
+    struct CKINPUT_API FFragment_InputButtonMap
     {
     public:
-        CK_GENERATED_BODY(FFragment_InputButtonMap_Current);
+        CK_GENERATED_BODY(FFragment_InputButtonMap);
 
     public:
         friend class FProcessor_InputButtonMap_HandleRequests;

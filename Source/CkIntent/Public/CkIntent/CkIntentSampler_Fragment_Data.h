@@ -268,12 +268,12 @@ public:
  * their default rationale in the module's Claude.md.
  */
 USTRUCT(BlueprintType)
-struct CKINTENT_API FCk_Fragment_IntentSampler_ParamsData
+struct CKINTENT_API FCk_IntentSampler_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntentSampler_ParamsData);
+    CK_GENERATED_BODY(FCk_IntentSampler_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -314,7 +314,7 @@ public:
     CK_PROPERTY(_SocdPolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntentSampler_ParamsData, _RingCapacity);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntentSampler_Spec, _RingCapacity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
