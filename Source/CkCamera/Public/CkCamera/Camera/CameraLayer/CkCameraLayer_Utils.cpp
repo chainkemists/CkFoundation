@@ -45,7 +45,7 @@ auto
     NewLayer.Add<ck::FFragment_CameraLayer_Blend>();
     NewLayer.AddOrGet<ck::FFragment_CameraLayer_AcquiredModifiers>();
 
-    auto TypedLayer = ck::StaticCast<FCk_Handle_CameraLayer>(NewLayer);
+    auto TypedLayer = UCk_Utils_CameraLayer_UE::CastChecked(NewLayer);
 
     ck::FUtils_RecordOfCameraLayers::AddIfMissing(InCamera);
     ck::FUtils_RecordOfCameraLayers::Request_Connect(

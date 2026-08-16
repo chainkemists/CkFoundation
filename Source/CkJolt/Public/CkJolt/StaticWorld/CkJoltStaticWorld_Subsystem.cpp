@@ -1,5 +1,7 @@
 #include "CkJoltStaticWorld_Subsystem.h"
 
+#include "CkJolt/StaticWorld/CkJoltStaticActor_Utils.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/Entity/CkEntity.h"
@@ -729,7 +731,7 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceComponent.GetFName());
 
-    return ck::StaticCast<FCk_Handle_JoltStaticActor>(NewEntity);
+    return UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
 }
 
 auto
@@ -751,7 +753,7 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceActor.GetFName());
 
-    return ck::StaticCast<FCk_Handle_JoltStaticActor>(NewEntity);
+    return UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
 }
 
 auto

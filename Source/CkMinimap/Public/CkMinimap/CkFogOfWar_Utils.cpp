@@ -34,7 +34,7 @@ auto
     InHandle.Add<ck::FFragment_FogOfWar_Current>();
     InHandle.Add<ck::FTag_FogOfWar_NeedsSetup>();
 
-    return ck::StaticCast<FCk_Handle_FogOfWar>(InHandle);
+    return UCk_Utils_FogOfWar_UE::CastChecked(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

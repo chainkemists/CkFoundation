@@ -38,7 +38,7 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, TEXT("Deferred Entity"));
 #endif
 
-    return ck::StaticCast<FCk_Handle_DeferredEntity>(InHandle);
+    return UCk_Utils_DeferredEntity_UE::CastChecked(InHandle);
 }
 
 auto

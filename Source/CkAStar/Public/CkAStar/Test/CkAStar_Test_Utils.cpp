@@ -47,7 +47,7 @@ auto
 		InNewEntity.Add<ck::FFragment_AStar_Debug>();
 	});
 
-	return ck::StaticCast<FCk_Handle_AStarTest>(NewEntity);
+	return UCk_Utils_AStarTest_UE::CastChecked(NewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
