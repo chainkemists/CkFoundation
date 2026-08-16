@@ -119,8 +119,7 @@ auto
 
     ck::unreal_component::Verbose(TEXT("Requesting Remove for UnrealComponent [{}]"), InUnrealComponent);
 
-    auto Handle = static_cast<FCk_Handle&>(InUnrealComponent);
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Handle);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InUnrealComponent);
 
     // Immediate mutation — destroy is initiated synchronously (CkEcs owns the deferred teardown
     // pipeline from here), so completion is synchronous on this stack.
