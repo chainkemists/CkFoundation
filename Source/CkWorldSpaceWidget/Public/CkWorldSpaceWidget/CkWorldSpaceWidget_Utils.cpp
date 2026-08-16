@@ -292,7 +292,8 @@ auto
             if (InEnabled)
             {
                 auto WorldTransform = InWorldSpaceWidgetHandle.Get<ck::FFragment_Transform>().Get_Transform();
-                WorldTransform.AddToTranslation(Params.Get_LocationInfo().Get_WorldSpaceOffset());
+                WorldTransform.AddToTranslation(InWorldSpaceWidgetHandle
+                    .Get<ck::FFragment_WorldSpaceWidget_Tunables>().Get_LocationInfo().Get_WorldSpaceOffset());
                 WidgetComponent->SetWorldTransform(WorldTransform);
             }
 
