@@ -73,7 +73,9 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_DiagAvoidanceScoreTap : public TParallelProcessor<
             FProcessor_CrowdAgent_DiagAvoidanceScoreTap, FCk_Handle_CrowdAgent,
             FTag_CrowdDiag_Tracked, FTag_CrowdAgent_Walking, FTag_CrowdAgent_HasProbe,
+            ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>, ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
+            ck::TReadOnly<FFragment_CrowdAgent_LocalBoundary>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>, ck::TReadWrite<FFragment_CrowdAgent_DiagRecorder>,
             TExclude<FTag_CrowdAgent_Asleep>, CK_IGNORE_PENDING_KILL>
     {
@@ -85,8 +87,10 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType,
+            const FFragment_Transform&,
             const FFragment_CrowdAgent_Params&,
             const FFragment_CrowdAgent_NeighborCache&,
+            const FFragment_CrowdAgent_LocalBoundary&,
             const FFragment_CrowdAgent_DesiredVelocity&,
             FFragment_CrowdAgent_DiagRecorder&) const -> void;
     };

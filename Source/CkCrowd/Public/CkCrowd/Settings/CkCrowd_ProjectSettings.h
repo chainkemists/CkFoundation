@@ -35,6 +35,15 @@ enum class ECk_AvoidanceSampleTrigger : uint8
 };
 
 UENUM(BlueprintType)
+enum class ECk_AvoidanceWallSegmentsMode : uint8
+{
+    Disabled,   // candidates are scored against neighbouring AGENTS only
+    Enabled,    // navmesh boundary walls are obstacles too (dtCrowd's dtLocalBoundary)
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_PushApartMode : uint8
 {
     Disabled,    // no post-hoc resolution
@@ -68,6 +77,13 @@ enum class ECk_CrowdPathRefreshMode : uint8
 {
     Disabled,    // a path computed before a crowd formed is followed forever — the agent presses into standing agents
     Enabled,     // a walking agent whose remaining path crosses a freshly painted cost disc re-paths and detours
+};
+
+UENUM(BlueprintType)
+enum class ECk_CrowdWaypointRetirementLineOfSightMode : uint8
+{
+    Disabled,    // a corner retires on proximity/plane alone, blind to what the chord to the next waypoint crosses
+    Enabled,     // a corner is given up only once the chord from the agent to the next waypoint is navigable
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -146,6 +162,17 @@ private:
         meta = (AllowPrivateAccess = true, ClampMin = 0.1, UIMin = 0.1, ClampMax = 10.0, UIMax = 10.0,
             ToolTip = "Time horizon (seconds) for the time-to-collision penalty. Mirrors dtCrowd's horizTime default."))
     float _AvoidanceHorizonTime = 2.5f;
+
+    // ---- Sampling Avoidance | Walls ----
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Walls",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for scoring candidate velocities against navmesh boundary walls, which dtCrowd feeds its obstacle query from a per-agent dtLocalBoundary cache (DetourCrowd.cpp:1557-1564). Disabled restores agent-only scoring: with neighbours pressing, the cheapest candidate is routinely one aimed straight at a wall or a UNavArea_Null fixture hole, the navmesh constraint then eats the whole displacement, and the agent walks on the spot. For A/B comparison only - production leaves this Enabled."))
+    ECk_AvoidanceWallSegmentsMode _AvoidanceWallSegments = ECk_AvoidanceWallSegmentsMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Walls",
+        meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0, ClampMax = 32.0, UIMax = 32.0,
+            ToolTip = "Wall query range as a multiple of the agent radius. Mirrors dtCrowd's collisionQueryRange, whose default is radius * 12 (CrowdFollowingComponent.cpp:43). It sizes both the navmesh wall search and the cache refresh distance, which is a quarter of it (DetourCrowd.cpp:1284), so raising it widens the search AND refreshes less often."))
+    float _AvoidanceWallQueryRangeMultiplier = 12.0f;
 
     // ---- Block detection ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
@@ -230,6 +257,12 @@ private:
             ToolTip = "Seconds after a disc is painted before PathRefresh even checks it against the navmesh. A cheap pre-filter only — actual eligibility is ground truth (the rebuilt mesh must report the cost area at the disc's location), so this just keeps the poly query off discs that cannot possibly have rebaked yet."))
     float _PathRefreshMarkupSettleSeconds = 0.5f;
 
+    // ---- Path follow ----
+    UPROPERTY(Config, EditDefaultsOnly, Category = "PathFollow",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for line-of-sight-gated waypoint retirement. Both retirement tests (proximity and the passed-plane crossing) are laterally blind: an agent standing a few cm inside a corner satisfies them while the straight chord to the FOLLOWING waypoint cuts across a UNavArea_Null hole or a wall. Retiring there aims steering through geometry it cannot enter, the navmesh constraint eats the whole displacement, and the agent walks on the spot until block detection notices. Enabled keeps the agent aimed at the corner (which is on-mesh by construction) until the next chord is navigable, so it walks to the corner and then turns. Disabled restores the old behaviour, for A/B comparison only. Worlds without nav data behave identically either way."))
+    ECk_CrowdWaypointRetirementLineOfSightMode _WaypointRetirementLineOfSight = ECk_CrowdWaypointRetirementLineOfSightMode::Enabled;
+
     // ---- Push-Apart ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
         meta = (AllowPrivateAccess = true,
@@ -251,6 +284,8 @@ public:
     CK_PROPERTY_GET(_AvoidanceWeightSide);
     CK_PROPERTY_GET(_AvoidanceWeightToi);
     CK_PROPERTY_GET(_AvoidanceHorizonTime);
+    CK_PROPERTY_GET(_AvoidanceWallSegments);
+    CK_PROPERTY_GET(_AvoidanceWallQueryRangeMultiplier);
     CK_PROPERTY_GET(_PushApartMode);
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_StationaryMarkupMode);
@@ -259,6 +294,7 @@ public:
     CK_PROPERTY_GET(_StationaryMarkupExtentMultiplier);
     CK_PROPERTY_GET(_PathRefreshMode);
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
+    CK_PROPERTY_GET(_WaypointRetirementLineOfSight);
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
     CK_PROPERTY_GET(_BlockDetectionNoProgressWindowSeconds);
@@ -297,6 +333,9 @@ public:
     static int32 Get_AvoidanceSampleDepth();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_AvoidanceWallSegmentsMode Get_AvoidanceWallSegments();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
@@ -310,6 +349,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdBlockDetectionMode Get_BlockDetectionMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdWaypointRetirementLineOfSightMode Get_WaypointRetirementLineOfSight();
 
     // Internal C++ accessor avoiding repeated GetMutableDefault calls in hot paths.
     static const UCk_Crowd_ProjectSettings_UE* Get();

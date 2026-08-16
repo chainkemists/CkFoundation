@@ -55,6 +55,139 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
             InDeltaSeconds};
     }
 
+    // A cached navmesh wall in the shape the scorer wants. _Touching is dtCrowd's seg->touch, which
+    // dtObstacleAvoidanceQuery computes ONCE per agent in prepare() and not per candidate
+    // (DetourObstacleAvoidance.cpp:315-320).
+    struct FWallSegment final
+    {
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+        bool _Touching = false;
+    };
+
+    using FWallSegments = TArray<FWallSegment, TInlineAllocator<FFragment_CrowdAgent_LocalBoundary::MaxSegments>>;
+
+    struct FWallParameters final
+    {
+        FVector _AgentPosition = FVector::ZeroVector;
+        TConstArrayView<FWallSegment> _Segments;
+    };
+
+    inline auto Dot2D(const FVector& InLhs, const FVector& InRhs) -> double
+    {
+        return (InLhs.X * InRhs.X) + (InLhs.Y * InRhs.Y);
+    }
+
+    inline auto Cross2D(const FVector& InLhs, const FVector& InRhs) -> double
+    {
+        return (InLhs.X * InRhs.Y) - (InLhs.Y * InRhs.X);
+    }
+
+    // dtDistancePtSegSqr2D (DetourCommon.h). OutSegmentTime is Detour's clamped `t`, which the
+    // boundary refresh needs to interpolate the wall's height at the closest point.
+    inline auto DistancePointSegmentSquared2D(
+        const FVector& InPoint,
+        const FVector& InStart,
+        const FVector& InEnd,
+        double* OutSegmentTime = nullptr) -> double
+    {
+        const auto Segment = InEnd - InStart;
+        const auto ToPoint = InPoint - InStart;
+        const auto LengthSquared = (Segment.X * Segment.X) + (Segment.Y * Segment.Y);
+        auto SegmentTime = (Segment.X * ToPoint.X) + (Segment.Y * ToPoint.Y);
+        if (LengthSquared > 0.0)
+        { SegmentTime /= LengthSquared; }
+        SegmentTime = FMath::Clamp(SegmentTime, 0.0, 1.0);
+
+        if (OutSegmentTime != nullptr)
+        { *OutSegmentTime = SegmentTime; }
+
+        const auto DeltaX = InStart.X + (SegmentTime * Segment.X) - InPoint.X;
+        const auto DeltaY = InStart.Y + (SegmentTime * Segment.Y) - InPoint.Y;
+        return (DeltaX * DeltaX) + (DeltaY * DeltaY);
+    }
+
+    // The OUTWARD normal of a wall - it points off the walkable surface. Two callers depend on that
+    // orientation, so neither the transform nor the sign is taken on faith:
+    //
+    // TRANSFORM. Detour computes it as `snorm[0] = -sdir[2]; snorm[2] = sdir[0]` in its XZ plane
+    // (DetourObstacleAvoidance.cpp:376-378). Unreal2RecastPoint is (x, y, z) -> (-x, z, -y)
+    // (NavMesh/RecastHelpers.h), so a wall direction D in Unreal has sdir = (-D.X, ., -D.Y);
+    // feeding that through gives snorm = (D.Y, ., -D.X), and mapping back to Unreal
+    // ((rx, ry, rz) -> (-rx, -rz, ry)) gives exactly (-D.Y, D.X). Because BOTH horizontal axes are
+    // negated, the 2D dot and the 2D cross are sign-identical in the two spaces too - so this is
+    // Detour's own comparison, not an analogue of it.
+    //
+    // SIGN. getPolyWallSegments and storeWallSegment both emit a wall in its source polygon's vertex
+    // winding (Start = verts[i], End = verts[i+1]), and Recast winds a polygon so its INTERIOR is
+    // the area2 < 0 side: RecastMesh.cpp defines left(a,b,c) as area2 < 0, and that is the
+    // ear-clipping predicate the poly mesh is triangulated with. area2(Start, End, X) is
+    // Cross2D(End - Start, X - Start), which is Dot2D of this vector with (X - Start). An interior
+    // point therefore projects NEGATIVE and the normal points away from the mesh. Consequences: a
+    // candidate velocity that projects negative is heading back inland, which is the branch Detour
+    // lets through free; and an agent that projects negative is standing on the walkable side of
+    // the wall, which is dtCrowd's back-face filter (DetourCrowd.cpp:1561) below.
+    inline auto MakeWallOutwardNormal(const FWallSegment& InSegment) -> FVector
+    {
+        const auto Direction = InSegment._End - InSegment._Start;
+        return FVector{-Direction.Y, Direction.X, 0.0};
+    }
+
+    // isectRaySeg (DetourObstacleAvoidance.cpp:51-68). OutTime is the RAY parameter, so with a
+    // candidate VELOCITY as the direction it is seconds; Detour bounds it to [0,1] and so does this.
+    inline auto IntersectRaySegment2D(
+        const FVector& InRayOrigin,
+        const FVector& InRayDirection,
+        const FVector& InSegmentStart,
+        const FVector& InSegmentEnd,
+        float& OutTime) -> bool
+    {
+        const auto SegmentDelta = InSegmentEnd - InSegmentStart;
+        const auto OriginDelta = InRayOrigin - InSegmentStart;
+
+        const auto Denominator = Cross2D(InRayDirection, SegmentDelta);
+        if (FMath::Abs(Denominator) < 1e-6)
+        { return false; }
+
+        const auto InverseDenominator = 1.0 / Denominator;
+
+        const auto RayTime = Cross2D(SegmentDelta, OriginDelta) * InverseDenominator;
+        if (RayTime < 0.0 || RayTime > 1.0)
+        { return false; }
+
+        const auto SegmentTime = Cross2D(InRayDirection, OriginDelta) * InverseDenominator;
+        if (SegmentTime < 0.0 || SegmentTime > 1.0)
+        { return false; }
+
+        OutTime = static_cast<float>(RayTime);
+        return true;
+    }
+
+    // dtCrowd hands the obstacle query only the walls whose walkable side faces the agent
+    // (DetourCrowd.cpp:1561) - a wall bounding some other part of the same connected neighbourhood
+    // is not one this agent can walk into. Both that filter and `touch` read the agent's CURRENT
+    // position, so they are rebuilt every sampled frame while the segments themselves are cached.
+    inline auto BuildWallSegments(
+        const FVector& InAgentPosition,
+        const FFragment_CrowdAgent_LocalBoundary& InBoundary) -> FWallSegments
+    {
+        // dtObstacleAvoidanceQuery::prepare's "really close to the segment" radius.
+        constexpr auto TouchRadius = 0.01;
+
+        auto Walls = FWallSegments{};
+        for (const auto& Segment : InBoundary.Get_Segments())
+        {
+            auto Wall = FWallSegment{Segment._Start, Segment._End, false};
+            if (Dot2D(MakeWallOutwardNormal(Wall), InAgentPosition - Wall._Start) > 0.0)
+            { continue; }
+
+            Wall._Touching =
+                DistancePointSegmentSquared2D(InAgentPosition, Wall._Start, Wall._End) < (TouchRadius * TouchRadius);
+            Walls.Emplace(MoveTemp(Wall));
+        }
+        return Walls;
+    }
+
     struct FScoringParameters final
     {
         float _AgentRadius = 0.0f;
@@ -66,6 +199,7 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         float _WeightTimeToImpact = 0.0f;
         ECk_AvoidanceSidePreference _SidePreference = ECk_AvoidanceSidePreference::Disabled;
         FReachabilityParameters _Reachability;
+        FWallParameters _Walls;
     };
 
     struct FSampleCloud final
@@ -341,6 +475,35 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
             if (SideEnabled)
             { SidePenaltySum += CalculateNeighborSidePenalty(ScoredCandidate, Neighbor.Get_RelativeOffset(), InParameters._MaxSpeed, InParameters._SidePreference); }
         }
+
+        // The segment branch of dtObstacleAvoidanceQuery::processSample
+        // (DetourObstacleAvoidance.cpp:369-405). It lowers the SAME minimum time the neighbour
+        // sweeps lower, so a wall and a neighbour compete for the one time-to-impact term exactly
+        // as they do in Detour. OutMinimumTimeToCollision stays neighbour-only: it names a
+        // colliding NEIGHBOUR, and a wall has no index to name.
+        for (const auto& Wall : InParameters._Walls._Segments)
+        {
+            auto TimeToWall = 0.0f;
+
+            if (Wall._Touching)
+            {
+                // Standing on the wall: a candidate that projects negatively onto the outward
+                // normal is heading back into the walkable interior and cannot collide with it.
+                // Anything else is aimed INTO the wall and takes the immediate-collision time.
+                if (Dot2D(MakeWallOutwardNormal(Wall), ScoredCandidate) < 0.0)
+                { continue; }
+            }
+            else if (NOT IntersectRaySegment2D(
+                InParameters._Walls._AgentPosition, ScoredCandidate, Wall._Start, Wall._End, TimeToWall))
+            { continue; }
+
+            // "Avoid less when facing walls" (DetourObstacleAvoidance.cpp:402-403).
+            TimeToWall *= 2.0f;
+
+            if (TimeToWall < MinimumTime)
+            { MinimumTime = TimeToWall; }
+        }
+
         const auto TimeToImpactPenalty = InParameters._WeightTimeToImpact * (1.0f / (0.1f + MinimumTime * InverseHorizon));
         const auto SidePenalty = SideEnabled && NOT InNeighbors.IsEmpty()
             ? InParameters._WeightSide * (SidePenaltySum / static_cast<float>(InNeighbors.Num()))

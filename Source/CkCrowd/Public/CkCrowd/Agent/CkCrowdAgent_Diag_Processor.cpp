@@ -110,8 +110,10 @@ namespace ck
     auto FProcessor_CrowdAgent_DiagAvoidanceScoreTap::ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
+        const FFragment_Transform& InTransform,
         const FFragment_CrowdAgent_Params& InParams,
         const FFragment_CrowdAgent_NeighborCache& InCache,
+        const FFragment_CrowdAgent_LocalBoundary& InBoundary,
         const FFragment_CrowdAgent_DesiredVelocity& InDesired,
         FFragment_CrowdAgent_DiagRecorder& InRecorder) const -> void
     {
@@ -123,6 +125,11 @@ namespace ck
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
         if (NOT IsValid(Settings) || InCache.Get_Neighbors().Num() == 0)
         { return; }
+
+        const auto AgentLocation = InTransform.Get_Transform().GetLocation();
+        const auto Walls = Settings->Get_AvoidanceWallSegments() == ECk_AvoidanceWallSegmentsMode::Enabled
+            ? ck_crowd_agent_avoidance_sample_algorithm::BuildWallSegments(AgentLocation, InBoundary)
+            : ck_crowd_agent_avoidance_sample_algorithm::FWallSegments{};
 
         const auto DesiredVelocity = InDesired.Get_Velocity();
         const auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfAgent);
@@ -139,7 +146,8 @@ namespace ck
                 InDesired.Get_LastVelocity(),
                 InParams.Get_MaxAcceleration(),
                 InParams.Get_MaxTurnRate(),
-                static_cast<float>(InDeltaT.Get_Seconds()))};
+                static_cast<float>(InDeltaT.Get_Seconds())),
+            ck_crowd_agent_avoidance_sample_algorithm::FWallParameters{AgentLocation, Walls}};
         auto Cloud = ck_crowd_agent_avoidance_sample_algorithm::BuildSampleCloud(
             DesiredVelocity, Parameters._MaxSpeed, Settings->Get_AvoidanceVelBias(),
             Settings->Get_AvoidanceSampleAngularDivs(), Settings->Get_AvoidanceSampleRings(),

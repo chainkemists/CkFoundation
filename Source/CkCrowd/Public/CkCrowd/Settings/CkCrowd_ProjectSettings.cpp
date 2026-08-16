@@ -32,6 +32,11 @@ auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleDepth() -> int32
     return Get()->Get_AvoidanceSampleDepth();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceWallSegments() -> ECk_AvoidanceWallSegmentsMode
+{
+    return Get()->Get_AvoidanceWallSegments();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_PushApartMode() -> ECk_PushApartMode
 {
     return Get()->Get_PushApartMode();
@@ -55,6 +60,11 @@ auto UCk_Utils_Crowd_Settings_UE::Get_PathRefreshMode() -> ECk_CrowdPathRefreshM
 auto UCk_Utils_Crowd_Settings_UE::Get_BlockDetectionMode() -> ECk_CrowdBlockDetectionMode
 {
     return Get()->Get_BlockDetectionMode();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() -> ECk_CrowdWaypointRetirementLineOfSightMode
+{
+    return Get()->Get_WaypointRetirementLineOfSight();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

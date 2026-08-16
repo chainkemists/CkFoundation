@@ -49,4 +49,51 @@ public:
 namespace ck
 {
     using FFragment_CrowdAgent_AvoidancePolicy = FCk_Fragment_CrowdAgent_AvoidancePolicy;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The navmesh boundary walls near an agent, cached exactly the way dtCrowd caches them in
+    // dtLocalBoundary (DetourCrowd/DetourLocalBoundary.cpp): the nearest MAX_LOCAL_SEGS = 8 wall
+    // segments inside the collision query range. FProcessor_CrowdAgent_AvoidanceSample refreshes it
+    // once the agent has travelled a quarter of that range away from _Centre, which is dtCrowd's own
+    // trigger (DetourCrowd.cpp:1284-1286). _Valid is false until a query has succeeded, so a failed
+    // one is retried on the next sampling frame rather than leaving the agent wall-blind until it
+    // has moved a quarter of the range.
+    struct CKCROWD_API FFragment_CrowdAgent_LocalBoundary
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_LocalBoundary);
+
+        friend class FProcessor_CrowdAgent_AvoidanceSample;
+
+        // dtLocalBoundary::MAX_LOCAL_SEGS
+        static constexpr auto MaxSegments = 8;
+
+        // Endpoints are in the source polygon's vertex winding, which is what makes the outward
+        // normal derivable - see MakeWallOutwardNormal in CkCrowdAgent_AvoidanceSample_Algorithm.h.
+        struct FSegment
+        {
+            FVector _Start = FVector::ZeroVector;
+            FVector _End = FVector::ZeroVector;
+        };
+
+        using SegmentsType = TArray<FSegment, TInlineAllocator<MaxSegments>>;
+
+    private:
+        FVector _Centre = FVector::ZeroVector;
+        SegmentsType _Segments;
+        bool _Valid = false;
+
+        // Time since the last successful refresh. dtLocalBoundary also refreshes when its cached poly
+        // refs stop validating (a tile rebuild); FindEdges hands back no refs to validate, so a
+        // stationary agent whose surroundings were repainted under it (fixture paint, markup tiles)
+        // would otherwise keep a wall-less cache forever. A time cap bounds that staleness instead.
+        float _SecondsSinceRefresh = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_Centre);
+        CK_PROPERTY_GET(_Segments);
+        CK_PROPERTY_GET(_Valid);
+        CK_PROPERTY_GET(_SecondsSinceRefresh);
+    };
 }
