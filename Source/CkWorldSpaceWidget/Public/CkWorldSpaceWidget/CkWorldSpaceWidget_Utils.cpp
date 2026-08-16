@@ -244,7 +244,7 @@ auto
     -> FCk_Handle_WorldSpaceWidget
 {
     if (InEnabled)
-    { InWorldSpaceWidgetHandle.Remove<ck::FTag_WorldSpaceWidget_Disabled>(); }
+    { InWorldSpaceWidgetHandle.Try_Remove<ck::FTag_WorldSpaceWidget_Disabled>(); }
     else
     { InWorldSpaceWidgetHandle.AddOrGet<ck::FTag_WorldSpaceWidget_Disabled>(); }
 
