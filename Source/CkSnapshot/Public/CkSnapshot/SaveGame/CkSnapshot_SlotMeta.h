@@ -110,32 +110,21 @@ private:
     TMap<FName, FString> _CustomFields;
 
     /**
-     * Pre-captured PNG thumbnail. When non-empty it is stored verbatim and NO capture is taken.
+     * PNG thumbnail for the slot, stored verbatim. Empty simply means the slot has no picture.
      *
-     * This exists because the fallback capture below reads the back buffer, menus and all — and a
-     * game almost always saves FROM a menu, so the automatic thumbnail is a picture of the save
-     * screen. The fix needs no async machinery: call Capture_ViewportPng at the moment the menu is
-     * opened, BEFORE the widget is pushed, and hand the bytes here.
+     * The save does NOT capture one for you, deliberately: a capture is frame-deferred (see
+     * Request_CaptureViewportPng), so folding it into the synchronous save would make the whole save
+     * span frames for a thumbnail — and capturing at save time photographs the menu the player saved
+     * from. Request it with UCk_Utils_Snapshot_UE::Request_CaptureViewportThumbnail when the menu
+     * OPENS, then hand the bytes here. It carries its own downscale width.
      */
     UPROPERTY()
     TArray<uint8> _ScreenshotPng;
-
-    // Fallback when _ScreenshotPng is empty: capture the game viewport during the save. Silently
-    // yields no screenshot when there is no viewport (headless / dedicated server) — never an error.
-    UPROPERTY()
-    bool _CaptureScreenshot = true;
-
-    // Thumbnail is downscaled to this width, aspect preserved. The menu shows it at ~240px; the
-    // default doubles that so it survives a high-DPI slot row without bloating the sidecar.
-    UPROPERTY()
-    int32 _ScreenshotMaxWidth = 480;
 
 public:
     CK_PROPERTY(_Title);
     CK_PROPERTY(_CustomFields);
     CK_PROPERTY(_ScreenshotPng);
-    CK_PROPERTY(_CaptureScreenshot);
-    CK_PROPERTY(_ScreenshotMaxWidth);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -152,15 +141,28 @@ namespace ck::snapshot::slot_meta
     CKSNAPSHOT_API auto Get_IsMetaSlotName(const FString& InSlotName) -> bool;
 
     /**
-     * PNG thumbnail of InWorld's game viewport, downscaled to InMaxWidth. Empty (NOT an error) when
-     * the world has no viewport — headless automation, -nullrhi and dedicated servers all take that
-     * path, which is why saving never depends on the result.
+     * PNG thumbnail of the game viewport, delivered on the NEXT rendered frame. The ONLY capture in
+     * this module — a synchronous one cannot exist correctly.
      *
-     * Synchronous: it flushes the render thread via FViewport::ReadPixels. That is deliberate —
-     * Request_Save is synchronous and already pumps the world to quiescence, so folding in an async
-     * screenshot request would make the whole save frame-spanning for a thumbnail.
+     * Why: reading the viewport from the game thread only works while Slate composites it into its own
+     * buffer (the editor). A packaged game builds its viewport widget with RenderDirectlyToWindow, so
+     * FSceneViewport holds the backbuffer only between BeginRenderFrame and EndRenderFrame on the
+     * RENDER thread, and its game-thread texture ref is permanently null. Reading it anyway does not
+     * fail — D3D12's RHIReadSurfaceData memzeroes the output for a null texture — so the caller gets a
+     * fully black image that reports success. This routes through the engine's own screenshot pipeline
+     * instead, whose readback runs INSIDE the render frame. It also reads before Slate composites UMG,
+     * so the result is the gameplay frame even when the request is issued from a menu.
+     *
+     * InOnCaptured always runs exactly once: with the PNG bytes, or with an empty array when there is
+     * no viewport (headless / -nullrhi / dedicated server) or nothing arrived within the timeout.
+     *
+     * The engine's screenshot request is a process-wide singleton, so a capture in flight will also
+     * consume a user-initiated screenshot taken on the same frame.
      */
-    CKSNAPSHOT_API auto Capture_ViewportPng(const UWorld* InWorld, int32 InMaxWidth) -> TArray<uint8>;
+    CKSNAPSHOT_API auto Request_CaptureViewportPng(
+        const UWorld* InWorld,
+        int32 InMaxWidth,
+        TFunction<void(TArray<uint8>)> InOnCaptured) -> void;
 
     /**
      * Decode PNG bytes into a transient UTexture2D, or nullptr when empty/undecodable. The texture

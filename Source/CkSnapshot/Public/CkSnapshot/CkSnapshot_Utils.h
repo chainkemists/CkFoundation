@@ -17,6 +17,13 @@ class UTexture2D;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Carries the PNG bytes of an asynchronous viewport thumbnail capture. Empty when there was no
+// viewport to read or the capture did not arrive — see Request_CaptureViewportThumbnail.
+DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Snapshot_OnThumbnailCaptured,
+    const TArray<uint8>&, InThumbnailPng);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Blueprint/AngelScript-facing queries over the save/load lifecycle markers. The markers themselves live in CkEcs
 // (CkSnapshot_RestoreMarker.h) / CkEcsExt (CkActorRebind_Utils.h) as plain C++ ECS tags so restore-redrive
 // processors can read them without a CkSnapshot dependency — but plain tags have no reflected surface, so script
@@ -160,18 +167,22 @@ public:
         const FString& InFallback);
 
     /**
-     * PNG thumbnail of the current viewport, for handing to Request_Save_WithMetadata.
+     * PNG thumbnail of the current viewport, delivered on the NEXT rendered frame — the capture that
+     * works in a packaged build. Hand the bytes to Request_Save_WithMetadata when they arrive.
      *
-     * Call it BEFORE pushing a save/pause menu: the read takes the back buffer as-is, menus
-     * included, so capturing during the save itself thumbnails the save screen. Empty (not an
-     * error) with no viewport — headless, -nullrhi and dedicated servers all take that path.
+     * Request it as a save/pause menu OPENS rather than when Save is clicked: the underlying read
+     * happens before Slate composites UMG, so the frame it captures is the gameplay behind the menu.
+     *
+     * InDelegate always runs exactly once — with the bytes, or with an empty array when there is no
+     * viewport (headless / -nullrhi / dedicated server) or the capture did not arrive in time.
      */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Capture Viewport Thumbnail",
-              meta = (WorldContext = "InWorldContextObject"))
-    static TArray<uint8>
-    Capture_ViewportThumbnail(
+              DisplayName = "[Ck][Snapshot] Request Capture Viewport Thumbnail",
+              meta = (WorldContext = "InWorldContextObject", AutoCreateRefTerm = "InDelegate"))
+    static void
+    Request_CaptureViewportThumbnail(
         const UObject* InWorldContextObject,
+        const FCk_Delegate_Snapshot_OnThumbnailCaptured& InDelegate,
         int32 InMaxWidth = 480);
 };
