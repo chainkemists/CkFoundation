@@ -300,3 +300,117 @@ text as the pre-rebase baseline. Integrity on the SAME run: 0 `inline discovery 
   Diagnosis method that settled it: the wrapper on disk CONTAINED the symbol the error said was
   missing — which is the signature of a generate-after-compile ordering issue, not a code defect.
   Do not "fix" the script; re-run.
+
+## Log (cont. 7) — 2026-08-16: second rebase onto dev (+126 commits), and the scan that was blind
+
+Rebased all four repos onto `origin/dev` (CkFoundation 126 behind / 36 ahead, CkTests 74/7,
+CkGameplayDebugger 125/10, superproject 17/3). Backups: `backup/prerebase-2026-08-16` in all four.
+
+- **A rename commit's conflicts have ONE correct resolution, and it is mechanical.** Take the DEV
+  side and re-apply the rename to it. Taking "ours" (the rename commit) silently deletes whatever
+  dev added to that file — `CkTween_Processor.h` would have lost a whole new `DoComputeValue`
+  overload. Before trusting that resolution, PROVE the commit was a pure rename for that file:
+  apply the derived map to the commit's own pre-image and require it to reproduce the post-image
+  byte-for-byte. It held for 19/19 files (`_Current`), 7/7 (`_Tunables`), 2/2 (CkTests). Where it
+  does NOT hold, the commit did more than rename and the file needs reading.
+- **Derive the rename map from the commit, never from the naming rule.** The `_Current` retire
+  looks like "strip the suffix", and for all 82 TYPES it was. The PARAMETER renames were not:
+  CkGoap's `InCurrent` became `InPlannerComp`, not `InGoap_Planner`. Diffing the commit's own
+  pre/post identifier sets per file produces the real map; assuming the rule would have been wrong
+  in exactly the files nobody would re-check.
+- **The superproject's two submodule-pointer commits are derived state.** After rebasing the
+  submodules, resolve the first bump to the new tips and SKIP the second — it replays as empty.
+  Machine-local dirt (EngineAssociation GUID, editor-generated gameplay tags) stashes and pops
+  cleanly; dev happened to bump `CkAuto` to the same SHA the local dirt already had.
+
+### The coverage gap: two whole modules arrived pre-campaign-shaped
+
+`CkInput` and `CkIntent` landed on dev after the P3 sweep, so nothing had ever converted them:
+7 features carrying both `FCk_Fragment_X_ParamsData` and `FFragment_X_Current`. Converted here —
+6 keep the earned `using FFragment_X_Params = FCk_X_Spec;` alias (nothing mutates them), and
+`_Current` becomes the bare `FFragment_X`. CoreRedirects added for all 7 Specs.
+
+- **`CkInputBias` was a genuine mutable-`_Params` defect, the campaign's core class, reintroduced.**
+  `Request_SetAxisBias` edits the table in place, which is why `FProcessor_InputBias_HandleRequests`
+  declared Params `TReadWrite` and why the reflected Spec FRIENDED a processor. The whole Spec is
+  the tunable — there is no immutable residue to split off — so it becomes
+  `FFragment_InputBias_Tunables` (the CkCrowdAgent/CkAStar precedent), the Spec drops the friend,
+  and `Add` unpacks `Get_AxisBiases()` rather than handing the fragment its Spec.
+
+### SCAN E — all four earlier scans are blind to container mutation
+
+Scans A–D missed `CkInputBias` at the source level. The mutations are:
+
+```cpp
+InParams._AxisBiases[ExistingIndex] = AxisBias;   // scan D wants \._Field *=, the [i] breaks it
+InParams._AxisBiases.Emplace(AxisBias);           // no scan looks for a mutating METHOD at all
+```
+
+Scan D (`In(Params|Tunables)\._[A-Za-z0-9]+ *=`) only matches assignment to a WHOLE member. A
+container member mutated by index, or by `Add`/`Emplace`/`Remove`/`Reset`/`RemoveAll`, is invisible
+to every pattern scan written so far. **Stop pattern-matching the mutation and match the STRUCTURE
+that permits it instead** — three queries, all of which the compiler enforces and none of which can
+be evaded by how the write is spelled:
+
+```
+A) TReadWrite<\s*(ck::)?FFragment_\w*_Params\s*>        a processor DECLARING the write
+B) (?<!const )FFragment_\w*_Params\s*&\s*In\w*          a non-const Params parameter
+C) auto\s*&\s*\w+\s*=\s*\w+\.Get<\s*(ck::)?FFragment_\w*_Params\s*>   a non-const local
+```
+
+Run over CkFoundation + CkTests + CkGameplayDebugger this returns 1 / 4 / 4 real hits.
+
+### Two PRE-EXISTING defects this surfaced — both on `origin/dev`, neither caused by the rebase
+
+The earlier claim "ZERO mutable `_Params` fragments remain framework-wide" is **false**. Scan C
+finds two more, and both are the `Handle.Get<>` shape of Workstream 3, which the log recorded as
+discharged. Verified present on `origin/dev` itself, so they are not rebase regressions:
+
+| Feature | Evidence | Note |
+|---|---|---|
+| `CkCameraLayer` | `CkCamera_Processor.cpp:110-112` (`Set_Priority`, `Set_CameraTarget`), `CkCamera_Utils.cpp:51-52` (`Set_IsDefault`, `Set_Priority`) | Listed verbatim in this PROMPT's Workstream 3 and never actually fixed. `FFragment_Camera_Params` WAS converted; `FFragment_CameraLayer_Params` is a different fragment and slipped through on the name. |
+| `Ck2dGridCell` | `Ck2dGridCell_Utils.cpp:171,195` — `Params.Get_Tags().AddTag/RemoveTag` from `Request_AddTag`/`Request_RemoveTag` | Not on any list. `CK_PROPERTY_GET` handed out a non-const ref through a non-const local, so no `Set_` and no `_Field =` ever appears. |
+
+Both are left for their own commit and their own gate, per the one-feature-per-commit rule.
+**The lesson is the same one twice: a converted `FFragment_Camera_Params` does not mean
+`FFragment_CameraLayer_Params` was looked at.** Audit the fragment list, not the feature list.
+
+## Log (cont. 8) - 2026-08-16: gate on the twice-rebased tree
+
+**Build: succeeded, 0 errors.** **Suite: 1032 total / 1030 passed / 2 failed / 0 skipped /
+0 contaminated**, 4m08s. The two are the known PathNetworkFollower pair BY NAME
+(`DesiredNavmeshClearanceMovesInward`, `ProjectsRibbonWaypointWithinNavQueryExtent`) - identical to
+the pre-rebase baseline. Integrity on the SAME run: 0 `inline discovery FAILED`,
+0 `AS_COMPILE_FAILED`, 0 compile/link errors.
+
+- **The AS generate-after-compile re-run is now confirmed twice.** The first test run exited 76
+  (`AS_COMPILE_FAILED`, "kept STALE bytecode... counts are MEANINGLESS") with
+  `Namespace 'utils_input_bias' doesn't exist`. Renaming AS-visible types invalidates the untracked,
+  generator-owned `Script/Generated/` wrappers, and the editor compiles AngelScript BEFORE the
+  generator rewrites them. Diagnosis method, unchanged and worth keeping: check the wrapper ON DISK
+  for the symbol the error says is missing. It was there, freshly written during that very run. Do
+  not touch the script; re-run. The second run was clean.
+
+### The count matched the baseline exactly - and that is the thing to distrust
+
+1032 before the rebase, 1032 after +126 dev commits. Equal totals across that much upstream work is
+not reassurance, it is a question. The answer: **97 CkInput/CkIntent AutoTests exist and NONE of
+them run.** They compile (AngelScript emits warnings citing them by path, and CkInput's runtime
+logs appear in every lane), they derive from `UCk_AutoTest_Base` exactly like tests that do run -
+and no automation entry is ever created for them. Zero occurrences of `InputBias` in a 4-minute
+suite log that boots CkInput three times.
+
+Pre-existing, not caused by this work, and the evidence is positive rather than an alibi:
+`git status` reports **0 asset/level changes across all four repos**, the tests were authored on dev
+on 2026-08-08 (`69ba4a74`), and the Gate-5 baseline recorded here on 2026-08-08 was ALREADY
+1032/1030/2 with the same two names. They have never run in this suite.
+
+**Consequence for this campaign, stated plainly: the CkInput/CkIntent conversion is
+COMPILE-verified and NOT runtime-verified.** A green suite says nothing about a path it does not
+exercise. `CkInputBias`'s split is the part that actually changes behaviour - the retune request now
+writes `FFragment_InputBias_Tunables` instead of the retained Spec - and the seven AutoTests that
+would pin it (`InputBias_RetuneAppliesToNextEvent` foremost) are among the 97 that never execute.
+
+`[EDITOR-VERIFY]` / follow-up, whoever owns CkTests wiring: find out why a `UCk_AutoTest_Base`
+subclass under `Script/CkInput/` produces no automation entry, then re-gate. Until then, treat
+CkInput and CkIntent as untested by the suite regardless of what the totals say.
