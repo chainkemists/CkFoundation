@@ -33,6 +33,7 @@ namespace ck
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
+            ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -54,7 +55,8 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
 
     private:
         auto
@@ -74,7 +76,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

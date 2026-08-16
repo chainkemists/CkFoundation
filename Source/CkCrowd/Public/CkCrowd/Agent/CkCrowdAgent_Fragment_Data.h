@@ -368,6 +368,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
     friend class ck::FProcessor_CrowdAgent_AccelClamp;
     friend class ck::FProcessor_CrowdAgent_AvoidanceSample;
+    friend class ck::FProcessor_CrowdAgent_BlockDetect;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:

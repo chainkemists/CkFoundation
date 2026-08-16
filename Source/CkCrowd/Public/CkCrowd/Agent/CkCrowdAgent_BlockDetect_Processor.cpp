@@ -110,7 +110,8 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_BlockDetectProc);
@@ -193,12 +194,28 @@ namespace ck
 
             if (OffPathDistance > OffPathThreshold)
             {
-                ck::crowd::Log(
-                    TEXT("CrowdAgent [{}] drifted {}cm off its path segment — re-pathing to {}"),
-                    InHandle, OffPathDistance, InPathFollow.Get_ActiveGoal());
+                // Drift spends a rung of the same ladder a stall does: an agent that keeps being
+                // clipped or shoved off its corridor would otherwise re-path here every cadence
+                // forever, never reaching an outcome a caller can observe. A one-off teleport
+                // still heals for free — the progress branch below refunds the whole budget.
+                if (InBlockDetect._StallRepathCount < Settings->Get_BlockDetectionMaxStallRepaths())
+                {
+                    ++InBlockDetect._StallRepathCount;
 
-                // Being displaced is not a stall, so the escalation ladder's budget is untouched.
-                DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect);
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] drifted {}cm off its path segment — re-pathing to {}, attempt {} of {}"),
+                        InHandle,
+                        OffPathDistance,
+                        InPathFollow.Get_ActiveGoal(),
+                        InBlockDetect._StallRepathCount,
+                        Settings->Get_BlockDetectionMaxStallRepaths());
+
+                    DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect, InDesired);
+                    return;
+                }
+
+                DoBlock(InHandle, InParams, InBlockDetect,
+                    ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
                 return;
             }
         }
@@ -250,7 +267,7 @@ namespace ck
                 Settings->Get_BlockDetectionMaxStallRepaths(),
                 InPathFollow.Get_ActiveGoal());
 
-            DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect);
+            DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect, InDesired);
             return;
         }
 
@@ -266,7 +283,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const
         -> void
     {
         auto NonConstHandle = InHandle;
@@ -275,7 +293,15 @@ namespace ck
         NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         InPathFollow._WaypointIndex = 0;
+        InPathFollow._ProtectedLeadingWaypointCount = 0;
         InBlockDetect.DoResetProgressWindow();
+
+        // A pinned agent must not keep pressing while its re-path is in flight: PathPending drops
+        // it from Steering's view but not from AccelClamp's or VelocityBridge's, which would ship
+        // the stalled velocity for the whole window. BOTH fields, because AccelClamp's target
+        // self-feeds from _Velocity — zeroing that alone buys one MaxAccel step, then plateaus.
+        InDesired._Velocity = FVector::ZeroVector;
+        InDesired._LastVelocity = FVector::ZeroVector;
 
         FProcessor_CrowdAgent_HandleRequests::RequestPathForActiveGoal(
             NonConstHandle, InParams, InPathFollow);
