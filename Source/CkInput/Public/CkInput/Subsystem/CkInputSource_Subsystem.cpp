@@ -129,7 +129,7 @@ auto
     const auto LocalPlayerIndex = LocalPlayer->GetLocalPlayerIndex();
 
     _InputSource = UCk_Utils_InputSource_UE::Add(NewEntity,
-        FCk_Fragment_InputSource_ParamsData{LocalPlayerIndex});
+        FCk_InputSource_Spec{LocalPlayerIndex});
 
     ck::input::Display(TEXT("Created InputSource entity [{}] for local player index [{}]"),
         _InputSource, LocalPlayerIndex);

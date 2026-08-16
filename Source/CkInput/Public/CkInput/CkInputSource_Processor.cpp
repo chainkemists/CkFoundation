@@ -25,7 +25,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             FFragment_InputSource_Requests& InRequests) const
         -> void
     {
@@ -38,7 +38,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InInputSource, Result);
 
-            Result = DoHandleRequest(InInputSource, InCurrent, InRequest);
+            Result = DoHandleRequest(InInputSource, InSourceComp, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -51,13 +51,13 @@ namespace ck
         FProcessor_InputSource_HandleRequests::
         DoHandleRequest(
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             const FCk_Request_InputSource_InjectRawEvent& InRequest)
         -> ECk_Request_OperationResult
     {
         const auto& Event = InRequest.Get_Event();
 
-        InCurrent._PendingRawEvents.Emplace(Event);
+        InSourceComp._PendingRawEvents.Emplace(Event);
 
         input::VeryVerbose
         (
@@ -76,7 +76,7 @@ namespace ck
         FProcessor_InputSource_HandleRequests::
         DoHandleRequest(
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             const FCk_Request_InputSource_AssignDevice& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -84,7 +84,7 @@ namespace ck
 
         // Re-claiming a device this source already owns leaves the caller's intent holding, so it is a
         // success rather than a conflict.
-        if (InCurrent._OwnedDevices.Contains(DeviceId))
+        if (InSourceComp._OwnedDevices.Contains(DeviceId))
         { return ECk_Request_OperationResult::Succeeded; }
 
         const auto ExistingOwner = UCk_Utils_InputSource_UE::TryGet_SourceOwningDevice(InInputSource, DeviceId);
@@ -96,7 +96,7 @@ namespace ck
             InInputSource, DeviceId.Get_DeviceClass(), DeviceId.Get_RawDeviceUserIndex(), ExistingOwner)
         { return ECk_Request_OperationResult::Failed; }
 
-        InCurrent._OwnedDevices.Emplace(DeviceId);
+        InSourceComp._OwnedDevices.Emplace(DeviceId);
 
         input::Verbose
         (

@@ -133,12 +133,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InputButtonMap
 // player's live profile, and a declaration of them would be a second source of truth that goes stale the first
 // time the player rebinds anything.
 USTRUCT(BlueprintType)
-struct CKINPUT_API FCk_Fragment_InputButtonMap_ParamsData
+struct CKINPUT_API FCk_InputButtonMap_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InputButtonMap_ParamsData);
+    CK_GENERATED_BODY(FCk_InputButtonMap_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -149,7 +149,7 @@ public:
     CK_PROPERTY_GET(_PhysicalButtons);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InputButtonMap_ParamsData, _PhysicalButtons);
+    CK_DEFINE_CONSTRUCTORS(FCk_InputButtonMap_Spec, _PhysicalButtons);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

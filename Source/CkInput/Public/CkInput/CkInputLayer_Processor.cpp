@@ -27,7 +27,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            const FFragment_InputSource_Current& InCurrent)
+            const FFragment_InputSource& InSourceComp)
         -> void
     {
         InInputSource.Add<FFragment_InputLayer_RouterState>();
@@ -41,7 +41,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             FFragment_InputLayer_Requests& InRequests) const
         -> void
     {
@@ -54,7 +54,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InLayer, Result);
 
-            Result = DoHandleRequest(InLayer, InCurrent, InRequest);
+            Result = DoHandleRequest(InLayer, InLayerComp, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -67,13 +67,13 @@ namespace ck
         FProcessor_InputLayer_HandleRequests::
         DoHandleRequest(
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             const FCk_Request_InputLayer_AddCapture& InRequest)
         -> ECk_Request_OperationResult
     {
         const auto& Capture = InRequest.Get_Capture();
 
-        const auto ExistingIndex = InCurrent._Captures.IndexOfByPredicate(
+        const auto ExistingIndex = InLayerComp._Captures.IndexOfByPredicate(
         [&](const FCk_InputLayer_Capture& InExisting) -> bool
         {
             return InExisting.Get_MatchMode() == Capture.Get_MatchMode() && InExisting.Get_Key() == Capture.Get_Key();
@@ -81,11 +81,11 @@ namespace ck
 
         if (ExistingIndex != INDEX_NONE)
         {
-            InCurrent._Captures[ExistingIndex] = Capture;
+            InLayerComp._Captures[ExistingIndex] = Capture;
         }
         else
         {
-            InCurrent._Captures.Emplace(Capture);
+            InLayerComp._Captures.Emplace(Capture);
         }
 
         input::VeryVerbose
@@ -101,7 +101,7 @@ namespace ck
         FProcessor_InputLayer_HandleRequests::
         DoHandleRequest(
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             const FCk_Request_InputLayer_RemoveCapture& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -109,7 +109,7 @@ namespace ck
         const auto& Key = InRequest.Get_Key();
 
         // Removing a capture the layer never declared leaves the caller's intent holding, so it is a success.
-        InCurrent._Captures.RemoveAll(
+        InLayerComp._Captures.RemoveAll(
         [&](const FCk_InputLayer_Capture& InExisting) -> bool
         {
             return InExisting.Get_MatchMode() == MatchMode && InExisting.Get_Key() == Key;
@@ -144,7 +144,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             FFragment_InputLayer_RouterState& InRouterState,
             FFragment_InputLayer_RoutedThisFrame& InRouted) const
         -> void
@@ -153,8 +153,8 @@ namespace ck
         // nothing, and leaving the previous frame's rows standing would read as this frame's.
         InRouted._RoutedEvents.Reset();
 
-        const auto EventsCopy = InCurrent._PendingRawEvents;
-        InCurrent._PendingRawEvents.Reset();
+        const auto EventsCopy = InSourceComp._PendingRawEvents;
+        InSourceComp._PendingRawEvents.Reset();
 
         if (EventsCopy.IsEmpty())
         { return; }
@@ -181,13 +181,13 @@ namespace ck
 
         InInputSource.View<
             FFragment_InputLayer_Params,
-            FFragment_InputLayer_Current,
+            FFragment_InputLayer,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>().ForEach(
             [&](
                 FCk_Entity InEntity,
                 const FFragment_InputLayer_Params& InParams,
-                const FFragment_InputLayer_Current&)
+                const FFragment_InputLayer&)
             {
                 if (InParams.Get_InputSource() != InInputSource)
                 { return; }
@@ -240,7 +240,7 @@ namespace ck
             if (NOT LayerIsLive)
             { continue; }
 
-            const auto& Captures = Layer.Get<FFragment_InputLayer_Current>().Get_Captures();
+            const auto& Captures = Layer.Get<FFragment_InputLayer>().Get_Captures();
 
             const auto MatchIndex = Captures.IndexOfByPredicate(
             [&](const FCk_InputLayer_Capture& InCapture) -> bool

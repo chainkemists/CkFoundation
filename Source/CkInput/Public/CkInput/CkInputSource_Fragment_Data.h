@@ -148,12 +148,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InputSource);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINPUT_API FCk_Fragment_InputSource_ParamsData
+struct CKINPUT_API FCk_InputSource_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InputSource_ParamsData);
+    CK_GENERATED_BODY(FCk_InputSource_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -164,7 +164,7 @@ public:
     CK_PROPERTY_GET(_LocalPlayerIndex);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InputSource_ParamsData, _LocalPlayerIndex);
+    CK_DEFINE_CONSTRUCTORS(FCk_InputSource_Spec, _LocalPlayerIndex);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

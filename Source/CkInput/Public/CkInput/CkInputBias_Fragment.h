@@ -16,7 +16,26 @@ class UCk_Utils_InputBias_UE;
 
 namespace ck
 {
-    using FFragment_InputBias_Params = FCk_Fragment_InputBias_ParamsData;
+    // _Tunables rather than _Params: Request_SetAxisBias adds-or-updates rows here at runtime, and there is no
+    // immutable half of the Spec to split off — the whole table is the tunable. "Params" would promise the
+    // conditioning pass could take it TReadOnly, and it cannot.
+    struct CKINPUT_API FFragment_InputBias_Tunables
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_InputBias_Tunables);
+
+    public:
+        friend class FProcessor_InputBias_HandleRequests;
+
+    private:
+        TArray<FCk_InputBias_AxisBias> _AxisBiases;
+
+    public:
+        CK_PROPERTY_GET(_AxisBiases);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_InputBias_Tunables, _AxisBiases);
+    };
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -26,10 +45,10 @@ namespace ck
     //
     // A row survives until the axis is sampled again, so a value read here is the LAST conditioned value rather
     // than this frame's — an axis that stopped sending events keeps reporting where it was left.
-    struct CKINPUT_API FFragment_InputBias_Current
+    struct CKINPUT_API FFragment_InputBias
     {
     public:
-        CK_GENERATED_BODY(FFragment_InputBias_Current);
+        CK_GENERATED_BODY(FFragment_InputBias);
 
     public:
         friend class FProcessor_InputBias_Condition;

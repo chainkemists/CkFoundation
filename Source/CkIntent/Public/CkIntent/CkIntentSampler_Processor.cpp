@@ -179,7 +179,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             FFragment_IntentSampler_PendingEvents& InPending) const
         -> void
     {
@@ -200,7 +200,7 @@ namespace ck
         // detects that in one pass over the claim and takes the single-row path with nothing copied.
         if (ck_intent_sampler_processor::Get_IndexOfCollapsingPress(Claimed, 0) == INDEX_NONE)
         {
-            DoSampleSegment(InSampler, InParams, InCurrent, Claimed);
+            DoSampleSegment(InSampler, InParams, InSamplerComp, Claimed);
             return;
         }
 
@@ -211,7 +211,7 @@ namespace ck
             const auto CutAt = ck_intent_sampler_processor::Get_IndexOfCollapsingPress(Claimed, SegmentStart);
             const auto SegmentEnd = CutAt != INDEX_NONE ? CutAt : Claimed.Num();
 
-            DoSampleSegment(InSampler, InParams, InCurrent,
+            DoSampleSegment(InSampler, InParams, InSamplerComp,
                 TArray<FCk_InputLayer_RoutedEvent>{Claimed.GetData() + SegmentStart, SegmentEnd - SegmentStart});
 
             SegmentStart = SegmentEnd;
@@ -223,31 +223,31 @@ namespace ck
         DoSampleSegment(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed)
         -> void
     {
-        auto Row = FCk_Intent_FrameRecord{InCurrent._NextFrameIndex};
-        ++InCurrent._NextFrameIndex;
+        auto Row = FCk_Intent_FrameRecord{InSamplerComp._NextFrameIndex};
+        ++InSamplerComp._NextFrameIndex;
 
         Row.Set_RoutedEvents(InClaimed);
 
-        DoRecordButtons(InSampler, InCurrent, InClaimed, Row);
-        DoRecordAxes(InSampler, InParams, InCurrent, InClaimed, Row);
+        DoRecordButtons(InSampler, InSamplerComp, InClaimed, Row);
+        DoRecordAxes(InSampler, InParams, InSamplerComp, InClaimed, Row);
 
         // Both derivations read what the two passes above just wrote into the row — the octant from its axis
         // pair, SOCD from its held set — so they run after them and never re-read the fragments themselves.
-        DoRecordOctant(InParams, InCurrent, Row);
-        DoRecordSocd(InSampler, InParams, InCurrent, InClaimed, Row);
+        DoRecordOctant(InParams, InSamplerComp, Row);
+        DoRecordSocd(InSampler, InParams, InSamplerComp, InClaimed, Row);
 
-        DoAppendRow(InParams, InCurrent, Row);
+        DoAppendRow(InParams, InSamplerComp, Row);
     }
 
     auto
         FProcessor_IntentSampler_Sample::
         DoRecordButtons(
             HandleType InSampler,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow)
         -> void
@@ -268,13 +268,13 @@ namespace ck
             {
                 case ECk_InputSource_EventType::Pressed:
                 {
-                    InCurrent._HeldKeys.AddUnique(Key);
+                    InSamplerComp._HeldKeys.AddUnique(Key);
                     ck_intent_sampler_processor::AppendButtonsForKey(ButtonMap, Key, Pressed);
                     break;
                 }
                 case ECk_InputSource_EventType::Released:
                 {
-                    InCurrent._HeldKeys.Remove(Key);
+                    InSamplerComp._HeldKeys.Remove(Key);
                     ck_intent_sampler_processor::AppendButtonsForKey(ButtonMap, Key, Released);
                     break;
                 }
@@ -290,7 +290,7 @@ namespace ck
 
         auto Held = TArray<FCk_Input_ButtonId>{};
 
-        for (const auto& HeldKey : InCurrent._HeldKeys)
+        for (const auto& HeldKey : InSamplerComp._HeldKeys)
         {
             ck_intent_sampler_processor::AppendButtonsForKey(ButtonMap, HeldKey, Held);
         }
@@ -305,7 +305,7 @@ namespace ck
         DoRecordAxes(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow)
         -> void
@@ -314,8 +314,8 @@ namespace ck
 
         if (ck::IsValid(Bias))
         {
-            InCurrent._LastAxisX = UCk_Utils_InputBias_UE::Get_ConditionedAxisValue(Bias, InParams.Get_AxisKeyX());
-            InCurrent._LastAxisY = UCk_Utils_InputBias_UE::Get_ConditionedAxisValue(Bias, InParams.Get_AxisKeyY());
+            InSamplerComp._LastAxisX = UCk_Utils_InputBias_UE::Get_ConditionedAxisValue(Bias, InParams.Get_AxisKeyX());
+            InSamplerComp._LastAxisY = UCk_Utils_InputBias_UE::Get_ConditionedAxisValue(Bias, InParams.Get_AxisKeyY());
         }
         else
         {
@@ -331,21 +331,21 @@ namespace ck
                 { continue; }
 
                 if (Event.Get_Key() == InParams.Get_AxisKeyX())
-                { InCurrent._LastAxisX = Event.Get_AnalogValue(); }
+                { InSamplerComp._LastAxisX = Event.Get_AnalogValue(); }
                 else if (Event.Get_Key() == InParams.Get_AxisKeyY())
-                { InCurrent._LastAxisY = Event.Get_AnalogValue(); }
+                { InSamplerComp._LastAxisY = Event.Get_AnalogValue(); }
             }
         }
 
-        OutRow.Set_ConditionedAxisX(InCurrent._LastAxisX);
-        OutRow.Set_ConditionedAxisY(InCurrent._LastAxisY);
+        OutRow.Set_ConditionedAxisX(InSamplerComp._LastAxisX);
+        OutRow.Set_ConditionedAxisY(InSamplerComp._LastAxisY);
     }
 
     auto
         FProcessor_IntentSampler_Sample::
         DoRecordOctant(
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             FCk_Intent_FrameRecord& OutRow)
         -> void
     {
@@ -359,7 +359,7 @@ namespace ck
             // The remembered octant is dropped rather than kept across the neutral pass. Hysteresis exists to
             // stop a boundary flicker inside one gesture, and a stick that came back to centre has ended the
             // gesture — carrying the memory through would let it bias the direction of the NEXT one.
-            InCurrent._LastOctant = ECk_Intent_Octant::Neutral;
+            InSamplerComp._LastOctant = ECk_Intent_Octant::Neutral;
             OutRow.Set_Octant(ECk_Intent_Octant::Neutral);
             return;
         }
@@ -367,7 +367,7 @@ namespace ck
         const auto AngleDegrees = FMath::RadiansToDegrees(FMath::Atan2(AxisY, AxisX));
         const auto Candidate = ck_intent_sampler_processor::Get_OctantAtAngle(AngleDegrees);
 
-        const auto Previous = InCurrent._LastOctant;
+        const auto Previous = InSamplerComp._LastOctant;
 
         if (Previous != ECk_Intent_Octant::Neutral)
         {
@@ -388,7 +388,7 @@ namespace ck
             }
         }
 
-        InCurrent._LastOctant = Candidate;
+        InSamplerComp._LastOctant = Candidate;
         OutRow.Set_Octant(Candidate);
     }
 
@@ -397,7 +397,7 @@ namespace ck
         DoRecordSocd(
             HandleType InSampler,
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const TArray<FCk_InputLayer_RoutedEvent>& InClaimed,
             FCk_Intent_FrameRecord& OutRow)
         -> void
@@ -406,7 +406,7 @@ namespace ck
 
         if (NOT Quad.Get_IsFullyNamed())
         {
-            InCurrent._SocdPressOrder.Reset();
+            InSamplerComp._SocdPressOrder.Reset();
             return;
         }
 
@@ -433,30 +433,30 @@ namespace ck
                 // A re-press moves the entry to the end: pressing a button while its opposite is already down
                 // IS the latest input, and leaving it at its original position would let a stale press outrank
                 // the one the player just made.
-                InCurrent._SocdPressOrder.Remove(Button);
-                InCurrent._SocdPressOrder.Emplace(Button);
+                InSamplerComp._SocdPressOrder.Remove(Button);
+                InSamplerComp._SocdPressOrder.Emplace(Button);
             }
         }
 
         const auto& Held = OutRow.Get_Held();
 
-        InCurrent._SocdPressOrder.RemoveAll([&Held](const FCk_Input_ButtonId& InButton)
+        InSamplerComp._SocdPressOrder.RemoveAll([&Held](const FCk_Input_ButtonId& InButton)
         {
             return NOT Held.Contains(InButton);
         });
 
         OutRow.Set_CleanedHorizontal(ck_intent_sampler_processor::Get_CleanedAxis(
-            Held, InCurrent._SocdPressOrder, Quad.Get_Right(), Quad.Get_Left(), InParams.Get_SocdPolicy()));
+            Held, InSamplerComp._SocdPressOrder, Quad.Get_Right(), Quad.Get_Left(), InParams.Get_SocdPolicy()));
 
         OutRow.Set_CleanedVertical(ck_intent_sampler_processor::Get_CleanedAxis(
-            Held, InCurrent._SocdPressOrder, Quad.Get_Up(), Quad.Get_Down(), InParams.Get_SocdPolicy()));
+            Held, InSamplerComp._SocdPressOrder, Quad.Get_Up(), Quad.Get_Down(), InParams.Get_SocdPolicy()));
     }
 
     auto
         FProcessor_IntentSampler_Sample::
         DoAppendRow(
             const FFragment_IntentSampler_Params& InParams,
-            FFragment_IntentSampler_Current& InCurrent,
+            FFragment_IntentSampler& InSamplerComp,
             const FCk_Intent_FrameRecord& InRow)
         -> void
     {
@@ -464,17 +464,17 @@ namespace ck
 
         // The write index and the array length advance together while the ring fills, so one branch grows the
         // storage and the other overwrites — never both.
-        if (InCurrent._Rows.Num() < Capacity)
+        if (InSamplerComp._Rows.Num() < Capacity)
         {
-            InCurrent._Rows.Emplace(InRow);
+            InSamplerComp._Rows.Emplace(InRow);
         }
         else
         {
-            InCurrent._Rows[InCurrent._NextWriteIndex] = InRow;
+            InSamplerComp._Rows[InSamplerComp._NextWriteIndex] = InRow;
         }
 
-        InCurrent._NextWriteIndex = (InCurrent._NextWriteIndex + 1) % Capacity;
-        InCurrent._RowCount = FMath::Min(InCurrent._RowCount + 1, Capacity);
+        InSamplerComp._NextWriteIndex = (InSamplerComp._NextWriteIndex + 1) % Capacity;
+        InSamplerComp._RowCount = FMath::Min(InSamplerComp._RowCount + 1, Capacity);
     }
 }
 

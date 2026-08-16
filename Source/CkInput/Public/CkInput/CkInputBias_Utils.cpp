@@ -11,8 +11,8 @@
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_InputBias_UE,
     FCk_Handle_InputBias,
-    ck::FFragment_InputBias_Params,
-    ck::FFragment_InputBias_Current);
+    ck::FFragment_InputBias_Tunables,
+    ck::FFragment_InputBias);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ auto
     UCk_Utils_InputBias_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputBias_ParamsData& InParams)
+        const FCk_InputBias_Spec& InParams)
     -> FCk_Handle_InputBias
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -74,8 +74,8 @@ auto
     if (NOT DoGet_AxisBiasesAreValid(InHandle, InParams.Get_AxisBiases()))
     { return {}; }
 
-    InHandle.Add<ck::FFragment_InputBias_Params>(InParams);
-    InHandle.Add<ck::FFragment_InputBias_Current>();
+    InHandle.Add<ck::FFragment_InputBias_Tunables>(InParams.Get_AxisBiases());
+    InHandle.Add<ck::FFragment_InputBias>();
 
     ck::input::Verbose
     (
@@ -94,7 +94,7 @@ auto
         const FCk_Handle_InputBias& InInputBias)
     -> TArray<FCk_InputBias_AxisBias>
 {
-    return InInputBias.Get<ck::FFragment_InputBias_Params>().Get_AxisBiases();
+    return InInputBias.Get<ck::FFragment_InputBias_Tunables>().Get_AxisBiases();
 }
 
 auto
@@ -104,7 +104,7 @@ auto
         const FKey& InAxisKey)
     -> FCk_InputBias_AxisBias
 {
-    const auto& AxisBiases = InInputBias.Get<ck::FFragment_InputBias_Params>().Get_AxisBiases();
+    const auto& AxisBiases = InInputBias.Get<ck::FFragment_InputBias_Tunables>().Get_AxisBiases();
 
     const auto FoundIndex = ck_input_bias_utils::Get_IndexOfAxisBias(AxisBiases, InAxisKey);
 
@@ -121,7 +121,7 @@ auto
         const FKey& InAxisKey)
     -> float
 {
-    const auto& ConditionedAxes = InInputBias.Get<ck::FFragment_InputBias_Current>().Get_ConditionedAxes();
+    const auto& ConditionedAxes = InInputBias.Get<ck::FFragment_InputBias>().Get_ConditionedAxes();
 
     const auto FoundIndex = ck_input_bias_utils::Get_IndexOfConditionedAxis(ConditionedAxes, InAxisKey);
 
@@ -138,7 +138,7 @@ auto
         const FKey& InAxisKey)
     -> float
 {
-    const auto& ConditionedAxes = InInputBias.Get<ck::FFragment_InputBias_Current>().Get_ConditionedAxes();
+    const auto& ConditionedAxes = InInputBias.Get<ck::FFragment_InputBias>().Get_ConditionedAxes();
 
     const auto FoundIndex = ck_input_bias_utils::Get_IndexOfConditionedAxis(ConditionedAxes, InAxisKey);
 

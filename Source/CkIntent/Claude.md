@@ -36,7 +36,7 @@ because a sampler on a child entity would have no routed events to read.
 | Compose | `Add`, `Has` (C++ only), `Cast`/`CastChecked` (`DoCast`/`DoCastChecked` in BP/AS), `Get_InvalidHandle` |
 | Read | `Get_FrameCount`, `Get_LatestFrame`, `TryGet_FrameAtOffset`, `Get_HeldKeys` |
 
-`FCk_Fragment_IntentSampler_ParamsData` is (`_RingCapacity` default 120, `_AxisKeyX` default
+`FCk_IntentSampler_Spec` is (`_RingCapacity` default 120, `_AxisKeyX` default
 `EKeys::Gamepad_LeftX`, `_AxisKeyY` default `EKeys::Gamepad_LeftY`, `_OctantNeutralRadius` default `0.25`,
 `_OctantHysteresisMarginDegrees` default `5.0`, `_SocdQuad` default unnamed, `_SocdPolicy` default `Neutral`).
 Capacity is the essential constructor argument; everything else has fluent setters.
@@ -93,7 +93,7 @@ matcher off a layer would have no arbitration to answer to.
 unless the row is `Active` right now, and while it is, the latest record frame minus it is how long this layer has
 had the input, in the sampler's own logic frames.
 
-`FCk_Fragment_IntentMatcher_ParamsData` carries two fields: `_CaptureBehavior` (default `Consume`, the essential
+`FCk_IntentMatcher_Spec` carries two fields: `_CaptureBehavior` (default `Consume`, the essential
 constructor argument) and `_LatchDecayFrames` (default 20, fluent setter, rejected at composition if not
 positive). There is deliberately **no input-source field**: the layer already names its source, and a second
 spelling is one that can disagree with the first.

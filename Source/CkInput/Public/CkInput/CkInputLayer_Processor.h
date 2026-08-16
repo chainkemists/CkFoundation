@@ -20,7 +20,7 @@ namespace ck
     class CKINPUT_API FProcessor_InputLayer_SetupRouterState : public ck_exp::TProcessor<
             FProcessor_InputLayer_SetupRouterState,
             FCk_Handle_InputSource,
-            ck::TReadOnly<FFragment_InputSource_Current>,
+            ck::TReadOnly<FFragment_InputSource>,
             TExclude<FFragment_InputLayer_RouterState>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -36,7 +36,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            const FFragment_InputSource_Current& InCurrent) -> void;
+            const FFragment_InputSource& InSourceComp) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ namespace ck
     class CKINPUT_API FProcessor_InputLayer_HandleRequests : public ck_exp::TProcessor<
             FProcessor_InputLayer_HandleRequests,
             FCk_Handle_InputLayer,
-            ck::TReadWrite<FFragment_InputLayer_Current>,
+            ck::TReadWrite<FFragment_InputLayer>,
             ck::TReadWrite<FFragment_InputLayer_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -64,20 +64,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             FFragment_InputLayer_Requests& InRequests) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             const FCk_Request_InputLayer_AddCapture& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InLayer,
-            FFragment_InputLayer_Current& InCurrent,
+            FFragment_InputLayer& InLayerComp,
             const FCk_Request_InputLayer_RemoveCapture& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -110,7 +110,7 @@ namespace ck
     class CKINPUT_API FProcessor_InputLayer_Route : public ck_exp::TProcessor<
             FProcessor_InputLayer_Route,
             FCk_Handle_InputSource,
-            ck::TReadWrite<FFragment_InputSource_Current>,
+            ck::TReadWrite<FFragment_InputSource>,
             ck::TReadWrite<FFragment_InputLayer_RouterState>,
             ck::TReadWrite<FFragment_InputLayer_RoutedThisFrame>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -127,7 +127,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             FFragment_InputLayer_RouterState& InRouterState,
             FFragment_InputLayer_RoutedThisFrame& InRouted) const -> void;
 

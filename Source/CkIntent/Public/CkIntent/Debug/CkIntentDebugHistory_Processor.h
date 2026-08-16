@@ -31,8 +31,8 @@ namespace ck
             FProcessor_IntentDebugHistory_Record,
             FCk_Handle_IntentDebugHistory,
             ck::TReadOnly<FFragment_IntentDebugHistory_Params>,
-            ck::TReadWrite<FFragment_IntentDebugHistory_Current>,
-            ck::TReadOnly<FFragment_IntentSampler_Current>,
+            ck::TReadWrite<FFragment_IntentDebugHistory>,
+            ck::TReadOnly<FFragment_IntentSampler>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -48,8 +48,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHistory,
             const FFragment_IntentDebugHistory_Params& InParams,
-            FFragment_IntentDebugHistory_Current& InCurrent,
-            const FFragment_IntentSampler_Current& InSamplerCurrent) -> void;
+            FFragment_IntentDebugHistory& InHistoryComp,
+            const FFragment_IntentSampler& InSamplerComp) -> void;
     };
 }
 

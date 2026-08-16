@@ -58,7 +58,7 @@ public:
     static FCk_Handle_IntentMatcher
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_IntentMatcher_ParamsData& InParams);
+        const FCk_IntentMatcher_Spec& InParams);
 
 public:
     static bool

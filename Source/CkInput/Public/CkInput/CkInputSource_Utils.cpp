@@ -12,7 +12,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_InputSource_UE,
     FCk_Handle_InputSource,
     ck::FFragment_InputSource_Params,
-    ck::FFragment_InputSource_Current);
+    ck::FFragment_InputSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ auto
     UCk_Utils_InputSource_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputSource_ParamsData& InParams)
+        const FCk_InputSource_Spec& InParams)
     -> FCk_Handle_InputSource
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -29,7 +29,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_InputSource_Params>(InParams);
-    InHandle.Add<ck::FFragment_InputSource_Current>();
+    InHandle.Add<ck::FFragment_InputSource>();
 
     return CastChecked(InHandle);
 }
@@ -38,7 +38,7 @@ auto
     UCk_Utils_InputSource_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_InputSource_ParamsData& InParams)
+        const FCk_InputSource_Spec& InParams)
     -> FCk_Handle_InputSource
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);
@@ -68,7 +68,7 @@ auto
         const FCk_Handle_InputSource& InInputSource)
     -> TArray<FCk_InputSource_RawEvent>
 {
-    return InInputSource.Get<ck::FFragment_InputSource_Current>().Get_PendingRawEvents();
+    return InInputSource.Get<ck::FFragment_InputSource>().Get_PendingRawEvents();
 }
 
 auto
@@ -77,7 +77,7 @@ auto
         const FCk_Handle_InputSource& InInputSource)
     -> int32
 {
-    return InInputSource.Get<ck::FFragment_InputSource_Current>().Get_PendingRawEvents().Num();
+    return InInputSource.Get<ck::FFragment_InputSource>().Get_PendingRawEvents().Num();
 }
 
 auto
@@ -86,7 +86,7 @@ auto
         const FCk_Handle_InputSource& InInputSource)
     -> TArray<FCk_InputSource_DeviceId>
 {
-    return InInputSource.Get<ck::FFragment_InputSource_Current>().Get_OwnedDevices();
+    return InInputSource.Get<ck::FFragment_InputSource>().Get_OwnedDevices();
 }
 
 auto
@@ -96,7 +96,7 @@ auto
         const FCk_InputSource_DeviceId& InDeviceId)
     -> bool
 {
-    return InInputSource.Get<ck::FFragment_InputSource_Current>().Get_OwnedDevices().Contains(InDeviceId);
+    return InInputSource.Get<ck::FFragment_InputSource>().Get_OwnedDevices().Contains(InDeviceId);
 }
 
 auto
@@ -115,17 +115,17 @@ auto
 
     InAnyEntityInWorld.View<
         ck::FFragment_InputSource_Params,
-        ck::FFragment_InputSource_Current,
+        ck::FFragment_InputSource,
         CK_IGNORE_PENDING_KILL>().ForEach(
         [&](
             FCk_Entity InEntity,
             const ck::FFragment_InputSource_Params&,
-            const ck::FFragment_InputSource_Current& InCurrent)
+            const ck::FFragment_InputSource& InSourceComp)
         {
             if (ck::IsValid(FoundSource))
             { return; }
 
-            if (NOT InCurrent.Get_OwnedDevices().Contains(InDeviceId))
+            if (NOT InSourceComp.Get_OwnedDevices().Contains(InDeviceId))
             { return; }
 
             auto EntityHandle = ck::MakeHandle(InEntity, Registry);

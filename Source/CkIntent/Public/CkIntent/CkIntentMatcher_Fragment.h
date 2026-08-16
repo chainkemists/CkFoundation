@@ -31,7 +31,7 @@ namespace ck::intent_matcher
 
 namespace ck
 {
-    using FFragment_IntentMatcher_Params = FCk_Fragment_IntentMatcher_ParamsData;
+    using FFragment_IntentMatcher_Params = FCk_IntentMatcher_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -261,10 +261,10 @@ namespace ck
      * below it several rows arrive at once — remembering the last frame consumed is what lets one pass answer both
      * without re-matching a row or skipping one.
      */
-    struct CKINTENT_API FFragment_IntentMatcher_Current
+    struct CKINTENT_API FFragment_IntentMatcher
     {
     public:
-        CK_GENERATED_BODY(FFragment_IntentMatcher_Current);
+        CK_GENERATED_BODY(FFragment_IntentMatcher);
 
     public:
         friend class FProcessor_IntentMatcher_HandleRequests;

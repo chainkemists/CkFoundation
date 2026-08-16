@@ -12,7 +12,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_InputButtonMap_UE,
     FCk_Handle_InputButtonMap,
     ck::FFragment_InputButtonMap_Params,
-    ck::FFragment_InputButtonMap_Current);
+    ck::FFragment_InputButtonMap);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ auto
     UCk_Utils_InputButtonMap_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputButtonMap_ParamsData& InParams)
+        const FCk_InputButtonMap_Spec& InParams)
     -> FCk_Handle_InputButtonMap
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -62,7 +62,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_InputButtonMap_Params>(InParams);
-    InHandle.Add<ck::FFragment_InputButtonMap_Current>();
+    InHandle.Add<ck::FFragment_InputButtonMap>();
 
     auto ButtonMap = CastChecked(InHandle);
 
@@ -94,7 +94,7 @@ auto
         const FCk_Handle_InputButtonMap& InButtonMap)
     -> TArray<FCk_Input_ButtonId>
 {
-    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap_Current>().Get_Associations();
+    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap>().Get_Associations();
 
     auto Result = TArray<FCk_Input_ButtonId>{};
     Result.Reserve(Associations.Num());
@@ -119,7 +119,7 @@ auto
     if (NOT InKey.IsValid())
     { return Result; }
 
-    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap_Current>().Get_Associations();
+    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap>().Get_Associations();
 
     for (const auto& Association : Associations)
     {
@@ -139,7 +139,7 @@ auto
         const FCk_Input_ButtonId& InButtonId)
     -> FKey
 {
-    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap_Current>().Get_Associations();
+    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap>().Get_Associations();
 
     const auto FoundIndex = ck_input_button_map_utils::Get_IndexOfButton(Associations, InButtonId);
 
@@ -158,7 +158,7 @@ auto
         const FCk_Input_ButtonId& InButtonId)
     -> TArray<FKey>
 {
-    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap_Current>().Get_Associations();
+    const auto& Associations = InButtonMap.Get<ck::FFragment_InputButtonMap>().Get_Associations();
 
     const auto FoundIndex = ck_input_button_map_utils::Get_IndexOfButton(Associations, InButtonId);
 

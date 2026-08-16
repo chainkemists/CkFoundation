@@ -72,12 +72,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Intent_Phase);
  * edited.
  */
 USTRUCT(BlueprintType)
-struct CKINTENT_API FCk_Fragment_IntentMatcher_ParamsData
+struct CKINTENT_API FCk_IntentMatcher_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntentMatcher_ParamsData);
+    CK_GENERATED_BODY(FCk_IntentMatcher_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -98,7 +98,7 @@ public:
     CK_PROPERTY(_LatchDecayFrames);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntentMatcher_ParamsData, _CaptureBehavior);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntentMatcher_Spec, _CaptureBehavior);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

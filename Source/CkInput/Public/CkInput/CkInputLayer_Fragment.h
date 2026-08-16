@@ -29,17 +29,17 @@ namespace ck::input_layer
 
 namespace ck
 {
-    using FFragment_InputLayer_Params = FCk_Fragment_InputLayer_ParamsData;
+    using FFragment_InputLayer_Params = FCk_InputLayer_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
     // ONE stable fragment per layer holding every capture as a row. Never a fragment or tag per capture: these pools
     // are tombstone-mode, so adding and removing fragment TYPES per frame is the expensive shape, and the whole
     // point of the declarative model is that the active set is one inspectable array.
-    struct CKINPUT_API FFragment_InputLayer_Current
+    struct CKINPUT_API FFragment_InputLayer
     {
     public:
-        CK_GENERATED_BODY(FFragment_InputLayer_Current);
+        CK_GENERATED_BODY(FFragment_InputLayer);
 
     public:
         friend class FProcessor_InputLayer_HandleRequests;

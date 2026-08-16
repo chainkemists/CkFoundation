@@ -13,7 +13,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_IntentSampler_UE,
     FCk_Handle_IntentSampler,
     ck::FFragment_IntentSampler_Params,
-    ck::FFragment_IntentSampler_Current,
+    ck::FFragment_IntentSampler,
     ck::FFragment_IntentSampler_PendingEvents);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -22,7 +22,7 @@ auto
     UCk_Utils_IntentSampler_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_IntentSampler_ParamsData& InParams)
+        const FCk_IntentSampler_Spec& InParams)
     -> FCk_Handle_IntentSampler
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -46,7 +46,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IntentSampler_Params>(InParams);
-    InHandle.Add<ck::FFragment_IntentSampler_Current>();
+    InHandle.Add<ck::FFragment_IntentSampler>();
     InHandle.Add<ck::FFragment_IntentSampler_PendingEvents>();
 
     ck::intent::Verbose
@@ -66,7 +66,7 @@ auto
         const FCk_Handle_IntentSampler& InSampler)
     -> int32
 {
-    return InSampler.Get<ck::FFragment_IntentSampler_Current>().Get_RowCount();
+    return InSampler.Get<ck::FFragment_IntentSampler>().Get_RowCount();
 }
 
 auto
@@ -75,7 +75,7 @@ auto
         const FCk_Handle_IntentSampler& InSampler)
     -> TArray<FKey>
 {
-    return InSampler.Get<ck::FFragment_IntentSampler_Current>().Get_HeldKeys();
+    return InSampler.Get<ck::FFragment_IntentSampler>().Get_HeldKeys();
 }
 
 auto
@@ -95,7 +95,7 @@ auto
         int32 InOffset)
     -> FCk_Intent_FrameRecord
 {
-    const auto& Current = InSampler.Get<ck::FFragment_IntentSampler_Current>();
+    const auto& Current = InSampler.Get<ck::FFragment_IntentSampler>();
 
     if (InOffset < 0 || InOffset >= Current.Get_RowCount())
     { return {}; }
@@ -116,7 +116,7 @@ auto
     UCk_Utils_IntentSampler_UE::
     DoGet_ParamsAreValid(
         const FCk_Handle& InContext,
-        const FCk_Fragment_IntentSampler_ParamsData& InParams)
+        const FCk_IntentSampler_Spec& InParams)
     -> bool
 {
     const auto CapacityIsPositive = InParams.Get_RingCapacity() > 0;

@@ -60,7 +60,7 @@ public:
     static FCk_Handle_InputButtonMap
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_InputButtonMap_ParamsData& InParams);
+        const FCk_InputButtonMap_Spec& InParams);
 
 public:
     static bool

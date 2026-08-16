@@ -22,7 +22,7 @@ namespace ck::intent_sampler
 
 namespace ck
 {
-    using FFragment_IntentSampler_Params = FCk_Fragment_IntentSampler_ParamsData;
+    using FFragment_IntentSampler_Params = FCk_IntentSampler_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -77,10 +77,10 @@ namespace ck
      * statements about which of two held buttons went down first — neither is recoverable from a row in
      * isolation, which is precisely why they are derived here once rather than by every consumer.
      */
-    struct CKINTENT_API FFragment_IntentSampler_Current
+    struct CKINTENT_API FFragment_IntentSampler
     {
     public:
-        CK_GENERATED_BODY(FFragment_IntentSampler_Current);
+        CK_GENERATED_BODY(FFragment_IntentSampler);
 
     public:
         friend class FProcessor_IntentSampler_Sample;

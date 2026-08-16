@@ -100,7 +100,7 @@ Thin Ck-shaped wrappers over CommonUI:
 
 An input source is one local player's inbox of raw device events plus the explicit list of devices that
 player owns. `Add(Handle, Params)` composes `ck::FFragment_InputSource_Params` (which carries only
-`_LocalPlayerIndex`) and `ck::FFragment_InputSource_Current` onto an entity; `Create(Owner, Params)`
+`_LocalPlayerIndex`) and `ck::FFragment_InputSource` onto an entity; `Create(Owner, Params)`
 creates a child entity first. Handle: `FCk_Handle_InputSource`.
 
 | Group | Functions |
@@ -149,7 +149,7 @@ same timing discipline as `UCk_KeyBinding_Subsystem`. The entity comes from
 ### `UCk_Utils_InputLayer_UE` — `CkInputLayer_Utils.h`
 
 Any entity becomes a layer in one source's stack by carrying this feature. Handle:
-`FCk_Handle_InputLayer`. `FCk_Fragment_InputLayer_ParamsData` is (`_InputSource`, `_Priority`) — both
+`FCk_Handle_InputLayer`. `FCk_InputLayer_Spec` is (`_InputSource`, `_Priority`) — both
 essential; priority is explicit because entities have no inherent order.
 
 | Group | Functions |
@@ -270,7 +270,7 @@ invalid returned handle, never a silent tie-break — arbitration order must be 
 and no return value, so the "matched but declined" state a handler's return would express does not exist
 and cannot silently eat a key. A layer whose own state decides whether it consumes expresses that by
 adding or removing captures. All of a layer's captures live as rows in ONE stable
-`ck::FFragment_InputLayer_Current` — never a fragment or tag per capture, because fragment pools are
+`ck::FFragment_InputLayer` — never a fragment or tag per capture, because fragment pools are
 tombstone-mode and churning fragment TYPES per frame is the expensive shape; keeping them in one array
 is also what makes the live arbitration set inspectable (`Get_Captures`).
 

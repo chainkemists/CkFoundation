@@ -15,7 +15,7 @@ class UCk_Utils_IntentDebugHistory_UE;
 
 namespace ck
 {
-    using FFragment_IntentDebugHistory_Params = FCk_Fragment_IntentDebugHistory_ParamsData;
+    using FFragment_IntentDebugHistory_Params = FCk_IntentDebugHistory_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -29,10 +29,10 @@ namespace ck
      * Capacity lives HERE rather than only in Params because it is runtime-mutable (the debugger's history
      * field); Params keeps the declared initial value.
      */
-    struct CKINTENT_API FFragment_IntentDebugHistory_Current
+    struct CKINTENT_API FFragment_IntentDebugHistory
     {
     public:
-        CK_GENERATED_BODY(FFragment_IntentDebugHistory_Current);
+        CK_GENERATED_BODY(FFragment_IntentDebugHistory);
 
     public:
         friend class FProcessor_IntentDebugHistory_Record;
