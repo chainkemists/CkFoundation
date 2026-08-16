@@ -38,7 +38,7 @@ namespace ck
         static auto
         Set_Phase(
             FCk_Handle_IntentMatcher InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             ECk_Intent_Phase InNewPhase,
             int32 InFrame) -> void;
@@ -103,7 +103,7 @@ namespace ck
             FProcessor_IntentMatcher_HandleRequests,
             FCk_Handle_IntentMatcher,
             ck::TReadOnly<FFragment_IntentMatcher_Params>,
-            ck::TReadWrite<FFragment_IntentMatcher_Current>,
+            ck::TReadWrite<FFragment_IntentMatcher>,
             ck::TReadWrite<FFragment_IntentMatcher_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -121,7 +121,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             FFragment_IntentMatcher_Requests& InRequests) const -> void;
 
     private:
@@ -129,7 +129,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Request_IntentMatcher_SwapSet& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -182,7 +182,7 @@ namespace ck
             FProcessor_IntentMatcher_Match,
             FCk_Handle_IntentMatcher,
             ck::TReadOnly<FFragment_IntentMatcher_Params>,
-            ck::TReadWrite<FFragment_IntentMatcher_Current>,
+            ck::TReadWrite<FFragment_IntentMatcher>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -198,7 +198,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMatcher,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent) const -> void;
+            FFragment_IntentMatcher& InMatcherComp) const -> void;
 
     private:
         static auto
@@ -206,19 +206,19 @@ namespace ck
             FCk_Handle_InputLayer& InLayer,
             const FCk_Handle_InputButtonMap& InButtonMap,
             const FFragment_IntentMatcher_Params& InParams,
-            FFragment_IntentMatcher_Current& InCurrent) -> void;
+            FFragment_IntentMatcher& InMatcherComp) -> void;
 
         static auto
         DoProcessRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             int32 InOffset) -> void;
 
         static auto
         DoScanRowForNewPresses(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset,
@@ -230,7 +230,7 @@ namespace ck
         static auto
         DoUpdateLevelRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset) -> void;
@@ -238,7 +238,7 @@ namespace ck
         static auto
         DoActivateLevelRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             const FCk_Input_ButtonId& InButton,
             const FKey& InAnchorKey,
@@ -247,7 +247,7 @@ namespace ck
         static auto
         DoDeactivateLevelRow(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InActiveLevelIndex,
             int32 InFrame,
             const FString& InReason) -> void;
@@ -255,13 +255,13 @@ namespace ck
         static auto
         DoDeactivateAllLevelRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InFrame,
             const FString& InReason) -> void;
 
         static auto
         Get_IsLevelActive(
-            const FFragment_IntentMatcher_Current& InCurrent,
+            const FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex) -> bool;
 
         // Answers whether the episode is FINISHED and should be dropped by the caller — the caller owns the array,
@@ -269,7 +269,7 @@ namespace ck
         static auto
         DoAdvanceEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_FrameRecord& InRow,
             int32 InOffset,
@@ -279,7 +279,7 @@ namespace ck
         static auto
         DoTryResolveEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FIntentMatcher_PendingEpisode& InEpisode,
             TFunctionRef<bool(const FCk_Intent_CompiledIntent&)> InCandidateFilter,
@@ -290,7 +290,7 @@ namespace ck
         static auto
         DoOpenEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Intent_FrameRecord& InRow,
             const FCk_Input_ButtonId& InButton,
             const FKey& InPressKey,
@@ -300,14 +300,14 @@ namespace ck
         static auto
         DoPurgeEpisodesResolvedElsewhere(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const TArray<int32>& InCompletedThisRow,
             int32 InFrame) -> void;
 
         static auto
         DoCompleteIntent(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             int32 InIntentIndex,
             int32 InFrame,
             TArray<int32>& OutCompletedThisRow) -> void;
@@ -315,7 +315,7 @@ namespace ck
         static auto
         DoFailEpisode(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_PendingEpisode& InEpisode,
             int32 InFrame) -> void;
 
@@ -325,23 +325,23 @@ namespace ck
         static auto
         DoSettleLosingRows(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_PendingEpisode& InEpisode,
             int32 InFrame) -> void;
 
         static auto
         DoAdvanceHoldAccumulator(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton) -> void;
 
         static auto
         DoDropHoldAccumulator(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton) -> void;
 
         static auto
         DoGet_AccumulatedHoldFrames(
-            const FFragment_IntentMatcher_Current& InCurrent,
+            const FFragment_IntentMatcher& InMatcherComp,
             const FCk_Input_ButtonId& InButton) -> int32;
 
         // Runs LAST on every row, so a completion stamped this frame is never decayed by the same pass that
@@ -351,20 +351,20 @@ namespace ck
         // the ring cannot end up describing only some of them.
         static auto
         DoRunScan(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             const FCk_Intent_CompiledIntent& InIntent,
             int32 InTerminalOffset) -> bool;
 
         static auto
         DoPushScanDiagnostic(
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             FCk_Intent_ScanDiagnostic InDiagnostic) -> void;
 
         static auto
         DoDecayLatches(
             HandleType InMatcher,
-            FFragment_IntentMatcher_Current& InCurrent,
+            FFragment_IntentMatcher& InMatcherComp,
             const FIntentMatcher_ScanContext& InContext,
             int32 InFrame) -> void;
     };

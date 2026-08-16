@@ -14,7 +14,7 @@ namespace ck
     class CKINPUT_API FProcessor_InputSource_HandleRequests : public ck_exp::TProcessor<
             FProcessor_InputSource_HandleRequests,
             FCk_Handle_InputSource,
-            ck::TReadWrite<FFragment_InputSource_Current>,
+            ck::TReadWrite<FFragment_InputSource>,
             ck::TReadWrite<FFragment_InputSource_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -31,20 +31,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             FFragment_InputSource_Requests& InRequests) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             const FCk_Request_InputSource_InjectRawEvent& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InInputSource,
-            FFragment_InputSource_Current& InCurrent,
+            FFragment_InputSource& InSourceComp,
             const FCk_Request_InputSource_AssignDevice& InRequest) -> ECk_Request_OperationResult;
     };
 

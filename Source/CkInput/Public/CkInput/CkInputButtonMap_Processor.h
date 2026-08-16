@@ -23,7 +23,7 @@ namespace ck
             FProcessor_InputButtonMap_HandleRequests,
             FCk_Handle_InputButtonMap,
             ck::TReadOnly<FFragment_InputSource_Params>,
-            ck::TReadWrite<FFragment_InputButtonMap_Current>,
+            ck::TReadWrite<FFragment_InputButtonMap>,
             ck::TReadWrite<FFragment_InputButtonMap_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -41,7 +41,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             FFragment_InputButtonMap_Requests& InRequests) const -> void;
 
     private:
@@ -49,14 +49,14 @@ namespace ck
         DoHandleRequest(
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             const FCk_Request_InputButtonMap_Rederive& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             const FCk_Request_InputButtonMap_RegisterPhysicalButton& InRequest) -> ECk_Request_OperationResult;
     };
 

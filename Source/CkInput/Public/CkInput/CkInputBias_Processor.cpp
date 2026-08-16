@@ -66,7 +66,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputBias,
-            FFragment_InputBias_Params& InParams,
+            FFragment_InputBias_Tunables& InTunables,
             FFragment_InputBias_Requests& InRequests) const
         -> void
     {
@@ -79,7 +79,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InInputBias, Result);
 
-            Result = DoHandleRequest(InInputBias, InParams, InRequest);
+            Result = DoHandleRequest(InInputBias, InTunables, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -92,22 +92,22 @@ namespace ck
         FProcessor_InputBias_HandleRequests::
         DoHandleRequest(
             HandleType InInputBias,
-            FFragment_InputBias_Params& InParams,
+            FFragment_InputBias_Tunables& InTunables,
             const FCk_Request_InputBias_SetAxisBias& InRequest)
         -> ECk_Request_OperationResult
     {
         const auto& AxisBias = InRequest.Get_AxisBias();
 
         const auto ExistingIndex = ck_input_bias_processor::Get_IndexOfAxisBias(
-            InParams._AxisBiases, AxisBias.Get_AxisKey());
+            InTunables._AxisBiases, AxisBias.Get_AxisKey());
 
         if (ExistingIndex != INDEX_NONE)
         {
-            InParams._AxisBiases[ExistingIndex] = AxisBias;
+            InTunables._AxisBiases[ExistingIndex] = AxisBias;
         }
         else
         {
-            InParams._AxisBiases.Emplace(AxisBias);
+            InTunables._AxisBiases.Emplace(AxisBias);
         }
 
         input::VeryVerbose
@@ -145,19 +145,19 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InInputBias,
-            const FFragment_InputBias_Params& InParams,
-            FFragment_InputBias_Current& InCurrent,
-            const FFragment_InputSource_Current& InSourceCurrent) const
+            const FFragment_InputBias_Tunables& InTunables,
+            FFragment_InputBias& InInputBiasComp,
+            const FFragment_InputSource& InSourceComp) const
         -> void
     {
-        const auto& PendingRawEvents = InSourceCurrent.Get_PendingRawEvents();
+        const auto& PendingRawEvents = InSourceComp.Get_PendingRawEvents();
 
         for (const auto& Event : PendingRawEvents)
         {
             if (Event.Get_EventType() != ECk_InputSource_EventType::AnalogAxis)
             { continue; }
 
-            DoConditionAxis(InInputBias, InParams, InCurrent, Event);
+            DoConditionAxis(InInputBias, InTunables, InInputBiasComp, Event);
         }
     }
 
@@ -165,25 +165,25 @@ namespace ck
         FProcessor_InputBias_Condition::
         DoConditionAxis(
             HandleType InInputBias,
-            const FFragment_InputBias_Params& InParams,
-            FFragment_InputBias_Current& InCurrent,
+            const FFragment_InputBias_Tunables& InTunables,
+            FFragment_InputBias& InInputBiasComp,
             const FCk_InputSource_RawEvent& InEvent)
         -> void
     {
         const auto& AxisKey = InEvent.Get_Key();
         const auto RawValue = InEvent.Get_AnalogValue();
 
-        const auto BiasIndex = ck_input_bias_processor::Get_IndexOfAxisBias(InParams.Get_AxisBiases(), AxisKey);
+        const auto BiasIndex = ck_input_bias_processor::Get_IndexOfAxisBias(InTunables.Get_AxisBiases(), AxisKey);
 
         const auto ConditionedValue = BiasIndex != INDEX_NONE
-            ? ck_input_bias_processor::Get_ConditionedValue(RawValue, InParams.Get_AxisBiases()[BiasIndex])
+            ? ck_input_bias_processor::Get_ConditionedValue(RawValue, InTunables.Get_AxisBiases()[BiasIndex])
             : RawValue;
 
         auto ConditionedAxis = FCk_InputBias_ConditionedAxis{AxisKey};
         ConditionedAxis.Set_RawValue(RawValue);
         ConditionedAxis.Set_ConditionedValue(ConditionedValue);
 
-        const auto ExistingIndex = InCurrent._ConditionedAxes.IndexOfByPredicate(
+        const auto ExistingIndex = InInputBiasComp._ConditionedAxes.IndexOfByPredicate(
         [&](const FCk_InputBias_ConditionedAxis& InExisting) -> bool
         {
             return InExisting.Get_AxisKey() == AxisKey;
@@ -191,11 +191,11 @@ namespace ck
 
         if (ExistingIndex != INDEX_NONE)
         {
-            InCurrent._ConditionedAxes[ExistingIndex] = ConditionedAxis;
+            InInputBiasComp._ConditionedAxes[ExistingIndex] = ConditionedAxis;
         }
         else
         {
-            InCurrent._ConditionedAxes.Emplace(ConditionedAxis);
+            InInputBiasComp._ConditionedAxes.Emplace(ConditionedAxis);
         }
 
         input::VeryVerbose

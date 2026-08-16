@@ -116,7 +116,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             FFragment_InputButtonMap_Requests& InRequests) const
         -> void
     {
@@ -129,7 +129,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InButtonMap, Result);
 
-            Result = DoHandleRequest(InButtonMap, InSourceParams, InCurrent, InRequest);
+            Result = DoHandleRequest(InButtonMap, InSourceParams, InButtonMapComp, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -143,7 +143,7 @@ namespace ck
         DoHandleRequest(
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             const FCk_Request_InputButtonMap_Rederive& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -171,7 +171,7 @@ namespace ck
         // a frame, cancelling live episodes and Active level rows downstream over a profile that was there a frame
         // ago and will be again. So the same treatment: leave it untouched and let the next re-derive do the work.
         // A map that carries no Mapped keys yet has nothing to lose, so the FIRST derive still runs.
-        if (Mappings.IsEmpty() && ck_input_button_map_processor::Get_AnyMappedButtonHasKeys(InCurrent._Associations))
+        if (Mappings.IsEmpty() && ck_input_button_map_processor::Get_AnyMappedButtonHasKeys(InButtonMapComp._Associations))
         {
             input::VeryVerbose
             (
@@ -186,7 +186,7 @@ namespace ck
         // Associations are rebuilt from the profile rather than patched against it, so a mapping that stopped
         // being player-mappable is left holding no keys instead of its last ones. Identities are never
         // touched here — that is the stability contract the whole tier exists for.
-        for (auto& Association : InCurrent._Associations)
+        for (auto& Association : InButtonMapComp._Associations)
         {
             if (Association.Get_ButtonId().Get_Tier() != ECk_Input_ButtonTier::Mapped)
             { continue; }
@@ -206,11 +206,11 @@ namespace ck
             const auto ButtonId = FCk_Input_ButtonId{ECk_Input_ButtonTier::Mapped, Mapping.GetMappingName()};
 
             const auto ExistingIndex = ck_input_button_map_processor::Get_IndexOfButton(
-                InCurrent._Associations, ButtonId);
+                InButtonMapComp._Associations, ButtonId);
 
             const auto Index = ExistingIndex != INDEX_NONE
                 ? ExistingIndex
-                : InCurrent._Associations.Emplace(FCk_Input_ButtonAssociation{ButtonId});
+                : InButtonMapComp._Associations.Emplace(FCk_Input_ButtonAssociation{ButtonId});
 
             const auto& CurrentKey = Mapping.GetCurrentKey();
 
@@ -261,12 +261,12 @@ namespace ck
                     TEXT("InputButtonMap [{}] derived Mapped button [{}] with only axis keys [{}] - it can never "
                          "produce a press edge, so nothing naming it will ever complete"),
                     InButtonMap,
-                    InCurrent._Associations[Kvp.Key].Get_ButtonId().Get_Name(),
+                    InButtonMapComp._Associations[Kvp.Key].Get_ButtonId().Get_Name(),
                     ck_input_button_map_processor::Get_KeyNamesForDisplay(Keys)
                 );
             }
 
-            InCurrent._Associations[Kvp.Key].Set_Keys(MoveTemp(Keys));
+            InButtonMapComp._Associations[Kvp.Key].Set_Keys(MoveTemp(Keys));
         }
 
         input::VeryVerbose
@@ -283,7 +283,7 @@ namespace ck
         DoHandleRequest(
             HandleType InButtonMap,
             const FFragment_InputSource_Params& InSourceParams,
-            FFragment_InputButtonMap_Current& InCurrent,
+            FFragment_InputButtonMap& InButtonMapComp,
             const FCk_Request_InputButtonMap_RegisterPhysicalButton& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -291,7 +291,7 @@ namespace ck
         const auto ButtonId = FCk_Input_ButtonId{ECk_Input_ButtonTier::Physical, Key.GetFName()};
 
         const auto ExistingIndex = ck_input_button_map_processor::Get_IndexOfButton(
-            InCurrent._Associations, ButtonId);
+            InButtonMapComp._Associations, ButtonId);
 
         // A physical button's association is the key itself, so re-registering one cannot change anything the
         // caller asked for — the intent already holds.
@@ -301,7 +301,7 @@ namespace ck
         auto Association = FCk_Input_ButtonAssociation{ButtonId};
         Association.Set_Keys(TArray<FKey>{Key});
 
-        InCurrent._Associations.Emplace(Association);
+        InButtonMapComp._Associations.Emplace(Association);
 
         input::VeryVerbose
         (

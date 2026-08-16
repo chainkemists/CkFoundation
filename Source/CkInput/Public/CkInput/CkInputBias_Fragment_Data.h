@@ -13,13 +13,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    class FProcessor_InputBias_HandleRequests;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UENUM(BlueprintType)
 enum class ECk_InputBias_AxisInversion : uint8
 {
@@ -129,18 +122,16 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InputBias);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The live conditioning table of one input source: at most one row per axis key, and an axis with no row passes
-// through untouched. This is params rather than settings because the whole point of the stage is that a game
-// retunes it while it runs — Request_SetAxisBias edits this array in place.
+// The authored conditioning table of one input source: at most one row per axis key, and an axis with no row
+// passes through untouched. These are start values only — Add seeds ck::FFragment_InputBias_Tunables from them
+// and Request_SetAxisBias retunes THAT, so the authored rows never track what the game is conditioning with.
 USTRUCT(BlueprintType)
-struct CKINPUT_API FCk_Fragment_InputBias_ParamsData
+struct CKINPUT_API FCk_InputBias_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InputBias_ParamsData);
-
-    friend class ck::FProcessor_InputBias_HandleRequests;
+    CK_GENERATED_BODY(FCk_InputBias_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -151,7 +142,7 @@ public:
     CK_PROPERTY_GET(_AxisBiases);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InputBias_ParamsData, _AxisBiases);
+    CK_DEFINE_CONSTRUCTORS(FCk_InputBias_Spec, _AxisBiases);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

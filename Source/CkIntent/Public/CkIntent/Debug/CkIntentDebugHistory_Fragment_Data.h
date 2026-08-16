@@ -23,12 +23,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IntentDebugHis
  * scrubber — and the two are deliberately independent knobs.
  */
 USTRUCT(BlueprintType)
-struct CKINTENT_API FCk_Fragment_IntentDebugHistory_ParamsData
+struct CKINTENT_API FCk_IntentDebugHistory_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntentDebugHistory_ParamsData);
+    CK_GENERATED_BODY(FCk_IntentDebugHistory_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -39,7 +39,7 @@ public:
     CK_PROPERTY_GET(_Capacity);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntentDebugHistory_ParamsData, _Capacity);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntentDebugHistory_Spec, _Capacity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

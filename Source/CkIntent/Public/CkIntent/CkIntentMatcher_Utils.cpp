@@ -31,7 +31,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_IntentMatcher_UE,
     FCk_Handle_IntentMatcher,
     ck::FFragment_IntentMatcher_Params,
-    ck::FFragment_IntentMatcher_Current);
+    ck::FFragment_IntentMatcher);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ auto
     UCk_Utils_IntentMatcher_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_IntentMatcher_ParamsData& InParams)
+        const FCk_IntentMatcher_Spec& InParams)
     -> FCk_Handle_IntentMatcher
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -67,7 +67,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IntentMatcher_Params>(InParams);
-    InHandle.Add<ck::FFragment_IntentMatcher_Current>();
+    InHandle.Add<ck::FFragment_IntentMatcher>();
 
     ck::intent::Verbose
     (
@@ -92,7 +92,7 @@ auto
     if (Index == INDEX_NONE)
     { return ECk_Intent_Phase::Idle; }
 
-    return InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[Index].Get_Phase();
+    return InMatcher.Get<ck::FFragment_IntentMatcher>().Get_PhaseRows()[Index].Get_Phase();
 }
 
 auto
@@ -107,7 +107,7 @@ auto
     if (Index == INDEX_NONE)
     { return ECk_Intent_Phase::Idle; }
 
-    return InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[Index].Get_Phase();
+    return InMatcher.Get<ck::FFragment_IntentMatcher>().Get_PhaseRows()[Index].Get_Phase();
 }
 
 auto
@@ -196,7 +196,7 @@ auto
         const FCk_Handle_IntentMatcher& InMatcher)
     -> bool
 {
-    return NOT InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_ActiveSet().Get_IsEmpty();
+    return NOT InMatcher.Get<ck::FFragment_IntentMatcher>().Get_ActiveSet().Get_IsEmpty();
 }
 
 auto
@@ -205,7 +205,7 @@ auto
         const FCk_Handle_IntentMatcher& InMatcher)
     -> int32
 {
-    return InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_ActiveSet().Get_Intents().Num();
+    return InMatcher.Get<ck::FFragment_IntentMatcher>().Get_ActiveSet().Get_Intents().Num();
 }
 
 auto
@@ -222,7 +222,7 @@ auto
         const FCk_Handle_IntentMatcher& InMatcher)
     -> TArray<FCk_Intent_ScanDiagnostic>
 {
-    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher_Current>();
+    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher>();
     const auto& Entries = Current.Get_ScanDiagnostics();
 
     if (Entries.IsEmpty())
@@ -252,7 +252,7 @@ auto
 {
     auto Keys = TArray<FKey>{};
 
-    for (const auto& Registered : InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_RegisteredCaptures())
+    for (const auto& Registered : InMatcher.Get<ck::FFragment_IntentMatcher>().Get_RegisteredCaptures())
     {
         for (const auto& Key : Registered.Get_Keys())
         {
@@ -331,7 +331,7 @@ auto
         return InMatcher;
     }
 
-    auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>()._PhaseRows[Index];
+    auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher>()._PhaseRows[Index];
 
     const auto PhaseIsClaimable = Row._Phase == ECk_Intent_Phase::Completed ||
                                   Row._Phase == ECk_Intent_Phase::Active;
@@ -443,7 +443,7 @@ auto
     if (InIntentIndex == INDEX_NONE)
     { return INDEX_NONE; }
 
-    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[InIntentIndex];
+    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher>().Get_PhaseRows()[InIntentIndex];
 
     // The row carries one frame for whichever phase it is in, so a completion frame is only a completion frame
     // while the row says Completed.
@@ -463,7 +463,7 @@ auto
     if (InIntentIndex == INDEX_NONE)
     { return INDEX_NONE; }
 
-    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[InIntentIndex];
+    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher>().Get_PhaseRows()[InIntentIndex];
 
     // Gated for the same reason the completion frame is: the row carries one frame for whichever phase it is in,
     // and a level that has already been released names the frame it was released on, not the one it began at.
@@ -483,7 +483,7 @@ auto
     if (InIntentIndex == INDEX_NONE)
     { return {}; }
 
-    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher_Current>().Get_PhaseRows()[InIntentIndex];
+    const auto& Row = InMatcher.Get<ck::FFragment_IntentMatcher>().Get_PhaseRows()[InIntentIndex];
 
     if (Row.Get_Phase() != ECk_Intent_Phase::Completed && Row.Get_Phase() != ECk_Intent_Phase::Active)
     { return {}; }
@@ -516,7 +516,7 @@ auto
     if (NOT InIntentTag.IsValid())
     { return INDEX_NONE; }
 
-    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher_Current>();
+    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher>();
     const auto& Intents = Current.Get_ActiveSet().Get_Intents();
 
     const auto Index = Intents.IndexOfByPredicate(
@@ -543,7 +543,7 @@ auto
     if (InIntentName == NAME_None)
     { return INDEX_NONE; }
 
-    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher_Current>();
+    const auto& Current = InMatcher.Get<ck::FFragment_IntentMatcher>();
     const auto& Intents = Current.Get_ActiveSet().Get_Intents();
 
     const auto Index = Intents.IndexOfByPredicate(

@@ -45,7 +45,7 @@ public:
     static FCk_Handle_IntentDebugHistory
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_IntentDebugHistory_ParamsData& InParams);
+        const FCk_IntentDebugHistory_Spec& InParams);
 
 public:
     static bool

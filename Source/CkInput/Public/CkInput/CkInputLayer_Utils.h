@@ -48,7 +48,7 @@ public:
     static FCk_Handle_InputLayer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_InputLayer_ParamsData& InParams);
+        const FCk_InputLayer_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InputLayer",
@@ -56,7 +56,7 @@ public:
     static FCk_Handle_InputLayer
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_InputLayer_ParamsData& InParams);
+        const FCk_InputLayer_Spec& InParams);
 
 public:
     static bool
@@ -261,17 +261,17 @@ private:
     static auto
     DoGet_RegistrationIsValid(
         const FCk_Handle& InContext,
-        const FCk_Fragment_InputLayer_ParamsData& InParams) -> bool;
+        const FCk_InputLayer_Spec& InParams) -> bool;
 
     static auto
     DoAddLayer(
         FCk_Handle& InHandle,
-        const FCk_Fragment_InputLayer_ParamsData& InParams) -> FCk_Handle_InputLayer;
+        const FCk_InputLayer_Spec& InParams) -> FCk_Handle_InputLayer;
 
     static auto
     DoCreateLayer(
         FCk_Handle& InOwner,
-        const FCk_Fragment_InputLayer_ParamsData& InParams) -> FCk_Handle_InputLayer;
+        const FCk_InputLayer_Spec& InParams) -> FCk_Handle_InputLayer;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
