@@ -263,6 +263,14 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   constraint entity for destroy; plain EndPlay handles the cascade case (constraint child dies
   with body A). Requests: SetEnabled (a disabled link is a heal-able rope cut),
   Distance_SetRange, Hinge_SetMotor.
+  **Read surface for the two bodies** (P8-D55): `Get_BodyA` / `Get_BodyB` return them as
+  `FCk_Handle_JoltBody`, and `Get_IsBodyBWorldAnchor` tells "anchored to the world by design" apart
+  from "body B's entity died". They exist because `FFragment_JoltConstraint_Current::_BodyA/_BodyB`
+  are private behind a friend list of the constraint's OWN processors, and a presentation consumer
+  that only wants to NAME the pair has no business being added to it — a read accessor on the utils
+  is the doctrine-conformant spot, and widening the friend list was the alternative that was rejected.
+  Body B is an empty handle for a world anchor and for a dead body alike; the flag is what separates
+  them.
 - **Rope builder** (`Constraint/CkJoltRope_Utils.h`): `UCk_Utils_JoltRope_UE::Create_Rope(Owner,
   FCk_JoltRope_ParamsData)` — N Dynamic sphere segments (children of Owner) linked Rigid (point
   constraints at boundaries) or Springy (auto-distance + spring between centers), anchored to the
@@ -725,6 +733,40 @@ physics system owns — the same rule that puts the body sample there — and sp
   diagnostic scalar that orders nothing. A frame running four sub-steps therefore reports the LAST sub-step's
   pairs; reporting all four as one step's is the number a stats panel would misread as a spike.
 
+### Health scan — problem bodies (Phase 8)
+
+The four ways a body in a shipping scene stops being physically meaningful, answered by the capture
+so a debugger never has to read `JPH::PhysicsSystem` for them either.
+
+```cpp
+Target->Set_ProblemThresholds(FCk_Jolt_DebugDraw_ProblemThresholds{RunawayVelocityCmS, KillZ});
+const TMap<uint64, ECk_Jolt_DebugDraw_ProblemFlags>& Flagged = Target->Get_ProblemBodies();
+Target->Set_ProblemThresholds({});   // disarm
+```
+
+- `ECk_Jolt_DebugDraw_ProblemFlags` — `NaNTransform`, `NaNVelocity`, `RunawayVelocity`, `BelowKillZ`,
+  `ZeroExtentBounds`. A bitmask: one body can be several kinds of broken at once.
+- **OFF by default, and unset means OFF.** The scan is an extra O(active) walk; nothing pays for it
+  while no consumer is showing the result. `Set_ProblemThresholds` also **drops the last verdict**, so a
+  threshold change can never leave a body flagged by the old bar.
+- **The two numbers are POLICY and CkJolt owns neither.** The runaway bar is a per-user debugger
+  preference and KillZ belongs to `AWorldSettings` — both are pushed in. A facility that hard-coded
+  "5000 cm/s" would be making a project decision inside a physics module.
+- **`Scan_ProblemBodies` is its own capture step, not a hook inside `Draw_Body`.** The body passes SKIP an
+  unchanged inactive body outright (§ Incremental full pass), and a scan that inherited that skip would
+  answer "nothing is wrong" for every body the incremental pass did not touch.
+- ⚠ **O(ACTIVE), so it is a scan of what is MOVING.** A body that fell out of the world and then fell
+  asleep down there is not re-flagged — it is caught on the way down, which is when a debugger is
+  watching. Widening it to every body would make it O(all) on a walk that is already O(all).
+- Facility-owned bodies (the drag anchor) are excluded, like everywhere else.
+- The verdict is refilled from scratch every capture, so **a flag clears the moment its condition does**.
+- `ck::jolt::debug_draw::Compute_ProblemFlags(Position, Rotation, LinearVelocity, WorldBounds, Thresholds)`
+  is the predicate, public and pure. It is public deliberately: a NaN cannot be INSTALLED on a live body
+  from a test — `BodyInterface::SetLinearVelocity` clamps and every `MotionProperties` setter asserts
+  (`JPH_ENABLE_ASSERTS` is on in every configuration) — so calling the predicate is the only way to pin
+  the two NaN arms. `BelowKillZ` tests the AABB's **max** Z, so a body straddling the plane is still in
+  the world.
+
 ### Contact recording
 
 Contacts exist ONLY during `PhysicsSystem::Update` — there is nothing left to read once it returns — so
@@ -925,6 +967,7 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.DragMovesDynamicBody` | a queued drag request does NOT begin the drag — applying the queue does; the drag adds exactly one anchor body and one constraint and publishes one internal key; over 120 fixed steps the body ends at least HALFWAY closer to where it is being pulled (the discriminating leg — "the call did not crash" would pass with no spring at all), and the state names the dragged body and the anchor point; ending it returns the body count and the constraint count to their pre-drag values, empties the internal-key set and leaves no drag state; a STATIC and a KINEMATIC body are each refused with no anchor and no constraint left behind; a second `Request_BeginDrag` REPLACES the live drag (one anchor, one constraint, the state names the SECOND body); destroying the dragged body under the drag ends it on the next apply with no dangling constraint and no anchor; `Shutdown` mid-drag leaves neither either |
 | `Ck.Jolt.DebugDraw.InternalBodiesAreInvisible` | the SAME world and the SAME ray, twice: without the internal set the anchor draws like any other body and a ray straight through it picks it BY KEY; with it, becoming internal releases its instances at once (no capture needed), a capture never draws it again, and the ray picks nothing |
 | `Ck.Jolt.DebugDraw.StatsSampled` | nothing is sampled before the first capture; the first one samples (age 0) and its counts are the fixture's own population and budget; the pushed contact-pair field is zero until pushed and non-zero after, over two touching bodies actually stepped; then a body is added and for the next 29 captures the SAMPLED count stays stale (never wrong) while the un-throttled active count follows immediately, and the 30th refreshes it back to the truth |
+| `Ck.Jolt.DebugDraw.ProblemBodiesFlagTheBrokenOnes` | two halves. The PURE predicate first (`Compute_ProblemFlags`), because a NaN cannot be installed on a live Jolt body from a test: a NaN position flags the transform, a NaN velocity flags the velocity and is NOT also reported as a runaway, a velocity past the bar is, a zero-extent box is flagged, a body wholly under KillZ has fallen out of the world while one STRADDLING it has not, and a healthy body is flagged with nothing. Then the capture path: an unarmed target scans nothing whatever the world is doing; armed, exactly the runaway body is in the map and the healthy one is not; slowing it down clears the flag on the next capture and speeding it up re-flags it; disarming empties the verdict on the spot and a capture with no thresholds leaves it empty |
 | `Ck.Jolt.DebugDraw.Benchmark.ScaleMatrix` (`Test_JoltDebugDraw_Benchmark.cpp`) | measurement with loose sanity gates at N ∈ {1k, 10k, 100k}: first pass, steady state, revision re-run, pick, and a selection-change re-armed pass, logged as `[JoltDebugDrawBench] N=… case=… ms=…`. The numbers are the product; the assertions are deliberately wide bounds (steady state < 50 ms, everything else < 2000 ms) that only an algorithmic-class regression trips, so they gate without flaking. A sixth run repeats N=100k with EVERY per-body draw flag on (`allflags_*` cases) — **measured, not gated**, because redrawing every body every capture is a different algorithmic class by construction |
 
 ---
