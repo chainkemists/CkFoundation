@@ -4,12 +4,17 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "HAL/PlatformTime.h"
+
+#include "NavigationSystem.h"
+#include "NavigationData.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +25,28 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnPathResolved);
 DECLARE_CYCLE_STAT(TEXT("Crowd::OnPathResolved"), STAT_CkCrowd_OnPathResolvedProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_crowd_agent_on_path_resolved_processor
+{
+    // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
+    // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
+    // to its projection-only form.
+    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ANavigationData*
+    {
+        if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
+            ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
+        { return nullptr; }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
+        const auto NavSys = ck::IsValid(World)
+            ? UNavigationSystemV1::GetCurrent(World)
+            : static_cast<UNavigationSystemV1*>(nullptr);
+
+        return ck::IsValid(NavSys)
+            ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
+            : static_cast<ANavigationData*>(nullptr);
+    }
+}
 
 namespace ck
 {
@@ -152,14 +179,30 @@ namespace ck
                 // this, Steering aims at the behind-corner (its plane test anchors on the agent's own
                 // install location, so "crossed" never fires) and the agent visibly walks BACKWARD to
                 // the corner before turning around — the "360 at path start" bug. The FINAL waypoint
-                // is never skipped (loop bound), matching Steering's retirement rule.
+                // is never skipped (loop bound), matching Steering's retirement rule — as does the
+                // navigability gate: the projection test is laterally blind, so a corner beside the
+                // agent reads as passed while the chord onward from where it stands cuts the hole
+                // the planner routed around.
+                const auto NavDataForGate =
+                    ck_crowd_agent_on_path_resolved_processor::Get_NavDataForChordGate(InHandle);
+
+                auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
+                {
+                    if (ck::Is_NOT_Valid(NavDataForGate))
+                    { return true; }
+
+                    auto HitLocation = FVector::ZeroVector;
+                    return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, FSharedConstNavQueryFilter{});
+                };
+
                 const auto SkippedWaypointCount =
                     ck_crowd_agent_path_follow_algorithm::SkipAlreadyPassedLeadingWaypoints(
                         InPathFollow.Get_CurrentSegmentStart(),
                         Wps,
                         InPathFollow._WaypointIndex,
                         InPathFollow._CurrentSegmentStart,
-                        InPathFollow.Get_ProtectedLeadingWaypointCount());
+                        InPathFollow.Get_ProtectedLeadingWaypointCount(),
+                        IsChordNavigable);
 
                 if (SkippedWaypointCount > 0)
                 {

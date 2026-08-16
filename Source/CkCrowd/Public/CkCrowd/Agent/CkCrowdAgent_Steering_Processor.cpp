@@ -2,11 +2,16 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
+
+#include "NavigationSystem.h"
+#include "NavigationData.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,6 +22,16 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_Steering);
 DECLARE_CYCLE_STAT(TEXT("Crowd::Steering"), STAT_CkCrowd_SteeringProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_crowd_agent_steering_processor
+{
+    // Standing ON the corner, the chord to the next waypoint IS the path segment, and a navmesh
+    // raycast running exactly along a boundary edge can report a spurious hit — so the last few
+    // uu retire unconditionally rather than risk a corner that can never be given up. Kept well
+    // under the lateral offsets that produce the defect this gate exists for: a measured 4.6uu
+    // offset beside a corner had a blocked chord, and waving that through is the bug.
+    constexpr auto WaypointRetirementNavQueryEpsilonUu = 3.0;
+}
 
 namespace ck
 {
@@ -56,6 +71,48 @@ namespace ck
 
         const auto CurrentLoc = InTransform.Get_Transform().GetLocation();
 
+        // BOTH retirement tests below are laterally blind — the plane through the corner is
+        // unbounded, and proximity says nothing about which side of the corridor the agent stands
+        // on. The polyline is FROZEN (Detour re-string-pulls from the agent's current position
+        // every frame; this solver cannot), so the chord to the next waypoint is only walkable
+        // while the agent is still ON the corridor. Give a corner up from beside a UNavArea_Null
+        // hole and steering aims through the hole face, ConstrainToNavmesh eats the whole
+        // displacement, and the agent walks on the spot until block detection notices. The corner
+        // is on-mesh by construction, so holding it costs one turn.
+        //
+        // Resolved on the first frame a retirement condition actually fires — at corners, not on
+        // every frame of a straight run — so an agent between corners pays nothing for the gate.
+        auto NavDataIsResolved = false;
+        auto NavData = static_cast<ANavigationData*>(nullptr);
+
+        const auto Get_NavDataForGate = [&]() -> ANavigationData*
+        {
+            if (NavDataIsResolved)
+            { return NavData; }
+
+            NavDataIsResolved = true;
+
+            if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
+                ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
+            { return NavData; }
+
+            // A flying agent's corridor comes from a volumetric provider, so a Recast ray through
+            // free space says nothing about it and would strand it on a waypoint it can reach.
+            if (InHandle.Has<FTag_CrowdAgent_Flying>())
+            { return NavData; }
+
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+            const auto NavSys = ck::IsValid(World)
+                ? UNavigationSystemV1::GetCurrent(World)
+                : static_cast<UNavigationSystemV1*>(nullptr);
+
+            NavData = ck::IsValid(NavSys)
+                ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
+                : static_cast<ANavigationData*>(nullptr);
+
+            return NavData;
+        };
+
         // The plane test does the real work: the minimum turning radius (MaxSpeed / MaxTurnRate,
         // 60cm at defaults) structurally EXCEEDS _WaypointArrivalRadius (25cm), so proximity alone
         // cannot retire a waypoint the agent's turn-limited arc missed and path-follow would then
@@ -66,8 +123,8 @@ namespace ck
         {
             const auto& Waypoint = Waypoints[InPathFollow._WaypointIndex];
 
-            const auto WithinArrivalRadius =
-                FVector::Dist(CurrentLoc, Waypoint) <= WaypointArrivalRadius;
+            const auto DistanceToWaypoint = FVector::Dist(CurrentLoc, Waypoint);
+            const auto WithinArrivalRadius = DistanceToWaypoint <= WaypointArrivalRadius;
 
             const auto CrossedWaypointPlane = [&]() -> bool
             {
@@ -81,6 +138,30 @@ namespace ck
             }();
 
             if (NOT (WithinArrivalRadius || CrossedWaypointPlane))
+            { break; }
+
+            const auto ChordIsNavigable = [&]() -> bool
+            {
+                if (DistanceToWaypoint <=
+                    ck_crowd_agent_steering_processor::WaypointRetirementNavQueryEpsilonUu)
+                { return true; }
+
+                const auto GateNavData = Get_NavDataForGate();
+
+                // No nav data (or the gate switched off) is the pre-gate world, where the navmesh
+                // constraint is a pass-through too — nothing here to disagree with.
+                if (ck::Is_NOT_Valid(GateNavData))
+                { return true; }
+
+                auto HitLocation = FVector::ZeroVector;
+                return NOT GateNavData->Raycast(
+                    CurrentLoc,
+                    Waypoints[InPathFollow._WaypointIndex + 1],
+                    HitLocation,
+                    FSharedConstNavQueryFilter{});
+            }();
+
+            if (NOT ChordIsNavigable)
             { break; }
 
             InPathFollow._CurrentSegmentStart = Waypoint;

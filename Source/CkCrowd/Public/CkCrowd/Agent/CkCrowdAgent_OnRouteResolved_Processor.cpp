@@ -4,7 +4,9 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -13,6 +15,9 @@
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
 #include "HAL/PlatformTime.h"
+
+#include "NavigationSystem.h"
+#include "NavigationData.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,6 +28,28 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnRouteResolved);
 DECLARE_CYCLE_STAT(TEXT("Crowd::OnRouteResolved"), STAT_CkCrowd_OnRouteResolvedProc, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_crowd_agent_on_route_resolved_processor
+{
+    // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
+    // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
+    // to its projection-only form.
+    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ANavigationData*
+    {
+        if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
+            ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
+        { return nullptr; }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
+        const auto NavSys = ck::IsValid(World)
+            ? UNavigationSystemV1::GetCurrent(World)
+            : static_cast<UNavigationSystemV1*>(nullptr);
+
+        return ck::IsValid(NavSys)
+            ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
+            : static_cast<ANavigationData*>(nullptr);
+    }
+}
 
 namespace ck
 {
@@ -200,13 +227,29 @@ namespace ck
                 // reset cursor aims back at an obsolete lateral projection before turning forward.
                 if (IsWalking)
                 {
+                    // The projection test is laterally blind: a corner BESIDE the agent reads as
+                    // passed while the chord onward from where it stands cuts the geometry the
+                    // route was spliced around, which installs an aim the navmesh clamp then eats.
+                    const auto NavDataForGate =
+                        ck_crowd_agent_on_route_resolved_processor::Get_NavDataForChordGate(InHandle);
+
+                    auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
+                    {
+                        if (ck::Is_NOT_Valid(NavDataForGate))
+                        { return true; }
+
+                        auto HitLocation = FVector::ZeroVector;
+                        return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, FSharedConstNavQueryFilter{});
+                    };
+
                     const auto SkippedWaypointCount =
                         ck_crowd_agent_path_follow_algorithm::SkipAlreadyPassedLeadingWaypoints(
                             InPathFollow.Get_CurrentSegmentStart(),
                             InstalledWaypoints,
                             InPathFollow._WaypointIndex,
                             InPathFollow._CurrentSegmentStart,
-                            InPathFollow.Get_ProtectedLeadingWaypointCount());
+                            InPathFollow.Get_ProtectedLeadingWaypointCount(),
+                            IsChordNavigable);
 
                     if (SkippedWaypointCount > 0)
                     {
