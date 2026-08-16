@@ -505,7 +505,7 @@ auto
     { return {}; }
 
     // Refused rather than left to misbehave quietly: the curves are sampled forward by time and
-    // ignore FFragment_Tween_Current's reversed flag, so a Yoyo's return leg would replay the curve
+    // ignore FFragment_Tween's reversed flag, so a Yoyo's return leg would replay the curve
     // IDENTICALLY instead of backwards. A motion that must come back authors the return in its keys.
     CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
         TEXT("Cannot create a curve-offset rotation tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InEntity)
