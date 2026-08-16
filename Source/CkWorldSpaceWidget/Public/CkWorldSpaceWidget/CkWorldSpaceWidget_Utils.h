@@ -65,6 +65,13 @@ public:
         bool InEnabled,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Get Enable Disable")
+    static ECk_EnableDisable
+    Get_EnableDisable(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
+
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
               DisplayName="[Ck][WorldSpaceWidget] Request Set Location Info",

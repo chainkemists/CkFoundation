@@ -18,6 +18,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Current>,
+            TExclude<FTag_WorldSpaceWidget_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -43,6 +44,7 @@ namespace ck
             ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Current>,
             FTag_WorldSpaceWidget_NeedsUpdateScaling,
+            TExclude<FTag_WorldSpaceWidget_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

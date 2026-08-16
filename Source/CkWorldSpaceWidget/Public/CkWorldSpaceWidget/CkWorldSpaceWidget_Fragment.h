@@ -20,6 +20,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ECS_TAG(FTag_WorldSpaceWidget_NeedsUpdateScaling);
+    CK_DEFINE_ECS_TAG(FTag_WorldSpaceWidget_Disabled);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -54,7 +55,6 @@ namespace ck
         TWeakObjectPtr<UCk_WorldSpaceWidget_Wrapper_UE> _WrapperWidget;
         TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
         TWeakObjectPtr<UWidgetComponent> _WidgetComponent;
-        bool _Enabled = true;
         // ScreenOverlay only: the wrapper's visibility as it was before the disable that
         // Collapsed it, so re-enabling restores what the widget actually had.
         TOptional<ESlateVisibility> _PreDisableVisibility;
@@ -64,7 +64,6 @@ namespace ck
         CK_PROPERTY_GET(_WrapperWidget);
         CK_PROPERTY_GET(_ContentWidgetHardRef);
         CK_PROPERTY_GET(_WidgetComponent);
-        CK_PROPERTY(_Enabled);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
