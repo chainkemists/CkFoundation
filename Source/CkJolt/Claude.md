@@ -511,8 +511,21 @@ facility does the rest:
   anchor can never be listed as a contact. Dropping the demand empties the list
   at once rather than leaving a superseded manifold readable. **This is not the ContactListener's
   record** (§ Contact recording) — that one exists only inside the solve; this is a query.
-- `TryPick_Body(Origin, Direction)` — oriented-box test in instance space over live instances, nearest
-  parametric hit wins; hidden classes are not pickable. O(live instances), for a click handler.
+- `TryPick_BodyHit(Origin, Direction, OutKey, OutHitPointWorld, OutDistance)` — the pick, with the HIT.
+  Oriented-box slab test in instance space over live instances, nearest parametric hit wins; hidden
+  classes and both overlays are not pickable. O(live instances), for a click handler.
+  **`OutHitPointWorld` is a point ON the picked body's oriented bounds** — where the ray entered it —
+  and `OutDistance` is the WORLD distance from the origin to that point, so an unnormalized direction
+  cannot make two picks incomparable. The slab distance is parametric along `InDirection`, and an
+  affine instance transform preserves that parameter, which is what lets a local-space test be turned
+  back into a world point by walking the original ray. A ray that starts INSIDE a body enters at zero:
+  the hit point is the origin and the distance is 0.
+  Consumers that place something at the grab point (the debugger's Ctrl+LMB drag) need this and nothing
+  less — a bounds centre is not on the surface the user clicked, and a wrong depth gives a drag spring a
+  lever arm that spins the body.
+- `TryPick_Body(Origin, Direction)` — the same pick, key only. A thin wrapper: the slab test computes
+  the hit either way, and a caller that only wants to know WHICH body should not have to declare three
+  out-parameters to find out. Returns `TOptional<uint64>`.
 
 ⚠ **Changing the selection or the isolation set re-arms the full inactive-body pass**
 (`_FullPassEverRan = false`), so a
@@ -648,7 +661,9 @@ the debug-draw facility's surface and simply reports an empty set when nothing c
 `UCk_Jolt_Subsystem::Request_BeginDrag(BodyKey, WorldGrabPoint)` / `Request_UpdateDrag(WorldTargetPoint)` /
 `Request_EndDrag()`, plus `Get_IsDragging()` and `Get_DragState()`, forwarding to the same names on `FJoltWorld`.
 `InBodyKey` is the **debug-draw body key** — the one `TryPick_Body` returns — so a click picks and drags the same
-body with nothing to convert in between.
+body with nothing to convert in between. `WorldGrabPoint` is the one `TryPick_BodyHit` reports: the pick that
+selects the body is also the pick that says where on it the user grabbed, so a consumer never has to reconstruct
+a depth from a bounds centre (P7-D70/i).
 
 - **The three requests QUEUE.** They arrive from a Slate click, and `FProcessor_JoltDebugDrag_Apply`
   (`FGroup_Transform`, `RunAfter` WaitForAsync + `FProcessor_JoltBody_KinematicPush`, `RunBefore`
@@ -952,7 +967,7 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.ContentBounds` | bounds track drawn content off the origin, widen with a far body, EXCLUDE a hidden class, and restore exactly on unhide without a re-capture |
 | `Ck.Jolt.DebugDraw.HighlightAddsOverlayInstance` | the selection ADDS an instance in its own Highlight bucket rather than moving one; hiding the body's own class leaves the overlay visible; a moving selection updates body and overlay in place (0 added / 0 removed); clearing releases the overlay immediately |
 | `Ck.Jolt.DebugDraw.HighlightedBodyBounds` | an already-drawn body yields selection bounds with NO re-capture, excluding the unselected body; a never-drawn body has none; clearing clears them |
-| `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns |
+| `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns. Plus the HIT half: `TryPick_BodyHit` agrees with the key-only pick, its point lies on the picked body's NEAR bounds face (a bounds centre or a far face fails), its distance is the world distance to that point, an unnormalized direction changes neither, and a miss reports no hit |
 | `Ck.Jolt.DebugDraw.SelectionSampleIsCaptureOwned` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
 | `Ck.Jolt.DebugDraw.PauseAndStepOnce` | drives `FProcessor_JoltWorld_PlanStep::DoTick` (and the Step processor) against a real `FJoltWorld` published as a registry context: a fat frame plans MORE than one step while running and the step loop records a non-zero solve duration; a debug-paused frame plans zero, frame after frame; an ENGINE pause on top of a pending step-once plans zero and does NOT eat the one-shot, which is then granted on the first unblocked frame as EXACTLY one step of one fixed dt with the accumulator untouched — the leg that separates "one step" from "this frame's worth of steps"; the next frame plans zero again; a request made while running is not banked for the next pause and an unconsumed one is discarded on resume |
 | `Ck.Jolt.DebugDraw.BodySampleFields` | the sampled fields are the SELECTED body's own — friction, restitution, gravity factor, object layer, shape type/sub-type, unit shape scale, a finite positive mass and a readable sleeping permission for a dynamic body; a static body reports INFINITE mass as 0 and its sleeping permission is never read (the assert-safety leg); a sensor reports itself as one; a rigid-body selection produces no character sample |
