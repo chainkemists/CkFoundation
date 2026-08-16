@@ -78,6 +78,32 @@ public:
     Get_OutputDirectoryForRootPath(
         const FString& InRootPath) -> FString;
 
+public:
+    /** The id this subsystem registers under with `FCk_AssetReferenceProviderRegistry`, and the word a consumer
+     *  prints beside the count. A function rather than a `static const FName`: an `FName` built during static
+     *  initialization runs before anything guarantees the name table is up. */
+    static auto
+    Get_ScriptReferenceProviderId() -> FName;
+
+    /**
+     * The `.as` files that reference `InAsset` through its generated accessor, or an empty array when none do.
+     *
+     * This is the ONLY way to learn that an asset is reachable from AngelScript. The reference is a text call to a
+     * generated `assets::` accessor resolved at runtime, so it creates no package dependency edge and
+     * `IAssetRegistry::GetReferencers` cannot see it — which is exactly why an auditor asking the graph alone will
+     * report a script-critical asset as unreferenced and offer it for deletion.
+     *
+     * Backed by the same two maps `HandleAssetsPreDelete` warns from, so the dialog and any tool consulting this
+     * agree by construction rather than by two copies of one rule. Sorted, because a caller printing the list must
+     * read the same on two machines and `FunctionUsageMap`'s storage order is a scan-order detail.
+     *
+     * Registered with `FCk_AssetReferenceProviderRegistry` under `"AngelScript"` at `Initialize`, which is how
+     * consumers reach it without linking this editor-only module.
+     */
+    auto
+    Get_ScriptReferencersOfAsset(
+        const FSoftObjectPath& InAsset) const -> TArray<FString>;
+
 private:
     auto
     OnAssetAdded(
