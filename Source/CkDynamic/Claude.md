@@ -65,6 +65,38 @@ comment-light; the *why* lives here.
   carry a field of that type (AngelScript — script structs cannot inherit); capture and hydration
   identify them through runtime `IsChildOf` / marker-typed-property scan. Do not use USTRUCT
   metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.
+- **`Get_IsLiveSessionField` — hydration never STOMPS a live delegate.** Alongside `CPF_Transient`,
+  the field-wise copy preserves every top-level delegate / multicast-delegate field, with no opt-in.
+  A delegate binds UObject + FunctionName, so across a rebuild+hydrate its saved form is stale or
+  empty *by construction* (it named objects in the torn-down world) while the live value is the set
+  of subscribers that bound during the rebuild. Copying the saved list over them silently
+  unsubscribes everyone, and the feature then keeps correct state and correct one-shot reads while
+  never notifying again — **"correct initial value, then frozen"** (BusterBlock 2026-08-16: a HUD
+  wallet showing the right balance that never moved; interact prompts and key hints that never
+  re-appeared after a load). Found across 46 unmarked BB `_Signals` fragments, which is why this is
+  a framework guard rather than a per-fragment marker: opt-in cannot survive the next new fragment.
+  **Limit — top-level fields only**, matching the `CPF_Transient` rule beside it. A delegate nested
+  in a struct- or array-typed member is copied wholesale, because "preserve the live one" is
+  undefined once the saved and live arrays differ in length; a subscriber-list fragment shaped that
+  way wants the whole-fragment `FCk_DynamicFragment_SnapshotTransient` marker instead. The two
+  divide cleanly: the guard covers delegate FIELDS, the marker covers subscriber-list FRAGMENTS.
+- **`Restore_UnresolvedHandles` — hydration never DOWNGRADES a live handle.** A fragment
+  field naming a construct-derived child (SceneNode, probe, Interactable, UnrealComponent, Tween) is
+  written fresh by the owner's replayed construction, but the SAVED value cannot resolve: those
+  children are unlabeled `FTag_ConstructSpawned` entities, which capture rule 3 classifies
+  save-transient, so their saved id remaps to a tombstone. The whole-fragment copy then replaced a
+  working handle with a dead one and the feature came back structurally complete but functionally
+  inert — only destroying and respawning the owner fixed it (BusterBlock 2026-08-16: a poster that
+  focused but never changed texture; a checkout counter whose settle offered no cash/credit option).
+  After the copy, any destination handle that is now invalid where the pre-copy value was valid is
+  restored. It stands down entirely when the pre-copy and post-copy walks visit different numbers of
+  handle slots, since a saved array of a different length shifts every later slot and positional
+  correspondence no longer holds. **Known trade:** a field the save deliberately CLEARED is
+  indistinguishable from one whose target failed to resolve (both arrive invalid), so a cleared field
+  keeps its construction-fresh value — holding a live handle is recoverable, holding a dead one is the
+  inert-feature bug. A field whose emptiness is load-bearing must persist that fact explicitly rather
+  than encode it as an invalid handle. `UPROPERTY(Transient)` remains the preferred per-field opt-out;
+  this is the backstop for fields nobody has audited yet.
 
 ### Cooked display schema (`CkDynamic_FragmentDisplaySchema.*`)
 

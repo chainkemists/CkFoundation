@@ -10,6 +10,7 @@
 
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
+#include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"               // ck::snapshot::ForEachHandle
 
 #include <NativeGameplayTags.h>
 #include <UObject/UnrealType.h> // TFieldIterator / FProperty (transient-preserving hydration copy)
@@ -26,24 +27,33 @@ namespace ck_dynamic_fragment
         return UCk_Utils_DynamicFragment_UE::Get_IsSnapshotTransient(InType);
     }
 
-    // A CPF_Transient field is a LIVE-SESSION value: the persistent save archive never wrote it
-    // (FProperty::ShouldSerializeValue) and the handle walker skips it, so the deserialized payload
-    // carries only its DEFAULT. A whole-struct assign would stomp the rebuilt world's freshly
-    // constructed value (e.g. a runtime child-entity handle written during construction replay)
-    // with that default — copy field-wise and preserve the destination's Transient values instead.
-    auto CopyFragment_PreservingTransientFields(const FInstancedStruct& InSource, FInstancedStruct& InDest) -> void
+    // The saved payload cannot carry a meaningful value for these, but the rebuilt world can:
+    // CPF_Transient is never written by the archive, and a delegate's saved form names objects from
+    // the torn-down world while the live value holds the subscribers that bound during the rebuild.
+    // Stomping either leaves a feature that reads correctly once and then never updates again.
+    // Top-level only — a nested delegate has no meaningful "live one" once array lengths differ;
+    // those fragments take the whole-struct SnapshotTransient marker instead.
+    auto Get_IsLiveSessionField(const FProperty* InProperty) -> bool
+    {
+        if (InProperty->HasAnyPropertyFlags(CPF_Transient))
+        { return true; }
+
+        return InProperty->IsA<FMulticastDelegateProperty>() || InProperty->IsA<FDelegateProperty>();
+    }
+
+    auto CopyFragment_PreservingLiveSessionFields(const FInstancedStruct& InSource, FInstancedStruct& InDest) -> void
     {
         const auto* Type = InSource.GetScriptStruct();
 
-        auto AnyTransient = false;
+        auto AnyPreserved = false;
         for (TFieldIterator<FProperty> It{Type}; It; ++It)
         {
-            if (It->HasAnyPropertyFlags(CPF_Transient))
-            { AnyTransient = true; break; }
+            if (Get_IsLiveSessionField(*It))
+            { AnyPreserved = true; break; }
         }
 
         const auto DestTypeMatches = InDest.GetScriptStruct() == Type;
-        if (NOT AnyTransient || NOT DestTypeMatches)
+        if (NOT AnyPreserved || NOT DestTypeMatches)
         {
             InDest = InSource;
             return;
@@ -51,9 +61,72 @@ namespace ck_dynamic_fragment
 
         for (TFieldIterator<FProperty> It{Type}; It; ++It)
         {
-            if (It->HasAnyPropertyFlags(CPF_Transient))
+            if (Get_IsLiveSessionField(*It))
             { continue; }
             It->CopyCompleteValue_InContainer(InDest.GetMutableMemory(), InSource.GetMemory());
+        }
+    }
+
+    // Collected BEFORE the hydration copy overwrites them; see Restore_UnresolvedHandles.
+    auto Collect_Handles(FInstancedStruct& InFragment) -> TArray<FCk_Handle>
+    {
+        auto Handles = TArray<FCk_Handle>{};
+
+        if (ck::Is_NOT_Valid(InFragment))
+        { return Handles; }
+
+        ck::snapshot::ForEachHandle(InFragment.GetScriptStruct(), InFragment.GetMutableMemory(),
+        [&Handles](FCk_Handle& InHandle) -> void
+        {
+            Handles.Emplace(InHandle);
+        });
+
+        return Handles;
+    }
+
+    // Hydration must never DOWNGRADE a live handle to a dead one: a construct-spawned child is
+    // unlabeled, so capture rule 3 never writes a row for it and its saved id remaps to a tombstone,
+    // leaving the feature structurally complete but inert. UPROPERTY(Transient) is the precise
+    // opt-out; this is the backstop for fields nobody has audited.
+    // Trade: a deliberately CLEARED field is indistinguishable from an unresolved one (both arrive
+    // invalid) and keeps its fresh value, so load-bearing emptiness must be persisted explicitly.
+    auto Restore_UnresolvedHandles(
+        const TArray<FCk_Handle>& InPreCopyHandles,
+        FInstancedStruct& InDest,
+        const UScriptStruct* InType,
+        const FCk_Handle& InOwner) -> void
+    {
+        if (InPreCopyHandles.IsEmpty() || InDest.GetScriptStruct() != InType)
+        { return; }
+
+        auto DestHandles = TArray<FCk_Handle*>{};
+        ck::snapshot::ForEachHandle(InType, InDest.GetMutableMemory(),
+            [&DestHandles](FCk_Handle& InHandle) -> void
+            {
+                DestHandles.Emplace(&InHandle);
+            });
+
+        // The walk is positional, so a differing slot count means a saved array of another length
+        // shifted every later field and slot i is no longer the same field on both sides.
+        if (DestHandles.Num() != InPreCopyHandles.Num())
+        {
+            ck::dynamic::Verbose(TEXT("v3 hydrate: skipping the unresolved-handle backstop on Entity [{}] fragment [{}] "
+                "— the saved layout holds [{}] handle slots against [{}] freshly constructed"),
+                InOwner, InType, DestHandles.Num(), InPreCopyHandles.Num());
+            return;
+        }
+
+        for (auto Index = 0; Index < DestHandles.Num(); ++Index)
+        {
+            const auto& PreCopyHandle = InPreCopyHandles[Index];
+
+            if (ck::IsValid(*DestHandles[Index]) || ck::Is_NOT_Valid(PreCopyHandle))
+            { continue; }
+
+            ck::dynamic::Verbose(TEXT("v3 hydrate: keeping the construction-fresh handle [{}] on Entity [{}] "
+                "fragment [{}] — the saved value did not resolve"), PreCopyHandle, InOwner, InType);
+
+            *DestHandles[Index] = PreCopyHandle;
         }
     }
 }
@@ -151,7 +224,15 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 // Commit every value before the first notification: a listener may destroy the entity, but it
                 // can no longer observe a half-hydrated set.
                 for (const auto& Resolved : ResolvedEntries)
-                { ck_dynamic_fragment::CopyFragment_PreservingTransientFields(*Resolved.Key, *Resolved.Value); }
+                {
+                    // Read first — the copy is what destroys them.
+                    const auto PreCopyHandles = ck_dynamic_fragment::Collect_Handles(*Resolved.Value);
+
+                    ck_dynamic_fragment::CopyFragment_PreservingLiveSessionFields(*Resolved.Key, *Resolved.Value);
+
+                    ck_dynamic_fragment::Restore_UnresolvedHandles(
+                        PreCopyHandles, *Resolved.Value, Resolved.Key->GetScriptStruct(), InEntity);
+                }
 
                 for (const auto& Resolved : ResolvedEntries)
                 {
