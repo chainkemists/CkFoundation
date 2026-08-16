@@ -932,7 +932,7 @@ auto
 	UCk_Utils_Goap_WorldState_UE::
 	DoApplyParentLink(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+		const FCk_Goap_WorldState_Spec& InParams)
 	-> void
 {
 	if (ck::Is_NOT_Valid(InParams.Get_FallbackParent()))
