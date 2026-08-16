@@ -1024,11 +1024,34 @@ public:
      * tighter than a world-space AABB and needs no per-instance box rebuild. Hidden colour classes and the
      * Highlight overlay are not pickable. O(live instances) per call — this is a click handler, not a tick.
      * InDirection needs no normalization; hit ordering is parametric along it.
+     *
+     * The thin wrapper over TryPick_BodyHit: the slab test computes the hit point either way, and a caller
+     * that only wants to know WHICH body should not have to declare three out-parameters to find out.
      */
     auto
     TryPick_Body(
         const FVector& InOrigin,
         const FVector& InDirection) const -> TOptional<uint64>;
+
+    /*
+     * The same pick, with the HIT rather than only the body (P7-D70/i). OutHitPointWorld is where the ray
+     * enters that body's oriented bounds — a point ON the surface the viewer clicked, which is what a drag
+     * needs for its grab point and what no amount of bounds-centre guessing can reconstruct. OutDistance is
+     * the world-space distance from InOrigin to that point, so it is comparable between calls whether or not
+     * InDirection was normalized.
+     *
+     * A ray whose origin is already INSIDE a body enters at zero: the hit point is the origin itself and the
+     * distance is 0. That is the slab test's own contract, not a special case added here.
+     *
+     * Returns false — and touches no out-parameter — when nothing was hit.
+     */
+    auto
+    TryPick_BodyHit(
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        uint64&        OutKey,
+        FVector&       OutHitPointWorld,
+        float&         OutDistance) const -> bool;
 
     /// World-space bounds of everything this target currently DRAWS — hidden classes are excluded, because the
     /// caller is a camera framing what the viewer can see. Invalid (`IsValid == 0`) when nothing is drawn.
