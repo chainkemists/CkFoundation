@@ -304,6 +304,49 @@ namespace ck::jolt::debug_draw
     }
 
     auto
+        Compute_ProblemFlags(
+            const FVector& InPosition,
+            const FQuat& InRotation,
+            const FVector& InLinearVelocity,
+            const FBox& InWorldBounds,
+            const FCk_Jolt_DebugDraw_ProblemThresholds& InThresholds)
+        -> ECk_Jolt_DebugDraw_ProblemFlags
+    {
+        auto Flags = ECk_Jolt_DebugDraw_ProblemFlags::None;
+
+        if (InPosition.ContainsNaN() || InRotation.ContainsNaN())
+        { EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::NaNTransform); }
+
+        if (InLinearVelocity.ContainsNaN())
+        { EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::NaNVelocity); }
+        else
+        {
+            // Only meaningful for a FINITE velocity: a NaN one compares false against every bar, and reporting
+            // it as "not a runaway" beside a NaN flag would read as the scan disagreeing with itself.
+            const auto RunawayBar = InThresholds.Get_RunawayVelocityCmS();
+
+            if (RunawayBar > 0.0f && InLinearVelocity.Size() > RunawayBar)
+            { EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::RunawayVelocity); }
+        }
+
+        if (InWorldBounds.IsValid == 0)
+        {
+            EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::ZeroExtentBounds);
+            return Flags;
+        }
+
+        if (InWorldBounds.GetExtent().IsNearlyZero())
+        { EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::ZeroExtentBounds); }
+
+        // The whole body has to be under the line, not just its centre — a body straddling KillZ is still in
+        // the world, and the engine's own kill check is the same one-sided test against the actor's location.
+        if (InWorldBounds.Max.Z < InThresholds.Get_KillZ())
+        { EnumAddFlags(Flags, ECk_Jolt_DebugDraw_ProblemFlags::BelowKillZ); }
+
+        return Flags;
+    }
+
+    auto
         Make_BodyKey(
             uint32 InIndexAndSequenceNumber)
         -> uint64
@@ -1600,6 +1643,37 @@ auto
     -> const TArray<FCk_Jolt_DebugDraw_ContactEntry>&
 {
     return _Impl->_SelectionContacts;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_ProblemThresholds(
+        TOptional<FCk_Jolt_DebugDraw_ProblemThresholds> InThresholds)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    _Impl->_ProblemThresholds = MoveTemp(InThresholds);
+
+    // The old verdict was reached against the old bar. Left standing until the next capture, it would report a
+    // body as broken by a threshold the caller has just replaced.
+    _Impl->_ProblemBodies.Reset();
+
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_ProblemThresholds() const
+    -> const TOptional<FCk_Jolt_DebugDraw_ProblemThresholds>&
+{
+    return _Impl->_ProblemThresholds;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_ProblemBodies() const
+    -> const TMap<uint64, ECk_Jolt_DebugDraw_ProblemFlags>&
+{
+    return _Impl->_ProblemBodies;
 }
 
 auto

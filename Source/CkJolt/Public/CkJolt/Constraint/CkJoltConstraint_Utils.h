@@ -84,6 +84,37 @@ public:
     Get_IsConstraintAdded(
         const FCk_Handle_JoltConstraint& InConstraint);
 
+    /*
+     * The two bodies the constraint joins, as they were handed to Create. Body B is INVALID for a
+     * world-anchored constraint (Get_IsBodyBWorldAnchor tells that apart from a body whose entity died,
+     * which the liveness reaper is about to act on).
+     *
+     * A read accessor rather than a widened friend list: the keys live on FFragment_JoltConstraint_Current,
+     * whose friends are its own processors, and a presentation consumer that only wants to NAME the two
+     * bodies has no business reaching into the fragment (P8-D55 / P5-D61 S8).
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|JoltConstraint",
+              DisplayName="[Ck][JoltConstraint] Get Body A")
+    static FCk_Handle_JoltBody
+    Get_BodyA(
+        const FCk_Handle_JoltConstraint& InConstraint);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|JoltConstraint",
+              DisplayName="[Ck][JoltConstraint] Get Body B")
+    static FCk_Handle_JoltBody
+    Get_BodyB(
+        const FCk_Handle_JoltConstraint& InConstraint);
+
+    // Whether an invalid body B means "anchored to the world by design" rather than "body B died".
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|JoltConstraint",
+              DisplayName="[Ck][JoltConstraint] Get Is Body B World Anchor")
+    static bool
+    Get_IsBodyBWorldAnchor(
+        const FCk_Handle_JoltConstraint& InConstraint);
+
     // Hinge only: the current rotation angle in degrees (0 = the creation pose). 0 on any other type
     // (with an ensure) and while the constraint is not yet created.
     UFUNCTION(BlueprintPure,

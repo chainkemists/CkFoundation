@@ -748,6 +748,59 @@ namespace ck_jolt_debugdraw_capture
     }
 
     /*
+     * The health scan (P8-D57). Deliberately its own walk rather than a hook inside Draw_Body: the body passes
+     * SKIP an unchanged inactive body outright, and a scan that inherited that skip would answer "nothing is
+     * wrong" for every body the incremental pass did not touch.
+     *
+     * O(active), and it does not run at all until a consumer arms it with thresholds. Facility-owned bodies are
+     * excluded for the same reason they are excluded everywhere else — the drag anchor is not the user's body.
+     */
+    auto
+        Scan_ProblemBodies(
+            FContext_Capture& InCtx)
+        -> void
+    {
+        auto& TargetImpl = *InCtx._TargetImpl;
+
+        TargetImpl._ProblemBodies.Reset();
+
+        if (NOT TargetImpl._ProblemThresholds.IsSet())
+        { return; }
+
+        const auto& Thresholds = *TargetImpl._ProblemThresholds;
+
+        auto ActiveBodyIds = JPH::BodyIDVector{};
+        InCtx._PhysicsSystem->GetActiveBodies(JPH::EBodyType::RigidBody, ActiveBodyIds);
+
+        for (const auto& BodyId : ActiveBodyIds)
+        {
+            const auto* Body = InCtx._LockInterface->TryGetBody(BodyId);
+
+            if (Body == nullptr)
+            { continue; }
+
+            const auto Key = Get_BodyKey(BodyId);
+
+            if (Get_IsInternalBody(TargetImpl, Key))
+            { continue; }
+
+            const auto WorldBounds = Body->GetWorldSpaceBounds();
+
+            const auto Flags = ck::jolt::debug_draw::Compute_ProblemFlags(
+                ck::jolt::Conv(Body->GetPosition()),
+                ck::jolt::Conv(Body->GetRotation()),
+                ck::jolt::Conv(Body->GetLinearVelocity()),
+                FBox{ck::jolt::Conv(WorldBounds.mMin), ck::jolt::Conv(WorldBounds.mMax)},
+                Thresholds);
+
+            if (Flags == ECk_Jolt_DebugDraw_ProblemFlags::None)
+            { continue; }
+
+            TargetImpl._ProblemBodies.Emplace(Key, Flags);
+        }
+    }
+
+    /*
      * P6-D48: the world's own counts, taken here because a presentation consumer must never read the physics system
      * itself — the same rule that puts the body sample here.
      *
@@ -1169,6 +1222,7 @@ auto
     Technique.ProcessAllSteps(Context);
 
     Sample_WorldStats(Context);
+    Scan_ProblemBodies(Context);
 
     // Outside every body scope on purpose: constraint drawing is whole-world and line-shaped, so it belongs to
     // the line channel rather than to any one body's instance slots. Still inside the active-target scope, which

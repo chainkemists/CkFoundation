@@ -394,6 +394,62 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
+ * What is WRONG with one body, as a bitmask, computed by the capture (P8-D57). None of it is a Jolt concept —
+ * these are the four ways a body in a shipping scene stops being physically meaningful, and a debugger opened
+ * because "something exploded" is looking for exactly one of them.
+ *
+ * NaNTransform / NaNVelocity are unconditional; RunawayVelocity and BelowKillZ are answered against thresholds
+ * the CALLER supplies, because "too fast" and "the floor of the world" are project policy and CkJolt owns none.
+ */
+enum class ECk_Jolt_DebugDraw_ProblemFlags : uint8
+{
+    None             = 0,
+    NaNTransform     = 1u << 0,
+    NaNVelocity      = 1u << 1,
+    RunawayVelocity  = 1u << 2,
+    BelowKillZ       = 1u << 3,
+    ZeroExtentBounds = 1u << 4,
+};
+
+ENUM_CLASS_FLAGS(ECk_Jolt_DebugDraw_ProblemFlags);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
+ * The two numbers the health scan cannot know for itself. Passing them in is what keeps the policy on the
+ * debugger's side of the boundary: KillZ is AWorldSettings' and the runaway bar is a per-user preference.
+ */
+struct CKJOLT_API FCk_Jolt_DebugDraw_ProblemThresholds
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_DebugDraw_ProblemThresholds);
+
+public:
+    FCk_Jolt_DebugDraw_ProblemThresholds() = default;
+
+    FCk_Jolt_DebugDraw_ProblemThresholds(
+        float InRunawayVelocityCmS,
+        float InKillZ)
+        : _RunawayVelocityCmS(InRunawayVelocityCmS)
+        , _KillZ(InKillZ)
+    {
+    }
+
+private:
+    /// Linear speed past which a body is a runaway. Zero or negative disables the check alone.
+    float _RunawayVelocityCmS = 0.0f;
+
+    /// World Z below which a body's AABB counts as fallen out of the world.
+    float _KillZ = -TNumericLimits<float>::Max();
+
+public:
+    CK_PROPERTY(_RunawayVelocityCmS);
+    CK_PROPERTY(_KillZ);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/*
  * What the world itself is doing, for a stats panel — filled BY THE CAPTURE from the physics system, in the same
  * async-safe window it draws from, so a consumer never reads JPH::PhysicsSystem for a count either (P6-D48).
  *
@@ -532,6 +588,23 @@ namespace ck::jolt::debug_draw
     };
 
     // ----------------------------------------------------------------------------------------------------------------
+
+    /*
+     * The health verdict on ONE body, from values the capture already has in hand. Free and pure so the four
+     * conditions can be pinned by a spec directly — a NaN velocity cannot be INJECTED through Jolt's body
+     * interface (SetLinearVelocity clamps, and every MotionProperties setter asserts), so the only way to prove
+     * the NaN arms are live is to call the predicate itself.
+     *
+     * The bounds are the body's WORLD-space AABB; an invalid box is reported as zero-extent, because a body the
+     * capture cannot bound is exactly as unrenderable as one whose shape has no size.
+     */
+    CKJOLT_API auto
+    Compute_ProblemFlags(
+        const FVector& InPosition,
+        const FQuat& InRotation,
+        const FVector& InLinearVelocity,
+        const FBox& InWorldBounds,
+        const FCk_Jolt_DebugDraw_ProblemThresholds& InThresholds) -> ECk_Jolt_DebugDraw_ProblemFlags;
 
     /*
      * The debug-draw slot key of a rigid body, from its BodyID's index+sequence number. This is the single
@@ -892,6 +965,28 @@ public:
     /// selected. Empty otherwise — including for a character selection, which has no shape query behind it.
     auto
     Get_SelectionContacts() const -> const TArray<FCk_Jolt_DebugDraw_ContactEntry>&;
+
+    /*
+     * Arms the per-capture health scan (P8-D57). UNSET is off, and off is the default: nothing pays for the scan
+     * while no consumer is showing the result. Setting it clears the last verdict, so a threshold change never
+     * leaves a body flagged by the OLD bar.
+     *
+     * The scan walks the ACTIVE rigid bodies only — O(active), the same order as the capture's own body pass.
+     * A body that fell out of the world and then fell ASLEEP down there is therefore not re-flagged; it is
+     * caught on the way down, which is when a debugger is watching.
+     */
+    auto
+    Set_ProblemThresholds(
+        TOptional<FCk_Jolt_DebugDraw_ProblemThresholds> InThresholds) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_ProblemThresholds() const -> const TOptional<FCk_Jolt_DebugDraw_ProblemThresholds>&;
+
+    /// Every body the last capture found something wrong with, keyed the same way every other consumer surface
+    /// keys a body. Refilled from scratch each capture, so a flag clears the moment its condition does. Empty
+    /// while no thresholds are set.
+    auto
+    Get_ProblemBodies() const -> const TMap<uint64, ECk_Jolt_DebugDraw_ProblemFlags>&;
 
     /*
      * Bodies the Jolt world created for its OWN internal use — today exactly the debug-drag anchor, a raw JPH
