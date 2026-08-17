@@ -331,6 +331,8 @@ public:
     // Request_Load — loudly and before any world teardown, never silently misread.
     static constexpr uint16 CurrentFormatVersion = 7;
 
+    static constexpr int32 k_AuditNotMeasured = -1;
+
 private:
     UPROPERTY()
     uint16 _FormatVersion = CurrentFormatVersion;
@@ -372,6 +374,8 @@ private:
     UPROPERTY()
     int32 _AnonymousSkippedCount = 0;
 
+    // -1 (k_AuditNotMeasured) when CaptureAuditMode was Disabled: nobody probed, so 0 would read as
+    // "no payloads were dropped" when the truth is "we did not look".
     UPROPERTY()
     int32 _UnlabeledWithPayloadAuditCount = 0;
 

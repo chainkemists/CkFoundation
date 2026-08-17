@@ -69,4 +69,12 @@ public:
     CK_PROPERTY_GET(_RefuseLoadsBelowBuildHash);
     CK_PROPERTY_GET(_CaptureAuditMode);
     CK_PROPERTY_GET(_CaptureAudit_MaxExamples);
+
+#if WITH_AUTOMATION_TESTS
+public:
+    // A test asserting audit behaviour must pin the mode: the project's own configuration would
+    // otherwise decide whether the assertion is even reachable.
+    auto TestOnly_Set_CaptureAuditMode(ECk_Snapshot_CaptureAuditMode InMode) -> void
+    { _CaptureAuditMode = InMode; }
+#endif
 };
