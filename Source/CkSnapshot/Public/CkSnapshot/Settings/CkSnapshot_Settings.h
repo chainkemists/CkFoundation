@@ -15,6 +15,18 @@ enum class ECk_Snapshot_OrphanSweepGate : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Snapshot_OrphanSweepGate);
 
+// Not a logging-verbosity knob: establishing whether a skipped entity carried a payload costs a full Produce
+// sweep per entity, so each mode buys diagnostic reach with save-frame time.
+UENUM(BlueprintType)
+enum class ECk_Snapshot_CaptureAuditMode : uint8
+{
+    Disabled,  // no probe, no dropped-payload signal; the only mode a shipped save pays nothing for
+    Summary,   // probe, then one aggregated Warning with counts and example entities
+    Detailed,  // one Warning per entity with the dropped payload's full ExportText (~0.45ms each)
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Snapshot_CaptureAuditMode);
+
 UCLASS(Config=Game, DefaultConfig, meta=(DisplayName="CkSnapshot"))
 class CKSNAPSHOT_API UCk_Snapshot_Settings : public UDeveloperSettings
 {
@@ -41,10 +53,20 @@ private:
     UPROPERTY(EditAnywhere, Config, Category="Strictness")
     bool _RefuseLoadsBelowBuildHash = false;
 
+    // A project shipping an autosave wants Disabled here and Summary on its dev configuration.
+    UPROPERTY(EditAnywhere, Config, Category="CaptureAudit")
+    ECk_Snapshot_CaptureAuditMode _CaptureAuditMode = ECk_Snapshot_CaptureAuditMode::Summary;
+
+    UPROPERTY(EditAnywhere, Config, Category="CaptureAudit",
+              meta=(EditCondition="_CaptureAuditMode == ECk_Snapshot_CaptureAuditMode::Summary", ClampMin="0"))
+    int32 _CaptureAudit_MaxExamples = 5;
+
 public:
     CK_PROPERTY_GET(_OrphanSweepGate);
     CK_PROPERTY_GET(_OrphanSweepGate_DurationSeconds);
     CK_PROPERTY_GET(_OrphanSweepGate_SignalName);
     CK_PROPERTY_GET(_RefuseLoadOnUnresolvedTypes);
     CK_PROPERTY_GET(_RefuseLoadsBelowBuildHash);
+    CK_PROPERTY_GET(_CaptureAuditMode);
+    CK_PROPERTY_GET(_CaptureAudit_MaxExamples);
 };
