@@ -449,7 +449,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 | `CK_REQUEST_DEFINE_DEBUG_NAME(T)` | Request debug identity | On every request struct |
 | `CK_GENERATED_BODY_HANDLE_TYPESAFE(T)` | Typesafe handle body | Declare in `_Fragment_Data.h`; pair with `CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE` |
 | `CK_REGISTER_PROCESSOR(T)` | Processor self-registration | Top of the processor .cpp |
-| `CK_REGISTER_SNAPSHOTABLE(T)` | **REMOVED** (Model-A purge, 2026-07-13) | The Model-A snapshot registry + fidelity oracle were deleted whole. Save/load is now v3 rebuild+hydrate only: a feature persists by registering a Produce/Apply handler on `FCk_ReplicatedFragmentHandlerRegistry` (`CkEcs/Net/ReplicatedFragmentContainer`, save subset via `Get_SaveHandlerTypes`); entities rebuild from spawn recipes on load. There is no per-fragment registration macro. Holder/record `_ROUNDTRIP`/`_TRANSIENT` policy classes are retained inert pending the Option-A macro retirement. |
+| `CK_REGISTER_SNAPSHOTABLE(T)` | **REMOVED** (Model-A purge, 2026-07-13) | The Model-A snapshot registry + fidelity oracle were deleted whole. Save/load is now v3 rebuild+hydrate only: a feature persists by registering a Produce/HydrationApply handler on `FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/CkPersistenceHandlerRegistry.h`, save subset via `Get_SaveHandlerTypes`); entities rebuild from spawn recipes on load. There is no per-fragment registration macro. Holder/record `_ROUNDTRIP`/`_TRANSIENT` policy classes are retained inert pending the Option-A macro retirement. |
 | `CK_DEFINE_CUSTOM_FORMATTER_ENUM(E)` | fmt support for enums | Expected on every UENUM |
 
 ## Where things live
