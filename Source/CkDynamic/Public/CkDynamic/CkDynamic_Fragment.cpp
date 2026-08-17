@@ -162,7 +162,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
 
                 auto SaveData = FCk_SaveData_DynamicFragments{};
                 SaveData.Set_Fragments(MoveTemp(Fragments));
-                return FInstancedStruct::Make(SaveData);
+                return FInstancedStruct::Make<FCk_SaveData_DynamicFragments>(MoveTemp(SaveData));
             },
             .HydrationApply = [](FCk_Handle& InEntity, const FInstancedStruct& InNew, const TOptional<FInstancedStruct>& /*InOld*/) -> ECk_Persistence_ApplyResult
             {
