@@ -133,7 +133,33 @@ private:
 public:
     CK_PROPERTY(_ScriptClassPath);
     CK_PROPERTY(_ArchetypePath);
+
+public:
+    auto Serialize(FArchive& InAr) -> bool;
 };
+
+template <>
+struct TStructOpsTypeTraits<FCk_Snapshot_V3_BuildStep> : public TStructOpsTypeTraitsBase2<FCk_Snapshot_V3_BuildStep>
+{
+    enum { WithSerializer = true };
+};
+
+namespace ck::snapshot
+{
+    // Why every V3 struct below has a native Serialize: FArrayProperty's bulk memcpy path is gated on
+    // unversioned property serialization (PropertyArray.cpp, CanBulkSerialize), which a save archive never
+    // uses, so a TArray<uint8> UPROPERTY is walked one virtual call per BYTE — 17.5MB measured at 554ms.
+    CKSNAPSHOT_API auto
+    Serialize_BulkBytes(
+        FArchive& InAr,
+        TArray<uint8>& InOutBytes) -> void;
+
+    // FTransform exposes no archive operator; its components do.
+    CKSNAPSHOT_API auto
+    Serialize_Transform(
+        FArchive& InAr,
+        FTransform& InOutTransform) -> void;
+}
 
 // Fields not relevant to the entry's provenance stay defaulted. Handle-bearing data (spawn params) is
 // pre-serialized into _SpawnParamsBytes, so the entry itself SerializeItem's without a handle context.
@@ -213,6 +239,15 @@ public:
     CK_PROPERTY(_ActorSpawnTransform);
     CK_PROPERTY(_SavedWorldTransform);
     CK_PROPERTY(_BuildRecipe);
+
+public:
+    auto Serialize(FArchive& InAr) -> bool;
+};
+
+template <>
+struct TStructOpsTypeTraits<FCk_Snapshot_V3_EntityEntry> : public TStructOpsTypeTraitsBase2<FCk_Snapshot_V3_EntityEntry>
+{
+    enum { WithSerializer = true };
 };
 
 USTRUCT()
@@ -232,6 +267,15 @@ public:
     CK_PROPERTY(_OwnerSavedId);
     CK_PROPERTY(_TypePath);
     CK_PROPERTY(_PayloadBytes);
+
+public:
+    auto Serialize(FArchive& InAr) -> bool;
+};
+
+template <>
+struct TStructOpsTypeTraits<FCk_Snapshot_V3_PayloadEntry> : public TStructOpsTypeTraitsBase2<FCk_Snapshot_V3_PayloadEntry>
+{
+    enum { WithSerializer = true };
 };
 
 USTRUCT()
@@ -252,6 +296,15 @@ private:
 public:
     CK_PROPERTY(_Entities);
     CK_PROPERTY(_Payloads);
+
+public:
+    auto Serialize(FArchive& InAr) -> bool;
+};
+
+template <>
+struct TStructOpsTypeTraits<FCk_Snapshot_V3_Tables> : public TStructOpsTypeTraitsBase2<FCk_Snapshot_V3_Tables>
+{
+    enum { WithSerializer = true };
 };
 
 USTRUCT(BlueprintType)
@@ -273,7 +326,10 @@ public:
     //   6 — added FCk_Snapshot_V3_EntityEntry::_ActorSaveFieldBytes: a bridged actor's UPROPERTY(SaveGame) fields ride
     //       the recipe and are applied before FinishSpawning. Version 5 rows spawn with class defaults, so an actor
     //       whose Construct branches on a saved field composes nothing.
-    static constexpr uint16 CurrentFormatVersion = 6;
+    // 7 (2026-08-16): the V3 tables and the SaveGame blob moved from tagged-property serialization to native
+    // bulk serializers. Byte layout differs, so a v6 slot is refused by the exact-equality check in
+    // Request_Load — loudly and before any world teardown, never silently misread.
+    static constexpr uint16 CurrentFormatVersion = 7;
 
 private:
     UPROPERTY()
