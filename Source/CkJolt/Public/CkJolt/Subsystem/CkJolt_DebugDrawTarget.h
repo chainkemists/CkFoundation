@@ -33,6 +33,7 @@ namespace JPH
 enum class ECk_Jolt_DebugDraw_RenderMode : uint8
 {
     Solid,
+    SensorWireframe,
     Wireframe
 };
 
@@ -113,8 +114,8 @@ public:
  * What a target colours its bodies BY. The mode decides which class index a body lands in, and therefore which
  * bucket draws it; changing it re-buckets everything the next capture touches.
  *
- * Highlight and Hover are deliberately NOT modes: they are the two mode-independent class indices below, so a
- * selection stays magenta whatever the bodies around it are coloured by.
+ * Sensor contact, Highlight and Hover are deliberately NOT modes: they are the three mode-independent class
+ * indices below, so transient state stays legible whatever the bodies around it are coloured by.
  */
 enum class ECk_Jolt_DebugDrawColorMode : uint8
 {
@@ -147,13 +148,14 @@ namespace ck::jolt::debug_draw
 {
     /*
      * ONE class-index space, shared by every colour mode. The visibility mask packs one bit per index into a
-     * uint64, so 64 is the hard ceiling and every per-mode class count below has to fit under the two reserved
+     * uint64, so 64 is the hard ceiling and every per-mode class count below has to fit under the three reserved
      * indices.
      *
-     * Highlight and Hover sit at the TOP two indices in every mode: a selection must never change colour, or be
-     * hideable, because the viewer switched to colouring by island.
+     * Sensor contact, Highlight and Hover sit at the TOP three indices in every mode: transient state must never
+     * change colour, or be hideable, because the viewer switched to colouring by island.
      */
     inline constexpr uint8 MaxColorClasses = 64;
+    inline constexpr uint8 SensorContactClassIndex = 61;
     inline constexpr uint8 HighlightClassIndex = 62;
     inline constexpr uint8 HoverClassIndex = 63;
 
@@ -169,12 +171,11 @@ namespace ck::jolt::debug_draw
     inline constexpr int32 WorldStatsSampleInterval = 30;
 
     /*
-     * ObjectLayer mode names one class per registered layer. 62 indices are available, so index 61 is the
-     * catch-all: a body whose object layer is 61 or higher lands there. P5-D42 phrased the cut as "> 61 → Other";
-     * with Highlight and Hover reserved there is no 63rd index to put Other in, so the top NAMED index doubles
-     * as it and the legend reads "Layer 61+".
+     * ObjectLayer mode names one class per registered layer. 61 indices are available, so index 60 is the
+     * catch-all: a body whose object layer is 60 or higher lands there. The top named index doubles as Other and
+     * the legend reads "Layer 60+".
      */
-    inline constexpr uint8 MaxNamedObjectLayer = 61;
+    inline constexpr uint8 MaxNamedObjectLayer = 60;
 
     /// The classes of ECk_Jolt_DebugDrawColorMode::SleepState.
     enum class ESleepStateClass : uint8
@@ -520,8 +521,8 @@ public:
     CK_GENERATED_BODY(FCk_Jolt_DebugDrawPalette);
 
 public:
-    /// The colour of one class index IN ONE MODE. Highlight and Hover answer the same in every mode; every other
-    /// index is interpreted by the mode that produced it.
+    /// The colour of one class index IN ONE MODE. The three overlay classes answer the same in every mode; every
+    /// other index is interpreted by the mode that produced it.
     auto
     Get_Color(
         ECk_Jolt_DebugDrawColorMode InColorMode,
@@ -535,6 +536,7 @@ private:
     FLinearColor _SensorColor          = FLinearColor{0.15f, 0.55f, 0.95f, 1.0f};
     FLinearColor _BakedStaticColor     = FLinearColor{0.55f, 0.45f, 0.30f, 1.0f};
     FLinearColor _CharacterColor       = FLinearColor{0.85f, 0.35f, 0.85f, 1.0f};
+    FLinearColor _SensorContactColor   = FLinearColor{0.20f, 1.00f, 0.30f, 1.0f};
 
     // Magenta, and deliberately not near any other entry: the old amber sat between the awake yellow and the
     // baked tan, which is what made a selection unreadable in PIE (P5-D41).
@@ -551,6 +553,7 @@ public:
     CK_PROPERTY(_SensorColor);
     CK_PROPERTY(_BakedStaticColor);
     CK_PROPERTY(_CharacterColor);
+    CK_PROPERTY(_SensorContactColor);
     CK_PROPERTY(_HighlightColor);
     CK_PROPERTY(_SleepingDimFactor);
     CK_PROPERTY(_Opacity);
@@ -752,8 +755,8 @@ public:
      * while hidden, so the toggle costs one SetVisibility per affected bucket and unhiding shows current poses,
      * never stale ones.
      *
-     * The Highlight and Hover indices are not hideable: a selection the viewer cannot see is indistinguishable
-     * from no selection. Asking to hide one is ignored, and Get_IsClassVisible always answers true for them.
+     * Overlay indices are not hideable: transient state the viewer cannot see is indistinguishable from no state.
+     * Asking to hide one is ignored, and Get_IsClassVisible always answers true for them.
      */
     auto
     Set_ClassVisibility(
@@ -812,6 +815,15 @@ public:
     auto
     Get_IsDrawFlagSet(
         ECk_Jolt_DebugDrawFlags InFlag) const -> bool;
+
+    /// Multiplies direction-only debug glyphs (contact normals and transform axes), never physical vectors such
+    /// as velocity whose magnitude is itself the information being shown.
+    auto
+    Set_DirectionGlyphScale(
+        float InScale) -> FCk_Jolt_DebugDrawTarget&;
+
+    auto
+    Get_DirectionGlyphScale() const -> float;
 
     // ---- Line + label + External channels ----
 
@@ -1004,6 +1016,18 @@ public:
     auto
     Get_InternalBodyKeys() const -> const TSet<uint64>&;
 
+    /**
+     * Sensor bodies currently touching at least one other body, in the same BodyID keyspace as the capture.
+     * Publishing a changed set invalidates retained inactive bodies so sleeping/static sensors light up and clear
+     * without waiting for motion or a static-scene revision.
+     */
+    auto
+    Set_SensorContactBodyKeys(
+        TSet<uint64> InBodyKeys) -> void;
+
+    auto
+    Get_SensorContactBodyKeys() const -> const TSet<uint64>&;
+
     /*
      * What the world is doing, filled by the capture (physics-derived counts) and by whoever pumps it (the two
      * fields the physics system does not own). See FCk_Jolt_DebugDraw_WorldStats for which fields are throttled.
@@ -1019,13 +1043,12 @@ public:
         int32 InContactPairsLastStep) -> void;
 
     /*
-     * Nearest live instance a ray hits, as the body key that drew it. Tests the ray against each instance's
-     * ORIENTED mesh bounds (the ray is pushed into instance space and tested against the local box), which is
-     * tighter than a world-space AABB and needs no per-instance box rebuild. Hidden colour classes and the
-     * Highlight overlay are not pickable. O(live instances) per call — this is a click handler, not a tick.
-     * InDirection needs no normalization; hit ordering is parametric along it.
+     * Nearest live instance a ray hits, as the body key that drew it. An oriented mesh-bounds test rejects broad
+     * misses, then a lazily-built per-geometry BVH tests the actual rendered triangles. Large concave meshes
+     * therefore cannot win through empty space inside their bounds. Hidden colour classes and all overlays are
+     * not pickable. InDirection needs no normalization; hit ordering is parametric along it.
      *
-     * The thin wrapper over TryPick_BodyHit: the slab test computes the hit point either way, and a caller
+     * The thin wrapper over TryPick_BodyHit: the triangle test computes the hit point either way, and a caller
      * that only wants to know WHICH body should not have to declare three out-parameters to find out.
      */
     auto
@@ -1035,13 +1058,12 @@ public:
 
     /*
      * The same pick, with the HIT rather than only the body (P7-D70/i). OutHitPointWorld is where the ray
-     * enters that body's oriented bounds — a point ON the surface the viewer clicked, which is what a drag
+     * meets that body's rendered triangles — a point ON the surface the viewer clicked, which is what a drag
      * needs for its grab point and what no amount of bounds-centre guessing can reconstruct. OutDistance is
      * the world-space distance from InOrigin to that point, so it is comparable between calls whether or not
      * InDirection was normalized.
      *
-     * A ray whose origin is already INSIDE a body enters at zero: the hit point is the origin itself and the
-     * distance is 0. That is the slab test's own contract, not a special case added here.
+     * A ray whose origin is already inside a closed body reports its forward exit surface.
      *
      * Returns false — and touches no out-parameter — when nothing was hit.
      */

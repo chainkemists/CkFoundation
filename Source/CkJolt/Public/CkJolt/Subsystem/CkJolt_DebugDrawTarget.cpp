@@ -35,9 +35,9 @@ namespace ck_jolt_debug_draw_target
     const auto ColorParameterName = FName{TEXT("Color")};
 
     static_assert(static_cast<int32>(ECk_Jolt_DebugDraw_ColorClass::Count) <=
-        ck::jolt::debug_draw::HighlightClassIndex,
-        "BodyClass mode's classes must fit UNDER the two reserved mode-independent indices, or a body would be "
-        "drawn in the Highlight bucket and become unhideable.");
+        ck::jolt::debug_draw::SensorContactClassIndex,
+        "BodyClass mode's classes must fit UNDER the three reserved mode-independent indices, or a body would be "
+        "drawn in an overlay bucket and become unhideable.");
 
     static_assert(ck::jolt::debug_draw::HoverClassIndex < ck::jolt::debug_draw::MaxColorClasses,
         "The hidden-class mask is a uint64 bitfield. A class index of 64 or more shifts the bit out of range and "
@@ -142,17 +142,49 @@ namespace ck_jolt_debug_draw_target
     // Rooted, not a bare static UMaterial*: a function-local raw pointer survives the GC that collects the
     // material it points at, and the next dereference is on freed memory.
     // Loaded directly rather than through GEngine->WireframeMaterial, which is null whenever the platform
-    // RequiresCookedData. Both engine debug materials are special-engine materials, so the ISM usage checks
+    // RequiresCookedData. These engine debug materials are special-engine materials, so the ISM usage checks
     // do not reject them.
     auto
-        Get_SolidBaseMaterial()
+        Get_OpaqueSolidBaseMaterial()
         -> UMaterial*
     {
         static auto Material = TStrongObjectPtr<UMaterial>{LoadObject<UMaterial>(
             nullptr,
-            TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"))};
+            TEXT("/Engine/EngineDebugMaterials/M_SimpleOpaque.M_SimpleOpaque"))};
 
         return Material.Get();
+    }
+
+    auto
+        Get_OverlayBaseMaterial()
+        -> UMaterial*
+    {
+        static auto Material = TStrongObjectPtr<UMaterial>{LoadObject<UMaterial>(
+            nullptr,
+            TEXT("/Engine/EngineDebugMaterials/M_SimpleTranslucent.M_SimpleTranslucent"))};
+
+        return Material.Get();
+    }
+
+    auto
+        Is_OverlayClass(
+            uint8 InColorClassIndex)
+        -> bool
+    {
+        return InColorClassIndex == ck::jolt::debug_draw::SensorContactClassIndex ||
+               InColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+               InColorClassIndex == ck::jolt::debug_draw::HoverClassIndex;
+    }
+
+    auto
+        Get_SolidBaseMaterial(
+            uint8 InColorClassIndex,
+            bool InIsSensor)
+        -> UMaterial*
+    {
+        return InIsSensor || Is_OverlayClass(InColorClassIndex)
+            ? Get_OverlayBaseMaterial()
+            : Get_OpaqueSolidBaseMaterial();
     }
 
     auto
@@ -166,9 +198,8 @@ namespace ck_jolt_debug_draw_target
         return Material.Get();
     }
 
-    // Where one instance sits and how big its geometry is, in the instance's OWN space. Keeping the box local
-    // and the transform beside it is what lets the pick test be an oriented-box test instead of a world AABB
-    // one, at no extra cost.
+    // Where one instance sits and how big its geometry is, in the instance's OWN space. The box is the pick's
+    // cheap oriented broad phase; the batch's retained triangles are the exact narrow phase.
     struct FInstancePlacement
     {
         FTransform _Transform;
@@ -369,9 +400,29 @@ namespace ck::jolt::debug_draw
     auto
         Get_ClassOpacity(
             uint8 InColorClassIndex,
+            bool InIsSensor,
             float InPaletteOpacity)
         -> float
     {
+        if (InIsSensor)
+        {
+            constexpr auto SensorFillOpacity = 0.45f;
+            constexpr auto SensorContactOpacity = 0.65f;
+            constexpr auto SensorHighlightOpacity = 0.70f;
+            constexpr auto SensorHoverOpacity = 0.50f;
+
+            if (InColorClassIndex == SensorContactClassIndex)
+            { return FMath::Min(InPaletteOpacity, SensorContactOpacity); }
+
+            if (InColorClassIndex == HighlightClassIndex)
+            { return FMath::Min(InPaletteOpacity, SensorHighlightOpacity); }
+
+            if (InColorClassIndex == HoverClassIndex)
+            { return FMath::Min(InPaletteOpacity, SensorHoverOpacity); }
+
+            return FMath::Min(InPaletteOpacity, SensorFillOpacity);
+        }
+
         if (InColorClassIndex == HighlightClassIndex)
         { return 1.0f; }
 
@@ -589,8 +640,11 @@ auto
         uint8 InClassIndex) const
     -> FLinearColor
 {
-    // Mode-independent, and answered before the mode is even looked at: a selection must read the same whatever
-    // the bodies around it are coloured by.
+    // Mode-independent, and answered before the mode is even looked at: transient overlays must read the same
+    // whatever the bodies around them are coloured by.
+    if (InClassIndex == ck::jolt::debug_draw::SensorContactClassIndex)
+    { return _SensorContactColor; }
+
     if (InClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
         InClassIndex == ck::jolt::debug_draw::HoverClassIndex)
     { return _HighlightColor; }
@@ -843,11 +897,12 @@ namespace ck::jolt::debug_draw
     }
 
     auto
-        Apply_BucketMaterial(
-            FBucket& InOutBucket,
-            const FCk_Jolt_DebugDrawPalette& InPalette,
-            uint8 InColorClassIndex,
-            ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode)
+    Apply_BucketMaterial(
+        FBucket& InOutBucket,
+        const FCk_Jolt_DebugDrawPalette& InPalette,
+        uint8 InColorClassIndex,
+        bool InIsSensor,
+        ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode)
         -> void
     {
         auto* Ism = InOutBucket._Ism.Get();
@@ -855,7 +910,7 @@ namespace ck::jolt::debug_draw
         { return; }
 
         const auto TintedColor = Get_TintedColor(InOutBucket._BaseColor,
-            Get_ClassOpacity(InColorClassIndex, InPalette.Get_Opacity()));
+            Get_ClassOpacity(InColorClassIndex, InIsSensor, InPalette.Get_Opacity()));
 
         const auto& Get_OrCreate_Mid = [&](TWeakObjectPtr<UMaterialInstanceDynamic>& InOutMid, UMaterial* InBase)
             -> UMaterialInstanceDynamic*
@@ -874,7 +929,7 @@ namespace ck::jolt::debug_draw
         // Deliberately NON-terminating recovery: an unavailable wireframe material degrades the whole target to
         // Solid and execution CONTINUES to assign the solid MID, because leaving the bucket unmaterialed would
         // be a worse failure than the mode silently not applying.
-        if (InOutRenderMode == ECk_Jolt_DebugDraw_RenderMode::Wireframe)
+        if (InOutRenderMode != ECk_Jolt_DebugDraw_RenderMode::Solid)
         {
             auto* WireframeBase = ck_jolt_debug_draw_target::Get_WireframeBaseMaterial();
 
@@ -889,7 +944,8 @@ namespace ck::jolt::debug_draw
 
         auto* Mid = UseWireframe
             ? Get_OrCreate_Mid(InOutBucket._WireframeMid, ck_jolt_debug_draw_target::Get_WireframeBaseMaterial())
-            : Get_OrCreate_Mid(InOutBucket._SolidMid, ck_jolt_debug_draw_target::Get_SolidBaseMaterial());
+            : Get_OrCreate_Mid(InOutBucket._SolidMid,
+                ck_jolt_debug_draw_target::Get_SolidBaseMaterial(InColorClassIndex, InIsSensor));
 
         CK_ENSURE_IF_NOT(ck::IsValid(Mid),
             TEXT("Failed to create the Jolt debug-draw material instance — bodies will draw untinted with the default material"))
@@ -897,6 +953,31 @@ namespace ck::jolt::debug_draw
 
         Mid->SetVectorParameterValue(ck_jolt_debug_draw_target::ColorParameterName, TintedColor);
         Ism->SetMaterial(0, Mid);
+
+        const auto UseSensorWireOverlay =
+            InOutRenderMode == ECk_Jolt_DebugDraw_RenderMode::SensorWireframe &&
+            InIsSensor &&
+            NOT ck_jolt_debug_draw_target::Is_OverlayClass(InColorClassIndex);
+
+        if (NOT UseSensorWireOverlay)
+        {
+            Ism->SetOverlayMaterial(nullptr);
+            return;
+        }
+
+        auto* SensorWireMid = Get_OrCreate_Mid(InOutBucket._WireframeMid,
+            ck_jolt_debug_draw_target::Get_WireframeBaseMaterial());
+
+        CK_ENSURE_IF_NOT(ck::IsValid(SensorWireMid),
+            TEXT("Failed to create the Jolt sensor wireframe overlay — drawing the translucent fill only"))
+        {
+            Ism->SetOverlayMaterial(nullptr);
+            return;
+        }
+
+        SensorWireMid->SetVectorParameterValue(ck_jolt_debug_draw_target::ColorParameterName,
+            FLinearColor{TintedColor.R, TintedColor.G, TintedColor.B, 1.0f});
+        Ism->SetOverlayMaterial(SensorWireMid);
     }
 }
 
@@ -974,7 +1055,7 @@ auto
     for (auto& Kvp : _Impl->_Buckets)
     {
         ck::jolt::debug_draw::Apply_BucketMaterial(Kvp.Value, _Impl->_Palette, Kvp.Key._ColorClassIndex,
-            _Impl->_RenderMode);
+            Kvp.Key._IsSensor, _Impl->_RenderMode);
     }
 }
 
@@ -985,7 +1066,8 @@ auto
         bool InIsVisible)
     -> FCk_Jolt_DebugDrawTarget&
 {
-    const auto IsHideable = InClassIndex != ck::jolt::debug_draw::HighlightClassIndex &&
+    const auto IsHideable = InClassIndex != ck::jolt::debug_draw::SensorContactClassIndex &&
+                            InClassIndex != ck::jolt::debug_draw::HighlightClassIndex &&
                             InClassIndex != ck::jolt::debug_draw::HoverClassIndex &&
                             InClassIndex < ck::jolt::debug_draw::MaxColorClasses;
 
@@ -1024,7 +1106,8 @@ auto
         uint8 InClassIndex) const
     -> bool
 {
-    if (InClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+    if (InClassIndex == ck::jolt::debug_draw::SensorContactClassIndex ||
+        InClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
         InClassIndex == ck::jolt::debug_draw::HoverClassIndex)
     { return true; }
 
@@ -1182,7 +1265,8 @@ auto
         }
     }
 
-    // Mode-independent and always last, so a legend reads its bodies first and its selection markers after.
+    // Mode-independent and always last, so a legend reads its bodies first and its transient markers after.
+    Add_Entry(SensorContactClassIndex, FText::FromString(TEXT("Sensor contact")));
     Add_Entry(HighlightClassIndex, FText::FromString(TEXT("Selected")));
     Add_Entry(HoverClassIndex, FText::FromString(TEXT("Hovered")));
 
@@ -1227,6 +1311,33 @@ auto
     -> bool
 {
     return EnumHasAnyFlags(_Impl->_DrawFlags, InFlag);
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_DirectionGlyphScale(
+        float InScale)
+    -> FCk_Jolt_DebugDrawTarget&
+{
+    constexpr auto MinScale = 0.25f;
+    constexpr auto MaxScale = 4.0f;
+    const auto ClampedScale = FMath::Clamp(InScale, MinScale, MaxScale);
+
+    if (FMath::IsNearlyEqual(_Impl->_DirectionGlyphScale, ClampedScale))
+    { return *this; }
+
+    _Impl->_DirectionGlyphScale = ClampedScale;
+    _Impl->_InactiveBodyRecords.Reset();
+    _Impl->_FullPassEverRan = false;
+    return *this;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_DirectionGlyphScale() const
+    -> float
+{
+    return _Impl->_DirectionGlyphScale;
 }
 
 auto
@@ -1699,6 +1810,9 @@ auto
             ck::jolt::debug_draw::EStatCounting::Excluded);
         ck::jolt::debug_draw::Release_SlotsForKey(*_Impl, ck::jolt::debug_draw::Make_HoverKey(InternalKey),
             ck::jolt::debug_draw::EStatCounting::Excluded);
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
+            ck::jolt::debug_draw::Make_SensorContactKey(InternalKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
 
         _Impl->_StaticBodyKeys.Remove(InternalKey);
         _Impl->_SleepingBodyKeys.Remove(InternalKey);
@@ -1715,6 +1829,41 @@ auto
     -> const TSet<uint64>&
 {
     return _Impl->_InternalBodyKeys;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Set_SensorContactBodyKeys(
+        TSet<uint64> InBodyKeys)
+    -> void
+{
+    if (_Impl->_SensorContactBodyKeys.Num() == InBodyKeys.Num() &&
+        _Impl->_SensorContactBodyKeys.Includes(InBodyKeys))
+    { return; }
+
+    // Ended contacts clear immediately. Begun contacts need a full inactive pass because a static or sleeping
+    // sensor otherwise has no reason to visit Draw_Body again.
+    for (const auto PreviousKey : _Impl->_SensorContactBodyKeys)
+    {
+        if (InBodyKeys.Contains(PreviousKey))
+        { continue; }
+
+        ck::jolt::debug_draw::Release_SlotsForKey(*_Impl,
+            ck::jolt::debug_draw::Make_SensorContactKey(PreviousKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
+    }
+
+    _Impl->_SensorContactBodyKeys = MoveTemp(InBodyKeys);
+    _Impl->_InactiveBodyRecords.Reset();
+    _Impl->_FullPassEverRan = false;
+}
+
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_SensorContactBodyKeys() const
+    -> const TSet<uint64>&
+{
+    return _Impl->_SensorContactBodyKeys;
 }
 
 auto
@@ -1783,9 +1932,10 @@ auto
 
         for (const auto& Slot : Kvp.Value)
         {
-            // Neither overlay is pickable: they trace a body that is already pickable in its own right, and a
+            // No overlay is pickable: each traces a body that is already pickable in its own right, and a
             // pick that returned an overlay key would name a slot no consumer can resolve to a body.
-            if (Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+            if (Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::SensorContactClassIndex ||
+                Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
                 Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
             { continue; }
 
@@ -1797,16 +1947,22 @@ auto
             if (NOT Placement.IsSet())
             { continue; }
 
-            // The ray goes into instance space rather than the box coming out of it: an affine transform
-            // preserves the parametric distance, so the test stays an oriented-box one and the hits from
-            // differently-rotated instances remain directly comparable.
+            // The ray goes into instance space rather than every box and triangle coming out of it. An affine
+            // transform preserves the parametric distance, so hits from differently transformed instances remain
+            // directly comparable.
             const auto LocalOrigin = Placement->_Transform.InverseTransformPosition(InOrigin);
             const auto LocalDirection = Placement->_Transform.InverseTransformVector(InDirection);
 
-            const auto HitDistance = ck_jolt_debug_draw_target::TryIntersect_RayBox(
+            const auto BoundsHitDistance = ck_jolt_debug_draw_target::TryIntersect_RayBox(
                 LocalOrigin, LocalDirection, Placement->_LocalBounds);
 
-            if (NOT HitDistance.IsSet() || *HitDistance >= NearestDistance)
+            if (NOT BoundsHitDistance.IsSet() || *BoundsHitDistance >= NearestDistance)
+            { continue; }
+
+            const auto HitDistance = ck::jolt::debug_draw::TryIntersect_BatchRay(
+                Slot._Bucket._Batch, LocalOrigin, LocalDirection, NearestDistance);
+
+            if (NOT HitDistance.IsSet())
             { continue; }
 
             NearestDistance = *HitDistance;
@@ -1819,7 +1975,7 @@ auto
 
     OutKey = *NearestKey;
 
-    // The slab distance is PARAMETRIC along InDirection, and an affine instance transform preserves that
+    // The triangle-hit distance is PARAMETRIC along InDirection, and an affine instance transform preserves that
     // parameter — which is why the local-space test can be turned back into a world point by simply walking
     // the ORIGINAL ray. The reported distance is the world one, so an unnormalized direction cannot make two
     // picks incomparable.

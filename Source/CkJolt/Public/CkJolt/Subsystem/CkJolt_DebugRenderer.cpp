@@ -7,6 +7,7 @@
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 
+#include <Algo/Sort.h>
 #include <Components/InstancedStaticMeshComponent.h>
 #include <Engine/StaticMesh.h>
 #include <Engine/World.h>
@@ -14,6 +15,7 @@
 #include <MeshDescription.h>
 #include <Misc/CoreDelegates.h>
 #include <StaticMeshAttributes.h>
+#include <StaticMeshOperations.h>
 #include <UObject/Package.h>
 #include <UObject/StrongObjectPtr.h>
 
@@ -22,6 +24,91 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Jolt_DebugDraw_Reconcile"), STAT_CkJolt_DebugDrawReconcile, STATGROUP_CkJolt);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_jolt_debug_renderer
+{
+    auto
+        TryIntersect_RayBox(
+            const FVector& InOrigin,
+            const FVector& InDirection,
+            const FBox3f& InBox,
+            double InMaxDistance)
+        -> TOptional<double>
+    {
+        auto EntryDistance = 0.0;
+        auto ExitDistance = InMaxDistance;
+
+        for (auto Axis = 0; Axis < 3; ++Axis)
+        {
+            const auto AxisDirection = InDirection[Axis];
+            const auto AxisOrigin = InOrigin[Axis];
+
+            if (FMath::IsNearlyZero(AxisDirection))
+            {
+                if (AxisOrigin < static_cast<double>(InBox.Min[Axis]) ||
+                    AxisOrigin > static_cast<double>(InBox.Max[Axis]))
+                { return {}; }
+
+                continue;
+            }
+
+            const auto InverseDirection = 1.0 / AxisDirection;
+            auto NearDistance = (static_cast<double>(InBox.Min[Axis]) - AxisOrigin) * InverseDirection;
+            auto FarDistance = (static_cast<double>(InBox.Max[Axis]) - AxisOrigin) * InverseDirection;
+
+            if (NearDistance > FarDistance)
+            { Swap(NearDistance, FarDistance); }
+
+            EntryDistance = FMath::Max(EntryDistance, NearDistance);
+            ExitDistance = FMath::Min(ExitDistance, FarDistance);
+
+            if (EntryDistance > ExitDistance)
+            { return {}; }
+        }
+
+        return EntryDistance < InMaxDistance ? TOptional<double>{EntryDistance} : TOptional<double>{};
+    }
+
+    auto
+        TryIntersect_RayTriangle(
+            const FVector& InOrigin,
+            const FVector& InDirection,
+            const FVector& InA,
+            const FVector& InB,
+            const FVector& InC,
+            double InMaxDistance)
+        -> TOptional<double>
+    {
+        const auto EdgeAB = InB - InA;
+        const auto EdgeAC = InC - InA;
+        const auto DirectionCrossAC = FVector::CrossProduct(InDirection, EdgeAC);
+        const auto Determinant = FVector::DotProduct(EdgeAB, DirectionCrossAC);
+
+        constexpr auto ParallelTolerance = 1.0e-10;
+        if (FMath::Abs(Determinant) <= ParallelTolerance)
+        { return {}; }
+
+        const auto InverseDeterminant = 1.0 / Determinant;
+        const auto OriginFromA = InOrigin - InA;
+        const auto BarycentricB = FVector::DotProduct(OriginFromA, DirectionCrossAC) * InverseDeterminant;
+
+        if (BarycentricB < 0.0 || BarycentricB > 1.0)
+        { return {}; }
+
+        const auto OriginCrossAB = FVector::CrossProduct(OriginFromA, EdgeAB);
+        const auto BarycentricC = FVector::DotProduct(InDirection, OriginCrossAB) * InverseDeterminant;
+
+        if (BarycentricC < 0.0 || BarycentricB + BarycentricC > 1.0)
+        { return {}; }
+
+        const auto Distance = FVector::DotProduct(EdgeAC, OriginCrossAB) * InverseDeterminant;
+        return Distance >= 0.0 && Distance < InMaxDistance
+            ? TOptional<double>{Distance}
+            : TOptional<double>{};
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,16 +122,42 @@ namespace ck::jolt::debug_draw
 
         auto Get_RefCount() const -> uint32 { return _RefCount.load(); }
 
-        auto
-        GetOrBuild_Mesh() -> UStaticMesh*;
+        auto GetOrBuild_Mesh() -> UStaticMesh*;
+        auto TryIntersect_Ray(const FVector& InOrigin, const FVector& InDirection, double InMaxDistance)
+            -> TOptional<double>;
 
     public:
         TArray<FVector3f> _Positions;
         TArray<uint32> _Indices;
 
     private:
+        struct FPickTriangle
+        {
+            uint32 _A = 0;
+            uint32 _B = 0;
+            uint32 _C = 0;
+            FVector3f _Centroid = FVector3f::ZeroVector;
+        };
+
+        struct FPickBvhNode
+        {
+            FBox3f _Bounds = FBox3f{ForceInit};
+            int32 _FirstTriangle = 0;
+            int32 _TriangleCount = 0;
+            int32 _LeftChild = INDEX_NONE;
+            int32 _RightChild = INDEX_NONE;
+
+            auto Is_Leaf() const -> bool { return _TriangleCount > 0; }
+        };
+
+        auto Ensure_PickBvh() -> void;
+        auto Build_PickBvhNode(int32 InFirstTriangle, int32 InTriangleCount) -> int32;
+
         TStrongObjectPtr<UStaticMesh> _Mesh;
         bool _BuildAttempted = false;
+        bool _PickBvhBuilt = false;
+        TArray<FPickTriangle> _PickTriangles;
+        TArray<FPickBvhNode> _PickBvhNodes;
         std::atomic<uint32> _RefCount = 0;
     };
 
@@ -99,14 +212,22 @@ namespace ck::jolt::debug_draw
             const auto InstanceB = Instances[static_cast<int32>(B)];
             const auto InstanceC = Instances[static_cast<int32>(C)];
 
-            // BOTH windings: Conv is a handedness passthrough, so a single winding renders inside-out.
-            Description.CreatePolygon(Group, TArray<FVertexInstanceID>{InstanceA, InstanceB, InstanceC});
+            // Jolt's outward winding is the opposite of UE's mesh-description winding under the XYZ passthrough.
             Description.CreatePolygon(Group, TArray<FVertexInstanceID>{InstanceA, InstanceC, InstanceB});
             ++EmittedTriangles;
         }
 
         if (EmittedTriangles == 0)
         { return nullptr; }
+
+        // BuildFromMeshDescriptions' runtime fast path copies the vertex-instance tangent basis verbatim; it
+        // does not run the editor mesh builder that normally repairs missing normals. The old unlit debug
+        // material hid that omission, but any DefaultLit material shades the zero normals black. Generate the
+        // complete tangent basis once while the cached batch mesh is built so editor and packaged viewports
+        // receive the same valid lighting data.
+        FStaticMeshOperations::ComputeTriangleTangentsAndNormals(Description);
+        FStaticMeshOperations::ComputeTangentsAndNormals(
+            Description, EComputeNTBsFlags::Normals | EComputeNTBsFlags::Tangents);
 
         auto* Mesh = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
         Mesh->SetStaticMaterials({FStaticMaterial(nullptr, TEXT("JoltDebug"))});
@@ -125,6 +246,193 @@ namespace ck::jolt::debug_draw
 
         _Mesh = TStrongObjectPtr{Mesh};
         return Mesh;
+    }
+
+    auto
+        FBatch::
+        Ensure_PickBvh()
+        -> void
+    {
+        if (_PickBvhBuilt)
+        { return; }
+
+        // Picking is driven by the Slate viewport on the game thread, after capture has finished publishing the
+        // immutable batch. Build once on first use rather than making every captured shape pay for a BVH it may
+        // never need.
+        _PickBvhBuilt = true;
+
+        const auto VertexCount = static_cast<uint32>(_Positions.Num());
+        _PickTriangles.Reserve(_Indices.Num() / 3);
+
+        for (auto Index = 0; Index + 2 < _Indices.Num(); Index += 3)
+        {
+            const auto A = _Indices[Index];
+            const auto B = _Indices[Index + 1];
+            const auto C = _Indices[Index + 2];
+
+            if (A == B || B == C || A == C || A >= VertexCount || B >= VertexCount || C >= VertexCount)
+            { continue; }
+
+            auto Triangle = FPickTriangle{};
+            Triangle._A = A;
+            Triangle._B = B;
+            Triangle._C = C;
+            Triangle._Centroid = (_Positions[static_cast<int32>(A)] +
+                                  _Positions[static_cast<int32>(B)] +
+                                  _Positions[static_cast<int32>(C)]) / 3.0f;
+            _PickTriangles.Emplace(MoveTemp(Triangle));
+        }
+
+        if (_PickTriangles.IsEmpty())
+        { return; }
+
+        _PickBvhNodes.Reserve(_PickTriangles.Num() * 2);
+        Build_PickBvhNode(0, _PickTriangles.Num());
+    }
+
+    auto
+        FBatch::
+        Build_PickBvhNode(
+            int32 InFirstTriangle,
+            int32 InTriangleCount)
+        -> int32
+    {
+        const auto NodeIndex = _PickBvhNodes.AddDefaulted();
+        auto Bounds = FBox3f{ForceInit};
+        auto CentroidBounds = FBox3f{ForceInit};
+
+        for (auto Index = InFirstTriangle; Index < InFirstTriangle + InTriangleCount; ++Index)
+        {
+            const auto& Triangle = _PickTriangles[Index];
+            Bounds += _Positions[static_cast<int32>(Triangle._A)];
+            Bounds += _Positions[static_cast<int32>(Triangle._B)];
+            Bounds += _Positions[static_cast<int32>(Triangle._C)];
+            CentroidBounds += Triangle._Centroid;
+        }
+
+        constexpr auto MaxTrianglesPerLeaf = 12;
+        if (InTriangleCount <= MaxTrianglesPerLeaf)
+        {
+            auto& Node = _PickBvhNodes[NodeIndex];
+            Node._Bounds = Bounds;
+            Node._FirstTriangle = InFirstTriangle;
+            Node._TriangleCount = InTriangleCount;
+            return NodeIndex;
+        }
+
+        const auto CentroidExtent = CentroidBounds.GetExtent();
+        auto SplitAxis = 0;
+        if (CentroidExtent.Y > CentroidExtent.X)
+        { SplitAxis = 1; }
+        if (CentroidExtent.Z > CentroidExtent[SplitAxis])
+        { SplitAxis = 2; }
+
+        auto Triangles = MakeArrayView(_PickTriangles.GetData() + InFirstTriangle, InTriangleCount);
+        Algo::Sort(Triangles, [SplitAxis](const FPickTriangle& InLeft, const FPickTriangle& InRight)
+        {
+            return InLeft._Centroid[SplitAxis] < InRight._Centroid[SplitAxis];
+        });
+
+        const auto LeftCount = InTriangleCount / 2;
+        const auto LeftChild = Build_PickBvhNode(InFirstTriangle, LeftCount);
+        const auto RightChild = Build_PickBvhNode(InFirstTriangle + LeftCount, InTriangleCount - LeftCount);
+
+        auto& Node = _PickBvhNodes[NodeIndex];
+        Node._Bounds = Bounds;
+        Node._LeftChild = LeftChild;
+        Node._RightChild = RightChild;
+        return NodeIndex;
+    }
+
+    auto
+        FBatch::
+        TryIntersect_Ray(
+            const FVector& InOrigin,
+            const FVector& InDirection,
+            double InMaxDistance)
+        -> TOptional<double>
+    {
+        Ensure_PickBvh();
+
+        if (_PickBvhNodes.IsEmpty() || InDirection.IsNearlyZero() || InMaxDistance <= 0.0)
+        { return {}; }
+
+        auto NearestDistance = InMaxDistance;
+        auto DidHit = false;
+
+        // The tree is median-split, so its depth is bounded by the bit width of the int32 triangle count. This
+        // fixed stack avoids allocating on every mouse move.
+        int32 NodeStack[64];
+        auto StackSize = 0;
+        NodeStack[StackSize++] = 0;
+
+        while (StackSize > 0)
+        {
+            const auto NodeIndex = NodeStack[--StackSize];
+            const auto& Node = _PickBvhNodes[NodeIndex];
+
+            if (NOT ck_jolt_debug_renderer::TryIntersect_RayBox(
+                InOrigin, InDirection, Node._Bounds, NearestDistance).IsSet())
+            { continue; }
+
+            if (Node.Is_Leaf())
+            {
+                for (auto TriangleIndex = Node._FirstTriangle;
+                     TriangleIndex < Node._FirstTriangle + Node._TriangleCount;
+                     ++TriangleIndex)
+                {
+                    const auto& Triangle = _PickTriangles[TriangleIndex];
+                    const auto HitDistance = ck_jolt_debug_renderer::TryIntersect_RayTriangle(
+                        InOrigin,
+                        InDirection,
+                        FVector{_Positions[static_cast<int32>(Triangle._A)]},
+                        FVector{_Positions[static_cast<int32>(Triangle._B)]},
+                        FVector{_Positions[static_cast<int32>(Triangle._C)]},
+                        NearestDistance);
+
+                    if (HitDistance.IsSet())
+                    {
+                        NearestDistance = *HitDistance;
+                        DidHit = true;
+                    }
+                }
+
+                continue;
+            }
+
+            const auto LeftDistance = ck_jolt_debug_renderer::TryIntersect_RayBox(
+                InOrigin, InDirection, _PickBvhNodes[Node._LeftChild]._Bounds, NearestDistance);
+            const auto RightDistance = ck_jolt_debug_renderer::TryIntersect_RayBox(
+                InOrigin, InDirection, _PickBvhNodes[Node._RightChild]._Bounds, NearestDistance);
+
+            // LIFO: push the farther child first so the nearer child can lower the pruning distance sooner.
+            if (LeftDistance.IsSet() && RightDistance.IsSet())
+            {
+                const auto NearChild = *LeftDistance <= *RightDistance ? Node._LeftChild : Node._RightChild;
+                const auto FarChild = NearChild == Node._LeftChild ? Node._RightChild : Node._LeftChild;
+                NodeStack[StackSize++] = FarChild;
+                NodeStack[StackSize++] = NearChild;
+            }
+            else if (LeftDistance.IsSet())
+            { NodeStack[StackSize++] = Node._LeftChild; }
+            else if (RightDistance.IsSet())
+            { NodeStack[StackSize++] = Node._RightChild; }
+        }
+
+        return DidHit ? TOptional<double>{NearestDistance} : TOptional<double>{};
+    }
+
+    auto
+        TryIntersect_BatchRay(
+            FBatch* InBatch,
+            const FVector& InOrigin,
+            const FVector& InDirection,
+            double InMaxDistance)
+        -> TOptional<double>
+    {
+        return InBatch != nullptr
+            ? InBatch->TryIntersect_Ray(InOrigin, InDirection, InMaxDistance)
+            : TOptional<double>{};
     }
 }
 
@@ -200,6 +508,7 @@ struct FCk_Jolt_DebugRenderer::FImpl
     TArray<ck_jolt_debug_renderer::FPendingDraw> _PendingBodyDraws;
     uint64 _CaptureBodyKey = 0;
     uint8 _ActiveColorClassIndex = 0;
+    bool _ActiveBodyIsSensor = false;
     bool _CaptureBodyOpen = false;
 };
 
@@ -392,7 +701,8 @@ auto
     if (BatchImpl->_Indices.IsEmpty())
     { return; }
 
-    const auto Key = ck::jolt::debug_draw::FBucketKey{BatchImpl, inModelColor.mU32, _Impl->_ActiveColorClassIndex};
+    const auto Key = ck::jolt::debug_draw::FBucketKey{
+        BatchImpl, inModelColor.mU32, _Impl->_ActiveColorClassIndex, _Impl->_ActiveBodyIsSensor};
     auto& Bucket = Target->_Impl->_Buckets.FindOrAdd(Key);
 
     if (Bucket._BatchKeepAlive.GetPtr() == nullptr)
@@ -455,12 +765,13 @@ auto
     // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
     Ism->RegisterComponentWithWorld(World);
 
-    // The overlays are translucent geometry drawn on top of the translucent body they trace, so without a
-    // higher sort priority the painter's-algorithm order between them is arbitrary — which is exactly the
-    // "I selected it and nothing looks different" report P5-D41 came from.
-    if (InKey._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
-        InKey._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
+    // The overlays are translucent geometry drawn over the body they trace. The contact glow sits inside hover
+    // and selection by scale; priorities mirror that nesting so translucent sorting cannot make the shells jitter.
+    if (InKey._ColorClassIndex == ck::jolt::debug_draw::SensorContactClassIndex)
     { Ism->SetTranslucentSortPriority(1); }
+    else if (InKey._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
+             InKey._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
+    { Ism->SetTranslucentSortPriority(2); }
 
     // A bucket born into a hidden class must not flash into view before the next toggle.
     Ism->SetVisibility(InTarget.Get_IsClassVisible(InKey._ColorClassIndex));
@@ -471,7 +782,7 @@ auto
     InOutBucket._SlotCount = 0;
 
     ck::jolt::debug_draw::Apply_BucketMaterial(InOutBucket, InTarget._Impl->_Palette, InKey._ColorClassIndex,
-        InTarget._Impl->_RenderMode);
+        InKey._IsSensor, InTarget._Impl->_RenderMode);
 
     return true;
 }
@@ -484,6 +795,7 @@ auto
 {
     _Impl->_ActiveTarget = &InTarget;
     _Impl->_CaptureBodyOpen = false;
+    _Impl->_ActiveBodyIsSensor = false;
     _Impl->_PendingBodyDraws.Reset();
 
     InTarget._Impl->_LastCaptureStats = ck::jolt::debug_draw::FDebugDrawStats{};
@@ -497,11 +809,13 @@ auto
     FCk_Jolt_DebugRenderer::
     BeginBody(
         uint64 InBodyKey,
-        uint8 InColorClassIndex)
+        uint8 InColorClassIndex,
+        bool InIsSensor)
     -> void
 {
     _Impl->_CaptureBodyKey = InBodyKey;
     _Impl->_ActiveColorClassIndex = InColorClassIndex;
+    _Impl->_ActiveBodyIsSensor = InIsSensor;
     _Impl->_CaptureBodyOpen = true;
     _Impl->_PendingBodyDraws.Reset();
 }
@@ -620,6 +934,8 @@ auto
         InStatCounting);
     ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl, ck::jolt::debug_draw::Make_HoverKey(InBodyKey),
         InStatCounting);
+    ck::jolt::debug_draw::Release_SlotsForKey(TargetImpl,
+        ck::jolt::debug_draw::Make_SensorContactKey(InBodyKey), InStatCounting);
 }
 
 auto
@@ -632,6 +948,7 @@ auto
     auto* Target = _Impl->_ActiveTarget;
     _Impl->_ActiveTarget = nullptr;
     _Impl->_CaptureBodyOpen = false;
+    _Impl->_ActiveBodyIsSensor = false;
     _Impl->_PendingBodyDraws.Reset();
 
     if (Target == nullptr)
@@ -663,7 +980,7 @@ auto
         if (OpacityChanged)
         {
             ck::jolt::debug_draw::Apply_BucketMaterial(Bucket, Target->_Impl->_Palette, Kvp.Key._ColorClassIndex,
-                Target->_Impl->_RenderMode);
+                Kvp.Key._IsSensor, Target->_Impl->_RenderMode);
         }
 
         AnyLive |= Bucket._SlotCount > 0;

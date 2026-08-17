@@ -107,12 +107,18 @@ namespace ck
         // in-world target is captured from the subsystem's Tick rather than here, but the drag anchor has to be
         // invisible there too — hence ReplayTargets, which already includes it.
         const auto& InternalBodyKeys = JoltWorld->Get_DebugInternalBodyKeys();
+#if !UE_BUILD_SHIPPING
+        const auto& SensorContactBodyKeys = JoltWorld->Get_SensorContactBodyKeys();
+#endif
         const auto LastStepDurationMs = JoltWorld->Get_LastStepDurationMs();
         const auto ContactPairsLastStep = JoltWorld->Get_ContactPairsLastStep();
 
         for (const auto& Target : ReplayTargets)
         {
             Target->Set_InternalBodyKeys(InternalBodyKeys);
+#if !UE_BUILD_SHIPPING
+            Target->Set_SensorContactBodyKeys(SensorContactBodyKeys);
+#endif
             Target->Set_StepStats(LastStepDurationMs, ContactPairsLastStep);
         }
 

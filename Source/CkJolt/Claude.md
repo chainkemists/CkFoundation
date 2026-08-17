@@ -354,8 +354,9 @@ no `Shape::Draw`, no bucket lookup, no `UpdateInstanceTransformById`. So a scene
 streaming cell, a re-bake, an asleep-spawn) costs one cheap comparison per body plus real work only for
 what changed. Pose equality is EXACT: any difference at all re-draws.
 
-The sensor flag and motion type are in the record because they are the colour class's inputs — a record
-that compared pose alone would skip a body whose class had changed and leave it painted the old colour.
+The sensor flag and motion type are in the record because they affect the retained bucket — motion can change
+the colour class, while sensor state selects the translucent material independently of colour mode. A record that
+compared pose alone could therefore leave a body painted with the old colour or opacity contract.
 Consequence for the stats: **`_BodiesCaptured` counts bodies DRAWN, not bodies walked**, so a re-run
 over an unchanged scene reports zero while still visiting every body.
 
@@ -471,8 +472,8 @@ facility does the rest:
   own always-visible `Hover` class, half alpha and a smaller swell. Independent of the highlight — a
   body may be both, and then it carries both overlays.
 - **Both overlays are drawn at a SCALE about the body's centre of mass** (1.03 highlight, 1.02 hover),
-  their buckets sit at `TranslucencySortPriority = 1`, and the highlight bucket ignores the palette's
-  opacity entirely. Without all three an overlay is co-planar, half-transparent geometry behind
+  their buckets sit at `TranslucencySortPriority = 1`, and a normal-body highlight ignores the palette's
+  opacity entirely. Sensor highlights remain translucent. Without the scale and deterministic ordering an overlay is co-planar, half-transparent geometry behind
   half-transparent geometry, which is exactly the "I selected it and nothing looks different" the user
   reported (P5-D41). The highlight colour is `{1.00, 0.15, 0.85}` — magenta, chosen to be near no entry
   of any mode's palette, which the `HighlightAddsOverlayInstance` spec asserts mode by mode.
@@ -512,18 +513,19 @@ facility does the rest:
   at once rather than leaving a superseded manifold readable. **This is not the ContactListener's
   record** (§ Contact recording) — that one exists only inside the solve; this is a query.
 - `TryPick_BodyHit(Origin, Direction, OutKey, OutHitPointWorld, OutDistance)` — the pick, with the HIT.
-  Oriented-box slab test in instance space over live instances, nearest parametric hit wins; hidden
-  classes and both overlays are not pickable. O(live instances), for a click handler.
-  **`OutHitPointWorld` is a point ON the picked body's oriented bounds** — where the ray entered it —
+  An oriented-box slab test is the broad phase over live instances; candidates then traverse a lazy
+  per-geometry triangle BVH, and the nearest actual rendered-triangle hit wins. A broad concave terrain
+  therefore cannot steal a pick through empty space inside its bounds. Hidden classes and both overlays
+  are not pickable. **`OutHitPointWorld` is a point ON the picked body's rendered surface**
   and `OutDistance` is the WORLD distance from the origin to that point, so an unnormalized direction
   cannot make two picks incomparable. The slab distance is parametric along `InDirection`, and an
   affine instance transform preserves that parameter, which is what lets a local-space test be turned
-  back into a world point by walking the original ray. A ray that starts INSIDE a body enters at zero:
-  the hit point is the origin and the distance is 0.
+  back into a world point by walking the original ray. A ray that starts inside a closed body reports its
+  forward exit surface.
   Consumers that place something at the grab point (the debugger's Ctrl+LMB drag) need this and nothing
   less — a bounds centre is not on the surface the user clicked, and a wrong depth gives a drag spring a
   lever arm that spins the body.
-- `TryPick_Body(Origin, Direction)` — the same pick, key only. A thin wrapper: the slab test computes
+- `TryPick_Body(Origin, Direction)` — the same pick, key only. A thin wrapper: the triangle test computes
   the hit either way, and a caller that only wants to know WHICH body should not have to declare three
   out-parameters to find out. Returns `TOptional<uint64>`.
 
@@ -535,35 +537,44 @@ to change. The cost is one O(all bodies) WALK per selection change, deselect inc
 that pass now draws is the newly selected one. Accepted and closed; the alternative is a selection that
 silently fails to highlight the exact bodies a physics debugger is most often opened for.
 
-**Colour + wireframe.** Buckets are per-(geometry, **colour-class INDEX**) — the index rides the bucket
-key alongside the packed colour, so two classes whose palette entries quantise to the same 8-bit colour
-still land in distinct buckets. `FCk_Jolt_DebugDrawPalette::Get_Color(Mode, ClassIndex)` maps an index
+**Colour + wireframe.** Buckets are per-(geometry, **colour-class INDEX**, sensor state) — the index and
+sensor bit ride the bucket key alongside the packed colour, so two classes whose palette entries quantise to the
+same 8-bit colour still land in distinct buckets, and a sensor cannot merge into an opaque nonsensor bucket in
+SleepState/ObjectLayer/ShapeType modes. `FCk_Jolt_DebugDrawPalette::Get_Color(Mode, ClassIndex)` maps an index
 to a colour, with a dim factor applied to the sleeping variant and the opacity the tint uses;
-`Set_Palette` invalidates the retained capture so the next one repaints everything. Solid mode =
-`M_SimpleUnlitTranslucent`, wireframe =
-`/Engine/EngineDebugMaterials/WireframeMaterial` — both loaded by direct `LoadObject` and held in a
+`Set_Palette` invalidates the retained capture so the next one repaints everything. Normal nonsensor bodies use lit
+opaque `/Engine/EngineDebugMaterials/M_SimpleOpaque`; sensors, hover and highlight use lit
+`/Engine/EngineDebugMaterials/M_SimpleTranslucent`; and wireframe uses
+`/Engine/EngineDebugMaterials/WireframeMaterial` — all loaded by direct `LoadObject` and held in a
 `TStrongObjectPtr` (a bare function-local `UMaterial*` static dangles after the GC that collects it).
+All use the `Color` parameter. Sensor fill is capped at 0.45 opacity, and sensor highlight/hover stay below 1.0.
+The render mode has three states: `Solid` leaves every fill without wireframe, `SensorWireframe` gives only a
+normal sensor ISM the wireframe MID through `SetOverlayMaterial`, and `Wireframe` uses the wire material as every
+bucket's primary material. The middle state adds one material pass for each sensor bucket but no component,
+instance or geometry; both other states clear that overlay pass.
+The editor-commandlet build of `FCkJoltModule` explicitly adds all three name-loaded materials to every cook
+through `UE::Cook::FDelegates::ModifyCook`; the runtime Game build contains no cook-API dependency.
 **Never** `GEngine->WireframeMaterial`: it is null whenever the platform `RequiresCookedData`.
 `Set_RenderMode` swaps each bucket's material 0 between the two MIDs — zero geometry rebuild.
 BakedStatic is distinguished from a Static-motion JoltBody by attribution entity, not by layer: both
 share the Static object-layer DOMAIN, and only a baked body's user-data resolves to a
 `FFragment_JoltStaticActor_Current`.
 
-⚠ **`[PACKAGED-VERIFY]` — both engine debug materials in a packaged build.** Whether
-`/Engine/EngineDebugMaterials/` survives a cook is UNPROVEN, and it is unproven identically for the
-solid material this facility has always used, so it is a standing risk rather than a regression. It
-cannot be closed headlessly. Exact acceptance step:
+⚠ **`[PACKAGED-VERIFY]` — live rendering of all three engine debug materials.** The cook dependency is
+explicit, but only a running packaged viewport can prove the final material appearance. Exact acceptance step:
 
 1. Package a **Development** build (DeveloperTool modules are included there, Test/Shipping exclude them).
-2. Run it, open the Jolt debugger window, and confirm bodies render **solid**.
-3. Flip the wireframe toggle and confirm they render **wireframe**, not untinted-default and not invisible.
-4. Check the log for `Failed to load WireframeMaterial` — the facility degrades to Solid and ensures
+2. Run it, open the Jolt debugger window, and confirm nonsensor bodies render **opaque with shadowless form cues**.
+3. Confirm every probe/sensor is lit but translucent in every colour mode and carries a readable wire outline.
+4. Hover and select bodies; confirm the overlays remain visible, and a selected sensor never becomes opaque or black.
+5. Cycle the wireframe control through **Off -> Transparent -> All**. Off has no outlines, Transparent outlines
+   only sensor/probe fills, and All renders every body as wireframe; none rebuild geometry.
+6. Check the log for `Failed to load WireframeMaterial` — the facility degrades to Solid and ensures
    loudly rather than drawing nothing, so a silent-looking pass with that line in the log is a FAIL.
 
-On failure the fallback is P1-D13 branch (b): a CkUsf-generated wireframe look (a `_Wireframe` flag, a
-trivial `.ush`, an AS asset declaration, and a regen commit) replacing the engine material load. Solid
-mode has no fallback — a cook that drops `M_SimpleUnlitTranslucent` breaks the in-world draw too, which
-is a project-wide cook-settings problem, not a debug-draw one.
+On failure, first confirm the `CkJoltDebugDraw` cook rules admitted both solid material packages. The fallback
+is P1-D13 branch (b): a CkUsf-generated wireframe look (a `_Wireframe` flag, a trivial `.ush`, an AS asset
+declaration, and a regen commit) replacing the engine material load.
 
 ### Colour modes + legend
 
@@ -935,8 +946,9 @@ gating construction on `JPH::DebugRenderer::sInstance` and is gone.
   (batch, transform, colour class) against the open body's slots, and `EndCapture` reconciles each bucket
   into one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay line/text-shaped and go to the
   target's line and label channels — velocity vectors, transform axes and contact normals are genuinely
-  line-shaped and low-count. Both windings are emitted per triangle (Conv is a handedness passthrough, so
-  one winding renders inside-out). `DrawGeometry` outside a body scope is DROPPED: instanced geometry only
+  line-shaped and low-count. One outward winding is emitted per source triangle; before the runtime fast mesh
+  build, `FStaticMeshOperations` generates the tangent basis that DefaultLit materials require. `DrawGeometry`
+  outside a body scope is DROPPED: instanced geometry only
   exists inside one, and nothing that runs outside a body scope (constraints, contacts) emits geometry.
 - Stale-bucket pruning is a HOLDER CENSUS, not a refcount-of-1 test: the front end tracks, per
   `FBatch`, how many live buckets across ALL targets hold a keep-alive, and a bucket is dropped only
@@ -959,7 +971,10 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 |---|---|
 | `Ck.Jolt.DebugDraw.TargetReconcile.StaticPassIsIdempotent` | full pass runs on first capture; an unchanged revision skips it entirely; a bumped revision re-runs it and touches NOTHING for unchanged bodies (0 added / 0 removed / 0 updated / 0 drawn) while a body that MOVED is re-drawn into the slot it already had (1 updated, 0 added, 0 removed) and the content bounds follow it |
 | `Ck.Jolt.DebugDraw.SleepTransitionRecolors` | a body already asleep before the FIRST capture still draws, coloured sleeping; a body falling asleep later moves buckets (1 removed + 1 added, instance count stable) |
-| `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every bucket's material 0 between the solid and wireframe base materials and back, instance counts unchanged |
+| `Ck.Jolt.DebugDraw.SingleTriangleBuild` | one Jolt source triangle becomes exactly one outward-wound UE triangle with finite normalized render normals; a coplanar opposite-wound duplicate cannot reappear and a lit material cannot receive zero tangent-space data |
+| `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every normal bucket between lit opaque `M_SimpleOpaque` and wireframe and back, all through `Color`, with instance counts unchanged |
+| `Ck.Jolt.DebugDraw.OverlayMaterial` | normal nonsensor geometry stays lit and opaque while hover and highlight use two translucent `Color`-tinted overlay buckets at half and full alpha |
+| `Ck.Jolt.DebugDraw.SensorMaterialsAcrossColorModes` | sensor identity remains independent of BodyClass/SleepState/ObjectLayer/ShapeType colour; sensor fill, hover and highlight stay translucent; Off has no wire overlay, Transparent outlines the normal sensor on its existing ISM, and All replaces every primary material without adding instances |
 | `Ck.Jolt.DebugDraw.ClassPalette` | one body per colour class on ONE shared shape → one bucket per class, so the split is provably by class and not by geometry |
 | `Ck.Jolt.DebugDraw.PreviewWorldCompat` | an `EWorldType::EditorPreview` world gets registered ISMs with correct instance counts, and zero ensures |
 | `Ck.Jolt.DebugDraw.MultiTargetBatchPrune` | two targets sharing one batch: destroying one leaves the other's bucket and instances intact and still slot-reusing; the batch is pruned only once every Jolt geometry reference is gone |
@@ -968,6 +983,8 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.HighlightAddsOverlayInstance` | the selection ADDS an instance in its own Highlight bucket rather than moving one; hiding the body's own class leaves the overlay visible; a moving selection updates body and overlay in place (0 added / 0 removed); clearing releases the overlay immediately |
 | `Ck.Jolt.DebugDraw.HighlightedBodyBounds` | an already-drawn body yields selection bounds with NO re-capture, excluding the unselected body; a never-drawn body has none; clearing clears them |
 | `Ck.Jolt.DebugDraw.PickNearestBody` | a ray through two bodies returns the nearer one and the answer FLIPS when fired from the other side (so it is not iteration order); a ray over everything misses; a hidden class falls through; the overlay is never what a pick returns. Plus the HIT half: `TryPick_BodyHit` agrees with the key-only pick, its point lies on the picked body's NEAR bounds face (a bounds centre or a far face fails), its distance is the world distance to that point, an unnormalized direction changes neither, and a miss reports no hit |
+| `Ck.Jolt.DebugDraw.PickUsesVisibleTrianglesNotMeshBounds` | a high disconnected mesh whose combined bounds cover the ray cannot steal hover/click through its empty centre from the lower visible box; both key-only and detailed picks return the box's real top-face hit |
+| `Ck.Jolt.DebugDraw.PickRespectsInstanceTransform` | exact triangle picking survives a translated, rotated, non-uniformly scaled instance and an unnormalized world ray; key, world hit point, and world distance all remain correct |
 | `Ck.Jolt.DebugDraw.SelectionSampleIsCaptureOwned` | the sample belongs to the CAPTURE: unset before one, matching the body's velocity after it, following a re-selection to the newly selected body, and cleared the moment the selection is |
 | `Ck.Jolt.DebugDraw.PauseAndStepOnce` | drives `FProcessor_JoltWorld_PlanStep::DoTick` (and the Step processor) against a real `FJoltWorld` published as a registry context: a fat frame plans MORE than one step while running and the step loop records a non-zero solve duration; a debug-paused frame plans zero, frame after frame; an ENGINE pause on top of a pending step-once plans zero and does NOT eat the one-shot, which is then granted on the first unblocked frame as EXACTLY one step of one fixed dt with the accumulator untouched — the leg that separates "one step" from "this frame's worth of steps"; the next frame plans zero again; a request made while running is not banked for the next pause and an unconsumed one is discarded on resume |
 | `Ck.Jolt.DebugDraw.BodySampleFields` | the sampled fields are the SELECTED body's own — friction, restitution, gravity factor, object layer, shape type/sub-type, unit shape scale, a finite positive mass and a readable sleeping permission for a dynamic body; a static body reports INFINITE mass as 0 and its sleeping permission is never read (the assert-safety leg); a sensor reports itself as one; a rigid-body selection produces no character sample |

@@ -42,17 +42,19 @@ namespace ck::jolt::debug_draw
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Bodies, characters and the two overlays all live in ONE slot map, so the four keyspaces have to be
+    // Bodies, characters and the three overlays all live in ONE slot map, so the five keyspaces have to be
     // disjoint. A BodyID key occupies the low 32 bits (index + sequence); a character has no BodyID, and each
-    // overlay traces a key that is already taken, so all three are lifted clear by their own bit.
+    // overlay traces a key that is already taken, so all four are lifted clear by their own bit.
     constexpr uint64 CharacterKeyBit = uint64{1} << 40;
     constexpr uint64 HighlightKeyBit = uint64{1} << 41;
     constexpr uint64 HoverKeyBit = uint64{1} << 42;
+    constexpr uint64 SensorContactKeyBit = uint64{1} << 43;
 
     // The overlays swell about the body's centre of mass so the traced shape is visible past the body's own
     // surface. Hover is the smaller of the two on purpose — a hover must never read as a selection.
     constexpr float HighlightOverlayScale = 1.03f;
     constexpr float HoverOverlayScale = 1.02f;
+    constexpr float SensorContactOverlayScale = 1.015f;
 
     constexpr auto
         Make_CharacterBodyKey_FromEntityId(
@@ -76,6 +78,14 @@ namespace ck::jolt::debug_draw
         -> uint64
     {
         return HoverKeyBit | InBodyKey;
+    }
+
+    constexpr auto
+        Make_SensorContactKey(
+            uint64 InBodyKey)
+        -> uint64
+    {
+        return SensorContactKeyBit | InBodyKey;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -117,19 +127,21 @@ namespace ck::jolt::debug_draw
         FBatch* _Batch = nullptr;
         uint32 _ColorU32 = 0;
         uint8 _ColorClassIndex = 0;
+        bool _IsSensor = false;
 
         auto operator==(const FBucketKey& InOther) const -> bool
         {
             return _Batch == InOther._Batch &&
                    _ColorU32 == InOther._ColorU32 &&
-                   _ColorClassIndex == InOther._ColorClassIndex;
+                   _ColorClassIndex == InOther._ColorClassIndex &&
+                   _IsSensor == InOther._IsSensor;
         }
 
         friend auto GetTypeHash(const FBucketKey& InKey) -> uint32
         {
             return HashCombine(
                 HashCombine(GetTypeHash(InKey._Batch), GetTypeHash(InKey._ColorU32)),
-                GetTypeHash(InKey._ColorClassIndex));
+                HashCombine(GetTypeHash(InKey._ColorClassIndex), GetTypeHash(InKey._IsSensor)));
         }
     };
 
@@ -183,11 +195,15 @@ namespace ck::jolt::debug_draw
         JPH::Quat _Rotation = JPH::Quat::sIdentity();
         const JPH::Shape* _Shape = nullptr;
         uint8 _ColorClassIndex = 0;
+        bool _IsSensor = false;
+        bool _HasSensorContact = false;
 
         auto operator==(const FInactiveBodyRecord& InOther) const -> bool
         {
             return _Shape == InOther._Shape &&
                    _ColorClassIndex == InOther._ColorClassIndex &&
+                   _IsSensor == InOther._IsSensor &&
+                   _HasSensorContact == InOther._HasSensorContact &&
                    _Position == InOther._Position &&
                    _Rotation == InOther._Rotation;
         }
@@ -215,6 +231,15 @@ namespace ck::jolt::debug_draw
     CKJOLT_API auto Note_BucketHolderAdded(JPH::RefTargetVirtual* InBatch) -> void;
     CKJOLT_API auto Note_BucketHolderRemoved(JPH::RefTargetVirtual* InBatch) -> void;
     CKJOLT_API auto Get_BucketHolderCount(JPH::RefTargetVirtual* InBatch) -> int32;
+
+    /// Exact local-space ray pick against the triangles retained by one debug geometry batch. InMaxDistance is
+    /// parametric along InDirection and lets the batch BVH prune anything behind a hit already found elsewhere.
+    CKJOLT_API auto
+    TryIntersect_BatchRay(
+        FBatch* InBatch,
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        double InMaxDistance) -> TOptional<double>;
 
     CKJOLT_API auto
     Get_TintedColor(
@@ -258,21 +283,21 @@ namespace ck::jolt::debug_draw
         EStatCounting InStatCounting) -> void;
 
     /// Creates the mode's MID on first use and assigns it to material slot 0. InOutRenderMode is written back
-    /// when the wireframe material is unavailable and the target degrades to Solid. The class index is what
-    /// decides the alpha: Highlight is forced fully opaque and Hover half-transparent, both independent of the
-    /// palette's own opacity, so a translucent population can never wash the selection out.
+    /// when the wireframe material is unavailable and the target degrades to Solid. Sensor metadata is separate
+    /// from the colour class because all colour modes must keep sensors translucent.
     CKJOLT_API auto
     Apply_BucketMaterial(
         FBucket& InOutBucket,
         const FCk_Jolt_DebugDrawPalette& InPalette,
         uint8 InColorClassIndex,
+        bool InIsSensor,
         ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode) -> void;
 
-    /// The alpha one class index draws at. Highlight ignores the palette opacity entirely (P5-D41) and Hover is
-    /// pinned to half; every other class follows the palette.
+    /// The alpha one bucket draws at. Sensors stay transparent in every colour mode, including their overlays.
     CKJOLT_API auto
     Get_ClassOpacity(
         uint8 InColorClassIndex,
+        bool InIsSensor,
         float InPaletteOpacity) -> float;
 
     /// Recomputes the process-wide contact-draw demand from every live target's flags and pushes it into Jolt's
@@ -328,6 +353,10 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     // a view filter a user can turn off.
     TSet<uint64> _InternalBodyKeys;
 
+    // Jolt-generic contact state published by FJoltWorld. A dedicated overlay reads this set; the base body class
+    // and its colour-mode bucket never change when a contact begins or ends.
+    TSet<uint64> _SensorContactBodyKeys;
+
     // Sampled by the capture for the PRIMARY selection only, and re-sampled from scratch every capture: a value
     // the current capture did not produce would be reported as live state it no longer is.
     TOptional<FCk_Jolt_DebugDraw_BodySample> _BodySample;
@@ -376,6 +405,8 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     ECk_Jolt_DebugDrawFlags _DrawFlags = ECk_Jolt_DebugDrawFlags::Shape;
 
     ECk_Jolt_DebugDrawColorMode _ColorMode = ECk_Jolt_DebugDrawColorMode::BodyClass;
+
+    float _DirectionGlyphScale = 1.0f;
 
     // One bit per colour-class INDEX. Visibility is a component-level flag, never a capture filter: a hidden
     // class keeps capturing so unhiding it is instant and its instances are never stale.
