@@ -207,7 +207,8 @@ public:
 
     // Usage flags baked into the generated master at generation time; hand-set flags on a generated master
     // are wiped by the next regeneration, and a missing flag falls back to the default material in packaged
-    // builds. CkIsm needs InstancedStaticMeshes; CkIskm needs SkeletalMesh (+ MorphTargets if morphed).
+    // builds. CkIsm needs InstancedStaticMeshes; CkIskm needs SkeletalMesh (+ MorphTargets if morphed);
+    // Nanite meshes need Nanite.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithInstancedStaticMeshes = false;
 
@@ -216,6 +217,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithMorphTargets = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithNanite = false;
 
     // Niagara SPRITE renderers (MATUSAGE_NiagaraSprites). Without it a sprite renderer using this master
     // falls back to the default material in a packaged build.

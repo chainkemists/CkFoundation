@@ -464,6 +464,7 @@ namespace ck::usf_editor
         Material->bUsedWithInstancedStaticMeshes = InDef->_UsedWithInstancedStaticMeshes;
         Material->bUsedWithSkeletalMesh = InDef->_UsedWithSkeletalMesh;
         Material->bUsedWithMorphTargets = InDef->_UsedWithMorphTargets;
+        Material->bUsedWithNanite = InDef->_UsedWithNanite;
         Material->bUsedWithNiagaraSprites = InDef->_UsedWithNiagaraSprites;
         Material->bUsedWithNiagaraMeshParticles = InDef->_UsedWithNiagaraMeshParticles;
         Material->bUsedWithNiagaraRibbons = InDef->_UsedWithNiagaraRibbons;
