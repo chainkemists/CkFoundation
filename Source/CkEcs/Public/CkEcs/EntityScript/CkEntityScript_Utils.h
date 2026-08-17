@@ -67,14 +67,6 @@ public:
         const FCk_Handle_EntityScript& InHandle);
 
 public:
-    // Re-establish every entity script's _AssociatedEntity back-pointer after a CkSnapshot restore: the field is
-    // Transient and set only at spawn, so a restored script would read a tombstone handle at teardown and ensure.
-    // Not Blueprint-exposed; internal restore plumbing. Returns the number of scripts re-linked.
-    static int32
-    Relink_AssociatedEntities_AfterRestore(
-        UWorld* InWorld);
-
-public:
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
     // The completion delegate reports that the spawn REQUEST was drained, not that construction finished —
     // a script returning ECk_EntityScript_ConstructionFlow::Continue still completes with Succeeded.

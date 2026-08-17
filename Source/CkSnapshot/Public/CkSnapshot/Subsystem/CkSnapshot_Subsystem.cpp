@@ -1929,7 +1929,7 @@ FCk_Snapshot_Header
     { return {}; } // invalid slot, or a pre-v3 slot with no v3 header of record
 
     // The SaveGame stores only the v3 header; this frozen BP return type is synthesized from the six overlapping
-    // fields. The legacy-only stream fields (manifest, transient id, tag offset) have no v3 source and stay default.
+    // fields. The legacy-only stream field (manifest) has no v3 source and stays default.
     const auto& HeaderV3 = SaveGame->_HeaderV3;
     auto Header = FCk_Snapshot_Header{};
     Header.Set_FormatVersion(HeaderV3.Get_FormatVersion())
