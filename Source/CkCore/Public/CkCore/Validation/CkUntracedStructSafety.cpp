@@ -12,26 +12,25 @@ namespace ck_untraced_struct_safety
 
     auto IsAngelScriptStruct(const UScriptStruct* InStruct) -> bool
     {
-        // Path-matched rather than Cast<UASStruct> so foundational CkCore need not link the optional AngelscriptCode
-        // module. Class identity alone is insufficient — script fields need not be exported as FProperty, so the
-        // complete AngelScript value size must also prove zero storage.
-        static const auto AngelScriptStructClassPath = FString{TEXT("/Script/AngelscriptCode.ASStruct")};
-        return InStruct != nullptr &&
-            InStruct->GetClass() != nullptr &&
-            InStruct->GetClass()->GetPathName() == AngelScriptStructClassPath &&
-            InStruct->GetPropertiesSize() == 0;
+        // Class identity alone is insufficient HERE — script fields need not be exported as FProperty, and this
+        // predicate is only reached from the field-less branch below, so the complete AngelScript value size must
+        // also prove zero storage.
+        return ck::Is_AngelScriptDeclaredStruct(InStruct) && InStruct->GetPropertiesSize() == 0;
     }
 
     auto IsApprovedGcIndependentStruct(const UScriptStruct* InStruct) -> bool
     {
         // Native structs certified to retain no untraced UObject reference, matched by reflected path (same
-        // link-avoidance rationale as IsAngelScriptStruct). FCk_Entity is provably GC-independent yet has zero
-        // reflected fields in a cooked build, so the field-less-struct heuristic below would otherwise reject
-        // every dynamic fragment / spawn-param embedding an FCk_Handle. FCk_DynamicFragment_SnapshotTransient
-        // is an empty-by-design marker AngelScript fragments carry as a field (script structs cannot inherit
-        // it) — without approval the marker would fail every fragment that declares snapshot-transience.
+        // link-avoidance rationale as Is_AngelScriptDeclaredStruct). FCk_Entity is provably GC-independent yet has
+        // zero reflected fields in a cooked build, so the field-less-struct heuristic below would otherwise reject
+        // every dynamic fragment / spawn-param embedding an FCk_Handle. The three posture markers are
+        // empty-by-design and AngelScript fragments carry them as a FIELD (script structs cannot inherit) —
+        // without approval a marker would fail schema validation on every fragment that declares its posture,
+        // and Produce refuses the whole entity's payload on an unsafe schema.
         static const auto ApprovedPaths = TSet<FString>{
             TEXT("/Script/CkEcs.Ck_Entity"),
+            TEXT("/Script/CkEcs.Ck_Snapshot_Durable"),
+            TEXT("/Script/CkEcs.Ck_Snapshot_Session"),
             TEXT("/Script/CkDynamic.Ck_DynamicFragment_SnapshotTransient")};
         return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
     }
@@ -166,6 +165,21 @@ namespace ck_untraced_struct_safety
 
         return Accept();
     }
+}
+
+auto
+    ck::
+    Is_AngelScriptDeclaredStruct(
+        const UScriptStruct* InStruct)
+    -> bool
+{
+    // Path-matched rather than Cast<UASStruct> so foundational CkCore need not link the optional AngelscriptCode
+    // module. UASStruct derives UScriptStruct, so every script struct's CLASS is exactly this one type.
+    static const auto AngelScriptStructClassPath = FString{TEXT("/Script/AngelscriptCode.ASStruct")};
+
+    return InStruct != nullptr &&
+        InStruct->GetClass() != nullptr &&
+        InStruct->GetClass()->GetPathName() == AngelScriptStructClassPath;
 }
 
 auto
