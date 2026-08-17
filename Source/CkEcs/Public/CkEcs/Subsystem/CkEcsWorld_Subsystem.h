@@ -138,12 +138,6 @@ public:
     // The per-frame pump-iteration budget (max across schedulers). 0 when no schedulers exist.
     auto Get_MaxPumpIterations() const -> int32;
 
-    // Re-points this world's ECS bookkeeping at a transient entity a snapshot restore rebuilt into the
-    // registry. Called by Run_Restore(UWorld&) once the loader has rebuilt the entity set.
-    auto
-    Request_AdoptRestoredTransient(
-        FCk_Entity InRestoredTransient) -> void;
-
     // While active, every EcsWorld actor ticks with LoadKernel scope so feature processors stay frozen
     // against the half-rebuilt world. Held by the snapshot load orchestrator across the rebuild.
     auto Get_IsLoadGateActive() const -> bool;

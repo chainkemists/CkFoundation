@@ -80,16 +80,6 @@ private:
     UPROPERTY()
     int32 _EntityCount = 0;
 
-    // Raw entt id of the registry's transient entity at capture; 0xFFFFFFFF == entt::null (a registry-core capture
-    // has no transient ctx and never adopts). Consumed only by the live-world restore.
-    UPROPERTY()
-    uint32 _TransientEntityId = 0xFFFFFFFFu;
-
-    // Byte offset of the self-describing tag section — restore Seeks here rather than trusting the stream
-    // position, since the fragment manifest byte-jumps.
-    UPROPERTY()
-    int64 _TagSectionByteOffset = 0;
-
 public:
     CK_PROPERTY(_FormatVersion);
     CK_PROPERTY(_EngineVersion);
@@ -98,8 +88,6 @@ public:
     CK_PROPERTY(_WorldAssetPath);
     CK_PROPERTY(_Manifest);
     CK_PROPERTY(_EntityCount);
-    CK_PROPERTY(_TransientEntityId);
-    CK_PROPERTY(_TagSectionByteOffset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

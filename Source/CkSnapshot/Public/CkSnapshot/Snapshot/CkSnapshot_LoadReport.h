@@ -180,9 +180,6 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_SkipRecord> _Skips;
 
-    UPROPERTY()
-    FCk_Snapshot_Header _LoadedHeader;
-
     // The rebuild kernel quiesced with unresolved rows and the loader ran full-scope ticks to let
     // multi-stage constructions (and the identity they stamp on completion) finish. Not a failure.
     UPROPERTY()
@@ -211,7 +208,6 @@ public:
     CK_PROPERTY(_SkippedScriptClasses);
     CK_PROPERTY(_Orphans);
     CK_PROPERTY(_Skips);
-    CK_PROPERTY(_LoadedHeader);
     CK_PROPERTY(_UsedEscalatedRebuild);
     CK_PROPERTY(_UnresolvedAfterEscalation);
 
