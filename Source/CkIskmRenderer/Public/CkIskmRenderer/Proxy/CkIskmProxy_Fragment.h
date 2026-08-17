@@ -42,6 +42,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_Current);
         friend class FProcessor_IskmProxy_Setup;
         friend class FProcessor_IskmProxy_HandleRequests;
+        friend class FProcessor_IskmProxy_HandleLateCustomDataRequests;
         friend class FProcessor_IskmProxy_UpdateTransform;
         friend class FProcessor_IskmProxy_EmitFinishedEvents;
         friend class FProcessor_IskmProxy_EndPlay;
@@ -204,6 +205,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_CustomData);
         friend class FProcessor_IskmProxy_Setup;
         friend class FProcessor_IskmProxy_HandleRequests;
+        friend class FProcessor_IskmProxy_HandleLateCustomDataRequests;
     private:
         TArray<float> _Values;
         bool _Dirty = false;
@@ -283,6 +285,22 @@ namespace ck
 
     public:
         TArray<RequestType> _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // Opt-in request lane for custom-data writes authored after the normal Gameplay_Rendering request
+    // pass. DeferredApply drains it after PostTransform without delaying or reordering the general lane.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_LateCustomDataRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_LateCustomDataRequests);
+        friend class FProcessor_IskmProxy_HandleLateCustomDataRequests;
+        friend class UCk_Utils_IskmProxy_UE;
+
+    private:
+        TArray<FCk_Request_IskmProxy_SetCustomDataFloat> _Requests;
 
     public:
         CK_PROPERTY_GET(_Requests);

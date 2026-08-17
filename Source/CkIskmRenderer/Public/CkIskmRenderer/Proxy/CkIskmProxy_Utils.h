@@ -159,6 +159,17 @@ public:
         FName InSocketName,
         ECk_IskmProxy_TransformSpace InSpace);
 
+    // Re-anchors the component-space socket pose onto the entity's live world transform and render
+    // offset. Unlike the World-space getter, this does not read the one-frame-late SKMC placement.
+    // Returns false with identity output while renderer setup/teardown makes BaseSKMC unavailable.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Try Get Socket Transform Current Entity World")
+    static bool
+    TryGet_SocketTransform_CurrentEntityWorld(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InSocketName,
+        FTransform& OutTransform);
+
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Get Socket Location")
     static FVector
@@ -237,6 +248,17 @@ public:
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         int32 InOffset,
         float InValue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Opt-in late lane: consumed in FGroup_DeferredApply after PostTransform. Use for a value
+    // produced after the normal Gameplay_Rendering request handler has already run this frame.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
+        DisplayName="[Ck][IskmProxy] Request Set Custom Data Float Late",
+        meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_IskmProxy
+    Request_SetCustomDataFloat_Late(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ---- per-proxy material overrides ----
