@@ -25,11 +25,10 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Snapshot_OnThumbnailCaptured,
 // --------------------------------------------------------------------------------------------------------------------
 
 // Blueprint/AngelScript-facing queries over the save/load lifecycle markers. The markers themselves live in CkEcs
-// (CkSnapshot_RestoreMarker.h) / CkEcsExt (CkActorRebind_Utils.h) as plain C++ ECS tags so restore-redrive
-// processors can read them without a CkSnapshot dependency — but plain tags have no reflected surface, so script
-// code cannot see them at all without this library. The marker queries are read-only: their lifecycles are owned
-// by the load, and game-side consumers that need a clear-side contract (e.g. a rebound-handled guard) own that
-// policy themselves. The SaveKey surface is the one mutator here — see its contract below.
+// (CkSnapshot_RestoreMarker.h) as plain C++ ECS tags so restore-redrive processors can read them without a
+// CkSnapshot dependency — but plain tags have no reflected surface, so script code cannot see them at all without
+// this library. The marker queries are read-only: their lifecycles are owned by the load. The SaveKey surface is
+// the one mutator here — see its contract below.
 UCLASS(NotBlueprintable)
 class CKSNAPSHOT_API UCk_Utils_Snapshot_UE : public UBlueprintFunctionLibrary
 {
@@ -46,16 +45,6 @@ public:
               DisplayName = "[Ck][Snapshot] Get Was Just Restored")
     static bool
     Get_WasJustRestored(
-        const FCk_Handle& InHandle);
-
-    // True while the entity carries FTag_ActorJustRebound — stamped by the respawn pass when a fresh bridged
-    // actor is re-bound to this restored entity. The re-bridge skips WithActor::Construct, so actor-side wiring
-    // is dead until a consumer reattaches; consumers own their done-guard.
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Get Was Actor Just Rebound")
-    static bool
-    Get_WasActorJustRebound(
         const FCk_Handle& InHandle);
 
     // True while a CkSnapshot load is reconstituting the world the entity lives in. WORLD-scoped, unlike the
@@ -75,8 +64,12 @@ public:
     // this load's OnLoadComplete (post-settle — hydrated values are readable). The consumer-side twin of the
     // load gate: feature processors are frozen during a load, but signal/promise CALLBACKS are not — a callback
     // delivered mid-load that reads world population (occupancy rosters, tag scans, counts) must route that
-    // read through this instead of acting on the half-rebuilt world. The immediate path passes a
-    // default-constructed report (there was no load to report on).
+    // read through this instead of acting on the half-rebuilt world.
+    //
+    // CAVEAT on the immediate path: it passes a DEFAULT-CONSTRUCTED report, and FCk_Snapshot_LoadReport's
+    // _Result defaults to ECk_SnapshotResult::Failed_IO — so a consumer that reads _Result on the immediate
+    // path sees a FAILURE for a load that never happened. Treat this delegate's report as meaningful only
+    // when you know a load was in flight; do not branch on _Result here.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Promise On Load Complete",
