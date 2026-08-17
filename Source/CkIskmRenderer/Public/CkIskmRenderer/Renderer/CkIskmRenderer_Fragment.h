@@ -12,8 +12,8 @@ class ACk_IskmRenderer_Actor_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmRenderer_NeedsSetup);
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmRenderer_PendingAsyncLoad);
+    CK_DEFINE_ECS_TAG(FTag_IskmRenderer_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_IskmRenderer_PendingAsyncLoad);
 
     struct CKISKMRENDERER_API FFragment_IskmRenderer_Params
     {
