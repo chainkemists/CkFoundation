@@ -303,6 +303,11 @@ private:
         return Resolve()->storage();
     }
 
+    auto Ctx() -> decltype(auto)
+    {
+        return Resolve()->ctx();
+    }
+
     template <typename T_Fragment>
     auto&& Storage(entt::id_type InHash)
     {

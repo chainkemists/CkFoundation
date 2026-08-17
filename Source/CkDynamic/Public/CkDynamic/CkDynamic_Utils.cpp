@@ -22,6 +22,16 @@
 
 namespace ck_dynamic_utils
 {
+    // Registry-ctx cache of the FFragment_DynamicFragment_Data pools, so per-entity sweeps
+    // (the save capture calls Get_AllFragments once per entity) touch only the dynamic pools instead of
+    // walking every pool in the registry. Pools are only ever appended, so an unchanged pool count proves
+    // the list is current; living in the registry's ctx, the cache dies with its world.
+    struct FCtx_DynamicFragmentPools
+    {
+        int64                                                      _PoolCountWhenBuilt = -1;
+        TArray<entt::storage<ck::FFragment_DynamicFragment_Data>*> _Pools;
+    };
+
     auto PassesDestroyFilter(const FCk_Handle& InHandle, ECk_DestroyFilter InFilter) -> bool
     {
         switch (InFilter)
@@ -566,17 +576,31 @@ auto
     auto Result = TArray<FInstancedStruct>{};
     auto MutableHandle = InHandle;
     const auto Entity = InHandle.Get_Entity().Get_ID();
+    auto RegistryView = MutableHandle.Get_RegistryView();
 
-    for (auto&& [StorageId, Pool] : MutableHandle.Get_RegistryView().Storage())
+    auto PoolsIterable = RegistryView.Storage();
+    const auto PoolCount = static_cast<int64>(PoolsIterable.end() - PoolsIterable.begin());
+
+    auto& Cache = RegistryView.Ctx().emplace<ck_dynamic_utils::FCtx_DynamicFragmentPools>();
+    if (Cache._PoolCountWhenBuilt != PoolCount)
     {
-        if (Pool.info() != entt::type_id<ck::FFragment_DynamicFragment_Data>())
+        Cache._PoolCountWhenBuilt = PoolCount;
+        Cache._Pools.Reset();
+        for (auto&& [StorageId, Pool] : PoolsIterable)
+        {
+            if (Pool.info() != entt::type_id<ck::FFragment_DynamicFragment_Data>())
+            { continue; }
+
+            Cache._Pools.Add(&RegistryView.Storage<ck::FFragment_DynamicFragment_Data>(StorageId));
+        }
+    }
+
+    for (auto* Pool : Cache._Pools)
+    {
+        if (NOT Pool->contains(Entity))
         { continue; }
 
-        if (NOT Pool.contains(Entity))
-        { continue; }
-
-        auto& TypedStorage = MutableHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
-        const auto& Fragment = TypedStorage.get(Entity);
+        const auto& Fragment = Pool->get(Entity);
 
         if (const auto& StructData = Fragment.Get_StructData();
             ck::IsValid(StructData))
