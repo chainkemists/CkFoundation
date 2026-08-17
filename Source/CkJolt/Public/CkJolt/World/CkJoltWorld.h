@@ -319,6 +319,15 @@ namespace ck
         auto Note_ContactPair() -> void;
         auto Get_ContactPairsLastStep() const -> int32;
 
+#if !UE_BUILD_SHIPPING
+        /*
+         * Sensor bodies that currently have one or more active Jolt contacts, named in the debug-draw keyspace.
+         * Maintained while the game thread drains Added/Removed events only; Persisted is deliberately excluded so
+         * repeated manifolds cannot inflate an active-contact count. No JPH objects escape through this API.
+         */
+        auto Get_SensorContactBodyKeys() const -> const TSet<uint64>&;
+#endif
+
         // ---- Body-removed change token (game-thread only) ----
         // Bumped by the JoltBody EndPlay funnel for EVERY body it destroys, whatever its motion type. The
         // debug-draw capture's sweep for destroyed SLEEPING bodies is O(sleeping) and can only be skipped
@@ -425,7 +434,18 @@ namespace ck
         // legitimately have seen no sub-step.
         uint64 _Debug_NumPersistedContactEventsTotal = 0;
 
+#if !UE_BUILD_SHIPPING
+        // Game-thread contact lifetime accounting for the sensor-contact debug overlay. The count is per SENSOR
+        // BodyID index+sequence because one sensor may overlap several bodies; the public set mirrors exactly the
+        // entries whose count is positive.
+        TMap<uint32, int32> _SensorBodyContactCounts;
+        TSet<uint64> _SensorContactBodyKeys;
+#endif
+
     private:
+#if !UE_BUILD_SHIPPING
+        auto Apply_SensorContactEvent(const FCk_Jolt_ContactEvent& InEvent) -> void;
+#endif
         auto Find_CharacterEntry(uint64 InUserData) -> FCk_Jolt_CharacterEntry*;
 
 #if !UE_BUILD_SHIPPING

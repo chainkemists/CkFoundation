@@ -291,6 +291,7 @@ namespace ck_jolt_debugdraw_capture
             FContext_Capture& InCtx,
             uint64 InSlotKey,
             uint8 InColorClassIndex,
+            bool InIsSensor,
             const JPH::Shape& InShape,
             JPH::RMat44Arg InCenterOfMassTransform,
             float InScale)
@@ -299,7 +300,7 @@ namespace ck_jolt_debugdraw_capture
         const auto Color = ck::jolt::Conv(
             InCtx._TargetImpl->_Palette.Get_Color(InCtx._TargetImpl->_ColorMode, InColorClassIndex));
 
-        InCtx._Renderer->BeginBody(InSlotKey, InColorClassIndex);
+        InCtx._Renderer->BeginBody(InSlotKey, InColorClassIndex, InIsSensor);
 
         constexpr auto UseMaterialColors = false;
         constexpr auto DrawWireframe = false;
@@ -360,6 +361,7 @@ namespace ck_jolt_debugdraw_capture
         Draw_SelectionOverlays(
             FContext_Capture& InCtx,
             uint64 InBodyKey,
+            bool InIsSensor,
             const JPH::Shape& InShape,
             JPH::RMat44Arg InCenterOfMassTransform)
         -> void
@@ -367,7 +369,7 @@ namespace ck_jolt_debugdraw_capture
         if (InCtx._TargetImpl->_HighlightedBodyKeySet.Contains(InBodyKey))
         {
             Draw_Shape(InCtx, ck::jolt::debug_draw::Make_HighlightKey(InBodyKey),
-                ck::jolt::debug_draw::HighlightClassIndex, InShape, InCenterOfMassTransform,
+                ck::jolt::debug_draw::HighlightClassIndex, InIsSensor, InShape, InCenterOfMassTransform,
                 ck::jolt::debug_draw::HighlightOverlayScale);
         }
 
@@ -376,9 +378,35 @@ namespace ck_jolt_debugdraw_capture
         if (HoveredKey.IsSet() && *HoveredKey == InBodyKey)
         {
             Draw_Shape(InCtx, ck::jolt::debug_draw::Make_HoverKey(InBodyKey),
-                ck::jolt::debug_draw::HoverClassIndex, InShape, InCenterOfMassTransform,
+                ck::jolt::debug_draw::HoverClassIndex, InIsSensor, InShape, InCenterOfMassTransform,
                 ck::jolt::debug_draw::HoverOverlayScale);
         }
+    }
+
+    // Contact state is a mode-independent overlay rather than a replacement class: BodyClass, SleepState,
+    // ObjectLayer and ShapeType all keep their original meaning while the sensor visibly lights up on top.
+    auto
+        Draw_SensorContactOverlay(
+            FContext_Capture& InCtx,
+            uint64 InBodyKey,
+            bool InIsSensor,
+            const JPH::Shape& InShape,
+            JPH::RMat44Arg InCenterOfMassTransform)
+        -> void
+    {
+        const auto HasContact = InIsSensor && InCtx._TargetImpl->_SensorContactBodyKeys.Contains(InBodyKey);
+
+        if (HasContact)
+        {
+            Draw_Shape(InCtx, ck::jolt::debug_draw::Make_SensorContactKey(InBodyKey),
+                ck::jolt::debug_draw::SensorContactClassIndex, true, InShape, InCenterOfMassTransform,
+                ck::jolt::debug_draw::SensorContactOverlayScale);
+            return;
+        }
+
+        ck::jolt::debug_draw::Release_SlotsForKey(*InCtx._TargetImpl,
+            ck::jolt::debug_draw::Make_SensorContactKey(InBodyKey),
+            ck::jolt::debug_draw::EStatCounting::Excluded);
     }
 
     auto
@@ -536,7 +564,8 @@ namespace ck_jolt_debugdraw_capture
         -> void
     {
         constexpr auto SeparationDistance = 2.0f;
-        constexpr auto NormalLength = 25.0f;
+        constexpr auto BaseNormalLength = 25.0f;
+        constexpr auto BaseArrowHeadSize = 5.0f;
         constexpr auto PointMarkerSize = 4.0f;
 
         auto& TargetImpl = *InCtx._TargetImpl;
@@ -565,6 +594,8 @@ namespace ck_jolt_debugdraw_capture
 
         const auto DrawPoints = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactPoints);
         const auto DrawNormals = EnumHasAnyFlags(TargetImpl._DrawFlags, ECk_Jolt_DebugDrawFlags::ContactNormals);
+        const auto NormalLength = BaseNormalLength * TargetImpl._DirectionGlyphScale;
+        const auto ArrowHeadSize = BaseArrowHeadSize * TargetImpl._DirectionGlyphScale;
 
         for (const auto& Hit : Collector.mHits)
         {
@@ -592,7 +623,10 @@ namespace ck_jolt_debugdraw_capture
                 { InCtx._Renderer->DrawMarker(InPoint, JPH::Color::sYellow, PointMarkerSize); }
 
                 if (DrawNormals)
-                { InCtx._Renderer->DrawLine(InPoint, InPoint + Normal * NormalLength, JPH::Color::sCyan); }
+                {
+                    InCtx._Renderer->DrawArrow(
+                        InPoint, InPoint + Normal * NormalLength, JPH::Color::sCyan, ArrowHeadSize);
+                }
             };
 
             // The colliding FACE is the contact patch; a pair whose faces were not resolved still has the single
@@ -626,6 +660,9 @@ namespace ck_jolt_debugdraw_capture
         Record._Shape = InBody.GetShape();
         Record._ColorClassIndex = Get_ColorClassIndex(InCtx._TargetImpl->_ColorMode, InBody,
             InCtx._TransientEntity, DoNotResolveBakedAttribution);
+        Record._IsSensor = InBody.IsSensor();
+        Record._HasSensorContact = Record._IsSensor &&
+                                   InCtx._TargetImpl->_SensorContactBodyKeys.Contains(Get_BodyKey(InBody.GetID()));
         return Record;
     }
 
@@ -650,11 +687,12 @@ namespace ck_jolt_debugdraw_capture
         -> void
     {
         constexpr auto ArrowSize = 10.0f;
-        constexpr auto AxisSize = 20.0f;
+        constexpr auto BaseAxisSize = 20.0f;
         constexpr auto MassTextHeight = 20.0f;
 
         const auto Flags = InCtx._TargetImpl->_DrawFlags;
         auto* Renderer = InCtx._Renderer;
+        const auto AxisSize = BaseAxisSize * InCtx._TargetImpl->_DirectionGlyphScale;
 
         if (EnumHasAnyFlags(Flags, ECk_Jolt_DebugDrawFlags::Velocity))
         {
@@ -719,13 +757,15 @@ namespace ck_jolt_debugdraw_capture
         const auto ColorClassIndex = Get_ColorClassIndex(InCtx._TargetImpl->_ColorMode, InBody,
             InCtx._TransientEntity, ResolveBakedAttribution);
         const auto BodyKey = Get_BodyKey(InBody.GetID());
+        const auto IsSensor = InBody.IsSensor();
         const auto& Shape = *InBody.GetShape();
         const auto CenterOfMassTransform = InBody.GetCenterOfMassTransform();
 
         if (EnumHasAnyFlags(InCtx._TargetImpl->_DrawFlags, ECk_Jolt_DebugDrawFlags::Shape))
         {
-            Draw_Shape(InCtx, BodyKey, ColorClassIndex, Shape, CenterOfMassTransform, NoOverlaySwell);
-            Draw_SelectionOverlays(InCtx, BodyKey, Shape, CenterOfMassTransform);
+            Draw_Shape(InCtx, BodyKey, ColorClassIndex, IsSensor, Shape, CenterOfMassTransform, NoOverlaySwell);
+            Draw_SensorContactOverlay(InCtx, BodyKey, IsSensor, Shape, CenterOfMassTransform);
+            Draw_SelectionOverlays(InCtx, BodyKey, IsSensor, Shape, CenterOfMassTransform);
         }
         else
         {
@@ -1166,8 +1206,8 @@ namespace ck_jolt_debugdraw_capture
                 constexpr auto NoOverlaySwell = 1.0f;
                 Draw_Shape(InCtx, Key,
                     ck::jolt::debug_draw::Get_ClassIndex(ECk_Jolt_DebugDraw_ColorClass::Character),
-                    Shape, CenterOfMassTransform, NoOverlaySwell);
-                Draw_SelectionOverlays(InCtx, Key, Shape, CenterOfMassTransform);
+                    false, Shape, CenterOfMassTransform, NoOverlaySwell);
+                Draw_SelectionOverlays(InCtx, Key, false, Shape, CenterOfMassTransform);
             });
         }
 

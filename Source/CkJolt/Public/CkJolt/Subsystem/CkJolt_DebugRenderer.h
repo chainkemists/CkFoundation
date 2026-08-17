@@ -94,12 +94,13 @@ public:
     BeginCapture(
         FCk_Jolt_DebugDrawTarget& InTarget) -> void;
 
-    /// Opens one body's draw. Every DrawGeometry until EndBody belongs to this body key, in this colour-class
-    /// index of the target's current colour mode.
+    /// Opens one body's draw. Every DrawGeometry until EndBody belongs to this body key, colour-class index and
+    /// sensor-material contract; sensor state is deliberately independent of the target's current colour mode.
     auto
     BeginBody(
         uint64 InBodyKey,
-        uint8 InColorClassIndex) -> void;
+        uint8 InColorClassIndex,
+        bool InIsSensor) -> void;
 
     /// Reconciles the body's accumulated draws against its persistent instance slots.
     auto
