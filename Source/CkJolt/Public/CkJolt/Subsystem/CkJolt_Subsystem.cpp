@@ -140,6 +140,10 @@ public:
             FScopeLock Lock(&_QueueLock);
             _BodyIdToUserData.Add(Event.Body1IndexAndSeq, Event.Body1UserData);
             _BodyIdToUserData.Add(Event.Body2IndexAndSeq, Event.Body2UserData);
+#if !UE_BUILD_SHIPPING
+            _BodyIdToIsSensor.Add(Event.Body1IndexAndSeq, Event.IsSensor1);
+            _BodyIdToIsSensor.Add(Event.Body2IndexAndSeq, Event.IsSensor2);
+#endif
             _ContactEventQueue.Emplace(MoveTemp(Event));
         }
     }
@@ -198,6 +202,10 @@ public:
 
         {
             FScopeLock Lock(&_QueueLock);
+#if !UE_BUILD_SHIPPING
+            _BodyIdToIsSensor.Add(Event.Body1IndexAndSeq, Event.IsSensor1);
+            _BodyIdToIsSensor.Add(Event.Body2IndexAndSeq, Event.IsSensor2);
+#endif
             _ContactEventQueue.Emplace(MoveTemp(Event));
         }
     }
@@ -225,6 +233,14 @@ public:
             if (const auto* UserData2 = _BodyIdToUserData.Find(Event.Body2IndexAndSeq))
             { Event.Body2UserData = *UserData2; }
 
+#if !UE_BUILD_SHIPPING
+            if (const auto* IsSensor1 = _BodyIdToIsSensor.Find(Event.Body1IndexAndSeq))
+            { Event.IsSensor1 = *IsSensor1; }
+
+            if (const auto* IsSensor2 = _BodyIdToIsSensor.Find(Event.Body2IndexAndSeq))
+            { Event.IsSensor2 = *IsSensor2; }
+#endif
+
             _ContactEventQueue.Emplace(MoveTemp(Event));
         }
     }
@@ -251,9 +267,12 @@ private:
 
     std::atomic<bool> _PersistedContactsWanted{false};
 
-    // Populated on ContactAdded, read on ContactRemoved (which carries no bodies). Entries persist for the
+    // Populated on Added/Persisted, read on ContactRemoved (which carries no bodies). Entries persist for the
     // listener's lifetime: per-contact removal would break a body's other simultaneous end-overlaps.
     TMap<uint32, uint64> _BodyIdToUserData;
+#if !UE_BUILD_SHIPPING
+    TMap<uint32, bool> _BodyIdToIsSensor;
+#endif
 
     // Non-owning, and outlives this listener by construction: the subsystem destroys the listener BEFORE the
     // world. Touched from worker threads, but only to bump an atomic on the far side.
@@ -658,6 +677,9 @@ auto
                 // demanding — which is exactly the case where the in-world draw is the only thing capturing, and
                 // the drag anchor still has to be invisible in it.
                 _DefaultDebugDrawTarget->Set_InternalBodyKeys(_JoltWorld->Get_DebugInternalBodyKeys());
+#if !UE_BUILD_SHIPPING
+                _DefaultDebugDrawTarget->Set_SensorContactBodyKeys(_JoltWorld->Get_SensorContactBodyKeys());
+#endif
                 _DefaultDebugDrawTarget->Set_StepStats(_JoltWorld->Get_LastStepDurationMs(),
                     _JoltWorld->Get_ContactPairsLastStep());
 

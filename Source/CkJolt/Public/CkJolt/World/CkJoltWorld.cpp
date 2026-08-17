@@ -173,6 +173,10 @@ namespace ck
         _World = nullptr;
         _ContactRouters.Empty();
         _PersistedContactInterestProviders.Empty();
+#if !UE_BUILD_SHIPPING
+        _SensorBodyContactCounts.Empty();
+        _SensorContactBodyKeys.Empty();
+#endif
         _PoseBuffer.Empty();
         _CharacterRegistry.Empty();
     }
@@ -274,6 +278,10 @@ namespace ck
         {
             if (Event.Type == FCk_Jolt_ContactEvent::EType::Persisted)
             { ++_Debug_NumPersistedContactEventsTotal; }
+
+#if !UE_BUILD_SHIPPING
+            Apply_SensorContactEvent(Event);
+#endif
         }
 
         if (Events.IsEmpty())
@@ -284,6 +292,48 @@ namespace ck
         for (const auto& Router : RoutersCopy)
         { Router.Value(Events); }
     }
+
+#if !UE_BUILD_SHIPPING
+    auto
+        FJoltWorld::
+        Apply_SensorContactEvent(
+            const FCk_Jolt_ContactEvent& InEvent)
+        -> void
+    {
+        if (InEvent.Type == FCk_Jolt_ContactEvent::EType::Persisted)
+        { return; }
+
+        const auto ApplyForSide = [this, &InEvent](uint32 InIndexAndSequence, bool InIsSensor) -> void
+        {
+            if (NOT InIsSensor)
+            { return; }
+
+            const auto BodyKey = ck::jolt::debug_draw::Make_BodyKey(InIndexAndSequence);
+
+            if (InEvent.Type == FCk_Jolt_ContactEvent::EType::Added)
+            {
+                ++_SensorBodyContactCounts.FindOrAdd(InIndexAndSequence);
+                _SensorContactBodyKeys.Add(BodyKey);
+                return;
+            }
+
+            auto* Count = _SensorBodyContactCounts.Find(InIndexAndSequence);
+            if (Count == nullptr)
+            { return; }
+
+            --*Count;
+
+            if (*Count > 0)
+            { return; }
+
+            _SensorBodyContactCounts.Remove(InIndexAndSequence);
+            _SensorContactBodyKeys.Remove(BodyKey);
+        };
+
+        ApplyForSide(InEvent.Body1IndexAndSeq, InEvent.IsSensor1);
+        ApplyForSide(InEvent.Body2IndexAndSeq, InEvent.IsSensor2);
+    }
+#endif
 
     auto
         FJoltWorld::
@@ -755,6 +805,16 @@ namespace ck
     {
         return _ContactPairsThisStep.load(std::memory_order_relaxed);
     }
+
+#if !UE_BUILD_SHIPPING
+    auto
+        FJoltWorld::
+        Get_SensorContactBodyKeys() const
+        -> const TSet<uint64>&
+    {
+        return _SensorContactBodyKeys;
+    }
+#endif
 
     // --------------------------------------------------------------------------------------------------------------------
 
