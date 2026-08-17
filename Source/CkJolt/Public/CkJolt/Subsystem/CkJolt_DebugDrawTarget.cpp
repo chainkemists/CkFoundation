@@ -10,6 +10,8 @@
 #include "CkCore/Format/CkFormat_Defaults.h"
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
+#include "CkDebugScene/CkDebugScene_Materials.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkJolt/CkJolt_Log.h"
@@ -17,9 +19,7 @@
 
 #include <Engine/World.h>
 #include <HAL/CriticalSection.h>
-#include <Materials/Material.h>
 #include <Misc/ScopeLock.h>
-#include <UObject/StrongObjectPtr.h>
 
 #include <Jolt/Physics/Constraints/ContactConstraintManager.h>
 
@@ -166,33 +166,6 @@ namespace ck_jolt_debug_draw_target
         }
     }
 
-    // Rooted, not a bare static UMaterial*: a function-local raw pointer survives the GC that collects the
-    // material it points at, and the next dereference is on freed memory.
-    // Loaded directly rather than through GEngine->WireframeMaterial, which is null whenever the platform
-    // RequiresCookedData. These engine debug materials are special-engine materials, so the ISM usage checks
-    // do not reject them.
-    auto
-        Get_OpaqueSolidBaseMaterial()
-        -> UMaterial*
-    {
-        static auto Material = TStrongObjectPtr<UMaterial>{LoadObject<UMaterial>(
-            nullptr,
-            TEXT("/Engine/EngineDebugMaterials/M_SimpleOpaque.M_SimpleOpaque"))};
-
-        return Material.Get();
-    }
-
-    auto
-        Get_OverlayBaseMaterial()
-        -> UMaterial*
-    {
-        static auto Material = TStrongObjectPtr<UMaterial>{LoadObject<UMaterial>(
-            nullptr,
-            TEXT("/Engine/EngineDebugMaterials/M_SimpleTranslucent.M_SimpleTranslucent"))};
-
-        return Material.Get();
-    }
-
     auto
         Is_OverlayClass(
             uint8 InColorClassIndex)
@@ -207,22 +180,11 @@ namespace ck_jolt_debug_draw_target
         Get_SolidBaseMaterial(
             uint8 InColorClassIndex,
             bool InIsSensor)
-        -> UMaterial*
+        -> UMaterialInterface*
     {
         return InIsSensor || Is_OverlayClass(InColorClassIndex)
-            ? Get_OverlayBaseMaterial()
-            : Get_OpaqueSolidBaseMaterial();
-    }
-
-    auto
-        Get_WireframeBaseMaterial()
-        -> UMaterial*
-    {
-        static auto Material = TStrongObjectPtr<UMaterial>{LoadObject<UMaterial>(
-            nullptr,
-            TEXT("/Engine/EngineDebugMaterials/WireframeMaterial.WireframeMaterial"))};
-
-        return Material.Get();
+            ? ck::debug_scene::materials::TryGet_Translucent()
+            : ck::debug_scene::materials::TryGet_Opaque();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -786,19 +748,28 @@ namespace ck::jolt::debug_draw
     {
         const auto IsWireframe = InRenderMode == ECk_Jolt_DebugDraw_RenderMode::Wireframe;
         auto* BaseMaterial = IsWireframe
-            ? ck_jolt_debug_draw_target::Get_WireframeBaseMaterial()
+            ? ck::debug_scene::materials::TryGet_Wireframe()
             : ck_jolt_debug_draw_target::Get_SolidBaseMaterial(InKey._ColorClassIndex, InKey._IsSensor);
         const auto BaseColor = ck::jolt::Conv(JPH::Color{InKey._ColorU32});
         const auto Color = Get_TintedColor(BaseColor,
             Get_ClassOpacity(InKey._ColorClassIndex, InKey._IsSensor, InPalette.Get_Opacity()));
         const auto IsOverlay = ck_jolt_debug_draw_target::Is_OverlayClass(InKey._ColorClassIndex);
         const auto TransparentOnlyWireframeClass = InKey._IsSensor && NOT IsOverlay;
+        // The translucent sensor fill must remain behind its visual state. Contact is the first overlay and
+        // selected/hovered are the final two; stable priorities avoid sort-by-distance flicker as bodies overlap.
+        const auto TranslucencySortPriority = InKey._ColorClassIndex == SensorContactClassIndex ? 1
+                                             : InKey._ColorClassIndex == HighlightClassIndex ||
+                                                       InKey._ColorClassIndex == HoverClassIndex
+                                                 ? 2
+                                                 : 0;
         return FCk_DebugScene_Appearance{}
             .Set_BaseMaterial(BaseMaterial)
             .Set_RenderClass(TransparentOnlyWireframeClass
                 ? ECk_DebugScene_RenderClass::Transparent : ECk_DebugScene_RenderClass::Opaque)
             .Set_RenderClassId(InKey._ColorClassIndex)
-            .Set_Color(Color);
+            .Set_Color(Color)
+            .Set_DepthPriority(ECk_DebugScene_DepthPriority::World)
+            .Set_TranslucencySortPriority(TranslucencySortPriority);
     }
 }
 

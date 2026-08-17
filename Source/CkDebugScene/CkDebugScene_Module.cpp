@@ -31,9 +31,9 @@ namespace ck_debug_scene_module
             Rule.CookRule = UE::Cook::EPackageCookRule::AddToCook;
         };
 
-        AddRule(TEXT("/Engine/EngineDebugMaterials/M_SimpleOpaque"));
-        AddRule(TEXT("/Engine/EngineDebugMaterials/M_SimpleTranslucent"));
         AddRule(TEXT("/Engine/EngineDebugMaterials/WireframeMaterial"));
+        AddRule(TEXT("/CkFoundation/DebugScene/M_CkDebugScene_Opaque"));
+        AddRule(TEXT("/CkFoundation/DebugScene/M_CkDebugScene_Translucent"));
     }
 }
 #endif

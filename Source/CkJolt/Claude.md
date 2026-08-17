@@ -542,39 +542,39 @@ sensor bit ride the bucket key alongside the packed colour, so two classes whose
 same 8-bit colour still land in distinct buckets, and a sensor cannot merge into an opaque nonsensor bucket in
 SleepState/ObjectLayer/ShapeType modes. `FCk_Jolt_DebugDrawPalette::Get_Color(Mode, ClassIndex)` maps an index
 to a colour, with a dim factor applied to the sleeping variant and the opacity the tint uses;
-`Set_Palette` invalidates the retained capture so the next one repaints everything. Normal nonsensor bodies use lit
-opaque `/Engine/EngineDebugMaterials/M_SimpleOpaque`; sensors, hover and highlight use lit
-`/Engine/EngineDebugMaterials/M_SimpleTranslucent`; and wireframe uses
-`/Engine/EngineDebugMaterials/WireframeMaterial` — all loaded by direct `LoadObject` and held in a
-`TStrongObjectPtr` (a bare function-local `UMaterial*` static dangles after the GC that collects it).
+`Set_Palette` invalidates the retained capture so the next one repaints everything. Normal nonsensor bodies use the
+shared DefaultLit opaque CkDebugScene material; sensors, hover and highlight use the shared Unlit translucent
+CkDebugScene material; and wireframe uses the shared accessor for the Engine wireframe material. The material
+library owns strong references and the two plugin materials carry their ISM shader usage in the asset.
 All use the `Color` parameter. Sensor fill is capped at 0.45 opacity, and sensor highlight/hover stay below 1.0.
+The base sensor uses translucency sort priority 0, its contact glow uses 1, and highlight/hover use 2 so overlap
+colour remains stable instead of reverting to distance-dependent translucent ordering.
 The render mode has three states: `Solid` leaves every fill without wireframe, `SensorWireframe` gives only a
 normal sensor ISM the wireframe MID through `SetOverlayMaterial`, and `Wireframe` uses the wire material as every
 bucket's primary material. The middle state adds one material pass for each sensor bucket but no component,
 instance or geometry; both other states clear that overlay pass.
-The editor-commandlet build of `FCkJoltModule` explicitly adds all three name-loaded materials to every cook
-through `UE::Cook::FDelegates::ModifyCook`; the runtime Game build contains no cook-API dependency.
+`CkDebugScene` owns the explicit cook and UFS staging rules for the two plugin materials and Engine wireframe asset;
+the runtime Game build contains no cook-API dependency.
 **Never** `GEngine->WireframeMaterial`: it is null whenever the platform `RequiresCookedData`.
 `Set_RenderMode` swaps each bucket's material 0 between the two MIDs — zero geometry rebuild.
 BakedStatic is distinguished from a Static-motion JoltBody by attribution entity, not by layer: both
 share the Static object-layer DOMAIN, and only a baked body's user-data resolves to a
 `FFragment_JoltStaticActor_Current`.
 
-⚠ **`[PACKAGED-VERIFY]` — live rendering of all three engine debug materials.** The cook dependency is
+⚠ **`[PACKAGED-VERIFY]` — live rendering of all three shared debug materials.** The cook dependency is
 explicit, but only a running packaged viewport can prove the final material appearance. Exact acceptance step:
 
 1. Package a **Development** build (DeveloperTool modules are included there, Test/Shipping exclude them).
 2. Run it, open the Jolt debugger window, and confirm nonsensor bodies render **opaque with shadowless form cues**.
-3. Confirm every probe/sensor is lit but translucent in every colour mode and carries a readable wire outline.
+3. Confirm every probe/sensor is clearly coloured and translucent in every colour mode and carries a readable wire outline.
 4. Hover and select bodies; confirm the overlays remain visible, and a selected sensor never becomes opaque or black.
 5. Cycle the wireframe control through **Off -> Transparent -> All**. Off has no outlines, Transparent outlines
    only sensor/probe fills, and All renders every body as wireframe; none rebuild geometry.
 6. Check the log for `Failed to load WireframeMaterial` — the facility degrades to Solid and ensures
    loudly rather than drawing nothing, so a silent-looking pass with that line in the log is a FAIL.
 
-On failure, first confirm the `CkJoltDebugDraw` cook rules admitted both solid material packages. The fallback
-is P1-D13 branch (b): a CkUsf-generated wireframe look (a `_Wireframe` flag, a trivial `.ush`, an AS asset
-declaration, and a regen commit) replacing the engine material load.
+On failure, first confirm the `CkDebugScene` cook rules admitted both plugin material packages and the Engine
+wireframe package.
 
 ### Colour modes + legend
 
@@ -972,9 +972,9 @@ registry. Every row lives in `CkTests/.../UnitTests/CkJolt/Test_JoltDebugDraw_Ta
 | `Ck.Jolt.DebugDraw.TargetReconcile.StaticPassIsIdempotent` | full pass runs on first capture; an unchanged revision skips it entirely; a bumped revision re-runs it and touches NOTHING for unchanged bodies (0 added / 0 removed / 0 updated / 0 drawn) while a body that MOVED is re-drawn into the slot it already had (1 updated, 0 added, 0 removed) and the content bounds follow it |
 | `Ck.Jolt.DebugDraw.SleepTransitionRecolors` | a body already asleep before the FIRST capture still draws, coloured sleeping; a body falling asleep later moves buckets (1 removed + 1 added, instance count stable) |
 | `Ck.Jolt.DebugDraw.SingleTriangleBuild` | one Jolt source triangle becomes exactly one outward-wound UE triangle with finite normalized render normals; a coplanar opposite-wound duplicate cannot reappear and a lit material cannot receive zero tangent-space data |
-| `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every normal bucket between lit opaque `M_SimpleOpaque` and wireframe and back, all through `Color`, with instance counts unchanged |
+| `Ck.Jolt.DebugDraw.MaterialSwap` | `Set_RenderMode` flips every normal bucket between the shared lit opaque material and wireframe and back, all through `Color`, with instance counts unchanged |
 | `Ck.Jolt.DebugDraw.OverlayMaterial` | normal nonsensor geometry stays lit and opaque while hover and highlight use two translucent `Color`-tinted overlay buckets at half and full alpha |
-| `Ck.Jolt.DebugDraw.SensorMaterialsAcrossColorModes` | sensor identity remains independent of BodyClass/SleepState/ObjectLayer/ShapeType colour; sensor fill, hover and highlight stay translucent; Off has no wire overlay, Transparent outlines the normal sensor on its existing ISM, and All replaces every primary material without adding instances |
+| `Ck.Jolt.DebugDraw.SensorMaterialsAcrossColorModes` | sensor identity remains independent of BodyClass/SleepState/ObjectLayer/ShapeType colour; sensor fill, hover and highlight stay translucent on the shared ISM-ready material with sort priorities 0/2; Off has no wire overlay, Transparent outlines the normal sensor on its existing ISM, and All replaces every primary material without adding instances |
 | `Ck.Jolt.DebugDraw.ClassPalette` | one body per colour class on ONE shared shape → one bucket per class, so the split is provably by class and not by geometry |
 | `Ck.Jolt.DebugDraw.PreviewWorldCompat` | an `EWorldType::EditorPreview` world gets registered ISMs with correct instance counts, and zero ensures |
 | `Ck.Jolt.DebugDraw.MultiTargetBatchPrune` | two targets sharing one batch: destroying one leaves the other's bucket and instances intact and still slot-reusing; the batch is pruned only once every Jolt geometry reference is gone |

@@ -45,6 +45,12 @@ enum class ECk_DebugScene_RenderClass : uint8
     Transparent,
 };
 
+enum class ECk_DebugScene_DepthPriority : uint8
+{
+    World,
+    Foreground,
+};
+
 enum class ECk_DebugScene_WireframeMode : uint8
 {
     None,
@@ -65,6 +71,10 @@ class CKDEBUGSCENE_API FCk_DebugScene_Appearance
     Set_Color(FLinearColor InColor) -> FCk_DebugScene_Appearance&;
     auto
     Set_Opacity(float InOpacity) -> FCk_DebugScene_Appearance&;
+    auto
+    Set_DepthPriority(ECk_DebugScene_DepthPriority InDepthPriority) -> FCk_DebugScene_Appearance&;
+    auto
+    Set_TranslucencySortPriority(int32 InTranslucencySortPriority) -> FCk_DebugScene_Appearance&;
 
     auto
     Get_BaseMaterial() const -> UMaterialInterface*;
@@ -77,6 +87,10 @@ class CKDEBUGSCENE_API FCk_DebugScene_Appearance
     auto
     Get_Opacity() const -> float;
     auto
+    Get_DepthPriority() const -> ECk_DebugScene_DepthPriority;
+    auto
+    Get_TranslucencySortPriority() const -> int32;
+    auto
     IsValid() const -> bool;
 
   private:
@@ -84,6 +98,8 @@ class CKDEBUGSCENE_API FCk_DebugScene_Appearance
     ECk_DebugScene_RenderClass _RenderClass = ECk_DebugScene_RenderClass::Opaque;
     uint8 _RenderClassId = 0;
     FLinearColor _Color = FLinearColor::White;
+    ECk_DebugScene_DepthPriority _DepthPriority = ECk_DebugScene_DepthPriority::World;
+    int32 _TranslucencySortPriority = 0;
 };
 
 class CKDEBUGSCENE_API FCk_DebugScene_Instance
