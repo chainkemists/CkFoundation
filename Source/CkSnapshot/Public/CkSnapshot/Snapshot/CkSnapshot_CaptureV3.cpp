@@ -82,21 +82,29 @@ namespace ck::snapshot
         // be restored without an intentionally omitted owner, so capturing it alone would create an orphan on load.
         // ReconstructOnly wins over SaveTransient: the enclosing feature explicitly declares that the omitted data is
         // recreated from authored/default state and therefore must not produce a data-loss audit.
+        struct FAncestry
+        {
+            ECk_SnapshotExclusionPolicy _Policy = ECk_SnapshotExclusionPolicy::None;
+            int32                       _Depth  = 0;
+        };
+
+        // One walk for both answers: an excluded entity is never persisted, so its depth is never read and the
+        // ReconstructOnly early-out costs nothing.
         auto
-            DoGet_SnapshotExclusionPolicy(
+            DoScan_Ancestry(
                 const FCk_Handle& InHandle)
-            -> ECk_SnapshotExclusionPolicy
+            -> FAncestry
         {
             constexpr auto MaxDepth = 256;
             auto Current = InHandle;
-            auto Result = ECk_SnapshotExclusionPolicy::None;
+            auto Result  = FAncestry{};
 
-            for (auto Depth = 0; Depth < MaxDepth; ++Depth)
+            while (Result._Depth < MaxDepth)
             {
                 if (Current.Has<ck::FTag_Snapshot_ReconstructOnly>())
-                { return ECk_SnapshotExclusionPolicy::ReconstructOnly; }
+                { return FAncestry{ECk_SnapshotExclusionPolicy::ReconstructOnly, Result._Depth}; }
                 if (Current.Has<ck::FTag_Snapshot_SaveTransient>())
-                { Result = ECk_SnapshotExclusionPolicy::SaveTransient; }
+                { Result._Policy = ECk_SnapshotExclusionPolicy::SaveTransient; }
 
                 if (NOT Current.Has<ck::FFragment_LifetimeOwner>())
                 { break; }
@@ -104,40 +112,24 @@ namespace ck::snapshot
                 const auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Current);
                 if (ck::Is_NOT_Valid(Owner) || Owner == Current)
                 { break; }
+
                 Current = Owner;
+                ++Result._Depth;
             }
             return Result;
         }
 
-        auto
-            DoGet_LifetimeDepth(
-                const FCk_Handle& InHandle)
-            -> int32
-        {
-            constexpr auto MaxDepth = 256;
-            auto Depth   = 0;
-            auto Current = InHandle;
-
-            while (Depth < MaxDepth && Current.Has<ck::FFragment_LifetimeOwner>())
-            {
-                auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Current);
-                if (ck::Is_NOT_Valid(Owner) || Owner == Current)
-                { break; }
-                Current = Owner;
-                ++Depth;
-            }
-            return Depth;
-        }
-
         // Tagged-property data first (object refs by path), then the handle walker writes each FCk_Handle's raw
         // saved entity id — a handle field is Transient and would otherwise be skipped.
+        // RemapHandles writes each handle back — with an identical value on save — so it needs mutable memory
+        // even though the struct's content never changes. Callers that already OWN the struct pass it here.
         auto
-            SerializeInstancedStruct(
-                const FInstancedStruct& InStruct)
+            Serialize_OwnedStruct(
+                FInstancedStruct& InOutStruct)
             -> TArray<uint8>
         {
             auto Blob = TArray<uint8>{};
-            if (InStruct.GetScriptStruct() == nullptr)
+            if (InOutStruct.GetScriptStruct() == nullptr)
             { return Blob; }
 
             auto MemoryWriter = FMemoryWriter{Blob, /*bIsPersistent=*/true};
@@ -148,10 +140,19 @@ namespace ck::snapshot
 
             auto Context = ck::FSnapshotContext{}; // save-mode handle write (raw id); no loader remap on save
 
-            auto Copy = FInstancedStruct{InStruct};
-            Copy.Serialize(Proxy);
-            ck::snapshot::RemapHandles(Copy.GetScriptStruct(), Copy.GetMutableMemory(), Proxy, Context);
+            InOutStruct.Serialize(Proxy);
+            ck::snapshot::RemapHandles(InOutStruct.GetScriptStruct(), InOutStruct.GetMutableMemory(), Proxy, Context);
             return Blob;
+        }
+
+        // For callers reading LIVE ecs memory, which must not be written to at all.
+        auto
+            SerializeInstancedStruct(
+                const FInstancedStruct& InStruct)
+            -> TArray<uint8>
+        {
+            auto Copy = FInstancedStruct{InStruct};
+            return Serialize_OwnedStruct(Copy);
         }
 
         auto
@@ -296,7 +297,7 @@ namespace ck::snapshot
                 const auto Payload = Handler->Produce(InEntity);
                 if (NOT Payload.IsSet())
                 { continue; }
-                if (AuditDetailed && OutPayloadDetail != nullptr && Payload->GetScriptStruct() != nullptr)
+                if (OutPayloadDetail != nullptr && Payload->GetScriptStruct() != nullptr)
                 {
                     Payload->GetScriptStruct()->ExportText(
                         *OutPayloadDetail, Payload->GetMemory(), nullptr, nullptr, PPF_None, nullptr);
@@ -308,11 +309,32 @@ namespace ck::snapshot
 
         auto SaveTransientWithPayloadAudit = 0;
         auto AuditExamples = TArray<FString>{};
-        const auto DoRecord_AuditExample = [&](const FCk_Handle& InEntity, const UScriptStruct* InProducingType) -> void
+
+        struct FDroppedPayload
         {
-            if (AuditExamples.Num() >= AuditMaxExamples)
-            { return; }
-            AuditExamples.Emplace(ck::Format_UE(TEXT("[{}] (producer [{}])"), InEntity, GetNameSafe(InProducingType)));
+            const UScriptStruct* _ProducingType = nullptr;
+            FString              _Detail;
+
+            explicit operator bool() const { return _ProducingType != nullptr; }
+        };
+
+        // Both skip sites share the probe, the counter and the Summary example bookkeeping; only the Detailed
+        // message differs, so that stays at the call site.
+        const auto DoAudit_DroppedPayload = [&](FCk_Handle& InEntity, int32& InOutCount) -> FDroppedPayload
+        {
+            auto Result = FDroppedPayload{};
+            Result._ProducingType = FindFirstProducingType(InEntity, AuditDetailed ? &Result._Detail : nullptr);
+
+            if (NOT Result)
+            { return Result; }
+
+            ++InOutCount;
+            if (NOT AuditDetailed && AuditExamples.Num() < AuditMaxExamples)
+            {
+                AuditExamples.Emplace(ck::Format_UE(TEXT("[{}] (producer [{}])"),
+                    InEntity, GetNameSafe(Result._ProducingType)));
+            }
+            return Result;
         };
 
 
@@ -335,7 +357,8 @@ namespace ck::snapshot
             if (IsMarkedForDestruction(Handle))
             { continue; }
 
-            const auto ExclusionPolicy = DoGet_SnapshotExclusionPolicy(Handle);
+            const auto Ancestry = DoScan_Ancestry(Handle);
+            const auto ExclusionPolicy = Ancestry._Policy;
 
             // Reconstruct-only: an explicit feature policy says this entity (or its reconstruction-owned ancestor) is
             // rebuilt from authored defaults after load, so its payload omission is intentional and must not raise the
@@ -346,19 +369,14 @@ namespace ck::snapshot
             if (ExclusionPolicy == ECk_SnapshotExclusionPolicy::SaveTransient)
             {
                 ++SaveTransientSkipped;
-                if (const auto* ProducingType = FindFirstProducingType(Handle))
+                if (const auto Audit = DoAudit_DroppedPayload(Handle, SaveTransientWithPayloadAudit);
+                    Audit && AuditDetailed)
                 {
-                    ++SaveTransientWithPayloadAudit;
-                    if (AuditDetailed)
-                    {
-                        ck::snapshot::Warning(
-                            TEXT("v3 capture AUDIT: save-transient entity [{}] carries a hydration payload that will be "
-                                 "DROPPED (first producer [{}]) — either stop stamping FTag_Snapshot_SaveTransient on it or move the payload "
-                                 "to its persisted owner."),
-                            Handle, GetNameSafe(ProducingType));
-                    }
-                    else
-                    { DoRecord_AuditExample(Handle, ProducingType); }
+                    ck::snapshot::Warning(
+                        TEXT("v3 capture AUDIT: save-transient entity [{}] carries a hydration payload that will be "
+                             "DROPPED (first producer [{}]) — either stop stamping FTag_Snapshot_SaveTransient on it or move the payload "
+                             "to its persisted owner."),
+                        Handle, GetNameSafe(Audit._ProducingType));
                 }
                 continue;
             }
@@ -392,24 +410,18 @@ namespace ck::snapshot
                 else
                 {
                     ++UnlabeledSkipped;
-                    auto PayloadDetail = FString{};
-                    if (const auto* ProducingType = FindFirstProducingType(Handle, &PayloadDetail))
+                    if (const auto Audit = DoAudit_DroppedPayload(Handle, UnlabeledWithPayloadAudit);
+                        Audit && AuditDetailed)
                     {
-                        ++UnlabeledWithPayloadAudit;
-                        if (AuditDetailed)
-                        {
-                            // Guarded: a registry-rooted entity legitimately has no lifetime owner (Get_LifetimeOwner ensures).
-                            const auto OwnerId = Handle.Has<ck::FFragment_LifetimeOwner>()
-                                ? Get_SavedId(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Handle))
-                                : k_NoEntity;
-                            ck::snapshot::Warning(
-                                TEXT("v3 capture AUDIT: unlabeled ConstructSpawned child [{}] (owner saved-id [{}]) carries a "
-                                     "hydration payload that will be DROPPED (first producer [{}]) — it is save-transient. Give the child a "
-                                      "GameplayLabel under its owner to persist it. Payload detail: [{}]"),
-                                Handle, OwnerId, GetNameSafe(ProducingType), PayloadDetail);
-                        }
-                        else
-                        { DoRecord_AuditExample(Handle, ProducingType); }
+                        // Guarded: a registry-rooted entity legitimately has no lifetime owner (Get_LifetimeOwner ensures).
+                        const auto OwnerId = Handle.Has<ck::FFragment_LifetimeOwner>()
+                            ? Get_SavedId(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Handle))
+                            : k_NoEntity;
+                        ck::snapshot::Warning(
+                            TEXT("v3 capture AUDIT: unlabeled ConstructSpawned child [{}] (owner saved-id [{}]) carries a "
+                                 "hydration payload that will be DROPPED (first producer [{}]) — it is save-transient. Give the child a "
+                                  "GameplayLabel under its owner to persist it. Payload detail: [{}]"),
+                            Handle, OwnerId, GetNameSafe(Audit._ProducingType), Audit._Detail);
                     }
                 }
             }
@@ -432,7 +444,7 @@ namespace ck::snapshot
             { continue; }
 
             PersistedIds.Add(RawId);
-            Classified.Add(FClassified{Handle, RawId, Provenance, DoGet_LifetimeDepth(Handle)});
+            Classified.Add(FClassified{Handle, RawId, Provenance, Ancestry._Depth});
         }
 
         // ---- Order owners before dependents (lifetime-topology; ties by saved-id for determinism) ------------------
@@ -564,14 +576,21 @@ namespace ck::snapshot
                 if (Handler == nullptr || NOT Handler->Produce)
                 { continue; }
 
-                auto Produced = Handler->Produce(Handle);
+                auto Produced = TOptional<FInstancedStruct>{};
+                {
+                    const auto ProduceStopwatch = FCk_ScopedStopwatch{Timings.PayloadsProduce};
+                    Produced = Handler->Produce(Handle);
+                }
                 if (NOT Produced.IsSet())
                 { continue; }
 
                 auto PayloadEntry = FCk_Snapshot_V3_PayloadEntry{};
                 PayloadEntry.Set_OwnerSavedId(Item._SavedId);
                 PayloadEntry.Set_TypePath(Type->GetPathName());
-                PayloadEntry.Set_PayloadBytes(SerializeInstancedStruct(Produced.GetValue()));
+                {
+                    const auto SerializeStopwatch = FCk_ScopedStopwatch{Timings.PayloadsSerialize};
+                    PayloadEntry.Set_PayloadBytes(Serialize_OwnedStruct(Produced.GetValue()));
+                }
                 Timings.PayloadByteTotal += PayloadEntry.Get_PayloadBytes().Num();
                 DistinctTypePaths.Add(Type);
                 Payloads.Emplace(MoveTemp(PayloadEntry));
@@ -601,7 +620,10 @@ namespace ck::snapshot
         InOutHeader.Set_PayloadCount(Payloads.Num());
         InOutHeader.Set_UnlabeledConstructSkippedCount(UnlabeledSkipped);
         InOutHeader.Set_AnonymousSkippedCount(AnonymousSkipped);
-        InOutHeader.Set_UnlabeledWithPayloadAuditCount(UnlabeledWithPayloadAudit);
+        InOutHeader.Set_UnlabeledWithPayloadAuditCount(
+            AuditMode == ECk_Snapshot_CaptureAuditMode::Disabled
+                ? FCk_Snapshot_HeaderV3::k_AuditNotMeasured
+                : UnlabeledWithPayloadAudit);
 
         ck::snapshot::Verbose(
             TEXT("Run_CaptureV3: persisted [{}] entities (EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], "
