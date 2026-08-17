@@ -380,7 +380,8 @@ auto
 
     if (NOT Saved)
     {
-        ck::snapshot::Error(TEXT("Request_Save: SaveGameToSlot failed for slot [{}]"), InSlotName);
+        ck::snapshot::Error(TEXT("Request_Save: [{}] failed for slot [{}]"),
+            Serialized ? TEXT("SaveDataToSlot") : TEXT("SaveGameToMemory"), InSlotName);
         DoFinish(ECk_SnapshotResult::Failed_IO);
         return;
     }

@@ -326,9 +326,9 @@ public:
     //   6 — added FCk_Snapshot_V3_EntityEntry::_ActorSaveFieldBytes: a bridged actor's UPROPERTY(SaveGame) fields ride
     //       the recipe and are applied before FinishSpawning. Version 5 rows spawn with class defaults, so an actor
     //       whose Construct branches on a saved field composes nothing.
-    // 7 (2026-08-16): the V3 tables and the SaveGame blob moved from tagged-property serialization to native
-    // bulk serializers. Byte layout differs, so a v6 slot is refused by the exact-equality check in
-    // Request_Load — loudly and before any world teardown, never silently misread.
+    //   7 — the V3 tables and the SaveGame blob moved from tagged-property serialization to native bulk
+    //       serializers. Byte layout differs, so a v6 slot is refused by the exact-equality check in
+    //       Request_Load — loudly and before any world teardown, never silently misread.
     static constexpr uint16 CurrentFormatVersion = 7;
 
     static constexpr int32 k_AuditNotMeasured = -1;

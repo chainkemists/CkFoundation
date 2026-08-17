@@ -14,8 +14,13 @@ auto
     auto Count = InOutBytes.Num();
     InAr << Count;
 
-    // Fail closed rather than hand a corrupt count to SetNumUninitialized.
-    if (Count < 0)
+    // Fail closed rather than hand a corrupt count to SetNumUninitialized — negative, or claiming more
+    // bytes than the archive still holds (which would otherwise allocate gigabytes before running dry).
+    // TotalSize is INDEX_NONE on archives with no known backing size; only the known-size check is skipped there.
+    const auto TotalSize = InAr.TotalSize();
+    const auto CountIsCorrupt = Count < 0 ||
+        (InAr.IsLoading() && TotalSize >= 0 && Count > TotalSize - InAr.Tell());
+    if (CountIsCorrupt)
     {
         InAr.SetError();
         return;
@@ -55,17 +60,25 @@ namespace ck_snapshot_header
 {
     // TArray<T>'s operator<< needs an `Ar << Element` for T, which a WithSerializer USTRUCT does not get.
     // Explicit count + per-element native Serialize keeps every nested array on the native path.
+    // InMinWireBytesPerEntry is a conservative floor of one EMPTY entry's stream, so a corrupt count
+    // claiming more entries than the remaining archive could possibly hold fails closed instead of
+    // allocating gigabytes.
     template <typename T_Entry>
     auto
         DoSerialize_EntryArray(
             FArchive& InAr,
-            TArray<T_Entry>& InOutEntries)
+            TArray<T_Entry>& InOutEntries,
+            int32 InMinWireBytesPerEntry)
         -> void
     {
         auto Count = InOutEntries.Num();
         InAr << Count;
 
-        if (Count < 0)
+        const auto TotalSize = InAr.TotalSize();
+        const auto CountIsCorrupt = Count < 0 ||
+            (InAr.IsLoading() && TotalSize >= 0 &&
+             static_cast<int64>(Count) * InMinWireBytesPerEntry > TotalSize - InAr.Tell());
+        if (CountIsCorrupt)
         {
             InAr.SetError();
             return;
@@ -123,7 +136,8 @@ auto
     ck::snapshot::Serialize_Transform(InAr, _ActorSpawnTransform);
     ck::snapshot::Serialize_Transform(InAr, _SavedWorldTransform);
 
-    ck_snapshot_header::DoSerialize_EntryArray(InAr, _BuildRecipe);
+    constexpr auto MinWireBytesPerBuildStep = 8; // two empty FStrings
+    ck_snapshot_header::DoSerialize_EntryArray(InAr, _BuildRecipe, MinWireBytesPerBuildStep);
 
     return true;
 }
@@ -150,8 +164,10 @@ auto
         FArchive& InAr)
     -> bool
 {
-    ck_snapshot_header::DoSerialize_EntryArray(InAr, _Entities);
-    ck_snapshot_header::DoSerialize_EntryArray(InAr, _Payloads);
+    constexpr auto MinWireBytesPerEntity  = 64; // ids + guid + provenance + empty strings/blobs + two transforms
+    constexpr auto MinWireBytesPerPayload = 12; // owner id + empty type path + empty blob count
+    ck_snapshot_header::DoSerialize_EntryArray(InAr, _Entities, MinWireBytesPerEntity);
+    ck_snapshot_header::DoSerialize_EntryArray(InAr, _Payloads, MinWireBytesPerPayload);
     return true;
 }
 
