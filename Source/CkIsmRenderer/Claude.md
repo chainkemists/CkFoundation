@@ -10,6 +10,8 @@
 ## Key API
 
 - `UCk_Utils_IsmProxy_UE` — add ISM proxy to entity, update transform batch, set custom data.
+- `UCk_Utils_IsmProxy_UE::Request_SetCustomInstanceDataValue_Late` — opt-in per-instance value lane
+  consumed in `FGroup_DeferredApply` after `FGroup_PostTransform`; the normal request lane is unchanged.
 - `FProcessor_IsmProxy_Setup` — creates the ISM component; `FProcessor_IsmProxy_Update` syncs transforms each tick.
 - **Entity-level outline** (`FProcessor_IsmProxy_Outline_Sync/_TransformSync/_Suspend/_Remove/_EndPlay`) — driven by
   `CkUsf`'s `UCk_Utils_Usf_Outline_UE::Request_ApplyOutline(Handle, Preset, Scope)`. Custom Depth/Stencil is per-
@@ -124,6 +126,15 @@ wins.
 - Per-instance custom data written after setup is only pushed to the component for `Movable` proxies
   (both `SetCustomInstanceData` request handlers gate on mobility). A `Static` proxy's post-setup write
   updates the CPU-side cache but never reaches the GPU.
+- The late custom-data lane preserves that mobility contract: every valid value updates the CPU cache;
+  movable proxies also update the main ISM and any active outline/cel-pattern shadow instance, while
+  static proxies do not issue a GPU write. A disabled movable proxy, or one awaiting re-add, has no live
+  instance, so its cache write still succeeds quietly and is pushed when the proxy is re-enabled. An
+  otherwise-ready movable proxy still diagnoses a missing renderer component or instance after accepting
+  the cache write. Its distinct request fragment is consumed after the complete `FGroup_PostTransform`,
+  has the same guarded completion/request-handle cleanup as the general lane, and is cancelled with
+  `Failed_Cancelled` during EndPlay if still pending.
+  If both lanes target the same index in one frame, the late lane wins by group order.
 - Pushing a previous-instance transform (`SetPreviousTransformById`) from `FProcessor_IsmProxy_TransformInstance`
   was tried for TSR dithering and appeared to do nothing while costing CPU; the call was removed. It also
   requires `SetHasPerInstancePrevTransform(true)`, which is not exposed as a renderer param.

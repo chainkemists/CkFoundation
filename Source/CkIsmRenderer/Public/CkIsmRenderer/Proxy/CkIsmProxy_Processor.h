@@ -287,6 +287,49 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKISMRENDERER_API FProcessor_IsmProxy_HandleLateCustomDataRequests : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_HandleLateCustomDataRequests,
+        FCk_Handle_IsmProxy,
+        TReadOnly<FFragment_IsmProxy_Params>,
+        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_IsmProxy_LateCustomDataRequests>,
+        TExclude<FTag_IsmProxy_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_DeferredApply;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
+        using MarkedDirtyBy = FFragment_IsmProxy_LateCustomDataRequests;
+
+    public:
+        using TProcessor::TProcessor;
+
+        auto
+        DoTick(TimeType InDeltaT) -> void;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp) const -> void;
+
+    private:
+        auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> bool;
+
+    private:
+        TWeakObjectPtr<UWorld> _World;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // HandleRequests excludes owners already tagged for destruction, so a destroyed proxy's still-queued
     // requests are never drained. This fires each pending request's completion delegate with
     // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
@@ -308,6 +351,26 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Requests& InRequestsComp)
+            -> void;
+    };
+
+    class CKISMRENDERER_API FProcessor_IsmProxy_CancelPendingLateCustomDataRequests : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_CancelPendingLateCustomDataRequests,
+        FCk_Handle_IsmProxy,
+        ck::TReadOnly<FFragment_IsmProxy_LateCustomDataRequests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp)
             -> void;
     };
 }
