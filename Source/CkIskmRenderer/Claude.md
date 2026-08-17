@@ -36,6 +36,12 @@ its coverage.
 - `UCk_Utils_IskmRenderer_UE::Add(InOwner, InRendererData)` — register a shared renderer for a `UCk_IskmRenderer_Data` asset (one renderer actor per *Renderer PDA* per world; multiple Renderer PDAs may share one AnimCollection).
 - `UCk_Utils_IskmProxy_UE::Add(InOwner, InParams)` — add a per-entity proxy. Allocates a `USkeletalMeshComponent` ("BaseSKMC") on the manager actor.
 - `UCk_Utils_IskmProxy_UE::Request_*` — animation playback, montage, ragdoll, outfit, custom data.
+- `UCk_Utils_IskmProxy_UE::TryGet_SocketTransform_CurrentEntityWorld` — current-frame world socket
+  composed from the live component-space pose, current entity transform, and proxy render offset;
+  unlike the ordinary World-space socket getter, it does not sample the SKMC's stale placement.
+- `UCk_Utils_IskmProxy_UE::Request_SetCustomDataFloat_Late` — opt-in custom-data lane consumed in
+  `FGroup_DeferredApply`, after `FGroup_PostTransform`; it mirrors the value to the CPU cache, base
+  SKMC, and attached submesh SKMCs without changing the normal `Request_SetCustomDataFloat` lane.
 - `UCk_Utils_IskmProxy_UE::BindTo_OnAnimationFinished/OnAnimationNotify/OnMontageFinished` — ECS signals fired by the bridging `UCk_IskmNotify_AnimInstance`.
 - **Entity-level outline (Plan-1):** driven by `CkUsf`'s `UCk_Utils_Usf_Outline_UE::Request_ApplyOutline(Handle, Preset, Scope)`.
   Sets Custom Depth/Stencil on the proxy's BaseSKMC **and** every outfit submesh, re-asserted per frame so submeshes
@@ -226,6 +232,19 @@ so the follower trails by a frame of velocity; component-space sampling leaves o
 (sub-cm) while the root-motion term stays current. The ragdoll case inverts this: physics owns the SKMC,
 `UpdateTransform` is excluded, and re-anchoring the live component-space socket onto the frozen death-pose root
 produced the hair-detach bug.
+
+`TryGet_SocketTransform_CurrentEntityWorld` exposes the same non-ragdoll composition without the follower offset and reports invalid handles/sockets explicitly:
+`Socket(component-space) x (LeaderEntityTransform + rotated LocalLocationOffset)`. It validates the handle,
+Transform feature, socket/bone, and every composed numeric input before returning. BaseSKMC absence during deferred
+renderer setup or EndPlay teardown is ordinary `TryGet` unavailability and returns false with identity output; malformed
+state ensures and returns identity without consulting or mutating the rejected object further. Physics-owned ragdoll
+callers that need the live simulated pose should continue to use `Get_SocketTransform(..., World)`.
+
+**Late custom-data lane.** `Request_SetCustomDataFloat_Late` writes a distinct transient request fragment consumed in
+`FGroup_DeferredApply`, whose group dependency places it after the complete `FGroup_PostTransform`. The general
+`Request_SetCustomDataFloat` lane remains in `FGroup_Gameplay_Rendering`. Both retain independent FIFO order and
+completion guards; EndPlay cancels either lane with `Failed_Cancelled`. A callback that enqueues into the lane being
+drained survives for the next frame. If both lanes target the same slot in one frame, the late lane wins by group order.
 
 **SocketFollower group placement (incident).** `FProcessor_IskmProxy_SocketFollower_SyncTransform` runs in
 `FGroup_Transform_Finalize`, after the ENTIRE `FGroup_Transform` — not merely `RunAfter

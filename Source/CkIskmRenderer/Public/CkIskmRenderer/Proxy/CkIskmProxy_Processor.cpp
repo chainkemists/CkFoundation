@@ -303,6 +303,70 @@ namespace ck
     }
 
     auto
+        FProcessor_IskmProxy_HandleLateCustomDataRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            FFragment_IskmProxy_LateCustomDataRequests& InRequests) const -> void
+    {
+        // Match the general lane's re-entrancy contract: callbacks may enqueue another late write,
+        // which must survive for the next frame instead of invalidating this drain.
+        auto RequestsCopy = MoveTemp(InRequests._Requests);
+        InRequests._Requests.Reset();
+
+        ck::algo::ForEachRequest(RequestsCopy,
+            [&](const auto& InRequest) -> void
+            {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InCurrent, InCustomData, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
+            }, ck::policy::DontResetContainer{});
+    }
+
+    auto
+        FProcessor_IskmProxy_HandleLateCustomDataRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> bool
+    {
+        const auto IsOffsetValid = InCustomData._Values.IsValidIndex(InRequest.Get_Offset());
+        CK_ENSURE_IF_NOT(IsOffsetValid,
+            TEXT("IskmProxy [{}]: late SetCustomDataFloat offset [{}] is out of range (allocated slots: [{}]). RendererData._NumCustomDataFloat must cover the requested offset"),
+            InHandle, InRequest.Get_Offset(), InCustomData._Values.Num())
+        {}
+        if (NOT IsOffsetValid)
+        { return false; }
+
+        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        const auto HasLiveSkmc = ck::IsValid(SKMC);
+        CK_ENSURE_IF_NOT(HasLiveSkmc,
+            TEXT("IskmProxy [{}]: BaseSKMC missing in late SetCustomDataFloat handler"),
+            InHandle)
+        {}
+        if (NOT HasLiveSkmc)
+        { return false; }
+
+        InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
+
+        SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+        for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+        {
+            if (auto* Child = WeakChild.Get())
+            {
+                Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+            }
+        }
+
+        return true;
+    }
+
+    auto
         FProcessor_IskmProxy_SocketFollower_SyncTransform::
         ForEachEntity(
             TimeType InDeltaT,
@@ -1233,11 +1297,24 @@ namespace ck
     {
         request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
+
+    auto
+        FProcessor_IskmProxy_CancelPendingLateCustomDataRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IskmProxy_LateCustomDataRequests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
 }
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleLateCustomDataRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_CancelPendingRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_CancelPendingLateCustomDataRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncDescendants);

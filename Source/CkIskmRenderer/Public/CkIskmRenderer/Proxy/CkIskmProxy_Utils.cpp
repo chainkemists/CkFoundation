@@ -295,6 +295,89 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    TryGet_SocketTransform_CurrentEntityWorld(
+        const FCk_Handle_IskmProxy& InHandle,
+        FName InSocketName,
+        FTransform& OutTransform)
+    -> bool
+{
+    SCOPE_CYCLE_COUNTER(STAT_CkIskm_GetSocketTransform);
+    OutTransform = FTransform::Identity;
+
+    const auto IsHandleValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(IsHandleValid,
+        TEXT("TryGet_SocketTransform_CurrentEntityWorld received an invalid IskmProxy handle [{}]"),
+        InHandle) {}
+    if (NOT IsHandleValid)
+    { return false; }
+
+    const auto HasCurrent = InHandle.Has<ck::FFragment_IskmProxy_Current>();
+    CK_ENSURE_IF_NOT(HasCurrent,
+        TEXT("IskmProxy [{}] has no Current fragment in TryGet_SocketTransform_CurrentEntityWorld"),
+        InHandle) {}
+    if (NOT HasCurrent)
+    { return false; }
+
+    const auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    const auto HasTransform = ck::IsValid(TransformHandle);
+    CK_ENSURE_IF_NOT(HasTransform,
+        TEXT("IskmProxy [{}] has no Transform in TryGet_SocketTransform_CurrentEntityWorld"),
+        InHandle) {}
+    if (NOT HasTransform)
+    { return false; }
+
+    const auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    // Current is published before renderer setup creates BaseSKMC and remains present while
+    // EndPlay releases it. Both are ordinary TryGet-unavailable lifecycle windows.
+    if (ck::Is_NOT_Valid(SKMC))
+    { return false; }
+
+    const auto HasSocket = SKMC->DoesSocketExist(InSocketName);
+    CK_ENSURE_IF_NOT(HasSocket,
+        TEXT("IskmProxy [{}] has no socket or bone named [{}]"),
+        InHandle, InSocketName) {}
+    if (NOT HasSocket)
+    { return false; }
+
+    const auto SocketComponentSpace = SKMC->GetSocketTransform(InSocketName, RTS_Component);
+    const auto IsSocketTransformFinite = NOT SocketComponentSpace.ContainsNaN();
+    CK_ENSURE_IF_NOT(IsSocketTransformFinite,
+        TEXT("IskmProxy [{}] socket [{}] produced a non-finite component-space transform"),
+        InHandle, InSocketName) {}
+    if (NOT IsSocketTransformFinite)
+    { return false; }
+
+    auto EntityWorld = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+    const auto IsEntityTransformFinite = NOT EntityWorld.ContainsNaN();
+    CK_ENSURE_IF_NOT(IsEntityTransformFinite,
+        TEXT("IskmProxy [{}] has a non-finite current entity transform"),
+        InHandle) {}
+    if (NOT IsEntityTransformFinite)
+    { return false; }
+
+    const auto LocalOffset = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
+    const auto IsLocalOffsetFinite = NOT LocalOffset.ContainsNaN();
+    CK_ENSURE_IF_NOT(IsLocalOffsetFinite,
+        TEXT("IskmProxy [{}] has a non-finite local render offset"),
+        InHandle) {}
+    if (NOT IsLocalOffsetFinite)
+    { return false; }
+
+    EntityWorld.AddToTranslation(EntityWorld.GetRotation().RotateVector(LocalOffset));
+    const auto Result = SocketComponentSpace * EntityWorld;
+    const auto IsResultFinite = NOT Result.ContainsNaN();
+    CK_ENSURE_IF_NOT(IsResultFinite,
+        TEXT("IskmProxy [{}] socket [{}] produced a non-finite current-entity-world transform"),
+        InHandle, InSocketName) {}
+    if (NOT IsResultFinite)
+    { return false; }
+
+    OutTransform = Result;
+    return true;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_SocketLocation(
         const FCk_Handle_IskmProxy& InHandle,
         FName InSocketName,
@@ -414,6 +497,30 @@ auto
     if (InDelegate.IsBound())
     { Request.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Request_SetCustomDataFloat_Late(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_IskmProxy
+{
+    const auto IsHandleValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(IsHandleValid,
+        TEXT("Request_SetCustomDataFloat_Late received an invalid IskmProxy handle [{}]"),
+        InHandle) {}
+    if (NOT IsHandleValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_LateCustomDataRequests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
 

@@ -107,6 +107,42 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKISKMRENDERER_API FProcessor_IskmProxy_HandleLateCustomDataRequests : public ck_exp::TProcessor<
+        FProcessor_IskmProxy_HandleLateCustomDataRequests,
+        FCk_Handle_IskmProxy,
+        TReadWrite<FFragment_IskmProxy_Current>,
+        TReadWrite<FFragment_IskmProxy_CustomData>,
+        TReadWrite<FFragment_IskmProxy_LateCustomDataRequests>,
+        TExclude<FTag_IskmProxy_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_DeferredApply;
+        using MarkedDirtyBy = FFragment_IskmProxy_LateCustomDataRequests;
+
+    public:
+        using TProcessor::TProcessor;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            FFragment_IskmProxy_LateCustomDataRequests& InRequests) const -> void;
+
+    private:
+        auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy_CustomData& InCustomData,
+            const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // HandleRequests excludes owners already tagged for destruction, so a destroyed proxy's still-queued
     // requests are never drained. This fires each pending request's completion delegate with
     // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
@@ -127,6 +163,26 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_Requests& InRequestsComp)
+            -> void;
+    };
+
+    class CKISKMRENDERER_API FProcessor_IskmProxy_CancelPendingLateCustomDataRequests : public ck_exp::TProcessor<
+        FProcessor_IskmProxy_CancelPendingLateCustomDataRequests,
+        FCk_Handle_IskmProxy,
+        TReadOnly<FFragment_IskmProxy_LateCustomDataRequests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IskmProxy_LateCustomDataRequests& InRequestsComp)
             -> void;
     };
 
