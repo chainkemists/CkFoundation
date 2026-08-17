@@ -69,6 +69,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS spatial overlap/collision | `CkOverlapBody` + `CkShapes` |
 | ECS spatial volume query / probes (Jolt) | `CkSpatialQuery` |
 | own/step/query the Jolt physics world | `CkJolt` |
+| retain high-throughput debugger-neutral preview geometry, lines, labels, bounds, and picking | `CkDebugScene` |
 | native entity queries (rings/cones over entities) | `CkEqs` (no doc yet; NOT UE's EQS) |
 | UE EQS wrappers | `CkAi` |
 | AI perception → ECS | `CkPerception` |
@@ -121,7 +122,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **79 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **80 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -141,6 +142,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 |---|---|
 | CkCVar | Core,Log |
 | CkCore | BuildConfig,Log,Settings,ThirdParty |
+| CkDebugScene | Core,Log |
 | CkEditorTools | Settings (added 2026-07-09; Runtime on purpose — consumed by CkGameplayDebugger's Runtime modules; hosts the shared `CkStyle::` tokens + `UCk_Style_UserSettings_UE`) |
 | CkLog | Settings,ThirdParty |
 | CkMemory | Core,Log |
