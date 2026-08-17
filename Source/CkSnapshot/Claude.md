@@ -7,7 +7,7 @@ byte-image snapshot and no per-fragment registration macro — `CK_REGISTER_SNAP
 oracle" were deleted 2026-07-13. A feature persists by registering a `Produce`/`HydrationApply` handler on the
 `CkEcs` replicated-fragment registry — the SAME registry the network path uses.
 
-**Depends on:** `Core`, `CoreUObject`, `CoreOnline`, `Engine`, `DeveloperSettings`, `CkCore`, `CkEcs`, `CkEcsExt`,
+**Depends on:** `Core`, `CoreUObject`, `CoreOnline`, `Engine`, `ImageCore`, `CkCore`, `CkEcs`, `CkEcsExt`,
 `CkLabel`, `CkLog`, `CkThirdParty` (see `CkSnapshot.Build.cs`).
 **Used by:** the game / superproject save-load layer (e.g. BusterBlock's `Bb_SnapshotRestore.*`). No CkFoundation
 module depends on CkSnapshot — features participate through the `CkEcs` handler registry, not a build dependency
@@ -333,15 +333,31 @@ snapshot-respawnable opt-in on a class that is ALSO placed in a level is inert r
 classifies it in this exact branch order. The rule numbers are the module's shared vocabulary — other files and this
 doc cite them; the code itself is now unannotated, so **this table is the definition**:
 
+**The rule IDs below are stable identifiers, not the evaluation sequence** — ~20 call sites across CkFoundation,
+CkTests and the game cite them by number, so they never get renumbered. The actual branch order is:
+**1 → 1.4 → 1.5 → 4a → 2 → 3 → 4b → 4.5 → 5.**
+
 | Rule | Test | Outcome |
 |---|---|---|
 | 1 | `IsMarkedForDestruction` (any `FTag_DestroyEntity_*`) | skip |
+| 1.4 | `FTag_Snapshot_ReconstructOnly` | skip, NOT counted, NO audit — the feature declares the omission intentional (it rebuilds from authored defaults), so a `Produce`-able payload on one is dropped by design |
 | 1.5 | `FTag_Snapshot_SaveTransient` | skip + count; derived state the owner's construction/re-drive recreates on load. A payload on one is an AUDIT Warning (it will be dropped) |
 | 2 | `FFragment_SaveKey`, or a player pawn/controller/state rendezvous (world path only) | `EngineOwned` |
 | 3 | `FTag_ConstructSpawned` **with a real (named) label** | `ConstructSpawned`. Unlabeled ⇒ save-transient, skipped + counted; a payload on one is an AUDIT Warning |
-| 4 | `FFragment_SpawnRecipe` (retained EntityScript spawn recipe) | `RuntimeSpawned` |
+| 4 | `FFragment_SpawnRecipe` (retained EntityScript spawn recipe) | `RuntimeSpawned`. Two branch positions: **4a** = recipe **AND** `FFragment_ActorSpawnIntent`, tested BEFORE rule 2; **4b** = recipe alone, tested after rule 3 |
 | 4.5 | `FFragment_BuildRecipe` (built via `Request_BuildAndReplicate`) | `DefinitionBuilt` |
 | 5 | none of the above — anonymous scratch | skip + count |
+
+Three things the table alone does not say:
+
+- **Rules 1.4/1.5 walk the `FFragment_LifetimeOwner` chain** (`DoGet_SnapshotExclusionPolicy`, depth-capped at
+  256), not just the entity itself: an exclusion marker on an owner applies to its whole construction subtree,
+  because a child restored without its intentionally-omitted owner would be an orphan on load.
+- **`ReconstructOnly` wins over `SaveTransient`** when the walk finds both — the enclosing feature is explicitly
+  declaring the omission is by design, so it must not raise the data-loss audit.
+- **4a precedes rule 2**, which is what makes `ActorSpawnIntent` and `SaveKey` alternatives rather than a
+  duplicate source: a KEYED bridged entity is still loader-respawned, and its key is retained and republished
+  after rebuild (see the table under *Provenance*).
 
 The transient entity is resolved up front and never persisted (bookkeeping, not world state). Truly empty entities
 never even appear as candidates; they would fall to rule 5 anyway. Classified entries are then sorted by lifetime

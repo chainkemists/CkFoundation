@@ -147,9 +147,14 @@ public:
     /**
      * Resolves pending registrations, then returns the payload types of every save-participating handler — a
      * Produce (the payload emitter) paired with a HydrationApply (the load-path applier) — SORTED by type path
-     * name for deterministic save files + deterministic per-entity hydration order. A Produce without a
+     * name, so the save file's payload rows are written in a deterministic order. A Produce without a
      * HydrationApply is a misconfig (caught by a registration-time ensure) and is excluded here, so it fails
      * loud rather than silently corrupting the save.
+     *
+     * This order is NOT the order the payloads apply in. FProcessor_Hydration_Dispatch drains an entity's
+     * FFragment_PendingHydration back-to-front (so applied/dropped entries can be removed in place), so
+     * hydration observes the REVERSE of this sort. Deterministic, but reversed — a handler must never depend
+     * on another type having applied first.
      */
     static auto
     Get_SaveHandlerTypes() -> TArray<const UScriptStruct*>;
