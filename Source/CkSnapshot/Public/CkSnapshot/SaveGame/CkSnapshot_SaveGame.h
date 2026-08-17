@@ -23,6 +23,9 @@ public:
     UPROPERTY()
     FCk_Snapshot_HeaderV3 _HeaderV3;
 
-    UPROPERTY()
+    // Not a UPROPERTY on purpose — see ck::snapshot::Serialize_BulkBytes, which Serialize() below routes it through.
     TArray<uint8> _SnapshotBytesV3;
+
+public:
+    virtual auto Serialize(FArchive& InAr) -> void override;
 };
