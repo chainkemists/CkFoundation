@@ -326,7 +326,7 @@ auto
     if (NOT HasTransform)
     { return false; }
 
-    const auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    const auto& SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC();
     // Current is published before renderer setup creates BaseSKMC and remains present while
     // EndPlay releases it. Both are ordinary TryGet-unavailable lifecycle windows.
     if (ck::Is_NOT_Valid(SKMC))
