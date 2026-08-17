@@ -2,6 +2,7 @@
 
 #include <Engine/DeveloperSettings.h>
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkSnapshot_Settings.generated.h"
@@ -61,6 +62,12 @@ private:
               meta=(EditCondition="_CaptureAuditMode == ECk_Snapshot_CaptureAuditMode::Summary", ClampMin="0"))
     int32 _CaptureAudit_MaxExamples = 5;
 
+    // Fork-join from the game thread: workers serialize the already-produced payload copies while the game
+    // thread participates and blocks, so GC — which only ever starts from the game thread — cannot run
+    // mid-serialize. Disable only to rule the parallel path out while diagnosing a save-side crash.
+    UPROPERTY(EditAnywhere, Config, Category="Save")
+    ECk_EnableDisable _ParallelPayloadSerialization = ECk_EnableDisable::Enable;
+
 public:
     CK_PROPERTY_GET(_OrphanSweepGate);
     CK_PROPERTY_GET(_OrphanSweepGate_DurationSeconds);
@@ -69,6 +76,7 @@ public:
     CK_PROPERTY_GET(_RefuseLoadsBelowBuildHash);
     CK_PROPERTY_GET(_CaptureAuditMode);
     CK_PROPERTY_GET(_CaptureAudit_MaxExamples);
+    CK_PROPERTY_GET(_ParallelPayloadSerialization);
 
 #if WITH_AUTOMATION_TESTS
 public:
@@ -76,5 +84,9 @@ public:
     // otherwise decide whether the assertion is even reachable.
     auto TestOnly_Set_CaptureAuditMode(ECk_Snapshot_CaptureAuditMode InMode) -> void
     { _CaptureAuditMode = InMode; }
+
+    // The parallel-vs-serial parity gate pins each mode explicitly rather than inheriting the project's.
+    auto TestOnly_Set_ParallelPayloadSerialization(ECk_EnableDisable InMode) -> void
+    { _ParallelPayloadSerialization = InMode; }
 #endif
 };

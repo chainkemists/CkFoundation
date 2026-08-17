@@ -30,6 +30,7 @@
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // FFragment_ActorSpawnIntent
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // bridged-actor spawn transform
 
+#include "Async/ParallelFor.h"
 #include "Misc/EngineVersion.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Serialization/MemoryWriter.h"
@@ -245,6 +246,10 @@ namespace ck::snapshot
             : ECk_Snapshot_CaptureAuditMode::Summary;
         const auto AuditMaxExamples = Settings != nullptr ? Settings->Get_CaptureAudit_MaxExamples() : 5;
         const auto AuditDetailed = AuditMode == ECk_Snapshot_CaptureAuditMode::Detailed;
+        const auto ParallelSerializeFlags = Settings == nullptr ||
+            Settings->Get_ParallelPayloadSerialization() == ECk_EnableDisable::Enable
+                ? EParallelForFlags::None
+                : EParallelForFlags::ForceSingleThread;
 
         auto Timings = FCaptureTimings{};
         auto ClassifyStopwatch = TOptional<FCk_ScopedStopwatch>{InPlace, Timings.Classify};
@@ -336,7 +341,6 @@ namespace ck::snapshot
             }
             return Result;
         };
-
 
         auto Classified = TArray<FClassified>{};
         auto PersistedIds = TSet<uint32>{};
@@ -463,6 +467,17 @@ namespace ck::snapshot
         auto& Entities = Tables.Get_Entities();
         auto& Payloads = Tables.Get_Payloads();
 
+        // Produce (game thread, reads live ECS state) is split from serialize (fork-join over the produced
+        // copies) so the serialize leg can fan out. Slot i of the payload table is pending payload i, so the
+        // file is byte-identical to the serial order.
+        struct FPendingPayload
+        {
+            uint32               _OwnerSavedId = 0;
+            const UScriptStruct* _Type = nullptr;
+            FInstancedStruct     _Payload;
+        };
+        auto PendingPayloads = TArray<FPendingPayload>{};
+
         auto EngineOwnedCount = 0;
         auto ConstructSpawnedCount = 0;
         auto RuntimeSpawnedCount = 0;
@@ -524,7 +539,8 @@ namespace ck::snapshot
                                     Handle, InParamHandle) {}
                             });
                     }
-                    Entry.Set_SpawnParamsBytes(SerializeInstancedStruct(Recipe.Get_SpawnParams()));
+                    // Assigned through the mutable getter: the generated Set_ takes const& and would copy the blob.
+                    Entry.Get_SpawnParamsBytes() = SerializeInstancedStruct(Recipe.Get_SpawnParams());
 
                     if (UCk_Utils_ContextOwner_UE::Has(Handle))
                     { Entry.Set_ContextOwnerSavedId(Get_SavedId(UCk_Utils_ContextOwner_UE::Get_ContextOwner(Handle))); }
@@ -532,8 +548,8 @@ namespace ck::snapshot
                     if (Handle.Has<FFragment_ActorSpawnIntent>())
                     {
                         Entry.Set_ActorClassPath(Handle.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath());
-                        Entry.Set_ActorSaveFieldBytes(
-                            SerializeActorSaveFields(UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Handle)));
+                        Entry.Get_ActorSaveFieldBytes() =
+                            SerializeActorSaveFields(UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Handle));
                     }
 
                     if (UCk_Utils_Transform_UE::Has(Handle))
@@ -584,18 +600,36 @@ namespace ck::snapshot
                 if (NOT Produced.IsSet())
                 { continue; }
 
-                auto PayloadEntry = FCk_Snapshot_V3_PayloadEntry{};
-                PayloadEntry.Set_OwnerSavedId(Item._SavedId);
-                PayloadEntry.Set_TypePath(Type->GetPathName());
-                {
-                    const auto SerializeStopwatch = FCk_ScopedStopwatch{Timings.PayloadsSerialize};
-                    PayloadEntry.Set_PayloadBytes(Serialize_OwnedStruct(Produced.GetValue()));
-                }
-                Timings.PayloadByteTotal += PayloadEntry.Get_PayloadBytes().Num();
                 DistinctTypePaths.Add(Type);
-                Payloads.Emplace(MoveTemp(PayloadEntry));
+                PendingPayloads.Emplace(FPendingPayload{Item._SavedId, Type, MoveTemp(Produced.GetValue())});
             }
         }
+
+        // ---- Serialize the produced payloads (fork-join) -----------------------------------------------------------
+        // Safe off the game thread with no GC guard: each task owns its payload copy, and the game thread is
+        // captive inside the ParallelFor — GC only ever starts from the game thread, so it cannot run here.
+        {
+            const auto SerializeStopwatch = FCk_ScopedStopwatch{Timings.PayloadsSerialize};
+
+            auto TypePaths = TMap<const UScriptStruct*, FString>{};
+            for (const auto* Type : DistinctTypePaths)
+            { TypePaths.Add(Type, Type->GetPathName()); }
+
+            Payloads.SetNum(PendingPayloads.Num());
+            ParallelFor(PendingPayloads.Num(),
+                [&](int32 InIndex) -> void
+                {
+                    auto& Pending = PendingPayloads[InIndex];
+                    auto& Entry   = Payloads[InIndex];
+                    Entry.Set_OwnerSavedId(Pending._OwnerSavedId);
+                    Entry.Set_TypePath(TypePaths.FindChecked(Pending._Type));
+                    Entry.Get_PayloadBytes() = Serialize_OwnedStruct(Pending._Payload);
+                },
+                ParallelSerializeFlags);
+        }
+
+        for (const auto& PayloadEntry : Payloads)
+        { Timings.PayloadByteTotal += PayloadEntry.Get_PayloadBytes().Num(); }
 
         PayloadStopwatch.Reset();
 

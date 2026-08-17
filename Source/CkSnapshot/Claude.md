@@ -361,14 +361,34 @@ spent in `DoRequest_Save`, so both the audit knob and the timing line below exis
 Every save logs one Display line after the write:
 
 ```
-Request_Save TIMING slot [BbQuickSave]: total [812.4ms] = pump [31.2ms] ([7] passes) + capture [704.9ms]
-(classify [402.1ms], payloads [281.4ms], tables [21.4ms]) + write [72.6ms] + sidecar [3.7ms].
-Audit [177.3ms] over [1841] probes (inside classify). [1900] entities, [2178] payloads, [6990758] bytes.
+Request_Save TIMING slot [BbQuickSave]: total [228.81ms] = pump [17.49ms] ([3] passes) + capture [205.02ms]
+(classify [40.27ms], payloads [155.88ms] (produce [47.28ms], serialize [93.87ms]), tables [8.87ms])
++ write [4.04ms] (serialize [1.11ms], io [2.93ms]) + sidecar [2.26ms]. Audit [0.00ms] over [0] probes
+(inside classify). [4411] entities, [6100] payloads ([20] distinct types), [9589774] bytes
+([7992490] payload + [1597284] structural).
 ```
 
-**Audit is a SUBSET of classify, not a sibling** — it is reported separately rather than added into the total.
-`TRACE_CPUPROFILER_EVENT_SCOPE`s cover the same stages for Insights. Read the line before theorising about a save
-hitch; it was added because CkSnapshot previously had no instrumentation at all and every attribution was a guess.
+**Audit is a SUBSET of classify, not a sibling** — it is reported separately rather than added into the total —
+and produce/serialize are the two halves of payloads. `TRACE_CPUPROFILER_EVENT_SCOPE`s cover the same stages for
+Insights. Read the line before theorising about a save hitch; it was added because CkSnapshot previously had no
+instrumentation at all and every attribution was a guess.
+
+### Payload serialization is fork-join parallel
+
+Capture runs every handler's `Produce` on the game thread (it reads live ECS state), collecting the produced
+`FInstancedStruct` copies; the per-payload serialization then fans out over a `ParallelFor`. This is GC-safe with
+NO guard by construction: GC only ever starts from the game thread, and the game thread is captive inside the
+fork-join. Each task owns its payload copy end-to-end (`Serialize_OwnedStruct` builds its archive, proxy and
+`FSnapshotContext` per call; the handle walk has no shared state), and slot *i* of the payload table is pending
+payload *i*, so the file is byte-identical to the serial order —
+pinned by `Ck.Snapshot.V3.ParallelSerializeParity` (CkTests).
+
+Consequences for handler authors: `Produce` must return an OWNED payload (a copy — never a view into live
+fragment memory), and a payload struct's `Serialize` path must not touch shared mutable state. Both already
+follow from the existing contract; this is why they are load-bearing.
+`UCk_Snapshot_Settings::_ParallelPayloadSerialization` (default `Enable`) is the escape hatch — `Disable`
+forces the same code path single-threaded (`ForceSingleThread`), for ruling the parallel path out while
+diagnosing a save-side crash.
 
 ### The save format uses NATIVE serializers, not tagged properties (v7)
 
