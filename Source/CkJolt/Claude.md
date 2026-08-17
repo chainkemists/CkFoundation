@@ -1109,6 +1109,9 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
 - Don't construct a second `FCk_Jolt_DebugRenderer` — Jolt asserts on a second `JPH::DebugRenderer`.
   Always `FCk_Jolt_DebugRenderer::Get_OrCreate()`; per-world state belongs on a target, not a
   renderer.
+- Don't add retained ISM, material-instance, line-batcher, bounds, or exact-pick ownership back to Jolt debug
+  draw. `FCk_Jolt_DebugDrawTarget` translates Jolt capture policy into the runtime `CkDebugScene` target, which is
+  the sole retained geometry/channel/pick path shared with other debuggers.
 - Don't read `JPH::PhysicsSystem` from a debugger/UI tick to build debug geometry OR to read a body
   scalar (velocity, pose, sleep state) — register an `FCk_Jolt_DebugDrawTarget` and let the capture
   processor fill it, or you race the async step. A value a presentation consumer needs live belongs on

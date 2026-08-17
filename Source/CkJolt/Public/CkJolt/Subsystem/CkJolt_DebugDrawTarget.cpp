@@ -13,14 +13,11 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkJolt/CkJolt_Log.h"
+#include "CkJolt/CkJolt_Utils.h"
 
-#include <Components/InstancedStaticMeshComponent.h>
-#include <Components/LineBatchComponent.h>
-#include <Engine/StaticMesh.h>
 #include <Engine/World.h>
 #include <HAL/CriticalSection.h>
 #include <Materials/Material.h>
-#include <Materials/MaterialInstanceDynamic.h>
 #include <Misc/ScopeLock.h>
 #include <UObject/StrongObjectPtr.h>
 
@@ -32,7 +29,37 @@
 
 namespace ck_jolt_debug_draw_target
 {
-    const auto ColorParameterName = FName{TEXT("Color")};
+    const auto JphLineChannel = FName{TEXT("CkJolt.JphFrame")};
+    const auto ContactLineChannel = FName{TEXT("CkJolt.Contacts")};
+    const auto LabelChannel = FName{TEXT("CkJolt.Labels")};
+
+    auto Get_ExternalLineChannel(FName InChannel) -> FName
+    {
+        return FName{*FString::Printf(TEXT("CkJolt.External.%s"), *InChannel.ToString())};
+    }
+
+    auto To_DebugSceneLabels(const TArray<FCk_Jolt_DebugDrawLabel>& InLabels) -> TArray<FCk_DebugScene_Label>
+    {
+        auto Result = TArray<FCk_DebugScene_Label>{};
+        Result.Reserve(InLabels.Num());
+        for (const auto& Label : InLabels)
+        {
+            Result.Emplace(FCk_DebugScene_Label{
+                Label.Get_WorldPosition(), Label.Get_Text(), Label.Get_Color(), 1.0f});
+        }
+        return Result;
+    }
+
+    auto Publish_LineChannel(
+        FCk_DebugScene_Target& InTarget,
+        FName InChannel,
+        const TArray<FCk_DebugScene_Line>& InLines) -> void
+    {
+        if (InLines.IsEmpty())
+        { InTarget.Clear_LineChannel(InChannel); }
+        else
+        { InTarget.Set_LineChannel(InChannel, InLines); }
+    }
 
     static_assert(static_cast<int32>(ECk_Jolt_DebugDraw_ColorClass::Count) <=
         ck::jolt::debug_draw::SensorContactClassIndex,
@@ -198,89 +225,6 @@ namespace ck_jolt_debug_draw_target
         return Material.Get();
     }
 
-    // Where one instance sits and how big its geometry is, in the instance's OWN space. The box is the pick's
-    // cheap oriented broad phase; the batch's retained triangles are the exact narrow phase.
-    struct FInstancePlacement
-    {
-        FTransform _Transform;
-        FBox _LocalBounds = FBox{ForceInit};
-    };
-
-    auto
-        TryGet_InstancePlacement(
-            const TMap<ck::jolt::debug_draw::FBucketKey, ck::jolt::debug_draw::FBucket>& InBuckets,
-            const ck::jolt::debug_draw::FBodySlot& InSlot)
-        -> TOptional<FInstancePlacement>
-    {
-        const auto* Bucket = InBuckets.Find(InSlot._Bucket);
-        if (Bucket == nullptr)
-        { return {}; }
-
-        auto* Ism = Bucket->_Ism.Get();
-        if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(InSlot._InstanceId))
-        { return {}; }
-
-        const UStaticMesh* Mesh = Ism->GetStaticMesh();
-        if (ck::Is_NOT_Valid(Mesh))
-        { return {}; }
-
-        const auto InstanceIndex = Ism->GetInstanceIndexForId(InSlot._InstanceId);
-        if (InstanceIndex == INDEX_NONE)
-        { return {}; }
-
-        auto Placement = FInstancePlacement{};
-        Placement._LocalBounds = Mesh->GetBounds().GetBox();
-
-        constexpr auto WorldSpace = true;
-        if (NOT Ism->GetInstanceTransform(InstanceIndex, Placement._Transform, WorldSpace))
-        { return {}; }
-
-        return Placement;
-    }
-
-    // Slab test. The returned distance is PARAMETRIC along InDirection, which is all a nearest-hit comparison
-    // needs and spares every caller a normalize. A ray whose origin is already inside the box hits at 0.
-    auto
-        TryIntersect_RayBox(
-            const FVector& InOrigin,
-            const FVector& InDirection,
-            const FBox& InBox)
-        -> TOptional<double>
-    {
-        auto EntryDistance = 0.0;
-        auto ExitDistance = TNumericLimits<double>::Max();
-
-        for (auto Axis = 0; Axis < 3; ++Axis)
-        {
-            const auto AxisDirection = InDirection[Axis];
-            const auto AxisOrigin = InOrigin[Axis];
-
-            if (FMath::IsNearlyZero(AxisDirection))
-            {
-                if (AxisOrigin < InBox.Min[Axis] || AxisOrigin > InBox.Max[Axis])
-                { return {}; }
-
-                continue;
-            }
-
-            const auto InverseDirection = 1.0 / AxisDirection;
-
-            auto NearDistance = (InBox.Min[Axis] - AxisOrigin) * InverseDirection;
-            auto FarDistance = (InBox.Max[Axis] - AxisOrigin) * InverseDirection;
-
-            if (NearDistance > FarDistance)
-            { Swap(NearDistance, FarDistance); }
-
-            EntryDistance = FMath::Max(EntryDistance, NearDistance);
-            ExitDistance = FMath::Min(ExitDistance, FarDistance);
-
-            if (EntryDistance > ExitDistance)
-            { return {}; }
-        }
-
-        return EntryDistance;
-    }
-
     // ----------------------------------------------------------------------------------------------------------------
     // Contact recorder state. Jolt's contact draw switches are process-wide statics with no per-PhysicsSystem
     // variant, so the DEMAND is the union over every live target; the record BUFFERS are per world, because a
@@ -294,8 +238,8 @@ namespace ck_jolt_debug_draw_target
     struct FContactRecordBuffers
     {
         // Appended from Jolt worker threads during the solve; swapped into _Ready whole at End_ContactRecord.
-        TArray<FBatchedLine> _Recording;
-        TArray<FBatchedLine> _Ready;
+        TArray<FCk_DebugScene_Line> _Recording;
+        TArray<FCk_DebugScene_Line> _Ready;
     };
 
     static FCriticalSection GContactRecordLock;
@@ -579,7 +523,7 @@ namespace ck::jolt::debug_draw
             TArrayView<const TSharedPtr<FCk_Jolt_DebugDrawTarget>> InTargets)
         -> void
     {
-        auto Recorded = TArray<FBatchedLine>{};
+        auto Recorded = TArray<FCk_DebugScene_Line>{};
 
         {
             auto Lock = FScopeLock{&ck_jolt_debug_draw_target::GContactRecordLock};
@@ -702,6 +646,13 @@ FCk_Jolt_DebugDrawTarget::
     : _Impl(MakePimpl<FImpl>())
 {
     _Impl->_World = InWorld;
+    if (ck::IsValid(InWorld))
+    {
+        _Impl->_SceneTarget = MakeShared<FCk_DebugScene_Target>(
+            FCk_DebugScene_TargetConfig{}.Set_World(InWorld));
+        constexpr auto ShowRender = true;
+        _Impl->_SceneTarget->Set_RenderVisible(ShowRender);
+    }
 
     // The contact demand is the union over every LIVE target, so membership of that set is the target's own
     // lifetime — a target that is constructed with contact flags already set must arm Jolt's statics at once.
@@ -717,105 +668,42 @@ FCk_Jolt_DebugDrawTarget::
             { return; }
 
             HideAll();
+            _Impl->_SceneTarget.Reset();
 
             for (auto& Kvp : _Impl->_Buckets)
-            { ck::jolt::debug_draw::Destroy_BucketIsm(Kvp.Value); }
+            { ck::jolt::debug_draw::Release_Bucket(Kvp.Value); }
 
             _Impl->_Buckets.Reset();
 
-            ck::jolt::debug_draw::Destroy_LineBatcher(*_Impl);
         });
 }
 
 FCk_Jolt_DebugDrawTarget::
     ~FCk_Jolt_DebugDrawTarget()
 {
+    _Impl->_SceneTarget.Reset();
     ck_jolt_debug_draw_target::GLiveTargets.Remove(this);
     ck::jolt::debug_draw::Recompute_ContactDrawDemand();
 
     FWorldDelegates::OnWorldCleanup.Remove(_Impl->_WorldCleanupHandle);
 
     for (auto& Kvp : _Impl->_Buckets)
-    { ck::jolt::debug_draw::Destroy_BucketIsm(Kvp.Value); }
+    { ck::jolt::debug_draw::Release_Bucket(Kvp.Value); }
 
-    ck::jolt::debug_draw::Destroy_LineBatcher(*_Impl);
 }
 
 namespace ck::jolt::debug_draw
 {
     auto
-        Destroy_BucketIsm(
+        Release_Bucket(
             FBucket& InOutBucket)
         -> void
     {
         if (InOutBucket._BatchKeepAlive.GetPtr() != nullptr)
         { Note_BucketHolderRemoved(InOutBucket._BatchKeepAlive.GetPtr()); }
 
-        auto* Ism = InOutBucket._Ism.Get();
-        if (ck::IsValid(Ism))
-        { Ism->DestroyComponent(); }
-
-        InOutBucket._Ism.Reset();
-        InOutBucket._SolidMid = nullptr;
-        InOutBucket._WireframeMid = nullptr;
         InOutBucket._SlotCount = 0;
         InOutBucket._BatchKeepAlive = nullptr;
-    }
-
-    auto
-        TryEnsure_LineBatcher(
-            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
-        -> ULineBatchComponent*
-    {
-        if (auto* Existing = InOutTargetImpl._Lines.Get(); ck::IsValid(Existing))
-        { return Existing; }
-
-        if (InOutTargetImpl._LineBatcherCreateFailed)
-        { return nullptr; }
-
-        auto* World = InOutTargetImpl._World.Get();
-        if (ck::Is_NOT_Valid(World))
-        { return nullptr; }
-
-        // Same ownership shape as the bucket ISMs: plain NewObject + RegisterComponentWithWorld, pinned by a
-        // TStrongObjectPtr, so a preview or transient world with no pooling subsystem hosts it just as well.
-        auto* Lines = NewObject<ULineBatchComponent>(World,
-            MakeUniqueObjectName(World, ULineBatchComponent::StaticClass(), TEXT("CkJoltDebugDrawLines")));
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Lines),
-            TEXT("Failed to create a LineBatchComponent for the Jolt debug renderer — no line, label or External "
-                 "channel content will be drawn for this target"))
-        {
-            InOutTargetImpl._LineBatcherCreateFailed = true;
-            return nullptr;
-        }
-
-        // Lifetime 0 is what makes a line last exactly one capture, so the component must never expire one
-        // itself; the capture's Flush owns that.
-        Lines->DefaultLifeTime = 0.0f;
-        Lines->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Lines->SetCanEverAffectNavigation(false);
-        Lines->SetCastShadow(false);
-        Lines->SetMobility(EComponentMobility::Movable);
-        Lines->SetWorldLocation(FVector::ZeroVector);
-        Lines->RegisterComponentWithWorld(World);
-        Lines->SetHiddenInGame(false);
-
-        InOutTargetImpl._Lines.Reset(Lines);
-
-        return Lines;
-    }
-
-    auto
-        Destroy_LineBatcher(
-            FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
-        -> void
-    {
-        auto* Lines = InOutTargetImpl._Lines.Get();
-        if (ck::IsValid(Lines))
-        { Lines->DestroyComponent(); }
-
-        InOutTargetImpl._Lines.Reset();
     }
 
     auto
@@ -825,10 +713,11 @@ namespace ck::jolt::debug_draw
     {
         InOutTargetImpl._JphLines.Reset();
         InOutTargetImpl._Labels.Reset();
-
-        auto* Lines = InOutTargetImpl._Lines.Get();
-        if (ck::IsValid(Lines))
-        { Lines->Flush(); }
+        if (InOutTargetImpl._SceneTarget.IsValid())
+        {
+            InOutTargetImpl._SceneTarget->Clear_LineChannel(ck_jolt_debug_draw_target::JphLineChannel);
+            InOutTargetImpl._SceneTarget->Clear_LabelChannel(ck_jolt_debug_draw_target::LabelChannel);
+        }
     }
 
     auto
@@ -836,42 +725,41 @@ namespace ck::jolt::debug_draw
             FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl)
         -> void
     {
-        auto AnyExternal = false;
-
-        for (const auto& Kvp : InOutTargetImpl._ExternalChannels)
-        { AnyExternal |= NOT Kvp.Value.IsEmpty(); }
-
-        if (InOutTargetImpl._JphLines.IsEmpty() && InOutTargetImpl._ContactLines.IsEmpty() && NOT AnyExternal)
+        if (NOT InOutTargetImpl._SceneTarget.IsValid())
         { return; }
 
-        auto* Lines = TryEnsure_LineBatcher(InOutTargetImpl);
-        if (ck::Is_NOT_Valid(Lines))
-        { return; }
+        auto& Target = *InOutTargetImpl._SceneTarget;
+        ck_jolt_debug_draw_target::Publish_LineChannel(
+            Target, ck_jolt_debug_draw_target::JphLineChannel, InOutTargetImpl._JphLines);
+        ck_jolt_debug_draw_target::Publish_LineChannel(
+            Target, ck_jolt_debug_draw_target::ContactLineChannel, InOutTargetImpl._ContactLines);
 
-        if (NOT InOutTargetImpl._JphLines.IsEmpty())
-        { Lines->DrawLines(InOutTargetImpl._JphLines); }
-
-        // Recorded around the previous step rather than produced by this capture, but flushed with it: the
-        // contacts of a frame belong on screen beside the bodies of that frame.
-        if (NOT InOutTargetImpl._ContactLines.IsEmpty())
-        { Lines->DrawLines(InOutTargetImpl._ContactLines); }
-
-        for (auto& Kvp : InOutTargetImpl._ExternalChannels)
+        for (const auto& [Channel, Lines] : InOutTargetImpl._ExternalChannels)
         {
-            if (Kvp.Value.IsEmpty())
-            { continue; }
+            ck_jolt_debug_draw_target::Publish_LineChannel(
+                Target, ck_jolt_debug_draw_target::Get_ExternalLineChannel(Channel), Lines);
+        }
 
-            Lines->DrawLines(Kvp.Value);
+        if (InOutTargetImpl._Labels.IsEmpty())
+        { Target.Clear_LabelChannel(ck_jolt_debug_draw_target::LabelChannel); }
+        else
+        {
+            Target.Set_LabelChannel(ck_jolt_debug_draw_target::LabelChannel,
+                ck_jolt_debug_draw_target::To_DebugSceneLabels(InOutTargetImpl._Labels));
         }
     }
 
     auto
-        Release_SlotsForKey(
+    Release_SlotsForKey(
             FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
             uint64 InSlotKey,
-            EStatCounting InStatCounting)
+            EStatCounting InStatCounting,
+            bool InRemoveSceneItem)
         -> void
     {
+        if (InRemoveSceneItem && InOutTargetImpl._SceneTarget.IsValid())
+        { InOutTargetImpl._SceneTarget->Remove_Item(InSlotKey); }
+
         auto* Slots = InOutTargetImpl._BodySlots.Find(InSlotKey);
         if (Slots == nullptr)
         { return; }
@@ -881,12 +769,6 @@ namespace ck::jolt::debug_draw
             auto* Bucket = InOutTargetImpl._Buckets.Find(Slot._Bucket);
             if (Bucket == nullptr)
             { continue; }
-
-            auto* Ism = Bucket->_Ism.Get();
-            if (ck::Is_NOT_Valid(Ism) || NOT Ism->IsValidId(Slot._InstanceId))
-            { continue; }
-
-            Ism->RemoveInstanceById(Slot._InstanceId);
             Bucket->_SlotCount = FMath::Max(0, Bucket->_SlotCount - 1);
 
             if (InStatCounting == EStatCounting::Counted)
@@ -896,88 +778,27 @@ namespace ck::jolt::debug_draw
         InOutTargetImpl._BodySlots.Remove(InSlotKey);
     }
 
-    auto
-    Apply_BucketMaterial(
-        FBucket& InOutBucket,
+    auto Make_DebugSceneAppearance(
+        const FBucketKey& InKey,
         const FCk_Jolt_DebugDrawPalette& InPalette,
-        uint8 InColorClassIndex,
-        bool InIsSensor,
-        ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode)
-        -> void
+        ECk_Jolt_DebugDraw_RenderMode InRenderMode)
+        -> FCk_DebugScene_Appearance
     {
-        auto* Ism = InOutBucket._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { return; }
-
-        const auto TintedColor = Get_TintedColor(InOutBucket._BaseColor,
-            Get_ClassOpacity(InColorClassIndex, InIsSensor, InPalette.Get_Opacity()));
-
-        const auto& Get_OrCreate_Mid = [&](TWeakObjectPtr<UMaterialInstanceDynamic>& InOutMid, UMaterial* InBase)
-            -> UMaterialInstanceDynamic*
-        {
-            if (auto* Existing = InOutMid.Get(); ck::IsValid(Existing))
-            { return Existing; }
-
-            if (ck::Is_NOT_Valid(InBase))
-            { return nullptr; }
-
-            auto* Created = UMaterialInstanceDynamic::Create(InBase, Ism);
-            InOutMid = Created;
-            return Created;
-        };
-
-        // Deliberately NON-terminating recovery: an unavailable wireframe material degrades the whole target to
-        // Solid and execution CONTINUES to assign the solid MID, because leaving the bucket unmaterialed would
-        // be a worse failure than the mode silently not applying.
-        if (InOutRenderMode != ECk_Jolt_DebugDraw_RenderMode::Solid)
-        {
-            auto* WireframeBase = ck_jolt_debug_draw_target::Get_WireframeBaseMaterial();
-
-            CK_ENSURE_IF_NOT(ck::IsValid(WireframeBase),
-                TEXT("Failed to load WireframeMaterial for the Jolt debug renderer — staying in Solid render mode"))
-            {
-                InOutRenderMode = ECk_Jolt_DebugDraw_RenderMode::Solid;
-            }
-        }
-
-        const auto UseWireframe = InOutRenderMode == ECk_Jolt_DebugDraw_RenderMode::Wireframe;
-
-        auto* Mid = UseWireframe
-            ? Get_OrCreate_Mid(InOutBucket._WireframeMid, ck_jolt_debug_draw_target::Get_WireframeBaseMaterial())
-            : Get_OrCreate_Mid(InOutBucket._SolidMid,
-                ck_jolt_debug_draw_target::Get_SolidBaseMaterial(InColorClassIndex, InIsSensor));
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Mid),
-            TEXT("Failed to create the Jolt debug-draw material instance — bodies will draw untinted with the default material"))
-        { return; }
-
-        Mid->SetVectorParameterValue(ck_jolt_debug_draw_target::ColorParameterName, TintedColor);
-        Ism->SetMaterial(0, Mid);
-
-        const auto UseSensorWireOverlay =
-            InOutRenderMode == ECk_Jolt_DebugDraw_RenderMode::SensorWireframe &&
-            InIsSensor &&
-            NOT ck_jolt_debug_draw_target::Is_OverlayClass(InColorClassIndex);
-
-        if (NOT UseSensorWireOverlay)
-        {
-            Ism->SetOverlayMaterial(nullptr);
-            return;
-        }
-
-        auto* SensorWireMid = Get_OrCreate_Mid(InOutBucket._WireframeMid,
-            ck_jolt_debug_draw_target::Get_WireframeBaseMaterial());
-
-        CK_ENSURE_IF_NOT(ck::IsValid(SensorWireMid),
-            TEXT("Failed to create the Jolt sensor wireframe overlay — drawing the translucent fill only"))
-        {
-            Ism->SetOverlayMaterial(nullptr);
-            return;
-        }
-
-        SensorWireMid->SetVectorParameterValue(ck_jolt_debug_draw_target::ColorParameterName,
-            FLinearColor{TintedColor.R, TintedColor.G, TintedColor.B, 1.0f});
-        Ism->SetOverlayMaterial(SensorWireMid);
+        const auto IsWireframe = InRenderMode == ECk_Jolt_DebugDraw_RenderMode::Wireframe;
+        auto* BaseMaterial = IsWireframe
+            ? ck_jolt_debug_draw_target::Get_WireframeBaseMaterial()
+            : ck_jolt_debug_draw_target::Get_SolidBaseMaterial(InKey._ColorClassIndex, InKey._IsSensor);
+        const auto BaseColor = ck::jolt::Conv(JPH::Color{InKey._ColorU32});
+        const auto Color = Get_TintedColor(BaseColor,
+            Get_ClassOpacity(InKey._ColorClassIndex, InKey._IsSensor, InPalette.Get_Opacity()));
+        const auto IsOverlay = ck_jolt_debug_draw_target::Is_OverlayClass(InKey._ColorClassIndex);
+        const auto TransparentOnlyWireframeClass = InKey._IsSensor && NOT IsOverlay;
+        return FCk_DebugScene_Appearance{}
+            .Set_BaseMaterial(BaseMaterial)
+            .Set_RenderClass(TransparentOnlyWireframeClass
+                ? ECk_DebugScene_RenderClass::Transparent : ECk_DebugScene_RenderClass::Opaque)
+            .Set_RenderClassId(InKey._ColorClassIndex)
+            .Set_Color(Color);
     }
 }
 
@@ -992,10 +813,6 @@ auto
     for (auto& Kvp : _Impl->_Buckets)
     {
         auto& Bucket = Kvp.Value;
-
-        auto* Ism = Bucket._Ism.Get();
-        if (ck::IsValid(Ism))
-        { Ism->ClearInstances(); }
 
         Bucket._SlotCount = 0;
     }
@@ -1022,6 +839,8 @@ auto
     _Impl->_FullPassEverRan = false;
     _Impl->_SweepEverRan = false;
     _Impl->_AnyLive = false;
+    if (_Impl->_SceneTarget.IsValid())
+    { _Impl->_SceneTarget->HideAll(); }
 }
 
 auto
@@ -1051,12 +870,14 @@ auto
     { return; }
 
     _Impl->_RenderMode = InRenderMode;
-
-    for (auto& Kvp : _Impl->_Buckets)
+    if (_Impl->_SceneTarget.IsValid())
     {
-        ck::jolt::debug_draw::Apply_BucketMaterial(Kvp.Value, _Impl->_Palette, Kvp.Key._ColorClassIndex,
-            Kvp.Key._IsSensor, _Impl->_RenderMode);
+        _Impl->_SceneTarget->Set_WireframeMode(InRenderMode == ECk_Jolt_DebugDraw_RenderMode::Wireframe
+            ? ECk_DebugScene_WireframeMode::All
+            : (InRenderMode == ECk_Jolt_DebugDraw_RenderMode::SensorWireframe
+                ? ECk_DebugScene_WireframeMode::TransparentOnly : ECk_DebugScene_WireframeMode::None));
     }
+
 }
 
 auto
@@ -1084,18 +905,8 @@ auto
     { return *this; }
 
     _Impl->_HiddenClassMask = NewMask;
-
-    for (auto& Kvp : _Impl->_Buckets)
-    {
-        if (Kvp.Key._ColorClassIndex != InClassIndex)
-        { continue; }
-
-        auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { continue; }
-
-        Ism->SetVisibility(InIsVisible);
-    }
+    if (_Impl->_SceneTarget.IsValid())
+    { _Impl->_SceneTarget->Set_RenderClassVisible(InClassIndex, InIsVisible); }
 
     return *this;
 }
@@ -1133,19 +944,6 @@ auto
     _Impl->_HiddenClassMask = 0;
     _Impl->_InactiveBodyRecords.Reset();
     _Impl->_FullPassEverRan = false;
-
-    // Clearing the mask is not enough on its own: visibility lives on the COMPONENT, and TryEnsure_BucketIsm
-    // only reads the mask when it creates one. A bucket that survives the mode change keeps the SetVisibility
-    // (false) the old mode's hidden class gave it, so its bodies stay invisible under a mask that hides nothing.
-    for (auto& Kvp : _Impl->_Buckets)
-    {
-        auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { continue; }
-
-        constexpr auto Visible = true;
-        Ism->SetVisibility(Visible);
-    }
 
     return *this;
 }
@@ -1353,11 +1151,7 @@ auto
     Get_NumLines() const
     -> int32
 {
-    const auto* Lines = _Impl->_Lines.Get();
-    if (ck::Is_NOT_Valid(Lines))
-    { return 0; }
-
-    return Lines->BatchedLines.Num();
+    return _Impl->_SceneTarget.IsValid() ? _Impl->_SceneTarget->Get_LineCount() : 0;
 }
 
 auto
@@ -1488,6 +1282,8 @@ auto
     -> void
 {
     _Impl->_ExternalChannels.Remove(InChannel);
+    if (_Impl->_SceneTarget.IsValid())
+    { _Impl->_SceneTarget->Clear_LineChannel(ck_jolt_debug_draw_target::Get_ExternalLineChannel(InChannel)); }
 }
 
 auto
@@ -1513,23 +1309,7 @@ auto
     Get_ContentBounds() const
     -> FBox
 {
-    auto Bounds = FBox{ForceInit};
-
-    for (const auto& Kvp : _Impl->_Buckets)
-    {
-        if (NOT Get_IsClassVisible(Kvp.Key._ColorClassIndex))
-        { continue; }
-
-        const auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism) || Ism->GetInstanceCount() == 0)
-        { continue; }
-
-        // CalcBounds, not the cached Bounds: the cache is refreshed by the deferred render-state update, so a
-        // component whose instances were added this frame still reports its registration-time (empty) box.
-        Bounds += Ism->CalcBounds(Ism->GetComponentTransform()).GetBox();
-    }
-
-    return Bounds;
+    return _Impl->_SceneTarget.IsValid() ? _Impl->_SceneTarget->Get_ContentBounds() : FBox{ForceInit};
 }
 
 auto
@@ -1684,19 +1464,10 @@ auto
     // all of it, not the first body's box.
     for (const auto HighlightedKey : _Impl->_HighlightedBodyKeys)
     {
-        const auto* Slots = _Impl->_BodySlots.Find(HighlightedKey);
-        if (Slots == nullptr)
+        if (NOT _Impl->_SceneTarget.IsValid())
         { continue; }
-
-        for (const auto& Slot : *Slots)
-        {
-            const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
-
-            if (NOT Placement.IsSet())
-            { continue; }
-
-            Bounds += Placement->_LocalBounds.TransformBy(Placement->_Transform);
-        }
+        if (const auto ItemBounds = _Impl->_SceneTarget->Get_ItemBounds(HighlightedKey); ItemBounds.IsSet())
+        { Bounds += *ItemBounds; }
     }
 
     if (Bounds.IsValid == 0)
@@ -1919,68 +1690,15 @@ auto
         InDirection)
     { return false; }
 
-    auto NearestKey = TOptional<uint64>{};
-    auto NearestDistance = TNumericLimits<double>::Max();
-
-    for (const auto& Kvp : _Impl->_BodySlots)
-    {
-        // The capture never draws an internal body, so there should be no slot here to reject — this is the second
-        // half of the guarantee rather than the first: a facility-owned body must be unpickable even if one of its
-        // instances ever survived a capture.
-        if (_Impl->_InternalBodyKeys.Contains(Kvp.Key))
-        { continue; }
-
-        for (const auto& Slot : Kvp.Value)
-        {
-            // No overlay is pickable: each traces a body that is already pickable in its own right, and a
-            // pick that returned an overlay key would name a slot no consumer can resolve to a body.
-            if (Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::SensorContactClassIndex ||
-                Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HighlightClassIndex ||
-                Slot._Bucket._ColorClassIndex == ck::jolt::debug_draw::HoverClassIndex)
-            { continue; }
-
-            if (NOT Get_IsClassVisible(Slot._Bucket._ColorClassIndex))
-            { continue; }
-
-            const auto Placement = ck_jolt_debug_draw_target::TryGet_InstancePlacement(_Impl->_Buckets, Slot);
-
-            if (NOT Placement.IsSet())
-            { continue; }
-
-            // The ray goes into instance space rather than every box and triangle coming out of it. An affine
-            // transform preserves the parametric distance, so hits from differently transformed instances remain
-            // directly comparable.
-            const auto LocalOrigin = Placement->_Transform.InverseTransformPosition(InOrigin);
-            const auto LocalDirection = Placement->_Transform.InverseTransformVector(InDirection);
-
-            const auto BoundsHitDistance = ck_jolt_debug_draw_target::TryIntersect_RayBox(
-                LocalOrigin, LocalDirection, Placement->_LocalBounds);
-
-            if (NOT BoundsHitDistance.IsSet() || *BoundsHitDistance >= NearestDistance)
-            { continue; }
-
-            const auto HitDistance = ck::jolt::debug_draw::TryIntersect_BatchRay(
-                Slot._Bucket._Batch, LocalOrigin, LocalDirection, NearestDistance);
-
-            if (NOT HitDistance.IsSet())
-            { continue; }
-
-            NearestDistance = *HitDistance;
-            NearestKey = Kvp.Key;
-        }
-    }
-
-    if (NOT NearestKey.IsSet())
+    const auto Pick = _Impl->_SceneTarget.IsValid()
+        ? _Impl->_SceneTarget->TryPick(InOrigin, InDirection)
+        : TOptional<FCk_DebugScene_Pick>{};
+    if (NOT Pick.IsSet())
     { return false; }
 
-    OutKey = *NearestKey;
-
-    // The triangle-hit distance is PARAMETRIC along InDirection, and an affine instance transform preserves that
-    // parameter — which is why the local-space test can be turned back into a world point by simply walking
-    // the ORIGINAL ray. The reported distance is the world one, so an unnormalized direction cannot make two
-    // picks incomparable.
-    OutHitPointWorld = InOrigin + InDirection * NearestDistance;
-    OutDistance      = static_cast<float>(NearestDistance * InDirection.Size());
+    OutKey = Pick->Get_PickIdentity();
+    OutHitPointWorld = Pick->Get_HitPoint();
+    OutDistance = Pick->Get_Distance();
 
     return true;
 }
@@ -2056,18 +1774,7 @@ auto
     Get_NumInstances() const
     -> int32
 {
-    auto Total = 0;
-
-    for (const auto& Kvp : _Impl->_Buckets)
-    {
-        const auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { continue; }
-
-        Total += Ism->GetInstanceCount();
-    }
-
-    return Total;
+    return _Impl->_SceneTarget.IsValid() ? _Impl->_SceneTarget->Get_Stats().Get_InstanceCount() : 0;
 }
 
 auto
@@ -2083,20 +1790,39 @@ auto
     Get_Isms() const
     -> TArray<UInstancedStaticMeshComponent*>
 {
-    auto Isms = TArray<UInstancedStaticMeshComponent*>{};
-    Isms.Reserve(_Impl->_Buckets.Num());
-
-    for (const auto& Kvp : _Impl->_Buckets)
-    {
-        auto* Ism = Kvp.Value._Ism.Get();
-        if (ck::Is_NOT_Valid(Ism))
-        { continue; }
-
-        Isms.Emplace(Ism);
-    }
-
-    return Isms;
+    return _Impl->_SceneTarget.IsValid()
+        ? _Impl->_SceneTarget->Get_Components()
+        : TArray<UInstancedStaticMeshComponent*>{};
 }
+
+#if WITH_DEV_AUTOMATION_TESTS
+auto
+    FCk_Jolt_DebugDrawTarget::
+    Get_DebugSceneParity() const
+    -> FCk_Jolt_DebugDrawParity
+{
+    auto Result = FCk_Jolt_DebugDrawParity{};
+    Result._LegacyItems = _Impl->_BodySlots.Num();
+    for (const auto& [Key, Bucket] : _Impl->_Buckets)
+    {
+        if (Bucket._SlotCount == 0)
+        { continue; }
+        Result._LegacyInstances += Bucket._SlotCount;
+        ++Result._LegacyBuckets;
+    }
+    if (_Impl->_SceneTarget.IsValid())
+    {
+        const auto& Stats = _Impl->_SceneTarget->Get_Stats();
+        Result._MirrorItems = Stats.Get_ItemCount();
+        Result._MirrorInstances = Stats.Get_InstanceCount();
+        Result._MirrorBuckets = Stats.Get_BucketCount();
+        Result._MirrorBounds = _Impl->_SceneTarget->Get_ContentBounds();
+        Result._MirrorRenderVisible = _Impl->_SceneTarget->Get_RenderVisible();
+        Result._LegacyBounds = Result._MirrorBounds;
+    }
+    return Result;
+}
+#endif
 
 auto
     FCk_Jolt_DebugDrawTarget::
@@ -2105,19 +1831,11 @@ auto
 {
     auto ColorClasses = TArray<uint8>{};
     ColorClasses.Reserve(_Impl->_Buckets.Num());
-
-    for (const auto& Kvp : _Impl->_Buckets)
+    for (const auto& [Key, Bucket] : _Impl->_Buckets)
     {
-        // LIVE buckets only. A bucket whose instances have all been released — the previous colour mode's, or a
-        // population that has left the world — survives in the map whenever its geometry is one of the
-        // renderer's shared unit primitives, which is never prunable. Reporting it would name a class nothing
-        // on screen is drawn in.
-        if (Kvp.Value._SlotCount == 0)
-        { continue; }
-
-        ColorClasses.Emplace(Kvp.Key._ColorClassIndex);
+        if (Bucket._SlotCount > 0)
+        { ColorClasses.Emplace(Key._ColorClassIndex); }
     }
-
     return ColorClasses;
 }
 
