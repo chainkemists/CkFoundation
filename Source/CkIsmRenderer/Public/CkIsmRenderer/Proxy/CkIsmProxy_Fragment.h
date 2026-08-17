@@ -44,6 +44,7 @@ namespace ck
         friend class FProcessor_IsmProxy_EndPlay;
         friend class FProcessor_IsmProxy_AddInstance;
         friend class FProcessor_IsmProxy_HandleRequests;
+        friend class FProcessor_IsmProxy_HandleLateCustomDataRequests;
 
     private:
         FPrimitiveInstanceId _IsmInstanceIndex;
@@ -153,6 +154,24 @@ namespace ck
 
     private:
         RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // Opt-in lane for per-instance value writes produced after the normal Gameplay_Rendering
+    // request pass. DeferredApply drains it without changing the general request contract.
+    struct CKISMRENDERER_API FFragment_IsmProxy_LateCustomDataRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_LateCustomDataRequests);
+
+    public:
+        friend class FProcessor_IsmProxy_HandleLateCustomDataRequests;
+        friend class UCk_Utils_IsmProxy_UE;
+
+    private:
+        TArray<FCk_Request_IsmProxy_SetCustomInstanceDataValue> _Requests;
 
     public:
         CK_PROPERTY_GET(_Requests);
