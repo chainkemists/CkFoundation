@@ -350,6 +350,72 @@ and owner-mapping passes rely on that ordering.
 
 ---
 
+## Save cost: a save is ONE frame, so everything here is hitch
+
+`Request_Save` pumps the world to quiescence, captures, serializes and writes the slot **synchronously on the game
+thread**. There is no frame-spanning save machine (unlike the load). A game with an autosave feels every millisecond
+spent in `DoRequest_Save`, so both the audit knob and the timing line below exist to make that budget legible.
+
+### The timing line (always on)
+
+Every save logs one Display line after the write:
+
+```
+Request_Save TIMING slot [BbQuickSave]: total [812.4ms] = pump [31.2ms] ([7] passes) + capture [704.9ms]
+(classify [402.1ms], payloads [281.4ms], tables [21.4ms]) + write [72.6ms] + sidecar [3.7ms].
+Audit [177.3ms] over [1841] probes (inside classify). [1900] entities, [2178] payloads, [6990758] bytes.
+```
+
+**Audit is a SUBSET of classify, not a sibling** — it is reported separately rather than added into the total.
+`TRACE_CPUPROFILER_EVENT_SCOPE`s cover the same stages for Insights. Read the line before theorising about a save
+hitch; it was added because CkSnapshot previously had no instrumentation at all and every attribution was a guess.
+
+### The save format uses NATIVE serializers, not tagged properties (v7)
+
+`FArrayProperty`'s bulk-memcpy path is gated on **unversioned** property serialization
+(`PropertyArray.cpp`, `CanBulkSerialize`) — a cooked-build feature a save archive never uses. So a
+`TArray<uint8>` UPROPERTY in a save is walked **one virtual call per byte**: 17.5 MB measured at
+554 ms, ~32 MB/s where a memcpy runs at GB/s. That single mechanism was ~75% of a 1273 ms save,
+because the blob is serialized twice (the tables build it, then `SaveGameToMemory` re-serializes it).
+
+Consequences for anyone touching the format:
+
+- Every V3 table struct (`FCk_Snapshot_V3_{BuildStep,EntityEntry,PayloadEntry,Tables}`) declares
+  `Serialize(FArchive&)` + `TStructOpsTypeTraits::WithSerializer`. **Adding a field means editing
+  that serializer** — it is not reflection-driven, so a new `UPROPERTY` alone is silently not saved.
+- Byte blobs go through `ck::snapshot::Serialize_BulkBytes`, never `Ar << Array` (`TArray`'s
+  `operator<<` is per-element for `uint8`) and never a bare UPROPERTY.
+- Nested arrays serialize as explicit count + per-element `Serialize`, because a `WithSerializer`
+  USTRUCT gets no `operator<<`.
+- `UCk_Snapshot_SaveGame::_SnapshotBytesV3` is deliberately **not** a UPROPERTY; the class's
+  `Serialize` override appends it in bulk after `Super::Serialize` writes the reflected header.
+- Layout is version-locked: bump `FCk_Snapshot_HeaderV3::CurrentFormatVersion` on any change.
+  `Request_Load` compares by exact equality **before** teardown, so an older slot is refused loudly
+  while the world is still alive rather than half-read.
+
+### `CaptureAuditMode` — the dropped-payload audit is not free
+
+Rules 1.5 and 3 skip entities, and the audit reports the ones that were carrying a payload (i.e. real data loss).
+Deciding that means running **every registered `Produce`** on each skipped entity — including CkDynamic's, which
+walks the registry's storage list — so the audit's cost scales with skipped-entity count, not with how many
+problems it finds. `UCk_Snapshot_Settings::_CaptureAuditMode`:
+
+| Mode | Behaviour | Cost |
+|---|---|---|
+| `Disabled` | no probe; no dropped-payload signal at all | free |
+| `Summary` (default) | probes, then ONE aggregated Warning with counts + N example entities | probe only |
+| `Detailed` | one Warning per entity carrying the full `ExportText` of the dropped payload | probe + ~0.45ms/entity |
+
+Measured on BusterBlock 2026-08-16: `Detailed` (the old unconditional behaviour) spent **177 ms emitting 394
+warnings** in a single 7 MB save, every one of them a `PROBE NODE` child. That is the *expected* steady state, not
+a backlog — `utils_scene_node::Create` gives its children a debug name and never a GameplayLabel, so every
+SceneNode/probe child is permanently an unlabeled rule-3 skip (see the recurring-driver note under
+*Dynamic-fragment snapshot opt-outs*). A project shipping an autosave wants `Disabled` on its shipping
+configuration and `Summary` while developing; reach for `Detailed` only when chasing a specific value that came
+back missing.
+
+---
+
 ## The v3 load machine
 
 `DoTick_Load` drives `TearingDown → AwaitingWorld → Rebuilding → Hydrating → Settling`. Rationale that used to live
