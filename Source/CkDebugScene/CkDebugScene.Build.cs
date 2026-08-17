@@ -15,8 +15,8 @@ public class CkDebugScene : CkModuleRules
             "CkCore",
         });
 
-        RuntimeDependencies.Add(Path.Combine(EngineDirectory, "Content", "EngineDebugMaterials", "M_SimpleOpaque.uasset"), StagedFileType.UFS);
-        RuntimeDependencies.Add(Path.Combine(EngineDirectory, "Content", "EngineDebugMaterials", "M_SimpleTranslucent.uasset"), StagedFileType.UFS);
         RuntimeDependencies.Add(Path.Combine(EngineDirectory, "Content", "EngineDebugMaterials", "WireframeMaterial.uasset"), StagedFileType.UFS);
+        RuntimeDependencies.Add(Path.Combine(PluginDirectory, "Content", "DebugScene", "M_CkDebugScene_Opaque.uasset"), StagedFileType.UFS);
+        RuntimeDependencies.Add(Path.Combine(PluginDirectory, "Content", "DebugScene", "M_CkDebugScene_Translucent.uasset"), StagedFileType.UFS);
     }
 }

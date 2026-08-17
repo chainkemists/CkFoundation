@@ -1,5 +1,7 @@
 #include "CkDebugScene_Target.h"
 
+#include "CkDebugScene/CkDebugScene_Materials.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -22,14 +24,6 @@ constexpr auto IsNotVisible = false;
 constexpr auto IsWorldSpace = false;
 constexpr auto IsPersistentBucket = false;
 constexpr auto IsTransientBucket = true;
-
-auto
-Get_WireframeMaterial() -> UMaterialInterface*
-{
-    static auto Material = TStrongObjectPtr<UMaterialInterface>{LoadObject<UMaterialInterface>(
-        nullptr, TEXT("/Engine/EngineDebugMaterials/WireframeMaterial.WireframeMaterial"))};
-    return Material.Get();
-}
 
 auto
 IsFinite(const FLinearColor& InColor) -> bool
@@ -86,12 +80,16 @@ struct FBucketKey
     ECk_DebugScene_RenderClass _RenderClass = ECk_DebugScene_RenderClass::Opaque;
     uint8 _RenderClassId = 0;
     FColor _Color;
+    ECk_DebugScene_DepthPriority _DepthPriority = ECk_DebugScene_DepthPriority::World;
+    int32 _TranslucencySortPriority = 0;
 
     auto
     operator==(const FBucketKey& InOther) const -> bool
     {
         return _Mesh == InOther._Mesh && _Material == InOther._Material && _RenderClass == InOther._RenderClass &&
-               _RenderClassId == InOther._RenderClassId && _Color == InOther._Color;
+               _RenderClassId == InOther._RenderClassId && _Color == InOther._Color &&
+               _DepthPriority == InOther._DepthPriority &&
+               _TranslucencySortPriority == InOther._TranslucencySortPriority;
     }
 
     friend auto
@@ -102,7 +100,9 @@ struct FBucketKey
         Hash = HashCombine(Hash, GetTypeHash(InKey._Material));
         Hash = HashCombine(Hash, GetTypeHash(InKey._RenderClass));
         Hash = HashCombine(Hash, GetTypeHash(InKey._RenderClassId));
-        return HashCombine(Hash, GetTypeHash(InKey._Color));
+        Hash = HashCombine(Hash, GetTypeHash(InKey._Color));
+        Hash = HashCombine(Hash, GetTypeHash(InKey._DepthPriority));
+        return HashCombine(Hash, GetTypeHash(InKey._TranslucencySortPriority));
     }
 };
 
@@ -133,7 +133,8 @@ MakeBucketKey(const FCk_DebugScene_Instance& InInstance) -> FBucketKey
 {
     const auto& Appearance = InInstance.Get_Appearance();
     return FBucketKey{InInstance.Get_Mesh(), Appearance.Get_BaseMaterial(), Appearance.Get_RenderClass(),
-                      Appearance.Get_RenderClassId(), Appearance.Get_Color().ToFColor(ConvertToSrgb)};
+                      Appearance.Get_RenderClassId(), Appearance.Get_Color().ToFColor(ConvertToSrgb),
+                      Appearance.Get_DepthPriority(), Appearance.Get_TranslucencySortPriority()};
 }
 
 auto
@@ -220,6 +221,24 @@ auto
 
 auto
     FCk_DebugScene_Appearance::
+    Set_DepthPriority(ECk_DebugScene_DepthPriority InDepthPriority)
+    -> FCk_DebugScene_Appearance&
+{
+    _DepthPriority = InDepthPriority;
+    return *this;
+}
+
+auto
+    FCk_DebugScene_Appearance::
+    Set_TranslucencySortPriority(int32 InTranslucencySortPriority)
+    -> FCk_DebugScene_Appearance&
+{
+    _TranslucencySortPriority = InTranslucencySortPriority;
+    return *this;
+}
+
+auto
+    FCk_DebugScene_Appearance::
     Get_BaseMaterial() const
     -> UMaterialInterface*
 {
@@ -253,12 +272,29 @@ auto
 {
     return _Color.A;
 }
+
 auto
     FCk_DebugScene_Appearance::
+    Get_DepthPriority() const
+    -> ECk_DebugScene_DepthPriority
+{
+    return _DepthPriority;
+}
+
+auto
+    FCk_DebugScene_Appearance::
+    Get_TranslucencySortPriority() const
+    -> int32
+{
+    return _TranslucencySortPriority;
+}
+auto
+FCk_DebugScene_Appearance::
     IsValid() const
     -> bool
 {
-    return ck::IsValid(Get_BaseMaterial()) && ck_debug_scene_target::IsFinite(_Color);
+    return ck::debug_scene::materials::Is_IsmCompatible(Get_BaseMaterial()) &&
+           ck_debug_scene_target::IsFinite(_Color);
 }
 
 auto
@@ -453,7 +489,7 @@ ApplyWireframeBucket(ECk_DebugScene_WireframeMode InMode, const FBucketKey& InKe
     }
     if (ck::Is_NOT_Valid(InOutBucket._WireMid.Get()))
     {
-        auto* Wireframe = Get_WireframeMaterial();
+        auto* Wireframe = ck::debug_scene::materials::TryGet_Wireframe();
         const auto WireframeIsValid = ck::IsValid(Wireframe);
         CK_ENSURE_IF_NOT(WireframeIsValid, TEXT("CkDebugScene could not load the engine wireframe material"))
         {
@@ -504,6 +540,10 @@ TryCreateBucket(UWorld* InWorld, const FBucketKey& InKey, const FCk_DebugScene_I
     Component->SetWorldLocation(FVector::ZeroVector);
     Component->SetHiddenInGame(IsHiddenInGame);
     Component->SetVisibility(InInitialVisibility);
+    Component->SetDepthPriorityGroup(InKey._DepthPriority == ECk_DebugScene_DepthPriority::Foreground
+                                         ? SDPG_Foreground
+                                         : SDPG_World);
+    Component->SetTranslucentSortPriority(InKey._TranslucencySortPriority);
     Component->SetStaticMesh(InSubmission.Get_Mesh()->Get_StaticMesh());
     Component->RegisterComponentWithWorld(InWorld);
 
