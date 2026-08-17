@@ -34,13 +34,14 @@ namespace ck
 
     // Provenance marker stamped on an entity created while its lifetime owner is still constructing: such a child
     // is re-created by the owner's replayed construction on load, so the save ADOPTS it by identity (owner + label)
-    // rather than respawning a recipe. TRANSIENT is deliberate — the tag must never round-trip through a save.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_ConstructSpawned);
+    // rather than respawning a recipe. The tag is read LIVE at capture and recorded as entity-table metadata; it
+    // must never round-trip through a save (no tag does).
+    CK_DEFINE_ECS_TAG(FTag_ConstructSpawned);
 
     // Construction-window marker for a definition-built entity, which carries NO FFragment_EntityScript_Current and
     // so would be missed by the ConstructSpawned stamp above. Held for the SYNCHRONOUS span of ConstructionInfo
-    // execution only. TRANSIENT is mandatory: a live construction marker is not a persistent property.
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_DefinitionBuild_InProgress);
+    // execution only. A live construction marker is not a persistent property and is never captured.
+    CK_DEFINE_ECS_TAG(FTag_DefinitionBuild_InProgress);
 
     // --------------------------------------------------------------------------------------------------------------------
 
