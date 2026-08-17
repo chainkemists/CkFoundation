@@ -1,6 +1,7 @@
 #include "CkEcs/Persistence/CkPersistenceHydration_Processor.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h" // ck::IsValid — DoGet_PayloadTypeName
 
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -8,6 +9,19 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Hydration_Dispatch);
+
+namespace ck_persistence_hydration_processor
+{
+    auto
+        DoGet_PayloadTypeName(
+            const FInstancedStruct& InData)
+        -> FString
+    {
+        return ck::IsValid(InData.GetScriptStruct())
+            ? InData.GetScriptStruct()->GetName()
+            : FString{TEXT("<invalid type>")};
+    }
+}
 
 namespace ck::persistence_apply
 {
@@ -23,8 +37,16 @@ namespace ck::persistence_apply
         const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(InData.GetScriptStruct());
         if (Handler == nullptr || NOT Handler->HydrationApply)
         {
-            // Registry churn, or a handler that never declared its load path. Drop rather than retry forever.
-            return EApplyOutcome::DroppedTimeout;
+            // Registry churn, or a handler that never declared its load path. Either way the save recorded state
+            // this build cannot apply, so it is silent data loss unless it says so — hence the ensure, and its own
+            // outcome rather than DroppedTimeout's (nothing waited, so there is nothing to retry).
+            CK_TRIGGER_ENSURE(
+                TEXT("Hydration payload [{}] on entity [{}] has no load path: nothing resolved a handler for it, or "
+                     "the handler that resolved never declared a HydrationApply. The save recorded state this build "
+                     "cannot apply — dropping the entry. Register the type's HydrationApply, or stop producing it."),
+                ck_persistence_hydration_processor::DoGet_PayloadTypeName(InData), InEntity);
+
+            return EApplyOutcome::DroppedNoHandler;
         }
 
         const auto ApplyResult = Handler->HydrationApply(InEntity, InData, InOldData);
@@ -38,14 +60,10 @@ namespace ck::persistence_apply
 
         if (InOutPendingForSeconds >= ck::PendingApplyTimeoutSeconds)
         {
-            const auto TypeName = ck::IsValid(InData.GetScriptStruct())
-                ? InData.GetScriptStruct()->GetName()
-                : FString{TEXT("<invalid type>")};
-
             CK_TRIGGER_ENSURE(
                 TEXT("Hydration payload [{}] on entity [{}] was never applied: Apply kept returning NotReady for "
                      "[{}]s — the feature it targets was never composed. Dropping the entry."),
-                TypeName, InEntity, InOutPendingForSeconds);
+                ck_persistence_hydration_processor::DoGet_PayloadTypeName(InData), InEntity, InOutPendingForSeconds);
 
             return EApplyOutcome::DroppedTimeout;
         }
