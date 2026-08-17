@@ -398,7 +398,8 @@ auto
 
     ck::snapshot::Display(
         TEXT("Request_Save TIMING slot [{}]: total [{:.2f}ms] = pump [{:.2f}ms] ([{}] passes) + capture [{:.2f}ms] "
-             "(classify [{:.2f}ms], payloads [{:.2f}ms], tables [{:.2f}ms]) + write [{:.2f}ms] "
+             "(classify [{:.2f}ms], payloads [{:.2f}ms] (produce [{:.2f}ms], serialize [{:.2f}ms]), "
+             "tables [{:.2f}ms]) + write [{:.2f}ms] "
              "(serialize [{:.2f}ms], io [{:.2f}ms]) + sidecar [{:.2f}ms]. "
              "Audit [{:.2f}ms] over [{}] probes (inside classify). [{}] entities, [{}] payloads ([{}] distinct types), "
              "[{}] bytes ([{}] payload + [{}] structural)."),
@@ -409,6 +410,8 @@ auto
         UCk_Utils_Time_UE::Get_Milliseconds(CaptureTime),
         UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Classify),
         UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Payloads),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.PayloadsProduce),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.PayloadsSerialize),
         UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Tables),
         UCk_Utils_Time_UE::Get_Milliseconds(WriteTime),
         UCk_Utils_Time_UE::Get_Milliseconds(SerializeTime),

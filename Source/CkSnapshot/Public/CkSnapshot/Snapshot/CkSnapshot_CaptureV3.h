@@ -22,6 +22,8 @@ namespace ck::snapshot
         FCk_Time Classify;
         FCk_Time Audit;
         FCk_Time Payloads;
+        FCk_Time PayloadsProduce;    // subset of Payloads: the handlers' Produce
+        FCk_Time PayloadsSerialize;  // subset of Payloads: per-payload SerializeInstancedStruct
         FCk_Time Tables;
         int32    AuditProbeCount   = 0;
         int64    PayloadByteTotal  = 0;
