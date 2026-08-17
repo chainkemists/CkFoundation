@@ -13,10 +13,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UInstancedStaticMeshComponent;
-class ULineBatchComponent;
 class UWorld;
 class FCk_Jolt_DebugRenderer;
 class FCk_Jolt_DebugDrawTarget;
+#if WITH_DEV_AUTOMATION_TESTS
+struct FCk_Jolt_DebugDrawParity;
+#endif
 struct FCk_Handle;
 
 // The contact recorder is keyed by the physics world whose solve produced the record, and a world is named by
@@ -685,11 +687,10 @@ namespace ck::jolt::debug_draw
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
- * Per-world retained state of the batched Jolt debug draw: the (geometry, colour-class) bucket map and the
- * UInstancedStaticMeshComponents behind it, the material mode, the palette, the draw flags, and the three
- * non-mesh channels (a ULineBatchComponent for lines, a per-frame label array, and the retained named External
- * sub-channels). The geometry cache itself is world-agnostic and lives on the single FCk_Jolt_DebugRenderer,
- * which reconciles into whichever target is active for the current draw session.
+ * Per-world retained state of the batched Jolt debug draw: lightweight capture policy and census data plus the
+ * debugger-neutral CkDebugScene target that owns geometry, materials, picking, and named line/label channels.
+ * The geometry cache itself is world-agnostic and lives on the single FCk_Jolt_DebugRenderer, which reconciles
+ * into whichever target is active for the current draw session.
  *
  * No Jolt type appears anywhere on this class — a presentation consumer binds a target, flips demand and render
  * mode, and reads counts, without ever seeing JPH. Everything Jolt-shaped lives behind the opaque impl. (The
@@ -709,8 +710,7 @@ public:
 public:
     friend class ::FCk_Jolt_DebugRenderer;
 
-    // The contact replay writes a channel no public setter exposes — FBatchedLine is an engine render type this
-    // header deliberately does not name, and the channel has exactly one legitimate writer.
+    // The contact replay writes a channel no public setter exposes; the channel has exactly one legitimate writer.
     friend auto ck::jolt::debug_draw::Replay_RecordedContacts(
         const JPH::PhysicsSystem* InPhysicsSystem,
         TArrayView<const TSharedPtr<FCk_Jolt_DebugDrawTarget>> InTargets) -> void;
@@ -834,14 +834,13 @@ public:
     auto
     Get_Labels() const -> const TArray<FCk_Jolt_DebugDrawLabel>&;
 
-    /// Lines currently live in the target's line component — JPH output for this capture plus every retained
-    /// External sub-channel. Zero before the first capture and whenever the target has nothing to draw.
+    /// Lines currently published through the target's named CkDebugScene channels.
     auto
     Get_NumLines() const -> int32;
 
     /*
      * The External channel: line work this facility does NOT produce (probe results, a grid, a drag line). Each
-     * named sub-channel is owned by its contributor and RETAINED — a capture re-emits it into the line component
+     * named sub-channel is owned by its contributor and RETAINED — a capture republishes it into CkDebugScene
      * without clearing it, because a contributor's push rate has nothing to do with the capture rate and a
      * per-capture clear would make anything pushed between captures flicker. Clear_External empties exactly one
      * sub-channel; nothing else ever does.
@@ -1106,6 +1105,10 @@ public:
     auto
     Get_Isms() const -> TArray<UInstancedStaticMeshComponent*>;
 
+#if WITH_DEV_AUTOMATION_TESTS
+    auto Get_DebugSceneParity() const -> FCk_Jolt_DebugDrawParity;
+#endif
+
     /// The class INDEX behind every live bucket, in the current mode. A consumer that wants names or colours
     /// reads Get_LegendEntries instead — the indices alone mean nothing without the mode that produced them.
     auto
@@ -1121,3 +1124,17 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+#if WITH_DEV_AUTOMATION_TESTS
+struct FCk_Jolt_DebugDrawParity
+{
+    int32 _LegacyItems = 0;
+    int32 _LegacyInstances = 0;
+    int32 _LegacyBuckets = 0;
+    FBox _LegacyBounds = FBox{ForceInit};
+    int32 _MirrorItems = 0;
+    int32 _MirrorInstances = 0;
+    int32 _MirrorBuckets = 0;
+    FBox _MirrorBounds = FBox{ForceInit};
+    bool _MirrorRenderVisible = false;
+};
+#endif
