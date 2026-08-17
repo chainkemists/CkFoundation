@@ -343,7 +343,7 @@ namespace ck
         if (NOT IsOffsetValid)
         { return false; }
 
-        auto* SKMC = InCurrent.Get_BaseSKMC().Get();
+        const auto& SKMC = InCurrent.Get_BaseSKMC();
         const auto HasLiveSkmc = ck::IsValid(SKMC);
         CK_ENSURE_IF_NOT(HasLiveSkmc,
             TEXT("IskmProxy [{}]: BaseSKMC missing in late SetCustomDataFloat handler"),
@@ -355,11 +355,11 @@ namespace ck
         InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();
 
         SKMC->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
-        for (auto& WeakChild : InCurrent._SubmeshSKMCs)
+        for (const auto& WeakChild : InCurrent._SubmeshSKMCs)
         {
-            if (auto* Child = WeakChild.Get())
+            if (ck::IsValid(WeakChild))
             {
-                Child->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
+                WeakChild->SetCustomPrimitiveDataFloat(InRequest.Get_Offset(), InRequest.Get_Value());
             }
         }
 
