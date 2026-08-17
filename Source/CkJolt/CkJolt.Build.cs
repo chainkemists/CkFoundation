@@ -32,6 +32,7 @@ public class CkJolt : CkModuleRules
 
             "CkThirdParty",
             "CkCore",
+            "CkDebugScene",
             "CkEcs",
             "CkEcsExt",
             "CkLog",

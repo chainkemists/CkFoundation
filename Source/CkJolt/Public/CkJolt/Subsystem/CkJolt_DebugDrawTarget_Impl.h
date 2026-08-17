@@ -7,24 +7,20 @@
 
 #include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
 
-#include <Components/LineBatchComponent.h>
 #include <Containers/Map.h>
-#include <SceneTypes.h>
-#include <InstanceDataTypes.h>
 #include <Math/Transform.h>
-#include <UObject/StrongObjectPtr.h>
 #include <UObject/WeakObjectPtr.h>
 
 #include <Jolt/Jolt.h>
 
 #if JPH_DEBUG_RENDERER
 
+#include "CkDebugScene/CkDebugScene_Target.h"
+
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Renderer/DebugRenderer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-
-class UMaterialInstanceDynamic;
 
 // ReSharper disable once CppInconsistentNaming
 namespace JPH
@@ -36,9 +32,16 @@ namespace JPH
 
 namespace ck::jolt::debug_draw
 {
-    // The world-agnostic geometry cache entry: one transient UStaticMesh per unique Jolt geometry. Defined in
-    // CkJolt_DebugRenderer.cpp because only the renderer builds and owns them.
+    // The world-agnostic geometry cache entry that lazily owns one CkDebugScene mesh per unique Jolt geometry.
+    // Defined in CkJolt_DebugRenderer.cpp because only the renderer builds and owns it.
     class FBatch;
+    struct FBucketKey;
+
+    CKJOLT_API auto Get_DebugSceneMesh(FBatch* InBatch) -> TSharedPtr<FCk_DebugScene_Mesh>;
+
+    CKJOLT_API auto Make_DebugSceneAppearance(const FBucketKey& InKey,
+        const FCk_Jolt_DebugDrawPalette& InPalette, ECk_Jolt_DebugDraw_RenderMode InRenderMode)
+        -> FCk_DebugScene_Appearance;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -90,11 +93,8 @@ namespace ck::jolt::debug_draw
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Every line the facility emits lives for exactly one capture: a lifetime of 0 means the component's own tick
-    // never expires it, and the capture's Flush is the only thing that clears it.
-    constexpr float LineLifeTime = 0.0f;
+    // Zero asks Unreal's line batcher to use its default one-pixel thickness.
     constexpr float LineThickness = 0.0f;
-    constexpr uint8 LineDepthPriority = static_cast<uint8>(SDPG_World);
 
     // The per-body flags that emit LINES. Their presence defeats the incremental full pass's skip: a skipped
     // inactive body draws nothing, and because lines are cleared every capture its extras would vanish after the
@@ -112,9 +112,9 @@ namespace ck::jolt::debug_draw
             const FVector& InFrom,
             const FVector& InTo,
             const FLinearColor& InColor)
-        -> FBatchedLine
+        -> FCk_DebugScene_Line
     {
-        return FBatchedLine{InFrom, InTo, InColor, LineLifeTime, LineThickness, LineDepthPriority};
+        return FCk_DebugScene_Line{InFrom, InTo, InColor, LineThickness};
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -150,18 +150,11 @@ namespace ck::jolt::debug_draw
     struct FBucket
     {
         JPH::DebugRenderer::Batch _BatchKeepAlive;
-        FLinearColor _BaseColor = FLinearColor::White;
-
-        // STRONG: an actorless component has no owner to root it, and the debug draw runs in worlds (preview,
-        // transient) that have no ObjectPooling subsystem to pin it either.
-        TStrongObjectPtr<UInstancedStaticMeshComponent> _Ism;
-        TWeakObjectPtr<UMaterialInstanceDynamic> _SolidMid;
-        TWeakObjectPtr<UMaterialInstanceDynamic> _WireframeMid;
-
-        // Persistent-slot reconcile (the only reconcile path); counts live instances added through AddInstanceById.
+        FCk_DebugScene_Appearance _Appearance;
+        ECk_Jolt_DebugDraw_RenderMode _AppearanceRenderMode = ECk_Jolt_DebugDraw_RenderMode::Solid;
+        float _AppearanceOpacity = -1.0f;
         int32 _SlotCount = 0;
-
-        bool _IsmCreateFailed = false;
+        bool _HasAppearance = false;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -170,7 +163,6 @@ namespace ck::jolt::debug_draw
     struct FBodySlot
     {
         FBucketKey _Bucket;
-        FPrimitiveInstanceId _InstanceId;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -232,15 +224,6 @@ namespace ck::jolt::debug_draw
     CKJOLT_API auto Note_BucketHolderRemoved(JPH::RefTargetVirtual* InBatch) -> void;
     CKJOLT_API auto Get_BucketHolderCount(JPH::RefTargetVirtual* InBatch) -> int32;
 
-    /// Exact local-space ray pick against the triangles retained by one debug geometry batch. InMaxDistance is
-    /// parametric along InDirection and lets the batch BVH prune anything behind a hit already found elsewhere.
-    CKJOLT_API auto
-    TryIntersect_BatchRay(
-        FBatch* InBatch,
-        const FVector& InOrigin,
-        const FVector& InDirection,
-        double InMaxDistance) -> TOptional<double>;
-
     CKJOLT_API auto
     Get_TintedColor(
         const FLinearColor& InBaseColor,
@@ -248,18 +231,8 @@ namespace ck::jolt::debug_draw
 
     // Free rather than members so the public target header never has to name FBucket.
     CKJOLT_API auto
-    Destroy_BucketIsm(
+    Release_Bucket(
         FBucket& InOutBucket) -> void;
-
-    /// The target's line component, created on first line and registered with its world. Null when the world is
-    /// gone or the component could not be created (already ensured, once).
-    CKJOLT_API auto
-    TryEnsure_LineBatcher(
-        FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl) -> ULineBatchComponent*;
-
-    CKJOLT_API auto
-    Destroy_LineBatcher(
-        FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl) -> void;
 
     /// Drops every line the component holds and forgets this capture's JPH lines and labels. The retained
     /// External sub-channels are NOT touched — they are owned by their contributors.
@@ -267,8 +240,8 @@ namespace ck::jolt::debug_draw
     Reset_LineChannels(
         FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl) -> void;
 
-    /// Pushes this capture's JPH lines plus every retained External sub-channel into the line component, in one
-    /// DrawLines call rather than one MarkRenderStateDirty per line.
+    /// Publishes this capture's JPH lines, contacts, labels, and retained External sub-channels through named
+    /// CkDebugScene channels.
     CKJOLT_API auto
     Flush_LineChannels(
         FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl) -> void;
@@ -280,18 +253,8 @@ namespace ck::jolt::debug_draw
     Release_SlotsForKey(
         FCk_Jolt_DebugDrawTarget::FImpl& InOutTargetImpl,
         uint64 InSlotKey,
-        EStatCounting InStatCounting) -> void;
-
-    /// Creates the mode's MID on first use and assigns it to material slot 0. InOutRenderMode is written back
-    /// when the wireframe material is unavailable and the target degrades to Solid. Sensor metadata is separate
-    /// from the colour class because all colour modes must keep sensors translucent.
-    CKJOLT_API auto
-    Apply_BucketMaterial(
-        FBucket& InOutBucket,
-        const FCk_Jolt_DebugDrawPalette& InPalette,
-        uint8 InColorClassIndex,
-        bool InIsSensor,
-        ECk_Jolt_DebugDraw_RenderMode& InOutRenderMode) -> void;
+        EStatCounting InStatCounting,
+        bool InRemoveSceneItem = true) -> void;
 
     /// The alpha one bucket draws at. Sensors stay transparent in every colour mode, including their overlays.
     CKJOLT_API auto
@@ -319,6 +282,7 @@ namespace ck::jolt::debug_draw
 struct FCk_Jolt_DebugDrawTarget::FImpl
 {
     TWeakObjectPtr<UWorld> _World;
+    TSharedPtr<FCk_DebugScene_Target> _SceneTarget;
 
     TMap<ck::jolt::debug_draw::FBucketKey, ck::jolt::debug_draw::FBucket> _Buckets;
 
@@ -371,18 +335,15 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     TOptional<FCk_Jolt_DebugDraw_ProblemThresholds> _ProblemThresholds;
     TMap<uint64, ECk_Jolt_DebugDraw_ProblemFlags> _ProblemBodies;
 
-    // STRONG for the same reason the bucket ISMs are: an actorless component has no owner to root it, and the
-    // preview/transient worlds this target binds to host no pooling subsystem either. Created on first line.
-    TStrongObjectPtr<ULineBatchComponent> _Lines;
-
-    // This capture's JPH line output, accumulated and pushed to the component in one DrawLines at EndCapture.
-    TArray<FBatchedLine> _JphLines;
+    // Compatibility mirrors retained for the Jolt public inspection API; rendering is published through named
+    // CkDebugScene channels at EndCapture.
+    TArray<FCk_DebugScene_Line> _JphLines;
 
     TArray<FCk_Jolt_DebugDrawLabel> _Labels;
 
     // Written wholesale by Replay_RecordedContacts on the game thread, before the capture that flushes them.
     // Not cleared by Reset_LineChannels: the replay owns this channel and is the only thing that rewrites it.
-    TArray<FBatchedLine> _ContactLines;
+    TArray<FCk_DebugScene_Line> _ContactLines;
 
     // Object-layer display names, indexed by layer, published by the capture from the collision-layer table.
     // Only the ObjectLayer legend reads them.
@@ -390,7 +351,7 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
 
     // RETAINED, and keyed by contributor: a capture re-emits these without clearing them, so a push made
     // between two captures is never dropped and never flickers. Only Clear_External empties one.
-    TMap<FName, TArray<FBatchedLine>> _ExternalChannels;
+    TMap<FName, TArray<FCk_DebugScene_Line>> _ExternalChannels;
 
     FCk_Jolt_DebugDrawPalette _Palette;
     ck::jolt::debug_draw::FDebugDrawStats _LastCaptureStats;
@@ -408,7 +369,7 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
 
     float _DirectionGlyphScale = 1.0f;
 
-    // One bit per colour-class INDEX. Visibility is a component-level flag, never a capture filter: a hidden
+    // One bit per colour-class INDEX. Visibility is target state, never a capture filter: a hidden
     // class keeps capturing so unhiding it is instant and its instances are never stale.
     uint64 _HiddenClassMask = 0;
 
@@ -417,7 +378,6 @@ struct FCk_Jolt_DebugDrawTarget::FImpl
     uint64 _CapturedStaticSceneRevision = 0;
     uint64 _CapturedBodyRemovedRevision = 0;
     float _AppliedOpacity = -1.0f;
-    bool _LineBatcherCreateFailed = false;
     bool _FullPassEverRan = false;
     bool _SweepEverRan = false;
     bool _AnyLive = false;

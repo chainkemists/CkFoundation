@@ -137,14 +137,6 @@ public:
         const FCk_Handle& InTransientEntity) -> void;
 
 private:
-    // Builds the bucket's transient mesh + ISM on first use. False once the bucket is known unbuildable.
-    auto
-    TryEnsure_BucketIsm(
-        FCk_Jolt_DebugDrawTarget& InTarget,
-        const ck::jolt::debug_draw::FBucketKey& InKey,
-        ck::jolt::debug_draw::FBucket& InOutBucket) -> bool;
-
-private:
     struct FImpl;
     TPimplPtr<FImpl> _Impl;
 };
