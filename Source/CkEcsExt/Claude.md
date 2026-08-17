@@ -111,21 +111,21 @@ The two tags are COUNTED because multiple SAME-world features may legitimately s
 and a JoltBody both claim Jolt; two Sensors both claim Chaos) — only the cross-world claim is a conflict.
 `Release_*` drops one claim; EndPlay teardown does not need to release (the entity is dying).
 
-### Actor rebind after a snapshot restore
+### Bridged actors after a snapshot restore — respawn, not rebind
 
-A snapshot restore severs the actor↔entity bridge: `Run_Restore`'s `clear()` drops the non-snapshotable
-OwningActor + Transform-root links, so a restored bridged entity comes back with no live actor. After the
-snapshot respawn pass spawns a fresh actor of `FFragment_ActorSpawnIntent`'s class,
-`UCk_Utils_ActorRebind_UE::Request_RebindActor` re-links the two WITHOUT re-running
-`WithActor::Construct` — the gameplay fragments already round-tripped. It re-adds the actor→entity
-reverse-lookup component, the entity→actor OwningActor fragment, and the Transform bound to the actor's
-root component (OwningActor first, so `Transform::Add` routes to `AddAndAttachToUnrealComponent` and
-PRESERVES the restored world transform rather than seeding from the actor's spawn transform).
+A restored bridged entity comes back with no live actor (the OwningActor + Transform-root links are not
+persistable). The v3 loader's answer is **actor-first respawn**, not a rebind of the restored entity: it
+spawns a FRESH actor of `FFragment_ActorSpawnIntent`'s class at the saved transform (deferred, so the
+saved `UPROPERTY(SaveGame)` fields land before `BeginPlay`), and that actor's own `BeginPlay` re-runs
+`WithActor::Construct`, which composes the entity and links the bridge exactly as in a fresh world. The
+saved payloads then hydrate onto it. See `CkSnapshot/CLAUDE.md` § "The v3 load machine".
 
-Because Construct does not re-run, any ACTOR-SIDE wiring the original construction did (cached entity
-handles on the actor, `NewObject` components, camera directors, …) is dead on the respawned actor. Game
-code keys a processor on `ck::FTag_ActorJustRebound` to run its own idempotent reattach, then REMOVES the
-tag as its done-guard. The tag is TRANSIENT — one-shot post-restore bookkeeping, never captured into a save.
+Because Construct DOES re-run, actor-side wiring is rebuilt by the normal construction path and no
+post-restore reattach hook is needed. An earlier design re-bridged the restored entity in place instead
+(`UCk_Utils_ActorRebind_UE::Request_RebindActor` + a `ck::FTag_ActorJustRebound` marker game code keyed a
+reattach processor on); it lost its last caller when `FProcessor_ActorRespawn` was deleted (`a8ad20458`,
+2026-07-12) and the whole path was removed in 2026-08. Do not reintroduce it — under v3 there is nothing
+for it to do.
 
 `WithActor::Construct` only stamps the intent for a RUNTIME-spawned actor. A level-placed one gets
 `FFragment_SaveKey` (from `ck::save_key::Get_LevelPlacedIdentity`) instead: the level re-creates it on every boot,

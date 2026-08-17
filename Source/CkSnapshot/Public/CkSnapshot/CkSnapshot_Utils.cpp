@@ -9,8 +9,6 @@
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"
-
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Subsystem.h"
 
@@ -32,20 +30,6 @@ auto
     { return false; }
 
     return InHandle.Has<ck::FTag_Snapshot_JustRestored>();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Snapshot_UE::
-    Get_WasActorJustRebound(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InHandle))
-    { return false; }
-
-    return InHandle.Has<ck::FTag_ActorJustRebound>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

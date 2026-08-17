@@ -109,8 +109,8 @@ auto
 
     if (InAttachTo->Mobility == EComponentMobility::Movable)
     {
-        // AddOrGet (not Add): on a CkSnapshot actor-respawn, Request_RebindActor re-runs this against an
-        // entity that already carries the (snapshot-restored) Movable tag — an unconditional Add ensures.
+        // AddOrGet (not Add): this can re-run against an entity that already carries the (snapshot-restored)
+        // Movable tag — an unconditional Add ensures.
         InHandle.AddOrGet<ck::FTag_Transform_Movable>();
     }
 
