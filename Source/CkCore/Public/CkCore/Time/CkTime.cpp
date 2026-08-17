@@ -381,3 +381,19 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_ScopedStopwatch::
+    FCk_ScopedStopwatch(
+        FCk_Time& InOutTotal)
+    : _Total(InOutTotal)
+    , _StartSeconds(FPlatformTime::Seconds())
+{
+}
+
+FCk_ScopedStopwatch::
+    ~FCk_ScopedStopwatch()
+{
+    _Total = _Total + FCk_Time{FPlatformTime::Seconds() - _StartSeconds};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
