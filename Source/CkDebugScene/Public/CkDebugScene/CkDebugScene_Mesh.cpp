@@ -122,6 +122,8 @@ auto
     Attributes.Register();
     auto VertexPositions = Attributes.GetVertexPositions();
     const auto PolygonGroup = Description.CreatePolygonGroup();
+    const auto MaterialSlotName = FName{TEXT("CkDebugScene")};
+    Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroup] = MaterialSlotName;
 
     for (const auto& Triangle : Result->_Triangles)
     {
@@ -151,6 +153,8 @@ auto
     {
         return {};
     }
+
+    Mesh->SetStaticMaterials({FStaticMaterial{nullptr, MaterialSlotName}});
 
     auto Params = UStaticMesh::FBuildMeshDescriptionsParams{};
     Params.bBuildSimpleCollision = false;
