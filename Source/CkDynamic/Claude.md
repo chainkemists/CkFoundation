@@ -48,6 +48,18 @@ comment-light; the *why* lives here.
   AngelScript type database is keyed on the F-prefixed script name, so a bare lookup misses by
   construction for every AS-declared fragment.
 
+### Dynamic-pool cache (`CkDynamic_Utils.cpp`)
+
+- **`Get_AllFragments` sweeps a registry-ctx cache of the dynamic pools**
+  (`ck_dynamic_utils::FCtx_DynamicFragmentPools`), not the registry's full pool list — the save capture's
+  blanket `Produce` calls it once per entity, and the full walk measured as the dominant produce cost.
+  Staleness is the registry's pool COUNT: pools are only ever appended, so an unchanged count proves the
+  cached list is current, and the count check is one iterator subtraction. If pool DISCARDING is ever
+  introduced (`registry.storage().discard`-style), the count key still catches it unless a discard and a
+  create land in the same interval — re-key the cache before adopting such an API. A first attempt cached
+  global storage IDs and probed them per entity; the per-id hash lookups measured SLOWER than the linear
+  walk they replaced (produce 37ms → 45ms) — don't resurrect that shape.
+
 ### Save / hydration (`CkDynamic_Fragment.cpp`, `CkDynamic_Fragment_Data.h`)
 
 - **`FCk_SaveData_DynamicFragments` exists because the net path is invisible to the save census.**
