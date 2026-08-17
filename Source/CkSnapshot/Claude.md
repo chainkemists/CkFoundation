@@ -361,11 +361,11 @@ spent in `DoRequest_Save`, so both the audit knob and the timing line below exis
 Every save logs one Display line after the write:
 
 ```
-Request_Save TIMING slot [BbQuickSave]: total [228.81ms] = pump [17.49ms] ([3] passes) + capture [205.02ms]
-(classify [40.27ms], payloads [155.88ms] (produce [47.28ms], serialize [93.87ms]), tables [8.87ms])
-+ write [4.04ms] (serialize [1.11ms], io [2.93ms]) + sidecar [2.26ms]. Audit [0.00ms] over [0] probes
-(inside classify). [4411] entities, [6100] payloads ([20] distinct types), [9589774] bytes
-([7992490] payload + [1597284] structural).
+Request_Save TIMING slot [BbQuickSave]: total [110.33ms] = pump [12.77ms] ([3] passes) + capture [90.55ms]
+(classify [25.46ms], payloads [53.14ms] (produce [33.02ms], serialize [9.88ms]), tables [11.95ms])
++ write [4.98ms] (serialize [1.88ms], io [3.10ms]) + sidecar [2.02ms]. Audit [0.00ms] over [0] probes
+(inside classify). [4426] entities, [6118] payloads ([20] distinct types), [9618721] bytes
+([8015572] payload + [1603149] structural).
 ```
 
 **Audit is a SUBSET of classify, not a sibling** — it is reported separately rather than added into the total —

@@ -30,7 +30,9 @@
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h" // FFragment_ActorSpawnIntent
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // bridged-actor spawn transform
 
+#include "Algo/Accumulate.h"
 #include "Async/ParallelFor.h"
+#include "Containers/BitArray.h"
 #include "Misc/EngineVersion.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Serialization/MemoryWriter.h"
@@ -130,7 +132,7 @@ namespace ck::snapshot
             -> TArray<uint8>
         {
             auto Blob = TArray<uint8>{};
-            if (InOutStruct.GetScriptStruct() == nullptr)
+            if (ck::Is_NOT_Valid(InOutStruct.GetScriptStruct()))
             { return Blob; }
 
             auto MemoryWriter = FMemoryWriter{Blob, /*bIsPersistent=*/true};
@@ -161,7 +163,7 @@ namespace ck::snapshot
                 const UClass* InClass)
             -> bool
         {
-            if (InClass == nullptr)
+            if (ck::Is_NOT_Valid(InClass))
             { return false; }
 
             for (TFieldIterator<FProperty> PropIt{InClass}; PropIt; ++PropIt)
@@ -182,7 +184,7 @@ namespace ck::snapshot
             -> TArray<uint8>
         {
             auto Blob = TArray<uint8>{};
-            if (InActor == nullptr || NOT Has_AnySaveGameProperty(InActor->GetClass()))
+            if (ck::Is_NOT_Valid(InActor) || NOT Has_AnySaveGameProperty(InActor->GetClass()))
             { return Blob; }
 
             auto MemoryWriter = FMemoryWriter{Blob, /*bIsPersistent=*/true};
@@ -206,15 +208,15 @@ namespace ck::snapshot
             -> TOptional<FString>
         {
             const auto* Actor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InHandle);
-            if (Actor == nullptr)
+            if (ck::Is_NOT_Valid(Actor))
             { return {}; }
 
             const auto* AsPawn = Cast<APawn>(Actor);
-            if (AsPawn == nullptr || AsPawn->IsPlayerControlled() == false)
+            if (ck::Is_NOT_Valid(AsPawn) || NOT AsPawn->IsPlayerControlled())
             { return {}; }
 
             const auto* PlayerState = AsPawn->GetPlayerState();
-            if (PlayerState == nullptr)
+            if (ck::Is_NOT_Valid(PlayerState))
             { return FString{}; }
 
             const auto UniqueId = PlayerState->GetUniqueId();
@@ -241,12 +243,13 @@ namespace ck::snapshot
         auto CkRegistry = FCk_Registry{InRegistryHandle};
 
         const auto* Settings = GetDefault<UCk_Snapshot_Settings>();
-        const auto AuditMode = Settings != nullptr
+        const auto SettingsAreValid = ck::IsValid(Settings);
+        const auto AuditMode = SettingsAreValid
             ? Settings->Get_CaptureAuditMode()
             : ECk_Snapshot_CaptureAuditMode::Summary;
-        const auto AuditMaxExamples = Settings != nullptr ? Settings->Get_CaptureAudit_MaxExamples() : 5;
+        const auto AuditMaxExamples = SettingsAreValid ? Settings->Get_CaptureAudit_MaxExamples() : 5;
         const auto AuditDetailed = AuditMode == ECk_Snapshot_CaptureAuditMode::Detailed;
-        const auto ParallelSerializeFlags = Settings == nullptr ||
+        const auto ParallelSerializeFlags = NOT SettingsAreValid ||
             Settings->Get_ParallelPayloadSerialization() == ECk_EnableDisable::Enable
                 ? EParallelForFlags::None
                 : EParallelForFlags::ForceSingleThread;
@@ -256,8 +259,11 @@ namespace ck::snapshot
 
         // ---- Collect candidate entities (every entity carrying ≥1 fragment/tag) -----------------------------------
         // Truly empty entities never appear — they are anonymous scratch (rule 5) and would be skipped anyway.
+        // Dedup is a bit per entity index rather than a hashed set: this pass touches every fragment instance
+        // in the registry (~15x the entity count), so per-touch cost dominates.
         const auto EntityStorageHash = static_cast<uint32>(entt::type_hash<ck::SnapshotEntityType>::value());
-        auto CandidateIds = TSet<uint32>{};
+        auto CandidateIds = TArray<uint32>{};
+        auto SeenEntityIndices = TBitArray<>{};
         for (auto&& StoragePair : InRegistry.storage())
         {
             const auto TypeHash = static_cast<uint32>(StoragePair.second.info().hash());
@@ -265,7 +271,18 @@ namespace ck::snapshot
             { continue; }
 
             for (const auto Entity : StoragePair.second)
-            { CandidateIds.Add(static_cast<uint32>(Entity)); }
+            {
+                if (Entity == entt::tombstone)
+                { continue; }
+
+                const auto EntityIndex = static_cast<int32>(entt::to_entity(Entity));
+                SeenEntityIndices.PadToNum(EntityIndex + 1, false);
+                if (SeenEntityIndices[EntityIndex])
+                { continue; }
+
+                SeenEntityIndices[EntityIndex] = true;
+                CandidateIds.Add(static_cast<uint32>(Entity));
+            }
         }
 
         // Resolve the transient so it is never persisted (bookkeeping, not world state).
@@ -297,12 +314,12 @@ namespace ck::snapshot
             for (const auto* Type : SaveTypes)
             {
                 const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
-                if (Handler == nullptr || NOT Handler->Produce)
+                if (ck::Is_NOT_Valid(Handler, ck::IsValid_Policy_NullptrOnly{}) || NOT Handler->Produce)
                 { continue; }
                 const auto Payload = Handler->Produce(InEntity);
                 if (NOT Payload.IsSet())
                 { continue; }
-                if (OutPayloadDetail != nullptr && Payload->GetScriptStruct() != nullptr)
+                if (ck::IsValid(OutPayloadDetail, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(Payload->GetScriptStruct()))
                 {
                     Payload->GetScriptStruct()->ExportText(
                         *OutPayloadDetail, Payload->GetMemory(), nullptr, nullptr, PPF_None, nullptr);
@@ -320,7 +337,7 @@ namespace ck::snapshot
             const UScriptStruct* _ProducingType = nullptr;
             FString              _Detail;
 
-            explicit operator bool() const { return _ProducingType != nullptr; }
+            explicit operator bool() const { return ck::IsValid(_ProducingType); }
         };
 
         // Both skip sites share the probe, the counter and the Summary example bookkeeping; only the Detailed
@@ -396,7 +413,7 @@ namespace ck::snapshot
                 bPersist = true;
             }
             else if (Handle.Has<FFragment_SaveKey>() ||
-                (InWorldOrNull != nullptr && TryResolve_PlayerRendezvous(Handle).IsSet()))
+                (ck::IsValid(InWorldOrNull) && TryResolve_PlayerRendezvous(Handle).IsSet()))
             {
                 Provenance = ECk_Snapshot_V3_Provenance::EngineOwned;
                 bPersist = true;
@@ -524,7 +541,7 @@ namespace ck::snapshot
 
                     // Flagged, then written anyway — a dangling ref is still better than a missing recipe.
                     auto ParamsCopy = FInstancedStruct{Recipe.Get_SpawnParams()};
-                    if (ParamsCopy.GetScriptStruct() != nullptr)
+                    if (ck::IsValid(ParamsCopy.GetScriptStruct()))
                     {
                         ck::snapshot::ForEachHandle(ParamsCopy.GetScriptStruct(), ParamsCopy.GetMutableMemory(),
                             [&](FCk_Handle& InParamHandle) -> void
@@ -589,7 +606,7 @@ namespace ck::snapshot
             for (const auto* Type : SaveTypes)
             {
                 const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Type);
-                if (Handler == nullptr || NOT Handler->Produce)
+                if (ck::Is_NOT_Valid(Handler, ck::IsValid_Policy_NullptrOnly{}) || NOT Handler->Produce)
                 { continue; }
 
                 auto Produced = TOptional<FInstancedStruct>{};
@@ -628,8 +645,9 @@ namespace ck::snapshot
                 ParallelSerializeFlags);
         }
 
-        for (const auto& PayloadEntry : Payloads)
-        { Timings.PayloadByteTotal += PayloadEntry.Get_PayloadBytes().Num(); }
+        Timings.PayloadByteTotal = Algo::TransformAccumulate(Payloads,
+            [](const FCk_Snapshot_V3_PayloadEntry& InEntry) { return static_cast<int64>(InEntry.Get_PayloadBytes().Num()); },
+            int64{0});
 
         PayloadStopwatch.Reset();
 
@@ -640,7 +658,7 @@ namespace ck::snapshot
         }
 
         Timings.DistinctTypePaths = DistinctTypePaths.Num();
-        if (OutTimings != nullptr)
+        if (ck::IsValid(OutTimings, ck::IsValid_Policy_NullptrOnly{}))
         { *OutTimings = Timings; }
 
         InOutHeader.Set_FormatVersion(FCk_Snapshot_HeaderV3::CurrentFormatVersion);
@@ -702,7 +720,7 @@ namespace ck::snapshot
 
         auto& CkRegistry = EcsWorld->Get_Registry();
         auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
-        if (RawRegistry == nullptr)
+        if (ck::Is_NOT_Valid(RawRegistry, ck::IsValid_Policy_NullptrOnly{}))
         {
             ck::snapshot::Error(TEXT("Run_CaptureV3: could not resolve the raw entt registry from World [{}]"), InWorld.GetName());
             return ECk_SnapshotResult::Failed_IO;
