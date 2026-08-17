@@ -103,6 +103,18 @@ UFUNCTION(BlueprintCallable,
         const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Opt-in late lane: consumed in FGroup_DeferredApply after PostTransform. Use for a value
+    // produced after the normal Gameplay_Rendering request handler has already run this frame.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data Value Late",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_IsmProxy
+    Request_SetCustomInstanceDataValue_Late(
+        UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Request Set Custom Primitive Data",

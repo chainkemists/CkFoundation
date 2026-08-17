@@ -29,7 +29,9 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_TransformInstance);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_HandleLateCustomDataRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CancelPendingRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CancelPendingLateCustomDataRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -590,6 +592,123 @@ namespace ck
     }
 
     auto
+        FProcessor_IsmProxy_HandleLateCustomDataRequests::
+        DoTick(TimeType InDeltaT) -> void
+    {
+        _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_IsmProxy_HandleLateCustomDataRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp) const -> void
+    {
+        // Removing the lane before dispatch mirrors the general request contract: a completion
+        // callback can enqueue another late write without it being discarded by this drain.
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_IsmProxy_LateCustomDataRequests& InRequests)
+        {
+            algo::ForEachRequest(InRequests._Requests,
+                [&](const auto& InRequest) -> void
+                {
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                    const auto WasApplied = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+
+                    if (InRequest.Get_IsRequestHandleValid())
+                    {
+                        InRequest.GetAndDestroyRequestHandle();
+                    }
+
+                    if (WasApplied)
+                    { Result = ECk_Request_OperationResult::Succeeded; }
+                }, policy::DontResetContainer{});
+        });
+    }
+
+    auto
+        FProcessor_IsmProxy_HandleLateCustomDataRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> bool
+    {
+        const auto& CurrentCustomInstanceData = InCurrent.Get_CustomInstanceDataValues();
+        const auto& NewCustomDataIndex = InRequest.Get_CustomDataIndex();
+        const auto& NewCustomDataValue = InRequest.Get_CustomDataValue();
+        const auto IsIndexValid = CurrentCustomInstanceData.IsValidIndex(NewCustomDataIndex);
+
+        CK_ENSURE_IF_NOT(IsIndexValid,
+            TEXT("Trying to set late custom data value [{}] at index [{}] on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements"),
+            NewCustomDataValue,
+            NewCustomDataIndex,
+            InHandle,
+            CurrentCustomInstanceData.Num()) {}
+        if (NOT IsIndexValid)
+        { return false; }
+
+        const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
+        TWeakObjectPtr<UInstancedStaticMeshComponent> IsmCompToUpdate;
+
+        if (Mobility == ECk_Mobility::Movable)
+        {
+            using namespace ck_ism_proxy_processor;
+
+            const auto IsDisabled = InHandle.Has<FTag_IsmProxy_Disabled>();
+            const auto IsAwaitingInstance = InHandle.Has<FTag_IsmProxy_NeedsInstanceAdded>();
+
+            if (NOT IsDisabled && NOT IsAwaitingInstance)
+            {
+                const auto& RendererData = InParams.Get_IsmRenderer().Get();
+                const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
+                const auto HasIsmComponent = ck::IsValid(IsmComp);
+
+                CK_ENSURE_IF_NOT(HasIsmComponent,
+                    TEXT("Failed to find ISM Renderer Component for ready ISM Proxy [{}] during late custom-data write"),
+                    InHandle) {}
+                if (NOT HasIsmComponent)
+                { return false; }
+
+                const auto HasLiveInstance = IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex());
+                CK_ENSURE_IF_NOT(HasLiveInstance,
+                    TEXT("Ready ISM Proxy [{}] has no live instance during late custom-data write"),
+                    InHandle) {}
+                if (NOT HasLiveInstance)
+                { return false; }
+
+                IsmCompToUpdate = IsmComp;
+            }
+        }
+
+        InCurrent._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
+
+        if (Mobility == ECk_Mobility::Movable)
+        {
+            if (ck::IsValid(IsmCompToUpdate))
+            {
+                IsmCompToUpdate->SetCustomDataValueById(
+                    InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
+            }
+
+            auto ShadowInstanceId = FPrimitiveInstanceId{};
+            if (const TWeakObjectPtr<UInstancedStaticMeshComponent> ShadowIsm =
+                    ck_ism_proxy_processor::TryGet_CustomDepthShadowInstance(InHandle, ShadowInstanceId);
+                ck::IsValid(ShadowIsm) && ShadowIsm->NumCustomDataFloats > NewCustomDataIndex)
+            {
+                ShadowIsm->SetCustomDataValueById(ShadowInstanceId, NewCustomDataIndex, NewCustomDataValue);
+            }
+        }
+
+        return true;
+    }
+
+    auto
         FProcessor_IsmProxy_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
@@ -714,6 +833,17 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
+
+    auto
+        FProcessor_IsmProxy_CancelPendingLateCustomDataRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp)
         -> void
     {
         request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());

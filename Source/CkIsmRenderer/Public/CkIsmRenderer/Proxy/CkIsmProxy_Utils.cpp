@@ -67,6 +67,31 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Request_SetCustomInstanceDataValue_Late(
+        FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_IsmProxy
+{
+    const auto IsHandleValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(IsHandleValid,
+        TEXT("Request_SetCustomInstanceDataValue_Late received an invalid IsmProxy handle [{}]"),
+        InHandle) {}
+    if (NOT IsHandleValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_IsmProxy_LateCustomDataRequests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Request_SetCustomInstanceDataValue(
         FCk_Handle_IsmProxy& InHandle,
         const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
