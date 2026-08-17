@@ -15,6 +15,8 @@
 
 #include <variant>
 
+class UCk_Utils_IskmProxy_UE;
+
 namespace ck
 {
     // ---- tags ----
