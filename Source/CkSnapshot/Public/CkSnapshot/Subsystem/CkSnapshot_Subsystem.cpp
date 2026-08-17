@@ -28,12 +28,14 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
 
 #include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
+#include "CkCore/Time/CkTime_Utils.h"                        // Get_Milliseconds for the save-stage breakdown
 
 #include "CkLabel/CkLabel_Utils.h"                            // ConstructSpawned adopt/reconcile by label
 
 #include "HAL/IConsoleManager.h"    // Ck.Snapshot.DumpSlot census command
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "PlatformFeatures.h"       // ISaveGameSystem::GetSaveGameNames — slot enumeration
 #include "SaveGameSystem.h"
 #include "Serialization/BufferArchive.h"
@@ -306,19 +308,31 @@ auto
     _SnapshotInProgress = true;
     ON_SCOPE_EXIT { _SnapshotInProgress = false; };
 
+    // A save is one synchronous game-thread frame, so the stage breakdown below IS the hitch profile. Logged
+    // unconditionally because it has to be readable from a packaged build with no Insights trace attached.
+    TRACE_CPUPROFILER_EVENT_SCOPE(UCk_Snapshot_Subsystem_UE_DoRequest_Save);
+
+    auto PumpTime      = FCk_Time{};
+    auto SerializeTime = FCk_Time{};
+    auto IoTime        = FCk_Time{};
+    auto SidecarTime   = FCk_Time{};
+
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreSave::Broadcast(Source, ck::MakePayload(Source));
 
     if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
         ck::IsValid(EcsWorld))
     {
+        TRACE_CPUPROFILER_EVENT_SCOPE(CkSnapshot_Save_PumpToQuiescence);
+        const auto PumpStopwatch = FCk_ScopedStopwatch{PumpTime};
         _LastPumpCount = EcsWorld->Request_PumpToQuiescence();
         ck::snapshot::Verbose(TEXT("Request_Save: pumped world to quiescence in [{}] pump passes"), _LastPumpCount);
     }
 
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
-    const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3);
+    auto CaptureTimings = ck::snapshot::FCaptureTimings{};
+    const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3, &CaptureTimings);
 
     auto DoFinish = [&](ECk_SnapshotResult InResult) -> void
     {
@@ -344,8 +358,26 @@ auto
 
     SaveGame->_HeaderV3 = HeaderV3;
     SaveGame->_SnapshotBytesV3 = MoveTemp(static_cast<TArray<uint8>&>(ByteWriterV3));
+    const auto SavedByteCount = SaveGame->_SnapshotBytesV3.Num();
 
-    const auto Saved = UGameplayStatics::SaveGameToSlot(SaveGame, InSlotName.ToString(), ck_snapshot_subsystem::UserIndex);
+    // The two halves of SaveGameToSlot, kept apart because only the io leg could ever move off the game
+    // thread — AsyncSaveGameToSlot runs SaveGameToMemory inline (GameplayStatics.cpp:2403).
+    auto ObjectBytes = TArray<uint8>{};
+
+    const auto Serialized = [&]() -> bool
+    {
+        TRACE_CPUPROFILER_EVENT_SCOPE(CkSnapshot_Save_SaveGameToMemory);
+        const auto SerializeStopwatch = FCk_ScopedStopwatch{SerializeTime};
+        return UGameplayStatics::SaveGameToMemory(SaveGame, ObjectBytes);
+    }();
+
+    const auto Saved = Serialized && [&]() -> bool
+    {
+        TRACE_CPUPROFILER_EVENT_SCOPE(CkSnapshot_Save_SaveDataToSlot);
+        const auto IoStopwatch = FCk_ScopedStopwatch{IoTime};
+        return UGameplayStatics::SaveDataToSlot(ObjectBytes, InSlotName.ToString(), ck_snapshot_subsystem::UserIndex);
+    }();
+
     if (NOT Saved)
     {
         ck::snapshot::Error(TEXT("Request_Save: SaveGameToSlot failed for slot [{}]"), InSlotName);
@@ -354,10 +386,39 @@ auto
     }
 
     if (InWriteSidecar)
-    { DoWrite_SlotMeta(InSlotName, InMetadata, HeaderV3); }
+    {
+        const auto SidecarStopwatch = FCk_ScopedStopwatch{SidecarTime};
+        DoWrite_SlotMeta(InSlotName, InMetadata, HeaderV3);
+    }
 
-    ck::snapshot::Display(TEXT("Request_Save: saved [{}] v3 bytes to slot [{}]"),
-        SaveGame->_SnapshotBytesV3.Num(), InSlotName);
+    ck::snapshot::Display(TEXT("Request_Save: saved [{}] v3 bytes to slot [{}]"), SavedByteCount, InSlotName);
+
+    const auto CaptureTime = CaptureTimings.Classify + CaptureTimings.Payloads + CaptureTimings.Tables;
+    const auto WriteTime   = SerializeTime + IoTime;
+
+    ck::snapshot::Display(
+        TEXT("Request_Save TIMING slot [{}]: total [{:.2f}ms] = pump [{:.2f}ms] ([{}] passes) + capture [{:.2f}ms] "
+             "(classify [{:.2f}ms], payloads [{:.2f}ms], tables [{:.2f}ms]) + write [{:.2f}ms] "
+             "(serialize [{:.2f}ms], io [{:.2f}ms]) + sidecar [{:.2f}ms]. "
+             "Audit [{:.2f}ms] over [{}] probes (inside classify). [{}] entities, [{}] payloads ([{}] distinct types), "
+             "[{}] bytes ([{}] payload + [{}] structural)."),
+        InSlotName,
+        UCk_Utils_Time_UE::Get_Milliseconds(PumpTime + CaptureTime + WriteTime + SidecarTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(PumpTime),
+        _LastPumpCount,
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Classify),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Payloads),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Tables),
+        UCk_Utils_Time_UE::Get_Milliseconds(WriteTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(SerializeTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(IoTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(SidecarTime),
+        UCk_Utils_Time_UE::Get_Milliseconds(CaptureTimings.Audit),
+        CaptureTimings.AuditProbeCount,
+        HeaderV3.Get_EntityCount(), HeaderV3.Get_PayloadCount(), CaptureTimings.DistinctTypePaths,
+        SavedByteCount, CaptureTimings.PayloadByteTotal, SavedByteCount - CaptureTimings.PayloadByteTotal);
+
     DoFinish(ECk_SnapshotResult::Success);
 }
 
