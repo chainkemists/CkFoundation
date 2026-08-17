@@ -62,17 +62,6 @@ public:
 
     UPROPERTY()
     TArray<TWeakObjectPtr<USoundBase>> WeakSounds;
-
-    // Strong UObject leaves nested in containers — untraced exactly like the scalar StrongSound
-    // above, so the retained mirror must weaken them in place.
-    UPROPERTY()
-    TArray<TObjectPtr<USoundBase>> StrongSounds;
-
-    UPROPERTY()
-    TOptional<TObjectPtr<USoundBase>> OptionalStrongSound;
-
-    UPROPERTY()
-    TMap<FName, TObjectPtr<USoundBase>> StrongSoundsByName;
 };
 
 UCLASS(NotBlueprintable, BlueprintType)

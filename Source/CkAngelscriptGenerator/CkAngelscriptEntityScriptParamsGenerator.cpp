@@ -88,35 +88,8 @@ namespace ck_entity_script_params_generator
         return InProperty->HasAnyPropertyFlags(CPF_ConstParm | CPF_BlueprintReadOnly);
     }
 
-    // A container whose ELEMENT type was weakened cannot be converted in an expression: AS has no
-    // TArray<UObject> -> TArray<TWeakObjectPtr<UObject>> conversion, and a wrapper-style
-    // `TArray<TWeakObjectPtr<T>>(InX)` does not compile. So the Params() parameter for a container
-    // is declared as the RETAINED type and the ctor assigns it straight across, instead of the
-    // scalar treatment (reflected parameter, ctor wraps). The cost is that a caller holding a
-    // strong TArray<T> converts at the call site; the benefit is that the generated ctor stays one
-    // assignment per field and needs no emitted loops.
-    auto Is_ContainerProperty(const FProperty* InProperty) -> bool
-    {
-        return CastField<FArrayProperty>(InProperty) != nullptr
-            || CastField<FSetProperty>(InProperty) != nullptr
-            || CastField<FMapProperty>(InProperty) != nullptr
-            || CastField<FOptionalProperty>(InProperty) != nullptr;
-    }
-
-    auto Format_ParameterType(FProperty* InProperty) -> FString
-    {
-        return Is_ContainerProperty(InProperty)
-            ? FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(InProperty)
-            : FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
-    }
-
     auto Format_RetainedValueExpression(FProperty* InProperty, const FString& InSourceExpression) -> FString
     {
-        // The parameter already arrives retained for a container — wrapping it again would emit a
-        // conversion that does not exist.
-        if (Is_ContainerProperty(InProperty))
-        { return InSourceExpression; }
-
         const auto SourceType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProperty);
         const auto RetainedType = FCkAngelscriptEntityScriptParamsGenerator::Get_RetainedPropertyType(InProperty);
         if (SourceType == RetainedType || InSourceExpression == TEXT("nullptr"))
@@ -204,10 +177,9 @@ namespace ck_entity_script_params_generator
         auto Out = FString{};
         for (auto Index = int32{0}; Index < InProps.Num(); ++Index)
         {
-            // Reflected (not retained) type for SCALARS: only the mirror FIELD is weak, and the ctor
-            // converts — so the public Params(...) call shape stays source-compatible for callers.
-            // Containers take the retained type (see Format_ParameterType).
-            auto AsType = Format_ParameterType(InProps[Index]);
+            // Reflected (not retained) type: only the mirror FIELD is weak, and the ctor converts —
+            // so the public Params(...) call shape stays source-compatible for callers.
+            auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProps[Index]);
             if (Is_ConstProperty(InProps[Index]) && NOT AsType.StartsWith(TEXT("const ")))
             {
                 AsType = TEXT("const ") + AsType;
@@ -462,83 +434,6 @@ namespace ck_entity_script_params_generator
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_entity_script_params_generator
-{
-    // A strong (non-weak, non-soft) UObject leaf anywhere under InProperty — the shape the retained
-    // params blob cannot legally hold, since UE's GC does not trace an FInstancedStruct.
-    auto Get_ContainsStrongObjectLeaf(const FProperty* InProperty) -> bool
-    {
-        if (InProperty == nullptr)
-        { return false; }
-
-        if (CastField<FWeakObjectProperty>(InProperty) != nullptr
-            || CastField<FSoftObjectProperty>(InProperty) != nullptr)
-        { return false; }
-
-        if (CastField<FObjectPropertyBase>(InProperty) != nullptr)
-        { return true; }
-
-        if (const auto* ArrayProperty = CastField<FArrayProperty>(InProperty))
-        { return Get_ContainsStrongObjectLeaf(ArrayProperty->Inner); }
-
-        if (const auto* SetProperty = CastField<FSetProperty>(InProperty))
-        { return Get_ContainsStrongObjectLeaf(SetProperty->ElementProp); }
-
-        if (const auto* MapProperty = CastField<FMapProperty>(InProperty))
-        {
-            return Get_ContainsStrongObjectLeaf(MapProperty->KeyProp)
-                || Get_ContainsStrongObjectLeaf(MapProperty->ValueProp);
-        }
-
-        if (const auto* OptionalProperty = CastField<FOptionalProperty>(InProperty))
-        { return Get_ContainsStrongObjectLeaf(OptionalProperty->GetValueProperty()); }
-
-        return false;
-    }
-
-    // Counts emitted struct blocks — the unit that actually matters for "did this bucket lose
-    // classes", and cheaper/steadier than re-deriving the class list from text.
-    auto Get_StructBlockCount(const FString& InContent) -> int32
-    {
-        constexpr auto Needle = TEXT("\nstruct F");
-        auto Count = int32{0};
-        auto SearchFrom = int32{0};
-        for (;;)
-        {
-            const auto Found = InContent.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, SearchFrom);
-            if (Found == INDEX_NONE)
-            { break; }
-
-            ++Count;
-            SearchFrom = Found + 1;
-        }
-        return Count;
-    }
-
-    // True only for the unrecoverable shape: the bucket is losing struct blocks AND AngelScript has
-    // no registered class to have legitimately produced that loss.
-    auto Get_ShouldRefuseTruncatingWrite(const FString& InExisting, const FString& InNew) -> bool
-    {
-#if WITH_ANGELSCRIPT_CK
-        const auto IsShrinking = Get_StructBlockCount(InNew) < Get_StructBlockCount(InExisting);
-        if (NOT IsShrinking)
-        { return false; }
-
-        for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
-        {
-            if (UASClass::GetFirstASClass(*ClassIterator) != nullptr)
-            { return false; }
-        }
-
-        return true;
-#else
-        return false;
-#endif
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     FCkAngelscriptEntityScriptParamsGenerator::
     GenerateAll()
@@ -604,29 +499,6 @@ auto
                 Bucket.PluginName, Bucket.Classes.Num());
             TotalClasses += Bucket.Classes.Num();
             TotalProperties += BucketProperties;
-            continue;
-        }
-
-        // TRUNCATION GUARD. OnPostEngineInit runs this generator BEFORE AngelScript's first compile,
-        // and again after a FAILED one — in both states no AS class is registered, so the
-        // TObjectIterator sweep above sees only the C++ entity scripts and this bucket collapses to
-        // that handful. Writing it destroys every AS-derived block the next compile needs to resolve
-        // its callers, and the damage is self-sustaining: the compile then fails on the missing
-        // structs, which keeps AS unregistered, which truncates again on the next boot. Venus hit
-        // exactly this (98 structs -> 1) once a stale read-only bit stopped masking it.
-        //
-        // Refuse the write when the canonical shrinks WHILE no AngelScript class is visible. A
-        // project whose entity scripts are genuinely all-C++ is unaffected (nothing shrinks, so the
-        // guard never trips), and a real deletion still lands because the compile that performed it
-        // leaves the surviving AS classes registered.
-        if (HasExisting && ck_entity_script_params_generator::Get_ShouldRefuseTruncatingWrite(
-                ExistingForCompare, ContentForCompare))
-        {
-            ck::angelscriptgenerator::Warning(
-                TEXT("[CkAS ES Params] [{}] REFUSED a truncating rewrite of [{}] — no AngelScript entity-script class is "
-                     "registered, so this pass would drop the AS-derived blocks and wedge the next compile. AngelScript has "
-                     "not compiled yet, or the last compile FAILED; the next successful compile regenerates this file."),
-                Bucket.PluginName, Bucket.OutputFilePath);
             continue;
         }
 
@@ -734,37 +606,6 @@ auto
     if (CastField<FWeakObjectProperty>(InProperty) != nullptr
         || CastField<FSoftObjectProperty>(InProperty) != nullptr)
     { return ReflectedType; }
-
-    // A strong UObject leaf is exactly as untraced inside a container as it is at the top level,
-    // and ck::Analyze_UntracedStructSafety walks into containers — so a raw TArray<UObject> field
-    // is rejected at Request_SpawnEntity even though the equivalent scalar is weakened here and
-    // accepted. Recurse so the leaf is weakened in place, mirroring Get_DetailedPropertyType's own
-    // container walk (which is what produces the reflected spelling these must stay parallel to).
-    if (const auto* ArrayProperty = CastField<FArrayProperty>(InProperty))
-    { return ck::Format_UE(TEXT("TArray<{}>"), Get_RetainedPropertyType(ArrayProperty->Inner)); }
-
-    // TArray is the ONLY container weakened automatically, and deliberately so: weakening is half a
-    // contract, and the other half is UCk_Utils_EntityScript_UE::TryInjectEntityScriptSpawnParams
-    // resolving the weak element back to a strong one when it writes into the script. That resolve
-    // exists for scalars and for TArray. Rewriting a TSet/TMap/TOptional here without it would hand
-    // the injector's generic CopyCompleteValue a weak-vs-strong element mismatch that byte-copies
-    // cleanly and yields garbage pointers — silent corruption, strictly worse than the loud runtime
-    // ensure the author gets today. Say so instead, and let them declare the container weak/soft.
-    if (CastField<FSetProperty>(InProperty) != nullptr
-        || CastField<FMapProperty>(InProperty) != nullptr
-        || CastField<FOptionalProperty>(InProperty) != nullptr)
-    {
-        if (ck_entity_script_params_generator::Get_ContainsStrongObjectLeaf(InProperty))
-        {
-            ck::angelscriptgenerator::Warning(
-                TEXT("[CkAS ES Params] Property [{}] is a {} holding a STRONG UObject leaf. Retained spawn params are not "
-                     "GC-traced, so this will be REJECTED at spawn time by the untraced-struct safety check. Only TArray is "
-                     "weakened automatically — declare this container's element as TWeakObjectPtr<> or TSoftObjectPtr<> at "
-                     "the source instead."),
-                InProperty->GetName(), ReflectedType);
-        }
-        return ReflectedType;
-    }
 
     const auto* ObjectProperty = CastField<FObjectPropertyBase>(InProperty);
     const auto* ObjectClass = ObjectProperty != nullptr ? ObjectProperty->PropertyClass.Get() : nullptr;
