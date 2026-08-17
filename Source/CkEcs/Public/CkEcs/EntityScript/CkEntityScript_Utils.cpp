@@ -465,40 +465,6 @@ auto
                 }
             }
 
-            // Array twin of the weak-resolve above. The params generator weakens strong UObject
-            // leaves INSIDE containers too (a raw one is just as untraced there), so a weak-element
-            // params array can face a strong-element script array. The generic CopyCompleteValue
-            // below would byte-copy between them: FWeakObjectPtr (index + serial) and TObjectPtr
-            // (a pointer) are both 8 bytes, so it compiles, runs, and yields garbage pointers
-            // instead of failing — resolve element-wise rather than letting that happen.
-            if (const auto* SpawnArrayProp = CastField<FArrayProperty>(SpawnParamsProp))
-            {
-                const auto* ScriptArrayProp = CastField<FArrayProperty>(EntityScriptProp);
-                const auto* SpawnInnerWeak = SpawnArrayProp != nullptr
-                    ? CastField<FWeakObjectProperty>(SpawnArrayProp->Inner) : nullptr;
-                const auto* ScriptInnerObject = ScriptArrayProp != nullptr
-                    ? CastField<FObjectPropertyBase>(ScriptArrayProp->Inner) : nullptr;
-                const auto ScriptInnerIsAlsoWeak = ScriptArrayProp != nullptr
-                    && CastField<FWeakObjectProperty>(ScriptArrayProp->Inner) != nullptr;
-
-                if (SpawnInnerWeak != nullptr && ScriptInnerObject != nullptr && NOT ScriptInnerIsAlsoWeak)
-                {
-                    auto SourceHelper = FScriptArrayHelper{SpawnArrayProp, SpawnParamsPropAddr};
-                    auto DestHelper = FScriptArrayHelper{ScriptArrayProp, EntityScriptPropAddr};
-
-                    const auto ElementCount = SourceHelper.Num();
-                    DestHelper.Resize(ElementCount);
-
-                    for (auto ElementIndex = int32{0}; ElementIndex < ElementCount; ++ElementIndex)
-                    {
-                        ScriptInnerObject->SetObjectPropertyValue(
-                            DestHelper.GetRawPtr(ElementIndex),
-                            SpawnInnerWeak->GetObjectPropertyValue(SourceHelper.GetRawPtr(ElementIndex)));
-                    }
-                    continue;
-                }
-            }
-
 #if ENABLE_MT_DETECTOR
             // ---- Delegate MRSW bypass ----
             // Delegates start with an FMRSWRecursiveAccessDetector; a raw memory copy through FInstancedStruct
