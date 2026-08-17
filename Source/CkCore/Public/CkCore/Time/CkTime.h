@@ -241,6 +241,24 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// Accumulates its own lifetime into InOutTotal. Nesting a scope inside another reports both, so a stage
+// containing a sub-stage needs no subtraction at the call site.
+class CKCORE_API FCk_ScopedStopwatch
+{
+public:
+    explicit FCk_ScopedStopwatch(FCk_Time& InOutTotal);
+    ~FCk_ScopedStopwatch();
+
+    FCk_ScopedStopwatch(const FCk_ScopedStopwatch&) = delete;
+    auto operator=(const FCk_ScopedStopwatch&) -> FCk_ScopedStopwatch& = delete;
+
+private:
+    FCk_Time& _Total;
+    double    _StartSeconds = 0.0;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Time, [](const FCk_Time& InObj)
