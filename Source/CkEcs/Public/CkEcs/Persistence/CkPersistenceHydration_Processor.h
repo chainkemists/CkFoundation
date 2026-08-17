@@ -64,11 +64,15 @@ namespace ck
 
 namespace ck::persistence_apply
 {
-    enum class EApplyOutcome : uint8 { Applied, StillPending, DroppedRejected, DroppedTimeout };
+    enum class EApplyOutcome : uint8 { Applied, StillPending, DroppedRejected, DroppedTimeout, DroppedNoHandler };
 
     // Resolves InData's handler and calls HydrationApply. Rejected is terminal immediately; NotReady accumulates
-    // InOutPendingForSeconds and past PendingApplyTimeoutSeconds fires the loud ensure and reports DroppedTimeout,
-    // as does a missing/HydrationApply-less handler. (The net dispatcher predates this and keeps its own copy.)
+    // InOutPendingForSeconds and past PendingApplyTimeoutSeconds fires the loud ensure and reports DroppedTimeout.
+    //
+    // A payload that resolves NO handler, or one whose handler never declared a HydrationApply, is
+    // DroppedNoHandler — its own outcome rather than DroppedTimeout, because nothing ever waited: the save
+    // recorded state this build cannot apply, so it is data loss, terminal on the first call, and ensures on the
+    // spot. (The net dispatcher predates this and keeps its own copy.)
     CKECS_API auto
     ApplyOne(
         FCk_Handle& InEntity,
