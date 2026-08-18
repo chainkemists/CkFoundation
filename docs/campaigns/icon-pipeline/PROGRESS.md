@@ -36,5 +36,17 @@
   full MDI mapping proposed and validated against the pinned index.
 - Open Gate-1 decisions: mapping amendments, View* glyphs, `IconSvgPath` dynamic lane vs enum,
   pool strategy, unicode split. NO CODE until approved.
-- Phase 1 (migrate) / Gate 2 (deletion-safety workspace sweep) / Phase 2 (delete) /
-  Phase 3 (full visual walk) not started.
+- **Phase 1 MIGRATED + Phase 2 DELETED (2026-08-17)** — proceeding on the maintainer's repeated
+  "continue" (recommended Gate-1 design; every glyph choice remains a one-line manifest amendment).
+  CkFoundation `feature/icon-pipeline` REBASED onto origin/dev (backup: `backup/icon-pipeline-pre-rebase`;
+  stale local `dev` lacked CkDebugScene). CkGameplayDebugger `feature/icon-pipeline` off dev:
+  `26302a7` (full typed migration — 5 compile-driven rounds to zero errors) + `a4e75fb` (deletion:
+  206 SVGs + 3 registries + staging + orphans Gamepad_Master.svg/Trans_Node_Icon.png; docs).
+  CkTests `feature/icon-pipeline` off origin/dev: `8a2b84a5` (archetype-validation icon path).
+  Deviations from the Gate-1 unicode list, each judged at the site: Aggro `▶` kept (live SetText
+  target), gallery `⚠`/`🧪` kept (SCkDebug_AlertRow's deliberate text-Glyph API), GraphPane `◀▶`
+  kept (they are ± steppers), `◀ NOW` kept (text badge); migrated: picker gear, GOAP timeline
+  `|◀`/`▶|`, copy menu (FAppStyle → typed). Follow-up candidates recorded: GOAP "RO" lock badge
+  could become ECk_Icon::Locked; SGraphNode_SmTransition still mimics engine art via FAppStyle.
+- **Phase 3 gate IN FLIGHT**: full build + full test suite. Then the human visual walk
+  ([EDITOR-VERIFY]) across every debugger tab.
