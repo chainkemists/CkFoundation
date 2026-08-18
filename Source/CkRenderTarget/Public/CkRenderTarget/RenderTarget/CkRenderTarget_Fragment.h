@@ -255,6 +255,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The saved channel a load handed this sync child, parked until Setup has resolved the drawable target the
+    // replay needs. The persistence handler may not wait for Setup itself — a load holds a restored entity out of
+    // every non-kernel processor's view until its payloads have applied, so a handler that waits for Setup waits
+    // for something that cannot happen and its payload is dropped at the apply timeout. Same shape, and the same
+    // reason, as FFragment_Sm_HydrationResume.
+    struct CKRENDERTARGET_API FFragment_RenderTarget_HydrationReplay
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_RenderTarget_HydrationReplay);
+
+    public:
+        friend class FProcessor_RenderTarget_HydrationReplay;
+
+    private:
+        FCk_RenderTarget_ChannelState _Channel;
+
+    public:
+        // Seeded by the save-transport Apply handler, which is not a friend.
+        auto Populate(const FCk_RenderTarget_ChannelState& InChannel) -> void { _Channel = InChannel; }
+
+    public:
+        CK_PROPERTY_GET(_Channel);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // The unit both the host's per-player send queues and the client's reassembly inbox carry.
     // Payload meta rides on every chunk so those queues need no side tables.
     struct CKRENDERTARGET_API FCk_RenderTarget_PixelChunk

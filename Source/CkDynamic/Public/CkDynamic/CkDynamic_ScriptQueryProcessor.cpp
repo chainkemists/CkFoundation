@@ -241,6 +241,12 @@ namespace ck
             if (NOT ck_dynamic_script_query_processor::PassesDestroyFilter(EntityHandle, ECk_DestroyFilter::IgnorePendingKill))
             { continue; }
 
+            // This join is hand-rolled over the storages rather than built through a view, so it is the one
+            // admission path MakeProcessorView cannot cover — and a script query's Exclude slots resolve only
+            // dynamic-fragment storages, so they cannot name this C++ tag either.
+            if (EntityHandle.Has<ck::FTag_Hydration_Quarantine>())
+            { continue; }
+
             auto PassesJoin = true;
             for (const auto& StateSlot : _BatchState._Slots)
             {

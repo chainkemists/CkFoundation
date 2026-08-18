@@ -5,6 +5,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Tag/CkTag_HydrationQuarantine.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment.h"
 #include "CkJolt/Body/CkJoltBody_Utils.h"
@@ -94,7 +95,16 @@ namespace ck::jolt_body
             const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(InUserData)}};
             if (NOT RegView.IsValid(Entity))
             { return {}; }
-            return InTransientEntity.Get_ValidHandle(Entity.Get_ID());
+
+            auto Handle = InTransientEntity.Get_ValidHandle(Entity.Get_ID());
+
+            // Resolved by id, so no view exclusion applies. Answering INVALID for an entity a load is still
+            // holding covers both sides at once: the self side stops signalling, and the other side stops being
+            // named in a payload a consumer would then hold a handle to mid-restore.
+            if (Handle.Has<ck::FTag_Hydration_Quarantine>())
+            { return {}; }
+
+            return Handle;
         };
 
         for (const auto& Event : InEvents)

@@ -97,11 +97,13 @@ not a bug in the handler.
 `HydrationApply` re-drives state through DEFERRED requests only — the chrono's `_CurrentValue` is
 friend-gated and is never written directly — and every `NotReady` return precedes every request:
 
-1. **Gate until Setup has run** (`FTag_Timer_NeedsSetup` cleared). `FProcessor_Timer_Setup` Completes a
-   CountDown chrono to GoalValue when it consumes that tag; re-driving the position first would let Setup
-   mutate the chrono *after* the Jump delta was computed, landing the timer at the wrong elapsed. Waiting
-   makes the current-elapsed baseline stable and guarantees the enqueued Jump is not clobbered. NotReady is
-   transient — Setup runs every authority tick.
+1. **Gate on COMPOSITION only** (`UCk_Utils_Timer_UE::Has`). It must NOT wait on `FTag_Timer_NeedsSetup`:
+   a load holds a restored entity out of every non-kernel processor's view until its payloads have applied,
+   so waiting for Setup waits for something that cannot happen and the payload is dropped at the apply
+   timeout. The baseline concern the old gate was reaching for is handled by the ordering instead — every
+   step below enqueues a DEFERRED request, and `FProcessor_Timer_HandleRequests` both `RunAfter`
+   `FProcessor_Timer_Setup` and excludes `FTag_Timer_NeedsSetup`, so Setup Completes the CountDown chrono
+   first and the absolute Jump is applied on top of that baseline, never before it.
 2. **Reposition via an ABSOLUTE `Request_Jump`.** The Jump handler
    (`FProcessor_Timer_HandleRequests::DoHandleRequest`) owns the direction-dependent delta math and is the
    single source of truth: in absolute mode `JumpDuration` is the TARGET elapsed and the handler Ticks

@@ -17,6 +17,7 @@ namespace ck
     public:
         using Group = FGroup_EntityLifecycle;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt; // load-gate kernel
 
     public:
         using FTimeType = FCk_Time;

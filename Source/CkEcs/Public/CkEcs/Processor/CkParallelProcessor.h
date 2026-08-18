@@ -90,7 +90,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+        using ViewType = decltype(this->template MakeProcessorView<detail::UnwrapAccessPolicy_T<T_Fragments>...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<detail::UnwrapAccessPolicy_T<T_Fragments>...>;
         using PoliciesOnly = detail::PoliciesOnly<T_Fragments...>;
 
@@ -113,7 +113,7 @@ namespace ck
         {
             CK_STAT(STAT_CollectEntities);
 
-            this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+            this->template MakeProcessorView<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
                 [&](EntityType InEntity, T_ComponentsOnly&... /*unused*/)
             {
                 _CachedEntities.Emplace(InEntity);

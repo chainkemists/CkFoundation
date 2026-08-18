@@ -137,6 +137,12 @@ Key `TProcessorBase` API (all processors inherit):
 - `Pump()` — tick with zero DeltaT (process deferred requests without advancing time).
 - `_TransientEntity` — a scratch entity the processor owns; use for deferred commands.
 
+### Processor views are built in one place
+
+Every generated `DoTick` — `ck::TProcessor`, `ck_exp::TProcessor` (both variants), `TParallelProcessor` — builds its view through `TProcessorBase::MakeProcessorView<...>()`, which appends `TExclude<ck::FTag_Hydration_Quarantine>` the same way `RuntimeVariantFragments` appends the editor-only exclusion. So a processor cannot observe an entity whose restored state a load has not finished writing, and a new processor base or tick variant cannot silently opt out — there is one expression to change, not a rule to remember.
+
+A processor that must keep seeing those entities declares `static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt;`. That is the load kernel itself (the `RunsDuringLoad` set, which cannot finish the rebuild or drain the payload queue without seeing its subjects) plus observe-only passes. The exclusion is a view filter, not a memory barrier: a processor that reaches an entity some OTHER way — by id, or through a stored handle — is not covered by it, which is why the two CkJolt id-resolution paths and the script-query join carry the check explicitly.
+
 ### Fixed tick rate (compile-time trait)
 
 A processor with a per-type fixed cadence declares ONE line; the base derives everything else
@@ -515,6 +521,20 @@ Stamped (via `UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSe
 - **`FTag_Snapshot_JustRestored`** is stamped by the load (`UCk_Snapshot_Subsystem::DoHydrate_Enqueue`) on every restored (saved-id-mapped) entity before the load gate opens; game-side rebind processors key off it. Transient, so never captured, but it survives for the entity's whole lifetime — consumers must pair it with their own once-per-feature dedup.
 - **`ck::FTag_Hydration_Quarantine`** (`CkEcs/Tag/CkTag_HydrationQuarantine.h`) holds a restored entity out of sight while the load still owns its Durable state. Stamped on the whole mapped set at payload ENQUEUE and released on the whole set at once — never per entity, because the exclusion is a view filter rather than a memory barrier, so a released entity reading a still-quarantined sibling's fragment directly is exactly what a per-entity release would allow. It has two bounded escapes (the hydrate frame cap, and unconditionally at load finish), each naming what it forced in `FCk_Snapshot_LoadReport::_QuarantineForced`. **Entering destruction leaves the quarantine** (`Request_DestroyEntity`), which is why the destruction pipeline needs no exemptions and why an entity destroyed mid-load cannot keep the tag forever. Its `FCtx_HydrationQuarantine` companion is the O(1) "is a load holding anything right now" answer, so the hot paths cost a context read rather than a pool lookup.
 - **`FTag_Snapshot_SaveTransient`** marks DERIVED state whose owner's construction/redrive recreates it on load; the capture must never persist it as a respawnable row. Canonical case: the SM graph (states/tasks/conditions/transitions/sub-SMs, recreated by the SM hydration redrive). Without the stamp such entities are captured via their SpawnRecipe (RuntimeSpawned) and respawned as top-level duplicates that re-run their lifecycle outside the owning feature's context — the zombie-SmTask-with-destroyed-SM incident.
+
+### The `Clear` contract
+
+A registry-wide `FCk_Registry::Clear<T...>` (reached through `FCk_Handle::Clear`) **skips entities a snapshot load is still holding** — those carrying `ck::FTag_Hydration_Quarantine` — while a load is active, and behaves exactly as before when none is. It has to: the ~30 features that wipe their dirty marker registry-wide do it from a shadowing `DoTick` on the very pass whose view just SKIPPED those entities, so a plain wipe would destroy the setup marker or the queued request the entity is waiting to be processed with, and it would come back released but inert.
+
+`Clear_Unconditional<T...>` is the opt-out, and the orientation is deliberate: the default skips, so a site nobody thought about preserves a marker rather than destroying one. Three kernel frame-boundary markers use it — `FTag_EntityScript_ConstructedThisFrame` (it DEFERS the hydration drain, so preserving it would wedge the drain against the quarantine that waits on the drain), `FTag_EntityJustCreated` and `FTag_Transform_Updated` (both are statements about the frame that just ended, not about the entity).
+
+Not covered, and worth knowing: a per-entity `Remove<T>()` on a handle a non-excluded processor happens to hold is not blocked by any of this.
+
+### What a persistence handler may wait for
+
+A `HydrationApply` may return `NotReady` for **composition** — the feature is not on the entity yet — and for nothing else. In particular it may not wait on the feature's own `NeedsSetup`/`RequiresSetup` marker, nor on any other output produced outside the load kernel, because the quarantine is what holds the entity out of those processors' views until the payload applies: the wait cannot end, and the payload is dropped at the apply timeout instead. The ordering the old gates were reaching for is now a guarantee — the whole mapped set is released together, and Setup then runs with the restored Durable fragments as its inputs, exactly as it reads params on a fresh entity.
+
+When the restore genuinely needs something Setup produces (a resolved render target, an allocated grid), the handler still applies immediately — it writes the payload onto the entity as a deferred `Request_*`, or parks it in a fragment a post-Setup processor consumes (`FFragment_Sm_HydrationResume`, `FFragment_RenderTarget_HydrationReplay`) — and returns `Applied`. The deferred-request form needs nothing extra: a feature's `HandleRequests` processor already runs after its `Setup` and excludes the setup marker, so the request lands on a set-up entity by construction.
 
 ### Private ECS worlds — `ck::FEcsWorld`
 

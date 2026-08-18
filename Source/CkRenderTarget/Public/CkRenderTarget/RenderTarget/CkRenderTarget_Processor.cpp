@@ -47,6 +47,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_PixelCapture);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_PixelSyncPump);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_HydrationReplay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_FlushPendingReplication);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_ApplyReplicatedBatches);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_DispatchPixelPayload);
@@ -1340,6 +1341,26 @@ namespace ck
         render_target::Verbose(
             TEXT("RenderTarget [{}] produced pixel payload seq [{}] kind [{}] — [{}] compressed bytes ([{}] raw)"),
             InRenderTargetEntity, PayloadSeq, Payload.Get_Kind(), Payload.Get_Bytes().Num(), Payload.Get_UncompressedSize());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_RenderTarget_HydrationReplay::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InRenderTargetEntity,
+            const FFragment_RenderTarget_HydrationReplay& InReplay)
+        -> void
+    {
+        auto Child = InRenderTargetEntity.ConvertToHandle();
+
+        // Keeps the fragment on a false, so a replicating target still waiting on its respawned owner driver
+        // is retried on the next pass instead of losing its saved pixels.
+        if (NOT FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Child, InReplay.Get_Channel()))
+        { return; }
+
+        InRenderTargetEntity.Remove<FFragment_RenderTarget_HydrationReplay>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
