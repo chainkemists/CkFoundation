@@ -165,8 +165,9 @@ namespace ck
             FFragment_RenderTarget_Current& InCurrent,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
 
-        // Returns false (NotReady, retry) until the restored child's Setup has composed Current;
-        // true after exactly one repaint. Contract and call site: CkRenderTarget/Claude.md.
+        // Returns false (retry next pass) until the restored child's Setup has composed Current and, for a
+        // replicating target, its owner's replication driver exists; true after exactly one repaint. Driven by
+        // FProcessor_RenderTarget_HydrationReplay, never by the persistence handler. Contract: CkRenderTarget/Claude.md.
         static auto
         HydrateFromSavedChannel(
             FCk_Handle& InChild,
@@ -300,6 +301,35 @@ namespace ck
         DoFinishPass(
             HandleType InRenderTargetEntity,
             FFragment_RenderTarget_PixelSync& InPixelSync) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Replays a saved channel onto a restored sync child once Setup has resolved its drawable target. The load's
+    // handler cannot do this itself: it runs while the entity is held out of every non-kernel processor's view,
+    // which is exactly the window in which Setup has not run.
+    class CKRENDERTARGET_API FProcessor_RenderTarget_HydrationReplay : public ck_exp::TProcessor<
+        FProcessor_RenderTarget_HydrationReplay,
+        FCk_Handle_RenderTarget,
+        ck::TReadOnly<FFragment_RenderTarget_HydrationReplay>,
+        TExclude<FTag_RenderTarget_NeedsSetup>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_RenderTarget_Setup>;
+        using MarkedDirtyBy = FFragment_RenderTarget_HydrationReplay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InRenderTargetEntity,
+            const FFragment_RenderTarget_HydrationReplay& InReplay)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

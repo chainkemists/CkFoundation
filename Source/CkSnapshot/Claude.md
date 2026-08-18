@@ -165,6 +165,16 @@ a second replication modifier (see the rationale at
 `CkAttribute/Public/CkAttribute/CkAttribute_RestorePersistence.h:68-71`). Put the composition guard
 (`if (NOT ...Has(Entity)) { return NotReady; }`) first, before any `Set_`/`Request_`.
 
+**And `NotReady` may mean COMPOSITION and nothing else.** Never gate on the feature's own
+`NeedsSetup`/`RequiresSetup` marker, and never on the output of a processor outside the load kernel: the
+quarantine holds a restored entity out of exactly those processors' views until its payloads apply, so the wait
+cannot end and the entry is dropped at the timeout. The ordering such a gate wants is now a guarantee —
+Setup runs AFTER hydration and reads the restored Durable fragments as its inputs, the way it reads params on a
+fresh entity. When the restore truly needs Setup's output (a resolved render target, an allocated grid), apply
+immediately anyway: enqueue the feature's own deferred `Request_*` (its `HandleRequests` processor already runs
+after `Setup` and excludes the setup marker), or park the payload in a fragment a post-Setup processor consumes
+(`FFragment_Sm_HydrationResume`, `FFragment_RenderTarget_HydrationReplay`), and return `Applied`.
+
 ### 4. Re-arm the Replicate pass
 
 Authority hydration writes values directly, but must leave the feature's Replicate pass **armed** so post-load

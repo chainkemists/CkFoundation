@@ -28,7 +28,9 @@ namespace ck
             FTimeType)
         -> void
     {
-        _TransientEntity.Clear<FTag_EntityJustCreated>();
+        // Unconditional: "was created on the frame that just ended" is a statement about the frame, not about the
+        // entity, so holding it for a quarantined entity would make it read as freshly created for the whole load.
+        _TransientEntity.Clear_Unconditional<FTag_EntityJustCreated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

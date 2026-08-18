@@ -81,6 +81,15 @@ namespace ck
 
         const auto& Params = InParams.Get_Params();
 
+        // Everything above is Session state Setup owns. The velocity itself is NOT: Add already seeded
+        // _CurrentVelocity from the params, and on a load the SAVED velocity is applied BEFORE Setup runs,
+        // so re-deriving it here overwrites a restored velocity with the starting one on every load. The
+        // seeding below is deferred to Setup solely for the LOCAL->world conversion, which needs a Transform
+        // that may not exist yet at Add time — and it is correct only while the value is still the
+        // untouched construct seed.
+        if (InCurrent._CurrentVelocity != Params.Get_StartingVelocity())
+        { return; }
+
         switch(const auto& Coordinates = Params.Get_Coordinates())
         {
             case ECk_LocalWorld::Local:

@@ -117,6 +117,12 @@ namespace ck_render_target_replication
                     },
                     // Authority-side, and Entity is the sync CHILD here (child-keyed payload) —
                     // not the owner NetApply resolves against. Why: CkRenderTarget/Claude.md.
+                    //
+                    // It parks the saved channel on the entity rather than replaying it. The replay needs the
+                    // drawable target Setup resolves, and a handler may not wait for Setup: a load holds a restored
+                    // entity out of every non-kernel processor's view until its payloads have applied, so waiting
+                    // for Setup here would burn the apply timeout and drop the pixels. Setup runs after hydration,
+                    // and FProcessor_RenderTarget_HydrationReplay does the repaint once it has.
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         const auto& Payload  = New.Get<FCk_RepData_RenderTarget>();
@@ -124,9 +130,11 @@ namespace ck_render_target_replication
                         if (Channels.IsEmpty())
                         { return ECk_Persistence_ApplyResult::Applied; }
 
-                        return ck::FProcessor_RenderTarget_HandleRequests::HydrateFromSavedChannel(Entity, Channels[0])
-                            ? ECk_Persistence_ApplyResult::Applied
-                            : ECk_Persistence_ApplyResult::NotReady;
+                        if (NOT Entity.Has<ck::FFragment_RenderTarget_Current>())
+                        { return ECk_Persistence_ApplyResult::NotReady; }
+
+                        Entity.AddOrGet<ck::FFragment_RenderTarget_HydrationReplay>().Populate(Channels[0]);
+                        return ECk_Persistence_ApplyResult::Applied;
                     }});
         }
     };

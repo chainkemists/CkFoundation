@@ -132,7 +132,16 @@ auto
         const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(InUserData)}};
         if (NOT RegView.IsValid(Entity))
         { return {}; }
-        return TransientEntity.Get_ValidHandle(Entity.Get_ID());
+
+        auto Handle = TransientEntity.Get_ValidHandle(Entity.Get_ID());
+
+        // Resolved by id, so no view exclusion applies, and this router ENQUEUES overlap requests onto the
+        // probes it resolves. Answering invalid for an entity a load is still holding keeps a restored probe
+        // out of an overlap set whose other end is mid-restore; the ck::IsValid guards below absorb it.
+        if (Handle.Has<ck::FTag_Hydration_Quarantine>())
+        { return {}; }
+
+        return Handle;
     };
 
     int32 AddedCount = 0;

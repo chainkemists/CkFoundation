@@ -330,6 +330,8 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Audio;
         using RunAfter = TDepList<FProcessor_AudioTrack_DebugDraw_All_Spatial>;
+        // Draws, never mutates — and it runs its own registry pass, so the view helper could not reach it anyway.
+        static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt;
 
     public:
         using TProcessor::TProcessor;

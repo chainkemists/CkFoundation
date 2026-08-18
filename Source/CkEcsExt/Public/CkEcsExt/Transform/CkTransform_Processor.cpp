@@ -613,7 +613,10 @@ namespace ck
         DoTick(
             TimeType InDeltaT) -> void
     {
-        _TransientEntity.Clear<FTag_Transform_Updated>();
+        // Unconditional, for the same reason as FTag_EntityJustCreated: this marks THIS frame's transform writes,
+        // and the load writes restored transforms, so preserving it would leave every restored entity permanently
+        // dirty to every consumer that polls it.
+        _TransientEntity.Clear_Unconditional<FTag_Transform_Updated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
