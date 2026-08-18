@@ -190,6 +190,12 @@ public:
     // menu world). Mirrors the per-scheduler condition behind the throttled pump-limit log warning.
     auto Get_WorstFramePumpCount() const -> int32;
 
+    // Tick groups the most recent Request_PumpToQuiescence could NOT pump because their tick was already in
+    // progress. Recorded rather than merely logged because a caller reading the pump's count to decide whether
+    // the world is quiescent would otherwise read a skipped group as a quiet one: a group that never ran
+    // contributes 0 passes, which is indistinguishable from a group that ran and found nothing to do.
+    auto Get_LastPumpSkippedGroupCount() const -> int32;
+
     // The per-frame pump-iteration budget (max across schedulers). 0 when no schedulers exist.
     auto Get_MaxPumpIterations() const -> int32;
 
@@ -265,6 +271,7 @@ private:
     FDelegateHandle _OnEndFrameHandle;
 
     ECk_EcsWorld_LoadHold _LoadHold = ECk_EcsWorld_LoadHold::None;
+    int32 _LastPumpSkippedGroupCount = 0;
     int32 _LoaderSpawnWindowDepth = 0;
     int32 _RendezvousSpawnWindowDepth = 0;
 

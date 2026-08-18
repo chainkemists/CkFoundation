@@ -181,6 +181,30 @@ public:
     CK_PROPERTY(_Reason);
 };
 
+// One convergence fact the load waited on and never got, named. Same reason as every other record here: a count
+// says the world was handed back before it was coherent; only a name says which part of it had not settled.
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_ConvergenceLossRecord
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_ConvergenceLossRecord);
+
+private:
+    // The registered predicate's name — the same name the owning module registered it under.
+    UPROPERTY()
+    FName _Name;
+
+    // Convergence frames burned before the bounded escape gave up on it.
+    UPROPERTY()
+    int32 _FramesWaited = 0;
+
+public:
+    CK_PROPERTY(_Name);
+    CK_PROPERTY(_FramesWaited);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -301,6 +325,14 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_PayloadLossRecord> _PayloadLosses;
 
+    // Convergence facts still Pending when the convergence phase hit its frame cap and the loader handed the
+    // world back anyway. Empty on a healthy load. Like the two above it is outside the accounting closure —
+    // those partition the SAVE's rows, and this records a LIVE-side fact — but unlike them it DOES move _Result:
+    // a world resumed before its physics, overlaps or queues settled is a world the player watches finish
+    // loading, which is the one thing the hold exists to prevent, so it says so instead of passing as Success.
+    UPROPERTY()
+    TArray<FCk_Snapshot_ConvergenceLossRecord> _ConvergenceUnmet;
+
 public:
     CK_PROPERTY(_Result);
     CK_PROPERTY(_EntitiesTotal);
@@ -329,6 +361,7 @@ public:
     CK_PROPERTY(_UnresolvedAfterEscalation);
     CK_PROPERTY(_QuarantineForced);
     CK_PROPERTY(_PayloadLosses);
+    CK_PROPERTY(_ConvergenceUnmet);
 
 public:
     /**
