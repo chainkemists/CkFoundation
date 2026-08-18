@@ -75,6 +75,9 @@ auto
         ECk_Icon_BrushSize InSize)
     -> const FSlateBrush*
 {
+    if (InIcon == ECk_Icon::None)
+    { return nullptr; }
+
     const auto StyleIsInitialized = _StyleInstance.IsValid();
     CK_ENSURE_IF_NOT(StyleIsInitialized, TEXT("FCkIconStyle::Get_Brush([{}]) called before Initialize"), InIcon)
     { return nullptr; }
@@ -109,6 +112,9 @@ auto
         ECk_Icon_BrushSize InSize)
     -> FName
 {
+    if (InIcon == ECk_Icon::None)
+    { return NAME_None; }
+
     const auto Index = static_cast<int32>(InIcon);
     const auto IndexIsValid = _StyleKeys_16x16.IsValidIndex(Index);
     CK_ENSURE_IF_NOT(IndexIsValid, TEXT("Get_StyleKey([{}]) before Initialize, or outside the generated table"), InIcon)
@@ -220,10 +226,11 @@ auto
 {
     const auto Entries = ck::icons::Get_GeneratedEntries();
 
-    _Brushes_16x16.Init(nullptr, Entries.Num());
-    _Brushes_24x24.Init(nullptr, Entries.Num());
-    _StyleKeys_16x16.Init(NAME_None, Entries.Num());
-    _StyleKeys_24x24.Init(NAME_None, Entries.Num());
+    // Slot 0 stays empty — it is ECk_Icon::None, the legitimate "no icon".
+    _Brushes_16x16.Init(nullptr, Entries.Num() + 1);
+    _Brushes_24x24.Init(nullptr, Entries.Num() + 1);
+    _StyleKeys_16x16.Init(NAME_None, Entries.Num() + 1);
+    _StyleKeys_24x24.Init(NAME_None, Entries.Num() + 1);
     _IconBySemanticName.Reserve(Entries.Num());
 
     for (const auto& Entry : Entries)
