@@ -307,6 +307,20 @@ private:
     // Succeeded_WithLoss, never Success. It only ever downgrades: a Failed_* result stands.
     auto DoCompute_LoadResult(FCk_Snapshot_LoadReport& InOutReport) const -> void;
 
+    // Game time does not advance while the load owns the world, and the mechanism is the engine's own: global
+    // time dilation, held at the world's floor. UWorld::TimeSeconds stops, every actor tick's DeltaSeconds
+    // collapses with it, and therefore every CkTimer, every processor cadence, every catch-up replay and every
+    // gameplay deadline expressed in world seconds stops too — for every reader, with no per-reader edit.
+    // RealTimeSeconds keeps accruing undilated, which is exactly why the small named set of watchdogs that must
+    // outlive the hold reads wall time instead.
+    //
+    // Scoped to ONE WORLD at a time, never to the load. AWorldSettings::TimeDilation is transient on a per-level
+    // actor whose constructor sets 1.0, so the freeze does NOT survive travel: the post-travel world must be
+    // frozen again, and the prior value is captured from — and restored to — the world it was applied to. A load
+    // therefore applies twice, and the second apply must not be mistaken for a redundant one.
+    auto DoApply_TimeFreeze(UWorld& InWorld) -> void;
+    auto DoRestore_TimeFreeze(UWorld& InWorld) -> void;
+
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
 private:
@@ -355,6 +369,11 @@ private:
 
     TWeakObjectPtr<UWorld> _PreTravelWorld;  // captured before OpenLevel; AwaitingWorld waits for a different world
     FString _TravelMapName;                  // resolved from the pre-travel world (RemovePIEPrefix)
+
+    // The world the game-time freeze is applied to RIGHT NOW (unset == none), and that world's dilation before
+    // it. Per world rather than per load, because the freeze does not survive travel — see DoApply_TimeFreeze.
+    TWeakObjectPtr<UWorld> _TimeFreezeWorld;
+    float _PriorTimeDilation = 1.0f;
 
     static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
     static constexpr int32 kLoad_TravelFrameCap   = 600; // abort if the post-travel world never comes up
