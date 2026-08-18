@@ -710,20 +710,30 @@ Three consumer-side tools, and a gap between them worth knowing:
 Feature PROCESSORS are the only thing the load gate freezes; promise/signal CALLBACKS are not — a bound delegate
 fires whenever the code that broadcasts it runs, gate active or not. Any consumer reading world-scoped state (an
 occupancy roster, a population count, a tag scan) from inside a callback that CAN fire mid-load must route that
-read through `UCk_Utils_Snapshot_UE::Promise_OnLoadComplete` (`CkSnapshot_Utils.h:62-75`, impl
-`CkSnapshot_Utils.cpp:80-117`) instead of acting directly on the half-rebuilt world.
+read through `UCk_Utils_Snapshot_UE::Promise_OnLoadComplete` instead of acting directly on the half-rebuilt world.
 
-- **No load in progress** — the delegate fires IMMEDIATELY, synchronously, with a default-constructed
-  `FCk_Snapshot_LoadReport{}` (there was no load to report on).
-- **A load IS in progress** — binds `ck::UUtils_Signal_Snapshot_OnLoadComplete` on the world's transient entity
-  with `ECk_Signal_BindingPolicy::IgnorePayloadInFlight` / `ECk_Signal_PostFireBehavior::Unbind`: a ONE-SHOT bind
-  that fires exactly once, on THIS load's completion. `IgnorePayloadInFlight` is load-bearing, not incidental — a
-  replay policy (`FireIfPayloadInFlight`) would fire immediately with a PRIOR load's already-in-flight report
-  while the current load is still reconstituting the world, which is the exact half-coherent read this API exists
-  to prevent.
-- Fires post-settle: the load machine's Settling phase pumps hydration to quiescence before `OnLoadComplete`
-  broadcasts (see "Settling waits on hydration, not just frames" above), so restored values are guaranteed
+- **No load in progress** — the delegate fires IMMEDIATELY, synchronously, with `Result = NoLoadInProgress`, and
+  the call RETURNS `ECk_Snapshot_PromiseResult::NoLoadInProgress` so a caller that cares can branch without a
+  second query. It is not a failure, and it no longer claims to be one: the immediate path used to hand over a
+  default-constructed report, whose `_Result` defaults to `Failed_IO`, so every consumer that branched on the
+  result saw a FAILURE for a load that never happened.
+- **A load IS in progress** — the delegate is queued on the SUBSYSTEM
+  (`Request_AddLoadCompletePromise`) and the call returns `Bound`. One-shot by construction: `DoFinish_Load`
+  swaps the list out before draining it, so it fires exactly once, on THIS load's completion, and a promise
+  re-armed from inside a callback takes the immediate path (the load flag is already clear) instead of landing in
+  the array being iterated.
+- **Either way it fires post-settle**: the load machine's Settling phase pumps hydration to quiescence before
+  `OnLoadComplete` (see "Settling waits on hydration, not just frames" above), so restored values are guaranteed
   readable by the time the callback runs.
+
+**Why the subsystem and not an entity signal.** A load TRAVELS, and every ECS registry is world-scoped
+(`UCk_EcsWorld_Subsystem_UE` is a world subsystem), so the old implementation bound
+`ck::UUtils_Signal_Snapshot_OnLoadComplete` on the CALLER's world transient while the broadcast happened on the
+POST-travel world's — a promise armed during a load, which is exactly when consumers reach for it, died with the
+world it was armed in and nothing said so (F-U1.6). The snapshot subsystem is GameInstance-scoped and survives
+the travel; a dynamic delegate is a weak UObject plus a function name, so a subscriber the travel destroyed
+simply no-ops. The world-scoped signal itself STAYS and is still broadcast — it is a legitimate world-scoped
+event; the promise just stopped being implemented on top of it.
 
 `Get_IsLoadInProgress` is the POLL form of the same fact; `Promise_OnLoadComplete` is the PUSH form for a
 consumer that would otherwise have to poll every tick.
