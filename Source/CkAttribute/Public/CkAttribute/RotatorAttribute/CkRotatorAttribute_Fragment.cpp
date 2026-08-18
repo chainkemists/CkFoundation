@@ -62,6 +62,7 @@ static struct FRotatorAttributeRepHandlerRegistrar
     FRotatorAttributeRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RotatorAttributes>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = &ck::attribute_restore::Produce<ck::TFragment_RotatorAttribute, FCk_RepData_RotatorAttributes>,
                 .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {

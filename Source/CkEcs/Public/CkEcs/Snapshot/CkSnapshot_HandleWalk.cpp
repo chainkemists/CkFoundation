@@ -1,6 +1,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"
 
 #include "CkEcs/Handle/CkHandle.h" // FCk_Handle::StaticStruct()
+#include "CkEcs/Snapshot/CkSnapshot_Posture.h" // ck::Get_FragmentPosture — the audit walk's descent gate
 
 #include "UObject/UnrealType.h"    // FStructProperty / FArrayProperty / FScriptArrayHelper / TFieldIterator
 
@@ -23,20 +24,44 @@ namespace ck::snapshot
             return InStruct != nullptr && InStruct->IsChildOf(FCk_Handle::StaticStruct());
         }
 
+        struct FWalkOptions
+        {
+            bool RehashAfterKeyVisit = false;
+
+            // Field paths cost a string concatenation per node, so only the audit — which runs once per save and
+            // must NAME what it found — asks for them. The remap walk runs on every payload on save AND load.
+            bool BuildFieldPaths = false;
+
+            // Descend into an FInstancedStruct only when its payload is DURABLE. Audit-only, and deliberately NOT
+            // how the remap walk behaves: the save's handle-id stream is positional, so the remap must visit every
+            // handle regardless of posture or the two sides stop agreeing on slot i.
+            bool DurableOnlyInstancedDescent = false;
+        };
+
         // TOptional fields are deliberately not walked — no fragment/params struct stores optional handles;
         // add FOptionalProperty support here if one ever does.
         auto
             WalkHandles(
                 const UScriptStruct* InStruct,
                 void* InMemory,
-                const TFunctionRef<void(FCk_Handle&)>& InVisit,
-                bool InRehashAfterKeyVisit)
+                const TFunctionRef<void(FCk_Handle&, const FString&)>& InVisit,
+                const FWalkOptions& InOptions,
+                const FString& InPath)
             -> void
         {
             if (InStruct == nullptr || InMemory == nullptr)
             { return; }
 
-            const auto VisitOrRecurse = [&](const FStructProperty* InStructProp, void* InElementMemory) -> void
+            const auto MakePath = [&](const FString& InLeaf) -> FString
+            {
+                if (NOT InOptions.BuildFieldPaths)
+                { return {}; }
+
+                return InPath.IsEmpty() ? InLeaf : InPath + TEXT(".") + InLeaf;
+            };
+
+            const auto VisitOrRecurse = [&](const FStructProperty* InStructProp, void* InElementMemory,
+                                            const FString& InElementPath) -> void
             {
                 // An FInstancedStruct is opaque to TFieldIterator — its payload's handles live behind
                 // GetScriptStruct()/GetMutableMemory(). This test must stay AHEAD of the handle-struct test
@@ -44,15 +69,24 @@ namespace ck::snapshot
                 if (InStructProp->Struct == FInstancedStruct::StaticStruct())
                 {
                     auto& Instanced = *static_cast<FInstancedStruct*>(InElementMemory);
-                    if (Instanced.IsValid())
-                    { WalkHandles(Instanced.GetScriptStruct(), Instanced.GetMutableMemory(), InVisit, InRehashAfterKeyVisit); }
+                    if (NOT Instanced.IsValid())
+                    { return; }
+
+                    if (InOptions.DurableOnlyInstancedDescent &&
+                        ck::Get_FragmentPosture(Instanced.GetScriptStruct()) != ECk_Snapshot_Posture::Durable)
+                    { return; }
+
+                    WalkHandles(Instanced.GetScriptStruct(), Instanced.GetMutableMemory(), InVisit, InOptions,
+                        InOptions.BuildFieldPaths && Instanced.GetScriptStruct() != nullptr
+                            ? InElementPath + TEXT("<") + Instanced.GetScriptStruct()->GetName() + TEXT(">")
+                            : InElementPath);
                     return;
                 }
 
                 if (Get_IsHandleStruct(InStructProp->Struct))
-                { InVisit(*static_cast<FCk_Handle*>(InElementMemory)); }
+                { InVisit(*static_cast<FCk_Handle*>(InElementMemory), InElementPath); }
                 else
-                { WalkHandles(InStructProp->Struct, InElementMemory, InVisit, InRehashAfterKeyVisit); }
+                { WalkHandles(InStructProp->Struct, InElementMemory, InVisit, InOptions, InElementPath); }
             };
 
             const auto MayContainHandles = [](const FStructProperty* InStructProp) -> bool
@@ -75,7 +109,8 @@ namespace ck::snapshot
 
                 if (const auto* StructProp = CastField<FStructProperty>(Property))
                 {
-                    VisitOrRecurse(StructProp, StructProp->ContainerPtrToValuePtr<void>(InMemory));
+                    VisitOrRecurse(StructProp, StructProp->ContainerPtrToValuePtr<void>(InMemory),
+                        MakePath(StructProp->GetName()));
                 }
                 else if (const auto* ArrayProp = CastField<FArrayProperty>(Property))
                 {
@@ -85,8 +120,12 @@ namespace ck::snapshot
 
                     auto ArrayHelper = FScriptArrayHelper{ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(InMemory)};
 
+                    const auto ArrayPath = MakePath(ArrayProp->GetName());
                     for (auto Index = 0; Index < ArrayHelper.Num(); ++Index)
-                    { VisitOrRecurse(InnerStruct, ArrayHelper.GetRawPtr(Index)); }
+                    {
+                        VisitOrRecurse(InnerStruct, ArrayHelper.GetRawPtr(Index),
+                            InOptions.BuildFieldPaths ? FString::Printf(TEXT("%s[%d]"), *ArrayPath, Index) : ArrayPath);
+                    }
                 }
                 else if (const auto* SetProp = CastField<FSetProperty>(Property))
                 {
@@ -96,11 +135,12 @@ namespace ck::snapshot
 
                     auto SetHelper = FScriptSetHelper{SetProp, SetProp->ContainerPtrToValuePtr<void>(InMemory)};
 
+                    const auto SetPath = MakePath(SetProp->GetName());
                     for (auto It = SetHelper.CreateIterator(); It; ++It)
-                    { VisitOrRecurse(ElemStruct, SetHelper.GetElementPtr(It)); }
+                    { VisitOrRecurse(ElemStruct, SetHelper.GetElementPtr(It), SetPath); }
 
                     // A visited element id mutated in place invalidates the hash buckets built during the data pass.
-                    if (InRehashAfterKeyVisit)
+                    if (InOptions.RehashAfterKeyVisit)
                     { SetHelper.Rehash(); }
                 }
                 else if (const auto* MapProp = CastField<FMapProperty>(Property))
@@ -112,15 +152,16 @@ namespace ck::snapshot
 
                     auto MapHelper = FScriptMapHelper{MapProp, MapProp->ContainerPtrToValuePtr<void>(InMemory)};
 
+                    const auto MapPath = MakePath(MapProp->GetName());
                     for (auto It = MapHelper.CreateIterator(); It; ++It)
                     {
                         if (MayContainHandles(KeyStruct))
-                        { VisitOrRecurse(KeyStruct, MapHelper.GetKeyPtr(It)); }
+                        { VisitOrRecurse(KeyStruct, MapHelper.GetKeyPtr(It), MapPath + TEXT("<key>")); }
                         if (MayContainHandles(ValueStruct))
-                        { VisitOrRecurse(ValueStruct, MapHelper.GetValuePtr(It)); }
+                        { VisitOrRecurse(ValueStruct, MapHelper.GetValuePtr(It), MapPath + TEXT("<value>")); }
                     }
 
-                    if (InRehashAfterKeyVisit && MayContainHandles(KeyStruct))
+                    if (InOptions.RehashAfterKeyVisit && MayContainHandles(KeyStruct))
                     { MapHelper.Rehash(); }
                 }
             }
@@ -137,13 +178,13 @@ namespace ck::snapshot
             ck::FSnapshotContext& InCtx)
         -> void
     {
-        const auto RehashAfterKeyVisit = InAr.IsLoading(); // save never mutates, so no rehash there
+        const auto Options = ck_snapshot_handlewalk::FWalkOptions{.RehashAfterKeyVisit = InAr.IsLoading()};
         ck_snapshot_handlewalk::WalkHandles(InStruct, InMemory,
-            [&](FCk_Handle& InOutHandle) -> void
+            [&](FCk_Handle& InOutHandle, const FString& /*InFieldPath*/) -> void
             {
                 InCtx.Snapshot_Handle(InAr, InOutHandle);
             },
-            RehashAfterKeyVisit);
+            Options, FString{});
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -155,8 +196,30 @@ namespace ck::snapshot
             const TFunctionRef<void(FCk_Handle&)>& InVisitor)
         -> void
     {
-        constexpr auto RehashAfterKeyVisit = false; // read-only visit, no in-place mutation
-        ck_snapshot_handlewalk::WalkHandles(InStruct, InMemory, InVisitor, RehashAfterKeyVisit);
+        // read-only visit, no in-place mutation
+        ck_snapshot_handlewalk::WalkHandles(InStruct, InMemory,
+            [&](FCk_Handle& InOutHandle, const FString& /*InFieldPath*/) -> void
+            {
+                InVisitor(InOutHandle);
+            },
+            ck_snapshot_handlewalk::FWalkOptions{}, FString{});
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        ForEachDurableHandle(
+            const UScriptStruct* InStruct,
+            void* InMemory,
+            const TFunctionRef<void(FCk_Handle&, const FString&)>& InVisitor)
+        -> void
+    {
+        const auto Options = ck_snapshot_handlewalk::FWalkOptions{
+            .RehashAfterKeyVisit = false,
+            .BuildFieldPaths = true,
+            .DurableOnlyInstancedDescent = true};
+
+        ck_snapshot_handlewalk::WalkHandles(InStruct, InMemory, InVisitor, Options, FString{});
     }
 }
 

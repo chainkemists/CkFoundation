@@ -27,6 +27,7 @@ static struct FPlayerRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Player>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT UCk_Utils_Player_UE::Has(Entity))

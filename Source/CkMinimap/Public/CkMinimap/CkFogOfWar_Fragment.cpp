@@ -19,6 +19,7 @@ namespace ck_fog_of_war_fragment
         FRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_RepData_FogOfWar>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_FogOfWar_UE::Has(Entity))

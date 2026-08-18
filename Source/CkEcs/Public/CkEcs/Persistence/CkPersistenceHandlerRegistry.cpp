@@ -83,6 +83,19 @@ auto
     for (const auto& Pair : _Handlers)
     {
         const auto ParticipatesInSave = Pair.Value.Produce && Pair.Value.HydrationApply;
+
+        // The named shapes enforce this at registration; the raw primitives below them take a plain aggregate and
+        // cannot, so a handler that went in the back door is checked here instead of silently entering the save
+        // under a posture it never claimed.
+        const auto PostureMatchesParticipation = ParticipatesInSave
+            ? Pair.Value.Posture == ECk_Snapshot_Posture::Durable
+            : Pair.Value.Posture != ECk_Snapshot_Posture::Durable;
+
+        CK_ENSURE_IF_NOT(PostureMatchesParticipation,
+            TEXT("Persistence handler for [{}] declares posture [{}] but its lambda set says save participation "
+                "is [{}]. Declaration and behaviour must agree — a reader of either one is entitled to trust it."),
+            Pair.Key, Pair.Value.Posture, ParticipatesInSave) {}
+
         if (ParticipatesInSave)
         { Types.Add(Pair.Key); }
     }

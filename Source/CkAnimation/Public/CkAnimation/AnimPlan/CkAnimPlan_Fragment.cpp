@@ -39,6 +39,7 @@ static struct FAnimPlanRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_AnimPlans>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 // Keyed per-AnimPlan-entity: emits this plan's goal/cluster/state, byte-identical to the
                 // wire-builder FProcessor_AnimPlan_Replicate. UNSET when this entity is not an AnimPlan.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>

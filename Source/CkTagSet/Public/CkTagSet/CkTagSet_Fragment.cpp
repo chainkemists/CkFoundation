@@ -11,6 +11,7 @@ static struct FTagSetRepHandlerRegistrar
     FTagSetRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_TagSet>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 // Payload shape matches FProcessor_TagSet_Replicate.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {

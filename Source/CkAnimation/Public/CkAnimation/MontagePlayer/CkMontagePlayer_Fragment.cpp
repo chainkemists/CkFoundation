@@ -27,6 +27,7 @@ static struct FMontagePlayerRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_MontagePlayer>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())

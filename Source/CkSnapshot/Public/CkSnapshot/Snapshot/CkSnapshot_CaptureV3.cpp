@@ -226,6 +226,60 @@ namespace ck::snapshot
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    namespace ck_snapshot_capturev3_audit
+    {
+        // A durable value that names an entity the save is NOT writing comes back as a tombstone: the feature is
+        // structurally present and functionally dead. Nothing earlier can catch it — whether a target is persisted
+        // is a property of that ENTITY at this instant, not of the field's type — so the capture is the first and
+        // last point at which the fact exists. It is reported here rather than dropped quietly, and the save still
+        // proceeds: a world that loads with one named gap beats a save nobody can write.
+        auto Audit_DurableHandles(
+            const UScriptStruct*        InPayloadType,
+            void*                       InPayloadMemory,
+            const FCk_Handle&           InOwner,
+            uint32                      InOwnerSavedId,
+            const TSet<uint32>&         InPersistedIds,
+            FCk_Snapshot_SaveReport&    OutReport) -> void
+        {
+            if (InPayloadType == nullptr || InPayloadMemory == nullptr)
+            { return; }
+
+            ck::snapshot::ForEachDurableHandle(InPayloadType, InPayloadMemory,
+                [&](FCk_Handle& InTarget, const FString& InFieldPath) -> void
+                {
+                    if (ck::Is_NOT_Valid(InTarget))
+                    { return; }
+
+                    const auto TargetId = static_cast<uint32>(InTarget.Get_Entity().Get_ID());
+                    if (InPersistedIds.Contains(TargetId))
+                    { return; }
+
+                    const auto TargetIdentity = UCk_Utils_GameplayLabel_UE::Has(InTarget)
+                        ? UCk_Utils_GameplayLabel_UE::Get_Label(InTarget).ToString()
+                        : FString{};
+
+                    CK_ENSURE_IF_NOT(false,
+                        TEXT("v3 capture: durable payload [{}] on entity [{}] holds a handle at [{}] to entity [{}], "
+                            "which this save does NOT persist. It will load back as a tombstone — the feature comes "
+                            "back structurally complete and functionally dead. Either persist the target, or make "
+                            "the field session state the owner's setup re-derives."),
+                        InPayloadType, InOwner, InFieldPath, InTarget) {}
+
+                    auto Loss = FCk_Snapshot_SaveLossRecord{};
+                    Loss.Set_PayloadType(InPayloadType->GetPathName());
+                    Loss.Set_FieldPath(InFieldPath);
+                    Loss.Set_OwnerSavedId(InOwnerSavedId);
+                    Loss.Set_TargetEntityId(TargetId);
+                    Loss.Set_TargetIdentity(TargetIdentity);
+                    Loss.Set_Reason(TEXT("handle to a non-persisted entity"));
+
+                    OutReport.Add_Loss(MoveTemp(Loss));
+                });
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         Run_CaptureV3_Registry(
             ck::SnapshotRegistryType& InRegistry,
@@ -233,6 +287,7 @@ namespace ck::snapshot
             UWorld* InWorldOrNull,
             FArchive& InByteWriter,
             FCk_Snapshot_HeaderV3& InOutHeader,
+            FCk_Snapshot_SaveReport& OutReport,
             FCaptureTimings* OutTimings)
         -> ECk_SnapshotResult
     {
@@ -539,23 +594,12 @@ namespace ck::snapshot
                     if (const auto ScriptClass = Recipe.Get_ScriptClass(); ck::IsValid(ScriptClass.Get()))
                     { Entry.Set_ScriptClassPath(ScriptClass->GetPathName()); }
 
-                    // Flagged, then written anyway — a dangling ref is still better than a missing recipe.
+                    // Flagged, then written anyway — a dangling ref is still better than a missing recipe. The
+                    // spawn recipe IS durable by construction (it is what rebuilds the entity), so it goes through
+                    // the same audit as every other durable payload rather than keeping a second copy of the rule.
                     auto ParamsCopy = FInstancedStruct{Recipe.Get_SpawnParams()};
-                    if (ck::IsValid(ParamsCopy.GetScriptStruct()))
-                    {
-                        ck::snapshot::ForEachHandle(ParamsCopy.GetScriptStruct(), ParamsCopy.GetMutableMemory(),
-                            [&](FCk_Handle& InParamHandle) -> void
-                            {
-                                if (ck::Is_NOT_Valid(InParamHandle))
-                                { return; }
-                                const auto RefId = static_cast<uint32>(InParamHandle.Get_Entity().Get_ID());
-                                CK_ENSURE_IF_NOT(PersistedIds.Contains(RefId),
-                                    TEXT("v3 capture: RuntimeSpawned entity [{}] spawn params reference entity [{}] which "
-                                         "is NOT persisted — it will dangle on load. Handle refs in spawn params must "
-                                         "target a persisted entity."),
-                                    Handle, InParamHandle) {}
-                            });
-                    }
+                    ck_snapshot_capturev3_audit::Audit_DurableHandles(ParamsCopy.GetScriptStruct(),
+                        ParamsCopy.GetMutableMemory(), Handle, Item._SavedId, PersistedIds, OutReport);
                     // Assigned through the mutable getter: the generated Set_ takes const& and would copy the blob.
                     Entry.Get_SpawnParamsBytes() = SerializeInstancedStruct(Recipe.Get_SpawnParams());
 
@@ -616,6 +660,11 @@ namespace ck::snapshot
                 }
                 if (NOT Produced.IsSet())
                 { continue; }
+
+                // Audited in place rather than on a copy: Audit_DurableHandles only reads, and this loop runs per
+                // payload per entity — the copy it used to take is exactly the kind this path was cleaned of.
+                ck_snapshot_capturev3_audit::Audit_DurableHandles(Produced.GetValue().GetScriptStruct(),
+                    Produced.GetValue().GetMutableMemory(), Handle, Item._SavedId, PersistedIds, OutReport);
 
                 DistinctTypePaths.Add(Type);
                 PendingPayloads.Emplace(FPendingPayload{Item._SavedId, Type, MoveTemp(Produced.GetValue())});
@@ -708,6 +757,7 @@ namespace ck::snapshot
             UWorld& InWorld,
             FArchive& InByteWriter,
             FCk_Snapshot_HeaderV3& InOutHeader,
+            FCk_Snapshot_SaveReport& OutReport,
             FCaptureTimings* OutTimings)
         -> ECk_SnapshotResult
     {
@@ -728,7 +778,8 @@ namespace ck::snapshot
 
         InOutHeader.Set_WorldAssetPath(FSoftObjectPath{&InWorld});
 
-        return Run_CaptureV3_Registry(*RawRegistry, CkRegistry.Get_RegistryHandle(), &InWorld, InByteWriter, InOutHeader, OutTimings);
+        return Run_CaptureV3_Registry(*RawRegistry, CkRegistry.Get_RegistryHandle(), &InWorld, InByteWriter,
+            InOutHeader, OutReport, OutTimings);
     }
 }
 

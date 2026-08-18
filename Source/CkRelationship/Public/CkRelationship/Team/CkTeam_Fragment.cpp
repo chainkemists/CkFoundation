@@ -29,6 +29,7 @@ static struct FTeamRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             // Produce-only capture (Phase 3A.4, [P1-R1]): mirror FProcessor_Team_Replicate's live-state build.
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {

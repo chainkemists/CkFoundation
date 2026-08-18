@@ -67,6 +67,7 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_GeometryCollectionOwner>({
+                .Posture = ECk_Snapshot_Posture::Session,
                 // Event-edge semantics (crumble/anchor/strain requests fire on field deltas vs the
                 // last APPLIED data) — always Applied; a not-yet-populated GC record just means the
                 // events have no targets, same as the old inline path.
