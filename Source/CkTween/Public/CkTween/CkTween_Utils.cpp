@@ -12,6 +12,75 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_tween_utils
+{
+    // The resolved counterpart of FCk_TweenCurveChannels: what the tween actually samples, once the
+    // authored soft paths have been checked for residency.
+    struct FResidentCurveChannels
+    {
+        UCurveFloat* _X = nullptr;
+        UCurveFloat* _Y = nullptr;
+        UCurveFloat* _Z = nullptr;
+    };
+
+    auto
+        DoResolve_ResidentChannel(
+            const TSoftObjectPtr<UCurveFloat>& InChannel,
+            const FString& InChannelName)
+        -> UCurveFloat*
+    {
+        if (ck::Is_NOT_Valid(InChannel))
+        { return nullptr; }
+
+        auto* ResidentCurve = InChannel.Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ResidentCurve),
+            TEXT("Tween curve channel [{}] is authored as [{}] but NOT RESIDENT - the channel contributes 0. "
+                 "Preload the curve before creating the tween."),
+            InChannelName, InChannel.ToSoftObjectPath())
+        { return nullptr; }
+
+        return ResidentCurve;
+    }
+
+    auto
+        DoResolve_ResidentChannels(
+            const FCk_TweenCurveChannels& InChannels)
+        -> FResidentCurveChannels
+    {
+        return FResidentCurveChannels
+        {
+            DoResolve_ResidentChannel(InChannels.Get_X(), TEXT("X")),
+            DoResolve_ResidentChannel(InChannels.Get_Y(), TEXT("Y")),
+            DoResolve_ResidentChannel(InChannels.Get_Z(), TEXT("Z"))
+        };
+    }
+
+    auto
+        DoGet_MaxTime(
+            const FResidentCurveChannels& InChannels)
+        -> float
+    {
+        auto MaxTime = 0.0f;
+
+        for (const UCurveFloat* Curve : {InChannels._X, InChannels._Y, InChannels._Z})
+        {
+            if (ck::Is_NOT_Valid(Curve))
+            { continue; }
+
+            auto CurveMinTime = 0.0f;
+            auto CurveMaxTime = 0.0f;
+            Curve->GetTimeRange(CurveMinTime, CurveMaxTime);
+
+            MaxTime = FMath::Max(MaxTime, CurveMaxTime);
+        }
+
+        return MaxTime;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Tween_UE::
     Create_TweenFloat(
@@ -281,21 +350,7 @@ auto
         const FCk_TweenCurveChannels& InChannels)
     -> float
 {
-    auto MaxTime = 0.0f;
-
-    for (const UCurveFloat* Curve : {InChannels.Get_X().Get(), InChannels.Get_Y().Get(), InChannels.Get_Z().Get()})
-    {
-        if (ck::Is_NOT_Valid(Curve))
-        { continue; }
-
-        auto CurveMinTime = 0.0f;
-        auto CurveMaxTime = 0.0f;
-        Curve->GetTimeRange(CurveMinTime, CurveMaxTime);
-
-        MaxTime = FMath::Max(MaxTime, CurveMaxTime);
-    }
-
-    return MaxTime;
+    return ck_tween_utils::DoGet_MaxTime(ck_tween_utils::DoResolve_ResidentChannels(InChannels));
 }
 
 auto
@@ -312,7 +367,7 @@ auto
     -> FCk_Handle_Tween
 {
     CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
-        TEXT("Cannot create a curve-offset rotation tween on [{}]: no channel has a valid curve."), InEntity)
+        TEXT("Cannot create a curve-offset rotation tween on [{}]: no channel has a curve authored."), InEntity)
     { return {}; }
 
     // Refused rather than left to misbehave quietly: the curves are sampled forward by time and
@@ -322,11 +377,13 @@ auto
         TEXT("Cannot create a curve-offset rotation tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InEntity)
     { return {}; }
 
+    const auto ResidentChannels = ck_tween_utils::DoResolve_ResidentChannels(InChannels);
+
     // A duration that disagrees with the curve's own extent is a bug waiting to happen (the motion
     // is cut short, or holds its last key), so deriving it is the default rather than an option.
     const auto Duration = InDuration > 0.0f
         ? InDuration
-        : Get_CurvesMaxTime(InChannels);
+        : ck_tween_utils::DoGet_MaxTime(ResidentChannels);
 
     CK_ENSURE_IF_NOT(Duration > 0.0f,
         TEXT("Cannot create a curve-offset rotation tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InEntity)
@@ -342,9 +399,9 @@ auto
         ECk_TweenTarget::Transform_Rotation, InCompletionBehavior);
 
     auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
-    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{InChannels.Get_X().Get()};
-    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Y().Get()};
-    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Z().Get()};
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{ResidentChannels._X};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Y};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Z};
     CurveDrive._Output = ECk_TweenCurveOutput::RotatorOffset;
     CurveDrive._TimeInput = InTimeInput;
     CurveDrive._BaseValue = FCk_TweenValue{BaseRotation};
@@ -366,7 +423,7 @@ auto
     -> FCk_Handle_Tween
 {
     CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
-        TEXT("Cannot create a curve-offset location tween on [{}]: no channel has a valid curve."), InEntity)
+        TEXT("Cannot create a curve-offset location tween on [{}]: no channel has a curve authored."), InEntity)
     { return {}; }
 
     // Same forward-only sampling caveat as Create_TweenEntityRotation_CurveOffset.
@@ -374,9 +431,11 @@ auto
         TEXT("Cannot create a curve-offset location tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InEntity)
     { return {}; }
 
+    const auto ResidentChannels = ck_tween_utils::DoResolve_ResidentChannels(InChannels);
+
     const auto Duration = InDuration > 0.0f
         ? InDuration
-        : Get_CurvesMaxTime(InChannels);
+        : ck_tween_utils::DoGet_MaxTime(ResidentChannels);
 
     CK_ENSURE_IF_NOT(Duration > 0.0f,
         TEXT("Cannot create a curve-offset location tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InEntity)
@@ -389,9 +448,9 @@ auto
         ECk_TweenTarget::Transform_Location, InCompletionBehavior);
 
     auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
-    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{InChannels.Get_X().Get()};
-    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Y().Get()};
-    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{InChannels.Get_Z().Get()};
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{ResidentChannels._X};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Y};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Z};
     CurveDrive._Output = ECk_TweenCurveOutput::VectorOffset;
     CurveDrive._TimeInput = InTimeInput;
     CurveDrive._BaseValue = FCk_TweenValue{BaseLocation};
@@ -423,7 +482,7 @@ auto
 
     const auto Duration = InDuration > 0.0f
         ? InDuration
-        : Get_CurvesMaxTime(FCk_TweenCurveChannels{InCurve, nullptr, nullptr});
+        : ck_tween_utils::DoGet_MaxTime(ck_tween_utils::FResidentCurveChannels{InCurve});
 
     CK_ENSURE_IF_NOT(Duration > 0.0f,
         TEXT("Cannot create a curve-driven float tween on [{}]: derived duration is 0 (the curve has no key past t=0)."), InOwner)
