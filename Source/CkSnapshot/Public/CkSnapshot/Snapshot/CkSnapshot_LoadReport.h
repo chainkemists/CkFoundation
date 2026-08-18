@@ -112,6 +112,36 @@ public:
     CK_PROPERTY(_Reason);
 };
 
+// One record per entity the loader had to force out of the hydration quarantine before the load's own machinery
+// released it. Reaching either escape means the settle could not finish on its own terms, so the entity is named
+// rather than counted: "some payloads did not apply" without saying WHICH entity is the silence this exists to break.
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_QuarantineForcedRecord
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_QuarantineForcedRecord);
+
+private:
+    // The entity, formatted the way every other snapshot diagnostic names one.
+    UPROPERTY()
+    FString _Identity;
+
+    // Payload entries still queued on it when the escape fired — the size of the loss, not just its existence.
+    UPROPERTY()
+    int32 _PayloadsOutstanding = 0;
+
+    // Which escape released it: "hydrate-frame-cap" or "load-finish".
+    UPROPERTY()
+    FString _Reason;
+
+public:
+    CK_PROPERTY(_Identity);
+    CK_PROPERTY(_PayloadsOutstanding);
+    CK_PROPERTY(_Reason);
+};
+
 USTRUCT(BlueprintType)
 struct CKSNAPSHOT_API FCk_Snapshot_LoadReport
 {
@@ -190,6 +220,12 @@ private:
     UPROPERTY()
     int32 _UnresolvedAfterEscalation = 0;
 
+    // Entities the hydration quarantine's bounded escape had to release with payloads still outstanding. Empty on
+    // a healthy load. It does NOT participate in the accounting closure: those partition the SAVE's rows, and this
+    // records a LIVE-side release. Nor does it move _Result — a lossy load still reports the Result it does today.
+    UPROPERTY()
+    TArray<FCk_Snapshot_QuarantineForcedRecord> _QuarantineForced;
+
 public:
     CK_PROPERTY(_Result);
     CK_PROPERTY(_EntitiesTotal);
@@ -210,6 +246,7 @@ public:
     CK_PROPERTY(_Skips);
     CK_PROPERTY(_UsedEscalatedRebuild);
     CK_PROPERTY(_UnresolvedAfterEscalation);
+    CK_PROPERTY(_QuarantineForced);
 
 public:
     /** True when every saved entity landed in exactly one of restored / skipped / orphaned. */

@@ -476,6 +476,14 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
 - **Hydrating is ATOMIC.** One ticker callback enqueues payloads, queues the reconcile-destroys, AND opens the gate,
   so no gated world-tick ever sees pending payloads; hydration can only drain in post-gate FULL passes (Setup then
   hydration, no stomp). `Settling` then lets the parked destroys finish.
+- **The same callback QUARANTINES every mapped entity** (`ck::FTag_Hydration_Quarantine`,
+  `CkEcs/Tag/CkTag_HydrationQuarantine.h`), because the pass that opens the gate is the pass a feature's Setup would
+  otherwise run against construct-default Durable state. It is stamped HERE and not at row mapping: a RuntimeSpawned
+  row is mapped while still constructing, and its finisher is a GAME processor, so quarantining at mapping starves
+  the very processor the rebuild waits on. The whole set is released together (below), never one entity at a time —
+  the exclusion is a view filter, not a memory barrier, so a released entity reading a still-quarantined sibling's
+  fragment directly is exactly what a per-entity release would allow. Entering destruction leaves the quarantine
+  (`Request_DestroyEntity`), which is why the 143 destruction-pipeline processors need zero exemptions.
 - **The SaveKey resolver is re-swept every rebuild tick, not once at world-ready.** On-demand infrastructure
   (ActorRelay channels) stamps its key ticks after BeginPlay, so a one-shot sweep left every such `EngineOwned` row
   unresolvable and orphaned its whole owned subtree. The sweep Resets and rescans the live
@@ -542,6 +550,17 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
 - **Settling waits on hydration, not just frames.** It previously finished on a bare frame countdown, so
   `OnLoadComplete` could fire with hydration still in flight. The frame cap is now a LOUD abort backstop — reaching it
   means some payloads never applied.
+- **Two predicates gate Settling, deliberately not one.** `DoIs_PayloadDrainComplete` (no live
+  `FTag_Hydration_PendingApply`) gates the quarantine RELEASE; `DoIs_HydrationComplete` (that, AND the quarantine
+  already released) gates FINISHING. Collapsing them is circular — the release would wait on a condition only the
+  release can make true, and every load would burn the frame cap. After the release, at least one further FULL pump
+  runs before `OnLoadComplete`, and that is the pass the freed Setup processors take.
+- **The quarantine has two bounded escapes, because fail-closed without one is a permanent wedge.** At
+  `kLoad_HydrateFrameCap` with the queue still draining, and unconditionally in `DoFinish_Load` (covering the abort
+  and teardown routes), every still-quarantined entity is released. Each one that still had queued payloads is logged
+  as an Error AND recorded in `FCk_Snapshot_LoadReport::_QuarantineForced` with its outstanding-entry count — a load
+  that came back incomplete says which entities, not just that it happened. Both sweeps skip stale handles: the mapped
+  set is append-only and is not pruned when an entity is destroyed mid-load.
 
 ### Restore invariants
 

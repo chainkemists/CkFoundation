@@ -13,6 +13,7 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Tag/CkTag_EditorOnly.h"
+#include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // leaving the quarantine is part of entering destruction
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,6 +23,29 @@ DECLARE_CYCLE_STAT(TEXT("EntityLifetime::Get_EntityNetMode"),     STAT_CkEcs_Get
 
 DECLARE_DWORD_COUNTER_STAT(TEXT("Ecs Entities Destroyed"), STAT_CkEcs_EntitiesDestroyed, STATGROUP_CkEcs);
 DECLARE_DWORD_COUNTER_STAT(TEXT("Ecs Entities Spawned"),   STAT_CkEcs_EntitiesSpawned,   STATGROUP_CkEcs);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_entity_lifetime_utils
+{
+    // Entering destruction leaves the hydration quarantine, and that is what makes the 143 destruction-pipeline
+    // processors need ZERO exemptions: a destroying entity is simply not quarantined, so every *_EndPlay body sees
+    // it exactly as it does today. It also means an entity destroyed mid-load cannot hold the tag forever, since
+    // the hydration dispatcher's view carries CK_IGNORE_PENDING_KILL and would keep draining it while nothing
+    // released it. Paired with the count so the O(1) "is a quarantine active" gate stays truthful.
+    auto
+        DoLeave_HydrationQuarantine(
+            FCk_Handle& InHandle)
+        -> void
+    {
+        if (NOT InHandle.Try_Remove<ck::FTag_Hydration_Quarantine>())
+        { return; }
+
+        auto Registry = InHandle.Get_RegistryView();
+        auto& Ctx = Registry.SetContext<ck::FCtx_HydrationQuarantine>();
+        Ctx._Count = FMath::Max(0, Ctx._Count - 1);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -62,6 +86,7 @@ auto
 
     ck::ecs::VeryVerbose(TEXT("Entity [{}] set to 'Initiate Destruction'"), InHandle);
     InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
+    ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InHandle);
     INC_DWORD_STAT(STAT_CkEcs_EntitiesDestroyed);
 
     auto LifetimeDependents = Get_LifetimeDependents(InHandle);
@@ -537,7 +562,10 @@ auto
 #endif
 
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
-    { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
+    {
+        InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>();
+        ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InNewEntity);
+    }
 
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
     { InNewEntity.Add<ck::FTag_DestroyEntity_Teardown>(); }
@@ -581,7 +609,10 @@ auto
     InEntity.Replace<ck::FFragment_LifetimeOwner>(InNewLifetimeOwner);
 
     if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
-    { InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate>(); }
+    {
+        InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
+        ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InEntity);
+    }
 
     if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
     { InEntity.AddOrGet<ck::FTag_DestroyEntity_Teardown>(); }
