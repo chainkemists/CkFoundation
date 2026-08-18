@@ -52,6 +52,24 @@ public:
      */
     static auto Get_Brush(ECk_Icon InIcon, ECk_Icon_BrushSize InSize) -> const FSlateBrush*;
 
+    /**
+     * The registered style key for a typed icon — for the rare consumer that needs an
+     * FSlateIcon (tab spawners) instead of a brush pointer. Never hand-write these keys.
+     */
+    static auto Get_StyleKey(ECk_Icon InIcon, ECk_Icon_BrushSize InSize) -> FName;
+
+    /** Reverse lookup by the generated semantic name (e.g. legacy archetype-descriptor basenames). */
+    static auto TryGet_IconBySemanticName(FName InSemanticName) -> TOptional<ECk_Icon>;
+
+    /**
+     * The dynamic side-lane for GAME-supplied icons (archetype descriptors' IconSvgPath):
+     * a generated enum is closed, so consumers outside CkFoundation register their SVGs here
+     * by name. First-party code must never use this — it uses ECk_Icon.
+     * Registration is idempotent per id; the SVG must be monochrome white like the corpus.
+     */
+    static auto Register_DynamicIcon(FName InId, const FString& InAbsoluteSvgPath) -> void;
+    static auto Get_DynamicBrush(FName InId, ECk_Icon_BrushSize InSize) -> const FSlateBrush*;
+
 private:
     static auto Create() -> TSharedRef<FSlateStyleSet>;
     static auto CreateIconBrushes(TSharedRef<FSlateStyleSet> InStyle) -> void;
@@ -59,6 +77,10 @@ private:
     static TSharedPtr<FSlateStyleSet> _StyleInstance;
     static TArray<const FSlateBrush*> _Brushes_16x16;
     static TArray<const FSlateBrush*> _Brushes_24x24;
+    static TArray<FName>              _StyleKeys_16x16;
+    static TArray<FName>              _StyleKeys_24x24;
+    static TMap<FName, ECk_Icon>      _IconBySemanticName;
+    static TMap<FName, TPair<const FSlateBrush*, const FSlateBrush*>> _DynamicBrushes;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

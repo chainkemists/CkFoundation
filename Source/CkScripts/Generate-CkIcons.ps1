@@ -48,8 +48,7 @@ $SeenSemantics = [System.Collections.Generic.HashSet[string]]::new()
 
 foreach ($Entry in $Manifest.icons)
 {
-    if ([string]::IsNullOrWhiteSpace($Entry.semantic)) { throw "Manifest entry with empty 'semantic' (mdi='$($Entry.mdi)')" }
-    if ([string]::IsNullOrWhiteSpace($Entry.mdi))      { throw "Manifest entry '$($Entry.semantic)' has empty 'mdi'" }
+    if ([string]::IsNullOrWhiteSpace($Entry.semantic)) { throw "Manifest entry with empty 'semantic' (mdi='$($Entry.mdi)', file='$($Entry.file)')" }
 
     if ($Entry.semantic -cnotmatch '^[A-Z][A-Za-z0-9]*$')
     { throw "Semantic name '$($Entry.semantic)' is not a valid PascalCase C++ identifier" }
@@ -57,17 +56,31 @@ foreach ($Entry in $Manifest.icons)
     if (-not $SeenSemantics.Add($Entry.semantic))
     { throw "Duplicate semantic name in manifest: '$($Entry.semantic)'" }
 
-    # The typo oracle: the pinned metadata is the authority on what MDI ships.
-    if (-not $KnownMdiNames.Contains($Entry.mdi))
-    { throw "Unknown MDI icon name '$($Entry.mdi)' (semantic '$($Entry.semantic)') — not present in the pinned $($Manifest._meta.mdiVersion) index ($NamesPath). Check spelling against https://pictogrammers.com/library/mdi/" }
+    $HasMdi  = -not [string]::IsNullOrWhiteSpace($Entry.mdi)
+    $HasFile = -not [string]::IsNullOrWhiteSpace($Entry.file)
+    if ($HasMdi -eq $HasFile)
+    { throw "Manifest entry '$($Entry.semantic)' must have exactly one of 'mdi' or 'file'" }
 
-    $SvgPath = Join-Path $MdiDir "$($Entry.mdi).svg"
-    if (-not (Test-Path $SvgPath))
-    { throw "Vendored SVG missing for '$($Entry.semantic)': $SvgPath — run Import-MdiIcon.ps1 -Name $($Entry.mdi)" }
+    if ($HasMdi)
+    {
+        # The typo oracle: the pinned metadata is the authority on what MDI ships.
+        if (-not $KnownMdiNames.Contains($Entry.mdi))
+        { throw "Unknown MDI icon name '$($Entry.mdi)' (semantic '$($Entry.semantic)') — not present in the pinned $($Manifest._meta.mdiVersion) index ($NamesPath). Check spelling against https://pictogrammers.com/library/mdi/" }
+
+        $SvgPath = Join-Path $MdiDir "$($Entry.mdi).svg"
+        if (-not (Test-Path $SvgPath))
+        { throw "Vendored SVG missing for '$($Entry.semantic)': $SvgPath — run Import-MdiIcon.ps1 -Name $($Entry.mdi)" }
+    }
+    else
+    {
+        $SvgPath = Join-Path $PluginRoot "Resources/Icons/$($Entry.file).svg"
+        if (-not (Test-Path $SvgPath))
+        { throw "Vendored SVG missing for '$($Entry.semantic)': $SvgPath" }
+    }
 
     $Svg = Get-Content $SvgPath -Raw
-    if ($Svg -notmatch 'fill="#FFFFFF"')
-    { throw "SVG is not recoloured (no fill=`"#FFFFFF`" on its paths) and would rasterize as an untintable black glyph: $SvgPath" }
+    if (($Svg -notmatch 'fill="#FFFFFF"') -and ($Svg -notmatch 'fill="white"') -and ($Svg -notmatch 'stroke="#FFFFFF"') -and ($Svg -notmatch 'stroke="white"'))
+    { throw "SVG has no white ink (fill or stroke) and would rasterize as an untintable black glyph: $SvgPath" }
 
     foreach ($Forbidden in @('<style', '<text', '<filter', 'class='))
     {
@@ -124,6 +137,9 @@ $H.Add('        const TCHAR* RelativePath;')
 $H.Add('    };')
 $H.Add('')
 $H.Add('    CKEDITORTOOLS_API auto Get_GeneratedEntries() -> TConstArrayView<FGeneratedEntry>;')
+$H.Add('')
+$H.Add('    // The decorative pool: stable hash-picked variety glyphs for archetypes without a bespoke icon.')
+$H.Add('    CKEDITORTOOLS_API auto Get_GeneratedPool() -> TConstArrayView<ECk_Icon>;')
 $H.Add('}')
 $H.Add('')
 $H.Add('// --------------------------------------------------------------------------------------------------------------------')
@@ -143,11 +159,28 @@ $C.Add('        static const FGeneratedEntry Entries[] =')
 $C.Add('        {')
 foreach ($Entry in $Icons)
 {
-    $C.Add("            { ECk_Icon::$($Entry.semantic), TEXT(`"$($Entry.semantic)`"), TEXT(`"Mdi/$($Entry.mdi)`") },")
+    $RelativePath = if ([string]::IsNullOrWhiteSpace($Entry.file)) { "Mdi/$($Entry.mdi)" } else { $Entry.file }
+    $C.Add("            { ECk_Icon::$($Entry.semantic), TEXT(`"$($Entry.semantic)`"), TEXT(`"$RelativePath`") },")
 }
 $C.Add('        };')
 $C.Add('')
 $C.Add('        return Entries;')
+$C.Add('    }')
+$C.Add('')
+$C.Add('    auto')
+$C.Add('        Get_GeneratedPool()')
+$C.Add('        -> TConstArrayView<ECk_Icon>')
+$C.Add('    {')
+$C.Add('        static const ECk_Icon Pool[] =')
+$C.Add('        {')
+foreach ($Entry in $Icons)
+{
+    if ($Entry.pool -eq $true)
+    { $C.Add("            ECk_Icon::$($Entry.semantic),") }
+}
+$C.Add('        };')
+$C.Add('')
+$C.Add('        return Pool;')
 $C.Add('    }')
 $C.Add('}')
 $C.Add('')
