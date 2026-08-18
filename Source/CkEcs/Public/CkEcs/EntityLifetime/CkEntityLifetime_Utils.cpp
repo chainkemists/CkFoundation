@@ -11,6 +11,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h" // FFragment_EntityScript_Current + FTag_EntityScript_HasBegunPlay (ConstructSpawned stamp)
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
+#include "CkEcs/Persistence/CkPersistenceHydration.h" // entries queued on a dying entity are a counted loss
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/Tag/CkTag_EditorOnly.h"
 #include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // leaving the quarantine is part of entering destruction
@@ -44,6 +45,43 @@ namespace ck_entity_lifetime_utils
         auto Registry = InHandle.Get_RegistryView();
         auto& Ctx = Registry.SetContext<ck::FCtx_HydrationQuarantine>();
         Ctx._Count = FMath::Max(0, Ctx._Count - 1);
+    }
+
+    // The other half of entering destruction during a load: whatever the entity still had queued dies with it.
+    // Counted here because this is the last moment the entries are knowable, and REMOVED here so each one is
+    // counted exactly once — the dispatcher's view carries CK_IGNORE_PENDING_KILL, so left in place the same
+    // entries would also be applied (or swept as unapplied) after being written off, and the load report's
+    // payload closure would over-sum. Applying restored state to an entity already entering destruction buys
+    // nothing either way.
+    auto
+        DoAbandon_PendingHydration(
+            FCk_Handle& InHandle)
+        -> void
+    {
+        if (NOT InHandle.Has<ck::FFragment_PendingHydration>())
+        { return; }
+
+        const auto Outstanding = InHandle.Get<ck::FFragment_PendingHydration>().Get_Entries().Num();
+
+        InHandle.Try_Remove<ck::FTag_Hydration_PendingApply>();
+        InHandle.Try_Remove<ck::FFragment_PendingHydration>();
+
+        if (Outstanding <= 0)
+        { return; }
+
+        auto Registry = InHandle.Get_RegistryView();
+        if (auto* Outcomes = Registry.TryGetContext<ck::FCtx_HydrationOutcomes>())
+        { Outcomes->_DestroyedWithEntries += Outstanding; }
+    }
+
+    // Both halves, at every site that stamps destroy-initiate.
+    auto
+        DoEnter_Destruction(
+            FCk_Handle& InHandle)
+        -> void
+    {
+        DoLeave_HydrationQuarantine(InHandle);
+        DoAbandon_PendingHydration(InHandle);
     }
 }
 
@@ -86,7 +124,7 @@ auto
 
     ck::ecs::VeryVerbose(TEXT("Entity [{}] set to 'Initiate Destruction'"), InHandle);
     InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
-    ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InHandle);
+    ck_entity_lifetime_utils::DoEnter_Destruction(InHandle);
     INC_DWORD_STAT(STAT_CkEcs_EntitiesDestroyed);
 
     auto LifetimeDependents = Get_LifetimeDependents(InHandle);
@@ -564,7 +602,7 @@ auto
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
     {
         InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>();
-        ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InNewEntity);
+        ck_entity_lifetime_utils::DoEnter_Destruction(InNewEntity);
     }
 
     if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())
@@ -611,7 +649,7 @@ auto
     if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
     {
         InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
-        ck_entity_lifetime_utils::DoLeave_HydrationQuarantine(InEntity);
+        ck_entity_lifetime_utils::DoEnter_Destruction(InEntity);
     }
 
     if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Teardown>())

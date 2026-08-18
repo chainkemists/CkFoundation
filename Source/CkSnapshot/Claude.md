@@ -339,11 +339,26 @@ naming the failure. Skips are not necessarily losses: `NonPersistedOwnerNotRespa
 boot infra the fresh world re-creates itself, while `BuildFailed` is real data loss. This module does not judge
 which is which.
 
-**The report accounts for 100% of the save.** Entities partition into restored + skipped + orphaned; payloads into
-enqueued + on-skipped + on-orphaned + on-unresolved-owner + dropped (a failed deserialize). `Get_IsAccountingClosed`
-asserts both sums, `DoHydrate_Enqueue` ensures on it, and the summary Display line prints every bucket. A payload
-whose owner id is absent from the entity table, or whose mapped handle went invalid, is the `on-unresolved-owner`
-bucket — it exists so nothing has to be inferred by subtraction.
+**The report accounts for 100% of the save, and it closes on APPLY.** Entities partition into restored + skipped +
+orphaned. Payloads partition by what each row RESULTED IN: applied + rejected + dropped-no-handler +
+dropped-timeout + destroyed-with-entries + unapplied-at-finish + on-skipped + on-orphaned + on-unresolved-owner +
+dropped (a failed deserialize). `Get_IsAccountingClosed` asserts both sums and `DoFinish_Load` ensures on it —
+**not** `DoHydrate_Enqueue`, because at enqueue time nothing has been applied yet and the question the closure asks
+has no answer. `_PayloadsEnqueued` survives as the useful mid-load diagnostic but is no longer a term: it says a row
+reached the queue, so a report that balanced on it balanced just as happily on a load that dropped everything it
+enqueued (F-U1.3). A payload whose owner id is absent from the entity table, or whose mapped handle went invalid, is
+the `on-unresolved-owner` bucket — it exists so nothing has to be inferred by subtraction.
+
+The four apply buckets come from `ck::FCtx_HydrationOutcomes` (`CkEcs/Persistence/CkPersistenceHydration.h`), a
+registry context the load zeroes when the post-travel world comes up and `DoFinish_Load` reads exactly ONCE.
+`ck::persistence_apply::ApplyOne` increments it per terminal outcome. Two consequences worth knowing:
+
+- **Post-fold outcomes are logged, never retro-counted.** The dispatcher is not load-gated, so it keeps draining
+  after the load goes Idle; anything still queued at the fold is counted as `unapplied-at-finish`, which is the
+  honest name for "in flight when the snapshot was taken" — some of it may apply a frame later.
+- **Entries on an entity entering destruction are written off where destruction begins** (`Request_DestroyEntity`),
+  counted as `destroyed-with-entries` and REMOVED there. Counting without removing would put one payload row in two
+  buckets: the dispatcher ignores pending-kill, so the same entries would also be applied or swept afterwards.
 
 `SaveKey` is stable identity, not provenance. A SaveKey-only level actor remains `EngineOwned` and must already
 exist in the fresh world. A bridged entity carrying `FFragment_ActorSpawnIntent` is explicitly snapshot-respawnable,
