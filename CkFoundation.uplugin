@@ -379,7 +379,7 @@
     {
       "Name": "CkEditorTools",
       "Type": "Runtime",
-      "LoadingPhase": "Default",
+      "LoadingPhase": "PreDefault",
       "WhitelistPlatforms": [
         "Win64",
         "Mac",
