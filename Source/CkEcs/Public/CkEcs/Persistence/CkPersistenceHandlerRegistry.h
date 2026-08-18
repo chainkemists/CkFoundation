@@ -160,6 +160,16 @@ public:
     Get_SaveHandlerTypes() -> TArray<const UScriptStruct*>;
 
     /**
+     * EVERY registered payload type, sorted the same way — not just the save-participating subset above.
+     * Exists so a fence can enumerate the registrations themselves instead of inferring them from a
+     * reflection walk, which cannot see a wire-only registration at all. Pair it with Find() to read the
+     * handler's shape: Produce + HydrationApply is save participation, NetApply without Produce is
+     * wire-only, and anything else is a registration nobody can read an intent from.
+     */
+    static auto
+    Get_RegisteredTypes() -> TArray<const UScriptStruct*>;
+
+    /**
      * Register a single catch-all handler consulted by Resolve() when no per-type handler matches.
      * Used by runtime-typed features (e.g. dynamic fragments) whose payload UScriptStruct is not
      * known at compile time, so per-type registration is impossible. The fallback only ever sees

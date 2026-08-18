@@ -96,6 +96,25 @@ auto
 
 auto
     FCk_PersistenceHandlerRegistry::
+    Get_RegisteredTypes()
+    -> TArray<const UScriptStruct*>
+{
+    if (_PendingHandlers.Num() > 0)
+    { ResolvePending(); }
+
+    auto Types = TArray<const UScriptStruct*>{};
+    Types.Reserve(_Handlers.Num());
+    for (const auto& Pair : _Handlers)
+    { Types.Add(Pair.Key); }
+
+    Types.Sort([](const UScriptStruct& InA, const UScriptStruct& InB)
+    { return InA.GetPathName() < InB.GetPathName(); });
+
+    return Types;
+}
+
+auto
+    FCk_PersistenceHandlerRegistry::
     Find(
         const UScriptStruct* InType)
     -> const FHandler*
