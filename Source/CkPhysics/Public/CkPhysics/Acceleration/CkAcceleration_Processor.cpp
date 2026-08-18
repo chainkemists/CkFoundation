@@ -43,54 +43,37 @@ namespace ck
             FFragment_Acceleration_Current& InCurrent) const
         -> void
     {
-        const auto& Params = InParams.Get_Params();
-
-        // Setup treats this Durable fragment as an INPUT, never as something to re-derive. Add already
-        // seeded _CurrentAcceleration from the params, and on a load the SAVED acceleration is applied
-        // BEFORE Setup runs — so re-deriving it here overwrites a restored acceleration with the starting
-        // one on every load. The only work genuinely left is the LOCAL->world conversion, which is deferred
-        // to Setup solely because it needs a Transform that may not exist yet at Add time; it is correct
-        // only while the value is still the untouched construct seed.
-        if (InCurrent._CurrentAcceleration != Params.Get_StartingAcceleration())
+        // Setup treats this Durable fragment as an INPUT, never as something to re-derive. Add already seeded
+        // _CurrentAcceleration from the params, and on a load the SAVED acceleration is applied BEFORE Setup
+        // runs — so re-deriving it here would overwrite a restored acceleration with the starting one on every
+        // load. What is genuinely deferred to Setup is the LOCAL->world conversion, which needs a Transform
+        // that may not exist yet at Add time — and the entities that still owe it are the ones Add MARKED, not
+        // the ones whose value happens to read back equal to the starting param. A rotated entity restored to
+        // an acceleration numerically equal to its local starting value is the case a value comparison
+        // converts twice.
+        if (NOT InHandle.Try_Remove<FTag_Acceleration_NeedsWorldConversion>())
         { return; }
 
-        switch(const auto& Coordinates = Params.Get_Coordinates())
+        const auto DoGetRotationFromEntityOrTargetEntity = [&]() -> FRotator
         {
-            case ECk_LocalWorld::Local:
+            if (UCk_Utils_Transform_UE::Has(InHandle))
             {
-                const auto DoGetRotationFromEntityOrTargetEntity = [&]() -> FRotator
-                {
-                    if (UCk_Utils_Transform_UE::Has(InHandle))
-                    {
-                        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
-                        return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
-                    }
-
-                    CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle),
-                        TEXT("Entity [{}] does NOT have Transform info nor does it have an AccelerationTarget. "
-                             "Unable to convert Acceleration to LOCAL coordinates"),
-                        InHandle)
-                    { return {}; }
-
-                    const auto AccelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
-                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(AccelerationTarget);
-                };
-
-                const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
-                InCurrent._CurrentAcceleration = Rotation.RotateVector(Params.Get_StartingAcceleration());
-                break;
+                const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
+                return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
             }
-            case ECk_LocalWorld::World:
-            {
-                InCurrent._CurrentAcceleration = Params.Get_StartingAcceleration();
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(Coordinates);
-                break;
-            }
-        }
+
+            CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle),
+                TEXT("Entity [{}] does NOT have Transform info nor does it have an AccelerationTarget. "
+                     "Unable to convert Acceleration to LOCAL coordinates"),
+                InHandle)
+            { return {}; }
+
+            const auto AccelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
+            return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(AccelerationTarget);
+        };
+
+        const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
+        InCurrent._CurrentAcceleration = Rotation.RotateVector(InParams.Get_Params().Get_StartingAcceleration());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

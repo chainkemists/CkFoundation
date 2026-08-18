@@ -25,6 +25,12 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Acceleration_NeedsSetup);
 
+    // Stamped by Add on entities whose starting acceleration is expressed in LOCAL coordinates, and consumed by
+    // Setup once a Transform exists to rotate against. Session state: it records work still owed, not a fact
+    // about the entity, so it must never be captured. A hydrated acceleration is already world-space, so the
+    // hydration handler clears it — the conversion is owed by a construct seed, never by a restored value.
+    CK_DEFINE_ECS_TAG(FTag_Acceleration_NeedsWorldConversion);
+
     CK_DEFINE_ECS_TAG(FTag_AccelerationChannel);
     CK_DEFINE_ECS_TAG(FTag_AccelerationModifier);
     CK_DEFINE_ECS_TAG(FTag_AccelerationModifier_NeedsSetup);
