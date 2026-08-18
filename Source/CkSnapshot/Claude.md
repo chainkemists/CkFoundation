@@ -415,7 +415,20 @@ CkTests and the game cite them by number, so they never get renumbered. The actu
 | 3 | `FTag_ConstructSpawned` **with a real (named) label** | `ConstructSpawned`. Unlabeled ⇒ save-transient, skipped + counted; a payload on one is an AUDIT Warning |
 | 4 | `FFragment_SpawnRecipe` (retained EntityScript spawn recipe) | `RuntimeSpawned`. Two branch positions: **4a** = recipe **AND** `FFragment_ActorSpawnIntent`, tested BEFORE rule 2; **4b** = recipe alone, tested after rule 3 |
 | 4.5 | `FFragment_BuildRecipe` (built via `Request_BuildAndReplicate`) | `DefinitionBuilt` |
-| 5 | none of the above — anonymous scratch | skip + count |
+| 5 | none of the above — anonymous scratch | skip + count; a payload on one is recorded in the SAVE REPORT (below), not warned about |
+
+**Rule 5 and runtime-created features — the C5 statement.** A feature composed after construction (a timer an SM
+state starts, one a request handler arms) has no construction recipe and no save identity, so rule 5 skips it and
+its state does not persist. That is the DESIGNED outcome under C5: the durable intent is the deadline, held by the
+owning feature, whose Setup re-creates the timer from it — a restored timer entity would be resuming a plan the
+world has already moved past. What was wrong before is only that the omission was INVISIBLE: nothing counted it,
+nothing named it, and an author could not tell a deliberate session-scoped loss from a silent drop (three
+BusterBlock timers vanished exactly this way). So the capture now records each one in
+`FCk_Snapshot_SaveReport::_UncapturedRuntimeEntities` (entity + first producing type), emits ONE summary Display
+line per save, and puts the per-entity detail at Verbose. Deliberately NOT a Warning: it is a census of a designed
+outcome, and the AngelScript autotest runner escalates warnings to failures, so warning here would fail every test
+that saves. A feature that genuinely needs its runtime state to survive gives the entity durable identity (a
+SaveKey) or moves the state to its persisted owner — the report is what makes that decision informed.
 
 Three things the table alone does not say:
 
@@ -427,6 +440,10 @@ Three things the table alone does not say:
 - **4a precedes rule 2**, which is what makes `ActorSpawnIntent` and `SaveKey` alternatives rather than a
   duplicate source: a KEYED bridged entity is still loader-respawned, and its key is retained and republished
   after rebuild (see the table under *Provenance*).
+- **The world transient is resolved up front and skipped — and a handler that PRODUCES for it now warns.** That
+  one IS a declaration defect rather than a design choice: durable state was put somewhere the save cannot reach,
+  and no type-level ratchet can see it, because the payload type is perfectly fine and only its owner is
+  unpersistable.
 
 The transient entity is resolved up front and never persisted (bookkeeping, not world state). Truly empty entities
 never even appear as candidates; they would fall to rule 5 anyway. Classified entries are then sorted by lifetime
