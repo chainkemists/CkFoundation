@@ -101,7 +101,7 @@ auto
         { continue; }
 
         Entry._PendingApply = true;
-        Entry._PendingForSeconds = 0.0f;
+        Entry._PendingSinceRealTimeSeconds = 0.0;
         Entity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
     }
 }

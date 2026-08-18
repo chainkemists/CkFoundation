@@ -7,6 +7,8 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include <HAL/PlatformTime.h> // FPlatformTime::Seconds — the apply timeout is a WALL-clock watchdog
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Hydration_Dispatch);
@@ -71,8 +73,7 @@ namespace ck::persistence_apply
             FCk_Handle& InEntity,
             const FInstancedStruct& InData,
             const TOptional<FInstancedStruct>& InOldData,
-            float& InOutPendingForSeconds,
-            FCk_Time InDeltaT)
+            double& InOutPendingSinceRealTimeSeconds)
         -> EApplyOutcome
     {
         const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(InData.GetScriptStruct());
@@ -97,9 +98,16 @@ namespace ck::persistence_apply
         if (ApplyResult == ECk_Persistence_ApplyResult::Rejected)
         { return EApplyOutcome::DroppedRejected; }
 
-        InOutPendingForSeconds += InDeltaT.Get_Seconds();
+        // WALL time: this watchdog has to keep running while a load holds game time frozen, or the one bound on
+        // a payload nothing will ever accept never fires and the entry degrades into an unnamed loss instead.
+        // 0.0 is the unstamped sentinel — FPlatformTime::Seconds() never returns it in practice.
+        const auto NowRealTimeSeconds = FPlatformTime::Seconds();
+        if (InOutPendingSinceRealTimeSeconds == 0.0)
+        { InOutPendingSinceRealTimeSeconds = NowRealTimeSeconds; }
 
-        if (InOutPendingForSeconds >= ck::PendingApplyTimeoutSeconds)
+        const auto PendingForSeconds = NowRealTimeSeconds - InOutPendingSinceRealTimeSeconds;
+
+        if (PendingForSeconds >= ck::PendingApplyTimeoutSeconds)
         {
             CK_TRIGGER_ENSURE(
                 TEXT("Hydration payload [{}] on entity [{}] was never applied: Apply kept returning NotReady for "
@@ -108,7 +116,7 @@ namespace ck::persistence_apply
                      "or on any other non-kernel processor's output, because a load holds the entity out of those "
                      "processors' views until this payload applies — Setup runs AFTER hydration, reading the "
                      "restored values as its inputs. Dropping the entry."),
-                ck_persistence_hydration_processor::DoGet_PayloadTypeName(InData), InEntity, InOutPendingForSeconds);
+                ck_persistence_hydration_processor::DoGet_PayloadTypeName(InData), InEntity, PendingForSeconds);
 
             return EApplyOutcome::DroppedTimeout;
         }
@@ -121,11 +129,10 @@ namespace ck::persistence_apply
             FCk_Handle& InEntity,
             const FInstancedStruct& InData,
             const TOptional<FInstancedStruct>& InOldData,
-            float& InOutPendingForSeconds,
-            FCk_Time InDeltaT)
+            double& InOutPendingSinceRealTimeSeconds)
         -> EApplyOutcome
     {
-        const auto Outcome = DoApplyOne(InEntity, InData, InOldData, InOutPendingForSeconds, InDeltaT);
+        const auto Outcome = DoApplyOne(InEntity, InData, InOldData, InOutPendingSinceRealTimeSeconds);
         ck_persistence_hydration_processor::DoRecord_Outcome(InEntity, InData, Outcome);
         return Outcome;
     }
@@ -169,7 +176,7 @@ namespace ck
         {
             // No per-entry coalescing on the load path (unlike the net FastArray) — the Old side is always unset.
             const auto Outcome = ck::persistence_apply::ApplyOne(
-                InHandle, Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingForSeconds, InDeltaT);
+                InHandle, Entries[Index], TOptional<FInstancedStruct>{}, InPending._PendingSinceRealTimeSeconds);
 
             if (Outcome == ck::persistence_apply::EApplyOutcome::StillPending)
             { AnyStillPending = true; }
@@ -178,7 +185,7 @@ namespace ck
         }
 
         if (NOT AnyStillPending)
-        { InPending._PendingForSeconds = 0.0f; }
+        { InPending._PendingSinceRealTimeSeconds = 0.0; }
 
         if (Entries.IsEmpty())
         {

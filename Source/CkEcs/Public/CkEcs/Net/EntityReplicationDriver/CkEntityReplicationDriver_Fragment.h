@@ -48,11 +48,14 @@ namespace ck
         friend class FProcessor_ReplicationDriver_FireOnDependentReplicationComplete;
 
     private:
-        float _Seconds = 0.0f;
+        // WALL-clock stamp (FPlatformTime::Seconds) of the first gate-held tick; 0.0 while nothing is held. Wall
+        // time because a snapshot load freezes game time for its whole duration — and the load is exactly when
+        // this report matters, since a client's release from the hold waits on the replication this reports on.
+        double _StalledSinceRealTimeSeconds = 0.0;
         bool  _Reported = false;
 
     public:
-        CK_PROPERTY_GET(_Seconds);
+        CK_PROPERTY_GET(_StalledSinceRealTimeSeconds);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
