@@ -21,6 +21,12 @@ static struct FVelocityRepHandlerRegistrar
             { return ECk_Persistence_ApplyResult::NotReady; }
 
             UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value, {});
+
+            // The value that just landed is already world-space — it was produced from a converted one. Setup
+            // runs after hydration, so leaving the debt standing would rotate a restored velocity a second
+            // time. Applies to the net receive for the same reason: the wire carries world-space too.
+            Entity.Try_Remove<ck::FTag_Velocity_NeedsWorldConversion>();
+
             return ECk_Persistence_ApplyResult::Applied;
         };
 

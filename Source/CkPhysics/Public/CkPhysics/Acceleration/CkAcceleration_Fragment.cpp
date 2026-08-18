@@ -21,6 +21,12 @@ static struct FAccelerationRepHandlerRegistrar
             { return ECk_Persistence_ApplyResult::NotReady; }
 
             UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value, {});
+
+            // The value that just landed is already world-space — it was produced from a converted one. Setup
+            // runs after hydration, so leaving the debt standing would rotate a restored acceleration a second
+            // time. Applies to the net receive for the same reason: the wire carries world-space too.
+            Entity.Try_Remove<ck::FTag_Acceleration_NeedsWorldConversion>();
+
             return ECk_Persistence_ApplyResult::Applied;
         };
 

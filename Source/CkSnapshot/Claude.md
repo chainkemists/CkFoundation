@@ -175,6 +175,15 @@ immediately anyway: enqueue the feature's own deferred `Request_*` (its `HandleR
 after `Setup` and excludes the setup marker), or park the payload in a fragment a post-Setup processor consumes
 (`FFragment_Sm_HydrationResume`, `FFragment_RenderTarget_HydrationReplay`), and return `Applied`.
 
+**The mirror rule, on Setup's side: work Setup still owes a construct seed is tracked with a marker, never
+inferred from the value.** A Setup that finishes what `Add` started — Velocity's and Acceleration's
+local→world conversion is the shipped case, since the `Transform` to rotate against may not exist at `Add`
+time — cannot ask "does this still look like the starting param?" to decide whether the work is outstanding.
+It looks exactly like it for the entity whose saved value *is* the starting param, and that entity gets
+converted a second time on every load. `Add` stamps a Session marker, `Setup` consumes it, and the hydration
+handler removes it because a restored value is already in final form. The value answers *what*; only a marker
+answers *what has been done to it*.
+
 ### 4. Re-arm the Replicate pass
 
 Authority hydration writes values directly, but must leave the feature's Replicate pass **armed** so post-load

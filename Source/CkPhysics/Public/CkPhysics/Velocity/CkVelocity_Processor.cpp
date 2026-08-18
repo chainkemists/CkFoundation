@@ -79,54 +79,36 @@ namespace ck
         // The regular Velocity fragments are still added even when a MovementComponent makes them
         // inapplicable — they are what the gameplay debugger reads.
 
-        const auto& Params = InParams.Get_Params();
-
         // Everything above is Session state Setup owns. The velocity itself is NOT: Add already seeded
-        // _CurrentVelocity from the params, and on a load the SAVED velocity is applied BEFORE Setup runs,
-        // so re-deriving it here overwrites a restored velocity with the starting one on every load. The
-        // seeding below is deferred to Setup solely for the LOCAL->world conversion, which needs a Transform
-        // that may not exist yet at Add time — and it is correct only while the value is still the
-        // untouched construct seed.
-        if (InCurrent._CurrentVelocity != Params.Get_StartingVelocity())
+        // _CurrentVelocity from the params, and on a load the SAVED velocity is applied BEFORE Setup runs, so
+        // re-deriving it here would overwrite a restored velocity with the starting one on every load. What is
+        // genuinely deferred to Setup is the LOCAL->world conversion, which needs a Transform that may not
+        // exist yet at Add time — and the entities that still owe it are the ones Add MARKED, not the ones
+        // whose value happens to read back equal to the starting param. A rotated entity restored to a
+        // velocity numerically equal to its local starting value is the case a value comparison converts twice.
+        if (NOT InHandle.Try_Remove<FTag_Velocity_NeedsWorldConversion>())
         { return; }
 
-        switch(const auto& Coordinates = Params.Get_Coordinates())
+        const auto DoGet_RotationFromEntityOrTargetEntity = [&]() -> FRotator
         {
-            case ECk_LocalWorld::Local:
+            if (UCk_Utils_Transform_UE::Has(InHandle))
             {
-                const auto DoGet_RotationFromEntityOrTargetEntity = [&]() -> FRotator
-                {
-                    if (UCk_Utils_Transform_UE::Has(InHandle))
-                    {
-                        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
-                        return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
-                    }
-
-                    CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle),
-                        TEXT("Entity [{}] does NOT have Transform info nor does it have an VelocityTarget. "
-                             "Unable to convert Velocity to LOCAL coordinates"),
-                        InHandle)
-                    { return {}; }
-
-                    const auto VelocityTarget = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
-                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(VelocityTarget);
-                };
-
-                const auto& Rotation = DoGet_RotationFromEntityOrTargetEntity();
-                InCurrent._CurrentVelocity = Rotation.RotateVector(Params.Get_StartingVelocity());
-                break;
+                const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
+                return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
             }
-            case ECk_LocalWorld::World:
-            {
-                InCurrent._CurrentVelocity = Params.Get_StartingVelocity();
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(Coordinates);
-                break;
-            }
-        }
+
+            CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle),
+                TEXT("Entity [{}] does NOT have Transform info nor does it have an VelocityTarget. "
+                     "Unable to convert Velocity to LOCAL coordinates"),
+                InHandle)
+            { return {}; }
+
+            const auto VelocityTarget = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
+            return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(VelocityTarget);
+        };
+
+        const auto& Rotation = DoGet_RotationFromEntityOrTargetEntity();
+        InCurrent._CurrentVelocity = Rotation.RotateVector(InParams.Get_Params().Get_StartingVelocity());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
