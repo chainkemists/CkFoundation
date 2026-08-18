@@ -46,6 +46,11 @@ namespace ck
 
 namespace ck::jolt
 {
+    // How many fixed steps a load's convergence phase is granted per frame, and how many must have run before
+    // physics counts as converged. Two is the smallest number that can settle a restored contact: the first step
+    // produces the contacts and the second is what proves the queue that routed them came back empty.
+    inline constexpr int32 kConvergePhysicsSteps = 2;
+
     // One frame's fixed-timestep plan — pure math over accumulator + frame delta, so tests can pin it.
     struct CKJOLT_API FCk_Jolt_StepPlan
     {
@@ -268,6 +273,27 @@ namespace ck
          */
         auto TryConsume_DebugPauseGate() -> bool;
 
+        // ---- Load-convergence step grant (game-thread only) ----
+        /*
+         * Runs N fixed steps on the next frame that steps, independently of that frame's delta AND of the debug
+         * pause. It exists for a snapshot load: a load holds global time dilation at its floor, so the frame delta
+         * plans zero steps and a restored world would be handed back with its bodies never settled and its contact
+         * queue never routed.
+         *
+         * Distinct from the debug step-once gate. That one PERMITS a step the pause is refusing, and only while
+         * paused; this one COMMANDS N whatever the world's own pacing says. Repeat grants before the next
+         * consumption do NOT queue — the pending grant is the MAX, so a driver granting every frame cannot bank a
+         * burst against a frame the engine happened to block.
+         */
+        auto Request_GrantFixedSteps(int32 InNumSteps) -> void;
+
+        /*
+         * The grant, CONSUMED once per frame by FProcessor_JoltWorld_PlanStep and nothing else — the same rule the
+         * debug gate follows, for the same reason: the plan is what the Step processor executes, so a flag
+         * interpreted downstream would bypass the accumulator model. Returns 0 when nothing is granted.
+         */
+        auto TryConsume_GrantedFixedSteps() -> int32;
+
         // ---- Step duration (written on the step thread, read anywhere) ----
         auto Set_LastStepDurationMs(float InDurationMs) -> void;
         auto Get_LastStepDurationMs() const -> float;
@@ -364,6 +390,19 @@ namespace ck
         bool _IsDebugPaused = false;
         bool _StepOnceRequested = false;
         bool _StepOnceGrantedThisFrame = false;
+
+        // ---- Load-convergence grant state (game thread only) ----
+        int32 _GrantedFixedSteps = 0;         // pending, waiting for the next frame that plans
+        int32 _GrantedStepsThisFrame = 0;     // consumed by PlanStep this frame; READ by Step
+        // Monotonic, never reset: a convergence predicate diffs it against a baseline sampled when the phase
+        // began, so it needs no notion of which load is running.
+        int32 _GrantedStepsExecutedTotal = 0;
+
+        // ---- Contact-drain observability (game thread only) ----
+        // How many routed drains have run, and how many events the most recent one carried. A settled world drains
+        // nothing; a world that has never drained has not established anything either way.
+        uint64 _NumContactDrains = 0;
+        int32  _LastDrainedContactEventCount = 0;
 
         // Written by the step loop, which runs on a TASK GRAPH thread in async mode, and read by the game thread
         // whenever a consumer asks. Relaxed: it is a lone diagnostic scalar that orders nothing.
@@ -478,6 +517,10 @@ namespace ck
         CK_PROPERTY_GET(_Debug_NumPersistedContactEventsTotal);
         CK_PROPERTY_GET(_IsDebugPaused);
         CK_PROPERTY_GET(_StepOnceGrantedThisFrame);
+        CK_PROPERTY(_GrantedStepsThisFrame);
+        CK_PROPERTY_GET(_GrantedStepsExecutedTotal);
+        CK_PROPERTY_GET(_NumContactDrains);
+        CK_PROPERTY_GET(_LastDrainedContactEventCount);
     };
 }
 

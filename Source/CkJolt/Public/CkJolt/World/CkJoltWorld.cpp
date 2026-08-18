@@ -274,6 +274,11 @@ namespace ck
         auto Events = TArray<FCk_Jolt_ContactEvent>{};
         _DrainQueueFn(Events);
 
+        // Recorded BEFORE the empty early-out below, because an empty drain is the observation that matters: a
+        // world whose last drain carried nothing has no contacts still working their way out of the solve.
+        ++_NumContactDrains;
+        _LastDrainedContactEventCount = Events.Num();
+
         for (const auto& Event : Events)
         {
             if (Event.Type == FCk_Jolt_ContactEvent::EType::Persisted)
@@ -442,6 +447,38 @@ namespace ck
         _StepOnceGrantedThisFrame = true;
 
         return false;
+    }
+
+    auto
+        FJoltWorld::
+        Request_GrantFixedSteps(
+            int32 InNumSteps)
+        -> void
+    {
+        if (InNumSteps <= 0)
+        {
+            ck::jolt::Verbose(TEXT("Ignoring Jolt Request_GrantFixedSteps: [{}] is not a number of steps to run"),
+                InNumSteps);
+            return;
+        }
+
+        // MAX, not +=. A driver that grants every frame while the engine is blocking the world would otherwise
+        // bank a burst and spend it all on the first frame that runs, which is the spiral the fixed-step pump's
+        // own clamp exists to prevent.
+        _GrantedFixedSteps = FMath::Max(_GrantedFixedSteps, InNumSteps);
+    }
+
+    auto
+        FJoltWorld::
+        TryConsume_GrantedFixedSteps()
+        -> int32
+    {
+        _GrantedStepsThisFrame = _GrantedFixedSteps;
+        _GrantedFixedSteps = 0;
+
+        _GrantedStepsExecutedTotal += _GrantedStepsThisFrame;
+
+        return _GrantedStepsThisFrame;
     }
 
     auto
