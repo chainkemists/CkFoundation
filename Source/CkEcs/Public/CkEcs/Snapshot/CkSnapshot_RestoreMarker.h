@@ -6,10 +6,16 @@
 
 namespace ck
 {
-    // Stamped by the load on every restored entity before the load gate opens, so game-side rebind
-    // processors can re-resolve the handles their persisted fragments carry. It survives on the entity
-    // for its whole lifetime, so consumers must pair it with their own once-per-feature dedup.
-    CK_DEFINE_ECS_TAG(FTag_Snapshot_JustRestored);
+    // Stamped by the load on every entity it mapped, beside the hydration quarantine, and NEVER removed: it
+    // records that this entity was part of a load during this session, not that anything is currently pending.
+    // A consumer that wants "my restored state is final" wants the one-shot Promise_OnHydrated instead — this
+    // is a permanent fact, so every reader has to carry its own dedup, which is the trap it is named after.
+    CK_DEFINE_ECS_TAG(FTag_Hydration_WasHydratedThisLoad);
+
+    // The former name, kept so the game's readers compile unchanged while they are swept. It is an alias, not a
+    // second tag: same type, same storage, same stamp. Deleted with UCk_Utils_Snapshot_UE::Get_WasJustRestored
+    // once the sweep lands.
+    using FTag_Snapshot_JustRestored = FTag_Hydration_WasHydratedThisLoad;
 
     // Stamp at creation on any entity that is DERIVED state its owner's construction/redrive recreates on
     // load (canonical: the SM graph). Unstamped, the capture persists it via its SpawnRecipe and respawns

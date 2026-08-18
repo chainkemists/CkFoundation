@@ -1354,13 +1354,13 @@ auto
     DoRestore_SavedOwnership();
     DoApply_SavedTransforms();
 
-    // Game-side rebind processors key off FTag_Snapshot_JustRestored to re-resolve handles their persisted fragments
-    // carry; stamp it before the gate opens so the full post-gate pump sees it.
+    // Game-side rebind processors key off FTag_Hydration_WasHydratedThisLoad to re-resolve handles their persisted
+    // fragments carry; stamp it before the gate opens so the full post-gate pump sees it. It is never removed.
     for (const auto& Pair : _SavedIdMap)
     {
         if (auto Restored = Pair.Value;
             ck::IsValid(Restored))
-        { Restored.AddOrGet<ck::FTag_Snapshot_JustRestored>(); }
+        { Restored.AddOrGet<ck::FTag_Hydration_WasHydratedThisLoad>(); }
     }
 
     // Quarantine the mapped set HERE, beside that stamp, not at row mapping: a RuntimeSpawned row is mapped while
