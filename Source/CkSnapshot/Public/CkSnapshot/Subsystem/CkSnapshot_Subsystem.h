@@ -205,6 +205,12 @@ public:
     auto TestOnly_LastPumpCount() const -> int32 { return _LastPumpCount; }
     auto TestOnly_TryPublish_SaveKeyWithoutDiagnostics(FGuid InKey, FCk_Handle InHandle) -> bool
     { return DoTryPublish_SaveKey(InKey, InHandle, false); }
+
+    // The hydrate frame cap is the quarantine's bounded escape, and proving an escape fires means reaching it —
+    // 600 frames of a load that is deliberately going nowhere. Shortening the fence does not weaken what the test
+    // proves: the exit taken is the same one, reached the same way. Values <= 0 restore the shipping cap.
+    auto TestOnly_Set_HydrateFrameCapOverride(int32 InFrameCap) -> void
+    { _TestOnly_HydrateFrameCapOverride = InFrameCap; }
 #endif
 
 private:
@@ -223,6 +229,11 @@ private:
     // gated world-tick ever sees pending payloads and hydration can only drain in post-gate FULL passes. Why that is
     // load-bearing, and the whole phase walkthrough: CkSnapshot/CLAUDE.md § "The v3 load machine".
     enum class ELoadPhase : uint8 { Idle, TearingDown, AwaitingWorld, Rebuilding, Hydrating, Settling };
+
+    // Why the hydration quarantine came off. Settled is the healthy path — the payload queue drained and the whole
+    // mapped set was released together. The other two are the bounded escapes fail-closed must pair with, and each
+    // names every entity it had to force rather than letting the release read as a normal one.
+    enum class EQuarantineLift : uint8 { Settled, ForcedAtFrameCap, ForcedAtLoadFinish };
 
     auto DoInitiate_Teardown() -> void;                  // Request_DestroyEntity all gameplay roots; record them
     auto DoIs_TeardownComplete() const -> bool;          // all requested roots now invalid
@@ -253,7 +264,17 @@ private:
     auto DoRestore_SavedOwnership() -> void;             // restore mapped lifetime/context links before hydration
     auto DoApply_SavedTransforms() -> void;              // restore each mapped entity's saved WORLD transform (G1)
     auto DoHydrate_Enqueue() -> void;                    // write payloads -> FFragment_PendingHydration + tag (once)
-    auto DoIs_HydrationComplete() const -> bool;         // no live FTag_Hydration_PendingApply remains
+
+    // Two predicates, deliberately not one. The LIFT waits on the payload queue alone; FINISHING waits on the lift
+    // having happened too. Collapsing them is circular — the lift would wait on a condition only the lift can make
+    // true, and every load would burn the frame cap and report forced losses it never had.
+    auto DoIs_PayloadDrainComplete() const -> bool;      // no live FTag_Hydration_PendingApply remains
+    auto DoIs_HydrationComplete() const -> bool;         // the above AND the quarantine is empty
+
+    auto DoStamp_HydrationQuarantine() -> void;                 // quarantine the whole mapped set, at enqueue
+    auto DoLift_HydrationQuarantine(EQuarantineLift InReason) -> void; // release the whole set at once
+    auto DoGet_HydrateFrameCap() const -> int32;                // kLoad_HydrateFrameCap, or a test's override
+
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
 private:
@@ -285,6 +306,10 @@ private:
     FCk_Snapshot_LoadReport _LastLoadReport;           // frozen copy of the last finished load's report (pull channel)
     FCk_Snapshot_SaveReport _LastSaveReport;           // same, for the last attempted save
     bool _HydrationEnqueued = false;                   // Hydrating enqueues payloads exactly once
+    bool _QuarantineStamped = false;                   // the mapped set carries FTag_Hydration_Quarantine right now
+#if WITH_AUTOMATION_TESTS
+    int32 _TestOnly_HydrateFrameCapOverride = 0;       // <= 0 == use kLoad_HydrateFrameCap
+#endif
     int32 _SettleFramesRemaining = 0;                  // post-gate frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once
     int32 _RebuildLastMappedCount = 0;                 // progress tracking: mapped count at the previous rebuild tick

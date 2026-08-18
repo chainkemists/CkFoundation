@@ -23,6 +23,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // Get_SaveHandlerTypes/Resolve (reconcile payload probe)
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply (split Phase 5)
+#include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // FTag_Hydration_Quarantine, FCtx_HydrationQuarantine
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
@@ -557,6 +558,7 @@ void
     _V3LoadReport = FCk_Snapshot_LoadReport{};
     _V3LoadReport.Set_Result(ECk_SnapshotResult::Success);
     _HydrationEnqueued = false;
+    _QuarantineStamped = false;
     _SettleFramesRemaining = 0;
     _SettleStarted = false;
     _RebuildLastMappedCount = 0;
@@ -1360,6 +1362,12 @@ auto
         { Restored.AddOrGet<ck::FTag_Snapshot_JustRestored>(); }
     }
 
+    // Quarantine the mapped set HERE, beside that stamp, not at row mapping: a RuntimeSpawned row is mapped while
+    // still constructing and its finisher is a gated GAME processor, so excluding mapped entities during Rebuilding
+    // starves the very processor the rebuild is waiting on. From this point the rebuild is done and the load owns
+    // these entities' Durable state until the whole set is released together.
+    DoStamp_HydrationQuarantine();
+
     // An orphan is a saved entity that never mapped AND was not deliberately skipped — skips are intentional (the
     // fresh world's boot owns them). Computed before the payload walk so each dropped payload is attributed to the
     // bucket its OWNER landed in rather than to an anonymous continue.
@@ -1506,6 +1514,18 @@ auto
     DoIs_HydrationComplete() const
     -> bool
 {
+    // Drain AND release. The lift gates on DoIs_PayloadDrainComplete alone; if this predicate also gated the lift
+    // it would be waiting on itself, and the settle could only ever exit through the frame cap.
+    return DoIs_PayloadDrainComplete() && NOT _QuarantineStamped;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoIs_PayloadDrainComplete() const
+    -> bool
+{
     const auto World = GetWorld();
     if (ck::Is_NOT_Valid(World))
     { return true; }
@@ -1526,6 +1546,123 @@ auto
         return false;
     }
     return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoGet_HydrateFrameCap() const
+    -> int32
+{
+#if WITH_AUTOMATION_TESTS
+    if (_TestOnly_HydrateFrameCapOverride > 0)
+    { return _TestOnly_HydrateFrameCapOverride; }
+#endif
+    return kLoad_HydrateFrameCap;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoStamp_HydrationQuarantine()
+    -> void
+{
+    auto StampedCount = 0;
+    auto Registry = FCk_Registry{};
+
+    for (auto Restored : _MappedLiveEntities)
+    {
+        if (ck::Is_NOT_Valid(Restored))
+        { continue; }
+
+        Restored.AddOrGet<ck::FTag_Hydration_Quarantine>();
+        Registry = Restored.Get_RegistryView();
+        ++StampedCount;
+    }
+
+    if (StampedCount == 0)
+    { return; }
+
+    Registry.SetContext<ck::FCtx_HydrationQuarantine>()._Count = StampedCount;
+    _QuarantineStamped = true;
+
+    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — quarantined [{}] restored entities until every payload applies"),
+        StampedCount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoLift_HydrationQuarantine(
+        EQuarantineLift InReason)
+    -> void
+{
+    if (NOT _QuarantineStamped)
+    { return; }
+
+    const auto Forced = InReason != EQuarantineLift::Settled;
+    const auto* ReasonText = InReason == EQuarantineLift::ForcedAtFrameCap
+        ? TEXT("hydrate-frame-cap")
+        : TEXT("load-finish");
+
+    auto ReleasedCount = 0;
+    auto ForcedRecords = TArray<FCk_Snapshot_QuarantineForcedRecord>{};
+    auto Registry = FCk_Registry{};
+
+    for (auto Restored : _MappedLiveEntities)
+    {
+        // The set is append-only across the load and is never pruned when an entity is destroyed mid-load, so it
+        // retains stale handles. Removing a fragment through one ensures — skip them rather than storm.
+        if (ck::Is_NOT_Valid(Restored))
+        { continue; }
+
+        Registry = Restored.Get_RegistryView();
+
+        if (NOT Restored.Try_Remove<ck::FTag_Hydration_Quarantine>())
+        { continue; }
+
+        ++ReleasedCount;
+
+        if (NOT Forced || NOT Restored.Has<ck::FTag_Hydration_PendingApply>())
+        { continue; }
+
+        // Forced out with payloads still queued: that IS the loss, and it is named per entity rather than summarised,
+        // because "some payloads did not apply" tells nobody which part of their world came back wrong.
+        const auto Outstanding = Restored.Has<ck::FFragment_PendingHydration>()
+            ? Restored.Get<ck::FFragment_PendingHydration>().Get_Entries().Num()
+            : 0;
+
+        auto Record = FCk_Snapshot_QuarantineForcedRecord{};
+        Record.Set_Identity(ck::Format_UE(TEXT("{}"), Restored));
+        Record.Set_PayloadsOutstanding(Outstanding);
+        Record.Set_Reason(FString{ReasonText});
+        ForcedRecords.Emplace(MoveTemp(Record));
+
+        ck::snapshot::Error(TEXT("Request_Load: entity [{}] was released from the hydration quarantine by the [{}] "
+            "escape with [{}] payload entries still queued — those payloads never applied and its restored state is "
+            "incomplete"), Restored, ReasonText, Outstanding);
+    }
+
+    if (ReleasedCount > 0)
+    { Registry.SetContext<ck::FCtx_HydrationQuarantine>()._Count = 0; }
+
+    _QuarantineStamped = false;
+
+    if (Forced)
+    {
+        const auto ForcedCount = ForcedRecords.Num();
+        _V3LoadReport.Set_QuarantineForced(MoveTemp(ForcedRecords));
+
+        ck::snapshot::Error(TEXT("Request_Load: hydration quarantine FORCED off ([{}]) — released [{}] entities, [{}] "
+            "of them with payloads still pending"), ReasonText, ReleasedCount, ForcedCount);
+        return;
+    }
+
+    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — quarantine lifted for [{}] entities (every payload applied)"),
+        ReleasedCount);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1778,14 +1915,29 @@ auto
             if (_SettleFramesRemaining > 0)
             { --_SettleFramesRemaining; }
 
+            // The whole mapped set comes off quarantine together the moment the payload queue is empty — never one
+            // entity at a time, so a released entity can never read a still-quarantined sibling's fragment. Then at
+            // least one more FULL pump runs before the load finishes, which is the pass the released Setups take.
+            if (_QuarantineStamped && DoIs_PayloadDrainComplete())
+            {
+                DoLift_HydrationQuarantine(EQuarantineLift::Settled);
+                _SettleFramesRemaining = FMath::Max(_SettleFramesRemaining, 1);
+                return true;
+            }
+
+            const auto FrameCap = DoGet_HydrateFrameCap();
             const auto HydrationPending = NOT DoIs_HydrationComplete();
-            if ((HydrationPending || _SettleFramesRemaining > 0) && _LoadFrameCount < kLoad_HydrateFrameCap)
+            if ((HydrationPending || _SettleFramesRemaining > 0) && _LoadFrameCount < FrameCap)
             { return true; }
 
             if (HydrationPending)
             {
                 CK_TRIGGER_ENSURE(TEXT("Request_Load: settle hit the [{}]-frame cap with hydration still pending — "
-                    "finishing anyway (some payloads did not apply)"), kLoad_HydrateFrameCap);
+                    "finishing anyway (some payloads did not apply)"), FrameCap);
+
+                // Fail-closed needs an escape: entities held for a queue that never drained are released here and
+                // each names itself in the report, rather than staying invisible to every processor for the session.
+                DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtFrameCap);
             }
 
             ck::snapshot::Display(TEXT("DIAG: v3 load settled — finishing (restored [{}], orphaned [{}])"),
@@ -1810,6 +1962,10 @@ auto
     if (auto* EcsWorld = DoGet_LoadWorldEcs();
         ck::IsValid(EcsWorld))
     { EcsWorld->Set_IsLoadGateActive(false); }
+
+    // The unconditional escape, covering every route into here — the abort paths included. It runs BEFORE the report
+    // is frozen so anything it has to force is still named in the copy consumers read.
+    DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtLoadFinish);
 
     _LastLoadReport = InReport;
 
