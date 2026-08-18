@@ -14,6 +14,8 @@ public class CkShapes : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
+            // UBodySetupCore::GetCollisionTraceFlag lives here, not in Engine.
+            "PhysicsCore",
 
             "CkCore",
             "CkEcs",
