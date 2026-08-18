@@ -247,6 +247,10 @@ public:
         const UScriptStruct* InStructType,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Binds the NET edge: this fragment's value arrived over the wire. A snapshot load does NOT deliver here —
+    // it broadcasts Hydration_OnTypeHydrated instead, and per-entity readiness is
+    // UCk_Utils_Snapshot_UE::Promise_OnHydrated. Binding this to learn "my value is ready" works only on a
+    // client; on the authority, and after a load anywhere, it never fires.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
               DisplayName="[Ck][DynamicFragment] Bind To OnRepNotify")

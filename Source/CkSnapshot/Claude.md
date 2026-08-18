@@ -504,12 +504,21 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   fragment directly is exactly what a per-entity release would allow. Entering destruction leaves the quarantine
   (`Request_DestroyEntity`), which is why the 143 destruction-pipeline processors need zero exemptions.
 - **`DoConstruct` and `DoBeginPlay` observe construct defaults; restored values are observable only in a
-  quarantine-gated Setup processor.** Neither construction hook is held for the load — holding `DoBeginPlay`
-  would deadlock the features that compose children or spawn from it, and the entity is not hydrated yet when
-  they run, so a Durable fragment read there answers with what `Add` seeded. This is a contract, not a timing
-  accident: the quarantine is what makes the Setup half of it reliable, and it is why a feature that needs a
-  restored value reads it from Setup rather than from construction. `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults`
-  pins it so a future change cannot quietly start holding BeginPlay instead.
+  quarantine-gated Setup processor and in `Promise_OnHydrated`.** Neither construction hook is held for the
+  load — holding `DoBeginPlay` would deadlock the features that compose children or spawn from it, and the
+  entity is not hydrated yet when they run, so a Durable fragment read there answers with what `Add` seeded.
+  This is a contract, not a timing accident: the quarantine is what makes the Setup half of it reliable, and it
+  is why a feature that needs a restored value reads it from Setup rather than from construction.
+  `UCk_Utils_Snapshot_UE::Promise_OnHydrated` is the other half, for a consumer with no Setup processor of its
+  own — a widget, a subsystem, another entity. Bind it FROM `DoBeginPlay`; that is the pairing the contract is
+  built around, and it is why holding BeginPlay was never necessary.
+  `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults` pins both halves so a future change cannot quietly
+  start holding BeginPlay instead.
+- **`Promise_OnHydrated` fires once, after this entity's payloads — and every other mapped entity's — have
+  applied, or immediately if nothing is pending for it.** The immediate path is not a degenerate case: a fresh
+  spawn, a client, a world with no load in flight, and a bind made after the lift all mean the same thing, and
+  a promise that stayed silent on any of them would put every consumer back to polling a marker. It fires for a
+  cap-forced entity too, with that entity's loss already recorded in the report — see the two escapes below.
 - **The SaveKey resolver is re-swept every rebuild tick, not once at world-ready.** On-demand infrastructure
   (ActorRelay channels) stamps its key ticks after BeginPlay, so a one-shot sweep left every such `EngineOwned` row
   unresolvable and orphaned its whole owned subtree. The sweep Resets and rescans the live

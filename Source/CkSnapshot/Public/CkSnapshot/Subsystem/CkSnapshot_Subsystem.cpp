@@ -559,6 +559,7 @@ void
     _V3LoadReport.Set_Result(ECk_SnapshotResult::Success);
     _HydrationEnqueued = false;
     _QuarantineStamped = false;
+    _QuarantineLifted  = false;
     _SettleFramesRemaining = 0;
     _SettleStarted = false;
     _RebuildLastMappedCount = 0;
@@ -1511,6 +1512,23 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    Get_IsHydrationPending(
+        const FCk_Handle& InHandle) const
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    if (NOT _LoadInProgress || _QuarantineLifted)
+    { return false; }
+
+    return _MappedLiveEntities.Contains(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoIs_HydrationComplete() const
     -> bool
 {
@@ -1612,6 +1630,14 @@ auto
     auto ForcedRecords = TArray<FCk_Snapshot_QuarantineForcedRecord>{};
     auto Registry = FCk_Registry{};
 
+    // Collected in pass 1, broadcast in pass 2. Two passes for the same reason the dynamic-fragment hydrator
+    // commits every value before its first notification: a listener that runs while the sweep is half-done sees
+    // some of the set released and the rest still held, which is precisely the torn cross-entity read the global
+    // lift exists to prevent. It also lets the forced-release records reach the report BEFORE the entities they
+    // name get their edge, so a consumer that reacts to OnHydrated by reading the report is not told a lie.
+    auto ReleasedHandles = TArray<FCk_Handle>{};
+    ReleasedHandles.Reserve(_MappedLiveEntities.Num());
+
     for (auto Restored : _MappedLiveEntities)
     {
         // The set is append-only across the load and is never pruned when an entity is destroyed mid-load, so it
@@ -1625,6 +1651,12 @@ auto
         { continue; }
 
         ++ReleasedCount;
+
+        // The once-guard for OnHydrated is this branch and nothing else: only an entity whose tag THIS pass
+        // actually removed gets an edge. A second escape running after a first lift finds nothing to remove and
+        // so broadcasts nothing, which is what keeps "exactly once per entity per load" true across all three
+        // release sites without a separate ledger to keep in sync.
+        ReleasedHandles.Emplace(Restored);
 
         if (NOT Forced || NOT Restored.Has<ck::FTag_Hydration_PendingApply>())
         { continue; }
@@ -1651,6 +1683,10 @@ auto
 
     _QuarantineStamped = false;
 
+    // Before the broadcast, so a listener that binds Promise_OnHydrated on some OTHER entity from inside its
+    // callback is told the truth — nothing is pending any more — instead of waiting on an edge that has passed.
+    _QuarantineLifted = true;
+
     if (Forced)
     {
         const auto ForcedCount = ForcedRecords.Num();
@@ -1658,11 +1694,23 @@ auto
 
         ck::snapshot::Error(TEXT("Request_Load: hydration quarantine FORCED off ([{}]) — released [{}] entities, [{}] "
             "of them with payloads still pending"), ReasonText, ReleasedCount, ForcedCount);
-        return;
+    }
+    else
+    {
+        ck::snapshot::Display(TEXT("DIAG: v3 hydrate — quarantine lifted for [{}] entities (every payload applied)"),
+            ReleasedCount);
     }
 
-    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — quarantine lifted for [{}] entities (every payload applied)"),
-        ReleasedCount);
+    // Pass 2. Every subscriber now observes a set that is entirely released, and — on a forced lift — a report
+    // that already names what was lost. Re-validated per entity because a listener may destroy entities that
+    // appear later in this list.
+    for (auto Released : ReleasedHandles)
+    {
+        if (ck::Is_NOT_Valid(Released))
+        { continue; }
+
+        ck::UUtils_Signal_Hydration_OnHydrated::Broadcast(Released, ck::MakePayload(Released));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

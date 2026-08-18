@@ -597,8 +597,11 @@ FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team
 - `Old` is unset on the first application; otherwise it holds the last APPLIED data (net path only —
   the load path never coalesces, so `HydrationApply`'s `Old` is always unset).
 - Consumer consequence: **`OnConstructed` means composed, not values-applied** — read replicated
-  values only from `Promise_OnReplicationComplete`. Full contract: [CkEcs/Claude.md](CkEcs/Claude.md); the
-  save/load authoring recipe: [CkSnapshot/Claude.md](CkSnapshot/Claude.md).
+  values only from `Promise_OnReplicationComplete`. The load path has the same split and the same
+  consequence: `DoConstruct`/`DoBeginPlay` observe construct defaults, and a RESTORED value is readable
+  in a quarantine-gated `Setup` processor or from `UCk_Utils_Snapshot_UE::Promise_OnHydrated`. Full
+  contract: [CkEcs/Claude.md](CkEcs/Claude.md); the save/load authoring recipe:
+  [CkSnapshot/Claude.md](CkSnapshot/Claude.md).
 
 ### `Request_*` takes the request STRUCT — never loose parameters
 

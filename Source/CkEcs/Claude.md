@@ -651,7 +651,16 @@ Registration lives in the feature's `_Fragment.cpp` on `FCk_PersistenceHandlerRe
 
 Pinned by `Ck.Attribute.Net.Values_AppliedBefore_OnReplicationComplete`, `Float_InitialBakedValue_Replicates`, and `Float_PreComposition_StashedValue_Applies` in CkTests.
 
-The **load path has the same split**, and its first half is the same statement: `DoConstruct` and `DoBeginPlay` observe **construct defaults**. A snapshot load hydrates a restored entity long after both have run, and neither is held for it — holding `DoBeginPlay` would deadlock every feature that composes a child or spawns from it. Restored values are observable in a quarantine-gated **Setup** processor, which the load provably cannot run early. Pinned by `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults`.
+The **load path has the same split**, and its first half is the same statement: `DoConstruct` and `DoBeginPlay` observe **construct defaults**. A snapshot load hydrates a restored entity long after both have run, and neither is held for it — holding `DoBeginPlay` would deadlock every feature that composes a child or spawns from it. Restored values are observable in a quarantine-gated **Setup** processor, which the load provably cannot run early.
+
+Its second half is **`UCk_Utils_Snapshot_UE::Promise_OnHydrated`** — the load-path twin of `Promise_OnReplicationComplete`, for a consumer that has no Setup processor to read from. It fires once per entity, at the load's global quarantine lift, so a callback may read its own entity and every sibling the same load restored; and it fires immediately when nothing is pending for that handle (a fresh spawn, a client, no load in flight, a bind made after the lift). The signal underneath is `ck::UUtils_Signal_Hydration_OnHydrated` (`CkEcs/Persistence/CkPersistenceHydration.h`); its per-TYPE sibling `Hydration_OnTypeHydrated` carries "this fragment type was hydrated" and is what a load broadcasts instead of `OnRepNotify`.
+
+| | Composed, values NOT applied | Values applied |
+|---|---|---|
+| net | `OnConstructed` | `Promise_OnReplicationComplete` |
+| load | `DoConstruct` / `DoBeginPlay` | quarantine-gated `Setup`, or `Promise_OnHydrated` |
+
+Pinned by `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults` and `Ck.Snapshot.Ordering.OnHydratedFiresAfterAllPayloads`.
 
 ### Actor-side unified promise
 
