@@ -47,8 +47,10 @@ public:
     // Set on receive/link, cleared by FProcessor_ReplicatedFragments_Dispatch once Apply succeeds.
     bool _PendingApply = false;
 
-    // Accumulated while Apply keeps returning NotReady; past the timeout the entry is dropped LOUDLY.
-    float _PendingForSeconds = 0.0f;
+    // WALL-clock stamp (FPlatformTime::Seconds) of the first NotReady; 0.0 while nothing is pending. Past the
+    // timeout the entry is dropped LOUDLY. Wall time, not game time: a snapshot load freezes game time for its
+    // whole duration, and a watchdog that stops with the world it is watching never fires.
+    double _PendingSinceRealTimeSeconds = 0.0;
 
     // The Old side of the next Apply: coalesced receives diff against what was APPLIED, not last received
     UPROPERTY(Transient, NotReplicated)

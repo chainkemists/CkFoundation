@@ -10,6 +10,8 @@
 #include "CkEcs/Persistence/CkPersistenceHydration.h"                            // FFragment_PendingHydration (stall report)
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include <HAL/PlatformTime.h> // FPlatformTime::Seconds — the stall report is a WALL-clock watchdog
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ReplicationDriver_FireOnDependentReplicationComplete);
@@ -31,10 +33,18 @@ namespace ck
         if (UCk_Utils_EntityReplicationDriver_UE::Get_HasUndrainedReplicatedFragments_IncludingDependents(InHandle))
         {
             auto& Stall = InHandle.AddOrGet<FFragment_RepDriver_FireGateStall>();
-            Stall._Seconds += InDeltaT.Get_Seconds();
 
-            constexpr auto StallReportThresholdSeconds = 10.0f; // past every dispatcher timeout (5s dev / 2s shipping)
-            if (NOT Stall._Reported && Stall._Seconds > StallReportThresholdSeconds)
+            // WALL time, like the two dispatcher timeouts this threshold is calibrated against: a snapshot load
+            // freezes game time for its whole duration, and a stall reporter that stops with the world it is
+            // watching stays silent through exactly the window the report is for.
+            const auto NowRealTimeSeconds = FPlatformTime::Seconds();
+            if (Stall._StalledSinceRealTimeSeconds == 0.0)
+            { Stall._StalledSinceRealTimeSeconds = NowRealTimeSeconds; }
+
+            const auto StalledForSeconds = NowRealTimeSeconds - Stall._StalledSinceRealTimeSeconds;
+
+            constexpr auto StallReportThresholdSeconds = 10.0; // past every dispatcher timeout (5s dev / 2s shipping)
+            if (NOT Stall._Reported && StalledForSeconds > StallReportThresholdSeconds)
             {
                 Stall._Reported = true;
                 const auto Blocker =

@@ -485,7 +485,10 @@ namespace ck
             && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
         {
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+            // WALL time: this backoff is a kernel watchdog that has to keep running while a snapshot load holds
+            // game time frozen — one that freezes with the world it is retrying against is a wedge, not a retry.
+            const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World}
+                .Set_TimeType(ECk_Time_WorldTimeType::RealTime);
             const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
 
             InHandle.Add<FTag_EntityScript_PendingReplicationRetry>();
@@ -531,7 +534,10 @@ namespace ck
         }
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
+        // WALL time, matching the stamp above: a load freezes game time, so a game-timed elapsed would read zero
+        // for the whole hold and this timeout could never fire inside the window it exists to bound.
+        const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World}
+            .Set_TimeType(ECk_Time_WorldTimeType::RealTime);
         const auto CurrentTime = UCk_Utils_Time_UE::Get_WorldTime(TimeParams).Get_WorldTime().Get_Time();
         const auto ElapsedSeconds = (CurrentTime - InTimestamp.Get_TaggedAt()).Get_Seconds();
 

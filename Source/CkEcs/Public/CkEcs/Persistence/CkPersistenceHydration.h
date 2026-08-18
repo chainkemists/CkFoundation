@@ -156,7 +156,11 @@ namespace ck
         TStrongObjectPtr<UCk_PendingHydrationPayloads_UE> _Payloads;
 
     public:
-        float _PendingForSeconds = 0.0f;
+        // WALL-clock stamp (FPlatformTime::Seconds) of the first NotReady; 0.0 while nothing is pending. Wall
+        // time and not game time because a load FREEZES game time for its whole duration, and this is the
+        // watchdog that turns a payload nothing will ever accept into a named loss — one measured in game time
+        // would sit at zero for the entire window it exists to bound.
+        double _PendingSinceRealTimeSeconds = 0.0;
 
     public:
         auto Enqueue(UObject* InOuter, FInstancedStruct InEntry) -> void;

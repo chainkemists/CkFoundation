@@ -12,7 +12,7 @@ static auto
     -> void
 {
     InEntry._PendingApply = true;
-    InEntry._PendingForSeconds = 0.0f;
+    InEntry._PendingSinceRealTimeSeconds = 0.0;
     InEntity.AddOrGet<ck::FTag_RepFragments_PendingApply>();
 }
 

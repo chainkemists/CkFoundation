@@ -7,7 +7,7 @@
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
-#include "CkCore/Time/CkTime.h" // FCk_Time (ApplyOne)
+#include "CkCore/Time/CkTime.h" // FCk_Time
 
 #include <Misc/Optional.h>
 
@@ -67,8 +67,11 @@ namespace ck::persistence_apply
 {
     enum class EApplyOutcome : uint8 { Applied, StillPending, DroppedRejected, DroppedTimeout, DroppedNoHandler };
 
-    // Resolves InData's handler and calls HydrationApply. Rejected is terminal immediately; NotReady accumulates
-    // InOutPendingForSeconds and past PendingApplyTimeoutSeconds fires the loud ensure and reports DroppedTimeout.
+    // Resolves InData's handler and calls HydrationApply. Rejected is terminal immediately; the FIRST NotReady
+    // stamps InOutPendingSinceRealTimeSeconds with FPlatformTime::Seconds(), and once PendingApplyTimeoutSeconds
+    // of WALL time have passed since that stamp the loud ensure fires and the outcome is DroppedTimeout. Wall
+    // time because a load freezes game time for its whole duration: a timeout measured in game time cannot
+    // expire inside the very window it exists to bound. Pass 0.0 for a fresh, never-pending entry.
     //
     // A payload that resolves NO handler, or one whose handler never declared a HydrationApply, is
     // DroppedNoHandler — its own outcome rather than DroppedTimeout, because nothing ever waited: the save
@@ -79,8 +82,7 @@ namespace ck::persistence_apply
         FCk_Handle& InEntity,
         const FInstancedStruct& InData,
         const TOptional<FInstancedStruct>& InOldData,
-        float& InOutPendingForSeconds,
-        FCk_Time InDeltaT) -> EApplyOutcome;
+        double& InOutPendingSinceRealTimeSeconds) -> EApplyOutcome;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

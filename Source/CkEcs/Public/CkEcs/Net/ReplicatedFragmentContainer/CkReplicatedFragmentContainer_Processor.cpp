@@ -5,6 +5,8 @@
 #include "CkEcs/Persistence/CkPersistenceHydration_Processor.h" // ck::PendingApplyTimeoutSeconds
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include <HAL/PlatformTime.h> // FPlatformTime::Seconds — the apply timeout is a WALL-clock watchdog
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ReplicatedFragments_Dispatch);
@@ -66,7 +68,7 @@ namespace ck
             if (ApplyResult == ECk_Persistence_ApplyResult::Applied)
             {
                 Entry._PendingApply = false;
-                Entry._PendingForSeconds = 0.0f;
+                Entry._PendingSinceRealTimeSeconds = 0.0;
                 Entry._LastAppliedData = Entry.Data;
                 Entry._WasEverApplied = true;
                 continue;
@@ -75,13 +77,19 @@ namespace ck
             if (ApplyResult == ECk_Persistence_ApplyResult::Rejected)
             {
                 Entry._PendingApply = false;
-                Entry._PendingForSeconds = 0.0f;
+                Entry._PendingSinceRealTimeSeconds = 0.0;
                 continue;
             }
 
-            Entry._PendingForSeconds += InDeltaT.Get_Seconds();
+            // WALL time, mirroring the hydration dispatcher: a snapshot load freezes game time for its whole
+            // duration, and a timeout that cannot expire during the window it bounds is not a timeout.
+            const auto NowRealTimeSeconds = FPlatformTime::Seconds();
+            if (Entry._PendingSinceRealTimeSeconds == 0.0)
+            { Entry._PendingSinceRealTimeSeconds = NowRealTimeSeconds; }
 
-            if (Entry._PendingForSeconds >= PendingApplyTimeoutSeconds)
+            const auto PendingForSeconds = NowRealTimeSeconds - Entry._PendingSinceRealTimeSeconds;
+
+            if (PendingForSeconds >= PendingApplyTimeoutSeconds)
             {
                 const auto TypeName = ck::IsValid(Entry.Data.GetScriptStruct())
                     ? Entry.Data.GetScriptStruct()->GetName()
@@ -91,10 +99,10 @@ namespace ck
                     TEXT("Replicated fragment [{}] on entity [{}] was never applied: Apply kept "
                          "returning NotReady for [{}]s — the feature it targets was never composed "
                          "on this client. Dropping the entry."),
-                    TypeName, InHandle, Entry._PendingForSeconds);
+                    TypeName, InHandle, PendingForSeconds);
 
                 Entry._PendingApply = false;
-                Entry._PendingForSeconds = 0.0f;
+                Entry._PendingSinceRealTimeSeconds = 0.0;
                 continue;
             }
 
