@@ -7,8 +7,6 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
-#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
@@ -48,21 +46,6 @@ namespace ck_objective
         }
     }
 
-    // Also true during escalated full-scope passes, which tick gated processors before restore provenance is stamped.
-    auto Get_IsLoadGateActive(
-        const FCk_Handle& InHandle)
-        -> bool
-    {
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        if (ck::Is_NOT_Valid(World))
-        { return false; }
-
-        const auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-        if (ck::Is_NOT_Valid(EcsWorld))
-        { return false; }
-
-        return EcsWorld->Get_IsLoadGateActive();
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -78,10 +61,6 @@ namespace ck
             FFragment_ObjectiveOwner_Current& InCurrent)
         -> void
     {
-        // Ahead of the marker consume on purpose: leaving it set re-runs this once the gate drops.
-        if (ck_objective::Get_IsLoadGateActive(InHandle))
-        { return; }
-
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
@@ -91,8 +70,15 @@ namespace ck
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         { return; }
 
-        // Restored children respawn from their own recipes; seeding on top of them is the duplicate.
-        if (InHandle.Has<FTag_Snapshot_JustRestored>())
+        // Seeding is for an owner that has no objectives — the defaults are a starting position, not something
+        // to add on top of what is already there. Restored owners are the case that made this necessary (their
+        // objectives respawn from their own recipes, and seeding beside them duplicates every one), but the
+        // question worth asking is about the owner's actual contents, not about how it came to have them: an
+        // owner already holding objectives is equally not a candidate whether a load restored them, an earlier
+        // pass added them, or a caller granted them before Setup ran. Note the MarkedDirtyBy consume above
+        // happens FIRST, so this processor does not re-run on this entity — a check that answered wrongly here
+        // would not get a second chance.
+        if (UCk_Utils_EntityCollection_UE::Get_NumEntitiesInCollection(CollectionHandle) > 0)
         { return; }
 
         for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
