@@ -17,6 +17,9 @@
 UENUM(BlueprintType)
 enum class ECk_Icon : uint8
 {
+    // "no icon" — carriers default to this; the registry returns nullptr for it without complaint.
+    None UMETA(Hidden),
+
     Actor,
     ActorBridge,
     Aggro,
