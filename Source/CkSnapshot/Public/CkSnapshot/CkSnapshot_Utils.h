@@ -67,6 +67,23 @@ public:
     Get_IsLoadInProgress(
         const FCk_Handle& InHandle);
 
+    // True while a load is REBUILDING the world the entity lives in — the load gate is held, whether the world is
+    // ticking the load kernel or an escalated full-scope pass. It exists for exactly one caller: something whose
+    // construction SEEDS or SPAWNS a separately-persisted entity, which must not do that while the loader is the
+    // sole legitimate creator of world population, or the world ends up with the loader's copy and its own.
+    //
+    // It is NOT the predicate for deciding whether a value may be read. Nothing needs that predicate any more: a
+    // load holds a restored entity out of every non-kernel processor's view until its payloads have applied, so a
+    // Setup processor reading a Durable fragment is already in the clear, and a consumer outside that path binds
+    // Promise_OnHydrated. Code that polls this to time a READ is describing a race that no longer exists, and is
+    // usually one edit away from having polled it in the wrong window instead.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Rebuild In Progress")
+    static bool
+    Get_IsRebuildInProgress(
+        const FCk_Handle& InHandle);
+
     // Runs the delegate once the world is COHERENT: immediately when no load is in progress, else one-shot on
     // this load's OnLoadComplete (post-settle — hydrated values are readable). The consumer-side twin of the
     // load gate: feature processors are frozen during a load, but signal/promise CALLBACKS are not — a callback
