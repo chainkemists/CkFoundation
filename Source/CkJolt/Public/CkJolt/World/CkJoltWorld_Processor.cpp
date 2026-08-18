@@ -132,8 +132,37 @@ namespace ck
         const auto WorldBlocksStep = ck::Is_NOT_Valid(World) || World->IsPaused();
         const auto DebugPauseBlocksStep = NOT WorldBlocksStep && JoltWorld->TryConsume_DebugPauseGate();
 
+        // A GRANT outranks the debug pause, which is why it is read here rather than beside the step-once branch
+        // below. A snapshot load holds game time at a standstill, so InDeltaT plans zero steps and the bodies a
+        // load waits on would never settle; the grant is the loader saying "step anyway, N times". Consumed here
+        // and only here — like the debug gate, and for the same reason — and AFTER that gate, so the step-once
+        // one-shot is still reset on a granted frame.
+        if (NOT WorldBlocksStep)
+        {
+            if (const auto GrantedSteps = JoltWorld->TryConsume_GrantedFixedSteps();
+                GrantedSteps > 0)
+            {
+                const auto GrantedFixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
+                const auto GrantedFixedDt = 1.0f / static_cast<float>(GrantedFixedHz);
+
+                // All four fields, exactly as the ordinary plan writes them. The accumulator is CLEARED rather
+                // than left standing: a granted batch is not a payment against banked real time, and carrying
+                // that time forward would burst on the frame the hold releases. Alpha 0 renders at the pose the
+                // grant just produced instead of interpolating toward one nothing is heading for.
+                JoltWorld->Set_Accumulator(0.0f);
+                JoltWorld->Set_Alpha(0.0f);
+                JoltWorld->Set_NumStepsLastFrame(GrantedSteps);
+                JoltWorld->Set_PendingSimTime(GrantedSteps * GrantedFixedDt);
+                return;
+            }
+        }
+
         if (WorldBlocksStep || DebugPauseBlocksStep)
         {
+            // The pending grant is NOT spent on a frame that steps nothing — it waits for the first frame that
+            // runs — but this frame's consumed count must not be left standing, or the Step processor reads the
+            // previous frame's grant as though it were this one's.
+            JoltWorld->Set_GrantedStepsThisFrame(0);
             JoltWorld->Set_NumStepsLastFrame(0);
             JoltWorld->Set_PendingSimTime(0.0f);
             return;
@@ -190,10 +219,11 @@ namespace ck
         { return; }
 
         // Paused skips the broadphase optimize too — PlanStep already zeroed the plan, but not this. The debug
-        // pause is READ here, never consumed: PlanStep owns the one-shot, and this is the frame it granted.
+        // pause is READ here, never consumed: PlanStep owns both one-shots, and this is the frame it granted.
         const auto World = JoltWorld->Get_World();
         const auto DebugPauseBlocksStep = JoltWorld->Get_IsDebugPaused() &&
-            NOT JoltWorld->Get_StepOnceGrantedThisFrame();
+            NOT JoltWorld->Get_StepOnceGrantedThisFrame() &&
+            JoltWorld->Get_GrantedStepsThisFrame() == 0;
 
         if (ck::Is_NOT_Valid(World) || World->IsPaused() || DebugPauseBlocksStep)
         { return; }
