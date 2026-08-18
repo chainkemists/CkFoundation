@@ -42,6 +42,7 @@ namespace ck
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::All;
         using MarkedDirtyBy = FTag_Hydration_PendingApply;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
+        static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;

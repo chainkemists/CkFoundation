@@ -40,14 +40,17 @@ namespace ck_timer_fragment
                 },
                 // Authority-side. DEFERRED requests only — the chrono's _CurrentValue is friend-gated. Every
                 // NotReady gate precedes every request.
+                //
+                // It waits on COMPOSITION and on nothing else. It must not wait on FTag_Timer_NeedsSetup: a load
+                // holds the entity out of every non-kernel processor's view until its payloads have applied, so a
+                // handler that waits for Setup waits for something that cannot happen, and the payload is dropped
+                // at the apply timeout. Setup runs AFTER hydration instead, and the ordering still works out —
+                // every request below is DEFERRED into FFragment_Timer_Requests, and
+                // FProcessor_Timer_HandleRequests both RunAfter Setup and excludes FTag_Timer_NeedsSetup. So
+                // Setup establishes the CountDown baseline first and the absolute Jump lands on top of it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_Timer_UE::Has(Entity))
-                    { return ECk_Persistence_ApplyResult::NotReady; }
-
-                    // Gate until Setup has run — it mutates a CountDown chrono, so the Jump baseline is not stable
-                    // until it clears. NotReady is transient: Setup runs every authority tick.
-                    if (Entity.Has<ck::FTag_Timer_NeedsSetup>())
                     { return ECk_Persistence_ApplyResult::NotReady; }
 
                     const auto& Payload = New.Get<FCk_SaveData_Timer>();

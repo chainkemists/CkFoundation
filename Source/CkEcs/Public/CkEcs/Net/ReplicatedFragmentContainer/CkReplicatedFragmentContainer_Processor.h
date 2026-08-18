@@ -26,6 +26,7 @@ namespace ck
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
         using MarkedDirtyBy = FTag_RepFragments_PendingApply;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
+        static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;

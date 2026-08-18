@@ -62,7 +62,11 @@ namespace ck::persistence_apply
         {
             CK_TRIGGER_ENSURE(
                 TEXT("Hydration payload [{}] on entity [{}] was never applied: Apply kept returning NotReady for "
-                     "[{}]s — the feature it targets was never composed. Dropping the entry."),
+                     "[{}]s. Either the feature it targets was never composed, or the handler is waiting on "
+                     "something a load cannot deliver: a handler may not wait on the feature's own Setup marker, "
+                     "or on any other non-kernel processor's output, because a load holds the entity out of those "
+                     "processors' views until this payload applies — Setup runs AFTER hydration, reading the "
+                     "restored values as its inputs. Dropping the entry."),
                 ck_persistence_hydration_processor::DoGet_PayloadTypeName(InData), InEntity, InOutPendingForSeconds);
 
             return EApplyOutcome::DroppedTimeout;
@@ -82,8 +86,12 @@ namespace ck
     {
         // Runs LAST in FGroup_DeferredApply, so clearing FTag_EntityScript_ConstructedThisFrame AFTER the loop is
         // safe: both dispatchers have already skipped those entities this pass, and the pump re-dispatches them.
+        //
+        // Unconditional, unlike almost every other registry-wide clear: this tag DEFERS the drain, and a quarantined
+        // entity is quarantined precisely until its drain finishes — preserving it for one would wedge the two
+        // against each other with nothing left to break the tie.
         TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<FTag_EntityScript_ConstructedThisFrame>();
+        _TransientEntity.Clear_Unconditional<FTag_EntityScript_ConstructedThisFrame>();
     }
 
     auto

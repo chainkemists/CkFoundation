@@ -22,6 +22,7 @@ namespace ck
         using Group = FGroup_Replication;
         using MarkedDirtyBy = FTag_EntityReplicationDriver_FireOnDependentReplicationComplete;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel (spec §4.3)
+        static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt; // load-gate kernel
 
     public:
         using TProcessor::TProcessor;

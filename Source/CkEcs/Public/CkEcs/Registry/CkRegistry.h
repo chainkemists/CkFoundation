@@ -9,6 +9,7 @@
 #include "CkEcs/Registry/CkRegistry_Handle.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Tag/CkTag.h"
+#include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // Clear consults the quarantine before wiping a pool
 
 #include "CkMemory/Allocator/CkMemoryAllocator.h"
 
@@ -228,6 +229,11 @@ private:
     template <typename... T_Fragments>
     auto Clear() -> void;
 
+    // Wipes the pool for entities the load is still holding, too. Reserved for frame-boundary markers the
+    // kernel itself owns, where preserving one would deadlock the very drain the quarantine waits on.
+    template <typename... T_Fragments>
+    auto Clear_Unconditional() -> void;
+
 public:
     template <typename... T_Fragments>
     auto View() -> RegistryViewType<T_Fragments...>;
@@ -262,6 +268,10 @@ public:
     auto TryGetContext() const -> const T_Context*;
 
 private:
+    // The unconditional pool wipe both Clear entry points share.
+    template <typename... T_Fragments>
+    auto DoClear_Pools() -> void;
+
     // Called from every mutation path so the scheduler can detect changes without scanning the storage.
     template <typename T_Fragment>
     auto DoBumpDirtyMarkerVersion() -> void;
@@ -738,6 +748,62 @@ auto
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Clear"));
 #endif
 
+    // A registry-wide wipe is issued by end-of-frame processors that just SKIPPED the entities a load is
+    // holding — so without this it would destroy the very setup markers and queued requests those entities
+    // are waiting to be processed with, and they would come back released but inert. Hence the orientation:
+    // the DEFAULT skips, so a site nobody thought about preserves a marker rather than destroying one, and
+    // Clear_Unconditional is the explicit opt-out for the few that must not.
+    const auto* Quarantine = TryGetContext<ck::FCtx_HydrationQuarantine>();
+    if (Quarantine == nullptr || Quarantine->_Count <= 0)
+    {
+        DoClear_Pools<T_Fragments...>();
+        return;
+    }
+
+    ([&]
+    {
+        if (NOT Has_AnyEntityWith<T_Fragments>())
+        { return; }
+
+        auto* Registry = Resolve();
+
+        // Collect first: erasing while iterating a storage is undefined, and the excluded view is what
+        // keeps the quarantined entities' fragments intact.
+        auto ToRemove = TArray<EntityType::IdType>{};
+        for (const auto Entity : Registry->template view<T_Fragments>(entt::exclude<ck::FTag_Hydration_Quarantine>))
+        { ToRemove.Add(Entity); }
+
+        if (ToRemove.IsEmpty())
+        { return; }
+
+        for (const auto Entity : ToRemove)
+        { Registry->template remove<T_Fragments>(Entity); }
+
+        DoBumpDirtyMarkerVersion<T_Fragments>();
+    }(), ...);
+}
+
+template <typename ... T_Fragments>
+auto
+    FCk_Registry::
+    Clear_Unconditional()
+    -> void
+{
+    static_assert(sizeof...(T_Fragments) > 0, "Clear requires at least one explicit fragment type");
+
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Clear_Unconditional"));
+#endif
+
+    DoClear_Pools<T_Fragments...>();
+}
+
+template <typename ... T_Fragments>
+auto
+    FCk_Registry::
+    DoClear_Pools()
+    -> void
+{
     // Skip pools with no packed entries (live OR tombstoned): end-of-frame processors Clear every frame,
     // and bumping a pool that had nothing to remove would re-dirty the pump short-circuit forever. A
     // tombstone-only pool still clears (and bumps once more) so its packed array resets to truly empty.

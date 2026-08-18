@@ -45,6 +45,15 @@ namespace ck
     {
         const auto& Params = InParams.Get_Params();
 
+        // Setup treats this Durable fragment as an INPUT, never as something to re-derive. Add already
+        // seeded _CurrentAcceleration from the params, and on a load the SAVED acceleration is applied
+        // BEFORE Setup runs — so re-deriving it here overwrites a restored acceleration with the starting
+        // one on every load. The only work genuinely left is the LOCAL->world conversion, which is deferred
+        // to Setup solely because it needs a Transform that may not exist yet at Add time; it is correct
+        // only while the value is still the untouched construct seed.
+        if (InCurrent._CurrentAcceleration != Params.Get_StartingAcceleration())
+        { return; }
+
         switch(const auto& Coordinates = Params.Get_Coordinates())
         {
             case ECk_LocalWorld::Local:

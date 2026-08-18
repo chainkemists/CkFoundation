@@ -585,6 +585,15 @@ FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team
 - Return `NotReady` while the target feature is not composed yet: the dispatcher retries each tick
   and past a timeout drops the entry LOUDLY (ensure naming the type and entity). A perpetual
   timeout means the feature is never composed on the client.
+- **`HydrationApply` may wait on COMPOSITION and on nothing else.** Never on the feature's own
+  `NeedsSetup`/`RequiresSetup` marker, and never on the output of any processor outside the load
+  kernel: a load holds a restored entity out of every non-kernel processor's view until its payloads
+  have applied, so such a wait waits for something that cannot happen and the payload is dropped at
+  the apply timeout. Setup runs AFTER hydration and reads the restored Durable values as its inputs,
+  exactly as it reads params on a fresh entity. When the restore genuinely needs Setup's output
+  (a resolved render target, an allocated grid), the handler writes the payload onto the entity —
+  a deferred `Request_*`, or a parked fragment a post-Setup processor consumes
+  (`FFragment_Sm_HydrationResume`, `FFragment_RenderTarget_HydrationReplay`) — and returns `Applied`.
 - `Old` is unset on the first application; otherwise it holds the last APPLIED data (net path only —
   the load path never coalesces, so `HydrationApply`'s `Old` is always unset).
 - Consumer consequence: **`OnConstructed` means composed, not values-applied** — read replicated

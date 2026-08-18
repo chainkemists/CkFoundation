@@ -957,6 +957,12 @@ namespace ck
             if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody_Current>())
             { continue; }
 
+            // This loop reaches entities by id and writes to them without ever constructing a view, so the
+            // processor-level exclusion cannot see it. A load still owning this body's state must not have a
+            // sleep tag and a step pose written over it.
+            if (Handle.Has<ck::FTag_Hydration_Quarantine>())
+            { continue; }
+
             // An entity may own more Jolt bodies than its JoltBody (e.g. a Probe), all sharing the entity id.
             if (Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Event.BodyIndexAndSeq)
             { continue; }

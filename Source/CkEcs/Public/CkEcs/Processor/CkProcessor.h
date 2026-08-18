@@ -7,6 +7,7 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Tag/CkTag_EditorOnly.h"
+#include "CkEcs/Tag/CkTag_HydrationQuarantine.h"
 
 #include "CkEcs/Scheduler/CkProcessorDescriptor.h"
 #include "CkEcs/Scheduler/CkSchedulerDebugData.h"
@@ -31,6 +32,20 @@ enum class ECk_ProcessorTickCatchUp : uint8
     // Fire DoTick ONCE with the summed elapsed intervals (phase remainder preserved, no time lost). For
     // sampling — not integrating — processors, where re-sampling the same state N times is pure waste.
     SampleLatestOnly,
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Whether a processor keeps seeing entities a load is still holding. Declare it on the derived processor:
+//     static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt;
+// Exempt belongs to the load kernel itself — the processors that finish the rebuild and drain the payload
+// queue, which cannot do either if they cannot see the entities they are working on — and to passes that
+// observe without acting. Anything that ACTS on an entity's state is not a candidate: acting on values the
+// load has not finished writing is the whole hazard.
+enum class ECk_ProcessorHydrationQuarantine : uint8
+{
+    Default,
+    Exempt
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -96,6 +111,42 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    namespace detail
+    {
+        template <typename T_Processor>
+        constexpr auto
+        Get_IsHydrationQuarantineExempt() -> bool
+        {
+            if constexpr (requires { T_Processor::HydrationQuarantinePolicy; })
+            {
+                static_assert(std::is_same_v<std::remove_const_t<decltype(T_Processor::HydrationQuarantinePolicy)>,
+                    ECk_ProcessorHydrationQuarantine>,
+                    "HydrationQuarantinePolicy must be an ECk_ProcessorHydrationQuarantine value");
+
+                return T_Processor::HydrationQuarantinePolicy == ECk_ProcessorHydrationQuarantine::Exempt;
+            }
+            else
+            { return false; }
+        }
+
+        // The processor's declared fragments, plus the quarantine exclusion unless it opted out — appended the same
+        // way RuntimeVariantFragments appends the editor-only exclusion, so an exclude cannot change the callback
+        // shape (FragmentsOnly strips it) and cannot change the empty-view-skip metadata (which is derived from the
+        // declared list, not from this).
+        template <typename T_Processor, typename... T_ViewFragments>
+        struct TProcessorViewFragments
+        {
+            using Type = std::conditional_t<
+                Get_IsHydrationQuarantineExempt<T_Processor>(),
+                entt::type_list<T_ViewFragments...>,
+                entt::type_list_cat_t<
+                    entt::type_list<T_ViewFragments...>,
+                    entt::type_list<ck::TExclude<ck::FTag_Hydration_Quarantine>>>>;
+        };
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor>
     class TProcessorBase
     {
@@ -142,6 +193,23 @@ namespace ck
 
     private:
         int32 _TotalTicks = 0;
+
+    protected:
+        // EVERY processor view is built here. That is the point: the exclusion is one function rather than a rule
+        // each DoTick has to remember, so a new processor base or a new tick variant cannot quietly opt out of it.
+        template <typename... T_ViewFragments>
+        auto MakeProcessorView()
+        {
+            return DoMakeProcessorView(
+                typename detail::TProcessorViewFragments<DerivedType, T_ViewFragments...>::Type{});
+        }
+
+    private:
+        template <typename... T_All>
+        auto DoMakeProcessorView(entt::type_list<T_All...>)
+        {
+            return this->_TransientEntity.template View<T_All...>();
+        }
 
     protected:
         HandleType _TransientEntity;
@@ -414,7 +482,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+        using ViewType = decltype(this->template MakeProcessorView<detail::UnwrapAccessPolicy_T<T_Fragments>...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<detail::UnwrapAccessPolicy_T<T_Fragments>...>;
         using PoliciesOnly = detail::PoliciesOnly<T_Fragments...>;
 
@@ -435,7 +503,7 @@ namespace ck
 
         auto EntityCount = int32{0};
 
-        this->_TransientEntity.template View<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+        this->template MakeProcessorView<detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
@@ -591,7 +659,7 @@ namespace ck_exp
         }
         else
         {
-            using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>());
+            using ViewType = decltype(this->template MakeProcessorView<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>());
             using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>;
             using PoliciesOnly = ck::detail::PoliciesOnly<T_Fragments...>;
 
@@ -614,7 +682,7 @@ namespace ck_exp
 
         auto EntityCount = int32{0};
 
-        this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
+        this->template MakeProcessorView<ck::detail::UnwrapAccessPolicy_T<T_Fragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
@@ -643,7 +711,7 @@ namespace ck_exp
             entt::type_list<T_VariantFragments...>)
         -> void
     {
-        using ViewType = decltype(this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>());
+        using ViewType = decltype(this->template MakeProcessorView<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>;
         using PoliciesOnly = ck::detail::PoliciesOnly<T_VariantFragments...>;
 
@@ -666,7 +734,7 @@ namespace ck_exp
 
         auto EntityCount = int32{0};
 
-        this->_TransientEntity.template View<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>().ForEach(
+        this->template MakeProcessorView<ck::detail::UnwrapAccessPolicy_T<T_VariantFragments>...>().ForEach(
             [&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);

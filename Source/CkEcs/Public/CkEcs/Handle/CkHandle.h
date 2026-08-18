@@ -218,6 +218,10 @@ public:
     template <typename... T_Fragments>
     auto Clear() -> void;
 
+    // See FCk_Registry::Clear_Unconditional — kernel frame-boundary markers only.
+    template <typename... T_Fragments>
+    auto Clear_Unconditional() -> void;
+
     template <typename... T_Fragment>
     auto View() -> FCk_Registry::RegistryViewType<T_Fragment...>;
 
@@ -291,10 +295,10 @@ public:
 private:
     template <typename T_Fragment>
     requires(std::is_empty_v<T_Fragment>)
-    auto DoClear() -> void;
+    auto DoClear(bool InSkipQuarantined) -> void;
 
     template <typename T_Fragment>
-    auto DoClear() -> void;
+    auto DoClear(bool InSkipQuarantined) -> void;
 
     // Mutates registry debug state and is NOT thread-safe — no-ops off the game thread and
     // inside a parallel region; parallel processors use FCk_Handle_ReadOnly.
@@ -917,11 +921,31 @@ auto
         TEXT("Unable to Clear<...> Fragments. Handle [{}] does NOT have a valid Registry."), *this)
     { return; }
 
-    // The per-fragment pass is what lets Entity debugging clear its debug mapping
+    // The per-fragment pass is what lets Entity debugging clear its debug mapping. It mirrors the registry's
+    // quarantine skip: a debugger row saying a fragment is gone while the entity still holds it is exactly
+    // the kind of mirror that sends the next reader looking in the wrong place.
+    constexpr auto SkipQuarantined = true;
 #if CK_DISABLE_ECS_HANDLE_DEBUGGING == 0
-    (DoClear<T_Fragments>(), ...);
+    (DoClear<T_Fragments>(SkipQuarantined), ...);
 #endif
     Get_RegistryView().Clear<T_Fragments...>();
+}
+
+template <typename ... T_Fragments>
+auto
+    FCk_Handle::
+    Clear_Unconditional()
+    -> void
+{
+    CK_ENSURE_IF_NOT(IsRegistryValid(),
+        TEXT("Unable to Clear<...> Fragments. Handle [{}] does NOT have a valid Registry."), *this)
+    { return; }
+
+    constexpr auto SkipQuarantined = false;
+#if CK_DISABLE_ECS_HANDLE_DEBUGGING == 0
+    (DoClear<T_Fragments>(SkipQuarantined), ...);
+#endif
+    Get_RegistryView().Clear_Unconditional<T_Fragments...>();
 }
 
 template <typename ... T_Fragment>
@@ -1097,12 +1121,15 @@ template <typename T_Fragment>
 requires (std::is_empty_v<T_Fragment>)
 auto
     FCk_Handle::
-    DoClear()
+    DoClear(
+        bool InSkipQuarantined)
     -> void
 {
     View<T_Fragment>().ForEach([&](EntityType InEntity)
     {
         auto Handle = ck::MakeHandle(InEntity, *this);
+        if (InSkipQuarantined && Handle.Has<ck::FTag_Hydration_Quarantine>())
+        { return; }
         Handle.DoRemove_FragmentDebugInfo<T_Fragment>();
     });
 }
@@ -1110,12 +1137,15 @@ auto
 template <typename T_Fragment>
 auto
     FCk_Handle::
-    DoClear()
+    DoClear(
+        bool InSkipQuarantined)
     -> void
 {
     View<T_Fragment>().ForEach([&](EntityType InEntity, T_Fragment&)
     {
         auto Handle = ck::MakeHandle(InEntity, *this);
+        if (InSkipQuarantined && Handle.Has<ck::FTag_Hydration_Quarantine>())
+        { return; }
         Handle.DoRemove_FragmentDebugInfo<T_Fragment>();
     });
 }
