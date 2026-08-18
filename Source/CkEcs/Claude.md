@@ -651,6 +651,8 @@ Registration lives in the feature's `_Fragment.cpp` on `FCk_PersistenceHandlerRe
 
 Pinned by `Ck.Attribute.Net.Values_AppliedBefore_OnReplicationComplete`, `Float_InitialBakedValue_Replicates`, and `Float_PreComposition_StashedValue_Applies` in CkTests.
 
+The **load path has the same split**, and its first half is the same statement: `DoConstruct` and `DoBeginPlay` observe **construct defaults**. A snapshot load hydrates a restored entity long after both have run, and neither is held for it — holding `DoBeginPlay` would deadlock every feature that composes a child or spawns from it. Restored values are observable in a quarantine-gated **Setup** processor, which the load provably cannot run early. Pinned by `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults`.
+
 ### Actor-side unified promise
 
 For actor-linked entities (`EntityScript_WithActor`), consumers should not juggle the two signals
