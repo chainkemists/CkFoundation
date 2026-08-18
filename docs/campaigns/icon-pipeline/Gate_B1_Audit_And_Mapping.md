@@ -287,3 +287,22 @@ reshuffle once (pool size changes); that is cosmetic and inevitable under any mi
 5. **Unicode split** (§1.5): approve the migrate/keep classification?
 
 **STOPPED — awaiting approval before any code is written.**
+
+## 7. Early Gate-2 sweep (2026-08-17 — re-run at the real Gate 2 before deleting anything)
+
+Workspace swept: `D:/Repositories/CkRepos/*` (BusterBlock, BusterBlock_5.5, CkPlugins,
+CkPlugins_Other), excluding Intermediate/Binaries/Saved/binary assets and the sibling
+CkGameplayDebugger checkouts themselves (same repo on other branches, not consumers).
+
+- **Debugger style keys/classes** (`CkDebugger.Icon.*`, `CkCommon.Icon.*`,
+  `CkDebuggerLauncher.Icon.*`, `FCkDebuggerStyle`/`FCkDebuggerCommonStyle`/
+  `FCkDebuggerLauncherStyle`, `Get_GeneralIconPool`) outside the plugin: **zero code references**
+  — only this campaign's own docs. BusterBlock game code never touches the debugger styles.
+- **`IconSvgPath` setters**: exactly ONE live external reference —
+  `CkTests/Script/CkEcs/CkArchetype_AuthoringValidation.as:15` (`IconSvgPath = "Icons/Cube.svg"`,
+  which names a deletion-candidate file). Phase B must update this CkTests test in step with the
+  corpus deletion (a CkTests submodule touch — plan the cross-repo commit pairing).
+  BusterBlock itself sets `IconSvgPath` nowhere (no game archetype uses a bespoke icon today).
+- **`Resources/Icons` path strings** elsewhere: BB doc `Script/Npc/AI/PROGRESS_NpcCombatAggroRefactor.md:152`
+  (doc mention of icon id `Aggro` — update the doc line at migration); unrelated third-party
+  plugin `EditorScriptingTools` has its own same-named folder (no relation).
