@@ -10,6 +10,7 @@
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
 #include <GameplayTags.h>
+#include <Templates/Function.h>
 
 #include "CkEcsWorld_Subsystem.generated.h"
 
@@ -25,6 +26,60 @@ enum class ECk_Ecs_WorldStatCollection_Policy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Which phase of a snapshot load owns this world right now. ONE value spans the whole load, in every world the
+// load passes through, and it is the only input to what a world-actor tick is allowed to do (Get_TickPlanForHold).
+// The phases are ordered by the load's own progress, not by severity.
+UENUM()
+enum class ECk_EcsWorld_LoadHold : uint8
+{
+    // Normal play. Full scope, real time.
+    None,
+    // The world being demolished. Full scope — the destruction pipeline, every feature EndPlay and the entity
+    // lifecycle groups are outside the load kernel, so a kernel-scoped teardown wedges — but at ZERO time.
+    Teardown,
+    // The world being rebuilt. LoadKernel scope: only the kernel processors run, so no feature processor ever
+    // observes the half-rebuilt world.
+    Rebuilding,
+    // Rebuilding, escalated: the kernel quiesced with saved rows still unresolved, so the FULL scope runs to let
+    // multi-stage constructions (and the identity they stamp on completion) finish — at ZERO time, because
+    // time-paced world policy must not act on a census taken mid-rebuild.
+    Escalated,
+    // Payloads applying: the restored values, the deferred requests those applies issue, and the parked
+    // reconcile-destroys. Full scope, ZERO time.
+    Draining,
+    // Drained, not yet coherent: physics bodies, probe overlaps and the deferred queues converge before the
+    // player is handed the world back. Full scope, ZERO time.
+    Converging,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EcsWorld_LoadHold);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // What ONE world-actor tick does under a given hold: which processors are eligible, and how much time they are
+    // handed.
+    struct FCk_TickPlan
+    {
+        CK_GENERATED_BODY(FCk_TickPlan);
+
+        ECk_SchedulerTickScope _Scope = ECk_SchedulerTickScope::Full;
+        FCk_Time _TickTime;
+    };
+
+    // A PURE function of the hold, so the whole policy is one table that can be asserted without a world. The
+    // zeroed tick time is reinforcement rather than the mechanism — the loader also freezes the engine's global
+    // time dilation, so the incoming DeltaSeconds is already ~0 — but it keeps the ECS deterministic in the frame
+    // between raising the hold and the dilation write, and in any world where dilation is disabled outright.
+    CKECS_API auto
+    Get_TickPlanForHold(
+        ECk_EcsWorld_LoadHold InHold,
+        float InDeltaSeconds) -> FCk_TickPlan;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -138,19 +193,39 @@ public:
     // The per-frame pump-iteration budget (max across schedulers). 0 when no schedulers exist.
     auto Get_MaxPumpIterations() const -> int32;
 
-    // While active, every EcsWorld actor ticks with LoadKernel scope so feature processors stay frozen
-    // against the half-rebuilt world. Held by the snapshot load orchestrator across the rebuild.
-    auto Get_IsLoadGateActive() const -> bool;
-    auto Set_IsLoadGateActive(bool InActive) -> void;
+    // Which phase of a snapshot load owns this world. The snapshot load orchestrator is the only writer; every
+    // world-actor tick reads it exactly once and does what Get_TickPlanForHold says.
+    auto Get_LoadHold() const -> ECk_EcsWorld_LoadHold;
+    auto Set_LoadHold(ECk_EcsWorld_LoadHold InHold) -> void;
 
-    // Escalated rebuild: the load gate stays owned by the orchestrator, but the world ticks the FULL
-    // processor scope AT ZERO TIME. The loader escalates when the kernel quiesces with saved rows still
-    // unresolved — a multi-stage construction (EntityScript `Continue` fulfilled by a game processor) can
-    // only finish under the full graph, and the identity it late-stamps (a GameplayLabel adopt key, a
-    // SaveKey) is the very thing the rebuild is waiting on. Zero time keeps time-paced world policy from
-    // observing the half-rebuilt world. Cleared automatically when the gate deactivates.
+    // True for every phase of a load, i.e. Get_LoadHold() != None.
+    auto Get_IsLoadGateActive() const -> bool;
+
+    // The escalated rebuild pass: the kernel quiesced with saved rows still unresolved, so the FULL processor
+    // scope runs AT ZERO TIME. A multi-stage construction (EntityScript `Continue` fulfilled by a game
+    // processor) cannot finish under the kernel, and the identity it late-stamps (a GameplayLabel adopt key, a
+    // SaveKey) is the very thing the rebuild is waiting on.
     auto Get_IsLoadGateEscalated() const -> bool;
+
+    // Compatibility setters over the phase above, kept so callers that only ever expressed "the gate is up" and
+    // "the world is escalating" keep saying exactly that. true -> Rebuilding (the phase whose spawn-suppression
+    // and kernel-scope semantics those callers mean by "the gate"), false -> None; escalating -> Escalated, and
+    // un-escalating returns to Rebuilding. Lowering the gate clears escalation, as it always did.
+    auto Set_IsLoadGateActive(bool InActive) -> void;
     auto Set_IsLoadGateEscalated(bool InEscalated) -> void;
+
+    // Answered at OnWorldBeginPlay, BEFORE the world's processor graph and scheduler actors exist: "does a load
+    // own this world from its very first frame?". A world that comes up mid-load has to be held before anything
+    // in it ticks, and the loader cannot do that itself — its own next opportunity is a full world tick later,
+    // which is the frame every level actor's BeginPlay and every entity-script construction runs in.
+    //
+    // SIDE-EFFECTING by design: the provider applies whatever else its owner needs applied to the fresh world
+    // (the global time dilation a load holds does not survive travel and has to be re-applied here) and returns
+    // whether the world is held. Registered from the owning module's startup and cleared on its shutdown, so
+    // CkEcs keeps no dependency on the module that answers.
+    using FLoadHoldSeedProvider = TFunction<bool(UWorld&)>;
+    static auto Set_LoadHoldSeedProvider(FLoadHoldSeedProvider InProvider) -> void;
+    static auto Clear_LoadHoldSeedProvider() -> void;
 
     // While the load gate is active, the loader is the sole creator of world population: only spawns issued
     // inside its own window (recipe replays, definition rebuilds) or by an owner still inside its construction
@@ -169,6 +244,8 @@ public:
     auto Pop_RendezvousSpawnWindow() -> void;
 
 private:
+    static auto DoGet_LoadHoldSeedProvider() -> FLoadHoldSeedProvider&;
+
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
 
@@ -187,8 +264,7 @@ private:
     bool _PendingRebuildGraph = false;
     FDelegateHandle _OnEndFrameHandle;
 
-    bool _IsLoadGateActive = false;
-    bool _IsLoadGateEscalated = false;
+    ECk_EcsWorld_LoadHold _LoadHold = ECk_EcsWorld_LoadHold::None;
     int32 _LoaderSpawnWindowDepth = 0;
     int32 _RendezvousSpawnWindowDepth = 0;
 

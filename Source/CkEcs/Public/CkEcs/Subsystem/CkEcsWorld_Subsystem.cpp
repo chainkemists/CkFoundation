@@ -24,6 +24,37 @@ DECLARE_STATS_GROUP(TEXT("CkEcsWorldActor_Tick"), STATGROUP_CkEcsWorldActor_Tick
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    ck::
+    Get_TickPlanForHold(
+        ECk_EcsWorld_LoadHold InHold,
+        float InDeltaSeconds)
+    -> ck::FCk_TickPlan
+{
+    switch (InHold)
+    {
+        case ECk_EcsWorld_LoadHold::None:
+        {
+            return FCk_TickPlan{ECk_SchedulerTickScope::Full, FCk_Time{InDeltaSeconds}};
+        }
+        case ECk_EcsWorld_LoadHold::Rebuilding:
+        {
+            return FCk_TickPlan{ECk_SchedulerTickScope::LoadKernel, FCk_Time{InDeltaSeconds}};
+        }
+        case ECk_EcsWorld_LoadHold::Teardown:
+        case ECk_EcsWorld_LoadHold::Escalated:
+        case ECk_EcsWorld_LoadHold::Draining:
+        case ECk_EcsWorld_LoadHold::Converging:
+        {
+            return FCk_TickPlan{ECk_SchedulerTickScope::Full, FCk_Time{0.0f}};
+        }
+    }
+
+    return FCk_TickPlan{ECk_SchedulerTickScope::Full, FCk_Time{InDeltaSeconds}};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 ACk_EcsWorld_Actor_UE::
     ACk_EcsWorld_Actor_UE()
 {
@@ -47,26 +78,17 @@ auto
 
     const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
 
-    // The load kernel keeps feature processors frozen against the half-rebuilt world. An ESCALATED gate
-    // runs the full scope while the loader still owns completion — multi-stage constructions (EntityScript
-    // `Continue` fulfilled by game processors) are unfinishable under the kernel, and the rebuild may be
-    // waiting on the identity they stamp on completion. Escalated passes run at ZERO TIME: constructions are
-    // marker/event-driven and complete fine, but time-paced world policy (population pacing, refills, timers,
-    // cadences) must not observe the half-rebuilt world — a census read mid-rebuild is a lie, and acting on it
-    // double-populates the world (the save-inflation incident, 2026-07-29). A construction that wall-clock
-    // waits cannot finish under a load and orphans loudly — construction must not depend on real time.
-    auto Scope = ck::ECk_SchedulerTickScope::Full;
-    auto TickTime = FCk_Time{DeltaSeconds};
-    if (const auto* Subsystem = DoGet_OwningSubsystem();
-        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive())
-    {
-        if (Subsystem->Get_IsLoadGateEscalated())
-        { TickTime = FCk_Time{0.0f}; }
-        else
-        { Scope = ck::ECk_SchedulerTickScope::LoadKernel; }
-    }
+    // What a load lets this world do is ONE table, keyed on the phase the load is in — see Get_TickPlanForHold.
+    // The two things it buys: feature processors stay frozen against a half-rebuilt world, and time-paced world
+    // policy (population pacing, refills, timers, cadences) never observes one — a census read mid-rebuild is a
+    // lie, and acting on it double-populates the world (the save-inflation incident, 2026-07-29). A construction
+    // that wall-clock waits cannot finish under a load and orphans loudly: construction must not depend on time.
+    const auto* Subsystem = DoGet_OwningSubsystem();
+    const auto Plan = ck::Get_TickPlanForHold(
+        Subsystem != nullptr ? Subsystem->Get_LoadHold() : ECk_EcsWorld_LoadHold::None,
+        DeltaSeconds);
 
-    _Scheduler->Tick(TickTime, _Registry, Scope);
+    _Scheduler->Tick(Plan._TickTime, _Registry, Plan._Scope);
 }
 
 auto
@@ -138,10 +160,35 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    Get_LoadHold() const
+    -> ECk_EcsWorld_LoadHold
+{
+    return _LoadHold;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Set_LoadHold(
+        ECk_EcsWorld_LoadHold InHold)
+    -> void
+{
+    _LoadHold = InHold;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Get_IsLoadGateActive() const
     -> bool
 {
-    return _IsLoadGateActive;
+    return _LoadHold != ECk_EcsWorld_LoadHold::None;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_IsLoadGateEscalated() const
+    -> bool
+{
+    return _LoadHold == ECk_EcsWorld_LoadHold::Escalated;
 }
 
 auto
@@ -150,18 +197,7 @@ auto
         bool InActive)
     -> void
 {
-    _IsLoadGateActive = InActive;
-
-    if (NOT InActive)
-    { _IsLoadGateEscalated = false; }
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    Get_IsLoadGateEscalated() const
-    -> bool
-{
-    return _IsLoadGateEscalated;
+    _LoadHold = InActive ? ECk_EcsWorld_LoadHold::Rebuilding : ECk_EcsWorld_LoadHold::None;
 }
 
 auto
@@ -170,7 +206,42 @@ auto
         bool InEscalated)
     -> void
 {
-    _IsLoadGateEscalated = InEscalated;
+    if (InEscalated)
+    {
+        _LoadHold = ECk_EcsWorld_LoadHold::Escalated;
+        return;
+    }
+
+    // Un-escalating is a return to the phase escalation was reached from, never a release of the hold: the
+    // caller that says "stop escalating" has not said the load is over.
+    if (_LoadHold == ECk_EcsWorld_LoadHold::Escalated)
+    { _LoadHold = ECk_EcsWorld_LoadHold::Rebuilding; }
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    DoGet_LoadHoldSeedProvider()
+    -> FLoadHoldSeedProvider&
+{
+    static FLoadHoldSeedProvider Provider;
+    return Provider;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Set_LoadHoldSeedProvider(
+        FLoadHoldSeedProvider InProvider)
+    -> void
+{
+    DoGet_LoadHoldSeedProvider() = MoveTemp(InProvider);
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Clear_LoadHoldSeedProvider()
+    -> void
+{
+    DoGet_LoadHoldSeedProvider() = FLoadHoldSeedProvider{};
 }
 
 auto
@@ -267,6 +338,15 @@ auto
     if (NOT _TransientEntity.Has<TWeakObjectPtr<UWorld>>())
     {
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+    }
+
+    // Before the graph, not after: a world that comes up mid-load must already be held when its first scheduler
+    // actor ticks, and Converging is the phase a world arrives in — its content is rebuilt, what it still owes is
+    // coherence. The seed is bounded by the phase that owns it; whoever raised the hold releases it.
+    if (const auto& SeedProvider = DoGet_LoadHoldSeedProvider();
+        static_cast<bool>(SeedProvider) and SeedProvider(InWorld))
+    {
+        Set_LoadHold(ECk_EcsWorld_LoadHold::Converging);
     }
 
     DoBuildGraphAndSpawnActors(InWorld);
