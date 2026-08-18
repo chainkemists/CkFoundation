@@ -104,6 +104,33 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
+    Get_IsRebuildInProgress(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+    if (ck::Is_NOT_Valid(World))
+    { return false; }
+
+    const auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return false; }
+
+    // Escalation is nested inside the gate today — deactivating the gate clears it — so the second clause is
+    // currently implied by the first. It is written out because the predicate's contract is "a rebuild is
+    // happening", not "the gate flag is set", and the two would part company the moment escalation outlives the
+    // gate. A seed suppressed during an escalated pass is exactly as duplicated as one suppressed during a
+    // kernel pass.
+    return EcsWorld->Get_IsLoadGateActive() || EcsWorld->Get_IsLoadGateEscalated();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
     Promise_OnHydrated(
         const FCk_Handle& InHandle,
         const FCk_Delegate_Hydration_OnHydrated& InDelegate)

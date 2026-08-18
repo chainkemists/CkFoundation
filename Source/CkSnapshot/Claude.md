@@ -637,13 +637,20 @@ and the completion delegate reports `Failed_NotEnqueued` — reconcile-shaped ca
 real-world evaluation instead of erroring. The suppression site also logs a Warning naming the class and lifetime
 owner and pointing at the two escape hatches below.
 
-Two consumer-side tools, and a gap between them worth knowing:
+Three consumer-side tools, and a gap between them worth knowing:
 
-- **`UCk_Utils_Snapshot_UE::Get_IsLoadInProgress(InHandle)`** (`CkSnapshot_Utils.h:49-60`) — gate
-  construction-time SEEDING on this returning false. The hazard it documents (`:51-54`): a construction script
-  that unconditionally seeds a separately-persisted entity creates a SECOND copy beside the one the load is
-  about to restore (children composed UNDER the seeding script are fine — replayed construction re-creating
-  them is how rebuild works — but a sibling/global seed is not).
+- **`UCk_Utils_Snapshot_UE::Get_IsRebuildInProgress(InHandle)`** — true while the load gate is held, kernel or
+  escalated. This is the predicate for a construction-time SEED or SPAWN of a separately-persisted entity: while
+  it is true the loader is the only legitimate creator of world population, and seeding anyway leaves the world
+  holding both copies. It answers a question about WRITING, and only that — a reader polling it to time a READ
+  is describing a race the quarantine already closed (Setup sees hydrated Durable state; everything else binds
+  `Promise_OnHydrated`), and is one edit away from polling it in the wrong window instead.
+- **`UCk_Utils_Snapshot_UE::Get_IsLoadInProgress(InHandle)`** — the wider window: true from `Request_Load` until
+  `OnLoadComplete`, so it stays true through Settling after the gate has already dropped. That extra stretch is
+  what covers the gap named below, which `Get_IsRebuildInProgress` by definition cannot. The hazard both of them
+  guard: a construction script that unconditionally seeds a separately-persisted entity creates a SECOND copy
+  beside the one the load is about to restore (children composed UNDER the seeding script are fine — replayed
+  construction re-creating them is how rebuild works — but a sibling/global seed is not).
 - **`Request_SpawnEntity_LoadRendezvous`** (`CkEcs/EntityScript/CkEntityScript_Utils.h:93-107`, impl
   `.cpp:238-254`) — the sanctioned call for legitimate mid-load spawns: it opens a
   `FCk_ScopedRendezvousSpawnWindow` around an ordinary `Request_SpawnEntity`, so it behaves identically when no
