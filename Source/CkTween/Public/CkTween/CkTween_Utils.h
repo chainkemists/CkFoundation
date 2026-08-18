@@ -301,8 +301,10 @@ public:
         UPARAM(ref) FCk_Handle_Tween& InTween,
         UCurveFloat* InCurve);
 
-    // Latest last-key time across the channels' curves; 0 when none are valid. This is the
+    // Latest last-key time across the channels' curves; 0 when none are set. This is the
     // duration a curve-driven tween derives for itself, exposed for callers that need the number.
+    // A channel authored but not resident ensures and counts as unset, so this and the tween the
+    // caller goes on to create can never disagree about what is actually playing.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Tween",
         DisplayName = "[Ck][Tween] Get Curves Max Time")

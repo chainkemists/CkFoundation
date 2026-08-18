@@ -211,17 +211,20 @@ public:
     CK_GENERATED_BODY(FCk_TweenCurveChannels);
 
 private:
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). Read synchronously at creation — resident-or-fail; an unloaded
+    // authored channel ensures and contributes 0.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCurveFloat> _X;
+    TSoftObjectPtr<UCurveFloat> _X;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCurveFloat> _Y;
+    TSoftObjectPtr<UCurveFloat> _Y;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCurveFloat> _Z;
+    TSoftObjectPtr<UCurveFloat> _Z;
 
 public:
     CK_PROPERTY_GET(_X);
@@ -231,6 +234,9 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_TweenCurveChannels, _X, _Y, _Z);
 
 public:
+    // Whether any channel is AUTHORED — deliberately not whether any is loaded. Residency is the
+    // creation site's business (it ensures per channel); this stays the "did anyone fill this in"
+    // question so an unloaded-but-authored set is rejected by duration, not mistaken for empty.
     auto Get_HasAnyCurve() const -> bool;
 };
 
