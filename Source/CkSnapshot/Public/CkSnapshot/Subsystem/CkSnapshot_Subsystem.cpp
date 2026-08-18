@@ -51,6 +51,7 @@
 #include <GameFramework/PlayerController.h>
 #include <GameFramework/PlayerState.h>
 #include <GameFramework/Pawn.h>
+#include <GameFramework/WorldSettings.h>   // AWorldSettings::TimeDilation — the load's game-time freeze
 #include "UObject/SoftObjectPath.h" // FSoftClassPath::TryLoadClass for recipe/actor classes
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -59,6 +60,14 @@ namespace ck_snapshot_subsystem
 {
     constexpr auto UserIndex = 0;
     constexpr auto k_NoEntity = 0xFFFFFFFFu; // mirrors ck::snapshot's k_NoEntity sentinel
+
+    // The post-condition the freeze has to actually achieve, not the value it asks for. SetTimeDilation clamps
+    // its argument into [MinGlobalTimeDilation, MaxGlobalTimeDilation], so asking for the floor always
+    // "succeeds" and returns whatever that floor happens to be — and the floor is EditAnywhere per level, saved
+    // into the .umap. A map authored with a floor of 1.0 would take the write, log nothing, and ship with the
+    // whole guarantee silently absent. 1% of real time is the loosest thing still worth calling frozen: the
+    // engine's own default floor is 0.0001, four orders of magnitude under it.
+    constexpr auto k_MaxFrozenTimeDilation = 0.01f;
 
     // Replays the capture's ArIsSaveGame tagged-property blob onto a deferred-spawn actor. Empty bytes mean the saved
     // class declared no SaveGame property (or the row predates the field), and the spawn proceeds untouched.
@@ -1823,6 +1832,90 @@ auto
         ck::snapshot::Error(TEXT("Request_Load: LOST payload [{}] on entity [{}] — reason [{}]"),
             Loss.Get_PayloadType(), Loss.Get_OwnerIdentity(), Loss.Get_Reason());
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoApply_TimeFreeze(
+        UWorld& InWorld)
+    -> void
+{
+    auto* Settings = InWorld.GetWorldSettings();
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    // Already frozen in THIS world. Re-applying would capture the floor AS the prior value, so the restore would
+    // hand the world back a permanent freeze. A DIFFERENT world re-arms rather than no-ops: the freeze is per
+    // world, and the post-travel world arrives at 1.0 no matter what the pre-travel world was set to.
+    if (_TimeFreezeWorld.Get() == &InWorld)
+    { return; }
+
+    // The one project-level off-switch, and it defaults true. If a world ever turns it off, the freeze is inert
+    // and has to say so — every promise the load makes about time not advancing is void on that world.
+    CK_ENSURE_IF_NOT(Settings->bAllowTimeDilation,
+        TEXT("CkSnapshot's load-time freeze is INERT on world [{}]: bAllowTimeDilation is false there, so global "
+             "time dilation is ignored and GAME TIME WILL ADVANCE for the whole load — timers, cadences and "
+             "world-time deadlines will fire against a world the player cannot see"),
+        InWorld.GetName())
+    { }
+
+    _TimeFreezeWorld   = &InWorld;
+    _PriorTimeDilation = Settings->TimeDilation;
+
+    Settings->SetTimeDilation(Settings->MinGlobalTimeDilation);
+
+    // Assert the OUTCOME, not the request. SetTimeDilation clamps into [Min,Max]GlobalTimeDilation, so asking
+    // for the floor always succeeds and returns whatever the floor is — and the floor is authorable per level.
+    CK_ENSURE_IF_NOT(Settings->GetEffectiveTimeDilation() <= ck_snapshot_subsystem::k_MaxFrozenTimeDilation,
+        TEXT("CkSnapshot's load-time freeze did NOT take on world [{}]: effective time dilation is [{}] after "
+             "writing the floor [{}]. Game time will keep advancing through the load. Check that world's "
+             "MinGlobalTimeDilation (World Settings, saved into the map) and bAllowTimeDilation [{}]"),
+        InWorld.GetName(), Settings->GetEffectiveTimeDilation(), Settings->MinGlobalTimeDilation,
+        Settings->bAllowTimeDilation)
+    { }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRestore_TimeFreeze(
+        UWorld& InWorld)
+    -> void
+{
+    if (_TimeFreezeWorld.Get() != &InWorld)
+    {
+        // Restoring a world that was never frozen is the ordinary case on every exit route that runs without a
+        // freeze in flight. Being frozen in a DIFFERENT live world while someone restores this one is not: it
+        // means an exit route is about to leave that world dilated with nobody left to release it.
+        if (const auto* FrozenWorld = _TimeFreezeWorld.Get();
+            FrozenWorld != nullptr)
+        {
+            ck::snapshot::Warning(TEXT("Restoring the load-time freeze on world [{}], but it is held on world [{}] — "
+                "that world is about to be left with game time frozen"), InWorld.GetName(), FrozenWorld->GetName());
+        }
+        return;
+    }
+
+    _TimeFreezeWorld.Reset();
+
+    auto* Settings = InWorld.GetWorldSettings();
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    // Anything other than the floor means something else moved the dial while the load held it. Say so rather
+    // than clobber silently — the value being overwritten is that writer's, not ours.
+    if (NOT FMath::IsNearlyEqual(Settings->TimeDilation, Settings->MinGlobalTimeDilation))
+    {
+        ck::snapshot::Warning(TEXT("Time dilation on world [{}] changed during the load hold (found [{}], expected the "
+            "floor [{}]) — restoring [{}] anyway"), InWorld.GetName(), Settings->TimeDilation,
+            Settings->MinGlobalTimeDilation, _PriorTimeDilation);
+    }
+
+    Settings->SetTimeDilation(_PriorTimeDilation);
+    _PriorTimeDilation = 1.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
