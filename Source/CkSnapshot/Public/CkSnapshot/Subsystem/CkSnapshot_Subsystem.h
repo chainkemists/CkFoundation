@@ -290,6 +290,10 @@ private:
     // of every payload rather than how many reached the queue. Called from DoFinish_Load, never twice per load.
     auto DoFold_HydrationOutcomes(FCk_Snapshot_LoadReport& InOutReport) const -> void;
 
+    // The load's verdict, computed LAST from the folded buckets — a completed load that lost named payloads is
+    // Succeeded_WithLoss, never Success. It only ever downgrades: a Failed_* result stands.
+    auto DoCompute_LoadResult(FCk_Snapshot_LoadReport& InOutReport) const -> void;
+
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
 private:

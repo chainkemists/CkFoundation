@@ -7,7 +7,7 @@ auto
     Get_DidLoadComplete() const
     -> bool
 {
-    return _Result == ECk_SnapshotResult::Success;
+    return _Result == ECk_SnapshotResult::Success || _Result == ECk_SnapshotResult::Succeeded_WithLoss;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

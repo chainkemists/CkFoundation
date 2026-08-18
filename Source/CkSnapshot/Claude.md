@@ -360,6 +360,25 @@ registry context the load zeroes when the post-travel world comes up and `DoFini
   counted as `destroyed-with-entries` and REMOVED there. Counting without removing would put one payload row in two
   buckets: the dispatcher ignores pending-kill, so the same entries would also be applied or swept afterwards.
 
+**`Result` answers one question — did the load COMPLETE?** `Success` (completed; everything applied),
+`Succeeded_WithLoss` (completed; NAMED payloads did not, and the world is playable without them), `Failed_*` (it did
+not complete). `Get_DidLoadComplete()` is true for both `Succeeded_*` and is what a consumer should branch on: a
+`== Success` comparison silently starts meaning "and nothing was lost", which is how a lossy-but-fine load ends up
+skipping a caller's entire post-load fixup. `NoLoadInProgress` is the fourth value and belongs to the promise path
+below — it is the honest answer for "there was no load", which used to be reported as `Failed_IO`.
+
+`DoCompute_LoadResult` runs LAST in `DoFinish_Load`, after the fold, and only ever DOWNGRADES `Success`: any of
+rejected / no-handler / timed-out / destroyed-with-entries / unapplied-at-finish / failed-to-deserialize, or any
+entity forced out of the quarantine, makes it `Succeeded_WithLoss` and logs an Error per named loss.
+`_EntitiesOrphaned` and `_UnresolvedAfterEscalation` are deliberately NOT in that trigger set: orphans are a routine
+outcome of the current loader and already carry their own per-row Warning, so including them would make virtually
+every load report a loss and drain the distinction of meaning. That exclusion is a deliberate, temporary weakening
+recorded as such, not an oversight.
+
+Each unapplied payload is NAMED in `_PayloadLosses` (type, owning entity, reason bucket), sourced from the same
+`FCtx_HydrationOutcomes` and capped so a pathological load cannot grow the list without bound. A count tells a
+consumer its world came back incomplete; only a name tells it which part.
+
 `SaveKey` is stable identity, not provenance. A SaveKey-only level actor remains `EngineOwned` and must already
 exist in the fresh world. A bridged entity carrying `FFragment_ActorSpawnIntent` is explicitly snapshot-respawnable,
 so it is `RuntimeSpawned` even when keyed; capture retains the key and load republishes it after actor-first rebuild.

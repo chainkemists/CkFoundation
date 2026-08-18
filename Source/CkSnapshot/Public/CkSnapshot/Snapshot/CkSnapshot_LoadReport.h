@@ -6,10 +6,22 @@
 
 #include "CkSnapshot_LoadReport.generated.h"
 
+// Answers ONE question — did the operation complete? — because that is what a caller branches on. The two
+// Succeeded_* values both mean the world is loaded and playable; the Failed_* values mean it is not. A caller
+// that cares about the difference reads the report's buckets, and one that does not calls Get_DidLoadComplete.
 UENUM(BlueprintType)
 enum class ECk_SnapshotResult : uint8
 {
+    // Completed; every payload applied.
     Success,
+    // Completed; NAMED payloads did not apply (dropped, no handler, unresolved, or released by a quarantine
+    // escape) and the world is playable without them. Reusing a Failed_* here would make a lossy-but-fine load
+    // indistinguishable from one that never loaded at all.
+    Succeeded_WithLoss,
+    // There was no load to report on — the honest answer for a promise that fires immediately outside a load,
+    // which used to be handed a default-constructed report and therefore said Failed_IO.
+    NoLoadInProgress,
+
     Failed_IO,
     Failed_Corrupt,
     Failed_IncompatibleSave,
@@ -142,6 +154,35 @@ public:
     CK_PROPERTY(_Reason);
 };
 
+// One payload that did not apply, named. A count says the world came back incomplete; only a name says which
+// part of it did — and that is the difference between a bug report and a shrug.
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_PayloadLossRecord
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_PayloadLossRecord);
+
+private:
+    UPROPERTY()
+    FString _PayloadType;
+
+    UPROPERTY()
+    FString _OwnerIdentity;
+
+    // "no-handler" | "rejected" | "timed-out" | "destroyed-with-entries"
+    UPROPERTY()
+    FString _Reason;
+
+public:
+    CK_PROPERTY(_PayloadType);
+    CK_PROPERTY(_OwnerIdentity);
+    CK_PROPERTY(_Reason);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKSNAPSHOT_API FCk_Snapshot_LoadReport
 {
@@ -255,6 +296,11 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_QuarantineForcedRecord> _QuarantineForced;
 
+    // The apply-side losses, named. Like _QuarantineForced this does NOT participate in the closure — the buckets
+    // above count them; this says which they were. Capped, so a pathological load cannot grow it without bound.
+    UPROPERTY()
+    TArray<FCk_Snapshot_PayloadLossRecord> _PayloadLosses;
+
 public:
     CK_PROPERTY(_Result);
     CK_PROPERTY(_EntitiesTotal);
@@ -282,6 +328,7 @@ public:
     CK_PROPERTY(_UsedEscalatedRebuild);
     CK_PROPERTY(_UnresolvedAfterEscalation);
     CK_PROPERTY(_QuarantineForced);
+    CK_PROPERTY(_PayloadLosses);
 
 public:
     /**
