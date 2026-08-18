@@ -92,7 +92,13 @@ CountUp, GoalValue for CountDown-after-Setup. The payload captures the three thi
 a spawn recipe and is rebuilt on load, so Produce/HydrationApply run for it. Timers added at RUNTIME
 (post-BeginPlay — e.g. an SM task's `WaitForNewTimer`) are RuntimeSpawned-with-no-recipe under the v3
 rebuild model, are NOT rebuilt on load, and therefore do not persist. That is the rebuild-model contract,
-not a bug in the handler.
+not a bug in the handler — and under C5 it is the intended shape: the durable fact is the DEADLINE, held by
+the feature that started the timer, and that feature's Setup re-creates the timer from it on load.
+
+It is no longer silent. Each such timer is recorded in `FCk_Snapshot_SaveReport::_UncapturedRuntimeEntities`
+(read it off `Get_LastSaveReport`), with one summary Display line per save and per-entity detail at Verbose.
+If a timer genuinely must survive, the fix is to give its entity durable identity or to keep the deadline on
+the persisted owner — not to make the capture guess.
 
 `HydrationApply` re-drives state through DEFERRED requests only — the chrono's `_CurrentValue` is
 friend-gated and is never written directly — and every `NotReady` return precedes every request:

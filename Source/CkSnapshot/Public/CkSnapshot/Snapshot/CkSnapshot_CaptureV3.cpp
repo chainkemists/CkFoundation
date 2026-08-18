@@ -4,6 +4,8 @@
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/Settings/CkSnapshot_Settings.h"
 
+#include "CkCore/Format/CkFormat.h" // ck::Format_UE — naming an entity the capture did not carry
+
 #include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
@@ -421,14 +423,30 @@ namespace ck::snapshot
         auto UnlabeledWithPayloadAudit = 0;
         auto SaveTransientSkipped = 0;
 
+        auto UncapturedRuntimeWithPayload = 0;
+
         for (const auto RawId : CandidateIds)
         {
-            if (TransientId.IsSet() && RawId == TransientId.GetValue())
-            { continue; }
-
             auto Handle = ck::MakeHandle(FCk_Entity{static_cast<ck::SnapshotEntityType>(RawId)}, CkRegistry);
             if (ck::Is_NOT_Valid(Handle))
             { continue; }
+
+            if (TransientId.IsSet() && RawId == TransientId.GetValue())
+            {
+                // The world transient is bookkeeping, never world state, so it is never persisted — but a handler
+                // that produces FOR it is a declaration defect rather than a design choice: durable state was put
+                // somewhere the save cannot reach, and no ratchet can see it, because the type is fine and only
+                // its OWNER is unpersistable.
+                if (const auto* ProducingType = FindFirstProducingType(Handle))
+                {
+                    ck::snapshot::Warning(
+                        TEXT("v3 capture AUDIT: the world TRANSIENT entity carries a hydration payload that will be "
+                             "DROPPED (first producer [{}]). The transient is bookkeeping and is never persisted — "
+                             "move that state onto an entity the save can carry."),
+                        GetNameSafe(ProducingType));
+                }
+                continue;
+            }
 
             if (IsMarkedForDestruction(Handle))
             { continue; }
@@ -514,6 +532,28 @@ namespace ck::snapshot
             else
             {
                 ++AnonymousSkipped;
+
+                // Runtime-created with no recipe and no identity: nothing to rebuild it from, so it is not
+                // captured. Under C5 that is normally the DESIGNED outcome — a timer an SM state started is
+                // session state whose durable intent lives in the owning feature — so this is recorded as DATA
+                // rather than warned about. What was wrong before is that it was invisible: an author could not
+                // tell a deliberate omission from a silent drop, and the runtime-timer class went unnoticed for
+                // exactly that reason. Per-item detail stays at Verbose; the save's own summary carries the count.
+                if (const auto* ProducingType = FindFirstProducingType(Handle))
+                {
+                    ++UncapturedRuntimeWithPayload;
+
+                    auto Record = FCk_Snapshot_UncapturedRuntimeRecord{};
+                    Record.Set_Identity(ck::Format_UE(TEXT("{}"), Handle));
+                    Record.Set_PayloadType(GetNameSafe(ProducingType));
+                    OutReport.Add_UncapturedRuntimeEntity(MoveTemp(Record));
+
+                    ck::snapshot::Verbose(
+                        TEXT("v3 capture: runtime entity [{}] produced [{}] but is not captured (no construction "
+                             "recipe and no save identity) — its state is session-scoped and the owning feature "
+                             "re-creates it on load"),
+                        Handle, GetNameSafe(ProducingType));
+                }
             }
 
             if (NOT bPersist)
@@ -745,6 +785,19 @@ namespace ck::snapshot
                      "Set CkSnapshot's CaptureAuditMode to Detailed for the per-entity payload dump."),
                 DroppedPayloadCount, UnlabeledWithPayloadAudit, SaveTransientWithPayloadAudit,
                 FString::Join(AuditExamples, TEXT(", ")));
+        }
+
+        // A DIFFERENT population from the audit above: those entities were skipped by an explicit rule, these were
+        // eligible and simply have nothing to rebuild from. Display, not Warning, on purpose — the AngelScript
+        // autotest runner escalates warnings to failures, and every test that saves would trip this census.
+        // ONE line per save either way: a per-item report would drown the log.
+        if (UncapturedRuntimeWithPayload > 0)
+        {
+            ck::snapshot::Display(
+                TEXT("Run_CaptureV3: [{}] runtime-created entities produced state the save did not carry — they have "
+                     "no construction recipe and no save identity, so the owning feature re-creates them on load. "
+                     "Named in the save report (Get_LastSaveReport); per-entity detail at Verbose"),
+                UncapturedRuntimeWithPayload);
         }
 
         return ECk_SnapshotResult::Success;

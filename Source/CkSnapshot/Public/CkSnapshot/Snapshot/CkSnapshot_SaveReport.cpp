@@ -12,3 +12,14 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Snapshot_SaveReport::
+    Add_UncapturedRuntimeEntity(
+        FCk_Snapshot_UncapturedRuntimeRecord InRecord)
+    -> void
+{
+    _UncapturedRuntimeEntities.Emplace(MoveTemp(InRecord));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
