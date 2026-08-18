@@ -69,8 +69,14 @@ comment-light; the *why* lives here.
 - **`HydrationApply`-only, never the net `Apply` slot** — applying on a client would race
   construct-time composition. Dynamic fragments have no structural composition step (they exist iff
   they hold data), so hydration has nothing to wait on: always `Applied`, never `NotReady`.
-- The post-write RepNotify broadcast **mirrors the net fallback's RepNotify** (`CkDynamic_Module.cpp`)
-  so a bound `OnRepNotify` handler re-runs against the restored value.
+- The post-write broadcast is **`Hydration_OnTypeHydrated`, NOT `OnRepNotify`** (`CkEcs/Persistence/CkPersistenceHydration.h`).
+  It mirrors the net fallback's shape — one edge per committed type, after every value in the entity's
+  payload set is written — but names the event that occurred. A load is not replication, and while both
+  used the same signal a consumer binding `OnRepNotify` for wire updates silently received load edges
+  too. `CkDynamic_Module.cpp`'s net broadcast keeps `OnRepNotify`; `BindTo_OnRepNotify` therefore binds
+  the NET edge only. In Gate 01 `Hydration_OnTypeHydrated` is a C++ signal with no `BindTo_*` UFUNCTION —
+  nothing binds it yet, and the per-ENTITY `Promise_OnHydrated` is the hook a consumer wants in almost
+  every case.
 - The re-arm payload **carries no per-type replication flag**, so a fragment the rebuild did not
   re-register as replicated stays local-only.
 - **Posture decides what is captured, and it is resolved from the TYPE, once.** `Produce` and

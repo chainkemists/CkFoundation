@@ -104,6 +104,50 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
+    Promise_OnHydrated(
+        const FCk_Handle& InHandle,
+        const FCk_Delegate_Hydration_OnHydrated& InDelegate)
+    -> void
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Promise_OnHydrated requires a valid entity handle"))
+    { return; }
+
+    const auto FireImmediately = [&]() -> void
+    {
+        InDelegate.ExecuteIfBound(InHandle);
+    };
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+    if (ck::Is_NOT_Valid(World))
+    { FireImmediately(); return; }
+
+    const auto GameInstance = World->GetGameInstance();
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+
+    // Nothing pending for this entity means hydration is as complete as it will ever be — a fresh spawn, a
+    // client, a world with no load in flight, or a load that already lifted. All four are the same answer, and
+    // deferring any of them would strand a consumer on an edge that is never going to come.
+    if (ck::Is_NOT_Valid(Subsystem) || NOT Subsystem->Get_IsHydrationPending(InHandle))
+    { FireImmediately(); return; }
+
+    // Pending, so the lift WILL broadcast for this entity: bind one-shot and ignore any payload in flight. The
+    // signal is per-entity and fires at most once per entity per load, so there is nothing stale to replay —
+    // the policy is here to keep a bind made during Rebuilding from being satisfied by anything but this load's
+    // own lift.
+    auto Source = InHandle;
+    CK_SIGNAL_BIND(ck::UUtils_Signal_Hydration_OnHydrated, Source, InDelegate,
+        ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+        ECk_Signal_PostFireBehavior::Unbind);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
     Request_AssignSaveKey(
         FCk_Handle& InHandle,
         const FString& InStableIdentity)
