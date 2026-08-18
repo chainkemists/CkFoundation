@@ -203,74 +203,90 @@ Restored values are readable at `OnLoadComplete` (the settle phase pumps to quie
 
 ---
 
-## Dynamic-fragment snapshot opt-outs
+## Dynamic-fragment posture — what is captured, and what the rebuild owns
 
 CkDynamic registers ONE blanket save handler for every dynamic (AS `Add_Fragment`-declared) struct on an entity
 (`CkDynamic/CkDynamic_Fragment.cpp` — `FCkDynamicFragmentsSaveHandlerRegistrar`,
-`Register_SaveOnly<FCk_SaveData_DynamicFragments>`): `Produce` captures **every** dynamic fragment, replicated or
-not, and `HydrationApply` re-composes each onto the rebuilt entity — no per-feature registrar needed to opt IN.
-Opting a fragment (or a field) OUT is two mechanisms, chosen by granularity:
+`Register_SaveOnly<FCk_SaveData_DynamicFragments>`), so no per-feature registrar is needed to participate. What
+that handler does with a given fragment is decided ENTIRELY by the fragment TYPE's snapshot **posture**, resolved
+by `ck::Get_FragmentPosture` (`CkEcs/Snapshot/CkSnapshot_Posture.h`) — the single authority both sides call:
 
-**Whole fragment — `FCk_DynamicFragment_SnapshotTransient`.** C++ structs *derive* from the marker; AngelScript
-structs cannot inherit, so the AS spelling is a **field** of that type instead (`CkDynamic_Fragment_Data.h:31-34`).
-`UCk_Utils_DynamicFragment_UE::Get_IsSnapshotTransient` (`CkDynamic_Utils.cpp:452-470`) accepts either spelling —
-an `IsChildOf` test on the struct itself, or a scan for a marker-typed `FStructProperty` — and it is honoured on
-BOTH sides: `Produce` strips these before saving, `HydrationApply` skips them on load. Reach for it when the
-fragment's ENTIRE content is rebuilt by `DoConstruct` replay: cached child-entity handles, `_Signals`, `_Requests`,
-`_NeedsSetup` tags. ~25 BB script files already do (`BB_Door_Feature.as`, `BB_CombatReceiver_Feature.as`).
+| Posture | `Produce` | `HydrationApply` |
+|---|---|---|
+| `Session` | not captured | skipped — never written, never composed onto the rebuilt entity |
+| `Durable` | captured whole | assigned whole onto the rebuilt fragment |
+| `Undeclared` | captured | field-wise copy preserving live-session fields — the transitional path, see below |
 
-**Automatic — delegate fields.** Since 2026-08-16 hydration ALSO preserves every top-level delegate and
-multicast-delegate field, with no opt-in (`Get_IsLiveSessionField`, `CkDynamic_Fragment.cpp`). A delegate binds
-UObject + FunctionName, so across a rebuild+hydrate its saved form is stale or empty *by construction* — the
-object it named belonged to the torn-down world — while the live value is the set of subscribers that bound
-during the rebuild. Copying the saved list over them silently unsubscribes everyone, and the failure is quiet in
-the worst way: the feature keeps its state and its one-shot reads still work, so it looks healthy, but it never
-notifies again. **"Correct initial value, then frozen"** is the signature (dead HUD counters, prompts that never
-re-show). Found 2026-08-16 across 46 unmarked BB `_Signals` fragments. No fragment needs to opt in, and no
-future one can forget.
+**Declaring one.** Two symmetric marker structs live in CkEcs: `FCk_Snapshot_Durable` (part of the saved world)
+and `FCk_Snapshot_Session` (rebuilt by the feature's own construction/setup). C++ structs *derive* from a marker;
+AngelScript structs cannot inherit, so the script spelling is a **field** of that type, and the resolver accepts
+either. There is deliberately no metadata spelling — Game and cooked targets strip metadata behind
+`WITH_METADATA` (`CkDynamic/Claude.md`), so a `meta=(...)` opt-out is silently inert in a packaged build.
+`FCk_DynamicFragment_SnapshotTransient` is the **deprecated** spelling of `FCk_Snapshot_Session` and still
+resolves Session, so the script sites carrying it keep behaving identically; new code writes the new name.
 
-Its limit: **top-level fields only**, matching the `CPF_Transient` rule it sits beside. A delegate nested inside
-a struct- or array-typed member is still copied wholesale — "preserve the live one" has no meaning once the
-saved and live arrays differ in length. A fragment shaped that way (`FBb_Fragment_Interactable_Signals`, whose
-channeled bindings are `TArray<{FGameplayTag, delegate}>`) wants the whole-fragment marker instead. The two
-mechanisms divide cleanly: the guard covers delegate FIELDS, the marker covers subscriber-list FRAGMENTS.
+**Some postures are DERIVED, and a derivation is a proof rather than a default** — it says the declared
+alternative is unachievable, not that nobody got round to declaring:
 
-**Per-field — `UPROPERTY(Transient)`.** The persistent archive never writes a `CPF_Transient` property
-(`FProperty::ShouldSerializeValue`), and hydration copies the payload back onto the rebuilt entity field-by-field
-via `CopyFragment_PreservingLiveSessionFields` (`CkDynamic_Fragment.cpp`): if the struct carries ANY preserved
-field, every OTHER field copies from the saved payload and each preserved field is left
-untouched, so the rebuilt world's freshly-CONSTRUCTED value survives instead of being stomped by the saved
-default. Reach for it when one fragment mixes durable state with runtime-only children (`FBb_Fragment_Shelf_State`
-— `Inventory`/`StockedSku`/`NextProxyID` persist while probe/interactable/outline/cosmetic-proxy handles are
-`Transient`). **The handle-id stream is positional** — a fragment's persisted handle fields must be declared
-BEFORE its `Transient` ones: the save's handle-remap walk is a straight positional field walk, not name-keyed, so
-a reordered struct attributes a durable saved value to the wrong field.
+| Shape | Pure ⇒ | The same shape ALSO carrying value fields ⇒ |
+|---|---|---|
+| no reflected field other than a posture marker — a tag | `Session` | n/a (a tag has no value fields) |
+| the TYPE walk reaches a delegate / multicast-delegate at ANY depth | `Session` | `Undeclared` + a "SPLIT ME" reason |
+| a script fragment whose name ends in `Requests`, or a type reaching an `FCk_Request_Base` | `Session` | `Undeclared` + a "SPLIT ME" reason |
 
-**Omitting whichever opt-out a fragment needs is the recurring shape of a real incident class.** Hydration's
-whole-fragment assign runs AFTER `DoConstruct` has already composed the entity fresh — so a Transient-worthy
-runtime handle a construction script just built (a child probe entity, a signal binding, an AI task handle) gets
-overwritten by the SAVED value for that field, which typically remaps to `entt::null` because the referenced
-child was never independently persisted. Door commit `52309113c`, the BusterBlock NPC freeze-after-load
-incident, and the 2026-08-16 QA pair (a ChangeablePoster that focuses but never changes texture; a checkout
-counter whose settle offered no cash/credit option because its presented-hand SceneNodes came back as
-tombstones) are all this shape: construct-fresh handles stomped by stale hydrated values.
+- **Delegates** bind UObject + FunctionName, so across a rebuild+hydrate the saved form is stale or empty *by
+  construction* — it named objects in the torn-down world — while the live value is the set of subscribers that
+  bound during the rebuild. Restoring the saved list silently unsubscribes everyone, and the failure is quiet in
+  the worst way: state and one-shot reads still look right, but the feature never notifies again. **"Correct
+  initial value, then frozen"** is the signature (dead HUD counters, prompts that never re-show; found 2026-08-16
+  across 46 unmarked BB `_Signals` fragments). Deriving Session closes that class structurally, at any nesting
+  depth, with nothing for a future fragment to forget.
+- **Tags** mark processing state that the replayed construction stamps again. Capturing one means hydration hands
+  it back to an entity whose Setup already consumed it, and the setup runs twice.
+- **Request queues** are in-flight work, not world state: a restored queue re-arms its processor against a world
+  that has already moved on.
 
-The recurring driver is that **`utils_scene_node::Create` gives its child a debug name, never a
-GameplayLabel** — so every SceneNode / probe-node child is an unlabeled `FTag_ConstructSpawned` entity, which
-capture rule 3 classifies save-transient. A handle to one can NEVER round-trip. Treat any fragment field naming
-a SceneNode, probe, Interactable, UnrealComponent or Tween child as `UPROPERTY(Transient)` by default.
+**A mixed shape is never silently reclassified.** A fragment matching a derived-Session shape that also carries
+real value fields resolves `Undeclared` and reds as "split me" — it keeps being captured meanwhile, because a
+derivation that dropped durable data would be the exact bug this design exists to prevent (two live BB cases are
+plain `int32` accumulators sitting inside `…Requests` fragments). Split it: durable fields into a `Durable`
+fragment, session content into a `Session` one.
 
-**Backstop:** since 2026-08-16 `CkDynamic`'s `HydrationApply` refuses to DOWNGRADE a live handle — after the
-field copy, any handle the save could not resolve is restored from the construction-fresh value
-(`Restore_UnresolvedHandles`, `CkDynamic_Fragment.cpp`). It stands down when the saved and fresh layouts hold
-different numbers of handle slots, because positional correspondence no longer holds there; and a field the
-save deliberately CLEARED keeps its construction-fresh value, since an empty saved handle and an unresolvable
-one are the same value by the time hydration sees them. It is a safety net for unaudited fields, **not a
-substitute for the opt-out** — a marked field also keeps the dead reference out of the save entirely.
+**A declaration never overrides a derivation.** `Durable` on a delegate-carrying, request-carrying or field-less
+type ensures and resolves `Undeclared`. So does `Durable` alongside a `UPROPERTY(Transient)` game field:
+field-level opt-out is **retired as an author mechanism** — a fragment is Durable whole or Session whole, and a
+mixture is a fragment that has not been split yet.
 
-Don't try to express either contract with USTRUCT `meta=(...)` metadata — Game and cooked targets strip metadata
-behind `WITH_METADATA` (`CkDynamic/CLAUDE.md`), so a metadata-only opt-out is silently inert in a packaged build.
-The `IsChildOf`/marker-field runtime scan above is the only opt-out CkDynamic actually evaluates.
+**`Undeclared` behaves exactly as the pre-posture code did, and it is transitional.** It is captured, and
+hydrated field-by-field via `CopyFragment_PreservingLiveSessionFields` (`CkDynamic_Fragment.cpp`): if the struct
+carries any `CPF_Transient` field or any top-level delegate, every OTHER field copies from the saved payload
+while those keep the value the REBUILT world constructed. `Ck.Snapshot.Meta.FragmentPostureCoverage` reds on any
+`Undeclared` type outside the project's allow-list, and that list only ever shrinks — when it empties, so does
+this row and the guard that serves it.
+
+Two facts that apply while a fragment is still `Undeclared`, and that declaring a posture retires:
+
+- **The handle-id stream is positional** — a persisted handle field must be declared BEFORE the `Transient` ones,
+  because the save's handle-remap walk is a straight positional field walk, not name-keyed, so a reordered struct
+  attributes a saved value to the wrong field. A `Durable` fragment has no skipped fields, so the rule dissolves.
+- **Backstop:** `HydrationApply` refuses to DOWNGRADE a live handle — after the field copy, any handle the save
+  could not resolve is restored from the construction-fresh value (`Restore_UnresolvedHandles`). It stands down
+  when the saved and fresh layouts hold different numbers of handle slots, since positional correspondence no
+  longer holds; and a field the save deliberately CLEARED keeps its construction-fresh value, because an empty
+  saved handle and an unresolvable one are the same value by then. It is a safety net for undeclared fields, not
+  a substitute for a posture — and every firing is a declaration defect worth chasing.
+
+**The incident class all of this comes from.** Hydration runs AFTER `DoConstruct` has already composed the entity
+fresh, so a runtime handle a construction script just built (a child probe entity, a signal binding, an AI task
+handle) used to be overwritten by the SAVED value for that field — which typically remaps to `entt::null`,
+because the referenced child was never independently persisted. Door commit `52309113c`, the BusterBlock NPC
+freeze-after-load incident, and the 2026-08-16 QA pair (a ChangeablePoster that focuses but never changes
+texture; a checkout counter whose settle offered no cash/credit option because its presented-hand SceneNodes came
+back as tombstones) are all that shape. The recurring driver is that **`utils_scene_node::Create` gives its child
+a debug name, never a GameplayLabel** — so every SceneNode / probe-node child is an unlabeled
+`FTag_ConstructSpawned` entity, which capture rule 3 classifies save-transient, and a handle to one can NEVER
+round-trip. A fragment whose fields name SceneNode, probe, Interactable, UnrealComponent or Tween children is
+`Session` state: declare it, do not try to persist half of it.
 
 ---
 

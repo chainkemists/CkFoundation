@@ -11,6 +11,7 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"               // ck::snapshot::ForEachHandle
+#include "CkEcs/Snapshot/CkSnapshot_Posture.h"                  // ck::Get_FragmentPosture
 
 #include <NativeGameplayTags.h>
 #include <UObject/UnrealType.h> // TFieldIterator / FProperty (transient-preserving hydration copy)
@@ -22,17 +23,12 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_EntityFragment_Root, TEXT("DynamicFragment"));
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck_dynamic_fragment
 {
-    auto IsSnapshotTransient(const UScriptStruct* InType) -> bool
-    {
-        return UCk_Utils_DynamicFragment_UE::Get_IsSnapshotTransient(InType);
-    }
-
     // The saved payload cannot carry a meaningful value for these, but the rebuilt world can:
     // CPF_Transient is never written by the archive, and a delegate's saved form names objects from
     // the torn-down world while the live value holds the subscribers that bound during the rebuild.
     // Stomping either leaves a feature that reads correctly once and then never updates again.
-    // Top-level only — a nested delegate has no meaningful "live one" once array lengths differ;
-    // those fragments take the whole-struct SnapshotTransient marker instead.
+    // Top-level only, and reached only by an UNDECLARED fragment: a fragment whose type walk finds a
+    // delegate at any depth resolves Session and is never copied at all.
     auto Get_IsLiveSessionField(const FProperty* InProperty) -> bool
     {
         if (InProperty->HasAnyPropertyFlags(CPF_Transient))
@@ -86,8 +82,8 @@ namespace ck_dynamic_fragment
 
     // Hydration must never DOWNGRADE a live handle to a dead one: a construct-spawned child is
     // unlabeled, so capture rule 3 never writes a row for it and its saved id remaps to a tombstone,
-    // leaving the feature structurally complete but inert. UPROPERTY(Transient) is the precise
-    // opt-out; this is the backstop for fields nobody has audited.
+    // leaving the feature structurally complete but inert. Declaring the fragment's posture is the
+    // fix; this is the backstop for the undeclared ones, and every firing names one of them.
     // Trade: a deliberately CLEARED field is indistinguishable from an unresolved one (both arrive
     // invalid) and keeps its fresh value, so load-bearing emptiness must be persisted explicitly.
     auto Restore_UnresolvedHandles(
@@ -145,7 +141,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 auto Fragments = UCk_Utils_DynamicFragment_UE::Get_AllFragments(InEntity);
                 Fragments.RemoveAll([](const FInstancedStruct& InEntry)
                 {
-                    return ck_dynamic_fragment::IsSnapshotTransient(InEntry.GetScriptStruct());
+                    return ck::Get_FragmentPosture(InEntry.GetScriptStruct()) == ECk_Snapshot_Posture::Session;
                 });
                 if (Fragments.IsEmpty())
                 { return {}; }
@@ -188,7 +184,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                     const auto* Type = Entry.GetScriptStruct();
                     if (ck::Is_NOT_Valid(Type))
                     { continue; } // unresolved content drift retains the warning-and-skip behavior below
-                    if (ck_dynamic_fragment::IsSnapshotTransient(Type))
+                    if (ck::Get_FragmentPosture(Type) == ECk_Snapshot_Posture::Session)
                     { continue; }
 
                     const auto Schema = ck::dynamic::Validate_FragmentSchema(Type);
@@ -212,7 +208,9 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                             "still applied."), InEntity);
                         continue;
                     }
-                    if (ck_dynamic_fragment::IsSnapshotTransient(Type))
+                    // A Session type in the payload predates its declaration. Skipping it BEFORE the add is what
+                    // keeps hydration from composing session state the rebuild deliberately did not.
+                    if (ck::Get_FragmentPosture(Type) == ECk_Snapshot_Posture::Session)
                     { continue; }
 
                     auto* Storage = UCk_Utils_DynamicFragment_UE::TryAddOrGet_Fragment_TypeUnsafe(InEntity, Type);
@@ -226,13 +224,22 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 // can no longer observe a half-hydrated set.
                 for (const auto& Resolved : ResolvedEntries)
                 {
+                    const auto* Type = Resolved.Key->GetScriptStruct();
+
+                    // A Durable fragment is captured whole and restored whole: nothing in it can be live-session
+                    // content, because a type that reaches any would not have resolved Durable.
+                    if (ck::Get_FragmentPosture(Type) == ECk_Snapshot_Posture::Durable)
+                    {
+                        *Resolved.Value = *Resolved.Key;
+                        continue;
+                    }
+
                     // Read first — the copy is what destroys them.
                     const auto PreCopyHandles = ck_dynamic_fragment::Collect_Handles(*Resolved.Value);
 
                     ck_dynamic_fragment::CopyFragment_PreservingLiveSessionFields(*Resolved.Key, *Resolved.Value);
 
-                    ck_dynamic_fragment::Restore_UnresolvedHandles(
-                        PreCopyHandles, *Resolved.Value, Resolved.Key->GetScriptStruct(), InEntity);
+                    ck_dynamic_fragment::Restore_UnresolvedHandles(PreCopyHandles, *Resolved.Value, Type, InEntity);
                 }
 
                 for (const auto& Resolved : ResolvedEntries)

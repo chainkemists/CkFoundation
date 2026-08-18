@@ -73,26 +73,33 @@ comment-light; the *why* lives here.
   so a bound `OnRepNotify` handler re-runs against the restored value.
 - The re-arm payload **carries no per-type replication flag**, so a fragment the rebuild did not
   re-register as replicated stays local-only.
-- Snapshot-transient dynamic structs derive from `FCk_DynamicFragment_SnapshotTransient` (C++) or
-  carry a field of that type (AngelScript — script structs cannot inherit); capture and hydration
-  identify them through runtime `IsChildOf` / marker-typed-property scan. Do not use USTRUCT
+- **Posture decides what is captured, and it is resolved from the TYPE, once.** `Produce` and
+  `HydrationApply` both call `ck::Get_FragmentPosture` (`CkEcs/Snapshot/CkSnapshot_Posture.h`) and
+  branch three ways: `Session` is skipped on both sides; `Durable` is captured whole and assigned
+  whole; `Undeclared` keeps the pre-posture behaviour — captured, and copied back field-wise through
+  the live-session guard below. The markers (`FCk_Snapshot_Durable` / `FCk_Snapshot_Session`) live in
+  CkEcs, which CkDynamic already depends on, so the registered-handler path reads the same
+  declaration; `FCk_DynamicFragment_SnapshotTransient` remains as the deprecated Session spelling for
+  the script sites that still carry it. Structs *derive* a marker in C++ and carry it as a FIELD in
+  AngelScript (script structs cannot inherit) — the resolver accepts either. Do not use USTRUCT
   metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.
-- **`Get_IsLiveSessionField` — hydration never STOMPS a live delegate.** Alongside `CPF_Transient`,
-  the field-wise copy preserves every top-level delegate / multicast-delegate field, with no opt-in.
-  A delegate binds UObject + FunctionName, so across a rebuild+hydrate its saved form is stale or
-  empty *by construction* (it named objects in the torn-down world) while the live value is the set
-  of subscribers that bound during the rebuild. Copying the saved list over them silently
-  unsubscribes everyone, and the feature then keeps correct state and correct one-shot reads while
-  never notifying again — **"correct initial value, then frozen"** (BusterBlock 2026-08-16: a HUD
-  wallet showing the right balance that never moved; interact prompts and key hints that never
-  re-appeared after a load). Found across 46 unmarked BB `_Signals` fragments, which is why this is
-  a framework guard rather than a per-fragment marker: opt-in cannot survive the next new fragment.
-  **Limit — top-level fields only**, matching the `CPF_Transient` rule beside it. A delegate nested
-  in a struct- or array-typed member is copied wholesale, because "preserve the live one" is
-  undefined once the saved and live arrays differ in length; a subscriber-list fragment shaped that
-  way wants the whole-fragment `FCk_DynamicFragment_SnapshotTransient` marker instead. The two
-  divide cleanly: the guard covers delegate FIELDS, the marker covers subscriber-list FRAGMENTS.
-- **`Restore_UnresolvedHandles` — hydration never DOWNGRADES a live handle.** A fragment
+- **`Get_IsLiveSessionField` — the `Undeclared` path, and only that path.** For a fragment nobody has
+  declared, the field-wise copy preserves every `CPF_Transient` field and every top-level delegate /
+  multicast-delegate field, with no opt-in. A delegate binds UObject + FunctionName, so across a
+  rebuild+hydrate its saved form is stale or empty *by construction* (it named objects in the
+  torn-down world) while the live value is the set of subscribers that bound during the rebuild.
+  Copying the saved list over them silently unsubscribes everyone, and the feature then keeps correct
+  state and correct one-shot reads while never notifying again — **"correct initial value, then
+  frozen"** (BusterBlock 2026-08-16: a HUD wallet showing the right balance that never moved;
+  interact prompts and key hints that never re-appeared after a load). Found across 46 unmarked BB
+  `_Signals` fragments. **Limit — top-level fields only.** A delegate nested in a struct- or
+  array-typed member is copied wholesale, because "preserve the live one" is undefined once the saved
+  and live arrays differ in length. That limit is why the posture resolver's delegate derivation
+  walks the type at ANY depth instead: a delegate-carrying fragment is `Session` and is never copied
+  at all, so the guard is the transitional backstop for undeclared fragments rather than the rule.
+  It dies with the last `Undeclared` fragment.
+- **`Restore_UnresolvedHandles` — hydration never DOWNGRADES a live handle.** Reached on the
+  `Undeclared` path only, for the same reason. A fragment
   field naming a construct-derived child (SceneNode, probe, Interactable, UnrealComponent, Tween) is
   written fresh by the owner's replayed construction, but the SAVED value cannot resolve: those
   children are unlabeled `FTag_ConstructSpawned` entities, which capture rule 3 classifies

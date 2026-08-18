@@ -317,7 +317,14 @@ public:
     //   7 — the V3 tables and the SaveGame blob moved from tagged-property serialization to native bulk
     //       serializers. Byte layout differs, so a v6 slot is refused by the exact-equality check in
     //       Request_Load — loudly and before any world teardown, never silently misread.
-    static constexpr uint16 CurrentFormatVersion = 7;
+    //   8 — the CAPTURE SET changed: a dynamic fragment's declared snapshot posture decides it. Types that derive
+    //       Session — bare tags, delegate carriers, request queues — are no longer captured nor hydrated, and a
+    //       Durable one is assigned whole instead of field-wise. A version 7 file therefore carries payload rows a
+    //       version 8 load would refuse to apply, and its Durable rows expect the field-wise copy.
+    //       (Authored as "7" on bugfix/saveload-core-tenets; renumbered to 8 when that branch rebased onto dev,
+    //       which had independently taken 7 for the bulk-serializer change above. Both changes apply, and a save
+    //       written by either lone predecessor is genuinely unreadable here — so it gets its own number.)
+    static constexpr uint16 CurrentFormatVersion = 8;
 
     static constexpr int32 k_AuditNotMeasured = -1;
 
