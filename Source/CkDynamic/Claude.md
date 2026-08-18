@@ -114,8 +114,11 @@ comment-light; the *why* lives here.
   indistinguishable from one whose target failed to resolve (both arrive invalid), so a cleared field
   keeps its construction-fresh value — holding a live handle is recoverable, holding a dead one is the
   inert-feature bug. A field whose emptiness is load-bearing must persist that fact explicitly rather
-  than encode it as an invalid handle. `UPROPERTY(Transient)` remains the preferred per-field opt-out;
-  this is the backstop for fields nobody has audited yet.
+  than encode it as an invalid handle. Both diagnostics log at **Warning**, not Verbose: every
+  firing is a fragment whose posture has not been declared, so it is a work item rather than trace
+  noise, and a backstop that engages silently tells nobody. The whole function is scheduled for
+  deletion once no fragment resolves `Undeclared` any more — it exists to carry the undeclared ones
+  across, not to be a permanent safety net.
 
 ### Cooked display schema (`CkDynamic_FragmentDisplaySchema.*`)
 
