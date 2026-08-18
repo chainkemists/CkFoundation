@@ -29,7 +29,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
 
-    return InHandle.Has<ck::FTag_Snapshot_JustRestored>();
+    return InHandle.Has<ck::FTag_Hydration_WasHydratedThisLoad>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
