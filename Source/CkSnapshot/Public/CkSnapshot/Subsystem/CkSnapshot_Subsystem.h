@@ -8,6 +8,7 @@
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
+#include "CkSnapshot/Snapshot/CkSnapshot_SaveReport.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Delegates.h"
 
 #include <Subsystems/GameInstanceSubsystem.h>
@@ -187,6 +188,15 @@ public:
     FCk_Snapshot_LoadReport
     Get_LastLoadReport() const;
 
+    // The report of the most recently attempted SAVE. Carries the result plus any durable value the capture
+    // could not carry — today, a durable payload holding a handle to an entity the save did not persist. The
+    // save's own return value stays a bare result, so no caller has to change to keep working.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Last Save Report")
+    FCk_Snapshot_SaveReport
+    Get_LastSaveReport() const;
+
 protected:
     virtual auto Deinitialize() -> void override;
 
@@ -273,6 +283,7 @@ private:
     TMap<uint32, TWeakObjectPtr<AActor>> _PendingBridgeActors; // bridged saved-id -> spawned actor awaiting its bridge
     FCk_Snapshot_LoadReport _V3LoadReport;             // accumulates orphan/skip counts; DoFinish_Load reports it
     FCk_Snapshot_LoadReport _LastLoadReport;           // frozen copy of the last finished load's report (pull channel)
+    FCk_Snapshot_SaveReport _LastSaveReport;           // same, for the last attempted save
     bool _HydrationEnqueued = false;                   // Hydrating enqueues payloads exactly once
     int32 _SettleFramesRemaining = 0;                  // post-gate frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once

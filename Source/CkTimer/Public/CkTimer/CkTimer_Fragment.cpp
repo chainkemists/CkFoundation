@@ -23,6 +23,7 @@ namespace ck_timer_fragment
         FRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_Timer>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 // UNSET when the Timer feature is absent on the entity (nothing to persist).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {

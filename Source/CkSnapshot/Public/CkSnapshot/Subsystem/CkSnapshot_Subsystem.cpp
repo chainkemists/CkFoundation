@@ -185,6 +185,13 @@ FCk_Snapshot_LoadReport
     return _LastLoadReport;
 }
 
+FCk_Snapshot_SaveReport
+    UCk_Snapshot_Subsystem_UE::
+    Get_LastSaveReport() const
+{
+    return _LastSaveReport;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -331,8 +338,11 @@ auto
 
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
+    _LastSaveReport = FCk_Snapshot_SaveReport{};
     auto CaptureTimings = ck::snapshot::FCaptureTimings{};
-    const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3, &CaptureTimings);
+    const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3,
+        _LastSaveReport, &CaptureTimings);
+    _LastSaveReport.Set_Result(CaptureResultV3);
 
     auto DoFinish = [&](ECk_SnapshotResult InResult) -> void
     {

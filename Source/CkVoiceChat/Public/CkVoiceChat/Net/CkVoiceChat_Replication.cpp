@@ -14,6 +14,7 @@ static struct FVoiceChatRepHandlerRegistrar
     FVoiceChatRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_VoiceChat>({
+            .Posture = ECk_Snapshot_Posture::Session,
             .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
             {
                 return UCk_Utils_VoiceChannel_UE::Apply_ReplicatedControlPlane(

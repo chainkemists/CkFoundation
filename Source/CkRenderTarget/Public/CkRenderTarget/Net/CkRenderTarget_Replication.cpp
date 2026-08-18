@@ -69,6 +69,7 @@ namespace ck_render_target_replication
         FCk_RenderTargetRepHandlerRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RenderTarget>({
+                    .Posture = ECk_Snapshot_Posture::Durable,
                     // Deliberately not gated on Replicates — CkRenderTarget/Claude.md.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {

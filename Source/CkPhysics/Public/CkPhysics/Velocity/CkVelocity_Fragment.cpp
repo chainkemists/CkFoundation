@@ -25,6 +25,7 @@ static struct FVelocityRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Velocity>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {

@@ -71,6 +71,7 @@
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_DataOnly_Items>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 // Keyed on the INVENTORY entity — emits THAT inventory's items. Capture-only, no mutation.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {

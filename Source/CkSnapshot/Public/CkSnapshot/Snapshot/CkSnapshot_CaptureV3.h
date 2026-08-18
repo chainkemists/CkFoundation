@@ -7,6 +7,7 @@
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h" // ECk_SnapshotResult
+#include "CkSnapshot/Snapshot/CkSnapshot_SaveReport.h"
 
 class UWorld;
 class FArchive;
@@ -41,6 +42,7 @@ namespace ck::snapshot
         UWorld* InWorldOrNull,
         FArchive& InByteWriter,
         FCk_Snapshot_HeaderV3& InOutHeader,
+        FCk_Snapshot_SaveReport& OutReport,
         FCaptureTimings* OutTimings = nullptr) -> ECk_SnapshotResult;
 
     CKSNAPSHOT_API auto
@@ -48,6 +50,7 @@ namespace ck::snapshot
         UWorld& InWorld,
         FArchive& InByteWriter,
         FCk_Snapshot_HeaderV3& InOutHeader,
+        FCk_Snapshot_SaveReport& OutReport,
         FCaptureTimings* OutTimings = nullptr) -> ECk_SnapshotResult;
 }
 
