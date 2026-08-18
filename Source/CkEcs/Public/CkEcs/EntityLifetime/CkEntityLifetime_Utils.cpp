@@ -1,5 +1,6 @@
 #include "CkEntityLifetime_Utils.h"
 
+#include "CkCore/Format/CkFormat.h" // ck::Format_UE — naming the entity a dropped payload belonged to
 #include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/CkEcsLog.h"
@@ -61,17 +62,27 @@ namespace ck_entity_lifetime_utils
         if (NOT InHandle.Has<ck::FFragment_PendingHydration>())
         { return; }
 
-        const auto Outstanding = InHandle.Get<ck::FFragment_PendingHydration>().Get_Entries().Num();
+        auto Registry = InHandle.Get_RegistryView();
+        auto* Outcomes = Registry.TryGetContext<ck::FCtx_HydrationOutcomes>();
+
+        const auto& Entries = InHandle.Get<ck::FFragment_PendingHydration>().Get_Entries();
+        const auto Outstanding = Entries.Num();
+
+        if (Outcomes != nullptr)
+        {
+            Outcomes->_DestroyedWithEntries += Outstanding;
+
+            for (const auto& Entry : Entries)
+            {
+                Outcomes->Record_Loss(
+                    ck::IsValid(Entry.GetScriptStruct()) ? Entry.GetScriptStruct()->GetName() : FString{TEXT("<invalid type>")},
+                    ck::Format_UE(TEXT("{}"), InHandle),
+                    FString{TEXT("destroyed-with-entries")});
+            }
+        }
 
         InHandle.Try_Remove<ck::FTag_Hydration_PendingApply>();
         InHandle.Try_Remove<ck::FFragment_PendingHydration>();
-
-        if (Outstanding <= 0)
-        { return; }
-
-        auto Registry = InHandle.Get_RegistryView();
-        if (auto* Outcomes = Registry.TryGetContext<ck::FCtx_HydrationOutcomes>())
-        { Outcomes->_DestroyedWithEntries += Outstanding; }
     }
 
     // Both halves, at every site that stamps destroy-initiate.

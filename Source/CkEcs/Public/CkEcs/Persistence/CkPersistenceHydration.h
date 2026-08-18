@@ -110,6 +110,19 @@ namespace ck
     // carry many. The read is deliberately once-and-final: the dispatcher is not load-gated, so it keeps draining
     // after a load goes Idle, and those post-fold outcomes are logged rather than retro-counted into a report
     // that has already been handed to consumers.
+    // One payload that did not apply, named where the fact exists. A count tells a consumer that its world came
+    // back incomplete; only a name tells it WHICH part.
+    struct CKECS_API FHydration_LossRecord
+    {
+        FString _PayloadType;
+        FString _OwnerIdentity;
+        // "no-handler" | "rejected" | "timed-out" | "destroyed-with-entries"
+        FString _Reason;
+    };
+
+    // A pathological load must not grow this without bound; past the cap the counts still tell the whole story.
+    constexpr auto MaxRecordedHydrationLosses = 64;
+
     struct CKECS_API FCtx_HydrationOutcomes
     {
         int32 _Applied              = 0;
@@ -121,6 +134,17 @@ namespace ck
         // Entries that died with their entity mid-load. Counted where destruction begins, because after that the
         // fragment holding them is gone and nothing downstream can tell they ever existed.
         int32 _DestroyedWithEntries = 0;
+
+        // The losses above, named — capped at MaxRecordedHydrationLosses.
+        TArray<FHydration_LossRecord> _Losses;
+
+        auto Record_Loss(FString InPayloadType, FString InOwnerIdentity, FString InReason) -> void
+        {
+            if (_Losses.Num() >= MaxRecordedHydrationLosses)
+            { return; }
+
+            _Losses.Emplace(FHydration_LossRecord{MoveTemp(InPayloadType), MoveTemp(InOwnerIdentity), MoveTemp(InReason)});
+        }
     };
 
     // Payloads to apply via the registered HydrationApply, sourced from a save load. Never persisted itself.
