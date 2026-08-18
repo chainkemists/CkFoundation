@@ -82,10 +82,20 @@ public:
     Get_IsLoadInProgress(
         const FCk_Handle& InHandle);
 
-    // True while a load is REBUILDING the world the entity lives in — the load gate is held, whether the world is
-    // ticking the load kernel or an escalated full-scope pass. It exists for exactly one caller: something whose
-    // construction SEEDS or SPAWNS a separately-persisted entity, which must not do that while the loader is the
-    // sole legitimate creator of world population, or the world ends up with the loader's copy and its own.
+    // True for the WHOLE of a load on the world the entity lives in — every phase, from the moment the old world
+    // starts being demolished to the moment the loader hands the world back. It exists for exactly one caller:
+    // something whose CONSTRUCTION seeds or spawns a separately-persisted entity, which must not do that while
+    // the loader is the sole legitimate creator of world population, or the world ends up holding the loader's
+    // copy and its own.
+    //
+    // The window is the whole load because construction runs throughout one: DoConstruct and DoBeginPlay are
+    // never held, so a level-triggered producer runs in every phase — including the phases after the payload
+    // queue has drained, where the restored copy it would duplicate is already sitting in the world.
+    //
+    // Contrast Get_IsSpawnSuppressedByLoadGate, which is deliberately NARROWER: the framework only REFUSES a
+    // spawn in the phases where the loader owns population outright, because refusing during the drain would
+    // break the composition the payload applies drive. Two predicates, two jobs — this one is what a producer
+    // asks before seeding; that one is what the framework enforces.
     //
     // It is NOT the predicate for deciding whether a value may be read. Nothing needs that predicate any more: a
     // load holds a restored entity out of every non-kernel processor's view until its payloads have applied, so a

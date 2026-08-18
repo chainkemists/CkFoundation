@@ -32,7 +32,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 namespace ck_entity_script_utils
 {
-    // While a CkSnapshot load owns the world (the load gate is active), the loader is the SOLE creator of
+    // While a CkSnapshot load is DEMOLISHING or REBUILDING the world, the loader is the SOLE creator of
     // world population: saved rows respawn through its own window (FCk_ScopedLoaderSpawnWindow) and replayed
     // constructions re-create their ConstructSpawned children. Any other spawn is world POLICY reacting to
     // the half-rebuilt world — a population census reading near-zero, an adopt-or-spawn task whose adopt scan
@@ -41,6 +41,11 @@ namespace ck_entity_script_utils
     // StoreDriver subordinate family in one save->load->save cycle). Suppressed spawns return an INVALID
     // pending handle; Promise_OnConstructed no-ops on it and the completion delegate reports
     // Failed_NotEnqueued — reconcile-shaped callers converge on their next real-world evaluation.
+    //
+    // The window stops at the rebuild, deliberately: once payloads start applying, a restored feature's own
+    // composition legitimately spawns (a payload's deferred request, a construction the apply drives), and
+    // refusing those breaks the restore itself. A PRODUCER that must not seed for the whole load asks
+    // UCk_Utils_Snapshot_UE::Get_IsRebuildInProgress, which is true in every phase.
     auto Get_IsSpawnSuppressedByLoadGate(const FCk_Handle& InLifetimeOwner, const UObject* InEntityScriptClassOrArchetype) -> bool
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InLifetimeOwner);
@@ -51,7 +56,12 @@ namespace ck_entity_script_utils
         if (ck::Is_NOT_Valid(EcsWorld))
         { return false; }
 
-        if (NOT EcsWorld->Get_IsLoadGateActive())
+        const auto Hold = EcsWorld->Get_LoadHold();
+        const auto LoaderOwnsPopulation = Hold == ECk_EcsWorld_LoadHold::Teardown
+            || Hold == ECk_EcsWorld_LoadHold::Rebuilding
+            || Hold == ECk_EcsWorld_LoadHold::Escalated;
+
+        if (NOT LoaderOwnsPopulation)
         { return false; }
 
         if (EcsWorld->Get_IsInLoaderSpawnWindow())

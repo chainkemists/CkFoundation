@@ -124,12 +124,10 @@ auto
     if (ck::Is_NOT_Valid(EcsWorld))
     { return false; }
 
-    // Escalation is nested inside the gate today — deactivating the gate clears it — so the second clause is
-    // currently implied by the first. It is written out because the predicate's contract is "a rebuild is
-    // happening", not "the gate flag is set", and the two would part company the moment escalation outlives the
-    // gate. A seed suppressed during an escalated pass is exactly as duplicated as one suppressed during a
-    // kernel pass.
-    return EcsWorld->Get_IsLoadGateActive() || EcsWorld->Get_IsLoadGateEscalated();
+    // Every phase, not just the rebuild ones. A seed produced while payloads drain, or while the world converges,
+    // duplicates the restored copy exactly as thoroughly as one produced under the kernel — the difference is
+    // only that by then the copy it duplicates is already visible.
+    return EcsWorld->Get_LoadHold() != ECk_EcsWorld_LoadHold::None;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
