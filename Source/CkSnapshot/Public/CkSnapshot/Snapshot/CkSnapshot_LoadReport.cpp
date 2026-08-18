@@ -17,8 +17,10 @@ auto
     Get_IsPayloadAccountingClosed() const
     -> bool
 {
-    return _PayloadsEnqueued + _PayloadsOnSkippedEntities + _PayloadsOnOrphanedEntities +
-           _PayloadsOnUnresolvedOwner + _PayloadsDropped == _PayloadsTotal;
+    return _PayloadsApplied + _PayloadsRejected + _PayloadsDroppedNoHandler + _PayloadsDroppedTimeout +
+           _PayloadsDestroyedWithEntries + _PayloadsUnappliedAtFinish +
+           _PayloadsOnSkippedEntities + _PayloadsOnOrphanedEntities + _PayloadsOnUnresolvedOwner +
+           _PayloadsDropped == _PayloadsTotal;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

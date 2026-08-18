@@ -267,6 +267,12 @@ public:
     template <typename T_Context>
     auto TryGetContext() const -> const T_Context*;
 
+    // Mutable twin, for a context a caller must UPDATE only where one already exists. SetContext would create it,
+    // which is wrong for an accumulator whose lifetime is owned elsewhere: an increment on a registry nobody
+    // reset would count into a bucket no one ever reads.
+    template <typename T_Context>
+    auto TryGetContext() -> T_Context*;
+
 private:
     // The unconditional pool wipe both Clear entry points share.
     template <typename... T_Fragments>
@@ -468,6 +474,18 @@ auto
     if (Reg == nullptr)
     { return nullptr; }
     return Reg->ctx().find<const T_Context>();
+}
+
+template <typename T_Context>
+auto
+    FCk_Registry::
+    TryGetContext()
+    -> T_Context*
+{
+    auto* Reg = ck::registry_table::TryResolve(_RegistryHandle);
+    if (Reg == nullptr)
+    { return nullptr; }
+    return Reg->ctx().find<T_Context>();
 }
 
 inline auto

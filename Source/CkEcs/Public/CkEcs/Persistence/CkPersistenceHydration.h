@@ -102,6 +102,27 @@ namespace ck
         FCk_Handle,
         FCk_Hydration_TypeInfo);
 
+    // Per-load tally of what the dispatcher actually DID with each payload entry, keyed into entt::registry::ctx()
+    // like FCtx_HydrationQuarantine. It lives here, written by CkEcs, because the apply outcome is only knowable
+    // where the apply happens; CkSnapshot owns the lifetime (zeroed once per load) and reads it once at the fold.
+    //
+    // Counted in ENTRIES, not entities — the load report partitions the save's payload rows, and one entity can
+    // carry many. The read is deliberately once-and-final: the dispatcher is not load-gated, so it keeps draining
+    // after a load goes Idle, and those post-fold outcomes are logged rather than retro-counted into a report
+    // that has already been handed to consumers.
+    struct CKECS_API FCtx_HydrationOutcomes
+    {
+        int32 _Applied              = 0;
+        int32 _Rejected             = 0;
+        // The handler-less path: the save recorded state this build cannot apply. Its own bucket rather than the
+        // timeout's, because nothing waited.
+        int32 _DroppedNoHandler     = 0;
+        int32 _DroppedTimeout       = 0;
+        // Entries that died with their entity mid-load. Counted where destruction begins, because after that the
+        // fragment holding them is gone and nothing downstream can tell they ever existed.
+        int32 _DestroyedWithEntries = 0;
+    };
+
     // Payloads to apply via the registered HydrationApply, sourced from a save load. Never persisted itself.
     struct CKECS_API FFragment_PendingHydration
     {

@@ -1498,14 +1498,8 @@ auto
         _V3LoadReport.Get_EntitiesOrphaned(), _V3LoadReport.Get_PayloadsTotal(), EnqueuedCount, PayloadsOnSkipped,
         PayloadsOnOrphaned, PayloadsOnUnresolvedOwner, PayloadsDropped);
 
-    const auto AccountingIsClosed = _V3LoadReport.Get_IsAccountingClosed();
-    CK_ENSURE_IF_NOT(AccountingIsClosed,
-        TEXT("v3 load accounting does not close: entities [{}] vs mapped [{}] + skipped [{}] + orphaned [{}]; ")
-        TEXT("payloads [{}] vs enqueued [{}] + on-skipped [{}] + on-orphaned [{}] + unresolved-owner [{}] + dropped [{}]"),
-        _V3LoadReport.Get_EntitiesTotal(), _V3LoadReport.Get_EntitiesRestored(), _V3LoadReport.Get_EntitiesSkipped(),
-        _V3LoadReport.Get_EntitiesOrphaned(), _V3LoadReport.Get_PayloadsTotal(), EnqueuedCount, PayloadsOnSkipped,
-        PayloadsOnOrphaned, PayloadsOnUnresolvedOwner, PayloadsDropped)
-    {}
+    // No accounting ensure here any more: the payload closure now asks what each row RESULTED IN, and at enqueue
+    // time nothing has been applied yet. It is checked once the outcomes are folded, in DoFinish_Load.
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1615,7 +1609,8 @@ auto
 auto
     UCk_Snapshot_Subsystem_UE::
     DoLift_HydrationQuarantine(
-        EQuarantineLift InReason)
+        EQuarantineLift InReason,
+        FCk_Snapshot_LoadReport& InOutReport)
     -> void
 {
     if (NOT _QuarantineStamped)
@@ -1690,7 +1685,7 @@ auto
     if (Forced)
     {
         const auto ForcedCount = ForcedRecords.Num();
-        _V3LoadReport.Set_QuarantineForced(MoveTemp(ForcedRecords));
+        InOutReport.Set_QuarantineForced(MoveTemp(ForcedRecords));
 
         ck::snapshot::Error(TEXT("Request_Load: hydration quarantine FORCED off ([{}]) — released [{}] entities, [{}] "
             "of them with payloads still pending"), ReasonText, ReleasedCount, ForcedCount);
@@ -1711,6 +1706,54 @@ auto
 
         ck::UUtils_Signal_Hydration_OnHydrated::Broadcast(Released, ck::MakePayload(Released));
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoFold_HydrationOutcomes(
+        FCk_Snapshot_LoadReport& InOutReport) const
+    -> void
+{
+    auto* EcsWorld = DoGet_LoadWorldEcs();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return; }
+
+    auto& CkRegistry = EcsWorld->Get_Registry();
+
+    if (const auto* Outcomes = CkRegistry.TryGetContext<ck::FCtx_HydrationOutcomes>())
+    {
+        InOutReport.Set_PayloadsApplied(Outcomes->_Applied);
+        InOutReport.Set_PayloadsRejected(Outcomes->_Rejected);
+        InOutReport.Set_PayloadsDroppedNoHandler(Outcomes->_DroppedNoHandler);
+        InOutReport.Set_PayloadsDroppedTimeout(Outcomes->_DroppedTimeout);
+        InOutReport.Set_PayloadsDestroyedWithEntries(Outcomes->_DestroyedWithEntries);
+    }
+
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+    if (RawRegistry == nullptr)
+    { return; }
+
+    // Whatever is still queued right now. Entities already entering destruction are skipped: their entries were
+    // written off (and removed) at destroy-initiate, and counting them again here would break the closure by
+    // putting one payload row in two buckets.
+    auto UnappliedAtFinish = 0;
+    for (const auto Entity : RawRegistry->view<ck::FTag_Hydration_PendingApply>())
+    {
+        auto Handle = ck::MakeHandle(FCk_Entity{Entity}, CkRegistry);
+        if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_PendingHydration>())
+        { continue; }
+
+        if (Handle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_EndPlay,
+                           ck::FTag_DestroyEntity_Teardown, ck::FTag_DestroyEntity_Await,
+                           ck::FTag_DestroyEntity_Finalize>())
+        { continue; }
+
+        UnappliedAtFinish += Handle.Get<ck::FFragment_PendingHydration>().Get_Entries().Num();
+    }
+
+    InOutReport.Set_PayloadsUnappliedAtFinish(UnappliedAtFinish);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1855,7 +1898,15 @@ auto
             // hydration dispatcher, ...) keeps running so the rebuild + construction can proceed.
             if (auto* EcsWorld = DoGet_LoadWorldEcs();
                 ck::IsValid(EcsWorld))
-            { EcsWorld->Set_IsLoadGateActive(true); }
+            {
+                EcsWorld->Set_IsLoadGateActive(true);
+
+                // Zero the apply tally HERE and not in Request_Load: the counters live in the registry, and the
+                // registry Request_Load ran against belongs to the world this load just travelled away from.
+                // Explicit assignment because the context API is get-or-create — an emplace onto an existing
+                // context returns it untouched, which would carry the previous load's counts into this one.
+                EcsWorld->Get_Registry().SetContext<ck::FCtx_HydrationOutcomes>() = ck::FCtx_HydrationOutcomes{};
+            }
 
             ck::snapshot::Display(TEXT("DIAG: rehydrated SaveKey resolver with [{}] live entries"),
                 DoRehydrate_SaveKeyResolver());
@@ -1968,7 +2019,7 @@ auto
             // least one more FULL pump runs before the load finishes, which is the pass the released Setups take.
             if (_QuarantineStamped && DoIs_PayloadDrainComplete())
             {
-                DoLift_HydrationQuarantine(EQuarantineLift::Settled);
+                DoLift_HydrationQuarantine(EQuarantineLift::Settled, _V3LoadReport);
                 _SettleFramesRemaining = FMath::Max(_SettleFramesRemaining, 1);
                 return true;
             }
@@ -1985,7 +2036,7 @@ auto
 
                 // Fail-closed needs an escape: entities held for a queue that never drained are released here and
                 // each names itself in the report, rather than staying invisible to every processor for the session.
-                DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtFrameCap);
+                DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtFrameCap, _V3LoadReport);
             }
 
             ck::snapshot::Display(TEXT("DIAG: v3 load settled — finishing (restored [{}], orphaned [{}])"),
@@ -2011,11 +2062,32 @@ auto
         ck::IsValid(EcsWorld))
     { EcsWorld->Set_IsLoadGateActive(false); }
 
-    // The unconditional escape, covering every route into here — the abort paths included. It runs BEFORE the report
-    // is frozen so anything it has to force is still named in the copy consumers read.
-    DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtLoadFinish);
-
+    // Frozen FIRST, then completed in place. Two of the three routes into here build their report LOCALLY, so a
+    // lift or a fold that wrote to _V3LoadReport would name what it found in a copy nobody reads; and every
+    // consumer — the pull channel, the signal, the delegate — is handed this one object.
     _LastLoadReport = InReport;
+
+    // The unconditional escape, covering every route into here, the abort paths included.
+    DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtLoadFinish, _LastLoadReport);
+
+    // Read the apply tally ONCE, here, and sweep whatever is still queued. Anything the dispatcher does after
+    // this point is logged rather than counted: the report describes the load, not the queue's whole life.
+    DoFold_HydrationOutcomes(_LastLoadReport);
+
+    const auto AccountingIsClosed = _LastLoadReport.Get_IsAccountingClosed();
+    CK_ENSURE_IF_NOT(AccountingIsClosed,
+        TEXT("v3 load accounting does not close: entities [{}] vs restored [{}] + skipped [{}] + orphaned [{}]; ")
+        TEXT("payloads [{}] vs applied [{}] + rejected [{}] + no-handler [{}] + timed-out [{}] + destroyed [{}] + ")
+        TEXT("unapplied-at-finish [{}] + on-skipped [{}] + on-orphaned [{}] + unresolved-owner [{}] + dropped [{}]"),
+        _LastLoadReport.Get_EntitiesTotal(), _LastLoadReport.Get_EntitiesRestored(),
+        _LastLoadReport.Get_EntitiesSkipped(), _LastLoadReport.Get_EntitiesOrphaned(),
+        _LastLoadReport.Get_PayloadsTotal(), _LastLoadReport.Get_PayloadsApplied(),
+        _LastLoadReport.Get_PayloadsRejected(), _LastLoadReport.Get_PayloadsDroppedNoHandler(),
+        _LastLoadReport.Get_PayloadsDroppedTimeout(), _LastLoadReport.Get_PayloadsDestroyedWithEntries(),
+        _LastLoadReport.Get_PayloadsUnappliedAtFinish(), _LastLoadReport.Get_PayloadsOnSkippedEntities(),
+        _LastLoadReport.Get_PayloadsOnOrphanedEntities(), _LastLoadReport.Get_PayloadsOnUnresolvedOwner(),
+        _LastLoadReport.Get_PayloadsDropped())
+    {}
 
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
@@ -2035,8 +2107,8 @@ auto
     _PendingLoadDelegate.Unbind();
 
     const auto Source = DoGet_SnapshotSource(); // re-resolve: the fresh world's transient
-    ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(Source, ck::MakePayload(Source, InReport));
-    Delegate.ExecuteIfBound(InReport);
+    ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(Source, ck::MakePayload(Source, _LastLoadReport));
+    Delegate.ExecuteIfBound(_LastLoadReport);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

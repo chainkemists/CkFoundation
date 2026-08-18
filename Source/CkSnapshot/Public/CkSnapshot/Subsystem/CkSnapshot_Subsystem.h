@@ -280,8 +280,15 @@ private:
     auto DoIs_HydrationComplete() const -> bool;         // the above AND the quarantine is empty
 
     auto DoStamp_HydrationQuarantine() -> void;                 // quarantine the whole mapped set, at enqueue
-    auto DoLift_HydrationQuarantine(EQuarantineLift InReason) -> void; // release the whole set at once
+    // Releases the whole set at once, recording anything it had to force INTO the report that is about to be
+    // frozen — the abort paths finish with a locally-built report, so writing to the member here would name
+    // the loss in a copy nobody reads.
+    auto DoLift_HydrationQuarantine(EQuarantineLift InReason, FCk_Snapshot_LoadReport& InOutReport) -> void;
     auto DoGet_HydrateFrameCap() const -> int32;                // kLoad_HydrateFrameCap, or a test's override
+
+    // Reads ck::FCtx_HydrationOutcomes ONCE and sweeps whatever is still queued, so the report says what became
+    // of every payload rather than how many reached the queue. Called from DoFinish_Load, never twice per load.
+    auto DoFold_HydrationOutcomes(FCk_Snapshot_LoadReport& InOutReport) const -> void;
 
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
