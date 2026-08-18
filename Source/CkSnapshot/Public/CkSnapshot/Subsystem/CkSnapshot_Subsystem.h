@@ -10,6 +10,7 @@
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_SaveReport.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Delegates.h"
+#include "CkSnapshot/Subsystem/CkSnapshot_Signals.h" // FCk_Delegate_Snapshot_OnLoadComplete
 
 #include <Subsystems/GameInstanceSubsystem.h>
 
