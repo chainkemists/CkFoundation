@@ -1,25 +1,642 @@
 {
     "_meta": {
         "format": "ck-icon-manifest",
-        "version": 1,
+        "version": 2,
         "mdiVersion": "v7.4.47",
-        "notes": "Semantic name -> MDI icon. Semantic names describe the CONCEPT, never the picture; call sites only ever see the generated ECk_Icon identifier. '-outline' variants preferred; entries with 'fallback' recorded have no outline variant at the pinned version."
+        "notes": "Semantic name -> icon asset. Semantic names describe the CONCEPT, never the picture; call sites only ever see the generated ECk_Icon identifier. Each entry has 'mdi' (vendored under Mdi/, '-outline' preferred; 'fallback' recorded when no outline variant exists) OR 'file' (any vendored SVG under Resources/Icons/, e.g. bespoke house glyphs). 'pool': true adds the icon to the generated decorative pool used for stable hash-picked archetype glyphs."
     },
     "icons": [
-        { "semantic": "Delete",     "mdi": "delete-outline" },
-        { "semantic": "Entity",     "mdi": "cube-outline" },
-        { "semantic": "Error",      "mdi": "alert-circle-outline" },
-        { "semantic": "Filter",     "mdi": "filter-outline" },
-        { "semantic": "Fragment",   "mdi": "puzzle-outline" },
-        { "semantic": "Info",       "mdi": "information-outline" },
-        { "semantic": "Pin",        "mdi": "pin-outline" },
-        { "semantic": "Processor",  "mdi": "cog-outline" },
-        { "semantic": "Refresh",    "mdi": "refresh", "fallback": "no -outline variant exists at v7.4.47" },
-        { "semantic": "Save",       "mdi": "content-save-outline" },
-        { "semantic": "Search",     "mdi": "magnify", "fallback": "no -outline variant exists at v7.4.47" },
-        { "semantic": "Success",    "mdi": "check-circle-outline" },
-        { "semantic": "Timer",      "mdi": "timer-outline" },
-        { "semantic": "Visibility", "mdi": "eye-outline" },
-        { "semantic": "Warning",    "mdi": "alert-outline" }
+        {
+            "semantic": "AStar",
+            "mdi": "vector-polyline"
+        },
+        {
+            "semantic": "Actor",
+            "mdi": "account-outline"
+        },
+        {
+            "semantic": "ActorBridge",
+            "mdi": "bridge"
+        },
+        {
+            "semantic": "Aggro",
+            "mdi": "target-account"
+        },
+        {
+            "semantic": "Aim",
+            "mdi": "crosshairs",
+            "pool": true
+        },
+        {
+            "semantic": "Anchored",
+            "mdi": "anchor"
+        },
+        {
+            "semantic": "Attribute",
+            "mdi": "chart-bar"
+        },
+        {
+            "semantic": "AttributeByte",
+            "mdi": "alpha-b-box-outline"
+        },
+        {
+            "semantic": "AttributeFloat",
+            "mdi": "decimal"
+        },
+        {
+            "semantic": "AttributeInteger",
+            "mdi": "numeric"
+        },
+        {
+            "semantic": "AttributeRotator",
+            "mdi": "rotate-3d-variant"
+        },
+        {
+            "semantic": "AttributeVector",
+            "mdi": "axis-arrow"
+        },
+        {
+            "semantic": "Audio",
+            "mdi": "waveform"
+        },
+        {
+            "semantic": "BodyActivity",
+            "mdi": "shoe-print",
+            "pool": true
+        },
+        {
+            "semantic": "Broadcast",
+            "mdi": "antenna",
+            "pool": true
+        },
+        {
+            "semantic": "Camera",
+            "mdi": "video-outline"
+        },
+        {
+            "semantic": "Capture",
+            "mdi": "web",
+            "pool": true
+        },
+        {
+            "semantic": "Catalog",
+            "mdi": "book-open-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Channel",
+            "mdi": "radio",
+            "pool": true
+        },
+        {
+            "semantic": "Cinematic",
+            "mdi": "movie-open-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Cleanup",
+            "mdi": "broom"
+        },
+        {
+            "semantic": "Combat",
+            "mdi": "sword",
+            "pool": true
+        },
+        {
+            "semantic": "Compass",
+            "mdi": "compass-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Connection",
+            "mdi": "power-plug-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Copy",
+            "mdi": "content-copy"
+        },
+        {
+            "semantic": "Crowd",
+            "mdi": "account-multiple-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Currency",
+            "mdi": "currency-usd",
+            "pool": true
+        },
+        {
+            "semantic": "CycleRoot",
+            "mdi": "sync-alert"
+        },
+        {
+            "semantic": "DayTime",
+            "mdi": "white-balance-sunny",
+            "pool": true
+        },
+        {
+            "semantic": "DefinitionBuilt",
+            "mdi": "factory"
+        },
+        {
+            "semantic": "Delete",
+            "mdi": "delete-outline"
+        },
+        {
+            "semantic": "Destructive",
+            "mdi": "bomb",
+            "pool": true
+        },
+        {
+            "semantic": "Diagnostics",
+            "mdi": "bug-outline"
+        },
+        {
+            "semantic": "Dialog",
+            "mdi": "forum-outline",
+            "pool": true
+        },
+        {
+            "semantic": "DirtyPackages",
+            "mdi": "bucket-outline"
+        },
+        {
+            "semantic": "Display",
+            "mdi": "monitor",
+            "pool": true
+        },
+        {
+            "semantic": "Door",
+            "mdi": "door",
+            "pool": true
+        },
+        {
+            "semantic": "Dormant",
+            "mdi": "sleep"
+        },
+        {
+            "semantic": "Duplicates",
+            "mdi": "package-variant"
+        },
+        {
+            "semantic": "Edit",
+            "mdi": "pencil-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Entity",
+            "mdi": "cube-outline"
+        },
+        {
+            "semantic": "EntityCollection",
+            "mdi": "select-group"
+        },
+        {
+            "semantic": "EntityInfo",
+            "mdi": "card-bulleted-outline"
+        },
+        {
+            "semantic": "Eqs",
+            "mdi": "magnify-scan"
+        },
+        {
+            "semantic": "Error",
+            "mdi": "alert-circle-outline"
+        },
+        {
+            "semantic": "Experiment",
+            "mdi": "flask-outline"
+        },
+        {
+            "semantic": "Filter",
+            "mdi": "filter-outline"
+        },
+        {
+            "semantic": "Fix",
+            "mdi": "wrench-outline"
+        },
+        {
+            "semantic": "FogOfWar",
+            "mdi": "weather-fog"
+        },
+        {
+            "semantic": "Foliage",
+            "mdi": "pine-tree",
+            "pool": true
+        },
+        {
+            "semantic": "Fragment",
+            "mdi": "puzzle-outline"
+        },
+        {
+            "semantic": "FrameActor",
+            "mdi": "vector-square"
+        },
+        {
+            "semantic": "Freeze",
+            "mdi": "snowflake"
+        },
+        {
+            "semantic": "Gate",
+            "mdi": "gate",
+            "pool": true
+        },
+        {
+            "semantic": "Goap",
+            "mdi": "graph-outline"
+        },
+        {
+            "semantic": "Grab",
+            "mdi": "hand-back-right-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Grid",
+            "mdi": "grid"
+        },
+        {
+            "semantic": "Hardware",
+            "mdi": "chip"
+        },
+        {
+            "semantic": "HotPath",
+            "mdi": "fire"
+        },
+        {
+            "semantic": "Info",
+            "mdi": "information-outline"
+        },
+        {
+            "semantic": "Input",
+            "mdi": "gamepad-variant-outline"
+        },
+        {
+            "semantic": "Interaction",
+            "mdi": "gesture-tap"
+        },
+        {
+            "semantic": "Inventory",
+            "mdi": "briefcase-outline"
+        },
+        {
+            "semantic": "IsmRenderer",
+            "mdi": "checkbox-multiple-blank-outline"
+        },
+        {
+            "semantic": "Jolt",
+            "mdi": "lightning-bolt-outline"
+        },
+        {
+            "semantic": "Label",
+            "mdi": "label-outline"
+        },
+        {
+            "semantic": "Lighting",
+            "mdi": "lightbulb-outline"
+        },
+        {
+            "semantic": "Loadout",
+            "mdi": "bag-personal-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Locked",
+            "mdi": "lock-outline"
+        },
+        {
+            "semantic": "Log",
+            "mdi": "script-outline",
+            "pool": true
+        },
+        {
+            "semantic": "MaterialAsset",
+            "mdi": "brush-outline"
+        },
+        {
+            "semantic": "Media",
+            "mdi": "disc",
+            "pool": true
+        },
+        {
+            "semantic": "Microphone",
+            "mdi": "microphone-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Minimap",
+            "mdi": "map-outline"
+        },
+        {
+            "semantic": "Network",
+            "mdi": "lan"
+        },
+        {
+            "semantic": "Note",
+            "mdi": "note-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Objective",
+            "mdi": "flag-outline"
+        },
+        {
+            "semantic": "Orphaned",
+            "mdi": "ghost-outline"
+        },
+        {
+            "semantic": "OverlapBody",
+            "mdi": "set-center"
+        },
+        {
+            "semantic": "PathNetwork",
+            "mdi": "road-variant"
+        },
+        {
+            "semantic": "PathNetworkFollower",
+            "mdi": "navigation-variant-outline"
+        },
+        {
+            "semantic": "Payload",
+            "mdi": "package-variant-closed"
+        },
+        {
+            "semantic": "Physics",
+            "mdi": "atom"
+        },
+        {
+            "semantic": "Pin",
+            "mdi": "pin-outline"
+        },
+        {
+            "semantic": "Play",
+            "mdi": "play"
+        },
+        {
+            "semantic": "Power",
+            "mdi": "flash-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Precision",
+            "mdi": "needle",
+            "pool": true
+        },
+        {
+            "semantic": "Probe",
+            "mdi": "radar"
+        },
+        {
+            "semantic": "Processor",
+            "mdi": "cog-outline"
+        },
+        {
+            "semantic": "ProfileTiming",
+            "mdi": "av-timer"
+        },
+        {
+            "semantic": "Projectile",
+            "mdi": "ray-start-arrow",
+            "pool": true
+        },
+        {
+            "semantic": "Protection",
+            "mdi": "shield",
+            "pool": true
+        },
+        {
+            "semantic": "Rail",
+            "mdi": "train-car",
+            "pool": true
+        },
+        {
+            "semantic": "Rarity",
+            "mdi": "diamond-stone",
+            "pool": true
+        },
+        {
+            "semantic": "Recording",
+            "mdi": "video-vintage",
+            "pool": true
+        },
+        {
+            "semantic": "Redirectors",
+            "mdi": "content-cut"
+        },
+        {
+            "semantic": "Refresh",
+            "mdi": "refresh",
+            "fallback": "no -outline variant exists at v7.4.47"
+        },
+        {
+            "semantic": "Relationships",
+            "mdi": "account-group-outline"
+        },
+        {
+            "semantic": "Report",
+            "mdi": "clipboard-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Resolver",
+            "mdi": "call-merge"
+        },
+        {
+            "semantic": "Ring",
+            "mdi": "ring",
+            "pool": true
+        },
+        {
+            "semantic": "RuntimeSpawned",
+            "mdi": "rocket-launch-outline"
+        },
+        {
+            "semantic": "Save",
+            "mdi": "content-save-outline"
+        },
+        {
+            "semantic": "SaveKey",
+            "mdi": "key-outline"
+        },
+        {
+            "semantic": "SaveSlot",
+            "mdi": "cassette"
+        },
+        {
+            "semantic": "SceneNode",
+            "mdi": "file-tree"
+        },
+        {
+            "semantic": "Schedule",
+            "mdi": "calendar-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Screen",
+            "mdi": "television",
+            "pool": true
+        },
+        {
+            "semantic": "Search",
+            "mdi": "magnify",
+            "fallback": "no -outline variant exists at v7.4.47"
+        },
+        {
+            "semantic": "SelectInViewport",
+            "mdi": "cursor-default-click-outline"
+        },
+        {
+            "semantic": "Settings",
+            "mdi": "tune"
+        },
+        {
+            "semantic": "Shapes",
+            "mdi": "shape-outline"
+        },
+        {
+            "semantic": "Signal",
+            "mdi": "waves",
+            "pool": true
+        },
+        {
+            "semantic": "Size",
+            "mdi": "scale"
+        },
+        {
+            "semantic": "SkipBackward",
+            "mdi": "skip-backward"
+        },
+        {
+            "semantic": "SkipForward",
+            "mdi": "skip-forward"
+        },
+        {
+            "semantic": "Speaker",
+            "mdi": "speaker",
+            "pool": true
+        },
+        {
+            "semantic": "StateMachine",
+            "mdi": "state-machine"
+        },
+        {
+            "semantic": "Storage",
+            "mdi": "treasure-chest",
+            "pool": true
+        },
+        {
+            "semantic": "Success",
+            "mdi": "check-circle-outline"
+        },
+        {
+            "semantic": "Target",
+            "mdi": "target",
+            "pool": true
+        },
+        {
+            "semantic": "TextureAsset",
+            "mdi": "palette-outline"
+        },
+        {
+            "semantic": "Ticket",
+            "mdi": "ticket-outline",
+            "pool": true
+        },
+        {
+            "semantic": "Timer",
+            "mdi": "timer-outline"
+        },
+        {
+            "semantic": "Transform",
+            "mdi": "arrow-all"
+        },
+        {
+            "semantic": "Tween",
+            "mdi": "transition"
+        },
+        {
+            "semantic": "UIWindow",
+            "mdi": "window-closed-variant",
+            "pool": true
+        },
+        {
+            "semantic": "Variables",
+            "mdi": "variable"
+        },
+        {
+            "semantic": "Vehicle",
+            "mdi": "ferris-wheel",
+            "pool": true
+        },
+        {
+            "semantic": "Vfx",
+            "mdi": "creation"
+        },
+        {
+            "semantic": "ViewBack",
+            "file": "Bespoke/ViewBack",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewBottom",
+            "file": "Bespoke/ViewBottom",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewFront",
+            "file": "Bespoke/ViewFront",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewLeft",
+            "file": "Bespoke/ViewLeft",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewPerspective",
+            "file": "Bespoke/ViewPerspective",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewRight",
+            "file": "Bespoke/ViewRight",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "ViewTop",
+            "file": "Bespoke/ViewTop",
+            "note": "bespoke house glyph \u2014 no faithful MDI equivalent for viewport orientation faces"
+        },
+        {
+            "semantic": "Visibility",
+            "mdi": "eye-outline"
+        },
+        {
+            "semantic": "Waiting",
+            "mdi": "timer-sand"
+        },
+        {
+            "semantic": "Warning",
+            "mdi": "alert-outline"
+        },
+        {
+            "semantic": "Web",
+            "mdi": "spider-web",
+            "pool": true
+        },
+        {
+            "semantic": "Well",
+            "mdi": "water-well",
+            "pool": true
+        },
+        {
+            "semantic": "Wind",
+            "mdi": "weather-windy",
+            "pool": true
+        },
+        {
+            "semantic": "World",
+            "mdi": "earth"
+        }
     ]
 }
