@@ -1811,26 +1811,39 @@ auto
 
     const auto ForcedReleases = InOutReport.Get_QuarantineForced().Num();
 
+    // A convergence fact the load gave up waiting on is a loss of the same kind: the world was handed back in a
+    // state the load promised it would not be handed back in. It is NAMED, it is bounded, and it must not read
+    // as Success — a caller that resumes gameplay on Success would be resuming onto exactly the unsettled world
+    // the hold exists to hide.
+    const auto ConvergenceUnmet = InOutReport.Get_ConvergenceUnmet().Num();
+
     // _EntitiesOrphaned and _UnresolvedAfterEscalation are deliberately NOT in this set. Orphans are a routine
     // outcome of the current loader — they have their own per-row Warning and records — so including them would
     // make virtually every load report a loss and drain the distinction of meaning.
-    if (LostPayloads == 0 && ForcedReleases == 0)
+    if (LostPayloads == 0 && ForcedReleases == 0 && ConvergenceUnmet == 0)
     { return; }
 
     InOutReport.Set_Result(ECk_SnapshotResult::Succeeded_WithLoss);
 
     ck::snapshot::Error(TEXT("Request_Load: the load COMPLETED WITH LOSS — [{}] payload entries did not apply "
         "(rejected [{}], no handler [{}], timed out [{}], destroyed with their entity [{}], still queued at finish "
-        "[{}], failed to deserialize [{}]) and [{}] entities were forced out of the hydration quarantine. The world "
-        "is playable; the state named below is not in it"),
+        "[{}], failed to deserialize [{}]), [{}] entities were forced out of the hydration quarantine, and [{}] "
+        "convergence facts were never met. The world is playable; the state named below is not in it"),
         LostPayloads, InOutReport.Get_PayloadsRejected(), InOutReport.Get_PayloadsDroppedNoHandler(),
         InOutReport.Get_PayloadsDroppedTimeout(), InOutReport.Get_PayloadsDestroyedWithEntries(),
-        InOutReport.Get_PayloadsUnappliedAtFinish(), InOutReport.Get_PayloadsDropped(), ForcedReleases);
+        InOutReport.Get_PayloadsUnappliedAtFinish(), InOutReport.Get_PayloadsDropped(), ForcedReleases,
+        ConvergenceUnmet);
 
     for (const auto& Loss : InOutReport.Get_PayloadLosses())
     {
         ck::snapshot::Error(TEXT("Request_Load: LOST payload [{}] on entity [{}] — reason [{}]"),
             Loss.Get_PayloadType(), Loss.Get_OwnerIdentity(), Loss.Get_Reason());
+    }
+
+    for (const auto& Unmet : InOutReport.Get_ConvergenceUnmet())
+    {
+        ck::snapshot::Error(TEXT("Request_Load: UNMET convergence [{}] — still pending after [{}] frames; the world "
+            "resumed without it"), Unmet.Get_Name(), Unmet.Get_FramesWaited());
     }
 }
 

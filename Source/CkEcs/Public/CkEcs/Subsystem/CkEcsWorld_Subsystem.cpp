@@ -384,6 +384,7 @@ auto
     -> int32
 {
     auto TotalPumpCount = int32{0};
+    auto SkippedGroupCount = int32{0};
 
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
@@ -395,8 +396,22 @@ auto
 
         if (Actor->_Scheduler->Get_IsTickInProgress())
         {
-            ck::ecs::Warning(TEXT("Request_PumpToQuiescence skipping tick group [{}]: a Tick is already in progress (re-entrant pump)"),
-                TickGroup);
+            ++SkippedGroupCount;
+
+            // A load pumps deliberately, every frame, for as long as the world takes to converge — so under a
+            // hold this is expected traffic rather than a re-entrant surprise, and one Warning per group per
+            // frame would bury the log (and the AutoTest runner escalates Warnings to failures). The skip is
+            // still COUNTED either way; Get_LastPumpSkippedGroupCount is what a convergence read must consult.
+            if (Get_IsLoadGateActive())
+            {
+                ck::ecs::Verbose(TEXT("Request_PumpToQuiescence skipping tick group [{}]: a Tick is already in progress (re-entrant pump)"),
+                    TickGroup);
+            }
+            else
+            {
+                ck::ecs::Warning(TEXT("Request_PumpToQuiescence skipping tick group [{}]: a Tick is already in progress (re-entrant pump)"),
+                    TickGroup);
+            }
             continue;
         }
 
@@ -404,7 +419,17 @@ auto
         TotalPumpCount += Actor->_Scheduler->Get_LastFramePumpCount();
     }
 
+    _LastPumpSkippedGroupCount = SkippedGroupCount;
+
     return TotalPumpCount;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_LastPumpSkippedGroupCount() const
+    -> int32
+{
+    return _LastPumpSkippedGroupCount;
 }
 
 auto
