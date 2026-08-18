@@ -1,6 +1,7 @@
 #include "CkEcs/Persistence/CkPersistenceHydration_Processor.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h" // ck::Format_UE — naming the entity a lost payload belonged to
 #include "CkCore/Validation/CkIsValid.h" // ck::IsValid — DoGet_PayloadTypeName
 
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
@@ -28,6 +29,7 @@ namespace ck_persistence_hydration_processor
     auto
         DoRecord_Outcome(
             FCk_Handle& InEntity,
+            const FInstancedStruct& InData,
             ck::persistence_apply::EApplyOutcome InOutcome)
         -> void
     {
@@ -41,14 +43,21 @@ namespace ck_persistence_hydration_processor
         if (Outcomes == nullptr)
         { return; }
 
+        const auto* LossReason = static_cast<const TCHAR*>(nullptr);
+
         switch (InOutcome)
         {
             case EOutcome::Applied:          ++Outcomes->_Applied; break;
-            case EOutcome::DroppedRejected:  ++Outcomes->_Rejected; break;
-            case EOutcome::DroppedNoHandler: ++Outcomes->_DroppedNoHandler; break;
-            case EOutcome::DroppedTimeout:   ++Outcomes->_DroppedTimeout; break;
+            case EOutcome::DroppedRejected:  ++Outcomes->_Rejected;        LossReason = TEXT("rejected"); break;
+            case EOutcome::DroppedNoHandler: ++Outcomes->_DroppedNoHandler; LossReason = TEXT("no-handler"); break;
+            case EOutcome::DroppedTimeout:   ++Outcomes->_DroppedTimeout;   LossReason = TEXT("timed-out"); break;
             default: break;
         }
+
+        if (LossReason == nullptr)
+        { return; }
+
+        Outcomes->Record_Loss(DoGet_PayloadTypeName(InData), ck::Format_UE(TEXT("{}"), InEntity), FString{LossReason});
     }
 }
 
@@ -117,7 +126,7 @@ namespace ck::persistence_apply
         -> EApplyOutcome
     {
         const auto Outcome = DoApplyOne(InEntity, InData, InOldData, InOutPendingForSeconds, InDeltaT);
-        ck_persistence_hydration_processor::DoRecord_Outcome(InEntity, Outcome);
+        ck_persistence_hydration_processor::DoRecord_Outcome(InEntity, InData, Outcome);
         return Outcome;
     }
 }

@@ -1729,6 +1729,18 @@ auto
         InOutReport.Set_PayloadsDroppedNoHandler(Outcomes->_DroppedNoHandler);
         InOutReport.Set_PayloadsDroppedTimeout(Outcomes->_DroppedTimeout);
         InOutReport.Set_PayloadsDestroyedWithEntries(Outcomes->_DestroyedWithEntries);
+
+        auto Losses = TArray<FCk_Snapshot_PayloadLossRecord>{};
+        Losses.Reserve(Outcomes->_Losses.Num());
+        for (const auto& Loss : Outcomes->_Losses)
+        {
+            auto Record = FCk_Snapshot_PayloadLossRecord{};
+            Record.Set_PayloadType(Loss._PayloadType);
+            Record.Set_OwnerIdentity(Loss._OwnerIdentity);
+            Record.Set_Reason(Loss._Reason);
+            Losses.Emplace(MoveTemp(Record));
+        }
+        InOutReport.Set_PayloadLosses(MoveTemp(Losses));
     }
 
     auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
@@ -1754,6 +1766,49 @@ auto
     }
 
     InOutReport.Set_PayloadsUnappliedAtFinish(UnappliedAtFinish);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoCompute_LoadResult(
+        FCk_Snapshot_LoadReport& InOutReport) const
+    -> void
+{
+    // A load that did not complete keeps saying so. This only ever answers the narrower question of whether a
+    // COMPLETED load completed intact.
+    if (InOutReport.Get_Result() != ECk_SnapshotResult::Success)
+    { return; }
+
+    const auto LostPayloads =
+        InOutReport.Get_PayloadsRejected() + InOutReport.Get_PayloadsDroppedNoHandler() +
+        InOutReport.Get_PayloadsDroppedTimeout() + InOutReport.Get_PayloadsDestroyedWithEntries() +
+        InOutReport.Get_PayloadsUnappliedAtFinish() + InOutReport.Get_PayloadsDropped();
+
+    const auto ForcedReleases = InOutReport.Get_QuarantineForced().Num();
+
+    // _EntitiesOrphaned and _UnresolvedAfterEscalation are deliberately NOT in this set. Orphans are a routine
+    // outcome of the current loader — they have their own per-row Warning and records — so including them would
+    // make virtually every load report a loss and drain the distinction of meaning.
+    if (LostPayloads == 0 && ForcedReleases == 0)
+    { return; }
+
+    InOutReport.Set_Result(ECk_SnapshotResult::Succeeded_WithLoss);
+
+    ck::snapshot::Error(TEXT("Request_Load: the load COMPLETED WITH LOSS — [{}] payload entries did not apply "
+        "(rejected [{}], no handler [{}], timed out [{}], destroyed with their entity [{}], still queued at finish "
+        "[{}], failed to deserialize [{}]) and [{}] entities were forced out of the hydration quarantine. The world "
+        "is playable; the state named below is not in it"),
+        LostPayloads, InOutReport.Get_PayloadsRejected(), InOutReport.Get_PayloadsDroppedNoHandler(),
+        InOutReport.Get_PayloadsDroppedTimeout(), InOutReport.Get_PayloadsDestroyedWithEntries(),
+        InOutReport.Get_PayloadsUnappliedAtFinish(), InOutReport.Get_PayloadsDropped(), ForcedReleases);
+
+    for (const auto& Loss : InOutReport.Get_PayloadLosses())
+    {
+        ck::snapshot::Error(TEXT("Request_Load: LOST payload [{}] on entity [{}] — reason [{}]"),
+            Loss.Get_PayloadType(), Loss.Get_OwnerIdentity(), Loss.Get_Reason());
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -2073,6 +2128,10 @@ auto
     // Read the apply tally ONCE, here, and sweep whatever is still queued. Anything the dispatcher does after
     // this point is logged rather than counted: the report describes the load, not the queue's whole life.
     DoFold_HydrationOutcomes(_LastLoadReport);
+
+    // LAST, and after the fold: the verdict is a statement about the buckets, so it cannot be computed before they
+    // are filled. Computing it here rather than at each call site is also what keeps DoFinish_Load's signature.
+    DoCompute_LoadResult(_LastLoadReport);
 
     const auto AccountingIsClosed = _LastLoadReport.Get_IsAccountingClosed();
     CK_ENSURE_IF_NOT(AccountingIsClosed,
