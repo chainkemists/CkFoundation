@@ -5,6 +5,8 @@
 
 #include "CkShapes/CkShapes_Common.h"
 
+#include <Math/BoxSphereBounds.h>
+
 #include "CkShapes_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -12,6 +14,25 @@
 #if WITH_EDITOR
 DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Shape_OnDimensionsChanged, const FCk_Handle&);
 #endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UBodySetup;
+class UStaticMesh;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::shapes
+{
+    // Takes a UBodySetup rather than the mesh so it is testable without an asset - a transient
+    // UStaticMesh reports zero-extent bounds. Classification order mirrors
+    // ck::jolt::bake::BuildShape_FromBodySetup; disagreeing with it would let the click target and
+    // the physics body describe different geometry.
+    CKSHAPES_API auto Derive_FromCollision(
+        const UBodySetup* InBodySetup,
+        const FBoxSphereBounds& InVisualBounds,
+        const FVector& InScale) -> FCk_Shape_FromMeshResult;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -98,6 +119,15 @@ public:
     static FCk_AnyShape
     Make_Cylinder(
         const FCk_ShapeCylinder_Dimensions& InDimensions);
+
+    // Dimensions carry InScale; the offset does NOT - see FCk_Shape_FromMeshResult.
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Shapes] Get Shape From Mesh Collision",
+              Category = "Ck|Utils|Shapes")
+    static FCk_Shape_FromMeshResult
+    Get_ShapeFromMeshCollision(
+        const UStaticMesh* InMesh,
+        const FVector& InScale);
 
 private:
     UFUNCTION(BlueprintCallable,

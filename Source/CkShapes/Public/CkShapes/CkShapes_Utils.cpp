@@ -7,6 +7,9 @@
 #include "CkShapes/Cylinder/CkShapeCylinder_Utils.h"
 #include "CkShapes/Sphere/CkShapeSphere_Utils.h"
 
+#include <Engine/StaticMesh.h>
+#include <PhysicsEngine/BodySetup.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #if WITH_EDITOR
@@ -295,6 +298,200 @@ auto
     -> FCk_AnyShape
 {
     return FCk_AnyShape{InDimensions};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_shapes_utils
+{
+    auto
+        DoMake_FromVisualBounds(
+            const FBoxSphereBounds& InVisualBounds,
+            const FVector& InScale)
+        -> FCk_Shape_FromMeshResult
+    {
+        const auto HalfExtents = (InVisualBounds.BoxExtent * InScale).GetAbs();
+
+        return FCk_Shape_FromMeshResult
+        {
+            FCk_AnyShape{FCk_ShapeBox_Dimensions{HalfExtents}},
+            FTransform{InVisualBounds.Origin * InScale},
+            ECk_Shape_FromMeshFidelity::VisualBounds
+        };
+    }
+
+    auto
+        DoGet_IsScaleUniform(
+            const FVector& InScale)
+        -> bool
+    {
+        const auto ScaleAbs = InScale.GetAbs();
+
+        return FMath::IsNearlyEqual(ScaleAbs.X, ScaleAbs.Y)
+            && FMath::IsNearlyEqual(ScaleAbs.Y, ScaleAbs.Z);
+    }
+
+    // Each primitive has its own faithfulness rule because the engine scales each differently:
+    // a box shears only when rotated, a sphere collapses to MinScaleAbs, a capsule radius to
+    // max(|X|,|Y|).
+    auto
+        DoGet_BoxFidelity(
+            const FRotator& InRotation,
+            const FVector& InScale)
+        -> ECk_Shape_FromMeshFidelity
+    {
+        if (DoGet_IsScaleUniform(InScale) || InRotation.IsNearlyZero())
+        { return ECk_Shape_FromMeshFidelity::Exact; }
+
+        return ECk_Shape_FromMeshFidelity::Approximated;
+    }
+
+    auto
+        DoGet_SphereFidelity(
+            const FVector& InScale)
+        -> ECk_Shape_FromMeshFidelity
+    {
+        return DoGet_IsScaleUniform(InScale)
+            ? ECk_Shape_FromMeshFidelity::Exact
+            : ECk_Shape_FromMeshFidelity::Approximated;
+    }
+
+    auto
+        DoGet_CapsuleFidelity(
+            const FRotator& InRotation,
+            const FVector& InScale)
+        -> ECk_Shape_FromMeshFidelity
+    {
+        if (DoGet_IsScaleUniform(InScale))
+        { return ECk_Shape_FromMeshFidelity::Exact; }
+
+        const auto ScaleAbs = InScale.GetAbs();
+        const auto IsRadiallyUniform = FMath::IsNearlyEqual(ScaleAbs.X, ScaleAbs.Y);
+
+        if (IsRadiallyUniform && InRotation.IsNearlyZero())
+        { return ECk_Shape_FromMeshFidelity::Exact; }
+
+        return ECk_Shape_FromMeshFidelity::Approximated;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::shapes
+{
+    auto
+        Derive_FromCollision(
+            const UBodySetup* InBodySetup,
+            const FBoxSphereBounds& InVisualBounds,
+            const FVector& InScale)
+        -> FCk_Shape_FromMeshResult
+    {
+        if (ck::Is_NOT_Valid(InBodySetup, ck::IsValid_Policy_NullptrOnly{}))
+        { return ck_shapes_utils::DoMake_FromVisualBounds(InVisualBounds, InScale); }
+
+        if (InBodySetup->GetCollisionTraceFlag() == ECollisionTraceFlag::CTF_UseComplexAsSimple)
+        { return ck_shapes_utils::DoMake_FromVisualBounds(InVisualBounds, InScale); }
+
+        const auto& AggGeom = InBodySetup->AggGeom;
+
+        const auto NumBox = AggGeom.BoxElems.Num();
+        const auto NumSphere = AggGeom.SphereElems.Num();
+        const auto NumSphyl = AggGeom.SphylElems.Num();
+
+        const auto NumExpressible = NumBox + NumSphere + NumSphyl;
+        const auto NumTotal = AggGeom.GetElementCount();
+
+        if (NumTotal == 0 || NumTotal != NumExpressible)
+        { return ck_shapes_utils::DoMake_FromVisualBounds(InVisualBounds, InScale); }
+
+        if (NumExpressible == 1)
+        {
+            if (NumBox == 1)
+            {
+                const auto& Elem = AggGeom.BoxElems[0];
+                const auto ScaledElem = Elem.GetFinalScaled(InScale, FTransform::Identity);
+                const auto HalfExtents = FVector{ScaledElem.X, ScaledElem.Y, ScaledElem.Z} * 0.5;
+
+                return FCk_Shape_FromMeshResult
+                {
+                    FCk_AnyShape{FCk_ShapeBox_Dimensions{HalfExtents}},
+                    FTransform{Elem.Rotation, Elem.Center},
+                    ck_shapes_utils::DoGet_BoxFidelity(ScaledElem.Rotation, InScale)
+                };
+            }
+
+            if (NumSphere == 1)
+            {
+                const auto& Elem = AggGeom.SphereElems[0];
+                const auto ScaledElem = Elem.GetFinalScaled(InScale, FTransform::Identity);
+
+                return FCk_Shape_FromMeshResult
+                {
+                    FCk_AnyShape{FCk_ShapeSphere_Dimensions{ScaledElem.Radius}},
+                    FTransform{Elem.Center},
+                    ck_shapes_utils::DoGet_SphereFidelity(InScale)
+                };
+            }
+
+            const auto& SphylElem = AggGeom.SphylElems[0];
+
+            // HalfHeight is half the CYLINDER SEGMENT. Scaling Length by |Z| agrees only under
+            // uniform scale - the engine scales the TOTAL half-length, then subtracts the radius.
+            const auto Radius = SphylElem.GetScaledRadius(InScale);
+            const auto HalfHeight = SphylElem.GetScaledCylinderLength(InScale) * 0.5f;
+
+            return FCk_Shape_FromMeshResult
+            {
+                FCk_AnyShape{FCk_ShapeCapsule_Dimensions{HalfHeight, Radius}},
+                FTransform{SphylElem.Rotation, SphylElem.Center},
+                ck_shapes_utils::DoGet_CapsuleFidelity(SphylElem.Rotation, InScale)
+            };
+        }
+
+        // NOT FKAggregateGeom::CalcAABB: it collapses a non-uniform scale to one min-absolute
+        // scalar (SelectMinScale), under-scaling every axis but the smallest.
+        constexpr auto AlreadyScaled = 1.0f;
+        auto Bounds = FBox{ForceInit};
+
+        for (const auto& Elem : AggGeom.BoxElems)
+        { Bounds += Elem.GetFinalScaled(InScale, FTransform::Identity).CalcAABB(FTransform::Identity, AlreadyScaled); }
+
+        for (const auto& Elem : AggGeom.SphereElems)
+        { Bounds += Elem.GetFinalScaled(InScale, FTransform::Identity).CalcAABB(FTransform::Identity, AlreadyScaled); }
+
+        for (const auto& Elem : AggGeom.SphylElems)
+        { Bounds += Elem.GetFinalScaled(InScale, FTransform::Identity).CalcAABB(FTransform::Identity, AlreadyScaled); }
+
+        const auto UnscaledCentre = InScale.IsNearlyZero()
+            ? FVector::ZeroVector
+            : FVector{Bounds.GetCenter() / InScale};
+
+        return FCk_Shape_FromMeshResult
+        {
+            FCk_AnyShape{FCk_ShapeBox_Dimensions{Bounds.GetExtent()}},
+            FTransform{UnscaledCentre},
+            ECk_Shape_FromMeshFidelity::PrimitiveUnion
+        };
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Shapes_UE::
+    Get_ShapeFromMeshCollision(
+        const UStaticMesh* InMesh,
+        const FVector& InScale)
+    -> FCk_Shape_FromMeshResult
+{
+    const auto MeshIsValid = ck::IsValid(InMesh, ck::IsValid_Policy_NullptrOnly{});
+    CK_ENSURE_IF_NOT(MeshIsValid, TEXT("Cannot derive a collision shape from an INVALID StaticMesh"))
+    { return {}; }
+
+    // GetBodySetup() and not the deprecated property: the accessor waits on the async mesh build.
+    return ck::shapes::Derive_FromCollision(InMesh->GetBodySetup(), InMesh->GetBounds(), InScale);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
