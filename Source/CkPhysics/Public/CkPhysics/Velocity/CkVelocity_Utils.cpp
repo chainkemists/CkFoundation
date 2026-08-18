@@ -26,6 +26,12 @@ auto
     InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
     InHandle.Add<ck::FTag_Velocity_NeedsSetup>();
 
+    // World coordinates are finished by the seed above; LOCAL ones still owe a rotation, and the Transform to
+    // rotate against may not exist yet. Marking the debt is what lets Setup tell a construct seed apart from a
+    // velocity something else has since written.
+    if (InParams.Get_Coordinates() == ECk_LocalWorld::Local)
+    { InHandle.Add<ck::FTag_Velocity_NeedsWorldConversion>(); }
+
     const auto& VelocityMinMax = InParams.Get_VelocityMinMax();
 
     if (VelocityMinMax.Get_HasMaxSpeed())

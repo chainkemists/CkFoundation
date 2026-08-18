@@ -24,6 +24,12 @@ auto
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();
 
+    // World coordinates are finished by the seed above; LOCAL ones still owe a rotation, and the Transform to
+    // rotate against may not exist yet. Marking the debt is what lets Setup tell a construct seed apart from an
+    // acceleration something else has since written.
+    if (InParams.Get_Coordinates() == ECk_LocalWorld::Local)
+    { InHandle.Add<ck::FTag_Acceleration_NeedsWorldConversion>(); }
+
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
         // Seed with REAL data at construction (FFragment_Acceleration_Current was composed above with the
