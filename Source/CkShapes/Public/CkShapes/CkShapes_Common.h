@@ -69,3 +69,56 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Shape_FromMeshFidelity : uint8
+{
+    Exact,
+    // One primitive, but the scale/rotation pair is one an axis-aligned shape cannot represent:
+    // a non-uniformly scaled sphere is an ellipsoid, a rotated box shears.
+    Approximated,
+    PrimitiveUnion,
+    // Convex hull, tri-mesh, or no authored collision at all.
+    VisualBounds,
+    None UMETA(DisplayName = "No Shape"),
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Shape_FromMeshFidelity);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSHAPES_API FCk_Shape_FromMeshResult
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Shape_FromMeshResult);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AnyShape _Shape;
+
+    // UNSCALED, unlike the dimensions: the usual consumer composes this under a node that already
+    // applies the mesh scale, so scaling both would apply it twice.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FTransform _LocalOffset = FTransform::Identity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Shape_FromMeshFidelity _Fidelity = ECk_Shape_FromMeshFidelity::None;
+
+public:
+    CK_PROPERTY_GET(_Shape);
+    CK_PROPERTY_GET(_LocalOffset);
+    CK_PROPERTY_GET(_Fidelity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Shape_FromMeshResult, _Shape, _LocalOffset, _Fidelity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
