@@ -4,6 +4,16 @@
 
 auto
     FCk_Snapshot_LoadReport::
+    Get_DidLoadComplete() const
+    -> bool
+{
+    return _Result == ECk_SnapshotResult::Success;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Snapshot_LoadReport::
     Get_IsEntityAccountingClosed() const
     -> bool
 {

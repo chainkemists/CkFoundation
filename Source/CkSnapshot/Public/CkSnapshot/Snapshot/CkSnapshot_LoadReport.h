@@ -284,6 +284,14 @@ public:
     CK_PROPERTY(_QuarantineForced);
 
 public:
+    /**
+     * Did the load COMPLETE? — the question almost every consumer is actually asking, and the one a bare
+     * `== Success` comparison answers wrongly the moment a completed load can also report losses. A world that
+     * came back playable with named payloads missing is loaded; a world that never came back is not. Branch on
+     * this, and read the individual buckets only when the difference matters to the caller.
+     */
+    auto Get_DidLoadComplete() const -> bool;
+
     /** True when every saved entity landed in exactly one of restored / skipped / orphaned. */
     auto Get_IsEntityAccountingClosed() const -> bool;
 
