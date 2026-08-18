@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Persistence/CkPersistenceHydration.h" // FCk_Delegate_Hydration_OnHydrated
 
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h" // FCk_Delegate_Snapshot_OnLoadComplete
@@ -78,6 +79,36 @@ public:
     Promise_OnLoadComplete(
         const FCk_Handle& InAnyWorldHandle,
         const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate);
+
+    /**
+     * Runs the delegate once THIS entity's restored state is final, exactly once, and always.
+     *
+     * The load-path twin of Promise_OnReplicationComplete, and the answer to "where do I read a restored value?"
+     * — construction is too early by contract (DoConstruct and DoBeginPlay observe construct defaults), and a
+     * feature's own Setup processor, which is the other correct place, is only available to a feature that HAS a
+     * Setup processor. This is the hook for everyone else: a widget, a subsystem, a consumer on another entity.
+     *
+     * It fires on the global quarantine lift — after every mapped entity's payloads have applied, not just this
+     * one's — so a callback may read its own entity AND its siblings. If nothing is pending for this handle
+     * (a fresh spawn, a client, no load in flight, or a load whose lift already happened) it fires IMMEDIATELY
+     * and synchronously, because hydration is then as complete as it will ever be. A promise that stayed silent
+     * on an un-restored entity would push every consumer back into "poll a marker and hope", which is the
+     * failure mode this replaces.
+     *
+     * It fires for a forced-release entity too — with that entity's loss already recorded in the load report —
+     * so a consumer is never left waiting on an edge that will not arrive.
+     *
+     * Prefer this over Promise_OnLoadComplete for anything scoped to ONE entity: OnLoadComplete answers "is the
+     * world coherent", which is a strictly later and coarser question.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Promise On Hydrated",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static void
+    Promise_OnHydrated(
+        const FCk_Handle& InHandle,
+        const FCk_Delegate_Hydration_OnHydrated& InDelegate);
 
     /**
      * Give the entity a stable save identity, derived deterministically from InStableIdentity.

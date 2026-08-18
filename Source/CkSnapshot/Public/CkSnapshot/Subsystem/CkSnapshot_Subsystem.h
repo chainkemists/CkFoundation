@@ -170,6 +170,14 @@ public:
     bool
     Get_IsLoadInProgress() const;
 
+    // True while THIS entity's restored state is still the load's to write: a load is in flight, the load
+    // mapped this entity, and the global quarantine lift has not run yet. It answers "will an OnHydrated edge
+    // still arrive for this handle?" — false for a fresh spawn, a client, a world with no load in flight, and
+    // an entity whose lift has already happened, all of which mean the same thing: nothing is pending, so
+    // hydration is as complete as it will ever be. Membership is what covers the window between row mapping and
+    // the quarantine stamp, where the entity is already the load's but carries no tag yet.
+    auto Get_IsHydrationPending(const FCk_Handle& InHandle) const -> bool;
+
     // True only for the duration of the SYNCHRONOUS Request_Save call, so it never reads true from
     // a caller on the game thread that is not itself inside the save. A menu uses it to disable
     // slot interaction from the OnPreSave/OnSaveComplete signals, not by polling.
@@ -307,6 +315,7 @@ private:
     FCk_Snapshot_SaveReport _LastSaveReport;           // same, for the last attempted save
     bool _HydrationEnqueued = false;                   // Hydrating enqueues payloads exactly once
     bool _QuarantineStamped = false;                   // the mapped set carries FTag_Hydration_Quarantine right now
+    bool _QuarantineLifted  = false;                   // this load's global lift has run (by settle or either escape)
 #if WITH_AUTOMATION_TESTS
     int32 _TestOnly_HydrateFrameCapOverride = 0;       // <= 0 == use kLoad_HydrateFrameCap
 #endif

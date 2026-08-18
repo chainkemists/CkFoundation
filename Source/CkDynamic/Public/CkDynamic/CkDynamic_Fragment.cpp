@@ -10,6 +10,7 @@
 
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
+#include "CkEcs/Persistence/CkPersistenceHydration.h"           // Hydration_OnTypeHydrated
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"               // ck::snapshot::ForEachHandle
 #include "CkEcs/Snapshot/CkSnapshot_Posture.h"                  // ck::Get_FragmentPosture
 
@@ -245,12 +246,16 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                     ck_dynamic_fragment::Restore_UnresolvedHandles(PreCopyHandles, *Resolved.Value, Type, InEntity);
                 }
 
+                // Hydration is not replication, and this edge used to say it was. A consumer binding
+                // OnRepNotify is describing a wire update; a load delivering one told it a different thing in
+                // the same words, which is how a bind made for one intent came to serve the other. The net path
+                // keeps OnRepNotify; this one names what actually happened.
                 for (const auto& Resolved : ResolvedEntries)
                 {
                     const auto* Type = Resolved.Key->GetScriptStruct();
-                    auto Info = FCk_DynamicFragment_RepNotifyInfo{};
-                    Info.ChangedType = const_cast<UScriptStruct*>(Type);
-                    ck::UUtils_Signal_DynamicFragment_OnRepNotify::Broadcast(InEntity, ck::MakePayload(InEntity, Info));
+                    auto Info = FCk_Hydration_TypeInfo{};
+                    Info.HydratedType = const_cast<UScriptStruct*>(Type);
+                    ck::UUtils_Signal_Hydration_OnTypeHydrated::Broadcast(InEntity, ck::MakePayload(InEntity, Info));
                 }
 
                 // Re-arm the Replicate pass ONCE, never per-entry.
