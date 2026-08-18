@@ -1564,6 +1564,20 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    Request_AddLoadCompletePromise(
+        const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate)
+    -> void
+{
+    if (NOT InDelegate.IsBound())
+    { return; }
+
+    _PendingLoadCompletePromises.Emplace(InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoGet_HydrateFrameCap() const
     -> int32
 {
@@ -2165,8 +2179,18 @@ auto
     const auto Delegate = _PendingLoadDelegate;
     _PendingLoadDelegate.Unbind();
 
+    // Swapped out BEFORE draining, so the list being iterated is not the list a callback can add to. _LoadInProgress
+    // is already false by here, so a promise re-armed from inside a callback takes the immediate path and fires
+    // there and then — landing it in this array would either be dropped or delivered twice.
+    const auto Promises = MoveTemp(_PendingLoadCompletePromises);
+    _PendingLoadCompletePromises.Reset();
+
     const auto Source = DoGet_SnapshotSource(); // re-resolve: the fresh world's transient
     ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(Source, ck::MakePayload(Source, _LastLoadReport));
+
+    for (const auto& Promise : Promises)
+    { Promise.ExecuteIfBound(Source, _LastLoadReport); }
+
     Delegate.ExecuteIfBound(_LastLoadReport);
 }
 

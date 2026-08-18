@@ -25,6 +25,21 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Snapshot_OnThumbnailCaptured,
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What Promise_OnLoadComplete DID, returned synchronously, so a caller that cares can branch without a second
+// query. The delegate runs exactly once either way.
+UENUM(BlueprintType)
+enum class ECk_Snapshot_PromiseResult : uint8
+{
+    // A load is in flight; the delegate is queued and will run when it finishes.
+    Bound,
+    // There was no load to wait for, so the delegate has ALREADY run, with Result = NoLoadInProgress.
+    NoLoadInProgress,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Snapshot_PromiseResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Blueprint/AngelScript-facing queries over the save/load lifecycle markers. The markers themselves live in CkEcs
 // (CkSnapshot_RestoreMarker.h) as plain C++ ECS tags so restore-redrive processors can read them without a
 // CkSnapshot dependency — but plain tags have no reflected surface, so script code cannot see them at all without
@@ -90,15 +105,22 @@ public:
     // delivered mid-load that reads world population (occupancy rosters, tag scans, counts) must route that
     // read through this instead of acting on the half-rebuilt world.
     //
-    // CAVEAT on the immediate path: it passes a DEFAULT-CONSTRUCTED report, and FCk_Snapshot_LoadReport's
-    // _Result defaults to ECk_SnapshotResult::Failed_IO — so a consumer that reads _Result on the immediate
-    // path sees a FAILURE for a load that never happened. Treat this delegate's report as meaningful only
-    // when you know a load was in flight; do not branch on _Result here.
+    // The immediate path reports Result = NoLoadInProgress, and the call RETURNS that too, so a caller that
+    // cares can branch without asking a second question. It is not a failure: nothing was loading.
+    //
+    // The promise is held by the snapshot subsystem, which is GameInstance-scoped, so it SURVIVES the level
+    // travel a load performs — a bind made before the travel still fires afterwards. That is the whole reason
+    // it is not an entity signal: every ECS registry is world-scoped, so a bind on the pre-travel world's
+    // transient entity died with that world and nothing said so.
+    //
+    // For anything scoped to ONE entity, prefer Promise_OnHydrated below: this answers the strictly later and
+    // coarser question of whether the whole world is coherent, and it is meant for consumers whose lifetime is
+    // DECOUPLED from the entities they read — widgets, subsystems, cross-entity tasks.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Promise On Load Complete",
               meta = (AutoCreateRefTerm = "InDelegate"))
-    static void
+    static ECk_Snapshot_PromiseResult
     Promise_OnLoadComplete(
         const FCk_Handle& InAnyWorldHandle,
         const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate);

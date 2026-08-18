@@ -153,6 +153,18 @@ public:
         FCk_Handle& OutHandle) const;
 
 public:
+    /**
+     * Queue a one-shot delegate for THIS load's completion. Call it through
+     * UCk_Utils_Snapshot_UE::Promise_OnLoadComplete, which owns the no-load-in-progress half of the contract.
+     *
+     * Held here, on a GameInstance subsystem, rather than bound as an entity signal: every ECS registry is
+     * world-scoped, so a bind made before a load's level travel died with the pre-travel world — silently, which
+     * is the failure this replaces. A dynamic delegate is a weak UObject plus a function name, so a subscriber
+     * the travel destroyed simply no-ops.
+     */
+    auto Request_AddLoadCompletePromise(const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate) -> void;
+
+public:
     // SaveKey resolver -- maps a stable FGuid (stored on the FFragment_SaveKey of a saved entity) to the
     // live FCk_Handle. Populated during load so post-load consumers can re-acquire entities by key.
     // Collision-safe publication: repeated publication by the same entity is
@@ -306,6 +318,10 @@ private:
     bool _LoadInProgress = false;
     ELoadPhase _LoadPhase = ELoadPhase::Idle;
     FCk_Delegate_OnLoadComplete _PendingLoadDelegate;
+    // One-shot promises queued through Promise_OnLoadComplete. Distinct from _PendingLoadDelegate, which is the
+    // ONE delegate the Request_Load caller passed: different delegate type (it carries no handle), one slot by
+    // definition, and already travel-safe for the same reason this list is — both live on the subsystem.
+    TArray<FCk_Delegate_Snapshot_OnLoadComplete> _PendingLoadCompletePromises;
     TArray<FCk_Handle> _PendingTeardownRoots;
     FTSTicker::FDelegateHandle _LoadTickerHandle;
     int32 _LoadFrameCount = 0;
