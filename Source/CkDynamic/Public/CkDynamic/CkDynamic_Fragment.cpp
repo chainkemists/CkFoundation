@@ -136,6 +136,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
     FCkDynamicFragmentsSaveHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_DynamicFragments>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = [](FCk_Handle& InEntity) -> TOptional<FInstancedStruct>
             {
                 if (NOT InEntity.Has<ck::FFragment_DynamicFragment_Data>())

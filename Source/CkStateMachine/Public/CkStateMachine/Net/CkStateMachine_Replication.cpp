@@ -292,6 +292,7 @@ namespace ck_state_machine_replication
             // never via dispatcher NotReady retries, preserving FlushPendingReplication_Drain's order.
 
             FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_StateMachine_WithHistory>({
+                    .Posture = ECk_Snapshot_Posture::Durable,
                     // Canonical single event {null -> CurrentStateClass, Seq 0, Fp 0}: live server seqs
                     // restart in the rebuilt world, so persisting the live ring would diverge. Gated on
                     // the replication MODEL (not _Replication) so DoesNotReplicate SMs persist too.
@@ -343,6 +344,7 @@ namespace ck_state_machine_replication
                     }});
 
             FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_StateMachine_NoHistory>({
+                    .Posture = ECk_Snapshot_Posture::Durable,
                     // Latest state only, canonical Seq 0 / Fp 0. Gated on the replication MODEL (not
                     // _Replication) so DoesNotReplicate WithoutHistory SMs persist too.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>

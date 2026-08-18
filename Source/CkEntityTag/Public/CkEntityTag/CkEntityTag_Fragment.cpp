@@ -19,6 +19,7 @@ static struct FCkEntityTagSaveHandlerRegistrar
     FCkEntityTagSaveHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityTags>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
                 if (NOT Entity.Has<ck::FFragment_EntityTag_Current>())

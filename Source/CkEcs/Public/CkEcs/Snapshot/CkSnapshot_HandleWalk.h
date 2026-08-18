@@ -32,6 +32,16 @@ namespace ck::snapshot
         const UScriptStruct* InStruct,
         void* InMemory,
         const TFunctionRef<void(FCk_Handle&)>& InVisitor) -> void;
+
+    // The AUDIT counterpart: same traversal, but it hands the visitor a dotted field path, and at an
+    // FInstancedStruct boundary it descends only into a DURABLE payload. Both differences are why it is a separate
+    // entry point rather than a flag on the two above — the remap walk must stay posture-blind (its handle-id
+    // stream is positional, so save and load have to visit the same slots), and it must not pay for paths.
+    CKECS_API auto
+    ForEachDurableHandle(
+        const UScriptStruct* InStruct,
+        void* InMemory,
+        const TFunctionRef<void(FCk_Handle&, const FString&)>& InVisitor) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

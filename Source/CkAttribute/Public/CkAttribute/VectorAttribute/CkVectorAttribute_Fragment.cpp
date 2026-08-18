@@ -64,6 +64,7 @@ static struct FVectorAttributeRepHandlerRegistrar
     FVectorAttributeRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_VectorAttributes>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = &ck::attribute_restore::Produce<ck::TFragment_VectorAttribute, FCk_RepData_VectorAttributes>,
                 .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {

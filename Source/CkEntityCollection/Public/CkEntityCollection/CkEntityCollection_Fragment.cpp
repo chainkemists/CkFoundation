@@ -22,6 +22,7 @@ static struct FEntityCollectionRepHandlerRegistrar
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_EntityCollections>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_EntityCollection_UE::Has_Any(Entity))

@@ -65,6 +65,7 @@ static struct FFloatAttributeRepHandlerRegistrar
     FFloatAttributeRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_FloatAttributes>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = &ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>,
                 .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
@@ -124,6 +125,7 @@ static struct FFloatAttributeRefillRepHandlerRegistrar
     FFloatAttributeRefillRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_FloatAttributeRefill>({
+            .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = &ck::attribute_refill_restore::Produce<
                     ck::TFragment_FloatAttribute, FCk_Handle_FloatAttributeRefill, UCk_Utils_FloatAttributeRefill_UE, FCk_SaveData_FloatAttributeRefill>,
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult

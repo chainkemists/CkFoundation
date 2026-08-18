@@ -24,6 +24,7 @@
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_2dGridPlacements>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_RecordOf_GridPlacements>())

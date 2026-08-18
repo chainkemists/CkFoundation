@@ -5,6 +5,7 @@
 // may include Net/.
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Snapshot/CkSnapshot_Posture.h" // ECk_Snapshot_Posture — declared, never inferred
 
 #include <InstancedStruct.h>
 #include <Misc/Optional.h>
@@ -50,6 +51,10 @@ public:
         // absent. A SET-but-empty payload is meaningful (seeds an empty container); only UNSET means "absent".
         // Presence of Produce IS save participation. Authoring recipe: CkSnapshot/Claude.md.
         TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
+
+        // What the registration CLAIMS its payload is. Last member so the aggregate's existing designated-init
+        // sites stay valid; the named shapes below make it mandatory where it can be enforced.
+        ECk_Snapshot_Posture Posture = ECk_Snapshot_Posture::Undeclared;
     };
 
     using FTypeResolver = TFunction<UScriptStruct*()>;
@@ -102,26 +107,41 @@ public:
         FRequiredApply(T&& InFn) : Value(Forward<T>(InFn)) {}
     };
 
+    // Posture is DECLARED, never inferred from which lambdas are present. The registry cannot tell "deliberately
+    // wire-only" from "somebody forgot Produce", and that ambiguity is the save path's silent-failure half: an
+    // unregistered type is simply absent from the save with nothing to notice it. Same no-default-ctor trick as
+    // the two above, so omitting the designator is a compile error rather than a runtime surprise.
+    struct FRequiredPosture
+    {
+        ECk_Snapshot_Posture Value;
+        FRequiredPosture() = delete;
+        FRequiredPosture(ECk_Snapshot_Posture InPosture) : Value(InPosture) {}
+    };
+
     // Per-shape designated-init args. Field order = the order designators must be written (C++ requires aggregate
     // designators in declaration order). Each struct exposes ONLY the slots its shape allows.
     struct FArgs_NetOnly
     {
-        FRequiredApply NetApply;
-        FRemoveFn      NetRemove{};
+        FRequiredPosture Posture;
+        FRequiredApply   NetApply;
+        FRemoveFn        NetRemove{};
     };
     struct FArgs_SaveOnly
     {
+        FRequiredPosture Posture;
         FRequiredProduce Produce;
         FRequiredApply   HydrationApply;
     };
     struct FArgs_NetAndSave_SharedApply
     {
+        FRequiredPosture Posture;
         FRequiredProduce Produce;
         FRequiredApply   SharedApply;
         FRemoveFn        NetRemove{};
     };
     struct FArgs_NetAndSave_SplitApply
     {
+        FRequiredPosture Posture;
         FRequiredProduce Produce;
         FRequiredApply   NetApply;
         FRequiredApply   HydrationApply;

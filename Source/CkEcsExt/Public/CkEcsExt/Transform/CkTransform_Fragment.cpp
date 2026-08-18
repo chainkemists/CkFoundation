@@ -29,7 +29,7 @@ static struct FTransformRepHandlerRegistrar
         // expected wait. An unset Old means first application: snap directly (an interpolation offset
         // would glide the entity in from origin).
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Location>({ .NetApply =
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Location>({ .Posture = ECk_Snapshot_Posture::Session, .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
@@ -51,7 +51,7 @@ static struct FTransformRepHandlerRegistrar
                     return ECk_Persistence_ApplyResult::Applied;
                 } });
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Rotation>({ .NetApply =
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Rotation>({ .Posture = ECk_Snapshot_Posture::Session, .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);
@@ -73,7 +73,7 @@ static struct FTransformRepHandlerRegistrar
                     return ECk_Persistence_ApplyResult::Applied;
                 } });
 
-        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Scale>({ .NetApply =
+        FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Scale>({ .Posture = ECk_Snapshot_Posture::Session, .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     auto HandleTransform = UCk_Utils_Transform_UE::Cast(Entity);

@@ -65,6 +65,7 @@ static struct FIntegerAttributeRepHandlerRegistrar
     FIntegerAttributeRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_IntegerAttributes>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = &ck::attribute_restore::Produce<ck::TFragment_IntegerAttribute, FCk_RepData_IntegerAttributes>,
                 .NetApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
@@ -124,6 +125,7 @@ static struct FIntegerAttributeRefillRepHandlerRegistrar
     FIntegerAttributeRefillRepHandlerRegistrar()
     {
         FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_IntegerAttributeRefill>({
+                .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = &ck::attribute_refill_restore::Produce<
                     ck::TFragment_IntegerAttribute, FCk_Handle_IntegerAttributeRefill, UCk_Utils_IntegerAttributeRefill_UE, FCk_SaveData_IntegerAttributeRefill>,
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult

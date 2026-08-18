@@ -43,6 +43,7 @@ namespace ck_entity_script_save_fields
         FRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityScriptFields>({
+                    .Posture = ECk_Snapshot_Posture::Durable,
                     // UNSET — not an empty payload — when there is no script, it is a shared CDO, or the class
                     // declares no SaveGame field: those cases have nothing to persist.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
