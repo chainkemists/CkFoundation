@@ -83,7 +83,10 @@ namespace ck_dynamic_fragment
     // Hydration must never DOWNGRADE a live handle to a dead one: a construct-spawned child is
     // unlabeled, so capture rule 3 never writes a row for it and its saved id remaps to a tombstone,
     // leaving the feature structurally complete but inert. Declaring the fragment's posture is the
-    // fix; this is the backstop for the undeclared ones, and every firing names one of them.
+    // fix; this is the backstop for the undeclared ones, and every firing names one of them — which
+    // is why both diagnostics report at Warning rather than Verbose: a backstop that engages
+    // silently is a defect nobody is told about, and the whole point of it engaging is that
+    // something upstream needs declaring.
     // Trade: a deliberately CLEARED field is indistinguishable from an unresolved one (both arrive
     // invalid) and keeps its fresh value, so load-bearing emptiness must be persisted explicitly.
     auto Restore_UnresolvedHandles(
@@ -106,7 +109,7 @@ namespace ck_dynamic_fragment
         // shifted every later field and slot i is no longer the same field on both sides.
         if (DestHandles.Num() != InPreCopyHandles.Num())
         {
-            ck::dynamic::Verbose(TEXT("v3 hydrate: skipping the unresolved-handle backstop on Entity [{}] fragment [{}] "
+            ck::dynamic::Warning(TEXT("v3 hydrate: skipping the unresolved-handle backstop on Entity [{}] fragment [{}] "
                 "— the saved layout holds [{}] handle slots against [{}] freshly constructed"),
                 InOwner, InType, DestHandles.Num(), InPreCopyHandles.Num());
             return;
@@ -119,7 +122,7 @@ namespace ck_dynamic_fragment
             if (ck::IsValid(*DestHandles[Index]) || ck::Is_NOT_Valid(PreCopyHandle))
             { continue; }
 
-            ck::dynamic::Verbose(TEXT("v3 hydrate: keeping the construction-fresh handle [{}] on Entity [{}] "
+            ck::dynamic::Warning(TEXT("v3 hydrate: keeping the construction-fresh handle [{}] on Entity [{}] "
                 "fragment [{}] — the saved value did not resolve"), PreCopyHandle, InOwner, InType);
 
             *DestHandles[Index] = PreCopyHandle;
