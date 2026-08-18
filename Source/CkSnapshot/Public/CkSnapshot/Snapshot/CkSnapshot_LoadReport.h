@@ -170,13 +170,42 @@ private:
     UPROPERTY()
     int32 _EntitiesPartiallyRestored = 0;
 
-    // Rows in the save's payload table. Enqueued + OnSkipped + OnOrphaned + OnUnresolvedOwner + Dropped
-    // partitions it exactly.
+    // Rows in the save's payload table. Applied + Rejected + DroppedNoHandler + DroppedTimeout +
+    // DestroyedWithEntries + UnappliedAtFinish + OnSkipped + OnOrphaned + OnUnresolvedOwner + Dropped
+    // partitions it exactly — the closure asks what HAPPENED to each row, not how far it got.
     UPROPERTY()
     int32 _PayloadsTotal = 0;
 
+    // Diagnostic, NOT a closure term: how many rows reached the apply queue at all. A row counted here is
+    // still counted again by whichever apply bucket it ends in, so it deliberately does not partition.
     UPROPERTY()
     int32 _PayloadsEnqueued = 0;
+
+    // ---- Apply outcomes, folded once from ck::FCtx_HydrationOutcomes when the load finishes -----------------
+    UPROPERTY()
+    int32 _PayloadsApplied = 0;
+
+    // The handler ran and refused the data.
+    UPROPERTY()
+    int32 _PayloadsRejected = 0;
+
+    // No handler resolved, or the one that did never declared a HydrationApply: the save recorded state this
+    // build cannot apply.
+    UPROPERTY()
+    int32 _PayloadsDroppedNoHandler = 0;
+
+    // The handler kept answering NotReady until the apply timeout.
+    UPROPERTY()
+    int32 _PayloadsDroppedTimeout = 0;
+
+    // Queued on an entity that entered destruction before they applied.
+    UPROPERTY()
+    int32 _PayloadsDestroyedWithEntries = 0;
+
+    // Still queued when the load finished. The dispatcher is not load-gated, so some of these may apply a frame
+    // later — the report is a snapshot of the load, and this is the honest name for what was still in flight.
+    UPROPERTY()
+    int32 _PayloadsUnappliedAtFinish = 0;
 
     // Payloads whose owner entity the loader deliberately did not rebuild — see _Skips for the per-entity reason.
     UPROPERTY()
@@ -235,6 +264,12 @@ public:
     CK_PROPERTY(_EntitiesPartiallyRestored);
     CK_PROPERTY(_PayloadsTotal);
     CK_PROPERTY(_PayloadsEnqueued);
+    CK_PROPERTY(_PayloadsApplied);
+    CK_PROPERTY(_PayloadsRejected);
+    CK_PROPERTY(_PayloadsDroppedNoHandler);
+    CK_PROPERTY(_PayloadsDroppedTimeout);
+    CK_PROPERTY(_PayloadsDestroyedWithEntries);
+    CK_PROPERTY(_PayloadsUnappliedAtFinish);
     CK_PROPERTY(_PayloadsOnSkippedEntities);
     CK_PROPERTY(_PayloadsOnOrphanedEntities);
     CK_PROPERTY(_PayloadsOnUnresolvedOwner);
@@ -252,8 +287,10 @@ public:
     /** True when every saved entity landed in exactly one of restored / skipped / orphaned. */
     auto Get_IsEntityAccountingClosed() const -> bool;
 
-    /** True when every saved payload landed in exactly one of enqueued / on-skipped / on-orphaned /
-     *  on-unresolved-owner / dropped. */
+    /** True when every saved payload landed in exactly one TERMINAL bucket: applied, rejected, dropped for want
+     *  of a handler or at the apply timeout, destroyed with its entity, still unapplied when the load finished,
+     *  or never enqueued at all (owner skipped / orphaned / unresolved, or the blob failed to deserialize).
+     *  Enqueued is not a term — it says a row reached the queue, not what became of it. */
     auto Get_IsPayloadAccountingClosed() const -> bool;
 
     /** Both of the above. A load report that does not close has an unaccounted saved entity or payload. */

@@ -21,12 +21,44 @@ namespace ck_persistence_hydration_processor
             ? InData.GetScriptStruct()->GetName()
             : FString{TEXT("<invalid type>")};
     }
+
+    // Records a terminal outcome into the per-load tally, if one is being kept. Nothing is created here: the
+    // context exists only while a load owns it, so an apply outside a load (or on an entity with no registry)
+    // simply is not counted rather than accumulating into a bucket no report will ever read.
+    auto
+        DoRecord_Outcome(
+            FCk_Handle& InEntity,
+            ck::persistence_apply::EApplyOutcome InOutcome)
+        -> void
+    {
+        using EOutcome = ck::persistence_apply::EApplyOutcome;
+
+        if (InOutcome == EOutcome::StillPending || ck::Is_NOT_Valid(InEntity))
+        { return; }
+
+        auto Registry = InEntity.Get_RegistryView();
+        auto* Outcomes = Registry.TryGetContext<ck::FCtx_HydrationOutcomes>();
+        if (Outcomes == nullptr)
+        { return; }
+
+        switch (InOutcome)
+        {
+            case EOutcome::Applied:          ++Outcomes->_Applied; break;
+            case EOutcome::DroppedRejected:  ++Outcomes->_Rejected; break;
+            case EOutcome::DroppedNoHandler: ++Outcomes->_DroppedNoHandler; break;
+            case EOutcome::DroppedTimeout:   ++Outcomes->_DroppedTimeout; break;
+            default: break;
+        }
+    }
 }
 
 namespace ck::persistence_apply
 {
+    // The apply itself. ApplyOne wraps it so that recording the outcome is structural rather than a rule every
+    // future return statement has to remember — an uncounted terminal outcome is exactly the hole the load
+    // report's closure exists to detect, and it must not be reintroducible by adding a branch here.
     auto
-        ApplyOne(
+        DoApplyOne(
             FCk_Handle& InEntity,
             const FInstancedStruct& InData,
             const TOptional<FInstancedStruct>& InOldData,
@@ -73,6 +105,20 @@ namespace ck::persistence_apply
         }
 
         return EApplyOutcome::StillPending;
+    }
+
+    auto
+        ApplyOne(
+            FCk_Handle& InEntity,
+            const FInstancedStruct& InData,
+            const TOptional<FInstancedStruct>& InOldData,
+            float& InOutPendingForSeconds,
+            FCk_Time InDeltaT)
+        -> EApplyOutcome
+    {
+        const auto Outcome = DoApplyOne(InEntity, InData, InOldData, InOutPendingForSeconds, InDeltaT);
+        ck_persistence_hydration_processor::DoRecord_Outcome(InEntity, Outcome);
+        return Outcome;
     }
 }
 
