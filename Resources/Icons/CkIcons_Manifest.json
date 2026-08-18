@@ -1,0 +1,25 @@
+{
+    "_meta": {
+        "format": "ck-icon-manifest",
+        "version": 1,
+        "mdiVersion": "v7.4.47",
+        "notes": "Semantic name -> MDI icon. Semantic names describe the CONCEPT, never the picture; call sites only ever see the generated ECk_Icon identifier. '-outline' variants preferred; entries with 'fallback' recorded have no outline variant at the pinned version."
+    },
+    "icons": [
+        { "semantic": "Delete",     "mdi": "delete-outline" },
+        { "semantic": "Entity",     "mdi": "cube-outline" },
+        { "semantic": "Error",      "mdi": "alert-circle-outline" },
+        { "semantic": "Filter",     "mdi": "filter-outline" },
+        { "semantic": "Fragment",   "mdi": "puzzle-outline" },
+        { "semantic": "Info",       "mdi": "information-outline" },
+        { "semantic": "Pin",        "mdi": "pin-outline" },
+        { "semantic": "Processor",  "mdi": "cog-outline" },
+        { "semantic": "Refresh",    "mdi": "refresh", "fallback": "no -outline variant exists at v7.4.47" },
+        { "semantic": "Save",       "mdi": "content-save-outline" },
+        { "semantic": "Search",     "mdi": "magnify", "fallback": "no -outline variant exists at v7.4.47" },
+        { "semantic": "Success",    "mdi": "check-circle-outline" },
+        { "semantic": "Timer",      "mdi": "timer-outline" },
+        { "semantic": "Visibility", "mdi": "eye-outline" },
+        { "semantic": "Warning",    "mdi": "alert-outline" }
+    ]
+}

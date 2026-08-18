@@ -1,0 +1,72 @@
+Source\CkAggroDebugger\Public\CkAggroDebugger\Window\SCkAggroDebuggerWindow.cpp:614: ▶ | ▶ %s  (%.1fs)
+Source\CkAudioDebugger\Public\CkAudioDebugger\Window\SCkAudioDebuggerWindow.cpp:1958: → | →
+Source\CkAudioDebugger\Public\CkAudioDebugger\Window\SCkAudioDebuggerWindow.cpp:2347: → | {}  {} → {}
+Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebugger_AgentListPanel.cpp:418: → | → %s
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_MissionControl.cpp:126: − | Sliding toggle (Sandbox/Enabled), −/+ cost stepper, and thin meter bars (cost, b
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_MissionControl.cpp:221: ⚠ | ⚠
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_MissionControl.cpp:229: 🧪 | 🧪
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_Nodes.cpp:138: • | • hasFuel
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_Nodes.cpp:138: •▲ | • fedUp ▲
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Picker\SCkDebug_ViewportPickerControls.cpp:164: ⚙ | ⚙
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Widgets\SCkDebug_Chip.cpp:179: → | →
+Source\CkDebuggerCommon\Public\CkDebuggerCommon\Widgets\SCkDebug_Stepper.cpp:28: − | −
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:181: ↳ |   ↳ {} component:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:196: ↳ |   ↳ {} override:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:273: ↳ |   ↳ {} [{}] {} delta:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:332: ↳ |   ↳ {} [{}] modifiers:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:359: ↳ |   ↳ {} refill:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspectorAttributeRows.h:380: ↳ |   ↳ {} refill control:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Audio.cpp:87: → | Volume (cur → target):
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Audio.cpp:100: → | {:.3f} → {:.3f}
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Camera.cpp:597: → | Alpha (cur → target):
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Camera.cpp:610: → | {:.2f} → {:.2f}
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityTagQuery.cpp:97: ∞ | ∞
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityTagQuery.cpp:133: ≤ |     Ensure ≤:
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_StateMachine.cpp:314: → | [%d] %s → %s  (frame %llu, %.2f s)
+Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_StateMachine.cpp:352: → | %s → %s
+Source\CkEcsDebugger\Public\CkEcsDebugger\Panels\CkDebuggerPanel_Inspector.cpp:449: › | ›
+Source\CkEntityDebugOverlay\Private\Providers\CkDebugOverlay_Provider_EntityInfo.cpp:111: → | → #%u
+Source\CkEntityDebugOverlay\Private\Providers\CkDebugOverlay_Provider_EntityInfo.cpp:112: → | → %s
+Source\CkEntityDebugOverlay\Private\Providers\CkDebugOverlay_Provider_StateMachine.cpp:261: → | %s → %s
+Source\CkEntityDebugOverlay\Private\Slate\SCkDebugOverlay_FocusCard.cpp:33: ‹ |  ‹ 
+Source\CkGoapDebugger\Public\CkGoapDebugger\Graph\CkGoapRuntimeGraphModel.cpp:148: ◆ | ◆ Goal
+Source\CkGoapDebugger\Public\CkGoapDebugger\Graph\CkGoapRuntimeGraphModel.cpp:160: ◆ | ◆ Goal
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebuggerWindow.cpp:447: ◀ | |◀
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebuggerWindow.cpp:449: ▶ | ▶|
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_AgentColumn.cpp:415: ◆ | ◆
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_AgentColumn.cpp:443: ◆● | ◆●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_AgentColumn.cpp:443: ● | ●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_AgentColumn.cpp:463: › | ›
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_AgentColumn.cpp:717: ◀ | ◀ NOW
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_CatalogPanel.cpp:347: ◆● | ◆●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_CatalogPanel.cpp:347: ● | ●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_DecisionPanel.cpp:523: ◆● | ◆●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_DecisionPanel.cpp:523: ● | ●
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:103: → | →
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:278: ◆● | ◆● ACTION+PLANNER
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:285: ● | ● FALLBACK
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:287: ● | ● ACTION
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:324: › | › %s
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:435: ◆ | ◆ Goal
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:824: ◀ | ◀
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:856: ▶ | ▶
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_Sidebar.cpp:1142: ▼ | ▼
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_Sidebar.cpp:1165: → | %s  →  %s   x%d
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_SquadTable.cpp:92: › |  › 
+Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_TimelineDock.cpp:479: → | %s → %s
+Source\CkInputDebugger\Public\CkInputDebugger\Window\SCkInputDebuggerWindow.cpp:1495: → | →
+Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:406: → |  → 
+Source\CkIntentDebugger\Public\CkIntentDebugger\Window\SCkIntentDebugger_ResolutionPanel.cpp:95: → | terminal button → candidates, most dominant first · deferral verdict
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:473: ▲ |  ▲
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:473: ▼ |  ▼
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:775: ■ | ■ in use
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:783: ■ | ■ live
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:1105: ▲ | ▲
+Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:1105: ▼ | ▼
+Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Fixes\CkOptimizationDebugger_Navigation.cpp:147: → | Opened Project Settings → {}.
+Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Fixes\CkOptimizationDebugger_Navigation.cpp:175: → | Open Project Settings → {}
+Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1261: ≥ | ≥2× budget
+Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:4276: ▸ | ▸
+Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:4276: ▾ | ▾
+Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Graph\SCkSchedulerProcessorCard.cpp:92: ● | ●
+Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Graph\SCkSchedulerProcessorCard.cpp:106: ◆ | ◆

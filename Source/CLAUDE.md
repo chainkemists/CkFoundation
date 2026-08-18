@@ -116,6 +116,7 @@ Before writing any code, navigate the documentation in this order:
 | project settings exposed to editor | `CkSettings` |
 | console variables / runtime tuning | `CkCVar` |
 | style tokens for editor-tool Slate UI (colors, fonts, tones) | `CkEditorTools` + `CkStyle::` |
+| typed icon brushes for editor-tool Slate UI (compile-checked `ECk_Icon`, MDI-backed) | `CkEditorTools` + `FCkIconStyle` (manifest: `Resources/Icons/CkIcons_Manifest.json`; regenerate via `Source/CkScripts/Generate-CkIcons.ps1`) |
 | log a message | `CkLog` (per-module `ck::<feature>` functions — root CLAUDE.md) |
 | profile a processor | `CkProfile` + `SCOPE_CYCLE_COUNTER` |
 | generate AngelScript accessors | `CkAngelscriptGenerator` (Editor module) |
@@ -143,7 +144,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkCVar | Core,Log |
 | CkCore | BuildConfig,Log,Settings,ThirdParty |
 | CkDebugScene | Core,Log |
-| CkEditorTools | Settings (added 2026-07-09; Runtime on purpose — consumed by CkGameplayDebugger's Runtime modules; hosts the shared `CkStyle::` tokens + `UCk_Style_UserSettings_UE`) |
+| CkEditorTools | Core,Settings (added 2026-07-09; Runtime on purpose — consumed by CkGameplayDebugger's Runtime modules; hosts the shared `CkStyle::` tokens + `UCk_Style_UserSettings_UE` + the typed icon registry `FCkIconStyle`/`ECk_Icon`, generated from the MDI manifest — Core added 2026-08-17 for it) |
 | CkLog | Settings,ThirdParty |
 | CkMemory | Core,Log |
 | CkPerception | Core,Log,ThirdParty |
