@@ -21,7 +21,11 @@
   - **PENDING [EDITOR-VERIFY]**: run `Ck.Icons.ShowTestWindow` in-editor, confirm all 15 icons
     render crisply at 16/24 and tint (black glyph = recolour failure; blank = missing SVG).
     Then DELETE `Source/CkEditorTools/Public/CkEditorTools/Style/CkIconStyle_TestWindow.cpp`.
-- Uncommitted; nothing in CkGameplayDebugger touched.
+- **COMMITTED 2026-08-17 on `feature/icon-pipeline` (branched off `dev`), unpushed**:
+  `516826365` (pipeline) + `fcf192733` (TEMPORARY test window — revert after visual check) +
+  `68c5358fc` (CkScripts doc). Nothing in CkGameplayDebugger touched. The CkFoundation checkout
+  is parked on this branch for the visual check; `git switch feature/save-load-optimization`
+  restores the save-load world.
 
 ## Phase B — migrate CkGameplayDebugger, delete old mechanism
 
