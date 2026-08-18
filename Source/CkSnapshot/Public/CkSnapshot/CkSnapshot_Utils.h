@@ -38,9 +38,15 @@ class CKSNAPSHOT_API UCk_Utils_Snapshot_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_Snapshot_UE);
 
-    // True while the entity carries the just-restored marker — stamped by a v3 load only on entities it mapped
-    // from a saved id. This is the restored-vs-replaced discriminator: presence/count checks cannot tell a
-    // restored entity from a fresh construction standing where it used to be; this can.
+    // True once the entity has been hydrated by a load this session (ck::FTag_Hydration_WasHydratedThisLoad,
+    // stamped only on entities the load mapped from a saved id). Genuinely useful as the restored-vs-replaced
+    // discriminator — presence and count checks cannot tell a restored entity from a fresh construction standing
+    // where it used to be, and this can.
+    //
+    // But it is PERMANENT: it never clears, so it answers "was this ever restored", never "is my restored state
+    // ready". Reading it to decide when a value may be read means polling from a processor that happens to tick
+    // in the right window, and pairing it with a hand-rolled once-per-feature dedup. Promise_OnHydrated is that
+    // question asked properly — one-shot, per entity, pushed. This stays until its callers are swept.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Was Just Restored")

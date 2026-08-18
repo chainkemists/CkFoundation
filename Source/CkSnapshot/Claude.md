@@ -568,9 +568,14 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   `FProcessor_Transform_SyncFromActor`'s per-tick stomp on actor-backed entities. `DoApply_SavedTransforms` runs once
   from `DoHydrate_Enqueue`, before payloads are enqueued; its deferred Transform requests / `SetActorTransform` calls
   land in the load-kernel settle pumps. Actor-backed entities are driven through the ACTOR only.
-- **`FTag_Snapshot_JustRestored` is stamped on every mapped entity before the gate opens.** Game-side rebind
-  processors (BusterBlock's `Bb_SnapshotRestore` fleet) key off it to re-resolve handles their persisted fragments
-  carry. The Model-A purge deleted the old stamp site and silently killed every consumer; v3 restores the semantic.
+- **`FTag_Hydration_WasHydratedThisLoad` is stamped on every mapped entity before the gate opens**, beside the
+  quarantine, and is never removed. Game-side rebind processors (BusterBlock's `Bb_SnapshotRestore` fleet) key off
+  it to re-resolve handles their persisted fragments carry. The Model-A purge deleted the old stamp site and
+  silently killed every consumer; v3 restores the semantic. Because it is permanent it answers "was this entity
+  ever hydrated", not "is its restored state ready" — the latter is `Promise_OnHydrated`, and the reason the
+  rename says `WasHydratedThisLoad` rather than `JustRestored` is that "just" was the part that was never true.
+  `FTag_Snapshot_JustRestored` remains as a deprecated alias, with `Get_WasJustRestored` as its reflected form,
+  until the game's readers are swept.
 - **Orphan accounting is per-entry, not a subtraction.** It used to be a bare `N - mapped - skipped` count; the walk
   enumerates the identical set (`_SavedIdMap` / `_SkippedIds` are disjoint subsets of the entity table) but emits one
   Warning + one report record per orphan, so a lossy load is self-explaining.
