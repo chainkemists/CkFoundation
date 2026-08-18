@@ -20,6 +20,20 @@ Create a tween entity for a specific property; the tween processor reads `Alpha`
 
 ---
 
+## Curve-driven offsets
+
+`Create_TweenEntityLocation_CurveOffset` / `Create_TweenEntityRotation_CurveOffset` take an
+`FCk_TweenCurveChannels` whose three channels are `TSoftObjectPtr<UCurveFloat>` — path-serialized so
+authoring them in a DataAsset or Blueprint costs the owning package nothing at load.
+
+**Creation is synchronous, so the caller owns the preload.** A channel authored but not resident
+ensures loudly and contributes 0 (exactly as an unset channel does); `Get_CurvesMaxTime` skips it the
+same way, so a derived duration never disagrees with what plays. When nothing resident remains and
+the duration is being derived, the existing zero-duration ensure rejects the whole creation.
+`Get_HasAnyCurve()` answers "is any channel AUTHORED", never "is any loaded".
+
+---
+
 ## Spline-follow
 
 `Create_TweenEntity_FollowSpline` moves an entity along a `CkSpline` path (an
