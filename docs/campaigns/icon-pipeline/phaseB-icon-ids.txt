@@ -1,0 +1,678 @@
+[root] AStar (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_AStar.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:47
+[root] ActorBridge (5 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:108
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_ActorRelay.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:38
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:38
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:97
+[root] Aggro (9 sites)
+    Source\CkAggroDebugger\CkAggroDebugger_Module.cpp:64
+    Source\CkAggroDebugger\Public\CkAggroDebugger\Window\SCkAggroDebuggerWindow.h:73
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:91
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Aggro.cpp:95
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Aggro.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:28
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:28
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:103
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:46
+[pool] Anchor (3 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:285
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1483
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:1128
+[pool] Antenna (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:58
+[pool] ArrowProjectile (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:68
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:263
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1471
+[root] Attribute (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:564
+    Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Data\CkSchedulerDebugger_DataCollector.cpp:630
+[root] AttributeByte (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_ByteAttributes.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:43
+[root] AttributeFloat (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_FloatAttributes.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:42
+[root] AttributeInteger (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_IntegerAttributes.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:44
+[root] AttributeRotator (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:46
+[root] AttributeVector (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:45
+[root] Audio (10 sites)
+    Source\CkAudioDebugger\CkAudioDebugger_Module.cpp:64
+    Source\CkAudioDebugger\Public\CkAudioDebugger\Window\SCkAudioDebuggerWindow.cpp:241
+    Source\CkAudioDebugger\Public\CkAudioDebugger\Window\SCkAudioDebuggerWindow.cpp:1486
+    Source\CkAudioDebugger\Public\CkAudioDebugger\Window\SCkAudioDebuggerWindow.h:115
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Audio.cpp:42
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Audio.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:29
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:118
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:134
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Model\CkOptimizationDebugger_Model.cpp:1460
+[pool] Backpack (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:64
+[pool] Bolt (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:59
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2231
+[pool] Bomb (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:71
+[pool] Book (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_AnimPlans.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:72
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2701
+[pool] Broom (5 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:457
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2323
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2363
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2389
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2486
+[pool] Brush (1 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:141
+[pool] Bucket (1 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:456
+[pool] Bug (2 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:369
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:883
+[pool] Bulb (3 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:142
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:188
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2873
+[pool] Calendar (1 sites)
+    Source\CkSmDebugger\Public\CkSmDebugger\Window\SCkSmDebuggerWindow.cpp:1572
+[pool] Camcorder (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:77
+[root] Camera (7 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:894
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:931
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:103
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Camera.h:20
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:33
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:33
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:115
+[pool] Cassette (6 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:74
+    Source\CkSaveDebugger\CkSaveDebugger_Module.cpp:66
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:547
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2137
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2190
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2392
+[pool] Chest (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:401
+[pool] Chip (4 sites)
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:614
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:183
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1733
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Styles\CkStyleLab_AxisMetadata.cpp:53
+[pool] Clipboard (4 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:525
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:1080
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2878
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2892
+[pool] Coin (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:65
+[pool] Compass (4 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Compass.cpp:22
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Compass.h:9
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:291
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2703
+[pool] Crate (2 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:275
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:451
+[pool] Crosshair (6 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:57
+    Source\CkIntentDebugger\CkIntentDebugger_Module.cpp:88
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:298
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1489
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:4122
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:486
+[root] Cube (13 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:45
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:853
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Pages\CkDebuggerPage_Archetypes.cpp:310
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Pages\CkDebuggerPage_Dashboard.cpp:450
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Pages\CkDebuggerPage_Dashboard.cpp:572
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_ArchetypeAggregation.cpp:126
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Widgets\CkDebuggerWidget_EntityTree.cpp:447
+    Source\CkJoltDebugger\CkJoltDebugger_Module.cpp:81
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:260
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1452
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:139
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:146
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1034
+[pool] Disc (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:413
+[pool] Door (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:1090
+[root] EntityCollection (8 sites)
+    Source\CkEcsDebugger\CkEcsDebugger_Module.cpp:86
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:110
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityCollections.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Panels\CkDebuggerPanel_EntityList.cpp:625
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:40
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:40
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:97
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:57
+[root] EntityInfo (6 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityInfo.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:43
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Presentation\CkDebugOverlay_Present.cpp:524
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Presentation\CkDebugOverlay_Present.cpp:775
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1037
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1052
+[root] Eqs (5 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:105
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:35
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:35
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:103
+    Source\CkEqsDebugger\CkEqsDebugger_Module.cpp:67
+[pool] Factory (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1036
+[pool] FilmReel (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_MontagePlayer.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:73
+[pool] Flag (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:66
+[pool] Flame (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:78
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1260
+[root] FogOfWar (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_FogOfWar.h:9
+[pool] Footprint (2 sites)
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:787
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1601
+[root] FrameActor (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:915
+[pool] Gate (1 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:288
+[pool] Gear (6 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:51
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:638
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:145
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2644
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2868
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2974
+[pool] Gem (1 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:185
+[pool] Ghost (5 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Picker\SCkDebug_ViewportPickerControls.cpp:202
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1232
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1050
+    Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Pages\CkSchedulerDebuggerPage_TreeView.cpp:368
+    Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Widgets\SCkSchedulerDebugger_Inspector.cpp:191
+[root] Goap (7 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:104
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:34
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:34
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:103
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:33
+    Source\CkGoapDebugger\CkGoapDebugger_Module.cpp:110
+    Source\CkGoapDebugger\Public\CkGoapDebugger\Inspector\CkGoapInspector_Gateway.h:23
+[root] Grid (17 sites)
+    Source\CkAStarDebugger\CkAStarDebugger_Module.cpp:77
+    Source\CkAStarDebugger\Public\CkAStarDebugger\Window\SCkAStarDebugger_StatsPanel.cpp:192
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:39
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:39
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:39
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:67
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:67
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:798
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:814
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:136
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:56
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:56
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:105
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:371
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Data\CkEqsDebugger_Types.h:159
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:221
+    Source\CkSmDebugger\Public\CkSmDebugger\Window\SCkSmDebuggerWindow.cpp:1554
+[pool] Hand (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:62
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:2284
+[pool] Hourglass (5 sites)
+    Source\CkAStarDebugger\Public\CkAStarDebugger\Window\SCkAStarDebuggerWindow.cpp:118
+    Source\CkDialogDebugger\Public\CkDialogDebugger\Window\SCkDialogDebuggerWindow.cpp:91
+    Source\CkInsightsDebugger\CkInsightsDebugger_Module.cpp:62
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1572
+    Source\CkObjectPoolingDebugger\Public\CkObjectPoolingDebugger\Window\SCkObjectPoolingDebuggerWindow.cpp:339
+[root] Input (11 sites)
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:208
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:212
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:218
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:223
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:229
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:234
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:246
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:251
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Settings\CkDebugOverlay_Settings.h:255
+    Source\CkInputDebugger\CkInputDebugger_Module.cpp:62
+    Source\CkInputDebugger\Public\CkInputDebugger\Window\SCkInputDebuggerWindow.cpp:144
+[root] Interaction (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_InteractionResolver.h:11
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_InteractTarget.h:13
+[root] Inventory (5 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:144
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Inventories.h:21
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:64
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:109
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:45
+[root] IsmRenderer (5 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_IskmProxy.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_IskmRenderer.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_IsmProxy.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:36
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:37
+[root] Jolt (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Jolt.cpp:81
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Jolt.h:9
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:206
+[pool] Key (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:52
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:453
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2690
+[root] Label (12 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:836
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Classification\CkEcsDebugger_Classification.cpp:30
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:92
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityTag.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_EntityTagQuery.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_TagSet.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:30
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:30
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:99
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:175
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:59
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2598
+[pool] Lock (2 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2957
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2990
+[pool] Mic (1 sites)
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:558
+[root] Minimap (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Minimap.cpp:52
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Minimap.h:9
+[pool] Monitor (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:76
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:644
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:184
+[pool] Moon (4 sites)
+    Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebugger_GraphPane.cpp:809
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1465
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:189
+    Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Widgets\SCkSchedulerDebugger_ProcessorTree.cpp:651
+[pool] Needle (1 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:301
+[pool] Net (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:798
+[root] Network (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Network.cpp:57
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Network.h:9
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Widgets\SCkStyleLab_SamplePane.cpp:598
+[pool] Note (1 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:311
+[root] Objective (8 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:99
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Objective.cpp:35
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Objective.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_ObjectiveOwner.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:31
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:31
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:109
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:48
+[root] OverlapBody (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_OverlapBody.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:52
+[pool] Package (11 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Panels\CkDebuggerPanel_EntityList.cpp:607
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:632
+    Source\CkObjectPoolingDebugger\CkObjectPoolingDebugger_Module.cpp:62
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Analysis\CkOptimizationDebugger_CleanupScan.cpp:510
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:449
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:808
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2704
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2755
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2957
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:3217
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:3541
+[pool] Palette (3 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:140
+    Source\CkStyleLabDebugger\CkStyleLabDebugger_Module.cpp:60
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Window\SCkStyleLabWindow.cpp:130
+[root] PathNetwork (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_PathNetwork.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_PathNetwork.h:10
+[root] PathNetworkFollower (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_PathNetworkFollower.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_PathNetworkFollower.h:10
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:41
+[pool] Pencil (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:54
+[pool] People (5 sites)
+    Source\CkCrowdDebugger\CkCrowdDebugger_Module.cpp:61
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:791
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:40
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:55
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:209
+[pool] Person (6 sites)
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:790
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:43
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:67
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:217
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:229
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:143
+[root] Physics (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Physics.cpp:117
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Physics.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:34
+[root] Pin (4 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:897
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Poi.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Widgets\CkDebuggerWidget_EntityTree.cpp:2089
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:464
+[pool] Plug (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:50
+[root] Probe (12 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:84
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Probes.cpp:25
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Probes.h:12
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Probes.h:13
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_ProbeTraces.h:12
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:105
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Settings\CkEcsDebuggerSettings.h:26
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:211
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:223
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:2445
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:2451
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1808
+[pool] Puzzle (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_DynamicFragments.h:9
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:144
+[pool] Radio (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:79
+[pool] Rail (2 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:44
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:219
+[root] Relationships (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Relationships.cpp:22
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Relationships.h:9
+[root] Resolver (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Resolver.cpp:46
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Resolver.h:9
+[pool] Ring (2 sites)
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:792
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Styles\CkStyleLab_AxisMetadata.cpp:63
+[pool] Rocket (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1035
+[pool] Scale (9 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:938
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Panels\CkDebuggerPanel_Inspector.cpp:618
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:278
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:3637
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:425
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:1111
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:3118
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:3202
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Widgets\SCkStyleLab_SamplePane.cpp:171
+[root] SceneNode (8 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Picker\SCkDebug_ViewportPickerControls.cpp:226
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:83
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_SceneNode.cpp:136
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_SceneNode.h:13
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_SceneNode.h:14
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:105
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Settings\CkEcsDebuggerSettings.h:26
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:54
+[pool] Scissors (1 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:455
+[pool] Scroll (3 sites)
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:626
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:515
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2897
+[root] SelectInViewport (2 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:866
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:925
+[root] Severity_Error (5 sites)
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:789
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:42
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Styles\CkDebuggerAxes.cpp:1436
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:215
+    Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebuggerWindow.cpp:1188
+[root] Severity_Info (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Styles\CkDebuggerAxes.cpp:1433
+[root] Severity_Success (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Styles\CkDebuggerAxes.cpp:1434
+[root] Severity_Warning (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Styles\CkDebuggerAxes.cpp:1435
+[root] Shapes (4 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Shapes.cpp:47
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Shapes.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:53
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:260
+[pool] Shield (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:70
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:304
+[pool] Snowflake (2 sites)
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:194
+    Source\CkSchedulerDebugger\Public\CkSchedulerDebugger\Window\SCkSchedulerDebuggerWindow.cpp:291
+[pool] SpeakerBox (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:80
+[pool] Speech (1 sites)
+    Source\CkDialogDebugger\CkDialogDebugger_Module.cpp:63
+[root] StateMachine (9 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:90
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_StateMachine.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:27
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:27
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:103
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:32
+    Source\CkEntityDebugOverlay\Public\CkEntityDebugOverlay\Presentation\CkDebugOverlay_Present.cpp:40
+    Source\CkSmDebugger\CkSmDebugger_Module.cpp:78
+    Source\CkSmDebugger\Public\CkSmDebugger\Window\SCkSmDebuggerWindow.cpp:1536
+[pool] Stopwatch (6 sites)
+    Source\CkGoapDebugger\Public\CkGoapDebugger\Window\SCkGoapDebuggerWindow.cpp:1178
+    Source\CkOptimizationDebugger\CkOptimizationDebugger_Module.cpp:65
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:182
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:190
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2991
+    Source\CkSchedulerDebugger\CkSchedulerDebugger_Module.cpp:71
+[pool] Sun (1 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:2155
+[pool] Sword (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:69
+[pool] Target (18 sites)
+    Source\CkAggroDebugger\Public\CkAggroDebugger\Window\SCkAggroDebuggerWindow.cpp:142
+    Source\CkAStarDebugger\Public\CkAStarDebugger\Window\SCkAStarDebuggerWindow.cpp:126
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebuggerWindow.cpp:788
+    Source\CkCrowdDebugger\Public\CkCrowdDebugger\Window\SCkCrowdDebugger_ViewportPanel.cpp:134
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:41
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:71
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:859
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:63
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:163
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:375
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:213
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:272
+    Source\CkMapDebugger\Public\CkMapDebugger\Window\SCkMapDebuggerWindow.cpp:752
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:905
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:3016
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:4153
+    Source\CkSmDebugger\Public\CkSmDebugger\Window\SCkSmDebuggerWindow.cpp:1051
+    Source\CkUIDebugger\Public\CkUIDebugger\Window\SCkUIDebuggerWindow.cpp:323
+[pool] Ticket (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:53
+[root] Timer (11 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:79
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Timer.cpp:59
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Timer.h:11
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Timer.h:12
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:109
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Settings\CkEcsDebuggerSettings.h:26
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:58
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:289
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:620
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:1097
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:1098
+[root] Transform (12 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Classification\CkEcsDebugger_Classification.cpp:30
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:82
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Transform.cpp:64
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Transform.h:13
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Transform.h:14
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Variables.cpp:357
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:105
+    Source\CkEntityDebugOverlay\Private\Providers\CkDebugOverlay_Provider_Variables.cpp:133
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:42
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:269
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:1477
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Widgets\SCkStyleLab_SamplePane.cpp:584
+[pool] Trap (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1051
+[pool] TreasureMap (2 sites)
+    Source\CkMapDebugger\CkMapDebugger_Module.cpp:60
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2508
+[pool] Tree (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:380
+    Source\CkInsightsDebugger\Public\CkInsightsDebugger\Window\SCkInsightsAnalyzerTab.cpp:650
+[pool] Tv (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:75
+[root] Tween (7 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:109
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Tween.cpp:54
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Tween.cpp:72
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Tween.h:11
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:39
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:39
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:107
+[root] Variables (3 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Variables.cpp:22
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Variables.h:9
+    Source\CkEntityDebugOverlay\Private\Tags\CkDebugOverlay_Tags.cpp:60
+[root] Vfx (5 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\FeatureFlags\CkEcsDebugger_FeatureFlags.cpp:158
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Vfx.h:9
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:32
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:78
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:115
+[root] ViewBack (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:914
+[root] ViewBottom (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:910
+[root] ViewFront (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:913
+[root] ViewLeft (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:911
+[root] ViewPerspective (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:908
+[root] ViewRight (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:912
+[root] ViewTop (1 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Viewport\SCkDebug_3dPreviewViewport.cpp:909
+[pool] Wave (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:61
+[pool] Web (1 sites)
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Window\SCkSaveDebuggerWindow.cpp:2700
+[pool] Well (1 sites)
+    Source\CkStyleLabDebugger\Public\CkStyleLabDebugger\Styles\CkStyleLab_AxisMetadata.cpp:63
+[pool] Wheel (1 sites)
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:266
+[pool] Wind (1 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Presentation\CkEcsDebugger_FeatureVisuals.cpp:60
+[pool] Window (2 sites)
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_UI.h:9
+    Source\CkUIDebugger\CkUIDebugger_Module.cpp:62
+[root] World (13 sites)
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:38
+    Source\CkDebuggerCommon\Public\CkDebuggerCommon\Gallery\Sections\CkGallery_IconToggles.cpp:69
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Inspectors\CkInspector_Transform.cpp:136
+    Source\CkEcsDebugger\Public\CkEcsDebugger\Window\CkDebuggerWindow_Main.cpp:367
+    Source\CkEqsDebugger\Public\CkEqsDebugger\Window\SCkEqsDebuggerWindow.cpp:207
+    Source\CkInputDebugger\Public\CkInputDebugger\Window\SCkInputDebuggerWindow.cpp:155
+    Source\CkIntentDebugger\Public\CkIntentDebugger\Window\SCkIntentDebuggerWindow.cpp:127
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:217
+    Source\CkJoltDebugger\Public\CkJoltDebugger\Window\SCkJoltDebuggerWindow.cpp:2858
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Analysis\CkOptimizationDebugger_CleanupScan.cpp:91
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Analysis\CkOptimizationDebugger_MemoryScan.cpp:138
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:3430
+    Source\CkSaveDebugger\Public\CkSaveDebugger\Model\CkSaveDebugger_Model.cpp:1033
+[pool] Wrench (2 sites)
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:1208
+    Source\CkOptimizationDebugger\Public\CkOptimizationDebugger\Window\SCkOptimizationDebuggerWindow.cpp:4138
+
+## referenced only in spec tests: ['Shop']
+
+## corpus files with ZERO code references (71):
+  [pool] Apple
+  [pool] Axe
+  [pool] Bag
+  [pool] Barrel
+  [pool] Basket
+  [pool] Battery
+  [pool] Bell
+  [pool] Bird
+  [pool] Boat
+  [pool] Bone
+  [pool] Boot
+  [pool] Bottle
+  [pool] Bow
+  [pool] Brain
+  [pool] Bread
+  [pool] Bridge
+  [pool] Briefcase
+  [pool] Cake
+  [pool] Car
+  [pool] Cart
+  [pool] Cash
+  [pool] Castle
+  [pool] Cloud
+  [pool] CrossedSwords
+  [pool] Crown
+  [pool] Cup
+  [pool] Dagger
+  [pool] Dice
+  [pool] Droplet
+  [pool] Egg
+  [pool] Feather
+  [pool] Fence
+  [pool] Fish
+  [pool] Flower
+  [pool] Gift
+  [pool] Hammer
+  [pool] Hat
+  [pool] Heart
+  [pool] House
+  [pool] IceCream
+  [pool] Leaf
+  [pool] Magnet
+  [pool] Mail
+  [pool] Meat
+  [pool] Medal
+  [pool] Mountain
+  [pool] Mushroom
+  [pool] Paw
+  [root] Perception
+  [pool] Phone
+  [pool] Pizza
+  [pool] Plane
+  [pool] Popcorn
+  [pool] Potion
+  [pool] Rain
+  [pool] Register
+  [pool] Remote
+  [pool] Screwdriver
+  [pool] Shelf
+  [pool] Shirt
+  [pool] Shovel
+  [pool] Skull
+  [pool] Spear
+  [pool] Star
+  [pool] Tent
+  [pool] Torch
+  [pool] Tower
+  [pool] Trophy
+  [pool] Truck
+  [pool] Umbrella
+  [pool] VhsTape

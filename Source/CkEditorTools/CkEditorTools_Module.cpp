@@ -1,5 +1,7 @@
 #include "CkEditorTools_Module.h"
 
+#include "CkEditorTools/Style/CkIconStyle.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -7,6 +9,7 @@ auto
     StartupModule()
     -> void
 {
+    FCkIconStyle::Initialize();
 }
 
 auto
@@ -14,6 +17,7 @@ auto
     ShutdownModule()
     -> void
 {
+    FCkIconStyle::Shutdown();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
