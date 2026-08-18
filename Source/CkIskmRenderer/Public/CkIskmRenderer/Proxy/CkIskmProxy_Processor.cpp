@@ -336,10 +336,6 @@ namespace ck
             std::visit([&](const auto& InRequest) -> void
             {
                 const auto PreloadSucceeded = GateResult._State != ck_iskmproxy_processor::EPreloadGate::Failed;
-                CK_ENSURE_IF_NOT(PreloadSucceeded,
-                    TEXT("IskmProxy [{}]: preload of [{}] failed — completing the request as Failed"),
-                    InHandle, GateResult._Path.ToString())
-                {}
 
                 // Every DoHandleRequest overload's internal CK_ENSURE_IF_NOT early-outs guard malformed
                 // state (missing SKMC, null asset, etc), not a legitimate request-rejection outcome, so
@@ -348,7 +344,9 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (NOT PreloadSucceeded)
+                CK_ENSURE_IF_NOT(PreloadSucceeded,
+                    TEXT("IskmProxy [{}]: preload of [{}] failed — completing the request as Failed"),
+                    InHandle, GateResult._Path.ToString())
                 { return; }
 
                 DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
