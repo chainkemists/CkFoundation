@@ -294,6 +294,15 @@ public:
     // the loader's own ticker to produce the very line it is asserting on.
     auto TestOnly_Get_PauseObservedUnderHold() const -> bool
     { return _PauseObservedUnderHold; }
+
+    // The freeze's single-valued bookkeeping is a contract about TWO worlds, and a test cannot state it without
+    // driving two applies directly — there is no load shape that produces a second LIVE world on demand. These
+    // forward to the private pair rather than widening it, so the shipping surface is unchanged.
+    auto TestOnly_Apply_TimeFreeze(UWorld& InWorld) -> void
+    { DoApply_TimeFreeze(InWorld); }
+
+    auto TestOnly_Restore_TimeFreeze(UWorld& InWorld) -> void
+    { DoRestore_TimeFreeze(InWorld); }
 #endif
 
 private:
@@ -406,10 +415,11 @@ private:
 
     // The ?CkLoad= option is a ONE-SHOT: it tells the world coming up right now which load owns it, and it has
     // no business surviving into the next travel. It would, though — every relative travel inherits the whole
-    // option array from FWorldContext::LastURL — so a finished load's epoch would re-arm a client hold on a
-    // later, unrelated map change, and would ride the join URL to anyone connecting through it. Struck from
-    // LastURL as it is consumed, which is where and how the engine strikes its own one-shots (Listen, failed,
-    // closed). UWorld::URL is deliberately left intact: that is the record of how THIS world came up.
+    // option array from FWorldContext::LastURL, and FWorldContext::LastRemoteURL is replayed verbatim by
+    // `reconnect` — so a finished load's epoch would re-arm a client hold on a later map change or a reconnect,
+    // and would ride the join URL to anyone connecting through it. Struck from BOTH as it is consumed, which is
+    // where and how the engine strikes its own one-shots (Listen, failed, closed). UWorld::URL is deliberately
+    // left intact: that is the record of how THIS world came up, and the arm gate reads it.
     auto DoConsume_LoadEpochOption(UWorld& InWorld) const -> void;
 
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
@@ -599,8 +609,17 @@ private:
     // watching it: the client failed open into a world still being rebuilt and reported the fact as NEVER
     // ARRIVED, which is a healthy slow load misreported as a broken one. Written as the SUM rather than as a
     // number so a phase whose cap moves carries this with it instead of silently re-opening the gap.
+    //
+    // Rebuild counts TWICE, and that is not padding: an escalation re-arms the phase against a fresh budget
+    // (DoTick_Load's Rebuilding case sets _RebuildEscalated, zeroes _LoadFrameCount and STAYS in Rebuilding), and
+    // escalating is a first-class reported outcome rather than a fault — it exists because a staged construction
+    // can only be finished by a game processor. So the load shape most likely to be slow is exactly the one a
+    // single-rebuild sum would have failed open on. The two error directions are not symmetric: failing open
+    // early hands the player a half-rebuilt world AND misreports a correct load, while failing open later costs
+    // seconds of a loading screen on a load that was already broken.
     static constexpr int32 kLoad_ClientHoldFrameCap =
-        kLoad_TeardownFrameCap + kLoad_TravelFrameCap + kLoad_RebuildFrameCap +
+        kLoad_TeardownFrameCap + kLoad_TravelFrameCap +
+        (2 * kLoad_RebuildFrameCap) +
         kLoad_HydrateFrameCap + kLoad_ConvergenceFrameCap;
 
     // The epoch's two halves. 16 low bits of count, 15 high bits of salt, sign bit left clear so the value
@@ -608,6 +627,11 @@ private:
     // in one session — a bound no session reaches, and in any case a collision WITHIN one instance, where the
     // salt is identical and the count was never the discriminator. The salt is what makes two INSTANCES
     // distinguishable, which is the case that actually bit.
+    //
+    // ACCEPTED RESIDUAL: 15 bits means two GameInstances draw the same salt with p = 1/32768, and when they are
+    // also at the same load count the pre-salt bug returns verbatim for that session. That is ~4 orders of
+    // magnitude better than the bare count it replaces, and only the sign bit is structurally load-bearing, so
+    // more salt bits are available cheaply if the residual ever stops being acceptable. Not widened here.
     static constexpr int32 kLoadEpoch_CountBits = 16;
     static constexpr int32 kLoadEpoch_CountMask = (1 << kLoadEpoch_CountBits) - 1;
     static constexpr int32 kLoadEpoch_SaltMask  = 0x7FFF;
