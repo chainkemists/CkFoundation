@@ -390,6 +390,17 @@ private:
     // beside the per-name Errors, so the question "what kept it alive" is answerable from the log alone rather
     // than from a repro. Per-frame detail stays at Verbose.
     auto DoReport_ConvergenceProgress(const TArray<FName>& InPending) -> void;
+
+    // A convergence that is still pending well past the point a healthy load has finished is the one case where
+    // the pump-count series is not enough: it says HOW MUCH work there is, never WHOSE. Per-processor attribution
+    // is behind ck.Scheduler.DebugTiming, which is off in a normal run for cost reasons — so the loader turns it
+    // on for itself, only once the phase is visibly stuck, and puts it back exactly as it found it on the way out.
+    auto DoArm_ConvergenceDebugTiming() -> void;
+    auto DoRestore_ConvergenceDebugTiming() -> void;
+
+    // ONE Display block at the cap, naming the processors that kept the world awake and the entities the destroy
+    // queue is still holding. Bounded: top 16 processors per tick group, at most 8 entities.
+    auto DoReport_ConvergenceStall() const -> void;
     auto DoGet_ConvergenceSeriesText(const TArray<int32>& InSeries) const -> FString;
     auto DoGet_ConvergenceGrantedSteps() const -> int32;
 
@@ -462,6 +473,8 @@ private:
     // reader cannot reconstruct from the outcome alone: the questions that matter afterwards are WHICH facts were
     // slow, and what the pump was still finding while they were. These three are what makes that answerable from
     // any log, and they are bounded — a rolling window, never a per-frame transcript.
+    bool _ConvergenceDebugTimingArmed = false;         // this load turned ck.Scheduler.DebugTiming on
+    bool _ConvergenceDebugTimingPrior = false;          // ...and this is what it was before, restored on exit
     TSet<FName> _ConvergencePendingLastFrame;          // to spot the frame a row flips Pending -> Satisfied
     TArray<int32> _ConvergencePumpSeries;              // trailing window of per-frame pump counts
     TArray<int32> _ConvergenceSkippedSeries;           // trailing window of per-frame skipped-tick-group counts
@@ -514,6 +527,9 @@ private:
     // Convergence is bounded like every other phase, and for the same reason: fail-closed without an escape is a
     // permanent wedge. 180 frames is generous against a phase whose work is a handful of physics steps and a pump.
     static constexpr int32 kLoad_ConvergenceFrameCap = 180;
+    // Well past a healthy convergence (measured: 2-3 frames) and well short of the cap, so a stuck phase pays for
+    // per-processor timing only when it is already going to cost 180 frames anyway.
+    static constexpr int32 kLoad_ConvergenceDebugArmFrame = 30;
     // Consecutive frames every registered fact must report converged before the world is handed back. One frame
     // can be a fact that has not started rather than one that has finished.
     static constexpr int32 kLoad_ConvergenceQuiescentFrames = 2;
