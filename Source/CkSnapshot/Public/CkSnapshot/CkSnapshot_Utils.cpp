@@ -269,3 +269,67 @@ auto
             Delegate.ExecuteIfBound(InPng);
         });
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_snapshot_utils
+{
+    auto TryGet_SnapshotSubsystem(
+        const UObject* InWorldContextObject) -> UCk_Snapshot_Subsystem_UE*
+    {
+        if (ck::Is_NOT_Valid(InWorldContextObject))
+        { return nullptr; }
+
+        const auto* World = GEngine->GetWorldFromContextObject(InWorldContextObject,
+            EGetWorldErrorMode::ReturnNull);
+
+        if (World == nullptr)
+        { return nullptr; }
+
+        auto* GameInstance = World->GetGameInstance();
+        if (ck::Is_NOT_Valid(GameInstance))
+        { return nullptr; }
+
+        return GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>();
+    }
+}
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Get_IsReadyToResume(
+        const UObject* InWorldContextObject)
+    -> bool
+{
+    const auto* Subsystem = ck_snapshot_utils::TryGet_SnapshotSubsystem(InWorldContextObject);
+
+    // No subsystem is the same answer as no load: there is nothing holding this world. A menu world and a
+    // dedicated server both land here, and both are running.
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return true; }
+
+    // A world that has never loaded is running, and saying otherwise would make every consumer special-case the
+    // ordinary case. The subsystem's own flag answers strictly about THIS load, so the never-loaded world is
+    // resolved here rather than there.
+    if (NOT Subsystem->Get_IsLoadInProgress())
+    { return true; }
+
+    return Subsystem->Get_IsReadyToResume();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Get_LoadEpoch(
+        const UObject* InWorldContextObject)
+    -> int32
+{
+    const auto* Subsystem = ck_snapshot_utils::TryGet_SnapshotSubsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return 0; }
+
+    return Subsystem->Get_LoadEpoch();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

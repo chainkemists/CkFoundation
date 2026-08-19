@@ -21,15 +21,15 @@ void FCkSnapshotModule::StartupModule()
     // answer — and the freeze that goes with it — is CkSnapshot's, registered here so CkEcs never learns this
     // module exists.
     UCk_EcsWorld_Subsystem_UE::Set_LoadHoldSeedProvider(
-    [](UWorld& InWorld) -> bool
+    [](UWorld& InWorld) -> ECk_EcsWorld_LoadHold
     {
         auto* GameInstance = InWorld.GetGameInstance();
         if (ck::Is_NOT_Valid(GameInstance))
-        { return false; }
+        { return ECk_EcsWorld_LoadHold::None; }
 
         auto* Snapshot = GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>();
         if (ck::Is_NOT_Valid(Snapshot))
-        { return false; }
+        { return ECk_EcsWorld_LoadHold::None; }
 
         return Snapshot->DoGet_ShouldHoldWorldAtBoot(InWorld);
     });

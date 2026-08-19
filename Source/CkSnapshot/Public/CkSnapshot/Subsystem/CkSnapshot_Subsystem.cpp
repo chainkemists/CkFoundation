@@ -2275,9 +2275,19 @@ auto
             // Resolved through the subsystem rather than a captured reference: the promise can land a frame or
             // more after the call that armed it, and a raw reference into a member outlives nothing usefully.
             if (InIsClientHold)
-            { Self->_ClientLoadStateChannelEntity = InResult.Get_ChannelEntity(); }
-            else
-            { Self->_LoadStateChannelEntity = InResult.Get_ChannelEntity(); }
+            {
+                Self->_ClientLoadStateChannelEntity = InResult.Get_ChannelEntity();
+                return;
+            }
+
+            Self->_LoadStateChannelEntity = InResult.Get_ChannelEntity();
+
+            // Converge from ARBITRARY state: this promise can land at any point in the load, including after
+            // ready-to-resume has already been published to a channel that did not exist yet. Re-publishing the
+            // CURRENT fact means a late channel carries the truth rather than the value the load happened to hold
+            // when it was asked for — otherwise a client waiting on a slow channel releases on its bounded escape
+            // for a load that finished long ago.
+            Self->DoPublish_LoadState(Self->_IsReadyToResume);
         });
 
     // Kept so the pending handle outlives this scope while the channel is still coming up.
@@ -2296,7 +2306,26 @@ auto
     -> void
 {
     if (ck::Is_NOT_Valid(_LoadStateChannelEntity))
-    { return; }
+    {
+        // Never silently — but the two publishes are not the same event. Publishing FALSE happens the moment the
+        // channel is asked for, before its promise can have landed, and the acquired-callback re-publishes the
+        // current fact when it does; that one is expected and routine. Publishing TRUE is the terminal outcome of
+        // the client contract, and if it does not happen the only other evidence is a warning on a DIFFERENT
+        // machine's log 600 frames later.
+        if (InReadyToResume)
+        {
+            ck::snapshot::Warning(TEXT("Could not publish the load's READY-TO-RESUME fact for epoch [{}]: the "
+                "ActorRelay channel entity is not resolved. A client following this load will not learn it "
+                "finished and will release on its own bounded escape instead"), _LoadEpoch);
+        }
+        else
+        {
+            ck::snapshot::Verbose(TEXT("Load-state fact [{}] for epoch [{}] not published yet: the ActorRelay "
+                "channel is still coming up. Its acquired-callback re-publishes whatever is current by then"),
+                InReadyToResume, _LoadEpoch);
+        }
+        return;
+    }
 
     auto Data = FCk_RepData_SnapshotLoadState{};
     Data.LoadEpoch = _LoadEpoch;
@@ -2320,7 +2349,7 @@ auto
     UCk_Snapshot_Subsystem_UE::
     DoGet_ShouldHoldWorldAtBoot(
         UWorld& InWorld)
-    -> bool
+    -> ECk_EcsWorld_LoadHold
 {
     // The AUTHORITY's own post-travel world. Held from its first frame — the frame every level actor's BeginPlay
     // and every entity-script construction runs in — because the loader's own next opportunity is a full world
@@ -2330,7 +2359,13 @@ auto
         // Global time dilation is transient on a per-level AWorldSettings whose constructor writes 1.0, so the
         // freeze does NOT survive travel and this is where the post-travel world gets its own.
         DoApply_TimeFreeze(InWorld);
-        return true;
+
+        // REBUILDING, not Converging. This world is about to run every level actor's BeginPlay and every
+        // entity-script construction in it, and those are exactly the frames a level-triggered producer would
+        // seed into an empty world beside the copies the loader is about to restore. Converging is deliberately
+        // outside the spawn-suppression set (payload applies must be able to compose), so seeding it here would
+        // leave the very window the seed was added for unsuppressed.
+        return ECk_EcsWorld_LoadHold::Rebuilding;
     }
 
     // A CLIENT following a listen-server reload. It has no load, no report and no completion of its own — the
@@ -2345,12 +2380,29 @@ auto
         if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
             EpochOption != nullptr)
         {
-            DoBegin_ClientHold(InWorld, FCString::Atoi(EpochOption));
-            return true;
+            // Validated, not merely present. FURL options survive a relative travel, and Atoi answers 0 for
+            // anything malformed — while _LoadEpoch starts at 1, so an unvalidated read arms a hold on an epoch
+            // no publish can ever match and burns 600 frames of loading screen failing open. Nothing in the log
+            // would distinguish that from a channel that never resolved.
+            const auto EpochString = FString{EpochOption};
+            const auto Epoch = FCString::Atoi(EpochOption);
+
+            if (NOT EpochString.IsNumeric() || Epoch <= 0)
+            {
+                ck::snapshot::Verbose(TEXT("Ignoring a ?CkLoad option this world cannot use: value [{}] is not a "
+                    "positive load epoch. No client hold is armed"), EpochString);
+                return ECk_EcsWorld_LoadHold::None;
+            }
+
+            // CONVERGING, not Rebuilding. A client rebuilds nothing — it has no saved rows and no loader — so the
+            // kernel-only scope would hold its whole world out of its own replication-driven composition. What it
+            // owes is coherence, which is exactly what Converging names.
+            DoBegin_ClientHold(InWorld, Epoch);
+            return ECk_EcsWorld_LoadHold::Converging;
         }
     }
 
-    return false;
+    return ECk_EcsWorld_LoadHold::None;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

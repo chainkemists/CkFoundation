@@ -323,12 +323,17 @@ auto
     }
 
     // Before the graph, not after: a world that comes up mid-load must already be held when its first scheduler
-    // actor ticks, and Converging is the phase a world arrives in — its content is rebuilt, what it still owes is
-    // coherence. The seed is bounded by the phase that owns it; whoever raised the hold releases it.
+    // actor ticks. WHICH phase is the provider's answer rather than this call's assumption — a world about to be
+    // rebuilt and a world that only owes coherence need different scopes and different spawn admission. The seed
+    // is bounded by the phase that owns it; whoever raised the hold releases it.
     if (const auto& SeedProvider = DoGet_LoadHoldSeedProvider();
-        static_cast<bool>(SeedProvider) and SeedProvider(InWorld))
+        static_cast<bool>(SeedProvider))
     {
-        Set_LoadHold(ECk_EcsWorld_LoadHold::Converging);
+        if (const auto SeededHold = SeedProvider(InWorld);
+            SeededHold != ECk_EcsWorld_LoadHold::None)
+        {
+            Set_LoadHold(SeededHold);
+        }
     }
 
     DoBuildGraphAndSpawnActors(InWorld);
@@ -368,8 +373,21 @@ auto
     auto TotalPumpCount = int32{0};
     auto SkippedGroupCount = int32{0};
 
-    for (auto& [TickGroup, Actor] : _WorldActors)
+    // ASCENDING tick-group order, not TMap iteration order. FGroup_Overlap is the only TG_PostPhysics group and
+    // therefore lives in its own world actor, while the granted physics steps run in the TG_PrePhysics one; a map
+    // layout that visited PostPhysics first would recompute probe overlaps against the PREVIOUS frame's poses and
+    // then report the overlap queue drained on a frame whose overlaps had not been recomputed at all. That is
+    // deterministic per build and unspecified by contract, which is the worst combination — the engine's own tick
+    // groups already state the order, so use them.
+    auto OrderedTickGroups = TArray<TEnumAsByte<ETickingGroup>>{};
+    _WorldActors.GenerateKeyArray(OrderedTickGroups);
+    OrderedTickGroups.Sort([](const TEnumAsByte<ETickingGroup>& InA, const TEnumAsByte<ETickingGroup>& InB) -> bool
+    { return InA.GetValue() < InB.GetValue(); });
+
+    for (const auto& TickGroup : OrderedTickGroups)
     {
+        const auto& Actor = _WorldActors[TickGroup];
+
         if (NOT Actor.IsValid())
         { continue; }
 

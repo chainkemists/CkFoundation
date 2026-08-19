@@ -78,18 +78,54 @@ auto
 
     ck::actorrelay::Verbose(TEXT("GroupSubsystem not yet resolved for ActorRelay. Will retry every 100ms"));
 
+    // Wall clock on purpose: a snapshot load freezes game time (M-C), and FTimerManager ticks the DILATED delta
+    // (LevelTick.cpp:1787) — a channel that only becomes ready on a game-time poll would never become ready
+    // during a load.
     auto WeakThis = TWeakObjectPtr(this);
-    GetWorld()->GetTimerManager().SetTimer(_RegistrationRetryTimerHandle, [WeakThis]()
-    {
-        if (ck::Is_NOT_Valid(WeakThis))
-        { return; }
-
-        if (WeakThis->DoTryRegisterWithGroupSubsystem())
+    _RegistrationRetryTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateLambda([WeakThis](float /*InDeltaSeconds*/) -> bool
         {
+            if (ck::Is_NOT_Valid(WeakThis))
+            { return false; }
+
+            if (NOT WeakThis->DoTryRegisterWithGroupSubsystem())
+            { return true; }
+
             ck::actorrelay::Verbose(TEXT("Successfully registered ActorRelay with GroupSubsystem"));
-            WeakThis->GetWorld()->GetTimerManager().ClearTimer(WeakThis->_RegistrationRetryTimerHandle);
-        }
-    }, 0.1f, true);
+            WeakThis->_RegistrationRetryTickerHandle.Reset();
+            return false;
+        }), 0.1f);
+}
+
+auto
+    ACk_ActorRelay_UE::
+    EndPlay(
+        const EEndPlayReason::Type InEndPlayReason)
+    -> void
+{
+    DoStop_PollTickers();
+
+    Super::EndPlay(InEndPlayReason);
+}
+
+auto
+    ACk_ActorRelay_UE::
+    DoStop_PollTickers()
+    -> void
+{
+    // An FTSTicker delegate is owned by the core ticker, not by the world, so a dying relay has to take its own
+    // polls with it or they keep firing (harmlessly, against a stale weak pointer) for the rest of the process.
+    if (_RegistrationRetryTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_RegistrationRetryTickerHandle);
+        _RegistrationRetryTickerHandle.Reset();
+    }
+
+    if (_BroadcastReadyTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_BroadcastReadyTickerHandle);
+        _BroadcastReadyTickerHandle.Reset();
+    }
 }
 
 auto
@@ -176,14 +212,22 @@ auto
     if (TryBroadcast())
     { return; }
 
-    GetWorld()->GetTimerManager().SetTimer(_BroadcastReadyTimerHandle, [WeakThis, TryBroadcast]()
-    {
-        if (ck::Is_NOT_Valid(WeakThis))
-        { return; }
+    // Wall clock on purpose: a snapshot load freezes game time (M-C), and FTimerManager ticks the DILATED delta
+    // (LevelTick.cpp:1787) — a channel that only becomes ready on a game-time poll would never become ready
+    // during a load. This poll IS the loader's client-release conjunct, so freezing it wedges the very thing the
+    // hold is waiting for.
+    _BroadcastReadyTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateLambda([WeakThis, TryBroadcast](float /*InDeltaSeconds*/) -> bool
+        {
+            if (ck::Is_NOT_Valid(WeakThis))
+            { return false; }
 
-        if (TryBroadcast())
-        { WeakThis->GetWorld()->GetTimerManager().ClearTimer(WeakThis->_BroadcastReadyTimerHandle); }
-    }, 0.1f, true);
+            if (NOT TryBroadcast())
+            { return true; }
+
+            WeakThis->_BroadcastReadyTickerHandle.Reset();
+            return false;
+        }), 0.1f);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
