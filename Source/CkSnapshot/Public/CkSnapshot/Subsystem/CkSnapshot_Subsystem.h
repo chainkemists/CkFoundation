@@ -255,6 +255,13 @@ public:
     // proves: the exit taken is the same one, reached the same way. Values <= 0 restore the shipping cap.
     auto TestOnly_Set_HydrateFrameCapOverride(int32 InFrameCap) -> void
     { _TestOnly_HydrateFrameCapOverride = InFrameCap; }
+
+    // Same reasoning for the convergence phase's bounded escape: proving it fires means reaching it, and the
+    // shipping bound is 180 frames of a phase that is deliberately going nowhere. Shortening the fence does not
+    // weaken what a test proves — the exit taken is the same one, reached the same way. Values <= 0 restore the
+    // shipping cap.
+    auto TestOnly_Set_ConvergenceFrameCapOverride(int32 InFrameCap) -> void
+    { _TestOnly_ConvergenceFrameCapOverride = InFrameCap; }
 #endif
 
 private:
@@ -330,6 +337,7 @@ private:
     // the loss in a copy nobody reads.
     auto DoLift_HydrationQuarantine(EQuarantineLift InReason, FCk_Snapshot_LoadReport& InOutReport) -> void;
     auto DoGet_HydrateFrameCap() const -> int32;                // kLoad_HydrateFrameCap, or a test's override
+    auto DoGet_ConvergenceFrameCap() const -> int32;            // kLoad_ConvergenceFrameCap, or a test's override
 
     // Reads ck::FCtx_HydrationOutcomes ONCE and sweeps whatever is still queued, so the report says what became
     // of every payload rather than how many reached the queue. Called from DoFinish_Load, never twice per load.
@@ -369,6 +377,14 @@ private:
     // the pump found into ck::FCtx_LoadConvergence. Deliberately an ACTION, called from one place, so the
     // predicates that read the result can stay pure.
     auto DoDrive_Convergence() -> void;
+
+    // Says how the convergence phase is going, at Display, in bounded form: one line the frame a fact flips to
+    // satisfied, one summary when the phase ends, and — if it ends at the cap — the trailing pump/skip series
+    // beside the per-name Errors, so the question "what kept it alive" is answerable from the log alone rather
+    // than from a repro. Per-frame detail stays at Verbose.
+    auto DoReport_ConvergenceProgress(const TArray<FName>& InPending) -> void;
+    auto DoGet_ConvergenceSeriesText(const TArray<int32>& InSeries) const -> FString;
+    auto DoGet_ConvergenceGrantedSteps() const -> int32;
 
     // Every remaining Pending row, recorded as a named loss with the frames it waited. The bounded escape's
     // report half.
@@ -429,10 +445,20 @@ private:
     bool _QuarantineLifted  = false;                   // this load's global lift has run (by settle or either escape)
 #if WITH_AUTOMATION_TESTS
     int32 _TestOnly_HydrateFrameCapOverride = 0;       // <= 0 == use kLoad_HydrateFrameCap
+    int32 _TestOnly_ConvergenceFrameCapOverride = 0;   // <= 0 == use kLoad_ConvergenceFrameCap
 #endif
     int32 _SettleFramesRemaining = 0;                  // Draining floor: frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once
     int32 _ConvergenceFramesSatisfied = 0;             // consecutive Converging frames with nothing Pending
+
+    // Convergence diagnostics. A phase that either converges invisibly or burns its cap and names a row is one a
+    // reader cannot reconstruct from the outcome alone: the questions that matter afterwards are WHICH facts were
+    // slow, and what the pump was still finding while they were. These three are what makes that answerable from
+    // any log, and they are bounded — a rolling window, never a per-frame transcript.
+    TSet<FName> _ConvergencePendingLastFrame;          // to spot the frame a row flips Pending -> Satisfied
+    TArray<int32> _ConvergencePumpSeries;              // trailing window of per-frame pump counts
+    TArray<int32> _ConvergenceSkippedSeries;           // trailing window of per-frame skipped-tick-group counts
+    static constexpr int32 kConvergenceSeriesWindow = 16;
     int32 _RebuildLastMappedCount = 0;                 // progress tracking: mapped count at the previous rebuild tick
     int32 _RebuildStallTicks = 0;                      // consecutive rebuild ticks with no NEW mapping (early-exit gate)
     bool  _RebuildEscalated = false;                   // kernel quiesced with unresolved rows -> full-scope ticks (see Rebuilding)
