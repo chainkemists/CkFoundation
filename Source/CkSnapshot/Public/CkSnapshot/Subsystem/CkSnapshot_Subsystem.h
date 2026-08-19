@@ -205,12 +205,18 @@ public:
     // design — it applies the time freeze and (on a client) arms the client-side hold. Registered as CkEcs's
     // load-hold seed provider by this module's startup, so CkEcs never learns CkSnapshot exists.
     //
-    // The phase it returns is ROLE-SPLIT, and the split is load-bearing. The authority's post-travel world gets
-    // Rebuilding: it is about to run every level actor's BeginPlay and every entity-script construction, which is
-    // exactly where a level-triggered producer would seed population beside the copies the loader is restoring,
-    // and only Rebuilding suppresses that. A client gets Converging: it rebuilds nothing and has no saved rows,
-    // so kernel scope would hold its whole world out of its own replication-driven composition — what it owes is
-    // coherence. None means do not seed.
+    // BOTH roles get Converging, and the value is measured rather than reasoned. Rebuilding was tried — it is the
+    // one phase that suppresses Request_SpawnEntity, which looked like the right guard for a fresh world's
+    // BeginPlay frames — and it BROKE the load: the level's own on-demand infrastructure spawns its entity and
+    // stamps its SaveKey in exactly those frames, so suppressing them left three EngineOwned rows unresolvable
+    // (savekey-miss) and cascaded 64 more into owner-orphaned, against zero on the reference. Measured on
+    // PlayerQuickUseHeldItemAfterLoad: mapped 85/orphaned 67 under Rebuilding, mapped 152/orphaned 0 under
+    // Converging.
+    //
+    // The window Rebuilding was meant to guard is real, but it is the PRODUCER's to guard: Get_IsRebuildInProgress
+    // is true in every phase, including this one, which is what a level-triggered seeder must ask. The framework
+    // cannot close it by refusing spawns here without also refusing the rebuild its own rows depend on.
+    // None means do not seed.
     auto DoGet_ShouldHoldWorldAtBoot(UWorld& InWorld) -> ECk_EcsWorld_LoadHold;
 
     // True while THIS entity's restored state is still the load's to write: a load is in flight, the load
