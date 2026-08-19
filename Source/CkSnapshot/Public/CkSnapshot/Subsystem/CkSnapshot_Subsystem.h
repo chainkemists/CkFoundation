@@ -432,6 +432,12 @@ private:
     auto DoTick_ClientHold(float InDeltaSeconds) -> bool;
     auto DoRelease_ClientHold(const TCHAR* InReason) -> void;
 
+    // The hold is per-EPOCH; the channel it releases on is per-WORLD. A client travels through more than one
+    // world for a single load, and the channel entity acquired in an earlier one dies with it — leaving the
+    // ticker watching a handle the fact can never reach. Re-points the hold at the world that begins play now:
+    // fresh channel, fresh freeze prediction, fresh frame budget, same epoch, same screen holder, same ticker.
+    auto DoRebind_ClientHold(UWorld& InWorld) -> void;
+
 private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
