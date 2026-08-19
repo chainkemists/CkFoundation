@@ -27,6 +27,8 @@
 
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
 
+#include <type_traits>
+
 #include <Engine/StaticMesh.h>
 #include <PhysicalMaterials/PhysicalMaterial.h>
 #include <PhysicsEngine/BodySetup.h>
@@ -451,7 +453,10 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
+        const auto* LayerCtx = _TransientEntity.Get_RegistryView().TryGetContext<ck::jolt::FCk_Jolt_LayerContext>();
+
         _PhysicsSystem = ck_jolt_body_processor::TryResolve_PhysicsSystem(_TransientEntity);
+        _LayerTable = LayerCtx != nullptr ? LayerCtx->_Table : nullptr;
         _JoltWorld = ck_jolt_body_processor::TryResolve_JoltWorld(_TransientEntity);
         if (ck::Is_NOT_Valid(_PhysicsSystem.Pin()))
         { return; }
@@ -464,6 +469,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
             FFragment_JoltBody_Current& InCurrent,
             FFragment_JoltBody_Requests& InRequestsComp) const
         -> void
@@ -479,7 +485,14 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InRequest);
+            // The two runtime mutators additionally rewrite Params (motion type / profile name) so later
+            // Get_MotionType and the EndPlay static-scene check agree with the live body.
+            using RequestType = std::decay_t<decltype(InRequest)>;
+            if constexpr (std::is_same_v<RequestType, FCk_Request_JoltBody_SetMotionType> ||
+                          std::is_same_v<RequestType, FCk_Request_JoltBody_SetCollisionProfile>)
+            { DoHandleRequest(InHandle, InParams, InCurrent, InRequest); }
+            else
+            { DoHandleRequest(InHandle, InCurrent, InRequest); }
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -769,6 +782,135 @@ namespace ck
         {
             _JoltWorld->Remove_PoseBufferEntry(InCurrent.Get_BodyId().GetIndexAndSequenceNumber());
         }
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetMotionType& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        const auto OldMotionType = InParams.Get_MotionType();
+        const auto NewMotionType = InRequest.Get_MotionType();
+
+        if (OldMotionType == NewMotionType)
+        { return; }
+
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        // A Static body is inert by definition, so it is never activated; Dynamic and Kinematic both are,
+        // otherwise a body switched out of Static while the simulation is settled would sit frozen until
+        // something else happened to wake it.
+        const auto Activation = NewMotionType == ECk_MotionType::Static
+            ? JPH::EActivation::DontActivate
+            : JPH::EActivation::Activate;
+
+        BodyInterface.SetMotionType(InCurrent.Get_BodyId(), ck::jolt::Conv(NewMotionType), Activation);
+
+        InParams.Set_MotionType(NewMotionType);
+
+        // Re-stamp the ECS-side mirrors. FTag_JoltBody_KinematicFromECS is the SELECTOR that puts a body
+        // into FProcessor_JoltBody_KinematicPush and excludes it from FProcessor_JoltBody_WritebackInterpolated;
+        // leaving it stale would have the same body driven FROM the ECS transform and written back INTO it in
+        // one frame. The MotionType_* tags feed the Teleport static-scene check and the debug draw's colouring.
+        InHandle.Try_Remove<ck::FTag_JoltBody_MotionType_Static>();
+        InHandle.Try_Remove<ck::FTag_JoltBody_MotionType_Kinematic>();
+        InHandle.Try_Remove<ck::FTag_JoltBody_MotionType_Dynamic>();
+        InHandle.Try_Remove<ck::FTag_JoltBody_KinematicFromECS>();
+
+        switch (NewMotionType)
+        {
+            case ECk_MotionType::Static:
+            {
+                InHandle.AddOrGet<ck::FTag_JoltBody_MotionType_Static>();
+                break;
+            }
+            case ECk_MotionType::Kinematic:
+            {
+                InHandle.AddOrGet<ck::FTag_JoltBody_MotionType_Kinematic>();
+                InHandle.AddOrGet<ck::FTag_JoltBody_KinematicFromECS>();
+                break;
+            }
+            case ECk_MotionType::Dynamic:
+            {
+                InHandle.AddOrGet<ck::FTag_JoltBody_MotionType_Dynamic>();
+                break;
+            }
+        }
+
+        // Sleep mirror: a body that just became Static or Kinematic will never fire OnBodyDeactivated, and one
+        // that just became Dynamic was activated above. Either way the Sleeping tag from a previous life is now
+        // wrong; drop it and let the activation-event mirror re-stamp it when the body actually settles.
+        InHandle.Try_Remove<ck::FTag_JoltBody_Sleeping>();
+
+        // Entering OR leaving Static changes what the revision-keyed full pass must reconcile: a body that just
+        // became Static will never activate again (only the full pass can notice it), and one that just left
+        // Static must be released from the inactive set.
+        if (_JoltWorld != nullptr &&
+            (OldMotionType == ECk_MotionType::Static || NewMotionType == ECk_MotionType::Static))
+        { _JoltWorld->Request_NoteStaticSceneChanged(); }
+    }
+
+    auto
+        FProcessor_JoltBody_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetCollisionProfile& InRequest) const
+        -> void
+    {
+        if (NOT InCurrent.Get_BodyAdded())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        CK_ENSURE_IF_NOT(_LayerTable != nullptr,
+            TEXT("JoltBody on Entity [{}]: no Jolt layer table context. Cannot resolve collision profile [{}]."),
+            InHandle, InRequest.Get_CollisionProfileName())
+        { return; }
+
+        const auto NewProfileName = InRequest.Get_CollisionProfileName();
+
+        if (InParams.Get_CollisionProfileName() == NewProfileName)
+        { return; }
+
+        // Same resolution path FProcessor_JoltBody_Setup uses — deliberately NOT a second implementation, so a
+        // profile can never mean one thing at creation and another at runtime. The domain is derived from the
+        // body's CURRENT motion type, which SetMotionType above keeps truthful.
+        const auto Domain = InParams.Get_MotionType() == ECk_MotionType::Static
+            ? ECk_Jolt_BodyDomain::Static
+            : ECk_Jolt_BodyDomain::Dynamic;
+
+        const auto MaybeSignature = ck::jolt::TryDerive_SignatureFromProfile(NewProfileName, Domain);
+
+        CK_ENSURE_IF_NOT(MaybeSignature.IsSet(),
+            TEXT("JoltBody on Entity [{}]: collision profile [{}] does not exist in UCollisionProfile (or has "
+                 "collision disabled). Keeping the previous object layer."), InHandle, NewProfileName)
+        { return; }
+
+        const auto Layer = _LayerTable->Get_OrRegisterLayer(*MaybeSignature);
+
+        // Table exhaustion already fired Get_OrRegisterLayer's own ensure; moving the body onto an invalid layer
+        // would silently make it collide with nothing, which is worse than keeping the old one.
+        if (Layer == JPH::cObjectLayerInvalid)
+        { return; }
+
+        PhysicsSystem->GetBodyInterface().SetObjectLayer(InCurrent.Get_BodyId(), Layer);
+
+        InParams.Set_CollisionProfileName(NewProfileName);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -197,6 +197,26 @@ public:
         const FCk_Request_JoltBody_Teleport& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Set Motion Type",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_JoltBody
+    Request_SetMotionType(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetMotionType& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|JoltBody",
+              DisplayName="[Ck][JoltBody] Request Set Collision Profile",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_JoltBody
+    Request_SetCollisionProfile(
+        UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetCollisionProfile& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
