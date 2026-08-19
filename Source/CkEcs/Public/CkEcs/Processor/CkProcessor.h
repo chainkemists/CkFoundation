@@ -214,8 +214,19 @@ namespace ck
     protected:
         HandleType _TransientEntity;
 
-        // Entities visited by the most recent DoTick. A custom DoTick override that doesn't report leaves
-        // the -1 sentinel Pump() sets, which the scheduler treats as "did work" (FTickable_Concept::Pump).
+        // Entities visited by the most recent DoTick, and the scheduler's answer to "is another pump pass
+        // worth taking". Pump() seeds it to -1 and the generated view-iteration DoTick overwrites it with the
+        // real count, so the sentinel survives exactly when a CUSTOM DoTick body never wrote one — and -1 is
+        // not 0, so that processor scores every pass as work whether or not it did any.
+        //
+        // Conservative on purpose: a custom body may do registry-wide work no view count describes, and a
+        // processor that under-reported would have its follow-up pass skipped and its cascade deferred a frame.
+        // The cost is that a pump can stay awake on a world where nothing is happening. If your custom DoTick
+        // has a meaningful count, the cheapest way to report it is to CALL the base DoTick (which writes this)
+        // and, if the body did extra work of its own, add to the value afterwards — see
+        // FProcessor_Nav_HandleRequests. Writing a real 0 is a behaviour change, not a tidy-up: it lets the
+        // scheduler stop pumping. The measured census of bodies that leave the sentinel today, and what
+        // changing the default would cost, are in CkEcs/CLAUDE.md § "The -1 visited-count contract".
         int32 _LastVisitedCount = -1;
 
     private:
