@@ -1968,6 +1968,10 @@ auto
 
     Settings->SetTimeDilation(Settings->MinGlobalTimeDilation);
 
+    // Copied out before it is formatted: bAllowTimeDilation is a BITFIELD (WorldSettings.h:468), and a bitfield
+    // lvalue cannot bind to the non-const reference the formatter's forwarding parameter deduces.
+    const auto AllowsTimeDilation = static_cast<bool>(Settings->bAllowTimeDilation);
+
     // Assert the OUTCOME, not the request. SetTimeDilation clamps into [Min,Max]GlobalTimeDilation, so asking
     // for the floor always succeeds and returns whatever the floor is — and the floor is authorable per level.
     CK_ENSURE_IF_NOT(Settings->GetEffectiveTimeDilation() <= ck_snapshot_subsystem::k_MaxFrozenTimeDilation,
@@ -1975,7 +1979,7 @@ auto
              "writing the floor [{}]. Game time will keep advancing through the load. Check that world's "
              "MinGlobalTimeDilation (World Settings, saved into the map) and bAllowTimeDilation [{}]"),
         InWorld.GetName(), Settings->GetEffectiveTimeDilation(), Settings->MinGlobalTimeDilation,
-        Settings->bAllowTimeDilation)
+        AllowsTimeDilation)
     { }
 }
 
