@@ -35,7 +35,7 @@ Before writing any code, navigate the documentation in this order:
 | bound range [min,max] + normalize | `CkCore/Math/ValueRange` |
 | streak-bounded random draws (shuffle bag) | `CkCore/Math/Probability` + `ck::TShuffleBag<T>` |
 | create/destroy entities | `CkEcs` + `UCk_Utils_EntityLifetime_UE` |
-| pool/recycle a UObject (or subsystem-own its lifetime) | `CkCore/ObjectPooling` — `UCk_Utils_Object_UE::Request_CreateNewObject` with `FCk_ObjectPooling_PoolParams` (Recycle) or DestroyOnRelease to just pin; release via `TryReleaseToPool`. Poolable EntityScripts: the `InstancedPerEntity_Poolable` policy |
+| create a UObject a feature will hold (component, widget, data object) | `CkCore/ObjectPooling` — `UCk_Utils_Object_UE::Request_CreateNewObject` with `FCk_ObjectPooling_PoolParams` (`DestroyOnRelease` to just pin, `Recycle` when construction cost dominates); the subsystem pin is the GC root, so the fragment holds `TWeakObjectPtr`; release via `TryReleaseToPool`. Poolable EntityScripts: the `InstancedPerEntity_Poolable` policy |
 | write a processor | `CkEcs/Processor` (`TProcessor`, self-registered via `CK_REGISTER_PROCESSOR`) |
 | bind/fire signals | `CkEcs/Signal` + `CK_SIGNAL_BIND` / `CK_SIGNAL_UNBIND` |
 | actor ↔ entity bridge | `CkEcs/OwningActor` (`UCk_Utils_OwningActor_UE`) + `CkActor`; EntityHolder in `CkEcsExt` |
@@ -109,7 +109,7 @@ Before writing any code, navigate the documentation in this order:
 | query/remap/swap/reset player key bindings, detect conflicts, resolve a key's icon brush | `CkInput` — `UCk_Utils_KeyBinding_UE`, `UCk_KeyBinding_Subsystem`, `UCk_Utils_KeyIcon_UE` |
 | show an input-action key prompt that survives rebinds AND an unapplied Mapping Context | `CkUI` — `UCk_InputActionWidget_UE` |
 | per-frame record of what the player pressed (ring buffer of button edges, held set, conditioned axes, delivery outcomes, octant direction with hysteresis, SOCD-cleaned cardinals) | `CkIntent` |
-| async asset loading → fragments | `CkResourceLoader` |
+| async asset loading → fragments | `CkResourceLoader` — `RequestLoad_RootedBatch` is the ONLY sanctioned way a feature loads an asset it will hold (the batch roots it); params/requests stay `TSoftObjectPtr` |
 | relay entity events to an actor (channels) | `CkActorRelay` |
 | debug shapes / procedural mesh text | `CkPmg` |
 | physics-substep ticking | `CkSubstep` |
@@ -377,47 +377,154 @@ const auto Val = ck::IsValid(InParams.Get_MyProvider())
     : DefaultValue;
 ```
 
-### Component lifetime (Niagara, Audio, any UObject the entity owns)
+### Objects and assets a fragment holds — the two rooting mechanisms
 
-Setup processor creates → monitor processor observes and fires signals, never destroys → EndPlay
-processor destroys during entity cleanup:
+**A fragment ref is never the GC root** (root [CLAUDE.md](../CLAUDE.md) → "UObject refs in
+fragments"). UE GC does not walk the EnTT registry, so a fragment member is a *reader*, and
+something outside the registry must be the owner. There are exactly two sanctioned owners; both are
+framework intrinsics, and a feature that needs a UObject or an asset uses one of them rather than
+inventing a third.
+
+#### 1. Objects the feature creates → the ObjectPooling subsystem pins them
+
+`UCk_Utils_Object_UE::Request_CreateNewObject` vends through `UCk_ObjectPooling_Subsystem_UE`,
+which holds every instance it hands out in `TObjectPtr` UPROPERTY storage. **That pin is the root**,
+which is why the fragment keeps a `TWeakObjectPtr`. Pass `DestroyOnRelease` when you want
+force-create-new semantics with subsystem-owned lifetime (the common case for components and
+widgets); `Recycle` only when per-instance construction cost dominates and you have measured it.
+Full model: `CkCore/Public/CkCore/ObjectPooling/README.md`.
 
 ```cpp
-struct FFragment_VfxCue_Current
+struct FFragment_AudioTrack_Current
 {
-    friend class FProcessor_VfxCue_Setup;
-    friend class FProcessor_VfxCue_EndPlay;
+    friend class FProcessor_AudioTrack_Setup;
+    friend class FProcessor_AudioTrack_EndPlay;
 
 private:
-    TStrongObjectPtr<UNiagaraComponent> _NiagaraComponent;
+    // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
+    TWeakObjectPtr<UAudioComponent> _AudioComponent;
+
+    // The GC root for the track's resolved sound + library settings: the batch's streamable
+    // handle keeps them loaded for exactly as long as this fragment holds it (reset at EndPlay).
+    FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
 
 public:
-    CK_PROPERTY_GET(_NiagaraComponent);
+    CK_PROPERTY_GET(_AudioComponent);
 };
 
-// Setup — create + store (factory function, see below):
-InCurrent._NiagaraComponent = TStrongObjectPtr{Component};
+// Setup — create through the pooled path; the subsystem pin roots it, the fragment observes:
+const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+    .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+
+auto AudioComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UAudioComponent>(
+    World, UAudioComponent::StaticClass(), nullptr, PoolParams, nullptr);
+
+CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
+{ return; }
+
+InCurrent._AudioComponent = AudioComponent;
 
 // LifetimeMonitor — observe, fire signals, DO NOT destroy:
-auto Component = InCurrent._NiagaraComponent.Get();
+auto Component = InCurrent._AudioComponent.Get();
 if (ck::IsValid(Component) && NOT Component->IsActive())
 { UUtils_Signal_OnFinished::Broadcast(InHandle, ...); }
 
-// EndPlay — destroy during entity cleanup:
-auto Component = InCurrent._NiagaraComponent.Get();
-if (ck::IsValid(Component))
-{ Component->DestroyComponent(); }
-InCurrent._NiagaraComponent.Reset();
+// EndPlay — unpin BEFORE destroying (destroy garbage-marks the object, failing release validity):
+if (ck::IsValid(InCurrent._AudioComponent))
+{
+    UCk_Utils_Object_UE::TryReleaseToPool(InCurrent._AudioComponent.Get());
+    InCurrent._AudioComponent->DestroyComponent();
+    InCurrent._AudioComponent = nullptr;
+}
 ```
 
 Cleanup order this guarantees: signal fires → EntityScript reacts (destroys entity if that's the
-behavior) → EndPlay processor destroys the component. Component lifetime is tied to entity
-lifetime. Never call `DestroyComponent()` from a monitor/update processor.
+behavior) → EndPlay processor releases and destroys the component. Component lifetime is tied to
+entity lifetime. Never call `DestroyComponent()` from a monitor/update processor, and never destroy
+without releasing first — `TryReleaseToPool` on an untracked or already-dead object is a benign
+no-op, so teardown paths call it unconditionally.
+
+Reference: `CkAudio` AudioTrack Setup/EndPlay. Same shape in `CkPmg` (ProceduralMeshComponent),
+`CkUnrealComponent`, `CkWorldSpaceWidget`, `CkIsmRenderer`, and EntityScript instancing.
+
+#### 2. Assets the feature loads → a CkResourceLoader rooted batch
+
+Asset references that reach a fragment are **soft**, and the load is standardized on
+`UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(ConsumerId, SoftPaths)`. **The batch's
+streamable handle is the root** for every asset in it, so `Current` holds the batch for as long as
+the assets must stay resident and clears it (`= {}`) at EndPlay.
+
+- **`TSoftObjectPtr` in `ParamsData` and in requests, not `TObjectPtr`.** A hard ref on an
+  `EditAnywhere`/`BlueprintReadWrite` field force-loads the asset with every DataAsset or Blueprint
+  that merely names it; removing that authoring cost is the point of the sweep. Requests keep
+  `TOptional<TSoftObjectPtr<T>>` where they were optional — UHT accepts it.
+- **Deferred setup ⇒ kick a batch and poll.** Kick in the fresh branch of Setup (or at the Utils
+  boundary for request-carried assets), then fall through to the ready check the same tick — a
+  resident asset and a `Synchronous`-overridden consumer both complete inline, so the warm path
+  never costs a frame. A cold load gates on a `FTag_<Feature>_PendingAssetLoad` tag whose presence
+  keeps the view polling at zero registry ops per stalled tick.
+- **Synchronous creation ⇒ resident-or-fail.** With no deferred setup to queue a load behind there
+  is no batch: ensure loudly naming the unresolved path, and take the same recovery an *unset*
+  reference has always taken (`CkTween`'s curve channels).
+- **A failed load ensures and recovers — it never wedges.** Reset the batch, complete any pending
+  request `Failed`, and fall back to a default where one exists.
+
+```cpp
+// Setup — kick once, poll, resolve. Canonical: CkFx Vfx Setup.
+if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+{
+    InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+        TEXT("Vfx.Setup"), {Params.Get_ParticleSystem().ToSoftObjectPath()});
+}
+
+if (NOT InCurrent._LoadedAssets.Get_IsReady())
+{
+    InHandle.AddOrGet<FTag_Vfx_PendingAssetLoad>();
+    return;
+}
+
+const auto ResolvedSystem = Cast<UNiagaraSystem>(
+    InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
+const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSystem);
+
+CK_ENSURE_IF_NOT(AssetsAreLoaded,
+    TEXT("Cannot setup Vfx [{}] - loading its ParticleSystem [{}] through CkResourceLoader failed"),
+    InHandle, Params.Get_ParticleSystem().ToSoftObjectPath())
+{ InCurrent._LoadedAssets = {}; }
+
+InHandle.Try_Remove<FTag_Vfx_PendingAssetLoad>();
+```
+
+`ConsumerId` is `"<Feature>.<Site>"` (`"Vfx.Setup"`, `"AudioTrack.Setup"`, `"PmgDonut.Material"`,
+`"IskmProxy.Requests"`, `"JoltBody.Setup"`) — it is the key a project flips to `Synchronous` in
+`UCk_ResourceLoader_ProjectSettings_UE` to debug one consumer, so name it and record it in the
+module's `Claude.md`. A module that gains a batch gains a `CkResourceLoader` dependency; note it in
+the tier table row.
+
+Never synchronously load inside a `ForEachEntity` body — the `Synchronous` per-consumer override is
+the sanctioned exception, by explicit per-project opt-in.
+
+Reference: `CkFx` (Sfx + Vfx), `CkAudio` AudioTrack, `CkAnimation`, `CkIskmRenderer` proxy requests,
+`CkJolt` JoltBody, `CkPmg` donut, `CkRenderTarget` draw requests, `CkVat`, `CkWorldSpaceWidget`.
 
 ### Standalone components (no actor owner)
 
-`NewObject<UNiagaraComponent>(World)` + manual `RegisterComponent()` fails or fires ensures. Use
-the factory functions that register with the world, with every bool argument named:
+`NewObject<UNiagaraComponent>(World)` + manual `RegisterComponent()` fails or fires ensures — an
+ownerless component has no actor to register against. Two working paths:
+
+**Owned by the feature** — pooled create, then register against the world explicitly
+(`RegisterComponentWithWorld(World)`, NOT `RegisterComponent()`). This is what `CkPmg`,
+`CkUnrealComponent`, and `CkWorldSpaceWidget` do, and it is the path to take when the entity must
+later stop, reconfigure, or destroy the component:
+
+```cpp
+auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
+    World, UProceduralMeshComponent::StaticClass(), nullptr, PoolParams, nullptr);
+MeshComponent->RegisterComponentWithWorld(World);
+```
+
+**Fire-and-forget** — the engine's world-registering factory functions, with every bool argument
+named:
 
 ```cpp
 constexpr auto AutoDestroy = false;
@@ -429,6 +536,12 @@ auto Component = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 ```
 
 Same idea for audio (`UGameplayStatics::SpawnSoundAtLocation`) and other component types.
+
+A factory-spawned component is **world-rooted** — that is the third legitimate owner, and it is why
+these are the fire-and-forget path: the feature does not own the instance, so a fragment that needs
+to reach it afterwards holds a `TWeakObjectPtr` and resolves on read. If the feature must own the
+component's lifetime (stop it, reconfigure it, destroy it with the entity), create it through the
+pooled path instead so the subsystem pin is the root.
 
 ### Replicated + persisted fragments — the persistence-handler contract
 
