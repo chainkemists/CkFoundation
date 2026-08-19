@@ -577,8 +577,12 @@ auto
                 VisitedCount = (*Node._Instance)->Pump();
             }
 
-            // A pump that provably visited zero entities cannot have produced new work. -1 means the
-            // processor's custom DoTick body doesn't report a count; treat it as having done work.
+            // A pump that PROVABLY visited zero entities cannot have produced new work. -1 is not that proof:
+            // it is the sentinel a custom DoTick body leaves when it never reported a count, and it is treated
+            // as work because such a body may have done registry-wide work no view count describes. Eleven
+            // processors sit in that family today and each of them keeps this loop awake for a pass — the
+            // census, and what inverting the default would cost, are in CkEcs/CLAUDE.md § "The -1 visited-count
+            // contract" (TProcessorBase::_LastVisitedCount carries the author-facing half).
             if (VisitedCount != 0)
             {
                 AnyProcessorTicked = true;
