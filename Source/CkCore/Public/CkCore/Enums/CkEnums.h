@@ -4,6 +4,8 @@
 
 #include "CkThirdParty/bitwise-enum/bitwise_enum.hpp"
 
+#include "Misc/EnumRange.h"
+
 #include "CkEnums.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
