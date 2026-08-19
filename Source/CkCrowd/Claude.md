@@ -107,6 +107,36 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
 
 Plus `FProcessor_CrowdAgent_BlockedRecheck` (FGroup_Gameplay): resumes a held agent when its goal clears.
 
+Plus `FProcessor_CrowdAgent_PathPendingWatchdog` (FGroup_Gameplay): the reconciler for the shared
+nav-path slot. **Read this before touching episode teardown.**
+
+Every provider — CkNavigation, CkPathNetwork, CkVoxelNav — parks the SAME
+`FFragment_Nav_PathResult` at `Pending` via `MarkPathPending`, but on the PathNetwork and VoxelNav
+branches no CkNavigation request is enqueued, so `MarkPathPending` is that slot's only writer and
+`OnRouteResolved` / `OnVoxelPathResolved` are the only things that can advance it — both gated on
+the agent still holding `PathPending` or `Walking`. `Request_Stop` removes both. Until 2026-08-19
+that combination meant a stopped agent's slot read `Pending` **forever**, and every consumer of
+`Get_PathStatus` was told a query was in flight for the life of the entity.
+
+The fix is an acquire/release pair, not a special case at the Stop site:
+`DoAbandonActiveProviderQuery` is the SINGLE episode-end seam — `Request_Stop` and every fresh
+dispatch route through it, so a terminal added later cannot forget the release. It advances the
+revision (superseding any late result) and abandons whichever provider owned the query, read from
+`FFragment_CrowdAgent_PathFollow::_ActiveProvider`. That field is RECORDED at dispatch rather than
+re-derived, because `RequestPathForActiveGoal`'s provider choice reads mutable state the teardown
+has already changed.
+
+The watchdog is keyed on the **slot**, not on `FTag_CrowdAgent_PathPending`, and that is
+deliberate: a tag-keyed watchdog is structurally blind to the exact state this defect produced
+(slot Pending, tag gone), so it could never have caught it. Two rows — a live episode past
+`_PathPendingTimeoutSeconds` is failed with `PendingTimeout` (status only; `OnPathResolved` owns
+the tag transition and the single `OnGoalFailed`, so doing both here would double-broadcast), and
+a Pending slot with NO live episode is the orphan: cleared, with an ensure naming the entity, and
+deliberately no broadcast because nothing is bound to hear one.
+
+**Do not "fix" a future recurrence by filtering the draw or the watchdog view on `Idle`.** That
+hides the state instead of releasing it, which is what let this ship.
+
 Plus `FProcessor_CrowdAgent_StationaryMarkup` (FGroup_Gameplay) + `_NavMarkup_EndPlay`: an agent
 at or below `_StationaryMarkupSpeedThreshold` past `_StationaryMarkupDelaySeconds` (windowed
 physical displacement, NOT the Idle tag — a blocked/pressing walker plugs a corridor exactly

@@ -163,6 +163,29 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
   in `CkNav_Processor.cpp`) — it is not multi-PIE-instance safe. Entries are dropped when their
   handle goes invalid and force-failed with `NoNavData` past `ck.Nav.MaxDeferralSeconds` (5s).
 
+## Acquire / release — a path episode must be ENDED, not just abandoned
+
+`Request_FindPath` acquires an episode; **`Request_AbandonPath` releases it**, and every terminal
+that ends a movement must call one. This is not optional bookkeeping: the result slot is shared, so
+a caller that walks away without releasing leaves it reading whatever the acquire parked there.
+
+Until 2026-08-19 there was no release at all. `FCk_Request_CrowdAgent_Stop` dropped the crowd's own
+tags and nothing wrote the slot again, so a stopped agent reported `Pending` **for the rest of its
+life** — every `Get_PathStatus` consumer was told a query was in flight forever, and the in-world
+path-trouble overlay drew a permanent marker over a stationary NPC. It shipped for three weeks
+because the two consumer-side guards that dropped the late result did so with a bare `return`.
+
+`Request_AbandonPath` clears the status, the waypoints AND the destination (a `None` slot still
+holding the old corridor is a half-cleared mirror), fires `Failed_Cancelled` for anything still
+queued, purges this entity's entries from the deferral queue, and stamps the caller's post-abandon
+revision so a query that drains afterwards is recognised as superseded rather than applied.
+
+**`Pending` is now bounded.** `FProcessor_CrowdAgent_PathPendingWatchdog` (CkCrowd) reconciles the
+slot against the agent's real movement state and fails an episode no provider answered within
+`_PathPendingTimeoutSeconds`. Note the bound lives in CkCrowd, not here: CkNavigation's own 5s
+deferral timeout only covers queries that actually reached its queue, and the PathNetwork and
+VoxelNav branches never enqueue one.
+
 ## Future work
 
 - Hierarchical path-finding (HPA*) if maps grow large enough that whole-map queries get slow.
