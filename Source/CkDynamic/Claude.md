@@ -82,49 +82,36 @@ comment-light; the *why* lives here.
 - **Posture decides what is captured, and it is resolved from the TYPE, once.** `Produce` and
   `HydrationApply` both call `ck::Get_FragmentPosture` (`CkEcs/Snapshot/CkSnapshot_Posture.h`) and
   branch three ways: `Session` is skipped on both sides; `Durable` is captured whole and assigned
-  whole; `Undeclared` keeps the pre-posture behaviour — captured, and copied back field-wise through
-  the live-session guard below. The markers (`FCk_Snapshot_Durable` / `FCk_Snapshot_Session`) live in
+  whole; `Undeclared` — an author error the resolver already ensured on, or a type outside the
+  ratchet's scope — is captured and assigned whole too. The markers (`FCk_Snapshot_Durable` / `FCk_Snapshot_Session`) live in
   CkEcs, which CkDynamic already depends on, so the registered-handler path reads the same
   declaration; `FCk_DynamicFragment_SnapshotTransient` remains as the deprecated Session spelling for
   the script sites that still carry it. Structs *derive* a marker in C++ and carry it as a FIELD in
   AngelScript (script structs cannot inherit) — the resolver accepts either. Do not use USTRUCT
   metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.
-- **`Get_IsLiveSessionField` — the `Undeclared` path, and only that path.** For a fragment nobody has
-  declared, the field-wise copy preserves every `CPF_Transient` field and every top-level delegate /
-  multicast-delegate field, with no opt-in. A delegate binds UObject + FunctionName, so across a
-  rebuild+hydrate its saved form is stale or empty *by construction* (it named objects in the
-  torn-down world) while the live value is the set of subscribers that bound during the rebuild.
-  Copying the saved list over them silently unsubscribes everyone, and the feature then keeps correct
-  state and correct one-shot reads while never notifying again — **"correct initial value, then
-  frozen"** (BusterBlock 2026-08-16: a HUD wallet showing the right balance that never moved;
-  interact prompts and key hints that never re-appeared after a load). Found across 46 unmarked BB
-  `_Signals` fragments. **Limit — top-level fields only.** A delegate nested in a struct- or
-  array-typed member is copied wholesale, because "preserve the live one" is undefined once the saved
-  and live arrays differ in length. That limit is why the posture resolver's delegate derivation
-  walks the type at ANY depth instead: a delegate-carrying fragment is `Session` and is never copied
-  at all, so the guard is the transitional backstop for undeclared fragments rather than the rule.
-  It dies with the last `Undeclared` fragment.
-- **`Restore_UnresolvedHandles` — hydration never DOWNGRADES a live handle.** Reached on the
-  `Undeclared` path only, for the same reason. A fragment
-  field naming a construct-derived child (SceneNode, probe, Interactable, UnrealComponent, Tween) is
-  written fresh by the owner's replayed construction, but the SAVED value cannot resolve: those
-  children are unlabeled `FTag_ConstructSpawned` entities, which capture rule 3 classifies
-  save-transient, so their saved id remaps to a tombstone. The whole-fragment copy then replaced a
-  working handle with a dead one and the feature came back structurally complete but functionally
-  inert — only destroying and respawning the owner fixed it (BusterBlock 2026-08-16: a poster that
-  focused but never changed texture; a checkout counter whose settle offered no cash/credit option).
-  After the copy, any destination handle that is now invalid where the pre-copy value was valid is
-  restored. It stands down entirely when the pre-copy and post-copy walks visit different numbers of
-  handle slots, since a saved array of a different length shifts every later slot and positional
-  correspondence no longer holds. **Known trade:** a field the save deliberately CLEARED is
-  indistinguishable from one whose target failed to resolve (both arrive invalid), so a cleared field
-  keeps its construction-fresh value — holding a live handle is recoverable, holding a dead one is the
-  inert-feature bug. A field whose emptiness is load-bearing must persist that fact explicitly rather
-  than encode it as an invalid handle. Both diagnostics log at **Warning**, not Verbose: every
-  firing is a fragment whose posture has not been declared, so it is a work item rather than trace
-  noise, and a backstop that engages silently tells nobody. The whole function is scheduled for
-  deletion once no fragment resolves `Undeclared` any more — it exists to carry the undeclared ones
-  across, not to be a permanent safety net.
+- **Hydration assigns WHOLE fragments — there is no field-wise copy and no handle backstop.**
+  A fragment holding live-session content declares `FCk_Snapshot_Session` and is skipped at capture and at
+  hydration alike; the DECLARATION is what preserves it. Two incident classes are what the declaration closes,
+  and both are worth knowing because their signature is quiet:
+  - **Delegates.** A delegate binds UObject + FunctionName, so across a rebuild+hydrate its saved form is stale
+    or empty *by construction* (it named objects in the torn-down world) while the live value is the set of
+    subscribers that bound during the rebuild. Assigning the saved list over them silently unsubscribes
+    everyone, and the feature then keeps correct state and correct one-shot reads while never notifying again —
+    **"correct initial value, then frozen"** (BusterBlock 2026-08-16: a HUD wallet showing the right balance
+    that never moved; interact prompts and key hints that never re-appeared after a load; found across 46
+    unmarked BB `_Signals` fragments). The posture resolver's delegate derivation walks the type at ANY depth,
+    so such a fragment resolves `Session` and is never copied at all.
+  - **Construct-rebuilt child handles.** A field naming a SceneNode, probe, Interactable, UnrealComponent or
+    Tween is written fresh by the owner's replayed construction, but the SAVED value cannot resolve: those
+    children are unlabeled `FTag_ConstructSpawned` entities, which capture rule 3 classifies save-transient, so
+    their saved id remaps to a tombstone. Assigning it back leaves the feature structurally complete but
+    functionally inert — only destroying and respawning the owner fixed it (BusterBlock 2026-08-16: a poster
+    that focused but never changed texture; a checkout counter whose settle offered no cash/credit option).
+    Such a fragment is `Session`, or is split so the handles live in a `Session` half.
+  The transitional guard that used to soften both on the `Undeclared` path
+  (`Get_IsLiveSessionField` / `CopyFragment_PreservingLiveSessionFields` / `Restore_UnresolvedHandles`) was
+  deleted once the posture allow-list drained to zero: a permanent safety net over a declared contract is a
+  second, silent source of truth for what survives a load.
 
 ### Cooked display schema (`CkDynamic_FragmentDisplaySchema.*`)
 

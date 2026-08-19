@@ -18,8 +18,10 @@
 UENUM(BlueprintType)
 enum class ECk_Snapshot_Posture : uint8
 {
-    // No declaration and no derivation. Captured and hydrated field-wise, i.e. the pre-posture behaviour: the
-    // transitional path the posture ratchet's allow-list enumerates, impossible once that list drains to zero.
+    // No declaration and no derivation. The posture ratchet's allow-list is empty, so nothing a project ships
+    // resolves here; what still can is an author error the resolver already ensured on (a contradiction, a
+    // Durable declaration over session content) or a type outside the ratchet's scope. Captured and hydrated
+    // WHOLE, exactly like Durable — the field-wise copy that once softened this path is gone.
     Undeclared,
     // Captured whole at save, hydrated whole at load.
     Durable,
