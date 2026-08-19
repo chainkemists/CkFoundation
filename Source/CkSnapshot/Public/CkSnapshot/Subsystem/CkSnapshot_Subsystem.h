@@ -204,7 +204,14 @@ public:
     // Answered at OnWorldBeginPlay for every world, BEFORE its processor graph exists, and SIDE-EFFECTING by
     // design — it applies the time freeze and (on a client) arms the client-side hold. Registered as CkEcs's
     // load-hold seed provider by this module's startup, so CkEcs never learns CkSnapshot exists.
-    auto DoGet_ShouldHoldWorldAtBoot(UWorld& InWorld) -> bool;
+    //
+    // The phase it returns is ROLE-SPLIT, and the split is load-bearing. The authority's post-travel world gets
+    // Rebuilding: it is about to run every level actor's BeginPlay and every entity-script construction, which is
+    // exactly where a level-triggered producer would seed population beside the copies the loader is restoring,
+    // and only Rebuilding suppresses that. A client gets Converging: it rebuilds nothing and has no saved rows,
+    // so kernel scope would hold its whole world out of its own replication-driven composition — what it owes is
+    // coherence. None means do not seed.
+    auto DoGet_ShouldHoldWorldAtBoot(UWorld& InWorld) -> ECk_EcsWorld_LoadHold;
 
     // True while THIS entity's restored state is still the load's to write: a load is in flight, the load
     // mapped this entity, and the global quarantine lift has not run yet. It answers "will an OnHydrated edge
