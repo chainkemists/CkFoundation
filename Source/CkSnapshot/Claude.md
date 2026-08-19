@@ -687,6 +687,21 @@ re-applied at the post-travel boot seed. "Frozen" means at most ~17 ms across a 
 every threshold is an epsilon. Wall time keeps running deliberately, for a small named list of watchdogs — see the
 allow-list fence `Ck.Snapshot.Meta.WallTimeReadsAreAllowListed`.
 
+**The freeze is single-valued: ONE world, ONE captured prior dilation.** That fits the shape a load has — the
+pre-travel world is frozen, dies, and the post-travel world is frozen in its place — but it cannot express two
+worlds frozen at once, because the second apply would overwrite the prior value the first world has to be given
+back. So `DoApply_TimeFreeze` **refuses** a second world while the one it holds is still LIVE (`CK_ENSURE` +
+no-op), and re-arms freely over a world that has begun tearing down, which is every load's own travel.
+`Ck.Snapshot.LoadHold.TimeFreezeRefusesASecondLiveWorld` / `…RearmsOverATearingDownWorld` pin both halves.
+
+**A PAUSED world is reported, never obeyed.** A paused world does not tick and every phase of a load is driven by
+world ticks, so a pause taken mid-load does not pause the load — it stops it, and if it outlives a phase's frame
+cap the load escapes there and reports `Succeeded_WithLoss` for facts that never got a frame in which to converge.
+The framework does not veto the pause (pausing is a game-side decision; the sanctioned guard is a pause UI that
+declines while `Get_IsLoadInProgress`), but the loader emits **one** Warning per load naming the world and the
+epoch, so the cap-escape is explained rather than mysterious. Fence:
+`Ck.Snapshot.LoadHold.PauseUnderHoldIsReported`.
+
 **The boot seed is `Converging`, for both roles.** A world coming up mid-load is held before anything in it ticks.
 `Rebuilding` was tried here and broke the load: it is the one phase that suppresses `Request_SpawnEntity`, and the
 level's own on-demand infrastructure spawns its entity and stamps the SaveKey the loader rendezvouses onto in
