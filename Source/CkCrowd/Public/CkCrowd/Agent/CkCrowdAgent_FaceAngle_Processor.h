@@ -32,6 +32,9 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_FaceAngle>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
+            // GoalFailedHold is terminal until an explicit wake: translating and turning are both
+            // observable motion, so never consume residual/avoidance velocity to re-face it.
+            TExclude<FTag_CrowdAgent_GoalFailedHold>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

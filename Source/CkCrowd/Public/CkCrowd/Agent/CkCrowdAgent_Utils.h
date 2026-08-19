@@ -60,6 +60,20 @@ public:
     Get_SeparationForce(
         const FCk_Handle_CrowdAgent& InHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Transient Personal Space Scale")
+    static float
+    Get_TransientPersonalSpaceScale(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Transient Personal Space Remaining Seconds")
+    static float
+    Get_TransientPersonalSpaceRemainingSeconds(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // The steering waypoint cursor — the index into the active path's waypoints the agent is walking
     // toward. Paired with the path's waypoint list it distinguishes a legitimately-unreached waypoint
     // from one the agent already passed but never retired.
@@ -135,6 +149,19 @@ public:
     Request_SetMaxSpeed(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         float InMaxSpeed,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Temporarily scales only reactive separation/personal space. Valid requests replace the
+    // current scale and expiry (they never stack); expiry restores the normal scale automatically.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Set Transient Personal Space Scale",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_CrowdAgent
+    Request_SetTransientPersonalSpaceScale(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        float InScale,
+        float InDurationSeconds,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Replace the query-filter policy used by every Recast path this agent issues. Active Recast
@@ -229,6 +256,16 @@ public:
               DisplayName="[Ck][CrowdAgent] Get Is Goal Blocked")
     static bool
     Get_IsGoalBlocked(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    // True after a terminal path/no-progress failure while the active goal is retained in a
+    // stable Idle hold. Identical ordinary MoveTo requests are coalesced until an explicit
+    // ForceRepath, a new correlation, or a genuinely different goal starts a fresh episode.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Goal Failed Hold")
+    static bool
+    Get_IsGoalFailedHold(
         const FCk_Handle_CrowdAgent& InAgent);
 
     // The agent's steering state (Idle / PathPending / Walking) — the state tags are EnTT

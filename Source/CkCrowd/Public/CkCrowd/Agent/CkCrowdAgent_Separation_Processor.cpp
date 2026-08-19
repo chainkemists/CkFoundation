@@ -25,6 +25,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            const FFragment_CrowdAgent_TransientPersonalSpace& InPersonalSpace,
             FFragment_CrowdAgent_SeparationForce& InSeparationForce)
         -> void
     {
@@ -32,7 +33,7 @@ namespace ck
 
         INC_DWORD_STAT(STAT_CkCrowd_ActiveAgents);
 
-        const auto SeparationRadius = InParams.Get_SeparationRadius();
+        const auto SeparationRadius = InParams.Get_SeparationRadius() * InPersonalSpace.Get_Scale();
         const auto SeparationWeight = InParams.Get_SeparationWeight();
         const auto MaxSpeed = InParams.Get_MaxSpeed();
 

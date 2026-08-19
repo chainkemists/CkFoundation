@@ -165,7 +165,7 @@ namespace ck
 
             if (ck::IsValid(Blocker))
             {
-                DoBlock(InHandle, InParams, InBlockDetect,
+                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
                     ECk_CrowdAgent_BlockedReason::GoalOccupied, Blocker, DistanceToFinal);
                 return;
             }
@@ -214,7 +214,7 @@ namespace ck
                     return;
                 }
 
-                DoBlock(InHandle, InParams, InBlockDetect,
+                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
                     ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
                 return;
             }
@@ -271,7 +271,7 @@ namespace ck
             return;
         }
 
-        DoBlock(InHandle, InParams, InBlockDetect,
+        DoBlock(InHandle, InParams, InBlockDetect, InDesired,
             ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
     }
 
@@ -313,6 +313,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
             ECk_CrowdAgent_BlockedReason InReason,
             FCk_Handle InBlocker,
             float InDistanceToGoal) const
@@ -352,6 +353,10 @@ namespace ck
         if (InParams.Get_BlockedPolicy() == ECk_CrowdAgent_BlockedPolicy::FailMove)
         {
             NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
+            NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
+
+            InDesired._Velocity = FVector::ZeroVector;
+            InDesired._LastVelocity = FVector::ZeroVector;
 
             UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                 NonConstHandle,
@@ -370,7 +375,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_BlockedRecheckProc);
@@ -409,7 +415,7 @@ namespace ck
         {
             if (InBlockDetect._BlockedRetryCount >= Settings->Get_BlockedMaxRetries())
             {
-                DoFailMove(InHandle, InPathFollow, InBlockDetect);
+                DoFailMove(InHandle, InPathFollow, InBlockDetect, InDesired);
                 return;
             }
 
@@ -488,7 +494,8 @@ namespace ck
         DoFailMove(
             HandleType InHandle,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const
         -> void
     {
         auto NonConstHandle = InHandle;
@@ -496,6 +503,7 @@ namespace ck
         // GoalBlocked goes with the hold it ends; the agent is already Idle from DoBlock.
         NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+        NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
 
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ProtectedLeadingWaypointCount = 0;
@@ -503,6 +511,9 @@ namespace ck
         InBlockDetect._BlockedBy = FCk_Handle{};
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
         InBlockDetect.DoResetProgressWindow();
+
+        InDesired._Velocity = FVector::ZeroVector;
+        InDesired._LastVelocity = FVector::ZeroVector;
 
         // Log, not Warning: an unreachable goal is a legitimate gameplay outcome (a player can
         // wall off any destination), and the caller is informed through OnGoalFailed.

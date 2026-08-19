@@ -369,6 +369,8 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
     friend class ck::FProcessor_CrowdAgent_AccelClamp;
     friend class ck::FProcessor_CrowdAgent_AvoidanceSample;
     friend class ck::FProcessor_CrowdAgent_BlockDetect;
+    friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
+    friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
@@ -545,6 +547,33 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_SetMaxSpeed, _MaxSpeed);
+};
+
+// Transient, per-agent comfort-space override. This intentionally scales only the
+// reactive separation volume; it never changes physical body radius, collision, nav
+// projection, predictive avoidance TOI, or PushApart contact radius.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    float _Scale = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    float _DurationSeconds = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_Scale);
+    CK_PROPERTY_GET(_DurationSeconds);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale, _Scale, _DurationSeconds);
 };
 
 // Public request — replace this agent's navigation-query policy. Policy requests are resolved as
