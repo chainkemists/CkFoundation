@@ -241,7 +241,7 @@ and `FCk_Snapshot_Session` (rebuilt by the feature's own construction/setup). C+
 AngelScript structs cannot inherit, so the script spelling is a **field** of that type, and the resolver accepts
 either. There is deliberately no metadata spelling — Game and cooked targets strip metadata behind
 `WITH_METADATA` (`CkDynamic/Claude.md`), so a `meta=(...)` opt-out is silently inert in a packaged build.
-`FCk_DynamicFragment_SnapshotTransient` is the **deprecated** spelling of `FCk_Snapshot_Session` and still
+`FCk_Snapshot_Session` is the **deprecated** spelling of `FCk_Snapshot_Session` and still
 resolves Session, so the script sites carrying it keep behaving identically; new code writes the new name.
 
 **Some postures are DERIVED, and a derivation is a proof rather than a default** — it says the declared

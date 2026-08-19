@@ -12,31 +12,11 @@
 
 namespace ck_snapshot_posture
 {
-    // The legacy Session spelling lives in CkDynamic, which depends ON CkEcs — naming its type here would invert
-    // the tier, so it is matched by reflected path instead (the same link-avoidance rationale as
-    // ck_untraced_struct_safety::IsApprovedGcIndependentStruct). Deprecated, not deleted: the ~188 script sites
-    // that carry it must keep resolving Session until they are renamed.
-    auto TryGet_LegacySessionMarker() -> const UScriptStruct*
-    {
-        static const auto LegacyPath = FString{TEXT("/Script/CkDynamic.Ck_DynamicFragment_SnapshotTransient")};
-        static auto Cached = TWeakObjectPtr<const UScriptStruct>{};
-
-        if (const auto* Found = Cached.Get())
-        { return Found; }
-
-        // Re-attempted while null rather than latched: CkDynamic may not be loaded on the first resolution.
-        Cached = FindObject<UScriptStruct>(nullptr, *LegacyPath);
-        return Cached.Get();
-    }
-
     auto Is_ChildOfOrSame(const UScriptStruct* InStruct, const UScriptStruct* InBase) -> bool
     { return InStruct != nullptr && InBase != nullptr && InStruct->IsChildOf(InBase); }
 
     auto Is_SessionMarkerType(const UScriptStruct* InStruct) -> bool
-    {
-        return Is_ChildOfOrSame(InStruct, FCk_Snapshot_Session::StaticStruct()) ||
-               Is_ChildOfOrSame(InStruct, TryGet_LegacySessionMarker());
-    }
+    { return Is_ChildOfOrSame(InStruct, FCk_Snapshot_Session::StaticStruct()); }
 
     auto Is_DurableMarkerType(const UScriptStruct* InStruct) -> bool
     { return Is_ChildOfOrSame(InStruct, FCk_Snapshot_Durable::StaticStruct()); }

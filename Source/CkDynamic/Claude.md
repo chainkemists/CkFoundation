@@ -85,7 +85,7 @@ comment-light; the *why* lives here.
   whole; `Undeclared` — an author error the resolver already ensured on, or a type outside the
   ratchet's scope — is captured and assigned whole too. The markers (`FCk_Snapshot_Durable` / `FCk_Snapshot_Session`) live in
   CkEcs, which CkDynamic already depends on, so the registered-handler path reads the same
-  declaration; `FCk_DynamicFragment_SnapshotTransient` remains as the deprecated Session spelling for
+  declaration; `FCk_Snapshot_Session` remains as the deprecated Session spelling for
   the script sites that still carry it. Structs *derive* a marker in C++ and carry it as a FIELD in
   AngelScript (script structs cannot inherit) — the resolver accepts either. Do not use USTRUCT
   metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.

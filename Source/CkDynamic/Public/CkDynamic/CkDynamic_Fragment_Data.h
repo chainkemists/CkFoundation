@@ -23,23 +23,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DestroyFilter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// DEPRECATED spelling of the SESSION posture — use FCk_Snapshot_Session (CkEcs/Snapshot/CkSnapshot_Posture.h) in
-// new code. Kept, and kept behaving identically, because ~188 script sites carry it: ck::Get_FragmentPosture
-// recognises it as Session by reflected path until those sites are renamed. Its name says HOW (transient) instead
-// of WHAT POSTURE, and it has no Durable counterpart, which is why the symmetric marker pair replaces it.
-//
-// Snapshot-transient dynamic fragments derive from this marker (C++), or carry a field of this type
-// (AngelScript — script structs cannot inherit), because USTRUCT metadata is unavailable in Game builds.
-// BlueprintType is load-bearing: the AngelScript binder only auto-binds BlueprintType structs, and the
-// script-side marker-field spelling needs the type visible in AS.
-USTRUCT(BlueprintType)
-struct CKDYNAMIC_API FCk_DynamicFragment_SnapshotTransient
-{
-    GENERATED_BODY()
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType)
 struct CKDYNAMIC_API FCk_Fragment_DynamicFragment_Data
 {
