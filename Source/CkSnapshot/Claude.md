@@ -234,7 +234,7 @@ by `ck::Get_FragmentPosture` (`CkEcs/Snapshot/CkSnapshot_Posture.h`) — the sin
 |---|---|---|
 | `Session` | not captured | skipped — never written, never composed onto the rebuilt entity |
 | `Durable` | captured whole | assigned whole onto the rebuilt fragment |
-| `Undeclared` | captured | field-wise copy preserving live-session fields — the transitional path, see below |
+| `Undeclared` | captured | assigned whole — an author error the resolver already ensured on, see below |
 
 **Declaring one.** Two symmetric marker structs live in CkEcs: `FCk_Snapshot_Durable` (part of the saved world)
 and `FCk_Snapshot_Session` (rebuilt by the feature's own construction/setup). C++ structs *derive* from a marker;
@@ -276,24 +276,22 @@ type ensures and resolves `Undeclared`. So does `Durable` alongside a `UPROPERTY
 field-level opt-out is **retired as an author mechanism** — a fragment is Durable whole or Session whole, and a
 mixture is a fragment that has not been split yet.
 
-**`Undeclared` behaves exactly as the pre-posture code did, and it is transitional.** It is captured, and
-hydrated field-by-field via `CopyFragment_PreservingLiveSessionFields` (`CkDynamic_Fragment.cpp`): if the struct
-carries any `CPF_Transient` field or any top-level delegate, every OTHER field copies from the saved payload
-while those keep the value the REBUILT world constructed. `Ck.Snapshot.Meta.FragmentPostureCoverage` reds on any
-`Undeclared` type outside the project's allow-list, and that list only ever shrinks — when it empties, so does
-this row and the guard that serves it.
+**`Undeclared` is now an author error, not a transitional path.** The posture ratchet
+(`Ck.Snapshot.Meta.FragmentPostureCoverage`) reds on any `Undeclared` type outside the project's allow-list, and
+that list only ever shrinks — BusterBlock drained it to zero, which is what let the transitional guard go. What
+can still resolve `Undeclared` is a shape the resolver already ensured on (a contradiction, a `Durable`
+declaration over session content) or a type outside the ratchet's scope; it is captured and assigned whole,
+exactly like `Durable`, so nothing is silently dropped while the red is open.
 
-Two facts that apply while a fragment is still `Undeclared`, and that declaring a posture retires:
-
-- **The handle-id stream is positional** — a persisted handle field must be declared BEFORE the `Transient` ones,
-  because the save's handle-remap walk is a straight positional field walk, not name-keyed, so a reordered struct
-  attributes a saved value to the wrong field. A `Durable` fragment has no skipped fields, so the rule dissolves.
-- **Backstop:** `HydrationApply` refuses to DOWNGRADE a live handle — after the field copy, any handle the save
-  could not resolve is restored from the construction-fresh value (`Restore_UnresolvedHandles`). It stands down
-  when the saved and fresh layouts hold different numbers of handle slots, since positional correspondence no
-  longer holds; and a field the save deliberately CLEARED keeps its construction-fresh value, because an empty
-  saved handle and an unresolvable one are the same value by then. It is a safety net for undeclared fields, not
-  a substitute for a posture — and every firing is a declaration defect worth chasing.
+**What the deleted guard used to do, and what replaced it.** Hydration once copied an `Undeclared` fragment
+field-by-field, keeping every `CPF_Transient` field and every top-level delegate
+(`CopyFragment_PreservingLiveSessionFields`), and refused to downgrade a live handle the save could not resolve
+(`Restore_UnresolvedHandles`, a positional walk that stood down on layout drift). Both were safety nets over
+fragments nobody had declared. The declaration replaced them, and it is strictly stronger: the delegate
+derivation walks the type at ANY depth rather than top-level only, and a fragment holding construct-rebuilt
+child handles is `Session` whole rather than patched field-by-field. One consequence retires with them — the
+handle-id stream no longer has to be positionally ordered around skipped fields, because a captured fragment
+has no skipped fields.
 
 **The incident class all of this comes from.** Hydration runs AFTER `DoConstruct` has already composed the entity
 fresh, so a runtime handle a construction script just built (a child probe entity, a signal binding, an AI task
