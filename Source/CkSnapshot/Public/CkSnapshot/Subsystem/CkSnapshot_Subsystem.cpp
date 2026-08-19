@@ -43,6 +43,7 @@
 
 #include "HAL/IConsoleManager.h"    // Ck.Snapshot.DumpSlot census command
 #include "Kismet/GameplayStatics.h"
+#include "Misc/Guid.h"              // FGuid::NewGuid — the load epoch's session-unique salt
 #include "Misc/ScopeExit.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "PlatformFeatures.h"       // ISaveGameSystem::GetSaveGameNames — slot enumeration
@@ -51,6 +52,7 @@
 #include "Serialization/MemoryReader.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
+#include <Engine/Engine.h>      // GEngine->GetWorldContextFromWorld — the travel state the ?CkLoad option rides
 #include <Engine/NetDriver.h>   // UNetDriver::ClientConnections to decide seamless-vs-OpenLevel
 #include <Engine/World.h>
 #include "EngineUtils.h"         // TActorRange (player rendezvous)
@@ -195,6 +197,18 @@ bool
 {
     return _IsReadyToResume;
 }
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Compose_LoadEpoch(
+        int32 InSalt,
+        int32 InCount)
+    -> int32
+{
+    return ((InSalt & kLoadEpoch_SaltMask) << kLoadEpoch_CountBits) | (InCount & kLoadEpoch_CountMask);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Snapshot_Subsystem_UE::
@@ -589,9 +603,20 @@ void
     _PreTravelWorld      = nullptr;
     _TravelMapName.Reset();
 
-    // Counted per GameInstance, and never reused: it rides the travel URL and the replicated fact, and it is
-    // what stops a client that travelled for THIS load releasing on a fact the previous one left standing.
-    ++_LoadEpoch;
+    // Minted here, and never reused: it rides the travel URL and the replicated fact, and it is what stops a
+    // client that travelled for THIS load releasing on a fact the previous one left standing. The salt is drawn
+    // once per GameInstance and from a GUID rather than from anything ambient — two PIE instances share a
+    // process, so a process id or a start time would collide between exactly the two machines this is meant to
+    // tell apart.
+    if (_LoadEpochSalt == 0)
+    {
+        _LoadEpochSalt = FMath::Max(1,
+            static_cast<int32>(GetTypeHash(FGuid::NewGuid()) & kLoadEpoch_SaltMask));
+    }
+
+    ++_LoadCount;
+    _LoadEpoch = Compose_LoadEpoch(_LoadEpochSalt, _LoadCount);
+
     _ConvergenceFramesSatisfied = 0;
     _PauseObservedUnderHold = false;
     _LoadStateChannelEntity = FCk_Handle{};
@@ -648,8 +673,12 @@ void
     DoApply_TimeFreeze(*World);
     DoSet_LoadHold(ECk_EcsWorld_LoadHold::Teardown);
 
-    // Acquired now, on the pre-travel world, so the fact has somewhere to land the moment the load reaches it.
-    // Pooled and shared with live consumers — acquire-only by design, so there is nothing to release.
+    // The PRE-TRAVEL channel, and it is worth being explicit about who it serves, because the post-travel world
+    // acquires its own and this one's entity dies with the world. It serves the clients that are ALREADY in
+    // this world: they watch the fact from here until the travel takes them, and what they must not see in that
+    // window is the PREVIOUS load's ready-to-resume still standing. Publishing false with the new epoch
+    // overwrites it, so a client cannot release for load N-1 in the seconds before load N even reaches it. The
+    // channel is pooled and shared with live consumers — acquire-only by design, nothing to release.
     DoAcquire_LoadStateChannel(*World);
     DoPublish_LoadState(false);
 
@@ -2052,6 +2081,30 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoConsume_LoadEpochOption(
+        UWorld& InWorld) const
+    -> void
+{
+    if (ck::Is_NOT_Valid(GEngine))
+    { return; }
+
+    auto* Context = GEngine->GetWorldContextFromWorld(&InWorld);
+    if (Context == nullptr)
+    { return; }
+
+    if (NOT Context->LastURL.HasOption(TEXT("CkLoad")))
+    { return; }
+
+    Context->LastURL.RemoveOption(TEXT("CkLoad"));
+
+    ck::snapshot::Verbose(TEXT("Struck the consumed ?CkLoad option from world [{}]'s travel state so it cannot "
+        "ride onto a later travel"), InWorld.GetName());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoObserve_PauseUnderHold(
         const UWorld& InWorld,
         const TCHAR* InSide,
@@ -2528,6 +2581,12 @@ auto
         UWorld& InWorld)
     -> ECk_EcsWorld_LoadHold
 {
+    // Consumed here, once, before anything branches on it — every route out of this function has finished with
+    // the option by the time it returns, and leaving it in the travel state is what lets a finished load's epoch
+    // arm a hold on the NEXT map change. See DoConsume_LoadEpochOption; InWorld.URL is untouched and is still
+    // what the reads below and the client-arm gate look at.
+    DoConsume_LoadEpochOption(InWorld);
+
     // The AUTHORITY's own post-travel world. Held from its first frame — the frame every level actor's BeginPlay
     // and every entity-script construction runs in — because the loader's own next opportunity is a full world
     // tick later, and by then the thing the hold exists to prevent has already happened.
