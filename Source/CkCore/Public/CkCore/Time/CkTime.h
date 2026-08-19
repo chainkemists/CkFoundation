@@ -8,6 +8,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+// WHICH CLOCK, and it matters most during a snapshot load. A load freezes GAME time by holding the engine's
+// global time dilation at its floor for the load's whole duration, so:
+//
+//   PausedAndDilatedAndClamped  frozen (the default, and what utils_time::Get_TimeNow resolves to)
+//   DilatedAndClampedOnly       frozen
+//   DeltaTime                   frozen (~0 per tick)
+//   AudioTime                   NOT frozen by the dilation — it is the audio clock, not the world's
+//   RealTime                    NOT frozen, deliberately
+//
+// Frozen is the CORRECT default: anything pacing gameplay stays put while the world is rebuilt, with no edit.
+// Reach for RealTime only when the code must keep running WHILE the game is frozen — a watchdog bounding work the
+// load itself is waiting on — and expect the wall-time allow-list fence to ask you to justify it.
 enum class ECk_Time_WorldTimeType : uint8
 {
     PausedAndDilatedAndClamped,

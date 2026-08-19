@@ -109,11 +109,20 @@ public:
     Get_IsRebuildInProgress(
         const FCk_Handle& InHandle);
 
-    // Runs the delegate once the world is COHERENT: immediately when no load is in progress, else one-shot on
-    // this load's OnLoadComplete (post-settle — hydrated values are readable). The consumer-side twin of the
-    // load gate: feature processors are frozen during a load, but signal/promise CALLBACKS are not — a callback
-    // delivered mid-load that reads world population (occupancy rosters, tag scans, counts) must route that
-    // read through this instead of acting on the half-rebuilt world.
+    // Runs the delegate once the world is READY TO RESUME: immediately when no load is in progress, else
+    // one-shot when this load hands the world back.
+    //
+    // Ready to resume means every payload applied AND every request those applies issued drained, physics
+    // stepped, probe overlaps converged, and GAME TIME HAS NOT ADVANCED since the load began — the loader holds
+    // global time dilation at its floor for the whole load, so nothing paced by game time moved while the world
+    // was being rebuilt. Wall time kept running, deliberately, for a small named list of watchdogs.
+    //
+    // It does NOT mean "nothing has simulated". Construction and DoBeginPlay run throughout a load, as
+    // [G1-D16] rules, so code there must be idempotent.
+    //
+    // The consumer-side twin of the hold: feature processors are frozen during a load, but signal/promise
+    // CALLBACKS are not — a callback delivered mid-load that reads world population (occupancy rosters, tag
+    // scans, counts) must route that read through this instead of acting on the half-rebuilt world.
     //
     // The immediate path reports Result = NoLoadInProgress, and the call RETURNS that too, so a caller that
     // cares can branch without asking a second question. It is not a failure: nothing was loading.
@@ -152,6 +161,14 @@ public:
      *
      * It fires for a forced-release entity too — with that entity's loss already recorded in the load report —
      * so a consumer is never left waiting on an edge that will not arrive.
+     *
+     * Fires at the GLOBAL quarantine lift, strictly BEFORE convergence — so it means "this entity's restored
+     * values are final", and it does NOT imply physics or overlap facts about the world around it. A consumer
+     * that needs those waits on Promise_OnLoadComplete instead.
+     *
+     * Note "final" is about the PAYLOAD, not about every value the feature will end up with: a handler built to
+     * the [G1-D38] shape returns Applied having only ENQUEUED deferred requests, and the feature's own processor
+     * writes the value afterwards. For a value restored that way, this edge is earlier than the write.
      *
      * Prefer this over Promise_OnLoadComplete for anything scoped to ONE entity: OnLoadComplete answers "is the
      * world coherent", which is a strictly later and coarser question.
