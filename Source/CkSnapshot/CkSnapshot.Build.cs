@@ -13,6 +13,7 @@ public class CkSnapshot : CkModuleRules
             "Engine",
             "DeveloperSettings", // UCk_Snapshot_Settings and UCk_Plugin_ProjectSettings_UE both derive UDeveloperSettings
             "ImageCore",         // FImage::ChangeFormat — reading back the HDR screenshot path's .exr
+            "NetCore",           // MARK_PROPERTY_DIRTY, reached by instantiating SetFragmentData<FCk_RepData_SnapshotLoadState>
 
             "CkActorRelay", // the net-correlated carrier the ready-to-resume fact reaches clients on
             "CkCore",
