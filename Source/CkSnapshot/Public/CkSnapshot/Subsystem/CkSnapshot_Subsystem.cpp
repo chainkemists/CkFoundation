@@ -2508,63 +2508,57 @@ auto
         return ECk_EcsWorld_LoadHold::Rebuilding;
     }
 
-    // A client hold ALREADY running, meeting a new world for the SAME load. This is the common case, not an
-    // edge: a client travels through more than one world for one load, and the channel it acquired in the
-    // previous one dies with that world — so the ticker sits watching a handle the server's fact can never
-    // reach, and the hold can only ever end at its bounded escape. Measured exactly that way before this
-    // existed: the server published READY TO RESUME and the client still burned its full frame budget
-    // reporting the fact NEVER ARRIVED.
+    // Which machine does this world belong to? Answered from THIS GameInstance's own load state, never from the
+    // world's net role. UWorld::InternalGetNetMode falls back to AttemptDeriveFromURL and then to
+    // PlayInEditorNetMode whenever the net driver is not yet attached (World.cpp:9461-9486), so "am I a client"
+    // is not reliably answerable at OnWorldBeginPlay — which is the one instant this has to be answered, before
+    // anything in the world ticks.
     //
-    // Deliberately ahead of the authority check below, and not gated on it: whatever a freshly-travelled world
-    // reports for its net mode at begin-play, a hold that is already running for this epoch belongs to this
-    // client, and the only question left is which world's channel it should be watching.
-    if (_ClientHoldActive)
+    // Ownership is answerable, though, and it is the question that actually matters: a world carrying a load
+    // epoch this GameInstance did not itself produce belongs to SOMEONE ELSE's load, and that is precisely what
+    // makes this machine a client of it. The loader holds _LoadInProgress across its whole load and stamps its
+    // own _LoadEpoch, so the authority refuses here on both counts and needs no role check to do it.
+    if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
+        EpochOption != nullptr)
     {
-        if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
-            EpochOption != nullptr)
-        {
-            const auto EpochString = FString{EpochOption};
-            const auto Epoch = FCString::Atoi(EpochOption);
+        // Validated, not merely present. FURL options survive a relative travel, and Atoi answers 0 for anything
+        // malformed — while _LoadEpoch starts at 1, so an unvalidated read would arm a hold on an epoch no
+        // publish can ever match and burn the whole budget failing open, indistinguishably from a real fault.
+        const auto EpochString = FString{EpochOption};
+        const auto Epoch = FCString::Atoi(EpochOption);
 
-            if (EpochString.IsNumeric() && Epoch == _ClientHoldEpoch && _ClientHoldWorld.Get() != &InWorld)
+        if (NOT EpochString.IsNumeric() || Epoch <= 0)
+        {
+            ck::snapshot::Verbose(TEXT("Ignoring a ?CkLoad option this world cannot use: value [{}] is not a "
+                "positive load epoch. No client hold is armed"), EpochString);
+            return ECk_EcsWorld_LoadHold::None;
+        }
+
+        const auto ThisInstanceOwnsTheLoad = _LoadInProgress || Epoch == _LoadEpoch;
+
+        if (NOT ThisInstanceOwnsTheLoad)
+        {
+            // The hold is per-EPOCH; the channel it releases on is per-WORLD. A client travels through more than
+            // one world for a single load, and the channel acquired in an earlier one dies with it — leaving the
+            // ticker watching a handle the server's fact can never reach. Measured exactly that way: the server
+            // published READY TO RESUME and the client still burned its whole budget reporting NEVER ARRIVED.
+            if (_ClientHoldActive && Epoch == _ClientHoldEpoch && _ClientHoldWorld.Get() != &InWorld)
             {
                 DoRebind_ClientHold(InWorld);
                 return ECk_EcsWorld_LoadHold::Converging;
-            }
-        }
-    }
-
-    // A CLIENT following a listen-server reload. It has no load, no report and no completion of its own — the
-    // travel URL is the earliest thing that can tell it a load owns this world, and it is readable here because
-    // ProcessServerTravel round-trips the same FURL, options intact, into ProcessClientTravel.
-    //
-    // Explicitly client-only, and not merely "the branch above did not take it": the server's own post-travel
-    // world carries the same option, so an aborted load that cleared _LoadInProgress would otherwise arm a
-    // client-shaped hold on the authority, waiting for a fact only the authority can publish.
-    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(&InWorld))
-    {
-        if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
-            EpochOption != nullptr)
-        {
-            // Validated, not merely present. FURL options survive a relative travel, and Atoi answers 0 for
-            // anything malformed — while _LoadEpoch starts at 1, so an unvalidated read arms a hold on an epoch
-            // no publish can ever match and burns 600 frames of loading screen failing open. Nothing in the log
-            // would distinguish that from a channel that never resolved.
-            const auto EpochString = FString{EpochOption};
-            const auto Epoch = FCString::Atoi(EpochOption);
-
-            if (NOT EpochString.IsNumeric() || Epoch <= 0)
-            {
-                ck::snapshot::Verbose(TEXT("Ignoring a ?CkLoad option this world cannot use: value [{}] is not a "
-                    "positive load epoch. No client hold is armed"), EpochString);
-                return ECk_EcsWorld_LoadHold::None;
             }
 
             // CONVERGING, not Rebuilding. A client rebuilds nothing — it has no saved rows and no loader — so the
             // kernel-only scope would hold its whole world out of its own replication-driven composition. What it
             // owes is coherence, which is exactly what Converging names.
-            DoBegin_ClientHold(InWorld, Epoch);
-            return ECk_EcsWorld_LoadHold::Converging;
+            //
+            // Reached on WHICHEVER world comes up first carrying the option, so a client that never passes
+            // through a transition world still arms here rather than silently going unheld.
+            if (NOT _ClientHoldActive)
+            {
+                DoBegin_ClientHold(InWorld, Epoch);
+                return ECk_EcsWorld_LoadHold::Converging;
+            }
         }
     }
 
