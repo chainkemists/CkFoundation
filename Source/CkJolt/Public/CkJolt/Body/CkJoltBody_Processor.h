@@ -88,9 +88,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Params is ReadWrite (not ReadOnly as in Setup) because SetMotionType / SetCollisionProfile must keep the
+    // params copy in step with the live body: Get_MotionType reads Params, and EndPlay reads Params to decide
+    // whether to bump the static-scene revision. A stale copy would make both lie.
     class CKJOLT_API FProcessor_JoltBody_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltBody_HandleRequests,
             FCk_Handle_JoltBody,
+            ck::TReadWrite<FFragment_JoltBody_Params>,
             ck::TReadWrite<FFragment_JoltBody_Current>,
             ck::TReadWrite<FFragment_JoltBody_Requests>,
             TExclude<FTag_JoltBody_NeedsSetup>,
@@ -113,6 +117,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
             FFragment_JoltBody_Current& InCurrent,
             FFragment_JoltBody_Requests& InRequestsComp) const -> void;
 
@@ -177,8 +182,24 @@ namespace ck
             const FFragment_JoltBody_Current& InCurrent,
             const FCk_Request_JoltBody_Teleport& InRequest) const -> void;
 
+        // The two runtime mutators below also rewrite InParams, so they take it non-const.
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetMotionType& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_JoltBody_Params& InParams,
+            const FFragment_JoltBody_Current& InCurrent,
+            const FCk_Request_JoltBody_SetCollisionProfile& InRequest) const -> void;
+
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+        ck::jolt::FCk_Jolt_CollisionLayerTable* _LayerTable = nullptr;
         FJoltWorld* _JoltWorld = nullptr;
     };
 

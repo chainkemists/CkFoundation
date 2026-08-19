@@ -323,6 +323,42 @@ auto
     return InJoltBody;
 }
 
+auto
+    UCk_Utils_JoltBody_UE::
+    Request_SetMotionType(
+        FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetMotionType& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_JoltBody
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
+
+    return InJoltBody;
+}
+
+auto
+    UCk_Utils_JoltBody_UE::
+    Request_SetCollisionProfile(
+        FCk_Handle_JoltBody& InJoltBody,
+        const FCk_Request_JoltBody_SetCollisionProfile& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_JoltBody
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
+
+    return InJoltBody;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
