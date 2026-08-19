@@ -171,6 +171,12 @@ namespace ck
         auto AnyStillPending = false;
         auto& Entries = InPending.Get_Entries();
 
+        // Declared for the whole loop: a HydrationApply may legitimately destroy the entity it is applying to,
+        // and destruction writes off whatever is still queued. That write-off must not run re-entrantly — it
+        // would claim the in-flight entry (which the returning apply then counts by its real outcome) and free
+        // this very array. While this is set it defers to us instead.
+        InPending._IsDispatchInFlight = true;
+
         // Iterate back-to-front so applied/dropped entries can be removed in place.
         for (auto Index = Entries.Num() - 1; Index >= 0; --Index)
         {
@@ -184,8 +190,21 @@ namespace ck
             { Entries.RemoveAt(Index); } // Applied or terminally dropped
         }
 
+        InPending._IsDispatchInFlight = false;
+
         if (NOT AnyStillPending)
         { InPending._PendingSinceRealTimeSeconds = 0.0; }
+
+        // An apply destroyed this entity. Everything that reached a terminal outcome above has already been
+        // counted by that outcome and removed, so what remains is exactly what never got its chance — which is
+        // what "destroyed with entries" means. Runs before the empty-check below because it removes the fragment
+        // itself when it fires.
+        if (InPending._AbandonRequested)
+        {
+            InPending._AbandonRequested = false;
+            DoAbandon_PendingHydration(InHandle);
+            return;
+        }
 
         if (Entries.IsEmpty())
         {
