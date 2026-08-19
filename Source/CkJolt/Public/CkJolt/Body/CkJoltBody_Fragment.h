@@ -132,7 +132,9 @@ namespace ck
             FCk_Request_JoltBody_AddAngularImpulse,
             FCk_Request_JoltBody_SetLinearVelocity,
             FCk_Request_JoltBody_SetAngularVelocity,
-            FCk_Request_JoltBody_Teleport>;
+            FCk_Request_JoltBody_Teleport,
+            FCk_Request_JoltBody_SetMotionType,
+            FCk_Request_JoltBody_SetCollisionProfile>;
         using RequestList = TArray<RequestType>;
 
     private:

@@ -477,6 +477,60 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Switch a live body's motion type. Dynamic/Kinematic activate the body; Static does not (a Static body is
+// inert by definition). The drain also re-stamps the entity's motion-type tags, because
+// FTag_JoltBody_KinematicFromECS is what selects a body INTO the kinematic push and OUT of the interpolated
+// writeback — leaving it stale would have the body pushed from the ECS transform AND written back into it.
+USTRUCT(BlueprintType)
+struct CKJOLT_API FCk_Request_JoltBody_SetMotionType : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_JoltBody_SetMotionType);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_JoltBody_SetMotionType);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_MotionType _MotionType = ECk_MotionType::Dynamic;
+
+public:
+    CK_PROPERTY_GET(_MotionType);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_JoltBody_SetMotionType, _MotionType);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Move a live body onto the Jolt object layer derived from a UCollisionProfile name, using the same
+// profile -> signature -> layer resolution FProcessor_JoltBody_Setup performs at creation. An unknown or
+// collision-disabled profile ENSURES and is skipped — the body keeps its previous layer rather than silently
+// landing on one that collides with nothing.
+USTRUCT(BlueprintType)
+struct CKJOLT_API FCk_Request_JoltBody_SetCollisionProfile : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_JoltBody_SetCollisionProfile);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_JoltBody_SetCollisionProfile);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _CollisionProfileName = NAME_None;
+
+public:
+    CK_PROPERTY_GET(_CollisionProfileName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_JoltBody_SetCollisionProfile, _CollisionProfileName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Payload for a JoltBody contact begin/persist signal. _OtherEntity may be INVALID (the other body has no
 // live entity). _ContactPoints/_ContactNormal are on THIS body's surface; _RelativeNormalSpeed is the closing
 // speed along that normal in UE units/s, POSITIVE when approaching (Jolt's raw sign is the opposite).
