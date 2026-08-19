@@ -2092,13 +2092,22 @@ auto
     if (Context == nullptr)
     { return; }
 
-    if (NOT Context->LastURL.HasOption(TEXT("CkLoad")))
+    const auto CarriedByLastURL = Context->LastURL.HasOption(TEXT("CkLoad"));
+
+    // BOTH copies the engine keeps. LastURL is what every relative travel inherits its option array from;
+    // LastRemoteURL is the client's verbatim record of how it joined, and `reconnect` replays it as an absolute
+    // travel — so leaving the epoch there means a client reconnecting after a completed load arms a hold for it
+    // and sits behind a frozen world for the whole client budget before failing open with NEVER ARRIVED.
+    const auto CarriedByLastRemoteURL = Context->LastRemoteURL.HasOption(TEXT("CkLoad"));
+
+    if (NOT CarriedByLastURL && NOT CarriedByLastRemoteURL)
     { return; }
 
     Context->LastURL.RemoveOption(TEXT("CkLoad"));
+    Context->LastRemoteURL.RemoveOption(TEXT("CkLoad"));
 
     ck::snapshot::Verbose(TEXT("Struck the consumed ?CkLoad option from world [{}]'s travel state so it cannot "
-        "ride onto a later travel"), InWorld.GetName());
+        "ride onto a later travel or a reconnect"), InWorld.GetName());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -2111,7 +2120,16 @@ auto
         int32 InEpoch)
     -> void
 {
-    if (_PauseObservedUnderHold || NOT InWorld.IsPaused())
+    if (_PauseObservedUnderHold)
+    { return; }
+
+    // A GAME pause — somebody pressed the button — and not merely UWorld::IsPaused(). That predicate is true for
+    // three other reasons (a client blocking on async loading, a pending map change committing, an editor
+    // debug-pause), none of which the message below describes, and any of them would CONSUME the one-shot and
+    // leave a genuine pause later in the same load silent. AWorldSettings::GetPauserPlayerState is the pause
+    // AGameModeBase::SetPause writes, which is the one the message is about.
+    const auto* Settings = InWorld.GetWorldSettings();
+    if (Settings == nullptr || Settings->GetPauserPlayerState() == nullptr)
     { return; }
 
     _PauseObservedUnderHold = true;
@@ -2627,8 +2645,10 @@ auto
         EpochOption != nullptr)
     {
         // Validated, not merely present. FURL options survive a relative travel, and Atoi answers 0 for anything
-        // malformed — while _LoadEpoch starts at 1, so an unvalidated read would arm a hold on an epoch no
-        // publish can ever match and burn the whole budget failing open, indistinguishably from a real fault.
+        // malformed — while a real epoch can never BE 0: the salt floors at 1 and the count is incremented
+        // before the compose, so the smallest value any load can mint is 65537. An unvalidated read would
+        // therefore arm a hold on an epoch no publish can ever match and burn the whole budget failing open,
+        // indistinguishably from a real fault.
         const auto EpochString = FString{EpochOption};
         const auto Epoch = FCString::Atoi(EpochOption);
 
