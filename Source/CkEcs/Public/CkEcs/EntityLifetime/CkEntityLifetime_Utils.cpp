@@ -48,43 +48,6 @@ namespace ck_entity_lifetime_utils
         Ctx._Count = FMath::Max(0, Ctx._Count - 1);
     }
 
-    // The other half of entering destruction during a load: whatever the entity still had queued dies with it.
-    // Counted here because this is the last moment the entries are knowable, and REMOVED here so each one is
-    // counted exactly once — the dispatcher's view carries CK_IGNORE_PENDING_KILL, so left in place the same
-    // entries would also be applied (or swept as unapplied) after being written off, and the load report's
-    // payload closure would over-sum. Applying restored state to an entity already entering destruction buys
-    // nothing either way.
-    auto
-        DoAbandon_PendingHydration(
-            FCk_Handle& InHandle)
-        -> void
-    {
-        if (NOT InHandle.Has<ck::FFragment_PendingHydration>())
-        { return; }
-
-        auto Registry = InHandle.Get_RegistryView();
-        auto* Outcomes = Registry.TryGetContext<ck::FCtx_HydrationOutcomes>();
-
-        const auto& Entries = InHandle.Get<ck::FFragment_PendingHydration>().Get_Entries();
-        const auto Outstanding = Entries.Num();
-
-        if (Outcomes != nullptr)
-        {
-            Outcomes->_DestroyedWithEntries += Outstanding;
-
-            for (const auto& Entry : Entries)
-            {
-                Outcomes->Record_Loss(
-                    ck::IsValid(Entry.GetScriptStruct()) ? Entry.GetScriptStruct()->GetName() : FString{TEXT("<invalid type>")},
-                    ck::Format_UE(TEXT("{}"), InHandle),
-                    FString{TEXT("destroyed-with-entries")});
-            }
-        }
-
-        InHandle.Try_Remove<ck::FTag_Hydration_PendingApply>();
-        InHandle.Try_Remove<ck::FFragment_PendingHydration>();
-    }
-
     // Both halves, at every site that stamps destroy-initiate.
     auto
         DoEnter_Destruction(
@@ -92,7 +55,11 @@ namespace ck_entity_lifetime_utils
         -> void
     {
         DoLeave_HydrationQuarantine(InHandle);
-        DoAbandon_PendingHydration(InHandle);
+
+        // Owned by the persistence layer, because it is a statement about payload accounting rather than about
+        // lifetime — and because the hydration dispatcher is its second caller (an apply that destroys its own
+        // entity reaches it re-entrantly, and it defers until the dispatch is off the stack).
+        ck::DoAbandon_PendingHydration(InHandle);
     }
 }
 
