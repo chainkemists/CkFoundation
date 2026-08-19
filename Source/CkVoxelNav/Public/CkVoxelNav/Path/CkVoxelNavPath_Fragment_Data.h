@@ -173,6 +173,17 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Ends an in-flight volumetric path episode. Request_FindPath acquires; this releases.
+USTRUCT(BlueprintType)
+struct CKVOXELNAV_API FCk_Request_VoxelNavPath_AbandonPath : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_VoxelNavPath_AbandonPath);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoxelNavPath_AbandonPath);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_VoxelNavPath_OnPathReady,
     FCk_Handle_VoxelNavPath, InPath);

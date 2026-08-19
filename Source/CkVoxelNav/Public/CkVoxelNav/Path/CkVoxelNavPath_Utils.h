@@ -62,6 +62,18 @@ public:
         const FCk_Request_VoxelNavPath_FindPath& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** The release half of Request_FindPath: drops queued queries and returns the stored result to
+     *  None, so nothing is left waiting on an episode the caller has ended. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoxelNavPath",
+              DisplayName="[Ck][VoxelNavPath] Request Abandon Path",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoxelNavPath
+    Request_AbandonPath(
+        UPARAM(ref) FCk_Handle_VoxelNavPath& InPath,
+        const FCk_Request_VoxelNavPath_AbandonPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     /** Bind the volume this agent plans through, for consumers that issue its path requests for it. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VoxelNavPath",

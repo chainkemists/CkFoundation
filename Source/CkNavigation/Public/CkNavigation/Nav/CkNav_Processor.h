@@ -8,6 +8,25 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::nav
+{
+    // Drops every deferred FindPath queued for this entity, completing each with Failed_Cancelled.
+    // The deferral queue is process-wide and private to the processor TU, so an abandon issued
+    // from anywhere else needs this seam to reach it — otherwise a query the caller has abandoned
+    // keeps re-projecting until its deferral timeout and then writes the slot the caller just
+    // released.
+    CKNAVIGATION_API auto PurgeDeferredRequestsFor(FCk_Handle& InHandle) -> void;
+
+    // Releases EVERY in-flight query for this entity — the undrained requests still sitting in
+    // FFragment_Nav_Requests and this entity's entries in the deferral queue — completing each
+    // with Failed_Cancelled. Deliberately does not touch the result slot: callers differ on what
+    // the slot should end up saying (an abandon wants None, a timeout wants Failed), but they
+    // agree that nothing may still be computing an answer for an episode that has ended.
+    CKNAVIGATION_API auto PurgeInFlightQueriesFor(FCk_Handle& InHandle) -> void;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     class CKNAVIGATION_API FProcessor_Nav_HandleRequests : public ck_exp::TProcessor<

@@ -638,6 +638,53 @@ auto
 
 auto
     UCk_Utils_PathNetworkFollower_UE::
+    Request_AbandonRoute(
+        FCk_Handle_PathNetworkFollower& InFollower,
+        const FCk_Request_PathNetworkFollower_AbandonRoute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_PathNetworkFollower
+{
+    const auto FollowerIsValid = ck::IsValid(InFollower);
+    CK_ENSURE_IF_NOT(FollowerIsValid,
+        TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_AbandonRoute"), InFollower)
+    {
+        InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InFollower;
+    }
+
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InFollower);
+    CK_ENSURE_IF_NOT(HasAuthority,
+        TEXT("Request_AbandonRoute on PathNetworkFollower [{}] dropped — caller does not have "
+             "authority. Routing is server-only."), InFollower)
+    {
+        InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InFollower;
+    }
+
+    // Undrained requests owe their callers a completion, and one left in the fragment would drain
+    // next tick and re-park the corridor this call just released.
+    if (InFollower.Has<ck::FFragment_PathNetworkFollower_Requests>())
+    {
+        const auto Queued = InFollower.Get<ck::FFragment_PathNetworkFollower_Requests>();
+        InFollower.Try_Remove<ck::FFragment_PathNetworkFollower_Requests>();
+        ck::request::FireCancelledForPending(InFollower, Queued.Get_Requests());
+    }
+
+    if (InFollower.Has<ck::FFragment_PathNetworkFollower_Corridor>())
+    {
+        auto& Result = InFollower.Get<ck::FFragment_PathNetworkFollower_Corridor>()._Result;
+        Result._Status = ECk_PathNetwork_RouteStatus::None;
+        Result._RequestRevision = InRequest.Get_RequestRevision();
+    }
+
+    InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Succeeded);
+    return InFollower;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
     Request_UpdateTuningAndReplan(
         FCk_Handle_PathNetworkFollower& InFollower,
         const FCk_PathNetworkFollower_Tuning& InTuning)

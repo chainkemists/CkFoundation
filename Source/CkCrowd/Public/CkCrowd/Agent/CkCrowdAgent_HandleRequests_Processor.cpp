@@ -60,34 +60,48 @@ namespace ck
             }
             if (LastPolicyRequest != nullptr)
             { InParams._NavQueryFilter = LastPolicyRequest->Get_NavQueryFilter(); }
-            const auto NavigationRevisionBeforeCommands = InPathFollow.Get_ActiveNavigationRequestRevision();
+            // Whether a movement command actually dispatched a route. Asked per-request rather
+            // than by diffing the revision across the whole batch, because ENDING an episode
+            // advances the revision too — a Stop in this batch would otherwise read as "a route
+            // was dispatched" and silently suppress the force-replan below.
+            auto MovementCommandDispatched = false;
 
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
+                using RequestType = std::decay_t<decltype(InRequest)>;
+                constexpr auto CanDispatchRoute =
+                    std::is_same_v<RequestType, FCk_Request_CrowdAgent_MoveTo>
+                    || std::is_same_v<RequestType, FCk_Request_CrowdAgent_FollowTarget>;
+
+                const auto RevisionBeforeRequest = InPathFollow.Get_ActiveNavigationRequestRevision();
+
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                using RequestType = std::decay_t<decltype(InRequest)>;
-                if constexpr (std::is_same_v<RequestType, FCk_Request_CrowdAgent_MoveTo>
-                    || std::is_same_v<RequestType, FCk_Request_CrowdAgent_FollowTarget>)
+                if constexpr (CanDispatchRoute)
                 {
                     Result = DoHandleRequest(
                         InHandle, InParams, InPathFollow, InDesired, InRequest);
+
+                    if (InPathFollow.Get_ActiveNavigationRequestRevision() != RevisionBeforeRequest)
+                    { MovementCommandDispatched = true; }
                 }
                 else
                 {
+                    // These overloads are void and have no rejection path, so reaching the line
+                    // after the call IS the success condition.
                     DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
                     Result = ECk_Request_OperationResult::Succeeded;
                 }
             }), policy::DontResetContainer{});
 
-            // A MoveTo/FollowTarget that actually dispatched a route advanced this revision using
-            // the resolved policy. If it was a same-goal no-op (or no movement command appeared),
-            // force-replan the current episode without changing its goal/correlation/follow ownership.
+            // A MoveTo/FollowTarget that actually dispatched a route already used the resolved
+            // policy. If it was a same-goal no-op (or no movement command appeared), force-replan
+            // the current episode without changing its goal/correlation/follow ownership.
             if (LastPolicyRequest != nullptr
                 && LastPolicyRequest->Get_ForceReplan() == ECk_EnableDisable::Enable
-                && InPathFollow.Get_ActiveNavigationRequestRevision() == NavigationRevisionBeforeCommands)
+                && NOT MovementCommandDispatched)
             {
                 DoForceReplan(InHandle, InParams, InPathFollow, InDesired);
             }
@@ -215,6 +229,12 @@ namespace ck
             }
         }
 
+        // Recorded HERE rather than at the provider fork: five other sites dispatch a CkNavigation
+        // query directly (both fallbacks, BlockDetect's stall re-path, PathRefresh, ForceReplan).
+        // Recording at the fork alone left the episode still labelled with the provider that just
+        // gave up, so the overlay named a sidewalk stall for what was by then an Unreal-nav query.
+        InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::Navigation;
+
         UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
     }
 
@@ -236,6 +256,75 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_HandleRequests::
+        DoAbandonActiveProviderQuery(
+            HandleType InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> int32
+    {
+        const auto Revision = AdvanceNavigationRequestRevision(InPathFollow);
+        const auto Provider = InPathFollow.Get_ActiveProvider();
+        InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::None;
+
+        auto NonConstHandle = InHandle;
+
+        // The shared nav slot is parked by EVERY provider, so it is released for every provider —
+        // not only when CkNavigation owned the query. Releasing it is what stops a stopped agent
+        // reading as Pending forever.
+        UCk_Utils_Nav_UE::Request_AbandonPath(
+            NonConstHandle, FCk_Request_Nav_AbandonPath{Revision}, {});
+
+        DoReleaseProviderQuery(InHandle, Provider, Revision);
+
+        return Revision;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoReleaseProviderQuery(
+            HandleType InHandle,
+            ECk_CrowdAgent_PathProvider InProvider,
+            int32 InRevision)
+        -> void
+    {
+        auto NonConstHandle = InHandle;
+
+        switch (InProvider)
+        {
+            case ECk_CrowdAgent_PathProvider::PathNetwork:
+            {
+                if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
+                {
+                    auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
+                    UCk_Utils_PathNetworkFollower_UE::Request_AbandonRoute(
+                        Follower, FCk_Request_PathNetworkFollower_AbandonRoute{InRevision}, {});
+                }
+                break;
+            }
+            case ECk_CrowdAgent_PathProvider::VoxelNav:
+            {
+                if (UCk_Utils_VoxelNavPath_UE::Has(NonConstHandle))
+                {
+                    auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(NonConstHandle);
+                    UCk_Utils_VoxelNavPath_UE::Request_AbandonPath(
+                        Path, FCk_Request_VoxelNavPath_AbandonPath{}, {});
+                }
+                break;
+            }
+            case ECk_CrowdAgent_PathProvider::Navigation:
+            case ECk_CrowdAgent_PathProvider::None:
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
         RequestPathForActiveGoal(
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
@@ -244,9 +333,10 @@ namespace ck
     {
         const auto Goal = InPathFollow.Get_ActiveGoal();
 
-        // Advance even for a non-CkNavigation provider: an already queued CkNavigation result must
-        // not replace this newer route after the provider decision changes.
-        AdvanceNavigationRequestRevision(InPathFollow);
+        // Every new episode begins by ending the previous one: the revision advances (so an
+        // already-queued result cannot replace this newer route) AND the provider that owned the
+        // last query is released, rather than being left to compute an answer nobody will consume.
+        DoAbandonActiveProviderQuery(InHandle, InPathFollow);
 
         const auto HasValidVoxelVolume = UCk_Utils_VoxelNavPath_UE::Has(InHandle)
             && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume());
@@ -259,6 +349,8 @@ namespace ck
             FCk_Nav_Algorithm::MarkPathPending(
                 InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
             InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
+
+            InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::VoxelNav;
 
             auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(InHandle);
             const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
@@ -276,6 +368,8 @@ namespace ck
             FCk_Nav_Algorithm::MarkPathPending(
                 InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
             InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+
+            InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::PathNetwork;
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
@@ -343,6 +437,14 @@ namespace ck
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ProtectedLeadingWaypointCount = 0;
         InHandle.Get<FFragment_CrowdAgent_PathTrouble>() = FFragment_CrowdAgent_PathTrouble{};
+
+        // Stop is a terminal for the movement episode, so it releases what the episode acquired.
+        // Without this the shared nav-path slot keeps the Pending its dispatch parked there: the
+        // provider result that lands afterwards is refused by OnRouteResolved's tag gate (which
+        // the tag removals below have just closed) and nothing else ever writes it, so every
+        // Get_PathStatus consumer is told a query is in flight for the entity's whole life.
+        DoAbandonActiveProviderQuery(InHandle, InPathFollow);
+        InPathFollow._ActiveGoal = FVector::ZeroVector;
 
         InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();

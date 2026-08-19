@@ -190,6 +190,11 @@ private:
             ToolTip = "Seconds the agent may go without improving its best REMAINING path distance before it counts as stalled. Replaces the feet-sample centroid ring, which an agent sliding laterally along a wall (exactly what the navmesh constraint's surface walk produces) evaded forever while its velocity stayed nonzero. Progress along the path cannot be faked by sliding, and the same measure also catches corner orbiting."))
     float _BlockDetectionNoProgressWindowSeconds = 3.0f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "PathEpisode",
+        meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0,
+            ToolTip = "Seconds a path episode may sit Pending before it is failed with PendingTimeout. The two legitimate long waits are both shorter and bounded: CkNavigation force-fails its deferral queue at ck.Nav.MaxDeferralSeconds (5s), and CkPathNetwork re-enqueues a route in the same breath as it re-parks one. CkPathNetwork and CkVoxelNav carry no timeout of their own, so without this a provider that never answers wedges the agent silently and forever."))
+    float _PathPendingTimeoutSeconds = 10.0f;
+
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0,
             ToolTip = "How much (cm) the best remaining path distance must improve within the no-progress window to count as progress. Too small and push-apart jitter reads as forward motion; too large and a legitimately slow agent (heavy crowd, tight corridor) is declared stalled."))
@@ -298,6 +303,7 @@ public:
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
     CK_PROPERTY_GET(_BlockDetectionNoProgressWindowSeconds);
+    CK_PROPERTY_GET(_PathPendingTimeoutSeconds);
     CK_PROPERTY_GET(_BlockDetectionProgressEpsilonCm);
     CK_PROPERTY_GET(_BlockDetectionMaxStallRepaths);
     CK_PROPERTY_GET(_BlockDetectionOffPathRepathThresholdCm);
