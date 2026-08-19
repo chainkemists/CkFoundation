@@ -232,9 +232,6 @@ private:
     UPROPERTY()
     int32 _EntitiesOrphaned = 0;
 
-    UPROPERTY()
-    int32 _EntitiesPartiallyRestored = 0;
-
     // Rows in the save's payload table. Applied + Rejected + DroppedNoHandler + DroppedTimeout +
     // DestroyedWithEntries + UnappliedAtFinish + OnSkipped + OnOrphaned + OnUnresolvedOwner + Dropped
     // partitions it exactly — the closure asks what HAPPENED to each row, not how far it got.
@@ -290,15 +287,6 @@ private:
     int32 _PayloadsDropped = 0;
 
     UPROPERTY()
-    TArray<FString> _SkippedFragmentTypes;
-
-    UPROPERTY()
-    TArray<FString> _SkippedDynamicTypes;
-
-    UPROPERTY()
-    TArray<FString> _SkippedScriptClasses;
-
-    UPROPERTY()
     TArray<FCk_Snapshot_OrphanRecord> _Orphans;
 
     UPROPERTY()
@@ -339,7 +327,6 @@ public:
     CK_PROPERTY(_EntitiesRestored);
     CK_PROPERTY(_EntitiesSkipped);
     CK_PROPERTY(_EntitiesOrphaned);
-    CK_PROPERTY(_EntitiesPartiallyRestored);
     CK_PROPERTY(_PayloadsTotal);
     CK_PROPERTY(_PayloadsEnqueued);
     CK_PROPERTY(_PayloadsApplied);
@@ -352,9 +339,6 @@ public:
     CK_PROPERTY(_PayloadsOnOrphanedEntities);
     CK_PROPERTY(_PayloadsOnUnresolvedOwner);
     CK_PROPERTY(_PayloadsDropped);
-    CK_PROPERTY(_SkippedFragmentTypes);
-    CK_PROPERTY(_SkippedDynamicTypes);
-    CK_PROPERTY(_SkippedScriptClasses);
     CK_PROPERTY(_Orphans);
     CK_PROPERTY(_Skips);
     CK_PROPERTY(_UsedEscalatedRebuild);
