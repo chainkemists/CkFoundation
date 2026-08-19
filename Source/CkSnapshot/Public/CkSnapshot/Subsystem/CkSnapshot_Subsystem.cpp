@@ -2490,12 +2490,21 @@ auto
         // freeze does NOT survive travel and this is where the post-travel world gets its own.
         DoApply_TimeFreeze(InWorld);
 
-        // REBUILDING, not Converging. This world is about to run every level actor's BeginPlay and every
-        // entity-script construction in it, and those are exactly the frames a level-triggered producer would
-        // seed into an empty world beside the copies the loader is about to restore. Converging is deliberately
-        // outside the spawn-suppression set (payload applies must be able to compose), so seeding it here would
-        // leave the very window the seed was added for unsuppressed.
-        return ECk_EcsWorld_LoadHold::Rebuilding;
+        // CONVERGING, and the value is measured rather than reasoned. Rebuilding was tried here on the argument
+        // that this world is about to run every level actor's BeginPlay, which is where a level-triggered
+        // producer would seed population beside the copies the loader is restoring, and Rebuilding is the one
+        // phase that suppresses Request_SpawnEntity. It BROKE the load: those same first frames are when the
+        // level's own on-demand infrastructure spawns its entity and stamps the SaveKey the loader rendezvouses
+        // onto, so suppressing them left three EngineOwned rows unresolvable [savekey-miss] and cascaded 64 more
+        // into [owner-orphaned]. Measured on PlayerQuickUseHeldItemAfterLoad, same binary otherwise:
+        //   Rebuilding  -> entities [159] = mapped [85]  + skipped [7] + orphaned [67]   FAIL
+        //   Converging  -> entities [159] = mapped [152] + skipped [7] + orphaned [0]    PASS (= Gate 01 ref)
+        //
+        // The BeginPlay-seeding window is real, but it is the PRODUCER's to guard, not this seed's:
+        // Get_IsRebuildInProgress answers true in every hold phase including this one, which is the question a
+        // level-triggered seeder must ask. The framework cannot close that window by refusing spawns here
+        // without also refusing the rebuild its own restored rows depend on.
+        return ECk_EcsWorld_LoadHold::Converging;
     }
 
     // Which machine does this world belong to? Answered from THIS GameInstance's own load state, never from the
