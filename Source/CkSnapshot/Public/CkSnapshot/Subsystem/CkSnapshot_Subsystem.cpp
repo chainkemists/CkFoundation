@@ -629,8 +629,18 @@ void
     _SkippedIds.Reset();
     _SkipRecords.Reset();
     _PersistedIds.Reset();
+    _SavedIdsAwaitingHydration.Reset();
     for (const auto& Entry : _V3Tables.Get_Entities())
-    { _PersistedIds.Add(Entry.Get_SavedId()); }
+    {
+        _PersistedIds.Add(Entry.Get_SavedId());
+
+        // A row with a saved transform is one the load still places (DoApply_SavedTransforms, at enqueue), so
+        // it belongs to the same "not written yet" set as a row carrying payloads.
+        if (NOT Entry.Get_SavedWorldTransform().Equals(FTransform::Identity))
+        { _SavedIdsAwaitingHydration.Add(Entry.Get_SavedId()); }
+    }
+    for (const auto& Payload : _V3Tables.Get_Payloads())
+    { _SavedIdsAwaitingHydration.Add(Payload.Get_OwnerSavedId()); }
     _PendingBridgeActors.Reset();
     _V3LoadReport = FCk_Snapshot_LoadReport{};
     _V3LoadReport.Set_Result(ECk_SnapshotResult::Success);
@@ -1731,19 +1741,74 @@ auto
         if (ck::Is_NOT_Valid(Restored))
         { continue; }
 
-        Restored.AddOrGet<ck::FTag_Hydration_Quarantine>();
         Registry = Restored.Get_RegistryView();
+
+        // Additive, not assigning: the escalated rebuild may already have stamped part of this set, and the
+        // context count is a live POPULATION (destroy-initiate decrements it), so re-deriving it from a full
+        // walk would silently undo those decrements.
+        if (Restored.Has<ck::FTag_Hydration_Quarantine>())
+        { continue; }
+
+        Restored.Add<ck::FTag_Hydration_Quarantine>();
         ++StampedCount;
     }
 
     if (StampedCount == 0)
     { return; }
 
-    Registry.SetContext<ck::FCtx_HydrationQuarantine>()._Count = StampedCount;
+    Registry.SetContext<ck::FCtx_HydrationQuarantine>()._Count += StampedCount;
     _QuarantineStamped = true;
 
     ck::snapshot::Display(TEXT("DIAG: v3 hydrate — quarantined [{}] restored entities until every payload applies"),
         StampedCount);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoStamp_HydrationQuarantine_MappedAwaitingHydration()
+    -> void
+{
+    if (_SavedIdsAwaitingHydration.IsEmpty())
+    { return; }
+
+    auto StampedCount = 0;
+    auto Registry = FCk_Registry{};
+
+    for (const auto& Pair : _SavedIdMap)
+    {
+        // Rows the load owes nothing to are deliberately left visible: their Setup can only ever read construct
+        // defaults, which is the correct answer for them, and the escalation's whole purpose is to let the
+        // game-side finisher of a staged construction reach the entities it is waiting on.
+        if (NOT _SavedIdsAwaitingHydration.Contains(Pair.Key))
+        { continue; }
+
+        auto Restored = Pair.Value;
+        if (ck::Is_NOT_Valid(Restored))
+        { continue; }
+
+        Registry = Restored.Get_RegistryView();
+
+        if (Restored.Has<ck::FTag_Hydration_Quarantine>())
+        { continue; }
+
+        Restored.Add<ck::FTag_Hydration_Quarantine>();
+        ++StampedCount;
+    }
+
+    if (StampedCount == 0)
+    { return; }
+
+    Registry.SetContext<ck::FCtx_HydrationQuarantine>()._Count += StampedCount;
+
+    // The lift walks _MappedLiveEntities and releases whatever it finds tagged, so these rows leave by exactly
+    // the same three exits (settle, hydrate-frame-cap, load-finish) with the same per-entity accounting — this
+    // flag is what stops every one of them from being a no-op before the enqueue stamp runs.
+    _QuarantineStamped = true;
+
+    ck::snapshot::Display(TEXT("DIAG: v3 escalated rebuild — quarantined [{}] mapped entities awaiting hydration "
+        "so the full-scope ticks cannot run their Setup against construct defaults"), StampedCount);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -3042,6 +3107,12 @@ auto
         {
             const auto Complete = DoRebuild_Tick();
 
+            // Already escalated ⇒ the world is ticking the FULL scope between our ticks, and DoRebuild_Tick just
+            // mapped more rows. Re-stamp so a row mapped on THIS tick is held before the next full-scope pass,
+            // not only the ones that existed when the escalation began.
+            if (_RebuildEscalated)
+            { DoStamp_HydrationQuarantine_MappedAwaitingHydration(); }
+
             // Some saved entities may never resolve (content drift, infra the fresh world owns). Rather than always
             // burn kLoad_RebuildFrameCap, proceed once no NEW entity maps for kLoad_RebuildStallTicks ticks.
             if (_SavedIdMap.Num() > _RebuildLastMappedCount)
@@ -3069,6 +3140,12 @@ auto
                 _V3LoadReport.Set_UsedEscalatedRebuild(true);
                 ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped — escalating to zero-time full-scope ticks"),
                     _SavedIdMap.Num(), _V3Tables.Get_Entities().Num());
+
+                // BEFORE the first full-scope tick, which is the world's own next Tick. Escalating opens the scope
+                // to every GAME processor while the payloads are still un-enqueued — without this, a mapped row's
+                // one-shot Setup runs here, consumes its marker and derives the feature from construct defaults,
+                // and the payload that arrives later has no Setup left to read it (the C2 hole on this path).
+                DoStamp_HydrationQuarantine_MappedAwaitingHydration();
                 return true;
             }
 
@@ -3316,6 +3393,7 @@ auto
     _SkippedIds.Reset();
     _SkipRecords.Reset();
     _PersistedIds.Reset();
+    _SavedIdsAwaitingHydration.Reset();
     _PendingBridgeActors.Reset();
 
     const auto Delegate = _PendingLoadDelegate;
