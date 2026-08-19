@@ -209,6 +209,19 @@ public:
         const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // The release half of Request_FindRoute: drops queued route requests and returns the corridor
+    // to None so no consumer is left told a route is still being computed. Server-only, mirroring
+    // its acquire.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName="[Ck][PathNetworkFollower] Request Abandon Route",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_PathNetworkFollower
+    Request_AbandonRoute(
+        UPARAM(ref) FCk_Handle_PathNetworkFollower& InFollower,
+        const FCk_Request_PathNetworkFollower_AbandonRoute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetworkFollower",
               DisplayName="[Ck][PathNetworkFollower] Request Set Network",

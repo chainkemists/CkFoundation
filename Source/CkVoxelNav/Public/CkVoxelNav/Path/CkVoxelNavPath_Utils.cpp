@@ -82,6 +82,41 @@ auto
 
 auto
     UCk_Utils_VoxelNavPath_UE::
+    Request_AbandonPath(
+        FCk_Handle_VoxelNavPath& InPath,
+        const FCk_Request_VoxelNavPath_AbandonPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoxelNavPath
+{
+    const auto PathIsValid = ck::IsValid(InPath);
+
+    CK_ENSURE_IF_NOT(PathIsValid,
+        TEXT("Invalid VoxelNav Path Handle [{}] supplied to Request_AbandonPath"), InPath)
+    {
+        InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InPath;
+    }
+
+    // Undrained queries owe their callers a completion, and one left in the fragment would drain
+    // next tick and write a result for an episode that no longer exists.
+    if (InPath.Has<ck::FFragment_VoxelNavPath_Requests>())
+    {
+        const auto Queued = InPath.Get<ck::FFragment_VoxelNavPath_Requests>();
+        InPath.Try_Remove<ck::FFragment_VoxelNavPath_Requests>();
+        ck::request::FireCancelledForPending(InPath, Queued.Get_Requests());
+    }
+
+    if (InPath.Has<ck::FFragment_VoxelNavPath_Result>())
+    { InPath.Get<ck::FFragment_VoxelNavPath_Result>()._Status = ECk_VoxelNav_PathStatus::None; }
+
+    InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Succeeded);
+    return InPath;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNavPath_UE::
     Request_SetVolume(
         FCk_Handle_VoxelNavPath& InPath,
         const FCk_Handle_VoxelNavVolume& InVolume,

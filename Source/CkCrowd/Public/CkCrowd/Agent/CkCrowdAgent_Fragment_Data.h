@@ -113,6 +113,24 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_Mode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Which provider owns the query the active movement episode is waiting on. Recorded when the
+// episode dispatches, because the provider choice in RequestPathForActiveGoal reads MUTABLE state
+// (the installed-path fragments and the PathPending tag) and so cannot be re-derived once the
+// episode ends. Ending an episode has to abandon the right provider's in-flight query, and the
+// path-trouble overlay has to name the provider that is actually stalled rather than assuming
+// CkNavigation.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_PathProvider : uint8
+{
+    None,           // No episode in flight
+    Navigation,     // CkNavigation (Recast)
+    PathNetwork,    // CkPathNetwork sidewalk follower
+    VoxelNav        // CkVoxelNav volumetric
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_PathProvider);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Reflected ECS params for a crowd agent (radius, height, tags, locomotion, separation, etc.).
 // See the module's Tunables Reference for the defaults table.
 USTRUCT(BlueprintType)
@@ -334,6 +352,13 @@ private:
     UPROPERTY()
     int32 _ActiveNavigationRequestRevision = 0;
 
+    // Provider that owns the in-flight query for this episode. Set when the episode dispatches;
+    // cleared when it ends. The end-of-episode seam routes its abandon on this, so it must be
+    // recorded rather than re-derived — RequestPathForActiveGoal's provider choice reads state
+    // the teardown has already changed.
+    UPROPERTY()
+    ECk_CrowdAgent_PathProvider _ActiveProvider = ECk_CrowdAgent_PathProvider::None;
+
     // Stationary-markup confirmation serial current when this path was installed. PathRefresh
     // compares it against each confirmed disc's serial: only a disc that became visible to Recast
     // AFTER the path can trigger a re-path, so a path that already chose to pay a disc's cost is
@@ -351,6 +376,7 @@ public:
     CK_PROPERTY_GET(_ProtectedLeadingWaypointCount);
     CK_PROPERTY_GET(_ActivePathEndsShortOfGoal);
     CK_PROPERTY_GET(_ActiveNavigationRequestRevision);
+    CK_PROPERTY_GET(_ActiveProvider);
     CK_PROPERTY_GET(_PathSerial);
 };
 

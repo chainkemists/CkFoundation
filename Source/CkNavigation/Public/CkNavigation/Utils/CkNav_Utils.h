@@ -39,6 +39,21 @@ public:
         const FCk_Request_Nav_FindPath& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // The release half of Request_FindPath. Returns the result slot to None, drops the entity's
+    // queued and deferred queries, and stamps the caller's post-abandon revision so a query that
+    // drains afterwards is recognised as superseded. Immediate, not deferred: the caller is
+    // ending the episode now, and leaving the slot readable as Pending for even one more tick is
+    // what every consumer of Get_PathStatus would act on.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Request AbandonPath",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle
+    Request_AbandonPath(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Nav_AbandonPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     // Default-constructed result (Status == None) if the entity has never issued a request.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Nav",
@@ -71,6 +86,30 @@ public:
     Request_NavigationRebuild_ForTesting(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Autotest hooks for the pending watchdog. Its two rows guard states that, once every terminal
+    // releases its episode correctly, CANNOT be produced through the public API — an orphaned
+    // Pending slot is unreachable by construction, and no provider stalls past the timeout on
+    // demand. A reconciler whose whole job is converging from arbitrary state has to be driven
+    // from arbitrary state to be tested at all. Production never needs either of these.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Request MarkPathPending (Testing)")
+    static FCk_Handle
+    Request_MarkPathPending_ForTesting(
+        UPARAM(ref) FCk_Handle& InHandle,
+        int32 InRequestRevision);
+
+    // Backdates the parked-at timestamp so the timeout row can be driven against the REAL
+    // threshold in one frame. Only the clock is faked; the episode, tags, revision and threshold
+    // are all production state.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Request AgePathPending (Testing)")
+    static FCk_Handle
+    Request_AgePathPending_ForTesting(
+        UPARAM(ref) FCk_Handle& InHandle,
+        float InAgeBySeconds);
 
     // OutSnappedPosition is written only when a navmesh tile is found within the search box.
     UFUNCTION(BlueprintCallable,

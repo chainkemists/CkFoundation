@@ -2,8 +2,11 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/CkNavigation_Stats.h"
+#include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/Nav/CkNav_Processor.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include <NavigationSystem.h>
@@ -43,6 +46,74 @@ auto
     ck::nav::Verbose(TEXT("FindPath enqueued on [{}] -> target [{}]"),
         InHandle, InRequest.Get_TargetLocation());
 
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
+    Request_AbandonPath(
+        FCk_Handle& InHandle,
+        const FCk_Request_Nav_AbandonPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Invalid handle [{}] passed to UCk_Utils_Nav_UE::Request_AbandonPath"), InHandle)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    ck::nav::PurgeInFlightQueriesFor(InHandle);
+
+    FCk_Nav_Algorithm::AbandonPath(InHandle, InRequest.Get_RequestRevision());
+
+    ck::nav::Verbose(TEXT("Path episode abandoned on [{}] (revision now [{}])"),
+        InHandle, InRequest.Get_RequestRevision());
+
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
+    Request_MarkPathPending_ForTesting(
+        FCk_Handle& InHandle,
+        int32       InRequestRevision)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Invalid handle [{}] passed to Request_MarkPathPending_ForTesting"), InHandle)
+    { return InHandle; }
+
+    FCk_Nav_Algorithm::MarkPathPending(InHandle, InRequestRevision);
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
+    Request_AgePathPending_ForTesting(
+        FCk_Handle& InHandle,
+        float       InAgeBySeconds)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Invalid handle [{}] passed to Request_AgePathPending_ForTesting"), InHandle)
+    { return InHandle; }
+
+    if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
+    { return InHandle; }
+
+    FCk_Nav_Algorithm::AgePathPending(InHandle, InAgeBySeconds);
     return InHandle;
 }
 

@@ -180,7 +180,29 @@ namespace ck
         }
         else if (IsPending)
         {
-            Label = TEXT("UNREAL NAV: Pending");
+            // MarkPathPending is provider-independent — every backend parks this one slot — so
+            // naming CkNavigation here would report a stalled sidewalk or volumetric query as an
+            // Unreal-navmesh problem and send the reader to the wrong layer.
+            switch (InPathFollow.Get_ActiveProvider())
+            {
+                case ECk_CrowdAgent_PathProvider::PathNetwork:
+                {
+                    Label = TEXT("SIDEWALK: Pending");
+                    break;
+                }
+                case ECk_CrowdAgent_PathProvider::VoxelNav:
+                {
+                    Label = TEXT("VOXEL NAV: Pending");
+                    break;
+                }
+                case ECk_CrowdAgent_PathProvider::Navigation:
+                case ECk_CrowdAgent_PathProvider::None:
+                default:
+                {
+                    Label = TEXT("UNREAL NAV: Pending");
+                    break;
+                }
+            }
         }
         else
         {
