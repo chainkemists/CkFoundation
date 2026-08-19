@@ -47,6 +47,11 @@ mirrors `bShouldBeOccluded`; `ECk_WorldSpaceWidget_RenderMode::WorldComponent` m
 - EndPlay must remove the WRAPPER from the viewport, not the content widget: the wrapper is what
   `Request_WrapWidget` added, and removing it takes its content child with it. Removing only the
   content leaked the wrapper into the viewport forever.
+- `ScreenOverlay` mode caches the owning `ULocalPlayer` (not the PlayerController) and re-resolves
+  `PlayerController` on every read — controller identity churns (DebugCamera swap, travel,
+  possession) while the local player does not. While the viewport is ejected/SIE
+  (`UGameViewportClient::IsSimulateInEditorViewport`), overlay widgets hide: the editor camera is
+  not represented by any PlayerController, so a projection through the player is undefined.
 - Enabled/disabled is the `FTag_WorldSpaceWidget_Disabled` tag, not a fragment field —
   `Get_EnableDisable` derives from tag presence and both PostTransform processors `TExclude` it, so a disabled
   widget is never iterated. Two consequences: the widget-went-away-destroy-the-entity safety net in

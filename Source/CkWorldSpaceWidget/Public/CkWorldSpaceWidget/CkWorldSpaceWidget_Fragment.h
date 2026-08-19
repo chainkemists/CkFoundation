@@ -12,6 +12,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_WorldSpaceWidget_UE;
+class ULocalPlayer;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,19 +49,28 @@ namespace ck
             UWidgetComponent* InWidgetComponent,
             UUserWidget* InContentWidget);
 
+    public:
+        // The controller CURRENTLY driving the owning local player — resolved on every read because
+        // controller identity churns (DebugCamera swap, travel, possession) while the local player does not.
+        auto Get_ResolvedOwningPlayer() const -> APlayerController*;
+
+        // True while the owning player's viewport renders from the editor camera (PIE ejected / SIE) —
+        // no PlayerController represents that view, so a projection through the player is undefined.
+        auto Get_IsRenderViewEjected() const -> bool;
+
     private:
         // STRONG: pins the caller-supplied content widget, which the pooling subsystem never handed out
         TStrongObjectPtr<UUserWidget> _ContentWidgetHardRef;
         // WEAK — lifetimes owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
         TWeakObjectPtr<UCk_WorldSpaceWidget_Wrapper_UE> _WrapperWidget;
-        TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
+        TWeakObjectPtr<ULocalPlayer> _WidgetOwningLocalPlayer;
         TWeakObjectPtr<UWidgetComponent> _WidgetComponent;
         // ScreenOverlay only: the wrapper's visibility as it was before the disable that
         // Collapsed it, so re-enabling restores what the widget actually had.
         TOptional<ESlateVisibility> _PreDisableVisibility;
 
     public:
-        CK_PROPERTY_GET(_WidgetOwningPlayer);
+        CK_PROPERTY_GET(_WidgetOwningLocalPlayer);
         CK_PROPERTY_GET(_WrapperWidget);
         CK_PROPERTY_GET(_ContentWidgetHardRef);
         CK_PROPERTY_GET(_WidgetComponent);
