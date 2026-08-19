@@ -2508,6 +2508,32 @@ auto
         return ECk_EcsWorld_LoadHold::Rebuilding;
     }
 
+    // A client hold ALREADY running, meeting a new world for the SAME load. This is the common case, not an
+    // edge: a client travels through more than one world for one load, and the channel it acquired in the
+    // previous one dies with that world — so the ticker sits watching a handle the server's fact can never
+    // reach, and the hold can only ever end at its bounded escape. Measured exactly that way before this
+    // existed: the server published READY TO RESUME and the client still burned its full frame budget
+    // reporting the fact NEVER ARRIVED.
+    //
+    // Deliberately ahead of the authority check below, and not gated on it: whatever a freshly-travelled world
+    // reports for its net mode at begin-play, a hold that is already running for this epoch belongs to this
+    // client, and the only question left is which world's channel it should be watching.
+    if (_ClientHoldActive)
+    {
+        if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
+            EpochOption != nullptr)
+        {
+            const auto EpochString = FString{EpochOption};
+            const auto Epoch = FCString::Atoi(EpochOption);
+
+            if (EpochString.IsNumeric() && Epoch == _ClientHoldEpoch && _ClientHoldWorld.Get() != &InWorld)
+            {
+                DoRebind_ClientHold(InWorld);
+                return ECk_EcsWorld_LoadHold::Converging;
+            }
+        }
+    }
+
     // A CLIENT following a listen-server reload. It has no load, no report and no completion of its own — the
     // travel URL is the earliest thing that can tell it a load owns this world, and it is readable here because
     // ProcessServerTravel round-trips the same FURL, options intact, into ProcessClientTravel.
@@ -2582,6 +2608,38 @@ auto
 
     ck::snapshot::Display(TEXT("DIAG: client hold armed from the travel URL (epoch [{}], world [{}])"),
         InEpoch, InWorld.GetName());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRebind_ClientHold(
+        UWorld& InWorld)
+    -> void
+{
+    _ClientHoldWorld = &InWorld;
+
+    // A fresh budget for the world that can actually receive the fact. The previous world's frames were spent
+    // watching a channel that no longer exists, and charging them against this world would hand the player back
+    // a world the client never really waited for. The CAP itself is untouched.
+    _ClientHoldFrameCount = 0;
+
+    // Dropped before re-acquiring: these name the dead world's channel, and a stale handle here is precisely
+    // what made the release conjunct unreachable.
+    _ClientLoadStateChannelEntity = FCk_Handle{};
+    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
+
+    // Dilation does not survive travel, so the prediction is re-applied per world exactly as the server re-applies
+    // its own. Still a prediction: the server's replicated value supersedes it.
+    DoApply_TimeFreeze(InWorld);
+
+    DoAcquire_LoadStateChannel(InWorld, true);
+
+    // The screen holder is GameInstance-scoped and still held, and the ticker is still registered — rebinding is
+    // about WHICH world the hold watches, not about starting a second hold.
+    ck::snapshot::Display(TEXT("DIAG: client hold re-bound to world [{}] (epoch [{}]) — re-acquiring the "
+        "load-state channel on the world that will receive the fact"), InWorld.GetName(), _ClientHoldEpoch);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
