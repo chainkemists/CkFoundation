@@ -2612,6 +2612,9 @@ auto
 
     if (FactHasArrived && ReplicationIsComplete)
     {
+#if WITH_AUTOMATION_TESTS
+        _TestOnly_ClientHoldReleasedByCap = false;
+#endif
         DoRelease_ClientHold(TEXT("the server reported ready-to-resume and this client's replication completed"));
         return false;
     }
@@ -2627,6 +2630,10 @@ auto
         _ClientHoldEpoch, kLoad_ClientHoldFrameCap,
         FactHasArrived ? TEXT("arrived") : TEXT("NEVER ARRIVED"),
         ReplicationIsComplete ? TEXT("completed") : TEXT("NEVER COMPLETED"));
+
+#if WITH_AUTOMATION_TESTS
+    _TestOnly_ClientHoldReleasedByCap = true;
+#endif
 
     DoRelease_ClientHold(TEXT("the client hold hit its frame cap"));
     return false;
