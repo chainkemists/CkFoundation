@@ -731,6 +731,24 @@ replication-complete signal. It deliberately does NOT acquire a relay channel of
 pooled PER SIDE, so the entity a client would acquire is not the one the server's fact replicates onto — a client
 that watched its own acquisition watched an entity the fact never reached.
 
+Three properties that contract rests on, each of which used to be one edit away from silently failing:
+
+- **The epoch identifies the LOAD, not its ordinal.** It is a session-unique salt in the high 15 bits over a
+  per-instance load count in the low 16, because the arm gate decides ownership by `Epoch == _LoadEpoch` and a
+  bare count made a machine that had hosted N loads read a host's load N as its own — no hold, no freeze, and a
+  player walking around a world being rebuilt underneath them. Treat the value as opaque: monotonic within a
+  session, never a count, never persisted. Fence:
+  `Ck.Snapshot.LoadHold.LoadEpochIdentifiesTheLoadNotItsOrdinal`.
+- **The option is consumed, once.** `?CkLoad=` is struck from `FWorldContext::LastURL` as it is read, because
+  every relative travel inherits the whole option array from there — so a finished load's epoch would otherwise
+  re-arm a hold on the next unrelated map change and ride the join URL to anyone connecting through it. This is
+  where and how the engine strikes its own one-shots (`Listen`, `failed`, `closed`). `UWorld::URL` is left
+  intact: that is the record of how this world came up, and the arm gate reads it.
+- **The client's budget covers the SERVER's whole load.** `kLoad_ClientHoldFrameCap` is the SUM of the server's
+  phase caps, written as that sum rather than as a number. Sized like a single phase, a server that spent its
+  teardown and travel budgets outlived the client watching it, and the client failed open into a half-rebuilt
+  world reporting the fact as NEVER ARRIVED — a healthy slow load misreported as a broken one.
+
 **What the promise may claim.** `Promise_OnLoadComplete` = ready to resume. It does NOT mean "nothing has
 simulated": construction and `DoBeginPlay` run throughout a load by `[G1-D16]`, so code there must be idempotent.
 
