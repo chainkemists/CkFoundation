@@ -226,9 +226,12 @@ public:
     //
     // SIDE-EFFECTING by design: the provider applies whatever else its owner needs applied to the fresh world
     // (the global time dilation a load holds does not survive travel and has to be re-applied here) and returns
-    // whether the world is held. Registered from the owning module's startup and cleared on its shutdown, so
-    // CkEcs keeps no dependency on the module that answers.
-    using FLoadHoldSeedProvider = TFunction<bool(UWorld&)>;
+    // WHICH PHASE holds it, None meaning do not seed. The phase is the provider's to choose because the answer
+    // differs by role: a world about to be REBUILT must suppress the population its own BeginPlay would otherwise
+    // seed, while a world that only owes coherence must not be held to the kernel scope. Registered from the
+    // owning module's startup and cleared on its shutdown, so CkEcs keeps no dependency on the module that
+    // answers.
+    using FLoadHoldSeedProvider = TFunction<ECk_EcsWorld_LoadHold(UWorld&)>;
     static auto Set_LoadHoldSeedProvider(FLoadHoldSeedProvider InProvider) -> void;
     static auto Clear_LoadHoldSeedProvider() -> void;
 

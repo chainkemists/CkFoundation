@@ -264,4 +264,39 @@ public:
         const UObject* InWorldContextObject,
         const FCk_Delegate_Snapshot_OnThumbnailCaptured& InDelegate,
         int32 InMaxWidth = 480);
+
+    /**
+     * TRUE when the world is the player's to act on: no load is holding it. A load freezes game time and holds
+     * every feature processor from Request_Load until every payload has applied, the requests those applies
+     * issued have drained, physics has stepped and probe overlaps have converged — this is the moment that ends.
+     *
+     * A world where no load ever ran answers TRUE, deliberately and for the same reason Promise_OnLoadComplete
+     * fires immediately there: "nothing is holding this world" is the question, and "there was never a load" is
+     * a yes. Consumers that need the difference ask Get_Is Load In Progress.
+     *
+     * This is the POLL form; Promise_OnLoadComplete is the push form, and is what a consumer with somewhere to
+     * be should use instead of polling this every tick.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Ready To Resume",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    Get_IsReadyToResume(
+        const UObject* InWorldContextObject);
+
+    /**
+     * Which load this is, counted per GameInstance and stamped into the travel URL so a world coming up
+     * mid-travel can say WHICH load owns it. Zero until the first load of the session.
+     *
+     * Useful for a consumer that must not react twice to the same load, or must distinguish "this load" from
+     * one whose facts are still standing from the previous one.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Load Epoch",
+              meta = (WorldContext = "InWorldContextObject"))
+    static int32
+    Get_LoadEpoch(
+        const UObject* InWorldContextObject);
 };
