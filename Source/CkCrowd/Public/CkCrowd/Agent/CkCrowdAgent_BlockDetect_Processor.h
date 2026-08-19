@@ -64,6 +64,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
             ECk_CrowdAgent_BlockedReason InReason,
             FCk_Handle InBlocker,
             float InDistanceToGoal) const -> void;
@@ -94,6 +95,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
+            ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -112,7 +114,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
 
     private:
         // Terminal end of a NoProgress hold: the retry budget is spent, so the caller is told the
@@ -121,7 +124,8 @@ namespace ck
         DoFailMove(
             HandleType InHandle,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) const -> void;
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
     };
 }
 

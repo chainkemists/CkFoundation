@@ -57,11 +57,14 @@ namespace ck
 
         const auto SelfRadius = InParams.Get_Radius();
 
-        // An idle agent has ARRIVED and has no drive to walk back, so what it absorbs is permanent —
-        // hence the reduced share. Deliberately NOT zero: idle-vs-idle overlap must still resolve.
-        const auto SelfYield = InHandle.Has<FTag_CrowdAgent_Idle>()
-            ? InParams.Get_PushApartIdleYield()
-            : 1.0f;
+        // A terminal failed-goal hold is a physical anchor until an explicit wake. Ordinary Idle
+        // and GoalBlocked agents retain their existing reduced-yield behavior.
+        const auto IsSelfFailedHeld = InHandle.Has<FTag_CrowdAgent_GoalFailedHold>();
+        const auto SelfYield = IsSelfFailedHeld
+            ? 0.0f
+            : InHandle.Has<FTag_CrowdAgent_Idle>()
+                ? InParams.Get_PushApartIdleYield()
+                : 1.0f;
 
         auto Displacement = FVector::ZeroVector;
 
@@ -72,6 +75,16 @@ namespace ck
             {
                 for (const auto& Nbr : Neighbors)
                 {
+                    const auto& NeighborHandle = Nbr.Get_Handle();
+                    const auto IsNeighborFailedHeld = ck::IsValid(NeighborHandle)
+                        && NeighborHandle.Has<FTag_CrowdAgent_GoalFailedHold>();
+                    // Normally each side owns half of the overlap. A non-held agent opposite a
+                    // failed-held anchor owns the whole correction; two held agents both yield
+                    // zero and remain stably overlapped until one is explicitly woken.
+                    const auto PairShare = IsNeighborFailedHeld && NOT IsSelfFailedHeld
+                        ? 1.0f
+                        : 0.5f;
+
                     // Points FROM the neighbor TO already-displaced self, which is the push direction.
                     auto PushFromNeighbor = -Nbr.Get_RelativeOffset() + Displacement;
 
@@ -98,12 +111,12 @@ namespace ck
                         const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % AngleBucketCount) * RadiansPerAngleBucket;
                         const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);
                         const auto Sign      = SelfHash > NbrHash ? 1.0f : -1.0f;
-                        Displacement += Axis * (Sign * 0.5f * CombinedRadius * SelfYield);
+                        Displacement += Axis * (Sign * PairShare * CombinedRadius * SelfYield);
                         continue;
                     }
 
                     const auto Penetration = CombinedRadius - Dist;
-                    const auto PenetrationScale = (Penetration * 0.5f) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
+                    const auto PenetrationScale = (Penetration * PairShare) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
                     Displacement += PushFromNeighbor * PenetrationScale;
                 }
             }

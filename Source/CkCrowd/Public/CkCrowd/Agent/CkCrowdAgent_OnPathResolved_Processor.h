@@ -26,6 +26,7 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_PathTrouble>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
+            ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -46,7 +47,8 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect) -> void;
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired) -> void;
     };
 }
 
