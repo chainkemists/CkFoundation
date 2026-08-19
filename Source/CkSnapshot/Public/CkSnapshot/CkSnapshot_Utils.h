@@ -303,8 +303,13 @@ public:
         const UObject* InWorldContextObject);
 
     /**
-     * Which load this is, counted per GameInstance and stamped into the travel URL so a world coming up
-     * mid-travel can say WHICH load owns it. Zero until the first load of the session.
+     * Which load this is, stamped into the travel URL and the replicated fact so a world coming up mid-travel
+     * can say WHICH load owns it. Zero until the first load of the session.
+     *
+     * OPAQUE, not a count. It is monotonically increasing within one session, but it carries a session-unique
+     * component so that two GameInstances which have each run the same NUMBER of loads do not produce the same
+     * value — equality means "the same load", which is the only thing any consumer of it asks. Do not derive a
+     * load COUNT from it, and do not persist it: it is meaningful only for the lifetime of the process.
      *
      * Useful for a consumer that must not react twice to the same load, or must distinguish "this load" from
      * one whose facts are still standing from the previous one.
@@ -316,4 +321,22 @@ public:
     static int32
     Get_LoadEpoch(
         const UObject* InWorldContextObject);
+
+    /**
+     * Did the load this report describes COMPLETE? — the question almost every consumer is actually asking.
+     *
+     * Script-facing twin of FCk_Snapshot_LoadReport::Get_DidLoadComplete: a plain USTRUCT method has no
+     * reflected surface, so Blueprint and AngelScript cannot reach it, and the only thing left to branch on
+     * there is a bare `Result == Success` comparison. That comparison silently starts meaning "and nothing was
+     * lost" the moment a completed load can also report losses, which is how a lossy-but-playable load ends up
+     * skipping a caller's entire post-load fixup. TRUE for Success and Succeeded_WithLoss; FALSE for every
+     * Failed_* and for NoLoadInProgress, which is not a failure — it is the honest answer for "there was no
+     * load", and no load did not complete.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Did Load Complete")
+    static bool
+    Get_DidLoadComplete(
+        const FCk_Snapshot_LoadReport& InReport);
 };
