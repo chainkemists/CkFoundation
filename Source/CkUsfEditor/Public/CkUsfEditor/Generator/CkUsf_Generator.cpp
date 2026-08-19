@@ -106,6 +106,7 @@ namespace ck::usf_editor
             case ECk_Usf_BlendableLocation::SceneColorAfterDOF:    return BL_SceneColorAfterDOF;
             case ECk_Usf_BlendableLocation::SceneColorBeforeDOF:   return BL_SceneColorBeforeDOF;
             case ECk_Usf_BlendableLocation::SceneColorBeforeBloom: return BL_SceneColorBeforeBloom;
+            case ECk_Usf_BlendableLocation::ReplacingTonemapper:   return BL_ReplacingTonemapper;
             default:                                               return BL_SceneColorAfterTonemapping;
         }
     }

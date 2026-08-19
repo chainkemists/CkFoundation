@@ -843,6 +843,27 @@ namespace CkUsf
         _Parameters.Add(Ch0);
     }
 
+    // ---- PostProcess: DATA output, not a picture ----
+
+    // Reads the Custom Stencil buffer back out as greyscale so a consumer can recover the byte. Used by the
+    // Optimization Debugger's snapshots to identify which mesh is at each pixel, but there is nothing
+    // debugger-specific in it — it is the generic "show me the stencil" pass.
+    asset StencilId of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/StencilId.ush";
+        _UshFunctionName = n"CkUsf_PP_StencilId";
+        _Domain          = ECk_Usf_Domain::PostProcess;
+        _LookName        = n"StencilId";
+
+        // The ONLY correct placement for this one. Every other location leaves the tonemapper to run
+        // afterwards, and a tone curve applied to an identifier corrupts it — worst near the batch
+        // boundaries, where a misread names a different mesh rather than no mesh. Replacing the tonemapper
+        // means what this writes IS the final image.
+        _BlendableLocation = ECk_Usf_BlendableLocation::ReplacingTonemapper;
+
+        _SceneTextures.Add(ECk_Usf_SceneTexture::CustomStencil);
+    }
+
     // ---- PostProcess (#2: scene-texture access) ----
 
     asset EdgeOutline of UCkUsf_LookDefinition

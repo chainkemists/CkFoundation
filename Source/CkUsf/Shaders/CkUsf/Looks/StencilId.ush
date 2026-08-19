@@ -1,0 +1,24 @@
+// /CkUsf/Looks/StencilId.ush
+// Writes the Custom Stencil value straight out as greyscale, unaltered.
+//
+// This is NOT a look in the usual sense: its output is DATA, not a picture. A consumer reads the byte back
+// and treats it as an identifier, which is why it is declared ReplacingTonemapper — anything that tonemaps
+// afterwards applies a curve to numbers that are not colour, and the values nearest the batch boundaries are
+// the first to be misread.
+//
+// Divide by 255 rather than 256: stencil 255 must reach exactly 1.0, so that a reader multiplying back by 255
+// and rounding recovers every value in [0, 255] rather than every value but the last.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_PP_StencilId(FCkUsf_SurfaceInput In)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float Stencil = In.CustomStencil.r / 255.0;
+
+    O.EmissiveColor = float3(Stencil, Stencil, Stencil);
+    O.Opacity = 1.0;
+
+    return O;
+}
