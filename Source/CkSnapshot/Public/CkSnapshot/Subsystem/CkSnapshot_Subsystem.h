@@ -426,17 +426,12 @@ private:
     // A client has no load, no report and no completion — but on a listen-server reload it travels and rebuilds
     // too, so its world needs the same hold for the same span. Armed from the travel URL (the server cannot reach
     // it any earlier than that) and released on the server's own ready-to-resume fact.
-    auto DoAcquire_LoadStateChannel(UWorld& InWorld, bool InIsClientHold) -> void;
+    auto DoAcquire_LoadStateChannel(UWorld& InWorld) -> void;
     auto DoPublish_LoadState(bool InReadyToResume) -> void;
     auto DoBegin_ClientHold(UWorld& InWorld, int32 InEpoch) -> void;
     auto DoTick_ClientHold(float InDeltaSeconds) -> bool;
     auto DoRelease_ClientHold(const TCHAR* InReason) -> void;
 
-    // The hold is per-EPOCH; the channel it releases on is per-WORLD. A client travels through more than one
-    // world for a single load, and the channel entity acquired in an earlier one dies with it — leaving the
-    // ticker watching a handle the fact can never reach. Re-points the hold at the world that begins play now:
-    // fresh channel, fresh freeze prediction, fresh frame budget, same epoch, same screen holder, same ticker.
-    auto DoRebind_ClientHold(UWorld& InWorld) -> void;
 
 private:
     UPROPERTY(Transient)
@@ -527,8 +522,6 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UCk_LoadingProcess_Task_UE> _ClientLoadScreenHold;
 
-    FCk_Handle_PendingActorRelay _PendingClientLoadStateChannel;
-    FCk_Handle _ClientLoadStateChannelEntity;
 
     static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
     static constexpr int32 kLoad_TravelFrameCap   = 600; // abort if the post-travel world never comes up
