@@ -16,6 +16,7 @@ public class CkLoadingScreen : CkModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
+            "MoviePlayer",
             "PreLoadScreen",
             "RenderCore",
             "DeveloperSettings",

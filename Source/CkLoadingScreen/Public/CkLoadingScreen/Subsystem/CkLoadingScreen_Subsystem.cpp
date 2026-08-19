@@ -6,6 +6,7 @@
 #include "CkLoadingScreen/CkLoadingScreen_Log.h"
 #include "CkLoadingScreen/LoadingProcess/CkLoadingProcess_Interface.h"
 #include "CkLoadingScreen/Settings/CkLoadingScreen_Settings.h"
+#include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_TransitionAttributes.h"
 
 #include <Engine/Engine.h>
 #include <Engine/GameInstance.h>
@@ -19,6 +20,9 @@
 #include <Misc/App.h>
 #include <Misc/CommandLine.h>
 #include <Misc/ConfigCacheIni.h>
+#include <Engine/AssetManager.h>
+#include <Engine/StreamableManager.h>
+#include <MoviePlayer.h>
 #include <PreLoadScreen.h>
 #include <PreLoadScreenManager.h>
 #include <ProfilingDebugging/CsvProfiler.h>
@@ -67,6 +71,10 @@ namespace ck_loading_screen_cvars
 
 namespace ck_loading_screen_subsystem
 {
+    // Fail-open cap on the transition handshake. A cosmetic handoff must never be able to hold the
+    // game hostage, so past this many seconds after loading finished we stop the movie regardless.
+    constexpr auto TransitionHandshakeFailOpenSecs = 5.0;
+
     // Eats ALL input so menus underneath the loading screen cannot be interacted with
     class FLoadingScreenInputPreProcessor : public IInputProcessor
     {
@@ -100,6 +108,8 @@ auto
 {
     FCoreUObjectDelegates::PreLoadMapWithContext.AddUObject(this, &ThisType::DoHandlePreLoadMap);
     FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &ThisType::DoHandlePostLoadMap);
+
+    DoRequestTransitionAssets();
 }
 
 auto
@@ -113,6 +123,8 @@ auto
 
     FCoreUObjectDelegates::PreLoadMapWithContext.RemoveAll(this);
     FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
+
+    _TransitionAssetsHandle.Reset();
 
     SetTickableTickType(ETickableTickType::Never);
 }
@@ -134,6 +146,11 @@ auto
     -> void
 {
     DoUpdateLoadingScreen();
+
+    // Deliberately AFTER DoUpdateLoadingScreen: during a handshake this Tick is running from inside
+    // the MoviePlayer's blocking wait loop (via GEngine->Tick), so the update above is what mounts
+    // our widget and this is what notices it went up - both in the same frame.
+    DoTickTransitionHandshake();
 
     _TimeUntilNextLogHeartbeatSeconds = FMath::Max(_TimeUntilNextLogHeartbeatSeconds - InDeltaTime, 0.0);
 }
@@ -458,7 +475,7 @@ auto
     DoShouldShowLoadingScreen()
     -> bool
 {
-    if (DoGet_IsPresentationSuppressed())
+    if (Get_IsPresentationSuppressed())
     {
         _DebugReason = TEXT("Loading screen presentation is suppressed (commandlet/unattended/null-RHI or ck.LoadingScreen.Disable)");
         return false;
@@ -569,8 +586,19 @@ auto
     }
     else
     {
-        ck::loading_screen::Error(TEXT("Failed to load the loading screen widget [{}], falling back to placeholder."),
-            UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenWidget().ToString());
+        // No widget configured is a legitimate choice (the throbber IS the loading screen), so it
+        // must not shout. A path that IS set and fails to load is a real content error.
+        if (UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenWidget().IsNull())
+        {
+            ck::loading_screen::Verbose(
+                TEXT("No loading screen widget configured - using the built-in throbber."));
+        }
+        else
+        {
+            ck::loading_screen::Error(TEXT("Failed to load the loading screen widget [{}], falling back to placeholder."),
+                UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenWidget().ToString());
+        }
+
         _LoadingScreenWidget = SNew(SThrobber);
     }
 
@@ -720,13 +748,102 @@ auto
 
 auto
     UCk_LoadingScreen_Subsystem_UE::
-    DoGet_IsPresentationSuppressed()
+    Get_IsPresentationSuppressed()
     -> bool
 {
     return IsRunningCommandlet() ||
            FApp::IsUnattended() ||
            NOT FApp::CanEverRender() ||
            ck_loading_screen_cvars::DisableLoadingScreen;
+}
+
+auto
+    UCk_LoadingScreen_Subsystem_UE::
+    DoRequestTransitionAssets()
+    -> void
+{
+    if (NOT UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionScreenEnabled())
+    { return; }
+
+    if (NOT UAssetManager::IsInitialized())
+    { return; }
+
+    auto PathsToLoad = TArray<FSoftObjectPath>{};
+
+    if (const auto& LogoPath = UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoTexture();
+        NOT LogoPath.IsNull())
+    { PathsToLoad.Add(LogoPath); }
+
+    for (const auto& BackgroundPath : UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionBackgroundImages())
+    {
+        if (BackgroundPath.IsNull())
+        { continue; }
+
+        PathsToLoad.Add(BackgroundPath);
+    }
+
+    if (PathsToLoad.IsEmpty())
+    { return; }
+
+    // Async and unwaited-on. If the very first travel beats the load in, the module simply builds
+    // no brush for whatever is not resident yet - never a sync load, never a block.
+    _TransitionAssetsHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad);
+}
+
+auto
+    UCk_LoadingScreen_Subsystem_UE::
+    DoTickTransitionHandshake()
+    -> void
+{
+    // Only a handshake the module armed may stop a movie - that is what keeps this from cutting
+    // short a startup-movie playback it had no part in setting up.
+    if (NOT ck::loading_screen::transition::Get_IsHandshakeArmed())
+    { return; }
+
+    const auto MoviePlayer = GetMoviePlayer();
+    if (ck::Is_NOT_Valid(MoviePlayer, ck::IsValid_Policy_NullptrOnly{}) ||
+        NOT MoviePlayer->IsMovieCurrentlyPlaying())
+    { return; }
+
+    // MOUNTED, not painted. While the movie owns the window its content has replaced the game
+    // viewport entirely (FDefaultGameMoviePlayer::WaitForMovieToFinish), so a viewport widget
+    // CANNOT paint until after the movie stops - waiting for a paint would burn the fail-open cap
+    // on every single travel. Mounted is the signal that actually matters: the screen is already in
+    // the viewport when the movie tears down, so there is no frame of raw world in between.
+    if (_CurrentlyShowingLoadingScreen && _LoadingScreenWidget.IsValid())
+    {
+        ck::loading_screen::Log(
+            TEXT("Transition handshake satisfied - stopping the movie, the game-thread screen is mounted"));
+
+        ck::loading_screen::transition::Request_DisarmHandshake();
+        _TimeTransitionLoadingFinished = -1.0;
+        MoviePlayer->StopMovie();
+        return;
+    }
+
+    if (NOT MoviePlayer->IsLoadingFinished())
+    {
+        _TimeTransitionLoadingFinished = -1.0;
+        return;
+    }
+
+    const auto CurrentTime = FPlatformTime::Seconds();
+    if (_TimeTransitionLoadingFinished < 0.0)
+    {
+        _TimeTransitionLoadingFinished = CurrentTime;
+        return;
+    }
+
+    if (CurrentTime - _TimeTransitionLoadingFinished < ck_loading_screen_subsystem::TransitionHandshakeFailOpenSecs)
+    { return; }
+
+    ck::loading_screen::Warning(
+        TEXT("Transition handshake timed out after [{}]s with no game-thread screen mounted - stopping the movie anyway"),
+        ck_loading_screen_subsystem::TransitionHandshakeFailOpenSecs);
+
+    ck::loading_screen::transition::Request_DisarmHandshake();
+    _TimeTransitionLoadingFinished = -1.0;
+    MoviePlayer->StopMovie();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
