@@ -202,24 +202,6 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Set_IsLoadGateEscalated(
-        bool InEscalated)
-    -> void
-{
-    if (InEscalated)
-    {
-        _LoadHold = ECk_EcsWorld_LoadHold::Escalated;
-        return;
-    }
-
-    // Un-escalating is a return to the phase escalation was reached from, never a release of the hold: the
-    // caller that says "stop escalating" has not said the load is over.
-    if (_LoadHold == ECk_EcsWorld_LoadHold::Escalated)
-    { _LoadHold = ECk_EcsWorld_LoadHold::Rebuilding; }
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
     DoGet_LoadHoldSeedProvider()
     -> FLoadHoldSeedProvider&
 {
