@@ -74,7 +74,16 @@ enum class ECk_Usf_BlendableLocation : uint8
     AfterTonemapping,      // BL_SceneColorAfterTonemapping — display res, post-TAA (historical default)
     SceneColorAfterDOF,    // BL_SceneColorAfterDOF         — render res, pre-TSR/TAA
     SceneColorBeforeDOF,   // BL_SceneColorBeforeDOF        — render res, pre-TSR/TAA, before DOF
-    SceneColorBeforeBloom  // BL_SceneColorBeforeBloom      — display res, post-TAA, pre-bloom/tonemap
+    SceneColorBeforeBloom, // BL_SceneColorBeforeBloom      — display res, post-TAA, pre-bloom/tonemap
+
+    // BL_ReplacingTonemapper — the look's output IS the final image; no tonemapper runs after it. APPENDED
+    // last on purpose: these values are serialized in look assets, so inserting one renumbers every look
+    // declared after it.
+    //
+    // For a LOOK this is usually the wrong choice — you inherit responsibility for the whole tonemap. It is
+    // here for the other kind of pass: one whose output is DATA rather than a picture, where a tonemap curve
+    // applied afterwards would corrupt the values it is meant to carry (an id, a mask, a depth).
+    ReplacingTonemapper
 };
 
 // Translucency lighting for LIT translucent-family surface looks. `Inherit` keeps the engine default
