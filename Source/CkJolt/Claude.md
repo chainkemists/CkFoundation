@@ -1038,6 +1038,21 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   GUARD (`WaitForAsyncStep()` iff a future is pending) — the async step kicked THIS frame
   is only consumed next frame, so teardown would otherwise race the task-graph loop.
 
+## Request_GrantFixedSteps — the load-convergence surface
+
+A snapshot load freezes game time, so `PlanStep` computes zero steps from the frame delta and `Step` early-returns:
+a frozen world's bodies never move, and every convergence fact waiting on them would wait forever.
+`Request_GrantFixedSteps(N)` runs N fixed steps in ONE frame regardless of dt, and is consumed by `PlanStep` — once
+per frame, after the debug step-once gate is consumed (so that one-shot is still reset) and before the
+world-blocks-step branch. `Step`'s own guard learns the grant, so a debug-paused world still honours it. The grant
+is MAX-not-accumulate and self-limiting: it stops once the configured number of steps has run since the phase
+began, because every granted step dirties pose markers and an every-frame grant would keep the scheduler
+permanently un-quiescent.
+
+This is DISTINCT from the debug step-once gate. That one is a human pressing a key on a paused world; this one is
+the loader making physics catch up before the player is handed a world whose bodies have not moved since it was
+saved.
+
 ## Determinism
 
 - The pump is fixed-timestep: `ck::jolt::ComputeStepPlan` (pure, unit-tested —

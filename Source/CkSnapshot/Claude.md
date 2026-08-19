@@ -579,7 +579,7 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   on work the kernel cannot run: a multi-stage construction (EntityScript `Continue`) is finished by a GAME
   processor (`GatedDuringLoad` — the load policy is framework-kernel-only by design), and the identity it stamps on
   completion — a child's GameplayLabel adopt key, a SaveKey — is exactly what the resolution scan waits on. When the
-  kernel quiesces with unresolved rows, the loader sets `Set_IsLoadGateEscalated(true)` (world ticks the FULL
+  kernel quiesces with unresolved rows, the loader sets `Set_LoadHold(ECk_EcsWorld_LoadHold::Escalated)` (world ticks the FULL
   processor scope while the load still owns completion) and concludes only when THAT quiesces too. Bridged
   respawn fallbacks fire only at final (post-escalation) quiesce, so a fresh copy created by a gated processor is
   adopted, never duplicated. Rows still unresolved after escalation are real losses: Error log,
@@ -664,10 +664,66 @@ an entry pointing at a destroyed entity is by design and is not reported.
 
 ---
 
+## The hold — a load does not simulate the world it is rebuilding
+
+`ECk_EcsWorld_LoadHold` (`CkEcs/Subsystem/CkEcsWorld_Subsystem.h`) is ONE value spanning the whole load, in every
+world it passes through, and the only input to what a world-actor tick may do. `ck::Get_TickPlanForHold` is that
+policy as a pure function, so the table is unit-testable without a world:
+
+| Hold | Scope | Tick time | Why |
+|---|---|---|---|
+| `None` | Full | real | normal play |
+| `Teardown` | **Full** | 0 | kernel scope WEDGES a teardown — the destruction pipeline, the entity-lifecycle groups and all 136 feature EndPlay processors are outside the kernel |
+| `Rebuilding` | LoadKernel | **real** | the only phase that keeps real time: the kernel's own watchdogs must keep making progress while nothing else does |
+| `Escalated` | Full | 0 | full scope so multi-stage constructions finish; zero time so time-paced world policy cannot act on a mid-rebuild census |
+| `Draining` | Full | 0 | payload applies, and the deferred requests those applies issue |
+| `Converging` | Full | 0 | physics steps and probe overlaps converge before the player is handed the world |
+
+**Game time is frozen by the engine's own dial, not by a new clock.** The loader holds
+`AWorldSettings::TimeDilation` at `MinGlobalTimeDilation` for the whole load, which stops `GetTimeSeconds()`, every
+actor tick's `DeltaSeconds`, every `CkTimer`, every cadence, and every AngelScript `utils_time::Get_TimeNow` caller
+AT ONCE, with no edit at any of them. It is `transient` on a per-level actor, so it does NOT survive travel and is
+re-applied at the post-travel boot seed. "Frozen" means at most ~17 ms across a whole load, never exactly zero, so
+every threshold is an epsilon. Wall time keeps running deliberately, for a small named list of watchdogs — see the
+allow-list fence `Ck.Snapshot.Meta.WallTimeReadsAreAllowListed`.
+
+**The boot seed is role-split.** A world coming up mid-load is held before anything in it ticks: the authority's
+post-travel world seeds `Rebuilding` (it is about to run every level actor's BeginPlay, which is where a
+level-triggered producer would seed population beside the copies being restored), a client seeds `Converging` (it
+rebuilds nothing and owes only coherence). The decision is made from load OWNERSHIP — a world carrying an epoch
+this GameInstance did not itself produce — never from a net role, because `UWorld::InternalGetNetMode` falls back
+to `PlayInEditorNetMode` when the net driver is not yet attached, which is exactly the instant the seed must answer.
+
+**Convergence is a tri-state registry, and it reads STABILITY rather than silence.** Each module registers the
+facts it owns (`Jolt.*`, `SpatialQuery.*`, `Ecs.*`); predicates are PURE reads and the work they measure is driven
+once per frame by the loader. `NotApplicable` is what keeps a Jolt-less world from burning the budget on physics
+facts it cannot have. The two `Ecs.*` rows are satisfied by a count that is zero **or** unchanged for
+`kLoad_ConvergenceStableFrames`: a live world never goes silent — state machines re-evaluate, request queues
+refill, NPC AI creates and destroys query entities every frame — so "another frame would change nothing" is the
+observable, and absolute zero was simply the wrong question. Measured: framework loads converge in 2-3 frames, BB
+content worlds in 7. Every phase is bounded, and each escape NAMES what it gave up on (`_ConvergenceUnmet`,
+`Succeeded_WithLoss`).
+
+**The client contract.** A client has no load, no report and no completion of its own, but on a listen-server
+reload it travels and rebuilds too. It ARMS from the travel URL's `?CkLoad=<epoch>` option — readable at its first
+world tick, and safe because `FURL::GetOption` matches by prefix so the engine's `load`-named-option trap does not
+fire. It RELEASES on the server's ready-to-resume fact **wherever that fact lands**, AND that entity's
+replication-complete signal. It deliberately does NOT acquire a relay channel of its own: ActorRelay channels are
+pooled PER SIDE, so the entity a client would acquire is not the one the server's fact replicates onto — a client
+that watched its own acquisition watched an entity the fact never reached.
+
+**What the promise may claim.** `Promise_OnLoadComplete` = ready to resume. It does NOT mean "nothing has
+simulated": construction and `DoBeginPlay` run throughout a load by `[G1-D16]`, so code there must be idempotent.
+
+---
+
 ## Load-gate spawn quarantine
 
-While `Get_IsLoadGateActive()` is true, `UCk_Utils_EntityScript_UE::Request_SpawnEntity` suppresses any spawn that
-is not the loader's own reconstruction — the check runs SYNCHRONOUSLY inside `Request_SpawnEntity` itself
+While the load hold is `Teardown`, `Rebuilding` or `Escalated`, `UCk_Utils_EntityScript_UE::Request_SpawnEntity`
+suppresses any spawn that is not the loader's own reconstruction. Deliberately NARROWER than "a load is running":
+`Draining` and `Converging` ADMIT spawns, because that is when payload applies drive composition and refusing there
+would break the restore itself. The producer-side question — "may I seed?" — is `Get_IsRebuildInProgress`, which is
+true in EVERY phase. Two predicates, two jobs — the check runs SYNCHRONOUSLY inside `Request_SpawnEntity` itself
 (`CkEcs/EntityScript/CkEntityScript_Utils.cpp:161-202`, calling `Get_IsSpawnSuppressedByLoadGate` at `:36-74`).
 Rationale is the save-inflation incident the code comment cites (2026-07-29): a census/adopt-or-spawn policy read
 the half-rebuilt world's near-zero population and spawned to fill the gap, so the next capture recorded both the
@@ -707,11 +763,13 @@ Three consumer-side tools, and a gap between them worth knowing:
   `FCk_ScopedRendezvousSpawnWindow` around an ordinary `Request_SpawnEntity`, so it behaves identically when no
   load is active and passes the quarantine when one is. Reserved for spawns that carry (or will acquire during
   construction) a stable SaveKey/adopt-label the loader rendezvouses onto — never for count-driven population.
-- **The gap the quarantine cannot close by construction, not by oversight:** the suppression check keys off
-  `Get_IsLoadGateActive()`, which the load machine turns off partway through Hydrating — the same ticker callback
-  that enqueues payloads and opens the gate (see "Hydrating is ATOMIC" above) — while `Get_IsLoadInProgress` /
-  `Promise_OnLoadComplete` stay live all the way through Settling until `OnLoadComplete` fires. A spawn issued in
-  that window — e.g. from an EntityScript's `DoBeginPlay`, which fires only once construction/composition has
+- **The gap this used to have, and what closed it.** The suppression check used to key off a single flag the load
+  machine turned OFF partway through Hydrating, while `Get_IsLoadInProgress` stayed true through Settling — so a
+  spawn issued in between sailed past unchallenged. C6 replaced that flag with the phase enum: the hold now runs
+  `Teardown -> Rebuilding -> Escalated -> Draining -> Converging` and is only released at ready-to-resume, so there
+  is no longer a window in which the load is running and the hold reads "off". What remains is a DELIBERATE
+  admission rather than a gap: `Draining`/`Converging` admit spawns so payload applies can compose. A spawn issued
+  there — e.g. from an EntityScript's `DoBeginPlay`, which fires only once construction/composition has
   finished and typically lands exactly there — sails through `Request_SpawnEntity`'s suppression check
   unchallenged, because `Get_IsLoadGateActive()` already reads false. If that `DoBeginPlay` unconditionally seeds
   a separately-persisted sibling, it creates a duplicate beside the entity the load is still in the middle of

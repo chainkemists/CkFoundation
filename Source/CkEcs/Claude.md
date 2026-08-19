@@ -282,6 +282,34 @@ Processor scripts (`CkProcessorScript_UE`) are a Blueprint/AS-scriptable wrapper
 
 ---
 
+## The load hold is NODE selection, not a view filter
+
+A snapshot load holds the world through `ECk_EcsWorld_LoadHold` on the world subsystem, read once per world-actor
+tick and turned into a (scope, tick-time) plan by the pure `ck::Get_TickPlanForHold`. Selection happens on the
+scheduler's EXECUTION ORDER, and `FProcessorScheduler::Tick` has exactly two callers repo-wide
+(`ACk_EcsWorld_Actor_UE::Tick` and `Request_PumpToQuiescence`). That makes it a true chokepoint: a shadowing
+`DoTick`, a `TParallelProcessor`, a hand-rolled processor class and the AngelScript query processors are **all**
+gated regardless of how they iterate. The hydration quarantine's view-filter bypass family is a different concern
+and does not apply here.
+
+`FGroup_Overlap` is the only `TG_PostPhysics` group, so it lives in its own world actor and its own scheduler
+partition — under the same hold, and pumped in ascending tick-group order so it always runs after the pre-physics
+partition that spends the loader's granted physics steps. `RunsDuringLoad` is unchanged and still framework-only:
+every project script processor is gated by construction.
+
+## The three clocks, and the one rule
+
+- **Game time** (`GetTimeSeconds`, every processor's `InDeltaT`, `CkTimer`, cadences, AngelScript
+  `utils_time::Get_TimeNow`) — FROZEN for the whole of a snapshot load, by the engine's own global time dilation.
+- **Wall time** (`FPlatformTime::Seconds`, `GetRealTimeSeconds`, `FDateTime::Now`) — keeps running.
+- **Frame counts** — what every phase of the loader is actually bounded by.
+
+The rule: **during a load, game time is frozen, so everything that paces gameplay is correct by default and needs
+no edit. Only code that must keep running WHILE the game is frozen reads wall time — and that code must be on the
+allow-list of `Ck.Snapshot.Meta.WallTimeReadsAreAllowListed`.** A wall-time read is a claim; the fence is the list
+of things that have made it, and it may only shrink. Note `FTimerManager` ticks the DILATED delta, so a timer-based
+poll is frozen too: anything a load waits on must not be scheduled on one.
+
 ## Processor group pipeline order
 
 Group processors define the top-level ordering; a processor joins one with `using Group = FGroup_X;`. The `RunAfter` chain in `CkProcessorGroups.h` is the authority — this roster is the human-readable view of it. All `TG_PrePhysics` unless noted.

@@ -163,3 +163,26 @@ line also suppresses (non-Shipping, Lyra parity).
 
 - BusterBlock `docs/superpowers/notes/2026-07-08-loading-screen-system-plan.md` — the full system
   plan this module is Phase 1 of (game-side holders, MapDefinition travel wrapper, preload).
+
+## CkSnapshot holds the screen for the whole of a load
+
+A snapshot load creates a `UCk_LoadingProcess_Task_UE` at `Request_Load` and releases it only at ready-to-resume —
+after every payload has applied, the requests they issued have drained, physics has stepped and probe overlaps have
+converged. Before that, the built-in show reasons all cleared once the fresh world had begun play with no pending
+travel, so the screen dropped at the post-travel boot and the player watched the entire rebuild.
+
+Three properties this leans on, all of them deliberate:
+
+- **The holder is GameInstance-scoped**, outered to this subsystem, so it survives the level travel a load performs.
+- **It passes `FCk_Time{}` — no wall-clock watchdog.** A load does not run at 60 fps: it runs a blocking `LoadMap`,
+  package loads and PSO warm-up, so a timeout sized for a healthy frame rate fires on a healthy slow load and drops
+  the screen over a half-rebuilt world, which is the one thing the screen is up for. The loader's own frame caps are
+  the bound, and every one of them names itself when it fires.
+- **The screen's own timers are wall-clocked** (`FPlatformTime::Seconds`), so the load's game-time freeze cannot
+  stall the very thing the player is looking at. Those reads are on the wall-time allow-list for exactly this reason.
+
+`Create` returns `nullptr` on a dedicated server, so an unset holder is a normal state rather than a missed one, and
+the release path is idempotent and unconditional on every exit route the load can take.
+
+The fade is **all holders released**, not "the loader finished": ready-to-resume is a statement about the WORLD, and
+a project is free to keep its own gates (BB holds one for store readiness) up afterwards.
