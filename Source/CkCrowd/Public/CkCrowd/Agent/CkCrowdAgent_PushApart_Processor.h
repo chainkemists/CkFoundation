@@ -14,8 +14,9 @@ namespace ck
 {
     // Stages into FFragment_CrowdAgent_PendingDisplacement and never writes the Transform — the
     // single Transform writer is FProcessor_CrowdAgent_ConstrainToNavmesh.
-    // No FTag_CrowdAgent_Walking requirement, deliberately: idle agents must separate too, which
-    // is what resolves a cluster that converged on one goal and went Idle.
+    // No FTag_CrowdAgent_Walking requirement, deliberately: ordinary idle agents must separate
+    // too. GoalFailedHold is the sole exception: it yields zero while a non-held pair member
+    // absorbs the full correction, preserving a physically stable terminal hold.
     //
     // A flying agent is excluded: the shove is zeroed in Z by construction, so two agents stacked
     // vertically would be de-overlapped sideways.

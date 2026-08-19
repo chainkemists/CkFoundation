@@ -217,6 +217,7 @@ namespace ck
             // reaching it is a FAILURE to reach the goal (verdict computed at install).
             if (InPathFollow.Get_ActivePathEndsShortOfGoal())
             {
+                NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
                 ck::crowd::Verbose(
                     TEXT("CrowdAgent [{}] walked its partial path to the end but the goal {} is unreachable from there — reporting OnGoalFailed"),
                     NonConstHandle, InPathFollow.Get_ActiveGoal());

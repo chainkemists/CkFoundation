@@ -23,6 +23,7 @@ namespace ck
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
+            ck::TReadOnly<FFragment_CrowdAgent_TransientPersonalSpace>,
             ck::TReadWrite<FFragment_CrowdAgent_SeparationForce>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
@@ -43,6 +44,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            const FFragment_CrowdAgent_TransientPersonalSpace& InPersonalSpace,
             FFragment_CrowdAgent_SeparationForce& InSeparationForce) -> void;
     };
 }

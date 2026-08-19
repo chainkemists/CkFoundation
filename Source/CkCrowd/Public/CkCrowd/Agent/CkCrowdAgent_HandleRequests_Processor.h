@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
@@ -72,7 +73,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
-            const FCk_Request_CrowdAgent_MoveTo& InRequest) -> void;
+            const FCk_Request_CrowdAgent_MoveTo& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
@@ -80,7 +81,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
-            const FCk_Request_CrowdAgent_FollowTarget& InRequest) -> void;
+            const FCk_Request_CrowdAgent_FollowTarget& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
@@ -118,6 +119,14 @@ namespace ck
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FFragment_CrowdAgent_DesiredVelocity& InDesired,
 			const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -59,7 +59,8 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble,
-            FFragment_CrowdAgent_BlockDetect& InBlockDetect)
+            FFragment_CrowdAgent_BlockDetect& InBlockDetect,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnPathResolvedProc);
@@ -224,10 +225,14 @@ namespace ck
             }
             case ECk_Nav_PathStatus::Failed:
             {
+                InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
                 InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+                InHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
+                InDesired._Velocity = FVector::ZeroVector;
+                InDesired._LastVelocity = FVector::ZeroVector;
 
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                     InHandle,

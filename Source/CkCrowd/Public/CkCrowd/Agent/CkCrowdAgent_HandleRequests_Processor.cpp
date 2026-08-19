@@ -20,6 +20,8 @@
 #include "CkVoxelNav/Path/CkVoxelNavPath_Fragment.h"
 #include "CkVoxelNav/Path/CkVoxelNavPath_Utils.h"
 
+#include <type_traits>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_HandleRequests);
@@ -63,14 +65,21 @@ namespace ck
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
-                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
-                // the line after the call IS the success condition.
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
-
-                Result = ECk_Request_OperationResult::Succeeded;
+                using RequestType = std::decay_t<decltype(InRequest)>;
+                if constexpr (std::is_same_v<RequestType, FCk_Request_CrowdAgent_MoveTo>
+                    || std::is_same_v<RequestType, FCk_Request_CrowdAgent_FollowTarget>)
+                {
+                    Result = DoHandleRequest(
+                        InHandle, InParams, InPathFollow, InDesired, InRequest);
+                }
+                else
+                {
+                    DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
+                    Result = ECk_Request_OperationResult::Succeeded;
+                }
             }), policy::DontResetContainer{});
 
             // A MoveTo/FollowTarget that actually dispatched a route advanced this revision using
@@ -95,29 +104,38 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_MoveTo& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
-        // A plain MoveTo takes over from any follow in flight; the FollowTarget handler delegates
-        // here and re-adds its own state afterwards.
-        InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
-
         const auto Goal = InRequest.Get_Target();
 
         // Re-issuing the goal we are already walking to resets the waypoint cursor, so a noisy
         // re-issuer would stop the final-stop ever latching and the agent would orbit its goal.
         constexpr auto SameGoalEpsilonCm = 20.0f;
-        if (NOT InRequest.Get_ForceRepath() &&
-            InHandle.Has<FTag_CrowdAgent_Walking>() &&
-            FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm &&
-            (InRequest.Get_CorrelationId() == 0 ||
-             InRequest.Get_CorrelationId() == InPathFollow.Get_ActiveMoveCorrelationId()))
+        const auto IsSameUnforcedClaim = NOT InRequest.Get_ForceRepath()
+            && FVector::Dist(Goal, InPathFollow.Get_ActiveGoal()) <= SameGoalEpsilonCm
+            && (InRequest.Get_CorrelationId() == 0
+                || InRequest.Get_CorrelationId() == InPathFollow.Get_ActiveMoveCorrelationId());
+
+        if (InHandle.Has<FTag_CrowdAgent_GoalFailedHold>() && IsSameUnforcedClaim)
         {
-            // Log, not Verbose: this silently swallows a caller's recovery attempt, and a caller
-            // that meant it has _ForceRepath.
             ck::crowd::Log(
-                TEXT("CrowdAgent [{}] MoveTo {} ignored (same goal without a new nonzero correlation {} or ForceRepath, already walking)"),
+                TEXT("CrowdAgent [{}] MoveTo {} rejected (same failed-held goal without a new nonzero correlation {} or ForceRepath)"),
                 InHandle, Goal, InRequest.Get_CorrelationId());
-            return;
+            // The request reached and was drained by this processor, so Failed_NotEnqueued would
+            // be false. Failed means the caller's requested movement episode was not dispatched.
+            return ECk_Request_OperationResult::Failed;
+        }
+
+        // A plain MoveTo takes over from any follow in flight; the FollowTarget handler delegates
+        // here and re-adds its own state afterwards. Preserve the legacy active-walk no-op contract.
+        InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
+
+        if (InHandle.Has<FTag_CrowdAgent_Walking>() && IsSameUnforcedClaim)
+        {
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] MoveTo {} ignored (same active goal without a new nonzero correlation {} or ForceRepath)"),
+                InHandle, Goal, InRequest.Get_CorrelationId());
+            return ECk_Request_OperationResult::Succeeded;
         }
 
         InPathFollow._ActiveMoveEpisode = InPathFollow._ActiveMoveEpisode == MAX_int32
@@ -145,6 +163,7 @@ namespace ck
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
         InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_GoalFailedHold>();
         InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal.
@@ -154,6 +173,7 @@ namespace ck
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
             InHandle, Goal, ArrivalRadius);
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -278,14 +298,14 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_FollowTarget& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         const auto& TargetPoint = InRequest.Get_TargetPoint();
         if (ck::Is_NOT_Valid(TargetPoint))
         {
             ck::crowd::Warning(TEXT("CrowdAgent [{}] FollowTarget ignored — the target point handle is invalid"),
                 InHandle);
-            return;
+            return ECk_Request_OperationResult::Failed;
         }
         const auto LiveGoal = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TargetPoint);
 
@@ -293,7 +313,10 @@ namespace ck
         auto MoveTo = FCk_Request_CrowdAgent_MoveTo{LiveGoal};
         MoveTo.Set_ArrivalRadiusOverrideMode(InRequest.Get_ArrivalRadiusOverrideMode());
         MoveTo.Set_ArrivalRadiusOverrideValue(InRequest.Get_ArrivalRadiusOverrideValue());
-        DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, MoveTo);
+        const auto MoveResult = DoHandleRequest(
+            InHandle, InParams, InPathFollow, InDesired, MoveTo);
+        if (MoveResult != ECk_Request_OperationResult::Succeeded)
+        { return MoveResult; }
 
         // ...then arm the follow AFTER the delegation, because a plain MoveTo clears it.
         auto& Follow = InHandle.AddOrGet<FFragment_CrowdAgent_FollowTarget>();
@@ -301,6 +324,7 @@ namespace ck
         Follow._RepathAccumulatorSec = 0.0f;
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] FollowTarget (goal={})"), InHandle, LiveGoal);
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -325,6 +349,7 @@ namespace ck
         InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
         InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_GoalFailedHold>();
         InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
         // Stop abandons the goal entirely — BlockedRecheck must never resume it.
@@ -342,6 +367,7 @@ namespace ck
         -> void
     {
         InAgent.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
+        InAgent.Try_Remove<FTag_CrowdAgent_GoalFailedHold>();
 
         if (NOT InAgent.Has<FFragment_CrowdAgent_BlockDetect>())
         { return; }
@@ -435,6 +461,22 @@ namespace ck
         InParams._MaxSpeed = InRequest.Get_MaxSpeed();
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] SetMaxSpeed {}"), InHandle, InRequest.Get_MaxSpeed());
+    }
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale& InRequest)
+        -> void
+    {
+        auto& PersonalSpace = InHandle.AddOrGet<FFragment_CrowdAgent_TransientPersonalSpace>();
+        PersonalSpace._Scale = InRequest.Get_Scale();
+        PersonalSpace._RemainingSeconds = InRequest.Get_DurationSeconds();
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] transient personal-space scale {} for {}s"), InHandle, PersonalSpace._Scale, PersonalSpace._RemainingSeconds);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

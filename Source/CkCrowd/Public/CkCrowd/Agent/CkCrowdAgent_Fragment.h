@@ -36,13 +36,32 @@ namespace ck
         using StopRequestType         = FCk_Request_CrowdAgent_Stop;
         using SetMaxSpeedRequestType  = FCk_Request_CrowdAgent_SetMaxSpeed;
         using SetNavQueryFilterRequestType = FCk_Request_CrowdAgent_SetNavQueryFilter;
-        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType, SetMaxSpeedRequestType, SetNavQueryFilterRequestType>;
+        using SetTransientPersonalSpaceScaleRequestType = FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale;
+        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType, SetMaxSpeedRequestType, SetNavQueryFilterRequestType, SetTransientPersonalSpaceScaleRequestType>;
 
     private:
         TArray<RequestType> _Requests;
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // Runtime-only state; omitted from snapshot payloads because a comfort squeeze must never
+    // survive a save/load boundary.
+    struct CKCROWD_API FFragment_CrowdAgent_TransientPersonalSpace
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_TransientPersonalSpace);
+        friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class FProcessor_CrowdAgent_TransientPersonalSpace;
+
+    private:
+        float _Scale = 1.0f;
+        float _RemainingSeconds = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_Scale);
+        CK_PROPERTY_GET(_RemainingSeconds);
     };
 
     // Added by HandleRequests when a FollowTarget request lands; removed by a plain MoveTo, by
@@ -249,6 +268,12 @@ namespace ck
     // HAS stopped, and GoalBlocked only records why and that it still wants the goal.
     // Cleared by any external MoveTo or Stop.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalBlocked);
+
+    // A movement episode ended because no usable path exists or a bounded NoProgress retry
+    // budget was exhausted. The active goal remains in PathFollow for diagnostics and an
+    // explicit ForceRepath/new-goal wake, but identical ordinary MoveTo requests are inert.
+    // Always co-resident with Idle; never co-resident with Walking or PathPending.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalFailedHold);
 
     // Progress-along-path stall detection plus the escalation ladder that answers it.
     // UPathFollowingComponent's feet-sample centroid ring (PathFollowingComponent.cpp:1556-1608)
