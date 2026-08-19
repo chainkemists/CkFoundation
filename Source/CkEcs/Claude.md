@@ -249,6 +249,47 @@ At that group's end, the scheduler replays the opted-in canonical processors in 
 
 Every participant must be safe to pump (`SkipPump` is rejected), must precede the barrier in the main graph, and shares the scheduler's normal per-frame pump-pass budget. A barrier runs in the load kernel only when every participant declares `RunsDuringLoad`. A trigger must declare a dirty marker, and that marker must be a consumed queue or other monotonically convergent work — never sticky state such as `FTag_Transform_Updated`.
 
+### The `-1` visited-count contract, and who is in it
+
+`Pump()` returns the number of entities the pass visited; the scheduler schedules another pass whenever any
+processor returns non-zero. `TProcessorBase::Pump` seeds `_LastVisitedCount = -1` before calling `DoTick`, and the
+generated view-iteration `DoTick` overwrites it with the real count. A **custom `DoTick` that never writes it
+leaves the sentinel**, and `-1 != 0`, so such a processor scores every pump pass as work whether or not it did
+any. That is deliberate and conservative — a custom body may do registry-wide work no view count describes, and a
+processor that under-reported would have its follow-up pass skipped and its cascade deferred a frame — but it is
+also why a pump can stay awake on a world where nothing is happening.
+
+**A custom `DoTick` that CALLS the base one inherits the real count**, and that is the cheap way in:
+`FProcessor_Nav_HandleRequests` and `FProcessor_Transform_HandleRequests` both do exactly this (Nav even adds its
+own drain actions to the inherited value). Only a body that never reaches the base leaves the sentinel.
+
+The measured family, on CkFoundation at `fa0aad517` — every processor whose `DoTick` neither calls a base
+`DoTick` nor writes `_LastVisitedCount`. **That measurement predates this branch's rebase onto dev**, which
+brought in commits that may have added or removed members; the table is a starting point, not a current census.
+Re-derive before relying on the count:
+
+| Module | Processor | What its pass actually does |
+|---|---|---|
+| CkAttribute | `TProcessor_AttributeModifier_ComputeAll` | ticks nine sub-processors, then clears its marker |
+| CkAudio | `FProcessor_AudioTrack_DebugDraw_All_NonSpatial` | debug draw |
+| CkEcs | `FProcessor_EntityLifetime_EntityJustCreated` | one registry-wide `Clear_Unconditional` |
+| CkEcsExt | `FProcessor_Transform_Cleanup` | registry-wide cleanup |
+| CkJolt | `FProcessor_JoltBody_SleepStateMirror` | mirrors Jolt sleep state |
+| CkJolt | `FProcessor_JoltDebugDrag_Apply` | editor drag |
+| CkJolt | `FProcessor_JoltDebugDraw_Capture` | debug draw |
+| CkJolt | `FProcessor_JoltWorld_WaitForAsync` · `_DrainEvents` · `_PlanStep` · `_Step` | the physics world's own step pipeline — no view at all |
+
+Eleven processors, in six modules. (`UCk_VoxelNavPreview_EditorSubsystem_UE` has a `DoTick` too and is not in
+this table: it is an editor subsystem tick, not a scheduler pump.) Two processors named in earlier campaign notes
+as members — `FProcessor_Eqs_Cleanup` and `FProcessor_FloatAttribute_FireSignals` — are **not**: the first has no
+custom `DoTick` at all, and the second is a composite whose `Pump` sums its five sub-processors' real counts
+through `FPumpVisitedCountAccumulator` (which propagates a sentinel only if a SUB reports one). Both already
+report truthfully; a diagnostic showing them visiting zero entities is showing exactly that.
+
+Re-derive: `rg --no-ignore -n '::$' -A 1 Source | rg 'DoTick\('` and read each body for a base-`DoTick` call or a
+`_LastVisitedCount` write. Changing the default (making `-1` mean "no work") is a silent behaviour change for
+every one of these bodies at once and is a maintainer decision, not a local one.
+
 ### Paced work (`CkPacedWork.h`)
 
 The pacer's marker is whatever fragment the consumer declares as `MarkedDirtyBy` (never with `SkipPump`). Simple case — the marker IS `ck::FFragment_PacedWork`; `Add` it to the work entity to start. Existing-queue case — the marker is a work-queue fragment every enqueue path already touches (so each enqueue re-marks dirty): pass that type as `RunPacedSteps<TMarkerFragment>` and keep the `FFragment_PacedWork` pacer separate (`AddOrGet` internally, budget only).
