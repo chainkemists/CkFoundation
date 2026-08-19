@@ -687,10 +687,14 @@ re-applied at the post-travel boot seed. "Frozen" means at most ~17 ms across a 
 every threshold is an epsilon. Wall time keeps running deliberately, for a small named list of watchdogs — see the
 allow-list fence `Ck.Snapshot.Meta.WallTimeReadsAreAllowListed`.
 
-**The boot seed is role-split.** A world coming up mid-load is held before anything in it ticks: the authority's
-post-travel world seeds `Rebuilding` (it is about to run every level actor's BeginPlay, which is where a
-level-triggered producer would seed population beside the copies being restored), a client seeds `Converging` (it
-rebuilds nothing and owes only coherence). The decision is made from load OWNERSHIP — a world carrying an epoch
+**The boot seed is `Converging`, for both roles.** A world coming up mid-load is held before anything in it ticks.
+`Rebuilding` was tried here and broke the load: it is the one phase that suppresses `Request_SpawnEntity`, and the
+level's own on-demand infrastructure spawns its entity and stamps the SaveKey the loader rendezvouses onto in
+exactly those first frames — suppressing them left three `EngineOwned` rows `savekey-miss` and cascaded 64 more
+into `owner-orphaned` (measured: mapped 85 / orphaned 67, against 152 / 0 on the reference). The BeginPlay-seeding
+window that motivated `Rebuilding` is real, but it belongs to the PRODUCER — `Get_IsRebuildInProgress` is true in
+every phase — because the framework cannot refuse spawns here without refusing the rebuild's own roots. The
+role decision is made from load OWNERSHIP — a world carrying an epoch
 this GameInstance did not itself produce — never from a net role, because `UWorld::InternalGetNetMode` falls back
 to `PlayInEditorNetMode` when the net driver is not yet attached, which is exactly the instant the seed must answer.
 
