@@ -363,12 +363,37 @@ default is dropped — moving the delegate earlier breaks AngelScript, which per
 trailing parameters, and silently rebinds existing positional callers. Dropping a default is a
 source-breaking change for AngelScript callers that omitted the argument, so grep `Script/` for them.
 
-**UObject refs in fragments — ownership split:** `TStrongObjectPtr` when the entity owns the
-object's lifetime (spawned components, render targets); `TWeakObjectPtr` for non-owning
-observation. Both are correct; pick by ownership. `TObjectPtr` only in UPROPERTY/reflected
-contexts. UE GC does NOT trace fragment members — an object only a fragment points at WILL be
-collected unless something roots it (see `ckecs-domain-reference` skill for the incident history).
-UObjects never use `CK_DEFINE_CONSTRUCTORS` (UHT owns their construction).
+**UObject refs in fragments — a fragment ref is NEVER the GC root.** UE GC does not trace fragment
+members, so an object whose only reference is a fragment is collected mid-life regardless of its
+Outer or of the pointer type wrapping it. `TStrongObjectPtr` in a fragment does not fix that — it
+merely hides it, keeping one object alive off-registry while nothing keeps its dependencies alive
+(incident history: `ckecs-domain-reference` skill). The rule is therefore about **who roots**,
+not about pointer strength:
+
+| The fragment's ref is… | Hold it as | Rooted by |
+|---|---|---|
+| an object the feature **observes** (an actor, a component, a world-context object it did not create) | `TWeakObjectPtr`, resolved on read | whoever owns it; a destroyed referent must read as gone, not as a recycled address |
+| an object the feature **creates/owns** (components, widgets, runtime data objects) | `TWeakObjectPtr` | `UCk_Utils_Object_UE::Request_CreateNewObject` — the ObjectPooling subsystem **pins** every instance it hands out; the pin is the root |
+| an **asset the feature loads** (mesh, material, curve, sound, Niagara system, anim) | `TSoftObjectPtr` in params/requests + an `FCk_ResourceLoader_RootedAssetBatch` in `Current` | the batch's streamable handle; resetting the batch releases the assets |
+
+`TObjectPtr` only in UPROPERTY/reflected contexts (there GC does trace, and the UPROPERTY is the
+root). UObjects never use `CK_DEFINE_CONSTRUCTORS` (UHT owns their construction).
+
+Both rooting mechanisms and the composition/EndPlay order they imply:
+[Source/CLAUDE.md](Source/CLAUDE.md) § "Objects and assets a fragment holds". Never hand-roll a
+third: no bare `NewObject` stored strongly in a fragment, no `AddToRoot`, no synchronous
+`LoadObject`/`.LoadSynchronous()` on a params path, and no hard `TObjectPtr` on an
+`EditAnywhere`/`BlueprintReadWrite` asset field — a hard ref there force-loads the asset with every
+DataAsset or Blueprint that merely names it, which is the authoring cost the soft-ref sweep exists
+to remove.
+
+⚠️ **Residual `TStrongObjectPtr` fragment members exist and are NOT the pattern** — the sweep that
+established the above (`e2f43a098`…`cfb24ae94`, 2026-07) converted CkAnimation, CkFx, CkAudio,
+CkIskmRenderer, CkJolt, CkPmg, CkRenderTarget, CkTween params, CkVat, CkWorldSpaceWidget,
+CkRaySense, CkCamera, CkActor, CkEntitySpawner. Untouched holders remain (`CkVfx`'s
+`FFragment_VfxCue_Current::_NiagaraComponent`, `CkTween`'s resolved curve drives, CkVoiceChat,
+CkCrowd, CkDebugScene). Do not copy them; convert one when you are already changing its feature,
+and say so in the commit.
 
 **Signals.** Defined via `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(...)`; bound via
 `CK_SIGNAL_BIND(ck::UUtils_Signal_OnX, Handle, Delegate, BindingPolicy, PostFireBehavior)` /
@@ -462,6 +487,15 @@ superproject with `.claude/scripts/sync-skills.ps1`).
 - **Stuck protocol:** STOP → delegate investigation → step back → simplify → ask "[A] vs [B]?".
   Two failed attempts means stop and present options, not a third attempt.
 - **Editor-dependent verification** is a human step: label it `[EDITOR-VERIFY]` with exact clicks.
+- **Batch the edits, not the gate.** Non-negotiable #7 requires the gate re-run before you claim
+  *fixed* — it does NOT mean re-running after every edit. A CK editor build is 5-30 min and a full
+  suite ~10-23 min, so a planned series of related changes is made in full, then verified in **one**
+  run scoped to the modules it touched (`--test-pattern`); the unscoped full suite is the
+  **end-of-work gate**, run once before claiming done. Break the batch when a change is novel or
+  risky enough to want immediate feedback, when one change's correctness gates the next, or while
+  debugging. A red batch does not localize its cause — bisect it, don't guess. Capture the baseline
+  counts and failing-test *names* before the first change, and always report which pattern you ran.
+  Mechanics and flags: the `/build-test` skill.
 - **Comment audit before done (mandatory closing step).** Re-read your own diff and delete every
   comment a good name would carry: gate/phase/campaign/PROMPT breadcrumbs, restatements of the code,
   and any *what*-comment. Keep only load-bearing *why*-comments and `/** contract */` blocks (Code
