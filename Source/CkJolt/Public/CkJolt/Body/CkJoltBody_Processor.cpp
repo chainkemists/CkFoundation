@@ -302,6 +302,10 @@ namespace ck
         Settings.mLinearDamping = InParams.Get_LinearDamping();
         Settings.mAngularDamping = InParams.Get_AngularDamping();
 
+        // Jolt's default is 500 in ITS units and Conv does not rescale, so a Jolt unit is a
+        // centimetre here — leaving this unset caps every dynamic body at 5 m/s.
+        Settings.mMaxLinearVelocity = InParams.Get_MaxLinearVelocity();
+
         switch (InParams.Get_MassSource())
         {
             case ECk_JoltBody_MassSource::FromShape:

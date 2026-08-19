@@ -181,6 +181,18 @@ private:
               meta = (AllowPrivateAccess = true))
     float _AngularDamping = 0.05f;
 
+    /// Speed ceiling for this body, in the project's world units (cm/s). NOT a knob you can leave
+    /// alone and forget: Jolt's own default is 500 expressed in ITS units, and ck::jolt::Conv is a
+    /// component copy with no rescaling — a Jolt unit IS a centimetre here — so an unset value
+    /// silently caps every dynamic body at 5 m/s. Anything thrown, launched, or falling from height
+    /// reaches that ceiling and then behaves as though the force were far weaker. Measured on a
+    /// ballistic throw solved for 850 cm/s: the body left at exactly 500 cm/s along the correct
+    /// direction and landed at a third of the intended range. The default below is Jolt's 500 m/s
+    /// INTENT re-expressed in this project's units; lower it per-body for a real terminal velocity.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0.0))
+    float _MaxLinearVelocity = 50000.0f;
+
     // Resolved against UCollisionProfile at setup to seed this body's Jolt object layer (v1 is profile-only).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -208,6 +220,7 @@ public:
     CK_PROPERTY(_GravityFactor);
     CK_PROPERTY(_LinearDamping);
     CK_PROPERTY(_AngularDamping);
+    CK_PROPERTY(_MaxLinearVelocity);
     CK_PROPERTY(_CollisionProfileName);
     CK_PROPERTY(_PersistContacts);
 
