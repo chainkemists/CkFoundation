@@ -24,6 +24,8 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
+#include "Materials/MaterialInterface.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WorldSpaceWidget_UE, FCk_Handle_WorldSpaceWidget,
@@ -433,7 +435,7 @@ auto
     const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
     const auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
 
-    const auto PlayerController = Current.Get_WidgetOwningPlayer().Get();
+    const auto PlayerController = Current.Get_ResolvedOwningPlayer();
     if (ck::Is_NOT_Valid(PlayerController))
     { return false; }
 
