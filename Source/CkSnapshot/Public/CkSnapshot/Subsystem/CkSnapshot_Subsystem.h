@@ -281,6 +281,12 @@ public:
     // a test exists to rule out. False until a client hold has released at least once this session.
     auto TestOnly_Get_ClientHoldReleasedByCap() const -> bool
     { return _TestOnly_ClientHoldReleasedByCap; }
+
+    // Whether the loader has already said, for THIS load, that it observed a paused world under the hold. A test
+    // that pauses mid-load reads this to know the observation landed before unpausing — otherwise it is racing
+    // the loader's own ticker to produce the very line it is asserting on.
+    auto TestOnly_Get_PauseObservedUnderHold() const -> bool
+    { return _PauseObservedUnderHold; }
 #endif
 
 private:
@@ -379,6 +385,17 @@ private:
     // therefore applies twice, and the second apply must not be mistaken for a redundant one.
     auto DoApply_TimeFreeze(UWorld& InWorld) -> void;
     auto DoRestore_TimeFreeze(UWorld& InWorld) -> void;
+
+    // A paused world does not tick, and every phase of a load is driven BY world ticks — the rebuild's kernel
+    // passes, the payload drain, the convergence pump. So a pause taken while the hold is on does not pause the
+    // load; it stops it, and the load then spends its whole frame budget going nowhere before escaping at the
+    // caps and reporting Succeeded_WithLoss for facts that were never given a chance to converge.
+    //
+    // The framework does not refuse the pause: pausing is a game-side decision, taken by a game-side menu, and a
+    // world subsystem is the wrong place to veto it (the sanctioned guard is the pause UI declining while
+    // Get_IsLoadInProgress). What it does is refuse to be SILENT about it — ONE Warning per load, naming the
+    // world and the phase, so the resulting cap-escape is explained rather than mysterious.
+    auto DoObserve_PauseUnderHold(const UWorld& InWorld, const TCHAR* InSide, int32 InEpoch) -> void;
 
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
@@ -504,6 +521,10 @@ private:
     // it. Per world rather than per load, because the freeze does not survive travel — see DoApply_TimeFreeze.
     TWeakObjectPtr<UWorld> _TimeFreezeWorld;
     float _PriorTimeDilation = 1.0f;
+
+    // One Warning per load, never one per frame — see DoObserve_PauseUnderHold. Cleared when a load latches and
+    // when a client hold arms, so a pause in a later load is reported again rather than absorbed by the first.
+    bool _PauseObservedUnderHold = false;
 
     // Which load this is, counted per GameInstance. It rides the travel URL and the replicated fact, and it is
     // what stops a client releasing on a fact left standing by the PREVIOUS load.
