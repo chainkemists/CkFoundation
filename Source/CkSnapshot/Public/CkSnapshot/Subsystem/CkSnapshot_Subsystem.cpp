@@ -2151,6 +2151,142 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoArm_ConvergenceDebugTiming()
+    -> void
+{
+    if (_ConvergenceDebugTimingArmed)
+    { return; }
+
+    auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Scheduler.DebugTiming"));
+    if (CVar == nullptr)
+    { return; }
+
+    _ConvergenceDebugTimingPrior = CVar->GetBool();
+    _ConvergenceDebugTimingArmed = true;
+
+    if (_ConvergenceDebugTimingPrior)
+    { return; }
+
+    CVar->Set(true, ECVF_SetByCode);
+
+    ck::snapshot::Display(TEXT("DIAG: v3 convergence still pending at frame [{}] — enabling ck.Scheduler.DebugTiming "
+        "so the stall report can name the processors keeping the world awake"), _LoadFrameCount);
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRestore_ConvergenceDebugTiming()
+    -> void
+{
+    if (NOT _ConvergenceDebugTimingArmed)
+    { return; }
+
+    _ConvergenceDebugTimingArmed = false;
+
+    if (_ConvergenceDebugTimingPrior)
+    { return; }
+
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Scheduler.DebugTiming")))
+    { CVar->Set(false, ECVF_SetByCode); }
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoReport_ConvergenceStall() const
+    -> void
+{
+    const auto* EcsWorld = DoGet_LoadWorldEcs();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return; }
+
+    // Per tick group, in the order they are pumped, so the report reads the way the frame ran.
+    auto OrderedTickGroups = TArray<TEnumAsByte<ETickingGroup>>{};
+    EcsWorld->Get_WorldActors().GenerateKeyArray(OrderedTickGroups);
+    OrderedTickGroups.Sort([](const TEnumAsByte<ETickingGroup>& InA, const TEnumAsByte<ETickingGroup>& InB) -> bool
+    { return InA.GetValue() < InB.GetValue(); });
+
+    for (const auto& TickGroup : OrderedTickGroups)
+    {
+        const auto& Actor = EcsWorld->Get_WorldActors()[TickGroup];
+        if (NOT Actor.IsValid())
+        { continue; }
+
+        const auto& SchedulerOpt = Actor->Get_Scheduler();
+        if (NOT SchedulerOpt.IsSet())
+        { continue; }
+
+        const auto& History = SchedulerOpt.GetValue().Get_DebugFrameHistory();
+        if (History.IsEmpty())
+        {
+            ck::snapshot::Display(TEXT("DIAG: v3 convergence stall — tick group [{}] has no debug frame history "
+                "(per-processor timing was not enabled long enough to record one)"), TickGroup);
+            continue;
+        }
+
+        auto Pumped = TArray<ck::FSchedulerDebug_ProcessorTiming>{};
+        for (const auto& Timing : History.Last().ProcessorTimings)
+        {
+            if (Timing.PumpCountThisFrame > 0)
+            { Pumped.Emplace(Timing); }
+        }
+
+        if (Pumped.IsEmpty())
+        {
+            ck::snapshot::Display(TEXT("DIAG: v3 convergence stall — tick group [{}] pumped NO processor on its "
+                "last recorded frame"), TickGroup);
+            continue;
+        }
+
+        Pumped.Sort([](const ck::FSchedulerDebug_ProcessorTiming& InA,
+                       const ck::FSchedulerDebug_ProcessorTiming& InB) -> bool
+        { return InA.PumpCountThisFrame > InB.PumpCountThisFrame; });
+
+        constexpr auto MaxReported = 16;
+        auto Lines = TArray<FString>{};
+        for (auto Index = 0; Index < FMath::Min(Pumped.Num(), MaxReported); ++Index)
+        {
+            const auto& Timing = Pumped[Index];
+
+            auto Counts = TArray<FString>{};
+            for (const auto EntityCount : Timing.PumpPassEntityCounts)
+            { Counts.Emplace(FString::FromInt(EntityCount)); }
+
+            Lines.Emplace(FString::Printf(TEXT("%s x%d entities[%s]"),
+                *Timing.ProcessorName.ToString(), Timing.PumpCountThisFrame, *FString::Join(Counts, TEXT(","))));
+        }
+
+        ck::snapshot::Display(TEXT("DIAG: v3 convergence stall — tick group [{}] pumped [{}] processor(s) on its "
+            "last recorded frame; top [{}] by pump count: {}"),
+            TickGroup, Pumped.Num(), Lines.Num(), FString::Join(Lines, TEXT(" | ")));
+    }
+
+    // The other row that hit the cap in practice. A destroy queue that never drains is a set of entities, and
+    // naming a few of them is the difference between "something is being destroyed" and a lead.
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    if (auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle()))
+    {
+        auto Names = TArray<FString>{};
+        auto Total = 0;
+        for (const auto Entity : RawRegistry->view<ck::FTag_DestroyEntity_Initiate>())
+        {
+            ++Total;
+            if (Names.Num() >= 8)
+            { continue; }
+
+            auto Handle = ck::MakeHandle(FCk_Entity{Entity}, CkRegistry);
+            Names.Emplace(ck::Format_UE(TEXT("{}"), Handle));
+        }
+
+        if (Total > 0)
+        {
+            ck::snapshot::Display(TEXT("DIAG: v3 convergence stall — [{}] entit(ies) still carry "
+                "FTag_DestroyEntity_Initiate; first [{}]: {}"), Total, Names.Num(), FString::Join(Names, TEXT(" | ")));
+        }
+    }
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoRecord_ConvergenceUnmet(
         FCk_Snapshot_LoadReport& InOutReport) const
     -> void
@@ -2866,6 +3002,9 @@ auto
 
             DoReport_ConvergenceProgress(Pending);
 
+            if (NOT Pending.IsEmpty() && _LoadFrameCount >= kLoad_ConvergenceDebugArmFrame)
+            { DoArm_ConvergenceDebugTiming(); }
+
             if (Pending.IsEmpty())
             { ++_ConvergenceFramesSatisfied; }
             else
@@ -2901,6 +3040,7 @@ auto
             // Tenet 7: fail-closed needs a bounded escape, and the escape has to NAME what it gave up on. Each
             // remaining fact becomes an Error and a record, the Result downgrades to Succeeded_WithLoss, and the
             // world is handed back — a world resumed early is recoverable, a world never handed back is not.
+            DoReport_ConvergenceStall();
             DoRecord_ConvergenceUnmet(_V3LoadReport);
             DoEnter_ReadyToResume();
             return false; // done — unregister
@@ -2928,6 +3068,7 @@ auto
     { DoRestore_TimeFreeze(*FrozenWorld); }
 
     DoRelease_LoadScreenHold(_LoadScreenHold);
+    DoRestore_ConvergenceDebugTiming();
 
     // Frozen FIRST, then completed in place. Two of the three routes into here build their report LOCALLY, so a
     // lift or a fold that wrote to _V3LoadReport would name what it found in a copy nobody reads; and every
