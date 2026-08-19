@@ -64,10 +64,16 @@ bool FCkTest_DynamicFragment_DisplaySchema_ValueOwnership::RunTest(const FString
     InvalidSchema.FragmentDisplayName = TEXT("Would Partially Publish");
     InvalidSchema.PropertyDisplayNames.Add(NAME_None, TEXT("Invalid Key"));
 
+    // AT LEAST once, not exactly once. The rejection is a CK_ENSURE, and how many log lines one ensure
+    // produces is a property of the HOST rather than of the code under test: outside PIE the ensure's own
+    // diagnostic and the engine's assertion-failure line both carry the message, so the exact-count form reds
+    // on a headless lane while passing in the editor. Zero is still a failure — the ensure firing is the
+    // assertion, and the two TestFalse checks below are what say it rejected atomically.
+    constexpr auto AtLeastOnce = 0;
     AddExpectedError(
         TEXT("Invalid native Dynamic Fragment display schema registration"),
         EAutomationExpectedErrorFlags::Contains,
-        1);
+        AtLeastOnce);
     TestFalse(TEXT("invalid schema is rejected atomically"),
         ck::dynamic::Register_NativeFragmentDisplaySchema(InvalidPath, MoveTemp(InvalidSchema)));
     TestFalse(TEXT("invalid schema publishes no partial entry"),
