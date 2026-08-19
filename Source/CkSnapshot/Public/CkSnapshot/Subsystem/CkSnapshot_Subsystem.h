@@ -269,6 +269,12 @@ public:
     // shipping cap.
     auto TestOnly_Set_ConvergenceFrameCapOverride(int32 InFrameCap) -> void
     { _TestOnly_ConvergenceFrameCapOverride = InFrameCap; }
+
+    // WHY the last client hold let go. A test that asserts only "the hold is off" passes identically whether the
+    // designed conjunct arrived or the bounded escape gave up on it — and the escape is exactly the outcome such
+    // a test exists to rule out. False until a client hold has released at least once this session.
+    auto TestOnly_Get_ClientHoldReleasedByCap() const -> bool
+    { return _TestOnly_ClientHoldReleasedByCap; }
 #endif
 
 private:
@@ -464,6 +470,7 @@ private:
 #if WITH_AUTOMATION_TESTS
     int32 _TestOnly_HydrateFrameCapOverride = 0;       // <= 0 == use kLoad_HydrateFrameCap
     int32 _TestOnly_ConvergenceFrameCapOverride = 0;   // <= 0 == use kLoad_ConvergenceFrameCap
+    bool  _TestOnly_ClientHoldReleasedByCap = false;   // the last client-hold release was the bounded escape
 #endif
     int32 _SettleFramesRemaining = 0;                  // Draining floor: frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once
