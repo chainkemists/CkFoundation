@@ -625,8 +625,9 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   silently killed every consumer; v3 restores the semantic. Because it is permanent it answers "was this entity
   ever hydrated", not "is its restored state ready" — the latter is `Promise_OnHydrated`, and the reason the
   rename says `WasHydratedThisLoad` rather than `JustRestored` is that "just" was the part that was never true.
-  `FTag_Snapshot_JustRestored` remains as a deprecated alias, with `Get_WasJustRestored` as its reflected form,
-  until the game's readers are swept.
+  Its reflected form is `UCk_Utils_Snapshot_UE::Get_WasHydratedThisLoad`, and its one sanctioned use is the
+  restored-vs-replaced discriminator (adopt the subordinate the loader rebuilt, or spawn a second one). The
+  deprecated alias of this tag and its "just restored" accessor are gone.
 - **Orphan accounting is per-entry, not a subtraction.** It used to be a bare `N - mapped - skipped` count; the walk
   enumerates the identical set (`_SavedIdMap` / `_SkippedIds` are disjoint subsets of the entity table) but emits one
   Warning + one report record per orphan, so a lossy load is self-explaining.
