@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkDynamic/CkDynamic_Fragment_Data.h"
 
@@ -180,14 +180,6 @@ public:
         const FCk_Handle& InHandle);
 
 public:
-    // True when the dynamic-fragment struct declares snapshot-transience — by deriving
-    // FCk_DynamicFragment_SnapshotTransient (C++) or carrying a marker-typed field (AngelScript, which
-    // cannot inherit structs). Save capture and hydration skip such fragments; fences and tooling must
-    // use THIS predicate rather than re-deriving the rule.
-    static auto
-    Get_IsSnapshotTransient(
-        const UScriptStruct* InStructType) -> bool;
-
     static auto
     Get_StorageId(
         const UScriptStruct* InStructType) -> entt::id_type;

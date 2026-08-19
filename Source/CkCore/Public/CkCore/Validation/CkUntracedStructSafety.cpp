@@ -23,15 +23,14 @@ namespace ck_untraced_struct_safety
         // Native structs certified to retain no untraced UObject reference, matched by reflected path (same
         // link-avoidance rationale as Is_AngelScriptDeclaredStruct). FCk_Entity is provably GC-independent yet has
         // zero reflected fields in a cooked build, so the field-less-struct heuristic below would otherwise reject
-        // every dynamic fragment / spawn-param embedding an FCk_Handle. The three posture markers are
+        // every dynamic fragment / spawn-param embedding an FCk_Handle. Both posture markers are
         // empty-by-design and AngelScript fragments carry them as a FIELD (script structs cannot inherit) —
         // without approval a marker would fail schema validation on every fragment that declares its posture,
         // and Produce refuses the whole entity's payload on an unsafe schema.
         static const auto ApprovedPaths = TSet<FString>{
             TEXT("/Script/CkEcs.Ck_Entity"),
             TEXT("/Script/CkEcs.Ck_Snapshot_Durable"),
-            TEXT("/Script/CkEcs.Ck_Snapshot_Session"),
-            TEXT("/Script/CkDynamic.Ck_DynamicFragment_SnapshotTransient")};
+            TEXT("/Script/CkEcs.Ck_Snapshot_Session")};
         return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
     }
 

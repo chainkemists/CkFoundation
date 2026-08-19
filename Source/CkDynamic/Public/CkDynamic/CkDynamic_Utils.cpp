@@ -1,4 +1,4 @@
-#include "CkDynamic/CkDynamic_Utils.h"
+﻿#include "CkDynamic/CkDynamic_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -432,46 +432,6 @@ auto
         {
             InDelegate.Execute(Handle);
         });
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_DynamicFragment_UE::
-    Get_IsSnapshotTransient(
-        const UScriptStruct* InStructType)
-    -> bool
-{
-    if (ck::Is_NOT_Valid(InStructType))
-    { return false; }
-
-    const auto DoCompute = [&]() -> bool
-    {
-        const auto* Marker = FCk_DynamicFragment_SnapshotTransient::StaticStruct();
-        if (InStructType->IsChildOf(Marker))
-        { return true; }
-
-        for (TFieldIterator<FStructProperty> It{InStructType}; It; ++It)
-        {
-            if (It->Struct == Marker)
-            { return true; }
-        }
-
-        return false;
-    };
-
-    // Weak key so an AS hot reload, which can replace a UScriptStruct at a recycled address, re-computes —
-    // matching Validate_FragmentSchema / Get_StorageId. Off the game thread the cache is skipped, not raced.
-    if (NOT IsInGameThread())
-    { return DoCompute(); }
-
-    static TMap<TWeakObjectPtr<const UScriptStruct>, bool> Cache;
-    if (const auto* Found = Cache.Find(InStructType))
-    { return *Found; }
-
-    const auto Result = DoCompute();
-    Cache.Add(InStructType, Result);
-    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
