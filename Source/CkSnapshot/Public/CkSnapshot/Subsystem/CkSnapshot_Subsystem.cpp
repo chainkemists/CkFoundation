@@ -1676,6 +1676,20 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoGet_ConvergenceFrameCap() const
+    -> int32
+{
+#if WITH_AUTOMATION_TESTS
+    if (_TestOnly_ConvergenceFrameCapOverride > 0)
+    { return _TestOnly_ConvergenceFrameCapOverride; }
+#endif
+    return kLoad_ConvergenceFrameCap;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoStamp_HydrationQuarantine()
     -> void
 {
@@ -2054,6 +2068,85 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoGet_ConvergenceGrantedSteps() const
+    -> int32
+{
+    const auto* EcsWorld = DoGet_LoadWorldEcs();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return 0; }
+
+    const auto* Convergence = EcsWorld->Get_Registry().TryGetContext<ck::FCtx_LoadConvergence>();
+    return Convergence != nullptr ? Convergence->_PhysicsGrantedStepsSinceHold : 0;
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoGet_ConvergenceSeriesText(
+        const TArray<int32>& InSeries) const
+    -> FString
+{
+    auto Parts = TArray<FString>{};
+    Parts.Reserve(InSeries.Num());
+    for (const auto Value : InSeries)
+    { Parts.Emplace(FString::FromInt(Value)); }
+
+    return FString::Join(Parts, TEXT(","));
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoReport_ConvergenceProgress(
+        const TArray<FName>& InPending)
+    -> void
+{
+    const auto GrantedSteps = DoGet_ConvergenceGrantedSteps();
+
+    // The edge, once per row per load. This is the line that answers "when did physics actually catch up" and
+    // "which fact was the slow one" without anybody having to reproduce the load.
+    for (const auto& WasPending : _ConvergencePendingLastFrame)
+    {
+        if (InPending.Contains(WasPending))
+        { continue; }
+
+        ck::snapshot::Display(TEXT("DIAG: v3 convergence row [{}] satisfied at frame [{}], granted physics steps "
+            "executed [{}]"), WasPending, _LoadFrameCount, GrantedSteps);
+    }
+
+    _ConvergencePendingLastFrame.Reset();
+    for (const auto& Name : InPending)
+    { _ConvergencePendingLastFrame.Add(Name); }
+
+    auto PumpCount = 0;
+    auto SkippedCount = 0;
+    if (const auto* EcsWorld = DoGet_LoadWorldEcs();
+        ck::IsValid(EcsWorld))
+    {
+        if (const auto* Convergence = EcsWorld->Get_Registry().TryGetContext<ck::FCtx_LoadConvergence>();
+            Convergence != nullptr)
+        {
+            PumpCount = Convergence->_PumpCountLastFrame;
+            SkippedCount = Convergence->_PumpSkippedGroupsLastFrame;
+        }
+    }
+
+    // Bounded by construction: a rolling window, not a transcript. 180 frames of per-frame Display would bury the
+    // very log it is meant to make readable.
+    _ConvergencePumpSeries.Emplace(PumpCount);
+    if (_ConvergencePumpSeries.Num() > kConvergenceSeriesWindow)
+    { _ConvergencePumpSeries.RemoveAt(0); }
+
+    _ConvergenceSkippedSeries.Emplace(SkippedCount);
+    if (_ConvergenceSkippedSeries.Num() > kConvergenceSeriesWindow)
+    { _ConvergenceSkippedSeries.RemoveAt(0); }
+
+    ck::snapshot::Verbose(TEXT("DIAG: v3 convergence frame [{}] — pending [{}], pump [{}], skipped groups [{}], "
+        "granted physics steps [{}]"), _LoadFrameCount, InPending.Num(), PumpCount, SkippedCount, GrantedSteps);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoRecord_ConvergenceUnmet(
         FCk_Snapshot_LoadReport& InOutReport) const
     -> void
@@ -2067,17 +2160,18 @@ auto
     { return; }
 
     auto Records = InOutReport.Get_ConvergenceUnmet();
+    const auto FrameCap = DoGet_ConvergenceFrameCap();
 
     for (const auto& Name : Pending)
     {
         ck::snapshot::Error(TEXT("Request_Load: convergence fact [{}] never reported converged within [{}] frames. "
             "The world is being handed back anyway — a world resumed early is recoverable, a world never handed "
             "back is not — and this load reports Succeeded_WithLoss because of it"),
-            Name, kLoad_ConvergenceFrameCap);
+            Name, FrameCap);
 
         Records.Emplace(FCk_Snapshot_ConvergenceLossRecord{}
             .Set_Name(Name)
-            .Set_FramesWaited(kLoad_ConvergenceFrameCap));
+            .Set_FramesWaited(FrameCap));
     }
 
     InOutReport.Set_ConvergenceUnmet(Records);
@@ -2694,6 +2788,9 @@ auto
             }
 
             _ConvergenceFramesSatisfied = 0;
+            _ConvergencePendingLastFrame.Reset();
+            _ConvergencePumpSeries.Reset();
+            _ConvergenceSkippedSeries.Reset();
             _LoadFrameCount = 0;
             _LoadPhase = ELoadPhase::Converging;
             return true;
@@ -2711,6 +2808,8 @@ auto
                 ? ck::FCk_LoadConvergenceRegistry::Get_Pending(EcsWorld->Get_Registry())
                 : TArray<FName>{};
 
+            DoReport_ConvergenceProgress(Pending);
+
             if (Pending.IsEmpty())
             { ++_ConvergenceFramesSatisfied; }
             else
@@ -2720,12 +2819,28 @@ auto
             // has finished — the first frame of the phase is exactly that for anything the grant is about to move.
             if (_ConvergenceFramesSatisfied >= kLoad_ConvergenceQuiescentFrames)
             {
+                ck::snapshot::Display(TEXT("DIAG: v3 converged after [{}] frames — pump counts last [{}]: [{}], "
+                    "skipped last [{}]: [{}], granted physics steps [{}]"),
+                    _LoadFrameCount, _ConvergencePumpSeries.Num(),
+                    DoGet_ConvergenceSeriesText(_ConvergencePumpSeries), _ConvergenceSkippedSeries.Num(),
+                    DoGet_ConvergenceSeriesText(_ConvergenceSkippedSeries), DoGet_ConvergenceGrantedSteps());
+
                 DoEnter_ReadyToResume();
                 return false; // done — unregister
             }
 
-            if (_LoadFrameCount < kLoad_ConvergenceFrameCap)
+            if (_LoadFrameCount < DoGet_ConvergenceFrameCap())
             { return true; }
+
+            // Beside the per-name Errors below, one line that says what the phase was still DOING while those
+            // facts refused to settle. Without it a cap hit is a name and nothing else, and the difference
+            // between "a fact nobody drives" and "a pump that never went quiet" needs a repro to tell apart.
+            ck::snapshot::Display(TEXT("DIAG: v3 convergence hit the [{}]-frame cap — pump counts last [{}]: [{}], "
+                "skipped groups last [{}]: [{}], granted physics steps [{}], still pending [{}]"),
+                DoGet_ConvergenceFrameCap(), _ConvergencePumpSeries.Num(),
+                DoGet_ConvergenceSeriesText(_ConvergencePumpSeries), _ConvergenceSkippedSeries.Num(),
+                DoGet_ConvergenceSeriesText(_ConvergenceSkippedSeries), DoGet_ConvergenceGrantedSteps(),
+                Pending.Num());
 
             // Tenet 7: fail-closed needs a bounded escape, and the escape has to NAME what it gave up on. Each
             // remaining fact becomes an Error and a record, the Result downgrades to Succeeded_WithLoss, and the
@@ -2793,6 +2908,9 @@ auto
     _LoadPhase = ELoadPhase::Idle;
     _LoadInProgress = false;
     _ConvergenceFramesSatisfied = 0;
+    _ConvergencePendingLastFrame.Reset();
+    _ConvergencePumpSeries.Reset();
+    _ConvergenceSkippedSeries.Reset();
     _PendingTeardownRoots.Reset();
     _V3Tables = FCk_Snapshot_V3_Tables{};
     _SavedIdMap.Reset();

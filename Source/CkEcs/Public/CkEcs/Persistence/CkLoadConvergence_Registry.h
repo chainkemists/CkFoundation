@@ -45,6 +45,11 @@ namespace ck
         // Monotonic counters sampled at the moment the phase began, so a predicate can ask "how much has happened
         // SINCE the hold" without keeping state of its own.
         int32 _PhysicsGrantedStepsBaseline = 0;
+
+        // How many of those granted steps have actually executed since the phase began, republished each frame by
+        // the module that owns the counter. Nothing reads it to decide anything — it exists so whoever drives the
+        // phase can SAY how far physics got, without taking a dependency on the module that stepped it.
+        int32 _PhysicsGrantedStepsSinceHold = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------

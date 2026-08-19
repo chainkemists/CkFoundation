@@ -101,6 +101,11 @@ void FCkJoltModule::StartupModule()
             // permanently un-quiescent — and Ecs.SchedulerQuiescent would then never be satisfied, making every
             // load burn the convergence budget on a phase that was doing exactly what it was told.
             const auto StepsSinceHold = JoltWorld->Get_GrantedStepsExecutedTotal() - Convergence->_PhysicsGrantedStepsBaseline;
+
+            // Republished for the driver's diagnostics only — it is the one number that says how far physics got,
+            // and the driver cannot ask CkJolt for it directly.
+            Convergence->_PhysicsGrantedStepsSinceHold = StepsSinceHold;
+
             if (StepsSinceHold >= ck::jolt::kConvergePhysicsSteps)
             { return; }
 
