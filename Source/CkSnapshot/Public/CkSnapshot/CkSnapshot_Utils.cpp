@@ -20,7 +20,7 @@
 
 auto
     UCk_Utils_Snapshot_UE::
-    Get_WasJustRestored(
+    Get_WasHydratedThisLoad(
         const FCk_Handle& InHandle)
     -> bool
 {
