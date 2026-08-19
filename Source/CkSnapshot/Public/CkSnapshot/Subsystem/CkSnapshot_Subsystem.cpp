@@ -649,7 +649,7 @@ void
 
     // Acquired now, on the pre-travel world, so the fact has somewhere to land the moment the load reaches it.
     // Pooled and shared with live consumers — acquire-only by design, so there is nothing to release.
-    DoAcquire_LoadStateChannel(*World, false);
+    DoAcquire_LoadStateChannel(*World);
     DoPublish_LoadState(false);
 
     auto Source = DoGet_SnapshotSource();
@@ -2386,8 +2386,7 @@ auto
 auto
     UCk_Snapshot_Subsystem_UE::
     DoAcquire_LoadStateChannel(
-        UWorld& InWorld,
-        bool InIsClientHold)
+        UWorld& InWorld)
     -> void
 {
     // ActorRelay channels are POOLED and shared with live consumers: the API is acquire-only by design and there
@@ -2405,7 +2404,7 @@ auto
     }
 
     UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
-        [WeakThis = TWeakObjectPtr<UCk_Snapshot_Subsystem_UE>{this}, InIsClientHold]
+        [WeakThis = TWeakObjectPtr<UCk_Snapshot_Subsystem_UE>{this}]
         (FCk_ActorRelay_ChannelResult InResult) -> void
         {
             auto* Self = WeakThis.Get();
@@ -2414,12 +2413,6 @@ auto
 
             // Resolved through the subsystem rather than a captured reference: the promise can land a frame or
             // more after the call that armed it, and a raw reference into a member outlives nothing usefully.
-            if (InIsClientHold)
-            {
-                Self->_ClientLoadStateChannelEntity = InResult.Get_ChannelEntity();
-                return;
-            }
-
             Self->_LoadStateChannelEntity = InResult.Get_ChannelEntity();
 
             // Converge from ARBITRARY state: this promise can land at any point in the load, including after
@@ -2431,10 +2424,7 @@ auto
         });
 
     // Kept so the pending handle outlives this scope while the channel is still coming up.
-    if (InIsClientHold)
-    { _PendingClientLoadStateChannel = Pending; }
-    else
-    { _PendingLoadStateChannel = Pending; }
+    _PendingLoadStateChannel = Pending;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -2542,9 +2532,18 @@ auto
             // one world for a single load, and the channel acquired in an earlier one dies with it — leaving the
             // ticker watching a handle the server's fact can never reach. Measured exactly that way: the server
             // published READY TO RESUME and the client still burned its whole budget reporting NEVER ARRIVED.
+            // A hold already running for this epoch simply FOLLOWS the client into whatever world comes up.
+            // The freeze prediction is per-world so it is re-applied; there is no per-world channel state left
+            // to rebind, because the fact is read from the live world every tick rather than from a handle
+            // captured once.
             if (_ClientHoldActive && Epoch == _ClientHoldEpoch && _ClientHoldWorld.Get() != &InWorld)
             {
-                DoRebind_ClientHold(InWorld);
+                _ClientHoldWorld = &InWorld;
+                _ClientHoldFrameCount = 0;
+                DoApply_TimeFreeze(InWorld);
+
+                ck::snapshot::Display(TEXT("DIAG: client hold followed the travel into world [{}] (epoch [{}])"),
+                    InWorld.GetName(), _ClientHoldEpoch);
                 return ECk_EcsWorld_LoadHold::Converging;
             }
 
@@ -2583,8 +2582,6 @@ auto
     _ClientHoldEpoch = InEpoch;
     _ClientHoldFrameCount = 0;
     _ClientHoldWorld = &InWorld;
-    _ClientLoadStateChannelEntity = FCk_Handle{};
-    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
     // The dilation the client writes here is a PREDICTION, and the server owns the value. AWorldSettings::
     // TimeDilation is replicated, so the server's floor — and later its restore — is what this world converges
@@ -2595,7 +2592,11 @@ auto
     DoCreate_LoadScreenHold(&InWorld, TEXT("CkSnapshot: the server is loading (not yet ready to resume)"),
         _ClientLoadScreenHold);
 
-    DoAcquire_LoadStateChannel(InWorld, true);
+    // NO channel acquire here, deliberately. ActorRelay channels are POOLED PER SIDE: the server picks one from
+    // its pool, a client's own Request_AcquireChannel picks from ITS pool, and nothing ties the two together. A
+    // client that watched the channel it acquired watched an entity the server's fact never reaches - measured
+    // twice as a client that burned its whole budget reporting the fact NEVER ARRIVED while that fact sat on a
+    // different entity in the same registry the entire time. The tick reads the fact WHEREVER it lands instead.
 
     _ClientHoldTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UCk_Snapshot_Subsystem_UE::DoTick_ClientHold));
@@ -2605,36 +2606,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Snapshot_Subsystem_UE::
-    DoRebind_ClientHold(
-        UWorld& InWorld)
-    -> void
-{
-    _ClientHoldWorld = &InWorld;
-
-    // A fresh budget for the world that can actually receive the fact. The previous world's frames were spent
-    // watching a channel that no longer exists, and charging them against this world would hand the player back
-    // a world the client never really waited for. The CAP itself is untouched.
-    _ClientHoldFrameCount = 0;
-
-    // Dropped before re-acquiring: these name the dead world's channel, and a stale handle here is precisely
-    // what made the release conjunct unreachable.
-    _ClientLoadStateChannelEntity = FCk_Handle{};
-    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
-
-    // Dilation does not survive travel, so the prediction is re-applied per world exactly as the server re-applies
-    // its own. Still a prediction: the server's replicated value supersedes it.
-    DoApply_TimeFreeze(InWorld);
-
-    DoAcquire_LoadStateChannel(InWorld, true);
-
-    // The screen holder is GameInstance-scoped and still held, and the ticker is still registered — rebinding is
-    // about WHICH world the hold watches, not about starting a second hold.
-    ck::snapshot::Display(TEXT("DIAG: client hold re-bound to world [{}] (epoch [{}]) — re-acquiring the "
-        "load-state channel on the world that will receive the fact"), InWorld.GetName(), _ClientHoldEpoch);
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -2649,18 +2620,42 @@ auto
 
     ++_ClientHoldFrameCount;
 
+    // The fact is RECOGNISED wherever it lands, every tick, never latched. The server publishes on the channel
+    // it acquired; that replicated container arrives on whichever entity mirrors it on this side, and because the
+    // pool is per side the client cannot name that entity in advance. Only relay channel entities carry
+    // FFragment_Snapshot_LoadState, so this view is a handful of entities.
+    auto Carrier = FCk_Handle{};
+
+    if (auto* HoldWorld = _ClientHoldWorld.Get();
+        HoldWorld != nullptr)
+    {
+        if (auto* Ecs = HoldWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+            ck::IsValid(Ecs))
+        {
+            auto& Registry = Ecs->Get_Registry();
+            Registry.View<ck::FFragment_Snapshot_LoadState>().ForEach(
+            [&Carrier, &Registry, this](FCk_Entity InEntity, const ck::FFragment_Snapshot_LoadState& InState)
+            {
+                if (ck::IsValid(Carrier))
+                { return; }
+
+                // THIS load's epoch, not merely any ready-to-resume: a fact left standing by a previous load is
+                // exactly what the epoch exists to disqualify.
+                if (NOT InState.Get_ReadyToResume() || InState.Get_LoadEpoch() != _ClientHoldEpoch)
+                { return; }
+
+                Carrier = ck::MakeHandle(InEntity, Registry);
+            });
+        }
+    }
+
     // BOTH conjuncts, and neither alone is enough. The fact says the server finished; replication-complete says
     // this client has actually received what that load produced. Releasing on the fact alone hands the player a
     // world whose contents are still arriving.
-    const auto ChannelIsLive = ck::IsValid(_ClientLoadStateChannelEntity);
-    const auto HasState = ChannelIsLive && _ClientLoadStateChannelEntity.Has<ck::FFragment_Snapshot_LoadState>();
+    const auto FactHasArrived = ck::IsValid(Carrier);
 
-    const auto FactHasArrived = HasState
-        && _ClientLoadStateChannelEntity.Get<ck::FFragment_Snapshot_LoadState>().Get_ReadyToResume()
-        && _ClientLoadStateChannelEntity.Get<ck::FFragment_Snapshot_LoadState>().Get_LoadEpoch() == _ClientHoldEpoch;
-
-    const auto ReplicationIsComplete = ChannelIsLive
-        && UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(_ClientLoadStateChannelEntity);
+    const auto ReplicationIsComplete = FactHasArrived
+        && UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(Carrier);
 
     if (FactHasArrived && ReplicationIsComplete)
     {
@@ -2722,8 +2717,6 @@ auto
 
     _ClientHoldActive = false;
     _ClientHoldWorld = nullptr;
-    _ClientLoadStateChannelEntity = FCk_Handle{};
-    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
     ck::snapshot::Display(TEXT("DIAG: client hold released for epoch [{}] — {}"), _ClientHoldEpoch, InReason);
 }
@@ -2886,7 +2879,7 @@ auto
                 _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
                 if (auto* PostTravelWorld = GetWorld();
                     ck::IsValid(PostTravelWorld))
-                { DoAcquire_LoadStateChannel(*PostTravelWorld, false); }
+                { DoAcquire_LoadStateChannel(*PostTravelWorld); }
                 DoPublish_LoadState(false);
             }
 
