@@ -213,12 +213,11 @@ public:
     // SaveKey) is the very thing the rebuild is waiting on.
     auto Get_IsLoadGateEscalated() const -> bool;
 
-    // Compatibility setters over the phase above, kept so callers that only ever expressed "the gate is up" and
-    // "the world is escalating" keep saying exactly that. true -> Rebuilding (the phase whose spawn-suppression
-    // and kernel-scope semantics those callers mean by "the gate"), false -> None; escalating -> Escalated, and
-    // un-escalating returns to Rebuilding. Lowering the gate clears escalation, as it always did.
+    // Compatibility setter over the phase above, kept so a caller that only ever expressed "the gate is up" keeps
+    // saying exactly that: true -> Rebuilding (the phase whose spawn-suppression and kernel-scope semantics such a
+    // caller means by "the gate"), false -> None. Everything that names a phase says which one, through
+    // Set_LoadHold.
     auto Set_IsLoadGateActive(bool InActive) -> void;
-    auto Set_IsLoadGateEscalated(bool InEscalated) -> void;
 
     // Answered at OnWorldBeginPlay, BEFORE the world's processor graph and scheduler actors exist: "does a load
     // own this world from its very first frame?". A world that comes up mid-load has to be held before anything

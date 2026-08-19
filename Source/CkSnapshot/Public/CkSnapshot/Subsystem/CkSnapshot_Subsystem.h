@@ -2,8 +2,11 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkActorRelay/CkActorRelay_Fragment_Data.h" // FCk_Handle_PendingActorRelay — the client's release carrier
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // ECk_EcsWorld_LoadHold — the hold this subsystem owns
 
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
@@ -23,6 +26,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class AActor;
+class UCk_LoadingProcess_Task_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -183,6 +187,25 @@ public:
     bool
     Get_IsLoadInProgress() const;
 
+    // True once THIS load has handed the world back: every payload applied, every request those applies issued
+    // drained, physics stepped, overlaps converged, the hold released and game time running again. It is the
+    // moment Promise_OnLoadComplete fires, and it is deliberately NOT the inverse of Get_IsLoadInProgress —
+    // between them sits every phase in which the world exists but is not yet the player's.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Is Ready To Resume")
+    bool
+    Get_IsReadyToResume() const;
+
+    // Which load this is, counted per GameInstance and stamped into the travel URL so a world coming up
+    // mid-travel can say WHICH load owns it. Zero until the first Request_Load.
+    auto Get_LoadEpoch() const -> int32;
+
+    // Answered at OnWorldBeginPlay for every world, BEFORE its processor graph exists, and SIDE-EFFECTING by
+    // design — it applies the time freeze and (on a client) arms the client-side hold. Registered as CkEcs's
+    // load-hold seed provider by this module's startup, so CkEcs never learns CkSnapshot exists.
+    auto DoGet_ShouldHoldWorldAtBoot(UWorld& InWorld) -> bool;
+
     // True while THIS entity's restored state is still the load's to write: a load is in flight, the load
     // mapped this entity, and the global quarantine lift has not run yet. It answers "will an OnHydrated edge
     // still arrive for this handle?" — false for a fresh spawn, a client, a world with no load in flight, and
@@ -249,7 +272,11 @@ private:
     // Hydrating is ATOMIC (one ticker callback): enqueue payloads + queue reconcile-destroys + open the gate, so no
     // gated world-tick ever sees pending payloads and hydration can only drain in post-gate FULL passes. Why that is
     // load-bearing, and the whole phase walkthrough: CkSnapshot/CLAUDE.md § "The v3 load machine".
-    enum class ELoadPhase : uint8 { Idle, TearingDown, AwaitingWorld, Rebuilding, Hydrating, Settling };
+    //
+    // Draining is what used to be called Settling: the payload drain, the deferred requests those applies issue,
+    // and the parked reconcile-destroys. Converging is new, and is the phase that makes "ready to resume" mean
+    // anything — the payload queue being empty is not the world being coherent.
+    enum class ELoadPhase : uint8 { Idle, TearingDown, AwaitingWorld, Rebuilding, Hydrating, Draining, Converging };
 
     // Why the hydration quarantine came off. Settled is the healthy path — the payload queue drained and the whole
     // mapped set was released together. The other two are the bounded escapes fail-closed must pair with, and each
@@ -259,7 +286,12 @@ private:
     auto DoInitiate_Teardown() -> void;                  // Request_DestroyEntity all gameplay roots; record them
     auto DoIs_TeardownComplete() const -> bool;          // all requested roots now invalid
     auto DoInitiate_Travel() -> void;                    // OpenLevel / seamless ServerTravel (once)
-    auto DoIs_NewWorldReady() const -> bool;             // a new world (!= pre-travel) HasBegunPlay
+
+    // ONE world-identity rule, shared by the readiness poll and the boot seed so they cannot fork. A world that
+    // answers true here is the world THIS load travelled to — not the pre-travel one, and not the seamless
+    // transition map, whose package name differs.
+    auto DoIs_WorldOwnedByThisLoad(const UWorld& InWorld) const -> bool;
+    auto DoIs_NewWorldReady() const -> bool;             // the above AND HasBegunPlay
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // clear flag, fire delegate/signal, reset
 
@@ -323,6 +355,43 @@ private:
 
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
+    // ---- The hold ------------------------------------------------------------------------------------------------
+    // Every write of the world's load hold goes through here, so a phase transition and the hold that expresses it
+    // can never disagree. A world that has gone away is not an error — a load's own travel is exactly that.
+    auto DoSet_LoadHold(ECk_EcsWorld_LoadHold InHold) -> void;
+
+    // The load's terminal transition, and the only place Ready_ToResume becomes true: the hold comes off, game
+    // time restarts, the loading screen this load was holding is released, and the fact is published to clients.
+    // Then DoFinish_Load closes the report and fires the promises — so every callback runs on a normal world.
+    auto DoEnter_ReadyToResume() -> void;
+
+    // Once per Converging frame: run the registered advances (the physics grant is one), pump, and record what
+    // the pump found into ck::FCtx_LoadConvergence. Deliberately an ACTION, called from one place, so the
+    // predicates that read the result can stay pure.
+    auto DoDrive_Convergence() -> void;
+
+    // Every remaining Pending row, recorded as a named loss with the frames it waited. The bounded escape's
+    // report half.
+    auto DoRecord_ConvergenceUnmet(FCk_Snapshot_LoadReport& InOutReport) const -> void;
+
+    // ---- The loading screen --------------------------------------------------------------------------------------
+    // Held for the WHOLE load, released on every route out of one. No watchdog: a load runs a blocking LoadMap,
+    // package loads and PSO warm-up, so a wall-clock timeout would fire on a healthy slow load and drop the screen
+    // over a half-rebuilt world. The loader's own frame caps are the bound.
+    auto DoCreate_LoadScreenHold(UObject* InWorldContext, const FString& InReason,
+                                 TObjectPtr<UCk_LoadingProcess_Task_UE>& InOutHold) const -> void;
+    auto DoRelease_LoadScreenHold(TObjectPtr<UCk_LoadingProcess_Task_UE>& InOutHold) const -> void;
+
+    // ---- The client half -----------------------------------------------------------------------------------------
+    // A client has no load, no report and no completion — but on a listen-server reload it travels and rebuilds
+    // too, so its world needs the same hold for the same span. Armed from the travel URL (the server cannot reach
+    // it any earlier than that) and released on the server's own ready-to-resume fact.
+    auto DoAcquire_LoadStateChannel(UWorld& InWorld, bool InIsClientHold) -> void;
+    auto DoPublish_LoadState(bool InReadyToResume) -> void;
+    auto DoBegin_ClientHold(UWorld& InWorld, int32 InEpoch) -> void;
+    auto DoTick_ClientHold(float InDeltaSeconds) -> bool;
+    auto DoRelease_ClientHold(const TCHAR* InReason) -> void;
+
 private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
@@ -361,8 +430,9 @@ private:
 #if WITH_AUTOMATION_TESTS
     int32 _TestOnly_HydrateFrameCapOverride = 0;       // <= 0 == use kLoad_HydrateFrameCap
 #endif
-    int32 _SettleFramesRemaining = 0;                  // post-gate frames to let parked destroys + Setups drain
+    int32 _SettleFramesRemaining = 0;                  // Draining floor: frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once
+    int32 _ConvergenceFramesSatisfied = 0;             // consecutive Converging frames with nothing Pending
     int32 _RebuildLastMappedCount = 0;                 // progress tracking: mapped count at the previous rebuild tick
     int32 _RebuildStallTicks = 0;                      // consecutive rebuild ticks with no NEW mapping (early-exit gate)
     bool  _RebuildEscalated = false;                   // kernel quiesced with unresolved rows -> full-scope ticks (see Rebuilding)
@@ -375,12 +445,48 @@ private:
     TWeakObjectPtr<UWorld> _TimeFreezeWorld;
     float _PriorTimeDilation = 1.0f;
 
+    // Which load this is, counted per GameInstance. It rides the travel URL and the replicated fact, and it is
+    // what stops a client releasing on a fact left standing by the PREVIOUS load.
+    int32 _LoadEpoch = 0;
+    bool _IsReadyToResume = false;
+
+    // The loading screen this load holds up for its whole duration, and the channel carrying the ready-to-resume
+    // fact to clients. Both are per load and both are released on every route out of one.
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_LoadingProcess_Task_UE> _LoadScreenHold;
+
+    FCk_Handle_PendingActorRelay _PendingLoadStateChannel;
+    FCk_Handle _LoadStateChannelEntity;
+
+    // ---- The client half: no load of its own, the same hold ----
+    bool _ClientHoldActive = false;
+    int32 _ClientHoldEpoch = 0;
+    int32 _ClientHoldFrameCount = 0;
+    FTSTicker::FDelegateHandle _ClientHoldTickerHandle;
+    TWeakObjectPtr<UWorld> _ClientHoldWorld;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_LoadingProcess_Task_UE> _ClientLoadScreenHold;
+
+    FCk_Handle_PendingActorRelay _PendingClientLoadStateChannel;
+    FCk_Handle _ClientLoadStateChannelEntity;
+
     static constexpr int32 kLoad_TeardownFrameCap = 600; // ~10s @ 60fps; abort guard for a stuck/non-ticking world
     static constexpr int32 kLoad_TravelFrameCap   = 600; // abort if the post-travel world never comes up
     static constexpr int32 kLoad_RebuildFrameCap  = 600; // hard cap if an entry never resolves/spawns
     static constexpr int32 kLoad_RebuildStallTicks = 30; // proceed early once no NEW entity maps for this many ticks
     static constexpr int32 kLoad_HydrateFrameCap  = 600; // abort if the hydration dispatcher never drains
-    static constexpr int32 kLoad_SettleFrames     = 3;   // post-gate frames: parked reconcile-destroys + gated Setups drain
+    static constexpr int32 kLoad_SettleFrames     = 3;   // Draining floor: parked reconcile-destroys + freed Setups drain
+
+    // Convergence is bounded like every other phase, and for the same reason: fail-closed without an escape is a
+    // permanent wedge. 180 frames is generous against a phase whose work is a handful of physics steps and a pump.
+    static constexpr int32 kLoad_ConvergenceFrameCap = 180;
+    // Consecutive frames every registered fact must report converged before the world is handed back. One frame
+    // can be a fact that has not started rather than one that has finished.
+    static constexpr int32 kLoad_ConvergenceQuiescentFrames = 2;
+    // The client's release conjuncts arrive over the wire, so its bound is the travel-shaped one rather than the
+    // convergence-shaped one.
+    static constexpr int32 kLoad_ClientHoldFrameCap = 600;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
