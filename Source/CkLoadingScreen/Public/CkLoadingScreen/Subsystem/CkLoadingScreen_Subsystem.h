@@ -16,6 +16,7 @@ class ICk_LoadingProcess;
 class IInputProcessor;
 class SWidget;
 class FSubsystemCollectionBase;
+struct FStreamableHandle;
 struct FWorldContext;
 template <typename InterfaceType> class TScriptInterface;
 
@@ -107,6 +108,14 @@ public:
     Unregister_LoadingProcessor(
         TScriptInterface<ICk_LoadingProcess> InInterface) -> void;
 
+public:
+    /**
+     * Commandlet / -unattended / null-RHI / ck.LoadingScreen.Disable — presentation off, bookkeeping
+     * on. Public because the MoviePlayer transition layer gates on the SAME list; two copies of it
+     * would eventually disagree about whether a run may present anything.
+     */
+    static auto Get_IsPresentationSuppressed() -> bool;
+
 private:
     auto DoHandlePreLoadMap(const FWorldContext& InWorldContext, const FString& InMapName) -> void;
     auto DoHandlePostLoadMap(UWorld* InWorld) -> void;
@@ -132,8 +141,16 @@ private:
 
     auto DoChangePerformanceSettings(bool InEnablingLoadingScreen) -> void;
 
-    /** Commandlet / -unattended / null-RHI / ck.LoadingScreen.Disable — presentation off, bookkeeping on. */
-    static auto DoGet_IsPresentationSuppressed() -> bool;
+    /**
+     * Roots the transition screen's textures for the subsystem's whole life. The Slate widget that
+     * draws them runs on the loading thread and must never touch a UObject, so it only ever gets
+     * pre-built brushes — this handle is what guarantees the textures behind those brushes are
+     * resident and GC-safe when the module builds them.
+     */
+    auto DoRequestTransitionAssets() -> void;
+
+    /** Drives the MoviePlayer -> game-thread-screen handoff. Ticks from inside the blocking wait. */
+    auto DoTickTransitionHandshake() -> void;
 
 private:
     UPROPERTY(Transient)
@@ -141,6 +158,7 @@ private:
 
     TSharedPtr<SWidget> _LoadingScreenWidget;
     TSharedPtr<IInputProcessor> _InputPreProcessor;
+    TSharedPtr<FStreamableHandle> _TransitionAssetsHandle;
 
     TArray<TWeakInterfacePtr<ICk_LoadingProcess>> _ExternalLoadingProcessors;
 
@@ -149,6 +167,7 @@ private:
     double _TimeLoadingScreenShown = 0.0;
     double _TimeLoadingScreenLastDismissed = -1.0;
     double _TimeUntilNextLogHeartbeatSeconds = 0.0;
+    double _TimeTransitionLoadingFinished = -1.0;
 
     bool _CurrentlyInLoadMap = false;
     bool _CurrentlyShowingLoadingScreen = false;
