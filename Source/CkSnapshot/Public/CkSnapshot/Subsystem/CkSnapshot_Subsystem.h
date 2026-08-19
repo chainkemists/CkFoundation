@@ -197,9 +197,16 @@ public:
     bool
     Get_IsReadyToResume() const;
 
-    // Which load this is, counted per GameInstance and stamped into the travel URL so a world coming up
-    // mid-travel can say WHICH load owns it. Zero until the first Request_Load.
+    // WHICH load this is, stamped into the travel URL and the replicated fact so a world coming up mid-travel
+    // can say which load owns it. Zero until the first Request_Load, monotonic within a session, and OPAQUE
+    // beyond that: it carries a session-unique salt so equality means "the same load" rather than "the same
+    // ordinal". Do not derive a load count from it and do not persist it.
     auto Get_LoadEpoch() const -> int32;
+
+    // The epoch's SHAPE, as a pure function of its two halves. Public because the property that matters —
+    // two GameInstances at the same load COUNT mint different epochs — is a statement about this composition,
+    // and asserting it any other way would need two instances that have each run the same number of loads.
+    static auto Compose_LoadEpoch(int32 InSalt, int32 InCount) -> int32;
 
     // Answered at OnWorldBeginPlay for every world, BEFORE its processor graph exists, and SIDE-EFFECTING by
     // design — it applies the time freeze and (on a client) arms the client-side hold. Registered as CkEcs's
@@ -397,6 +404,14 @@ private:
     // world and the phase, so the resulting cap-escape is explained rather than mysterious.
     auto DoObserve_PauseUnderHold(const UWorld& InWorld, const TCHAR* InSide, int32 InEpoch) -> void;
 
+    // The ?CkLoad= option is a ONE-SHOT: it tells the world coming up right now which load owns it, and it has
+    // no business surviving into the next travel. It would, though — every relative travel inherits the whole
+    // option array from FWorldContext::LastURL — so a finished load's epoch would re-arm a client hold on a
+    // later, unrelated map change, and would ride the join URL to anyone connecting through it. Struck from
+    // LastURL as it is consumed, which is where and how the engine strikes its own one-shots (Listen, failed,
+    // closed). UWorld::URL is deliberately left intact: that is the record of how THIS world came up.
+    auto DoConsume_LoadEpochOption(UWorld& InWorld) const -> void;
+
     auto DoReconcile_Queue() -> void;                    // subtractive Request_DestroyEntity of stray labeled children
 
     // ---- The hold ------------------------------------------------------------------------------------------------
@@ -526,8 +541,19 @@ private:
     // when a client hold arms, so a pause in a later load is reported again rather than absorbed by the first.
     bool _PauseObservedUnderHold = false;
 
-    // Which load this is, counted per GameInstance. It rides the travel URL and the replicated fact, and it is
-    // what stops a client releasing on a fact left standing by the PREVIOUS load.
+    // How many loads this GameInstance has run. The LOW half of the epoch below; nothing outside this class
+    // reads it.
+    int32 _LoadCount = 0;
+
+    // The HIGH half, drawn once per GameInstance. Without it the epoch is a bare per-instance COUNT, so a
+    // machine that has hosted N loads and then joins a host running its own load N reads that load as its own
+    // (`Epoch == _LoadEpoch`) and refuses to arm its client hold — the one decision the epoch exists to make.
+    // Salted, equality of epochs implies identity of loads, which is the only claim any consumer makes on it.
+    int32 _LoadEpochSalt = 0;
+
+    // WHICH load this is. It rides the travel URL and the replicated fact, and it is what stops a client
+    // releasing on a fact left standing by the previous load — or arming for one that belongs to somebody else.
+    // OPAQUE: monotonic within a session, but not a count, and never persisted.
     int32 _LoadEpoch = 0;
     bool _IsReadyToResume = false;
 
@@ -566,9 +592,25 @@ private:
     // Consecutive frames every registered fact must report converged before the world is handed back. One frame
     // can be a fact that has not started rather than one that has finished.
     static constexpr int32 kLoad_ConvergenceQuiescentFrames = 2;
-    // The client's release conjuncts arrive over the wire, so its bound is the travel-shaped one rather than the
-    // convergence-shaped one.
-    static constexpr int32 kLoad_ClientHoldFrameCap = 600;
+
+    // The client waits on the SERVER's whole load, so its budget is the sum of what the server may legitimately
+    // spend — not one phase of it. At 600 it was sized like a single phase (it was equal to the hydrate cap),
+    // which means a server that spent even its teardown and travel budgets had already outlived the client
+    // watching it: the client failed open into a world still being rebuilt and reported the fact as NEVER
+    // ARRIVED, which is a healthy slow load misreported as a broken one. Written as the SUM rather than as a
+    // number so a phase whose cap moves carries this with it instead of silently re-opening the gap.
+    static constexpr int32 kLoad_ClientHoldFrameCap =
+        kLoad_TeardownFrameCap + kLoad_TravelFrameCap + kLoad_RebuildFrameCap +
+        kLoad_HydrateFrameCap + kLoad_ConvergenceFrameCap;
+
+    // The epoch's two halves. 16 low bits of count, 15 high bits of salt, sign bit left clear so the value
+    // survives FCString::Atoi and the `Epoch > 0` validation on the way back in. The count wraps at 65536 loads
+    // in one session — a bound no session reaches, and in any case a collision WITHIN one instance, where the
+    // salt is identical and the count was never the discriminator. The salt is what makes two INSTANCES
+    // distinguishable, which is the case that actually bit.
+    static constexpr int32 kLoadEpoch_CountBits = 16;
+    static constexpr int32 kLoadEpoch_CountMask = (1 << kLoadEpoch_CountBits) - 1;
+    static constexpr int32 kLoadEpoch_SaltMask  = 0x7FFF;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
