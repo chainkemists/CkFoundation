@@ -75,7 +75,24 @@ namespace ck
         const auto IsWalking     = InHandle.Has<FTag_CrowdAgent_Walking>();
 
         if (NOT IsPathPending && NOT IsWalking)
-        { return; }
+        {
+            // Dropping a result is not automatically a no-op. Ending an episode advances the
+            // revision, so a SUPERSEDED result here is ordinary control flow and stays silent.
+            // A result still carrying the CURRENT revision, with an actual answer in it and both
+            // movement tags gone, means an episode ended without releasing what it acquired —
+            // exactly the orphan this bare return used to hide for months.
+            const auto CarriesAnAnswer = Result.Get_Status() == ECk_PathNetwork_RouteStatus::Ready
+                || Result.Get_Status() == ECk_PathNetwork_RouteStatus::Failed;
+            if (CarriesAnAnswer
+                && Result.Get_RequestRevision() == InPathFollow.Get_ActiveNavigationRequestRevision())
+            {
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] dropped a current-revision PathNetwork route ({}) with no "
+                         "active movement tags — its episode ended without releasing the query"),
+                    InHandle, Result.Get_Status());
+            }
+            return;
+        }
 
         // A policy/goal replan can retain the same goal while superseding an already
         // queued path-network request. Do not let an older result alter this episode.

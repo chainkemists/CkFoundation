@@ -50,7 +50,20 @@ namespace ck
         const auto IsWalking     = InHandle.Has<FTag_CrowdAgent_Walking>();
 
         if (NOT IsPathPending && NOT IsWalking)
-        { return; }
+        {
+            // See the twin guard in OnRouteResolved: a superseded result is expected and silent,
+            // an unconsumed CURRENT-revision answer means an episode ended without releasing it.
+            const auto CarriesAnAnswer = InPathResult.Get_Status() == ECk_VoxelNav_PathStatus::Ready
+                || InPathResult.Get_Status() == ECk_VoxelNav_PathStatus::Failed;
+            if (CarriesAnAnswer)
+            {
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] dropped a VoxelNav path result ({}) with no active "
+                         "movement tags — its episode ended without releasing the query"),
+                    InHandle, InPathResult.Get_Status());
+            }
+            return;
+        }
 
         // An agent whose volume binding went away is being pathed by CkNavigation instead, and must
         // never be transitioned by a result left over from when it was not.

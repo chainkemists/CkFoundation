@@ -55,6 +55,28 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
     static auto MarkPathPending(
         FCk_Handle& InHandle,
         int32       InRequestRevision = 0) -> void;
+
+    // Releases what MarkPathPending / a FindPath acquired: the slot returns to None and carries
+    // the caller's post-abandon revision, so a query that drains afterwards is recognised as
+    // superseded rather than applied. Clears the corridor too — a None slot still holding the old
+    // waypoints and destination is a half-cleared mirror that later readers would trust.
+    static auto AbandonPath(
+        FCk_Handle& InHandle,
+        int32       InRequestRevision = 0) -> void;
+
+    // Terminates a slot with an explicit failure reason, carrying the caller's CURRENT revision so
+    // the consumer that owns the episode still recognises it as its own answer rather than a
+    // superseded one. Used by the pending watchdog to convert a never-answered episode into a
+    // reportable failure instead of a silent wedge.
+    static auto FailPath(
+        FCk_Handle&            InHandle,
+        ECk_Nav_PathFailReason InReason,
+        int32                  InRequestRevision) -> void;
+
+    // Backdates a parked slot's age. Test-only seam — see the ForTesting hooks on UCk_Utils_Nav_UE.
+    static auto AgePathPending(
+        FCk_Handle& InHandle,
+        float       InAgeBySeconds) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

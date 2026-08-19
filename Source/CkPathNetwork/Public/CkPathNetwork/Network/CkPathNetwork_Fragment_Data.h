@@ -566,6 +566,31 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_PathNetworkFollower_FindRoute, _GoalLocation);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Ends an in-flight route episode. Request_FindRoute acquires; this releases. Without it a caller
+// that stops mid-route leaves the corridor parked at Pending and the follower still computing a
+// route nobody will consume.
+USTRUCT(BlueprintType)
+struct CKPATHNETWORK_API FCk_Request_PathNetworkFollower_AbandonRoute : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_PathNetworkFollower_AbandonRoute);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_PathNetworkFollower_AbandonRoute);
+
+private:
+    // Stamped onto the corridor result so a route that drains after this abandon is recognised
+    // as superseded rather than installed.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _RequestRevision = 0;
+
+public:
+    CK_PROPERTY(_RequestRevision);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_PathNetworkFollower_AbandonRoute, _RequestRevision);
+};
+
 // Deferred so tuning changes are serialized with route planning on the follower's entity.
 USTRUCT(BlueprintType)
 struct CKPATHNETWORK_API FCk_Request_PathNetworkFollower_UpdateTuning : public FCk_Request_Base

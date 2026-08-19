@@ -14,6 +14,7 @@
 #include <NavMesh/RecastNavMesh.h>
 #include <NavigationData.h>
 #include <NavFilters/NavigationQueryFilter.h>
+#include "HAL/PlatformTime.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -299,6 +300,83 @@ auto
     auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
     Result._Status = ECk_Nav_PathStatus::Pending;
     Result._RequestRevision = InRequestRevision;
+    Result._PendingSinceSeconds = FPlatformTime::Seconds();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    AbandonPath(
+        FCk_Handle& InHandle,
+        int32       InRequestRevision)
+    -> void
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("AbandonPath called with an invalid Handle"))
+    { return; }
+
+    // Nothing was ever acquired on this entity, so there is nothing to release.
+    if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
+    { return; }
+
+    auto& Result = InHandle.Get<ck::FFragment_Nav_PathResult>();
+    Result._Status = ECk_Nav_PathStatus::None;
+    Result._RequestRevision = InRequestRevision;
+    Result._Waypoints.Reset();
+    Result._DestinationLocation = FVector::ZeroVector;
+    Result._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::None;
+    Result._PendingSinceSeconds = 0.0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    FailPath(
+        FCk_Handle&            InHandle,
+        ECk_Nav_PathFailReason InReason,
+        int32                  InRequestRevision)
+    -> void
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("FailPath called with an invalid Handle"))
+    { return; }
+
+    if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
+    { return; }
+
+    auto& Result = InHandle.Get<ck::FFragment_Nav_PathResult>();
+    Result._Status = ECk_Nav_PathStatus::Failed;
+    Result._RequestRevision = InRequestRevision;
+    Result._Diagnostics._LastFailReason = InReason;
+    Result._PendingSinceSeconds = 0.0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    AgePathPending(
+        FCk_Handle& InHandle,
+        float       InAgeBySeconds)
+    -> void
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("AgePathPending called with an invalid Handle"))
+    { return; }
+
+    if (NOT InHandle.Has<ck::FFragment_Nav_PathResult>())
+    { return; }
+
+    auto& Result = InHandle.Get<ck::FFragment_Nav_PathResult>();
+    if (Result._PendingSinceSeconds <= 0.0)
+    { return; }
+
+    Result._PendingSinceSeconds -= static_cast<double>(InAgeBySeconds);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

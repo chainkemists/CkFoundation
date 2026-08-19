@@ -48,7 +48,8 @@ enum class ECk_Nav_PathFailReason : uint8
     FindPathInvalid,            // ENavigationQueryResult::Invalid (degenerate input)
     EmptyPath,                  // Result=Success but Path had zero points (degenerate start≈end)
     NotAuthority,               // Client-side request was dropped (server-only model)
-    BudgetExceeded              // Per-frame budget hit; request will retry next frame
+    BudgetExceeded,             // Per-frame budget hit; request will retry next frame
+    PendingTimeout              // A provider parked the slot at Pending and never answered
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Nav_PathFailReason);
 
@@ -142,12 +143,24 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     int32 _RequestRevision = 0;
 
+    // FPlatformTime::Seconds() when this slot was parked at Pending. A provider that never answers
+    // has no other bound — CkPathNetwork and CkVoxelNav carry no timeout of their own — so this is
+    // what lets a stalled episode be detected and reported instead of waiting forever.
+    //
+    // MUST NOT be persisted or replicated. It is a PROCESS-relative absolute timestamp: restored
+    // into another process (or received from a peer) it reads as ancient and trips the timeout
+    // instantly. If this fragment ever gains a persistence or replication handler, this field has
+    // to be excluded or rebased, not carried.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    double _PendingSinceSeconds = 0.0;
+
 public:
     CK_PROPERTY_GET(_Waypoints);
     CK_PROPERTY_GET(_DestinationLocation);
     CK_PROPERTY_GET(_Status);
     CK_PROPERTY_GET(_Diagnostics);
     CK_PROPERTY_GET(_RequestRevision);
+    CK_PROPERTY_GET(_PendingSinceSeconds);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -194,6 +207,34 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Nav_FindPath, _TargetLocation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Ends an in-flight path episode. Request_FindPath acquires; this releases. Without a release the
+// result slot keeps whatever the acquire parked there — a caller that stops mid-query leaves it
+// reading Pending for the entity's whole life, and every Get_PathStatus consumer is told a query
+// is still in flight.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Request_Nav_AbandonPath : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_Nav_AbandonPath);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Nav_AbandonPath);
+
+private:
+    // The caller's post-abandon revision, stamped onto the result so a query that drains AFTER
+    // this abandon is recognised as superseded instead of applied. CkNavigation cannot read the
+    // caller's revision counter (CkCrowd depends on CkNavigation, never the reverse), so it
+    // arrives as payload.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    int32 _RequestRevision = 0;
+
+public:
+    CK_PROPERTY(_RequestRevision);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Nav_AbandonPath, _RequestRevision);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

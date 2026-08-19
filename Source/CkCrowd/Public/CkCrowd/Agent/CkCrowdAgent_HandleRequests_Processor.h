@@ -56,6 +56,25 @@ namespace ck
 		static auto
 		AdvanceNavigationRequestRevision(FFragment_CrowdAgent_PathFollow& InPathFollow) -> int32;
 
+		// Ends the active path episode: advances the revision and releases whichever provider owns
+		// the in-flight query, so the shared FFragment_Nav_PathResult never outlives the episode
+		// that parked it. The single release for a TERMINAL — Stop and the provider fork both route
+		// through here rather than each remembering to clean up, which is how the orphaned-Pending
+		// slot arose. (The five sites that re-dispatch a CkNavigation query directly — both
+		// fallbacks, BlockDetect's stall re-path, PathRefresh, ForceReplan — advance the revision
+		// without it, which is safe only because each dispatches from a state whose prior query has
+		// already reached a terminal.)
+		// Deliberately does NOT clear _ActiveGoal: a re-dispatch reads it immediately afterwards.
+		static auto
+		DoAbandonActiveProviderQuery(HandleType InHandle, FFragment_CrowdAgent_PathFollow& InPathFollow) -> int32;
+
+		// Releases the PROVIDER's half of an episode without advancing the revision — for a terminal
+		// that must keep the current revision so its own result is still recognised as the answer
+		// (the pending watchdog's timeout). Ending an episode and leaving the provider's corridor
+		// parked would reproduce the orphan one layer down, on the provider's own result.
+		static auto
+		DoReleaseProviderQuery(HandleType InHandle, ECk_CrowdAgent_PathProvider InProvider, int32 InRevision) -> void;
+
 		// Dispatches a fresh query at _ActiveGoal through whichever provider owns this agent, and
 		// is the ONLY sanctioned way for a framework-internal re-path to reach one — the caller-side
 		// same-goal guard would otherwise swallow it. The caller owns the tag transition into

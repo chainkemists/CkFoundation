@@ -121,6 +121,58 @@ namespace ck_nav_processor
         ECVF_Default);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::nav
+{
+    auto
+        PurgeDeferredRequestsFor(
+            FCk_Handle& InHandle)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InHandle))
+        { return; }
+
+        // Move this entity's entries OUT of the shared queue before completing ANY of them. A
+        // completion delegate is caller code (AngelScript, in practice) and may re-enter the
+        // abandon path, which would nest a second purge over the very array this one is still
+        // erasing from.
+        auto Cancelled = TArray<FCk_Request_Nav_FindPath>{};
+        for (auto Index = ck_nav_processor::GDeferredNavRequests.Num() - 1; Index >= 0; --Index)
+        {
+            auto& Entry = ck_nav_processor::GDeferredNavRequests[Index];
+            if (Entry.Handle != InHandle)
+            { continue; }
+
+            Cancelled.Add(Entry.Request);
+            ck_nav_processor::GDeferredNavRequests.RemoveAt(Index, EAllowShrinking::No);
+        }
+
+        for (auto& CancelledRequest : Cancelled)
+        { CancelledRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed_Cancelled); }
+    }
+
+    auto
+        PurgeInFlightQueriesFor(
+            FCk_Handle& InHandle)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InHandle))
+        { return; }
+
+        // Undrained requests owe their callers a completion, and one left in the fragment would
+        // drain next tick and answer an episode that no longer exists.
+        if (InHandle.Has<FFragment_Nav_Requests>())
+        {
+            const auto Queued = InHandle.Get<FFragment_Nav_Requests>();
+            InHandle.Try_Remove<FFragment_Nav_Requests>();
+            ck::request::FireCancelledForPending(InHandle, Queued.Get_Requests());
+        }
+
+        PurgeDeferredRequestsFor(InHandle);
+    }
+}
+
 namespace ck
 {
     auto
@@ -322,8 +374,15 @@ namespace ck
 
         if (NOT bStartReady)
         {
-            InResult._Status = ECk_Nav_PathStatus::Pending;
             const auto NowSec = FPlatformTime::Seconds();
+
+            // Re-parking Pending MUST restamp the age. A prior terminal (the pending watchdog's
+            // timeout) zeroes _PendingSinceSeconds, and a zero age is the watchdog's "not
+            // measurable, leave it alone" early-out — so a bare status write here would re-park an
+            // episode that can never be timed out again, which is the silent wedge this whole
+            // change exists to remove. Every write of Pending carries its clock.
+            InResult._Status = ECk_Nav_PathStatus::Pending;
+            InResult._PendingSinceSeconds = NowSec;
             InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
             {
                 for (const auto& Variant : InSnapshot._Requests)
