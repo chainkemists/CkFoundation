@@ -42,6 +42,21 @@ namespace ck
         int32 _PumpCountLastFrame = 0;
         int32 _PumpSkippedGroupsLastFrame = 0;
 
+        // Consecutive frames on which the pump found the SAME amount of work as the frame before. A world that
+        // has stopped changing is what the hold is waiting for, and that is not the same as a world that has gone
+        // silent: a content world has legitimate per-frame request traffic (state machines re-evaluating, probe
+        // and ISM-proxy queues refilling) which never reaches zero and never grows either. Reset to 0 the moment
+        // the count moves.
+        int32 _PumpCountPrevFrame = 0;
+        int32 _PumpCountStableFrames = 0;
+
+        // The same question for the destruction pipeline, which spans three ticks by design: how many entities
+        // carry FTag_DestroyEntity_Initiate, and for how many consecutive frames that number has held. NPC AI
+        // creates and destroys immediate-query entities every frame, so "the queue is empty" is unreachable on a
+        // live world while "the queue is not growing" is exactly the fact the hold needs.
+        int32 _DestroyCarriersLastFrame = 0;
+        int32 _DestroyCarriersStableFrames = 0;
+
         // Monotonic counters sampled at the moment the phase began, so a predicate can ask "how much has happened
         // SINCE the hold" without keeping state of its own.
         int32 _PhysicsGrantedStepsBaseline = 0;
@@ -51,6 +66,11 @@ namespace ck
         // phase can SAY how far physics got, without taking a dependency on the module that stepped it.
         int32 _PhysicsGrantedStepsSinceHold = 0;
     };
+
+    // Consecutive frames a count must hold before "unchanged" is read as "settled". Deliberately larger than
+    // kLoad_ConvergenceQuiescentFrames (which the loader applies over ALL rows on top of this): one frame of
+    // sameness is a coincidence, four is a steady state.
+    inline constexpr int32 kLoad_ConvergenceStableFrames = 4;
 
     // --------------------------------------------------------------------------------------------------------------
 
