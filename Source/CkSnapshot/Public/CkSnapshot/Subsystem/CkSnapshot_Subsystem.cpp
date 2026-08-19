@@ -593,6 +593,7 @@ void
     // what stops a client that travelled for THIS load releasing on a fact the previous one left standing.
     ++_LoadEpoch;
     _ConvergenceFramesSatisfied = 0;
+    _PauseObservedUnderHold = false;
     _LoadStateChannelEntity = FCk_Handle{};
     _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
@@ -1954,6 +1955,29 @@ auto
     if (_TimeFreezeWorld.Get() == &InWorld)
     { return; }
 
+    // ...but only a world this load has LEFT may be re-armed over. _PriorTimeDilation is single-valued, so
+    // arming a second freeze while a first one is still held on a LIVE world would overwrite the dial that
+    // world has to be given back, and nothing would ever restore it — the world would run the rest of the
+    // session at the floor. The legitimate second apply is not this case: by the time the post-travel world is
+    // frozen, the world it travelled away from has already had BeginTearingDown called on it (UnrealEngine.cpp
+    // LoadMap, World.cpp seamless travel), so it is not live and its dial is about to stop existing.
+    //
+    // Refuse rather than pick a winner. Two concurrently-frozen worlds is a contract this class does not
+    // implement, and silently freezing the newcomer while abandoning the incumbent trades a loud, findable
+    // breach for a world stuck at 1/10000 speed with no breadcrumb naming who did it.
+    const auto* AlreadyFrozen = _TimeFreezeWorld.Get();
+    const auto HoldingADifferentLiveWorld =
+        ck::IsValid(AlreadyFrozen) && NOT AlreadyFrozen->bIsTearingDown;
+
+    CK_ENSURE_IF_NOT(NOT HoldingADifferentLiveWorld,
+        TEXT("CkSnapshot's load-time freeze was asked to freeze world [{}] while it is already held on the LIVE "
+             "world [{}]. The freeze is single-valued — one world, one captured prior dilation — so arming this "
+             "one would strand [{}] at its time-dilation floor with nothing left to restore it. REFUSED: game "
+             "time will NOT be frozen on [{}], and every promise the load makes about time not advancing is "
+             "void there"),
+        InWorld.GetName(), AlreadyFrozen->GetName(), AlreadyFrozen->GetName(), InWorld.GetName())
+    { return; }
+
     // The one project-level off-switch, and it defaults true. If a world ever turns it off, the freeze is inert
     // and has to say so — every promise the load makes about time not advancing is void on that world.
     CK_ENSURE_IF_NOT(Settings->bAllowTimeDilation,
@@ -2022,6 +2046,29 @@ auto
 
     Settings->SetTimeDilation(_PriorTimeDilation);
     _PriorTimeDilation = 1.0f;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoObserve_PauseUnderHold(
+        const UWorld& InWorld,
+        const TCHAR* InSide,
+        int32 InEpoch)
+    -> void
+{
+    if (_PauseObservedUnderHold || NOT InWorld.IsPaused())
+    { return; }
+
+    _PauseObservedUnderHold = true;
+
+    ck::snapshot::Warning(TEXT("The {} world [{}] is PAUSED while a load holds it (epoch [{}]). A paused world "
+        "does not tick, and every phase of a load is driven by world ticks — the rebuild, the payload drain and "
+        "the convergence pump are all stopped for as long as this lasts. If it outlives the phase's frame cap "
+        "the load escapes there and reports Succeeded_WithLoss for facts that never got a frame in which to "
+        "converge. A pause menu must decline while a load is in progress"),
+        InSide, InWorld.GetName(), InEpoch);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -2591,6 +2638,7 @@ auto
     _ClientHoldEpoch = InEpoch;
     _ClientHoldFrameCount = 0;
     _ClientHoldWorld = &InWorld;
+    _PauseObservedUnderHold = false;
 
     // The dilation the client writes here is a PREDICTION, and the server owns the value. AWorldSettings::
     // TimeDilation is replicated, so the server's floor — and later its restore — is what this world converges
@@ -2628,6 +2676,10 @@ auto
     { return false; }
 
     ++_ClientHoldFrameCount;
+
+    if (const auto* HeldWorld = _ClientHoldWorld.Get();
+        HeldWorld != nullptr)
+    { DoObserve_PauseUnderHold(*HeldWorld, TEXT("client's held"), _ClientHoldEpoch); }
 
     // The fact is RECOGNISED wherever it lands, every tick, never latched. The server publishes on the channel
     // it acquired; that replicated container arrives on whichever entity mirrors it on this side, and because the
@@ -2824,6 +2876,13 @@ auto
     -> bool
 {
     ++_LoadFrameCount;
+
+    // Before the phase machine, because a paused world is exactly the case where the phase machine below is
+    // about to make no progress and the reason will not be in the log anywhere else. The loader's own ticker is
+    // the core FTSTicker, which keeps running while the world is paused — so this is observable at all.
+    if (const auto* World = GetWorld();
+        ck::IsValid(World))
+    { DoObserve_PauseUnderHold(*World, TEXT("loading"), _LoadEpoch); }
 
     switch (_LoadPhase)
     {
