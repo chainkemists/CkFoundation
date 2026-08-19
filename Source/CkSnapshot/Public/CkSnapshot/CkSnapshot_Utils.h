@@ -54,19 +54,25 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Snapshot_UE);
 
     // True once the entity has been hydrated by a load this session (ck::FTag_Hydration_WasHydratedThisLoad,
-    // stamped only on entities the load mapped from a saved id). Genuinely useful as the restored-vs-replaced
-    // discriminator — presence and count checks cannot tell a restored entity from a fresh construction standing
-    // where it used to be, and this can.
+    // stamped only on entities the load mapped from a saved id). Its ONE job is the restored-vs-replaced
+    // discriminator: presence and count checks cannot tell a restored entity from a fresh construction standing
+    // where it used to be, and this can. A driver deciding whether to ADOPT the subordinate the loader rebuilt
+    // or SPAWN a second one is the shape it exists for.
     //
-    // But it is PERMANENT: it never clears, so it answers "was this ever restored", never "is my restored state
-    // ready". Reading it to decide when a value may be read means polling from a processor that happens to tick
-    // in the right window, and pairing it with a hand-rolled once-per-feature dedup. Promise_OnHydrated is that
-    // question asked properly — one-shot, per entity, pushed. This stays until its callers are swept.
+    // It is PERMANENT: it never clears, so it answers "was this ever hydrated", never "is my restored state
+    // ready". It is therefore NOT the predicate for timing a read, and code that uses it that way is describing
+    // a race that no longer exists — the load holds a restored entity out of every non-kernel processor's view
+    // until its payloads have applied, so a Setup processor reading a Durable fragment is already in the clear,
+    // and a consumer outside that path binds Promise_OnHydrated (one-shot, per entity, pushed).
+    //
+    // The retired spelling of this said "just restored", over an alias of the same tag. "Just" was the part
+    // that was never true, and every reader had to carry a hand-rolled once-per-feature dedup to survive the
+    // lie. Both are gone.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Get Was Just Restored")
+              DisplayName = "[Ck][Snapshot] Get Was Hydrated This Load")
     static bool
-    Get_WasJustRestored(
+    Get_WasHydratedThisLoad(
         const FCk_Handle& InHandle);
 
     // True while a CkSnapshot load is reconstituting the world the entity lives in. WORLD-scoped, unlike the

@@ -12,11 +12,6 @@ namespace ck
     // is a permanent fact, so every reader has to carry its own dedup, which is the trap it is named after.
     CK_DEFINE_ECS_TAG(FTag_Hydration_WasHydratedThisLoad);
 
-    // The former name, kept so the game's readers compile unchanged while they are swept. It is an alias, not a
-    // second tag: same type, same storage, same stamp. Deleted with UCk_Utils_Snapshot_UE::Get_WasJustRestored
-    // once the sweep lands.
-    using FTag_Snapshot_JustRestored = FTag_Hydration_WasHydratedThisLoad;
-
     // Stamp at creation on any entity that is DERIVED state its owner's construction/redrive recreates on
     // load (canonical: the SM graph). Unstamped, the capture persists it via its SpawnRecipe and respawns
     // it as a top-level duplicate that re-runs its lifecycle outside the owning feature's context.
