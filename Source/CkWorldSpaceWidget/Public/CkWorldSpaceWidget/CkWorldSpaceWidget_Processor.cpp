@@ -8,6 +8,7 @@
 
 #include "CollisionQueryParams.h"
 
+#include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 
@@ -79,12 +80,36 @@ namespace ck
 
         const auto& LocationInfo = InParams.Get_LocationInfo();
         const auto AnchorWorldLocation = InTransform.Get_Transform().GetLocation() + LocationInfo.Get_WorldSpaceOffset();
-        const auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController),
-            TEXT("Invalid PlayerController. Unable to Project [{}] at World Location [{}]"),
-            InParams.Get_Widget(), AnchorWorldLocation)
-        { return; }
+        const auto HideWidget = [&]() -> void
+        {
+            if (WrapperWidget->GetRenderOpacity() != 0.0f)
+            { WrapperWidget->SetRenderOpacity(0.0f); }
+        };
+
+        if (ck::Is_NOT_Valid(InCurrent.Get_WidgetOwningLocalPlayer()))
+        {
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+            return;
+        }
+
+        // Ejected/SIE renders from the editor camera, which no PlayerController represents — a
+        // projection through the player would pin the widget to the frozen game view, so hide instead.
+        if (InCurrent.Get_IsRenderViewEjected())
+        {
+            HideWidget();
+            return;
+        }
+
+        const auto PlayerController = InCurrent.Get_ResolvedOwningPlayer();
+
+        // Transient by design: the local player is alive but between controllers (DebugCamera swap,
+        // travel, possession churn) — hide rather than paint at a stale position.
+        if (ck::Is_NOT_Valid(PlayerController))
+        {
+            HideWidget();
+            return;
+        }
 
         const auto CameraManager = PlayerController->PlayerCameraManager;
         const auto CameraLocation = ck::IsValid(CameraManager)
@@ -234,8 +259,14 @@ namespace ck
             return;
         }
 
-        auto PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(PlayerController), TEXT("Invalid PlayerController"))
+        // Hidden by UpdateLocation while ejected — a scale from the frozen game camera is meaningless.
+        if (InCurrent.Get_IsRenderViewEjected())
+        { return; }
+
+        const auto PlayerController = InCurrent.Get_ResolvedOwningPlayer();
+
+        // Transient by design: between controllers (DebugCamera swap, travel, possession churn).
+        if (ck::Is_NOT_Valid(PlayerController))
         { return; }
 
         auto CameraManager = PlayerController->PlayerCameraManager;
