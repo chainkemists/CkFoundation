@@ -699,8 +699,10 @@ world ticks, so a pause taken mid-load does not pause the load — it stops it, 
 cap the load escapes there and reports `Succeeded_WithLoss` for facts that never got a frame in which to converge.
 The framework does not veto the pause (pausing is a game-side decision; the sanctioned guard is a pause UI that
 declines while `Get_IsLoadInProgress`), but the loader emits **one** Warning per load naming the world and the
-epoch, so the cap-escape is explained rather than mysterious. Fence:
-`Ck.Snapshot.LoadHold.PauseUnderHoldIsReported`.
+epoch, so the cap-escape is explained rather than mysterious. The predicate is `AWorldSettings::
+GetPauserPlayerState()`, not `UWorld::IsPaused()` — the latter is also true for async-loading blocks, a
+committing map change and an editor debug-pause, none of which the message describes and any of which would
+consume the one-shot. Fence: `Ck.Snapshot.LoadHold.PauseUnderHoldIsReported`.
 
 **The boot seed is `Converging`, for both roles.** A world coming up mid-load is held before anything in it ticks.
 `Rebuilding` was tried here and broke the load: it is the one phase that suppresses `Request_SpawnEntity`, and the
@@ -737,17 +739,20 @@ Three properties that contract rests on, each of which used to be one edit away 
   per-instance load count in the low 16, because the arm gate decides ownership by `Epoch == _LoadEpoch` and a
   bare count made a machine that had hosted N loads read a host's load N as its own — no hold, no freeze, and a
   player walking around a world being rebuilt underneath them. Treat the value as opaque: monotonic within a
-  session, never a count, never persisted. Fence:
-  `Ck.Snapshot.LoadHold.LoadEpochIdentifiesTheLoadNotItsOrdinal`.
-- **The option is consumed, once.** `?CkLoad=` is struck from `FWorldContext::LastURL` as it is read, because
-  every relative travel inherits the whole option array from there — so a finished load's epoch would otherwise
-  re-arm a hold on the next unrelated map change and ride the join URL to anyone connecting through it. This is
-  where and how the engine strikes its own one-shots (`Listen`, `failed`, `closed`). `UWorld::URL` is left
-  intact: that is the record of how this world came up, and the arm gate reads it.
+  session, never a count, never persisted. Accepted residual: 15 salt bits means two instances collide with
+  p = 1/32768, ~4 orders of magnitude better than the count it replaces; more bits are cheap if that stops being
+  acceptable. Fence: `Ck.Snapshot.LoadHold.LoadEpochIdentifiesTheLoadNotItsOrdinal`.
+- **The option is consumed, once, from both copies.** `?CkLoad=` is struck from `FWorldContext::LastURL` (which
+  every relative travel inherits its whole option array from) **and** from `LastRemoteURL` (which `reconnect`
+  replays verbatim), so a finished load's epoch cannot re-arm a hold on a later map change, a reconnect, or a
+  join URL. This is where and how the engine strikes its own one-shots (`Listen`, `failed`, `closed`).
+  `UWorld::URL` is left intact: that is the record of how this world came up, and the arm gate reads it.
 - **The client's budget covers the SERVER's whole load.** `kLoad_ClientHoldFrameCap` is the SUM of the server's
-  phase caps, written as that sum rather than as a number. Sized like a single phase, a server that spent its
-  teardown and travel budgets outlived the client watching it, and the client failed open into a half-rebuilt
-  world reporting the fact as NEVER ARRIVED — a healthy slow load misreported as a broken one.
+  phase caps, written as that sum rather than as a number, and it counts **rebuild twice** because an escalation
+  re-arms that phase against a fresh budget. Sized like a single phase, a server that spent its teardown and
+  travel budgets outlived the client watching it, and the client failed open into a half-rebuilt world reporting
+  the fact as NEVER ARRIVED — a healthy slow load misreported as a broken one, in the load shape most likely to
+  be slow.
 
 **What the promise may claim.** `Promise_OnLoadComplete` = ready to resume. It does NOT mean "nothing has
 simulated": construction and `DoBeginPlay` run throughout a load by `[G1-D16]`, so code there must be idempotent.

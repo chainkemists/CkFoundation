@@ -259,14 +259,13 @@ any. That is deliberate and conservative — a custom body may do registry-wide 
 processor that under-reported would have its follow-up pass skipped and its cascade deferred a frame — but it is
 also why a pump can stay awake on a world where nothing is happening.
 
-**A custom `DoTick` that CALLS the base one inherits the real count**, and that is the cheap way in:
-`FProcessor_Nav_HandleRequests` and `FProcessor_Transform_HandleRequests` both do exactly this (Nav even adds its
-own drain actions to the inherited value). Only a body that never reaches the base leaves the sentinel.
+**A custom `DoTick` that CALLS the base one inherits the real count** — that is why 59 of the 84 custom bodies in
+CkFoundation are already truthful and are not listed below. The family is what is left, and it comes in **three
+shapes**, measured on CkFoundation at `fa0aad517` by reading all 84 bodies. **That measurement predates this
+branch's rebase onto dev**, which brought in commits that may have added or retired members — treat the counts
+and tables below as a starting point and re-derive (command at the end of this section) before relying on them:
 
-The measured family, on CkFoundation at `fa0aad517` — every processor whose `DoTick` neither calls a base
-`DoTick` nor writes `_LastVisitedCount`. **That measurement predates this branch's rebase onto dev**, which
-brought in commits that may have added or removed members; the table is a starting point, not a current census.
-Re-derive before relying on the count:
+**Shape 1 — never reaches the base, never writes the count (11).** The sentinel survives on every pass.
 
 | Module | Processor | What its pass actually does |
 |---|---|---|
@@ -279,16 +278,42 @@ Re-derive before relying on the count:
 | CkJolt | `FProcessor_JoltDebugDraw_Capture` | debug draw |
 | CkJolt | `FProcessor_JoltWorld_WaitForAsync` · `_DrainEvents` · `_PlanStep` · `_Step` | the physics world's own step pipeline — no view at all |
 
-Eleven processors, in six modules. (`UCk_VoxelNavPreview_EditorSubsystem_UE` has a `DoTick` too and is not in
-this table: it is an editor subsystem tick, not a scheduler pump.) Two processors named in earlier campaign notes
-as members — `FProcessor_Eqs_Cleanup` and `FProcessor_FloatAttribute_FireSignals` — are **not**: the first has no
-custom `DoTick` at all, and the second is a composite whose `Pump` sums its five sub-processors' real counts
+**Shape 2 — reaches the base CONDITIONALLY and short-circuits without writing the count (14).** These are the
+expensive ones, and they were missed by the first pass of this census: they leave the sentinel on exactly the
+frames they decided there was nothing to do, which is the frame on which the pump is otherwise most likely to go
+quiet. The top two fire on the **shipping default**, so any world with a state machine or a probe pays an extra
+pump pass forever.
+
+| File:line | Processor | Short-circuits when |
+|---|---|---|
+| `CkSpatialQuery/…/Probe/CkProbe_Processor.cpp:917` | `FProcessor_Probe_DebugDrawAll` | `NOT Get_DebugPreviewAllProbes()` — **shipping default** |
+| `CkStateMachine/…/Debug/CkStateMachine_Debug_Processor.cpp:42` | `FProcessor_Sm_Debug` | debug data not desired — **shipping default** |
+| `CkJolt/…/Body/CkJoltBody_Processor.cpp:115` · `:411` · `:812` · `:867` | `_Setup` · `_HandleRequests` · `_KinematicPush` · `_WritebackInterpolated` | no physics system resolved |
+| `CkJolt/…/Character/CkJoltCharacter_Processor.cpp:73` · `:316` | `_Setup` · `_PreStep` | same guard |
+| `CkJolt/…/Constraint/CkJoltConstraint_Processor.cpp:121` · `:266` | `_Setup` · `_HandleRequests` | same guard |
+| `CkCrowd/…/Agent/CkCrowdAgent_PathRefresh_Processor.cpp:48` | `FProcessor_CrowdAgent_PathRefresh` | refresh mode disabled |
+| `CkCrowd/…/Agent/CkCrowdAgent_DrawBody_Processor.cpp:163` | `FProcessor_CrowdAgent_DrawBody_Update` | draw disabled |
+| `CkAudio/…/AudioTrack/CkAudioTrack_Processor.cpp:1250` | `FProcessor_AudioTrack_DebugDraw_All_Spatial` | draw disabled |
+| `CkGrid/…/2dGridSystem/Grid/Ck2dGridSystem_Processor.cpp:22` | `FProcessor_2dGridSystem_DebugDrawAll` | draw disabled |
+
+**Shape 3 — the remedy, already in the tree (1).** `FProcessor_Transform_HandleRequests`
+(`CkEcsExt/Public/CkEcsExt/Transform/CkTransform_Processor.cpp:186-192`) has exactly Shape 2's structure and
+writes `_LastVisitedCount = 0;` before its early return. Every one of the fourteen above is that one line away
+from letting the pump go quiet, with **no** change to the framework default. `FProcessor_Nav_HandleRequests`
+(`CkNavigation/…/Nav/CkNav_Processor.cpp:228-231`) is truthful for a different reason worth knowing: it reaches
+the base unconditionally and then ADDS its own drain actions to the inherited count.
+
+**25 in the family, in nine modules.** (`UCk_VoxelNavPreview_EditorSubsystem_UE` has a `DoTick` too and is not
+counted: it is an editor subsystem tick, not a scheduler pump.) Two processors named in earlier campaign notes as
+members — `FProcessor_Eqs_Cleanup` and `FProcessor_FloatAttribute_FireSignals` — are **not** in it: the first has
+no custom `DoTick` at all, and the second is a composite whose `Pump` sums its five sub-processors' real counts
 through `FPumpVisitedCountAccumulator` (which propagates a sentinel only if a SUB reports one). Both already
 report truthfully; a diagnostic showing them visiting zero entities is showing exactly that.
 
-Re-derive: `rg --no-ignore -n '::$' -A 1 Source | rg 'DoTick\('` and read each body for a base-`DoTick` call or a
-`_LastVisitedCount` write. Changing the default (making `-1` mean "no work") is a silent behaviour change for
-every one of these bodies at once and is a maintainer decision, not a local one.
+Re-derive: read every `DoTick` body under `Source` and classify it on two questions — does it reach a base
+`DoTick` on EVERY path, and does it write `_LastVisitedCount` on the paths that do not. Changing the default
+(making `-1` mean "no work") is a silent behaviour change for all 25 bodies at once and is a maintainer decision;
+adopting Shape 3 per-processor is not, and is where the cheap wins are.
 
 ### Paced work (`CkPacedWork.h`)
 

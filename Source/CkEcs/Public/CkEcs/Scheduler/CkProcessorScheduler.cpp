@@ -579,10 +579,12 @@ auto
 
             // A pump that PROVABLY visited zero entities cannot have produced new work. -1 is not that proof:
             // it is the sentinel a custom DoTick body leaves when it never reported a count, and it is treated
-            // as work because such a body may have done registry-wide work no view count describes. Eleven
-            // processors sit in that family today and each of them keeps this loop awake for a pass — the
-            // census, and what inverting the default would cost, are in CkEcs/CLAUDE.md § "The -1 visited-count
-            // contract" (TProcessorBase::_LastVisitedCount carries the author-facing half).
+            // as work because such a body may have done registry-wide work no view count describes. 25
+            // processors sit in that family today and each of them keeps this loop awake for a pass — 14 of them
+            // only on the frames they decided there was nothing to do, and two of those fire on the shipping
+            // default. The census, the three shapes, and the one-line remedy fourteen of them can adopt without
+            // any default change are in CkEcs/Claude.md § "The -1 visited-count contract"
+            // (TProcessorBase::_LastVisitedCount carries the author-facing half).
             if (VisitedCount != 0)
             {
                 AnyProcessorTicked = true;

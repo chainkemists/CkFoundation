@@ -224,9 +224,12 @@ namespace ck
         // The cost is that a pump can stay awake on a world where nothing is happening. If your custom DoTick
         // has a meaningful count, the cheapest way to report it is to CALL the base DoTick (which writes this)
         // and, if the body did extra work of its own, add to the value afterwards — see
-        // FProcessor_Nav_HandleRequests. Writing a real 0 is a behaviour change, not a tidy-up: it lets the
-        // scheduler stop pumping. The measured census of bodies that leave the sentinel today, and what
-        // changing the default would cost, are in CkEcs/CLAUDE.md § "The -1 visited-count contract".
+        // FProcessor_Nav_HandleRequests. Watch the CONDITIONAL case: a body that reaches the base on one path
+        // and returns early on another leaves the sentinel on exactly the frames it decided there was nothing to
+        // do, which is the frame the pump would otherwise have gone quiet on. Write `_LastVisitedCount = 0;`
+        // before that return — FProcessor_Transform_HandleRequests does, and it is one line. The measured census
+        // of the 25 bodies that leave the sentinel today, in three shapes, is in CkEcs/Claude.md § "The -1
+        // visited-count contract".
         int32 _LastVisitedCount = -1;
 
     private:
