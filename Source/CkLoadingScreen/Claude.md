@@ -6,7 +6,8 @@ GameState not replicated, world not begun play, or any `ICk_LoadingProcess` hold
 screen only when nothing holds it, then holds an extra configurable window (world rendering
 re-enabled) so texture streaming / PSO compilation warm up behind the cover.
 
-**Depends on:** `CkCore`, `CkLog`, `CkSettings` (+ engine: Slate, UMG, PreLoadScreen, RenderCore).
+**Depends on:** `CkCore`, `CkLog`, `CkSettings` (+ engine: Slate, UMG, MoviePlayer, PreLoadScreen,
+RenderCore).
 **Used by:** game-side travel/readiness systems (BusterBlock's GameFlow layer is the worked example).
 
 **Provenance:** restyled port of Epic's `CommonLoadingScreen` plugin from the Lyra sample as shipped
@@ -40,6 +41,72 @@ ordering without re-reading the original. Lyra's `CommonStartupLoadingScreen` mo
   permanently black-screen a packaged build. Zero = no watchdog.
 - `UCk_LoadingScreen_ProjectSettings_UE` (`Settings/`) — widget class, z-order, hold-secs,
   heartbeat/log intervals; debug toggles are CVar-backed.
+
+## The transition screen (MoviePlayer layer) — the OTHER half
+
+The subsystem above is a **game-thread** screen: a UMG widget in the viewport. It cannot cover the
+part of a map load where the game thread is *blocked* — during `LoadMap` there is no tick, so a UMG
+screen freezes on its last frame (and on a first-ever travel may not exist yet). That frozen window
+is what the transition layer covers.
+
+`TransitionScreen/` is a pure-Slate widget handed to the engine's **MoviePlayer**, which renders it
+from the Slate loading thread while the game thread is stalled. Off by default
+(`_TransitionScreenEnabled`); a project opts in from its own ini. It absorbs the mechanism of the
+`AsyncLoadingScreen` marketplace plugin BusterBlock retired (2026-08-19) — ~250 lines of the
+plugin's 3,090 were worth keeping.
+
+- **`SCk_LoadingScreen_Transition`** — tint plate → optional backdrop (ScaleToFill) → corner logo →
+  optional tip. Animation is **paint-driven**: `OnPaint` accumulates `Args.GetDeltaTime()` and drives
+  the logo's opacity. There is no Tick and no timer out there — the thread that would run them is the
+  blocked one. Every brush arrives pre-resolved as `FDeferredCleanupSlateBrush`; the widget takes
+  brushes, literals and FTexts, and **touches no UObject after construction**.
+- **`FCk_LoadingScreen_TransitionAttributesBuilder`** — the mode → `FLoadingScreenAttributes`
+  translation, split out from the module so the flag matrix is unit-testable
+  (`Ck.LoadingScreen.TransitionAttributes.*`). The MoviePlayer is inert in automation, so these flags
+  are the only part of the layer automation can assert on.
+- **Texture lifetime** lives in the subsystem: `Initialize` async-loads the logo + backgrounds and
+  keeps the `FStreamableHandle` as a member. That handle IS the GC root. The module resolves brushes
+  with `FSoftObjectPath::ResolveObject()` — never `TryLoad` — so a not-yet-resident texture degrades
+  to "no backdrop", never to a sync load on the game thread at travel start.
+
+### The handshake (`_TransitionWaitForGameThreadScreen`, default on)
+
+Handshake mode sets `bWaitForManualStop=true` + `bAutoCompleteWhenLoadingCompletes=false`, and the
+subsystem stops the movie once its own widget is mounted — so the movie tears down with the UMG
+screen already in the viewport and the "single frame of raw world" seam cannot happen.
+
+Two things about it are load-bearing:
+
+- **`bAllowEngineTick=true` is MANDATORY in handshake mode.** The manual-stop wait loop blocks the
+  game thread; without the engine tick the subsystem never ticks, so nothing can ever reach
+  `StopMovie` and the game deadlocks at the end of every load. A unit test asserts no mode can ever
+  emit `bWaitForManualStop && !bAllowEngineTick`.
+- **The signal is "mounted", not "painted".** `FDefaultGameMoviePlayer::WaitForMovieToFinish` swaps
+  the main window's content to the movie for the whole wait, so a viewport-mounted widget *cannot*
+  paint until after `StopMovie`. Requiring a paint would burn the fail-open cap on every travel.
+- **Fail-open cap: 5s** after `IsLoadingFinished()` with no widget mounted → stop anyway + `Warning`.
+  A cosmetic handshake must never be able to hold the game hostage.
+
+### Boot logos — NOT via `_StartupMoviePaths` at the current loading phase
+
+`_StartupMoviePaths` + the eager `SetupLoadingScreen` in `StartupModule` mirror the retired plugin,
+but this module loads at **`ELoadingPhase::Default`**, and `LaunchEngineLoop` calls `PlayMovie()` for
+the startup screen *before* that (PreLoadingScreen modules 3748 → `PlayMovie` 3810 → Default modules
+4617). The retired plugin loaded at `PreLoadingScreen`, which is why its passthrough worked.
+
+So the setup call is **guarded and is a no-op today**, and projects should route boot logos through
+the engine's own `[/Script/MoviePlayer.MoviePlayerSettings] StartupMovies` (read at 3507). Moving
+this module to `PreLoadingScreen` would drag `CkCore`/`CkLog` up with it — a framework-wide change
+`Source/CLAUDE.md` explicitly discourages.
+
+### Mode A (`_TransitionModeA_UMGHandOff`) — experimental, ships dark
+
+Hands the configured UMG widget to the loading thread instead of the Slate one. UMG ticked on the
+Slate loading thread is the Ultra-plugin pattern: works in the common case, **unverified with the
+AngelScript VM**. Takes parity flags deliberately — when the loading-thread widget *is* the
+game-thread widget there is no seam for a handshake to cover, and manual-stop on an unhardened path
+is the one failure mode that can wedge a boot. Falls back to the Slate screen if its widget fails to
+build.
 
 ## CVars
 
@@ -84,6 +151,13 @@ line also suppresses (non-Shipping, Lyra parity).
   (net arrival, discovery) that might never come.
 - Don't gate game logic on `Get_IsLoadingScreenShowing()` in headless contexts — presentation is
   suppressed there; gate on `Get_NeedsLoadingScreen()` instead.
+- **Don't let the transition widget touch a UObject after construction.** It runs on the Slate
+  loading thread. Pre-resolve everything into `FDeferredCleanupSlateBrush`. The retired plugin's
+  `TryLoad()`-in-`Construct` (a sync load on the game thread at travel start) and its un-rooted
+  `TArray<UTexture2D*>` module cache (a GC hole) are the counter-examples — both were deliberately
+  NOT ported.
+- **Don't duplicate the presentation-suppression condition list.** Call
+  `UCk_LoadingScreen_Subsystem_UE::Get_IsPresentationSuppressed()`; two copies eventually disagree.
 
 ## See also
 

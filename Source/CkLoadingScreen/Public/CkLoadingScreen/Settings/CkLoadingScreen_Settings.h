@@ -4,9 +4,17 @@
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
+#include <Kismet/BlueprintFunctionLibrary.h>
+#include <Math/Color.h>
+#include <Math/Vector2D.h>
 #include <UObject/SoftObjectPath.h>
+#include <UObject/SoftObjectPtr.h>
 
 #include "CkLoadingScreen_Settings.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UTexture2D;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -87,6 +95,91 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _HoldLoadingScreenAdditionalSecsEvenInEditor = false;
 
+private:
+    /**
+     * Master switch for the MoviePlayer transition layer - the screen that covers the BLOCKING part
+     * of a map load, where the game thread is stalled and the UMG screen cannot animate (or even
+     * exist yet). Off by default; a project opts in from its own ini.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    bool _TransitionScreenEnabled = false;
+
+    /** Corner logo drawn on the transition screen. Empty = no logo. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, AllowedClasses = "/Script/Engine.Texture2D"))
+    FSoftObjectPath _TransitionLogoTexture;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    FVector2D _TransitionLogoSize = FVector2D{192.0, 192.0};
+
+    /** Inset from the bottom-right corner. Negative values move the logo inward. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    FVector2D _TransitionLogoOffset = FVector2D{-40.0, -40.0};
+
+    /** Full 1 -> min -> 1 opacity cycle. Zero or negative leaves the logo static. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, ForceUnits = s))
+    float _TransitionLogoThrobPeriod = 1.5f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "1.0"))
+    float _TransitionLogoMinOpacity = 0.35f;
+
+    /**
+     * One is picked at random per show. Empty = the tint IS the background, which is the look a
+     * project inherits if it never authors any.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, AllowedClasses = "/Script/Engine.Texture2D"))
+    TArray<FSoftObjectPath> _TransitionBackgroundImages;
+
+    /**
+     * Must be OPAQUE. The transition screen covers a blocking load, so a translucent plate leaves
+     * whatever was last rendered showing through underneath it.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _TransitionBackgroundTint = FLinearColor::Black;
+
+    /** One is picked per show and stays for the whole load - nothing can tick a rotation out there. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TArray<FText> _TransitionTipTexts;
+
+    /**
+     * Boot logo movies, relative to Content/Movies.
+     *
+     * NOTE: this module loads at ELoadingPhase::Default, which is AFTER LaunchEngineLoop has already
+     * called PlayMovie() for the startup screen (LaunchEngineLoop.cpp: PreLoadingScreen modules 3748,
+     * PlayMovie 3810, Default modules 4617). So this only fires if the module is ever moved to an
+     * earlier phase. The engine's own [/Script/MoviePlayer.MoviePlayerSettings] StartupMovies, read
+     * at 3507, is the route that actually plays logos at boot.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TArray<FString> _StartupMoviePaths;
+
+    /**
+     * Hold the movie until the game-thread loading screen is mounted, then stop it, so the handoff
+     * has no frame of raw world in it. False falls back to retired-plugin parity (the movie tears
+     * itself down the instant loading completes).
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    bool _TransitionWaitForGameThreadScreen = true;
+
+    /**
+     * EXPERIMENTAL, ships dark. Hands the configured UMG widget to the loading thread instead of the
+     * Slate transition widget. UMG ticked on the Slate loading thread is the Ultra-plugin pattern: it
+     * works in the common case and is UNVERIFIED with the AngelScript VM. Packaged-build experiment.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    bool _TransitionModeA_UMGHandOff = false;
+
 public:
     CK_PROPERTY_GET(_LoadingScreenWidget);
     CK_PROPERTY_GET(_LoadingScreenZOrder);
@@ -99,6 +192,19 @@ public:
     CK_PROPERTY_GET(_ForceLoadingScreenVisible);
     CK_PROPERTY_GET(_DisableLoadingScreen);
     CK_PROPERTY_GET(_HoldLoadingScreenAdditionalSecsEvenInEditor);
+
+    CK_PROPERTY_GET(_TransitionScreenEnabled);
+    CK_PROPERTY_GET(_TransitionLogoTexture);
+    CK_PROPERTY_GET(_TransitionLogoSize);
+    CK_PROPERTY_GET(_TransitionLogoOffset);
+    CK_PROPERTY_GET(_TransitionLogoThrobPeriod);
+    CK_PROPERTY_GET(_TransitionLogoMinOpacity);
+    CK_PROPERTY_GET(_TransitionBackgroundImages);
+    CK_PROPERTY_GET(_TransitionBackgroundTint);
+    CK_PROPERTY_GET(_TransitionTipTexts);
+    CK_PROPERTY_GET(_StartupMoviePaths);
+    CK_PROPERTY_GET(_TransitionWaitForGameThreadScreen);
+    CK_PROPERTY_GET(_TransitionModeA_UMGHandOff);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -138,6 +244,83 @@ public:
 
     static auto
     Get_HoldLoadingScreenAdditionalSecsEvenInEditor() -> bool;
+
+    static auto
+    Get_TransitionScreenEnabled() -> bool;
+
+    static auto
+    Get_TransitionLogoTexture() -> const FSoftObjectPath&;
+
+    static auto
+    Get_TransitionLogoSize() -> FVector2D;
+
+    static auto
+    Get_TransitionLogoOffset() -> FVector2D;
+
+    static auto
+    Get_TransitionLogoThrobPeriod() -> float;
+
+    static auto
+    Get_TransitionLogoMinOpacity() -> float;
+
+    static auto
+    Get_TransitionBackgroundImages() -> const TArray<FSoftObjectPath>&;
+
+    static auto
+    Get_TransitionBackgroundTint() -> FLinearColor;
+
+    static auto
+    Get_TransitionTipTexts() -> const TArray<FText>&;
+
+    static auto
+    Get_StartupMoviePaths() -> const TArray<FString>&;
+
+    static auto
+    Get_TransitionWaitForGameThreadScreen() -> bool;
+
+    static auto
+    Get_TransitionModeA_UMGHandOff() -> bool;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Script-visible half of the settings surface.
+ *
+ * UCk_Utils_LoadingScreen_Settings_UE above is plain statics, so Blueprint and AngelScript cannot
+ * see it. These exist so the GAME-THREAD loading screen widget can fall back to the same look
+ * tokens the MoviePlayer transition screen uses — one source of defaults for both renderers, which
+ * is what keeps the two halves of a travel looking like one screen.
+ */
+UCLASS(NotBlueprintable)
+class CKLOADINGSCREEN_API UCk_Utils_LoadingScreen_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|LoadingScreen",
+              DisplayName = "[Ck][LoadingScreen] Get Transition Background Images")
+    static TArray<TSoftObjectPtr<UTexture2D>>
+    Get_TransitionBackgroundImages();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|LoadingScreen",
+              DisplayName = "[Ck][LoadingScreen] Get Transition Tip Texts")
+    static TArray<FText>
+    Get_TransitionTipTexts();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|LoadingScreen",
+              DisplayName = "[Ck][LoadingScreen] Get Transition Logo Throb Period")
+    static float
+    Get_TransitionLogoThrobPeriod();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|LoadingScreen",
+              DisplayName = "[Ck][LoadingScreen] Get Transition Logo Min Opacity")
+    static float
+    Get_TransitionLogoMinOpacity();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
