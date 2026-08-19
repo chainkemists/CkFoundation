@@ -162,11 +162,36 @@ namespace ck
         // would sit at zero for the entire window it exists to bound.
         double _PendingSinceRealTimeSeconds = 0.0;
 
+        // True only while the dispatcher is inside its apply loop for THIS entity. A HydrationApply may destroy
+        // the entity it is applying to — a legitimate restore outcome — and destruction writes off whatever is
+        // still queued. Without this flag that write-off runs re-entrantly: it counts the entry currently being
+        // applied as "destroyed with entries", which the returning apply then also counts as applied (one payload,
+        // two buckets — the closure the AccountingIsClosed ensure asserts), and it removes the very fragment the
+        // loop is iterating, leaving the dispatcher holding a dangling reference.
+        bool _IsDispatchInFlight = false;
+
+        // Set when a write-off arrived mid-dispatch. The dispatcher performs it after its loop, on whatever is
+        // genuinely LEFT — so an entry that reached a terminal outcome is counted by that outcome, and only
+        // entries that never got their chance are counted as destroyed.
+        bool _AbandonRequested = false;
+
     public:
         auto Enqueue(UObject* InOuter, FInstancedStruct InEntry) -> void;
         auto Get_Entries() -> TArray<FInstancedStruct>&;
         auto Get_Entries() const -> const TArray<FInstancedStruct>&;
     };
+
+    // Whatever an entity still had queued when it entered destruction dies with it: counted (this is the last
+    // moment the entries are knowable) and removed (so each is counted exactly once — the dispatcher's view
+    // carries CK_IGNORE_PENDING_KILL, so entries left in place would also be applied, or swept as unapplied,
+    // after being written off).
+    //
+    // TWO callers, and they are one contract. Destruction calls it directly. But an apply may DESTROY the entity
+    // it is applying to, which reaches this from inside the dispatcher's own loop — so when a dispatch is in
+    // flight this defers (via _AbandonRequested) and the dispatcher calls it once the loop is done. That is what
+    // keeps the payload accounting a PARTITION: an entry that reached a terminal outcome is counted by that
+    // outcome, and only entries that never got their chance are counted as destroyed.
+    CKECS_API auto DoAbandon_PendingHydration(FCk_Handle& InHandle) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
