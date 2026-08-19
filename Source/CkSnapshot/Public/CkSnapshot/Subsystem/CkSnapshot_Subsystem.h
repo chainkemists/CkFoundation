@@ -373,6 +373,12 @@ private:
     auto DoIs_HydrationComplete() const -> bool;         // the above AND the quarantine is empty
 
     auto DoStamp_HydrationQuarantine() -> void;                 // quarantine the whole mapped set, at enqueue
+    // The ESCALATED rebuild opens the scope to FULL while the payloads are still un-enqueued, so every GAME
+    // processor — including a feature's one-shot Setup — ticks against rows the load has already mapped but not
+    // yet written. Stamped incrementally from the escalation transition onward over the mapped rows the load
+    // still owes a write to (a payload, or a saved transform); rows it owes nothing carry no restored state to
+    // read and stay visible, so the game-side finisher the escalation exists to run is not starved of them.
+    auto DoStamp_HydrationQuarantine_MappedAwaitingHydration() -> void;
     // Releases the whole set at once, recording anything it had to force INTO the report that is about to be
     // frozen — the abort paths finish with a locally-built report, so writing to the member here would name
     // the loss in a copy nobody reads.
@@ -507,6 +513,7 @@ private:
     TSet<uint32> _SpawnedRuntimeIds;                    // RuntimeSpawned entries we already issued a spawn for
     TSet<FCk_Handle> _RuntimeEntityScriptsAwaitingConstruction; // mapped identity; not yet safe as a definition-build owner
     TSet<uint32> _PersistedIds;                         // every saved entity id — an owner NOT here is the world root/transient
+    TSet<uint32> _SavedIdsAwaitingHydration;            // saved ids the load still owes a write to (payload rows / saved transform)
     TSet<uint32> _SkippedIds;                           // entries the loader deliberately does NOT rebuild
     TArray<FCk_Snapshot_SkipRecord> _SkipRecords;       // one reasoned record per _SkippedIds entry; copied into the report
     TMap<uint32, TWeakObjectPtr<AActor>> _PendingBridgeActors; // bridged saved-id -> spawned actor awaiting its bridge
