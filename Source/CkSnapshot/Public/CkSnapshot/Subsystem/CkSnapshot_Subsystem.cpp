@@ -4,7 +4,12 @@
 #include "CkSnapshot/Inspection/CkSnapshot_Inspection.h" // shared identity/provenance rendering + the DumpSlot census
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path)
+#include "CkSnapshot/Subsystem/CkSnapshot_LoadState.h" // the ready-to-resume fact clients read
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
+
+#include "CkActorRelay/CkActorRelay_Utils.h" // Request_AcquireChannel — the fact's net-correlated carrier
+
+#include "CkLoadingScreen/LoadingProcess/CkLoadingProcess_Task.h" // the screen the whole load holds up
 
 #include "CkEcs/Snapshot/CkSaveKey_Fragment.h"                // EngineOwned rendezvous resolver
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -23,12 +28,15 @@
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"             // ck::snapshot::RemapHandles
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // Get_SaveHandlerTypes/Resolve (reconcile payload probe)
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply (split Phase 5)
+#include "CkEcs/Persistence/CkLoadConvergence_Registry.h" // the convergence phase's predicates + advances
+#include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment — the ready-to-resume fact's wire path
 #include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // FTag_Hydration_Quarantine, FCtx_HydrationQuarantine
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
 
 #include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"          // ResolveGameplayTag — the ActorRelay group tag
 #include "CkCore/Time/CkTime_Utils.h"                        // Get_Milliseconds for the save-stage breakdown
 
 #include "CkLabel/CkLabel_Utils.h"                            // ConstructSpawned adopt/reconcile by label
@@ -183,6 +191,21 @@ bool
 
 bool
     UCk_Snapshot_Subsystem_UE::
+    Get_IsReadyToResume() const
+{
+    return _IsReadyToResume;
+}
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Get_LoadEpoch() const
+    -> int32
+{
+    return _LoadEpoch;
+}
+
+bool
+    UCk_Snapshot_Subsystem_UE::
     Get_IsSaveInProgress() const
 {
     return _SnapshotInProgress;
@@ -215,14 +238,25 @@ auto
         _LoadTickerHandle.Reset();
     }
 
-    // Defensive: never leave a world gated if we tear down mid-load.
-    if (auto* EcsWorld = DoGet_LoadWorldEcs();
-        ck::IsValid(EcsWorld))
-    { EcsWorld->Set_IsLoadGateActive(false); }
+    // Tearing down mid-load must not leave anything the load put in place standing: a held world never ticks
+    // again, a frozen world never runs again, and a held loading screen never comes down. Each is a permanent
+    // wedge on its own, so this route releases all of them even though the world is going away anyway — the
+    // GameInstance may outlive the world, and a leaked screen holder is outered to the GameInstance.
+    DoSet_LoadHold(ECk_EcsWorld_LoadHold::None);
+
+    if (auto* FrozenWorld = _TimeFreezeWorld.Get();
+        FrozenWorld != nullptr)
+    { DoRestore_TimeFreeze(*FrozenWorld); }
+
+    DoRelease_LoadScreenHold(_LoadScreenHold);
+    DoRelease_ClientHold(TEXT("the snapshot subsystem is being torn down"));
 
     _LoadInProgress = false;
+    _IsReadyToResume = false;
     _LoadPhase = ELoadPhase::Idle;
     _RuntimeEntityScriptsAwaitingConstruction.Reset();
+    _LoadStateChannelEntity = FCk_Handle{};
+    _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
     Super::Deinitialize();
 }
@@ -548,11 +582,19 @@ void
 
     // ---- Latch the load (spans real frames + a level reload from here) -------------------------------------
     _LoadInProgress      = true;
+    _IsReadyToResume     = false;
     _LoadPhase           = ELoadPhase::TearingDown;
     _PendingLoadDelegate = InDelegate;
     _LoadFrameCount      = 0;
     _PreTravelWorld      = nullptr;
     _TravelMapName.Reset();
+
+    // Counted per GameInstance, and never reused: it rides the travel URL and the replicated fact, and it is
+    // what stops a client that travelled for THIS load releasing on a fact the previous one left standing.
+    ++_LoadEpoch;
+    _ConvergenceFramesSatisfied = 0;
+    _LoadStateChannelEntity = FCk_Handle{};
+    _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
     _SavedIdMap.Reset();
     _MappedLiveEntities.Reset();
@@ -594,6 +636,22 @@ void
             EngineOwned, ConstructSpawned, RuntimeSpawned, Bridged);
     }
 
+    // The screen goes up BEFORE the first entity is destroyed, and stays up until the world is ready to resume.
+    // Everything between those two points — the teardown cascade, the travel, the rebuild, the drain, the
+    // convergence — is a world the player has no business watching.
+    DoCreate_LoadScreenHold(World, TEXT("CkSnapshot: load in progress (not yet ready to resume)"), _LoadScreenHold);
+
+    // The world about to be demolished is frozen too. Its destruction cascade must complete, and the 136 EndPlay
+    // processors that run it are outside the load kernel — but nothing in it should be PACED while it happens.
+    // The freeze does not survive the travel; the post-travel world is frozen again at its boot seed.
+    DoApply_TimeFreeze(*World);
+    DoSet_LoadHold(ECk_EcsWorld_LoadHold::Teardown);
+
+    // Acquired now, on the pre-travel world, so the fact has somewhere to land the moment the load reaches it.
+    // Pooled and shared with live consumers — acquire-only by design, so there is nothing to release.
+    DoAcquire_LoadStateChannel(*World, false);
+    DoPublish_LoadState(false);
+
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
 
@@ -602,8 +660,8 @@ void
     _LoadTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UCk_Snapshot_Subsystem_UE::DoTick_Load));
 
-    ck::snapshot::Display(TEXT("Request_Load: v3 load started for slot [{}] ([{}] entities, [{}] payloads; [{}] roots tearing down)"),
-        InSlotName, _V3Tables.Get_Entities().Num(), _V3Tables.Get_Payloads().Num(), _PendingTeardownRoots.Num());
+    ck::snapshot::Display(TEXT("Request_Load: v3 load [epoch {}] started for slot [{}] ([{}] entities, [{}] payloads; [{}] roots tearing down)"),
+        _LoadEpoch, InSlotName, _V3Tables.Get_Entities().Num(), _V3Tables.Get_Payloads().Num(), _PendingTeardownRoots.Num());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -680,6 +738,12 @@ auto
 
     constexpr auto AbsoluteTravel = true;
 
+    // The option rides BOTH travel shapes, because it is what tells a world coming up on the other side that a
+    // load owns it — on this instance and, through ProcessClientTravel's round-trip of the same FURL, on every
+    // client that follows. It is CkLoad and never "load": UWorld::SetupLevel skips assigning URL when the
+    // incoming one carries an option by that exact name, which would silently make it unreadable at begin play.
+    const auto LoadEpochOption = FString::Printf(TEXT("CkLoad=%d"), _LoadEpoch);
+
     // Seamless ServerTravel is connection-preserving but heavier — with no remote clients, OpenLevel is correct.
     auto* NetDriver = World->GetNetDriver();
     const auto HasConnectedClients =
@@ -687,9 +751,9 @@ auto
 
     if (World->GetNetMode() == ENetMode::NM_Standalone || NOT HasConnectedClients)
     {
-        ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel (no connected clients) to map [{}] (pre-travel world [{}])"),
-            _TravelMapName, World->GetName());
-        UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel);
+        ck::snapshot::Display(TEXT("DIAG: Request_Load travel — OpenLevel (no connected clients) to map [{}] (pre-travel world [{}], epoch [{}])"),
+            _TravelMapName, World->GetName(), _LoadEpoch);
+        UGameplayStatics::OpenLevel(World, FName{*_TravelMapName}, AbsoluteTravel, LoadEpochOption);
         return;
     }
 
@@ -707,7 +771,22 @@ auto
     ck::snapshot::Display(TEXT("DIAG: Request_Load travel — seamless ServerTravel (netmode [{}], [{}] client connection(s)) to map [{}] (pre-travel world [{}])"),
         static_cast<int32>(World->GetNetMode()), NetDriver->ClientConnections.Num(), _TravelMapName, World->GetName());
 
-    World->ServerTravel(_TravelMapName + TEXT("?listen"), AbsoluteTravel);
+    World->ServerTravel(_TravelMapName + TEXT("?listen?") + LoadEpochOption, AbsoluteTravel);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoIs_WorldOwnedByThisLoad(
+        const UWorld& InWorld) const
+    -> bool
+{
+    if (&InWorld == _PreTravelWorld.Get())
+    { return false; }
+
+    // Skip the seamless-travel transition map (different package name); the destination equals _TravelMapName.
+    return InWorld.RemovePIEPrefix(InWorld.GetOutermost()->GetName()) == _TravelMapName;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -721,14 +800,10 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return false; }
 
-    if (World == _PreTravelWorld.Get())
-    { return false; }
-
-    // Skip the seamless-travel transition map (different package name); the destination equals _TravelMapName.
-    if (World->RemovePIEPrefix(World->GetOutermost()->GetName()) != _TravelMapName)
-    { return false; }
-
-    return World->HasBegunPlay();
+    // Identity and READINESS are separate questions asked of the same rule: the boot seed has to answer the first
+    // one at OnWorldBeginPlay, before HasBegunPlay is even true, and a second copy of the identity rule would be
+    // free to drift from this one.
+    return DoIs_WorldOwnedByThisLoad(*World) && World->HasBegunPlay();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1935,6 +2010,383 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
+    DoSet_LoadHold(
+        ECk_EcsWorld_LoadHold InHold)
+    -> void
+{
+    // A world that has gone away is not an error here: a load's own travel is exactly that, and the phase whose
+    // transition asked for this hold is about to raise it again on the world that replaces it.
+    if (auto* EcsWorld = DoGet_LoadWorldEcs();
+        ck::IsValid(EcsWorld))
+    { EcsWorld->Set_LoadHold(InHold); }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoDrive_Convergence()
+    -> void
+{
+    auto* EcsWorld = DoGet_LoadWorldEcs();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return; }
+
+    auto& Registry = EcsWorld->Get_Registry();
+
+    // The registered advances first: physics is frozen with everything else, so without a grant its bodies never
+    // move and the predicates waiting on them wait forever. Each advance stamps its own baseline on this frame if
+    // it needs one, which is why they run BEFORE _FramesConverging is incremented.
+    ck::FCk_LoadConvergenceRegistry::Run_Advances(Registry);
+
+    const auto PumpCount = EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::Full);
+
+    if (auto* Convergence = Registry.TryGetContext<ck::FCtx_LoadConvergence>();
+        Convergence != nullptr)
+    {
+        Convergence->_PumpCountLastFrame = PumpCount;
+        Convergence->_PumpSkippedGroupsLastFrame = EcsWorld->Get_LastPumpSkippedGroupCount();
+        ++Convergence->_FramesConverging;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRecord_ConvergenceUnmet(
+        FCk_Snapshot_LoadReport& InOutReport) const
+    -> void
+{
+    const auto* EcsWorld = DoGet_LoadWorldEcs();
+    if (ck::Is_NOT_Valid(EcsWorld))
+    { return; }
+
+    const auto Pending = ck::FCk_LoadConvergenceRegistry::Get_Pending(EcsWorld->Get_Registry());
+    if (Pending.IsEmpty())
+    { return; }
+
+    auto Records = InOutReport.Get_ConvergenceUnmet();
+
+    for (const auto& Name : Pending)
+    {
+        ck::snapshot::Error(TEXT("Request_Load: convergence fact [{}] never reported converged within [{}] frames. "
+            "The world is being handed back anyway — a world resumed early is recoverable, a world never handed "
+            "back is not — and this load reports Succeeded_WithLoss because of it"),
+            Name, kLoad_ConvergenceFrameCap);
+
+        Records.Emplace(FCk_Snapshot_ConvergenceLossRecord{}
+            .Set_Name(Name)
+            .Set_FramesWaited(kLoad_ConvergenceFrameCap));
+    }
+
+    InOutReport.Set_ConvergenceUnmet(Records);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoEnter_ReadyToResume()
+    -> void
+{
+    // Order matters, and this is the whole of it: the world becomes NORMAL before any consumer is told about it.
+    // The hold comes off, game time restarts, the screen comes down, and the fact reaches clients — only then
+    // does DoFinish_Load close the report and drain the promises, so a callback that spawns, polls or reads a
+    // clock sees a world that is running rather than one that is a frame away from it.
+    DoSet_LoadHold(ECk_EcsWorld_LoadHold::None);
+
+    if (auto* FrozenWorld = _TimeFreezeWorld.Get();
+        FrozenWorld != nullptr)
+    { DoRestore_TimeFreeze(*FrozenWorld); }
+
+    _IsReadyToResume = true;
+    DoPublish_LoadState(true);
+
+    DoRelease_LoadScreenHold(_LoadScreenHold);
+
+    ck::snapshot::Display(TEXT("DIAG: v3 load READY TO RESUME (epoch [{}], restored [{}], orphaned [{}], convergence "
+        "unmet [{}])"), _LoadEpoch, _V3LoadReport.Get_EntitiesRestored(), _V3LoadReport.Get_EntitiesOrphaned(),
+        _V3LoadReport.Get_ConvergenceUnmet().Num());
+
+    DoFinish_Load(_V3LoadReport);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoCreate_LoadScreenHold(
+        UObject* InWorldContext,
+        const FString& InReason,
+        TObjectPtr<UCk_LoadingProcess_Task_UE>& InOutHold) const
+    -> void
+{
+    if (ck::IsValid(InOutHold))
+    { return; }
+
+    // FCk_Time{} — deliberately NO watchdog. The task's watchdog is wall-clock, and a load does not run at 60 fps:
+    // it runs a blocking LoadMap, package loads and PSO warm-up. A timeout sized for a healthy frame rate fires on
+    // a healthy slow load and drops the screen over a half-rebuilt world, which is precisely the thing the screen
+    // is up for. The loader's own frame caps are the bound, and every one of them is named when it fires.
+    InOutHold = UCk_LoadingProcess_Task_UE::Create(InWorldContext, InReason, FCk_Time{});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRelease_LoadScreenHold(
+        TObjectPtr<UCk_LoadingProcess_Task_UE>& InOutHold) const
+    -> void
+{
+    // Create returns null on a dedicated server, so an unset holder is a normal state rather than a missed one.
+    if (ck::IsValid(InOutHold))
+    { InOutHold->Request_Unregister(); }
+
+    InOutHold = nullptr;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoAcquire_LoadStateChannel(
+        UWorld& InWorld,
+        bool InIsClientHold)
+    -> void
+{
+    // ActorRelay channels are POOLED and shared with live consumers: the API is acquire-only by design and there
+    // is nothing to release. The channel entity is what makes the fact reach a client at all — a replicated
+    // container only rides an entity the replication driver knows about.
+    auto Pending = UCk_Utils_ActorRelay_UE::Request_AcquireChannel(&InWorld,
+        UCk_Utils_GameplayTag_UE::ResolveGameplayTag(TEXT("ActorRelay.Generic")));
+
+    if (NOT UCk_Utils_PendingActorRelay_UE::Get_IsValid(Pending))
+    {
+        ck::snapshot::Warning(TEXT("Could not acquire an ActorRelay channel on world [{}] for the load's "
+            "ready-to-resume fact — a client will not learn when this load finished and will release on its own "
+            "bounded escape instead"), InWorld.GetName());
+        return;
+    }
+
+    UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
+        [WeakThis = TWeakObjectPtr<UCk_Snapshot_Subsystem_UE>{this}, InIsClientHold]
+        (FCk_ActorRelay_ChannelResult InResult) -> void
+        {
+            auto* Self = WeakThis.Get();
+            if (ck::Is_NOT_Valid(Self))
+            { return; }
+
+            // Resolved through the subsystem rather than a captured reference: the promise can land a frame or
+            // more after the call that armed it, and a raw reference into a member outlives nothing usefully.
+            if (InIsClientHold)
+            { Self->_ClientLoadStateChannelEntity = InResult.Get_ChannelEntity(); }
+            else
+            { Self->_LoadStateChannelEntity = InResult.Get_ChannelEntity(); }
+        });
+
+    // Kept so the pending handle outlives this scope while the channel is still coming up.
+    if (InIsClientHold)
+    { _PendingClientLoadStateChannel = Pending; }
+    else
+    { _PendingLoadStateChannel = Pending; }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoPublish_LoadState(
+        bool InReadyToResume)
+    -> void
+{
+    if (ck::Is_NOT_Valid(_LoadStateChannelEntity))
+    { return; }
+
+    auto Data = FCk_RepData_SnapshotLoadState{};
+    Data.LoadEpoch = _LoadEpoch;
+    Data.ReadyToResume = InReadyToResume;
+
+    // Add-then-update rather than either alone: the first publish of a load has nothing to update, and every one
+    // after it has nothing to add. Both are host-gated and no-op off the authority.
+    UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_SnapshotLoadState>(_LoadStateChannelEntity, Data);
+    UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_SnapshotLoadState>(_LoadStateChannelEntity, Data);
+
+    // The server reads the fact the same way a client does, off the same fragment, so a listen server's own
+    // release path is not a second implementation of the same question.
+    auto& State = _LoadStateChannelEntity.AddOrGet<ck::FFragment_Snapshot_LoadState>();
+    State.Set_LoadEpoch(_LoadEpoch);
+    State.Set_ReadyToResume(InReadyToResume);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoGet_ShouldHoldWorldAtBoot(
+        UWorld& InWorld)
+    -> bool
+{
+    // The AUTHORITY's own post-travel world. Held from its first frame — the frame every level actor's BeginPlay
+    // and every entity-script construction runs in — because the loader's own next opportunity is a full world
+    // tick later, and by then the thing the hold exists to prevent has already happened.
+    if (_LoadInProgress && DoIs_WorldOwnedByThisLoad(InWorld))
+    {
+        // Global time dilation is transient on a per-level AWorldSettings whose constructor writes 1.0, so the
+        // freeze does NOT survive travel and this is where the post-travel world gets its own.
+        DoApply_TimeFreeze(InWorld);
+        return true;
+    }
+
+    // A CLIENT following a listen-server reload. It has no load, no report and no completion of its own — the
+    // travel URL is the earliest thing that can tell it a load owns this world, and it is readable here because
+    // ProcessServerTravel round-trips the same FURL, options intact, into ProcessClientTravel.
+    //
+    // Explicitly client-only, and not merely "the branch above did not take it": the server's own post-travel
+    // world carries the same option, so an aborted load that cleared _LoadInProgress would otherwise arm a
+    // client-shaped hold on the authority, waiting for a fact only the authority can publish.
+    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(&InWorld))
+    {
+        if (const auto* EpochOption = InWorld.URL.GetOption(TEXT("CkLoad="), nullptr);
+            EpochOption != nullptr)
+        {
+            DoBegin_ClientHold(InWorld, FCString::Atoi(EpochOption));
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoBegin_ClientHold(
+        UWorld& InWorld,
+        int32 InEpoch)
+    -> void
+{
+    // A second reload while the first is still held: release the old one rather than stacking, or its ticker and
+    // its screen holder outlive the world they belong to.
+    if (_ClientHoldActive)
+    { DoRelease_ClientHold(TEXT("a newer load's travel superseded it")); }
+
+    _ClientHoldActive = true;
+    _ClientHoldEpoch = InEpoch;
+    _ClientHoldFrameCount = 0;
+    _ClientHoldWorld = &InWorld;
+    _ClientLoadStateChannelEntity = FCk_Handle{};
+    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
+
+    // The dilation the client writes here is a PREDICTION, and the server owns the value. AWorldSettings::
+    // TimeDilation is replicated, so the server's floor — and later its restore — is what this world converges
+    // on; the local write only closes the frame-0 gap before the first replication of the fresh world's settings
+    // arrives, and the local restore closes the same gap on the way out. Both are superseded, never authoritative.
+    DoApply_TimeFreeze(InWorld);
+
+    DoCreate_LoadScreenHold(&InWorld, TEXT("CkSnapshot: the server is loading (not yet ready to resume)"),
+        _ClientLoadScreenHold);
+
+    DoAcquire_LoadStateChannel(InWorld, true);
+
+    _ClientHoldTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateUObject(this, &UCk_Snapshot_Subsystem_UE::DoTick_ClientHold));
+
+    ck::snapshot::Display(TEXT("DIAG: client hold armed from the travel URL (epoch [{}], world [{}])"),
+        InEpoch, InWorld.GetName());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoTick_ClientHold(
+        float /*InDeltaSeconds*/)
+    -> bool
+{
+    if (NOT _ClientHoldActive)
+    { return false; }
+
+    ++_ClientHoldFrameCount;
+
+    // BOTH conjuncts, and neither alone is enough. The fact says the server finished; replication-complete says
+    // this client has actually received what that load produced. Releasing on the fact alone hands the player a
+    // world whose contents are still arriving.
+    const auto ChannelIsLive = ck::IsValid(_ClientLoadStateChannelEntity);
+    const auto HasState = ChannelIsLive && _ClientLoadStateChannelEntity.Has<ck::FFragment_Snapshot_LoadState>();
+
+    const auto FactHasArrived = HasState
+        && _ClientLoadStateChannelEntity.Get<ck::FFragment_Snapshot_LoadState>().Get_ReadyToResume()
+        && _ClientLoadStateChannelEntity.Get<ck::FFragment_Snapshot_LoadState>().Get_LoadEpoch() == _ClientHoldEpoch;
+
+    const auto ReplicationIsComplete = ChannelIsLive
+        && UCk_Utils_EntityReplicationDriver_UE::Get_IsReplicationCompleteAllDependents(_ClientLoadStateChannelEntity);
+
+    if (FactHasArrived && ReplicationIsComplete)
+    {
+        DoRelease_ClientHold(TEXT("the server reported ready-to-resume and this client's replication completed"));
+        return false;
+    }
+
+    if (_ClientHoldFrameCount < kLoad_ClientHoldFrameCap)
+    { return true; }
+
+    // Tenet 7 again, and the escape NAMES which conjunct never arrived — "the client hold timed out" is a
+    // symptom, "the fact never replicated" and "the channel never completed" are two different bugs.
+    ck::snapshot::Warning(TEXT("Client hold for load epoch [{}] hit its [{}]-frame cap and is releasing: the "
+        "ready-to-resume fact [{}] and this client's channel replication [{}]. The world is being handed back "
+        "anyway — a client held forever is a client that cannot play"),
+        _ClientHoldEpoch, kLoad_ClientHoldFrameCap,
+        FactHasArrived ? TEXT("arrived") : TEXT("NEVER ARRIVED"),
+        ReplicationIsComplete ? TEXT("completed") : TEXT("NEVER COMPLETED"));
+
+    DoRelease_ClientHold(TEXT("the client hold hit its frame cap"));
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRelease_ClientHold(
+        const TCHAR* InReason)
+    -> void
+{
+    if (_ClientHoldTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(_ClientHoldTickerHandle);
+        _ClientHoldTickerHandle.Reset();
+    }
+
+    if (NOT _ClientHoldActive)
+    { return; }
+
+    if (auto* HeldWorld = _ClientHoldWorld.Get();
+        HeldWorld != nullptr)
+    {
+        if (auto* EcsWorld = HeldWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+            ck::IsValid(EcsWorld))
+        { EcsWorld->Set_LoadHold(ECk_EcsWorld_LoadHold::None); }
+
+        DoRestore_TimeFreeze(*HeldWorld);
+    }
+
+    DoRelease_LoadScreenHold(_ClientLoadScreenHold);
+
+    _ClientHoldActive = false;
+    _ClientHoldWorld = nullptr;
+    _ClientLoadStateChannelEntity = FCk_Handle{};
+    _PendingClientLoadStateChannel = FCk_Handle_PendingActorRelay{};
+
+    ck::snapshot::Display(TEXT("DIAG: client hold released for epoch [{}] — {}"), _ClientHoldEpoch, InReason);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
     DoReconcile_Queue()
     -> void
 {
@@ -2071,16 +2523,26 @@ auto
 
             // Freeze feature processors against the half-rebuilt world. The kernel (EntityScript pipeline,
             // hydration dispatcher, ...) keeps running so the rebuild + construction can proceed.
+            DoSet_LoadHold(ECk_EcsWorld_LoadHold::Rebuilding);
+
             if (auto* EcsWorld = DoGet_LoadWorldEcs();
                 ck::IsValid(EcsWorld))
             {
-                EcsWorld->Set_IsLoadGateActive(true);
-
                 // Zero the apply tally HERE and not in Request_Load: the counters live in the registry, and the
                 // registry Request_Load ran against belongs to the world this load just travelled away from.
                 // Explicit assignment because the context API is get-or-create — an emplace onto an existing
                 // context returns it untouched, which would carry the previous load's counts into this one.
                 EcsWorld->Get_Registry().SetContext<ck::FCtx_HydrationOutcomes>() = ck::FCtx_HydrationOutcomes{};
+                EcsWorld->Get_Registry().SetContext<ck::FCtx_LoadConvergence>() = ck::FCtx_LoadConvergence{};
+
+                // The channel was acquired on the world this load travelled AWAY from, so its entity died with
+                // it. Re-acquire against the world the fact now has to be published from.
+                _LoadStateChannelEntity = FCk_Handle{};
+                _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
+                if (auto* PostTravelWorld = GetWorld();
+                    ck::IsValid(PostTravelWorld))
+                { DoAcquire_LoadStateChannel(*PostTravelWorld, false); }
+                DoPublish_LoadState(false);
             }
 
             ck::snapshot::Display(TEXT("DIAG: rehydrated SaveKey resolver with [{}] live entries"),
@@ -2116,9 +2578,7 @@ auto
                 // orphan incident, 2026-07-29). Escalate to full-scope ticks and only conclude when THAT
                 // quiesces too; orphaning here would silently drop every payload under the waiting rows.
                 _RebuildEscalated = true;
-                if (auto* EcsWorld = DoGet_LoadWorldEcs();
-                    ck::IsValid(EcsWorld))
-                { EcsWorld->Set_IsLoadGateEscalated(true); }
+                DoSet_LoadHold(ECk_EcsWorld_LoadHold::Escalated);
                 _RebuildStallTicks = 0;
                 _LoadFrameCount = 0;
                 _V3LoadReport.Set_UsedEscalatedRebuild(true);
@@ -2168,21 +2628,23 @@ auto
             DoHydrate_Enqueue();
             DoReconcile_Queue();
 
+            // The scope opens to FULL, but the hold does NOT come off: the payloads, the deferred requests those
+            // applies issue, and the parked reconcile-destroys all need the whole processor set to run — and none
+            // of it should be PACED, because the player is still looking at a loading screen.
+            DoSet_LoadHold(ECk_EcsWorld_LoadHold::Draining);
+
             if (auto* EcsWorld = DoGet_LoadWorldEcs();
                 ck::IsValid(EcsWorld))
-            {
-                EcsWorld->Set_IsLoadGateActive(false);
-                EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::Full);
-            }
+            { EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::Full); }
 
             _SettleFramesRemaining = kLoad_SettleFrames;
             _SettleStarted = true;
             _LoadFrameCount = 0;
-            _LoadPhase = ELoadPhase::Settling;
+            _LoadPhase = ELoadPhase::Draining;
             return true;
         }
 
-        case ELoadPhase::Settling:
+        case ELoadPhase::Draining:
         {
             // Finish only once hydration has fully drained AND the parked reconcile-destroys have had their minimum
             // settle frames. The frame cap is a LOUD abort backstop — reaching it means some payloads never applied.
@@ -2214,9 +2676,62 @@ auto
                 DoLift_HydrationQuarantine(EQuarantineLift::ForcedAtFrameCap, _V3LoadReport);
             }
 
-            ck::snapshot::Display(TEXT("DIAG: v3 load settled — finishing (restored [{}], orphaned [{}])"),
+            // The old breadcrumb, re-worded: it no longer means the load is finishing, because a convergence
+            // phase follows it. The ready-to-resume line is the one a consumer should watch.
+            ck::snapshot::Display(TEXT("DIAG: v3 load payloads drained — converging (restored [{}], orphaned [{}])"),
                 _V3LoadReport.Get_EntitiesRestored(), _V3LoadReport.Get_EntitiesOrphaned());
-            DoFinish_Load(_V3LoadReport);
+
+            DoSet_LoadHold(ECk_EcsWorld_LoadHold::Converging);
+
+            if (auto* EcsWorld = DoGet_LoadWorldEcs();
+                ck::IsValid(EcsWorld))
+            {
+                // Zeroed at the phase's entry, never at Request_Load: the counters live in the registry, and the
+                // registry Request_Load ran against belongs to the world this load travelled away from. Explicit
+                // assignment because the context API is get-or-create. Each module's own baseline is stamped by
+                // its own advance on the first frame, so nothing here has to know what those baselines are.
+                EcsWorld->Get_Registry().SetContext<ck::FCtx_LoadConvergence>() = ck::FCtx_LoadConvergence{};
+            }
+
+            _ConvergenceFramesSatisfied = 0;
+            _LoadFrameCount = 0;
+            _LoadPhase = ELoadPhase::Converging;
+            return true;
+        }
+
+        case ELoadPhase::Converging:
+        {
+            // Drive FIRST, then read. The physics grant and the pump are deliberate once-per-frame ACTIONS; the
+            // predicates that judge the result are pure reads of what those actions produced, which is what keeps
+            // a convergence check from certifying its own side effects.
+            DoDrive_Convergence();
+
+            auto* EcsWorld = DoGet_LoadWorldEcs();
+            const auto Pending = ck::IsValid(EcsWorld)
+                ? ck::FCk_LoadConvergenceRegistry::Get_Pending(EcsWorld->Get_Registry())
+                : TArray<FName>{};
+
+            if (Pending.IsEmpty())
+            { ++_ConvergenceFramesSatisfied; }
+            else
+            { _ConvergenceFramesSatisfied = 0; }
+
+            // Consecutive frames, not one. A single frame can be a fact that has not started rather than one that
+            // has finished — the first frame of the phase is exactly that for anything the grant is about to move.
+            if (_ConvergenceFramesSatisfied >= kLoad_ConvergenceQuiescentFrames)
+            {
+                DoEnter_ReadyToResume();
+                return false; // done — unregister
+            }
+
+            if (_LoadFrameCount < kLoad_ConvergenceFrameCap)
+            { return true; }
+
+            // Tenet 7: fail-closed needs a bounded escape, and the escape has to NAME what it gave up on. Each
+            // remaining fact becomes an Error and a record, the Result downgrades to Succeeded_WithLoss, and the
+            // world is handed back — a world resumed early is recoverable, a world never handed back is not.
+            DoRecord_ConvergenceUnmet(_V3LoadReport);
+            DoEnter_ReadyToResume();
             return false; // done — unregister
         }
 
@@ -2232,10 +2747,16 @@ auto
     DoFinish_Load(const FCk_Snapshot_LoadReport& InReport)
     -> void
 {
-    // Defensive: a teardown/travel abort must never leave a world gated.
-    if (auto* EcsWorld = DoGet_LoadWorldEcs();
-        ck::IsValid(EcsWorld))
-    { EcsWorld->Set_IsLoadGateActive(false); }
+    // Every route into here releases everything the load put in place. The healthy one has already done it in
+    // DoEnter_ReadyToResume — this is idempotent — but the teardown and travel aborts reach here directly, and a
+    // world left held, frozen or behind a loading screen is a wedge nothing else will clear.
+    DoSet_LoadHold(ECk_EcsWorld_LoadHold::None);
+
+    if (auto* FrozenWorld = _TimeFreezeWorld.Get();
+        FrozenWorld != nullptr)
+    { DoRestore_TimeFreeze(*FrozenWorld); }
+
+    DoRelease_LoadScreenHold(_LoadScreenHold);
 
     // Frozen FIRST, then completed in place. Two of the three routes into here build their report LOCALLY, so a
     // lift or a fold that wrote to _V3LoadReport would name what it found in a copy nobody reads; and every
@@ -2271,6 +2792,7 @@ auto
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
     _LoadInProgress = false;
+    _ConvergenceFramesSatisfied = 0;
     _PendingTeardownRoots.Reset();
     _V3Tables = FCk_Snapshot_V3_Tables{};
     _SavedIdMap.Reset();
