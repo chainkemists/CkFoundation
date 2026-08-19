@@ -1773,6 +1773,29 @@ auto
     if (_SavedIdsAwaitingHydration.IsEmpty())
     { return; }
 
+    // What the escalation is still WAITING on. An unresolved row is finished by work that runs against its
+    // OWNER — the staged construction that stamps a child's adopt key, the definition build issued under a
+    // mapped inventory — and that work is precisely what full scope was opened for. Holding such an owner out
+    // of view starves the pass the escalation exists to run: measured on Bb.Snapshot.ShelfRestore, quarantining
+    // the mapped inventory left its three DefinitionBuilt item rows unresolvable and the rebuild stalled at
+    // 19/30 mapped. Recomputed on every call, so an owner becomes quarantinable the moment its last dependent
+    // resolves, and the set is empty once the rebuild completes.
+    auto OwnersOfUnresolved = TSet<uint32>{};
+    for (const auto& Entry : _V3Tables.Get_Entities())
+    {
+        const auto SavedId = Entry.Get_SavedId();
+        if (_SavedIdMap.Contains(SavedId) || _SkippedIds.Contains(SavedId))
+        { continue; }
+
+        if (const auto LifetimeOwner = Entry.Get_LifetimeOwnerSavedId();
+            LifetimeOwner != ck_snapshot_subsystem::k_NoEntity)
+        { OwnersOfUnresolved.Add(LifetimeOwner); }
+
+        if (const auto ContextOwner = Entry.Get_ContextOwnerSavedId();
+            ContextOwner != ck_snapshot_subsystem::k_NoEntity)
+        { OwnersOfUnresolved.Add(ContextOwner); }
+    }
+
     auto StampedCount = 0;
     auto Registry = FCk_Registry{};
 
@@ -1782,6 +1805,9 @@ auto
         // defaults, which is the correct answer for them, and the escalation's whole purpose is to let the
         // game-side finisher of a staged construction reach the entities it is waiting on.
         if (NOT _SavedIdsAwaitingHydration.Contains(Pair.Key))
+        { continue; }
+
+        if (OwnersOfUnresolved.Contains(Pair.Key))
         { continue; }
 
         auto Restored = Pair.Value;
