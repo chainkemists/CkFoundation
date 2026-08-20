@@ -7,6 +7,8 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
+#include "HAL/PlatformTime.h"
+#include "RHI.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -292,3 +294,188 @@ namespace ck_pixel_art_debug_pan
         FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoStart_Pan));
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// `ck.PixelArt.Debug.PerfSweep [SecondsPerStage]` - the renderer's own perf measurement.
+//
+// The claim worth checking is that the renderer is CHEAPER than native, because the scene rasterizes into
+// a small fraction of the pixels and the upscale is one fullscreen pass. A claim like that is worthless
+// without numbers from the machine and scene it is claimed on, and reading `stat gpu` off a screenshot is
+// not a number - so this walks the three configurations itself and prints GPU milliseconds for each.
+//
+// Each stage discards its first frames: switching resolution reallocates render targets and recompiles
+// nothing useful into the first few frames, and averaging those in would flatter or punish whichever stage
+// happened to go first.
+namespace ck_pixel_art_perf
+{
+    struct FStage
+    {
+        const TCHAR* Name;
+        int32 Enabled;
+        int32 InternalHeight;
+    };
+
+    const FStage GStages[] = {
+        {TEXT("OFF (native)"),   0, -1},
+        {TEXT("ON @ 360"),       1, 360},
+        {TEXT("ON @ 180"),       1, 180}};
+
+    constexpr int32 StageCount = UE_ARRAY_COUNT(GStages);
+
+    // Long enough that a stray hitch cannot dominate a stage, short enough that the whole sweep is one
+    // sitting. Both are in frames rather than seconds so the settle is independent of frame rate.
+    constexpr int32 SettleFrames = 30;
+
+    struct FSweepState
+    {
+        int32 StageIndex = 0;
+        int32 FramesRemaining = 0;
+        int32 SettleRemaining = 0;
+        int32 SampleCount = 0;
+        double AccumulatedGpuMs = 0.0;
+        double StageGpuMs[StageCount] = {};
+        int32 FramesPerStage = 0;
+        bool IsRunning = false;
+        FTSTicker::FDelegateHandle TickerHandle;
+    };
+
+    FSweepState GSweep = {};
+
+    auto
+        DoSet_CVar(
+            const TCHAR* InName,
+            int32 InValue)
+        -> void
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(InName))
+        { CVar->Set(InValue, ECVF_SetByConsole); }
+    }
+
+    auto
+        DoBegin_Stage(
+            int32 InIndex)
+        -> void
+    {
+        const auto& Stage = GStages[InIndex];
+
+        DoSet_CVar(TEXT("ck.PixelArt.InternalHeight"), Stage.InternalHeight);
+        DoSet_CVar(TEXT("ck.PixelArt.Enabled"), Stage.Enabled);
+
+        GSweep.StageIndex = InIndex;
+        GSweep.FramesRemaining = GSweep.FramesPerStage;
+        GSweep.SettleRemaining = SettleFrames;
+        GSweep.SampleCount = 0;
+        GSweep.AccumulatedGpuMs = 0.0;
+
+        UE_LOG(LogCkPixelArt, Display, TEXT("PerfSweep stage [%s] starting"), Stage.Name);
+    }
+
+    auto
+        DoFinish_Sweep()
+        -> void
+    {
+        // Back to configuration-driven, so the sweep leaves no override of its own behind.
+        DoSet_CVar(TEXT("ck.PixelArt.Enabled"), -1);
+        DoSet_CVar(TEXT("ck.PixelArt.InternalHeight"), -1);
+
+        UE_LOG(LogCkPixelArt, Display, TEXT("PerfSweep results (GPU milliseconds per frame, mean):"));
+
+        for (auto Index = 0; Index < StageCount; ++Index)
+        {
+            UE_LOG(LogCkPixelArt, Display, TEXT("  %-14s %.3f ms"), GStages[Index].Name, GSweep.StageGpuMs[Index]);
+        }
+
+        const auto Native = GSweep.StageGpuMs[0];
+
+        if (Native > 0.0)
+        {
+            UE_LOG(LogCkPixelArt, Display,
+                TEXT("  ON@360 is %.1f%% of native; ON@180 is %.1f%% of native"),
+                100.0 * GSweep.StageGpuMs[1] / Native,
+                100.0 * GSweep.StageGpuMs[2] / Native);
+        }
+
+        FTSTicker::GetCoreTicker().RemoveTicker(GSweep.TickerHandle);
+        GSweep = {};
+    }
+
+    auto
+        DoTick_Sweep(
+            float InDeltaSeconds)
+        -> bool
+    {
+        // RHIGetGPUFrameCycles rather than the deprecated GGPUFrameTime global. Zero means the platform
+        // reported nothing this frame - counting it would silently drag every mean towards zero, which is
+        // the direction that would make the renderer look good.
+        const auto GpuCycles = RHIGetGPUFrameCycles();
+
+        if (GSweep.SettleRemaining > 0)
+        {
+            --GSweep.SettleRemaining;
+            return true;
+        }
+
+        if (GpuCycles > 0)
+        {
+            GSweep.AccumulatedGpuMs += FPlatformTime::ToMilliseconds(GpuCycles);
+            ++GSweep.SampleCount;
+        }
+
+        --GSweep.FramesRemaining;
+
+        if (GSweep.FramesRemaining > 0)
+        { return true; }
+
+        GSweep.StageGpuMs[GSweep.StageIndex] =
+            GSweep.SampleCount > 0 ? GSweep.AccumulatedGpuMs / GSweep.SampleCount : 0.0;
+
+        if (GSweep.StageIndex + 1 < StageCount)
+        {
+            DoBegin_Stage(GSweep.StageIndex + 1);
+            return true;
+        }
+
+        DoFinish_Sweep();
+
+        return false;
+    }
+
+    auto
+        DoStart_Sweep(
+            const TArray<FString>& InArgs)
+        -> void
+    {
+        if (GSweep.IsRunning)
+        {
+            UE_LOG(LogCkPixelArt, Warning, TEXT("PerfSweep is already running."));
+            return;
+        }
+
+        const auto Seconds = InArgs.Num() > 0 ? FCString::Atof(*InArgs[0]) : 5.0f;
+
+        if (Seconds <= 0.0f)
+        {
+            UE_LOG(LogCkPixelArt, Warning, TEXT("PerfSweep needs a positive duration (got [%f])."), Seconds);
+            return;
+        }
+
+        // Frames, not seconds: the ticker is the clock, and a stage measured in frames samples the same
+        // number of times whatever the frame rate turns out to be.
+        GSweep.FramesPerStage = FMath::Max(30, FMath::RoundToInt32(Seconds * 60.0f));
+        GSweep.IsRunning = true;
+        GSweep.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&DoTick_Sweep));
+
+        UE_LOG(LogCkPixelArt, Display,
+            TEXT("PerfSweep starting: %d stages, %d frames each (%d discarded per stage while it settles)."),
+            StageCount, GSweep.FramesPerStage, SettleFrames);
+
+        DoBegin_Stage(0);
+    }
+
+    FAutoConsoleCommand CCmd_PerfSweep(
+        TEXT("ck.PixelArt.Debug.PerfSweep"),
+        TEXT("Measure mean GPU frame time with the renderer off, at 360 internal texels, and at 180 - ")
+        TEXT("<SecondsPerStage> each (default 5) - then print the three numbers. Run it with a steady ")
+        TEXT("camera; it restores the CVars it moved."),
+        FConsoleCommandWithArgsDelegate::CreateStatic(&DoStart_Sweep));
+}

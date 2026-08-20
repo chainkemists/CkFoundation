@@ -20,6 +20,20 @@ enum class ECk_PixelArt_UpscaleFilter : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What decides the internal resolution.
+//
+// FixedHeight pins the texel count and lets the texel/pixel ratio fall where the window puts it — the authored
+// "360p" that looks the same on every monitor. TexelsPerPixel pins the ratio instead, so the grid is always a
+// whole number of screen pixels and never resamples unevenly, at the cost of a bigger window showing more world.
+UENUM(BlueprintType)
+enum class ECk_PixelArt_ResolutionMode : uint8
+{
+    FixedHeight,
+    TexelsPerPixel
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // What one world wants from the pixel-art renderer.
 //
 // Plain struct with public members rather than the house private-`_Member` + CK_PROPERTY shape: this module loads
@@ -34,6 +48,12 @@ struct FCk_PixelArt_RenderConfig
     // viewport aspect, then drives the screen percentage on width, because the engine applies one resolution
     // fraction to both axes and only one of them can be made exact.
     int32 InternalHeight = 360;
+
+    ECk_PixelArt_ResolutionMode ResolutionMode = ECk_PixelArt_ResolutionMode::FixedHeight;
+
+    // Output pixels per texel when the mode is TexelsPerPixel. The internal height is then the viewport height
+    // divided by this, so the texel grid lands on whole screen pixels at any window size.
+    int32 TexelsPerPixel = 4;
 
     // Texels rendered beyond the displayed window on each side, so re-applying the camera's sub-texel snap
     // remainder never samples texels that were not rendered.

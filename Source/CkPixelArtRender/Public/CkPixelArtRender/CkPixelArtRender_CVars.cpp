@@ -54,6 +54,16 @@ namespace ck_pixel_art_cvars
         Get_ChangedDelegate(),
         ECVF_Default);
 
+    int32 CVarPixelArt_TexelsPerPixel = -1;
+    static FAutoConsoleVariableRef CVarPixelArt_TexelsPerPixel_Ref(
+        TEXT("ck.PixelArt.TexelsPerPixel"),
+        CVarPixelArt_TexelsPerPixel,
+        TEXT("Override the resolution mode to output-pixels-per-texel and set the ratio: negative =\n")
+        TEXT("configuration-driven. Setting this switches the mode as well as the value, because a ratio with\n")
+        TEXT("the mode left on FixedHeight would be read by nothing and look like the override was ignored."),
+        Get_ChangedDelegate(),
+        ECVF_Default);
+
     int32 CVarPixelArt_Margin = -1;
     static FAutoConsoleVariableRef CVarPixelArt_Margin_Ref(
         TEXT("ck.PixelArt.Margin"),
@@ -137,6 +147,12 @@ namespace ck::pixel_art
 
         if (ck_pixel_art_cvars::CVarPixelArt_InternalHeight >= 0)
         { InOutConfig.InternalHeight = ck_pixel_art_cvars::CVarPixelArt_InternalHeight; }
+
+        if (ck_pixel_art_cvars::CVarPixelArt_TexelsPerPixel > 0)
+        {
+            InOutConfig.ResolutionMode = ECk_PixelArt_ResolutionMode::TexelsPerPixel;
+            InOutConfig.TexelsPerPixel = ck_pixel_art_cvars::CVarPixelArt_TexelsPerPixel;
+        }
 
         if (ck_pixel_art_cvars::CVarPixelArt_Margin >= 0)
         { InOutConfig.MarginTexels = ck_pixel_art_cvars::CVarPixelArt_Margin; }
