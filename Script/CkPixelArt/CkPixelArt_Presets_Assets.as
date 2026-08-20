@@ -56,6 +56,28 @@ namespace CkPixelArt
         _PaletteCount          = 12;
     }
 
+    // Crisp16 moved into OKLab: the same palette and band-shift edges, but the ladder spaced by PERCEIVED
+    // lightness, palette entries matched perceptually, and the reference warm/cool drift with band
+    // brightness. The A/B against Crisp16 is the point — same style, same colours, different spacing of
+    // the same bands — and [O] in the gym flips any station into this treatment for the comparison.
+    asset DA_PixelArt_OKLab of UCkPixelArt_Preset
+    {
+        _ResolutionMode = ECk_PixelArt_ResolutionMode::FixedHeight;
+        _InternalHeight = 360;
+        _MarginTexels   = 2;
+        _SnapEnabled    = ECk_EnableDisable::Enable;
+        _UpscaleFilter  = ECk_PixelArt_UpscaleFilter::BoxFilter;
+
+        _ApplyLook      = ECk_EnableDisable::Enable;
+        _EnableOutline  = ECk_EnableDisable::Enable;
+        _EdgeMode       = ECk_PixelArt_EdgeMode::BandShift;
+        _Bands          = 6;
+        _ColorSpace     = ECk_PixelArt_ColorSpace::OKLab;
+        _WarmShift      = 0.05;
+        _PaletteMode    = ECk_PixelArt_PaletteMode::CustomPalette;
+        _PaletteCount   = 8;
+    }
+
     // The renderer with no stylization at all: a sharp, snapped, low-resolution image and nothing else.
     // Kept as a shipped preset rather than as a gym-only toggle because it is the control every visual
     // verdict about the look has to be read against.

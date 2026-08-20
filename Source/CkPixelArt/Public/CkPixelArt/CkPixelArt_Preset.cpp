@@ -20,6 +20,8 @@ auto
     Look.Set_Bands(_Bands);
     Look.Set_ThresholdGradientSize(_ThresholdGradientSize);
     Look.Set_DitherStrength(_DitherStrength);
+    Look.Set_ColorSpace(_ColorSpace);
+    Look.Set_WarmShift(_WarmShift);
     Look.Set_PaletteMode(_PaletteMode);
     Look.Set_PaletteCount(_PaletteCount);
     Look.Set_PaletteColor0(_PaletteColor0);
