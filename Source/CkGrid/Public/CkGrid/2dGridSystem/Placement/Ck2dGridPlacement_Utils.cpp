@@ -226,7 +226,7 @@ auto
     if (ck::Is_NOT_Valid(InPlacement))
     { return {}; }
 
-    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Grid();
+    return InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Grid();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -240,7 +240,7 @@ auto
     if (ck::Is_NOT_Valid(InPlacement))
     { return FIntPoint::ZeroValue; }
 
-    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Anchor();
+    return InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Anchor();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ auto
     if (ck::Is_NOT_Valid(InPlacement))
     { return ECk_CardinalRotation::None; }
 
-    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Rotation();
+    return InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Rotation();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
