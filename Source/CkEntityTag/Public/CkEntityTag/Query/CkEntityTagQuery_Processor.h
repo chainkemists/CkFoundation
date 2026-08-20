@@ -86,6 +86,17 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_EntityTagQuery_Current& InCurrent) const -> void;
+
+    private:
+        /**
+         * True when this pass can be skipped whole: no requirement's tag storage has mutated since
+         * the last evaluated pass, and nothing forced a re-evaluate. Stamps the current versions
+         * and clears the force flag when it returns false, so a change is evaluated exactly once.
+         */
+        static auto
+        DoTryConsume_UnchangedTagVersions(
+            HandleType InHandle,
+            FFragment_EntityTagQuery_Current& InCurrent) -> bool;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
