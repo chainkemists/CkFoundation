@@ -135,7 +135,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
-        // Reads final frame transforms AND the camera's composed POV (FGroup_Gameplay_Camera runs earlier
+        // Reads final frame transforms AND the camera's composed POV (FGroup_Transform_Derived runs earlier
         // in the frame; FGroup_PostTransform group-RunAfters it) — same slot as the compass projector.
         // FogOfWar processors run in an EARLIER group so the fog cull below never reads a same-frame
         // half-written grid (same-group ordering is registration order — unsafe by house rule).
