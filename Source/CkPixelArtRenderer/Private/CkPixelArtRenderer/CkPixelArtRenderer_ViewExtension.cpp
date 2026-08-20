@@ -157,6 +157,15 @@ auto
     -> void
 {
     const auto* World = ck_pixel_art_view_extension::TryGet_World(InViewFamily);
+
+    // A capture family must not TOUCH the per-frame state, not merely skip the drive: deferred scene captures
+    // render INSIDE BeginRenderingViewFamilies, between the game viewport's SetupViewFamily and its
+    // BeginRenderViewFamily — so resetting the state here would silently drop the viewport's upscaler on every
+    // frame a bCaptureEveryFrame capture is alive. Leaving the lease unrenewed is safe: the game viewport's own
+    // family renews it in the same frame.
+    if (!ck_pixel_art_view_extension::Get_IsPrimaryViewportFamily(InViewFamily, World))
+    { return; }
+
     auto Config = ck_pixel_art_view_extension::TryGet_EffectiveConfig(World);
 
     _FrameConfig.Reset();
@@ -164,11 +173,6 @@ auto
     _FrameWorld = World;
 
     if (!Config.IsSet() || !Config->Enabled)
-    { return; }
-
-    // A capture renders into its own target and is never upscaled here. Leaving the lease unrenewed is safe: the
-    // game viewport's own family renews it in the same frame.
-    if (!ck_pixel_art_view_extension::Get_IsPrimaryViewportFamily(InViewFamily, World))
     { return; }
 
     const auto FixedHeight = Config->ResolutionMode == ECk_PixelArt_ResolutionMode::FixedHeight;
@@ -267,21 +271,28 @@ auto
     if (!_FrameConfig.IsSet() || !_FrameReport.IsSet() || InViewFamily.Views.Num() == 0)
     { return; }
 
-    // Captures bypass the projection hook the snap lives in, so upscaling one would produce an unsnapped image.
+    // Only the game viewport's family may consume the frame state. A capture family with persistent view state
+    // (bCaptureEveryFrame allocates one) would otherwise pick up the viewport's geometry and register an
+    // upscaler whose margins and remainder describe a different target entirely.
+    if (!ck_pixel_art_view_extension::Get_IsPrimaryViewportFamily(InViewFamily, _FrameWorld.Get()))
+    { return; }
+
+    // Stereo and other stateless special views bypass the projection hook the snap lives in.
     const auto* PrimaryView = InViewFamily.Views[0];
 
     if (PrimaryView == nullptr || PrimaryView->State == nullptr)
     { return; }
 
     // Anything but 1 means the window gets a second, engine-owned resample after ours - the reason every visual
-    // verdict for this renderer is taken standalone rather than in PIE.
+    // verdict for this renderer is taken standalone rather than in PIE. The drive divides the settled value out
+    // from the NEXT frame on, so the internal resolution is exact again once this value is stable.
     if (!FMath::IsNearlyEqual(_LastSecondaryViewFraction, InViewFamily.SecondaryViewFraction))
     {
         _LastSecondaryViewFraction = InViewFamily.SecondaryViewFraction;
 
         UE_LOG(CkPixelArtRenderer, Display,
-            TEXT("Secondary view fraction is %.4f (SetupViewFamily assumed 1.0000). Below 1 the engine inserts a ")
-            TEXT("DPI-driven secondary upscale after ours and the internal resolution is smaller than requested."),
+            TEXT("Secondary view fraction settled at %.4f. Below 1 the engine inserts a DPI-driven secondary ")
+            TEXT("upscale after ours; the screen-percentage drive compensates for it from the next frame."),
             _LastSecondaryViewFraction);
     }
 
@@ -449,9 +460,11 @@ auto
 
     const auto RenderedWidth = InnerWidth + 2 * HorizontalMargin;
 
-    // The secondary fraction is not computed yet here, so this reads the family default of 1 - correct standalone at
-    // 100% DPI. BeginRenderViewFamily logs what the engine actually settled on so a DPI divergence names itself.
-    const auto SecondaryViewFraction = InViewFamily.SecondaryViewFraction;
+    // The family's own SecondaryViewFraction still holds the default 1 at this hook - the engine assigns the
+    // DPI-derived value only afterwards. Last frame's settled value (read in BeginRenderViewFamily) is the
+    // prediction instead: exact whenever the DPI and the secondary-percentage CVar are stable, and a change
+    // heals itself one frame later, with the upscaler warning about the single mismatched frame.
+    const auto SecondaryViewFraction = _LastSecondaryViewFraction > 0.0f ? _LastSecondaryViewFraction : 1.0f;
 
     const auto FractionForWidth =
         UCk_Utils_PixelArtRenderer_UE::Get_ExactFraction(RenderedWidth, ViewportSize.X);
