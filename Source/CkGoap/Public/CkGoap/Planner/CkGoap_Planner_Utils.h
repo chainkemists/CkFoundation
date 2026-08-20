@@ -122,6 +122,13 @@ public:
 	static TArray<TSubclassOf<UCk_GoapAction_EntityScript>>
 	Get_PlanClasses(const FCk_Handle_Goap_Planner& InPlanner);
 
+	// Head-of-plan only, without materialising the whole class array. Prefer this over
+	// Get_PlanClasses()[0] on any per-frame path.
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
+		DisplayName = "[Ck][Goap|Planner] Get First Plan Class")
+	static TSubclassOf<UCk_GoapAction_EntityScript>
+	Get_FirstPlanClass(const FCk_Handle_Goap_Planner& InPlanner);
+
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Plan Cost")
 	static float
