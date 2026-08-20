@@ -281,9 +281,16 @@ FGroup_DestructionPipeline  (OwningActor_Destroy, DestructionPhase_Finalize, Des
                 -> FGroup_Physics
                   -> FGroup_Transform_SyncFrom (SyncFromActor, SyncFromMeshSocket, Interpolation)
                     -> FGroup_Transform        (HandleRequests, SceneNode, Tween)
-                      -> FGroup_Transform_Finalize (SyncToActor, FireSignals)
-                        -> FGroup_Gameplay_Camera  (compose/POV/apply — reads anchors AFTER they
-                                                    are synced this frame)
+                      -> FGroup_Transform_Derived (readers of the settled first pass that enqueue
+                                                   transforms of their OWN — e.g. the camera view
+                                                   anchor other content attaches to)
+                        -> FGroup_Transform_LateResolve (the frame's SECOND resolution point: the
+                                                         request drain and scene-node chain re-run so
+                                                         late writes land before anything is finalized,
+                                                         replicated or pushed to components)
+                          -> FGroup_Transform_Finalize (SyncToActor, FireSignals)
+                            -> FGroup_Gameplay_Camera  (compose/POV/apply — reads anchors AFTER they
+                                                        are synced this frame)
                           -> FGroup_PostTransform  (OverlapBody, RaySense, UI, ...)
                             -> FGroup_DeferredApply (replicated-fragment + save-load hydration
                                                      dispatch — applies payloads after composition,
