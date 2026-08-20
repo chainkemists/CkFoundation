@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,15 +22,15 @@ namespace ck::pixel_art
 
     // Broadcast on every change to any of the overrides below. Without it a console flip would only take effect
     // at whatever later moment something else happened to touch the configuration.
-    CKPIXELARTRENDER_API auto Get_OnCVarChanged() -> FCk_PixelArt_OnCVarChanged&;
+    CKPIXELARTRENDERER_API auto Get_OnCVarChanged() -> FCk_PixelArt_OnCVarChanged&;
 
     // Applies the console overlay to a configuration read out of the registry. Pure overlay: it neither reads nor
     // writes the registry.
-    CKPIXELARTRENDER_API auto Fold_Overrides(
+    CKPIXELARTRENDERER_API auto Fold_Overrides(
         FCk_PixelArt_RenderConfig& InOutConfig) -> void;
 
     // Whether `ck.PixelArt.Debug.LogState` asked for per-transition state logging.
-    CKPIXELARTRENDER_API auto Get_LogStateEnabled() -> bool;
+    CKPIXELARTRENDERER_API auto Get_LogStateEnabled() -> bool;
 
     // Debug behaviour of the snap compensation, all under `ck.PixelArt.Debug.*`. These exist to make the three
     // states of the technique separable by eye, which is the only way its correctness can actually be judged:
@@ -51,5 +51,5 @@ namespace ck::pixel_art
         float CompensationSign = 1.0f;
     };
 
-    CKPIXELARTRENDER_API auto Get_DebugSnapOverrides() -> FCk_PixelArt_DebugSnapOverrides;
+    CKPIXELARTRENDERER_API auto Get_DebugSnapOverrides() -> FCk_PixelArt_DebugSnapOverrides;
 }

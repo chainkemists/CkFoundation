@@ -1,11 +1,11 @@
-#include "CkPixelArtRender/CkPixelArtRender_Upscaler.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Upscaler.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_UpscaleShader.h"
-#include "CkPixelArtRender/CkPixelArtRender_Log.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_UpscaleShader.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Log.h"
 
 #include "RenderUtils.h"
 #include "SceneRendering.h"
-#include "ScreenPass.h"
+#include <ScreenPass.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -148,7 +148,7 @@ auto
     {
         LastLogged = {DisplayedSize, OutputSize, static_cast<int32>(InPassInputs.Stage)};
 
-        UE_LOG(LogCkPixelArt, Display,
+        UE_LOG(CkPixelArtRenderer, Display,
             TEXT("Upscaler AddPasses: rendered=%dx%d displayed=%dx%d at (%d,%d) out=%dx%d stage=%s"),
             RenderedRect.Width(), RenderedRect.Height(),
             DisplayedSize.X, DisplayedSize.Y,
@@ -158,7 +158,7 @@ auto
 
         if (_Frame.RenderSize != FIntPoint::ZeroValue && _Frame.RenderSize != RenderedRect.Size())
         {
-            UE_LOG(LogCkPixelArt, Warning,
+            UE_LOG(CkPixelArtRenderer, Warning,
                 TEXT("The scene rendered at %dx%d but the camera snap was computed for %dx%d. The texel grid the ")
                 TEXT("snap aligned to is not the one being displayed, so pixels will creep."),
                 RenderedRect.Width(), RenderedRect.Height(), _Frame.RenderSize.X, _Frame.RenderSize.Y);
@@ -166,7 +166,7 @@ auto
 
         if (!WindowIsUsable)
         {
-            UE_LOG(LogCkPixelArt, Warning,
+            UE_LOG(CkPixelArtRenderer, Warning,
                 TEXT("The displayed window (offset %d,%d size %dx%d) falls outside the %dx%d rendered rect. ")
                 TEXT("Falling back to displaying the whole render, margin and all."),
                 _Frame.InnerOffsetTexels.X, _Frame.InnerOffsetTexels.Y,

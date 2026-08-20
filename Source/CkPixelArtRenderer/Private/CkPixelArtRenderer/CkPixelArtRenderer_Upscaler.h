@@ -4,7 +4,7 @@
 
 #include "PostProcess/PostProcessUpscale.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,10 +17,7 @@ struct FCk_PixelArt_UpscaleFrame
     // actually handed; this is here so a breadcrumb can name a disagreement between the two.
     FIntPoint RenderSize = FIntPoint::ZeroValue;
 
-    // The displayed window inside that render: the rendered image is larger on every side so shifting the
-    // sampling window by the snap remainder never reads texels that were never rendered. The offset is not
-    // necessarily symmetric — the vertical margin is what the engine's rounding leaves once the horizontal one is
-    // chosen, and the surplus row goes to the bottom.
+    // The displayed window inside that render; not necessarily centred (see FCk_PixelArt_FrameReport).
     FIntPoint InnerOffsetTexels = FIntPoint::ZeroValue;
     FIntPoint InnerSizeTexels = FIntPoint::ZeroValue;
 

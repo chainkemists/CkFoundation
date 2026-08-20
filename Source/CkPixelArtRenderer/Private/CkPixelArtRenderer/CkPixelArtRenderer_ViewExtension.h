@@ -2,32 +2,18 @@
 
 #include "CoreMinimal.h"
 
-#include "SceneViewExtension.h"
+#include <HAL/IConsoleManager.h>
+#include <SceneViewExtension.h>
 
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Drives the whole pixel-art render path for one frame:
+// Drives the pixel-art render path for one frame across four game-thread hooks, which run in a fixed order inside
+// UGameViewportClient::Draw. That single-threaded order is what lets one member carry the frame's state from hook
+// to hook without a lock; the frame number stamped on it is the guard against consuming a hook that did not run.
 //
-//   IsActiveThisFrame        — resolve the context world's configuration (registry + console overlay)
-//   SetupViewFamily          — drive the screen percentage so the scene rasterizes at the internal resolution
-//   SetupViewProjectionMatrix— fold the render margin into the projection and snap the view origin to the texel
-//                              lattice, keeping the sub-texel remainder
-//   BeginRenderViewFamily    — install the box-filter upscaler for THIS family (the only legal registration
-//                              point; the renderer checks all three upscaler slots are null first)
-//
-// Those three run in that order inside UGameViewportClient::Draw (GameViewportClient.cpp:1486, then :1687 via
-// LocalPlayer::CalcSceneView, then :1971), all on the game thread, which is what lets one member carry the
-// frame's state from hook to hook without a lock or a registry round trip. The frame number stamped on that
-// member is the guard: a hook that does not run leaves the previous frame's answer behind, and consuming it would
-// snap to a lattice the scene was never rendered against.
-//
-// Disabling is a LEASE, not an event. Every frame the renderer is meant to be running, SetupViewFamily renews the
-// lease; a frame that ends without a renewal releases it and puts r.ScreenPercentage back. That converges from
-// every path that can stop us — the console override, the world's configuration being cleared, the world being
-// torn down, or the activation functor going false — instead of working only for the one path we remembered to
-// hook. It is also why there is no "on disabled" callback anywhere in this class.
+// Disabling is a LEASE, not an event — see this module's Claude.md for why there is no "on disabled" callback.
 class FCk_PixelArt_ViewExtension : public FSceneViewExtensionBase
 {
 public:
@@ -64,6 +50,11 @@ private:
 private:
     TOptional<FCk_PixelArt_RenderConfig> _FrameConfig;
     TOptional<float> _SavedScreenPercentage;
+
+    // Saved beside the value, because a console variable remembers who set it last and refuses weaker
+    // writers. Restoring the number without the priority would leave r.ScreenPercentage pinned at this
+    // renderer's own priority and silently kill the scalability slider that writes it.
+    EConsoleVariableFlags _SavedScreenPercentagePriority = ECVF_SetByConstructor;
 
     // What the renderer is doing to the frame currently being assembled, built up across the three hooks and
     // published to the state registry once the snap is known. Reset at end of frame.
