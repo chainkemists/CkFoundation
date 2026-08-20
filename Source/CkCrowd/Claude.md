@@ -501,6 +501,27 @@ cadence, walk back in, re-block, and oscillate between held and pressing forever
 blocker therefore holds without spending a retry, exactly as an occupied goal does; resume still
 happens through the ordinary full-repath path once the pack genuinely drains.
 
+**The recheck re-validates the REMEMBERED blocker first, by direct read — the cache scans alone
+cannot be trusted to declare the goal clear.** Both scans read the neighbour cache, which is the
+top-`_MaxNeighborsForSteering` nearest bodies; a rim holder in a settled pack no longer carries the
+goal's occupant among its N nearest, so the scans go blind exactly when everything is at rest, and
+the agent resumes into a crowd that never moved (observed under full-suite load: a lone resume 0.5s
+into the BunchUp quiet window, and a mass resume one cadence after a mass block). So the recheck
+first re-validates `_BlockedBy` from the handle itself — transform, settled/stationary state, and
+the occupancy geometry its cause blocked under (`Get_AnchorQualifyingDepth` is shared between the
+cluster scan and this re-validation precisely so the two cannot drift). Only when the body that
+caused the hold no longer qualifies do the scans get to decide; a departed or destroyed blocker
+therefore resumes exactly as before.
+
+**Re-validation deliberately does NOT re-litigate strictly-nearer or the frontal cone.** Both are
+hold-CONSTRUCTION rules — nearer keeps the anchor relation acyclic, the cone proves the anchor is
+in the way of travel — and neither concern survives into a hold that already exists: the edges were
+acyclic when built, and a held agent is not travelling. Post-settle PushApart drift of a few
+centimetres routinely flips both (observed: an agent blocked `GoalOccupied` at 42.0cm relaxed to
+38.4cm, ended up nearer the goal than its own still-standing blocker, and resumed into the pack
+half a second into the quiet window). A hold re-validation asks one question only: does that body
+still occupy the ground.
+
 **Known and accepted:** an agent that reached its goal and was later shoved off it still counts as
 settled, so a newcomer holds at contact with it even while the goal point is momentarily free. The
 hold is resumable and the formation is stable, which is worth more than chasing the transient.
