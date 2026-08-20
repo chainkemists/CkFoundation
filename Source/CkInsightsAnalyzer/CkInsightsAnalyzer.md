@@ -71,6 +71,10 @@ The headless commandlet accepts `-json` to emit JSON instead of Slack markdown:
 UnrealEditor-Cmd.exe <Project.uproject> -run=CkInsightsAnalyzer -trace=session.utrace -all -json -output=report.json
 ```
 
+Modifiers worth knowing: `-depth=full|standard|concise|hotpaths` (detail level — previously only
+settable in code), `-noscreenshots` (drop capture-polluted frames), `-timertop=N` (size the
+`timerAverages` section), `-budget=<ms>`, `-raw -top=N`, `-showall`.
+
 Conventions: schemaVersion `2`, generator metadata, times in milliseconds (3-decimal precision),
 camelCase keys, and empty sections omitted. Existing consumers can continue using `worstFrames`;
 multi-frame reports now add `hotFrames` with the full per-frame diagnostic shape. By default this
@@ -100,10 +104,61 @@ and `budgetMs`. Single-frame mode (`-frame=N`) adds `singleFrame`; range/worst/a
       "frameIndex": 0, "durationMs": 0.0, "dominantCost": "...", "dominantCostMs": 0.0,
       "callTree": [], "topTimers": [], "categories": [], "workerThreads": [], "waitBreakdown": []
     } ],
-    "categoryAverages": [ { "name": "...", "avgExclusiveMs": 0.0, "p95ExclusiveMs": 0.0, "pctOfTotal": 0.0 } ]
+    "categoryAverages": [ { "name": "...", "avgExclusiveMs": 0.0, "p95ExclusiveMs": 0.0, "pctOfTotal": 0.0 } ],
+    "timerAverages": [ { "name": "...", "category": "...", "avgExclusiveMs": 0.0, "p95ExclusiveMs": 0.0,
+                         "maxExclusiveMs": 0.0, "avgInclusiveMs": 0.0, "avgCount": 0.0, "framesPresent": 0 } ],
+    "excludedScreenshotFrames": 0
   }
 }
 ```
+
+### `timerAverages` — the per-timer view across EVERY analysed frame
+
+`hotFrames[].topTimers` describes one outlier frame each, so it cannot answer "what is this category
+actually made of on a **typical** frame" — the question you hit the moment a category like "Other"
+turns out to be the biggest one. `timerAverages` answers it.
+
+Rows are sorted by `avgExclusiveMs` descending and capped at
+`FCk_MultiFrameReportConfig::TimerAverageCount` (Full 250 / Standard 100 / Concise 50 / HotPathsOnly
+disabled; `-timertop=N` overrides). Rows below `MinTimerAverageMs` (0.005 ms) are dropped.
+
+**Averages divide by the analysed frame count, not by `framesPresent`** — a timer absent from a
+frame contributes zero for that frame. That is what makes `avgExclusiveMs` read as "cost this timer
+adds to a typical frame" and lets rows sum toward `avgMs`. `framesPresent` distinguishes a steady
+per-frame cost from a rare expensive one; `avgCount` is fractional for timers that do not fire every
+frame.
+
+Each row carries its own `category`, so a consumer can re-bin without re-implementing
+`FCk_TimerCategorizer` — worth doing, since the categorizer is keyword-based and will always trail
+new scope names.
+
+`excludedScreenshotFrames` is present only when `-noscreenshots` actually skipped frames.
+
+## Screenshot frames are capture cost, not game cost
+
+A trace screenshot stalls the game thread for 20+ ms in `FlushRenderingCommands` waiting out the
+readback, on top of a `ScreenshotTracing_Prepare` scope. Left in, those frames own the worst-frame
+ranking and inflate `maxMs`/`p99Ms` — the analyzer ends up reporting on its own capture tooling.
+`-noscreenshots` (or `FCk_MultiFrameReportConfig::ExcludeScreenshotFrames`) drops any frame
+containing a screenshot scope and reports how many were dropped.
+
+Excluded frames leave the divisor too: `frameCount` is the number of frames actually analysed, so
+excluding frames does not silently deflate every average.
+
+## Categorization is keyword-based and will trail reality
+
+`FCk_TimerCategorizer` matches categories **in registration order, first keyword hit wins**. Two
+consequences worth knowing before adding a keyword:
+
+- A keyword added to a high-priority category (Slate/UI is third) silently re-homes rows that
+  already had a category, which breaks A/B continuity against previously captured reports. Prefer
+  leaving a row in "Other" over stealing it. `CkTimerCategorizer.spec.cpp` pins both directions.
+- Scope names that carry no category token land in "Other" regardless of what they are. Before
+  concluding that "Other" is unattributed engine work, check `timerAverages[].name` — it is usually
+  known work with an unhelpful scope name.
+
+Known residual: `Scheduler::MainPass` matches Rendering's `MainPass` keyword. It is ~0.04 ms
+exclusive, and narrowing Rendering would mis-bin Nanite's own bare `MainPass` RDG scope.
 
 Unlike the markdown hot-path tree, `callTree` is the **true aggregated call tree** built from raw
 timing events (merged by call path, raw timer names, no wrapper collapsing), pruned below the
@@ -112,6 +167,10 @@ naming exception: `workerThreads[].topTimers` reuses the shared summary computat
 simplified names, matching the markdown report.
 
 ## Tests
+
+`Ck.CkInsightsAnalyzer.TimerCategorizer.*` (`Core/CkTimerCategorizer.spec.cpp`) pins categorization
+in both directions: real capture scope names that must not fall through to "Other", and existing
+attributions that a newly added keyword must not steal.
 
 The CkGameplayDebugger-focused `Ck.InsightsDebugger` automation suite exercises the public trace-session
 screenshot failure contract. Its real-renderer capture round trip additionally verifies named screenshot

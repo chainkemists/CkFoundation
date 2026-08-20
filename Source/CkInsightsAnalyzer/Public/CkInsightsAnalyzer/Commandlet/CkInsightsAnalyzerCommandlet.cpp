@@ -15,6 +15,19 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_insights_analyzer_commandlet
+{
+    const TMap<FString, ECkReportDepth> DepthByName
+    {
+        {TEXT("full"),     ECkReportDepth::Full},
+        {TEXT("standard"), ECkReportDepth::Standard},
+        {TEXT("concise"),  ECkReportDepth::Concise},
+        {TEXT("hotpaths"), ECkReportDepth::HotPathsOnly},
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCkInsightsAnalyzerCommandlet::UCkInsightsAnalyzerCommandlet()
 {
     LogToConsole = true;
@@ -23,7 +36,7 @@ UCkInsightsAnalyzerCommandlet::UCkInsightsAnalyzerCommandlet()
     IsServer = false;
 
     HelpDescription = TEXT("Analyzes Unreal Insights .utrace files and generates Slack-friendly performance reports.");
-    HelpUsage = TEXT("CkInsightsAnalyzer -trace=<path> [-frame=N | -frames=N-M | -worst=N | -all] [-output=path] [-clipboard]");
+    HelpUsage = TEXT("CkInsightsAnalyzer -trace=<path> [-frame=N | -frames=N-M | -worst=N | -all] [-depth=full] [-noscreenshots] [-output=path] [-clipboard]");
 
     HelpParamNames.Add(TEXT("trace"));
     HelpParamDescriptions.Add(TEXT("Path to .utrace file (required)"));
@@ -45,6 +58,15 @@ UCkInsightsAnalyzerCommandlet::UCkInsightsAnalyzerCommandlet()
 
     HelpParamNames.Add(TEXT("clipboard"));
     HelpParamDescriptions.Add(TEXT("Copy report to Windows clipboard"));
+
+    HelpParamNames.Add(TEXT("depth"));
+    HelpParamDescriptions.Add(TEXT("Detail level: full, standard (default), concise or hotpaths"));
+
+    HelpParamNames.Add(TEXT("noscreenshots"));
+    HelpParamDescriptions.Add(TEXT("Skip frames containing a trace-screenshot scope (capture-tooling cost, not game cost)"));
+
+    HelpParamNames.Add(TEXT("timertop"));
+    HelpParamDescriptions.Add(TEXT("How many per-timer average rows to report across all frames (0 disables)"));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,6 +113,45 @@ int32
         RawTop = FCString::Atoi(**TopStr);
         if (RawTop <= 0) RawTop = 50;
     }
+
+    auto Depth = ECkReportDepth::Standard;
+    if (const auto DepthStr = ParsedParams.Find(TEXT("depth")))
+    {
+        const auto* FoundDepth = ck_insights_analyzer_commandlet::DepthByName.Find(DepthStr->ToLower());
+
+        if (FoundDepth == nullptr)
+        {
+            ck::insights_analyzer::Error(
+                TEXT("Unknown -depth={}. Use full, standard, concise or hotpaths."), **DepthStr);
+            return 1;
+        }
+
+        Depth = *FoundDepth;
+    }
+
+    const auto ExcludeScreenshotFrames = Switches.Contains(TEXT("noscreenshots"));
+
+    auto TimerTop = TOptional<int32>{};
+    if (const auto TimerTopStr = ParsedParams.Find(TEXT("timertop")))
+    {
+        TimerTop = FMath::Max(0, FCString::Atoi(**TimerTopStr));
+    }
+
+    // Every multi-frame mode below shares this. WorstFrameCount is the one field a mode may
+    // override afterwards, because ApplyDepth sets it from Depth.
+    const auto MakeMultiConfig = [&]() -> FCk_MultiFrameReportConfig
+    {
+        auto MultiConfig = FCk_MultiFrameReportConfig{};
+        MultiConfig.Depth = Depth;
+        MultiConfig.ApplyDepth();
+        MultiConfig.TargetFrameMs = Budget;
+        MultiConfig.ExcludeScreenshotFrames = ExcludeScreenshotFrames;
+
+        if (TimerTop.IsSet())
+        { MultiConfig.TimerAverageCount = *TimerTop; }
+
+        return MultiConfig;
+    };
 
     // ---- Open trace ----
 
@@ -139,8 +200,10 @@ int32
         }
 
         FCk_FrameReportConfig ReportConfig;
+        ReportConfig.Depth = Depth;
+        ReportConfig.ApplyDepth();
         ReportConfig.TargetFrameMs = Budget;
-        ReportConfig.ShowRawTimerList = Raw;
+        ReportConfig.ShowRawTimerList = Raw || ReportConfig.ShowRawTimerList;
         ReportConfig.RawTimerCount = RawTop;
         ReportConfig.ShowAllChildren = ShowAll;
 
@@ -174,10 +237,7 @@ int32
                 TEXT("Analyzing frames {}-{} ({} frames)..."),
                 StartFrame, EndFrame - 1, EndFrame - StartFrame);
 
-            FCk_MultiFrameReportConfig MultiConfig;
-            MultiConfig.TargetFrameMs = Budget;
-
-            FCk_MultiFrameReport MultiReport(MultiConfig);
+            FCk_MultiFrameReport MultiReport(MakeMultiConfig());
             Report = MultiReport.AnalyzeAndGenerate(Session, StartFrame, EndFrame);
 
             if (Json)
@@ -202,11 +262,8 @@ int32
         ck::insights_analyzer::Display(
             TEXT("Finding {} worst frames across {} total frames..."), WorstCount, TotalFrames);
 
-        FCk_MultiFrameReportConfig MultiConfig;
-        MultiConfig.TargetFrameMs = Budget;
-        MultiConfig.WorstFrameCount = WorstCount;
-
-        FCk_MultiFrameReport MultiReport(MultiConfig);
+        // AnalyzeWorstFrames writes WorstFrameCount itself, so -worst wins over -depth here.
+        FCk_MultiFrameReport MultiReport(MakeMultiConfig());
         Report = MultiReport.AnalyzeWorstFrames(Session, WorstCount);
 
         if (Json)
@@ -221,10 +278,7 @@ int32
         ck::insights_analyzer::Display(
             TEXT("Analyzing all {} frames..."), TotalFrames);
 
-        FCk_MultiFrameReportConfig MultiConfig;
-        MultiConfig.TargetFrameMs = Budget;
-
-        FCk_MultiFrameReport MultiReport(MultiConfig);
+        FCk_MultiFrameReport MultiReport(MakeMultiConfig());
         Report = MultiReport.AnalyzeAndGenerate(Session, 0, 0);
 
         if (Json)
@@ -239,10 +293,7 @@ int32
         ck::insights_analyzer::Display(
             TEXT("No mode specified, defaulting to -worst=10..."));
 
-        FCk_MultiFrameReportConfig MultiConfig;
-        MultiConfig.TargetFrameMs = Budget;
-
-        FCk_MultiFrameReport MultiReport(MultiConfig);
+        FCk_MultiFrameReport MultiReport(MakeMultiConfig());
         Report = MultiReport.AnalyzeWorstFrames(Session, 10);
 
         if (Json)
