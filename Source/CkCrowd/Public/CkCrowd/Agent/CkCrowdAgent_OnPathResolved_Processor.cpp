@@ -2,6 +2,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -102,6 +103,52 @@ namespace ck
                 InPathResult.Get_Waypoints().Num(),
                 Diagnostics.Get_LastFailReason(),
                 Diagnostics.Get_LastQueryDurationMs());
+        }
+
+        // ---- Strict → permissive fallback ---------------------------------------------------------
+        // The strict phase treats stationary-crowd markup as impassable, so its honest answer for
+        // a goal with no crowd-free route is Failed — or, more often, Partial ending short (Recast
+        // returns the closest reachable poly outside the excluded band). Neither is terminal for
+        // the EPISODE: re-dispatch once with the permissive toll filter, which is how queue-joiners
+        // still reach a slot beside standing bodies. Runs BEFORE the path-trouble stamp and the
+        // switch — a strict miss is expected control flow, not trouble for the overlay to flag and
+        // never a caller-facing failure.
+        if (IsTerminalPathResult &&
+            InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict)
+        {
+            const auto StrictEndsShortOfGoal = [&]() -> bool
+            {
+                if (InPathResult.Get_Status() != ECk_Nav_PathStatus::Partial ||
+                    InPathResult.Get_Waypoints().Num() == 0)
+                { return false; }
+
+                const auto& Diag = InPathResult.Get_Diagnostics();
+                const auto GoalOnMesh = Diag.Get_EndProjected()
+                    ? Diag.Get_LastProjectedEnd()
+                    : InPathResult.Get_DestinationLocation();
+                return FVector::Dist(InPathResult.Get_Waypoints().Last(), GoalOnMesh) >
+                    InPathFollow.Get_ActiveArrivalRadius();
+            }();
+
+            if (InPathResult.Get_Status() == ECk_Nav_PathStatus::Failed || StrictEndsShortOfGoal)
+            {
+                ck::crowd::Verbose(
+                    TEXT("CrowdAgent [{}] no crowd-free route (strict result: {}) — re-planning with the toll filter"),
+                    InHandle, InPathResult.Get_Status());
+
+                InPathFollow._StrictPlanFailed = true;
+
+                FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+
+                constexpr auto ForcePermissivePlan = true;
+                FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                    InHandle,
+                    InHandle.Get<FFragment_CrowdAgent_Params>(),
+                    InPathFollow,
+                    InPathFollow.Get_ActiveGoal(),
+                    ForcePermissivePlan);
+                return;
+            }
         }
 
         const auto IsNavigationTrouble =
@@ -236,7 +283,12 @@ namespace ck
 
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                     InHandle,
-                    MakePayload(InHandle));
+                    MakePayload(InHandle,
+                        FCk_CrowdAgent_GoalFailedInfo{
+                            ECk_CrowdAgent_GoalFailReason::PathFailed,
+                            InPathResult.Get_Diagnostics().Get_LastFailReason(),
+                            InPathFollow.Get_StrictPlanFailed(),
+                            InPathFollow.Get_ActiveGoal()}));
 
                 ck::crowd::Warning(TEXT("CrowdAgent [{}] PathPending → Idle (path failed: {})"),
                     InHandle, InPathResult.Get_Diagnostics().Get_LastFailReason());

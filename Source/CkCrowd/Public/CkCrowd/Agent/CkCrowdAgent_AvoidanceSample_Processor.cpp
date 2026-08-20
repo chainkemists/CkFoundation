@@ -11,6 +11,8 @@
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include <NavigationSystem.h>
@@ -295,6 +297,48 @@ namespace ck
             }
 
             Walls = ck_crowd_agent_avoidance_sample_algorithm::BuildWallSegments(AgentLocation, InBoundary);
+
+            // ---- Corridor stand-down ----------------------------------------------------------
+            // Between opposing walls tighter than diameter + slack, the sampler is the jitter: it
+            // penalises inward candidates from both sides at once and the winner oscillates under
+            // any neighbour pressure. Path-follow + the navmesh clamp cannot leave the mesh anyway,
+            // so they carry the agent through; separation and push-apart still run. Same
+            // override-outranks rule as the final-approach envelope above.
+            //
+            // Open corridors only: a STATIONARY body within the pinch's reach means the sampler
+            // still has a real job — its standoff against an immovable blocker is the calm
+            // behaviour the facing contract pins, and standing down there trades it for a lateral
+            // separation slide the body visibly tracks (measured: 128° of yaw travel against the
+            // 90° ceiling the moment this gate ran without the veto).
+            if (Settings->Get_CorridorStandDown() == ECk_CrowdCorridorStandDownMode::Enabled &&
+                NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
+                ck_crowd_agent_avoidance_sample_algorithm::Is_InTightCorridor(
+                    AgentLocation,
+                    InParams.Get_Radius(),
+                    Settings->Get_CorridorStandDownSlackCm(),
+                    Walls))
+            {
+                const auto SelfVelocityHandle = UCk_Utils_Velocity_UE::Cast(SelfAgent);
+                const auto SelfVel = ck::IsValid(SelfVelocityHandle)
+                    ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocityHandle)
+                    : FVector::ZeroVector;
+                const auto StationarySpeedThreshold = Settings->Get_BlockedStationarySpeedThreshold();
+                const auto VetoRange =
+                    (4.0f * InParams.Get_Radius()) + Settings->Get_CorridorStandDownSlackCm();
+
+                const auto StationaryNeighbourNearby = ck::algo::AnyOf(InNeighborCache.Get_Neighbors(),
+                    [&](const auto& InNbr) -> bool
+                    {
+                        if (InNbr.Get_Distance() > VetoRange)
+                        { return false; }
+
+                        const auto NbrAbsVel = InNbr.Get_RelativeVelocity() + SelfVel;
+                        return NbrAbsVel.Size2D() < StationarySpeedThreshold;
+                    });
+
+                if (NOT StationaryNeighbourNearby)
+                { return; }
+            }
         }
 
         const auto DesiredVelocity = InDesired.Get_Velocity();

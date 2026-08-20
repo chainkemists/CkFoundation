@@ -10,7 +10,9 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_NavQueryFilter.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
@@ -180,8 +182,10 @@ namespace ck
         InHandle.Try_Remove<FTag_CrowdAgent_GoalFailedHold>();
         InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
-        // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal.
+        // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal
+        // and the strict planning phase gets a fresh attempt.
         DoClearBlockedState(InHandle);
+        InPathFollow._StrictPlanFailed = false;
 
         RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
 
@@ -198,7 +202,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
-            const FVector& InGoal)
+            const FVector& InGoal,
+            bool InForcePermissivePlan)
         -> void
     {
         // Park the slot at Pending BEFORE enqueueing: OnPathResolved runs after this processor
@@ -208,7 +213,7 @@ namespace ck
             InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
         auto Request = FCk_Request_Nav_FindPath{InGoal};
-        Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+        ApplyPlanPhase(InParams, InPathFollow, Request, InForcePermissivePlan);
         Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
         // A MoveTo issued while the agent stands inside painted stationary markup would plan
@@ -236,6 +241,55 @@ namespace ck
         InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::Navigation;
 
         UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        ApplyPlanPhase(
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FCk_Request_Nav_FindPath& InOutRequest,
+            bool InForcePermissive)
+        -> void
+    {
+        if (InForcePermissive)
+        {
+            InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            return;
+        }
+
+        // _StrictPlanFailed is deliberately NOT reset here. Only a dispatch carrying NEW evidence
+        // retries strict — a fresh MoveTo, a BlockedRecheck resume (the pack drained), a
+        // PathRefresh trigger (a new disc confirmed), a caller ForceReplan — and those sites reset
+        // the flag themselves. The stall ladder's re-paths carry no new evidence: retrying strict
+        // there re-fails against the same plugged route and doubles every rung's Pending stop-start
+        // cycle, which the body visibly tracks (measured as a facing-whip regression).
+        const auto StrictWanted =
+            (NOT InPathFollow.Get_StrictPlanFailed()) &&
+            UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
+                ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
+            UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() ==
+                ECk_CrowdStationaryMarkupMode::Enabled;
+
+        if (NOT StrictWanted)
+        {
+            InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            return;
+        }
+
+        InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Strict;
+
+        if (InParams.Get_NavQueryFilterStrict().IsValid())
+        {
+            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilterStrict());
+            return;
+        }
+
+        InOutRequest.Set_QueryFilterClassOverride(UCk_NavQueryFilter_AvoidStandingCrowds::StaticClass());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -501,6 +555,9 @@ namespace ck
             || InHandle.Has<FTag_CrowdAgent_GoalBlocked>();
         if (NOT HasActiveGoal)
         { return; }
+
+        // A caller force-replan says the world changed — the strict phase gets a fresh attempt.
+        InPathFollow._StrictPlanFailed = false;
 
         // Query filters are a Recast policy. A Voxel route cannot apply one,
         // and replacing its in-flight job without a provider-owned revision

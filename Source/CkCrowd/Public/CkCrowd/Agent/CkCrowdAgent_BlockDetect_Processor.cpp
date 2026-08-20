@@ -651,9 +651,15 @@ namespace ck
             InDesired._Velocity = FVector::ZeroVector;
             InDesired._LastVelocity = FVector::ZeroVector;
 
+            const auto& PathFollow = NonConstHandle.Get<FFragment_CrowdAgent_PathFollow>();
             UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                 NonConstHandle,
-                MakePayload(NonConstHandle));
+                MakePayload(NonConstHandle,
+                    FCk_CrowdAgent_GoalFailedInfo{
+                        ECk_CrowdAgent_GoalFailReason::BlockedFailMovePolicy,
+                        ECk_Nav_PathFailReason::None,
+                        PathFollow.Get_StrictPlanFailed(),
+                        PathFollow.Get_ActiveGoal()}));
         }
     }
 
@@ -793,8 +799,12 @@ namespace ck
             FCk_Nav_Algorithm::MarkPathPending(
                 NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
+            // The resume itself is the new evidence — the recheck just saw the blocker gone — so
+            // the strict phase gets a fresh attempt.
+            InPathFollow._StrictPlanFailed = false;
+
             auto Request = FCk_Request_Nav_FindPath{Goal};
-            Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            FProcessor_CrowdAgent_HandleRequests::ApplyPlanPhase(InParams, InPathFollow, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
             // A held agent may have been shoved inside painted stationary markup — resuming from
@@ -850,7 +860,12 @@ namespace ck
 
         UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
             NonConstHandle,
-            MakePayload(NonConstHandle));
+            MakePayload(NonConstHandle,
+                FCk_CrowdAgent_GoalFailedInfo{
+                    ECk_CrowdAgent_GoalFailReason::NoProgressRetriesExhausted,
+                    ECk_Nav_PathFailReason::None,
+                    InPathFollow.Get_StrictPlanFailed(),
+                    InPathFollow.Get_ActiveGoal()}));
     }
 }
 

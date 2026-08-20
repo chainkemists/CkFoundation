@@ -822,8 +822,11 @@ namespace ck
             FCk_Nav_Algorithm::MarkPathPending(
                 NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
+            // A newly confirmed disc IS new markup evidence — the strict phase gets a fresh attempt.
+            InPathFollow._StrictPlanFailed = false;
+
             auto Request = FCk_Request_Nav_FindPath{Goal};
-            Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            FProcessor_CrowdAgent_HandleRequests::ApplyPlanPhase(InParams, InPathFollow, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
 
             const auto Escaped = Get_EscapedQueryStart(NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());

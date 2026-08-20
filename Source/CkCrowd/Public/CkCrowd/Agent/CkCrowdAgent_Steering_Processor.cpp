@@ -224,7 +224,12 @@ namespace ck
 
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                     NonConstHandle,
-                    MakePayload(NonConstHandle));
+                    MakePayload(NonConstHandle,
+                        FCk_CrowdAgent_GoalFailedInfo{
+                            ECk_CrowdAgent_GoalFailReason::PathEndsShortOfGoal,
+                            ECk_Nav_PathFailReason::None,
+                            InPathFollow.Get_StrictPlanFailed(),
+                            InPathFollow.Get_ActiveGoal()}));
                 return;
             }
 
