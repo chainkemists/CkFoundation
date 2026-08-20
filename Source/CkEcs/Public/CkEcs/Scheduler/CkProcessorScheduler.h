@@ -104,6 +104,10 @@ namespace ck
         TArray<FSchedulerDebug_FrameSnapshot> _DebugFrameHistory;
         FSchedulerDebug_FrameSnapshot _DebugCurrentFrame;
 
+        // Stamped by Get_DebugFrameHistory so per-processor timing collection runs only while
+        // something is actually reading it. Mutable because reading the history is logically const.
+        mutable uint64 _LastDebugHistoryReadFrame = 0;
+
         auto DoDebugBeginFrame() -> void;
         auto DoDebugRecordProcessorTick(int32 InNodeIndex, double InElapsedMs, int32 InEntityCount) -> void;
         auto DoDebugRecordProcessorPump(int32 InNodeIndex, int32 InPumpPass, double InElapsedMs, int32 InEntityCount) -> void;
@@ -118,8 +122,28 @@ namespace ck
         CK_PROPERTY(_MaxPumpIterations);
 
 #if !UE_BUILD_SHIPPING
-        CK_PROPERTY_GET(_DebugFrameHistory);
         CK_PROPERTY(_DebugFrameHistoryMax);
+
+        /**
+         * Reading the history is what keeps per-processor timing collection alive, so this is
+         * hand-written rather than CK_PROPERTY_GET. See Get_IsDebugTimingWanted.
+         */
+        auto
+        Get_DebugFrameHistory() const
+            -> const TArray<FSchedulerDebug_FrameSnapshot>&;
+
+        /**
+         * Whether to pay for per-processor wall-clock timing this frame.
+         *
+         * Collection costs 2x FPlatformTime::Seconds plus a record call per processor per frame —
+         * at ~824 dispatches that is ~1,648 clock reads (and, in a STATS build, as many extra stat
+         * scopes) that nobody looks at on a normal frame. It now runs only while a consumer is
+         * reading the history — the Scheduler Debugger polls it every frame it is open — or while
+         * ck.Scheduler.DebugTiming forces it on.
+         */
+        auto
+        Get_IsDebugTimingWanted() const
+            -> bool;
 #endif
     };
 }

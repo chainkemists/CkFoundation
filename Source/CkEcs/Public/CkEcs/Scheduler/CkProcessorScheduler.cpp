@@ -21,9 +21,12 @@ int32 ck::GDebug_LastProcessedEntityCount = 0;
 
 static TAutoConsoleVariable<bool> CVar_SchedulerDebugTiming(
     TEXT("ck.Scheduler.DebugTiming"),
-    true,
-    TEXT("Collect per-processor wall-clock timings for the Scheduler Debugger (default on). Set 0 to skip ")
-    TEXT("the 2x QueryPerformanceCounter-per-processor cost that otherwise shows as Scheduler::Dispatch self-time."),
+    false,
+    TEXT("FORCE per-processor wall-clock TIMING collection on. Off by default because timing is now ")
+    TEXT("demand-driven: the 2x clock read per processor runs only while something is reading the ")
+    TEXT("frame history (the Scheduler Debugger while its window is open). Entity counts, pump ")
+    TEXT("counts, dirty flags and empty-view skips are ALWAYS recorded — only the elapsed-ms ")
+    TEXT("numbers go dark. Set 1 to capture timings for a window you will inspect afterwards."),
     ECVF_Default);
 
 static TAutoConsoleVariable<int32> CVar_SchedulerMaxPumpIterations(
@@ -58,6 +61,19 @@ DECLARE_CYCLE_STAT(TEXT("Scheduler::DebugRecord"),       STAT_Scheduler_DebugRec
 // --------------------------------------------------------------------------------------------------------------------
 
 static constexpr double GCk_Scheduler_PumpWarningThrottleSeconds = 5.0;
+
+namespace ck_processor_scheduler
+{
+    // How many frames a history read keeps timing collection alive for.
+    //
+    // Sized against the SLOWEST consumer cadence, not the fastest: the Scheduler Debugger throttles
+    // its reads through FCkDebuggerRefreshGate, whose Hz5 rate lands roughly every 12 frames at
+    // 60fps (and Hz15 every 4 — exactly on a 4-frame boundary, so it would flicker). Anything at or
+    // below the slowest read interval leaves most frames untimed while the window is open, which
+    // reads as a broken debugger rather than a fast one. Over-covering costs nothing: it only
+    // extends collection while a consumer is genuinely polling.
+    constexpr uint64 DebugTimingKeepAliveFrames = 24;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -221,7 +237,7 @@ auto
     _LastFramePumpCount = 0;
 
 #if !UE_BUILD_SHIPPING
-    const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+    const auto DebugTimingEnabled = Get_IsDebugTimingWanted();
     _MaxPumpIterations = FMath::Max(1, CVar_SchedulerMaxPumpIterations.GetValueOnGameThread());
     DoDebugBeginFrame();
     const auto FrameStartTime = FPlatformTime::Seconds();
@@ -278,12 +294,16 @@ auto
             }
 
 #if !UE_BUILD_SHIPPING
+            // The entity counter is reset unconditionally: it is a plain int32 store, and the
+            // visited-count it feeds is a correctness signal that tests and the debugger read for
+            // PAST frames. Only the clock reads below are demand-driven.
+            ck::GDebug_LastProcessedEntityCount = 0;
+
             auto ProcessorStartTime = 0.0;
             if (DebugTimingEnabled)
             {
                 SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
                 ProcessorStartTime = FPlatformTime::Seconds();
-                ck::GDebug_LastProcessedEntityCount = 0;
             }
 #endif
 
@@ -297,12 +317,11 @@ auto
             }
 
 #if !UE_BUILD_SHIPPING
-            if (DebugTimingEnabled)
-            {
-                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
-                const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
-                DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
-            }
+            const auto ProcessorElapsedMs = DebugTimingEnabled
+                ? (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0
+                : 0.0;
+
+            DoDebugRecordProcessorTick(NodeIndex, ProcessorElapsedMs, ck::GDebug_LastProcessedEntityCount);
 #endif
         }
     }
@@ -495,7 +514,7 @@ auto
     const auto& PumpOrder = InScope == ECk_SchedulerTickScope::LoadKernel ? _LoadPumpOrder : _PumpOrder;
 
 #if !UE_BUILD_SHIPPING
-    const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+    const auto DebugTimingEnabled = Get_IsDebugTimingWanted();
 #endif
 
     for (const auto NodeIndex : PumpOrder)
@@ -541,12 +560,13 @@ auto
             SCOPE_CYCLE_COUNTER(STAT_Scheduler_PumpDispatch);
 
 #if !UE_BUILD_SHIPPING
+            ck::GDebug_LastProcessedEntityCount = 0;
+
             auto PumpStartTime = 0.0;
             if (DebugTimingEnabled)
             {
                 SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
                 PumpStartTime = FPlatformTime::Seconds();
-                ck::GDebug_LastProcessedEntityCount = 0;
             }
 #endif
 
@@ -568,12 +588,11 @@ auto
             }
 
 #if !UE_BUILD_SHIPPING
-            if (DebugTimingEnabled)
-            {
-                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
-                const auto PumpElapsedMs = (FPlatformTime::Seconds() - PumpStartTime) * 1000.0;
-                DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs, ck::GDebug_LastProcessedEntityCount);
-            }
+            const auto PumpElapsedMs = DebugTimingEnabled
+                ? (FPlatformTime::Seconds() - PumpStartTime) * 1000.0
+                : 0.0;
+
+            DoDebugRecordProcessorPump(NodeIndex, InPumpIndex, PumpElapsedMs, ck::GDebug_LastProcessedEntityCount);
 #endif
 
             if (_UseDirtyMarkerVersionShortCircuit)
@@ -655,6 +674,29 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 #if !UE_BUILD_SHIPPING
+
+auto
+    ck::FProcessorScheduler::
+    Get_DebugFrameHistory() const
+    -> const TArray<FSchedulerDebug_FrameSnapshot>&
+{
+    _LastDebugHistoryReadFrame = GFrameCounter;
+
+    return _DebugFrameHistory;
+}
+
+auto
+    ck::FProcessorScheduler::
+    Get_IsDebugTimingWanted() const
+    -> bool
+{
+    if (CVar_SchedulerDebugTiming.GetValueOnGameThread())
+    { return true; }
+
+    // Never read leaves the stamp at 0, so the delta is GFrameCounter itself and this reports
+    // "nobody is looking" from the fifth frame of the process onward.
+    return (GFrameCounter - _LastDebugHistoryReadFrame) <= ck_processor_scheduler::DebugTimingKeepAliveFrames;
+}
 
 auto
     ck::FProcessorScheduler::
