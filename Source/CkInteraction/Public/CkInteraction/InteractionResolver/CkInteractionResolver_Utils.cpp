@@ -10,6 +10,7 @@
 #include "CkInteraction/CkInteraction_Stats.h"
 
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
+#include "CkInteraction/Interaction/CkInteraction_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -235,8 +236,10 @@ auto
             { continue; }
 
             // The three non-CanInteractWith results below are accepted so a target with an ACTIVE
-            // interaction stays in the resolved set — otherwise re-evaluation caused by an unrelated
-            // intent stopping drops it, and the bridge code cancels its live interaction.
+            // interaction stays in the resolved set — otherwise a re-evaluation drops it and the
+            // bridge code cancels its live interaction. This only reaches consumers that compose an
+            // InteractSource, because AlreadyExists is decided against the InteractSource CAST of
+            // InSource; the pin below the sort is what protects everyone else.
             INC_DWORD_STAT(STAT_Interaction_CanInteractWithCalls);
             const auto CanInteractResult = UCk_Utils_InteractTarget_UE::Get_CanInteractWith(Target, InResolver);
             if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith &&
@@ -255,8 +258,40 @@ auto
     if (DistanceSorting == ECk_InteractionResolver_DistanceSorting::Enabled && ValidTargets.Num() > 1)
     { DoSortByDistance(InResolver, ValidTargets); }
 
+    // An interaction this resolver ALREADY started outranks proximity. Without this, a nearer
+    // same-channel target appearing mid-hold sorts ahead and the truncation below evicts the live
+    // one; the consumer bridge cancels what it no longer sees, and a cancelled Timed interaction is
+    // destroyed along with its progress -- so a hold resets to zero for a reason the player cannot
+    // perceive. The A-to-B retarget case is unaffected: the target you looked away from leaves
+    // AvailableTargets entirely, so it never reaches this pin.
+    //
+    // Deliberately NOT keyed on Get_CanInteractWith's AlreadyExists result: that compares the
+    // interaction's source against the INTERACT-SOURCE CAST of InSource, so it is unreachable for
+    // any consumer that composes no InteractSource feature. Ask the interaction record directly.
     if (ValidTargets.Num() > MaxConcurrentInteractions)
-    { ValidTargets.SetNum(MaxConcurrentInteractions); }
+    {
+        auto Pinned = TArray<FCk_Handle_InteractTarget>{};
+        auto Unpinned = TArray<FCk_Handle_InteractTarget>{};
+
+        for (const auto& Target : ValidTargets)
+        {
+            const auto& LiveInteraction = UCk_Utils_Interaction_UE::TryGet(Target, InResolver, Target,
+                UCk_Utils_InteractTarget_UE::Get_InteractionChannel(Target));
+
+            if (ck::IsValid(LiveInteraction))
+            { Pinned.Emplace(Target); }
+            else
+            { Unpinned.Emplace(Target); }
+        }
+
+        if (NOT Pinned.IsEmpty())
+        {
+            Pinned.Append(Unpinned);
+            ValidTargets = MoveTemp(Pinned);
+        }
+
+        ValidTargets.SetNum(MaxConcurrentInteractions);
+    }
 
     return ValidTargets;
 }
