@@ -51,12 +51,16 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CrowdAgent);
 // the closest this agent can physically get is (SelfRadius + BlockerRadius) out — further than its
 // arrival radius; _BlockedBy names it. NoProgress: the agent stopped making progress along its path
 // and re-planning did not help, so the obstruction is static and there is no blocker handle.
-// The two causes retry differently — see ECk_CrowdAgent_BlockedPolicy.
+// GoalCrowded: the destination is not reachable through the pack already settled on it — _BlockedBy
+// names the settled neighbour this agent came to rest behind, which may be several bodies out from
+// the goal itself. It retries like GoalOccupied, because the pack is made of agents and will move.
+// The causes retry differently — see ECk_CrowdAgent_BlockedPolicy.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_BlockedReason : uint8
 {
     GoalOccupied,
-    NoProgress
+    NoProgress,
+    GoalCrowded
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedReason);
 

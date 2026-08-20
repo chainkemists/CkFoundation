@@ -14,6 +14,7 @@
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -63,6 +64,162 @@ namespace ck
             }
 
             return FCk_Handle{};
+        }
+
+        // A settled neighbour only blocks when it lies within this cone around the agent's own
+        // direction of travel — 0.5 is cos(60 degrees), so the wedge is +/-60. Without it, brushing
+        // laterally past someone parked near the goal in a wide corridor reads as a block: the
+        // strictly-nearer test alone admits a neighbour up to ~75 degrees off the line to the goal.
+        constexpr auto FrontalConeCosine = 0.5f;
+
+        // Below this separation a direction is numerical noise, so the cone test cannot be posed and
+        // is treated as passed: standing on the goal, or interpenetrating a neighbour, are both
+        // states the other tests already answer for.
+        constexpr auto DegenerateDirectionCm = 1.0f;
+
+        // The depth an anchor contributes to whoever settles behind it. An agent that reached the
+        // goal, or stopped for any reason other than a crowd, is the FOOT of a chain and
+        // contributes 0 — which is what guarantees every chain bottoms out at a body genuinely
+        // standing on the destination instead of drifting outward on its own.
+        //
+        // A GoalCrowded block always stamps depth >= 1, so 0 unambiguously means "not chained" and
+        // the two branches of the region test collapse into a single expression at the call site.
+        auto Get_AnchorCrowdDepth(
+            const FCk_Handle& InAnchor) -> int32
+        {
+            if (NOT InAnchor.Has<FTag_CrowdAgent_GoalBlocked>())
+            { return 0; }
+
+            if (NOT InAnchor.Has<FFragment_CrowdAgent_BlockDetect>())
+            { return 0; }
+
+            const auto& AnchorBlockDetect = InAnchor.Get<FFragment_CrowdAgent_BlockDetect>();
+            if (AnchorBlockDetect.Get_BlockedCause() != ECk_CrowdAgent_BlockedReason::GoalCrowded)
+            { return 0; }
+
+            return AnchorBlockDetect.Get_CrowdedGoalDepth();
+        }
+
+        // Returns the settled neighbour the agent must come to rest behind, or an invalid handle.
+        //
+        // Get_GoalBlocker above answers only for whoever is in contact with the GOAL, so in a crowd
+        // commanded to one point only the innermost ring ever learns anything. This is the
+        // transitive half: contact with a neighbour already settled ON the ground this agent is
+        // walking to, standing nearer the goal, and standing in the way, is itself proof the
+        // destination cannot be reached.
+        //
+        // WHY the neighbour is parked there is deliberately not asked — its own goal is never read.
+        // A stranger stopped on the spot obstructs exactly as much as a rival for the same
+        // destination, and goal identity would miss every crowd whose members were sent to nearby
+        // but unequal points. What bounds the rule instead is geometry: the neighbour must be inside
+        // the agent's own goal region (condition 2), which is what keeps a picket line parked metres
+        // away from anyone's destination inert — such a stranger is not itself GoalCrowded, so it
+        // contributes no depth and only ever anchors at the base radius.
+        //
+        // The strictly-nearer test is what makes the settled-anchor relation acyclic — a settled
+        // agent BEHIND self can never stop it short of ground that is still free, and two agents can
+        // never hold each other. It is also what terminates the depth chain: depth strictly
+        // increases along a strictly-decreasing sequence of distances to the goal.
+        auto Get_CrowdedGoalBlocker(
+            const FVector& InSelfLoc,
+            const FVector& InSelfGoal,
+            float InSelfRadius,
+            float InArrivalRadius,
+            float InContactPadCm,
+            bool InMarkupAnchorsEnabled,
+            const FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> FCk_Handle
+        {
+            const auto SelfDistanceToGoal = static_cast<float>(FVector::Dist2D(InSelfLoc, InSelfGoal));
+
+            auto BestAnchor = FCk_Handle{};
+            auto BestAnchorDepth = TNumericLimits<int32>::Max();
+
+            for (const auto& Nbr : InNeighborCache.Get_Neighbors())
+            {
+                const auto NeighbourAgent = UCk_Utils_CrowdAgent_UE::Cast(Nbr.Get_Handle());
+                if (ck::Is_NOT_Valid(NeighbourAgent))
+                { continue; }
+
+                // Painted stationary markup is the BOOTSTRAP anchor, and the cascade cannot start
+                // without it: under crowd pressure the avoidance sampler's standoff can exceed the
+                // arrival radius, so the innermost agent hovers just outside its goal, NOBODY ever
+                // reaches, and no reached/blocked anchor is ever created for the chain to root in.
+                // Markup paints on windowed physical stillness alone — Walking-but-jammed counts —
+                // so the jammed agent becomes an anchor, its ring blocks off it, pressure releases,
+                // and it then genuinely arrives. Being Walking is not a contradiction here: the
+                // strictly-nearer test below means it never blocks on its own dependents.
+                //
+                // A markup anchor can unpaint by moving again, leaving dependents held on an
+                // obstruction that has left; BlockedRecheck resumes them within its 1s cadence, so
+                // the churn is bounded and deliberately accepted. With markup Disabled the disjunct
+                // simply drops out and the tier degrades to reached/blocked anchors only.
+                const auto NeighbourIsParked = InMarkupAnchorsEnabled &&
+                    NeighbourAgent.Has<FFragment_CrowdAgent_NavMarkup>() &&
+                    NeighbourAgent.Get<FFragment_CrowdAgent_NavMarkup>().Get_Markup().IsValid();
+
+                const auto NeighbourHasSettled =
+                    UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(NeighbourAgent) ||
+                    NeighbourAgent.Has<FTag_CrowdAgent_GoalBlocked>() ||
+                    NeighbourAgent.Has<FTag_CrowdAgent_GoalFailedHold>() ||
+                    NeighbourIsParked;
+                if (NOT NeighbourHasSettled)
+                { continue; }
+
+                const auto NeighbourRadius = NeighbourAgent.Has<FFragment_CrowdAgent_Params>()
+                    ? NeighbourAgent.Get<FFragment_CrowdAgent_Params>().Get_Radius()
+                    : InSelfRadius;
+
+                const auto NeighbourCentre = InSelfLoc + Nbr.Get_RelativeOffset();
+                const auto NeighbourDistanceToGoal =
+                    static_cast<float>(FVector::Dist2D(NeighbourCentre, InSelfGoal));
+
+                // Parked ON the destination — close enough that this agent could not stand where
+                // the neighbour does and still be short of its own arrival tolerance — OR already
+                // settled as part of the pack occupying it, in which case the allowance grows by
+                // one body diameter per ring already stacked up. That is the exact rate at which a
+                // physical pile grows outward, and because a chain only extends through agents that
+                // are themselves GoalCrowded, every chain bottoms out at a body genuinely standing
+                // on the destination.
+                const auto AnchorDepth = Get_AnchorCrowdDepth(Nbr.Get_Handle());
+                const auto GoalRegionRadius =
+                    InSelfRadius + NeighbourRadius + InArrivalRadius + InContactPadCm +
+                    (static_cast<float>(AnchorDepth) * (InSelfRadius + NeighbourRadius));
+
+                if (NeighbourDistanceToGoal > GoalRegionRadius)
+                { continue; }
+
+                const auto NeighbourDistance =
+                    static_cast<float>(FVector::Dist2D(NeighbourCentre, InSelfLoc));
+                if (NeighbourDistance > InSelfRadius + NeighbourRadius + InContactPadCm)
+                { continue; }
+
+                if (NeighbourDistanceToGoal >= SelfDistanceToGoal)
+                { continue; }
+
+                const auto DirectionsAreMeasurable =
+                    SelfDistanceToGoal > DegenerateDirectionCm &&
+                    NeighbourDistance > DegenerateDirectionCm;
+
+                if (DirectionsAreMeasurable)
+                {
+                    const auto ToGoal = FVector2D{InSelfGoal - InSelfLoc}.GetSafeNormal();
+                    const auto ToNeighbour = FVector2D{NeighbourCentre - InSelfLoc}.GetSafeNormal();
+
+                    if (FVector2D::DotProduct(ToGoal, ToNeighbour) < FrontalConeCosine)
+                    { continue; }
+                }
+
+                // Shallowest qualifier wins: stamping off a deeper anchor than we had to would
+                // inflate the allowance for everyone behind us through a chain we never needed.
+                // Neighbours arrive distance-sorted, so an equal-depth tie keeps the nearest.
+                if (AnchorDepth >= BestAnchorDepth)
+                { continue; }
+
+                BestAnchor = Nbr.Get_Handle();
+                BestAnchorDepth = AnchorDepth;
+            }
+
+            return BestAnchor;
         }
 
         // What the agent still has to walk: the leg to its current waypoint plus the polyline tail.
@@ -178,6 +335,30 @@ namespace ck
 
         const auto SecondsSinceLastSample = InBlockDetect._SampleAccumulatorSec;
         InBlockDetect._SampleAccumulatorSec = 0.0f;
+
+        // ---- Cluster detector (propagation) ------------------------------------------------------
+        // Deliberately OUTSIDE the engagement window the geometric detector uses: a crowd stacks far
+        // deeper than one braking distance from its goal, and the agents this rule exists for are
+        // exactly the ones that never come near the goal at all. Contact with a settled obstruction
+        // standing on the destination IS the engagement.
+        if (Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
+        {
+            const auto CrowdBlocker = ck_crowdagent_blockdetect::Get_CrowdedGoalBlocker(
+                SelfLoc,
+                InPathFollow.Get_ActiveGoal(),
+                SelfRadius,
+                ArrivalRadius,
+                Settings->Get_CrowdedGoalContactPadCm(),
+                Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled,
+                InNeighborCache);
+
+            if (ck::IsValid(CrowdBlocker))
+            {
+                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
+                    ECk_CrowdAgent_BlockedReason::GoalCrowded, CrowdBlocker, DistanceToFinal);
+                return;
+            }
+        }
 
         // ---- Off-path re-path --------------------------------------------------------------------
         // Nothing in the pipeline notices that the agent is no longer near the corridor it is
@@ -331,6 +512,13 @@ namespace ck
         InBlockDetect._BlockedCause = InReason;
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
 
+        // Depth chains only through a crowd block, and only off the anchor we actually stopped
+        // behind. Every other reason is the foot of a chain, so it resets — a stale depth would
+        // widen the goal region for whoever settles behind us on a pack that no longer exists.
+        InBlockDetect._CrowdedGoalDepth = InReason == ECk_CrowdAgent_BlockedReason::GoalCrowded
+            ? ck_crowdagent_blockdetect::Get_AnchorCrowdDepth(InBlocker) + 1
+            : 0;
+
         // The stall ladder is per Walking stretch: a resumed agent gets its re-path budget back,
         // while BlockedRecheck's own budget is what bounds the episode as a whole.
         InBlockDetect._StallRepathCount = 0;
@@ -354,6 +542,9 @@ namespace ck
         {
             NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
             NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
+
+            // A failed move is not a crowd hold, so it anchors nobody.
+            InBlockDetect._CrowdedGoalDepth = 0;
 
             InDesired._Velocity = FVector::ZeroVector;
             InDesired._LastVelocity = FVector::ZeroVector;
@@ -407,6 +598,26 @@ namespace ck
         if (ck::IsValid(Blocker))
         { return; }  // still taken — keep holding
 
+        // Symmetric with BlockDetect's cluster rule, and load-bearing: an agent whose anchor is a
+        // settled NEIGHBOUR rather than the goal itself has nothing here that can see the pack, so
+        // it would resume every cadence, walk back into it, re-block, and — on a NoProgress cause —
+        // spend the whole retry budget doing it before failing outright. Holding costs no retry:
+        // the pack is made of agents and will drain, exactly like an occupied goal.
+        if (Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
+        {
+            const auto CrowdBlocker = ck_crowdagent_blockdetect::Get_CrowdedGoalBlocker(
+                SelfLoc,
+                InPathFollow.Get_ActiveGoal(),
+                InParams.Get_Radius(),
+                InPathFollow.Get_ActiveArrivalRadius(),
+                Settings->Get_CrowdedGoalContactPadCm(),
+                Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled,
+                InNeighborCache);
+
+            if (ck::IsValid(CrowdBlocker))
+            { return; }
+        }
+
         // A GoalOccupied block holds for as long as the blocker stands there: that IS the queue
         // behaviour callers depend on, and it is not a failure. A NoProgress block has no blocker
         // to wait out — the obstruction is static — so each re-check spends one bounded attempt
@@ -440,6 +651,7 @@ namespace ck
         InPathFollow._WaypointIndex = 0;
 
         InBlockDetect._BlockedBy = FCk_Handle{};
+        InBlockDetect._CrowdedGoalDepth = 0;
         InBlockDetect.DoResetProgressWindow();
 
         // _BlockedSignalSent is deliberately NOT reset: same goal means same episode. Only an
@@ -509,6 +721,7 @@ namespace ck
         InPathFollow._ProtectedLeadingWaypointCount = 0;
 
         InBlockDetect._BlockedBy = FCk_Handle{};
+        InBlockDetect._CrowdedGoalDepth = 0;
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
         InBlockDetect.DoResetProgressWindow();
 
