@@ -292,6 +292,42 @@ float CkUsf_Stylize_StrokePattern(int PatternIndex, float2 P, float Irregularity
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// OKLab (Ottosson). The value over working in RGB: L is PERCEIVED lightness, so a band ladder or a
+// nearest-colour search spaced in L treats the darks and the brights evenly, where linear luminance
+// crowds every band into the low end. Input/output are LINEAR RGB; both directions floor at zero
+// because scene-referred input can carry small negative channels and cbrt/cubing would amplify them.
+// --------------------------------------------------------------------------------------------------------------------
+
+float3 CkUsf_ToOKLab(float3 LinearRgb)
+{
+    const float3 Lms = float3(
+        dot(LinearRgb, float3(0.4122214708, 0.5363325363, 0.0514459929)),
+        dot(LinearRgb, float3(0.2119034982, 0.6806995451, 0.1073969566)),
+        dot(LinearRgb, float3(0.0883024619, 0.2220049174, 0.6896926207)));
+
+    const float3 Cbrt = pow(max(Lms, 0.0), 1.0 / 3.0);
+
+    return float3(
+        dot(Cbrt, float3(0.2104542553,  0.7936177850, -0.0040720468)),
+        dot(Cbrt, float3(1.9779984951, -2.4285922050,  0.4505937099)),
+        dot(Cbrt, float3(0.0259040371,  0.7827717662, -0.8086757660)));
+}
+
+float3 CkUsf_FromOKLab(float3 Lab)
+{
+    const float L = Lab.x + 0.3963377774 * Lab.y + 0.2158037573 * Lab.z;
+    const float M = Lab.x - 0.1055613458 * Lab.y - 0.0638541728 * Lab.z;
+    const float S = Lab.x - 0.0894841775 * Lab.y - 1.2914855480 * Lab.z;
+
+    const float3 Cubed = float3(L * L * L, M * M * M, S * S * S);
+
+    return max(float3(
+        dot(Cubed, float3( 4.0767416621, -3.3077115913,  0.2309699292)),
+        dot(Cubed, float3(-1.2684380046,  2.6097574011, -0.3413193965)),
+        dot(Cubed, float3(-0.0041960863, -0.7034186147,  1.7076147010))), 0.0);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Luminance + palette. The luma coefficients are Common.ush's (CkUsf_Desaturate, Rec.601) — the two
 // must agree or a desaturated pixel and a quantized one disagree on what "the same grey" means.
 // --------------------------------------------------------------------------------------------------------------------
@@ -345,6 +381,33 @@ float3 CkUsf_Stylize_NearestPaletteColor(float3 Color, float3 Palette[8], int Co
         { continue; }
 
         float3 Delta = Color - Palette[I];
+        float Distance = dot(Delta, Delta);
+        if (Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            Best = Palette[I];
+        }
+    }
+    return Best;
+}
+
+// Nearest palette entry by squared OKLab distance — perceptual, so a dark red maps to the palette's
+// dark entry rather than to whichever colour happens to sit closest in linear RGB. The returned value
+// is the AUTHORED entry, untouched: only the comparison space changes.
+float3 CkUsf_Stylize_NearestPaletteColorOKLab(float3 Color, float3 Palette[8], int Count)
+{
+    int N = clamp(Count, 1, 8);
+    float3 Target = CkUsf_ToOKLab(Color);
+    float3 Best = Palette[0];
+    float BestDistance = 1e9;
+
+    [unroll]
+    for (int I = 0; I < 8; ++I)
+    {
+        if (I >= N)
+        { continue; }
+
+        float3 Delta = Target - CkUsf_ToOKLab(Palette[I]);
         float Distance = dot(Delta, Delta);
         if (Distance < BestDistance)
         {

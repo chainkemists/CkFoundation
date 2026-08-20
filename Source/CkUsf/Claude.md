@@ -923,8 +923,8 @@ indistinguishable.
 
 ### Pixel art (a look CkUsf owns, applied by CkPixelArt)
 
-`/CkUsf/Looks/PixelArt.ush` — 1-texel outlines, luminance banding and palette reduction, at
-`SceneColorAfterDOF`. Unlike the four Stylize effects it has no subsystem here: `CkPixelArt` owns the
+`/CkUsf/Looks/PixelArt.ush` — 1-texel outlines, lightness banding (Rec.601 luminance or OKLab L, with an
+optional warm/cool band ramp) and palette reduction, at `SceneColorAfterDOF`. Unlike the four Stylize effects it has no subsystem here: `CkPixelArt` owns the
 settings, the preset and the MID, and this module owns only the look. Presets:
 `Script/CkPixelArt/CkPixelArt_Presets_Assets.as`; the look asset is
 `Script/CkUsf/CkUsf_PixelArtLook_Assets.as`.
