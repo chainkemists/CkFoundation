@@ -9,9 +9,11 @@
 //
 // Pipeline, in order (the order IS the contract):
 //   1. edges     — 4-tap plus kernel over depth + world normal, classified into silhouette / crease
-//   2. bands     — quantize scene-colour LUMINANCE into N bands with a controllable transition width
+//   2. bands     — quantize the scene colour's LIGHTNESS into N bands with a controllable transition
+//                  width. The axis is Rec.601 luminance or OKLab L (ColorSpace), and WarmShift adds the
+//                  reference warm/cool drift with band brightness
 //   3. edge apply— either flat multipliers, or a +/-1 BAND shift applied BEFORE the palette snap
-//   4. palette   — steps per channel, nearest authored entry, or luminance-only steps
+//   4. palette   — steps per channel, nearest authored entry (RGB- or OKLab-distance), or lightness steps
 //
 // Step 3 before step 4 is the t3ssel8r signature and the reason the two cannot be reordered: shifting a
 // band and THEN snapping means an outline is always a colour the palette already contains. Tinting after
@@ -92,6 +94,8 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
     float Bands,
     float ThresholdGradientSize,
     float DitherStrength,
+    float ColorSpace,
+    float WarmShift,
     float PaletteMode,
     float PaletteCount,
     float3 PaletteColor0, float3 PaletteColor1, float3 PaletteColor2, float3 PaletteColor3,
@@ -212,8 +216,26 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
     }
 
     // ---- 2. Bands ---------------------------------------------------------------------------------
-    const float RawLuminance = CkUsf_Stylize_Luminance(max(Color, 0.0));
-    const float Luminance = RawLuminance / (1.0 + RawLuminance);
+    // The banding axis: Rec.601 luminance, or OKLab lightness, which spaces the ladder by PERCEIVED
+    // brightness so the darks get their fair share of the bands instead of crowding into the bottom one.
+    // Either way the axis is Reinhard-compressed first — this look sits pre-tonemap where the input is
+    // unbounded, and a clamp would collapse everything above 1 into the top band.
+    const bool UsesOKLab = (int)(ColorSpace + 0.5) == 1;
+
+    float3 LabColor = float3(0.0, 0.0, 0.0);
+    float RawAxis;
+
+    if (UsesOKLab)
+    {
+        LabColor = CkUsf_ToOKLab(max(Color, 0.0));
+        RawAxis = max(LabColor.x, 0.0);
+    }
+    else
+    {
+        RawAxis = CkUsf_Stylize_Luminance(max(Color, 0.0));
+    }
+
+    const float Luminance = RawAxis / (1.0 + RawAxis);
 
     const float BandCount = max(Bands, 2.0);
     const float BandWidth = 1.0 / BandCount;
@@ -256,8 +278,29 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
     const float BandedTone = ClampedBand / max(1.0 - ClampedBand, 1e-4);
 
     // Re-light the original hue by the banded tone rather than replacing the colour with a grey ladder:
-    // banding the luminance alone is what keeps material colour while quantizing shading.
-    Color = max(Color * (BandedTone / max(RawLuminance, 1e-4)) * FlatEdgeScale, 0.0);
+    // banding the lightness alone is what keeps material colour while quantizing shading. In OKLab that
+    // means SETTING L (a/b carry the hue); in luminance space it means rescaling the RGB by the ratio.
+    //
+    // WarmShift is the reference ramp on OKLab b: bright bands drift warm, dark bands cool, anchored on
+    // the band's position so the tint quantizes with the shading instead of smearing across it.
+    if (UsesOKLab)
+    {
+        LabColor.x = BandedTone;
+        LabColor.z += (ClampedBand - 0.5) * WarmShift;
+
+        Color = max(CkUsf_FromOKLab(LabColor) * FlatEdgeScale, 0.0);
+    }
+    else
+    {
+        Color = max(Color * (BandedTone / max(RawAxis, 1e-4)) * FlatEdgeScale, 0.0);
+
+        if (abs(WarmShift) > 1e-5)
+        {
+            float3 Warmed = CkUsf_ToOKLab(Color);
+            Warmed.z += (ClampedBand - 0.5) * WarmShift;
+            Color = CkUsf_FromOKLab(Warmed);
+        }
+    }
 
     // ---- 4. Palette -------------------------------------------------------------------------------
     // Compared exactly rather than thresholded, so a mode appended to the enum cannot silently fall into
@@ -278,7 +321,11 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
         Palette[4] = PaletteColor4; Palette[5] = PaletteColor5;
         Palette[6] = PaletteColor6; Palette[7] = PaletteColor7;
 
-        Color = CkUsf_Stylize_NearestPaletteColor(Color, Palette, clamp((int)(PaletteCount + 0.5), 1, 8));
+        const int LivePaletteCount = clamp((int)(PaletteCount + 0.5), 1, 8);
+
+        Color = UsesOKLab
+            ? CkUsf_Stylize_NearestPaletteColorOKLab(Color, Palette, LivePaletteCount)
+            : CkUsf_Stylize_NearestPaletteColor(Color, Palette, LivePaletteCount);
     }
     else if (Mode == 2)
     {
