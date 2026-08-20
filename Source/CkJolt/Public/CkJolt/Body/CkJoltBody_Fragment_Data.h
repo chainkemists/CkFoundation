@@ -120,6 +120,18 @@ private:
                       EditCondition = "_ShapeSource == ECk_JoltBody_ShapeSource::StaticMeshAsset"))
     TSoftObjectPtr<UStaticMesh> _StaticMesh;
 
+    // Multiplies into the entity-transform scale when a StaticMeshAsset shape is built (setup-time
+    // only — a live body's shape never rescales; ExplicitShape dimensions are typed and authors bake
+    // scale into them directly). Exists for owners whose entity transform is deliberately unit scale
+    // while their display scale lives elsewhere — baking a display scale into the entity transform
+    // would double-apply every other shape riding that same transform (probes). A body built
+    // unscaled under a scaled visual reads as the mesh sinking into surfaces at rest and off-center
+    // wobble in flight.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_ShapeSource == ECk_JoltBody_ShapeSource::StaticMeshAsset"))
+    FVector _ShapeScale = FVector::OneVector;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_MotionType _MotionType = ECk_MotionType::Dynamic;
@@ -206,6 +218,7 @@ public:
     CK_PROPERTY_GET(_ShapeSource);
     CK_PROPERTY(_ShapeDimensions);
     CK_PROPERTY(_StaticMesh);
+    CK_PROPERTY(_ShapeScale);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
     CK_PROPERTY(_InitialSleepState);
