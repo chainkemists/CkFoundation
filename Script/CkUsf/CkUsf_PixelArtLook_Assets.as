@@ -49,6 +49,8 @@ namespace CkUsf
         _Parameters.Add(CkUsf::Usf_ScalarIn(n"Bands", 4.0, n"Banding", 0));
         _Parameters.Add(CkUsf::Usf_ScalarIn(n"ThresholdGradientSize", 0.05, n"Banding", 1));
         _Parameters.Add(CkUsf::Usf_ScalarIn(n"DitherStrength", 0.0, n"Banding", 2));
+        _Parameters.Add(CkUsf::Usf_ScalarIn(n"ColorSpace", 0.0, n"Banding", 3));          // ECk_PixelArt_ColorSpace::Linear
+        _Parameters.Add(CkUsf::Usf_ScalarIn(n"WarmShift", 0.0, n"Banding", 4));
 
         // ---- Palette ----
         _Parameters.Add(CkUsf::Usf_ScalarIn(n"PaletteMode", 1.0, n"Palette", 0));         // ECk_PixelArt_PaletteMode::CustomPalette
