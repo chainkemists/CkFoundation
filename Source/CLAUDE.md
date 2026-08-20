@@ -85,6 +85,8 @@ Before writing any code, navigate the documentation in this order:
 | full-screen hand-drawn look (paint, ink contours, hatching, paper grain) | `CkUsf` — `Stylize/CkUsf_HandDrawnSubsystem` |
 | full-screen cel shading (quantized bands, halftone transitions, per-object pattern via Custom Stencil) | `CkUsf` — `Stylize/CkUsf_CelShadeSubsystem` |
 | post-tonemap palette reduction / ordered dithering / pixelation | `CkUsf` — `Stylize/CkUsf_ScreenDitherSubsystem` |
+| render the scene at a low internal texel grid that does not crawl when the camera moves (orthographic only) | `CkPixelArt` (params, presets, precondition gating) → `CkPixelArtRenderer` (screen-percentage drive, camera texel snap, box-filter upscaler) |
+| the pixel-art LOOK on its own (1-texel outlines, luminance banding, palette snap) at any resolution | `CkUsf` — `Looks/PixelArt.ush`; composes with `CkPixelArt` but does not require it |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
 | retained editor and high-count entity visualizers | `CkEntityVisualizer` (CkPmg analytical shapes + shared CkIsm primitives) |
 | vertex-animation-texture playback (bake skeletal anims to textures, tick-less ISM instances) | `CkVat` (+ `CkVatEditor` baker) |
@@ -136,7 +138,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkSettings | — | DeveloperSettings base; not listed in the uplugin |
 | CkThirdParty | — | Vendored: EnTT, JoltPhysics, fmt, cleantype, ctti, delegate, bitwise-enum |
 | CkIskmRendererVF | — | Engine-only vertex-factory shim for CkIskmRenderer (RenderCore/RHI/Renderer); `PostConfigInit` so the VF registers before the engine seals its factory list; plain ModuleRules |
-| CkPixelArtRender | — | Custom primary spatial upscaler + camera texel snap; `PostConfigInit` so its `/CkPixelArt` shader mapping and global shader type exist before the global shader map is built. NOT `CkModuleRules` (it adds AngelscriptCode/ApplicationCore, neither loadable that early), hence `ensureMsgf` and plain structs instead of the CkCore macros. Includes `Renderer/Private` — recompile-coupled to the pinned fork |
+| CkPixelArtRenderer | — | Custom primary spatial upscaler + camera texel snap; `PostConfigInit` so its `/CkPixelArt` shader mapping and global shader type exist before the global shader map is built. NOT `CkModuleRules` (it adds AngelscriptCode/ApplicationCore, neither loadable that early), hence `ensureMsgf` and plain structs instead of the CkCore macros. Includes `Renderer/Private` — recompile-coupled to the pinned fork |
 
 ### T1 — foundation
 
@@ -216,7 +218,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
-| CkPixelArt | Core,Ecs,Log,PixelArtRender,Settings,Usf (preset + project settings + the world subsystem that writes CkPixelArtRender's per-world config; reaches the renderer ONLY through that registry, so the render module stays consumable without this one) |
+| CkPixelArt | Core,Ecs,Log,PixelArtRenderer,Settings,Usf (preset + project settings + the world subsystem that writes CkPixelArtRenderer's per-world config; reaches the renderer ONLY through that registry, so the render module stays consumable without this one) |
 | CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,ResourceLoader,Settings |
 | CkPoi | Core,Ecs,EcsExt,EntityTag,Label,Log |
 | CkPoiDisplayDefinition | Core,Ecs,EcsExt,Label,Log,Record,Settings,VisibleRange |
