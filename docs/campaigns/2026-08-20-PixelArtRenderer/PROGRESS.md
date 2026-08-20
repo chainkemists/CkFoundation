@@ -1265,6 +1265,22 @@ stations; worse when moving. Two causes found, one fixed, one instrumented:
 
 Gate: 1206/1203/3, same three names, zero never-run (`Saved/Logs/BuildTest-JitterDiag.log`).
 
+**Round 2 (after the maintainer re-ran with one light): the residual static sparkle is VSM's own
+per-frame stochastics.** Ground truth chain: the maintainer's interactive WatchSnap verdict was STATIC
+(one snapped origin, 119 reporting frames — the rig exonerated under live input too; the remainder range
+[-0.42, 0] with both axes settling AT zero is the floating-pawn deceleration tail, the motion-coupled
+component that makes CREEP read calmest). VSM must stay on — the engine hardcodes CSM cascade building
+as perspective (`ShadowSetup.cpp:2952`), so VSM is the only working ortho shadow path — but its SMRT
+sampling is seeded by `View.StateFrameIndex` (`VirtualShadowMapProjection.usf:136,810`): the noise
+pattern re-rolls EVERY FRAME by design, expecting the temporal AA this renderer requires OFF. Fixes:
+`Request_Apply_RecommendedCVars` now also zeroes `r.Shadow.Virtual.SMRT.TexelDitherScale{Directional,
+Local}` (applied-not-gated, leased and restored like its siblings — animated noise traded for static
+aliasing, which quantizes like everything else), and the gym's key light takes `SourceAngle 0` — the
+default 0.54° grows a several-texel stochastic penumbra at the scene's depths, and a hard edge is the
+style anyway. `[EDITOR-VERIFY]`: re-run the gym; the remaining verdict is whether hard shadows + static
+aliasing read right, and whether any sparkle survives (if it does, the next knobs are
+`r.Shadow.Virtual.SMRT.RayCountDirectional` / `SamplesPerRayDirectional` upward).
+
 ## Final state — what is committed where, and what is not
 
 **Nothing is pushed. No submodule pointer was bumped.** The superproject is still at `133f8f9` with
