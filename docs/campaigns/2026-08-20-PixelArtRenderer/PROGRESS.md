@@ -1233,6 +1233,38 @@ clean, every shader compile flushed to zero with no errors, and the new paramete
 in the regenerated `.uasset` (committed this time — a real parameter change, unlike the byte-noise re-save
 above).
 
+## Shadow jitter investigation (maintainer-reported, 2026-08-20)
+
+Symptom: shadow shimmer on thin features (the rail's shadow) while the camera is held still, on most
+stations; worse when moving. Two causes found, one fixed, one instrumented:
+
+- **FIXED — the shared map's lighting was live under the judge scene's.** The gym added its own key +
+  fill but never turned the map's off, so every verdict ran under TWO directional lights (doubled
+  shadows — overlapping penumbrae that read as jitter on one-texel features) and the engine's
+  forward-light selection was unstable (the on-screen ForwardShadingPriority warning). The judge scene
+  now suppresses every map directional/sky light while alive (runtime-confirmed: "suppressed 2 map
+  light(s)") and restores them on EndPlay so the other gyms keep their lighting; the key light also
+  takes ForwardShadingPriority 100 as a belt.
+- **INSTRUMENTED — `ck.PixelArt.Debug.WatchSnap <Frames>`** separates the two possible jitter sources
+  no eyeball can: it samples the snapped view origin per frame (via the new diagnostic-only
+  `TryGet_LastFrameReport`, one-frame-tolerant because tickers run before the frame's hooks) and
+  verdicts STATIC (one distinct origin → the jitter is shadow/light-side) vs MOVING (the true origin is
+  crossing lattice boundaries — invisible on geometry because the compensation cancels it, but every
+  camera-anchored pass re-renders each flip). Each new distinct origin logs with its frame index, so
+  boom-composition movement in the first frames reads apart from ongoing oscillation.
+- **Headless ground truth** (`Saved/Logs/PixelArtWatchSnap.log`): after the 8-frame boom composition,
+  ONE snapped origin across ~290 consecutive frames — the camera rig is genuinely still, at least
+  headless. If the maintainer's interactive session still jitters with one light, run
+  `ck.PixelArt.Debug.WatchSnap 300` while standing still and read the verdict; MOVING there would
+  implicate input/springs under a live controller.
+- Residual expectations, documented rather than fixable: a ~one-texel-wide shadow at 360p sits at the
+  sampling limit (RESEARCH §D.4's "balancing act") — if the rail's shadow still sparkles under a single
+  light, the knobs are the key light's source angle (fatter penumbra) and VSM filtering, both
+  eyes-required tuning. The rotating cone's shadow legitimately re-renders per frame. The STUTTER and
+  CREEP stations are SUPPOSED to look bad in motion — that is what they demonstrate.
+
+Gate: 1206/1203/3, same three names, zero never-run (`Saved/Logs/BuildTest-JitterDiag.log`).
+
 ## Final state — what is committed where, and what is not
 
 **Nothing is pushed. No submodule pointer was bumped.** The superproject is still at `133f8f9` with
