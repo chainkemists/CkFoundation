@@ -638,3 +638,60 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
     cached a refusal while its own header comment promised it recomputed.
   - The still-open editor from the look-generation run hot-compiled the gym scripts and reported two
     AngelScript errors for free. Leaving an editor up while writing `.as` is a cheap feedback loop.
+
+## Final state — what is committed where, and what is not
+
+**Nothing is pushed. No submodule pointer was bumped.** The superproject is still at `133f8f9` with
+nothing staged; its three dirty entries (`CkPlugins.uproject`, `Config/DefaultGameplayTags.ini`, and the
+gitlink drift) are the pre-existing dirt recorded in the baseline, untouched. Publishing is the
+maintainer's `/ck-ship-dev`.
+
+### CkFoundation — branch `feature/pixel-art-renderer`, 11 commits ahead of its origin
+
+| SHA | What |
+|---|---|
+| `1f47b9e8f` | docs(pixelart): campaign complete through Phase 6 |
+| `1fab414a6` | docs: tier-table rows + two stale claims corrected |
+| `71582ac5a` | feat(CkUsf): the PixelArt look |
+| `7c5a76da2` | feat(CkPixelArt): the game-facing half |
+| `0d518cd0a` | docs(pixelart): Phase 2/3 verdicts + the margin adjudication |
+| `43746c7ee` | feat(CkCamera): orthographic projection support |
+| `54b4bfe5b` | feat(CkPixelArtRender): camera texel snap + remainder |
+| `5a152a19e` `1760226ae` `c4b7463e0` `c5857bcc9` | Phases 0-1 (earlier session) |
+
+### CkTests — branch `feature/pixel-art-renderer` (local only, no upstream)
+
+| SHA | What |
+|---|---|
+| `ea4dd870` | feat(CkTests): the Pixel Art gym |
+| `650c60cf` | test(CkUsf): the look's asset-to-HLSL contract |
+| `bbc54ee2` | test(CkPixelArt): the subsystem contract |
+| `b5869fa0` | test(CkCamera): orthographic projection end to end |
+| `365db8f2` | test(CkPixelArtRender): the camera snap arithmetic |
+| `3c08fdd1` | Phase 1 specs (earlier session) |
+
+### Known limitations (= the supported-feature matrix)
+
+Stated in full in [../../../Source/CkPixelArtRender/Claude.md](../../../Source/CkPixelArtRender/Claude.md);
+the short version, because these are the ones that will generate bug reports:
+
+- **Anti-aliasing must be None or FXAA.** TSR and TAA disable the upscale slot this renderer occupies.
+- **Dynamic resolution must be off.**
+- **PIE is a preview.** Above 100% OS DPI the engine adds a second resample after ours.
+- **Orthographic only** for the snap. Under perspective the margin fold still applies but pixels creep,
+  and no snap can fix that — one world-space snap displaces near and far geometry differently.
+- **Zoom shimmers while it changes** and settles when it stops. Documented technique limit.
+- **Split screen, stereo, scene captures: untested or out of scope.**
+- **`Renderer/Private` include** — recompile-coupled to the pinned engine fork; budget for it on upgrade.
+
+### What is the maintainer's to decide
+
+- **The human queue H-1 … H-11.** Everything visual, plus the Blueprint-surface line. All of them are now
+  launchable headlessly into the right gym — the URL form that Phase 0 could not make work is
+  `?game=/Script/Angelscript.Ck_PixelArtGym_GameMode`.
+- **Three things flagged for cheap veto:** the debug-only surface in a runtime module (D-7 ToggleLoop,
+  plus DebugPan and PerfSweep), `ensureMsgf` in the CkCore-less module (D-5), and `TOptional` in a
+  reflected request struct (D-12, open adjudication A1).
+- **VALIDATION A9 (Shipping-config compile) is UNRUN**, not assumed. Only Development/Editor was built.
+- **Phase 7 backlog** is untouched: god rays, cloud shadows, per-object snap, stencil point-light,
+  BusterBlock adoption.
