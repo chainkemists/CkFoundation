@@ -57,6 +57,14 @@ situation it exists to rescue is usually one where somebody typed the offending 
 and a `SetByCode` write would be silently dropped underneath it. The escape also sets the show flag, so
 it can clear every row it reports; an escape that cannot is a trap.
 
+Two settings are applied by the escape but deliberately NOT gated on, because they cost quality rather
+than prevent rendering: `r.SecondaryScreenPercentage.GameViewport 100` (a DPI-derived secondary fraction
+softens the image), and `r.Shadow.Virtual.SMRT.TexelDitherScale{Directional,Local} 0` — virtual shadow
+maps jitter their ray casts per frame expecting temporal AA to average the noise, and with the AA this
+renderer requires the noise reaches the screen raw as shadow sparkle on a still camera. Zeroed, the
+trade is static aliasing, which quantizes like everything else in the frame. Pair it with hard light
+source angles (0) on the content side — a soft sun's penumbra is where the sparkle lives.
+
 **Two things about those console variables that are easy to get wrong, and were:**
 
 - **They are PROCESS-wide, so the lease is too.** Priors live in a refcounted process-level table, not on

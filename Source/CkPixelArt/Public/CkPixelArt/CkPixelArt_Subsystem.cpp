@@ -347,6 +347,14 @@ auto
     // the renderer working. Gating on it would refuse to enable on every DPI-scaled display.
     Remember_And_Set(TEXT("r.SecondaryScreenPercentage.GameViewport"), 100.0f);
 
+    // Also applied-not-gated: virtual shadow maps jitter their ray casts per frame (seeded by
+    // View.StateFrameIndex) on the assumption that temporal AA averages the noise away — and this renderer
+    // REQUIRES temporal AA off, so the noise reaches the screen raw as shadow sparkle on a perfectly still
+    // camera. Zeroing the dither trades that animated noise for static aliasing, which quantizes like
+    // everything else in a pixel-art frame. Hard light source angles finish the job on the content side.
+    Remember_And_Set(TEXT("r.Shadow.Virtual.SMRT.TexelDitherScaleDirectional"), 0.0f);
+    Remember_And_Set(TEXT("r.Shadow.Virtual.SMRT.TexelDitherScaleLocal"), 0.0f);
+
     // A viewport field rather than a console variable, so it needs its own line - but it IS a gated precondition,
     // and an escape that cannot clear every row it reports leaves the caller nothing to try next.
     if (auto* GameViewport = ck::IsValid(GetWorld()) ? GetWorld()->GetGameViewport() : nullptr;
