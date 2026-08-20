@@ -322,8 +322,13 @@ private:
     // ---- Facing ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Facing",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, Units = "cm/s",
-            ToolTip = "Desired speed (cm/s) below which an agent stops tracking its desired-velocity heading and simply holds the facing it has. The heading is the avoidance sampler's per-frame winner and may legally slew at the full turn rate at ANY speed, so a jammed agent going nowhere transcribes every flip and whips on the spot. The 10cm/s default matches _BlockedStationarySpeedThreshold, the module's definition of not moving, so facing and block detection agree on which agents are standing still. Re-engagement needs twice this speed, because a bare threshold is a cliff an oscillating speed toggles across. 0 disables the floor."))
+            ToolTip = "Desired speed (cm/s) below which an agent stops tracking its desired-velocity heading and simply holds the facing it has. The heading is the avoidance sampler's per-frame winner and may legally slew at the full turn rate at ANY speed, so a jammed agent going nowhere transcribes every flip and whips on the spot. The 10cm/s default matches _BlockedStationarySpeedThreshold, the module's definition of not moving, so facing and block detection agree on which agents are standing still. Re-engagement needs twice this speed, because a bare threshold is a cliff an oscillating speed toggles across. 0 disables the floor. NOT a rotation smoother: raising it just freezes facing on every slow-moving agent — for residual rotational chatter, tune _FacingDeadBandDeg instead."))
     float _FacingSpeedFloorCm = 10.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Facing",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, UIMax = 14.0, Units = "deg",
+            ToolTip = "Heading changes smaller than this never move the committed facing target at all, so the body converges on its facing and STAYS instead of transcribing every sub-degree wobble at the full turn rate — the residual micro-jitter a moving crowd shows once the large sampler flips are already persistence-filtered. A genuine slow arc accumulates past the band within a few frames and tracks normally, at the cost of the body trailing the true heading by at most this many degrees. Keep it below the 15-degree track tolerance: at or above it, every turn pays the persistence filter's commit latency instead. 0 disables the band."))
+    float _FacingDeadBandDeg = 6.0f;
 
     // ---- Push-Apart ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
@@ -362,6 +367,7 @@ public:
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
     CK_PROPERTY_GET(_WaypointRetirementLineOfSight);
     CK_PROPERTY_GET(_FacingSpeedFloorCm);
+    CK_PROPERTY_GET(_FacingDeadBandDeg);
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
     CK_PROPERTY_GET(_BlockDetectionNoProgressWindowSeconds);

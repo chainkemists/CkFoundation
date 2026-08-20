@@ -850,6 +850,19 @@ bucket. A sampler flip lasts 1-2 frames and therefore never commits; a real 90°
 ~50ms of commit latency and then slews normally. The slew itself is untouched: `_MaxTurnRate`
 toward the committed target, exactly as before.
 
+**A dead-band decides whether a small heading change moves the target at all.** The tolerance
+accept above fires EVERY frame, so sub-tolerance heading noise — separation/blend wobble under
+neighbour pressure, well below the sampler's flip quantum — used to be transcribed to the body at
+the full turn rate: the residual micro-jitter a moving crowd still showed once the big flips were
+persistence-filtered (PIE-observed 2026-08-20 at 100+ agents; raising `_FacingSpeedFloorCm` cannot
+fix it and only freezes facing on slow movers). Changes within `_FacingDeadBandDeg` (project
+settings, default 6°, 0 disables) of the committed target now leave it untouched, so the body
+converges on its facing and stays; a genuine slow arc accumulates past the band within a few
+frames and tracks normally, trailing the true heading by at most the band. Keep the band below the
+15° tolerance — at or above it every turn pays the persistence filter's commit latency instead. An
+in-band frame also resets the pending candidate bucket, exactly as any other non-matching frame
+does. Coverage: `Test_Crowd_FaceAngle_DeadBand.cpp` (algorithm), the Facing AutoTest (contract).
+
 **On re-engagement the committed target is seeded from the body's CURRENT orientation.** Without
 that seed the target the filter starts from is stale — 0 at first engage, or the heading of a
 journey that ended pointing somewhere else — and the persistence window becomes a window in which
