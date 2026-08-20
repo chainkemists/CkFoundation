@@ -176,14 +176,26 @@ namespace ck::jolt::bake::mesh_shape_utils
         const auto SourceMatches = ShapeAsset->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && ShapeAsset->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
 
-        CK_ENSURE_IF_NOT(VersionsMatch && SourceMatches,
+        const auto BlobIsUsable = VersionsMatch && SourceMatches;
+        const auto MeshIsWorthPreBaking = Get_IsWorthPreBaking(*BodySetup);
+
+        // Drift on a mesh the cook no longer covers is an ORPHAN, not a stale bake: the cook skips a
+        // mesh whose collision stopped being worth pre-baking, so it can never refresh this blob and
+        // "re-run the cook" would be advice that provably cannot work. Deleting the asset is the only
+        // fix, and costs nothing — the shape it holds is one the runtime rebuilds for free.
+        CK_ENSURE_IF_NOT(BlobIsUsable || MeshIsWorthPreBaking,
+            TEXT("Cooked Jolt shape [{}] is ORPHANED — mesh [{}] no longer has hull or tri-mesh collision, "
+                 "so the mesh cook SKIPS it and will never refresh this blob. DELETE the cooked asset; "
+                 "re-running the cook does NOT help. The shape is built at runtime meanwhile."),
+            AssetPath, MeshPackagePath)
+        { return Memoize({}); }
+
+        CK_ENSURE_IF_NOT(BlobIsUsable,
             TEXT("Cooked Jolt shape for mesh [{}] is STALE (cook version [{}] vs [{}], Jolt [{}] vs [{}], "
                  "BodySetup guid/trace-flag drift: [{}]) — the blob is skipped and the shape is built at "
                  "runtime. Re-run the Jolt mesh cook."),
             MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::CookVersion_Current,
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
-        {}
-        if (NOT (VersionsMatch && SourceMatches))
         { return Memoize({}); }
 
         return Memoize(Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob(), MeshPackagePath));
