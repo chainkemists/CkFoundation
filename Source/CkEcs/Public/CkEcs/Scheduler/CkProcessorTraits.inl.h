@@ -196,6 +196,19 @@ namespace ck
             Descriptor._GroupName = Get_ProcessorCanonicalName<typename T_Processor::Group>();
         }
 
+        if constexpr (requires { typename T_Processor::LocalSettleAfter; })
+        {
+            Descriptor._LocalSettleAfterGroupName =
+                Get_ProcessorCanonicalName<typename T_Processor::LocalSettleAfter>();
+        }
+
+        if constexpr (requires { T_Processor::LocalSettleTrigger; })
+        {
+            static_assert(requires { typename T_Processor::LocalSettleAfter; },
+                "LocalSettleTrigger requires LocalSettleAfter to name the barrier.");
+            Descriptor._IsLocalSettleTrigger = static_cast<bool>(T_Processor::LocalSettleTrigger);
+        }
+
         if constexpr (requires { typename T_Processor::RunAfter; })
         {
             detail::ExtractCanonicalNames(

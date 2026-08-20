@@ -89,26 +89,16 @@ namespace ck
 
     // Consumers of the settled transform pass that DERIVE new transform inputs from it: work that both
     // reads finished first-pass poses and enqueues transform requests of its own — a composition whose
-    // output other transforms then attach to. Anything enqueued here resolves in
-    // FGroup_Transform_LateResolve the same frame.
+    // output other transforms then attach to. Canonical transform-resolution processors opt into the
+    // scheduler's local settle barrier after this group, so deferred outputs land before Finalize.
     struct FGroup_Transform_Derived
     {
         using RunAfter = TDepList<FGroup_Transform>;
     };
 
-    // The frame's second transform-resolution point: re-registrations of the request drain and the
-    // scene-node chain, so transforms written by FGroup_Transform_Derived land — and their scene-node
-    // children compose — before anything is finalized, replicated, or pushed to components. Near-free
-    // when nothing was enqueued late: the drain declares MainPassRequiredFragments and the scene chain
-    // early-outs wherever a parent did not move.
-    struct FGroup_Transform_LateResolve
-    {
-        using RunAfter = TDepList<FGroup_Transform_Derived>;
-    };
-
     struct FGroup_Transform_Finalize
     {
-        using RunAfter = TDepList<FGroup_Transform_LateResolve>;
+        using RunAfter = TDepList<FGroup_Transform_Derived>;
     };
 
     // Runs after every transform-resolution point has settled (still TG_PrePhysics) and before the

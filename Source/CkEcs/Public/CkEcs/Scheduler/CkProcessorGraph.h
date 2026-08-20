@@ -28,6 +28,8 @@ namespace ck
 
         int32 _Index = INDEX_NONE;
         FName _ProcessorName;
+        FName _LocalSettleAfterGroupName;
+        bool _IsLocalSettleTrigger = false;
 
         // Per-processor Insights CPU scope name, plus its lazily-created trace event spec id
         // (0 = not traced yet; created on first dispatch with the `cpu` trace channel enabled).

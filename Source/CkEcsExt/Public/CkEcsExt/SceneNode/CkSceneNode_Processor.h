@@ -105,13 +105,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_Layer, typename T_Group = FGroup_Transform>
+    template <typename T_Layer>
     class TProcessor_SceneNode_Update;
 
     // Per-layer RunAfter list. Dropping either dependency — Transform_HandleRequests for layer 0, or the
     // layer N-1 chain for the rest — stops motion propagating past the first scene-node link.
     // Full rationale: CkEcsExt/CLAUDE.md § "SceneNode layer ordering".
-    template <typename T_Layer, typename T_Group = FGroup_Transform>
+    template <typename T_Layer>
     struct TSceneNode_Update_RunAfter
     {
         using type = TDepList<
@@ -119,93 +119,83 @@ namespace ck
             FProcessor_Transform_HandleRequests>;
     };
 
-    // The late-resolve band's first layer waits on the late drain instead: its parents' poses are the
-    // requests that drain landed, not anything the anchor follower produced.
     template <>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer0, FGroup_Transform_LateResolve>
-    {
-        using type = TDepList<FProcessor_Transform_HandleRequests_LateResolve>;
-    };
-
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer1, T_Group>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer1>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer0, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer0>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer2, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer2>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer1, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer1>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer3, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer3>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer2, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer2>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer4, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer4>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer3, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer3>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer5, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer5>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer4, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer4>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer6, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer6>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer5, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer5>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer7, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer7>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer6, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer6>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer8, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer8>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer7, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer7>>;
     };
 
-    template <typename T_Group>
-    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer9, T_Group>
+    template <>
+    struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer9>
     {
         using type = TDepList<
             FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer8, T_Group>>;
+            TProcessor_SceneNode_Update<FTag_SceneNode_Layer8>>;
     };
 
-    // Registered once per layer in FGroup_Transform (the main band) and once per layer in
-    // FGroup_Transform_LateResolve (the frame's second resolution point) through the group parameter;
-    // both bands share this one body. An entity's layer tag is its depth, so the same node is visited by
-    // both bands and the parent-unchanged early-out makes the second visit free wherever nothing moved.
-    template <typename T_Layer, typename T_Group>
+    // The canonical depth chain runs in FGroup_Transform, then may be replayed in the same order by the
+    // scheduler's local settle barrier after derived transform producers.
+    template <typename T_Layer>
     class CKECSEXT_API TProcessor_SceneNode_Update : public TParallelProcessor<
-            TProcessor_SceneNode_Update<T_Layer, T_Group>,
+            TProcessor_SceneNode_Update<T_Layer>,
             FCk_Handle_SceneNode,
             T_Layer,
             TReadOnly<SceneNodeParent>,
@@ -215,15 +205,16 @@ namespace ck
             TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>
     {
-        using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer, T_Group>, FCk_Handle_SceneNode, T_Layer,
+        using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
             TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode_Current>,
             TReadWrite<FFragment_Transform>, TReadWrite<FFragment_Transform_Previous>,
             TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>;
 
     public:
-        using Group = T_Group;
-        using RunAfter = typename TSceneNode_Update_RunAfter<T_Layer, T_Group>::type;
+        using Group = FGroup_Transform;
+        using RunAfter = typename TSceneNode_Update_RunAfter<T_Layer>::type;
+        using LocalSettleAfter = FGroup_Transform_Derived;
 
     public:
         explicit TProcessor_SceneNode_Update(

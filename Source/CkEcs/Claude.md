@@ -231,6 +231,18 @@ The pump short-circuit is **load-bearing, not an optimisation**: `Has_AnyEntityW
 
 **Dynamic (script-struct) dirty markers** participate in the same version-counter mechanism, in an FName-derived hash domain: the CkDynamic mutation paths call `FCk_Registry::BumpDirtyMarkerVersion` with `UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash`, and that is the value a script-processor host must register on its descriptor. Historically script processors registered a hash nothing ever bumped and were silently pump-deaf — if a script processor stops reacting to a dynamic fragment mutation, check that the two hashes agree.
 
+### Group-local settle barriers (`LocalSettleAfter`)
+
+The scheduler tail pump is intentionally global and runs after the complete main graph. When a deferred producer must become observable at an earlier architectural boundary, canonical processors can explicitly opt into a group-local settle barrier:
+
+```cpp
+using LocalSettleAfter = FGroup_MyDerivedProducers;
+```
+
+At that group's end, the scheduler replays the opted-in canonical processors in their existing topological order with `DeltaT=0`. Replay membership alone never activates a barrier. A consumed-marker processor explicitly opts into activation with `static constexpr auto LocalSettleTrigger = true`; this separation prevents an otherwise replay-safe participant's sticky marker from accidentally driving non-convergent passes. Marker-less and non-trigger participants are ordered replay steps only. This makes downstream composition explicit without registering a second processor type or replaying an entire group of unrelated/time-sensitive systems.
+
+Every participant must be safe to pump (`SkipPump` is rejected), must precede the barrier in the main graph, and shares the scheduler's normal per-frame pump-pass budget. A barrier runs in the load kernel only when every participant declares `RunsDuringLoad`. A trigger must declare a dirty marker, and that marker must be a consumed queue or other monotonically convergent work — never sticky state such as `FTag_Transform_Updated`.
+
 ### Paced work (`CkPacedWork.h`)
 
 The pacer's marker is whatever fragment the consumer declares as `MarkedDirtyBy` (never with `SkipPump`). Simple case — the marker IS `ck::FFragment_PacedWork`; `Add` it to the work entity to start. Existing-queue case — the marker is a work-queue fragment every enqueue path already touches (so each enqueue re-marks dirty): pass that type as `RunPacedSteps<TMarkerFragment>` and keep the `FFragment_PacedWork` pacer separate (`AddOrGet` internally, budget only).
@@ -281,9 +293,11 @@ FGroup_DestructionPipeline  (OwningActor_Destroy, DestructionPhase_Finalize, Des
                 -> FGroup_Physics
                   -> FGroup_Transform_SyncFrom (SyncFromActor, SyncFromMeshSocket, Interpolation)
                     -> FGroup_Transform        (HandleRequests, SceneNode, Tween)
-                      -> FGroup_Transform_Finalize (SyncToActor, FireSignals)
-                        -> FGroup_Gameplay_Camera  (compose/POV/apply — reads anchors AFTER they
-                                                    are synced this frame)
+                      -> FGroup_Transform_Derived  (Camera compose/POV — reads settled anchors,
+                                                     may enqueue ordinary transform requests)
+                        -> [transform-local settle barrier]
+                          -> FGroup_Transform_Finalize (SyncToActor, FireSignals)
+                            -> FGroup_Gameplay_Camera  (post-finalize camera consumers/probes)
                           -> FGroup_PostTransform  (OverlapBody, RaySense, UI, ...)
                             -> FGroup_DeferredApply (replicated-fragment + save-load hydration
                                                      dispatch — applies payloads after composition,

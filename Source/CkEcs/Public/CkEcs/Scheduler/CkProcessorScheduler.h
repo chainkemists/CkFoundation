@@ -19,6 +19,22 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    struct FProcessorLocalSettlePlan
+    {
+        CK_GENERATED_BODY(FProcessorLocalSettlePlan);
+
+        FName _AfterGroupName;
+        int32 _MainPassInsertIndex = INDEX_NONE;
+        int32 _LoadPassInsertIndex = INDEX_NONE;
+        bool _RunsDuringLoad = false;
+        bool _IsValid = true;
+
+        TArray<int32> _ParticipantNodeIndices;
+        TArray<int32> _TriggerNodeIndices;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessorScheduler
     {
     public:
@@ -39,6 +55,19 @@ namespace ck
             int32 InPumpIndex,
             ECk_SchedulerTickScope InScope) -> bool;
 
+        auto DoRunLocalSettleBarriers(
+            int32 InMainPassInsertIndex,
+            const FCk_Registry& InRegistry,
+            ECk_SchedulerTickScope InScope) -> void;
+
+        auto DoRunLocalSettle(
+            FProcessorLocalSettlePlan& InPlan,
+            const FCk_Registry& InRegistry) -> void;
+
+        auto DoHasDirtyLocalSettleTrigger(
+            const FProcessorLocalSettlePlan& InPlan,
+            const FCk_Registry& InRegistry) const -> bool;
+
         auto DoLogPumpLimitReached(
             const FCk_Registry& InRegistry,
             double InNow) -> void;
@@ -52,6 +81,8 @@ namespace ck
 
         TArray<int32> _LoadPassOrder;
         TArray<int32> _LoadPumpOrder;
+
+        TArray<FProcessorLocalSettlePlan> _LocalSettlePlans;
 
         int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;
