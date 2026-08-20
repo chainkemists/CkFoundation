@@ -37,6 +37,21 @@ auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceWallSegments() -> ECk_AvoidanceWa
     return Get()->Get_AvoidanceWallSegments();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_CorridorStandDown() -> ECk_CrowdCorridorStandDownMode
+{
+    return Get()->Get_CorridorStandDown();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() -> ECk_CrowdPlanAroundStandingCrowdsMode
+{
+    return Get()->Get_PlanAroundStandingCrowds();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_CorridorStandDownSlackCm() -> float
+{
+    return Get()->Get_CorridorStandDownSlackCm();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_PushApartMode() -> ECk_PushApartMode
 {
     return Get()->Get_PushApartMode();

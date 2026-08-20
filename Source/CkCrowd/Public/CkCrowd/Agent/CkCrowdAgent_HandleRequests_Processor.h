@@ -9,6 +9,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Request_Nav_FindPath;
+
 namespace ck
 {
     // Drains and dispatches FFragment_CrowdAgent_MoveRequests. MoveTo arms PathFollow and fires a
@@ -49,7 +51,8 @@ namespace ck
 			HandleType InHandle,
 			const FFragment_CrowdAgent_Params& InParams,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
-			const FVector& InGoal) -> void;
+			const FVector& InGoal,
+			bool InForcePermissivePlan = false) -> void;
 
 		// Invalidates CkNavigation results issued before this route dispatch. This advances for
 		// every provider so a late CkNavigation result cannot replace a newer non-navigation route.
@@ -84,6 +87,18 @@ namespace ck
 			HandleType InHandle,
 			const FFragment_CrowdAgent_Params& InParams,
 			FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+
+		// Stamps the planning phase and its filter onto a CkNavigation FindPath request. Every
+		// FRESH dispatch tries strict first (a crowd-free route may exist now even if it did not a
+		// moment ago). The one caller that must not retry strict — OnPathResolved's
+		// strict→permissive fallback — passes InForcePermissive, which also leaves
+		// _StrictPlanFailed exactly as the fallback set it.
+		static auto
+		ApplyPlanPhase(
+			const FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_PathFollow& InPathFollow,
+			FCk_Request_Nav_FindPath& InOutRequest,
+			bool InForcePermissive = false) -> void;
 
     private:
         static auto
