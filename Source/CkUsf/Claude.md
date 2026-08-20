@@ -942,7 +942,7 @@ swapped.
 The look never references the pixel-art renderer's state, and renders as an ordinary full-resolution
 stylization with the renderer off — the pairing is composition, not coupling. Design and the campaign that
 produced it: `docs/campaigns/2026-08-20-PixelArtRenderer/`, plus
-`Source/CkPixelArtRender/Claude.md` for the renderer half. That campaign is also the sanctioned exception
+`Source/CkPixelArtRenderer/Claude.md` for the renderer half. That campaign is also the sanctioned exception
 to the "no new scene view extensions for Stylize-class effects" ruling — a custom primary spatial upscaler
 has no blendable equivalent.
 
