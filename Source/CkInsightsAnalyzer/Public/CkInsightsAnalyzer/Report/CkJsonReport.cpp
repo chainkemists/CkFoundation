@@ -496,6 +496,34 @@ auto
         Multi->SetArrayField(TEXT("categoryAverages"), CategoryValues);
     }
 
+    const auto TimerValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(Stats.TimerAverages,
+        [](const FCk_MultiFrameStats::FTimerStats& InTimer) -> TSharedPtr<FJsonValue>
+        {
+            TSharedPtr<FJsonObject> TimerObj = MakeShared<FJsonObject>();
+            TimerObj->SetStringField(TEXT("name"), InTimer.Name);
+            TimerObj->SetStringField(TEXT("category"), InTimer.Category);
+            TimerObj->SetNumberField(TEXT("avgExclusiveMs"), Round3(InTimer.AvgExclMs));
+            TimerObj->SetNumberField(TEXT("p95ExclusiveMs"), Round3(InTimer.P95ExclMs));
+            TimerObj->SetNumberField(TEXT("maxExclusiveMs"), Round3(InTimer.MaxExclMs));
+            TimerObj->SetNumberField(TEXT("avgInclusiveMs"), Round3(InTimer.AvgInclMs));
+            TimerObj->SetNumberField(TEXT("avgCount"), Round3(InTimer.AvgCount));
+            TimerObj->SetNumberField(TEXT("framesPresent"), static_cast<double>(InTimer.FramesPresent));
+
+            return MakeShared<FJsonValueObject>(TimerObj);
+        });
+
+    if (NOT TimerValues.IsEmpty())
+    {
+        Multi->SetArrayField(TEXT("timerAverages"), TimerValues);
+    }
+
+    if (Stats.ExcludedScreenshotFrameCount > 0)
+    {
+        Multi->SetNumberField(
+            TEXT("excludedScreenshotFrames"),
+            static_cast<double>(Stats.ExcludedScreenshotFrameCount));
+    }
+
     Root->SetObjectField(TEXT("multiFrame"), Multi);
     return ToJsonString(Root);
 }

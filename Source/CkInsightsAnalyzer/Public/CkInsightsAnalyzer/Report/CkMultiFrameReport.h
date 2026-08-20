@@ -31,6 +31,26 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
     /** Whether to include category averages section. */
     bool ShowCategoryAverages = true;
 
+    /**
+     * How many per-timer rows to report in TimerAverages (0 disables the section).
+     *
+     * Unlike the hot-frame timer lists, these are averaged over EVERY analysed frame, which is
+     * what makes "what is the Other category actually made of, on a typical frame" answerable.
+     */
+    int32 TimerAverageCount = 100;
+
+    /** Minimum per-timer average exclusive time (ms) to appear in TimerAverages. */
+    double MinTimerAverageMs = 0.005;
+
+    /**
+     * Skip frames that contain a trace-screenshot scope.
+     *
+     * A screenshot frame stalls the game thread for 20+ ms in FlushRenderingCommands waiting out
+     * the readback, which is capture-tooling cost, not game cost. Left in, those frames own the
+     * worst-frame ranking and quietly inflate max/p99.
+     */
+    bool ExcludeScreenshotFrames = false;
+
     /** Set all individual fields from Depth. */
     auto ApplyDepth() -> void
     {
@@ -40,21 +60,25 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
             WorstFrameCount = 10;
             MinCategoryMs = 0.2;
             ShowCategoryAverages = true;
+            TimerAverageCount = 250;
             break;
         case ECkReportDepth::Standard:
             WorstFrameCount = 5;
             MinCategoryMs = 0.3;
             ShowCategoryAverages = true;
+            TimerAverageCount = 100;
             break;
         case ECkReportDepth::Concise:
             WorstFrameCount = 3;
             MinCategoryMs = 0.5;
             ShowCategoryAverages = true;
+            TimerAverageCount = 50;
             break;
         case ECkReportDepth::HotPathsOnly:
             WorstFrameCount = 5;
             MinCategoryMs = 0.5;
             ShowCategoryAverages = false;
+            TimerAverageCount = 0;
             break;
         }
     }
@@ -111,6 +135,9 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
     /** Full per-frame analysis for the selected worst frames, in the same order as WorstFrames. */
     TArray<FCk_HotFrameDetails> HotFrames;
 
+    /** How many frames were skipped because they contained a trace-screenshot scope. */
+    uint64 ExcludedScreenshotFrameCount = 0;
+
     /** Per-category average exclusive time across all frames. */
     struct FCategoryStats
     {
@@ -120,6 +147,31 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
         double TotalPct = 0.0;
     };
     TArray<FCategoryStats> CategoryAverages;
+
+    /**
+     * Per-timer averages across every analysed frame, sorted by AvgExclMs descending.
+     *
+     * Averages are over the full analysed frame count — a timer absent from a frame contributes
+     * zero for that frame — so AvgExclMs reads as "cost this timer adds to a typical frame" and
+     * the rows sum toward the frame average. That is the difference from the hot-frame timer
+     * lists, which describe one outlier frame each.
+     */
+    struct FTimerStats
+    {
+        FString Name;
+        FString Category;
+        double AvgExclMs = 0.0;
+        double P95ExclMs = 0.0;
+        double MaxExclMs = 0.0;
+        double AvgInclMs = 0.0;
+
+        /** Average calls per analysed frame. Fractional when the timer is not hit every frame. */
+        double AvgCount = 0.0;
+
+        /** How many analysed frames contained this timer at all. */
+        uint64 FramesPresent = 0;
+    };
+    TArray<FTimerStats> TimerAverages;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -182,11 +234,44 @@ private:
                               const TMap<uint32, FString>& TimerNames) const
         -> TPair<FString, double>;
 
+    /** Whether this frame contains a trace-screenshot scope, i.e. is capture-tooling polluted. */
+    static auto DoIs_ScreenshotFrame(
+        const FCk_FrameAnalysisResult& InResult,
+        const TMap<uint32, FString>& InTimerNames)
+        -> bool;
+
+    /** Reduce the per-frame timer accumulators into _Stats.TimerAverages. Sorts the exclusive samples in place. */
+    auto DoBuild_TimerAverages(
+        const TMap<uint32, FString>& InTimerNames,
+        TMap<uint32, TArray<double>>& InTimerExclusivePerFrame,
+        const TMap<uint32, double>& InTimerInclusiveSum,
+        const TMap<uint32, uint64>& InTimerCallSum)
+        -> void;
+
     /** Generate the markdown report from populated _Stats. */
     auto GenerateReport(const FCk_TraceSession& Session) const -> FString;
 
     /** Compute percentile from a sorted array. */
     static auto Percentile(const TArray<double>& SortedValues, double P) -> double;
+
+    /**
+     * Percentile over a sorted array conceptually preceded by InLeadingZeroCount zeros, without
+     * materialising them.
+     *
+     * Per-timer samples are only kept for the frames a timer actually appeared in. Padding each
+     * one out to the full frame count would cost (distinct timers x frames) doubles, which is
+     * driven by how many RARE timers the trace contains — the opposite of the data that matters.
+     * Identical arithmetic to Percentile on the padded array; the spec pins that equivalence.
+     */
+    static auto PercentileWithLeadingZeros(
+        const TArray<double>& InSortedPresentValues,
+        int32 InLeadingZeroCount,
+        double InPercentile)
+        -> double;
+
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FCkTest_MultiFrameReport_PercentileWithLeadingZerosMatchesPadded;
+#endif
 
     FCk_MultiFrameReportConfig _Config;
     FCk_MultiFrameStats _Stats;
