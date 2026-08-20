@@ -44,6 +44,8 @@ namespace ck
             float InStationarySpeedThreshold,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> FCk_Handle
         {
+            const auto SelfDistToGoal2D = FVector::Dist2D(InSelfLoc, InFinalWaypoint);
+
             for (const auto& Nbr : InNeighborCache.Get_Neighbors())
             {
                 const auto NbrAbsVel = Nbr.Get_RelativeVelocity() + InSelfVel;
@@ -60,7 +62,16 @@ namespace ck
                 if (ClosestApproach <= 0.0f)
                 { continue; }  // arrival tolerance is wide enough to swallow the blocker — not blocked
 
-                if (FVector::Dist2D(NbrCentre, InFinalWaypoint) < ClosestApproach)
+                const auto NbrDistToGoal2D = FVector::Dist2D(NbrCentre, InFinalWaypoint);
+
+                // Strictly nearer, exactly as the cluster rule requires of an anchor: a body standing
+                // FARTHER from the goal than we do cannot be why we stop short of it. Without this the
+                // markup-bootstrapped innermost and its own settled dependent hold each other — each
+                // inside the other's foreclosure ring — and the goal is never taken.
+                if (NbrDistToGoal2D >= SelfDistToGoal2D)
+                { continue; }
+
+                if (NbrDistToGoal2D < ClosestApproach)
                 { return Nbr.Get_Handle(); }
             }
 
