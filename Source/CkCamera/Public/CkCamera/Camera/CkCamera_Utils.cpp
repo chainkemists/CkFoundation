@@ -1,5 +1,7 @@
 #include "CkCamera/Camera/CkCamera_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkCamera/CkCamera_Log.h"
 #include "CkCamera/Camera/CkCamera_Component.h"
 #include "CkCamera/Camera/CkCamera_GameplayTags.h"
@@ -25,7 +27,7 @@
 auto
     UCk_Utils_Camera_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Fragment_Camera_ParamsData& InParams)
     -> FCk_Handle_Camera
 {
@@ -58,16 +60,28 @@ auto
 
     InParams.Get_OutputComponent()->Set_DirectorEntity(Director);
 
+    // The composed view's attachable presence (FFragment_Camera_Current::_ViewAnchor): a plain child
+    // transform, seeded from the director's current pose so a first-frame attach composes from something
+    // sane. Every later pose arrives as an ordinary transform request enqueued by the POV processor and
+    // drained by the frame's late-resolve pass.
+    {
+        const auto SeedPose = Director.Get<ck::FFragment_Transform>().Get_Transform();
+
+        auto& Current = Director.Get<ck::FFragment_Camera_Current>();
+        Current._ViewAnchor = UCk_Utils_Transform_UE::Create(InHandle,
+            FTransform{SeedPose.GetRotation(), SeedPose.GetLocation()}, ECk_Replication::DoesNotReplicate);
+    }
+
     // The FIRST GetCameraView can land before FProcessor_Camera_UpdatePOV ever ticks; without this seed it would
-    // return a default (origin) FMinimalViewInfo and the camera would snap on the first frame after Add.
-    if (Director.Has<ck::FFragment_Transform>())
+    // return a default (origin) FMinimalViewInfo and the camera would snap on the first frame after Add. The
+    // transform is guaranteed — Add requires a transform handle.
     {
         auto& Current = Director.Get<ck::FFragment_Camera_Current>();
 
         auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform  = Director.Get<ck::FFragment_Transform>().Get_Transform();
         Input._World            = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Director);
-        Input._TraceIgnoreActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(Director);
+        Input._TraceIgnoreActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Director);
 
         ck::camera::FPov::Run(Current.Get_ComposedProfile(), Input, Current._PovState);
 
@@ -82,16 +96,6 @@ auto
     return Director;
 }
 
-auto
-    UCk_Utils_Camera_UE::
-    Create(
-        FCk_Handle& InOwner,
-        const FCk_Fragment_Camera_ParamsData& InParams)
-    -> FCk_Handle_Camera
-{
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
-    return Add(NewEntity, InParams);
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +166,15 @@ auto
     -> FMinimalViewInfo
 {
     return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewInfo();
+}
+
+auto
+    UCk_Utils_Camera_UE::
+    Get_ViewAnchor(
+        const FCk_Handle_Camera& InCamera)
+    -> FCk_Handle_Transform
+{
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewAnchor();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

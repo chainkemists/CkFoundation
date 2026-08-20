@@ -8,6 +8,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment_Data.h"
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Fragment_Data.h"
@@ -74,6 +76,17 @@ namespace ck
     private:
         // Read-cache; refreshed each frame by the lifecycle processor, read by UpdatePOV + observers.
         FCk_CameraProfile _ComposedProfile;
+
+        // The composed view's attachable presence: a plain child transform the POV processor drives
+        // through an ordinary transform request each time it composes. Content that must follow the
+        // rendered view scene-node-attaches here; the request lands in the frame's late-resolve pass,
+        // so those children compose before anything is pushed to components.
+        FCk_Handle_Transform _ViewAnchor;
+
+    public:
+        CK_PROPERTY_GET(_ViewAnchor);
+
+    private:
 
         // ---- Non-attribute leaves (bools + curves) ----
         // These do not blend, so they are plain data rather than tuner attributes.

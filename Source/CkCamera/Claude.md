@@ -42,3 +42,19 @@
 ## See also
 
 - `CkAttribute/Claude.md` (modifier flow), `CkRecord/Claude.md`, `CkLabel/Claude.md`.
+
+## Frame position and the view anchor
+
+The composition chain (`FProcessor_Camera_HandleRequests` → `FProcessor_CameraLayer_Lifecycle` →
+`FProcessor_Camera_UpdatePOV`) runs in `FGroup_Transform_Derived`: after the main transform pass has
+settled every input anchor, before the frame's second resolution point (`FGroup_Transform_LateResolve`).
+`UCk_Utils_Camera_UE::Add` requires a TRANSFORM handle — the director's transform is the composition's
+input anchor and is non-optional by construction.
+
+The composed view is published two ways each compose:
+- `FFragment_Camera_Current::_ViewInfo` — the render authority, pulled by `UCk_CameraComponent::GetCameraView`.
+- the **view anchor** (`UCk_Utils_Camera_UE::Get_ViewAnchor`) — an attachable child transform whose pose is
+  enqueued as an ordinary `Request_SetTransform` and drained by the late-resolve pass. Scene-node-attach
+  content here to have it follow the rendered view with zero special-casing; children compose in the same
+  frame, before components are pushed. Input anchor and view anchor are distinct on purpose — the compose
+  must never consume its own output.
