@@ -17,7 +17,8 @@ Reference for `ck-performance-and-analysis`: turning a captured trace or stat du
 - Scheduler self-time: the per-processor stats nest inside `stat CkScheduler`'s scopes, so
   `Scheduler::MainPass`/`Dispatch` self-time is pure orchestration. In non-Shipping builds a large
   `Dispatch` self-time is usually the scheduler debugger's own 2x `QueryPerformanceCounter` per
-  processor — default on; kill it while profiling with `ck.Scheduler.DebugTiming 0`
+  processor — demand-driven since 2026-08-20 (runs only while something reads the frame history,
+  e.g. the Scheduler Debugger window). `ck.Scheduler.DebugTiming` defaults OFF and FORCES it on
   (`CkProcessorScheduler.cpp:20-30`).
 
 ### 3.2 Dirty-set size vs full-view iteration (`MarkedDirtyBy`)
