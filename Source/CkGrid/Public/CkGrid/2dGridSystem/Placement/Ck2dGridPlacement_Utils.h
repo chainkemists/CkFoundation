@@ -57,7 +57,9 @@ public:
     //
     // Pair with UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant to go occupant -> placement -> args.
     //
-    // CONSUMER CONTRACT — branch on Get_Grid (or on the placement handle's own validity) FIRST.
+    // CONSUMER CONTRACT — branch on Get_Grid FIRST (C++ may branch on the placement handle itself;
+    // ANGELSCRIPT CANNOT — FCk_Handle_2dGridPlacement is not a registered script handle type, so it has
+    // neither ck::IsValid nor .H() there, and Get_Grid is the only discriminator script can spell).
     // Get_Anchor and Get_Rotation answer (0,0) and None for an invalid placement, and those are
     // legitimate values for a real placement at the grid origin: the two cases are indistinguishable
     // at the call site. There is deliberately no TryGet variant — an out-param pair would be a second
