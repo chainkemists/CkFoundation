@@ -26,6 +26,28 @@ CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer7>
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer8>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer9>);
 
+// The frame's second resolution point re-registers the identical chain (see FGroup_Transform_LateResolve).
+using FSceneNodeUpdate_LateResolve_Layer0 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer1 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer1, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer2 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer2, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer3 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer3, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer4 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer4, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer5 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer5, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer6 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer6, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer7 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer7, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer8 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer8, ck::FGroup_Transform_LateResolve>;
+using FSceneNodeUpdate_LateResolve_Layer9 = ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer9, ck::FGroup_Transform_LateResolve>;
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer0);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer1);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer2);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer3);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer4);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer5);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer6);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer7);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer8);
+CK_REGISTER_PROCESSOR(FSceneNodeUpdate_LateResolve_Layer9);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -137,16 +159,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_Layer>
-    TProcessor_SceneNode_Update<T_Layer>::
+    template <typename T_Layer, typename T_Group>
+    TProcessor_SceneNode_Update<T_Layer, T_Group>::
         TProcessor_SceneNode_Update(
         const typename Super::RegistryType& InRegistry)
         : Super(InRegistry)
     { }
 
-    template <typename T_Layer>
+    template <typename T_Layer, typename T_Group>
     auto
-        TProcessor_SceneNode_Update<T_Layer>::
+        TProcessor_SceneNode_Update<T_Layer, T_Group>::
         ForEachEntity(
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
