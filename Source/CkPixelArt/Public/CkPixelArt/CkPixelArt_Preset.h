@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataAsset.h"
+#include <Engine/DataAsset.h>
 
 #include "CkPixelArt/CkPixelArt_Params.h"
 
