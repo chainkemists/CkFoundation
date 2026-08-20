@@ -92,9 +92,11 @@ namespace ck
         // The depth an anchor contributes to whoever settles behind it. An agent that reached the
         // goal, or stopped for any reason other than a crowd, is the FOOT of a chain and
         // contributes 0 — which is what guarantees every chain bottoms out at a body genuinely
-        // standing on the destination instead of drifting outward on its own.
+        // standing on the destination instead of drifting outward on its own. Both crowd causes
+        // chain: a GoalOccupied hold stopped directly behind the goal's occupant, the same
+        // physical fact a GoalCrowded hold stopped for.
         //
-        // A GoalCrowded block always stamps depth >= 1, so 0 unambiguously means "not chained" and
+        // A crowd block always stamps depth >= 1, so 0 unambiguously means "not chained" and
         // the two branches of the region test collapse into a single expression at the call site.
         auto Get_AnchorCrowdDepth(
             const FCk_Handle& InAnchor) -> int32
@@ -106,7 +108,9 @@ namespace ck
             { return 0; }
 
             const auto& AnchorBlockDetect = InAnchor.Get<FFragment_CrowdAgent_BlockDetect>();
-            if (AnchorBlockDetect.Get_BlockedCause() != ECk_CrowdAgent_BlockedReason::GoalCrowded)
+            const auto AnchorCause = AnchorBlockDetect.Get_BlockedCause();
+            if (AnchorCause != ECk_CrowdAgent_BlockedReason::GoalCrowded &&
+                AnchorCause != ECk_CrowdAgent_BlockedReason::GoalOccupied)
             { return 0; }
 
             return AnchorBlockDetect.Get_CrowdedGoalDepth();
@@ -615,9 +619,17 @@ namespace ck
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
 
         // Depth chains only through a crowd block, and only off the anchor we actually stopped
-        // behind. Every other reason is the foot of a chain, so it resets — a stale depth would
-        // widen the goal region for whoever settles behind us on a pack that no longer exists.
-        InBlockDetect._CrowdedGoalDepth = InReason == ECk_CrowdAgent_BlockedReason::GoalCrowded
+        // behind. GoalOccupied earns depth for the same physical fact GoalCrowded does — a body on
+        // the destination — and its blocker IS that body (a chain foot, depth 0), so an occupied
+        // hold is ring 1. Without this a pack whose members all saw the occupant AT BLOCK TIME
+        // builds no chain at all, and a rim agent's six-nearest evidence horizon finds nothing at
+        // re-check: it resumes into a crowd that never moved, once a second. Every other reason is
+        // the foot of a chain, so it resets — a stale depth would widen the goal region for
+        // whoever settles behind us on a pack that no longer exists.
+        const auto ReasonChainsDepth =
+            InReason == ECk_CrowdAgent_BlockedReason::GoalCrowded ||
+            InReason == ECk_CrowdAgent_BlockedReason::GoalOccupied;
+        InBlockDetect._CrowdedGoalDepth = ReasonChainsDepth
             ? ck_crowdagent_blockdetect::Get_AnchorCrowdDepth(InBlocker) + 1
             : 0;
 
