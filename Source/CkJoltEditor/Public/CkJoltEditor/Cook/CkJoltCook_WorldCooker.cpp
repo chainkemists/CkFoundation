@@ -1,5 +1,7 @@
 #include "CkJoltCook_WorldCooker.h"
 
+#include "CkJoltCook_AssetSave.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkJolt/CkJolt_Log.h"
@@ -9,13 +11,11 @@
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 
-#include <AssetRegistry/AssetRegistryModule.h>
 #include <Engine/Level.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
 #include <Misc/ScopeExit.h>
 #include <UObject/Package.h>
-#include <UObject/SavePackage.h>
 #include <WorldPartition/WorldPartition.h>
 #include <WorldPartition/WorldPartitionHelpers.h>
 #include <WorldPartition/WorldPartitionActorDescInstance.h>
@@ -85,18 +85,7 @@ namespace ck_jolt_cook_world_cooker
 
     static auto DoSave_Asset(UObject& InAsset) -> bool
     {
-        auto* Package = InAsset.GetOutermost();
-
-        FAssetRegistryModule::AssetCreated(&InAsset);
-        Package->MarkPackageDirty();
-
-        const auto FileName = FPackageName::LongPackageNameToFilename(
-            Package->GetName(), FPackageName::GetAssetPackageExtension());
-
-        auto SaveArgs = FSavePackageArgs{};
-        SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-
-        return UPackage::SavePackage(Package, &InAsset, *FileName, SaveArgs);
+        return ck::jolt::cook::Save_CookedAsset(InAsset);
     }
 
     template <typename T_Asset>
@@ -300,7 +289,8 @@ auto
         CellAsset->Set_ShapeCount(ShapeToIndex.Num());
         CellAsset->Set_ActorGroups(MoveTemp(ActorGroups));
 
-        CK_ENSURE_IF_NOT(DoSave_Asset(*CellAsset), TEXT("Failed to SAVE cell asset [{}]"), CellPackageName)
+        const auto CellSaved = DoSave_Asset(*CellAsset);
+        CK_ENSURE_IF_NOT(CellSaved, TEXT("Failed to SAVE cell asset [{}]"), CellPackageName)
         { return Stats; }
 
         auto CellRef = FCk_Jolt_CookedCellRef{};
@@ -325,7 +315,8 @@ auto
     IndexAsset->Set_Cells(MoveTemp(CellRefs));
     IndexAsset->Set_ActorLookup(MoveTemp(ActorLookup));
 
-    CK_ENSURE_IF_NOT(DoSave_Asset(*IndexAsset), TEXT("Failed to SAVE index asset [{}]"), IndexPackageName)
+    const auto IndexSaved = DoSave_Asset(*IndexAsset);
+    CK_ENSURE_IF_NOT(IndexSaved, TEXT("Failed to SAVE index asset [{}]"), IndexPackageName)
     { return Stats; }
 
     ck::jolt::Log(TEXT("JoltCook: cooked map [{}] — [{}] actors, [{}] bodies, [{}] unique shapes, [{}] cells -> [{}]"),

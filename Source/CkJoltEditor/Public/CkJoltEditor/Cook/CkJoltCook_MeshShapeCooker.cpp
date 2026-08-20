@@ -1,5 +1,7 @@
 #include "CkJoltCook_MeshShapeCooker.h"
 
+#include "CkJoltCook_AssetSave.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -16,7 +18,6 @@
 #include <Misc/ScopeExit.h>
 #include <PhysicsEngine/BodySetup.h>
 #include <UObject/Package.h>
-#include <UObject/SavePackage.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/StreamWrapper.h>
@@ -34,18 +35,7 @@ namespace ck_jolt_cook_mesh_shape_cooker
 
     static auto DoSave_Asset(UObject& InAsset) -> bool
     {
-        auto* Package = InAsset.GetOutermost();
-
-        FAssetRegistryModule::AssetCreated(&InAsset);
-        Package->MarkPackageDirty();
-
-        const auto FileName = FPackageName::LongPackageNameToFilename(
-            Package->GetName(), FPackageName::GetAssetPackageExtension());
-
-        auto SaveArgs = FSavePackageArgs{};
-        SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-
-        return UPackage::SavePackage(Package, &InAsset, *FileName, SaveArgs);
+        return ck::jolt::cook::Save_CookedAsset(InAsset);
     }
 
     static auto DoSerialize_ScaleOneShape(
@@ -206,7 +196,8 @@ auto
         ShapeAsset->Set_TraceFlag(static_cast<uint8>(BodySetup->GetCollisionTraceFlag()));
         ShapeAsset->Set_ShapeBlob(MoveTemp(Blob));
 
-        CK_ENSURE_IF_NOT(DoSave_Asset(*ShapeAsset),
+        const auto ShapeSaved = DoSave_Asset(*ShapeAsset);
+        CK_ENSURE_IF_NOT(ShapeSaved,
             TEXT("JoltMeshCook: failed to SAVE shape asset [{}]"), AssetPath)
         {
             ++Stats._NumFailed;
