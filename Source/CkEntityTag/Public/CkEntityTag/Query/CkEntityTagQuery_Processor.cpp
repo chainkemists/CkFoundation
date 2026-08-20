@@ -140,26 +140,30 @@ namespace ck
             return Registry.Get_DirtyMarkerVersion(entt::id_type{GetTypeHash(InRequirement.Get_Tag())});
         };
 
-        auto VersionsAreUnchanged =
-            NOT InCurrent._NeedsEvaluate &&
-            LastSeen.Num() == Requirements.Num();
-
-        for (auto Index = 0; VersionsAreUnchanged && Index < Requirements.Num(); ++Index)
+        const auto VersionsAreUnchanged = [&]() -> bool
         {
-            VersionsAreUnchanged = LastSeen[Index] == Get_TagVersion(Requirements[Index]);
-        }
+            if (InCurrent._NeedsEvaluate)
+            { return false; }
+
+            if (LastSeen.Num() != Requirements.Num())
+            { return false; }
+
+            for (auto Index = 0; Index < Requirements.Num(); ++Index)
+            {
+                if (LastSeen[Index] != Get_TagVersion(Requirements[Index]))
+                { return false; }
+            }
+
+            return true;
+        }();
 
         if (VersionsAreUnchanged)
         { return true; }
 
-        // Stamped BEFORE the pass runs, not after: a tag mutation raised during this pass (the
-        // append scan can add tracking fragments) must leave the version ahead of the snapshot so
-        // the next pass re-runs rather than trusting a stamp taken after its own writes.
-        LastSeen.SetNum(Requirements.Num());
-        for (auto Index = 0; Index < Requirements.Num(); ++Index)
-        {
-            LastSeen[Index] = Get_TagVersion(Requirements[Index]);
-        }
+        // Stamped BEFORE the pass runs: a tag mutated DURING the pass (e.g. by an inline signal
+        // handler) must leave its version ahead of this snapshot so the next pass re-runs.
+        LastSeen.Reset();
+        ck::algo::Transform(Requirements, ck::algo::ToTransform(LastSeen), Get_TagVersion);
 
         InCurrent._NeedsEvaluate = false;
 
@@ -198,11 +202,9 @@ namespace ck
             InCurrent._PendingRemoved.SetNum(Requirements.Num());
         }
 
-        // Nothing below can change a result set, flip satisfaction, or broadcast unless some entity
-        // gained or lost one of this query's tags — the tail of this function is already delta-only.
-        // So an unchanged version per requirement makes the whole pass provably a no-op, and the
-        // per-frame prune / append / ensure scans (each of which walks the tag's whole storage) can
-        // be skipped outright.
+        // The tail of this function is already delta-only: nothing below can change a result set,
+        // flip satisfaction, or broadcast unless an entity gained or lost one of this query's tags.
+        // Unchanged versions therefore make the whole pass — prune, append, ensure — a provable no-op.
         if (DoTryConsume_UnchangedTagVersions(InHandle, InCurrent))
         { return; }
 
@@ -434,12 +436,9 @@ namespace ck
                 if (RemovedCount == 0)
                 { continue; }
 
-                // Outside the bounds guard below on purpose: an entity was scrubbed from the
-                // results either way, so satisfaction must be re-tested. Leaving this inside the
-                // guard means a defensive array mismatch strands _IsSatisfied stale AND lets the
-                // version gate skip every later pass — before the gate existed the next
-                // unconditional pass self-healed that. An entity dying mutates no tag storage, so
-                // nothing else would re-arm it.
+                // An entity dying mutates no tag storage, so nothing else re-arms the version gate.
+                // Deliberately outside the bounds guard below: inside it, a defensive array mismatch
+                // would strand _IsSatisfied stale with every later pass skipped.
                 Current._NeedsEvaluate = true;
 
                 if (i < Current._PendingRemoved.Num())

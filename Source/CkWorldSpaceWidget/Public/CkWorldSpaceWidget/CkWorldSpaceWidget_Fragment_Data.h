@@ -100,14 +100,11 @@ private:
         meta=(AllowPrivateAccess = true))
     bool _TwoSided = false;
 
-    // UWidgetComponent::TickComponent re-renders the widget into its render target every tick. With
-    // this false (the engine default) it early-outs on a component that has not been rendered
-    // recently, so an off-screen widget costs nothing; with it true every widget in the level pays
-    // full redraw whether or not anyone can see it.
-    //
-    // Set it only for a widget whose render target is CONSUMED off-screen — something sampling the
-    // texture elsewhere. The cost of leaving it on is paid by every instance, every frame; the cost
-    // of leaving it off is one stale frame the first time a widget comes back into view.
+    // UWidgetComponent::TickComponent re-renders the widget into its render target every tick; with
+    // this false (the engine default) it early-outs when the component was not recently rendered,
+    // so an off-screen widget costs nothing. Set it only for a widget whose render target is
+    // CONSUMED off-screen (something sampling the texture elsewhere) — the cost of true is a full
+    // redraw for every instance every frame; the cost of false is one stale frame on re-view.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
     bool _TickWhenOffscreen = false;

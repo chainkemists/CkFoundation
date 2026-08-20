@@ -64,14 +64,11 @@ static constexpr double GCk_Scheduler_PumpWarningThrottleSeconds = 5.0;
 
 namespace ck_processor_scheduler
 {
-    // How many frames a history read keeps timing collection alive for.
-    //
-    // Sized against the SLOWEST consumer cadence, not the fastest: the Scheduler Debugger throttles
-    // its reads through FCkDebuggerRefreshGate, whose Hz5 rate lands roughly every 12 frames at
-    // 60fps (and Hz15 every 4 — exactly on a 4-frame boundary, so it would flicker). Anything at or
-    // below the slowest read interval leaves most frames untimed while the window is open, which
-    // reads as a broken debugger rather than a fast one. Over-covering costs nothing: it only
-    // extends collection while a consumer is genuinely polling.
+    // Keep-alive window for timing collection after a history read. Sized ABOVE the slowest
+    // consumer cadence: the Scheduler Debugger reads through FCkDebuggerRefreshGate, whose Hz5
+    // rate lands roughly every 12 frames at 60fps (Hz15 every 4 — exactly on a 4-frame boundary,
+    // so a 4-frame window would flicker). Over-covering only extends collection while a consumer
+    // is genuinely polling.
     constexpr uint64 DebugTimingKeepAliveFrames = 24;
 }
 
@@ -694,7 +691,7 @@ auto
     { return true; }
 
     // Never read leaves the stamp at 0, so the delta is GFrameCounter itself and this reports
-    // "nobody is looking" from the fifth frame of the process onward.
+    // "nobody is looking" once the process is past the keep-alive window.
     return (GFrameCounter - _LastDebugHistoryReadFrame) <= ck_processor_scheduler::DebugTimingKeepAliveFrames;
 }
 

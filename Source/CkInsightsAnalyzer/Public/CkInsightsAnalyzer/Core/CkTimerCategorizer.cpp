@@ -29,19 +29,16 @@ auto
 
     const auto Matches = [&LowerName](const FString& InKeyword) -> bool
     {
-        // A keyword prefixed with '=' matches the WHOLE name instead of any substring of it. The
-        // substring default is what lets a bare cycle-stat name silently claim the Ck processor
-        // that wraps it — "JoltWorld_Step" is a substring of "ck::FProcessor_JoltWorld_Step" — and
-        // re-homing a row that already had a category breaks A/B continuity against past captures.
+        // '=' prefix means whole-name; the default is substring. The Physics (Jolt) category
+        // documents why the distinction exists.
         if (InKeyword.StartsWith(ck_timer_categorizer::ExactMatchPrefix))
         { return LowerName == InKeyword.RightChop(ck_timer_categorizer::ExactMatchPrefix.Len()).ToLower(); }
 
         return LowerName.Contains(InKeyword.ToLower());
     };
 
-    // Range-for rather than ck::algo::FindIf on purpose: the TArray overload of FindIf returns a
-    // TOptional<ElementType>, i.e. a COPY of the category — including its keyword array — on every
-    // call. AnyOf on the inner list has no such cost and carries the meaning that matters here.
+    // Not ck::algo::FindIf: its TArray overload returns TOptional<ElementType> — a copy of the
+    // category and its keyword array per call. AnyOf on the inner list has no such cost.
     for (const auto& Category : _Categories)
     {
         if (ck::algo::AnyOf(Category.Keywords, Matches))
