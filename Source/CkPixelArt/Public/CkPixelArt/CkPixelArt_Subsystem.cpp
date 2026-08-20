@@ -732,6 +732,8 @@ auto
     Set_Scalar(TEXT("Bands"), static_cast<float>(InLook.Get_Bands()), static_cast<float>(Previous.Get_Bands()));
     Set_Scalar(TEXT("ThresholdGradientSize"), InLook.Get_ThresholdGradientSize(), Previous.Get_ThresholdGradientSize());
     Set_Scalar(TEXT("DitherStrength"), InLook.Get_DitherStrength(), Previous.Get_DitherStrength());
+    Set_Scalar(TEXT("ColorSpace"), Get_EnumIndex(InLook.Get_ColorSpace()), Get_EnumIndex(Previous.Get_ColorSpace()));
+    Set_Scalar(TEXT("WarmShift"), InLook.Get_WarmShift(), Previous.Get_WarmShift());
     Set_Scalar(TEXT("PaletteMode"), Get_EnumIndex(InLook.Get_PaletteMode()), Get_EnumIndex(Previous.Get_PaletteMode()));
     Set_Scalar(TEXT("PaletteCount"), static_cast<float>(InLook.Get_PaletteCount()), static_cast<float>(Previous.Get_PaletteCount()));
 
