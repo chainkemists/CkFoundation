@@ -68,6 +68,26 @@ public:
     // The retired spelling of this said "just restored", over an alias of the same tag. "Just" was the part
     // that was never true, and every reader had to carry a hand-rolled once-per-feature dedup to survive the
     // lie. Both are gone.
+    //
+    // RETIRING [G2-D48]. FEATURE-CONSUMER use is over: a feature asking "was I restored" is nearly always
+    // asking something it can answer better from its own state. The two forms that replaced the measured
+    // callers, and which a new caller should reach for first:
+    //
+    //   - ADOPT BY CARRIER. A driver deciding whether to adopt the subordinate the loader rebuilt reads its
+    //     own Durable subordinate handle, which the load REMAPS. That is the link the save recorded; it is
+    //     exact, needs no world scan, and narrows to this driver by construction.
+    //   - HOLD AN INVARIANT. A feature that would seed or suppress once behind this marker states the rule it
+    //     actually wants as a level-triggered reconcile over its own durable state. That converges from
+    //     arbitrary state, which additionally removes an ordering hazard this marker HID: the marker is
+    //     stamped before the gate opens, so it reads correctly in any pump order, while a value restored
+    //     through a deferred apply (the attribute family recomputes Final through a queued request) is not
+    //     readable at every edge a one-shot might run on. Substituting a durable READ for this marker without
+    //     converging is how that trade gets lost.
+    //
+    // What remains sanctioned, and nothing else: the load MACHINERY reading its own marker (a layer below the
+    // features), and TEST identity assertions — proving a reacquired entity IS the restored one and not a
+    // replacement, which no other predicate can express. Deletion of the accessor lands with Gate 03, once the
+    // two remaining game-side callers (both tagged in place) are dissolved.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Was Hydrated This Load")
