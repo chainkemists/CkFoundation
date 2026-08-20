@@ -380,6 +380,259 @@ outside the unit tests as well as inside them.
 | C1-C9 | Visual / human | **QUEUED** — H-1 … H-11 below |
 | D | Change-control class 3+ | Docs landed, comment audit done, everything committed on the feature branches, nothing pushed, no submodule pointer bumps |
 
+## Adversarial audit (Fable, 2026-08-20) and what was done about it
+
+A full adversarial pass over both modules, the CkCamera diff, the shader against its sibling looks, all five
+test files and the gym, with the engine-fork claims re-verified from source. 17 findings + 3 questions.
+Every one is dispositioned below; the two CRITICALs were confirmed against real code before anything moved.
+
+### Fixed
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | **The shader double-decoded the world normal** (`*2.0-1.0` on an already-decoded `PPI_WorldNormal` tap) | CONFIRMED against `CelShade.ush:104`, `EdgeOutline.ush:48`, `CrossHatch.ush:98` - all three use the tap raw. Removed, and the sibling `+ float3(0,0,1e-6)` epsilon added: the bad remap was accidentally masking a NaN on sky pixels, where the normal is zero. This corrupted crease contrast AND made `Facing` vary with camera yaw on a flat floor, so the grazing-angle guard - the very thing D-21 was fixed for - was misbehaving silently |
+| 2 | **`r.ScreenPercentage` restored at the wrong PRIORITY**, killing the resolution-quality slider for the process | CONFIRMED: `Scalability.cpp:551` writes at `ECVF_SetByScalability`, weaker than the `SetByCode` the restore pinned. Now saves the priority beside the value, writes the value at the CURRENT priority so it cannot be dropped, then restores the original priority bits |
+| 3 | **Per-world CVar priors over process-global CVars** - one PIE world's teardown restored values out from under another that was still rendering, and the second world held no prior to fix it | Replaced with a process-wide REFCOUNTED lease. Last holder out restores; a world that finds the value already moved takes a reference rather than recording a bogus prior |
+| 4 | The recommended CVars were pinned at `SetByConsole` after restore, so they would ignore project settings and device profiles forever | Same priority-restoring mechanism as 2 |
+| 6 | **Split-brain look effect**: `DoEnsure_LookEffect` keyed only on the MID, which outlives the world-spawned actor carrying the blendable - once the actor died the look silently never rendered again | Now a reconciler rather than a cache: validates MID, component AND actor, rebuilds when any is gone, and resets `_WrittenLook` so the next write is full rather than a diff against a dead material |
+| 7 | `Request_SetProjectionMode` had **zero coverage in any environment** - the AS test reached ortho only through the profile | Extended `CkAutoTest_Camera_OrthoProjection`: switches mode both ways through the request, carries clip planes with it, and asserts both reach `ViewInfo`. This also answers Q3 (whether the generator binds the reflected `TOptional<float>` members) by exercising them |
+| 8 | **The margin-fold assertions were tautologies** - algebra of the test's own arithmetic, passing whether or not the implementation existed | The fold is now `ck::pixel_art::Apply_MarginFold`, called by the view extension and DRIVEN by the test, which reads the result back off the matrix. Plus a degenerate-input case |
+| 9 | The "screen percentage was rejected" Error sat behind the geometry early-out, so the common case never reported | Moved above it |
+| 10 | The margin error blamed the margin when the cause was internal resolution >= viewport | Message now distinguishes the two |
+| 11 | `!` instead of `NOT` in a CkCore-linked module | Fixed; the D-2 exemption covers only the CkCore-less render module |
+| 12 | The gym's pan "toggle" could never stop the pan (always passed a speed, which the command treats as restart) | Tracks its own state and sends the bare form to stop |
+| 13 | ToggleLoop's "run with the renderer OFF" was documentation, not a guard - started while enabled it produces a false FAIL | Refuses with an explanation |
+| 15 | Restore stamped a remembered value over one the user had since typed into the console | Restores only when the current value is still the one we wrote |
+| 14 | `Request_Apply_RecommendedCVars` could not clear `ShowFlag.ScreenPercentage`, a precondition it reports - apply, read an unchanged report, nothing to try next | The escape now sets the show flag too. `r.SecondaryScreenPercentage` stays applied-but-not-gated, now with a comment saying why: it costs sharpness, it does not prevent rendering, and gating on it would refuse to enable on every DPI-scaled display |
+
+### Disagreed with, and why
+
+**Finding 5 - "there is no crease de-doubling gate; every crease renders as a 2-texel pair".** The behaviour
+is confirmed. The conclusion is not: this look FOLLOWS section C.3, whose reference implementation returns
+highlight-or-darken per texel and in which both sides of a fold do fire. A bright/dark pair reads as a lit
+bevel and is literally "highlight the outward-facing edges, and darken the outlines" with both sides visible.
+The defect section C.1's gate prevents is a different shape - two texels given the SAME treatment, which
+reads as one fat line. So the code is documented and kept, and **H-8's wording is what changed**, because the
+rubric as written described the other defect. This is a visual judgment that cannot be settled headlessly; the
+H-8 note now says so explicitly and names the fix if the maintainer disagrees on sight.
+
+### Recorded, not actioned
+
+- **16 - naming drift.** `UCkPixelArt_Subsystem` (no `_UE`) follows the CelShade exemplar PHASE_4 said to
+  mirror exactly; `FCk_PixelArtRender_StateRegistry` follows house form. Both defensible in isolation, but the
+  pair is inconsistent. Not renaming a committed public type over it - noted for the maintainer.
+- **17 - `DoOn_CVarChanged` is a near-no-op** by the module's own design. Kept because it becomes load-bearing
+  the moment the look half gains any CVar, and its absence would then be a silent missing re-sync.
+- **Q1 - scene captures with view state.** Already closed before the audit reported, by the render-target
+  identity guard: a `bCaptureEveryFrame` capture renders into its own target and never reaches the drive. The
+  audit was reading pre-fix code.
+
+### What this says about the method
+
+Two of the three worst findings were in the shader BODY - the exact gap called out above as the one thing
+nothing automated covers. That is now three shader defects (D-20, D-21, finding 1) found by reading against
+the sibling looks and zero found by any test. The shader is the part of this feature least protected by the
+gate, and a reviewer's eyes are currently the only thing protecting it.
+
+## Post-campaign — the gym was perspective, so the snap never ran (2026-08-20)
+
+Reported by the maintainer on sight: "The camera in the gym is a perspective camera and not orthographic I
+think, which is why I see flickering." Correct, and it is the most consequential gym defect found so far.
+
+**What was wrong.** The gym had no camera of its own. `ACk_Gym_Base_Pawn` derives from `ADefaultPawn`, which
+is perspective, and none of the four gym scripts touched a camera. The view extension deliberately returns
+before the snap on a perspective projection (`CkPixelArtRender_ViewExtension.cpp`, `SetupViewProjectionMatrix`
+— one world-space snap displaces near and far geometry by different screen amounts, so the technique is
+orthographic-only by construction). The margin fold and the box upscale still ran, so the image still
+pixelated and nothing looked broken.
+
+The consequence is that every station had been rendering low-resolution and UNSNAPPED — which is exactly the
+CREEP station. Stations 5/6/7 are the A/B rig for pixel creep and they were three copies of the same image.
+Every creep, stutter and smoothness verdict the gym could produce was worthless, and it produced them
+confidently.
+
+**Why it survived the whole campaign.** `r.Ortho.Debug.ForceAllCamerasToOrtho` appears five times in this
+campaign's own docs and zero times in gym code. The manual verification instructions opened by telling the
+operator to type it. A gym whose central demonstration depends on the operator remembering a debug console
+variable is not a gym that demonstrates anything — and it is exactly the shape of defect that reads as
+working, which is why no automated line caught it either.
+
+**Decision (made, not delegated — low-blast and reversible).** The gym composes the camera it needs, using
+CkCamera rather than the debug CVar or a bare `UCameraComponent`. Three reasons, in order: this campaign added
+`Request_SetProjectionMode` to CkCamera and had no gym exercising it; `ACk_CameraGym_Pawn` is an existing
+precedent for a gym pawn that composes a CkCamera, so this is mimicry rather than invention; and forcing a
+global debug CVar from a gym is the same "hide the problem behind a fallback" shape the subsystem's
+precondition gate was built to refuse.
+
+**What changed.**
+
+| File | Change |
+|---|---|
+| `CkTests/Script/CkPixelArt/CkPixelArtGym_Pawn.as` (new) | `ACk_PixelArtGym_Pawn` composing a CkCamera with an orthographic sensor (OrthoWidth 2200 → ~3.4uu/texel at 360p, explicit 10/50000 clip planes), plus `UCk_PixelArtGym_CameraLayer_Fixed` holding a fixed boom (2500uu, pitch -35) with orbit, auto-reorient and collision all off — each of those would move the camera for reasons unrelated to the pan, and the creep verdicts are read off camera motion |
+| `CkPixelArtGym_GameMode.as` | `DefaultPawnClass` repointed, with the reason on the line |
+| `CkPixelArtGym_PlayerController.as` | `Get_ProjectionIsOrthographic()` / `Request_ToggleProjection()` forwarders, read off the pawn rather than mirrored; header updated |
+| `CkPixelArtGym_HUD.as` | `[P]` flips the projection; a footer row reports the mode, in warning colour on perspective |
+
+**Correction found on the maintainer's first run.** The first version passed a default-constructed
+`FCk_Fragment_Camera_ParamsData()`, copying `ACk_CameraGym_Pawn`, whose comments state that the director
+"auto-creates a `UCk_CameraComponent` on this pawn". It does not. `_OutputComponent` is the single ESSENTIAL
+constructor parameter of the params struct and is `CK_PROPERTY_GET` only, so there is no path that supplies it
+after construction — the ensure fired immediately:
+
+```
+Camera Add on entity [25|0(25)(Ck_PixelArtGym_Pawn_0)] requires a valid output UCk_CameraComponent
+supplied in FCk_Fragment_Camera_ParamsData - none was provided.
+```
+
+The pawn now declares `UPROPERTY(DefaultComponent) UCk_CameraComponent CameraComponent` and passes it to the
+constructor, which is what `ACkAutoTest_GameplayCamera_Helper` has been doing all along — the AutoTest fixture
+was the correct exemplar and the gym pawn was not. Mimicking a sibling is only as good as the sibling, and the
+comment was more confident than the code.
+
+**Adjacent defect, flagged not fixed:** `CkTests/Script/CkCamera/CkCameraGym_Pawn.as:90` has exactly this bug
+and declares no camera component anywhere — the CkCamera gym should be hitting the same ensure on entry. Left
+for its own change rather than folded in here.
+
+**The clip planes are explicit on purpose**, and this is the second time that mattered: auto-calculated ortho
+planes are derived from the view rect, so the 180 / 360 / 540 stations would each have been judging a
+different depth range while appearing to differ only in resolution.
+
+**`[P]` is part of the exercise, not a debug affordance.** Perspective IS what the defect looks like, and the
+gym could not previously show it. Being able to flip the same station between the two is the fastest way to
+learn to recognise it — which is the thing that would have caught this on day one.
+
+**Correction to the manual verification instructions.** The step "run `r.Ortho.Debug.ForceAllCamerasToOrtho 1`
+and `r.Ortho.Debug.ForceOrthoWidth 2200` before judging anything" is now obsolete: the gym is orthographic on
+entry. H-8's rubric assumes an orthographic view, and previously did not say so.
+
+## Module rename: `CkPixelArtRender` -> `CkPixelArtRenderer` (2026-08-20)
+
+Maintainer call, for consistency with the `CkIsmRenderer` / `CkIskmRenderer` siblings. Mechanical, but with
+three consequences worth recording because each would have been a silent breakage:
+
+- **The generated AngelScript wrapper had to be deleted.** `Script/Generated/utils_pixel_art_render.as` is
+  gitignored and regenerated at editor startup, but it is compiled BEFORE it is regenerated - and it referenced
+  `UCk_Utils_PixelArtRender_UE`, a class that no longer exists under that name. Left in place it would have
+  failed the AngelScript compile on the next boot with an error pointing at a file nobody edited. It now
+  regenerates as `utils_pixel_art_renderer.as`.
+- **The log category was renamed too**, `LogCkPixelArt` -> `CkPixelArtRenderer` (dropping the engine-style `Log`
+  prefix, which no other category in the plugin carries - all ~90 siblings are bare `Ck<Module>`). The old name was derived
+  from a module name that no longer matched, and it collided in the reader's eye with the SEPARATE `CkPixelArt`
+  category that the sibling module declares through `CK_DEFINE_LOG_FUNCTIONS`. Two categories one character
+  apart, on two different modules, is a debugging trap. Quoted log evidence earlier in this document predates
+  the rename and is left verbatim; instructions that tell a human what to grep were updated.
+- **The `/CkPixelArt` shader virtual mapping was NOT renamed.** It namespaces the feature, not the module, and
+  the look shader in CkUsf sits under the same feature name. Renaming it would have churned shader paths for no
+  reader benefit.
+
+Also added while here: the two rows this feature never had in `Source/CLAUDE.md`'s "I need to..." decision
+tree. A module with no row there is a module nobody finds.
+
+### Operational trap: renaming a test leaves a stale toolbox plan that ABORTS LANES
+
+The first post-rename gate reported `1204/1201/3` - exactly the baseline - and still could not be trusted. Buried
+in the tail:
+
+```
+[utb --test] [lane 1/3]: no progress across 2 consecutive spawns - aborting with 4 tests never run
+             (first: 'CkTests.UnitTests.CkPixelArtRender.ConfigRegistry.RejectsNullWorld')
+```
+
+All three lanes aborted that way (4 + 5 + 4 = 13 never run, which is exactly the pixel-art test count), and every
+name they cite is the PRE-rename one. `Saved/UnrealToolbox/TestBatchCmds__lane_*.txt` - regenerated by that very
+run - still listed the old names, so each lane spawned an editor looking for tests that no longer exist, made no
+progress, and killed itself.
+
+Two lessons, both about not trusting a number:
+- **A pass/fail count matching the baseline is not evidence the suite ran.** Here it matched precisely BECAUSE
+  the never-run tests were counted out of the total rather than as failures. The abort line is in the tail, far
+  below the summary block, and nothing else flags it.
+- **Renaming any automation test invalidates the toolbox plan.** Delete `Saved/UnrealToolbox/TestBatchCmds*.txt`
+  after a test rename and re-run; they regenerate. Otherwise the gate silently skips exactly the tests whose
+  names changed - the ones the rename most needed to exercise.
+
+## Second Fable review - house-idiom conformance (2026-08-20)
+
+Requested by the maintainer alongside four direct instructions (rename the module, use the strict utilities,
+cut the comments, and "the code should be very similar to how it is written elsewhere in CkFoundation").
+No critical bugs. 5 MAJOR, 14 MINOR, 4 uncertain. The reviewer verified the Stylize exemplar shapes before
+reporting and correctly did NOT report the T0 module's `!` / `ensureMsgf` / plain-struct usage.
+
+### The one that mattered: an un-restored show flag
+
+`Request_Apply_RecommendedCVars` set `EngineShowFlags.SetScreenPercentage(true)` and nothing ever put it back,
+while the three console variables beside it got the full refcounted, priority-preserving lease. The subsystem
+header promises the opposite ("Disabling ... restores any console variables ... moved"), so a project that
+deliberately runs with that flag off had it silently latched on for the world's life after a single
+Apply/Disable cycle. Fixed with `DoRestore_ScreenPercentageShowFlag`, which follows the same only-undo-what-is-
+still-ours rule as the CVar leases: if somebody turned it on themselves in the meantime, it is left alone.
+
+That is a genuine miss from the FIRST audit, which added the show-flag write specifically so the escape could
+clear every row it reports (finding 14 there) and did not ask what puts it back.
+
+### Comment density, measured rather than asserted
+
+The maintainer's "avoid extensive comments" was actionable once measured against neighbours instead of taste.
+Baselines: CkTimer `.cpp` 1.9%, the CkUsf Stylize `.cpp` files 5.7-6.3%, their headers 19-22%, complex
+`Looks/*.ush` 28-43%.
+
+| File | Before | After |
+|---|---|---|
+| `CkPixelArtRenderer_ViewExtension.cpp` | 17.4% | 9.2% |
+| `CkPixelArt_Subsystem.cpp` | 9.7% | 6.1% |
+| `CkPixelArt_Subsystem.h` | 19.4% | 12.2% |
+| `CkPixelArt_Params.h` | 16.2% | 14.0% |
+| `CkPixelArtRenderer_SnapMath.h` | 58.4% | rewritten; prose replaced by `/** contract */` blocks |
+| `PixelArt.ush` | 28.8% | unchanged - already at CelShade (29.2%) and ScreenDither (30.0%) |
+
+**A correction worth recording:** the first pass applied a 6% target to HEADERS as well, which was wrong - it
+was measured on `.cpp` files only. `CkUsf_CelShadeSubsystem.h`, the exemplar this feature mirrors, is 22.5%.
+Headers carry contract docs and legitimately run three times denser than implementation. `PixelArt.ush` was
+left alone for the same reason: measured against its actual siblings it was never an outlier.
+
+### Two defects found by looking rather than by testing
+
+- **A doc block attached to the wrong function.** The first audit's extraction of `Apply_MarginFold` inserted
+  the new declaration BETWEEN `Get_HorizontalMarginTexels`' doc block and its declaration, so one public
+  function was documented by the other's contract and the second had none. Nothing catches this but reading.
+- **Campaign breadcrumbs in a shipped shader.** `PixelArt.ush` cited `RESEARCH_Technique.md` sections C.1/C.2/
+  C.3/D in two places - a direct violation of the comment rule ("a comment naming a Gate, Phase, PROMPT,
+  campaign ... is always noise"), and the only `Looks/*.ush` in the suite that referenced a campaign doc.
+
+### Idiom fixes
+
+Log category `LogCkPixelArt` -> `CkPixelArtRenderer` (the `Log` prefix was the only one in ~90 categories);
+BPFL category -> `Ck|Utils|PixelArtRenderer`; `Ck_PixelArt_DebugPan` -> `ck.PixelArt.Debug.Pan` (the module's
+own banner declares everything lives under `ck.PixelArt.*`); the missing `CK_DEFINE_CUSTOM_FORMATTER_ENUM` for
+the two T0-defined enums, hosted in CkPixelArt since the macro cannot live in a CkCore-less module;
+`ck::Is_NOT_Valid` for the two UObject pointers that used `== nullptr` (pending-kill reads as valid there);
+`ck::algo::Transform` + `ck::Format_UE` for the one hand-rolled transform loop; `NOT Test*` in the unit tests
+(needing an explicit `CkCore/Macros/CkMacros.h` include, because the module under test pulls in no Ck header);
+`Make_Config` and named `constexpr` bool arguments; engine includes normalised to angle brackets (1518 vs 178
+suite-wide).
+
+### Declined or documented rather than fixed
+
+- **Restoring the AutoTest's prior `r.AntiAliasingMethod`.** Correct in principle, but `UCk_Utils_CVar_UE`
+  exposes no value getter to AngelScript, and adding one to CkCVar for a test is scope creep into a module
+  nobody asked me to touch. The literal `0` stays, now under a KNOWN LIMITATION comment that says so.
+- **Type-prefix split** (`FCk_PixelArtRenderer_StateRegistry` vs `FCk_PixelArt_RenderConfig`) and the
+  `ck::pixel_art` / `ck::pixelart` namespace pair. Both are real inconsistencies. Renaming committed public
+  types and a namespace reached from tests and AngelScript is churn disproportionate to a MINOR, and the
+  reviewer offered "commit to PixelArt = the feature name" as an equally valid resolution. Left for the
+  maintainer.
+
+### Uncertain items, recorded not chased
+
+The reviewer flagged four it could not confirm. The one worth a second pair of eyes: `SetupViewFamily` resets
+the per-frame state for EVERY active family, so if any capture or planar-reflection family's `SetupViewFamily`
+could interleave between the game viewport's `SetupViewFamily` and its `BeginRenderViewFamily`, that frame
+would lose its upscaler and render blurry. The reviewer's reading of the 5.7 flow says captures update during
+the world tick, before `UGameViewportClient::Draw`'s contiguous hook run, so it cannot interleave - but that
+is a reading, not a test. The other three: a blocking `LoadObject` on the explicit (non-deferred) settings
+path, `DoCheck_ResetToDefaults` assuming the host project configures no default preset, and the two
+edge-detector members being per-extension rather than per-world (log-only impact).
+
 ## Divergence log (phase doc vs repo — repo is authority for mechanics, PROMPT.md for intent)
 
 - **D-1 — Host project is CkPlugins_Other, not BusterBlock.** See above. The step's intent (a host
@@ -402,7 +655,7 @@ outside the unit tests as well as inside them.
   → **Resolution:** plain `ModuleRules`, `CppStandardVersion.Cpp20`, engine-only deps (Core,
   CoreUObject, Engine, RenderCore, RHI + private Renderer, Projects) and the Renderer-private
   include paths. Consequences: no `CK_DEFINE_LOG_FUNCTIONS` (it lives in CkLog) — a plain
-  `LogCkPixelArt` category instead; no `CK_GENERATED_BODY` on the subsystem. House naming,
+  `CkPixelArtRenderer` category instead; no `CK_GENERATED_BODY` on the subsystem. House naming,
   formatting and validation rules still apply.
 
 - **D-3 — `internal=644x364` is unreachable with a single resolution fraction.** The engine applies
@@ -582,18 +835,26 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   `?game=/Script/Angelscript.Ck_PixelArtGym_GameMode`. Verified in the perf run, which loaded straight into
   the pixel-art gym with no keyboard involved (`Saved/Logs/PixelArtPerfSweep.log:2085`). Every remaining
   visual item below can therefore be launched directly into its gym.
+
+  **The two `r.Ortho.Debug.*` lines are only for spiking a DIFFERENT gym.** As of the camera fix above, the
+  pixel-art gym enters orthographic on its own and `[P]` flips it — so anywhere a step below reads "launch the
+  pixel-art gym, then force ortho", drop the forcing. The forcing is still required for H-1/H-2 precisely
+  because those spike a foreign gym (Crowd, IskmRenderer) whose camera is perspective, and H-4 forces it
+  deliberately to test the auto-planes behaviour.
 - **[EDITOR-VERIFY] H-2 — 7a on geometry.** Same run as H-1, plus `ck.Usf.CelShade.Enabled 1`.
   Expected: CelShade's ink lines / halftone are chunky at texel scale, not native-res fine.
 - **[EDITOR-VERIFY] H-3 — 7c PIE half.** Run the same scene in PIE at >100% OS DPI with the spike on.
-  Expected: `LogCkPixelArt` logs a `Secondary view fraction is <1` line, and the image is softer than
+  Expected: `CkPixelArtRenderer` logs a `Secondary view fraction is <1` line, and the image is softer than
   the standalone capture. No fix wanted — this is the evidence for "PIE lies" (standing risk 1).
 - **[EDITOR-VERIFY] H-4 — 7b runtime.** With the spike on, compare `r.Ortho.AutoPlanes 1` against
   explicit near/far and confirm the auto far plane moves with the render resolution.
 
-- **[EDITOR-VERIFY] H-5 — Phase 2 gate 6.G, the creep/stutter/smooth A/B.** Standalone, gym map with
-  visible geometry, `r.AntiAliasingMethod 0`, `r.Ortho.Debug.ForceAllCamerasToOrtho 1`,
-  `r.Ortho.Debug.ForceOrthoWidth 2000`, `ck.PixelArt.Enabled 1`, `ck.PixelArt.Debug.LogState 1`, then
-  `Ck_PixelArt_DebugPan 0.2`. Score three states, in this order:
+- **[EDITOR-VERIFY] H-5 — Phase 2 gate 6.G, the creep/stutter/smooth A/B.** **Prefer the pixel-art gym's own
+  stations 5/6/7 now** — they are this A/B, pre-configured, on a camera that is orthographic on entry, and
+  `Ck_GymPixelArt_TogglePan` drives the motion. Nothing needs forcing. The manual form below remains valid for
+  scoring the A/B inside some other gym: standalone, gym map with visible geometry, `r.AntiAliasingMethod 0`,
+  `r.Ortho.Debug.ForceAllCamerasToOrtho 1`, `r.Ortho.Debug.ForceOrthoWidth 2000`, `ck.PixelArt.Enabled 1`,
+  `ck.PixelArt.Debug.LogState 1`, then `Ck_PixelArt_DebugPan 0.2`. Score three states, in this order:
   1. `ck.PixelArt.Snap 0` — expected: pixels visibly CRAWL along edges. Without this the other two
      verdicts mean nothing, because it is what proves the problem exists in this scene.
   2. `ck.PixelArt.Snap 1` + `ck.PixelArt.Debug.SnapOnly 1` — expected: motion advances in whole
@@ -616,8 +877,15 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
 - **[EDITOR-VERIFY] H-8 - Phase 5 outline rubric.** Gym map, standalone, station **PRESET: CRISP 16**.
   Score five things:
   1. Silhouettes are darkened and exactly ONE texel wide (use station **FILTER: NEAREST** to count).
-  2. Creases are brightened, and are also one texel - two means the de-doubling gate failed.
-  3. No doubled lines anywhere on the cube stack.
+  2. Creases render as a PAIR: the outward-facing texel brightened, the inward one darkened, one texel each.
+     That is intended (RESEARCH_Technique section C.3 - it reads as a lit bevel, and is what "highlight the
+     outward-facing edges, and darken the outlines" means when both sides of a fold are visible). The DEFECT
+     to look for is two texels given the SAME treatment, which reads as one fat line; that is what section
+     C.1's de-doubling gate exists to prevent, and this look relies on the pair being opposite instead.
+     If the pair reads as mush rather than as a bevel at 360p, say so - the gate is a small change and this
+     is the call that needs eyes on it.
+  3. No doubled SILHOUETTES anywhere on the cube stack - an object's outer edge is one-sided by
+     construction (only the nearer texel draws it), so two there is a real defect.
   4. No staircase of false outlines across the ground plane at grazing angle. This is the most likely
      defect and the reason `AngleZCutoff` / `AngleZScale` exist; if it appears, raise `AngleZScale`.
   5. In band-shift mode every outline colour is one the palette already contains. A grey or black line
