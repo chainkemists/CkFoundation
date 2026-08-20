@@ -8,33 +8,30 @@
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_CVars.h"
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_CVars.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
 
-#include "Components/PostProcessComponent.h"
-#include "Engine/Engine.h"
-#include "Engine/GameViewportClient.h"
-#include "Engine/World.h"
-#include "GameFramework/Actor.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "Materials/MaterialInterface.h"
-#include "HAL/IConsoleManager.h"
-#include "Misc/CoreDelegates.h"
+#include <Components/PostProcessComponent.h>
+#include <Engine/Engine.h>
+#include <Engine/GameViewportClient.h>
+#include <Engine/World.h>
+#include <GameFramework/Actor.h>
+#include <HAL/IConsoleManager.h>
+#include <Materials/MaterialInstanceDynamic.h>
+#include <Materials/MaterialInterface.h>
+#include <Misc/CoreDelegates.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pixel_art_subsystem
 {
-    // Name of the look whose generated master backs the stylization half, and of its .ush entry point's
-    // parameters. The writes below are positional in nothing but NAME, so a rename on either side is a silent
-    // no-op until someone looks at a gym.
+    // Shared by the generated master and its .ush parameter names: matched by NAME only, so a rename on either
+    // side is a silent no-op until someone looks at a gym.
     const FName LookName = TEXT("PixelArt");
 
-    // Anti-aliasing methods that take the primary spatial upscale slot away. TSR and TAA switch the view to
-    // TEMPORAL upscaling, and the renderer's whole delivery mechanism is the spatial pass they replace — so with
-    // either selected the scene renders at the internal resolution and is upscaled by something else entirely.
+    // TSR and TAA switch the view to temporal upscaling, replacing the spatial pass this renderer delivers through.
     constexpr int32 AntiAliasingMethod_None = 0;
     constexpr int32 AntiAliasingMethod_FXAA = 1;
 
@@ -51,10 +48,8 @@ namespace ck_pixel_art_subsystem
         return CVar->GetFloat();
     }
 
-    // ECVF_SetByConsole, not ECVF_SetByCode: this is only ever reached from an explicit
-    // Request_Apply_RecommendedCVars, and the situation it exists to rescue is precisely one where somebody has
-    // already typed the offending value into the console. A SetByCode write is silently dropped under a console
-    // one, which would leave the caller looking at an unchanged precondition report and no explanation.
+    // ECVF_SetByConsole, not SetByCode: this is only reached from an explicit escape, and the situation it rescues
+    // is one where somebody typed the offending value into the console, where a SetByCode write is dropped.
     auto
         DoSet_CVarFloat(
             const TCHAR* InName,
@@ -67,6 +62,45 @@ namespace ck_pixel_art_subsystem
         { return; }
 
         CVar->Set(InValue, ECVF_SetByConsole);
+    }
+
+    // Restores the value AND the priority it was set at. Writing back at our own priority would pin the variable
+    // there for the process; the value goes in at the CURRENT priority, then the original bits are restored.
+    auto
+        DoRestore_CVarFloat(
+            const TCHAR* InName,
+            float InValue,
+            EConsoleVariableFlags InPriority)
+        -> void
+    {
+        auto* CVar = IConsoleManager::Get().FindConsoleVariable(InName);
+
+        if (CVar == nullptr)
+        { return; }
+
+        const auto CurrentPriority = static_cast<EConsoleVariableFlags>(CVar->GetFlags() & ECVF_SetByMask);
+
+        CVar->Set(InValue, CurrentPriority);
+        CVar->SetFlags(static_cast<EConsoleVariableFlags>((CVar->GetFlags() & ~ECVF_SetByMask) | InPriority));
+    }
+
+    // One console variable's prior value, plus how many worlds currently rely on the moved one.
+    struct FCVarLease
+    {
+        float PriorValue = 0.0f;
+        float AppliedValue = 0.0f;
+        EConsoleVariableFlags PriorPriority = ECVF_SetByConstructor;
+        int32 HolderCount = 0;
+    };
+
+    // PROCESS-wide, because the console variables are. Held per world, a second PIE world's teardown would restore
+    // values out from under a first that is still rendering.
+    auto
+        Get_CVarLeases()
+        -> TMap<FString, FCVarLease>&
+    {
+        static TMap<FString, FCVarLease> Leases;
+        return Leases;
     }
 
     auto
@@ -89,9 +123,8 @@ auto
         UObject* InOuter) const
     -> bool
 {
-    // A dedicated server renders nothing, so a configured default preset must not make it drive a screen
-    // percentage per world. Same granularity and same known gap as the Stylize subsystems: a PIE
-    // dedicated-server world lives in the editor process and still gets one.
+    // A dedicated server renders nothing. Same known gap as the Stylize subsystems: a PIE dedicated-server world
+    // lives in the editor process and still gets one.
     if (IsRunningDedicatedServer())
     { return false; }
 
@@ -118,9 +151,8 @@ auto
     ck::pixel_art::Get_OnCVarChanged().Remove(_CVarChangedHandle);
     _CVarChangedHandle.Reset();
 
-    // Leave nothing of this world behind: the registry entry would keep a dead world's configuration alive until
-    // the next sweep, and a moved console variable would outlive the world that moved it.
-    FCk_PixelArtRender_StateRegistry::Clear(GetWorld());
+    // A registry entry would outlive the world, and so would a moved console variable.
+    FCk_PixelArtRenderer_StateRegistry::Clear(GetWorld());
     DoRestore_RecommendedCVars();
 
     Super::Deinitialize();
@@ -166,7 +198,7 @@ auto
     {
         _Enabled = ECk_EnableDisable::Disable;
 
-        FCk_PixelArtRender_StateRegistry::Clear(GetWorld());
+        FCk_PixelArtRenderer_StateRegistry::Clear(GetWorld());
         DoSync_LookEffect();
         DoRestore_RecommendedCVars();
 
@@ -185,7 +217,7 @@ auto
         // Get_PreconditionReport still says why, because it recomputes.
         _Enabled = ECk_EnableDisable::Disable;
 
-        FCk_PixelArtRender_StateRegistry::Clear(GetWorld());
+        FCk_PixelArtRenderer_StateRegistry::Clear(GetWorld());
 
         return;
     }
@@ -267,33 +299,64 @@ auto
     Request_Apply_RecommendedCVars()
     -> void
 {
+    auto& Leases = ck_pixel_art_subsystem::Get_CVarLeases();
+
     const auto Remember_And_Set = [&](const TCHAR* InName, float InValue) -> void
     {
-        const auto Current = ck_pixel_art_subsystem::TryGet_CVarFloat(InName);
+        auto* CVar = IConsoleManager::Get().FindConsoleVariable(InName);
 
-        if (!Current.IsSet())
+        if (CVar == nullptr)
         {
             ck::pixelart::Warning(TEXT("Console variable [{}] does not exist; the pixel-art renderer cannot set it"),
                 InName);
             return;
         }
 
-        if (FMath::IsNearlyEqual(*Current, InValue))
+        const auto Name = FString{InName};
+
+        // This world already holds the lease; asking twice must not make it count twice.
+        if (_HeldCVarLeases.Contains(Name))
         { return; }
 
-        // Only the FIRST prior is kept. A second apply that overwrote it would make the restore put back a value
-        // this subsystem itself wrote, which is how a "restore" quietly becomes a no-op.
-        if (!_CVarPriors.Contains(InName))
-        { _CVarPriors.Add(InName, *Current); }
+        auto& Lease = Leases.FindOrAdd(Name);
+
+        if (Lease.HolderCount == 0)
+        {
+            Lease.PriorValue = CVar->GetFloat();
+            Lease.PriorPriority = static_cast<EConsoleVariableFlags>(CVar->GetFlags() & ECVF_SetByMask);
+        }
+
+        ++Lease.HolderCount;
+        _HeldCVarLeases.Add(Name);
+
+        if (FMath::IsNearlyEqual(CVar->GetFloat(), InValue))
+        { return; }
+
+        const auto Previous = CVar->GetFloat();
 
         ck_pixel_art_subsystem::DoSet_CVarFloat(InName, InValue);
+        Lease.AppliedValue = InValue;
 
-        ck::pixelart::Display(TEXT("Recommended CVar [{}]: {} -> {}"), InName, *Current, InValue);
+        ck::pixelart::Display(TEXT("Recommended CVar [{}]: {} -> {}"), InName, Previous, InValue);
     };
 
     Remember_And_Set(TEXT("r.AntiAliasingMethod"), ck_pixel_art_subsystem::AntiAliasingMethod_None);
     Remember_And_Set(TEXT("r.DynamicRes.OperationMode"), 0.0f);
+
+    // Applied but deliberately NOT gated on: a secondary fraction below 1 costs sharpness, it does not stop
+    // the renderer working. Gating on it would refuse to enable on every DPI-scaled display.
     Remember_And_Set(TEXT("r.SecondaryScreenPercentage.GameViewport"), 100.0f);
+
+    // A viewport field rather than a console variable, so it needs its own line - but it IS a gated precondition,
+    // and an escape that cannot clear every row it reports leaves the caller nothing to try next.
+    if (auto* GameViewport = ck::IsValid(GetWorld()) ? GetWorld()->GetGameViewport() : nullptr;
+        ck::IsValid(GameViewport) && NOT GameViewport->EngineShowFlags.ScreenPercentage)
+    {
+        GameViewport->EngineShowFlags.SetScreenPercentage(true);
+        _TurnedOnScreenPercentageShowFlag = true;
+
+        ck::pixelart::Display(TEXT("Recommended show flag [ScreenPercentage]: off -> on"));
+    }
 }
 
 auto
@@ -312,7 +375,7 @@ auto
             Method == ck_pixel_art_subsystem::AntiAliasingMethod_None ||
             Method == ck_pixel_art_subsystem::AntiAliasingMethod_FXAA;
 
-        if (!MethodIsSpatial)
+        if (NOT MethodIsSpatial)
         {
             Failures.Emplace(
                 TEXT("r.AntiAliasingMethod"),
@@ -332,7 +395,7 @@ auto
             TEXT("r.DynamicRes.OperationMode 0"));
     }
 
-    if (!ck_pixel_art_subsystem::Get_ScreenPercentageShowFlagIsOn(GetWorld()))
+    if (NOT ck_pixel_art_subsystem::Get_ScreenPercentageShowFlagIsOn(GetWorld()))
     {
         Failures.Emplace(
             TEXT("ShowFlag.ScreenPercentage"),
@@ -358,13 +421,12 @@ auto
 
     if (_Enabled == ECk_EnableDisable::Disable)
     {
-        FCk_PixelArtRender_StateRegistry::Clear(World);
+        FCk_PixelArtRenderer_StateRegistry::Clear(World);
         return;
     }
 
-    // Only the renderer half crosses over. The console overlay is NOT folded in here: the render module applies
-    // `ck.PixelArt.*` on the way out of the registry, so folding it in on the way in would make an override
-    // indistinguishable from a setting and leave it behind when the CVar goes back to -1.
+    // Only the renderer half crosses over, and the console overlay is NOT folded in: the render module applies
+    // ck.PixelArt.* on the way OUT, so folding it in would leave an override behind when the CVar returns to -1.
     auto Config = FCk_PixelArt_RenderConfig{};
     Config.Enabled = true;
     Config.ResolutionMode = _Settings.Get_ResolutionMode();
@@ -374,7 +436,7 @@ auto
     Config.SnapEnabled = _Settings.Get_SnapEnabled() == ECk_EnableDisable::Enable;
     Config.FilterMode = _Settings.Get_UpscaleFilter();
 
-    FCk_PixelArtRender_StateRegistry::Set(World, Config);
+    FCk_PixelArtRenderer_StateRegistry::Set(World, Config);
 }
 
 auto
@@ -382,14 +444,76 @@ auto
     DoRestore_RecommendedCVars()
     -> void
 {
-    for (const auto& Prior : _CVarPriors)
-    {
-        ck_pixel_art_subsystem::DoSet_CVarFloat(*Prior.Key, Prior.Value);
+    auto& Leases = ck_pixel_art_subsystem::Get_CVarLeases();
 
-        ck::pixelart::Display(TEXT("Restored CVar [{}] to {}"), Prior.Key, Prior.Value);
+    for (const auto& Name : _HeldCVarLeases)
+    {
+        auto* Lease = Leases.Find(Name);
+
+        if (Lease == nullptr)
+        { continue; }
+
+        --Lease->HolderCount;
+
+        // Another world still relies on the moved value, and it holds no prior of its own to put back because its own
+        // apply was a no-op on an already-moved variable.
+        if (Lease->HolderCount > 0)
+        { continue; }
+
+        auto* CVar = IConsoleManager::Get().FindConsoleVariable(*Name);
+
+        if (CVar != nullptr)
+        {
+            // Only restore if the current value is still the one we wrote: somebody who has since typed their own meant it.
+            const auto WeStillOwnIt =
+                FMath::IsNearlyEqual(CVar->GetFloat(), Lease->AppliedValue) ||
+                FMath::IsNearlyEqual(CVar->GetFloat(), Lease->PriorValue);
+
+            if (WeStillOwnIt)
+            {
+                ck_pixel_art_subsystem::DoRestore_CVarFloat(*Name, Lease->PriorValue, Lease->PriorPriority);
+
+                ck::pixelart::Display(TEXT("Restored CVar [{}] to {}"), Name, Lease->PriorValue);
+            }
+            else
+            {
+                ck::pixelart::Display(
+                    TEXT("Left CVar [{}] at {} — it was changed after the renderer set it, so the value that ")
+                    TEXT("is there now is somebody's deliberate choice, not ours to undo"),
+                    Name, CVar->GetFloat());
+            }
+        }
+
+        Leases.Remove(Name);
     }
 
-    _CVarPriors.Empty();
+    _HeldCVarLeases.Empty();
+
+    DoRestore_ScreenPercentageShowFlag();
+}
+
+auto
+    UCkPixelArt_Subsystem::
+    DoRestore_ScreenPercentageShowFlag()
+    -> void
+{
+    if (NOT _TurnedOnScreenPercentageShowFlag)
+    { return; }
+
+    _TurnedOnScreenPercentageShowFlag = false;
+
+    auto* GameViewport = ck::IsValid(GetWorld()) ? GetWorld()->GetGameViewport() : nullptr;
+
+    if (ck::Is_NOT_Valid(GameViewport))
+    { return; }
+
+    // Same rule as the CVar leases: only undo what is still ours. Somebody who turned it on themselves meant it.
+    if (NOT GameViewport->EngineShowFlags.ScreenPercentage)
+    { return; }
+
+    GameViewport->EngineShowFlags.SetScreenPercentage(false);
+
+    ck::pixelart::Display(TEXT("Restored show flag [ScreenPercentage] to off"));
 }
 
 auto
@@ -410,10 +534,8 @@ auto
     DoApply_ProjectDefault()
     -> void
 {
-    // A packaged game runs its startup map's BeginPlay from inside FEngineLoop::Init, before
-    // OnFEngineLoopInitComplete flips the blocking-load flag — resolving the soft ref there is the
-    // premature-load class CkCore documents. The retry deliberately does NOT re-test the flag: it is already ON
-    // that delegate, and CkCore's own flag-setting registrar may run after us in add-order.
+    // A packaged game runs its startup map's BeginPlay inside FEngineLoop::Init, before the blocking-load flag
+    // flips. The retry does NOT re-test the flag: it is already on that delegate, and CkCore's registrar may run after us.
     if (UCk_Utils_IO_UE::Get_IsEngineSafeForBlockingLoads_Peek())
     {
         DoApply_ProjectDefault_Now();
@@ -431,16 +553,14 @@ auto
     DoApply_ProjectDefault_Now()
     -> void
 {
-    // A default is a DEFAULT: game code that has already spoken wins. This only bites on the deferred path — a
-    // packaged game runs its startup map's BeginPlay inside FEngineLoop::Init, so gameplay can legitimately have
-    // set settings before the delegate that carries us here fires, and applying the project row then would
-    // silently undo it.
+    // A default is a DEFAULT: game code that has already spoken wins. Only bites on the deferred path, where
+    // gameplay can legitimately have set settings before the delegate that carries us here fires.
     if (_SettingsExplicitlySet)
     { return; }
 
     auto* DefaultPreset = DoResolve_ProjectDefaultPreset();
 
-    if (DefaultPreset == nullptr)
+    if (ck::Is_NOT_Valid(DefaultPreset))
     { return; }
 
     Apply_Preset(DefaultPreset);
@@ -455,10 +575,8 @@ auto
     DoOn_CVarChanged()
     -> void
 {
-    // A debug CVar must never be what turns the renderer on: every world has one of these subsystems, so an
-    // unconditional re-sync would start driving the screen percentage in every world that merely exists the
-    // moment anyone touches a console value. Worlds already enabled re-sync; the console force-on path lives in
-    // the render module, which can bring itself up without a configuration.
+    // A debug CVar must never turn the renderer ON: every world has one of these, so an unconditional re-sync would
+    // start driving the screen percentage everywhere. The console force-on path lives in the render module.
     if (_Enabled == ECk_EnableDisable::Disable)
     { return; }
 
@@ -473,8 +591,25 @@ auto
     DoEnsure_LookEffect()
     -> bool
 {
-    if (ck::IsValid(_LookMID))
+    // Every piece has to be alive, not just the MID: the MID is outered to this subsystem and outlives the
+    // world-spawned actor carrying the blendable, so keying on it alone let the look silently stop rendering.
+    if (ck::IsValid(_LookMID) && ck::IsValid(_LookPP) && ck::IsValid(_LookActor))
     { return true; }
+
+    if (ck::IsValid(_LookMID))
+    {
+        ck::pixelart::Warning(
+            TEXT("The pixel-art look's view actor went away while its material survived; rebuilding it. ")
+            TEXT("Expected during a level transition, worth investigating otherwise."));
+
+        _LookMID = nullptr;
+        _LookPP = nullptr;
+        _LookActor = nullptr;
+
+        // The rebuilt material starts blank, so the next write must be a full one rather than a diff
+        // against what the DEAD material happened to hold.
+        _WrittenLook.Reset();
+    }
 
     auto* World = GetWorld();
 
@@ -486,9 +621,8 @@ auto
 
     if (ck::Is_NOT_Valid(Master))
     {
-        // Warned, not ensured: a project that wants the renderer without the stylization is a supported
-        // configuration, and so is a fresh checkout that has not generated look masters yet. Settings keep
-        // round-tripping either way; only the look does not render.
+        // Warned, not ensured: the renderer without the stylization is supported, and so is a fresh checkout with no
+        // look masters generated yet. Settings round-trip either way.
         if (NOT _WarnedMissingMaster)
         {
             _WarnedMissingMaster = true;

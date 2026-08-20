@@ -1,8 +1,8 @@
 using UnrealBuildTool;
 
 // The game-facing half of the pixel-art renderer: presets, project settings, and the world subsystem that
-// decides what CkPixelArtRender does. Loads at the ordinary Default phase, which is exactly why the split
-// exists — CkPixelArtRender has to load at PostConfigInit (before the global shader map is built) and can
+// decides what CkPixelArtRenderer does. Loads at the ordinary Default phase, which is exactly why the split
+// exists — CkPixelArtRenderer has to load at PostConfigInit (before the global shader map is built) and can
 // therefore link no Ck module at all.
 public class CkPixelArt : CkModuleRules
 {
@@ -22,7 +22,7 @@ public class CkPixelArt : CkModuleRules
             "CkSettings",
             "CkUsf",
 
-            "CkPixelArtRender",
+            "CkPixelArtRenderer",
         });
     }
 }
