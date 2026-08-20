@@ -103,11 +103,22 @@ auto
         Output.UpdateVisualizeTextureExtent();
     }
 
-    // The rendered rect carries MarginTexels of extra texels per side; the displayed window is the inset. Handing
-    // the inset rect to the pass as the input viewport is what makes the vertex shader's UV span exactly the
-    // window, so the shader needs no window uniforms of its own.
-    auto InnerRect = InPassInputs.SceneColor.ViewRect;
-    InnerRect.InflateRect(-_Frame.MarginTexels);
+    // Handing the displayed window to the pass as the input viewport is what makes the vertex shader's UV span
+    // exactly that window, so the shader needs no window uniforms of its own. Clamped to the rect actually
+    // handed to us rather than trusted: the game thread PREDICTED this size from the screen percentage it drove,
+    // and a disagreement means something downstream re-quantized it.
+    const auto RenderedRect = InPassInputs.SceneColor.ViewRect;
+
+    auto InnerRect = FIntRect{
+        RenderedRect.Min + _Frame.InnerOffsetTexels,
+        RenderedRect.Min + _Frame.InnerOffsetTexels + _Frame.InnerSizeTexels};
+
+    InnerRect.Clip(RenderedRect);
+
+    const auto WindowIsUsable = InnerRect.Width() > 0 && InnerRect.Height() > 0;
+
+    if (!WindowIsUsable)
+    { InnerRect = RenderedRect; }
 
     const auto InputExtent = InPassInputs.SceneColor.Texture->Desc.Extent;
     const auto InputViewport = FScreenPassTextureViewport{InPassInputs.SceneColor.Texture, InnerRect};
@@ -138,12 +149,30 @@ auto
         LastLogged = {DisplayedSize, OutputSize, static_cast<int32>(InPassInputs.Stage)};
 
         UE_LOG(LogCkPixelArt, Display,
-            TEXT("Upscaler AddPasses: rendered=%dx%d displayed=%dx%d out=%dx%d margin=%d stage=%s"),
-            InPassInputs.SceneColor.ViewRect.Width(), InPassInputs.SceneColor.ViewRect.Height(),
+            TEXT("Upscaler AddPasses: rendered=%dx%d displayed=%dx%d at (%d,%d) out=%dx%d stage=%s"),
+            RenderedRect.Width(), RenderedRect.Height(),
             DisplayedSize.X, DisplayedSize.Y,
+            _Frame.InnerOffsetTexels.X, _Frame.InnerOffsetTexels.Y,
             OutputSize.X, OutputSize.Y,
-            _Frame.MarginTexels,
             ck_pixel_art_upscaler::Get_StageName(InPassInputs.Stage));
+
+        if (_Frame.RenderSize != FIntPoint::ZeroValue && _Frame.RenderSize != RenderedRect.Size())
+        {
+            UE_LOG(LogCkPixelArt, Warning,
+                TEXT("The scene rendered at %dx%d but the camera snap was computed for %dx%d. The texel grid the ")
+                TEXT("snap aligned to is not the one being displayed, so pixels will creep."),
+                RenderedRect.Width(), RenderedRect.Height(), _Frame.RenderSize.X, _Frame.RenderSize.Y);
+        }
+
+        if (!WindowIsUsable)
+        {
+            UE_LOG(LogCkPixelArt, Warning,
+                TEXT("The displayed window (offset %d,%d size %dx%d) falls outside the %dx%d rendered rect. ")
+                TEXT("Falling back to displaying the whole render, margin and all."),
+                _Frame.InnerOffsetTexels.X, _Frame.InnerOffsetTexels.Y,
+                _Frame.InnerSizeTexels.X, _Frame.InnerSizeTexels.Y,
+                RenderedRect.Width(), RenderedRect.Height());
+        }
     }
 
     AddDrawScreenPass(InGraphBuilder,

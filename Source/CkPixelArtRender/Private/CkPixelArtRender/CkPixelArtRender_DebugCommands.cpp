@@ -1,6 +1,11 @@
 #include "CkPixelArtRender/CkPixelArtRender_Log.h"
+#include "CkPixelArtRender/CkPixelArtRender_State.h"
 
+#include "Camera/PlayerCameraManager.h"
 #include "Containers/Ticker.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -144,3 +149,146 @@ namespace ck_pixel_art_debug
         TEXT("whether r.ScreenPercentage came back to its pre-enable value. Run it with the renderer OFF."),
         FConsoleCommandWithArgsDelegate::CreateStatic(&DoStart_ToggleLoop));
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// `Ck_PixelArt_DebugPan <TexelsPerFrame>` — the A/B rig for the whole snap technique.
+//
+// Judging pixel creep needs motion slow enough that a texel takes several frames to cross, which no human can
+// produce on a gamepad and no scripted camera in the test level provides. Drifting the view target diagonally by
+// a fraction of a texel per frame makes the three states legible in seconds:
+//
+//   ck.PixelArt.Snap 0                 -> edges crawl
+//   ck.PixelArt.Debug.SnapOnly 1       -> whole-texel stepping
+//   both off (the default)             -> smooth and grid-aligned
+//
+// Diagonal on purpose: an axis-aligned pan exercises one component of the remainder and would let a swapped or
+// half-applied compensation pass unnoticed.
+namespace ck_pixel_art_debug_pan
+{
+    struct FPanState
+    {
+        TWeakObjectPtr<UWorld> World;
+        float TexelsPerFrame = 0.2f;
+        bool IsRunning = false;
+        FTSTicker::FDelegateHandle TickerHandle;
+    };
+
+    FPanState GPan = {};
+
+    auto
+        DoStop_Pan()
+        -> void
+    {
+        if (!GPan.IsRunning)
+        { return; }
+
+        FTSTicker::GetCoreTicker().RemoveTicker(GPan.TickerHandle);
+        GPan = {};
+
+        UE_LOG(LogCkPixelArt, Display, TEXT("DebugPan stopped."));
+    }
+
+    auto
+        DoTick_Pan(
+            float InDeltaSeconds)
+        -> bool
+    {
+        auto* World = GPan.World.Get();
+
+        if (World == nullptr)
+        {
+            DoStop_Pan();
+            return false;
+        }
+
+        auto* PlayerController = World->GetFirstPlayerController();
+
+        if (PlayerController == nullptr || PlayerController->PlayerCameraManager == nullptr)
+        {
+            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: no player controller with a camera manager. Stopping."));
+            DoStop_Pan();
+            return false;
+        }
+
+        auto* ViewTarget = PlayerController->GetViewTarget();
+
+        if (ViewTarget == nullptr)
+        {
+            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: the player controller has no view target. Stopping."));
+            DoStop_Pan();
+            return false;
+        }
+
+        // A texel is only defined while the renderer is actually running an orthographic view. Without a report
+        // there is no texel to pan by, so say so instead of inventing a world-space speed that would make the
+        // capture meaningless.
+        const auto Report = FCk_PixelArtRender_StateRegistry::TryGet_FrameReport(World);
+        const auto TexelWorldSize = Report.IsSet() ? Report->TexelWorldSize : 0.0;
+
+        if (TexelWorldSize <= 0.0)
+        {
+            UE_LOG(LogCkPixelArt, Warning,
+                TEXT("DebugPan: the renderer published no texel size this frame (is it enabled, with an ")
+                TEXT("orthographic camera?). Stopping rather than panning by an arbitrary distance."));
+            DoStop_Pan();
+            return false;
+        }
+
+        const auto CameraRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+        const auto CameraMatrix = FRotationMatrix{CameraRotation};
+
+        const auto Direction =
+            (CameraMatrix.GetScaledAxis(EAxis::Y) + CameraMatrix.GetScaledAxis(EAxis::Z)).GetSafeNormal();
+
+        ViewTarget->SetActorLocation(
+            ViewTarget->GetActorLocation() + Direction * (GPan.TexelsPerFrame * TexelWorldSize));
+
+        return true;
+    }
+
+    auto
+        DoStart_Pan(
+            const TArray<FString>& InArgs,
+            UWorld* InWorld)
+        -> void
+    {
+        const auto TexelsPerFrame = InArgs.Num() > 0 ? FCString::Atof(*InArgs[0]) : 0.2f;
+
+        if (GPan.IsRunning)
+        {
+            DoStop_Pan();
+
+            // Re-issuing with a speed restarts at that speed; re-issuing bare is the off switch, so the command
+            // is its own toggle and there is nothing extra to remember mid-capture.
+            if (InArgs.Num() == 0)
+            { return; }
+        }
+
+        if (InWorld == nullptr)
+        {
+            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: no world. Run this from a running game."));
+            return;
+        }
+
+        if (FMath::IsNearlyZero(TexelsPerFrame))
+        { return; }
+
+        GPan.World = InWorld;
+        GPan.TexelsPerFrame = TexelsPerFrame;
+        GPan.IsRunning = true;
+        GPan.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&DoTick_Pan));
+
+        UE_LOG(LogCkPixelArt, Display,
+            TEXT("DebugPan drifting the view target diagonally at %.3f texels/frame. Run the command again with ")
+            TEXT("no argument to stop."),
+            TexelsPerFrame);
+    }
+
+    FAutoConsoleCommandWithWorldAndArgs CCmd_DebugPan(
+        TEXT("Ck_PixelArt_DebugPan"),
+        TEXT("Drift the view target diagonally by <TexelsPerFrame> (default 0.2) so pixel creep, whole-texel ")
+        TEXT("stepping and smooth compensated motion can be told apart by eye. Run again with no argument to stop."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoStart_Pan));
+}
+

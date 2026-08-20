@@ -46,6 +46,44 @@ struct FCk_PixelArt_RenderConfig
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What the renderer actually did to one frame, published for the frame it describes.
+//
+// Two readers need it. The upscaler's hooks run in a fixed order within a frame (SetupViewFamily, then
+// SetupViewProjectionMatrix, then BeginRenderViewFamily) and the snap remainder computed in the middle one has to
+// reach the last one. Everything else outside the renderer that cares where the camera REALLY ended up — a
+// world-space widget projecting to the screen, a debug pan that wants to move by exact texels — needs the same
+// numbers and has no other way to get them, because the snap deliberately never touches the gameplay camera.
+//
+// FrameNumber is GFrameCounter at publication. A reader whose frame number does not match is holding last
+// frame's answer and must treat it as absent rather than as slightly stale.
+struct FCk_PixelArt_FrameReport
+{
+    uint64 FrameNumber = 0;
+
+    // Texels the scene actually rasterizes into, including the margin on every side.
+    FIntPoint RenderSize = FIntPoint::ZeroValue;
+
+    // The displayed window inside that render: where it starts, and how big it is. The offset is NOT always
+    // symmetric — the vertical margin is whatever the engine's rounding leaves after the horizontal one is
+    // chosen, so the surplus row goes to the bottom.
+    FIntPoint InnerOffsetTexels = FIntPoint::ZeroValue;
+    FIntPoint InnerSizeTexels = FIntPoint::ZeroValue;
+
+    // World units one texel spans. Zero when the view was not orthographic, which is also how a reader tells that
+    // no snap was possible this frame.
+    double TexelWorldSize = 0.0;
+
+    FVector SnappedViewOrigin = FVector::ZeroVector;
+
+    // Sub-texel part of the camera position the snap removed, in texels, in the view's right/up basis and the
+    // world's sense of up. The upscaler flips the vertical sign to turn it into a UV shift.
+    FVector2f RemainderTexels = FVector2f::ZeroVector;
+
+    bool SnapApplied = false;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // The only channel between game-side configuration and the scene view extension's hooks.
 //
 // Keyed per world and weakly, because PIE runs several worlds at once (configuring one must never pixelate the
@@ -73,4 +111,16 @@ public:
     // so a world nobody configured can never render pixelated by accident.
     static auto TryGet(
         const UWorld* InWorld) -> TOptional<FCk_PixelArt_RenderConfig>;
+
+public:
+    // Publishes what the renderer did to the frame currently being assembled. Overwrites unconditionally: there
+    // is exactly one report per world per frame and a reader that wanted the previous one was already too late.
+    static auto Set_FrameReport(
+        const UWorld* InWorld,
+        const FCk_PixelArt_FrameReport& InReport) -> void;
+
+    // Unset when the world has no report, or when the one it has belongs to an earlier frame — a caller must
+    // never act on a stale snap.
+    static auto TryGet_FrameReport(
+        const UWorld* InWorld) -> TOptional<FCk_PixelArt_FrameReport>;
 };

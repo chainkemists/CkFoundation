@@ -1,5 +1,6 @@
 #include "CkPixelArtRender/CkPixelArtRender_State.h"
 
+#include "CoreGlobals.h"
 #include "Engine/World.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -7,6 +8,7 @@
 namespace ck_pixel_art_state
 {
     using FRegistryMap = TMap<TWeakObjectPtr<const UWorld>, FCk_PixelArt_RenderConfig>;
+    using FFrameReportMap = TMap<TWeakObjectPtr<const UWorld>, FCk_PixelArt_FrameReport>;
 
     auto
         Get_Registry()
@@ -17,8 +19,17 @@ namespace ck_pixel_art_state
     }
 
     auto
+        Get_FrameReports()
+        -> FFrameReportMap&
+    {
+        static FFrameReportMap FrameReports;
+        return FrameReports;
+    }
+
+    template <typename T_Map>
+    auto
         DoSweep_StaleKeys(
-            FRegistryMap& InOutRegistry)
+            T_Map& InOutRegistry)
         -> void
     {
         for (auto It = InOutRegistry.CreateIterator(); It; ++It)
@@ -86,6 +97,51 @@ auto
     const auto* Found = ck_pixel_art_state::Get_Registry().Find(InWorld);
 
     if (Found == nullptr)
+    { return {}; }
+
+    return *Found;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_PixelArtRender_StateRegistry::
+    Set_FrameReport(
+        const UWorld* InWorld,
+        const FCk_PixelArt_FrameReport& InReport)
+    -> void
+{
+    check(IsInGameThread());
+
+    if (InWorld == nullptr)
+    { return; }
+
+    auto& FrameReports = ck_pixel_art_state::Get_FrameReports();
+
+    ck_pixel_art_state::DoSweep_StaleKeys(FrameReports);
+
+    FrameReports.Add(InWorld, InReport);
+}
+
+auto
+    FCk_PixelArtRender_StateRegistry::
+    TryGet_FrameReport(
+        const UWorld* InWorld)
+    -> TOptional<FCk_PixelArt_FrameReport>
+{
+    check(IsInGameThread());
+
+    if (InWorld == nullptr)
+    { return {}; }
+
+    const auto* Found = ck_pixel_art_state::Get_FrameReports().Find(InWorld);
+
+    if (Found == nullptr)
+    { return {}; }
+
+    // A report from an earlier frame describes a camera that has already moved. Reporting absence is the only
+    // answer that cannot be acted on by mistake.
+    if (Found->FrameNumber != GFrameCounter)
     { return {}; }
 
     return *Found;
