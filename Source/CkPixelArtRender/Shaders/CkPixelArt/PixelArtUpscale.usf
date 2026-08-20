@@ -1,0 +1,47 @@
+// Box-filter upscale for the CkPixelArt renderer (t3ssel8r's filter).
+//
+// The ideal upscaled pixel is the average of the low-resolution source over that screen pixel's footprint — a
+// pixel-sized box filter. A bilinear tap IS a box reconstruction, so the average of a texel-aligned box comes out
+// of ONE bilinear sample taken at a shifted UV. The footprint is estimated from screen-space derivatives and the
+// box is clamped to at most one texel: past that the hardware filter is already performing the correct
+// minification and widening the box further would only blur. SampleGrad (rather than Sample) keeps mip selection
+// tied to the true UV derivatives, so the choice stays stable while the sample position is being nudged around.
+//
+// The incoming UV spans the DISPLAYED window only: the pass is given the internal view rect already inset by the
+// render margin, so `floor(Tx) +/- 1` always lands on texels that were actually rendered even after the sub-texel
+// shift below.
+//
+// SubTexelOffsetTexels re-applies the remainder of the camera's texel-grid snap. Snapping alone makes camera
+// motion advance in whole-texel steps (stutter); shifting the sampling window back by the discarded fraction
+// restores sub-texel-smooth motion while every rendered pixel stays grid-aligned.
+
+#include "/Engine/Private/Common.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float2 InputExtent;
+float2 InputExtentInv;
+float2 SubTexelOffsetTexels;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void MainPS(
+    noperspective float4 UVAndScreenPos : TEXCOORD0,
+    FStereoPSInput StereoInput,
+    float4 SvPosition : SV_POSITION,
+    out float4 OutColor : SV_Target0)
+{
+    StereoSetupPS(StereoInput);
+
+    const float2 UV = UVAndScreenPos.xy;
+
+    const float2 BoxSize = clamp(fwidth(UV) * InputExtent, 1e-5f, 1.0f);
+    const float2 Tx = UV * InputExtent + SubTexelOffsetTexels - 0.5f * BoxSize;
+    const float2 TxOffset = smoothstep(1.0f - BoxSize, 1.0f, frac(Tx));
+    const float2 SampleUV = (floor(Tx) + 0.5f + TxOffset) * InputExtentInv;
+
+    OutColor = Texture2DSampleGrad(InputTexture, InputSampler, SampleUV, ddx(UV), ddy(UV));
+}
