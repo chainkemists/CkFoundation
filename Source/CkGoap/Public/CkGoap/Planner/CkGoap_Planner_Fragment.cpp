@@ -21,4 +21,19 @@ namespace ck
 		}
 		return Result;
 	}
+
+	auto
+		FFragment_Goap_Planner_PlanState::
+		Get_FirstPlanClass() const -> TSubclassOf<UCk_GoapAction_EntityScript>
+	{
+		for (const auto& ActionHandle : _Plan)
+		{
+			if (ck::Is_NOT_Valid(ActionHandle))
+			{ continue; }
+
+			return ActionHandle.template Get<FFragment_Goap_Action_Params>().Get_ActionClass();
+		}
+
+		return {};
+	}
 }

@@ -207,6 +207,17 @@ namespace ck
 		CK_PROPERTY_GET(_PlanAttemptCount);
 
 		auto Get_PlanClasses() const -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>;
+
+		/**
+		 * The class of the first VALID action in the plan, or an empty class when the plan holds
+		 * none.
+		 *
+		 * Equals Get_PlanClasses()[0] — including the identical skip over invalid handles —
+		 * WHENEVER that array is non-empty; where it would be empty, indexing [0] is out of bounds
+		 * and this returns an empty class instead. Avoids building the whole array, which callers
+		 * that only want the head were paying for once or twice per agent per frame.
+		 */
+		auto Get_FirstPlanClass() const -> TSubclassOf<UCk_GoapAction_EntityScript>;
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
