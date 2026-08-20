@@ -112,6 +112,100 @@ namespace ck
             return AnchorBlockDetect.Get_CrowdedGoalDepth();
         }
 
+        // The strictly-nearer and frontal-cone tests exist to keep hold CONSTRUCTION sound: nearer
+        // makes the anchor relation acyclic, the cone proves the anchor is in the way of travel.
+        // Neither concern survives into re-validating a hold that already exists — the edges were
+        // acyclic when built and a held agent is not travelling — while post-settle PushApart drift
+        // of a few centimetres routinely flips both (observed: an agent blocked at 42.0cm relaxed
+        // to 38.4cm, ending up NEARER the goal than its own still-standing blocker, and resumed
+        // into the pack). So a hold re-validation only asks whether the body still occupies the
+        // ground.
+        enum class EAnchorTestPurpose
+        {
+            BlockDecision,
+            HoldRevalidation
+        };
+
+        // One anchor qualification, two callers — Get_CrowdedGoalBlocker's cache scan and
+        // BlockedRecheck's remembered-blocker re-validation — so the two can never drift apart.
+        // Returns the anchor's depth when the neighbour qualifies, unset otherwise.
+        auto Get_AnchorQualifyingDepth(
+            const FVector& InSelfLoc,
+            const FVector& InSelfGoal,
+            float InSelfRadius,
+            float InArrivalRadius,
+            float InContactPadCm,
+            bool InMarkupAnchorsEnabled,
+            EAnchorTestPurpose InPurpose,
+            const FCk_Handle& InNeighbourHandle,
+            const FVector& InNeighbourCentre) -> TOptional<int32>
+        {
+            const auto NeighbourAgent = UCk_Utils_CrowdAgent_UE::Cast(InNeighbourHandle);
+            if (ck::Is_NOT_Valid(NeighbourAgent))
+            { return {}; }
+
+            // A markup anchor can unpaint by moving again, leaving dependents held on an
+            // obstruction that has left; BlockedRecheck resumes them within its 1s cadence, so
+            // the churn is bounded and deliberately accepted. Being Walking-but-jammed is not a
+            // contradiction here: the strictly-nearer test below means such an anchor never
+            // blocks on its own dependents.
+            const auto NeighbourHasSettled =
+                ck_crowd_agent_settled_algorithm::Is_NeighbourSettled(
+                    NeighbourAgent, InMarkupAnchorsEnabled);
+            if (NOT NeighbourHasSettled)
+            { return {}; }
+
+            const auto NeighbourRadius = NeighbourAgent.Has<FFragment_CrowdAgent_Params>()
+                ? NeighbourAgent.Get<FFragment_CrowdAgent_Params>().Get_Radius()
+                : InSelfRadius;
+
+            const auto NeighbourDistanceToGoal =
+                static_cast<float>(FVector::Dist2D(InNeighbourCentre, InSelfGoal));
+
+            // Parked ON the destination — close enough that this agent could not stand where
+            // the neighbour does and still be short of its own arrival tolerance — OR already
+            // settled as part of the pack occupying it, in which case the allowance grows by
+            // one body diameter per ring already stacked up. That is the exact rate at which a
+            // physical pile grows outward, and because a chain only extends through agents that
+            // are themselves GoalCrowded, every chain bottoms out at a body genuinely standing
+            // on the destination.
+            const auto AnchorDepth = Get_AnchorCrowdDepth(InNeighbourHandle);
+            const auto GoalRegionRadius =
+                InSelfRadius + NeighbourRadius + InArrivalRadius + InContactPadCm +
+                (static_cast<float>(AnchorDepth) * (InSelfRadius + NeighbourRadius));
+
+            if (NeighbourDistanceToGoal > GoalRegionRadius)
+            { return {}; }
+
+            const auto NeighbourDistance =
+                static_cast<float>(FVector::Dist2D(InNeighbourCentre, InSelfLoc));
+            if (NeighbourDistance > InSelfRadius + NeighbourRadius + InContactPadCm)
+            { return {}; }
+
+            if (InPurpose == EAnchorTestPurpose::BlockDecision)
+            {
+                const auto SelfDistanceToGoal =
+                    static_cast<float>(FVector::Dist2D(InSelfLoc, InSelfGoal));
+                if (NeighbourDistanceToGoal >= SelfDistanceToGoal)
+                { return {}; }
+
+                const auto DirectionsAreMeasurable =
+                    SelfDistanceToGoal > DegenerateDirectionCm &&
+                    NeighbourDistance > DegenerateDirectionCm;
+
+                if (DirectionsAreMeasurable)
+                {
+                    const auto ToGoal = FVector2D{InSelfGoal - InSelfLoc}.GetSafeNormal();
+                    const auto ToNeighbour = FVector2D{InNeighbourCentre - InSelfLoc}.GetSafeNormal();
+
+                    if (FVector2D::DotProduct(ToGoal, ToNeighbour) < FrontalConeCosine)
+                    { return {}; }
+                }
+            }
+
+            return AnchorDepth;
+        }
+
         // Returns the settled neighbour the agent must come to rest behind, or an invalid handle.
         //
         // Get_GoalBlocker above answers only for whoever is in contact with the GOAL, so in a crowd
@@ -141,83 +235,93 @@ namespace ck
             bool InMarkupAnchorsEnabled,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> FCk_Handle
         {
-            const auto SelfDistanceToGoal = static_cast<float>(FVector::Dist2D(InSelfLoc, InSelfGoal));
-
             auto BestAnchor = FCk_Handle{};
             auto BestAnchorDepth = TNumericLimits<int32>::Max();
 
             for (const auto& Nbr : InNeighborCache.Get_Neighbors())
             {
-                const auto NeighbourAgent = UCk_Utils_CrowdAgent_UE::Cast(Nbr.Get_Handle());
-                if (ck::Is_NOT_Valid(NeighbourAgent))
-                { continue; }
-
-                // A markup anchor can unpaint by moving again, leaving dependents held on an
-                // obstruction that has left; BlockedRecheck resumes them within its 1s cadence, so
-                // the churn is bounded and deliberately accepted. Being Walking-but-jammed is not a
-                // contradiction here: the strictly-nearer test below means such an anchor never
-                // blocks on its own dependents.
-                const auto NeighbourHasSettled =
-                    ck_crowd_agent_settled_algorithm::Is_NeighbourSettled(
-                        NeighbourAgent, InMarkupAnchorsEnabled);
-                if (NOT NeighbourHasSettled)
-                { continue; }
-
-                const auto NeighbourRadius = NeighbourAgent.Has<FFragment_CrowdAgent_Params>()
-                    ? NeighbourAgent.Get<FFragment_CrowdAgent_Params>().Get_Radius()
-                    : InSelfRadius;
-
                 const auto NeighbourCentre = InSelfLoc + Nbr.Get_RelativeOffset();
-                const auto NeighbourDistanceToGoal =
-                    static_cast<float>(FVector::Dist2D(NeighbourCentre, InSelfGoal));
-
-                // Parked ON the destination — close enough that this agent could not stand where
-                // the neighbour does and still be short of its own arrival tolerance — OR already
-                // settled as part of the pack occupying it, in which case the allowance grows by
-                // one body diameter per ring already stacked up. That is the exact rate at which a
-                // physical pile grows outward, and because a chain only extends through agents that
-                // are themselves GoalCrowded, every chain bottoms out at a body genuinely standing
-                // on the destination.
-                const auto AnchorDepth = Get_AnchorCrowdDepth(Nbr.Get_Handle());
-                const auto GoalRegionRadius =
-                    InSelfRadius + NeighbourRadius + InArrivalRadius + InContactPadCm +
-                    (static_cast<float>(AnchorDepth) * (InSelfRadius + NeighbourRadius));
-
-                if (NeighbourDistanceToGoal > GoalRegionRadius)
+                const auto AnchorDepth = Get_AnchorQualifyingDepth(
+                    InSelfLoc, InSelfGoal, InSelfRadius, InArrivalRadius, InContactPadCm,
+                    InMarkupAnchorsEnabled, EAnchorTestPurpose::BlockDecision,
+                    Nbr.Get_Handle(), NeighbourCentre);
+                if (NOT AnchorDepth.IsSet())
                 { continue; }
-
-                const auto NeighbourDistance =
-                    static_cast<float>(FVector::Dist2D(NeighbourCentre, InSelfLoc));
-                if (NeighbourDistance > InSelfRadius + NeighbourRadius + InContactPadCm)
-                { continue; }
-
-                if (NeighbourDistanceToGoal >= SelfDistanceToGoal)
-                { continue; }
-
-                const auto DirectionsAreMeasurable =
-                    SelfDistanceToGoal > DegenerateDirectionCm &&
-                    NeighbourDistance > DegenerateDirectionCm;
-
-                if (DirectionsAreMeasurable)
-                {
-                    const auto ToGoal = FVector2D{InSelfGoal - InSelfLoc}.GetSafeNormal();
-                    const auto ToNeighbour = FVector2D{NeighbourCentre - InSelfLoc}.GetSafeNormal();
-
-                    if (FVector2D::DotProduct(ToGoal, ToNeighbour) < FrontalConeCosine)
-                    { continue; }
-                }
 
                 // Shallowest qualifier wins: stamping off a deeper anchor than we had to would
                 // inflate the allowance for everyone behind us through a chain we never needed.
                 // Neighbours arrive distance-sorted, so an equal-depth tie keeps the nearest.
-                if (AnchorDepth >= BestAnchorDepth)
+                if (AnchorDepth.GetValue() >= BestAnchorDepth)
                 { continue; }
 
                 BestAnchor = Nbr.Get_Handle();
-                BestAnchorDepth = AnchorDepth;
+                BestAnchorDepth = AnchorDepth.GetValue();
             }
 
             return BestAnchor;
+        }
+
+        // BlockedRecheck's scans read the top-N neighbour cache, and a rim holder in a settled
+        // pack no longer carries the goal's occupant among its N nearest bodies — the scans go
+        // blind exactly when everything is at rest, and the agent resumes into a crowd that never
+        // moved (observed: a lone resume half a second into the BunchUp quiet window). The body
+        // that actually caused the hold is therefore re-validated FIRST, by direct read; the
+        // scans only get to declare the goal clear once that body no longer qualifies under the
+        // same geometry that blocked on it.
+        auto Does_RememberedBlockerStillObstruct(
+            const FVector& InSelfLoc,
+            const FVector& InSelfGoal,
+            float InSelfRadius,
+            float InArrivalRadius,
+            float InContactPadCm,
+            float InStationarySpeedThreshold,
+            bool InMarkupAnchorsEnabled,
+            ECk_CrowdAgent_BlockedReason InCause,
+            const FCk_Handle& InBlockedBy) -> bool
+        {
+            if (ck::Is_NOT_Valid(InBlockedBy))
+            { return false; }
+
+            const auto BlockerTransform = UCk_Utils_Transform_UE::Cast(InBlockedBy);
+            if (ck::Is_NOT_Valid(BlockerTransform))
+            { return false; }
+
+            const auto BlockerCentre =
+                UCk_Utils_Transform_UE::Get_EntityCurrentLocation(BlockerTransform);
+
+            switch (InCause)
+            {
+                case ECk_CrowdAgent_BlockedReason::GoalOccupied:
+                {
+                    // Get_GoalBlocker's per-candidate test, sourced from the handle instead of a
+                    // cache row — minus the strictly-nearer guard, which binds the BLOCK decision
+                    // only (see EAnchorTestPurpose).
+                    const auto BlockerVelocity = UCk_Utils_Velocity_UE::Cast(InBlockedBy);
+                    const auto BlockerVel = ck::IsValid(BlockerVelocity)
+                        ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(BlockerVelocity)
+                        : FVector::ZeroVector;
+                    if (BlockerVel.Size2D() >= InStationarySpeedThreshold)
+                    { return false; }
+
+                    const auto CombinedRadius = InSelfRadius + InSelfRadius;
+                    const auto ClosestApproach = CombinedRadius - InArrivalRadius;
+                    if (ClosestApproach <= 0.0f)
+                    { return false; }
+
+                    return FVector::Dist2D(BlockerCentre, InSelfGoal) < ClosestApproach;
+                }
+                case ECk_CrowdAgent_BlockedReason::GoalCrowded:
+                {
+                    return Get_AnchorQualifyingDepth(
+                        InSelfLoc, InSelfGoal, InSelfRadius, InArrivalRadius, InContactPadCm,
+                        InMarkupAnchorsEnabled, EAnchorTestPurpose::HoldRevalidation,
+                        InBlockedBy, BlockerCentre).IsSet();
+                }
+                default:
+                {
+                    return false;
+                }
+            }
         }
 
         // What the agent still has to walk: the leg to its current waypoint plus the polyline tail.
@@ -581,6 +685,18 @@ namespace ck
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
 
         const auto SelfLoc = InTransform.Get_Transform().GetLocation();
+
+        if (ck_crowdagent_blockdetect::Does_RememberedBlockerStillObstruct(
+                SelfLoc,
+                InPathFollow.Get_ActiveGoal(),
+                InParams.Get_Radius(),
+                InPathFollow.Get_ActiveArrivalRadius(),
+                Settings->Get_CrowdedGoalContactPadCm(),
+                Settings->Get_BlockedStationarySpeedThreshold(),
+                Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled,
+                InBlockDetect.Get_BlockedCause(),
+                InBlockDetect.Get_BlockedBy()))
+        { return; }
 
         // A held agent is stationary, so neighbour relative velocity IS absolute velocity — hence
         // the zero self-velocity argument.
