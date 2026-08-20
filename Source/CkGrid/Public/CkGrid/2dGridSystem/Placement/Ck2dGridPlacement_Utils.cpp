@@ -216,6 +216,51 @@ auto
 
 auto
     UCk_Utils_2dGridPlacement_UE::
+    Get_Grid(
+        const FCk_Handle_2dGridPlacement& InPlacement)
+    -> FCk_Handle_2dGridSystem
+{
+    // An invalid placement is the ordinary "this occupant is not placed" answer, not an anomaly — the
+    // caller reaches here through Get_PlacementForOccupant, which returns an invalid handle for exactly
+    // that case. Answering with an invalid handle keeps the whole chain one branch for the consumer.
+    if (ck::Is_NOT_Valid(InPlacement))
+    { return {}; }
+
+    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Grid();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridPlacement_UE::
+    Get_Anchor(
+        const FCk_Handle_2dGridPlacement& InPlacement)
+    -> FIntPoint
+{
+    if (ck::Is_NOT_Valid(InPlacement))
+    { return FIntPoint::ZeroValue; }
+
+    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Anchor();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridPlacement_UE::
+    Get_Rotation(
+        const FCk_Handle_2dGridPlacement& InPlacement)
+    -> ECk_CardinalRotation
+{
+    if (ck::Is_NOT_Valid(InPlacement))
+    { return ECk_CardinalRotation::None; }
+
+    return InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>().Get_Rotation();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_2dGridPlacement_UE::
     Request_Place(
         FCk_Handle_2dGridSystem& InGrid,
         FCk_Handle& InOccupant,
