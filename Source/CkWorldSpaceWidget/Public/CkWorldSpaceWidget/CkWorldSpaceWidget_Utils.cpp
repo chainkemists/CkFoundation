@@ -212,8 +212,7 @@ auto
     WidgetComponent->SetTwoSided(WorldComponentInfo.Get_TwoSided());
     WidgetComponent->SetMobility(EComponentMobility::Movable);
 
-    constexpr auto TickEvenWhenOffscreen = true;
-    WidgetComponent->SetTickWhenOffscreen(TickEvenWhenOffscreen);
+    WidgetComponent->SetTickWhenOffscreen(WorldComponentInfo.Get_TickWhenOffscreen());
 
     // The component roots the applied material; resolution is resident-or-fail because this
     // creation path is synchronous — there is no deferred setup to queue a load behind.

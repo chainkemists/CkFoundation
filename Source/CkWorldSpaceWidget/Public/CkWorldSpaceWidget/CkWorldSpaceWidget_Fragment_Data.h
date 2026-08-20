@@ -100,6 +100,18 @@ private:
         meta=(AllowPrivateAccess = true))
     bool _TwoSided = false;
 
+    // UWidgetComponent::TickComponent re-renders the widget into its render target every tick. With
+    // this false (the engine default) it early-outs on a component that has not been rendered
+    // recently, so an off-screen widget costs nothing; with it true every widget in the level pays
+    // full redraw whether or not anyone can see it.
+    //
+    // Set it only for a widget whose render target is CONSUMED off-screen — something sampling the
+    // texture elsewhere. The cost of leaving it on is paid by every instance, every frame; the cost
+    // of leaving it off is one stale frame the first time a widget comes back into view.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    bool _TickWhenOffscreen = false;
+
     // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
     // never walks the EnTT registry). Resolved resident-or-fail at the synchronous creation site —
     // no deferred setup to queue a load behind.
@@ -114,6 +126,7 @@ public:
     CK_PROPERTY(_BlendMode);
     CK_PROPERTY(_GeometryMode);
     CK_PROPERTY(_TwoSided);
+    CK_PROPERTY(_TickWhenOffscreen);
     CK_PROPERTY(_OverrideMaterial);
 
     CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_WorldComponentInfo, _DrawSize);
