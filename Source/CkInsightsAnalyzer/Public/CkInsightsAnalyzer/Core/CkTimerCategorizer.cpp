@@ -229,14 +229,25 @@ auto
         TEXT("Queue Ticks"), TEXT("Flip Results"),
     });
 
+    // The second row is evidence-driven: each entry was observed landing in "Other" in a real
+    // capture because the scope name carries no other Slate token. Keep additions here NARROW —
+    // this category is matched third, so a broad keyword silently steals rows from ECS and the
+    // game category below.
     AddCategory(TEXT("Slate/UI"), {
         TEXT("Slate"), TEXT("Widget"), TEXT("WBP_"), TEXT("SlateFontCache"), TEXT("Freetype"),
         TEXT("Load Font"), TEXT("Shape Bidirectional"), TEXT("SlatePrepass"), TEXT("SlateRender"),
         TEXT("_Paint"), TEXT("ScreenWidget"), TEXT("SWidget"),
+
+        TEXT("Paint: "), TEXT("VisibilityAttributes"), TEXT("Text Layout"),
+        TEXT("GatherWindowElements"), TEXT("Tooltip"), TEXT("DrawStringInternal"),
+        TEXT("QueryCursor"), TEXT("ProcessMouse"), TEXT("ProcessKey"), TEXT("HitTestGrid"),
+        TEXT("SConstraintCanvas"),
     });
 
+    // "SceneQuery" (covering SceneQueryTotal and the engine's UnknownSceneQuery) is safe to widen:
+    // no Ck module declares a scope containing it, so nothing is pulled out of ECS below.
     AddCategory(TEXT("Scene Queries"), {
-        TEXT("SceneQueryTotal"), TEXT("EnvQueryOverlap"),
+        TEXT("SceneQuery"), TEXT("EnvQueryOverlap"),
     });
 
     AddCategory(TEXT("Physics (UE Overlaps)"), {
@@ -255,8 +266,11 @@ auto
         TEXT("JointConstraintPhysicsProxy"),
     });
 
+    // "JoltWorld_Step" is deliberately exact, not a bare "Jolt" or "JoltWorld": this category
+    // outranks ECS below, so a broader token pulls ck::FProcessor_JoltWorld_* out of ECS (CK)
+    // and silently changes attribution that existing captures were measured against.
     AddCategory(TEXT("Physics (Jolt)"), {
-        TEXT("JoltPhysics"),
+        TEXT("JoltPhysics"), TEXT("JoltWorld_Step"), TEXT("JoltContacts"),
     });
 
     AddCategory(TEXT("Character Movement"), {
@@ -273,6 +287,7 @@ auto
         TEXT("BeginRenderingViewFamily"), TEXT("DeferredRenderUpdates"),
         TEXT("Transform or RenderData"), TEXT("StaticMeshComponent"),
         TEXT("D3D12"), TEXT("LockBuffer"), TEXT("UnlockBuffer"),
+        TEXT("AddPrimitive"), TEXT("GetStreamingRenderAssetInfo"),
     });
 
     AddCategory(TEXT("AI/BehaviorTree"), {
@@ -284,10 +299,18 @@ auto
         TEXT("Recast"), TEXT("Nav Tick"), TEXT("Navigation_"), TEXT("NavMesh"), TEXT("ZoneGraph"),
     });
 
+    // The second row covers Ck scopes declared via DECLARE_CYCLE_STAT with a bare subsystem
+    // prefix rather than a ck:: / Ck_ token — they carry no other category keyword and were
+    // landing in "Other". Known residual: "Scheduler::MainPass" still matches Rendering's
+    // "MainPass" keyword (matched at a higher priority). It is ~0.04 ms exclusive, and narrowing
+    // Rendering would mis-bin Nanite's own bare "MainPass" RDG scope, so it is left alone.
     AddCategory(TEXT("ECS (CK)"), {
         TEXT("ck::"), TEXT("Ck_"), TEXT("CkFoundation"),
         TEXT("AC_Fragment"), TEXT("ObjectReplicator"), TEXT("EcsWorld"),
         TEXT("script::"),   // scheduler-emitted script-processor scopes (see CkProcessorScheduler.cpp)
+
+        TEXT("Scheduler::"), TEXT("SmTask::"), TEXT("Sm::"), TEXT("EntityTag::"),
+        TEXT("Record::ForEach"), TEXT("Ism::"), TEXT("DestroyEntities"),
     });
 
     AddCategory(TEXT("Networking"), {
@@ -311,6 +334,8 @@ auto
         TEXT("BB_"), TEXT("VHS_"), TEXT("ItemActor"), TEXT("Store"), TEXT("Customer"),
         TEXT("Employee"), TEXT("ThrowBox"), TEXT("Checkout"), TEXT("BusterBlock"),
         TEXT("NPC"), TEXT("_BB_BP"), TEXT("Bb_"),
+
+        TEXT("BehaviorLeaf"), TEXT("Locomotion"), TEXT("Minimap"), TEXT("HeadCutaway"),
     });
 }
 
