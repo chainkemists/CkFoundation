@@ -1,4 +1,4 @@
-#include "CkPixelArtRender/CkPixelArtRender_SnapMath.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_SnapMath.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -61,6 +61,24 @@ namespace ck::pixel_art
         { return 0.0; }
 
         return 2.0 / HorizontalScale;
+    }
+
+    auto
+        Apply_MarginFold(
+            FMatrix& InOutProjection,
+            const FIntPoint& InInnerSize,
+            const FIntPoint& InRenderSize)
+        -> void
+    {
+        if (InInnerSize.X <= 0 || InInnerSize.Y <= 0 || InRenderSize.X <= 0 || InRenderSize.Y <= 0)
+        { return; }
+
+        const auto HorizontalScale =
+            static_cast<double>(InInnerSize.X) / static_cast<double>(InRenderSize.X);
+
+        InOutProjection.M[0][0] *= HorizontalScale;
+        InOutProjection.M[1][1] = InOutProjection.M[0][0] *
+            (static_cast<double>(InRenderSize.X) / static_cast<double>(InRenderSize.Y));
     }
 
     auto

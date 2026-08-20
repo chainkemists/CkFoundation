@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FCkPixelArtRenderModule : public IModuleInterface
+class FCkPixelArtRendererModule : public IModuleInterface
 {
 public:
     virtual void StartupModule() override;
