@@ -760,6 +760,28 @@ verdict below.
   and pixels would creep. Nobody has asked for letterboxed pixel-art; a matrix row can be added when someone
   does.
 
+### Maintainer follow-up: residual `!` instead of `NOT`
+
+Reported on reading the review's output. Sweep result across every NOT-mandatory C++ file the feature
+touches (CkPixelArt, CkCamera, all CkTests pixel-art test files): the offender was
+`Test_Usf_PixelArtLookContract.cpp` — four bare `!` and one `!= nullptr` on a UObject that review #2's
+idiom pass missed (it converted the other four unit-test files and this one slipped). Fixed: `NOT` with the
+explicit `CkCore/Macros/CkMacros.h` include the sibling tests carry, and `ck::IsValid` on the asset-registry
+`Cast` result. NOT re-touched, with the reason: the `!` in `CkPixelArtRenderer` is the Tier-0 exemption
+(the module cannot reach CkCore, where `NOT` lives — its own `Claude.md` § "Why this module can use no Ck
+code at all"), `!`/`== false` in `.as` is Script/CLAUDE.md's own rule (no `NOT` macro exists there), and the
+raw `IConsoleVariable*`/lease-pointer `== nullptr` checks in `CkPixelArt_Subsystem.cpp` were considered and
+left by review #2 (raw engine-interface pointers, not UObjects).
+
+Gate after the fix (`--build --test --no-live`, log `Saved/Logs/BuildTest-NotMacroFix.log`):
+**1206 / 1202 / 4** — the three standing names plus `Ck_AutoTest_CkJolt_SphereRollsDownRampToBottom`,
+dispositioned as PARALLEL-LANE FLAKE, not a regression: it passes in isolation on the SAME binary
+(`Test-JoltIsolated.log`, 1/1), it passed in the full run forty minutes earlier whose only delta is this
+six-line test-TU style edit, and a physics AutoTest has no causal path from a `NOT`-macro substitution in
+a CkUsf contract test. This is the documented lane-contention signature (physics/settle-timer tests under
+3-lane load). `MatchesEntrySignature` itself green in the same run. A `--parallel 1` serial gate is the
+stronger discriminator if the maintainer wants it on record.
+
 ### H-queue mechanization (the "convert human verification into machine verification" task)
 
 - **Moved into the suite:** H-4's runtime half. Two new unit tests pin the engine behaviour D4 rests on:
