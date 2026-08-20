@@ -68,6 +68,9 @@ namespace ck
         InCurrent._ResultsPerRequirement.Emplace(TArray<FCk_Handle>{});
         InCurrent._PendingAdded.Emplace(TArray<FCk_Handle>{});
         InCurrent._PendingRemoved.Emplace(TArray<FCk_Handle>{});
+
+        // A new requirement has no cached results, and its tag version snapshot does not exist yet.
+        InCurrent._NeedsEvaluate = true;
     }
 
     auto
@@ -99,6 +102,10 @@ namespace ck
         {
             InCurrent._PendingRemoved.RemoveAt(Index);
         }
+
+        // Satisfaction is computed across every requirement, so dropping one can flip it without
+        // any tag having mutated.
+        InCurrent._NeedsEvaluate = true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -112,6 +119,51 @@ namespace ck
         -> void
     {
         request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTagQuery_Evaluate::
+        DoTryConsume_UnchangedTagVersions(
+            HandleType InHandle,
+            FFragment_EntityTagQuery_Current& InCurrent)
+        -> bool
+    {
+        const auto& Requirements = InCurrent._Requirements;
+        auto& LastSeen = InCurrent._LastSeenTagVersionPerRequirement;
+
+        const auto Registry = InHandle.Get_RegistryView();
+
+        const auto Get_TagVersion = [&Registry](const FCk_EntityTagQuery_Requirement& InRequirement) -> uint64
+        {
+            return Registry.Get_DirtyMarkerVersion(entt::id_type{GetTypeHash(InRequirement.Get_Tag())});
+        };
+
+        auto VersionsAreUnchanged =
+            NOT InCurrent._NeedsEvaluate &&
+            LastSeen.Num() == Requirements.Num();
+
+        for (auto Index = 0; VersionsAreUnchanged && Index < Requirements.Num(); ++Index)
+        {
+            VersionsAreUnchanged = LastSeen[Index] == Get_TagVersion(Requirements[Index]);
+        }
+
+        if (VersionsAreUnchanged)
+        { return true; }
+
+        // Stamped BEFORE the pass runs, not after: a tag mutation raised during this pass (the
+        // append scan can add tracking fragments) must leave the version ahead of the snapshot so
+        // the next pass re-runs rather than trusting a stamp taken after its own writes.
+        LastSeen.SetNum(Requirements.Num());
+        for (auto Index = 0; Index < Requirements.Num(); ++Index)
+        {
+            LastSeen[Index] = Get_TagVersion(Requirements[Index]);
+        }
+
+        InCurrent._NeedsEvaluate = false;
+
+        return false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -145,6 +197,14 @@ namespace ck
         {
             InCurrent._PendingRemoved.SetNum(Requirements.Num());
         }
+
+        // Nothing below can change a result set, flip satisfaction, or broadcast unless some entity
+        // gained or lost one of this query's tags — the tail of this function is already delta-only.
+        // So an unchanged version per requirement makes the whole pass provably a no-op, and the
+        // per-frame prune / append / ensure scans (each of which walks the tag's whole storage) can
+        // be skipped outright.
+        if (DoTryConsume_UnchangedTagVersions(InHandle, InCurrent))
+        { return; }
 
         auto AnyAppendedThisPass = false;
 
@@ -371,7 +431,18 @@ namespace ck
                     return H == InHandle;
                 });
 
-                if (RemovedCount > 0 && i < Current._PendingRemoved.Num())
+                if (RemovedCount == 0)
+                { continue; }
+
+                // Outside the bounds guard below on purpose: an entity was scrubbed from the
+                // results either way, so satisfaction must be re-tested. Leaving this inside the
+                // guard means a defensive array mismatch strands _IsSatisfied stale AND lets the
+                // version gate skip every later pass — before the gate existed the next
+                // unconditional pass self-healed that. An entity dying mutates no tag storage, so
+                // nothing else would re-arm it.
+                Current._NeedsEvaluate = true;
+
+                if (i < Current._PendingRemoved.Num())
                 {
                     Current._PendingRemoved[i].AddUnique(FCk_Handle{InHandle});
                 }
