@@ -70,6 +70,7 @@ namespace ck
             InFaceAngle._TargetYaw = Commit_TrackedYaw(
                 InFaceAngle.Get_TargetYaw(),
                 static_cast<float>(FMath::Atan2(Heading.Y, Heading.X)),
+                FMath::DegreesToRadians(UCk_Utils_Crowd_Settings_UE::Get()->Get_FacingDeadBandDeg()),
                 InFaceAngle._PendingTargetYaw,
                 InFaceAngle._PendingTargetFrames);
         }
