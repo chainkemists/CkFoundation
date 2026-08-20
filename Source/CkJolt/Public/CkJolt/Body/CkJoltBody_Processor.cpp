@@ -185,7 +185,9 @@ namespace ck
         const auto& EntityTransform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
         const auto EntityLocation = EntityTransform.GetLocation();
         const auto EntityRotation = EntityTransform.GetRotation();
-        const auto EntityScale = EntityTransform.GetScale3D();
+        // _ShapeScale folds into the build scale for owners whose display scale lives outside the
+        // entity transform (see its declaration). Setup-time only, like every other shape input.
+        const auto EntityScale = EntityTransform.GetScale3D() * InParams.Get_ShapeScale();
 
         const auto DebugName = ck::Format_UE(TEXT("JoltBody [{}]"), InHandle);
 
