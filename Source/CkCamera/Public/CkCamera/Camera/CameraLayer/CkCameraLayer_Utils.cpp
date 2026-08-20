@@ -364,6 +364,11 @@ auto UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_AspectRatio(FCk_Handle_Cam
     return DoAcquire_Float(InLayer, DoGet_OwningCamera(InLayer).Get<ck::FFragment_Camera_Sensor>()._AspectRatio, InOp, InTarget, ECk_MinMaxCurrent::Current);
 }
 
+auto UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_OrthoWidth(FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOp, float InTarget) -> FCk_Handle_FloatAttributeModifier
+{
+    return DoAcquire_Float(InLayer, DoGet_OwningCamera(InLayer).Get<ck::FFragment_Camera_Sensor>()._OrthoWidth, InOp, InTarget, ECk_MinMaxCurrent::Current);
+}
+
 // ---- Noise ----
 auto UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_NoisePitchSpeed(FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOp, float InTarget) -> FCk_Handle_FloatAttributeModifier
 {

@@ -16,6 +16,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Springs_LookAtLocationInterpSpeed,    TEXT("Ca
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Sensor_FOV,         TEXT("Camera.Sensor.FOV"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Sensor_AspectRatio, TEXT("Camera.Sensor.AspectRatio"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Sensor_OrthoWidth,  TEXT("Camera.Sensor.OrthoWidth"));
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Noise_Pitch_Speed,                TEXT("Camera.Noise.Pitch.Speed"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_Camera_Noise_Pitch_Limits,               TEXT("Camera.Noise.Pitch.Limits"));
