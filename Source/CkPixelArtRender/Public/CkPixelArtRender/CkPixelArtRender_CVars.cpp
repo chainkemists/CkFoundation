@@ -83,6 +83,36 @@ namespace ck_pixel_art_cvars
         Get_ChangedDelegate(),
         ECVF_Default);
 
+    int32 CVarPixelArt_SnapOnly = 0;
+    static FAutoConsoleVariableRef CVarPixelArt_SnapOnly_Ref(
+        TEXT("ck.PixelArt.Debug.SnapOnly"),
+        CVarPixelArt_SnapOnly,
+        TEXT("Snap the camera to the texel grid WITHOUT re-applying the sub-texel remainder. 0 off, 1 on.\n")
+        TEXT("The picture must visibly advance in whole texels — that is the proof the snap is actually live,\n")
+        TEXT("and the middle state between creeping pixels and finished smooth motion."),
+        Get_ChangedDelegate(),
+        ECVF_Cheat);
+
+    int32 CVarPixelArt_FreezeSnap = 0;
+    static FAutoConsoleVariableRef CVarPixelArt_FreezeSnap_Ref(
+        TEXT("ck.PixelArt.Debug.FreezeSnap"),
+        CVarPixelArt_FreezeSnap,
+        TEXT("Hold the last snapped view origin instead of snapping the live one. 0 off, 1 on.\n")
+        TEXT("The image must stop moving while the gameplay camera keeps going, which separates a render-side\n")
+        TEXT("problem from a camera-side one."),
+        Get_ChangedDelegate(),
+        ECVF_Cheat);
+
+    float CVarPixelArt_CompSign = 1.0f;
+    static FAutoConsoleVariableRef CVarPixelArt_CompSign_Ref(
+        TEXT("ck.PixelArt.Debug.CompSign"),
+        CVarPixelArt_CompSign,
+        TEXT("Multiplier on the snap compensation applied by the upscaler: 1 derived default, -1 inverted.\n")
+        TEXT("If motion looks smooth but the picture still creeps, the compensation is being applied the wrong\n")
+        TEXT("way round and this settles it without a rebuild."),
+        Get_ChangedDelegate(),
+        ECVF_Cheat);
+
     int32 CVarPixelArt_LogState = 0;
     static FAutoConsoleVariableRef CVarPixelArt_LogState_Ref(
         TEXT("ck.PixelArt.Debug.LogState"),
@@ -127,5 +157,17 @@ namespace ck::pixel_art
         -> bool
     {
         return ck_pixel_art_cvars::CVarPixelArt_LogState != 0;
+    }
+
+    auto
+        Get_DebugSnapOverrides()
+        -> FCk_PixelArt_DebugSnapOverrides
+    {
+        auto Overrides = FCk_PixelArt_DebugSnapOverrides{};
+        Overrides.SnapOnly = ck_pixel_art_cvars::CVarPixelArt_SnapOnly != 0;
+        Overrides.FreezeSnap = ck_pixel_art_cvars::CVarPixelArt_FreezeSnap != 0;
+        Overrides.CompensationSign = ck_pixel_art_cvars::CVarPixelArt_CompSign >= 0.0f ? 1.0f : -1.0f;
+
+        return Overrides;
     }
 }
