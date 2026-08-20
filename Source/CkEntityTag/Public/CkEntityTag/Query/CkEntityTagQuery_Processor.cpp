@@ -140,22 +140,15 @@ namespace ck
             return Registry.Get_DirtyMarkerVersion(entt::id_type{GetTypeHash(InRequirement.Get_Tag())});
         };
 
-        const auto VersionsAreUnchanged = [&]() -> bool
-        {
-            if (InCurrent._NeedsEvaluate)
-            { return false; }
-
-            if (LastSeen.Num() != Requirements.Num())
-            { return false; }
-
-            for (auto Index = 0; Index < Requirements.Num(); ++Index)
-            {
-                if (LastSeen[Index] != Get_TagVersion(Requirements[Index]))
-                { return false; }
-            }
-
-            return true;
-        }();
+        // ck::algo::Compare treats a size mismatch as a plain false, which is exactly the
+        // "requirement set changed shape" case — no separate Num() check needed.
+        const auto VersionsAreUnchanged =
+            NOT InCurrent._NeedsEvaluate &&
+            ck::algo::Compare(LastSeen, Requirements,
+                [&](uint64 InSeenVersion, const FCk_EntityTagQuery_Requirement& InRequirement)
+                {
+                    return InSeenVersion == Get_TagVersion(InRequirement);
+                });
 
         if (VersionsAreUnchanged)
         { return true; }

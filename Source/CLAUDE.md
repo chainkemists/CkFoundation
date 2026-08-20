@@ -651,11 +651,20 @@ Disambiguate per-type via `DoHandleRequest` overloads on the handler side.
 | `ForEach` | container, iterator, `IsValid` variants | |
 | `ForEachRequest` | `TArray`, `TOptional`, `DontResetContainer` policy | request draining |
 | `AllOf` / `AnyOf` / `NoneOf` | container, iterator | |
+| `Compare(A, B)` | `operator==`, predicate | pairwise over two ranges; size mismatch = plain `false` |
 | `FindIf` | iterator, `TOptional` return | |
 | `CountIf` / `FindIndex` | container | |
 
 Projection overloads take a member-function pointer as the projected key, e.g.
 `ck::algo::Except(Current, Previous, &FCk_InventoryItem_ReplicatedEntry::Get_ItemHandle)`.
+
+**Algos first — and grow the library when one is missing.** Reach for `ck::algo` before writing a
+raw loop. When the shape you need is not in the table (a zip/pairwise compare was the last gap),
+do NOT hand-roll it at the call site: add the algo to `CkAlgorithms.h` / `CkAlgorithms.inl.h` —
+declaration + split-signature impl delegating to the UE `Algo::` or `std::` equivalent when one
+exists — extend the table above, then use it. One caveat gates this: on a per-frame path, prefer
+the allocation-free formulation (e.g. `Compare` with a predicate) over an algo that materialises a
+temporary container (`Transform`-then-compare).
 
 ### Technique pipeline (`ck::Technique`)
 
