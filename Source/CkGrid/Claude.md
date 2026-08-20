@@ -61,6 +61,14 @@ comes back as `entt::null`), and `Request_AddPlacement` adds the placement and i
 `NotReady` gate on the occupant would never flip and would drop the whole payload once the
 dispatcher timeout expired.
 
+What survives a load is the placement — grid, anchor, rotation, cells — and
+`UCk_Utils_2dGridPlacement_UE::Get_Grid` / `Get_Anchor` / `Get_Rotation` read those back off a live
+placement handle (pair them with `UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant` to go
+occupant → placement → args). They store nothing; they exist so a consumer whose own DERIVED state is
+`Session` — a navmesh cut, a footprint outline — can rebuild it from the placement after a load
+instead of re-running the spatial resolve that produced the anchor, which would be a second
+implementation of placement math free to drift from this one.
+
 ---
 
 ## See also

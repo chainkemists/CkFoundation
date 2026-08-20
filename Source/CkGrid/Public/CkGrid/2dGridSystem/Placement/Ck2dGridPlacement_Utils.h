@@ -49,6 +49,36 @@ public:
         ECk_CardinalRotation InRotation);
 
 public:
+    // READ-BACK of what a live placement was made with. Nothing new is stored: Request_AddPlacement already
+    // writes the grid, anchor and rotation onto the entry, and the occupancy persistence handler already
+    // round-trips them (Ck2dGridOccupancy_Fragment.cpp re-registers from Entry.Get_Anchor()/Get_Rotation()).
+    // Without a reader, a consumer whose own DERIVED state is Session — a navmesh cut, a footprint outline —
+    // has no way to re-derive it after a load except by re-running the spatial resolve that produced the
+    // anchor in the first place, which is a second implementation of placement math and drifts from this one.
+    //
+    // Pair with UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant to go occupant -> placement -> args.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridPlacement",
+              DisplayName="[Ck][2dGridPlacement] Get Grid")
+    static FCk_Handle_2dGridSystem
+    Get_Grid(
+        const FCk_Handle_2dGridPlacement& InPlacement);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridPlacement",
+              DisplayName="[Ck][2dGridPlacement] Get Anchor")
+    static FIntPoint
+    Get_Anchor(
+        const FCk_Handle_2dGridPlacement& InPlacement);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|2dGridPlacement",
+              DisplayName="[Ck][2dGridPlacement] Get Rotation")
+    static ECk_CardinalRotation
+    Get_Rotation(
+        const FCk_Handle_2dGridPlacement& InPlacement);
+
+public:
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|2dGridPlacement",
