@@ -15,15 +15,19 @@ struct FCk_PixelArt_UpscaleFrame
 {
     // Internal view rect size the game thread drove the screen percentage towards. The pass reads the rect it is
     // actually handed; this is here so a breadcrumb can name a disagreement between the two.
-    FIntPoint InternalSize = FIntPoint::ZeroValue;
+    FIntPoint RenderSize = FIntPoint::ZeroValue;
 
-    // Remainder of the camera's texel-grid snap, in source texels, re-applied by the upscale shader so motion
-    // stays sub-texel smooth while the raster stays grid-aligned. Zero means "camera not snapped".
+    // The displayed window inside that render: the rendered image is larger on every side so shifting the
+    // sampling window by the snap remainder never reads texels that were never rendered. The offset is not
+    // necessarily symmetric — the vertical margin is what the engine's rounding leaves once the horizontal one is
+    // chosen, and the surplus row goes to the bottom.
+    FIntPoint InnerOffsetTexels = FIntPoint::ZeroValue;
+    FIntPoint InnerSizeTexels = FIntPoint::ZeroValue;
+
+    // Remainder of the camera's texel-grid snap, already converted to a source-texel shift for the shader: the
+    // horizontal component as-is, the vertical one negated because V grows downward. Adding it to the sampled
+    // position moves the displayed content the way the un-snapped camera would have. Zero means "not snapped".
     FVector2f SubTexelOffsetTexels = FVector2f::ZeroVector;
-
-    // Texels rendered beyond the displayed window on each side, so shifting the sampling window by the remainder
-    // above never reads outside the rendered image. Callers guarantee InternalSize > 2 * MarginTexels per axis.
-    int32 MarginTexels = 0;
 
     ECk_PixelArt_UpscaleFilter FilterMode = ECk_PixelArt_UpscaleFilter::BoxFilter;
 };

@@ -2,9 +2,11 @@
 
 #include "CkPixelArtRender/CkPixelArtRender_CVars.h"
 #include "CkPixelArtRender/CkPixelArtRender_Log.h"
+#include "CkPixelArtRender/CkPixelArtRender_SnapMath.h"
 #include "CkPixelArtRender/CkPixelArtRender_Upscaler.h"
 #include "CkPixelArtRender/CkPixelArtRender_Utils.h"
 
+#include "CoreGlobals.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CoreDelegates.h"
@@ -130,6 +132,8 @@ auto
     auto Config = ck_pixel_art_view_extension::TryGet_EffectiveConfig(World);
 
     _FrameConfig.Reset();
+    _FrameReport.Reset();
+    _FrameWorld = World;
 
     if (!Config.IsSet() || !Config->Enabled)
     { return; }
@@ -152,11 +156,97 @@ auto
 
 auto
     FCk_PixelArt_ViewExtension::
+    SetupViewProjectionMatrix(
+        FSceneViewProjectionData& InOutProjectionData)
+    -> void
+{
+    if (!_FrameConfig.IsSet() || !_FrameReport.IsSet())
+    { return; }
+
+    auto& Report = *_FrameReport;
+
+    const auto GeometryIsUsable =
+        Report.InnerSizeTexels.X > 0 && Report.InnerSizeTexels.Y > 0 &&
+        Report.RenderSize.X > 0 && Report.RenderSize.Y > 0;
+
+    if (!GeometryIsUsable)
+    { return; }
+
+    // The margin fold, applied to perspective and orthographic views alike: the scene is being rasterized into
+    // more texels than are displayed, so the projection has to cover proportionally more world or the extra
+    // texels would come out of the framing instead of being added to it.
+    //
+    // Horizontal first, because width is the axis the screen percentage lands exactly. The vertical term is then
+    // DERIVED from the rendered aspect rather than scaled by the same factor: the engine takes CeilToInt of the
+    // rendered height, so scaling both by one number would leave texels a fraction of a percent off square, and
+    // square texels are the whole premise of the look.
+    const auto HorizontalScale =
+        static_cast<double>(Report.InnerSizeTexels.X) / static_cast<double>(Report.RenderSize.X);
+
+    // Read before the fold: this is the world width the CAMERA framed, spread over the DISPLAYED texels, which
+    // is the mapping the player sees and therefore the one the snap has to align to. The fold widens the world
+    // span and the texel count by the same ratio, so it leaves this number alone by construction.
+    const auto AuthoredOrthoWidth =
+        ck::pixel_art::Get_OrthoWidthFromProjection(InOutProjectionData.ProjectionMatrix);
+
+    InOutProjectionData.ProjectionMatrix.M[0][0] *= HorizontalScale;
+    InOutProjectionData.ProjectionMatrix.M[1][1] =
+        InOutProjectionData.ProjectionMatrix.M[0][0] *
+        (static_cast<double>(Report.RenderSize.X) / static_cast<double>(Report.RenderSize.Y));
+
+    // No ensure: a perspective view is a legitimate state that the look simply is not stabilized for. One
+    // world-space snap displaces near and far geometry by different screen amounts, so there is no snap that
+    // corrects all depths — the technique is orthographic-only by construction, not by omission.
+    if (InOutProjectionData.IsPerspectiveProjection())
+    { return; }
+
+    const auto Overrides = ck::pixel_art::Get_DebugSnapOverrides();
+
+    if (!_FrameConfig->SnapEnabled)
+    {
+        _FrozenViewOrigin.Reset();
+        return;
+    }
+
+    if (Overrides.FreezeSnap)
+    {
+        if (!_FrozenViewOrigin.IsSet())
+        { _FrozenViewOrigin = InOutProjectionData.ViewOrigin; }
+
+        InOutProjectionData.ViewOrigin = *_FrozenViewOrigin;
+        return;
+    }
+
+    _FrozenViewOrigin.Reset();
+
+    const auto TexelWorldSize = AuthoredOrthoWidth / Report.InnerSizeTexels.X;
+
+    if (TexelWorldSize <= 0.0)
+    { return; }
+
+    auto RemainderTexels = FVector2f::ZeroVector;
+
+    InOutProjectionData.ViewOrigin = ck::pixel_art::Get_SnappedViewOrigin(
+        InOutProjectionData.ViewOrigin,
+        InOutProjectionData.ViewRotationMatrix,
+        TexelWorldSize,
+        RemainderTexels);
+
+    Report.TexelWorldSize = TexelWorldSize;
+    Report.SnappedViewOrigin = InOutProjectionData.ViewOrigin;
+    Report.RemainderTexels = Overrides.SnapOnly ? FVector2f::ZeroVector : RemainderTexels;
+    Report.SnapApplied = true;
+
+    FCk_PixelArtRender_StateRegistry::Set_FrameReport(_FrameWorld.Get(), Report);
+}
+
+auto
+    FCk_PixelArt_ViewExtension::
     BeginRenderViewFamily(
         FSceneViewFamily& InViewFamily)
     -> void
 {
-    if (!_FrameConfig.IsSet() || InViewFamily.Views.Num() == 0)
+    if (!_FrameConfig.IsSet() || !_FrameReport.IsSet() || InViewFamily.Views.Num() == 0)
     { return; }
 
     // Scene and reflection captures have no view state and are explicitly out of scope: they bypass the
@@ -211,10 +301,31 @@ auto
     if (InViewFamily.GetPrimarySpatialUpscalerInterface() != nullptr)
     { return; }
 
+    const auto& Report = *_FrameReport;
+
+    // A report stamped with an older frame means the projection hook did not run this frame — a stereo path, or a
+    // view that is not a local player's. Compensating with the previous frame's remainder would smear the image
+    // by up to a texel in an unpredictable direction, so the frame renders snapped but uncompensated instead.
+    const auto SnapIsFromThisFrame = Report.SnapApplied && Report.FrameNumber == GFrameCounter;
+
+    const auto CompensationSign = ck::pixel_art::Get_DebugSnapOverrides().CompensationSign;
+
     auto Frame = FCk_PixelArt_UpscaleFrame{};
-    Frame.InternalSize = _LastInternalSize;
-    Frame.MarginTexels = _LastMarginTexels;
+    Frame.RenderSize = Report.RenderSize;
+    Frame.InnerOffsetTexels = Report.InnerOffsetTexels;
+    Frame.InnerSizeTexels = Report.InnerSizeTexels;
     Frame.FilterMode = _FrameConfig->FilterMode;
+
+    // Sampling further right in the source puts content that was further right at the current screen position,
+    // which moves the picture LEFT — the same direction the camera moving right would have moved it. So the
+    // horizontal remainder goes in as-is. The vertical one is negated because V grows downward while the
+    // remainder is expressed in the world's sense of up.
+    if (SnapIsFromThisFrame)
+    {
+        Frame.SubTexelOffsetTexels = FVector2f{
+            Report.RemainderTexels.X * CompensationSign,
+            -Report.RemainderTexels.Y * CompensationSign};
+    }
 
     // The view family owns this instance and deletes it in its destructor — allocate one per frame, never cache it
     // and never delete it. It is also the whole game-thread-to-render-thread transport for the frame's snap state.
@@ -244,9 +355,8 @@ auto
 
     _SavedScreenPercentage.Reset();
     _LastViewportSize = FIntPoint::ZeroValue;
-    _LastInternalSize = FIntPoint::ZeroValue;
-    _LastMarginTexels = 0;
     _LastFraction = 0.0f;
+    _FrozenViewOrigin.Reset();
 }
 
 auto
@@ -260,6 +370,7 @@ auto
 
     _LeaseRenewedThisFrame = false;
     _FrameConfig.Reset();
+    _FrameReport.Reset();
 }
 
 auto
@@ -296,9 +407,18 @@ auto
 
     _LeaseRenewedThisFrame = true;
 
+    const auto Aspect = static_cast<double>(ViewportSize.X) / static_cast<double>(ViewportSize.Y);
+    const auto InnerWidth = ck_pixel_art_view_extension::Get_TargetWidth(InConfig.InternalHeight, ViewportSize);
+    const auto InnerHeight = InConfig.InternalHeight;
+
+    // A margin asked for in texels cannot be spent evenly on both axes — one fraction scales both, so extra width
+    // buys proportionally fewer extra rows. Widening horizontally until the vertical fallout still reaches the
+    // requested margin is what makes the guarantee hold at any aspect ratio rather than only at 16:9.
     const auto MarginTexels = FMath::Max(0, InConfig.MarginTexels);
-    const auto TargetWidth = ck_pixel_art_view_extension::Get_TargetWidth(InConfig.InternalHeight, ViewportSize);
-    const auto RenderedWidth = TargetWidth + 2 * MarginTexels;
+    const auto HorizontalMargin = ck::pixel_art::Get_HorizontalMarginTexels(
+        InnerWidth, InnerHeight, MarginTexels, Aspect);
+
+    const auto RenderedWidth = InnerWidth + 2 * HorizontalMargin;
 
     // At this point in UGameViewportClient::Draw the secondary fraction has not been computed yet, so this reads
     // the family default of 1. It is correct in standalone at 100% DPI; BeginRenderViewFamily logs the value the
@@ -314,11 +434,26 @@ auto
 
     ScreenPercentageCVar->Set(Fraction * 100.0f, ECVF_SetByCode);
 
-    const auto PredictedInternalSize = ck_pixel_art_view_extension::Get_PredictedInternalSize(
+    const auto RenderSize = ck_pixel_art_view_extension::Get_PredictedInternalSize(
         ViewportSize, Fraction, SecondaryViewFraction);
 
-    _LastInternalSize = PredictedInternalSize;
-    _LastMarginTexels = MarginTexels;
+    // The vertical margin is not chosen, it is what the engine's rounding leaves once the horizontal one is
+    // fixed. Splitting an odd surplus towards the top keeps the displayed window's origin deterministic; the
+    // extra row goes to the bottom.
+    const auto SurplusRows = RenderSize.Y - InnerHeight;
+    const auto TopInset = FMath::Max(0, SurplusRows / 2);
+
+    auto Report = FCk_PixelArt_FrameReport{};
+    Report.FrameNumber = GFrameCounter;
+    Report.RenderSize = RenderSize;
+    Report.InnerOffsetTexels = FIntPoint{HorizontalMargin, TopInset};
+    Report.InnerSizeTexels = FIntPoint{InnerWidth, FMath::Min(InnerHeight, RenderSize.Y - TopInset)};
+
+    _FrameReport = Report;
+
+    // Published before the snap is known so a same-frame reader always finds the geometry; the projection hook
+    // republishes with the snap once it has one.
+    FCk_PixelArtRender_StateRegistry::Set_FrameReport(_FrameWorld.Get(), Report);
 
     const auto GeometryIsUnchanged =
         _LastViewportSize == ViewportSize && FMath::IsNearlyEqual(_LastFraction, Fraction);
@@ -329,6 +464,22 @@ auto
     _LastViewportSize = ViewportSize;
     _LastFraction = Fraction;
 
+    // The margin exists to absorb the half-texel snap shift and the box filter's own footprint. If the rounding
+    // above left less than a texel of it on any side, the shifted sampling window reads texels that were never
+    // rendered and the borders smear — loudly, because it looks like a shader bug and is not one.
+    const auto BottomInset = RenderSize.Y - TopInset - Report.InnerSizeTexels.Y;
+    const auto EverySideHasMargin = HorizontalMargin >= 1 && TopInset >= 1 && BottomInset >= 1;
+
+    if (MarginTexels > 0 && !EverySideHasMargin)
+    {
+        UE_LOG(LogCkPixelArt, Error,
+            TEXT("The render margin came out as %d horizontal, %d top, %d bottom for a %dx%d render of a %dx%d ")
+            TEXT("window — less than one texel on some side. The snap compensation will sample outside the ")
+            TEXT("rendered image and the borders will smear. Raise ck.PixelArt.Margin."),
+            HorizontalMargin, TopInset, BottomInset,
+            RenderSize.X, RenderSize.Y, InnerWidth, InnerHeight);
+    }
+
     // r.ScreenPercentage set by console or command line outranks ECVF_SetByCode, in which case our write is
     // dropped silently and the scene renders at the wrong resolution. Read it back so that failure is visible.
     const auto AppliedPercentage = ScreenPercentageCVar->GetFloat();
@@ -336,11 +487,13 @@ auto
     if (ck::pixel_art::Get_LogStateEnabled())
     {
         UE_LOG(LogCkPixelArt, Display,
-            TEXT("Active: viewport=%dx%d rendered=%dx%d displayed=%dx%d fraction=%.6f applied=%.6f secondary=%.4f"),
+            TEXT("Active: viewport=%dx%d rendered=%dx%d displayed=%dx%d at (%d,%d) margin=%d/%d/%d ")
+            TEXT("fraction=%.6f applied=%.6f secondary=%.4f"),
             ViewportSize.X, ViewportSize.Y,
-            PredictedInternalSize.X, PredictedInternalSize.Y,
-            PredictedInternalSize.X - 2 * MarginTexels,
-            PredictedInternalSize.Y - 2 * MarginTexels,
+            RenderSize.X, RenderSize.Y,
+            Report.InnerSizeTexels.X, Report.InnerSizeTexels.Y,
+            Report.InnerOffsetTexels.X, Report.InnerOffsetTexels.Y,
+            HorizontalMargin, TopInset, BottomInset,
             Fraction, AppliedPercentage / 100.0f, SecondaryViewFraction);
     }
 
