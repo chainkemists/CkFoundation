@@ -122,7 +122,7 @@ namespace ck
             FCk_Handle_InteractionResolver,
             TReadOnly<FFragment_InteractionResolver_Params>,
             TReadWrite<FFragment_InteractionResolver_Current>,
-            FTag_InteractionResolver_IntentUpdated,
+            FTag_InteractionResolver_ResolveDirty,
             CK_IGNORE_PENDING_KILL>
     {
     public:

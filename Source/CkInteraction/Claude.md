@@ -29,6 +29,23 @@ Interactable entities have an Interaction fragment; interactor entities hold a r
   handle) after creating the interaction. That dependency direction is not ideal but is accepted,
   and it matches the pattern already used by the Resolver.
 
+- **The resolver's best-target cache is invalidated by BOTH of its inputs.**
+  `FProcessor_InteractionResolver_Persistent` runs only when `FTag_InteractionResolver_ResolveDirty`
+  is present, and that tag is stamped by the intent handlers (`StartIntent`/`StopIntent`) AND by any
+  handler that really mutates `_AvailableTargets` (add / remove / remove-all-by-channel; never on
+  their no-op early-returns). Target churn therefore re-resolves *while a button is held*, which is
+  what lets a consumer retarget mid-hold instead of latching whatever was picked at press time.
+  Before this, `Request_AddInteractTarget` had no observable effect until some unrelated intent edge
+  happened along.
+- **A live interaction outranks proximity.** `DoResolveTargets_Internal` pins targets this resolver
+  is already interacting with ahead of the distance sort and the `MaxConcurrentInteractions`
+  truncation. Without it, a nearer same-channel target appearing mid-hold evicts the live one, the
+  consumer cancels what it no longer sees, and a cancelled `Timed` interaction is destroyed along
+  with its progress — a hold silently resetting to zero. The pin asks the interaction record
+  directly rather than reading `Get_CanInteractWith`'s `AlreadyExists`, because that result is
+  decided against the INTERACT-SOURCE CAST of the source and is unreachable for any consumer that
+  composes no `InteractSource`.
+
 ## Anti-patterns
 
 Don't poll for nearby interactables every frame in a Processor — use the spatial query (`CkSpatialQuery`) results as the input to the interaction system.
