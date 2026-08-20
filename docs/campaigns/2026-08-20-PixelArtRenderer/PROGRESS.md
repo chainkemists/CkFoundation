@@ -1194,6 +1194,45 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   the line/column, and a failed gym-script compile keeps OLD bytecode for the whole boot, so the run looks
   mysteriously stale rather than broken.
 
+## OKLab treatment (maintainer go on the mined references, 2026-08-20)
+
+"Apply the improvements mined from the new resources." The terrain repo yields technique knowledge only
+(no license — filed above); the applied set is the texel-splatting OKLab work:
+
+- **`StylizeCommon.ush`**: `CkUsf_ToOKLab` / `CkUsf_FromOKLab` (Ottosson constants, zero-floored both
+  directions for scene-referred input) and `CkUsf_Stylize_NearestPaletteColorOKLab` — shared, so the
+  other stylize looks can adopt them.
+- **`PixelArt.ush`**: two new signature params inserted after `DitherStrength` — `ColorSpace`
+  (0 Linear, 1 OKLab) and `WarmShift`. In OKLab the band ladder runs on Reinhard-compressed OKLab L
+  (NOT the reference's clamp — the D-20 HDR rule holds), L is SET rather than the RGB rescaled (a/b
+  carry the hue), palette matching goes perceptual, and `WarmShift` applies the reference
+  `b += (band − 0.5) · k` warm/cool drift, anchored on the band so the tint quantizes with the shading.
+  In Linear space everything renders bit-identically to before at the defaults; WarmShift works there
+  too via a post-hoc OKLab round trip.
+- **Ripple**: `ECk_PixelArt_ColorSpace` + two `FCk_PixelArt_LookParams` fields + preset mirror fields +
+  `DoWrite_ChangedLookParams` writes + two LookDefinition asset rows at the matching signature
+  positions + master regeneration.
+- **`DA_PixelArt_OKLab`**: Crisp16 moved into OKLab with `WarmShift 0.05` — the shipped A/B.
+- **Gym**: `[O]` / `Ck_GymPixelArt_ToggleOKLab` flips the ACTIVE station into the OKLab treatment
+  (in-place, like `[P]` — the ten number keys are spoken for, and the A/B only means anything on the
+  same station). Forces the look on while active, because a colour-space verdict with no look is inert.
+- **Gym spawn fix (maintainer-reported)**: the pawn spawned at the shared map's PlayerStart, which can
+  sit UNDER the judge scene's ground plane — its collision sphere then trapped it there with the camera
+  looking at the underside of the world. The gym now places the pawn at the first station's viewing
+  point + 400uu at start; the floating pawn movement has no gravity, so it stays put.
+
+Defaults preserve every existing preset bit-for-bit; the only pixel-level change at defaults is none.
+H-8 gains one line: flip `[O]` on PRESET: CRISP 16 and judge whether the OKLab spacing and warm ramp
+read closer to the reference — that verdict is eyes-only by nature.
+
+Gate (`--build --test --no-live`, log `Saved/Logs/BuildTest-OKLab.log`): **1206 / 1203 / 3 — delta-zero**,
+the same three pre-existing names, zero never-run, zero contaminated. `MatchesEntrySignature` green is the
+positional proof that the two new signature parameters and the two new asset rows pair correctly, and the
+lanes compiled every touched `.as`. Master regenerated (`Saved/Logs/PixelArtGenLooksOKLab.log`): generator
+clean, every shader compile flushed to zero with no errors, and the new parameter names verified present
+in the regenerated `.uasset` (committed this time — a real parameter change, unlike the byte-noise re-save
+above).
+
 ## Final state — what is committed where, and what is not
 
 **Nothing is pushed. No submodule pointer was bumped.** The superproject is still at `133f8f9` with
