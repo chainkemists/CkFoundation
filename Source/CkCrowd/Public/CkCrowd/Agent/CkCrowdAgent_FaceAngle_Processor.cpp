@@ -5,6 +5,8 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_FaceAngle_Algorithm.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,23 +33,41 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_FaceAngleProc);
 
-        // Yaw is independent of vertical motion; with no horizontal speed there is no meaningful
-        // target heading, so the last cached _TargetYaw stands.
+        using namespace ck_crowd_agent_face_angle_algorithm;
+
+        // Yaw is independent of vertical motion, so the engage gate reads the planar speed only.
         auto Heading = InDesired.Get_Velocity();
         Heading.Z = 0.0f;
-        const auto SpeedXY = Heading.Size();
-        if (SpeedXY < KINDA_SMALL_NUMBER)
+        const auto SpeedXY = static_cast<float>(Heading.Size());
+
+        const auto WasEngaged = InFaceAngle.Get_FacingEngaged();
+        const auto FacingIsEngaged = Update_Engaged(
+            InFaceAngle._FacingEngaged,
+            InFaceAngle._PendingTargetFrames,
+            SpeedXY,
+            UCk_Utils_Crowd_Settings_UE::Get()->Get_FacingSpeedFloorCm());
+        if (NOT FacingIsEngaged)
         { return; }
-
-        Heading /= SpeedXY;
-
-        const auto TargetYawRad = FMath::Atan2(Heading.Y, Heading.X);
-        InFaceAngle._TargetYaw = TargetYawRad;
-
-        auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
 
         const auto CurrentRot = InTransform.Get_Transform().Rotator();
         const auto CurrentYawRad = FMath::DegreesToRadians(CurrentRot.Yaw);
+
+        // Resuming facing means resuming from where the body points, not from a target it never
+        // finished reaching — see Seed_CommittedFromBody.
+        if (NOT WasEngaged)
+        { Seed_CommittedFromBody(InFaceAngle._TargetYaw, static_cast<float>(CurrentYawRad)); }
+
+        Heading /= SpeedXY;
+
+        InFaceAngle._TargetYaw = Commit_TrackedYaw(
+            InFaceAngle.Get_TargetYaw(),
+            static_cast<float>(FMath::Atan2(Heading.Y, Heading.X)),
+            InFaceAngle._PendingTargetYaw,
+            InFaceAngle._PendingTargetFrames);
+
+        const auto TargetYawRad = InFaceAngle.Get_TargetYaw();
+
+        auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
 
         const auto DeltaYaw = FMath::FindDeltaAngleRadians(CurrentYawRad, TargetYawRad);
         if (FMath::IsNearlyZero(DeltaYaw))
