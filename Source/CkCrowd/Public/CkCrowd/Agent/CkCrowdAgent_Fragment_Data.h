@@ -11,6 +11,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
 
@@ -135,6 +137,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_PathProvider);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Which filter the in-flight CkNavigation query planned with. Strict treats stationary-crowd
+// markup as impassable — passers-by route around standing crowds or fail fast; a strict answer of
+// Failed (or Partial ending short of the goal) re-dispatches the episode once with Permissive (the
+// cost toll), which is what queue-joiners whose destination sits beside standing bodies land on.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_PlanPhase : uint8
+{
+    Permissive,
+    Strict
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_PlanPhase);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Reflected ECS params for a crowd agent (radius, height, tags, locomotion, separation, etc.).
 // See the module's Tunables Reference for the defaults table.
 USTRUCT(BlueprintType)
@@ -172,6 +188,15 @@ private:
     // Empty tag -> NavData's default filter.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _NavQueryFilter;
+
+    // Filter for the STRICT phase of two-phase planning, where stationary-crowd markup is
+    // impassable rather than a toll. A host whose agents plan with a custom _NavQueryFilter maps a
+    // strict VARIANT of that filter here (same areas plus the UCk_NavArea_CrowdAgent exclusion) —
+    // filter classes cannot compose at query time, so the permissive filter's own exclusions would
+    // otherwise be lost for the strict attempt. Empty tag -> the framework's
+    // UCk_NavQueryFilter_AvoidStandingCrowds, which excludes only the crowd area.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FGameplayTag _NavQueryFilterStrict;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _ArrivalRadius = 30.0f;
@@ -235,6 +260,7 @@ public:
     CK_PROPERTY(_MaxAcceleration);
     CK_PROPERTY(_MaxTurnRate);
     CK_PROPERTY(_NavQueryFilter);
+    CK_PROPERTY(_NavQueryFilterStrict);
     CK_PROPERTY(_ArrivalRadius);
     CK_PROPERTY(_WaypointArrivalRadius);
     CK_PROPERTY(_SeparationRadius);
@@ -370,6 +396,18 @@ private:
     UPROPERTY()
     uint64 _PathSerial = 0;
 
+    // Filter phase of the in-flight query — OnPathResolved must know which phase just answered to
+    // decide between the permissive fallback and the terminal failure flow.
+    UPROPERTY()
+    ECk_CrowdAgent_PlanPhase _PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+
+    // A strict plan failed during this movement episode: at plan time, no crowd-free route to the
+    // goal existed. Feeds the goal-failed payload so gameplay can tell "blocked by standing bodies
+    // right now — may clear when they move" from "no route at all". Reset whenever a dispatch
+    // tries strict again.
+    UPROPERTY()
+    bool _StrictPlanFailed = false;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
@@ -382,6 +420,8 @@ public:
     CK_PROPERTY_GET(_ActiveNavigationRequestRevision);
     CK_PROPERTY_GET(_ActiveProvider);
     CK_PROPERTY_GET(_PathSerial);
+    CK_PROPERTY_GET(_PlanPhase);
+    CK_PROPERTY_GET(_StrictPlanFailed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -653,6 +693,57 @@ public:
 // Delegate types for the CrowdAgent lifecycle signals: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE
 // (in _Fragment.h) references these by name but does not declare them, so they live at global scope.
 
+// Why a movement episode terminally failed. The high-level reason a caller branches on; the nav
+// layer's detail rides alongside in FCk_CrowdAgent_GoalFailedInfo.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_GoalFailReason : uint8
+{
+    PathFailed,                    // CkNavigation answered Failed — no route to the goal at all
+    PathEndsShortOfGoal,           // a Partial path was walked to its end; the goal is unreachable from there
+    NoProgressRetriesExhausted,    // the agent stopped making progress and every bounded retry re-wedged
+    BlockedFailMovePolicy          // the goal is blocked and this agent's _BlockedPolicy is FailMove; the OnGoalBlocked fired just before this names the blocker
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_GoalFailReason);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Payload of OnGoalFailed — the clear message a queue manager or planner acts on. The load-bearing
+// bit is _NoCrowdFreeRouteExisted: true means the strict planning phase found no route that avoids
+// STANDING BODIES, so the goal may open up when they move (retry later, or wait); false means the
+// failure is structural (walls, fixtures, no navmesh) and retrying against unchanged nav is futile.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_CrowdAgent_GoalFailedInfo
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_CrowdAgent_GoalFailedInfo);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_CrowdAgent_GoalFailReason _Reason = ECk_CrowdAgent_GoalFailReason::PathFailed;
+
+    // Detail for PathFailed; None for the other reasons.
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_Nav_PathFailReason _NavFailReason = ECk_Nav_PathFailReason::None;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _NoCrowdFreeRouteExisted = false;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _GoalLocation = FVector::ZeroVector;
+
+public:
+    CK_PROPERTY_GET(_Reason);
+    CK_PROPERTY_GET(_NavFailReason);
+    CK_PROPERTY_GET(_NoCrowdFreeRouteExisted);
+    CK_PROPERTY_GET(_GoalLocation);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CrowdAgent_GoalFailedInfo,
+        _Reason, _NavFailReason, _NoCrowdFreeRouteExisted, _GoalLocation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Payload of OnGoalBlocked. _BlockedBy is the agent standing on the goal — invalid when the reason
 // is NoProgress, where there is no single culprit.
 USTRUCT(BlueprintType)
@@ -686,9 +777,10 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_CrowdAgent_OnGoalReached,
     FCk_Handle_CrowdAgent, InAgent);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_CrowdAgent_OnGoalFailed,
-    FCk_Handle_CrowdAgent, InAgent);
+    FCk_Handle_CrowdAgent, InAgent,
+    FCk_CrowdAgent_GoalFailedInfo, InInfo);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_CrowdAgent_OnGoalBlocked,

@@ -188,6 +188,62 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         return Walls;
     }
 
+    // Two facing walls closer together than the agent needs to also keep an avoidance margin from
+    // them. The navmesh bakes such a corridor walkable — the body fits — but the sampler penalises
+    // inward candidates from BOTH sides at once, and with any neighbour pressure the winner
+    // oscillates between wall-hugging candidates: the agent jitters through a gap it could simply
+    // walk. Corridor width is the sum of the agent's clearances to the two walls, which for walls
+    // bracketing the agent is the wall-to-wall distance through it; "facing each other" is the
+    // closest-point directions opposing within ~60 degrees, so a doorway's jambs qualify while a
+    // convex corner's two edges (directions near-perpendicular) do not. Callers pass
+    // BuildWallSegments' output, already restricted to walls whose walkable side faces the agent.
+    inline auto Is_InTightCorridor(
+        const FVector& InAgentPosition,
+        float InAgentRadius,
+        float InSlackCm,
+        TConstArrayView<FWallSegment> InSegments) -> bool
+    {
+        constexpr auto OpposingDot = -0.5;
+        const auto WidthThreshold = (2.0 * InAgentRadius) + InSlackCm;
+
+        for (auto IndexA = 0; IndexA < InSegments.Num(); ++IndexA)
+        {
+            auto TimeA = 0.0;
+            const auto DistanceA = FMath::Sqrt(DistancePointSegmentSquared2D(
+                InAgentPosition, InSegments[IndexA]._Start, InSegments[IndexA]._End, &TimeA));
+            if (DistanceA >= WidthThreshold)
+            { continue; }
+
+            const auto ClosestA = InSegments[IndexA]._Start +
+                ((InSegments[IndexA]._End - InSegments[IndexA]._Start) * TimeA);
+            const auto DirectionA =
+                FVector{ClosestA.X - InAgentPosition.X, ClosestA.Y - InAgentPosition.Y, 0.0}.GetSafeNormal2D();
+            if (DirectionA.IsNearlyZero())
+            { continue; }
+
+            for (auto IndexB = IndexA + 1; IndexB < InSegments.Num(); ++IndexB)
+            {
+                auto TimeB = 0.0;
+                const auto DistanceB = FMath::Sqrt(DistancePointSegmentSquared2D(
+                    InAgentPosition, InSegments[IndexB]._Start, InSegments[IndexB]._End, &TimeB));
+                if (DistanceA + DistanceB >= WidthThreshold)
+                { continue; }
+
+                const auto ClosestB = InSegments[IndexB]._Start +
+                    ((InSegments[IndexB]._End - InSegments[IndexB]._Start) * TimeB);
+                const auto DirectionB =
+                    FVector{ClosestB.X - InAgentPosition.X, ClosestB.Y - InAgentPosition.Y, 0.0}.GetSafeNormal2D();
+                if (DirectionB.IsNearlyZero())
+                { continue; }
+
+                if (Dot2D(DirectionA, DirectionB) < OpposingDot)
+                { return true; }
+            }
+        }
+
+        return false;
+    }
+
     struct FScoringParameters final
     {
         float _AgentRadius = 0.0f;
