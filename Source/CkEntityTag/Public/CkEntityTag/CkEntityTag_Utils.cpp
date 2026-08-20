@@ -21,10 +21,15 @@ auto
         bool InPresent)
     -> void
 {
-    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_StorageParams>(
-        entt::id_type{GetTypeHash(InTag)});
+    const auto TagStorageHash = entt::id_type{GetTypeHash(InTag)};
+
+    auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_StorageParams>(TagStorageHash);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
+    // These writes go straight to the per-tag entt storage, bypassing FCk_Registry's own Add/Remove,
+    // which is where the mutation counter is normally bumped. Bumping it here is what lets a
+    // consumer answer "did anything gain or lose this tag since I last looked" in O(1) —
+    // FProcessor_EntityTagQuery_Evaluate skips its per-frame scans on exactly that answer.
     if (InPresent)
     {
         if (NOT Storage.contains(Entity))
@@ -32,6 +37,8 @@ auto
             Storage.emplace<ck::FFragment_EntityTag_StorageParams>(
                 Entity,
                 ck::FFragment_EntityTag_StorageParams{InTag});
+
+            InHandle.Get_RegistryView().BumpDirtyMarkerVersion(TagStorageHash);
         }
     }
     else
@@ -39,6 +46,8 @@ auto
         if (Storage.contains(Entity))
         {
             Storage.remove(Entity);
+
+            InHandle.Get_RegistryView().BumpDirtyMarkerVersion(TagStorageHash);
         }
     }
 }
