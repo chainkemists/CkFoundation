@@ -1,0 +1,314 @@
+// /CkUsf/Looks/PixelArt.ush
+// PostProcess pixel-art stylization: 1-texel outlines, quantized bands, palette reduction.
+//
+// Placed at SceneColorAfterDOF (see the asset's _BlendableLocation) — RENDER resolution, pre-TAA. That is
+// not a preference: an outline is only exactly one texel wide if it is computed at the resolution the
+// scene was rasterized at. Run this after tonemapping and the kernel steps in DISPLAY pixels, so a
+// "1-pixel" line comes out as many screen pixels wide as the upscale factor, which is the whole thing the
+// pixel-art renderer exists to avoid.
+//
+// Pipeline, in order (the order IS the contract):
+//   1. edges     — 4-tap plus kernel over depth + world normal, classified into silhouette / crease
+//   2. bands     — quantize scene-colour LUMINANCE into N bands with a controllable transition width
+//   3. edge apply— either flat multipliers, or a +/-1 BAND shift applied BEFORE the palette snap
+//   4. palette   — steps per channel, nearest authored entry, or luminance-only steps
+//
+// Step 3 before step 4 is the t3ssel8r signature and the reason the two cannot be reordered: shifting a
+// band and THEN snapping means an outline is always a colour the palette already contains. Tinting after
+// the snap would introduce colours the artist never chose, which reads as a completely different style.
+//
+// Algorithms and their sources are set out in
+// docs/campaigns/2026-08-20-PixelArtRenderer/RESEARCH_Technique.md; the sections are cited so the
+// reasoning behind each threshold is findable rather than folklore:
+//   - silhouette + grazing-angle threshold scaling: RESEARCH_Technique.md section C.2
+//   - crease via opposed-pair normal contrast, and the de-doubling gate: sections C.1 and C.2
+//   - convex/concave decision by view-facing comparison, band-shift application: section C.3
+//   - band quantization with a transition zone, and Bayer dither at the boundaries: section D
+// This look sits pre-tonemap, so its input is scene-referred LINEAR and unbounded. Luminance is therefore
+// normalized through Reinhard (L/(1+L)) before it is banded and inverted on the way out — HandDrawn's
+// approach, for its reason: a 0..1 ladder applied to unbounded light would put every band boundary in the
+// darks, and a plain saturate would collapse everything above 1 into the top band and render bright scenes
+// flat. There is nothing to mistune here (CelShade needs its Midpoint because it places band POSITIONS
+// against a scene's exposure; this only needs a monotone domain to quantize in).
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Neighbour taps run in BUFFER space, converted once. Viewport UV and buffer UV differ whenever the view
+// rect does not fill the scene buffer — which under this renderer is ALWAYS, because driving the screen
+// percentage is how it gets a low internal resolution in the first place. Tapping at raw viewport UV
+// would drift off-object by exactly the amount the renderer downscaled by.
+float CkUsf_PixelArt_SampleDepth(float2 BufferUV)
+{
+    return SceneTextureLookup(ClampSceneTextureUV(BufferUV, PPI_SceneDepth), PPI_SceneDepth, false).r;
+}
+
+float3 CkUsf_PixelArt_SampleNormal(float2 BufferUV)
+{
+    return SceneTextureLookup(ClampSceneTextureUV(BufferUV, PPI_WorldNormal), PPI_WorldNormal, false).rgb;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Bands the value into Bands steps, with a transition zone of ThresholdGradientSize (0 = hard step, 1 = the
+// full band width blended). The blend is what stops a slowly moving light from making a band boundary pop
+// across a whole surface in one frame.
+float CkUsf_PixelArt_QuantizeBands(float Value, float Bands, float TransitionSize)
+{
+    float BandCount = max(Bands, 2.0);
+    float BandWidth = 1.0 / BandCount;
+
+    float Index = floor(Value * BandCount);
+    float Quantized = saturate(Index * BandWidth);
+
+    if (TransitionSize <= 1e-4)
+    { return Quantized; }
+
+    // Blend across the boundary this sample is nearest to, not across the whole band: a wide transition
+    // should soften the edges of the bands, never turn the ladder back into a gradient.
+    float Nearest = round(Value * BandCount);
+    float Threshold = Nearest * BandWidth;
+    float HalfWidth = 0.5 * BandWidth * saturate(TransitionSize);
+
+    float Blend = smoothstep(max(0.0, Threshold - HalfWidth), min(1.0, Threshold + HalfWidth), Value);
+
+    return saturate(lerp(saturate((Nearest - 1.0) * BandWidth), saturate(Nearest * BandWidth), Blend));
+}
+
+float3 CkUsf_PixelArt_SnapToPalette(float3 Color, float PaletteCount, float3 Palette[8])
+{
+    int Count = clamp((int)(PaletteCount + 0.5), 1, 8);
+
+    float3 Best = Palette[0];
+    float BestDistance = 1e9;
+
+    [unroll]
+    for (int Index = 0; Index < 8; ++Index)
+    {
+        if (Index >= Count)
+        { continue; }
+
+        float3 Delta = Color - Palette[Index];
+        float Distance = dot(Delta, Delta);
+
+        if (Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            Best = Palette[Index];
+        }
+    }
+
+    return Best;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
+    FCkUsf_SurfaceInput In,
+    float EnableOutline,
+    float DepthThreshold,
+    float AngleZCutoff,
+    float AngleZScale,
+    float NormalSmoothLow,
+    float NormalSmoothHigh,
+    float LineDarken,
+    float CreaseBrighten,
+    float EdgeMode,
+    float Bands,
+    float ThresholdGradientSize,
+    float DitherStrength,
+    float PaletteMode,
+    float PaletteCount,
+    float3 PaletteColor0, float3 PaletteColor1, float3 PaletteColor2, float3 PaletteColor3,
+    float3 PaletteColor4, float3 PaletteColor5, float3 PaletteColor6, float3 PaletteColor7)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    const float2 ViewportUV = In.UV;
+    const float2 BufferUV = CkUsf_ViewportUVToBufferUV(ViewportUV);
+    const float2 Texel = CkUsf_BufferTexelSize();
+
+    float3 Color = In.SceneColor.rgb;
+
+    // ---- 1. Edges ---------------------------------------------------------------------------------
+    // 0 = none, 1 = darken (silhouette, or the concave side of a crease), 2 = brighten (convex side).
+    int EdgeKind = 0;
+
+    if (EnableOutline > 0.5)
+    {
+        const float CenterDepth = CkUsf_PixelArt_SampleDepth(BufferUV);
+        const float3 CenterNormal = normalize(CkUsf_PixelArt_SampleNormal(BufferUV) * 2.0 - 1.0);
+
+        const float2 Offsets[4] = {
+            float2( 0.0, -1.0),   // up
+            float2(-1.0,  0.0),   // left
+            float2( 1.0,  0.0),   // right
+            float2( 0.0,  1.0)};  // down
+
+        float NeighborDepth[4];
+        float3 NeighborNormal[4];
+
+        [unroll]
+        for (int Tap = 0; Tap < 4; ++Tap)
+        {
+            const float2 TapUV = BufferUV + Offsets[Tap] * Texel;
+            NeighborDepth[Tap] = CkUsf_PixelArt_SampleDepth(TapUV);
+            NeighborNormal[Tap] = normalize(CkUsf_PixelArt_SampleNormal(TapUV) * 2.0 - 1.0);
+        }
+
+        // A surface seen nearly edge-on has an enormous depth gradient with no edge in it, which is what
+        // grows a staircase of false outlines across a floor. Scale the threshold by how side-on the
+        // surface is, so grazing geometry needs a proportionally larger step to count.
+        // NOT In.CameraVector: that input is wired for SURFACE looks only and reads zero in a
+        // post-process one, which would silently make every surface read as fully face-on and disable the
+        // grazing-angle fix entirely. The screen-rect helper is orthographic-safe (this renderer is
+        // orthographic by definition) and needs no large-world-coordinate arithmetic.
+        const float2 ScreenPosition = ViewportUV * float2(2.0, -2.0) + float2(-1.0, 1.0);
+        const float3 ViewDir = -normalize(ScreenVectorFromScreenRect(float4(ScreenPosition, 1.0, 0.0)));
+        const float Facing = 1.0 - saturate(abs(dot(CenterNormal, ViewDir)));
+        const float Grazing = saturate((Facing - AngleZCutoff) / max(1.0 - AngleZCutoff, 1e-4));
+        const float DepthCutoff = max(DepthThreshold, 1e-5) * (Grazing * AngleZScale + 1.0) * max(CenterDepth, 1.0);
+
+        // One-sided on purpose: of the two texels straddling a silhouette only the NEARER one draws the
+        // line, which is what keeps it one texel wide instead of two.
+        float MaxDepthStep = 0.0;
+
+        [unroll]
+        for (int Silhouette = 0; Silhouette < 4; ++Silhouette)
+        { MaxDepthStep = max(MaxDepthStep, NeighborDepth[Silhouette] - CenterDepth); }
+
+        const bool IsSilhouette = MaxDepthStep > DepthCutoff;
+
+        // Opposed-PAIR contrast rather than a sum of per-neighbour differences: a sum fires on smooth
+        // curvature, where every neighbour differs a little and none of them is an edge.
+        const float ContrastUp = 1.0 - dot(CenterNormal, NeighborNormal[0]);
+        const float ContrastLeft = 1.0 - dot(CenterNormal, NeighborNormal[1]);
+        const float ContrastRight = 1.0 - dot(CenterNormal, NeighborNormal[2]);
+        const float ContrastDown = 1.0 - dot(CenterNormal, NeighborNormal[3]);
+
+        const float NormalDifference = max(abs(ContrastUp - ContrastDown), abs(ContrastLeft - ContrastRight));
+        const float CreaseWeight = smoothstep(NormalSmoothLow, max(NormalSmoothHigh, NormalSmoothLow + 1e-4),
+            NormalDifference);
+
+        if (IsSilhouette)
+        {
+            EdgeKind = 1;
+        }
+        else if (CreaseWeight > 0.5)
+        {
+            // Convex or concave is a purely geometric question: whichever side of the crease faces the
+            // viewer more is the outward one, and gets the highlight. No light direction is read — the
+            // light-gated variant is unverified upstream and would make the outline move with the sun.
+            float MostDifferentFacing = dot(CenterNormal, ViewDir);
+            int MostDifferent = 0;
+            float LargestContrast = 0.0;
+
+            [unroll]
+            for (int Crease = 0; Crease < 4; ++Crease)
+            {
+                const float Contrast = 1.0 - dot(CenterNormal, NeighborNormal[Crease]);
+
+                if (Contrast > LargestContrast)
+                {
+                    LargestContrast = Contrast;
+                    MostDifferent = Crease;
+                }
+            }
+
+            MostDifferentFacing = dot(NeighborNormal[MostDifferent], ViewDir);
+
+            EdgeKind = dot(CenterNormal, ViewDir) > MostDifferentFacing ? 2 : 1;
+        }
+    }
+
+    // ---- 2. Bands ---------------------------------------------------------------------------------
+    const float RawLuminance = CkUsf_Stylize_Luminance(max(Color, 0.0));
+    const float Luminance = RawLuminance / (1.0 + RawLuminance);
+
+    const float BandCount = max(Bands, 2.0);
+    const float BandWidth = 1.0 / BandCount;
+
+    // Dither BEFORE quantizing, and by at most one band: a threshold applied afterwards is a noise
+    // overlay on top of banding rather than a way of hiding the boundary.
+    const float DitherThreshold = CkUsf_Bayer4x4(In.UV * View.ViewSizeAndInvSize.xy);
+    const float DitheredLuminance = saturate(Luminance + (DitherThreshold - 0.5) * BandWidth * saturate(DitherStrength));
+
+    float BandedLuminance = CkUsf_PixelArt_QuantizeBands(DitheredLuminance, BandCount, ThresholdGradientSize);
+
+    // ---- 3. Edge application ----------------------------------------------------------------------
+    const bool UsesBandShift = (int)(EdgeMode + 0.5) == 1;
+    float FlatEdgeScale = 1.0;
+
+    if (EdgeKind != 0)
+    {
+        if (UsesBandShift)
+        {
+            // Exactly one band, so the outline colour is one the palette already contains.
+            BandedLuminance = saturate(BandedLuminance + (EdgeKind == 2 ? BandWidth : -BandWidth));
+        }
+        else
+        {
+            FlatEdgeScale = EdgeKind == 2 ? (1.0 + max(CreaseBrighten, 0.0))
+                                          : saturate(1.0 - saturate(LineDarken));
+        }
+    }
+
+    // Back out of the normalized domain before re-lighting, or the picture would be uniformly crushed
+    // towards black by exactly the amount the normalization compressed it.
+    //
+    // The clamp is what keeps that inverse finite, and the ceiling is the BAND COUNT rather than a
+    // constant: Reinhard's inverse goes to infinity as its input approaches 1, and the top band plus an
+    // upward edge shift lands exactly there. Bounded to the top band, the brightest tone this look can
+    // emit is BandCount - 1 — so fewer bands is a harder highlight clamp, which falls out of the artist's
+    // own choice instead of a magic number.
+    const float TopBand = (BandCount - 1.0) / BandCount;
+    const float ClampedBand = min(BandedLuminance, TopBand);
+    const float BandedTone = ClampedBand / max(1.0 - ClampedBand, 1e-4);
+
+    // Re-light the original hue by the banded tone rather than replacing the colour with a grey ladder:
+    // banding the luminance alone is what keeps material colour while quantizing shading.
+    Color = max(Color * (BandedTone / max(RawLuminance, 1e-4)) * FlatEdgeScale, 0.0);
+
+    // ---- 4. Palette -------------------------------------------------------------------------------
+    // Compared exactly rather than thresholded, so a mode appended to the enum cannot silently fall into
+    // an earlier branch.
+    const int Mode = (int)(PaletteMode + 0.5);
+
+    // Bounded from here on, and that is a property of the stage rather than a compromise: once a pixel is
+    // snapped to an authored palette, the palette IS the answer and there is no high dynamic range left to
+    // preserve. A value above 1 resolves to the brightest entry, which is what the artist chose for
+    // "brightest". Everything downstream still tonemaps this like any other scene colour.
+    Color = saturate(Color);
+
+    if (Mode == 1)
+    {
+        float3 Palette[8];
+        Palette[0] = PaletteColor0; Palette[1] = PaletteColor1;
+        Palette[2] = PaletteColor2; Palette[3] = PaletteColor3;
+        Palette[4] = PaletteColor4; Palette[5] = PaletteColor5;
+        Palette[6] = PaletteColor6; Palette[7] = PaletteColor7;
+
+        Color = CkUsf_PixelArt_SnapToPalette(Color, PaletteCount, Palette);
+    }
+    else if (Mode == 2)
+    {
+        const float Steps = max(PaletteCount, 2.0);
+        const float SteppedLuminance = floor(CkUsf_Stylize_Luminance(Color) * Steps) / max(Steps - 1.0, 1.0);
+        const float CurrentLuminance = max(CkUsf_Stylize_Luminance(Color), 1e-4);
+
+        Color = saturate(Color * (SteppedLuminance / CurrentLuminance));
+    }
+    else
+    {
+        const float Steps = max(PaletteCount, 2.0);
+        Color = floor(Color * Steps) / max(Steps - 1.0, 1.0);
+    }
+
+    O.EmissiveColor = saturate(Color);
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.Opacity = 1.0;
+
+    return O;
+}
