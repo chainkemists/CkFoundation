@@ -5,9 +5,9 @@ using UnrealBuildTool;
 // module loads at PostDefault, and ApplicationCore; neither can load at PostConfigInit). Loaded at PostConfigInit
 // (see CkFoundation.uplugin) so the /CkPixelArt shader directory mapping and the upscale global shader type exist
 // before the engine builds its global shader map. Same shape and same reason as CkIskmRendererVF.
-public class CkPixelArtRender : ModuleRules
+public class CkPixelArtRenderer : ModuleRules
 {
-    public CkPixelArtRender(ReadOnlyTargetRules Target) : base(Target)
+    public CkPixelArtRenderer(ReadOnlyTargetRules Target) : base(Target)
     {
         CppStandard = CppStandardVersion.Cpp20;
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;

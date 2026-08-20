@@ -4,12 +4,12 @@
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 
-#include "CkPixelArtRender_Utils.generated.h"
+#include "CkPixelArtRenderer_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, DisplayName = "CkUtils_PixelArtRender")
-class CKPIXELARTRENDER_API UCk_Utils_PixelArtRender_UE : public UBlueprintFunctionLibrary
+UCLASS(NotBlueprintable, DisplayName = "CkUtils_PixelArtRenderer")
+class CKPIXELARTRENDERER_API UCk_Utils_PixelArtRenderer_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -28,8 +28,8 @@ public:
      * the renderer's own resolution-fraction check.
      */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|PixelArtRender",
-              DisplayName = "[Ck][PixelArtRender] Get Exact Resolution Fraction")
+              Category = "Ck|Utils|PixelArtRenderer",
+              DisplayName = "[Ck][PixelArtRenderer] Get Exact Resolution Fraction")
     static float
     Get_ExactFraction(
         int32 InTargetWidth,
@@ -46,8 +46,8 @@ public:
      * FVector2f is marked BlueprintInternalUseOnly by the engine and cannot appear on a Blueprint node.
      */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|PixelArtRender",
-              DisplayName = "[Ck][PixelArtRender] Get Snapped View Origin")
+              Category = "Ck|Utils|PixelArtRenderer",
+              DisplayName = "[Ck][PixelArtRenderer] Get Snapped View Origin")
     static FVector
     Get_SnappedViewOrigin(
         const FVector& InOrigin,
@@ -60,8 +60,8 @@ public:
      * extraction). Returns 0 for a projection with no horizontal scale.
      */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|PixelArtRender",
-              DisplayName = "[Ck][PixelArtRender] Get Ortho Width From Projection")
+              Category = "Ck|Utils|PixelArtRenderer",
+              DisplayName = "[Ck][PixelArtRenderer] Get Ortho Width From Projection")
     static float
     Get_OrthoWidthFromProjection(
         const FMatrix& InProjection);
@@ -75,8 +75,8 @@ public:
      * the wider horizontal margin whose vertical fallout still reaches the asked-for figure.
      */
     UFUNCTION(BlueprintPure,
-              Category = "Ck|PixelArtRender",
-              DisplayName = "[Ck][PixelArtRender] Get Horizontal Margin Texels")
+              Category = "Ck|Utils|PixelArtRenderer",
+              DisplayName = "[Ck][PixelArtRenderer] Get Horizontal Margin Texels")
     static int32
     Get_HorizontalMarginTexels(
         int32 InInnerWidth,

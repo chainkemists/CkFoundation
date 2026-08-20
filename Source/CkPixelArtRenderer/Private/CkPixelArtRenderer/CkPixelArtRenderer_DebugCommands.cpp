@@ -1,13 +1,13 @@
-#include "CkPixelArtRender/CkPixelArtRender_Log.h"
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Log.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Containers/Ticker.h"
-#include "Engine/World.h"
-#include "GameFramework/Actor.h"
-#include "GameFramework/PlayerController.h"
-#include "HAL/IConsoleManager.h"
-#include "HAL/PlatformTime.h"
+#include <Engine/World.h>
+#include <GameFramework/Actor.h>
+#include <GameFramework/PlayerController.h>
+#include <HAL/IConsoleManager.h>
+#include <HAL/PlatformTime.h>
 #include "RHI.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -55,13 +55,13 @@ namespace ck_pixel_art_debug
 
         if (IsClean)
         {
-            UE_LOG(LogCkPixelArt, Display,
+            UE_LOG(CkPixelArtRenderer, Display,
                 TEXT("ToggleLoop PASS: r.ScreenPercentage returned to its pre-enable value %.4f — no residue."),
                 GToggleLoop.BaselineScreenPercentage);
         }
         else
         {
-            UE_LOG(LogCkPixelArt, Error,
+            UE_LOG(CkPixelArtRenderer, Error,
                 TEXT("ToggleLoop FAIL: r.ScreenPercentage is %.4f but was %.4f before the first enable — the ")
                 TEXT("renderer left residue behind."),
                 Final, GToggleLoop.BaselineScreenPercentage);
@@ -112,7 +112,7 @@ namespace ck_pixel_art_debug
     {
         if (GToggleLoop.IsRunning)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("ToggleLoop is already running."));
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("ToggleLoop is already running."));
             return;
         }
 
@@ -120,7 +120,7 @@ namespace ck_pixel_art_debug
 
         if (Cycles <= 0)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("ToggleLoop needs a positive cycle count (got [%d])."), Cycles);
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("ToggleLoop needs a positive cycle count (got [%d])."), Cycles);
             return;
         }
 
@@ -128,7 +128,20 @@ namespace ck_pixel_art_debug
 
         if (ScreenPercentageCVar == nullptr)
         {
-            UE_LOG(LogCkPixelArt, Error, TEXT("r.ScreenPercentage does not exist — nothing to check residue against."));
+            UE_LOG(CkPixelArtRenderer, Error, TEXT("r.ScreenPercentage does not exist — nothing to check residue against."));
+            return;
+        }
+
+        // Started while the renderer is already driving, the "baseline" would capture the DRIVEN value and
+        // the verdict would compare the restored original against it — a guaranteed false FAIL, and one
+        // that reads as a defect in the lease rather than as operator error.
+        auto* EnabledCVar = Get_CVar(TEXT("ck.PixelArt.Enabled"));
+
+        if (EnabledCVar != nullptr && EnabledCVar->GetInt() == 1)
+        {
+            UE_LOG(CkPixelArtRenderer, Warning,
+                TEXT("ToggleLoop needs the renderer OFF to capture a meaningful baseline, but ")
+                TEXT("ck.PixelArt.Enabled is 1. Set it to -1 or 0 and run again."));
             return;
         }
 
@@ -139,7 +152,7 @@ namespace ck_pixel_art_debug
         GToggleLoop.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
             FTickerDelegate::CreateStatic(&DoTick_ToggleLoop));
 
-        UE_LOG(LogCkPixelArt, Display,
+        UE_LOG(CkPixelArtRenderer, Display,
             TEXT("ToggleLoop starting: %d enable/disable cycles, one toggle per frame. ")
             TEXT("r.ScreenPercentage before the first enable is %.4f."),
             Cycles, GToggleLoop.BaselineScreenPercentage);
@@ -154,7 +167,7 @@ namespace ck_pixel_art_debug
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// `Ck_PixelArt_DebugPan <TexelsPerFrame>` — the A/B rig for the whole snap technique.
+// `ck.PixelArt.Debug.Pan <TexelsPerFrame>` — the A/B rig for the whole snap technique.
 //
 // Judging pixel creep needs motion slow enough that a texel takes several frames to cross, which no human can
 // produce on a gamepad and no scripted camera in the test level provides. Drifting the view target diagonally by
@@ -188,7 +201,7 @@ namespace ck_pixel_art_debug_pan
         FTSTicker::GetCoreTicker().RemoveTicker(GPan.TickerHandle);
         GPan = {};
 
-        UE_LOG(LogCkPixelArt, Display, TEXT("DebugPan stopped."));
+        UE_LOG(CkPixelArtRenderer, Display, TEXT("DebugPan stopped."));
     }
 
     auto
@@ -208,7 +221,7 @@ namespace ck_pixel_art_debug_pan
 
         if (PlayerController == nullptr || PlayerController->PlayerCameraManager == nullptr)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: no player controller with a camera manager. Stopping."));
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("DebugPan: no player controller with a camera manager. Stopping."));
             DoStop_Pan();
             return false;
         }
@@ -217,7 +230,7 @@ namespace ck_pixel_art_debug_pan
 
         if (ViewTarget == nullptr)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: the player controller has no view target. Stopping."));
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("DebugPan: the player controller has no view target. Stopping."));
             DoStop_Pan();
             return false;
         }
@@ -225,12 +238,12 @@ namespace ck_pixel_art_debug_pan
         // A texel is only defined while the renderer is actually running an orthographic view. Without a report
         // there is no texel to pan by, so say so instead of inventing a world-space speed that would make the
         // capture meaningless.
-        const auto Report = FCk_PixelArtRender_StateRegistry::TryGet_FrameReport(World);
+        const auto Report = FCk_PixelArtRenderer_StateRegistry::TryGet_FrameReport(World);
         const auto TexelWorldSize = Report.IsSet() ? Report->TexelWorldSize : 0.0;
 
         if (TexelWorldSize <= 0.0)
         {
-            UE_LOG(LogCkPixelArt, Warning,
+            UE_LOG(CkPixelArtRenderer, Warning,
                 TEXT("DebugPan: the renderer published no texel size this frame (is it enabled, with an ")
                 TEXT("orthographic camera?). Stopping rather than panning by an arbitrary distance."));
             DoStop_Pan();
@@ -269,7 +282,7 @@ namespace ck_pixel_art_debug_pan
 
         if (InWorld == nullptr)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("DebugPan: no world. Run this from a running game."));
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("DebugPan: no world. Run this from a running game."));
             return;
         }
 
@@ -281,14 +294,14 @@ namespace ck_pixel_art_debug_pan
         GPan.IsRunning = true;
         GPan.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&DoTick_Pan));
 
-        UE_LOG(LogCkPixelArt, Display,
+        UE_LOG(CkPixelArtRenderer, Display,
             TEXT("DebugPan drifting the view target diagonally at %.3f texels/frame. Run the command again with ")
             TEXT("no argument to stop."),
             TexelsPerFrame);
     }
 
     FAutoConsoleCommandWithWorldAndArgs CCmd_DebugPan(
-        TEXT("Ck_PixelArt_DebugPan"),
+        TEXT("ck.PixelArt.Debug.Pan"),
         TEXT("Drift the view target diagonally by <TexelsPerFrame> (default 0.2) so pixel creep, whole-texel ")
         TEXT("stepping and smooth compensated motion can be told apart by eye. Run again with no argument to stop."),
         FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoStart_Pan));
@@ -367,7 +380,7 @@ namespace ck_pixel_art_perf
         GSweep.SampleCount = 0;
         GSweep.AccumulatedGpuMs = 0.0;
 
-        UE_LOG(LogCkPixelArt, Display, TEXT("PerfSweep stage [%s] starting"), Stage.Name);
+        UE_LOG(CkPixelArtRenderer, Display, TEXT("PerfSweep stage [%s] starting"), Stage.Name);
     }
 
     auto
@@ -378,18 +391,18 @@ namespace ck_pixel_art_perf
         DoSet_CVar(TEXT("ck.PixelArt.Enabled"), -1);
         DoSet_CVar(TEXT("ck.PixelArt.InternalHeight"), -1);
 
-        UE_LOG(LogCkPixelArt, Display, TEXT("PerfSweep results (GPU milliseconds per frame, mean):"));
+        UE_LOG(CkPixelArtRenderer, Display, TEXT("PerfSweep results (GPU milliseconds per frame, mean):"));
 
         for (auto Index = 0; Index < StageCount; ++Index)
         {
-            UE_LOG(LogCkPixelArt, Display, TEXT("  %-14s %.3f ms"), GStages[Index].Name, GSweep.StageGpuMs[Index]);
+            UE_LOG(CkPixelArtRenderer, Display, TEXT("  %-14s %.3f ms"), GStages[Index].Name, GSweep.StageGpuMs[Index]);
         }
 
         const auto Native = GSweep.StageGpuMs[0];
 
         if (Native > 0.0)
         {
-            UE_LOG(LogCkPixelArt, Display,
+            UE_LOG(CkPixelArtRenderer, Display,
                 TEXT("  ON@360 is %.1f%% of native; ON@180 is %.1f%% of native"),
                 100.0 * GSweep.StageGpuMs[1] / Native,
                 100.0 * GSweep.StageGpuMs[2] / Native);
@@ -447,7 +460,7 @@ namespace ck_pixel_art_perf
     {
         if (GSweep.IsRunning)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("PerfSweep is already running."));
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("PerfSweep is already running."));
             return;
         }
 
@@ -455,7 +468,7 @@ namespace ck_pixel_art_perf
 
         if (Seconds <= 0.0f)
         {
-            UE_LOG(LogCkPixelArt, Warning, TEXT("PerfSweep needs a positive duration (got [%f])."), Seconds);
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("PerfSweep needs a positive duration (got [%f])."), Seconds);
             return;
         }
 
@@ -465,7 +478,7 @@ namespace ck_pixel_art_perf
         GSweep.IsRunning = true;
         GSweep.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&DoTick_Sweep));
 
-        UE_LOG(LogCkPixelArt, Display,
+        UE_LOG(CkPixelArtRenderer, Display,
             TEXT("PerfSweep starting: %d stages, %d frames each (%d discarded per stage while it settles)."),
             StageCount, GSweep.FramesPerStage, SettleFrames);
 

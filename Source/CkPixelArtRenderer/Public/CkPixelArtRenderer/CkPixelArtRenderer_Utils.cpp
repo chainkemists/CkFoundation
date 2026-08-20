@@ -1,11 +1,11 @@
-#include "CkPixelArtRender/CkPixelArtRender_Utils.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Utils.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_SnapMath.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_SnapMath.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_PixelArtRender_UE::
+    UCk_Utils_PixelArtRenderer_UE::
     Get_ExactFraction(
         int32 InTargetWidth,
         int32 InViewportWidth)
@@ -23,7 +23,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_PixelArtRender_UE::
+    UCk_Utils_PixelArtRenderer_UE::
     Get_SnappedViewOrigin(
         const FVector& InOrigin,
         const FMatrix& InViewRotationMatrix,
@@ -44,7 +44,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_PixelArtRender_UE::
+    UCk_Utils_PixelArtRenderer_UE::
     Get_OrthoWidthFromProjection(
         const FMatrix& InProjection)
     -> float
@@ -55,7 +55,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_PixelArtRender_UE::
+    UCk_Utils_PixelArtRenderer_UE::
     Get_HorizontalMarginTexels(
         int32 InInnerWidth,
         int32 InInnerHeight,

@@ -1,14 +1,14 @@
-#include "CkPixelArtRender/CkPixelArtRender_Subsystem.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Subsystem.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_Log.h"
-#include "CkPixelArtRender/CkPixelArtRender_ViewExtension.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Log.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_ViewExtension.h"
 
-#include "SceneViewExtension.h"
+#include <SceneViewExtension.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_PixelArtRender_Subsystem_UE::
+    UCk_PixelArtRenderer_Subsystem_UE::
     Initialize(
         FSubsystemCollectionBase& InCollection)
     -> void
@@ -17,11 +17,11 @@ auto
 
     _ViewExtension = FSceneViewExtensions::NewExtension<FCk_PixelArt_ViewExtension>();
 
-    UE_LOG(LogCkPixelArt, Display, TEXT("PixelArt scene view extension registered"));
+    UE_LOG(CkPixelArtRenderer, Display, TEXT("PixelArt scene view extension registered"));
 }
 
 auto
-    UCk_PixelArtRender_Subsystem_UE::
+    UCk_PixelArtRenderer_Subsystem_UE::
     Deinitialize()
     -> void
 {

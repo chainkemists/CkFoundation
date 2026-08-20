@@ -1,4 +1,4 @@
-#include "CkPixelArtRender/CkPixelArtRender_CVars.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_CVars.h"
 
 #include <HAL/IConsoleManager.h>
 

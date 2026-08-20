@@ -1,4 +1,4 @@
-#include "CkPixelArtRender/CkPixelArtRender_UpscaleShader.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_UpscaleShader.h"
 
 #include "DataDrivenShaderPlatformInfo.h"
 
