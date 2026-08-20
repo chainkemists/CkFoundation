@@ -143,3 +143,25 @@ auto
 
     return *Found;
 }
+
+auto
+    FCk_PixelArtRenderer_StateRegistry::
+    TryGet_LastFrameReport(
+        const UWorld* InWorld)
+    -> TOptional<FCk_PixelArt_FrameReport>
+{
+    check(IsInGameThread());
+
+    if (InWorld == nullptr)
+    { return {}; }
+
+    const auto* Found = ck_pixel_art_state::Get_FrameReports().Find(InWorld);
+
+    if (Found == nullptr)
+    { return {}; }
+
+    if (Found->FrameNumber + 1 < GFrameCounter)
+    { return {}; }
+
+    return *Found;
+}

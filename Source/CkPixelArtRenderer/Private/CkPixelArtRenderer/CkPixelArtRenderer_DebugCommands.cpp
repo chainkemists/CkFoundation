@@ -309,6 +309,177 @@ namespace ck_pixel_art_debug_pan
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// `ck.PixelArt.Debug.WatchSnap <Frames>` — splits "the image jitters while the camera is still" into its two
+// possible sources, which no amount of looking at the screen can do.
+//
+// The box filter's compensation makes a texel-lattice flip INVISIBLE on geometry: the raster shifts one texel
+// and the UV shift cancels it. But shadows, specular and every other camera-anchored pass re-render against the
+// hopped origin — so a supposedly-still camera oscillating across a lattice boundary shows up as shadow shimmer
+// on an otherwise rock-steady image. This watches the snapped origin for N frames: exactly one distinct origin
+// means the camera is genuinely still and the instability is on the shadow/light side; more than one means the
+// true view origin is moving and the camera rig is the thing to fix.
+namespace ck_pixel_art_debug_watch_snap
+{
+    struct FWatchSnapState
+    {
+        TArray<FVector> DistinctOrigins;
+        FVector2f RemainderMin = FVector2f::ZeroVector;
+        FVector2f RemainderMax = FVector2f::ZeroVector;
+        double TexelWorldSize = 0.0;
+        int32 RemainingFrames = 0;
+        int32 FramesWithReport = 0;
+        bool DistinctOverflowed = false;
+        bool IsRunning = false;
+        TWeakObjectPtr<const UWorld> World;
+        FTSTicker::FDelegateHandle TickerHandle;
+    };
+
+    FWatchSnapState GWatchSnap = {};
+
+    auto
+        DoFinish_WatchSnap()
+        -> void
+    {
+        if (GWatchSnap.FramesWithReport == 0)
+        {
+            UE_LOG(CkPixelArtRenderer, Warning,
+                TEXT("WatchSnap: no snap reports arrived. The renderer is off, the camera is perspective, or ")
+                TEXT("nothing rendered — enable the renderer on an orthographic view and run again."));
+        }
+        else if (GWatchSnap.DistinctOrigins.Num() == 1)
+        {
+            UE_LOG(CkPixelArtRenderer, Display,
+                TEXT("WatchSnap: STATIC — one snapped origin across %d reporting frames; remainder x in ")
+                TEXT("[%.4f, %.4f], y in [%.4f, %.4f] texels. Any jitter on screen is NOT the camera: look at ")
+                TEXT("the shadow/light side (competing directional lights, shadow-map invalidation)."),
+                GWatchSnap.FramesWithReport,
+                GWatchSnap.RemainderMin.X, GWatchSnap.RemainderMax.X,
+                GWatchSnap.RemainderMin.Y, GWatchSnap.RemainderMax.Y);
+        }
+        else
+        {
+            UE_LOG(CkPixelArtRenderer, Warning,
+                TEXT("WatchSnap: MOVING — %d%s distinct snapped origins across %d reporting frames while the ")
+                TEXT("camera was supposedly still (remainder x in [%.4f, %.4f], y in [%.4f, %.4f]). The true ")
+                TEXT("view origin is crossing texel boundaries: the geometry looks stable because the ")
+                TEXT("compensation cancels the flip, but shadows and every camera-anchored pass re-render each ")
+                TEXT("time. Chase the camera rig (springs, interpolation, per-frame recomposition), not the ")
+                TEXT("renderer."),
+                GWatchSnap.DistinctOrigins.Num(),
+                GWatchSnap.DistinctOverflowed ? TEXT("+") : TEXT(""),
+                GWatchSnap.FramesWithReport,
+                GWatchSnap.RemainderMin.X, GWatchSnap.RemainderMax.X,
+                GWatchSnap.RemainderMin.Y, GWatchSnap.RemainderMax.Y);
+        }
+
+        FTSTicker::GetCoreTicker().RemoveTicker(GWatchSnap.TickerHandle);
+        GWatchSnap = {};
+    }
+
+    auto
+        DoTick_WatchSnap(
+            float InDeltaSeconds)
+        -> bool
+    {
+        const auto Report = FCk_PixelArtRenderer_StateRegistry::TryGet_LastFrameReport(GWatchSnap.World.Get());
+
+        if (Report.IsSet() && Report->SnapApplied)
+        {
+            if (GWatchSnap.FramesWithReport == 0)
+            {
+                GWatchSnap.RemainderMin = Report->RemainderTexels;
+                GWatchSnap.RemainderMax = Report->RemainderTexels;
+                GWatchSnap.TexelWorldSize = Report->TexelWorldSize;
+            }
+
+            ++GWatchSnap.FramesWithReport;
+
+            GWatchSnap.RemainderMin = FVector2f::Min(GWatchSnap.RemainderMin, Report->RemainderTexels);
+            GWatchSnap.RemainderMax = FVector2f::Max(GWatchSnap.RemainderMax, Report->RemainderTexels);
+
+            // Same lattice point, arithmetically re-derived from a slightly different input, lands within float
+            // noise of itself — a quarter texel cleanly separates that from a genuine one-texel hop.
+            const auto Tolerance = FMath::Max(GWatchSnap.TexelWorldSize * 0.25, 1e-6);
+            const auto IsKnown = GWatchSnap.DistinctOrigins.ContainsByPredicate(
+                [&](const FVector& InKnown)
+                {
+                    return InKnown.Equals(Report->SnappedViewOrigin, Tolerance);
+                });
+
+            if (!IsKnown)
+            {
+                if (GWatchSnap.DistinctOrigins.Num() < 16)
+                {
+                    GWatchSnap.DistinctOrigins.Add(Report->SnappedViewOrigin);
+
+                    // Stamped as it appears: origins that only show up in the first frames are the camera rig
+                    // composing itself; ones that keep arriving late are the oscillation this command hunts.
+                    UE_LOG(CkPixelArtRenderer, Display,
+                        TEXT("WatchSnap: origin #%d at reporting frame %d: (%.3f, %.3f, %.3f)"),
+                        GWatchSnap.DistinctOrigins.Num(), GWatchSnap.FramesWithReport,
+                        Report->SnappedViewOrigin.X, Report->SnappedViewOrigin.Y, Report->SnappedViewOrigin.Z);
+                }
+                else
+                { GWatchSnap.DistinctOverflowed = true; }
+            }
+        }
+
+        --GWatchSnap.RemainingFrames;
+
+        if (GWatchSnap.RemainingFrames > 0)
+        { return true; }
+
+        DoFinish_WatchSnap();
+
+        return false;
+    }
+
+    auto
+        DoStart_WatchSnap(
+            const TArray<FString>& InArgs,
+            UWorld* InWorld)
+        -> void
+    {
+        if (GWatchSnap.IsRunning)
+        {
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("WatchSnap is already running."));
+            return;
+        }
+
+        if (InWorld == nullptr)
+        {
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("WatchSnap: no world. Run this from a running game."));
+            return;
+        }
+
+        const auto Frames = InArgs.Num() > 0 ? FCString::Atoi(*InArgs[0]) : 120;
+
+        if (Frames <= 0)
+        {
+            UE_LOG(CkPixelArtRenderer, Warning, TEXT("WatchSnap needs a positive frame count (got [%d])."), Frames);
+            return;
+        }
+
+        GWatchSnap.World = InWorld;
+        GWatchSnap.RemainingFrames = Frames;
+        GWatchSnap.IsRunning = true;
+        GWatchSnap.TickerHandle =
+            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&DoTick_WatchSnap));
+
+        UE_LOG(CkPixelArtRenderer, Display,
+            TEXT("WatchSnap: sampling the snapped view origin for %d frames. Hold the camera still."), Frames);
+    }
+
+    FAutoConsoleCommandWithWorldAndArgs CCmd_WatchSnap(
+        TEXT("ck.PixelArt.Debug.WatchSnap"),
+        TEXT("Watch the snapped view origin for <Frames> (default 120) and report how many distinct origins were ")
+        TEXT("seen. One = the camera is genuinely still (jitter is on the shadow/light side); more = the view ")
+        TEXT("origin is crossing texel boundaries and the camera rig is the thing to fix."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DoStart_WatchSnap));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // `ck.PixelArt.Debug.PerfSweep [SecondsPerStage]` - the renderer's own perf measurement.
 //
 // The claim worth checking is that the renderer is CHEAPER than native, because the scene rasterizes into
