@@ -6,7 +6,7 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 #include "CkPixelArt_Params.generated.h"
 
@@ -26,6 +26,10 @@ enum class ECk_PixelArt_EdgeMode : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_EdgeMode);
+
+// Hosted here rather than beside their UENUMs: those live in CkPixelArtRenderer, which cannot link CkCore.
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_UpscaleFilter);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_ResolutionMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,9 +54,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_PaletteMode);
 
 // The look half of the pixel-art configuration: outlines, banding and palette, applied at the internal
 // resolution so a one-texel line is one texel on screen.
-//
-// Declared in full here even though the shader that consumes it lands later, so that the params struct callers
-// author against does not change shape underneath them.
 USTRUCT(BlueprintType)
 struct CKPIXELART_API FCk_PixelArt_LookParams
 {
@@ -188,10 +189,8 @@ public:
 
 // Everything one world's pixel-art rendering is configured by.
 //
-// Two halves that are deliberately independent: the RENDERER (what resolution the scene rasterizes at, whether
-// the camera snaps) and the LOOK (outlines, banding, palette). Either works without the other — the look is an
-// ordinary full-resolution stylization with the renderer off, and the renderer is a plain sharp downscale with
-// the look off. Pairing them is composition, not coupling.
+// The RENDERER half (internal resolution, camera snap) and the LOOK half (outlines, banding, palette) are
+// independent: either works with the other off. Pairing them is composition, not coupling.
 USTRUCT(BlueprintType)
 struct CKPIXELART_API FCk_PixelArt_Params
 {
@@ -256,11 +255,10 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One engine setting that stands between the configuration and a pixel-art image.
+// One engine setting standing between the configuration and a pixel-art image.
 //
-// It carries the fix as data rather than as prose because the fix is the point: a caller that cannot render
-// needs to know which console variable to move and to what, and a log line saying "preconditions failed" makes
-// the reader go and find that out themselves.
+// Carries the fix as data rather than prose: a caller that cannot render needs the console variable and the
+// value, not a "preconditions failed" line that sends them looking.
 USTRUCT(BlueprintType)
 struct CKPIXELART_API FCk_PixelArt_PreconditionFailure
 {
@@ -294,10 +292,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Why the renderer will not run, or empty when nothing is in its way.
-//
-// Empty is the ONLY meaning of "ready" — the report is never a warning list alongside a successful enable, so a
-// caller can branch on emptiness without also having to know which entries are fatal.
+// Why the renderer will not run, or empty when nothing is in its way. Empty is the ONLY meaning of "ready",
+// so a caller can branch on emptiness without ranking severities.
 USTRUCT(BlueprintType)
 struct CKPIXELART_API FCk_PixelArt_PreconditionReport
 {
