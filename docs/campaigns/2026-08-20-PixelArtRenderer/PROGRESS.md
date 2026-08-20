@@ -791,6 +791,13 @@ are the SAME pre-existing names as every prior gate (`Ck_AutoTest_Crowd_NavQuery
 `Ck_AutoTest_PixelArt_SubsystemContract` and `Ck_AutoTest_Camera_OrthoProjection` both green; the gym
 scripts (including the new capture tripwire) compiled clean.
 
+The edited SHADER BODY was compile-verified separately, because nothing in the suite compiles it and no
+standalone run happened to render the look: a headless `Ck_Usf_GenerateLooks PixelArt` editor run
+(log `Saved/Logs/PixelArtGenLooksReview3.log`) regenerated the master, and the engine flushed every
+outstanding shader compile to `Shaders left to compile 0` before exiting, with zero
+LogShaderCompilers/LogMaterial errors. The re-saved `.uasset` was byte-noise (same size, no parameter
+change) and was reverted rather than committed; re-run the generator if a fresh save is wanted.
+
 Runtime confirmation of the interleave fix, real RHI, standalone gym boots
 (logs `Saved/Logs/PixelArtCaptureTripwire{,3,4}.log`):
 
@@ -1176,7 +1183,7 @@ maintainer's `/ck-ship-dev`.
 
 | SHA | What |
 |---|---|
-| _(docs commit)_ | docs(pixelart): third adversarial review + the two module Claude.mds force-added |
+| `ff112fc82`+ | docs(pixelart): third adversarial review + the two module Claude.mds force-added (plus this shader-compile-evidence follow-up) |
 | `f68c60886` | fix(CkPixelArtRenderer): capture-interleave guard; settled secondary-fraction prediction |
 | `8bfbe0124` | fix(CkUsf): depth-gate the PixelArt crease detector; reuse the stylize helpers |
 | `1f47b9e8f` | docs(pixelart): campaign complete through Phase 6 |
