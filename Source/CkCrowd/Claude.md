@@ -170,6 +170,24 @@ re-path site (MoveTo, BlockedRecheck, PathRefresh) plans from just OUTSIDE the b
 `Get_EscapedQueryStart` + the FindPath request's start override when the agent is inside and its
 goal is not. Master switch `_PathRefreshMode` (default Enabled).
 
+**Two-phase planning** (`_PlanAroundStandingCrowds`, default Enabled, gated on markup being
+Enabled) sits on top of the toll: every agent FindPath plans FIRST with a STRICT filter that
+treats the markup area as IMPASSABLE. The toll alone has a break-even — for a destination close
+behind a standing crowd, crossing beats any detour, so single-phase planning legitimately walked
+agents into bodies they could never pass (the queue-cross field symptom). A strict answer of
+Failed, or Partial ending short of the goal, re-dispatches the episode ONCE with the permissive
+toll filter (`OnPathResolved`, before the path-trouble stamp, revision advanced) — which is how
+queue-joiners still reach a slot beside standing bodies. Strict is retried only on NEW evidence
+(fresh MoveTo, BlockedRecheck resume, PathRefresh trigger, caller ForceReplan); the stall ladder's
+re-paths carry none, and retrying strict there doubles every rung's Pending stop-start cycle into
+a measurable facing whip. The strict filter composes with a host's own filter through the params'
+`_NavQueryFilterStrict` tag (register a strict VARIANT of the permissive filter — classes cannot
+compose at query time); unset, the framework's `UCk_NavQueryFilter_AvoidStandingCrowds` rides the
+FindPath request's `_QueryFilterClassOverride`. `_StrictPlanFailed` on PathFollow records "no
+crowd-free route existed this episode" and surfaces in the OnGoalFailed payload. Coverage:
+`CkAutoTest_Crowd_NarrowGap_BlockedDetours`, `CkAutoTest_Crowd_QueueCross_RoutesAround`; gyms
+`Crowd NarrowGap`, `Crowd QueueCross`.
+
 **NOT BUILT** (documented here for years, never implemented — do not look for them):
 `SleepEvaluator`, `Piercing`. `ProgressEval`/`TriggerReplan` never existed either, but the capability
 they claimed — noticing an agent that cannot reach its goal — now DOES exist, as `BlockDetect` /
@@ -551,6 +569,19 @@ queue manager needs to send the NPC somewhere else instead of having it wait.
 cluster — so a `NoProgress` agent that happens to have someone standing on its goal, or a settled
 pack between it and that goal, holds without spending a retry.
 
+**`OnGoalFailed` says WHY** (`FCk_CrowdAgent_GoalFailedInfo`): the high-level reason
+(`PathFailed` / `PathEndsShortOfGoal` / `NoProgressRetriesExhausted` / `BlockedFailMovePolicy`),
+the nav layer's detail (`ECk_Nav_PathFailReason`), the goal, and the load-bearing bit —
+`_NoCrowdFreeRouteExisted`. True means the strict planning phase found no route avoiding STANDING
+BODIES this episode: they move, so a caller retries later or waits (a bounded
+`MoveTo + Set_ForceRepath(true)` is the sanctioned retry — it is the one override that clears the
+failure hold). False means the failure is structural — walls, fixtures, no navmesh — and retrying
+against unchanged nav is futile: rotate the target or give up. This is the queue-manager /
+planner contract; a consumer that ignores the flag either blacklists targets a crowd merely stood
+near, or retries forever into a wall. Coverage:
+`CkAutoTest_Crowd_NarrowGap_NoRouteFailsClean` (also the no-progress ladder's dedicated
+instrument: a point-plug cannot refund the stall window the way pack-rim creep does).
+
 **What is deliberately NOT offered: silently widening the arrival radius to declare "arrived".** It
 lies to a caller who asked for "within `_ArrivalRadius` of X" and may range-check against it — and it
 is **terminal**: an agent that has "arrived" 100cm out is Idle and will never walk the last metre when
@@ -634,6 +665,23 @@ route around to. An explicit per-agent override (`SamplingAlways` policy, or the
 outranks the envelope: those are deliberate caller instructions, not defaults to second-guess. `0`
 disables the feature outright — the gate short-circuits before `PackExtent` is ever measured, so the
 pack term cannot resurrect a disabled suppression.
+
+### The corridor stand-down — the sampler also stands down between tight walls
+
+A second stand-down, same doctrine (gate whether the sampler runs, never edit its scores): between
+OPPOSING navmesh walls whose corridor width is under `2 × radius + _CorridorStandDownSlackCm`
+(default slack 40 → 124cm for the standard agent), the sampler IS the jitter. The navmesh bakes the
+gap walkable — the body fits — but the sampler penalises inward candidates from BOTH sides at once,
+and with any neighbour pressure the winner oscillates between wall-hugging candidates: the agent
+fidgets through a doorway it could simply walk. `Is_InTightCorridor`
+(`CkCrowdAgent_AvoidanceSample_Algorithm.h`, unit-pinned) detects the bracket from the cached local
+boundary (pairs of agent-facing walls whose closest-point directions oppose within ~60°); the
+stand-down hands the corridor to path-follow + the navmesh clamp, which cannot leave the mesh
+anyway. OPEN corridors only: a STATIONARY body within the pinch's reach vetoes the stand-down —
+the sampler's standoff against an immovable blocker is the calm behaviour the facing contract pins
+(measured: 128° of yaw travel against the 90° ceiling the one time this gate ran without the
+veto). The same explicit per-agent overrides outrank it. Master switch `_CorridorStandDown`
+(default Enabled). Coverage: `CkAutoTest_Crowd_NarrowGap_TraverseCalm`; gym `Crowd NarrowGap`.
 
 The stride gate is a pure function of `GFrameCounter` and the agent hash, so skipping carries no
 round-robin bookkeeping to half-update; a suppressed agent is also not counted in `Crowd Agents

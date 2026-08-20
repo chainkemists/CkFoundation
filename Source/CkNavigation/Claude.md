@@ -156,7 +156,14 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
 
 ## Limitations / known issues
 
-- `_QueryFilter` field is reserved but unused in v1. Plug into `UNavigationQueryFilter` subclasses post-ship if needed.
+- ~~`_QueryFilter` field is reserved but unused~~ — **live since the tag→class table**
+  (`UCk_Nav_ProjectSettings_UE::_QueryFilters`): the tag resolves to a `UNavigationQueryFilter`
+  subclass at query time; empty/unmapped falls back to NavData's default. A request may also carry
+  `_QueryFilterClassOverride` (a `TSubclassOf` that outranks the tag for THAT query) — added for
+  CkCrowd's strict/permissive planning phases, where a per-dispatch filter swap is not a project
+  policy the table could express. Note the start/end projection is UNFILTERED, so a query whose
+  filter excludes the area under its own start still projects onto it — callers standing inside an
+  excluded band must move their start out first (CkCrowd's `Get_EscapedQueryStart`).
 - No async path queries. `FindPathSync` is fast enough at 8/frame for any realistic scenario; if it ever isn't, a dedicated async processor lives at the next layer.
 - No off-mesh links / jumps. Recast supports them but we don't surface them.
 - **The deferred-FindPath queue is process-wide, not keyed on world** (`ck_nav_processor::GDeferredNavRequests`
