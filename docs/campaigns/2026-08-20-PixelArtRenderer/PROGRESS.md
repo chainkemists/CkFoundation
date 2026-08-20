@@ -4,12 +4,17 @@
 > Executor: update this file at every phase boundary, every gate verdict, and every blocker.
 > Never improvise past a failed gate — record it under Blockers and stop the phase.
 
-## Status: PHASE 0 COMPLETE. Next: PHASE_1.md.
+## Status: PHASE 1 COMPLETE. Next: PHASE_2.md (snap + margin + remainder).
 
-Phase 0 exit gate passed on the FINAL binary (rebuild + full suite after the last edit):
-**1188 / 1184 pass / 4 fail — the same four names as the Phase-0-entry baseline. Delta-zero.**
-Nothing pushed; two commits on `feature/pixel-art-renderer` in CkFoundation only (CkTests is
-branched but untouched so far).
+Phase 1 exit gate: **1193 / 1190 pass / 3 fail** (1188 baseline + the 5 new spec tests).
+**No new failures.** One PRE-EXISTING failure disappeared —
+`Angelscript.CppTests.AngelscriptCodeCoverage.IntegrationTest`, an ENGINE test asserting that
+coverage reports exist under `Saved/Automation/Tmp/TestOutput/`. It ran and passed this time,
+almost certainly because earlier runs in this session populated that directory. It was not
+touched and is not claimed as fixed; if it reappears in a later baseline that is noise, not a
+regression.
+
+Nothing pushed. CkFoundation and CkTests both carry commits on `feature/pixel-art-renderer`.
 
 Decisions D1–D8 LOCKED 2026-08-20 (maintainer directive to execute; F1 scoped-SVE-re-open
 approved; F2 module split approved; F3 render-side snap; F4 content exemplars → Phase 7 backlog;
@@ -77,7 +82,7 @@ session, and never trust an exit-76 run's counts.
 | Phase | Deliverable | Status | Exit evidence |
 |---|---|---|---|
 | 0 | Spike: module skeleton, hardcoded upscale proven, D8 gate, empirical checks 7a–7d, baseline | **DONE** | `CkPixelArtRender` module (14 files) + uplugin entry; gate 5.G passed at 3 viewport sizes (D8 = a); box filter verified by zoom; full suite delta-zero on the final binary (`Saved/Logs/BuildTest-Phase0-Final.log`) |
-| 1 | CkPixelArtRender productionized: registry, CVars, lifecycle, fraction/config tests | NOT STARTED | |
+| 1 | CkPixelArtRender productionized: registry, CVars, lifecycle, fraction/config tests | **DONE** | 5/5 spec tests green; `PixelArt.Spike` gone (0 hits); 100x toggle PASS with zero residue; PrimaryToSecondary/OverrideOutput path verified against the engine's rect assertion; suite 1193/1190/3 with no new failures |
 | 2 | Snap + margin + remainder; creep/stutter A/B verified | NOT STARTED | |
 | 3 | CkCamera ortho (attribute + requests + ViewInfo) | NOT STARTED | |
 | 4 | CkPixelArt module: subsystem/preset/settings/CVars, D7 preconditions | NOT STARTED | |
@@ -144,6 +149,19 @@ RESEARCH_UeApis §5 predicted.
   Do NOT record this as working. Phase 1 owns lifecycle/CVars and must prove it with a runtime
   toggle (spike on -> frame rendered -> spike off -> read `r.ScreenPercentage` back).
 
+### Phase 1 exit criteria — verdicts
+
+| Criterion | Result |
+|---|---|
+| Both spec tests green (`--test-pattern PixelArtRender --discover-fresh`) | **5/5** — the fraction test alone asserts 8 viewport widths x 4 targets |
+| `rg "PixelArt.Spike" Source` -> 0 hits | **0** |
+| 100x toggle leaves `r.ScreenPercentage` at its pre-enable value | **PASS** — 100 Active/Released pairs, every restore exactly `0.0000`, verdict logged by `ck.PixelArt.Debug.ToggleLoop` |
+| Full suite vs baseline | **1193 / 1190 / 3 — no new failures** |
+| `OverrideOutput` / not-last-pass path (step 4) | **Verified** at `r.SecondaryScreenPercentage.GameViewport 50`: `stage=PrimaryToSecondary`, `out=640x360` matching `GetSecondaryViewRectSize()`, no engine assertion |
+
+Zero-residue (Phase 0 left this NOT VERIFIED) is now established, by the runtime toggle loop rather
+than by argument.
+
 ### Phase 2 sign gate 6.G
 
 _(fill — final CompSign + evidence captures)_
@@ -191,6 +209,43 @@ _(fill — final CompSign + evidence captures)_
   VS-provided UV spans exactly the rect handed in as `InputViewport`. Passing the inner rect there
   (the SceneColor view rect inset by the margin) makes the two representations unable to disagree.
   The shader keeps `InputExtent`, `InputExtentInv`, `SubTexelOffsetTexels`. Same math, same intent.
+
+- **D-5 — Phase 1's config/registry types carry NO CkCore macros.** PHASE_1 step 1 specifies
+  `CK_GENERATED_BODY` + private `_Members` + `CK_PROPERTY` + `CK_DEFINE_CONSTRUCTORS` on
+  `FCk_PixelArt_RenderConfig`, and `CK_DEFINE_CUSTOM_FORMATTER_ENUM` on the filter enum. All of
+  those live in CkCore, which this module cannot link (divergence D-2). Confirmed against the
+  engine rather than assumed: `FEngineLoop::AppInit` loads PostConfigInit modules
+  (`LaunchEngineLoop.cpp:6756`), `PreInitPreStartupScreen` then calls `CompileGlobalShaderMap`
+  (`:3241`), and `Default`-phase modules only load later in `LoadStartupModules` (`:4611`) — so
+  PostConfigInit is the LAST phase before the global shader map is built and the module cannot
+  move to Default either. → Resolution: plain public-member struct, exactly like
+  `FCk_Iskm_BoneMatrix3x4` in the sibling PostConfigInit module. The enum IS a `UENUM` (no CkCore
+  needed) so Phase 4 can expose it. The reflected, accessor-bearing, BP/AS-facing configuration
+  surface belongs in Phase 4's `CkPixelArt`, which CAN link CkCore.
+  **Open for the maintainer:** validation in this module uses `ensureMsgf`, which house doctrine
+  normally forbids. The doctrine's stated reason ("logs get ignored, ensures do not") is served by
+  it, and the thing it actually forbids — `Warning`/`Error` log-and-continue — is avoided. If the
+  ruling is that no ensure at all may live in a CkCore-less module, the validation has to move to
+  Phase 4's module and this one becomes contract-by-construction.
+
+- **D-6 — the driven axis is WIDTH, the authored knob is HEIGHT.** `FCk_PixelArt_RenderConfig`
+  carries `InternalHeight` (PHASE_1's field), but D5 locks the exactness formula as
+  `(InternalW - 0.5)/ViewportW`. The engine applies ONE resolution fraction to both axes
+  (`SceneRendering.cpp:3352`), so only one axis can be exact. Resolution: the author sets a
+  vertical texel count, the extension derives `TargetWidth = round(InternalHeight * aspect)`, and
+  the fraction is driven on width per D5. At 16:9 that reproduces Phase 0's verified 640 -> 644 exactly.
+  The vertical texel count therefore lands within a texel of the authored value, which is
+  harmless: texel squareness comes from the ortho projection matching the view aspect, not from
+  the internal height being a round number.
+
+- **D-7 — `ck.PixelArt.Debug.ToggleLoop` is instrumentation added to satisfy an exit criterion.**
+  PHASE_1 requires proving zero residue by toggling 100x "via console". No batch of console
+  commands can express it: `-CkDeferredCmdsFile` drains every line in ONE pump, so there are no
+  frames between the toggles and therefore no lease renewals to release. The debug command flips
+  the enable CVar once per frame via `FTSTicker` and logs a PASS/FAIL verdict against the
+  `r.ScreenPercentage` value captured before the first enable. It is debug-only surface in a
+  runtime module — flagged so it can be vetoed; removing it would return zero-residue to
+  "unverified", which is where Phase 0 had to leave it.
 
 ## Blockers
 
