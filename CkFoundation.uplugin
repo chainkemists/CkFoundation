@@ -657,7 +657,7 @@
       ]
     },
     {
-      "Name": "CkPixelArtRender",
+      "Name": "CkPixelArtRenderer",
       "Type": "Runtime",
       "LoadingPhase": "PostConfigInit",
       "WhitelistPlatforms": [
