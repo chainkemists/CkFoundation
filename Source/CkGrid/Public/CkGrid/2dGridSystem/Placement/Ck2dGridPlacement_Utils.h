@@ -48,7 +48,6 @@ public:
         const FCk_Handle_2dGridObject& InObject,
         ECk_CardinalRotation InRotation);
 
-public:
     // READ-BACK of what a live placement was made with. Nothing new is stored: Request_AddPlacement already
     // writes the grid, anchor and rotation onto the entry, and the occupancy persistence handler already
     // round-trips them (Ck2dGridOccupancy_Fragment.cpp re-registers from Entry.Get_Anchor()/Get_Rotation()).
@@ -57,6 +56,12 @@ public:
     // anchor in the first place, which is a second implementation of placement math and drifts from this one.
     //
     // Pair with UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant to go occupant -> placement -> args.
+    //
+    // CONSUMER CONTRACT — branch on Get_Grid (or on the placement handle's own validity) FIRST.
+    // Get_Anchor and Get_Rotation answer (0,0) and None for an invalid placement, and those are
+    // legitimate values for a real placement at the grid origin: the two cases are indistinguishable
+    // at the call site. There is deliberately no TryGet variant — an out-param pair would be a second
+    // way to ask one question, and the grid read already separates "no placement" from every anchor.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridPlacement",
               DisplayName="[Ck][2dGridPlacement] Get Grid")
