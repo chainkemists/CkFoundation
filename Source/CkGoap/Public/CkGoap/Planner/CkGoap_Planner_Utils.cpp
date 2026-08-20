@@ -448,6 +448,17 @@ auto
 
 auto
 	UCk_Utils_Goap_Planner_UE::
+	Get_FirstPlanClass(const FCk_Handle_Goap_Planner& InPlanner) -> TSubclassOf<UCk_GoapAction_EntityScript>
+{
+	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+		TEXT("Invalid Planner handle in Get_FirstPlanClass"))
+	{ return {}; }
+
+	return InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>().Get_FirstPlanClass();
+}
+
+auto
+	UCk_Utils_Goap_Planner_UE::
 	Get_PlanCost(const FCk_Handle_Goap_Planner& InPlanner) -> float
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
