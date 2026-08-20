@@ -39,19 +39,15 @@ namespace ck
 
         /**
          * Per-requirement snapshot of that tag's storage mutation version at the end of the last
-         * evaluated pass. Parallel to _Requirements.
-         *
-         * A pass can only change a result set if some entity gained or lost one of the tags the
-         * query asks about, so an unchanged version set means the whole pass — validity prune,
-         * append scan and ensure scan — provably produces no output and no signal. See
-         * FProcessor_EntityTagQuery_Evaluate.
+         * evaluated pass; parallel to _Requirements. An unchanged version set proves the pass would
+         * produce no output and no signal. See FProcessor_EntityTagQuery_Evaluate.
          */
         TArray<uint64>                         _LastSeenTagVersionPerRequirement;
 
         /**
-         * Forces the next pass to run regardless of tag versions. Set whenever something other than
-         * a tag mutation invalidates the cached results: a requirement was added or removed, or the
-         * tracked-entity destructor scrubbed a dead entity out of the result sets.
+         * Forces the next pass regardless of tag versions. Set when something other than a tag
+         * mutation invalidates the cached results: a requirement change, or the tracked-entity
+         * destructor scrubbing a dead entity out of them.
          */
         bool                                   _NeedsEvaluate = true;
 

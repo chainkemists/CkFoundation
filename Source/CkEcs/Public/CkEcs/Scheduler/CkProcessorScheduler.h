@@ -135,11 +135,10 @@ namespace ck
         /**
          * Whether to pay for per-processor wall-clock timing this frame.
          *
-         * Collection costs 2x FPlatformTime::Seconds plus a record call per processor per frame —
-         * at ~824 dispatches that is ~1,648 clock reads (and, in a STATS build, as many extra stat
-         * scopes) that nobody looks at on a normal frame. It now runs only while a consumer is
-         * reading the history — the Scheduler Debugger polls it every frame it is open — or while
-         * ck.Scheduler.DebugTiming forces it on.
+         * Collection costs two FPlatformTime::Seconds calls plus a record call per processor per
+         * frame (and, in a STATS build, as many extra stat scopes) that nobody looks at on a normal
+         * frame. It runs only while a consumer is reading the history — the Scheduler Debugger
+         * polls it every frame its window is open — or while ck.Scheduler.DebugTiming forces it on.
          */
         auto
         Get_IsDebugTimingWanted() const

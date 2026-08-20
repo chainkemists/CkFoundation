@@ -26,10 +26,9 @@ auto
     auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_EntityTag_StorageParams>(TagStorageHash);
     const auto Entity = InHandle.Get_Entity().Get_ID();
 
-    // These writes go straight to the per-tag entt storage, bypassing FCk_Registry's own Add/Remove,
-    // which is where the mutation counter is normally bumped. Bumping it here is what lets a
-    // consumer answer "did anything gain or lose this tag since I last looked" in O(1) —
-    // FProcessor_EntityTagQuery_Evaluate skips its per-frame scans on exactly that answer.
+    // These writes bypass FCk_Registry's Add/Remove, where the mutation counter is normally bumped.
+    // Bumping here is what lets FProcessor_EntityTagQuery_Evaluate answer "did anything gain or
+    // lose this tag since I last looked" in O(1) and skip its per-frame scans.
     if (InPresent)
     {
         if (NOT Storage.contains(Entity))
