@@ -481,6 +481,7 @@ namespace ck
         BlockDetect._BlockedSignalSent = false;
         BlockDetect._StallRepathCount = 0;
         BlockDetect._BlockedRetryCount = 0;
+        BlockDetect._CrowdedGoalDepth = 0;
         BlockDetect.DoResetProgressWindow();
     }
 

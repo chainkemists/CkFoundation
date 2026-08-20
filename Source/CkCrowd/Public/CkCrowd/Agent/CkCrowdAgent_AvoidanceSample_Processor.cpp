@@ -8,6 +8,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment.h"
+
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include <NavigationSystem.h>
@@ -41,6 +43,47 @@ namespace ck_crowd_agent_avoidance_sample
     // rebuilds) without it moving a quarter of its query range. dtLocalBoundary catches that through
     // poly-ref validation; FindEdges returns no refs, so a time cap stands in for it.
     constexpr auto BOUNDARY_MAX_CACHE_AGE_SEC = 1.0f;
+
+    // True while the agent is on its LAST path leg and inside the final-approach envelope. Mirrors
+    // FProcessor_CrowdAgent_Steering's arrival test exactly — same targeting predicate, same 3D
+    // metric — so the envelope is a strict superset of the arrival condition it exists to let the
+    // agent satisfy. A missing path/follow fragment means "not in the envelope", so the sampler
+    // keeps its old behaviour rather than being silently switched off.
+    auto Is_InFinalApproachEnvelope(
+        const FCk_Handle_CrowdAgent& InAgent,
+        const FVector& InAgentLocation,
+        float InSuppressionCm) -> bool
+    {
+        if (NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>() ||
+            NOT InAgent.Has<ck::FFragment_Nav_PathResult>())
+        { return false; }
+
+        const auto& Waypoints = InAgent.Get<ck::FFragment_Nav_PathResult>().Get_Waypoints();
+        if (Waypoints.IsEmpty())
+        { return false; }
+
+        const auto& PathFollow = InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>();
+        const auto IsTargetingFinal = PathFollow.Get_WaypointIndex() == Waypoints.Num() - 1;
+        if (NOT IsTargetingFinal)
+        { return false; }
+
+        const auto Envelope = PathFollow.Get_ActiveArrivalRadius() + InSuppressionCm;
+        return FVector::Dist(InAgentLocation, Waypoints.Last()) <= Envelope;
+    }
+
+    // An explicit per-agent instruction outranks the envelope: both of these are deliberate caller
+    // overrides that say "always sample this agent", not defaults for the envelope to second-guess.
+    auto Has_ExplicitAlwaysSampleOverride(
+        const FCk_Handle_CrowdAgent& InAgent) -> bool
+    {
+        if (InAgent.Has<ck::FFragment_CrowdAgent_AvoidancePolicy>() &&
+            InAgent.Get<ck::FFragment_CrowdAgent_AvoidancePolicy>().Get_Policy() ==
+                ECk_AvoidancePolicy::SamplingAlways)
+        { return true; }
+
+        return ck::ck_crowd_agent_avoidance_sample_algorithm::HasAvoidanceTag(
+            InAgent, TAG_CrowdAvoidance_AlwaysSample);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -145,15 +188,30 @@ namespace ck
         if (NOT ck_crowd_agent_avoidance_sample_algorithm::ShouldRunSampling(SelfAgent, InNeighborCache))
         { return; }
 
-        INC_DWORD_STAT(STAT_CkCrowd_AgentsSampled);
-        if (InNeighborCache.Get_Neighbors().Num() == 0)
-        { return; }
-
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
         if (NOT IsValid(Settings))
         { return; }
 
         const auto AgentLocation = InTransform.Get_Transform().GetLocation();
+
+        // ---- Final-approach suppression ----------------------------------------------------------
+        // The standard Detour-caller idiom, and it breaks a hard lock-out rather than tuning one:
+        // ringed by bodies at contact distance, every inward candidate closes on a near-overlapping
+        // neighbour, the overlap branch of TimeToCollision floods ToiPen across the WHOLE cloud, and
+        // the cheapest candidate is a standoff wider than the arrival radius. The agent then hovers
+        // just outside its goal forever and never arrives — measured at 39-40cm against 30.
+        // Leaving Steering's path-follow velocity untouched is what lets it close the last stretch;
+        // separation (lateral-clamped) and push-apart still run, so contact inside the envelope is
+        // resolved by de-penetration, which is the correct authority a metre from the destination.
+        const auto SuppressionCm = Settings->Get_AvoidanceFinalApproachSuppressionCm();
+        if (SuppressionCm > 0.0f &&
+            NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
+            ck_crowd_agent_avoidance_sample::Is_InFinalApproachEnvelope(SelfAgent, AgentLocation, SuppressionCm))
+        { return; }
+
+        INC_DWORD_STAT(STAT_CkCrowd_AgentsSampled);
+        if (InNeighborCache.Get_Neighbors().Num() == 0)
+        { return; }
 
         auto Walls = ck_crowd_agent_avoidance_sample_algorithm::FWallSegments{};
         if (Settings->Get_AvoidanceWallSegments() == ECk_AvoidanceWallSegmentsMode::Enabled)
