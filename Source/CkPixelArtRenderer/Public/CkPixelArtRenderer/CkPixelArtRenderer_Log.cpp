@@ -1,5 +1,5 @@
-#include "CkPixelArtRender/CkPixelArtRender_Log.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(LogCkPixelArt);
+DEFINE_LOG_CATEGORY(CkPixelArtRenderer);

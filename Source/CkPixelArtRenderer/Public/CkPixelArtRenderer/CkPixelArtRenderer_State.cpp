@@ -1,7 +1,7 @@
-#include "CkPixelArtRender/CkPixelArtRender_State.h"
+#include "CkPixelArtRenderer/CkPixelArtRenderer_State.h"
 
 #include "CoreGlobals.h"
-#include "Engine/World.h"
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ namespace ck_pixel_art_state
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_PixelArtRender_StateRegistry::
+    FCk_PixelArtRenderer_StateRegistry::
     Set(
         const UWorld* InWorld,
         const FCk_PixelArt_RenderConfig& InConfig)
@@ -51,9 +51,6 @@ auto
 {
     check(IsInGameThread());
 
-    // ensureMsgf rather than the house CK_ENSURE_IF_NOT: this module cannot link CkCore at PostConfigInit. It is
-    // still an ensure and not a log-and-continue — a null key here would otherwise become a registry entry that
-    // no world can ever match or clear.
     if (!ensureMsgf(InWorld != nullptr,
         TEXT("CkPixelArt: Set was called with a null world. Nothing was stored.")))
     { return; }
@@ -68,7 +65,7 @@ auto
 }
 
 auto
-    FCk_PixelArtRender_StateRegistry::
+    FCk_PixelArtRenderer_StateRegistry::
     Clear(
         const UWorld* InWorld)
     -> void
@@ -84,7 +81,7 @@ auto
 }
 
 auto
-    FCk_PixelArtRender_StateRegistry::
+    FCk_PixelArtRenderer_StateRegistry::
     TryGet(
         const UWorld* InWorld)
     -> TOptional<FCk_PixelArt_RenderConfig>
@@ -105,7 +102,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_PixelArtRender_StateRegistry::
+    FCk_PixelArtRenderer_StateRegistry::
     Set_FrameReport(
         const UWorld* InWorld,
         const FCk_PixelArt_FrameReport& InReport)
@@ -124,7 +121,7 @@ auto
 }
 
 auto
-    FCk_PixelArtRender_StateRegistry::
+    FCk_PixelArtRenderer_StateRegistry::
     TryGet_FrameReport(
         const UWorld* InWorld)
     -> TOptional<FCk_PixelArt_FrameReport>
