@@ -19,8 +19,12 @@ namespace ck
 {
     // dtCrowd-style penalty-scored velocity sampling; overwrites _DesiredVelocity with the
     // lowest-penalty candidate. PARALLEL-SAFE: every cross-entity access is a read (the zone-tag
-    // walk and the navmesh wall query), and the only writes are the agent's own DesiredVelocity and
-    // its own LocalBoundary cache. The navmesh query is worker-thread safe by construction:
+    // walk, the navmesh wall query, and the final-approach envelope's settled-neighbour scan), and
+    // the only writes are the agent's own DesiredVelocity and its own LocalBoundary cache. The
+    // settled scan reads state written by BlockDetect and Steering, both of which this processor
+    // already runs after within FGroup_Physics, and by tiers that live in FGroup_Gameplay — so no
+    // writer of it is ever concurrent with this scan. The navmesh query is worker-thread safe by
+    // construction:
     // ARecastNavMesh reaches Detour through INITIALIZE_NAVQUERY, which uses a STACK-LOCAL
     // dtNavMeshQuery off the game thread and the shared one only on it (RecastNavMesh.cpp:49-52),
     // and the dtNavMesh itself is only read.
