@@ -13,6 +13,22 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("EntityTag Entities Scanned"), STAT_EntityTag_En
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_entity_tag_utils
+{
+    // Subscription-marker pools and per-tag storage pools live in the SAME registry pool map, both
+    // keyed by name hash — and production uses the same name for both (an NPC subscribing to a
+    // station kind tag that stations carry as a live tag). The salt keeps the two id spaces
+    // disjoint; without it the two features resolve ONE pool under two different storage types.
+    constexpr auto SubscriptionStorageSalt = entt::id_type{0x5AB5C81B};
+
+    auto Get_SubscriptionStorageId(FName InTagFilter) -> entt::id_type
+    {
+        return entt::id_type{GetTypeHash(InTagFilter)} ^ SubscriptionStorageSalt;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_EntityTag_UE::
     Set_StoragePresence(
@@ -61,7 +77,7 @@ auto
 {
     auto&& Storage = InListenerHost.Get_RegistryView()
         .Storage<ck::FFragment_EntityTag_AnyEntitySubscription>(
-            entt::id_type{GetTypeHash(InTagFilter)});
+            ck_entity_tag_utils::Get_SubscriptionStorageId(InTagFilter));
 
     const auto Entity = InListenerHost.Get_Entity().Get_ID();
 
@@ -106,7 +122,7 @@ auto
     {
         auto&& Storage = InMutatedEntity.Get_RegistryView()
             .Storage<ck::FFragment_EntityTag_AnyEntitySubscription>(
-                entt::id_type{GetTypeHash(InStorageKey)});
+                ck_entity_tag_utils::Get_SubscriptionStorageId(InStorageKey));
 
         const auto View = entt::basic_view{Storage};
         View.each([&](const auto InListenerEntity, const ck::FFragment_EntityTag_AnyEntitySubscription&)

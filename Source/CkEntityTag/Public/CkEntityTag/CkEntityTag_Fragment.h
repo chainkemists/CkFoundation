@@ -73,9 +73,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Presence in the per-tag-keyed storage (entt::id_type{GetTypeHash(Tag)}, mirroring
-    // FFragment_EntityTag_StorageParams) marks the listener as interested in that tag; NAME_None
-    // is the wildcard. Refcounted so multiple delegates on one (entity, tag) pair share a marker.
+    // Presence in the per-tag-keyed storage (ck_entity_tag_utils::Get_SubscriptionStorageId — the
+    // name hash SALTED so these pools can never collide with the FFragment_EntityTag_StorageParams
+    // pools that key by the same names) marks the listener as interested in that tag; NAME_None is
+    // the wildcard. Refcounted so multiple delegates on one (entity, tag) pair share a marker.
     struct CKENTITYTAG_API FFragment_EntityTag_AnyEntitySubscription
     {
     public:

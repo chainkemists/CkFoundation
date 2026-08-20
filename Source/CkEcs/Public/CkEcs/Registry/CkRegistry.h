@@ -311,7 +311,29 @@ private:
     template <typename T_Fragment>
     auto&& Storage(entt::id_type InHash)
     {
-        return Resolve()->storage<T_Fragment>(InHash);
+        auto* ResolvedRegistry = Resolve();
+
+#if !UE_BUILD_SHIPPING
+        // Pools are keyed by id ALONE, so two features keying different types into one id silently
+        // share a pool — EnTT's own type assert compiles out of UE builds, leaving wrong-stride
+        // writes as heap corruption. Loud here so an id-domain collision is caught at the call site
+        // instead of surfacing as distant memory damage.
+        if (const auto* ExistingPool = ResolvedRegistry->storage(InHash))
+        {
+            const auto& ExistingInfo  = ExistingPool->info();
+            const auto& RequestedInfo = entt::type_id<T_Fragment>();
+
+            CK_ENSURE_IF_NOT(ExistingInfo == RequestedInfo,
+                TEXT("Registry pool id [{}] already holds storage of type [{}] but [{}] was requested — "
+                     "two features are keying DIFFERENT types into the same id"),
+                InHash,
+                FString{static_cast<int32>(ExistingInfo.name().size()), ExistingInfo.name().data()},
+                FString{static_cast<int32>(RequestedInfo.name().size()), RequestedInfo.name().data()})
+            { /* fall through: the typed resolve below is the pre-existing behavior — the ensure is the alarm */ }
+        }
+#endif
+
+        return ResolvedRegistry->storage<T_Fragment>(InHash);
     }
 
 private:
