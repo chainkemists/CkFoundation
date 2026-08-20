@@ -7,6 +7,7 @@
 #include "CkPixelArtRender/CkPixelArtRender_Utils.h"
 
 #include "CoreGlobals.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CoreDelegates.h"
@@ -56,6 +57,32 @@ namespace ck_pixel_art_view_extension
         -> const UWorld*
     {
         return InViewFamily.Scene != nullptr ? InViewFamily.Scene->GetWorld() : nullptr;
+    }
+
+    // Whether this family is the one the player is looking at.
+    //
+    // A world renders more families than the game viewport's: scene captures, reflection captures, planar
+    // reflections, and a real-time sky light's cubemap faces all arrive here with their OWN render target.
+    // Deriving the internal resolution from one of those computes geometry for a texture nobody sees — and
+    // because the screen percentage is a GLOBAL console variable, driving it from one of them stamps that
+    // value over the real viewport's for the frame.
+    //
+    // Render-target IDENTITY is the check, not a list of family kinds. The capture flags live on FSceneView
+    // rather than on the family, and the family's views are not built yet at the point this has to answer;
+    // more to the point, the question is strictly "is this the game viewport", and comparing against it
+    // answers exactly that with nothing to keep up to date as the engine gains new kinds of capture.
+    auto
+        Get_IsPrimaryViewportFamily(
+            const FSceneViewFamily& InViewFamily,
+            const UWorld* InWorld)
+        -> bool
+    {
+        if (InWorld == nullptr || InWorld->GetGameViewport() == nullptr)
+        { return false; }
+
+        const auto* GameViewport = InWorld->GetGameViewport()->Viewport;
+
+        return GameViewport != nullptr && InViewFamily.RenderTarget == GameViewport;
     }
 
     // The scene renderer applies ONE resolution fraction to both axes, so only one of them can be made exact.
@@ -152,6 +179,13 @@ auto
     _FrameWorld = World;
 
     if (!Config.IsSet() || !Config->Enabled)
+    { return; }
+
+    // Captures render into their own targets and are never upscaled by this renderer, so acting on one
+    // would compute geometry for a texture nobody sees AND stamp its screen percentage over the real
+    // viewport's — the CVar is global. Leaving the lease unrenewed here is deliberate and safe: the game
+    // viewport's own family renews it in the same frame.
+    if (!ck_pixel_art_view_extension::Get_IsPrimaryViewportFamily(InViewFamily, World))
     { return; }
 
     const auto FixedHeight = Config->ResolutionMode == ECk_PixelArt_ResolutionMode::FixedHeight;
@@ -426,7 +460,17 @@ auto
     _LeaseRenewedThisFrame = true;
 
     const auto Aspect = static_cast<double>(ViewportSize.X) / static_cast<double>(ViewportSize.Y);
-    const auto InnerHeight = ck_pixel_art_view_extension::Get_InnerHeight(InConfig, ViewportSize);
+
+    // Clamped to what the viewport can actually hold, margin included. This renderer only ever
+    // DOWNSCALES — Get_ExactFraction answers 1.0 for a target wider than the viewport — so an internal
+    // height larger than the window does not supersample, it produces a displayed window bigger than the
+    // rendered image and an inner rect with no margin left on any side. A small window is a legitimate
+    // state (a resized editor window, a low-resolution display), not a misconfiguration, so this bends
+    // rather than refusing.
+    const auto RequestedHeight = ck_pixel_art_view_extension::Get_InnerHeight(InConfig, ViewportSize);
+    const auto MaxHeightForViewport = FMath::Max(1, ViewportSize.Y - 2 * FMath::Max(0, InConfig.MarginTexels));
+
+    const auto InnerHeight = FMath::Min(RequestedHeight, MaxHeightForViewport);
     const auto InnerWidth = ck_pixel_art_view_extension::Get_TargetWidth(InnerHeight, ViewportSize);
 
     // A margin asked for in texels cannot be spent evenly on both axes — one fraction scales both, so extra width
@@ -487,6 +531,14 @@ auto
     // rendered and the borders smear — loudly, because it looks like a shader bug and is not one.
     const auto BottomInset = RenderSize.Y - TopInset - Report.InnerSizeTexels.Y;
     const auto EverySideHasMargin = HorizontalMargin >= 1 && TopInset >= 1 && BottomInset >= 1;
+
+    if (InnerHeight != RequestedHeight)
+    {
+        UE_LOG(LogCkPixelArt, Warning,
+            TEXT("Internal height %d does not fit a %dx%d viewport with a %d-texel margin; rendering at %d ")
+            TEXT("instead. The texel grid is coarser than configured until the window grows."),
+            RequestedHeight, ViewportSize.X, ViewportSize.Y, MarginTexels, InnerHeight);
+    }
 
     if (MarginTexels > 0 && !EverySideHasMargin)
     {
