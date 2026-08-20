@@ -71,6 +71,22 @@ namespace ck_pixel_art_view_extension
         return FMath::RoundToInt(InInternalHeight * Aspect);
     }
 
+    // The authored vertical texel count for this viewport. In TexelsPerPixel mode it falls out of the window
+    // rather than being authored, which is the whole difference between the two modes.
+    auto
+        Get_InnerHeight(
+            const FCk_PixelArt_RenderConfig& InConfig,
+            const FIntPoint& InViewportSize)
+        -> int32
+    {
+        if (InConfig.ResolutionMode == ECk_PixelArt_ResolutionMode::FixedHeight)
+        { return InConfig.InternalHeight; }
+
+        const auto TexelsPerPixel = FMath::Max(1, InConfig.TexelsPerPixel);
+
+        return FMath::Max(1, InViewportSize.Y / TexelsPerPixel);
+    }
+
     auto
         Get_PredictedInternalSize(
             const FIntPoint& InViewportSize,
@@ -138,15 +154,17 @@ auto
     if (!Config.IsSet() || !Config->Enabled)
     { return; }
 
-    const auto InternalHeightIsUsable = Config->InternalHeight > 0;
+    const auto FixedHeight = Config->ResolutionMode == ECk_PixelArt_ResolutionMode::FixedHeight;
+    const auto ResolutionIsUsable = FixedHeight ? Config->InternalHeight > 0 : Config->TexelsPerPixel > 0;
 
     // ensureMsgf rather than the house CK_ENSURE_IF_NOT: this module cannot link CkCore at PostConfigInit. It is
-    // still an ensure and not a log-and-continue — a non-positive internal height would otherwise resolve to a
-    // handful of texels and look like a broken renderer rather than a bad setting.
-    if (!ensureMsgf(InternalHeightIsUsable,
-        TEXT("CkPixelArt: InternalHeight is [%d], which cannot describe a resolution. The renderer will not run ")
-        TEXT("for this world until it is positive."),
-        Config->InternalHeight))
+    // still an ensure and not a log-and-continue — a non-positive value here would otherwise resolve to a handful
+    // of texels and look like a broken renderer rather than a bad setting.
+    if (!ensureMsgf(ResolutionIsUsable,
+        TEXT("CkPixelArt: %s is [%d], which cannot describe a resolution. The renderer will not run for this ")
+        TEXT("world until it is positive."),
+        FixedHeight ? TEXT("InternalHeight") : TEXT("TexelsPerPixel"),
+        FixedHeight ? Config->InternalHeight : Config->TexelsPerPixel))
     { return; }
 
     _FrameConfig = Config;
@@ -408,8 +426,8 @@ auto
     _LeaseRenewedThisFrame = true;
 
     const auto Aspect = static_cast<double>(ViewportSize.X) / static_cast<double>(ViewportSize.Y);
-    const auto InnerWidth = ck_pixel_art_view_extension::Get_TargetWidth(InConfig.InternalHeight, ViewportSize);
-    const auto InnerHeight = InConfig.InternalHeight;
+    const auto InnerHeight = ck_pixel_art_view_extension::Get_InnerHeight(InConfig, ViewportSize);
+    const auto InnerWidth = ck_pixel_art_view_extension::Get_TargetWidth(InnerHeight, ViewportSize);
 
     // A margin asked for in texels cannot be spent evenly on both axes — one fraction scales both, so extra width
     // buys proportionally fewer extra rows. Widening horizontally until the vertical fallout still reaches the
