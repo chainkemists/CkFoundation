@@ -59,6 +59,13 @@ enum class ECk_CrowdBlockDetectionMode : uint8
 };
 
 UENUM(BlueprintType)
+enum class ECk_CrowdCrowdedGoalBlockMode : uint8
+{
+    Disabled,    // only an agent in contact with the goal ITSELF ever blocks; everyone behind it presses inward
+    Enabled,     // contact with a settled neighbour parked on the agent's own goal region blocks too, so settling propagates outward
+};
+
+UENUM(BlueprintType)
 enum class ECk_CrowdNavmeshConstraintMode : uint8
 {
     Disabled,    // agents integrate in free space; separation/avoidance/push-apart can displace them off the navmesh
@@ -163,6 +170,11 @@ private:
             ToolTip = "Time horizon (seconds) for the time-to-collision penalty. Mirrors dtCrowd's horizTime default."))
     float _AvoidanceHorizonTime = 2.5f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "Extra distance (cm) beyond the arrival radius within which an agent on its FINAL path leg stops running the velocity-obstacle sampler and simply follows Steering's path-follow velocity. It exists to break a hard lock-out: ringed by neighbours at contact distance, every inward candidate closes on a near-overlapping body, the overlap branch of the time-to-collision term floods the collision penalty across the whole sample cloud, and the sampler parks the agent at a standoff WIDER than its arrival radius, where it hovers indefinitely without ever arriving. Trades away predictive avoidance for the last (ArrivalRadius + this) of an approach; separation and push-apart still run, so contact in the envelope is resolved by de-penetration, which is the right authority that close to a destination. 0 disables the suppression. An explicit per-agent override (SamplingAlways policy, or the AlwaysSample tag) outranks it."))
+    float _AvoidanceFinalApproachSuppressionCm = 90.0f;
+
     // ---- Sampling Avoidance | Walls ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Walls",
         meta = (AllowPrivateAccess = true,
@@ -224,6 +236,16 @@ private:
         meta = (AllowPrivateAccess = true, ClampMin = 0, UIMin = 0, ClampMax = 20, UIMax = 20,
             ToolTip = "How many HoldAndRetry re-check cycles a NoProgress block may spend re-pathing before the move is failed outright. Applies ONLY to NoProgress: a goal occupied by another AGENT keeps the unbounded hold (a queue wait is not a failure), while static geometry never clears and retrying it forever is a silent hang no caller can observe."))
     int32 _BlockedMaxRetries = 3;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Master switch for cluster-aware goal-blocked detection. The occupied-goal test only ever answers for the agent in contact with the GOAL, so in a crowd commanded to one point only the innermost ring learns anything and everyone behind it presses inward until the slow no-progress ladder stops them one by one. Enabled also blocks a walking agent that is in contact with a SETTLED neighbour parked inside its own goal region, standing nearer the goal, and standing in its way (a +/-60 degree cone around the direction of travel). Why the neighbour stopped there is not asked, so a stranger obstructs exactly as much as a rival for the same destination. Disabled restores the occupied-goal-only behaviour, for A/B comparison only."))
+    ECk_CrowdCrowdedGoalBlockMode _CrowdedGoalBlockMode = ECk_CrowdCrowdedGoalBlockMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "Slack (cm) that widens BOTH cluster-blocking distance tests: the radius sum a pair must be within to count as being in CONTACT, and the region around the agent's own goal a settled neighbour must be parked inside to count as standing on the destination. Trades settle latency and reach against false stops: push-apart holds a settled pair at exactly the radius sum, so zero pad leaves the contact test no margin and the 0.5s sampling cadence can miss the frame outright; too large and agents stop with a visible gap, and strangers parked further and further from the destination start halting passers-by."))
+    float _CrowdedGoalContactPadCm = 10.0f;
 
     // ---- Navmesh constraint ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
@@ -289,6 +311,7 @@ public:
     CK_PROPERTY_GET(_AvoidanceWeightSide);
     CK_PROPERTY_GET(_AvoidanceWeightToi);
     CK_PROPERTY_GET(_AvoidanceHorizonTime);
+    CK_PROPERTY_GET(_AvoidanceFinalApproachSuppressionCm);
     CK_PROPERTY_GET(_AvoidanceWallSegments);
     CK_PROPERTY_GET(_AvoidanceWallQueryRangeMultiplier);
     CK_PROPERTY_GET(_PushApartMode);
@@ -310,6 +333,8 @@ public:
     CK_PROPERTY_GET(_BlockedStationarySpeedThreshold);
     CK_PROPERTY_GET(_BlockedRecheckInterval);
     CK_PROPERTY_GET(_BlockedMaxRetries);
+    CK_PROPERTY_GET(_CrowdedGoalBlockMode);
+    CK_PROPERTY_GET(_CrowdedGoalContactPadCm);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -355,6 +380,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdBlockDetectionMode Get_BlockDetectionMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdCrowdedGoalBlockMode Get_CrowdedGoalBlockMode();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdWaypointRetirementLineOfSightMode Get_WaypointRetirementLineOfSight();
