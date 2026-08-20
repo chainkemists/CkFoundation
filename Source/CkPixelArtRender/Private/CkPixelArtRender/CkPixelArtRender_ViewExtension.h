@@ -10,10 +10,18 @@
 
 // Drives the whole pixel-art render path for one frame:
 //
-//   IsActiveThisFrame      — resolve the context world's configuration (registry + console overlay)
-//   SetupViewFamily        — drive the screen percentage so the scene rasterizes at the internal resolution
-//   BeginRenderViewFamily  — install the box-filter upscaler for THIS family (the only legal registration point;
-//                            the renderer checks all three upscaler slots are null before the extension callbacks)
+//   IsActiveThisFrame        — resolve the context world's configuration (registry + console overlay)
+//   SetupViewFamily          — drive the screen percentage so the scene rasterizes at the internal resolution
+//   SetupViewProjectionMatrix— fold the render margin into the projection and snap the view origin to the texel
+//                              lattice, keeping the sub-texel remainder
+//   BeginRenderViewFamily    — install the box-filter upscaler for THIS family (the only legal registration
+//                              point; the renderer checks all three upscaler slots are null first)
+//
+// Those three run in that order inside UGameViewportClient::Draw (GameViewportClient.cpp:1486, then :1687 via
+// LocalPlayer::CalcSceneView, then :1971), all on the game thread, which is what lets one member carry the
+// frame's state from hook to hook without a lock or a registry round trip. The frame number stamped on that
+// member is the guard: a hook that does not run leaves the previous frame's answer behind, and consuming it would
+// snap to a lattice the scene was never rendered against.
 //
 // Disabling is a LEASE, not an event. Every frame the renderer is meant to be running, SetupViewFamily renews the
 // lease; a frame that ends without a renewal releases it and puts r.ScreenPercentage back. That converges from
@@ -31,6 +39,9 @@ public:
 public:
     auto SetupViewFamily(
         FSceneViewFamily& InViewFamily) -> void override;
+
+    auto SetupViewProjectionMatrix(
+        FSceneViewProjectionData& InOutProjectionData) -> void override;
 
     auto BeginRenderViewFamily(
         FSceneViewFamily& InViewFamily) -> void override;
@@ -54,13 +65,23 @@ private:
     TOptional<FCk_PixelArt_RenderConfig> _FrameConfig;
     TOptional<float> _SavedScreenPercentage;
 
+    // What the renderer is doing to the frame currently being assembled, built up across the three hooks and
+    // published to the state registry once the snap is known. Reset at end of frame.
+    TOptional<FCk_PixelArt_FrameReport> _FrameReport;
+
+    // Resolved in SetupViewFamily, which is the only hook that is handed the scene. SetupViewProjectionMatrix
+    // receives projection data and nothing else, so without this it could not name the world it is publishing for.
+    TWeakObjectPtr<const UWorld> _FrameWorld;
+
+    // Origin held by `ck.PixelArt.Debug.FreezeSnap`. Kept across frames on purpose — freezing is only meaningful
+    // if the held value outlives the frame that captured it.
+    TOptional<FVector> _FrozenViewOrigin;
+
     FDelegateHandle _EndFrameHandle;
 
     bool _LeaseRenewedThisFrame = false;
 
     FIntPoint _LastViewportSize = FIntPoint::ZeroValue;
-    FIntPoint _LastInternalSize = FIntPoint::ZeroValue;
-    int32 _LastMarginTexels = 0;
     float _LastFraction = 0.0f;
     float _LastSecondaryViewFraction = 1.0f;
     bool _LastUpscaleSlotWasLive = true;

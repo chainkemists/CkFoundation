@@ -31,4 +31,25 @@ namespace ck::pixel_art
 
     // Whether `ck.PixelArt.Debug.LogState` asked for per-transition state logging.
     CKPIXELARTRENDER_API auto Get_LogStateEnabled() -> bool;
+
+    // Debug behaviour of the snap compensation, all under `ck.PixelArt.Debug.*`. These exist to make the three
+    // states of the technique separable by eye, which is the only way its correctness can actually be judged:
+    //
+    //   snap off                  -> pixels crawl along edges (the problem the technique solves)
+    //   snap on, compensation off -> motion advances in whole texels (proves the snap is live)
+    //   snap on, compensation on  -> smooth motion, still grid-aligned (the finished result)
+    struct FCk_PixelArt_DebugSnapOverrides
+    {
+        // Snap without re-applying the remainder. The picture must visibly step.
+        bool SnapOnly = false;
+
+        // Hold the last snapped origin. The picture must freeze while the gameplay camera keeps moving.
+        bool FreezeSnap = false;
+
+        // Multiplies the UV compensation. The correct sign is derived and is the default; -1 exists so a human
+        // can settle the question in one console command instead of a rebuild if the derivation is ever wrong.
+        float CompensationSign = 1.0f;
+    };
+
+    CKPIXELARTRENDER_API auto Get_DebugSnapOverrides() -> FCk_PixelArt_DebugSnapOverrides;
 }
