@@ -79,7 +79,7 @@ namespace ck
 
         // The composed view's attachable presence: a plain child transform the POV processor drives
         // through an ordinary transform request each time it composes. Content that must follow the
-        // rendered view scene-node-attaches here; the request lands in the frame's late-resolve pass,
+        // rendered view scene-node-attaches here; the request lands in the transform-local settle barrier,
         // so those children compose before anything is pushed to components.
         FCk_Handle_Transform _ViewAnchor;
 

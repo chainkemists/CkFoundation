@@ -304,7 +304,7 @@ namespace ck
         InCurrent._ViewInfo = ViewInfo;
 
         // Publish the composed pose to the view anchor through the ordinary deferred request path. The
-        // enqueue happens in FGroup_Transform_Derived, so the frame's late-resolve pass drains it and
+        // enqueue happens in FGroup_Transform_Derived, so the transform-local settle barrier drains it and
         // composes any scene-node children of the anchor before components are pushed.
         if (ck::IsValid(InCurrent._ViewAnchor))
         {

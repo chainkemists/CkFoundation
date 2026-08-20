@@ -233,7 +233,7 @@ public:
         const FCk_Handle_Camera& InCamera);
 
     // The composed view's attachable transform presence. Scene-node-attach here to have content follow
-    // the rendered view; children compose in the frame's late-resolve pass, after the POV publish.
+    // the rendered view; children compose in the transform-local settle barrier after the POV publish.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Get View Anchor")

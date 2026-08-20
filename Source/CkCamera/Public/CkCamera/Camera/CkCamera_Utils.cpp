@@ -63,7 +63,7 @@ auto
     // The composed view's attachable presence (FFragment_Camera_Current::_ViewAnchor): a plain child
     // transform, seeded from the director's current pose so a first-frame attach composes from something
     // sane. Every later pose arrives as an ordinary transform request enqueued by the POV processor and
-    // drained by the frame's late-resolve pass.
+    // drained by the transform-local settle barrier.
     {
         const auto SeedPose = Director.Get<ck::FFragment_Transform>().Get_Transform();
 
