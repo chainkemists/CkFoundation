@@ -4,7 +4,7 @@
 > Executor: update this file at every phase boundary, every gate verdict, and every blocker.
 > Never improvise past a failed gate — record it under Blockers and stop the phase.
 
-## Status: PHASE 1 COMPLETE. Next: PHASE_2.md (snap + margin + remainder).
+## Status: PHASES 2 + 3 IMPLEMENTED, gate pending. Next: PHASE_4.md (CkPixelArt module).
 
 Phase 1 exit gate: **1193 / 1190 pass / 3 fail** (1188 baseline + the 5 new spec tests).
 **No new failures.** One PRE-EXISTING failure disappeared —
@@ -162,9 +162,51 @@ RESEARCH_UeApis §5 predicted.
 Zero-residue (Phase 0 left this NOT VERIFIED) is now established, by the runtime toggle loop rather
 than by argument.
 
-### Phase 2 sign gate 6.G
+### Phase 2 sign gate 6.G — HUMAN-QUEUED (see H-5)
 
-_(fill — final CompSign + evidence captures)_
+The gate is `[EDITOR-VERIFY, standalone]` by its own heading and no agent can score it: every verdict
+in it is "does this look like it crawls / steps / moves smoothly". The compensation SIGN was therefore
+DERIVED rather than discovered, and `ck.PixelArt.Debug.CompSign -1` exists so a human can overturn the
+derivation in one console command instead of a rebuild.
+
+The derivation, so the maintainer can check the reasoning and not only the picture: the shader samples
+at `UV * Extent + SubTexelOffsetTexels`. Sampling further RIGHT in the source puts content that was
+further right at the current screen position, which moves the picture LEFT — the same direction the
+camera moving right would have moved it. So the horizontal remainder goes in with its own sign. The
+vertical one is negated, because the remainder is expressed in the WORLD's sense of up while V grows
+downward. Code: `CkPixelArtRender_ViewExtension.cpp`, `BeginRenderViewFamily`.
+
+### Fable adjudication — render margin across axes (2026-08-20)
+
+**Question.** D5 locks "+2 texels per side", but its formula is one-dimensional (width only) and the
+renderer applies ONE resolution fraction to both axes. At 16:9 a 2-texel horizontal margin buys only
+~1.1 rows vertically; on a 32:9 ultrawide it degrades to ~0.5 rows per side, below the functional
+minimum. Three options went to a Fable agent: (A) charter-literal, (B) aspect-compensated horizontal
+margin, (C) symmetric-integer margin with a per-axis projection scale.
+
+**Ruling: B, floor-bias on an odd surplus, with the real insets asserted at runtime.** A fails the
+no-sampling-outside-the-render invariant at shipping aspect ratios. C buys symmetric edges by making
+every texel ~0.3% rectangular, trading a correctness guarantee for cosmetics — and square texels are
+the premise of the look. B holds the invariant at any aspect for ~3% more rendered pixels.
+
+Implemented as `ck::pixel_art::Get_HorizontalMarginTexels`, which solves for the margin directly
+rather than using the ruling's `ceil(M * Aspect)` approximation: the rendered height is
+`ceil((RenderedWidth - 0.5) / Aspect)`, so the width that guarantees `M` rows on both sides is
+`(InnerHeight + 2M) * Aspect + 0.5`. At 1280x720 / 360p / M=2 that gives a 4-texel horizontal margin,
+rendering 648x365 for a 640x360 window — insets 4/4 horizontal, 2/3 vertical.
+
+Fable's flagged risk was that the guarantee is proven with clean arithmetic and could fail on odd
+viewport heights or DPI-scaled windows. Taken: `DoApply_ScreenPercentage` logs an Error naming the
+three computed insets whenever any drops below one texel, and the spec test sweeps six viewport sizes
+(incl. 2560x1080, 3440x1440, 1024x768) x four internal heights x three margins.
+
+**One correction to the framing given to Fable**, recorded because it changes nothing but was
+overstated: options A and B do not produce *exactly* square texels either. The engine takes CeilToInt
+of the rendered height, so the rendered rect's aspect differs from the viewport's by a fraction of a
+percent no matter what. The implementation therefore does NOT scale `M[1][1]` by the same factor as
+`M[0][0]` — it DERIVES `M[1][1]` from the actual rendered aspect, which makes texels exactly square
+and moves the rounding error into the vertical framing (~0.1% of view height) where it is invisible.
+That is strictly better than any of the three options as described.
 
 ## Divergence log (phase doc vs repo — repo is authority for mechanics, PROMPT.md for intent)
 
@@ -247,6 +289,45 @@ _(fill — final CompSign + evidence captures)_
   runtime module — flagged so it can be vetoed; removing it would return zero-residue to
   "unverified", which is where Phase 0 had to leave it.
 
+- **D-8 — the snap/remainder handshake is an extension member, not a per-world transient slot.**
+  PHASE_2 step 2 prescribes writing the remainder into `FCk_PixelArt_FrameTransients` on the state
+  registry and asserting `_FrameNumber == GFrameCounter` when consumed. The three hooks that must
+  agree all run on the game thread, in a fixed order, inside one `UGameViewportClient::Draw`:
+  `SetupViewFamily` (`GameViewportClient.cpp:1486`), then `SetupViewProjectionMatrix` via
+  `LocalPlayer::CalcSceneView` (`:1687` -> `LocalPlayer.cpp:1266`), then `BeginRenderViewFamily`
+  (`:1971`). One `TOptional` member on the extension therefore carries the frame's state with no lock
+  and no map lookup, and is strictly more correct for multiple viewports (the registry is keyed per
+  WORLD; the real granularity is per viewport). The frame-number guard is kept — it is the part that
+  earns its keep — and the report IS still published to the registry, because Phase 4's snapped-view
+  consumers and the debug pan read it from there.
+
+- **D-9 — the reflected snap wrapper takes `FVector2D`, not `FVector2f`.** PHASE_2's spec names
+  `FVector2f& OutRemainderTexels` on `UCk_Utils_PixelArtRender_UE`. `FVector2f` is declared
+  `BlueprintInternalUseOnly` by the engine (`NoExportTypes.h:654`) and cannot appear on a Blueprint
+  node. The free function `ck::pixel_art::Get_SnappedViewOrigin` keeps the specced `FVector2f`
+  signature and is what the spec tests exercise; the BPFL wrapper converts.
+
+- **D-10 — "red first" is not literally reachable for a C++ unit test of a new native API.** The
+  phase docs require the spec test to be run RED before the implementation. A test calling
+  `ck::pixel_art::Get_ViewBasis` before that function exists does not fail, it fails to COMPILE, and
+  the only way to produce a genuine red would be to stub the API with deliberately wrong returns —
+  theatre that proves nothing. What was actually done, and what the rule protects: the spec was
+  authored from the phase doc before the implementation and was never weakened to make it pass. The
+  one bound the tests do relax is the idempotence tolerance, which scales with texel size because the
+  residue is a floating-point artefact of the lattice arithmetic — stated in the test itself.
+
+- **D-11 — the margin fold applies to perspective projections too; only the SNAP is
+  orthographic-only.** PHASE_2's fence says the snap never applies to a perspective projection, and it
+  does not. The fold is a different thing: the scene rasterizes into more texels than are displayed
+  regardless of projection type, so without folding, a perspective view would silently CROP by the
+  margin instead of gaining it. Folding widens the FOV by the same ratio and costs nothing.
+
+- **D-12 — `FCk_Request_Camera_SetProjectionMode` uses `TOptional<float>` in a reflected struct.**
+  Root CLAUDE.md prefers enum-mode + value pairs and flags `TOptional` as open adjudication A1.
+  PHASE_3 step 4 explicitly asks for "optional plane overrides", and there is in-repo precedent for
+  the reflected form (`CkPmg_Fragment_Data_Donut.h:80,83`), so this follows the newer-modules branch
+  of A1. If A1 is ruled the other way, the fix is local to this one struct.
+
 ## Blockers
 
 _(none — executor: paste exact commands + full error text here, then END the phase. Do not
@@ -274,6 +355,29 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   the standalone capture. No fix wanted — this is the evidence for "PIE lies" (standing risk 1).
 - **[EDITOR-VERIFY] H-4 — 7b runtime.** With the spike on, compare `r.Ortho.AutoPlanes 1` against
   explicit near/far and confirm the auto far plane moves with the render resolution.
+
+- **[EDITOR-VERIFY] H-5 — Phase 2 gate 6.G, the creep/stutter/smooth A/B.** Standalone, gym map with
+  visible geometry, `r.AntiAliasingMethod 0`, `r.Ortho.Debug.ForceAllCamerasToOrtho 1`,
+  `r.Ortho.Debug.ForceOrthoWidth 2000`, `ck.PixelArt.Enabled 1`, `ck.PixelArt.Debug.LogState 1`, then
+  `Ck_PixelArt_DebugPan 0.2`. Score three states, in this order:
+  1. `ck.PixelArt.Snap 0` — expected: pixels visibly CRAWL along edges. Without this the other two
+     verdicts mean nothing, because it is what proves the problem exists in this scene.
+  2. `ck.PixelArt.Snap 1` + `ck.PixelArt.Debug.SnapOnly 1` — expected: motion advances in whole
+     texels, visibly STEPPING (proves the snap is live).
+  3. `ck.PixelArt.Debug.SnapOnly 0` — expected: smooth motion, no crawl.
+
+  If state 3 is smooth but still creeping, the compensation sign is inverted: set
+  `ck.PixelArt.Debug.CompSign -1`, confirm, and say so — the default then flips in code and the knob
+  goes. Anything else (jitter worse than state 1, smearing at a screen border) is a blocker, not a
+  tweak. `Ck_PixelArt_DebugPan` with no argument stops the pan.
+- **[EDITOR-VERIFY] H-6 — Phase 2 margin check.** During H-5 state 3, raise the pan to
+  `Ck_PixelArt_DebugPan 0.49` (worst-case remainder) and watch all four screen borders. Expected: no
+  smear, no garbage, no repeated edge column. Then `ck.PixelArt.Margin 0` — expected: the smear
+  APPEARS, which is what proves the margin is the thing preventing it.
+- **[EDITOR-VERIFY] H-7 — Phase 2 zoom policy.** With the pan running, sweep
+  `r.Ortho.Debug.ForceOrthoWidth` from 2000 to 4000 over a few seconds. Expected: full-frame shimmer
+  WHILE the width changes, stability once it settles. That is the documented limit of the technique
+  (RESEARCH_Technique §A "Zoom"), not a defect — the check is that it settles.
 
 ### Evidence on disk (gitignored, host project — copy out before cleaning `Saved/`)
 
