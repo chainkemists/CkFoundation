@@ -38,10 +38,20 @@ void MainPS(
 
     const float2 UV = UVAndScreenPos.xy;
 
+#if NEAREST_DEBUG
+
+    // Debug path: point sampling, so the texel grid is unambiguous while diagnosing snap or margin problems.
+    const float2 NearestTx = UV * InputExtent + SubTexelOffsetTexels;
+    OutColor = Texture2DSampleLevel(InputTexture, InputSampler, (floor(NearestTx) + 0.5f) * InputExtentInv, 0);
+
+#else
+
     const float2 BoxSize = clamp(fwidth(UV) * InputExtent, 1e-5f, 1.0f);
     const float2 Tx = UV * InputExtent + SubTexelOffsetTexels - 0.5f * BoxSize;
     const float2 TxOffset = smoothstep(1.0f - BoxSize, 1.0f, frac(Tx));
     const float2 SampleUV = (floor(Tx) + 0.5f + TxOffset) * InputExtentInv;
 
     OutColor = Texture2DSampleGrad(InputTexture, InputSampler, SampleUV, ddx(UV), ddy(UV));
+
+#endif
 }
