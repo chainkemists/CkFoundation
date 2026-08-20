@@ -15,6 +15,10 @@ namespace ck
     // Turns the agent toward its desired-velocity heading at _MaxTurnRate. Facing is decoupled from
     // travel direction, so the agent may briefly walk sideways through a sharp corner.
     //
+    // The heading is only TRACKED while the agent is genuinely moving (_FacingSpeedFloorCm, with
+    // hysteresis) and a large change must persist before it is committed — see the module's Claude.md
+    // "Facing" section for why a body must not transcribe the sampler's per-frame winner.
+    //
     // Group FGroup_Transform_SyncFrom: after FGroup_Physics so steering/integrator state has settled,
     // before FGroup_Transform so the rotation request drains in the same frame.
     // PumpPolicy::SkipPump: the enqueued delta is a fixed value, so a DeltaT=0 pump would re-enqueue

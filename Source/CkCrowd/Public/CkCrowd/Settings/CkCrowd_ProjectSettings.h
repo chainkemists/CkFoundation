@@ -290,6 +290,12 @@ private:
             ToolTip = "Master switch for line-of-sight-gated waypoint retirement. Both retirement tests (proximity and the passed-plane crossing) are laterally blind: an agent standing a few cm inside a corner satisfies them while the straight chord to the FOLLOWING waypoint cuts across a UNavArea_Null hole or a wall. Retiring there aims steering through geometry it cannot enter, the navmesh constraint eats the whole displacement, and the agent walks on the spot until block detection notices. Enabled keeps the agent aimed at the corner (which is on-mesh by construction) until the next chord is navigable, so it walks to the corner and then turns. Disabled restores the old behaviour, for A/B comparison only. Worlds without nav data behave identically either way."))
     ECk_CrowdWaypointRetirementLineOfSightMode _WaypointRetirementLineOfSight = ECk_CrowdWaypointRetirementLineOfSightMode::Enabled;
 
+    // ---- Facing ----
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Facing",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, Units = "cm/s",
+            ToolTip = "Desired speed (cm/s) below which an agent stops tracking its desired-velocity heading and simply holds the facing it has. The heading is the avoidance sampler's per-frame winner and may legally slew at the full turn rate at ANY speed, so a jammed agent going nowhere transcribes every flip and whips on the spot. The 10cm/s default matches _BlockedStationarySpeedThreshold, the module's definition of not moving, so facing and block detection agree on which agents are standing still. Re-engagement needs twice this speed, because a bare threshold is a cliff an oscillating speed toggles across. 0 disables the floor."))
+    float _FacingSpeedFloorCm = 10.0f;
+
     // ---- Push-Apart ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
         meta = (AllowPrivateAccess = true,
@@ -323,6 +329,7 @@ public:
     CK_PROPERTY_GET(_PathRefreshMode);
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
     CK_PROPERTY_GET(_WaypointRetirementLineOfSight);
+    CK_PROPERTY_GET(_FacingSpeedFloorCm);
     CK_PROPERTY_GET(_BlockDetectionMode);
     CK_PROPERTY_GET(_BlockDetectionInterval);
     CK_PROPERTY_GET(_BlockDetectionNoProgressWindowSeconds);

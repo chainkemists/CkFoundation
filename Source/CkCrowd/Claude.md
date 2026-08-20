@@ -73,7 +73,9 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
                                           OVERWRITES the desired velocity (see "Avoidance" below)
   FProcessor_CrowdAgent_AccelClamp      ← bounds per-frame magnitude + direction change
   FProcessor_CrowdAgent_VelocityBridge  ← writes FFragment_Velocity_Current (RunAfter AccelClamp)
-  FProcessor_CrowdAgent_FaceAngle       ← lerps yaw to face desired velocity (yaw only)
+  FProcessor_CrowdAgent_FaceAngle       ← slews yaw toward the desired-velocity heading (yaw only),
+                                          but only while genuinely moving and only once a large
+                                          heading change persists (see "Facing")
        │
        ▼
 [CkPhysics]
@@ -195,7 +197,7 @@ this tier exists to make unnecessary.
 | `FFragment_CrowdAgent_LocalBoundary` | Cached navmesh boundary walls (dtCrowd's `dtLocalBoundary`) | `Add()`; refreshed by AvoidanceSample |
 | `FFragment_CrowdAgent_SeparationForce` | Computed force vector | Separation |
 | `FFragment_CrowdAgent_ProbeRef` | Handle to the probe child entity | Setup |
-| `FFragment_CrowdAgent_FaceAngle` | Current/target yaw | Add() |
+| `FFragment_CrowdAgent_FaceAngle` | Committed target yaw/pitch + the facing filter's engage flag and pending-candidate bucket | Add() |
 | `FFragment_CrowdAgent_MoveRequests` | Variant of pending request types | Per-tick (drained) |
 | `FFragment_CrowdAgent_InstalledRoute` | Goal + network epoch of the installed corridor (PathNetwork) | OnRouteResolved |
 | `FFragment_CrowdAgent_PendingDisplacement` | Per-frame displacement staging (ApplyOffset + PushApart write; ConstrainToNavmesh consumes) | `Add()` |
@@ -292,8 +294,9 @@ to be here for `_Piercing*`, `_Sleep*`, `_Replan*`, `_MaxReplansPerPath` and `_P
 | `_CollisionFlags` / `_IgnoreFlags` | -1 / 0 | Present on the struct; **no processor currently reads them.** |
 | `_AgentMode` | `Grounded` | `Flying` makes `Add` stamp `FTag_CrowdAgent_Flying`. Read once, at Add — changing it later changes nothing. See the Tags section for what the tag partitions. |
 
-Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stride) and
-stationary-markup tuning live in `UCk_Crowd_ProjectSettings_UE`
+Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stride),
+stationary-markup tuning and the facing speed floor (`_FacingSpeedFloorCm`, see "Facing")
+live in `UCk_Crowd_ProjectSettings_UE`
 (`Settings/CkCrowd_ProjectSettings.h`), not on the agent. `_StationaryMarkupSpeedThreshold`
 defaults to 84 cm/s, the former half-radius-per-0.25-second rule for the standard 42 cm agent;
 the classifier uses XY displacement over the actual sample window rather than instantaneous
@@ -697,6 +700,61 @@ the cost function is broken somewhere above. UE's answer to a genuinely blocked 
 tier* — block detection → re-path → abort the move → let the caller decide — and this module HAS
 that tier (`BlockDetect` / `BlockedRecheck`, see "Blocked goals"). Stagnation belongs there, where it
 sees the whole path, and never in the per-frame velocity scoring.
+
+---
+
+## Facing — the body does NOT transcribe the desired-velocity heading
+
+`FProcessor_CrowdAgent_FaceAngle` (grounded, yaw) and `FProcessor_CrowdAgent_FaceAngle3D` (flying,
+yaw + pitch) are the only rotation writers, and both read the same input the avoidance sampler
+writes: `FFragment_CrowdAgent_DesiredVelocity`. That input is **not** a facing signal. It is the
+sampler's per-frame winner among candidate velocities, it flips between candidates a frame or two at
+a time under neighbour pressure, and its heading is scale-free — it slews at the full turn rate
+whether the agent is travelling at 240 cm/s or pressing at 2 cm/s into a body it cannot pass. A
+processor that chased it unconditionally made a jammed agent **whip on the spot at `_MaxTurnRate`
+while its feet went nowhere** (measured: 11 sign reversals and 276° of total yaw travel in 6s, with
+the input heading peaking at 152.9° flips). Two filters stand between that input and the body.
+
+**A speed floor with hysteresis decides whether facing tracks at all.** Below
+`_FacingSpeedFloorCm` (project settings, default **10 cm/s**) facing DISENGAGES: no target update, no
+rotation request, the body simply holds. It RE-ENGAGES only above **2× the floor**
+(`FacingEngageHysteresisMultiplier`, a file-local constant) — a bare threshold is a cliff an
+oscillating speed toggles across every frame, which would reintroduce exactly the churn the floor
+removes. The 10 cm/s default is `_BlockedStationarySpeedThreshold`, so facing and block detection
+agree on which agents are standing still; `0` disables the floor. The grounded twin gates on planar
+speed (yaw is independent of vertical motion); the flying twin gates on 3D speed and holds **pitch**
+under the same gate, so a hovering flyer chases neither axis.
+
+**A persistence filter decides whether a large heading change is believed.** While engaged, a new
+heading within `TargetTrackToleranceRad` (~15°) of the committed target is accepted immediately —
+that is a genuine gradual turn, and the tolerance sits below the sampler's 22.5° minimum winner-flip
+quantum precisely so ordinary turning is never delayed. A larger change is held as a **candidate**
+and committed only after it repeats within tolerance for `TargetPersistFrames` (3) consecutive
+frames; a frame matching neither the committed target nor the standing candidate restarts the
+bucket. A sampler flip lasts 1-2 frames and therefore never commits; a real 90° path corner pays
+~50ms of commit latency and then slews normally. The slew itself is untouched: `_MaxTurnRate`
+toward the committed target, exactly as before.
+
+**On re-engagement the committed target is seeded from the body's CURRENT orientation.** Without
+that seed the target the filter starts from is stale — 0 at first engage, or the heading of a
+journey that ended pointing somewhere else — and the persistence window becomes a window in which
+the body slews the *wrong way* before the fresh heading commits: a visible twitch at every move
+start. Seeding is not a hole in the flip filter, because the seed is the body's own stable rotation
+and never the noisy heading: facing simply resumes from where the agent already points, and the
+filter still decides when it may begin turning away from there. Only yaw needs it — pitch has no
+persistence filter and commits fresh on every engaged frame, so it has no stale window.
+
+Both filters live in `CkCrowdAgent_FaceAngle_Algorithm.h` and their state (`_FacingEngaged`, the
+pending yaw and its frame count) on `FFragment_CrowdAgent_FaceAngle`. **There is no path that writes
+`_TargetYaw` without passing both**, and `Get_TargetYawDegrees` / `Get_TargetPitchDegrees` therefore
+now report the COMMITTED facing target rather than the raw heading — which is what a caller, a
+debugger row or an animation graph actually wants to read.
+
+**The upstream oscillation is deliberately still there.** This tier fixes the body's TRACKING of a
+noisy heading, not the noise; the desired velocity swinging under neighbour pressure is the
+sampler's business and is a separate piece of work. Do not "fix" a facing complaint by damping
+Steering or the sampler from here. Coverage:
+`CkAutoTest_Crowd_Facing_CalmWhilePressingBlockedGap`.
 
 ---
 
