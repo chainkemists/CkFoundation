@@ -121,8 +121,12 @@ auto
     PassParameters->SubTexelOffsetTexels = _Frame.SubTexelOffsetTexels;
     PassParameters->RenderTargets[0] = Output.GetRenderTargetBinding();
 
+    auto PermutationVector = FCk_PixelArt_UpscalePS::FPermutationDomain{};
+    PermutationVector.Set<FCk_PixelArt_UpscalePS::FNearestDebugDim>(
+        _Frame.FilterMode == ECk_PixelArt_UpscaleFilter::Nearest);
+
     const auto VertexShader = TShaderMapRef<FScreenPassVS>{InView.ShaderMap};
-    const auto PixelShader = TShaderMapRef<FCk_PixelArt_UpscalePS>{InView.ShaderMap};
+    const auto PixelShader = TShaderMapRef<FCk_PixelArt_UpscalePS>{InView.ShaderMap, PermutationVector};
 
     const auto DisplayedSize = InnerRect.Size();
     const auto OutputSize = Output.ViewRect.Size();

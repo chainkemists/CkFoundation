@@ -43,7 +43,7 @@ auto
 
         // Put r.ScreenPercentage back before letting go: the extension's destructor does this too, but only once
         // the renderer has dropped its last reference, which is not guaranteed to be now.
-        _ViewExtension->Request_RestoreScreenPercentage();
+        _ViewExtension->Request_ReleaseScreenPercentage();
         _ViewExtension.Reset();
     }
 

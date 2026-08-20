@@ -28,6 +28,12 @@ public:
         RENDER_TARGET_BINDING_SLOTS()
     END_SHADER_PARAMETER_STRUCT()
 
+    // Point sampling instead of the box filter. A permutation rather than a uniform branch because it is a debug
+    // path taken for a whole frame, never per pixel.
+    class FNearestDebugDim : SHADER_PERMUTATION_BOOL("NEAREST_DEBUG");
+
+    using FPermutationDomain = TShaderPermutationDomain<FNearestDebugDim>;
+
 public:
     static auto ShouldCompilePermutation(
         const FGlobalShaderPermutationParameters& InParameters) -> bool;

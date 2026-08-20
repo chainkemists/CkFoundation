@@ -4,6 +4,8 @@
 
 #include "PostProcess/PostProcessUpscale.h"
 
+#include "CkPixelArtRender/CkPixelArtRender_State.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Everything the upscale pass needs to know about ONE frame. Baked on the game thread and handed to the upscaler
@@ -22,6 +24,8 @@ struct FCk_PixelArt_UpscaleFrame
     // Texels rendered beyond the displayed window on each side, so shifting the sampling window by the remainder
     // above never reads outside the rendered image. Callers guarantee InternalSize > 2 * MarginTexels per axis.
     int32 MarginTexels = 0;
+
+    ECk_PixelArt_UpscaleFilter FilterMode = ECk_PixelArt_UpscaleFilter::BoxFilter;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
