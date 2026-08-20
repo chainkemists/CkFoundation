@@ -263,17 +263,16 @@ namespace ck
         const auto& Profile = InCurrent.Get_ComposedProfile();
         const auto& Sensor  = Profile.Get_Sensor();
 
-        // No anchor transform yet (e.g. director on an entity without a transform) — keep the last POV.
-        if (NOT InHandle.Has<ck::FFragment_Transform>())
-        { return; }
-
+        // Add requires a transform handle, so a director always has its input anchor — read it directly.
         auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform      = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
         Input._OrientationIntention = InCurrent.Get_OrientationIntention();
         Input._DeltaSeconds         = static_cast<float>(InDeltaT.Get_Seconds());
         Input._LookAtLocation       = InCurrent._DominantLookAt;
         Input._World                = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        Input._TraceIgnoreActor     = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+        // An actor-less director is legal (Add requires only a transform); with no owning actor there is
+        // simply nothing for the boom trace to ignore.
+        Input._TraceIgnoreActor     = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InHandle);
 
         {
             SCOPE_CYCLE_COUNTER(STAT_Camera_PovRun);
@@ -304,11 +303,20 @@ namespace ck
 
         InCurrent._ViewInfo = ViewInfo;
 
+        // Publish the composed pose to the view anchor through the ordinary deferred request path. The
+        // enqueue happens in FGroup_Transform_Derived, so the frame's late-resolve pass drains it and
+        // composes any scene-node children of the anchor before components are pushed.
+        if (ck::IsValid(InCurrent._ViewAnchor))
+        {
+            UCk_Utils_Transform_UE::Request_SetTransform(InCurrent._ViewAnchor,
+                FCk_Request_Transform_SetTransform{FTransform{ViewInfo.Rotation, ViewInfo.Location}}, {});
+        }
+
         // Camera-authoritative control rotation. One-way by design: the camera reads input intention, never control
         // rotation, so this can never feed back into the POV.
         if (InHandle.Get<FFragment_Camera_Params>().Get_Params().Get_DriveControllerControlRotation())
         {
-            if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle));
+            if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InHandle));
                 ck::IsValid(Pawn))
             {
                 if (auto* PC = Cast<APlayerController>(Pawn->GetController());
