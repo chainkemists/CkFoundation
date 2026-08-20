@@ -352,12 +352,13 @@ Two agents sent to the same point cannot both stand on it. Before this tier exis
 pressed against the first forever, vibrating, and eventually **shoved it off its own goal** until the
 point came within arrival radius. Nothing in the system was aware.
 
-**`FProcessor_CrowdAgent_BlockDetect`** runs two detectors, because neither alone is sufficient:
+**`FProcessor_CrowdAgent_BlockDetect`** runs three detectors, because none alone is sufficient:
 
 | detector | how | catches | misses |
 |---|---|---|---|
 | **Geometric** (primary) | a *stationary* neighbour sits on the final waypoint such that `SelfRadius + NbrRadius` exceeds the arrival radius — so the closest the agent can physically get is further out than "arrived" | agent-occupied goals, **exactly and immediately**, naming the blocker | walls, props, multi-agent plugs |
-| **No-progress** (safety net) | REMAINING PATH DISTANCE (agent → current waypoint + the polyline tail) sampled every `_BlockDetectionInterval`; a stall is `_BlockDetectionNoProgressWindowSeconds` without the windowed minimum improving by `_BlockDetectionProgressEpsilonCm` | everything else — walls, fixtures, multi-agent plugs, **and orbiting** | nothing the geometric detector is for (it names the blocker, which this cannot) |
+| **Cluster** (propagation) | a cached neighbour has SETTLED (reached-and-Idle, `GoalBlocked`, `GoalFailedHold`, or stationary-markup PAINTED), is parked inside our depth-chained GOAL REGION (`SelfRadius + NbrRadius + ArrivalRadius + _CrowdedGoalContactPadCm + AnchorDepth * (SelfRadius + NbrRadius)` of our `_ActiveGoal`), is in 2D contact (`SelfRadius + NbrRadius + _CrowdedGoalContactPadCm`), stands strictly nearer the goal, and lies in a ±60° cone around our direction of travel | the agents the geometric detector structurally cannot answer for — everyone behind the first ring of a crowd converging on one destination, and anyone whose destination a stranger simply stopped on | anything not made of settled agents standing on the destination |
+| **No-progress** (safety net) | REMAINING PATH DISTANCE (agent → current waypoint + the polyline tail) sampled every `_BlockDetectionInterval`; a stall is `_BlockDetectionNoProgressWindowSeconds` without the windowed minimum improving by `_BlockDetectionProgressEpsilonCm` | everything else — walls, fixtures, multi-agent plugs, **and orbiting** | nothing the other two are for (it names no blocker) |
 
 **The no-progress detector measures progress along the path, not displacement.** It used to be UE's
 feet-sample centroid ring (`PathFollowingComponent.cpp:1556-1608`) — N samples all within a small
@@ -401,6 +402,99 @@ The geometric detector's **engagement range is derived, not a knob**:
 is the last moment it could still stop cleanly; a neighbour parked on a goal 30m away is not
 blocking anything yet.
 
+**The cluster detector exists because the geometric one only ever answers for the agent touching the
+GOAL.** Send fifteen agents to one point and the innermost ring is the only part of the crowd in
+contact with anything that detector can see; everyone behind it learns nothing and presses inward,
+each shoving the ring ahead of it, until the no-progress ladder stops them one at a time — ~9s+ each,
+and a pack that keeps creeping refunds the ladder's budget and never terminates at all. The cluster
+rule closes that gap by making a settled agent an ANCHOR: contact with an agent that has already
+stopped on the ground you are walking to, ahead of you, is itself proof the destination is
+unreachable — so settling propagates outward (occupant → ring 1 → ring 2) and the crowd converges to
+a stable packed formation within about a second of contact.
+
+**It never reads the neighbour's goal, and that is the point.** Goal identity looked like the natural
+test and is the wrong one: agents sent to *nearby but unequal* points — a slot offset, a projected
+destination, two customers at the same shelf — form exactly the pile this tier exists for and would
+never match. And why a body is parked in your way is not a property you can act on: a stranger who
+simply stopped there obstructs precisely as much as a rival. What replaces goal identity is geometry,
+in three parts, each load-bearing:
+
+- **Goal region, chained by depth** — the neighbour must be parked within `SelfRadius + NbrRadius +
+  ArrivalRadius + _CrowdedGoalContactPadCm + AnchorDepth * (SelfRadius + NbrRadius)` of *your* goal.
+  The base term is "close enough that you could not stand where it does and still be short of your
+  own arrival tolerance"; the depth term is what lets the rule reach past the first ring (see below).
+  Since markup makes every stationary stranger a candidate anchor (see below), **this test plus
+  contact/nearer/cone is the entire protection against false blocks** — a picket line is "settled" now,
+  and only its distance from your goal keeps it inert. A stranger that is not itself `GoalCrowded`
+  contributes depth 0, so it never anchors beyond the base radius: `StationaryLine_PathsRouteAround`,
+  both `PathRefresh` tests and `PathNetworkStationaryDetour` park their pickets 450-539cm from the
+  walker's goal against a 124cm base region, a 3.6-4.3× margin.
+- **Strictly nearer** — makes the anchor relation acyclic. A settled agent behind you can never stop
+  you short of ground that is still free, and two agents can never hold each other.
+- **±60° frontal cone** (`FrontalConeCosine`, a file-local constant, not a knob) — the neighbour must
+  actually be in the way. Strictly-nearer alone admits a body up to ~75° off the line to the goal, so
+  without the cone an agent brushing laterally past someone parked near the goal in a wide corridor
+  stops for no reason. A degenerate direction — standing on the goal, or interpenetrating the
+  neighbour — passes the cone rather than failing it; the other tests already answer those states.
+
+**The region grows with the pile, via a depth chain.** A fixed region does not work, and the failure
+is not theoretical: with the flat 124cm region a 15-agent crowd settled at 96-180cm from the goal —
+real packing is sparser than hex arithmetic predicts — so ring-2 bodies fell outside the region,
+could anchor nobody, and the 15th agent walked forever with no qualifying contact. Capacity landed
+at exactly the crowd size that had to fit.
+
+So each `GoalCrowded` block stamps a **depth** on the agent (`_CrowdedGoalDepth`): 1 for stopping
+behind a body standing on the goal itself, +1 per ring outward. An anchor's depth extends the region
+the *next* agent back is allowed to find it in, by one body diameter per ring — the exact rate at
+which a physical pile grows. Every other blocked reason, and every path that clears blocked state,
+resets the depth to 0, so a chain can only extend through agents that are themselves `GoalCrowded`
+and therefore **always bottoms out at a body genuinely standing on the destination**. That is what
+keeps the rule from drifting outward on its own: depth is earned, never assumed. When several
+neighbours qualify, the **shallowest** wins, so a chain never gets longer than the pile requires.
+
+Conditions 3-5 are unchanged and still all required — the depth only ever widens *where* an anchor
+may stand, never what makes it one.
+
+**Painted stationary markup is the fourth way to count as settled, and it is what ROOTS the chain.**
+A pure reached/blocked predicate has a bootstrap hole that only shows up under load: the avoidance
+sampler's crowd-pressure standoff can exceed the arrival radius, so the innermost agent hovers just
+outside its goal — measured at 39-40cm against a 30cm radius — never arrives, and therefore no
+anchor of any kind is ever created. The whole cascade has nothing to start from and the entire crowd
+walks forever. Markup closes it precisely because it paints on **windowed physical stillness alone**
+(`_StationaryMarkupDelaySeconds`, 1.5s), with no reference to goal state: a Walking-but-jammed agent
+paints exactly like a standing one. The jammed innermost becomes an anchor, its ring blocks off it,
+the inward pressure releases, and it then genuinely arrives. That a Walking agent can anchor is not a
+contradiction — the strictly-nearer test means it never blocks on its own dependents, so it keeps
+pressing with less opposition rather than deadlocking against the ring it just stopped.
+
+Two consequences worth stating. A markup anchor can **unpaint** by moving again, leaving its
+dependents held on an obstruction that has gone; `BlockedRecheck` resumes them within its 1s cadence,
+so the churn is bounded and accepted. And a crowd agent that was **never commanded anywhere** — no
+goal, no reached or blocked state, simply parked — now anchors too, which is correct: a body standing
+on your destination obstructs it whether or not anything ever told it to go there. With
+`_StationaryMarkupMode` Disabled the disjunct simply drops out and the tier degrades to
+reached/blocked anchors only.
+
+The rule is deliberately NOT gated on the geometric detector's engagement window: a real crowd stacks
+far deeper than one braking distance from its goal, and contact with a settled obstruction ON the
+destination IS the engagement. Master switch `_CrowdedGoalBlockMode` (default Enabled). Coverage:
+`CkAutoTest_Crowd_BunchUp_SettlesAtSharedGoal`.
+
+**`BlockedRecheck` evaluates the same cluster rule, and that symmetry is load-bearing.** The recheck
+decides resume-vs-hold by re-running blocker detection, and an agent anchored on a NEIGHBOUR rather
+than on the goal has nothing in the occupied-goal test that can see the pack — it would resume every
+cadence, walk back in, re-block, and oscillate between held and pressing forever (and on a
+`NoProgress` cause, burn `_BlockedMaxRetries` doing it and fail the move outright). A live cluster
+blocker therefore holds without spending a retry, exactly as an occupied goal does; resume still
+happens through the ordinary full-repath path once the pack genuinely drains.
+
+**Known and accepted:** an agent that reached its goal and was later shoved off it still counts as
+settled, so a newcomer holds at contact with it even while the goal point is momentarily free. The
+hold is resumable and the formation is stable, which is worth more than chasing the transient.
+Likewise, an agent whose goal sits just past a stranger parked in a doorway now HOLDS instead of
+pressing — that is the intended reading of "cannot get there", and the hold resumes the moment the
+doorway clears.
+
 **On block:** `Walking` → `Idle` + `FTag_CrowdAgent_GoalBlocked`, and `OnGoalBlocked` fires **once per
 episode** (not once per re-check) with a payload naming the blocker — exactly what a gameplay-side
 queue manager needs to send the NPC somewhere else instead of having it wait.
@@ -416,10 +510,12 @@ queue manager needs to send the NPC somewhere else instead of having it wait.
 | cause | retry | why |
 |---|---|---|
 | `GoalOccupied` | **unbounded**, exactly as before | the blocker is another AGENT and it will move. Queue NPCs sit here for as long as the line takes; making a long wait emit `OnGoalFailed` would break every gameplay-side queue that deliberately defers to `HoldAndRetry` |
+| `GoalCrowded` | **unbounded**, same as `GoalOccupied` | the obstruction in front is another agent too, and `_BlockedBy` names the settled neighbour this agent came to rest behind rather than whoever holds the goal. It differs from `GoalOccupied` only in what the payload points at, which is what a queue manager needs to tell "the shelf is taken" from "the way to it is full" |
 | `NoProgress` | bounded by `_BlockedMaxRetries`, then `OnGoalFailed` + `GoalBlocked` cleared + Idle | the obstruction is static — a wall, a fixture, a plug the planner cannot see. It never clears, so the old behaviour (`BlockedRecheck` finds no agent blocker, re-paths, re-enters the same wedge, forever) was a silent hang no caller could observe |
 
-`BlockedRecheck` still tests for an agent blocker FIRST for both causes, so a `NoProgress` agent that
-happens to have someone standing on its goal holds without spending a retry.
+`BlockedRecheck` still tests for an agent blocker FIRST for every cause — occupied goal, then
+cluster — so a `NoProgress` agent that happens to have someone standing on its goal, or a settled
+pack between it and that goal, holds without spending a retry.
 
 **What is deliberately NOT offered: silently widening the arrival radius to declare "arrived".** It
 lies to a caller who asked for "within `_ArrivalRadius` of X" and may range-check against it — and it
@@ -457,9 +553,33 @@ Gates (project settings): `_AvoidanceSampleTrigger` = `NeighborCountAndZoneTag`,
 `_AvoidanceSampleNeighborThreshold` = 1 (any neighbour at all triggers it), `_AvoidanceSampleStride` = 1
 (every frame). The view requires `FTag_CrowdAgent_Walking` + `FTag_CrowdAgent_HasProbe`.
 
-Three independent gates must all pass: triggered (project trigger mode + per-agent `AvoidancePolicy`
-override + zone tags), on this agent's 1-in-N frame (round-robin stride), and at least one cached
-neighbour. Scheduling: `FGroup_Physics`, RunAfter Steering (whose output it overwrites) + NeighborSync
+Four independent gates must all pass: triggered (project trigger mode + per-agent `AvoidancePolicy`
+override + zone tags), on this agent's 1-in-N frame (round-robin stride), NOT inside the
+final-approach envelope (below), and at least one cached neighbour.
+
+### The final-approach envelope — the sampler stands down for the last stretch
+
+**An agent on its LAST path leg and within `ActiveArrivalRadius + _AvoidanceFinalApproachSuppressionCm`
+(30 + 90 = 120cm at defaults) of the final waypoint does not sample at all** — Steering's path-follow
+velocity survives untouched. This is the standard Detour-caller idiom, and it is here to break a hard
+lock-out rather than to tune one: once a ring of bodies has settled at contact distance around the
+destination, every inward candidate closes on a near-overlapping neighbour, the `C < 0` overlap branch
+of `TimeToCollision` floods `ToiPen` across the *whole* cloud, and the cheapest candidate becomes a
+standoff **wider than the arrival radius**. The agent hovers just outside its goal forever — measured
+at 39-40cm against a 30cm radius, with the entire crowd Walking and nothing terminal. No penalty
+weight fixes that; the cloud has no cheap inward candidate left to pick.
+
+The envelope mirrors Steering's arrival test exactly (same `_WaypointIndex == Num()-1` predicate, same
+3D metric), so it is a strict superset of the condition it exists to let the agent satisfy. What is
+given up is predictive avoidance in the last ~1.2m; what still runs is **separation** (lateral-clamped)
+and **PushApart**, so contact inside the envelope is resolved by de-penetration — the correct authority
+that close to a destination, where there is nowhere left to route around to. An explicit per-agent
+override (`SamplingAlways` policy, or the `AlwaysSample` tag) outranks the envelope: those are
+deliberate caller instructions, not defaults to second-guess. `0` disables the feature.
+
+The stride gate is a pure function of `GFrameCounter` and the agent hash, so skipping carries no
+round-robin bookkeeping to half-update; a suppressed agent is also not counted in `Crowd Agents
+Sampled`. Scheduling: `FGroup_Physics`, RunAfter Steering (whose output it overwrites) + NeighborSync
 (whose cache it reads); RunBefore AccelClamp/VelocityBridge is enforced *indirectly* by AccelClamp's
 RunAfter on it. It is a `TParallelProcessor` because the Samples × Neighbors scoring loop is the
 module's only nested-loop hot spot.

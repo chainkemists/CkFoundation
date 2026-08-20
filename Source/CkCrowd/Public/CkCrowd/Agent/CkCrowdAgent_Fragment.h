@@ -308,6 +308,12 @@ namespace ck
         // geometry never clears — unlike an agent-occupied goal, which is a queue wait.
         int32 _BlockedRetryCount = 0;
 
+        // How many bodies deep in a settled pack this agent came to rest. 0 for anything that is
+        // not a GoalCrowded block, 1 for an agent stopped behind a body standing on the goal
+        // itself, +1 per ring outward. It widens the goal region the NEXT agent back may find its
+        // anchor in, so a pack keeps propagating outward at the rate it physically grows.
+        int32 _CrowdedGoalDepth = 0;
+
         ECk_CrowdAgent_BlockedReason _BlockedCause = ECk_CrowdAgent_BlockedReason::GoalOccupied;
 
         // OnGoalBlocked fires ONCE per blocked episode, not once per re-check.
@@ -326,6 +332,7 @@ namespace ck
     public:
         CK_PROPERTY_GET(_BlockedBy);
         CK_PROPERTY_GET(_BlockedCause);
+        CK_PROPERTY_GET(_CrowdedGoalDepth);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

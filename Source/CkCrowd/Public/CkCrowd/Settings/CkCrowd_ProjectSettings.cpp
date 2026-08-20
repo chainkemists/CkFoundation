@@ -62,6 +62,11 @@ auto UCk_Utils_Crowd_Settings_UE::Get_BlockDetectionMode() -> ECk_CrowdBlockDete
     return Get()->Get_BlockDetectionMode();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_CrowdedGoalBlockMode() -> ECk_CrowdCrowdedGoalBlockMode
+{
+    return Get()->Get_CrowdedGoalBlockMode();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() -> ECk_CrowdWaypointRetirementLineOfSightMode
 {
     return Get()->Get_WaypointRetirementLineOfSight();
