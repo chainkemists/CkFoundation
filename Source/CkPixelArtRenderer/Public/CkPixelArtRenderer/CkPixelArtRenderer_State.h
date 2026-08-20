@@ -130,4 +130,11 @@ public:
     // never act on a stale snap.
     static auto TryGet_FrameReport(
         const UWorld* InWorld) -> TOptional<FCk_PixelArt_FrameReport>;
+
+    // The report of the most recently ASSEMBLED frame, accepting one frame of age. For DIAGNOSTIC readers
+    // only: a core ticker runs before the current frame's hooks, so the freshest report it can ever see is
+    // last frame's. Anything that would act on the snap must use TryGet_FrameReport, whose strict freshness
+    // is the contract.
+    static auto TryGet_LastFrameReport(
+        const UWorld* InWorld) -> TOptional<FCk_PixelArt_FrameReport>;
 };
