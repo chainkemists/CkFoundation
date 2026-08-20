@@ -19,7 +19,9 @@ namespace ck
     // Requires FTag_CrowdAgent_Flying, which the yaw-only processor excludes, so exactly one of the
     // two rotates any given agent. Group, pump policy and turn-rate constant are the yaw-only
     // processor's verbatim — this differs in the axes it may turn about, and in writing the reached
-    // orientation absolutely rather than as a delta (see the body).
+    // orientation absolutely rather than as a delta (see the body). The speed floor, its hysteresis
+    // and the yaw persistence filter are shared with the yaw-only processor; the engage gate holds
+    // pitch as well, so a hovering flyer chases neither axis.
     //
     // It is a rotation writer and never touches translation, so it does not compete with the single
     // Transform-translation writer (ConstrainToNavmesh for a grounded agent, ApplyDisplacement3D for

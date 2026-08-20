@@ -419,10 +419,14 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Cached target yaw for the face-angle processor, in RADIANS (converted at the BP boundary by
+// Committed facing target for the face-angle processor, in RADIANS (converted at the BP boundary by
 // Get_TargetYawDegrees). Surfaced for the debugger and tests; the orientation itself lives on the
 // SceneNode. _TargetPitch stays at its default for a grounded agent — only the flying facing
 // processor writes it.
+//
+// The remaining fields are the facing filter's own state: the desired-velocity heading is only
+// tracked while the agent is genuinely moving (_FacingEngaged), and a large heading change is held
+// as a candidate until it repeats rather than committed on the frame it appears.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_FaceAngleData
 {
@@ -440,9 +444,19 @@ private:
     UPROPERTY()
     float _TargetPitch = 0.0f;
 
+    UPROPERTY()
+    bool _FacingEngaged = false;
+
+    UPROPERTY()
+    float _PendingTargetYaw = 0.0f;
+
+    UPROPERTY()
+    int32 _PendingTargetFrames = 0;
+
 public:
     CK_PROPERTY_GET(_TargetYaw);
     CK_PROPERTY_GET(_TargetPitch);
+    CK_PROPERTY_GET(_FacingEngaged);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
