@@ -92,6 +92,13 @@ public:
               meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 1.0, ClampMax = 1.0))
     float _DitherStrength = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkPixelArt|Look|Banding")
+    ECk_PixelArt_ColorSpace _ColorSpace = ECk_PixelArt_ColorSpace::Linear;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkPixelArt|Look|Banding",
+              meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 0.2, ClampMax = 0.5))
+    float _WarmShift = 0.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkPixelArt|Look|Palette")
     ECk_PixelArt_PaletteMode _PaletteMode = ECk_PixelArt_PaletteMode::ColorSteps;
 

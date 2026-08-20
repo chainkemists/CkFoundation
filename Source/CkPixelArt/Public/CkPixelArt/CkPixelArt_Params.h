@@ -52,6 +52,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_PaletteMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Which space the banding ladder and the palette matching work in. Order is a contract with PixelArt.ush —
+// the shader receives the index.
+UENUM(BlueprintType)
+enum class ECk_PixelArt_ColorSpace : uint8
+{
+    // Rec.601 luminance bands, RGB-distance palette matching. The classic pipeline.
+    Linear,
+
+    // Bands spaced by OKLab lightness — perceptual, so the darks get their fair share of the ladder —
+    // and palette entries matched by OKLab distance.
+    OKLab
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PixelArt_ColorSpace);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // The look half of the pixel-art configuration: outlines, banding and palette, applied at the internal
 // resolution so a one-texel line is one texel on screen.
 USTRUCT(BlueprintType)
@@ -117,6 +134,17 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 1.0, ClampMax = 1.0))
     float _DitherStrength = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Banding",
+              meta = (AllowPrivateAccess = true))
+    ECk_PixelArt_ColorSpace _ColorSpace = ECk_PixelArt_ColorSpace::Linear;
+
+    // Warm/cool drift with band brightness: bright bands push OKLab b positive (warm), dark bands negative
+    // (cool). 0 is off; the reference implementation ships 0.05. Anchored on the band, not the raw pixel,
+    // so the tint quantizes with the shading instead of smearing across it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Banding",
+              meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 0.2, ClampMax = 0.5))
+    float _WarmShift = 0.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Palette",
               meta = (AllowPrivateAccess = true))
     ECk_PixelArt_PaletteMode _PaletteMode = ECk_PixelArt_PaletteMode::ColorSteps;
@@ -172,6 +200,8 @@ public:
     CK_PROPERTY(_Bands);
     CK_PROPERTY(_ThresholdGradientSize);
     CK_PROPERTY(_DitherStrength);
+    CK_PROPERTY(_ColorSpace);
+    CK_PROPERTY(_WarmShift);
     CK_PROPERTY(_PaletteMode);
     CK_PROPERTY(_PaletteCount);
     CK_PROPERTY(_PaletteColor0);
