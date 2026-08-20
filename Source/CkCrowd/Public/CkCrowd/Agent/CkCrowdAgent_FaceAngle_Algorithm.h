@@ -88,31 +88,46 @@ namespace ck::ck_crowd_agent_face_angle_algorithm
     }
 
     // Returns the committed facing target. A large heading change is held as a CANDIDATE until it
-    // repeats: committing to each per-frame sampler flip is what makes a pressing agent whip, while a
-    // small change is a genuine gradual turn and is accepted the frame it appears.
+    // repeats: committing to each per-frame sampler flip is what makes a pressing agent whip. A
+    // small change is a genuine gradual turn and is accepted the frame it appears — UNLESS it is
+    // smaller than the dead-band, in which case the target does not move at all: sub-band chatter
+    // (separation/blend wobble under neighbour pressure, well below the sampler's 22.5-degree flip
+    // quantum) would otherwise be transcribed to the body at the full turn rate every frame, which
+    // is the residual micro-jitter a moving crowd shows once the big flips are already filtered. A
+    // real slow arc accumulates past the band within a few frames and then tracks normally, so the
+    // body trails the true heading by at most the band.
     inline auto Commit_TrackedYaw(
         const float InCommittedYawRad,
         const float InCandidateYawRad,
+        const float InDeadBandRad,
         float& InOutPendingYawRad,
         int32& InOutPendingFrames) -> float
     {
         const auto InputsAreValid =
             FMath::IsFinite(InCommittedYawRad) &&
-            FMath::IsFinite(InCandidateYawRad);
+            FMath::IsFinite(InCandidateYawRad) &&
+            FMath::IsFinite(InDeadBandRad) && InDeadBandRad >= 0.0f;
         CK_ENSURE_IF_NOT(
             InputsAreValid,
-            TEXT("Invalid crowd facing target yaw (committed [{}], candidate [{}])"),
+            TEXT("Invalid crowd facing target yaw (committed [{}], candidate [{}], dead_band [{}])"),
             InCommittedYawRad,
-            InCandidateYawRad)
+            InCandidateYawRad,
+            InDeadBandRad)
         {
             InOutPendingFrames = 0;
             return InCommittedYawRad;
         }
 
-        const auto TracksCommitted =
-            FMath::Abs(FMath::FindDeltaAngleRadians(InCommittedYawRad, InCandidateYawRad)) <=
-            TargetTrackToleranceRad;
-        if (TracksCommitted)
+        const auto DeltaFromCommitted =
+            FMath::Abs(FMath::FindDeltaAngleRadians(InCommittedYawRad, InCandidateYawRad));
+
+        if (DeltaFromCommitted <= InDeadBandRad)
+        {
+            InOutPendingFrames = 0;
+            return InCommittedYawRad;
+        }
+
+        if (DeltaFromCommitted <= TargetTrackToleranceRad)
         {
             InOutPendingFrames = 0;
             return InCandidateYawRad;
