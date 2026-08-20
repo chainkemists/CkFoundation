@@ -68,7 +68,10 @@ namespace ck_timer_categorizer_tests
     // A/B continuity against previously captured reports, which is worse than leaving it in Other.
     const TArray<FExpectation> MustNotMove
     {
-        // "JoltWorld_Step" stays exact: a broader "JoltWorld" outranks ECS and would claim this.
+        // The Jolt keyword is whole-name ("=JoltWorld_Step") because Physics (Jolt) outranks ECS
+        // and every substring form of that stat name is also a substring of the Ck processor that
+        // wraps it. Both of these prove the exact-match form is doing its job.
+        {TEXT("ck::FProcessor_JoltWorld_Step"),           TEXT("ECS (CK)")},
         {TEXT("ck::FProcessor_JoltWorld_WaitForAsync"),   TEXT("ECS (CK)")},
 
         // "Locomotion" / "BehaviorLeaf" sit in the last category and must not shadow the AI and

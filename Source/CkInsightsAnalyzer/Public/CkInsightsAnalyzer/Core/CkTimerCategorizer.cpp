@@ -1,5 +1,7 @@
 #include "CkInsightsAnalyzer/Core/CkTimerCategorizer.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_TimerCategorizer::FCk_TimerCategorizer()
@@ -10,22 +12,40 @@ FCk_TimerCategorizer::FCk_TimerCategorizer()
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_timer_categorizer
+{
+    // Marks a keyword as whole-name rather than substring. See Categorize.
+    const FString ExactMatchPrefix = TEXT("=");
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     FCk_TimerCategorizer::
     Categorize(const FString& TimerName) const
     -> FString
 {
-    const FString LowerName = TimerName.ToLower();
+    const auto LowerName = TimerName.ToLower();
 
-    for (const FCk_TimerCategory& Category : _Categories)
+    const auto Matches = [&LowerName](const FString& InKeyword) -> bool
     {
-        for (const FString& Keyword : Category.Keywords)
-        {
-            if (LowerName.Contains(Keyword.ToLower()))
-            {
-                return Category.Name;
-            }
-        }
+        // A keyword prefixed with '=' matches the WHOLE name instead of any substring of it. The
+        // substring default is what lets a bare cycle-stat name silently claim the Ck processor
+        // that wraps it — "JoltWorld_Step" is a substring of "ck::FProcessor_JoltWorld_Step" — and
+        // re-homing a row that already had a category breaks A/B continuity against past captures.
+        if (InKeyword.StartsWith(ck_timer_categorizer::ExactMatchPrefix))
+        { return LowerName == InKeyword.RightChop(ck_timer_categorizer::ExactMatchPrefix.Len()).ToLower(); }
+
+        return LowerName.Contains(InKeyword.ToLower());
+    };
+
+    // Range-for rather than ck::algo::FindIf on purpose: the TArray overload of FindIf returns a
+    // TOptional<ElementType>, i.e. a COPY of the category — including its keyword array — on every
+    // call. AnyOf on the inner list has no such cost and carries the meaning that matters here.
+    for (const auto& Category : _Categories)
+    {
+        if (ck::algo::AnyOf(Category.Keywords, Matches))
+        { return Category.Name; }
     }
 
     return TEXT("Other");
@@ -266,11 +286,12 @@ auto
         TEXT("JointConstraintPhysicsProxy"),
     });
 
-    // "JoltWorld_Step" is deliberately exact, not a bare "Jolt" or "JoltWorld": this category
-    // outranks ECS below, so a broader token pulls ck::FProcessor_JoltWorld_* out of ECS (CK)
-    // and silently changes attribution that existing captures were measured against.
+    // "=JoltWorld_Step" is whole-name on purpose. This category outranks ECS below, and every
+    // substring form of that stat name is ALSO a substring of ck::FProcessor_JoltWorld_Step — so a
+    // plain keyword would pull that processor's row out of ECS (CK) and silently change attribution
+    // existing captures were measured against.
     AddCategory(TEXT("Physics (Jolt)"), {
-        TEXT("JoltPhysics"), TEXT("JoltWorld_Step"), TEXT("JoltContacts"),
+        TEXT("JoltPhysics"), TEXT("=JoltWorld_Step"), TEXT("JoltContacts"),
     });
 
     AddCategory(TEXT("Character Movement"), {

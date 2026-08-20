@@ -134,6 +134,16 @@ int32
     auto TimerTop = TOptional<int32>{};
     if (const auto TimerTopStr = ParsedParams.Find(TEXT("timertop")))
     {
+        // Rejected rather than coerced: Atoi maps garbage to 0, which DISABLES the very section the
+        // operator asked to size — a silent no-op is the worst answer to a typo.
+        if (NOT TimerTopStr->IsNumeric())
+        {
+            ck::insights_analyzer::Error(
+                TEXT("-timertop={} is not a number. Use a non-negative integer (0 disables the section)."),
+                **TimerTopStr);
+            return 1;
+        }
+
         TimerTop = FMath::Max(0, FCString::Atoi(**TimerTopStr));
     }
 
