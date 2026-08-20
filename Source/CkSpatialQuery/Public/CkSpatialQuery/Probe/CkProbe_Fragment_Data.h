@@ -493,8 +493,8 @@ private:
     FCk_Jolt_QueryFilter _WorldFilter;
 
     // Whether filter-matching PROBE hits ping Begin/EndOverlap into the probes they hit. World hits
-    // never fire overlaps regardless. Silent exists because a weapon aim sweep wants the hit list
-    // without the side-effects (see bb_aim::Sweep, which bypassed this API entirely to get it).
+    // never fire overlaps regardless. Silent exists because a query like a weapon aim sweep wants
+    // the hit list without the side-effects - callers needing that were bypassing this API to get it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_ProbeResponse_Policy _OverlapNotifyPolicy = ECk_ProbeResponse_Policy::Notify;
@@ -630,8 +630,8 @@ private:
     FCk_Jolt_QueryFilter _WorldFilter;
 
     // Whether filter-matching PROBE hits ping Begin/EndOverlap into the probes they hit. World hits
-    // never fire overlaps regardless. Silent exists because a weapon aim sweep wants the hit list
-    // without the side-effects (see bb_aim::Sweep, which bypassed this API entirely to get it).
+    // never fire overlaps regardless. Silent exists because a query like a weapon aim sweep wants
+    // the hit list without the side-effects - callers needing that were bypassing this API to get it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_ProbeResponse_Policy _OverlapNotifyPolicy = ECk_ProbeResponse_Policy::Notify;
