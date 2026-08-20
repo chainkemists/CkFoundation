@@ -33,9 +33,9 @@ auto
 
     const auto Overlay = SNew(SOverlay);
 
-    // The opaque plate. With no backdrop configured this IS the background, which is precisely
-    // BusterBlock's shipped look (black + corner logo) - so the retired plugin's screen survives
-    // its own deletion unchanged.
+    // The opaque plate. With no backdrop configured this IS the background - a solid tint behind
+    // the optional corner logo - so a project that configures nothing still gets a complete screen
+    // rather than an empty one.
     Overlay->AddSlot()
     [
         SNew(SBorder)

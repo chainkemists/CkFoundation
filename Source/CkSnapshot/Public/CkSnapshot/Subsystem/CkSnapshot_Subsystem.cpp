@@ -1691,7 +1691,7 @@ auto
                 // The kernel quiesced with rows still unresolved. A row can legitimately depend on work the
                 // kernel cannot run: a multi-stage construction (EntityScript `Continue`) is finished by a
                 // GAME processor, and the identity it stamps on completion — a child's GameplayLabel adopt
-                // key, a SaveKey — is exactly what the resolution scan is waiting on (the gondola-shelf
+                // key, a SaveKey — is exactly what the resolution scan is waiting on (the child-adopt
                 // orphan incident, 2026-07-29). Escalate to full-scope ticks and only conclude when THAT
                 // quiesces too; orphaning here would silently drop every payload under the waiting rows.
                 _RebuildEscalated = true;

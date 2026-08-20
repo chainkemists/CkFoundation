@@ -58,7 +58,7 @@ private:
     TArray<uint8> _ScreenshotPng;
 
     // Game-defined summary fields, opaque to CkSnapshot — round-tripped so the game can format its
-    // own row description (BusterBlock: store level / xp / money / play time).
+    // own row description (e.g. level / xp / currency / play time).
     UPROPERTY()
     TMap<FName, FString> _CustomFields;
 

@@ -16,9 +16,9 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("EntityTag Entities Scanned"), STAT_EntityTag_En
 namespace ck_entity_tag_utils
 {
     // Subscription-marker pools and per-tag storage pools live in the SAME registry pool map, both
-    // keyed by name hash — and production uses the same name for both (an NPC subscribing to a
-    // station kind tag that stations carry as a live tag). The salt keeps the two id spaces
-    // disjoint; without it the two features resolve ONE pool under two different storage types.
+    // keyed by name hash — and callers legitimately use ONE name for both: subscribing to updates
+    // for a tag that entities also carry is the whole point of the filter. The salt keeps the two id
+    // spaces disjoint; without it the two features resolve ONE pool under two different storage types.
     constexpr auto SubscriptionStorageSalt = entt::id_type{0x5AB5C81B};
 
     auto Get_SubscriptionStorageId(FName InTagFilter) -> entt::id_type
