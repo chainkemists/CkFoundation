@@ -290,6 +290,9 @@ public:
         const UObject* InWorldContextObject);
 
 public:
+    // Reading through these arms the scheduler's demand-driven timing collection, but only from the
+    // NEXT frame — a caller asking about a PAST frame gets 0.0 ms elapsed unless collection was
+    // already running. Counts (entities, pumps, dirty, empty-view skips) are always recorded.
     // Test/diagnostic hooks over the scheduler's per-frame debug history (ck.Scheduler.DebugTiming,
     // default on; 300-frame ring). -1 when the frame or processor is not in the history.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EcsWorld|Debug",
