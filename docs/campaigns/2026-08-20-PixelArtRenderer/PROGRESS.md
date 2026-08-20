@@ -1255,3 +1255,29 @@ the short version, because these are the ones that will generate bug reports:
 - **VALIDATION A9 (Shipping-config compile) is UNRUN**, not assumed. Only Development/Editor was built.
 - **Phase 7 backlog** is untouched: god rays, cloud shadows, per-object snap, stencil point-light,
   BusterBlock adoption.
+
+### Reference intake (maintainer-supplied, post-campaign, 2026-08-20)
+
+- **Texel-splatting demo code** — https://github.com/dylanebert/texel-splatting (mined from a local
+  shallow clone; MIT). Beyond what RESEARCH_Technique already quoted: the exact Ottosson OKLab
+  matrices in WGSL (`src/oklab.ts`, with `max(lms,0)` pre-cbrt and a zero floor on the way out); the
+  precise pipeline order (`splat.ts:718-732`: lit linear RGB → edge shift of exactly one posterize
+  level in OKLab L, `bandSize = 1/32`, both edge weights 1.0 → `posterize` = round-to-NEAREST 32-level
+  L quantization + the warm/cool ramp `lab.z += (L - 0.5) * 0.05`); and that even dither is done in
+  OKLab L (±0.03 by world hash). Note for any port: they clamp L because their scene is controlled —
+  OUR look is pre-tonemap HDR, so banding must stay Reinhard-compressed (the D-20 lesson) or bright
+  scenes flatten. A concrete `BandingSpace`/`WarmShift` plan was drafted and is awaiting the
+  maintainer's go (adds two look params → asset row + regen + subsystem writes; defaults preserve
+  every existing preset).
+- **MarchingSquaresTerrain** — https://github.com/jackachulian/Infinity-Realm-Expedition
+  `addons/MarchingSquaresTerrain` @ `ddde131` (found via r/godot "Recreating t3ssel8r's 3D pixel art
+  terrain"). A Godot 4 editor plugin (~2k lines GDScript) for t3ssel8r-style TERRACED TERRAIN
+  authoring: chunked heightmap grid sculpted with a brush dock; per-cell marching-squares case
+  analysis where an edge is "connected" (no cliff) when the corner height delta is under
+  `merge_threshold`, otherwise a wall is emitted; a rotation trick collapses the 16 cases onto five
+  primitives (full floor / outer corner / inner corner / edge / diagonal floor); floors and walls get
+  SEPARATE smooth groups so wall-floor breaks are hard normals — which is exactly what makes our
+  crease detector draw clean terrace lines. Plus a MultiMesh grass planter per floor cell
+  (shadows off) that pairs with §E's grass rules. Pure content-side: a Phase-7+ authoring feature
+  (candidate sibling to the §E backlog), zero renderer coupling. ⚠ The parent repo has NO license
+  file — reimplement the technique, do not port the GDScript.
