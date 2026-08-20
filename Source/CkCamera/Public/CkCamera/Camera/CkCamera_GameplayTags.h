@@ -25,6 +25,7 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Camera_Springs_LookAtLocationInterpSpeed);
 // ---- Sensor ----
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Camera_Sensor_FOV);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Camera_Sensor_AspectRatio);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Camera_Sensor_OrthoWidth);
 
 // ---- Noise (Pitch / Yaw / Roll) ----
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Camera_Noise_Pitch_Speed);

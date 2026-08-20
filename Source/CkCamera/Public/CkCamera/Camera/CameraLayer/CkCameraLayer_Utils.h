@@ -90,6 +90,10 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_AspectRatio(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier OrthoWidth")
+    static FCk_Handle_FloatAttributeModifier
+    Acquire_CameraModifier_OrthoWidth(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
+
     // ACQUIRE — Noise
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier NoisePitchSpeed")

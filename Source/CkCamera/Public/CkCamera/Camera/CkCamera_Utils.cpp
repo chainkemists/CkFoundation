@@ -294,6 +294,25 @@ auto
 
 auto
     UCk_Utils_Camera_UE::
+    Request_SetProjectionMode(FCk_Handle_Camera& InCamera, const FCk_Request_Camera_SetProjectionMode& InRequest, const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_Camera
+{
+    auto& CurrentFrag = InCamera.Get<ck::FFragment_Camera_Current>();
+    CurrentFrag.Set_ProjectionMode(InRequest.Get_ProjectionMode());
+
+    if (InRequest.Get_OrthoNearClipPlane().IsSet())
+    { CurrentFrag.Set_OrthoNearClipPlane(*InRequest.Get_OrthoNearClipPlane()); }
+
+    if (InRequest.Get_OrthoFarClipPlane().IsSet())
+    { CurrentFrag.Set_OrthoFarClipPlane(*InRequest.Get_OrthoFarClipPlane()); }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
+    return InCamera;
+}
+
+auto
+    UCk_Utils_Camera_UE::
     Request_Set_HasOrientationControl(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
@@ -530,6 +549,7 @@ auto
         auto& Section = InCamera.AddOrGet<ck::FFragment_Camera_Sensor>();
         Section._FOV         = AddFloat(Owner, TAG_Camera_Sensor_FOV,         Sensor.Get_FOV());
         Section._AspectRatio = AddFloat(Owner, TAG_Camera_Sensor_AspectRatio, Sensor.Get_AspectRatio());
+        Section._OrthoWidth  = AddFloat(Owner, TAG_Camera_Sensor_OrthoWidth,  Sensor.Get_OrthoWidth());
     }
 
     // ---- Noise ----
@@ -586,6 +606,9 @@ auto
         auto& CurrentFrag = InCamera.AddOrGet<ck::FFragment_Camera_Current>();
         CurrentFrag.Set_UseFixedBoomRotation(InDefaults.Get_Rig().Get_UseFixedBoomRotation());
         CurrentFrag.Set_ConstrainAspectRatio(InDefaults.Get_Sensor().Get_ConstrainAspectRatio());
+        CurrentFrag.Set_ProjectionMode(InDefaults.Get_Sensor().Get_ProjectionMode());
+        CurrentFrag.Set_OrthoNearClipPlane(InDefaults.Get_Sensor().Get_OrthoNearClipPlane());
+        CurrentFrag.Set_OrthoFarClipPlane(InDefaults.Get_Sensor().Get_OrthoFarClipPlane());
         CurrentFrag.Set_HasOrientationControl(InDefaults.Get_HasOrientationControl());
         CurrentFrag.Set_HasAutoReorient(InDefaults.Get_HasAutoReorient());
         CurrentFrag.Set_HasCollision(InDefaults.Get_HasCollision());
@@ -641,6 +664,10 @@ auto
         Sensor.Set_FOV(ReadFloat(Section._FOV));
         Sensor.Set_ConstrainAspectRatio(CurrentFrag.Get_ConstrainAspectRatio());
         Sensor.Set_AspectRatio(ReadFloat(Section._AspectRatio));
+        Sensor.Set_ProjectionMode(CurrentFrag.Get_ProjectionMode());
+        Sensor.Set_OrthoWidth(ReadFloat(Section._OrthoWidth));
+        Sensor.Set_OrthoNearClipPlane(CurrentFrag.Get_OrthoNearClipPlane());
+        Sensor.Set_OrthoFarClipPlane(CurrentFrag.Get_OrthoFarClipPlane());
         Profile.Set_Sensor(Sensor);
     }
 

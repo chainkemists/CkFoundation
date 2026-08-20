@@ -197,6 +197,19 @@ public:
     static FCk_Handle_Camera
     Request_Set_ConstrainAspectRatio(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /**
+     * Switches the camera between perspective and orthographic, optionally setting the orthographic depth range
+     * in the same call. Takes effect the same frame, like the toggles above.
+     *
+     * The orthographic WIDTH is not here: it blends, so it is a tuner attribute driven through
+     * Acquire_CameraModifier_OrthoWidth like FOV, and setting it from two places would let a layer and a direct
+     * write fight over it.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Projection Mode",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Camera
+    Request_SetProjectionMode(UPARAM(ref) FCk_Handle_Camera& InCamera, const FCk_Request_Camera_SetProjectionMode& InRequest, const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Orientation Control",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
