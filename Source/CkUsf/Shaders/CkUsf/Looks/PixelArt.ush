@@ -17,13 +17,6 @@
 // band and THEN snapping means an outline is always a colour the palette already contains. Tinting after
 // the snap would introduce colours the artist never chose, which reads as a completely different style.
 //
-// Algorithms and their sources are set out in
-// docs/campaigns/2026-08-20-PixelArtRenderer/RESEARCH_Technique.md; the sections are cited so the
-// reasoning behind each threshold is findable rather than folklore:
-//   - silhouette + grazing-angle threshold scaling: RESEARCH_Technique.md section C.2
-//   - crease via opposed-pair normal contrast, and the de-doubling gate: sections C.1 and C.2
-//   - convex/concave decision by view-facing comparison, band-shift application: section C.3
-//   - band quantization with a transition zone, and Bayer dither at the boundaries: section D
 // This look sits pre-tonemap, so its input is scene-referred LINEAR and unbounded. Luminance is therefore
 // normalized through Reinhard (L/(1+L)) before it is banded and inverted on the way out — HandDrawn's
 // approach, for its reason: a 0..1 ladder applied to unbounded light would put every band boundary in the
@@ -45,9 +38,15 @@ float CkUsf_PixelArt_SampleDepth(float2 BufferUV)
     return SceneTextureLookup(ClampSceneTextureUV(BufferUV, PPI_SceneDepth), PPI_SceneDepth, false).r;
 }
 
+// Returned DECODED, in [-1,1] world space, so there is no 2n-1 remap to do here. Every sibling look uses
+// the tap exactly this way (CelShade.ush:104, EdgeOutline.ush:48, CrossHatch.ush:98). The epsilon is not
+// decoration: a sky pixel writes a zero normal, and normalize(0) is NaN.
 float3 CkUsf_PixelArt_SampleNormal(float2 BufferUV)
 {
-    return SceneTextureLookup(ClampSceneTextureUV(BufferUV, PPI_WorldNormal), PPI_WorldNormal, false).rgb;
+    const float3 Raw = SceneTextureLookup(
+        ClampSceneTextureUV(BufferUV, PPI_WorldNormal), PPI_WorldNormal, false).rgb;
+
+    return normalize(Raw + float3(0.0, 0.0, 1e-6));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -139,7 +138,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
     if (EnableOutline > 0.5)
     {
         const float CenterDepth = CkUsf_PixelArt_SampleDepth(BufferUV);
-        const float3 CenterNormal = normalize(CkUsf_PixelArt_SampleNormal(BufferUV) * 2.0 - 1.0);
+        const float3 CenterNormal = CkUsf_PixelArt_SampleNormal(BufferUV);
 
         const float2 Offsets[4] = {
             float2( 0.0, -1.0),   // up
@@ -155,7 +154,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
         {
             const float2 TapUV = BufferUV + Offsets[Tap] * Texel;
             NeighborDepth[Tap] = CkUsf_PixelArt_SampleDepth(TapUV);
-            NeighborNormal[Tap] = normalize(CkUsf_PixelArt_SampleNormal(TapUV) * 2.0 - 1.0);
+            NeighborNormal[Tap] = CkUsf_PixelArt_SampleNormal(TapUV);
         }
 
         // A surface seen nearly edge-on has an enormous depth gradient with no edge in it, which is what
@@ -198,9 +197,12 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
         }
         else if (CreaseWeight > 0.5)
         {
-            // Convex or concave is a purely geometric question: whichever side of the crease faces the
-            // viewer more is the outward one, and gets the highlight. No light direction is read — the
-            // light-gated variant is unverified upstream and would make the outline move with the sun.
+            // A crease is deliberately TWO texels, one highlighted and one darkened: that light/dark pair
+            // reads as a lit bevel. The defect it must not become is two texels given the SAME treatment,
+            // which reads as one fat line. Silhouettes stay one-sided via the depth test above.
+            //
+            // Convex or concave is purely geometric: whichever side faces the viewer more is outward and
+            // gets the highlight. No light direction is read, or the outline would move with the sun.
             float MostDifferentFacing = dot(CenterNormal, ViewDir);
             int MostDifferent = 0;
             float LargestContrast = 0.0;
