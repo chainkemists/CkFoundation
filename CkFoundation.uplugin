@@ -657,6 +657,16 @@
       ]
     },
     {
+      "Name": "CkPixelArtRender",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkVat",
       "Type": "Runtime",
       "LoadingPhase": "Default",
