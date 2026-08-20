@@ -921,6 +921,31 @@ one judge scene of CURVED forms (a box cannot show a wrapping hatch: one normal 
 direction look correct), plus a mask row where hand-tagged cubes and entity-API subjects must be
 indistinguishable.
 
+### Pixel art (a look CkUsf owns, applied by CkPixelArt)
+
+`/CkUsf/Looks/PixelArt.ush` — 1-texel outlines, luminance banding and palette reduction, at
+`SceneColorAfterDOF`. Unlike the four Stylize effects it has no subsystem here: `CkPixelArt` owns the
+settings, the preset and the MID, and this module owns only the look. Presets:
+`Script/CkPixelArt/CkPixelArt_Presets_Assets.as`; the look asset is
+`Script/CkUsf/CkUsf_PixelArtLook_Assets.as`.
+
+**Its placement is a REQUIREMENT, not a preference.** An outline is exactly one texel wide only if the
+kernel steps in the resolution the scene was rasterized at. Moving it after tonemapping makes the kernel
+step in display pixels, so a "1-pixel" line comes out as wide as the upscale factor — the exact thing the
+pixel-art renderer exists to prevent. `Test_Usf_PixelArtLookContract` pins that, along with the positional
+parameter contract, by parsing the real `.ush` signature off disk.
+
+**Edges are applied BEFORE the palette snap** (a ±1 band shift), so an outline is always a colour the
+palette already contains. That ordering is the t3ssel8r signature and is why the two steps cannot be
+swapped.
+
+The look never references the pixel-art renderer's state, and renders as an ordinary full-resolution
+stylization with the renderer off — the pairing is composition, not coupling. Design and the campaign that
+produced it: `docs/campaigns/2026-08-20-PixelArtRenderer/`, plus
+`Source/CkPixelArtRender/Claude.md` for the renderer half. That campaign is also the sanctioned exception
+to the "no new scene view extensions for Stylize-class effects" ruling — a custom primary spatial upscaler
+has no blendable equivalent.
+
 ### Stylize follow-ups
 
 - **The effect mask has no AngelScript AutoTest coverage for its ISM / ISKM / batched paths.** The cel
