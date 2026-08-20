@@ -4,7 +4,7 @@
 > Executor: update this file at every phase boundary, every gate verdict, and every blocker.
 > Never improvise past a failed gate — record it under Blockers and stop the phase.
 
-## Status: CAMPAIGN COMPLETE through Phase 6. Machine lines green; human queue H-1 … H-11 open.
+## Status: CAMPAIGN COMPLETE through Phase 6. Machine lines green; human queue H-1 … H-11 open (H-4's runtime half now mechanized — see the third review). Three adversarial reviews run and dispositioned.
 
 Phase 1 exit gate: **1193 / 1190 pass / 3 fail** (1188 baseline + the 5 new spec tests).
 **No new failures.** One PRE-EXISTING failure disappeared —
@@ -633,6 +633,182 @@ is a reading, not a test. The other three: a blocking `LoadObject` on the explic
 path, `DoCheck_ResetToDefaults` assuming the host project configures no default preset, and the two
 edge-detector members being per-extension rather than per-world (log-only impact).
 
+## Third adversarial review (Fable, 2026-08-20) — the rendered result, end to end
+
+Scope per the maintainer's brief: the shader against RESEARCH_Technique §C/§D line by line, the four
+uncertainties left open by review #2 (the first chased to ground against the pinned engine), the
+supported-but-unexercised conditions (portrait, DPI, resize, multi-world, roll, zoom), and moving human
+verification into the suite where the lane environment allows it. Four findings fixed, three recorded, one
+review-#2 uncertainty refuted with engine evidence.
+
+### Fixed
+
+**1 — CRITICAL: review #2's open uncertainty #1 is REFUTED — the capture interleave is real.** The chain,
+read from the 5.7.4 fork rather than argued: `FRendererModule::BeginRenderingViewFamilies` updates deferred
+scene captures (`SceneCaptureUpdateDeferredCapturesInternal`, `SceneRendering.cpp:5173`) BEFORE
+`CreateLinkedSceneRenderers` (`:5176`), and the main family's `BeginRenderViewFamily` extension callbacks
+fire inside `CreateSceneRenderers` (`SceneRenderBuilder.cpp:507`). The capture path gathers ALL active
+extensions (`SceneCaptureRendering.cpp:886`) and calls `SetupViewFamily` on each (`:812`). So every frame, a
+`bCaptureEveryFrame` scene capture's `SetupViewFamily` lands BETWEEN the game viewport's `SetupViewFamily`
+and its `BeginRenderViewFamily` — and the old reset-first shape wiped `_FrameConfig`/`_FrameReport` there,
+so the viewport silently lost its upscaler on every frame a capture was alive: engine CatmullRom on the
+low-res render, the margin displayed instead of inset, no snap compensation. Any game with a minimap or
+mirror hits it permanently. Review #2's reading ("captures update during the world tick") is true only for
+sky-light and reflection captures (`UWorld::Tick`); it does not hold for SceneCapture2D/Cube deferred
+captures. Fix: BOTH hooks now identity-check the family against the game viewport before touching or
+consuming per-frame state (`Get_IsPrimaryViewportFamily` in `SetupViewFamily` AND `BeginRenderViewFamily` —
+the Begin check also matters because a `bCaptureEveryFrame` capture HAS view state, so the old
+`State != nullptr` guard would not have kept it from consuming the viewport's geometry once the reset
+stopped protecting it by accident). The gym's judge scene now keeps a 128x128 per-frame capture alive as a
+permanent tripwire: a regression of this guard makes the whole gym go soft and mis-framed on sight.
+
+**2 — Shader: the crease detector fired across occlusion boundaries** (`PixelArt.ush`). The far side of
+every silhouette carried a large normal contrast with no crease in it, so it rendered a bright or dark
+fringe hugging each outline — worst against the sky, where the zero-normal's `(0,0,1)` stand-in guarantees
+maximum contrast against any side face and the convex rule classifies it BRIGHT: a 1-texel halo in the sky
+around every object, reading as a doubled silhouette (H-8 rubric item 3). This is exactly what
+RESEARCH_Technique §C.2's `saturate(normalDifference - invDepthDifference)` suppression and §C.3's
+silhouette `continue` exist to prevent, and this shader had neither. Fix: a per-neighbour continuity gate —
+a neighbour's normal contrast is zeroed when the depth step to it exceeds the silhouette cutoff computed
+from the NEARER of the two depths. The min-depth basis is the load-bearing part: the sky's own enormous
+depth would otherwise inflate its gate right back open, and for the silhouette direction (neighbour deeper)
+min == center, so the silhouette test itself is numerically unchanged. At the gym's framing the lit-bevel
+pair at a cube's ground contact survives the gate (step ~174uu against a ~2400uu-depth cutoff of ~360uu+),
+so the intended §C.3 look is intact — only the fringe on the far side of true occlusion boundaries dies.
+Also removed while in the block: a dead first assignment to `MostDifferentFacing`, and the classification
+loop now reuses the gated contrasts instead of recomputing raw ones.
+
+**3 — The DPI divide-out was structurally inert** (`DoApply_ScreenPercentage`). It divided by
+`InViewFamily.SecondaryViewFraction`, which at `SetupViewFamily` time still holds the construction default
+1.0 — the engine assigns the DPI-derived value at `GameViewportClient.cpp:1566-1584`, between the hook at
+`:1486` and the projection hook at `:1687`. So in PIE above 100% OS DPI, or under an explicit
+`r.SecondaryScreenPercentage.GameViewport` (including the Phase-1 verification run at 50), the internal
+geometry was wrong by the secondary fraction: width exactness broke, the upscaler warned "the camera snap
+was computed for", and pixels crept. Fix: the drive divides by the LAST SETTLED fraction, read in
+`BeginRenderViewFamily` the frame before — exact whenever DPI is stable, self-healing one frame after a
+change (the upscaler's existing warning names the single mismatched frame). PIE remains "preview only" for
+sharpness — the engine's SmoothStep secondary resample still runs after ours — but the geometry and the
+snap compensation are now exact in it, which retires the geometry half of standing risk 1.
+
+**4 — The shader re-implemented three StylizeCommon helpers** (non-negotiable #9). `SnapToPalette` was a
+verbatim copy of `CkUsf_Stylize_NearestPaletteColor`; palette modes 0/2 re-implemented
+`CkUsf_Stylize_QuantizeSteps` / `CkUsf_Stylize_QuantizeLuminance` minus their top-band `min()` guard (an
+input of exactly 1.0 overshot to `N/(N-1)` before the final saturate). Replaced with the library calls;
+behaviour identical except the guard now holds.
+
+**5 — Both new module `Claude.md`s were never actually committed.** This repo gitignores `*.md`
+(`.gitignore:49`, "md files, they should be force added instead"); every tracked module doc
+(`CkTimer/Claude.md`, `CkCamera/Claude.md`, `CkUsf/Claude.md`) was force-added at some point —
+`Source/CkPixelArt/Claude.md` and `Source/CkPixelArtRenderer/Claude.md` never were. They existed only on
+this machine's disk: the branch as committed shipped the feature with no module documentation, the Phase-6
+exit evidence ("both module Claude.md's ... landed") was wrong, and all three adversarial reviews read the
+files from disk without noticing — a reviewer diffing the BRANCH would have seen a feature with no docs.
+Fixed by force-adding both in this review's docs commit. Lesson: after authoring any new `.md` outside
+`docs/`/`.claude/`, check `git ls-files` for it — "the file exists" and "the file is tracked" diverge
+silently here by design.
+
+Plus two new pinning unit tests, `CkTests.UnitTests.CkPixelArtRenderer.OrthoPlanes.*` — see the H-queue
+verdict below.
+
+### The unexercised-conditions sweep — verified clean, with the evidence
+
+- **Portrait and non-16:9.** The arithmetic holds at aspect < 1 (worked example 1080x1920 @ 360p: inner
+  203x360, horizontal margin 2, rendered 207x368, insets 2/4/4 — all ≥ the requested 2).
+  `Get_OrthoWidthFromProjection` reads the SPAN (`2/M[0][0]`), not the camera's OrthoWidth, so the
+  landscape/portrait axis-multiplier flip its doc block warns about never reaches the texel math, and
+  `Apply_MarginFold`'s derived `M[1][1]` keeps texels exactly square at any aspect (proven by the existing
+  fold test's square-texel assertion across 6 aspects).
+- **Camera roll and rotated yaw.** Already covered by tests, not merely claimed:
+  `Snap.BasisMatchesCameraAxes` pins the column extraction against `FRotationMatrix` axes at yaw -120 /
+  roll 22.5, and the four 1000-sample property sweeps draw roll from the full -180..180 range. A transpose
+  error fails those today. The remainder lives in the view basis, which is also what the upscaler's UV
+  shift is expressed in, so compensation under roll is correct by construction.
+- **Window resize mid-run, both resolution modes.** Geometry is recomputed every frame from
+  `RenderTarget->GetSizeXY()`; `GeometryIsUnchanged` gates only the logging. TexelsPerPixel re-derives the
+  inner height from the live viewport each frame, which is the mode's definition.
+- **Two PIE worlds / one enabled one not.** Per-frame state is written and consumed inside one viewport's
+  `Draw`; a second world's family resets state only in its OWN Draw and (post-fix) only for its own primary
+  family. The CVar leases were already process-wide and refcounted (audit finding 3). Residual:
+  `_LastViewportSize`/`_LastFraction`/`_LastSecondaryViewFraction` are per-extension, so two viewports with
+  DIFFERENT sizes or DPI alternate the change-log every frame and each mispredicts the other's secondary
+  fraction — log noise plus a one-frame-class geometry error, only in multi-viewport PIE, recorded not fixed.
+- **Zoom.** The shimmer-while-changing / stable-once-settled behaviour is the technique's documented limit
+  (RESEARCH §A) and no cheap improvement exists inside this architecture: the alternative is QUANTIZED zoom
+  (integer texel-per-pixel steps, scaling the upscale window between steps), which is a Phase-7 feature —
+  it needs its own upscale-quad scaling, not a tweak to the current path.
+
+### Recorded, not actioned
+
+- **Ortho depth-threshold units are boom-relative.** The silhouette cutoff multiplies
+  `max(CenterDepth, 1.0)` — the CelShade/EdgeOutline sibling shape, correct under perspective where depth
+  deltas scale with distance. Under ortho they do not: the cutoff varies with the boom length (which has no
+  other visual effect in ortho — boom 2500 vs 250 gives 10x different edge verdicts on an identical image)
+  and across the screen (~2x between near and far ground at the gym's pitch), so identical props at the top
+  and bottom of the frame can get different edges. The research-faithful ortho form is a fixed view-space
+  threshold (§C.2), but that changes the knob's units and demands re-tuning with eyes on the image — so it
+  is folded into H-8: if the rubric shows edge verdicts varying across the ground plane, the fix is to gate
+  the `max(CenterDepth, 1.0)` factor on the projection type (`View.ViewToClip[3][3]` is 1 under ortho) and
+  re-calibrate `DepthThreshold` in absolute units for the ortho branch. Not changed blind: with the default
+  0.15 relative threshold the gym's silhouettes near the ground are actually drawn by the crease pair, not
+  the depth test (a 100uu cube's step is ~174uu against a ~375uu+ cutoff), and re-tuning that balance
+  without an image would be guessing.
+- **The lit-bevel crease pair** stands per the settled disposition, and the new continuity gate was checked
+  against it: the pair still fires at cube-ground contact (the step is well under the gate), so H-8 item 2's
+  intended look is unchanged.
+- **`bConstrainAspectRatio` (letterboxed cameras).** The drive predicts from the render-target size; a
+  constrained camera's view rect is a sub-rect, so the prediction would mismatch, the upscaler would warn,
+  and pixels would creep. Nobody has asked for letterboxed pixel-art; a matrix row can be added when someone
+  does.
+
+### H-queue mechanization (the "convert human verification into machine verification" task)
+
+- **Moved into the suite:** H-4's runtime half. Two new unit tests pin the engine behaviour D4 rests on:
+  `OrthoPlanes.AutoFarPlaneTracksViewRect` proves `FMinimalViewInfo::AutoCalculateOrthoPlanes` derives a
+  DIFFERENT far plane for a 1920x1080 rect than for the 648x365 internal rect under the default
+  `r.Ortho.AutoPlanes` configuration (defaults verified in `CameraStackTypes.cpp`), and
+  `ExplicitPlanesIgnoreViewRect` proves authored planes survive untouched at both rects. If the engine ever
+  changes that derivation, the first test fails and D4 can be revisited. H-4 itself can drop to a footnote.
+- **Cannot move, with the reason:** the toolbox lanes run `-nullrhi` (verified in the lane logs'
+  `LogInit: Command Line`), so `UGameViewportClient::Draw` never assembles a real view family in the suite —
+  nothing that needs SetupViewFamily, a frame report, or an executed shader body can be asserted there.
+  That covers H-5/6/7 (also inherently visual verdicts), H-8 (the contract test pins the signature; the
+  BODY only ever executes under a real RHI), H-9, and the imagery halves of H-1/2/3. H-10's
+  restore-the-prior-value half still needs an AngelScript CVar value getter — declined in review #2 as
+  scope creep into CkCVar; unchanged. H-11 is editor-only by definition.
+- **Made observable rather than provable:** the interleave fix. The judge scene's new capture tripwire
+  means any human gym run (H-5 through H-9) now exercises the capture path continuously — a regression
+  reads as the whole gym going soft — and a headless standalone boot greps as
+  `Upscaler AddPasses` still appearing with the capture alive.
+
+### Gate
+
+Full suite on the rebuilt binary (`--build --config=Development --target=Editor --test --no-live
+--discover-fresh`, log `Saved/Logs/BuildTest-AdversarialReview3.log`):
+**1206 total / 1203 passed / 3 failed / 0 skipped / 0 contaminated / 5m 30s.**
+1206 = the 1204 gate-of-record plus the two new OrthoPlanes tests, both green by name. The three failures
+are the SAME pre-existing names as every prior gate (`Ck_AutoTest_Crowd_NavQueryFilter_ForceReplan`, both
+`Ck_AutoTest_PathNetworkFollower_*`). Zero `never run`, zero lane aborts (grepped, not assumed).
+`Ck_AutoTest_PixelArt_SubsystemContract` and `Ck_AutoTest_Camera_OrthoProjection` both green; the gym
+scripts (including the new capture tripwire) compiled clean.
+
+Runtime confirmation of the interleave fix, real RHI, standalone gym boots
+(logs `Saved/Logs/PixelArtCaptureTripwire{,3,4}.log`):
+
+- Run 3 (`ck.PixelArt.Enabled 1`): tripwire alive (`🟪 Capture tripwire alive` at frame 19), drive line
+  `Active: viewport=1280x720 rendered=648x365 displayed=640x360 at (4,2) margin=4/2/3` and
+  `Upscaler AddPasses ... stage=PrimaryToOutput` both present, ZERO `viewport=128x128` lines.
+- Run 4 (`ck.PixelArt.Debug.ToggleLoop 60`): capture alive from frame 21; **61 `Active:` drive lines
+  spanning frames 14→393** — ~59 full enable cycles executed WHILE the capture interleaved every frame,
+  all with identical correct geometry and `applied == fraction`; final verdict
+  `ToggleLoop PASS: r.ScreenPercentage returned to its pre-enable value — no residue`.
+
+What this proves vs infers: every game-thread half (the drive, the lease, the geometry, zero
+capture-driven writes) is runtime-proven across 60 cycles beside the live capture. The per-frame
+UPSCALER registration during capture-alive frames is proven by code-reading plus the engine ordering
+(the `AddPasses` breadcrumb is geometry-change-gated, so it logs once) — the one residual that only an
+eyes-on gym run can fully close, and the tripwire makes any regression of it read as the whole gym going
+soft.
+
 ## Divergence log (phase doc vs repo — repo is authority for mechanics, PROMPT.md for intent)
 
 - **D-1 — Host project is CkPlugins_Other, not BusterBlock.** See above. The step's intent (a host
@@ -848,6 +1024,8 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   the standalone capture. No fix wanted — this is the evidence for "PIE lies" (standing risk 1).
 - **[EDITOR-VERIFY] H-4 — 7b runtime.** With the spike on, compare `r.Ortho.AutoPlanes 1` against
   explicit near/far and confirm the auto far plane moves with the render resolution.
+  **Mechanized (third review):** `CkTests.UnitTests.CkPixelArtRenderer.OrthoPlanes.*` now proves both
+  halves against the live engine in every suite run. The editor comparison is optional corroboration only.
 
 - **[EDITOR-VERIFY] H-5 — Phase 2 gate 6.G, the creep/stutter/smooth A/B.** **Prefer the pixel-art gym's own
   stations 5/6/7 now** — they are this A/B, pre-configured, on a camera that is orthographic on entry, and
@@ -976,6 +1154,17 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   - The still-open editor from the look-generation run hot-compiled the gym scripts and reported two
     AngelScript errors for free. Leaving an editor up while writing `.as` is a cheap feedback loop.
 
+- 2026-08-20 (Fable, session 4): **third adversarial review** — the rendered result end to end. Findings
+  and dispositions in the "Third adversarial review" section above. Fixed: the capture-family interleave
+  (review #2's open uncertainty, REFUTED against the engine source), the crease-across-occlusion fringe in
+  `PixelArt.ush`, the inert DPI divide-out, the stylize-helper duplication, and the never-force-added
+  module `Claude.md`s. Added: two OrthoPlanes pinning unit tests (mechanizing H-4) and the gym's capture
+  tripwire. Gate: 1206/1203/3, same three pre-existing names, zero never-run. Runtime: 60 toggle cycles
+  beside a live capture, zero residue, zero capture-driven writes. Operational note for the next session:
+  AngelScript does NOT concatenate adjacent string literals (a C++ habit) — the compiler error names only
+  the line/column, and a failed gym-script compile keeps OLD bytecode for the whole boot, so the run looks
+  mysteriously stale rather than broken.
+
 ## Final state — what is committed where, and what is not
 
 **Nothing is pushed. No submodule pointer was bumped.** The superproject is still at `133f8f9` with
@@ -983,10 +1172,13 @@ nothing staged; its three dirty entries (`CkPlugins.uproject`, `Config/DefaultGa
 gitlink drift) are the pre-existing dirt recorded in the baseline, untouched. Publishing is the
 maintainer's `/ck-ship-dev`.
 
-### CkFoundation — branch `feature/pixel-art-renderer`, 11 commits ahead of its origin
+### CkFoundation — branch `feature/pixel-art-renderer`
 
 | SHA | What |
 |---|---|
+| _(docs commit)_ | docs(pixelart): third adversarial review + the two module Claude.mds force-added |
+| `f68c60886` | fix(CkPixelArtRenderer): capture-interleave guard; settled secondary-fraction prediction |
+| `8bfbe0124` | fix(CkUsf): depth-gate the PixelArt crease detector; reuse the stylize helpers |
 | `1f47b9e8f` | docs(pixelart): campaign complete through Phase 6 |
 | `1fab414a6` | docs: tier-table rows + two stale claims corrected |
 | `71582ac5a` | feat(CkUsf): the PixelArt look |
@@ -1000,6 +1192,8 @@ maintainer's `/ck-ship-dev`.
 
 | SHA | What |
 |---|---|
+| `ca3400e2` | feat(CkTests): capture tripwire in the pixel-art gym judge scene |
+| `92327f29` | test(CkPixelArtRenderer): pin the ortho auto-plane resolution dependence |
 | `ea4dd870` | feat(CkTests): the Pixel Art gym |
 | `650c60cf` | test(CkUsf): the look's asset-to-HLSL contract |
 | `bbc54ee2` | test(CkPixelArt): the subsystem contract |
