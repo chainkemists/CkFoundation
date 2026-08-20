@@ -76,32 +76,6 @@ float CkUsf_PixelArt_QuantizeBands(float Value, float Bands, float TransitionSiz
     return saturate(lerp(saturate((Nearest - 1.0) * BandWidth), saturate(Nearest * BandWidth), Blend));
 }
 
-float3 CkUsf_PixelArt_SnapToPalette(float3 Color, float PaletteCount, float3 Palette[8])
-{
-    int Count = clamp((int)(PaletteCount + 0.5), 1, 8);
-
-    float3 Best = Palette[0];
-    float BestDistance = 1e9;
-
-    [unroll]
-    for (int Index = 0; Index < 8; ++Index)
-    {
-        if (Index >= Count)
-        { continue; }
-
-        float3 Delta = Color - Palette[Index];
-        float Distance = dot(Delta, Delta);
-
-        if (Distance < BestDistance)
-        {
-            BestDistance = Distance;
-            Best = Palette[Index];
-        }
-    }
-
-    return Best;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
@@ -168,7 +142,8 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
         const float3 ViewDir = -normalize(ScreenVectorFromScreenRect(float4(ScreenPosition, 1.0, 0.0)));
         const float Facing = 1.0 - saturate(abs(dot(CenterNormal, ViewDir)));
         const float Grazing = saturate((Facing - AngleZCutoff) / max(1.0 - AngleZCutoff, 1e-4));
-        const float DepthCutoff = max(DepthThreshold, 1e-5) * (Grazing * AngleZScale + 1.0) * max(CenterDepth, 1.0);
+        const float DepthCutoffBase = max(DepthThreshold, 1e-5) * (Grazing * AngleZScale + 1.0);
+        const float DepthCutoff = DepthCutoffBase * max(CenterDepth, 1.0);
 
         // One-sided on purpose: of the two texels straddling a silhouette only the NEARER one draws the
         // line, which is what keeps it one texel wide instead of two.
@@ -182,12 +157,28 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
 
         // Opposed-PAIR contrast rather than a sum of per-neighbour differences: a sum fires on smooth
         // curvature, where every neighbour differs a little and none of them is an edge.
-        const float ContrastUp = 1.0 - dot(CenterNormal, NeighborNormal[0]);
-        const float ContrastLeft = 1.0 - dot(CenterNormal, NeighborNormal[1]);
-        const float ContrastRight = 1.0 - dot(CenterNormal, NeighborNormal[2]);
-        const float ContrastDown = 1.0 - dot(CenterNormal, NeighborNormal[3]);
+        //
+        // A neighbour only contributes while the surface is CONTINUOUS across to it. Comparing normals across
+        // an occlusion-scale depth step manufactures a crease on the FAR side of every silhouette — a bright or
+        // dark fringe hugging the outline, worst against the sky, whose stand-in normal is arbitrary. The
+        // continuity cutoff is scaled by the NEARER of the two depths so a distant background (or the sky's
+        // enormous depth) can never inflate its own gate.
+        float NeighborContrast[4];
 
-        const float NormalDifference = max(abs(ContrastUp - ContrastDown), abs(ContrastLeft - ContrastRight));
+        [unroll]
+        for (int Neighbor = 0; Neighbor < 4; ++Neighbor)
+        {
+            const float ContinuityCutoff =
+                DepthCutoffBase * max(min(CenterDepth, NeighborDepth[Neighbor]), 1.0);
+            const bool SurfaceIsContinuous = abs(NeighborDepth[Neighbor] - CenterDepth) <= ContinuityCutoff;
+
+            NeighborContrast[Neighbor] =
+                SurfaceIsContinuous ? 1.0 - dot(CenterNormal, NeighborNormal[Neighbor]) : 0.0;
+        }
+
+        const float NormalDifference = max(
+            abs(NeighborContrast[0] - NeighborContrast[3]),
+            abs(NeighborContrast[1] - NeighborContrast[2]));
         const float CreaseWeight = smoothstep(NormalSmoothLow, max(NormalSmoothHigh, NormalSmoothLow + 1e-4),
             NormalDifference);
 
@@ -203,25 +194,20 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
             //
             // Convex or concave is purely geometric: whichever side faces the viewer more is outward and
             // gets the highlight. No light direction is read, or the outline would move with the sun.
-            float MostDifferentFacing = dot(CenterNormal, ViewDir);
             int MostDifferent = 0;
             float LargestContrast = 0.0;
 
             [unroll]
             for (int Crease = 0; Crease < 4; ++Crease)
             {
-                const float Contrast = 1.0 - dot(CenterNormal, NeighborNormal[Crease]);
-
-                if (Contrast > LargestContrast)
+                if (NeighborContrast[Crease] > LargestContrast)
                 {
-                    LargestContrast = Contrast;
+                    LargestContrast = NeighborContrast[Crease];
                     MostDifferent = Crease;
                 }
             }
 
-            MostDifferentFacing = dot(NeighborNormal[MostDifferent], ViewDir);
-
-            EdgeKind = dot(CenterNormal, ViewDir) > MostDifferentFacing ? 2 : 1;
+            EdgeKind = dot(CenterNormal, ViewDir) > dot(NeighborNormal[MostDifferent], ViewDir) ? 2 : 1;
         }
     }
 
@@ -292,20 +278,15 @@ FCkUsf_SurfaceOutput CkUsf_PP_PixelArt(
         Palette[4] = PaletteColor4; Palette[5] = PaletteColor5;
         Palette[6] = PaletteColor6; Palette[7] = PaletteColor7;
 
-        Color = CkUsf_PixelArt_SnapToPalette(Color, PaletteCount, Palette);
+        Color = CkUsf_Stylize_NearestPaletteColor(Color, Palette, clamp((int)(PaletteCount + 0.5), 1, 8));
     }
     else if (Mode == 2)
     {
-        const float Steps = max(PaletteCount, 2.0);
-        const float SteppedLuminance = floor(CkUsf_Stylize_Luminance(Color) * Steps) / max(Steps - 1.0, 1.0);
-        const float CurrentLuminance = max(CkUsf_Stylize_Luminance(Color), 1e-4);
-
-        Color = saturate(Color * (SteppedLuminance / CurrentLuminance));
+        Color = saturate(CkUsf_Stylize_QuantizeLuminance(Color, PaletteCount));
     }
     else
     {
-        const float Steps = max(PaletteCount, 2.0);
-        Color = floor(Color * Steps) / max(Steps - 1.0, 1.0);
+        Color = CkUsf_Stylize_QuantizeSteps(Color, PaletteCount);
     }
 
     O.EmissiveColor = saturate(Color);
