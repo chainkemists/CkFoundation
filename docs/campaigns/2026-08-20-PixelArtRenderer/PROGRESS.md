@@ -87,7 +87,7 @@ session, and never trust an exit-76 run's counts.
 | 3 | CkCamera ortho (attribute + requests + ViewInfo) | **DONE** | `Ck_AutoTest_Camera_OrthoProjection` green in a fresh-discovery run; `rg -in pixelart Source/CkCamera` = 0; CkFoundation `43746c7ee`, CkTests `b5869fa0` |
 | 4 | CkPixelArt module: subsystem/preset/settings/CVars, D7 preconditions | **DONE** | `Ck_AutoTest_PixelArt_SubsystemContract` green; module + uplugin entry + tier rows landed |
 | 5 | PixelArt look (outline + banding + palette + band-shift edges) | **DONE** (visual rubric human-queued) | `Ck_Usf_GenerateLooks PixelArt` clean, `M_CkUsf_Look_PixelArt.uasset` written + validated; positional contract test green |
-| 6 | Gym, gate of record, perf table, docs, VALIDATION executed | **DONE** | Gate of record delta-zero (1204/1201/3, same failing names); perf table measured; gym + both module `Claude.md`s + tier rows + two stale-doc fixes landed |
+| 6 | Gym, gate of record, perf table, docs, VALIDATION executed | **DONE** (gym extended post-gate) | Gate of record delta-zero (1204/1201/3, same failing names); perf table measured; gym + both module `Claude.md`s + tier rows + two stale-doc fixes landed |
 | 7 | BACKLOG (separate sign-off): god rays, cloud shadows, per-object snap, stencil point-light, BB adoption | BACKLOG | |
 
 ## Decision gates — verdicts
@@ -241,6 +241,75 @@ The generation run was driven headlessly the same way Phase 0's standalone sweep
 boot with `-CkDeferredCmdsFile` carrying `Ck_Usf_GenerateLooks PixelArt`, then the log read for the
 generator's own lines. Nothing about it needed a human at the keyboard, so it is a machine line rather
 than a queued one.
+
+### Gym additions after the gate (2026-08-20)
+
+Two gaps against PHASE_6's station list, both found by re-reading the phase doc against what was actually
+built rather than by any test:
+
+- **The judge scene had no lighting of its own.** PHASE_6 asked for a directional light with VSM and the scene
+  was inheriting whatever the shared gym map provided. That matters more here than usual: every banding and
+  crease verdict IS a verdict about lighting, so an inherited setup makes two runs incomparable. It now builds
+  a low-angle key (shadows on, so VSM — `r.Shadow.Virtual.Enable=1` is already project-wide) plus a sky-light
+  fill. The low angle is deliberate: it throws a long shadow across the ground plane, which is what gives the
+  grazing-angle test something to be wrong about.
+
+- **No UMG overlay for the native-res UI criterion.** Replaced by something better rather than reproduced:
+  `ACk_PixelArtGym_HUD` subclasses the shared cycler HUD and draws an always-on station panel. Crisp text
+  sitting directly on a chunky frame IS the criterion, and a panel that is always there judges it continuously
+  instead of at one station the observer has to walk to.
+
+The panel also carries **number-key station selection** (1-9 and 0, both number row and numpad — a laptop has
+no numpad, and binding one but not the other makes the feature depend on hardware). The non-obvious part is
+that the keys would have been inert without suspending the PROXIMITY selection: the gym picks a station by how
+close the pawn is standing, so the next tick would have snapped straight back. A key press latches until the
+player moves 400uu — past shuffling on the spot, well short of the 1200uu station spacing — and the panel
+footer names which mode is live, because "I pressed 5 and it went back to 2" is otherwise silent.
+
+Verified: AngelScript compiles clean, the gym loads via
+`?game=/Script/Angelscript.Ck_PixelArtGym_GameMode`, `Game class is 'Ck_PixelArtGym_GameMode'` and
+`Client Set HUD` both appear in the boot log. **NOT verified: how any of it looks.** The panel's layout,
+whether it collides with the Tab hint, and whether the lighting flatters or ruins the banding verdicts are all
+human observations — folded into H-8 and H-9.
+
+### Post-campaign — a real defect the margin tripwire caught (2026-08-20)
+
+Found while adding the gym's own lighting, which is what made it reachable: a real-time sky light triggers a
+cubemap capture, and that capture arrives at the scene view extension as its OWN view family with its OWN
+render target.
+
+```
+LogRenderer: Forcing update for all mesh draw commands: SkyLight real-time capture change
+LogCkPixelArt: Active: viewport=128x128 rendered=128x128 displayed=360x128 at (3,0) fraction=1.000000
+LogCkPixelArt: Active: viewport=1920x1080 rendered=648x365 displayed=640x360 fraction=0.337240
+```
+
+**What was wrong.** `BeginRenderViewFamily` already skipped captures (no view state), but `SetupViewFamily` —
+the hook that drives `r.ScreenPercentage` — had no equivalent guard. So the renderer computed geometry from a
+128x128 texture nobody sees and, because the screen percentage is a GLOBAL console variable, stamped that
+frame's value over the real viewport's. Every capture frame, forever. Any world with a scene capture, a
+reflection capture, a planar reflection or a real-time sky light hits it, which is most games — the campaign
+simply never had one in the scene until the gym gained a fill light.
+
+A second defect fell out of the same line: an internal height LARGER than the viewport degenerated silently
+(displayed 360x128 out of a 128x128 render, zero margin on every side). This renderer only ever downscales, so
+that never supersamples — it just breaks. Reachable on any window smaller than the configured internal height.
+
+**Fixes.** `SetupViewFamily` now bails unless the family's render target IS the game viewport's. Identity, not
+a list of capture kinds: the flags (`bIsSceneCapture` and friends) live on `FSceneView` and not on the family,
+the family's views are not built yet at that point, and the question is strictly "is this the thing on screen".
+The internal height is separately clamped to what the viewport holds with margin, warning that the grid is
+coarser than configured — a small window is a legitimate state, not a misconfiguration.
+
+**Verified at runtime**, same gym boot before and after: the `viewport=128x128` line and the margin error both
+go from 1 occurrence to 0, while `viewport=1920x1080 rendered=648x365 displayed=640x360 margin=4/2/3` is
+unchanged. Log: `Saved/Logs/PixelArtGymBoot.log`.
+
+**Worth recording about the method, not just the bug.** This was caught by the runtime tripwire the Fable
+margin ruling asked for — its flagged risk was that the margin guarantee was proven with clean arithmetic and
+might not survive real viewport sizes. It did not, for a reason neither of us predicted, and the assertion is
+the only thing that said so. The main viewport looked perfect throughout and the bad frames were interleaved
+with good ones; no screenshot would have shown it.
 
 ### Gate of record — the delta, in full
 
