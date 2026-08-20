@@ -45,6 +45,10 @@ Interactable entities have an Interaction fragment; interactor entities hold a r
   directly rather than reading `Get_CanInteractWith`'s `AlreadyExists`, because that result is
   decided against the INTERACT-SOURCE CAST of the source and is unreachable for any consumer that
   composes no `InteractSource`.
+  The pin's contract is therefore: **the interaction's stored source must equal the resolver's own
+  entity**. A consumer that starts interactions with some other handle as the source gets no pin.
+  Both in-tree consumers satisfy it (the resolver is composed on the same entity the bridge passes
+  as the source).
 
 ## Anti-patterns
 
