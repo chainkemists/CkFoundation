@@ -130,7 +130,36 @@ namespace ck
                     InPathFollow.Get_ActiveArrivalRadius();
             }();
 
-            if (InPathResult.Get_Status() == ECk_Nav_PathStatus::Failed || StrictEndsShortOfGoal)
+            // Only a genuine planning VERDICT may trigger the permissive retry: the query ran
+            // against the mesh and found no route the strict filter allows. An infrastructure
+            // failure — an unprojectable start or end (projection is UNFILTERED, so the permissive
+            // phase fails it identically), NoNavData/deferral-timeout, or the pending watchdog's
+            // PendingTimeout — is filter-independent, and retrying it doubles the caller's wait
+            // for nothing. PendingTimeout is the load-bearing case: the watchdog's contract is
+            // that a never-answered episode terminates as a bounded failure EXACTLY ONCE, and a
+            // fallback re-dispatch here would resurrect it into a second Pending wait instead
+            // (caught by CkAutoTest_Crowd_Watchdog_PendingTimeoutFailsEpisodeOnce). Ending in
+            // strict phase without the fallback also leaves _StrictPlanFailed false, so the
+            // OnGoalFailed payload correctly reports the failure as structural rather than
+            // crowd-blocked.
+            const auto StrictFailedOnRoute = [&]() -> bool
+            {
+                if (InPathResult.Get_Status() != ECk_Nav_PathStatus::Failed)
+                { return false; }
+
+                switch (InPathResult.Get_Diagnostics().Get_LastFailReason())
+                {
+                    case ECk_Nav_PathFailReason::FindPathNoPath:
+                    case ECk_Nav_PathFailReason::FindPathError:
+                    case ECk_Nav_PathFailReason::FindPathInvalid:
+                    case ECk_Nav_PathFailReason::EmptyPath:
+                        return true;
+                    default:
+                        return false;
+                }
+            }();
+
+            if (StrictFailedOnRoute || StrictEndsShortOfGoal)
             {
                 ck::crowd::Verbose(
                     TEXT("CrowdAgent [{}] no crowd-free route (strict result: {}) — re-planning with the toll filter"),

@@ -175,9 +175,16 @@ Enabled) sits on top of the toll: every agent FindPath plans FIRST with a STRICT
 treats the markup area as IMPASSABLE. The toll alone has a break-even — for a destination close
 behind a standing crowd, crossing beats any detour, so single-phase planning legitimately walked
 agents into bodies they could never pass (the queue-cross field symptom). A strict answer of
-Failed, or Partial ending short of the goal, re-dispatches the episode ONCE with the permissive
-toll filter (`OnPathResolved`, before the path-trouble stamp, revision advanced) — which is how
-queue-joiners still reach a slot beside standing bodies. Strict is retried only on NEW evidence
+Failed on a genuine PLANNING VERDICT (no-path / find-path error / invalid / empty), or Partial
+ending short of the goal, re-dispatches the episode ONCE with the permissive toll filter
+(`OnPathResolved`, before the path-trouble stamp, revision advanced) — which is how queue-joiners
+still reach a slot beside standing bodies. Infrastructure failures never trigger the fallback:
+projection is unfiltered (a strict projection miss fails permissive identically), NoNavData is
+filter-independent, and the pending watchdog's `PendingTimeout` MUST terminate exactly once — a
+fallback there resurrected the timed-out episode into a second Pending wait
+(`CkAutoTest_Crowd_Watchdog_PendingTimeoutFailsEpisodeOnce` pins this). Such an episode ends in
+strict phase with `_StrictPlanFailed` false, so its OnGoalFailed payload reads structural, not
+crowd-blocked. Strict is retried only on NEW evidence
 (fresh MoveTo, BlockedRecheck resume, PathRefresh trigger, caller ForceReplan); the stall ladder's
 re-paths carry none, and retrying strict there doubles every rung's Pending stop-start cycle into
 a measurable facing whip. The strict filter composes with a host's own filter through the params'
