@@ -15,6 +15,9 @@ public class CkJoltEditor : CkModuleRules
             "Engine",
             "UnrealEd",
             "EditorSubsystem",
+            // A re-cook overwrites assets that a Git-LFS/Perforce workspace checked out read-only;
+            // the cook checks them out first rather than clobbering the read-only flag.
+            "SourceControl",
             "AssetRegistry",
             "ToolMenus",
             "Landscape",
