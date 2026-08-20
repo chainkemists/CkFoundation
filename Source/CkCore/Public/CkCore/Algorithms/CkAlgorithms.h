@@ -4,6 +4,7 @@
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Algo/Compare.h>
 #include <Algo/MaxElement.h>
 #include <Algo/MinElement.h>
 
@@ -47,6 +48,16 @@ namespace ck::algo
     template <typename T_ItrType, typename T_PredicateFunction>
     [[nodiscard]]
     auto AnyOf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_PredicateFunction InFunc) -> bool;
+
+    // True when both containers are the same size AND operator== (or the predicate) holds for
+    // every aligned pair. A size mismatch is a plain false, not an error.
+    template <typename T_ContainerA, typename T_ContainerB>
+    [[nodiscard]]
+    auto Compare(const T_ContainerA& InContainerA, const T_ContainerB& InContainerB) -> bool;
+
+    template <typename T_ContainerA, typename T_ContainerB, typename T_PredicateFunction>
+    [[nodiscard]]
+    auto Compare(const T_ContainerA& InContainerA, const T_ContainerB& InContainerB, T_PredicateFunction InFunc) -> bool;
 
     template <typename T_ItrType, typename T_UnaryFunction>
     [[nodiscard]]

@@ -91,6 +91,27 @@ namespace ck::algo
         return std::any_of(InItrBegin, InItrEnd, InFunc);
     }
 
+    template <typename T_ContainerA, typename T_ContainerB>
+    auto
+        Compare(
+            const T_ContainerA& InContainerA,
+            const T_ContainerB& InContainerB)
+        -> bool
+    {
+        return Algo::Compare(InContainerA, InContainerB);
+    }
+
+    template <typename T_ContainerA, typename T_ContainerB, typename T_PredicateFunction>
+    auto
+        Compare(
+            const T_ContainerA& InContainerA,
+            const T_ContainerB& InContainerB,
+            T_PredicateFunction InFunc)
+        -> bool
+    {
+        return Algo::Compare(InContainerA, InContainerB, InFunc);
+    }
+
     template <typename T_ItrType, typename T_UnaryFunction>
     auto
         FindIf(
