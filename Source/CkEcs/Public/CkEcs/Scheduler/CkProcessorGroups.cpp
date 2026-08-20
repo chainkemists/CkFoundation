@@ -14,6 +14,8 @@ CK_REGISTER_GROUP(ck::FGroup_Gameplay_Chaos);
 CK_REGISTER_GROUP(ck::FGroup_Physics);
 CK_REGISTER_GROUP(ck::FGroup_Transform_SyncFrom);
 CK_REGISTER_GROUP(ck::FGroup_Transform);
+CK_REGISTER_GROUP(ck::FGroup_Transform_Derived);
+CK_REGISTER_GROUP(ck::FGroup_Transform_LateResolve);
 CK_REGISTER_GROUP(ck::FGroup_Transform_Finalize);
 CK_REGISTER_GROUP(ck::FGroup_Gameplay_Camera);
 CK_REGISTER_GROUP(ck::FGroup_PostTransform);
