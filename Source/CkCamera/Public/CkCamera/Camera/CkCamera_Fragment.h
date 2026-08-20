@@ -98,6 +98,13 @@ namespace ck
         bool _UseAsyncTrace = true;
         bool _UsePostProcess = false;
 
+        // Projection mode and its depth range do not blend — a half-orthographic camera is not a thing — so they
+        // are plain data here rather than tuner attributes. Only the ortho WIDTH blends, and that one is an
+        // attribute like FOV.
+        ECk_Camera_ProjectionMode _ProjectionMode = ECk_Camera_ProjectionMode::Perspective;
+        float _OrthoNearClipPlane = 0.0f;
+        float _OrthoFarClipPlane = 100000.0f;
+
         FAlphaBlend _XIntentionCurve;
         FAlphaBlend _YIntentionCurve;
 
@@ -127,6 +134,9 @@ namespace ck
         CK_PROPERTY(_HasCollision);
         CK_PROPERTY(_UseAsyncTrace);
         CK_PROPERTY(_UsePostProcess);
+        CK_PROPERTY(_ProjectionMode);
+        CK_PROPERTY(_OrthoNearClipPlane);
+        CK_PROPERTY(_OrthoFarClipPlane);
         CK_PROPERTY(_XIntentionCurve);
         CK_PROPERTY(_YIntentionCurve);
         CK_PROPERTY(_OrientationIntention);
@@ -204,6 +214,7 @@ namespace ck
     public:
         FCk_Handle_FloatAttribute _FOV;
         FCk_Handle_FloatAttribute _AspectRatio;
+        FCk_Handle_FloatAttribute _OrthoWidth;
     };
 
     struct CKCAMERA_API FFragment_Camera_Noise

@@ -301,6 +301,18 @@ namespace ck
             ViewInfo.AspectRatio          = Sensor.Get_AspectRatio();
         }
 
+        if (Sensor.Get_ProjectionMode() == ECk_Camera_ProjectionMode::Orthographic)
+        {
+            ViewInfo.ProjectionMode = ECameraProjectionMode::Orthographic;
+            ViewInfo.OrthoWidth     = Sensor.Get_OrthoWidth();
+
+            // Explicit planes, never the engine's auto-calculated ones: those are derived from the view rect, so
+            // the scene's depth range would change with the rendering resolution.
+            ViewInfo.bAutoCalculateOrthoPlanes = false;
+            ViewInfo.OrthoNearClipPlane        = Sensor.Get_OrthoNearClipPlane();
+            ViewInfo.OrthoFarClipPlane         = Sensor.Get_OrthoFarClipPlane();
+        }
+
         InCurrent._ViewInfo = ViewInfo;
 
         // Publish the composed pose to the view anchor through the ordinary deferred request path. The

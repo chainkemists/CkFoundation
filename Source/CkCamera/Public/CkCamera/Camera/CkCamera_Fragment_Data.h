@@ -169,6 +169,44 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// Switches a live camera between perspective and orthographic, carrying the depth range the orthographic view
+// should use.
+//
+// The planes travel WITH the mode rather than being set separately because they are only meaningful together: an
+// orthographic view with a perspective camera's near/far clips the scene at the wrong distances, and there is no
+// moment at which a caller wants one without having decided the other.
+USTRUCT(BlueprintType)
+struct CKCAMERA_API FCk_Request_Camera_SetProjectionMode : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Camera_SetProjectionMode);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Camera_SetProjectionMode);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Camera_ProjectionMode _ProjectionMode = ECk_Camera_ProjectionMode::Perspective;
+
+    // Unset leaves the camera's current planes alone, which is what makes a bare mode flip a one-liner while a
+    // caller that cares about depth range can still say so in the same request.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TOptional<float> _OrthoNearClipPlane;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TOptional<float> _OrthoFarClipPlane;
+
+public:
+    CK_PROPERTY_GET(_ProjectionMode);
+    CK_PROPERTY(_OrthoNearClipPlane);
+    CK_PROPERTY(_OrthoFarClipPlane);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Camera_SetProjectionMode, _ProjectionMode);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // PARAMS
 // --------------------------------------------------------------------------------------------------------------------
 

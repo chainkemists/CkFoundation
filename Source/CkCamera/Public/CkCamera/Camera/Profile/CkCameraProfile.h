@@ -11,6 +11,19 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How the camera projects the world. Never reorder — the index is the serialized contract in every asset that
+// stores a camera profile.
+UENUM(BlueprintType)
+enum class ECk_Camera_ProjectionMode : uint8
+{
+    Perspective,
+    Orthographic
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Camera_ProjectionMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Generic rotation tuning (speed + limits + out-of-range behaviour). Reused by OrientationControl/AutoReorient/Noise.
 USTRUCT(BlueprintType)
 struct CKCAMERA_API FCk_CameraProfile_Rotation
@@ -132,10 +145,30 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _AspectRatio = 1.77777777f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Camera_ProjectionMode _ProjectionMode = ECk_Camera_ProjectionMode::Perspective;
+
+    // World units the view spans horizontally under an orthographic projection. Ignored in Perspective.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _OrthoWidth = 1024.0f;
+
+    // Explicit depth range for the orthographic projection. The engine can derive these from the view rect
+    // instead, which makes the scene's depth range a function of the RESOLUTION — anything that renders at a
+    // different internal resolution would silently change what is clipped, so they are authored here.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _OrthoNearClipPlane = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _OrthoFarClipPlane = 100000.0f;
+
 public:
     CK_PROPERTY(_FOV);
     CK_PROPERTY(_ConstrainAspectRatio);
     CK_PROPERTY(_AspectRatio);
+    CK_PROPERTY(_ProjectionMode);
+    CK_PROPERTY(_OrthoWidth);
+    CK_PROPERTY(_OrthoNearClipPlane);
+    CK_PROPERTY(_OrthoFarClipPlane);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
