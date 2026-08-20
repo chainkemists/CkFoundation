@@ -115,6 +115,12 @@ namespace ck
 
         FName _GroupName;
 
+        // Optional group boundary after which this canonical processor may be replayed with DeltaT=0 as
+        // part of a local settle barrier. Participation and activation are deliberately separate: only a
+        // processor declaring LocalSettleTrigger activates the plan from its consumed dirty marker.
+        FName _LocalSettleAfterGroupName;
+        bool _IsLocalSettleTrigger = false;
+
         TArray<FName> _RunAfter;
         TArray<FName> _RunBefore;
 

@@ -70,12 +70,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Registered at TWO points in the frame through the group template parameter — FGroup_Transform (the
-    // primary drain) and FGroup_Transform_LateResolve (the second resolution point, so requests enqueued
-    // by FGroup_Transform_Derived land the same frame) — with both instantiations sharing this one body.
-    template <typename T_Group>
-    class TProcessor_Transform_HandleRequests_InGroup : public ck_exp::TProcessor<
-            TProcessor_Transform_HandleRequests_InGroup<T_Group>,
+    // The canonical request drain runs once in FGroup_Transform, then may be replayed by the scheduler's
+    // local settle barrier after FGroup_Transform_Derived when a derived producer queued more requests.
+    class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
+            FProcessor_Transform_HandleRequests,
             FCk_Handle_Transform,
             ck::TReadWrite<FFragment_Transform>,
             ck::TReadOnly<FFragment_Transform_Requests>,
@@ -83,12 +81,10 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = T_Group;
-        // The in-group edge is only meaningful for the primary drain; the late instance is ordered by its
-        // group alone.
-        using RunAfter = std::conditional_t<std::is_same_v<T_Group, FGroup_Transform>,
-            TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>,
-            TDepList<>>;
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>;
+        using LocalSettleAfter = FGroup_Transform_Derived;
+        static constexpr auto LocalSettleTrigger = true;
         using MarkedDirtyBy = FFragment_Transform_Requests;
 
         // The custom DoTick's normal drain, cancellation drain, and pool clear are all meaningful only
@@ -96,7 +92,7 @@ namespace ck
         // the processor entirely from an idle main pass.
         using MainPassRequiredFragments = entt::type_list<FFragment_Transform_Requests>;
 
-        using Super = ck_exp::TProcessor<TProcessor_Transform_HandleRequests_InGroup<T_Group>,
+        using Super = ck_exp::TProcessor<FProcessor_Transform_HandleRequests,
             FCk_Handle_Transform,
             ck::TReadWrite<FFragment_Transform>,
             ck::TReadOnly<FFragment_Transform_Requests>,
@@ -152,11 +148,6 @@ namespace ck
             FFragment_Transform& InComp,
             const FCk_Request_Transform_SetScale& InRequest) -> void;
     };
-
-    using FProcessor_Transform_HandleRequests             = TProcessor_Transform_HandleRequests_InGroup<FGroup_Transform>;
-    using FProcessor_Transform_HandleRequests_LateResolve = TProcessor_Transform_HandleRequests_InGroup<FGroup_Transform_LateResolve>;
-
-    // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSEXT_API FProcessor_Transform_SyncToActor : public ck_exp::TProcessor<
             FProcessor_Transform_SyncToActor,

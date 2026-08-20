@@ -243,6 +243,8 @@ auto
             auto Node = FProcessorGraphNode{};
             Node._Index = _Nodes.Num();
             Node._ProcessorName = Descriptor._Name;
+            Node._LocalSettleAfterGroupName = Descriptor._LocalSettleAfterGroupName;
+            Node._IsLocalSettleTrigger = Descriptor._IsLocalSettleTrigger;
             Node._TraceName = detail::Get_NodeTraceName(Descriptor);
             Node._HasDirtyMarker = Descriptor._HasDirtyMarker;
             Node._IsDirtyChecker = Descriptor._IsDirtyChecker;

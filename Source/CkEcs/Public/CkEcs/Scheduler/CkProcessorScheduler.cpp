@@ -50,6 +50,7 @@ DECLARE_CYCLE_STAT(TEXT("Scheduler::Dispatch"),          STAT_Scheduler_Dispatch
 DECLARE_CYCLE_STAT(TEXT("Scheduler::Pump"),              STAT_Scheduler_Pump,              STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDispatch"),      STAT_Scheduler_PumpDispatch,      STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::PumpDirtyCheck"),    STAT_Scheduler_PumpDirtyCheck,    STATGROUP_CkScheduler);
+DECLARE_CYCLE_STAT(TEXT("Scheduler::LocalSettle"),       STAT_Scheduler_LocalSettle,       STATGROUP_CkScheduler);
 
 DECLARE_CYCLE_STAT(TEXT("Scheduler::EmptyViewCheck"),    STAT_Scheduler_EmptyViewCheck,    STATGROUP_CkScheduler);
 DECLARE_CYCLE_STAT(TEXT("Scheduler::DebugRecord"),       STAT_Scheduler_DebugRecord,       STATGROUP_CkScheduler);
@@ -87,6 +88,121 @@ ck::FProcessorScheduler::
             { _LoadPumpOrder.Add(NodeIndex); }
         }
     }
+
+    auto PlanIndexByGroup = TMap<FName, int32>{};
+
+    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    {
+        const auto& Node = _Partition._Nodes[NodeIndex];
+        if (Node._IsGhost or NOT Node._Instance.IsSet() or Node._LocalSettleAfterGroupName.IsNone())
+        { continue; }
+
+        auto* PlanIndex = PlanIndexByGroup.Find(Node._LocalSettleAfterGroupName);
+        if (PlanIndex == nullptr)
+        {
+            const auto NewPlanIndex = _LocalSettlePlans.Emplace();
+            auto& NewPlan = _LocalSettlePlans[NewPlanIndex];
+            NewPlan._AfterGroupName = Node._LocalSettleAfterGroupName;
+            PlanIndexByGroup.Add(Node._LocalSettleAfterGroupName, NewPlanIndex);
+            PlanIndex = PlanIndexByGroup.Find(Node._LocalSettleAfterGroupName);
+        }
+
+        auto& Plan = _LocalSettlePlans[*PlanIndex];
+        Plan._ParticipantNodeIndices.Add(NodeIndex);
+        if (Node._IsLocalSettleTrigger)
+        {
+            const auto TriggerHasDirtyMarker = Node._HasDirtyMarker;
+            CK_ENSURE_IF_NOT(TriggerHasDirtyMarker,
+                TEXT("Processor [{}] activates local settle after [{}] but has no dirty marker."),
+                Node._ProcessorName, Plan._AfterGroupName)
+            { }
+            if (TriggerHasDirtyMarker)
+            { Plan._TriggerNodeIndices.Add(NodeIndex); }
+            else
+            { Plan._IsValid = false; }
+        }
+
+        if (Node._PumpPolicy == ECk_ProcessorPumpPolicy::SkipPump)
+        {
+            CK_TRIGGER_ENSURE(TEXT("Processor [{}] opts into local settle after [{}] but declares SkipPump. "
+                                   "Local-settle participants must be safe to replay with DeltaT=0."),
+                Node._ProcessorName, Plan._AfterGroupName);
+            Plan._IsValid = false;
+        }
+    }
+
+    auto MainPassInsertIndex = int32{0};
+    auto LoadPassInsertIndex = int32{0};
+    for (const auto NodeIndex : _Partition._ExecutionOrder)
+    {
+        const auto& Node = _Partition._Nodes[NodeIndex];
+
+        if (Node._IsGroupEnd and Node._PairedGroupNodeIndex != INDEX_NONE)
+        {
+            const auto& GroupStart = _Partition._Nodes[Node._PairedGroupNodeIndex];
+            if (const auto* PlanIndex = PlanIndexByGroup.Find(GroupStart._ProcessorName))
+            {
+                _LocalSettlePlans[*PlanIndex]._MainPassInsertIndex = MainPassInsertIndex;
+                _LocalSettlePlans[*PlanIndex]._LoadPassInsertIndex = LoadPassInsertIndex;
+            }
+        }
+
+        if (Node._Instance.IsSet() and NOT Node._IsGhost)
+        {
+            ++MainPassInsertIndex;
+            if (Node._LoadPolicy == ECk_ProcessorLoadPolicy::RunsDuringLoad)
+            { ++LoadPassInsertIndex; }
+        }
+    }
+
+    for (auto& Plan : _LocalSettlePlans)
+    {
+        const auto HasAnchor = Plan._MainPassInsertIndex != INDEX_NONE;
+        CK_ENSURE_IF_NOT(HasAnchor,
+            TEXT("Local-settle participants name group [{}], but that group has no boundary in this scheduler partition."),
+            Plan._AfterGroupName)
+        { }
+        if (NOT HasAnchor)
+        { Plan._IsValid = false; }
+
+        const auto HasTrigger = NOT Plan._TriggerNodeIndices.IsEmpty();
+        CK_ENSURE_IF_NOT(HasTrigger,
+            TEXT("Local-settle plan after [{}] has no explicit consumed-marker trigger."),
+            Plan._AfterGroupName)
+        { }
+        if (NOT HasTrigger)
+        { Plan._IsValid = false; }
+
+        Plan._RunsDuringLoad = NOT Plan._ParticipantNodeIndices.IsEmpty();
+        for (const auto ParticipantNodeIndex : Plan._ParticipantNodeIndices)
+        {
+            const auto& ParticipantNode = _Partition._Nodes[ParticipantNodeIndex];
+            Plan._RunsDuringLoad &= ParticipantNode._LoadPolicy == ECk_ProcessorLoadPolicy::RunsDuringLoad;
+
+            const auto ParticipantMainPassIndex = _MainPassOrder.Find(ParticipantNodeIndex);
+            const auto ParticipantPrecedesBarrier = ParticipantMainPassIndex != INDEX_NONE
+                and ParticipantMainPassIndex < Plan._MainPassInsertIndex;
+            CK_ENSURE_IF_NOT(ParticipantPrecedesBarrier,
+                TEXT("Local-settle participant [{}] must run before its [{}] barrier in the main graph."),
+                ParticipantNode._ProcessorName, Plan._AfterGroupName)
+            { }
+            if (NOT ParticipantPrecedesBarrier)
+            { Plan._IsValid = false; }
+
+            if (Plan._RunsDuringLoad)
+            {
+                const auto ParticipantLoadPassIndex = _LoadPassOrder.Find(ParticipantNodeIndex);
+                const auto ParticipantPrecedesLoadBarrier = ParticipantLoadPassIndex != INDEX_NONE
+                    and ParticipantLoadPassIndex < Plan._LoadPassInsertIndex;
+                CK_ENSURE_IF_NOT(ParticipantPrecedesLoadBarrier,
+                    TEXT("Load-capable local-settle participant [{}] must run before its [{}] barrier in the load graph."),
+                    ParticipantNode._ProcessorName, Plan._AfterGroupName)
+                { }
+                if (NOT ParticipantPrecedesLoadBarrier)
+                { Plan._IsValid = false; }
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -102,6 +218,7 @@ auto
     _IsTickInProgress = true;
 
     const auto& MainOrder = InScope == ECk_SchedulerTickScope::LoadKernel ? _LoadPassOrder : _MainPassOrder;
+    _LastFramePumpCount = 0;
 
 #if !UE_BUILD_SHIPPING
     const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
@@ -112,10 +229,16 @@ auto
 
     {
         SCOPE_CYCLE_COUNTER(STAT_Scheduler_MainPass);
-        for (const auto NodeIndex : MainOrder)
+        for (auto MainPassIndex = 0; MainPassIndex <= MainOrder.Num(); ++MainPassIndex)
         {
+            DoRunLocalSettleBarriers(MainPassIndex, InRegistry, InScope);
+
+            if (MainPassIndex == MainOrder.Num())
+            { break; }
+
             SCOPE_CYCLE_COUNTER(STAT_Scheduler_Dispatch);
 
+            const auto NodeIndex = MainOrder[MainPassIndex];
             auto& Node = _Partition._Nodes[NodeIndex];
 
             if (_UseEmptyViewMainPassSkip and Node._CanSkipWhenViewEmpty)
@@ -186,13 +309,11 @@ auto
 
     {
         SCOPE_CYCLE_COUNTER(STAT_Scheduler_Pump);
-        _LastFramePumpCount = 0;
-        for (auto PumpIndex = 0; PumpIndex < _MaxPumpIterations; ++PumpIndex)
+        for (; _LastFramePumpCount < _MaxPumpIterations; ++_LastFramePumpCount)
         {
-            const auto AnotherPumpNeeded = DoPump(InRegistry, PumpIndex, InScope);
+            const auto AnotherPumpNeeded = DoPump(InRegistry, _LastFramePumpCount, InScope);
             if (NOT AnotherPumpNeeded)
             { break; }
-            ++_LastFramePumpCount;
         }
     }
 
@@ -221,6 +342,132 @@ auto
 #endif
 
     _IsTickInProgress = false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::FProcessorScheduler::
+    DoRunLocalSettleBarriers(
+        int32 InMainPassInsertIndex,
+        const FCk_Registry& InRegistry,
+        ECk_SchedulerTickScope InScope)
+    -> void
+{
+    for (auto& Plan : _LocalSettlePlans)
+    {
+        const auto BarrierInsertIndex = InScope == ECk_SchedulerTickScope::LoadKernel
+            ? Plan._LoadPassInsertIndex
+            : Plan._MainPassInsertIndex;
+        if (NOT Plan._IsValid or BarrierInsertIndex != InMainPassInsertIndex)
+        { continue; }
+
+        if (InScope == ECk_SchedulerTickScope::LoadKernel and NOT Plan._RunsDuringLoad)
+        { continue; }
+
+        DoRunLocalSettle(Plan, InRegistry);
+    }
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoRunLocalSettle(
+        FProcessorLocalSettlePlan& InPlan,
+        const FCk_Registry& InRegistry)
+    -> void
+{
+    if (NOT DoHasDirtyLocalSettleTrigger(InPlan, InRegistry))
+    { return; }
+
+    SCOPE_CYCLE_COUNTER(STAT_Scheduler_LocalSettle);
+
+    while (_LastFramePumpCount < _MaxPumpIterations)
+    {
+        if (NOT DoHasDirtyLocalSettleTrigger(InPlan, InRegistry))
+        { return; }
+
+        const auto SettlePassIndex = _LastFramePumpCount;
+
+        for (const auto NodeIndex : InPlan._ParticipantNodeIndices)
+        {
+            auto& Node = _Partition._Nodes[NodeIndex];
+            if (Node._HasDirtyMarker and NOT Node._IsDirtyChecker(InRegistry))
+            { continue; }
+
+#if !UE_BUILD_SHIPPING
+            const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+            auto ProcessorStartTime = 0.0;
+            if (DebugTimingEnabled)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                ProcessorStartTime = FPlatformTime::Seconds();
+                ck::GDebug_LastProcessedEntityCount = 0;
+            }
+#endif
+
+            auto VisitedCount = int32{};
+            {
+#if CPUPROFILERTRACE_ENABLED
+                constexpr auto TraceUnconditionally = true;
+                FCpuProfilerTrace::FEventScope ProcessorTraceScope{
+                    Node._TraceSpecId, Node._TraceName, TraceUnconditionally, __FILE__, __LINE__};
+#endif
+                VisitedCount = (*Node._Instance)->Pump();
+            }
+
+#if !UE_BUILD_SHIPPING
+            if (DebugTimingEnabled)
+            {
+                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
+                const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
+                DoDebugRecordProcessorPump(NodeIndex, SettlePassIndex, ProcessorElapsedMs,
+                    VisitedCount >= 0 ? VisitedCount : ck::GDebug_LastProcessedEntityCount);
+            }
+#endif
+        }
+
+        ++_LastFramePumpCount;
+    }
+
+    if (NOT DoHasDirtyLocalSettleTrigger(InPlan, InRegistry))
+    { return; }
+
+    auto StillDirtyNames = TArray<FName>{};
+    for (const auto TriggerNodeIndex : InPlan._TriggerNodeIndices)
+    {
+        const auto& TriggerNode = _Partition._Nodes[TriggerNodeIndex];
+        if (TriggerNode._IsDirtyChecker(InRegistry))
+        { StillDirtyNames.Add(TriggerNode._ProcessorName); }
+    }
+
+    auto StillDirtyBreakdown = FString{};
+    for (const auto& StillDirtyName : StillDirtyNames)
+    {
+        if (NOT StillDirtyBreakdown.IsEmpty())
+        { StillDirtyBreakdown += TEXT(", "); }
+        StillDirtyBreakdown += StillDirtyName.ToString();
+    }
+
+    ck::ecs::Warning(TEXT("Local settle after group [{}] reached the [{}]-pass limit. Still dirty: [{}]. "
+                          "Work remains queued for the next frame."),
+        InPlan._AfterGroupName, _MaxPumpIterations, StillDirtyBreakdown);
+}
+
+auto
+    ck::FProcessorScheduler::
+    DoHasDirtyLocalSettleTrigger(
+        const FProcessorLocalSettlePlan& InPlan,
+        const FCk_Registry& InRegistry) const
+    -> bool
+{
+    for (const auto TriggerNodeIndex : InPlan._TriggerNodeIndices)
+    {
+        const auto& TriggerNode = _Partition._Nodes[TriggerNodeIndex];
+        if (TriggerNode._IsDirtyChecker(InRegistry))
+        { return true; }
+    }
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -362,6 +609,13 @@ auto
             StillDirtyNames.Add(Node._ProcessorName);
             StillDirtyNodeIndices.Add(NodeIndex);
         }
+    }
+
+
+    if (StillDirtyNames.IsEmpty())
+    {
+        _LastWarnedStillDirtyNames.Reset();
+        return;
     }
 
     // StillDirtyNames is gathered in stable _ExecutionOrder, so element-wise inequality is a real change.
