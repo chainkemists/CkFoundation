@@ -1,6 +1,7 @@
 #include "CkCrowdAgent_AvoidanceSample_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_AvoidanceSample_Algorithm.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Settled_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -44,15 +45,66 @@ namespace ck_crowd_agent_avoidance_sample
     // poly-ref validation; FindEdges returns no refs, so a time cap stands in for it.
     constexpr auto BOUNDARY_MAX_CACHE_AGE_SEC = 1.0f;
 
+    // Beyond roughly four rings a settled body near the path is indistinguishable from an unrelated
+    // parked stranger, and predictive avoidance must stay ON when the agent is merely passing one;
+    // the ceiling bounds how far the suppression can reach.
+    constexpr auto PackExtentCeilingCm = 400.0f;
+
+    // How far out from the destination the settled pack standing on it already reaches. Only bodies
+    // that will not move out of the way count, and only within the ceiling above, so an agent with
+    // no settled neighbours measures 0 and the envelope is exactly what it always was.
+    auto Get_SettledPackExtentCm(
+        const FVector& InAgentLocation,
+        const FVector& InFinalWaypoint,
+        bool InMarkupAnchorsEnabled,
+        const ck::FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> float
+    {
+        auto PackExtentCm = 0.0f;
+
+        for (const auto& Neighbour : InNeighborCache.Get_Neighbors())
+        {
+            const auto NeighbourAgent = UCk_Utils_CrowdAgent_UE::Cast(Neighbour.Get_Handle());
+            if (ck::Is_NOT_Valid(NeighbourAgent))
+            { continue; }
+
+            if (NOT ck::ck_crowd_agent_settled_algorithm::Is_NeighbourSettled(
+                    NeighbourAgent, InMarkupAnchorsEnabled))
+            { continue; }
+
+            // Planar, because the bodies are cylinders — the same metric the cluster detector's
+            // goal-region test uses, so the two tiers measure one pack the same way.
+            const auto NeighbourCentre = InAgentLocation + Neighbour.Get_RelativeOffset();
+            const auto NeighbourDistanceToFinal =
+                static_cast<float>(FVector::Dist2D(NeighbourCentre, InFinalWaypoint));
+
+            if (NeighbourDistanceToFinal > PackExtentCeilingCm)
+            { continue; }
+
+            PackExtentCm = FMath::Max(PackExtentCm, NeighbourDistanceToFinal);
+        }
+
+        return PackExtentCm;
+    }
+
     // True while the agent is on its LAST path leg and inside the final-approach envelope. Mirrors
     // FProcessor_CrowdAgent_Steering's arrival test exactly — same targeting predicate, same 3D
     // metric — so the envelope is a strict superset of the arrival condition it exists to let the
     // agent satisfy. A missing path/follow fragment means "not in the envelope", so the sampler
     // keeps its old behaviour rather than being silently switched off.
+    //
+    // The envelope grows by the settled pack's own extent because a fixed one is sized for an EMPTY
+    // destination. Once bodies have settled around it, the agent's last leg ends at the pack's rim,
+    // not at the goal, and the sampler's ordinary (non-overlap) time-to-impact term out-votes the
+    // desired-velocity term there — a standoff several body-lengths out, which is OUTSIDE a fixed
+    // envelope and therefore never suppressed. The cost function is right; it simply has no notion
+    // that the bodies ahead will never move. Standing down at the pack's boundary is what lets
+    // contact happen at all, and contact is the evidence BlockDetect's cluster tier needs to fire.
     auto Is_InFinalApproachEnvelope(
         const FCk_Handle_CrowdAgent& InAgent,
         const FVector& InAgentLocation,
-        float InSuppressionCm) -> bool
+        float InSuppressionCm,
+        bool InMarkupAnchorsEnabled,
+        const ck::FFragment_CrowdAgent_NeighborCache& InNeighborCache) -> bool
     {
         if (NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>() ||
             NOT InAgent.Has<ck::FFragment_Nav_PathResult>())
@@ -67,7 +119,10 @@ namespace ck_crowd_agent_avoidance_sample
         if (NOT IsTargetingFinal)
         { return false; }
 
-        const auto Envelope = PathFollow.Get_ActiveArrivalRadius() + InSuppressionCm;
+        const auto PackExtentCm = Get_SettledPackExtentCm(
+            InAgentLocation, Waypoints.Last(), InMarkupAnchorsEnabled, InNeighborCache);
+
+        const auto Envelope = PathFollow.Get_ActiveArrivalRadius() + InSuppressionCm + PackExtentCm;
         return FVector::Dist(InAgentLocation, Waypoints.Last()) <= Envelope;
     }
 
@@ -200,13 +255,21 @@ namespace ck
         // neighbour, the overlap branch of TimeToCollision floods ToiPen across the WHOLE cloud, and
         // the cheapest candidate is a standoff wider than the arrival radius. The agent then hovers
         // just outside its goal forever and never arrives — measured at 39-40cm against 30.
+        //
+        // The envelope's job is to stand down at the SETTLED PACK'S boundary, not at a fixed radius
+        // around an empty goal: the sampler standoff is what starves BlockDetect's contact test, so
+        // an agent held off the rim can never produce the contact its cluster tier blocks on.
         // Leaving Steering's path-follow velocity untouched is what lets it close the last stretch;
         // separation (lateral-clamped) and push-apart still run, so contact inside the envelope is
         // resolved by de-penetration, which is the correct authority a metre from the destination.
         const auto SuppressionCm = Settings->Get_AvoidanceFinalApproachSuppressionCm();
+        const auto MarkupAnchorsEnabled =
+            Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled;
+
         if (SuppressionCm > 0.0f &&
             NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
-            ck_crowd_agent_avoidance_sample::Is_InFinalApproachEnvelope(SelfAgent, AgentLocation, SuppressionCm))
+            ck_crowd_agent_avoidance_sample::Is_InFinalApproachEnvelope(
+                SelfAgent, AgentLocation, SuppressionCm, MarkupAnchorsEnabled, InNeighborCache))
         { return; }
 
         INC_DWORD_STAT(STAT_CkCrowd_AgentsSampled);

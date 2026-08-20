@@ -381,6 +381,16 @@ sanctioned way for framework-internal code to reach a re-path, because the calle
 guard would swallow it. Real progress (the windowed minimum improving by the epsilon) refunds the
 budget; an exhausted budget is what promotes the stall to a block.
 
+⚠️ **Known gap: the no-progress ladder does not engage against slow pack-rim creep.** The stall
+window trips only after `_BlockDetectionNoProgressWindowSeconds` (3.0s) without the windowed minimum
+improving by `_BlockDetectionProgressEpsilonCm` (30cm) — an implied floor of ~10 cm/s. An agent
+creeping inward at or above that against the outside of a settled pile refunds the window forever
+while never arriving, and every re-path site (including `PathRefresh`, which spends no rung of the
+ladder) calls `DoResetProgressWindow` and re-seeds the baseline. Measured against a 15-agent
+shared-goal pile, the ladder never reached even its first re-path. **Do not read a bounded stall
+termination into this tier for a crowd-pressure stall** — it is reliable against walls and static
+plugs, which is what it was measured on. Hardening it is deferred work.
+
 **A re-path brakes the agent.** `DoRepathAtActiveGoal` swaps `Walking` for `PathPending`, which
 drops the agent from Steering's view but not from AccelClamp's or VelocityBridge's — it used to
 keep shipping the velocity it stalled with and walk-cycle into the obstruction for the whole
@@ -562,23 +572,47 @@ final-approach envelope (below), and at least one cached neighbour.
 
 ### The final-approach envelope — the sampler stands down for the last stretch
 
-**An agent on its LAST path leg and within `ActiveArrivalRadius + _AvoidanceFinalApproachSuppressionCm`
-(30 + 90 = 120cm at defaults) of the final waypoint does not sample at all** — Steering's path-follow
-velocity survives untouched. This is the standard Detour-caller idiom, and it is here to break a hard
-lock-out rather than to tune one: once a ring of bodies has settled at contact distance around the
-destination, every inward candidate closes on a near-overlapping neighbour, the `C < 0` overlap branch
-of `TimeToCollision` floods `ToiPen` across the *whole* cloud, and the cheapest candidate becomes a
-standoff **wider than the arrival radius**. The agent hovers just outside its goal forever — measured
-at 39-40cm against a 30cm radius, with the entire crowd Walking and nothing terminal. No penalty
-weight fixes that; the cloud has no cheap inward candidate left to pick.
+**An agent on its LAST path leg and within
+`ActiveArrivalRadius + _AvoidanceFinalApproachSuppressionCm + PackExtent` of the final waypoint does
+not sample at all** — Steering's path-follow velocity survives untouched. This is the standard
+Detour-caller idiom, and it is here to break a hard lock-out rather than to tune one: once a ring of
+bodies has settled at contact distance around the destination, every inward candidate closes on a
+near-overlapping neighbour, the `C < 0` overlap branch of `TimeToCollision` floods `ToiPen` across the
+*whole* cloud, and the cheapest candidate becomes a standoff **wider than the arrival radius**. The
+agent hovers just outside its goal forever — measured at 39-40cm against a 30cm radius, with the
+entire crowd Walking and nothing terminal. No penalty weight fixes that; the cloud has no cheap
+inward candidate left to pick.
+
+**`PackExtent` is what sizes the envelope to the pile actually standing there**, and without it the
+envelope is sized for an EMPTY destination. It is the largest planar distance from the final waypoint
+to any cached neighbour that counts as SETTLED, capped at a file-local `PackExtentCeilingCm` = 400cm;
+no settled neighbours means 0, and the envelope is then exactly the fixed `30 + 90 = 120cm` it always
+was. The failure it closes is a *second*, separate standoff from the overlap one above: against a
+settled pile, the sampler's ORDINARY (non-overlap) time-to-impact term out-votes the desired-velocity
+term by several penalty points at 84-120cm, which is a stable equilibrium **outside** a fixed 120cm
+envelope and therefore never suppressed. That cost function is dtCrowd-faithful and correct — it
+simply has no notion that the bodies ahead will never move — so the fix is not to touch it but to
+stand the sampler down at the pack's boundary. **Doing so is what lets contact happen at all, and
+contact is the evidence `BlockDetect`'s cluster tier blocks on**; a sampler-held agent starves that
+tier of its only input and the pile never propagates outward to it. The 400cm ceiling exists because
+beyond roughly four rings a settled body near the path is indistinguishable from an unrelated parked
+stranger, and predictive avoidance must stay ON when merely passing one.
+
+"Settled" is the SAME predicate the cluster detector anchors on — reached, `GoalBlocked`,
+`GoalFailedHold`, or stationary-markup painted — shared as
+`ck::ck_crowd_agent_settled_algorithm::Is_NeighbourSettled` rather than restated, precisely so the
+two tiers cannot drift apart. A divergence would let the sampler hold an agent off a pack the
+detector considers anchorable, which is the standoff both exist to end.
 
 The envelope mirrors Steering's arrival test exactly (same `_WaypointIndex == Num()-1` predicate, same
-3D metric), so it is a strict superset of the condition it exists to let the agent satisfy. What is
-given up is predictive avoidance in the last ~1.2m; what still runs is **separation** (lateral-clamped)
-and **PushApart**, so contact inside the envelope is resolved by de-penetration — the correct authority
-that close to a destination, where there is nowhere left to route around to. An explicit per-agent
-override (`SamplingAlways` policy, or the `AlwaysSample` tag) outranks the envelope: those are
-deliberate caller instructions, not defaults to second-guess. `0` disables the feature.
+3D metric for the agent's own distance), so it is a strict superset of the condition it exists to let
+the agent satisfy. What is given up is predictive avoidance over that last stretch; what still runs is
+**separation** (lateral-clamped) and **PushApart**, so contact inside the envelope is resolved by
+de-penetration — the correct authority that close to a destination, where there is nowhere left to
+route around to. An explicit per-agent override (`SamplingAlways` policy, or the `AlwaysSample` tag)
+outranks the envelope: those are deliberate caller instructions, not defaults to second-guess. `0`
+disables the feature outright — the gate short-circuits before `PackExtent` is ever measured, so the
+pack term cannot resurrect a disabled suppression.
 
 The stride gate is a pure function of `GFrameCounter` and the agent hash, so skipping carries no
 round-robin bookkeeping to half-update; a suppressed agent is also not counted in `Crowd Agents
@@ -620,17 +654,29 @@ agent solved as if the other would not move, and both over-corrected.
 Port details owned here (the processor is deliberately comment-light — this doc is where the
 rationale lives):
 
-- **Sample density / single depth iteration is deliberate.** `BuildSamplePattern` runs one depth
-  iteration (no `adaptiveDepth` refinement) — a shipped engine configuration:
-  UE's `ECrowdAvoidanceQuality::Low` is 5 divs × 2 rings + centre at velBias 0.5
-  (`CrowdManager.cpp:182-187`); our default 8 × 2 + centre is denser than that. The bias centre is
-  Detour's "sample at zero pattern offset" (`DetourObstacleAvoidance.cpp:551-554`) — VelBias of the
-  desired velocity ("slow down"), never a true stop; there are no off-grid desired/current/zero
-  anchors (see invariant 2).
-- **Side preference is the agent's own choice, not a function of neighbour position.**
-  `SideRightness` scores a candidate against the agent's own left-perpendicular, so two head-on
-  agents that both "pass left" diverge (their lefts point in opposite world directions).
-  Neighbour-relative side logic degenerates exactly in the head-on case (cross ≈ 0).
+- **Sample density and adaptive refinement.** `BuildCandidatePattern` builds one cloud —
+  `_AvoidanceSampleAngularDivs` × `_AvoidanceSampleRings` + centre, default **8 × 2**, denser than
+  UE's `ECrowdAvoidanceQuality::Low` (5 divs × 2 rings + centre at velBias 0.5,
+  `CrowdManager.cpp:182-187`). `SelectWinner` then runs Detour's **full adaptive refinement**:
+  `_AvoidanceSampleDepth` iterations (default **5**), each halving the cloud radius and re-centring
+  on the previous depth's winner (on the winner's *scored* velocity when reachability projection is
+  enabled, so distinct clouds cannot collapse onto one post-projection plateau). There is no
+  `BuildSamplePattern` symbol and refinement is not disabled — earlier revisions of this file
+  claimed both. The depth-1 bias centre is Detour's "sample at zero pattern offset"
+  (`DetourObstacleAvoidance.cpp:551-554`) — VelBias of the desired velocity ("slow down"), never a
+  true stop; there are no off-grid desired/current/zero anchors (see invariant 2).
+- **Side preference is scored neighbour-relative, on the candidate velocity.**
+  `CalculateNeighborSidePenalty` takes the normalised direction to the neighbour and the candidate
+  velocity `vcand`, and penalises the cross product `dir × vcand` signed by the configured
+  preference — so the penalty is per-neighbour and averaged over the cache. There is **no
+  `SideRightness` symbol** and no agent-frame left-perpendicular; earlier revisions of this file
+  described both, and also claimed the neighbour-relative form degenerates head-on. It does not:
+  A sees B at +X, so a +Y candidate scores zero penalty under PassLeft and A goes +Y; B sees A at
+  −X, penalises +Y, and goes −Y. The two diverge. What degenerates head-on is a *cross-product of
+  the two velocities*, which is not what this computes. Note this is a Ck term with no stock Detour
+  counterpart — `DetourObstacleAvoidance.cpp` has no side preference at all — so it is **not**
+  claimed as port parity (the setting's own tooltip says so). `_AvoidanceSidePreference` defaults to
+  `PassLeft`; `Disabled` zeroes the term and is the configuration that matches stock Detour.
 - **Penalty-weight defaults** (`_AvoidanceWeightDesVel`/`CurVel`/`Side`/`Toi`) mirror dtCrowd's —
   `DetourObstacleAvoidance.cpp:471-475`.
 

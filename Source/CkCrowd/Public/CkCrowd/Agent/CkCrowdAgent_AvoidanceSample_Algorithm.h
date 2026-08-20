@@ -241,7 +241,13 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
     };
 
     constexpr auto DiagnosticMirrorEpsilon = KINDA_SMALL_NUMBER;
-    constexpr auto DiagnosticTieEpsilon = KINDA_SMALL_NUMBER;
+
+    // Diagnostic only — nothing reads this to make a decision, it just flags a depth's winner as
+    // "barely won". At KINDA_SMALL_NUMBER it never fired in practice: a measured mirror pair
+    // separated by 0.104 penalty points produced a 161-degree winner flip that the trace reported
+    // as a clean win. 0.5 is above the noise floor of the penalty sum and makes near-ties
+    // self-reporting, which is the whole point of the field.
+    constexpr auto DiagnosticTieEpsilon = 0.5f;
     constexpr auto MaximumSampleAngularDivs = 16;
     constexpr auto MaximumSampleRings = 4;
     constexpr auto MaximumSampleDepth = 8;

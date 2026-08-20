@@ -14,6 +14,7 @@
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Settled_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -140,28 +141,14 @@ namespace ck
                 if (ck::Is_NOT_Valid(NeighbourAgent))
                 { continue; }
 
-                // Painted stationary markup is the BOOTSTRAP anchor, and the cascade cannot start
-                // without it: under crowd pressure the avoidance sampler's standoff can exceed the
-                // arrival radius, so the innermost agent hovers just outside its goal, NOBODY ever
-                // reaches, and no reached/blocked anchor is ever created for the chain to root in.
-                // Markup paints on windowed physical stillness alone — Walking-but-jammed counts —
-                // so the jammed agent becomes an anchor, its ring blocks off it, pressure releases,
-                // and it then genuinely arrives. Being Walking is not a contradiction here: the
-                // strictly-nearer test below means it never blocks on its own dependents.
-                //
                 // A markup anchor can unpaint by moving again, leaving dependents held on an
                 // obstruction that has left; BlockedRecheck resumes them within its 1s cadence, so
-                // the churn is bounded and deliberately accepted. With markup Disabled the disjunct
-                // simply drops out and the tier degrades to reached/blocked anchors only.
-                const auto NeighbourIsParked = InMarkupAnchorsEnabled &&
-                    NeighbourAgent.Has<FFragment_CrowdAgent_NavMarkup>() &&
-                    NeighbourAgent.Get<FFragment_CrowdAgent_NavMarkup>().Get_Markup().IsValid();
-
+                // the churn is bounded and deliberately accepted. Being Walking-but-jammed is not a
+                // contradiction here: the strictly-nearer test below means such an anchor never
+                // blocks on its own dependents.
                 const auto NeighbourHasSettled =
-                    UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(NeighbourAgent) ||
-                    NeighbourAgent.Has<FTag_CrowdAgent_GoalBlocked>() ||
-                    NeighbourAgent.Has<FTag_CrowdAgent_GoalFailedHold>() ||
-                    NeighbourIsParked;
+                    ck_crowd_agent_settled_algorithm::Is_NeighbourSettled(
+                        NeighbourAgent, InMarkupAnchorsEnabled);
                 if (NOT NeighbourHasSettled)
                 { continue; }
 
