@@ -84,7 +84,7 @@ namespace ck
             return;
         }
 
-        InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
+        InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
         InCurrent._ActiveIntents.Add(Intent);
 
         ck::interaction::VeryVerbose(TEXT("Started intent [{}] for resolver [{}]. Active intents: {}"), Intent, InHandle, InCurrent._ActiveIntents.Num());
@@ -111,7 +111,7 @@ namespace ck
             return;
         }
 
-        InHandle.AddOrGet<FTag_InteractionResolver_IntentUpdated>();
+        InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
         const auto PreviousTargets = InCurrent.Get_CachedBestTargets().Find(Intent);
         const auto PreviousTargetsArray = PreviousTargets ? *PreviousTargets : TArray<FCk_Handle_InteractTarget>{};
@@ -154,6 +154,7 @@ namespace ck
         }
 
         InCurrent._AvailableTargets.Add(Target);
+        InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
         ck::interaction::VeryVerbose(TEXT("Added InteractTarget [{}] to resolver [{}]"), Target, InHandle);
     }
@@ -176,6 +177,7 @@ namespace ck
         }
 
         InCurrent._AvailableTargets.Remove(Target);
+        InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>();
 
         ck::interaction::VeryVerbose(TEXT("Removed InteractTarget [{}] from resolver [{}]"), Target, InHandle);
     }
@@ -210,6 +212,9 @@ namespace ck
         {
             InCurrent._AvailableTargets.Remove(TargetToRemove);
         }
+
+        if (NOT TargetsToRemove.IsEmpty())
+        { InHandle.AddOrGet<FTag_InteractionResolver_ResolveDirty>(); }
 
         ck::interaction::VeryVerbose(TEXT("Removed {} targets with channel [{}] from resolver [{}]"),
             TargetsToRemove.Num(), Channel, InHandle);
@@ -250,7 +255,7 @@ namespace ck
             FFragment_InteractionResolver_Current& InCurrent)
         -> void
     {
-        InHandle.Remove<FTag_InteractionResolver_IntentUpdated>();
+        InHandle.Remove<FTag_InteractionResolver_ResolveDirty>();
 
         auto InvalidTargets = TArray<FCk_Handle_InteractTarget>{};
         for (const auto& Target : InCurrent.Get_AvailableTargets())
