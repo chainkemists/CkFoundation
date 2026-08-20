@@ -69,6 +69,11 @@ occupant → placement → args). They store nothing; they exist so a consumer w
 instead of re-running the spatial resolve that produced the anchor, which would be a second
 implementation of placement math free to drift from this one.
 
+Branch on `Get_Grid` (or on the placement handle's validity) **before** reading anchor or rotation:
+those two answer `(0,0)` and `None` for an invalid placement, which is exactly what a real placement at
+the grid origin answers. There is no `TryGet` variant on purpose — the grid read already separates
+"no placement" from every possible anchor, and a second way to ask one question is how the two drift.
+
 ---
 
 ## See also
