@@ -22,7 +22,7 @@ namespace ck
     class FProcessor_Transform_SyncFromActor;
     class FProcessor_Transform_SyncFromMeshSocket;
     class FProcessor_Transform_SyncFromMeshSocket_SceneNode;
-    class FProcessor_Transform_HandleRequests;
+    template <typename T_Group> class TProcessor_Transform_HandleRequests_InGroup;
     class FProcessor_Transform_SyncToActor;
 }
 
@@ -45,7 +45,7 @@ public:
     friend class ck::FProcessor_Transform_SyncFromActor;
     friend class ck::FProcessor_Transform_SyncFromMeshSocket;
     friend class ck::FProcessor_Transform_SyncFromMeshSocket_SceneNode;
-    friend class ck::FProcessor_Transform_HandleRequests;
+    template <typename T_Group> friend class ck::TProcessor_Transform_HandleRequests_InGroup;
     friend class ck::FProcessor_Transform_SyncToActor;
 
 #if WITH_EDITOR
@@ -211,19 +211,6 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetTransform& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
-
-    // Same-frame transform write for callers that run AFTER the request drain and cannot afford a
-    // deferred landing — a per-frame override recomputed from state that only exists late in the
-    // frame (a rendered-view anchor, a post-step pose). Writes the fragments directly and tags
-    // FTag_Transform_Updated, so downstream consumers observe the change this frame. Not a general
-    // mutation path — the deferred request API stays the default.
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Transform (Same Frame)")
-    static void
-    Request_SetTransform_SameFrame(
-        UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FTransform& InTransform);
 
 public:
     UFUNCTION(BlueprintPure,

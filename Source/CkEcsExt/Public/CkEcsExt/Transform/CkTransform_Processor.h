@@ -70,8 +70,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
-            FProcessor_Transform_HandleRequests,
+    // Registered at TWO points in the frame through the group template parameter — FGroup_Transform (the
+    // primary drain) and FGroup_Transform_LateResolve (the second resolution point, so requests enqueued
+    // by FGroup_Transform_Derived land the same frame) — with both instantiations sharing this one body.
+    template <typename T_Group>
+    class TProcessor_Transform_HandleRequests_InGroup : public ck_exp::TProcessor<
+            TProcessor_Transform_HandleRequests_InGroup<T_Group>,
             FCk_Handle_Transform,
             ck::TReadWrite<FFragment_Transform>,
             ck::TReadOnly<FFragment_Transform_Requests>,
@@ -79,8 +83,12 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>;
+        using Group = T_Group;
+        // The in-group edge is only meaningful for the primary drain; the late instance is ordered by its
+        // group alone.
+        using RunAfter = std::conditional_t<std::is_same_v<T_Group, FGroup_Transform>,
+            TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>,
+            TDepList<>>;
         using MarkedDirtyBy = FFragment_Transform_Requests;
 
         // The custom DoTick's normal drain, cancellation drain, and pool clear are all meaningful only
@@ -88,8 +96,18 @@ namespace ck
         // the processor entirely from an idle main pass.
         using MainPassRequiredFragments = entt::type_list<FFragment_Transform_Requests>;
 
+        using Super = ck_exp::TProcessor<TProcessor_Transform_HandleRequests_InGroup<T_Group>,
+            FCk_Handle_Transform,
+            ck::TReadWrite<FFragment_Transform>,
+            ck::TReadOnly<FFragment_Transform_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
+            CK_IGNORE_PENDING_KILL>;
+        using TimeType = typename Super::TimeType;
+        using HandleType = typename Super::HandleType;
+        using EntityType = typename Super::EntityType;
+
     public:
-        using TProcessor::TProcessor;
+        using Super::Super;
 
     public:
         auto DoTick(
@@ -134,6 +152,9 @@ namespace ck
             FFragment_Transform& InComp,
             const FCk_Request_Transform_SetScale& InRequest) -> void;
     };
+
+    using FProcessor_Transform_HandleRequests             = TProcessor_Transform_HandleRequests_InGroup<FGroup_Transform>;
+    using FProcessor_Transform_HandleRequests_LateResolve = TProcessor_Transform_HandleRequests_InGroup<FGroup_Transform_LateResolve>;
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -367,20 +367,6 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
-    Request_SetTransform_SameFrame(
-        FCk_Handle_Transform& InHandle,
-        const FTransform& InTransform)
-    -> void
-{
-    auto& TransformFragment = InHandle.Get<ck::FFragment_Transform>();
-    auto& PrevTransformFragment = InHandle.Get<ck::FFragment_Transform_Previous>();
-
-    Apply_SetTransform_DirectWrite(TransformFragment, PrevTransformFragment, InTransform);
-    Request_TransformUpdated(InHandle);
-}
-
-auto
-    UCk_Utils_Transform_UE::
     Get_EntityCurrentTransform(
         const FCk_Handle_Transform& InHandle)
     -> FTransform

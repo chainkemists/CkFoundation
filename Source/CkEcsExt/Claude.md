@@ -145,3 +145,15 @@ not from this fragment.
 - `CkEcs/Claude.md` — the handle, processor, signal, and EntityScript primitives.
 - `CkRecord/Claude.md` — the Record system that Meta Fragments are stored in.
 - `CkLabel/Claude.md` — label matching used in cross-record lookup.
+
+## The frame's second transform-resolution point (`FGroup_Transform_LateResolve`)
+
+`FProcessor_Transform_HandleRequests` and the whole `TProcessor_SceneNode_Update` layer chain are each
+registered TWICE — once in `FGroup_Transform` (the main pass) and once in `FGroup_Transform_LateResolve` —
+via a group template parameter; both registrations share one body. The late pass exists for
+`FGroup_Transform_Derived` writers (work that consumes settled first-pass poses and enqueues transform
+requests of its own, e.g. the camera composition publishing its view anchor): their requests land, and the
+scene-node children of what they wrote compose, in the SAME frame, before `FGroup_Transform_Finalize` and
+the component push. Cost when idle is ~zero — the drain declares `MainPassRequiredFragments` and the scene
+chain early-outs wherever a parent did not move. The scene-node feature itself knows nothing about who the
+late writers are; the frame composition owns that ordering.

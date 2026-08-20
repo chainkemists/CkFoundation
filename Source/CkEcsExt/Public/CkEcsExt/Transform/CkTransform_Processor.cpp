@@ -30,6 +30,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromMeshSocket);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Location);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Rotation);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_HandleRequests_LateResolve);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncToActor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Replicate);
@@ -178,23 +179,24 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoTick(
             TimeType InDeltaT) -> void
     {
         // The scheduler skips the main-pass dispatch via MainPassRequiredFragments. Keep this
         // tombstone-aware guard as the pump-path backstop: a once-used in_place_delete pool can remain
         // physically non-empty after its last live request owner is gone.
-        if (NOT _TransientEntity.Get_RegistryView().Has_AnyLiveEntityWith<FFragment_Transform_Requests>())
+        if (NOT this->_TransientEntity.Get_RegistryView().Has_AnyLiveEntityWith<FFragment_Transform_Requests>())
         {
-            _LastVisitedCount = 0;
+            this->_LastVisitedCount = 0;
             return;
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_Drain);
-            TProcessor::DoTick(InDeltaT);
+            Super::DoTick(InDeltaT);
         }
 
         // Whatever the drain did not reach — an owner mid-destroy, or one whose RootComponent is not
@@ -208,7 +210,7 @@ namespace ck
 
             auto UndrainedOwners = TArray<EntityType>{};
 
-            _TransientEntity.View<FFragment_Transform_Requests>().ForEach(
+            this->_TransientEntity.View<FFragment_Transform_Requests>().ForEach(
             [&](EntityType InEntity, const FFragment_Transform_Requests&)
             {
                 UndrainedOwners.Emplace(InEntity);
@@ -216,7 +218,7 @@ namespace ck
 
             for (const auto& UndrainedEntity : UndrainedOwners)
             {
-                auto Owner = MakeHandle(UndrainedEntity, _TransientEntity);
+                auto Owner = MakeHandle(UndrainedEntity, this->_TransientEntity);
                 const auto& Requests = Owner.Get<FFragment_Transform_Requests>();
 
                 request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
@@ -238,12 +240,13 @@ namespace ck
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_Clear);
-            _TransientEntity.Clear<MarkedDirtyBy>();
+            this->_TransientEntity.Clear<MarkedDirtyBy>();
         }
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -372,8 +375,9 @@ namespace ck
         }
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -407,8 +411,9 @@ namespace ck
         InComp._Transform.SetLocation(NewLocation);
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -446,8 +451,9 @@ namespace ck
         InComp._Transform.AddToTranslation(DeltaLocation);
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -481,8 +487,9 @@ namespace ck
         InComp._Transform.SetRotation(NewRotation.Quaternion());
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -521,8 +528,9 @@ namespace ck
         InComp._Transform.ConcatenateRotation(DeltaRotation.Quaternion());
     }
 
+    template <typename T_Group>
     auto
-        FProcessor_Transform_HandleRequests::
+        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
