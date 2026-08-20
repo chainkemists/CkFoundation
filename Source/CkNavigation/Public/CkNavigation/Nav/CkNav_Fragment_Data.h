@@ -8,12 +8,14 @@
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
+#include <Templates/SubclassOf.h>
 
 #include "CkNav_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Nav_Algorithm;
+class UNavigationQueryFilter;
 namespace ck
 {
     class FProcessor_Nav_HandleRequests;
@@ -185,6 +187,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _QueryFilter;
 
+    // Explicit filter class for THIS query; outranks the tag mapping when set. Exists for
+    // per-dispatch filter swaps (CkCrowd's strict/permissive planning phases) — a phase is not a
+    // project policy, so it cannot live in the settings table.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    TSubclassOf<UNavigationQueryFilter> _QueryFilterClassOverride;
+
     // Plan from _StartOverrideLocation instead of the entity's transform.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
@@ -201,6 +209,7 @@ public:
     CK_PROPERTY_GET(_TargetLocation);
     CK_PROPERTY(_AllowPartialPath);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_QueryFilterClassOverride);
     CK_PROPERTY(_StartOverride);
     CK_PROPERTY(_StartOverrideLocation);
     CK_PROPERTY(_RequestRevision);

@@ -422,7 +422,9 @@ namespace ck
                         return;
                     }
 
-                    const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
+                    const auto FilterClass = InFindPath.Get_QueryFilterClassOverride().Get() != nullptr
+                        ? InFindPath.Get_QueryFilterClassOverride()
+                        : UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
 
                     // The readiness gate above probed the ENTITY location; an override start sits
                     // within a band-width of it (same tiles), so that answer carries over.

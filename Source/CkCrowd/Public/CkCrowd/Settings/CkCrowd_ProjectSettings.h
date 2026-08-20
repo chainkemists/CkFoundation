@@ -87,6 +87,20 @@ enum class ECk_CrowdPathRefreshMode : uint8
 };
 
 UENUM(BlueprintType)
+enum class ECk_CrowdCorridorStandDownMode : uint8
+{
+    Disabled,    // the sampler keeps scoring inside tight corridors; opposing walls make the winner oscillate and the agent jitters through gaps it geometrically fits
+    Enabled,     // between opposing walls closer than the agent needs to also avoid them, the sampler stands down and path-follow + the navmesh clamp carry the agent through
+};
+
+UENUM(BlueprintType)
+enum class ECk_CrowdPlanAroundStandingCrowdsMode : uint8
+{
+    Disabled,    // single-phase toll planning: for a close destination behind a crowd, crossing the toll beats any detour and the agent presses into bodies it cannot pass
+    Enabled,     // plan strict first (markup impassable — always detour around standing crowds); fall back to the toll filter once when no crowd-free route exists
+};
+
+UENUM(BlueprintType)
 enum class ECk_CrowdWaypointRetirementLineOfSightMode : uint8
 {
     Disabled,    // a corner retires on proximity/plane alone, blind to what the chord to the next waypoint crosses
@@ -186,6 +200,16 @@ private:
             ToolTip = "Wall query range as a multiple of the agent radius. Mirrors dtCrowd's collisionQueryRange, whose default is radius * 12 (CrowdFollowingComponent.cpp:43). It sizes both the navmesh wall search and the cache refresh distance, which is a quarter of it (DetourCrowd.cpp:1284), so raising it widens the search AND refreshes less often."))
     float _AvoidanceWallQueryRangeMultiplier = 12.0f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Walls",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Stand the sampler down between OPPOSING navmesh walls whose corridor width is under (2 x agent radius + CorridorStandDownSlackCm). The navmesh bakes such a corridor walkable — the agent geometrically fits — but the sampler scores both walls as obstacles to keep a margin from, penalising inward candidates from both sides at once; with any neighbour pressure the winner oscillates and the agent jitters through a gap it could simply walk. Standing down hands the corridor to path-follow + the navmesh clamp, the authorities that cannot leave the mesh anyway. Separation (lateral-clamped) and push-apart still run. The explicit per-agent overrides (SamplingAlways policy, AlwaysSample tag) outrank it, and it only engages when wall segments are Enabled — it reads the same cached local boundary."))
+    ECk_CrowdCorridorStandDownMode _CorridorStandDown = ECk_CrowdCorridorStandDownMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Walls",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, ClampMax = 200.0, UIMax = 200.0,
+            ToolTip = "Slack (cm) added to the agent's diameter to decide what counts as a TIGHT corridor for the stand-down above. At the default 40 a standard 42cm-radius agent stands down in corridors narrower than 124cm — wide enough to fit, too narrow to also keep an avoidance margin from both walls."))
+    float _CorridorStandDownSlackCm = 40.0f;
+
     // ---- Block detection ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true,
@@ -280,6 +304,11 @@ private:
     ECk_CrowdPathRefreshMode _PathRefreshMode = ECk_CrowdPathRefreshMode::Enabled;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Two-phase planning over stationary-crowd markup. Enabled: every agent path plans FIRST with a strict filter that treats painted markup as IMPASSABLE — passers-by and queue-crossers always route around standing crowds instead of discovering with their bodies that a toll-priced route cannot physically be walked; only when no crowd-free route exists does the episode re-dispatch once with the permissive toll filter (how queue-joiners still reach a slot beside standing bodies). The strict filter is the agent's NavQueryFilterStrict tag, or the framework's UCk_NavQueryFilter_AvoidStandingCrowds when unset. Disabled restores single-phase toll planning: for a destination close behind a standing crowd, crossing the toll is cheaper than any detour, and the agent presses into bodies it can never pass."))
+    ECk_CrowdPlanAroundStandingCrowdsMode _PlanAroundStandingCrowds = ECk_CrowdPlanAroundStandingCrowdsMode::Enabled;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
             ToolTip = "Seconds after a disc is painted before PathRefresh even checks it against the navmesh. A cheap pre-filter only — actual eligibility is ground truth (the rebuilt mesh must report the cost area at the disc's location), so this just keeps the poly query off discs that cannot possibly have rebaked yet."))
     float _PathRefreshMarkupSettleSeconds = 0.5f;
@@ -320,6 +349,8 @@ public:
     CK_PROPERTY_GET(_AvoidanceFinalApproachSuppressionCm);
     CK_PROPERTY_GET(_AvoidanceWallSegments);
     CK_PROPERTY_GET(_AvoidanceWallQueryRangeMultiplier);
+    CK_PROPERTY_GET(_CorridorStandDown);
+    CK_PROPERTY_GET(_CorridorStandDownSlackCm);
     CK_PROPERTY_GET(_PushApartMode);
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_StationaryMarkupMode);
@@ -327,6 +358,7 @@ public:
     CK_PROPERTY_GET(_StationaryMarkupSpeedThreshold);
     CK_PROPERTY_GET(_StationaryMarkupExtentMultiplier);
     CK_PROPERTY_GET(_PathRefreshMode);
+    CK_PROPERTY_GET(_PlanAroundStandingCrowds);
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
     CK_PROPERTY_GET(_WaypointRetirementLineOfSight);
     CK_PROPERTY_GET(_FacingSpeedFloorCm);
@@ -374,6 +406,12 @@ public:
     static ECk_AvoidanceWallSegmentsMode Get_AvoidanceWallSegments();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdCorridorStandDownMode Get_CorridorStandDown();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static float Get_CorridorStandDownSlackCm();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
@@ -384,6 +422,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdPathRefreshMode Get_PathRefreshMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdPlanAroundStandingCrowdsMode Get_PlanAroundStandingCrowds();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdBlockDetectionMode Get_BlockDetectionMode();

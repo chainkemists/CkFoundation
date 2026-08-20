@@ -339,8 +339,11 @@ namespace ck
     // OnGoalReached fires once when the path-follow cursor crosses the final waypoint within
     // _ActiveArrivalRadius (Walking → Idle) — and only when that waypoint actually is the goal.
     // OnGoalFailed fires once when CkNavigation reports Failed on the path query
-    // (PathPending → Idle), or when a PARTIAL path is walked to its end but the goal is
-    // unreachable from there (Walking → Idle; see _ActivePathEndsShortOfGoal).
+    // (PathPending → Idle), when a PARTIAL path is walked to its end but the goal is unreachable
+    // from there (Walking → Idle; see _ActivePathEndsShortOfGoal), or when a NoProgress hold
+    // exhausts its bounded retries. Its payload says WHY, with the nav layer's detail and whether
+    // any crowd-free route existed — the difference between "wait for the bodies to move" and
+    // "this destination is structurally unreachable".
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKCROWD_API,
         CrowdAgent_OnGoalReached,
@@ -351,7 +354,8 @@ namespace ck
         CKCROWD_API,
         CrowdAgent_OnGoalFailed,
         FCk_Delegate_CrowdAgent_OnGoalFailed,
-        FCk_Handle_CrowdAgent);
+        FCk_Handle_CrowdAgent,
+        FCk_CrowdAgent_GoalFailedInfo);
 
     // OnGoalBlocked fires ONCE when the agent discovers its goal is unreachable. It is NOT a failure:
     // under the default HoldAndRetry policy the agent resumes on its own when the goal clears. The
