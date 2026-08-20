@@ -456,7 +456,8 @@ in three parts, each load-bearing:
   own arrival tolerance"; the depth term is what lets the rule reach past the first ring (see below).
   Since markup makes every stationary stranger a candidate anchor (see below), **this test plus
   contact/nearer/cone is the entire protection against false blocks** — a picket line is "settled" now,
-  and only its distance from your goal keeps it inert. A stranger that is not itself `GoalCrowded`
+  and only its distance from your goal keeps it inert. A stranger that is not itself crowd-blocked
+  (`GoalCrowded` or `GoalOccupied`)
   contributes depth 0, so it never anchors beyond the base radius: `StationaryLine_PathsRouteAround`,
   both `PathRefresh` tests and `PathNetworkStationaryDetour` park their pickets 450-539cm from the
   walker's goal against a 124cm base region, a 3.6-4.3× margin.
@@ -474,14 +475,23 @@ real packing is sparser than hex arithmetic predicts — so ring-2 bodies fell o
 could anchor nobody, and the 15th agent walked forever with no qualifying contact. Capacity landed
 at exactly the crowd size that had to fit.
 
-So each `GoalCrowded` block stamps a **depth** on the agent (`_CrowdedGoalDepth`): 1 for stopping
-behind a body standing on the goal itself, +1 per ring outward. An anchor's depth extends the region
-the *next* agent back is allowed to find it in, by one body diameter per ring — the exact rate at
-which a physical pile grows. Every other blocked reason, and every path that clears blocked state,
-resets the depth to 0, so a chain can only extend through agents that are themselves `GoalCrowded`
-and therefore **always bottoms out at a body genuinely standing on the destination**. That is what
-keeps the rule from drifting outward on its own: depth is earned, never assumed. When several
-neighbours qualify, the **shallowest** wins, so a chain never gets longer than the pile requires.
+So each crowd block — `GoalCrowded` *and* `GoalOccupied` — stamps a **depth** on the agent
+(`_CrowdedGoalDepth`): 1 for stopping behind a body standing on the goal itself, +1 per ring
+outward. An anchor's depth extends the region the *next* agent back is allowed to find it in, by
+one body diameter per ring — the exact rate at which a physical pile grows. Every other blocked
+reason, and every path that clears blocked state, resets the depth to 0, so a chain can only
+extend through agents that are themselves crowd-blocked and therefore **always bottoms out at a
+body genuinely standing on the destination**. That is what keeps the rule from drifting outward on
+its own: depth is earned, never assumed. When several neighbours qualify, the **shallowest** wins,
+so a chain never gets longer than the pile requires.
+
+`GoalOccupied` chaining was added 2026-08-20 (it originally reset to 0): in a crowd that was still
+spread out at block time, nearly everyone SEES the occupant and blocks `GoalOccupied` — so no
+chain ever formed, the zone never grew, and a held rim agent whose six-nearest cache no longer
+contained the occupant found no evidence at re-check and resumed into a pack that never moved,
+once a second. An occupied hold stopped for the same physical fact a crowded one did — its blocker
+IS the body on the goal (a chain foot, depth 0) — so it earns ring-1 depth by the same rule rather
+than by exception.
 
 Conditions 3-5 are unchanged and still all required — the depth only ever widens *where* an anchor
 may stand, never what makes it one.
