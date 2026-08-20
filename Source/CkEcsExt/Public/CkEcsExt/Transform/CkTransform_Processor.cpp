@@ -30,7 +30,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromMeshSocket);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Location);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Rotation);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_HandleRequests);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_HandleRequests_LateResolve);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncToActor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Replicate);
@@ -179,9 +178,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoTick(
             TimeType InDeltaT) -> void
     {
@@ -244,9 +242,8 @@ namespace ck
         }
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -375,9 +372,8 @@ namespace ck
         }
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -411,9 +407,8 @@ namespace ck
         InComp._Transform.SetLocation(NewLocation);
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -451,9 +446,8 @@ namespace ck
         InComp._Transform.AddToTranslation(DeltaLocation);
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -487,9 +481,8 @@ namespace ck
         InComp._Transform.SetRotation(NewRotation.Quaternion());
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,
@@ -528,9 +521,8 @@ namespace ck
         InComp._Transform.ConcatenateRotation(DeltaRotation.Quaternion());
     }
 
-    template <typename T_Group>
     auto
-        TProcessor_Transform_HandleRequests_InGroup<T_Group>::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform& InComp,

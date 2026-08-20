@@ -180,7 +180,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Transform);
 
     public:
-        template <typename T_Group> friend class TProcessor_Transform_HandleRequests_InGroup;
+        friend class FProcessor_Transform_HandleRequests;
         friend class FProcessor_Transform_Replicate;
         friend class FProcessor_Transform_SyncFromActor;
         friend class FProcessor_Transform_SyncFromMeshSocket;
@@ -206,7 +206,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Transform_Requests);
 
     public:
-        template <typename T_Group> friend class TProcessor_Transform_HandleRequests_InGroup;
+        friend class FProcessor_Transform_HandleRequests;
         friend class UCk_Utils_Transform_UE;
 
     public:

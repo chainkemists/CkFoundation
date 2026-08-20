@@ -146,14 +146,17 @@ not from this fragment.
 - `CkRecord/Claude.md` — the Record system that Meta Fragments are stored in.
 - `CkLabel/Claude.md` — label matching used in cross-record lookup.
 
-## The frame's second transform-resolution point (`FGroup_Transform_LateResolve`)
+## Transform-local settle after derived producers
 
-`FProcessor_Transform_HandleRequests` and the whole `TProcessor_SceneNode_Update` layer chain are each
-registered TWICE — once in `FGroup_Transform` (the main pass) and once in `FGroup_Transform_LateResolve` —
-via a group template parameter; both registrations share one body. The late pass exists for
-`FGroup_Transform_Derived` writers (work that consumes settled first-pass poses and enqueues transform
-requests of its own, e.g. the camera composition publishing its view anchor): their requests land, and the
-scene-node children of what they wrote compose, in the SAME frame, before `FGroup_Transform_Finalize` and
-the component push. Cost when idle is ~zero — the drain declares `MainPassRequiredFragments` and the scene
-chain early-outs wherever a parent did not move. The scene-node feature itself knows nothing about who the
-late writers are; the frame composition owns that ordering.
+`FProcessor_Transform_HandleRequests` and the `TProcessor_SceneNode_Update` layer chain are registered once
+in `FGroup_Transform`. Those canonical processors declare `LocalSettleAfter = FGroup_Transform_Derived`, so
+the scheduler can replay the same ordered transform-resolution slice before `FGroup_Transform_Finalize`.
+The request drain additionally declares `LocalSettleTrigger = true`, so the barrier activates only when its
+consumed transform request fragment is dirty; the marker-less SceneNode layers
+then replay in their normal depth order. A camera view-anchor request therefore drains and all descendants
+compose in the same frame without a camera exception, duplicate processor identity, or a second transform
+group.
+
+Do not activate this barrier from `FTag_Transform_Updated`: that tag remains present until cleanup and cannot
+converge a settle loop. The consumed transform request queue is the activation source. The SceneNode chain
+is replay-only and stays unaware of which derived system produced the request.

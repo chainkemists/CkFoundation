@@ -22,7 +22,7 @@ namespace ck
     class FProcessor_Transform_SyncFromActor;
     class FProcessor_Transform_SyncFromMeshSocket;
     class FProcessor_Transform_SyncFromMeshSocket_SceneNode;
-    template <typename T_Group> class TProcessor_Transform_HandleRequests_InGroup;
+    class FProcessor_Transform_HandleRequests;
     class FProcessor_Transform_SyncToActor;
 }
 
@@ -45,7 +45,7 @@ public:
     friend class ck::FProcessor_Transform_SyncFromActor;
     friend class ck::FProcessor_Transform_SyncFromMeshSocket;
     friend class ck::FProcessor_Transform_SyncFromMeshSocket_SceneNode;
-    template <typename T_Group> friend class ck::TProcessor_Transform_HandleRequests_InGroup;
+    friend class ck::FProcessor_Transform_HandleRequests;
     friend class ck::FProcessor_Transform_SyncToActor;
 
 #if WITH_EDITOR
