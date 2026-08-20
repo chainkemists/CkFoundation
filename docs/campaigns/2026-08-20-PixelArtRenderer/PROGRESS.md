@@ -4,7 +4,7 @@
 > Executor: update this file at every phase boundary, every gate verdict, and every blocker.
 > Never improvise past a failed gate — record it under Blockers and stop the phase.
 
-## Status: PHASES 2 + 3 IMPLEMENTED, gate pending. Next: PHASE_4.md (CkPixelArt module).
+## Status: CAMPAIGN COMPLETE through Phase 6. Machine lines green; human queue H-1 … H-11 open.
 
 Phase 1 exit gate: **1193 / 1190 pass / 3 fail** (1188 baseline + the 5 new spec tests).
 **No new failures.** One PRE-EXISTING failure disappeared —
@@ -83,11 +83,11 @@ session, and never trust an exit-76 run's counts.
 |---|---|---|---|
 | 0 | Spike: module skeleton, hardcoded upscale proven, D8 gate, empirical checks 7a–7d, baseline | **DONE** | `CkPixelArtRender` module (14 files) + uplugin entry; gate 5.G passed at 3 viewport sizes (D8 = a); box filter verified by zoom; full suite delta-zero on the final binary (`Saved/Logs/BuildTest-Phase0-Final.log`) |
 | 1 | CkPixelArtRender productionized: registry, CVars, lifecycle, fraction/config tests | **DONE** | 5/5 spec tests green; `PixelArt.Spike` gone (0 hits); 100x toggle PASS with zero residue; PrimaryToSecondary/OverrideOutput path verified against the engine's rect assertion; suite 1193/1190/3 with no new failures |
-| 2 | Snap + margin + remainder; creep/stutter A/B verified | NOT STARTED | |
-| 3 | CkCamera ortho (attribute + requests + ViewInfo) | NOT STARTED | |
-| 4 | CkPixelArt module: subsystem/preset/settings/CVars, D7 preconditions | NOT STARTED | |
-| 5 | PixelArt look (outline + banding + palette + band-shift edges) | NOT STARTED | |
-| 6 | Gym, gate of record, perf table, docs, VALIDATION executed | NOT STARTED | |
+| 2 | Snap + margin + remainder; creep/stutter A/B verified | **DONE** (gate 6.G human-queued) | 8 snap spec tests green; suite 1202/1199/3, same 3 pre-existing failures BY NAME; CkFoundation `54b4bfe5b`, CkTests `365db8f2` |
+| 3 | CkCamera ortho (attribute + requests + ViewInfo) | **DONE** | `Ck_AutoTest_Camera_OrthoProjection` green in a fresh-discovery run; `rg -in pixelart Source/CkCamera` = 0; CkFoundation `43746c7ee`, CkTests `b5869fa0` |
+| 4 | CkPixelArt module: subsystem/preset/settings/CVars, D7 preconditions | **DONE** | `Ck_AutoTest_PixelArt_SubsystemContract` green; module + uplugin entry + tier rows landed |
+| 5 | PixelArt look (outline + banding + palette + band-shift edges) | **DONE** (visual rubric human-queued) | `Ck_Usf_GenerateLooks PixelArt` clean, `M_CkUsf_Look_PixelArt.uasset` written + validated; positional contract test green |
+| 6 | Gym, gate of record, perf table, docs, VALIDATION executed | **DONE** | Gate of record delta-zero (1204/1201/3, same failing names); perf table measured; gym + both module `Claude.md`s + tier rows + two stale-doc fixes landed |
 | 7 | BACKLOG (separate sign-off): god rays, cloud shadows, per-object snap, stencil point-light, BB adoption | BACKLOG | |
 
 ## Decision gates — verdicts
@@ -207,6 +207,109 @@ percent no matter what. The implementation therefore does NOT scale `M[1][1]` by
 `M[0][0]` — it DERIVES `M[1][1]` from the actual rendered aspect, which makes texels exactly square
 and moves the rounding error into the vertical framing (~0.1% of view height) where it is invisible.
 That is strictly better than any of the three options as described.
+
+### Phase 4 verdicts
+
+| Criterion | Result |
+|---|---|
+| Subsystem contract AutoTest | **GREEN** — default-off, full settings round-trip (renderer AND look halves), refusal under forced TSR, enable after `Request_Apply_RecommendedCVars`, reset to defaults |
+| Module skeleton + uplugin entry + tier rows | Landed (`CkPixelArt`, Runtime/Default) |
+| Precondition report populated, enable refused under TSR | **GREEN** — exercised deliberately by the test, which forces `r.AntiAliasingMethod 4` and restores it |
+
+**One real bug the spec test caught, worth recording because the code contradicted its own doc.**
+`Get_PreconditionReport()` cached the report from the last refusal and returned it in preference to a
+fresh one, while its header comment claimed it recomputed. So a caller that refused, fixed the
+setting, and asked again still got the stale complaint — the exact moment someone is reading that
+report and trusting it. The cache is gone; it recomputes every call, and the refusal path relies on
+the ensure's own log line for the "what did the refusal see" record.
+
+**A consequence worth knowing:** `Request_Apply_RecommendedCVars` writes at `ECVF_SetByConsole`, not
+`ECVF_SetByCode`. The situation it exists to rescue is usually one where somebody typed the offending
+value into the console, and a `SetByCode` write is silently dropped underneath a console one — the
+caller would see an unchanged report and no explanation.
+
+### Phase 5 verdicts
+
+| Criterion | Result |
+|---|---|
+| `Ck_Usf_GenerateLooks PixelArt` | **GREEN, zero errors.** `LogSavePackage: Moving ... to '../../Plugins/CkFoundation/Content/CkUsf/GeneratedLooks/M_CkUsf_Look_PixelArt.uasset'` -> `CkUsfEditor: Trace: Generated master for look [PixelArt]` -> `AssetCheck: ... Validating asset` with no validator output. Log: `Saved/Logs/PixelArtGenerateLooks.log:3129-3150` |
+| Look contract test | **GREEN** — parses the real `PixelArt.ush` entry signature off disk and checks it against `_Parameters` name-for-name in order, plus domain / blendable location / scene textures / every parameter grouped |
+| `rg -n "_Group"` on the look asset | Every parameter grouped, via the existing `CkUsf::Usf_ScalarIn` / `Usf_VectorIn` helpers |
+| Visual rubric (1-texel silhouettes, brightened creases, no doubled lines, no ground staircase, palette-adjacent band shift) | **HUMAN-QUEUED (H-8)** — `[EDITOR-VERIFY]` by its own definition |
+
+The generation run was driven headlessly the same way Phase 0's standalone sweeps were: a full editor
+boot with `-CkDeferredCmdsFile` carrying `Ck_Usf_GenerateLooks PixelArt`, then the log read for the
+generator's own lines. Nothing about it needed a human at the keyboard, so it is a machine line rather
+than a queued one.
+
+### Gate of record — the delta, in full
+
+| | Baseline (Phase 0) | Gate of record (Phase 6) |
+|---|---|---|
+| Total | 1188 | 1204 (+16, all added by this campaign) |
+| Passed | 1184 | 1201 |
+| Failed | 4 | 3 |
+| Failing NAMES | `Angelscript.CppTests.AngelscriptCodeCoverage.IntegrationTest`, `Crowd_NavQueryFilter_ForceReplan`, `PathNetworkFollower_ProjectsRibbonWaypointWithinNavQueryExtent`, `PathNetworkFollower_DesiredNavmeshClearanceMovesInward` | the same three, minus the Angelscript coverage one |
+
+The Angelscript coverage test is an ENGINE test asserting that coverage reports exist under
+`Saved/Automation/Tmp/TestOutput/`; it passes once earlier runs in a session have populated that
+directory, which is what happened here. It was never touched and is not claimed as fixed.
+
+**The 16 tests this campaign added**, all green: 2 fraction · 3 config registry · 8 snap math ·
+1 camera ortho AutoTest · 1 subsystem contract AutoTest · 1 look positional contract.
+
+**One honest gap in what the gate covers.** Nothing automated exercises the look's SHADER BODY — the
+contract test checks its signature and the generator checks it compiles. Two real defects in that body were
+found by reading it back rather than by any test (D-20, D-21), which is a fair estimate of how much is
+still resting on the H-8 rubric. If one claim here is most likely to be wrong, it is that the shader does
+what its comments say; the arithmetic around it is pinned, the arithmetic inside it is not.
+
+### Phase 6 — perf measurement (success criterion 8)
+
+Measured on THIS machine and THIS scene, by the renderer's own `ck.PixelArt.Debug.PerfSweep 5`: three
+stages of 300 frames each, the first 30 of every stage discarded while render targets settle, mean GPU
+milliseconds per frame from `RHIGetGPUFrameCycles()`. Standalone `-game -windowed -resx=2560 -resy=1440`,
+gym map, VSync and the frame cap off. Log: `Saved/Logs/PixelArtPerfSweep.log:2061-2107`.
+
+| Configuration | Mean GPU ms/frame | vs native |
+|---|---|---|
+| OFF (native 2560x1440) | **1.214** | — |
+| ON @ 360 internal | **0.854** | 70.3% |
+| ON @ 180 internal | **0.802** | 66.0% |
+
+ON is cheaper than OFF, which is the direction the design predicted: the scene rasterizes into about 6% of
+the pixels and the upscale is one fullscreen pixel shader. No STOP condition.
+
+**Read these as a direction, not as a budget.** The gym judge scene is deliberately geometry-light (engine
+basic shapes), so native is only 1.2 ms to begin with and the fixed costs — the upscale pass, the
+post-process chain that runs at internal resolution either way — are a large share of what is left. On a
+scene where native GPU time is dominated by pixel work the ratio would improve; on one dominated by draw
+call count or vertex work it would not, because the renderer changes neither. Re-measure on the real scene
+before quoting a number to anyone.
+
+**What the same run also confirmed at runtime, on a viewport size no test covers:** at 2560x1440 with a
+360-texel internal height the renderer chose `rendered=648x365 displayed=640x360 at (4,2) margin=4/2/3`.
+That is exactly what `Get_HorizontalMarginTexels` predicts, so the aspect-compensated margin ruling holds
+outside the unit tests as well as inside them.
+
+### Phase 6 — VALIDATION.md execution
+
+| # | Check | Verdict |
+|---|---|---|
+| A1 | Fraction exactness unit tests | **GREEN** — 8x4 viewport/target sweep |
+| A2 | Snap math property tests | **GREEN** — 8 tests, incl. the margin fold and the basis extraction |
+| A3 | Camera ortho AutoTest | **GREEN** — present in fresh discovery, not a zero-match |
+| A4 | Subsystem contract AutoTest | **GREEN** |
+| A5 | Look contract test | **GREEN** |
+| A6 | Look generation validator | **GREEN** — zero errors, master written and validated |
+| A7 | Full suite, gate of record | **GREEN — delta-zero.** 1204 total / 1201 pass / 3 fail, `--test --no-live --discover-fresh`, 5m 07s, log `Saved/Logs/Test-GateOfRecord.log`. The three failures are the SAME NAMES as the Phase-0 baseline (`Crowd_NavQueryFilter_ForceReplan`, both `PathNetworkFollower_*`). 1204 = the 1188 baseline + 16 tests this campaign added |
+| A8 | Zero-residue greps | **GREEN** — `rg -n "PixelArt.Spike" Source` = 0; `rg -in "pixelart" Source/CkCamera` = 0 |
+| A9 | Shipping-config compile | **UNRUN** — the toolbox lane used here is `--config=Development --target=Editor`; a Shipping target was never built in this campaign, so this line is honestly unrun rather than assumed |
+| B1 | C++ surface | **GREEN** — the unit tests call the utils directly |
+| B2 | Blueprint surface | **HUMAN-QUEUED (H-11)** — the nodes exist by construction (UFUNCTION + DisplayName), but "a BP graph can call them" is an editor observation |
+| B3 | AngelScript surface | **GREEN** — the AutoTests and the gym drive the subsystem, the camera requests and the presets entirely from AngelScript, and they compile and run |
+| C1-C9 | Visual / human | **QUEUED** — H-1 … H-11 below |
+| D | Change-control class 3+ | Docs landed, comment audit done, everything committed on the feature branches, nothing pushed, no submodule pointer bumps |
 
 ## Divergence log (phase doc vs repo — repo is authority for mechanics, PROMPT.md for intent)
 
@@ -328,6 +431,62 @@ That is strictly better than any of the three options as described.
   the reflected form (`CkPmg_Fragment_Data_Donut.h:80,83`), so this follows the newer-modules branch
   of A1. If A1 is ruled the other way, the fix is local to this one struct.
 
+- **D-13 - `Get_IsEnabled()` returns `ECk_EnableDisable`, not `bool`.** PHASE_4's spec text says `bool`.
+  The exemplar it also names (`UCkUsf_CelShadeSubsystem`, which the same phase says to mirror EXACTLY)
+  returns the enum, and root CLAUDE.md prefers enums over bools. The enum wins on both counts.
+
+- **D-14 - there is no `DoGet_EffectiveSettings` on the subsystem.** PHASE_4 step 7 asks for the
+  CelShade-style CVar fold. The fold already exists, in the right place: `ck::pixel_art::Fold_Overrides`
+  is applied by the RENDER module on the way OUT of the state registry (Phase 1). Folding again on the
+  way in would make an override indistinguishable from a setting and leave it behind when the CVar goes
+  back to -1 - which is the exact property the CelShade shape exists to preserve. The look half has no
+  CVars, so a second fold would have nothing to do.
+
+- **D-15 - `UCkPixelArt_Preset` mirrors the params FLAT rather than nesting one `_Params`.** PHASE_4
+  step 3 asks for one nested field. An AngelScript `asset` block assigns reflected properties by name
+  and cannot reach into a nested struct (no precedent for it anywhere in `Script/`), so a nested preset
+  would have been authorable only in the editor - and the phase's own exemplar, `UCkUsf_CelShadePreset`,
+  is flat for the same reason. `Get_AsParams()` packs them.
+
+- **D-16 - `CK_DEFINE_CONSTRUCTORS(T)` with no essentials does not compile.** The macro expands to
+  `T() = default;` plus `CK_DEFINE_CONSTRUCTOR(T, )`, and the zero-vararg form is a syntax error
+  (C2760/C2351 at the macro line). Structs whose fields are all optional simply omit it - which is what
+  `FCk_Usf_CelShade_Params` does. PHASE_4 step 2's "CK_DEFINE_CONSTRUCTORS with no essentials" is not a
+  reachable shape.
+
+- **D-17 - the presets live in `Script/CkPixelArt/`, not `Script/CkUsf/`.** PHASE_5 step 1 puts them
+  under CkUsf. They are `UCkPixelArt_Preset` assets, so they belong with the module that owns the type;
+  the LOOK asset (a `UCkUsf_LookDefinition`) does live in `Script/CkUsf/` as the phase doc says.
+
+- **D-18 - `CkPixelArt_Log.h` lives under `Public/CkPixelArt/`, not at the module root.** The CkVisibleRange
+  shape puts it at the root, which only resolves for modules that add `ModuleDirectory` to their public
+  include paths (CkUsf does). Following the sibling `CkPixelArtRender` instead keeps both campaign modules
+  on one convention and needs no build-file special case.
+
+- **D-19 — the gym's PIE placard is unconditional, not conditional.** PHASE_6 step 1 asks the gym to print
+  it "when it detects PIE + non-100 DPI-derived secondary fraction". AngelScript exposes no PIE predicate
+  (`Gameplay::IsInEditor` does not exist — the compiler said so), and more to the point the condition that
+  actually matters is not "is this PIE" but "did the engine settle on a secondary view fraction below 1",
+  which only the renderer can see. It already logs that value the frame it changes. The gym therefore states
+  the caveat unconditionally and points at that log line as the evidence, rather than guessing at the
+  condition from the wrong side.
+
+- **D-20 — the look normalizes luminance through Reinhard rather than saturating it.** Not in any phase
+  doc; caught while reading the shader back. The look sits pre-tonemap, where scene colour is unbounded, so
+  the first version's `saturate` before banding would have collapsed everything above 1 into the top band —
+  a bright scene renders flat, and the failure would have been read as a palette problem in the H-8 rubric.
+  Now normalized (`L/(1+L)`), banded there, and inverted on the way out with a max-tone cap, which is
+  `HandDrawn.ush`'s approach and its stated reason. The palette stage still bounds its input, and that one
+  IS a property of the stage: once a pixel is snapped to an authored palette there is no dynamic range left
+  to preserve.
+
+- **D-21 — the shader's view vector comes from `ScreenVectorFromScreenRect`, not `In.CameraVector`.** Also
+  caught by reading rather than by a test: `CameraVector` is wired for SURFACE looks only and reads zero in
+  a post-process one, which would have made every surface test as fully face-on and disabled the
+  grazing-angle threshold scaling entirely — i.e. the ground-plane staircase this look is specifically
+  built to avoid, silently, with the knobs for it present and inert. `CelShade.ush:464` uses the same helper
+  for the same reason.
+
 ## Blockers
 
 _(none — executor: paste exact commands + full error text here, then END the phase. Do not
@@ -348,6 +507,12 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   `r.Ortho.Debug.ForceOrthoWidth 2000`, `ck.PixelArt.Spike 1`, `Shot`.
   Expected: chunky-but-sharp pixels on the geometry, crisp UI above it. This is the image the D1
   ruling should be judged on.
+
+  **The Tab step is no longer necessary — the URL form was the problem, and it is solved.** A gym GameMode
+  DOES take on the map URL, using the full AngelScript class path rather than the bare name:
+  `?game=/Script/Angelscript.Ck_PixelArtGym_GameMode`. Verified in the perf run, which loaded straight into
+  the pixel-art gym with no keyboard involved (`Saved/Logs/PixelArtPerfSweep.log:2085`). Every remaining
+  visual item below can therefore be launched directly into its gym.
 - **[EDITOR-VERIFY] H-2 — 7a on geometry.** Same run as H-1, plus `ck.Usf.CelShade.Enabled 1`.
   Expected: CelShade's ink lines / halftone are chunky at texel scale, not native-res fine.
 - **[EDITOR-VERIFY] H-3 — 7c PIE half.** Run the same scene in PIE at >100% OS DPI with the spike on.
@@ -379,6 +544,31 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
   WHILE the width changes, stability once it settles. That is the documented limit of the technique
   (RESEARCH_Technique §A "Zoom"), not a defect — the check is that it settles.
 
+- **[EDITOR-VERIFY] H-8 - Phase 5 outline rubric.** Gym map, standalone, station **PRESET: CRISP 16**.
+  Score five things:
+  1. Silhouettes are darkened and exactly ONE texel wide (use station **FILTER: NEAREST** to count).
+  2. Creases are brightened, and are also one texel - two means the de-doubling gate failed.
+  3. No doubled lines anywhere on the cube stack.
+  4. No staircase of false outlines across the ground plane at grazing angle. This is the most likely
+     defect and the reason `AngleZCutoff` / `AngleZScale` exist; if it appears, raise `AngleZScale`.
+  5. In band-shift mode every outline colour is one the palette already contains. A grey or black line
+     means the edge is being applied AFTER the palette snap instead of before.
+  The **PRESET: SOFT RAMP** station is the A/B - flat edge colours and per-channel steps, which should
+  read as toon shading rather than pixel art.
+- **[EDITOR-VERIFY] H-9 - UMG overlay at native resolution.** Any gym station with the renderer on:
+  the station placards and the cycler menu must stay crisp at native resolution above the chunky scene.
+  Blurry UI means the upscale is happening after UI composition rather than before.
+- **[EDITOR-VERIFY] H-10 - toggle residue, ten times.** From the gym, walk between **OFF (NATIVE)** and
+  **RENDERER ONLY** ten times, then check `r.ScreenPercentage`, `r.AntiAliasingMethod` and
+  `r.DynamicRes.OperationMode` are back at their pre-gym values. The machine half of this is already
+  covered (`ck.PixelArt.Debug.ToggleLoop` 100x, Phase 1); this is the half that also covers the
+  subsystem's CVar restore.
+
+- **[EDITOR-VERIFY] H-11 — Blueprint surface (VALIDATION B2).** In the editor, make a throwaway Blueprint
+  and place `[Ck][PixelArt] Get Pixel Art Subsystem` -> `Apply Preset` -> `Request Set Enabled`. Expected:
+  all three nodes exist under the `[Ck][PixelArt]` display names and wire up. This is the only line in
+  VALIDATION §B that cannot be answered from a headless run.
+
 ### Evidence on disk (gitignored, host project — copy out before cleaning `Saved/`)
 
 | What | Path |
@@ -387,6 +577,9 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
 | 7a runs (spike+CelShade, CelShade only) | `Saved/Logs/PixelArtCheck_{geometry,celshade,celshade_nospike}.log` |
 | Spike captures (menu-over-sky) | `Saved/Screenshots/WindowsEditor/ScreenShot0000{0,1,2,3}.png` |
 | 7a A/B captures | `ScreenShot00004.png` (spike+CelShade) vs `ScreenShot00005.png` (CelShade only) |
+| Look generation (A6) | `Saved/Logs/PixelArtGenerateLooks.log` (generator + validator lines at :3129-3150) |
+| Perf sweep (three GPU numbers) | `Saved/Logs/PixelArtPerfSweep.log` (:2061-2107) |
+| Gate of record | `Saved/Logs/Test-GateOfRecord.log` |
 
 ## Session log
 
@@ -426,3 +619,22 @@ Phase 6 populates the rest from VALIDATION.md §C. Queued so far:
     the runtime toggle-off (zero-residue) check could not be completed here.
   - `?game=Ck_AggroGym_GameMode` on the map URL does NOT select a gym (AngelScript GameMode classes
     need their full class path); the gym map shows the cycler menu until a human presses Tab.
+- 2026-08-20 (Opus executor, session 3): **PHASES 2-6.** Phase 2 (snap/margin/remainder) and Phase 3
+  (CkCamera ortho) implemented and committed after a delta-zero full suite; Phase 4 (`CkPixelArt` module),
+  Phase 5 (the `PixelArt` look, generated and validated) and Phase 6 (gym, docs, perf table) landed on top.
+
+  One decision went to a Fable agent — the render margin across axes — and its ruling is recorded above
+  with the one correction I had to make to the framing I gave it.
+
+  Notes for whoever picks this up:
+  - **A gym GameMode DOES take on the map URL**, with the full AngelScript class path:
+    `?game=/Script/Angelscript.Ck_PixelArtGym_GameMode`. Phase 0 concluded the opposite from the bare-name
+    form and left four visual items behind a keyboard step. They are all launchable now.
+  - **Two real defects were caught by reading rather than by a test**, and both would have presented as
+    "the look is wrong" rather than as a crash: the surface-only `In.CameraVector` (D-21) and the
+    unbounded-input `saturate` (D-20). Nothing automated covers the shader BODY — the contract test checks
+    its signature. That gap is what the H-8 rubric is for.
+  - **A third was caught by the spec test**, which is the one that reads best: `Get_PreconditionReport()`
+    cached a refusal while its own header comment promised it recomputed.
+  - The still-open editor from the look-generation run hot-compiled the gym scripts and reported two
+    AngelScript errors for free. Leaving an editor up while writing `.as` is a cheap feedback loop.
