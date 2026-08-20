@@ -19,7 +19,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group = FGroup_Gameplay_Camera;
+        using Group = FGroup_Transform_Derived;
         using MarkedDirtyBy = FFragment_Camera_Requests;
 
     public:
@@ -78,7 +78,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group    = FGroup_Gameplay_Camera;
+        using Group    = FGroup_Transform_Derived;
         using RunAfter = TDepList<FProcessor_Camera_HandleRequests>;
 
     public:
@@ -99,7 +99,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using Group    = FGroup_Gameplay_Camera;
+        using Group    = FGroup_Transform_Derived;
         using RunAfter = TDepList<FProcessor_CameraLayer_Lifecycle>;
 
     public:

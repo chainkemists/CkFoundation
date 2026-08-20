@@ -34,16 +34,9 @@ public:
               DisplayName = "[Ck][Camera] Add")
     static FCk_Handle_Camera
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Fragment_Camera_ParamsData& InParams);
 
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Create")
-    static FCk_Handle_Camera
-    Create(
-        UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Camera_ParamsData& InParams);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -237,6 +230,15 @@ public:
               DisplayName = "[Ck][Camera] Get View Info")
     static FMinimalViewInfo
     Get_ViewInfo(
+        const FCk_Handle_Camera& InCamera);
+
+    // The composed view's attachable transform presence. Scene-node-attach here to have content follow
+    // the rendered view; children compose in the frame's late-resolve pass, after the POV publish.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Get View Anchor")
+    static FCk_Handle_Transform
+    Get_ViewAnchor(
         const FCk_Handle_Camera& InCamera);
 
     // The resolved camera view rotation (this frame's composed POV).
