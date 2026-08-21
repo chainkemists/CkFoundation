@@ -5,10 +5,13 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkQueue/Queue/CkQueue_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_Dispatch);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_ObserveOutcome);
+CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_MaintainFacing);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_EndPlay);
 
 namespace
@@ -174,7 +177,12 @@ namespace ck
 
         auto Outcome = TOptional<ECk_Queue_MovementOutcome>{};
         if (UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(Agent))
-        { Outcome = ECk_Queue_MovementOutcome::Reached; }
+        {
+            if (UCk_Utils_CrowdAgent_UE::Get_MovementState(Agent)
+                != ECk_CrowdAgent_MovementState::Idle)
+            { return; }
+            Outcome = ECk_Queue_MovementOutcome::Reached;
+        }
         else if (UCk_Utils_CrowdAgent_UE::Get_IsGoalFailedHold(Agent))
         { Outcome = ECk_Queue_MovementOutcome::Failed; }
 
@@ -190,6 +198,42 @@ namespace ck
                 Outcome.GetValue()},
             {});
         InAdapter._ReportedQueueAssignmentRevision = InAdapter._IssuedQueueAssignmentRevision;
+    }
+
+    auto
+        FProcessor_CrowdQueueAdapter_MaintainFacing::
+        ForEachEntity(
+            TimeType /*InDeltaT*/,
+            HandleType InAgent,
+            const FFragment_CrowdQueueAdapter& InAdapter,
+            const FFragment_CrowdAgent_FaceAngle& InFaceAngle)
+        -> void
+    {
+        if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAgent)
+            || UCk_Utils_CrowdAgent_UE::Get_MovementState(InAgent) != ECk_CrowdAgent_MovementState::Idle)
+        { return; }
+
+        auto Agent = InAgent;
+        auto Snapshot = FCk_Queue_MemberSnapshot{};
+        if (NOT GetCurrentSnapshot(Agent, InAdapter, Snapshot)
+            || Snapshot.Get_Mover() != FCk_Handle{InAgent}
+            || (Snapshot.Get_State() != ECk_Queue_MemberState::AtSlot
+                && Snapshot.Get_State() != ECk_Queue_MemberState::AtFront))
+        { return; }
+
+        auto Transform = UCk_Utils_Transform_UE::CastChecked(Agent);
+        const auto TargetRotation = Snapshot.Get_TargetWorldTransform().GetRotation().Rotator();
+        const auto CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(Transform);
+        if (CurrentRotation.Equals(TargetRotation, 0.1f) && NOT InFaceAngle.Get_FacingEngaged())
+        { return; }
+
+        // An engaged Crowd-facing pass can have queued a same-frame rotation even while the current
+        // transform still matches this target. Enqueue after it until Crowd facing disengages; once
+        // settled, the equality gate avoids an indefinite request per idle queue member per frame.
+        UCk_Utils_Transform_UE::Request_SetRotation(
+            Transform,
+            FCk_Request_Transform_SetRotation{TargetRotation}.Set_LocalWorld(ECk_LocalWorld::World),
+            {});
     }
 
     auto
