@@ -347,13 +347,15 @@ namespace ck_angelscript_generator_module
     // data assets and writes a small JSON — no shader contention, no nested FSlowTask.
     auto Maybe_RegenDynamicHandleJson_OnPostCompile() -> void
     {
-        if (NOT Has_DynamicHandleStubRecoveryFile_OnDisk())
-        { return; }
+        const auto HasStubRecovery = Has_DynamicHandleStubRecoveryFile_OnDisk();
 
         if (NOT GEditor)
         {
-            ck::angelscriptgenerator::Warning(
-                TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping."));
+            if (HasStubRecovery)
+            {
+                ck::angelscriptgenerator::Warning(
+                    TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping."));
+            }
             return;
         }
 
@@ -365,9 +367,23 @@ namespace ck_angelscript_generator_module
             return;
         }
 
+        // During cold-start compilation the Asset Registry may still be cataloging. A full-registry
+        // comparison at that point could mistake undiscovered definitions for deletions. The editor
+        // subsystem owns an OnFilesLoaded reconciliation for that path; stub recovery remains the one
+        // exception because its newly compiled definition is already known and must replace the stub.
+        if (NOT HasStubRecovery && FAssetRegistryModule::GetRegistry().IsLoadingAssets())
+        { return; }
+
+        const auto RegistryHasDrift = Subsystem->IsRegenerationNeeded();
+        if (NOT HasStubRecovery && NOT RegistryHasDrift)
+        { return; }
+
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] PostCompile detected pending _StubRecovery_DynamicHandleTypes.json sibling. ")
-            TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions."));
+            HasStubRecovery
+                ? TEXT("[Module] PostCompile detected pending _StubRecovery_DynamicHandleTypes.json sibling. ")
+                  TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions.")
+                : TEXT("[Module] PostCompile detected DynamicHandleTypes.json drift against live definitions. ")
+                  TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions."));
 
         Subsystem->GenerateHandleTypeRegistry();
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
