@@ -101,6 +101,18 @@ public:
     // that unconditionally SEEDS a separately-persisted entity must gate that seeding on this returning false,
     // or it creates a second copy alongside the restored one. (Children composed UNDER the script are fine:
     // the replayed construction re-creating them is exactly how the rebuild works.)
+    //
+    // THIS is the consumer spelling of "is a load running", and the only one game code should reach for. Read it
+    // at the instant the work is DECIDED — arm time for a timer, callback entry for a promise — not when the
+    // deferred work eventually runs, by which point the load is over and the question no longer has an answer.
+    // Game time is frozen for the whole load, so a boot-armed game-time one-shot that used to fire BEFORE the
+    // restore (and lose to it harmlessly) now fires after it and wins.
+    //
+    // Guard the WRITE, and only where the write actually round-trips. A guard over something the save never
+    // captured does not prevent a duplicate — it converts "rebuilt after load" into "absent after load", because
+    // the world's own rebuild was the only thing that was ever going to create it. The save log's capture AUDIT
+    // lines are the evidence for which half a given spawn is in. Never guard a KEYED spawn: a SaveKey makes it
+    // the load's adopt target, and suppressing it destroys the thing the saved row is waiting for.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Is Load In Progress")
@@ -108,11 +120,14 @@ public:
     Get_IsLoadInProgress(
         const FCk_Handle& InHandle);
 
-    // True for the WHOLE of a load on the world the entity lives in — every phase, from the moment the old world
-    // starts being demolished to the moment the loader hands the world back. It exists for exactly one caller:
-    // something whose CONSTRUCTION seeds or spawns a separately-persisted entity, which must not do that while
-    // the loader is the sole legitimate creator of world population, or the world ends up holding the loader's
-    // copy and its own.
+    // FRAMEWORK-INTERNAL: the spawn-suppression predicate. True for the WHOLE of a load on the world the entity
+    // lives in — every phase, from the moment the old world starts being demolished to the moment the loader hands
+    // the world back — and it exists to answer the framework's own question about whether the loader is currently
+    // the sole legitimate creator of world population.
+    //
+    // GAME CODE SHOULD NOT REACH FOR THIS. The consumer spelling of "is a load running" is Get_IsLoadInProgress
+    // above; carrying two spellings for one job is how a codebase ends up guarding half its producers on one
+    // predicate and half on the other, with no way to tell which sites were considered and which were copied.
     //
     // The window is the whole load because construction runs throughout one: DoConstruct and DoBeginPlay are
     // never held, so a level-triggered producer runs in every phase — including the phases after the payload
@@ -120,8 +135,7 @@ public:
     //
     // Contrast Get_IsSpawnSuppressedByLoadGate, which is deliberately NARROWER: the framework only REFUSES a
     // spawn in the phases where the loader owns population outright, because refusing during the drain would
-    // break the composition the payload applies drive. Two predicates, two jobs — this one is what a producer
-    // asks before seeding; that one is what the framework enforces.
+    // break the composition the payload applies drive.
     //
     // It is NOT the predicate for deciding whether a value may be read. Nothing needs that predicate any more: a
     // load holds a restored entity out of every non-kernel processor's view until its payloads have applied, so a
@@ -138,13 +152,22 @@ public:
     // Runs the delegate once the world is READY TO RESUME: immediately when no load is in progress, else
     // one-shot when this load hands the world back.
     //
-    // Ready to resume means every payload applied AND every request those applies issued drained, physics
-    // stepped, probe overlaps converged, and GAME TIME HAS NOT ADVANCED since the load began — the loader holds
-    // global time dilation at its floor for the whole load, so nothing paced by game time moved while the world
-    // was being rebuilt. Wall time kept running, deliberately, for a small named list of watchdogs.
+    // Ready to resume means every payload applied, every request those applies issued drained, physics stepped,
+    // probe overlaps converged, and no game time elapsed since the load began — and NOTHING MORE: construction
+    // and DoBeginPlay ran throughout, values a handler restored by enqueueing deferred requests may still be in
+    // flight in their feature's own queue, and any subsystem that rebuilds on its own retry cadence — the input
+    // intent stack, discovery/acquire tickets, an asynchronous asset load — is still rebuilding after the world
+    // is handed back.
     //
-    // It does NOT mean "nothing has simulated". Construction and DoBeginPlay run throughout a load, as
-    // [G1-D16] rules, so code there must be idempotent.
+    // Each clause of that is load-bearing, and each was bought by a bug:
+    //  - game time: the loader holds global time dilation at its floor for the whole load, so nothing paced by
+    //    game time moved while the world was being rebuilt. Wall time kept running, deliberately, for a small
+    //    named list of watchdogs.
+    //  - "construction ran throughout": neither construction hook is held, so code there must be idempotent.
+    //  - "may still be in flight": a handler that returns Applied having only ENQUEUED its deferred requests has
+    //    not written the value yet — its own HandleRequests pass does, later.
+    //  - "its own retry cadence": a subsystem rebuilding on a poll is not finished merely because the world is.
+    //    Read such a fact level-triggered from the durable state, never once at this edge.
     //
     // The consumer-side twin of the hold: feature processors are frozen during a load, but signal/promise
     // CALLBACKS are not — a callback delivered mid-load that reads world population (occupancy rosters, tag
@@ -157,6 +180,12 @@ public:
     // travel a load performs — a bind made before the travel still fires afterwards. That is the whole reason
     // it is not an entity signal: every ECS registry is world-scoped, so a bind on the pre-travel world's
     // transient entity died with that world and nothing said so.
+    //
+    // The PROMISE surviving the travel is not the same as the DELEGATE TARGET surviving it. A dynamic delegate is
+    // a weak UObject plus a function name, so a target the travel destroyed simply no-ops and the caller waits
+    // forever for a fire that was delivered to nobody. Bind from something with GameInstance lifetime, or watch
+    // the epoch-stamped READY TO RESUME breadcrumb instead — the epoch makes the line unique per load, which a
+    // plain substring watch is not.
     //
     // For anything scoped to ONE entity, prefer Promise_OnHydrated below: this answers the strictly later and
     // coarser question of whether the whole world is coherent, and it is meant for consumers whose lifetime is
