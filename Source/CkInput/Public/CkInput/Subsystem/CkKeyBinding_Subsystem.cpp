@@ -44,6 +44,17 @@ auto
     if (_Bound)
     { return; }
 
+    // Separated from the null-settings retry below because the two are indistinguishable at the call
+    // site and only one of them ever resolves: with user settings off, GetUserSettings() is null
+    // FOREVER, so every retry below would keep returning quietly and the whole feature stays inert.
+    const auto UserSettingsAreEnabled = UCk_Utils_KeyBinding_UE::Get_AreUserSettingsEnabled();
+    CK_ENSURE_IF_NOT(UserSettingsAreEnabled,
+        TEXT("Enhanced Input user settings are DISABLED, so no key profile is ever created and every CkInput key "
+             "binding query, remap and key-changed delegate is permanently inert. Enable it in Project Settings > "
+             "Engine > Enhanced Input > Enable User Settings, or set bEnableUserSettings=True under "
+             "[/Script/EnhancedInput.EnhancedInputDeveloperSettings] in DefaultInput.ini"))
+    { return; }
+
     const auto* LocalPlayer = GetLocalPlayer();
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }

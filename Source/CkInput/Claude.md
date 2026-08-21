@@ -51,7 +51,7 @@ the file-local `ck_key_binding_utils::Get_CurrentProfile` (`GetCurrentKeyProfile
 
 | Group | Functions |
 |---|---|
-| Core | `Get_InputUserSettings`, `Get_AllRemappableKeys` → `TArray<FPlayerKeyMapping>`, `Get_KeyForMapping`, `Get_MappingNamesForKey`, `Get_KeyForInputAction`, `Get_MappingNameFromInputAction`, `Get_MappableKeyInfoFromInputAction` |
+| Core | `Get_AreUserSettingsEnabled`, `Get_InputUserSettings`, `Get_AllRemappableKeys` → `TArray<FPlayerKeyMapping>`, `Get_KeyForMapping`, `Get_MappingNamesForKey`, `Get_KeyForInputAction`, `Get_MappingNameFromInputAction`, `Get_MappableKeyInfoFromInputAction` |
 | Change detection | `Get_DidMappingKeyChange` (poll against a cached `FKey`), `BindTo_OnMappingKeyChanged`, `UnbindFrom_OnMappingKeyChanged` |
 | Remapping | `RemapKey`, `RemapKeys` (batch onto one key; defers the settings broadcast until the last entry) |
 | Reset | `ResetMappingToDefault` (one row), `ResetAllToDefaults` (whole profile) |
@@ -72,7 +72,12 @@ default rather than unbinding it, so an unbind is `MapPlayerKey` with `NewKey = 
 ### `UCk_KeyBinding_Subsystem` — `Subsystem/CkKeyBinding_Subsystem.h`
 
 `ULocalPlayerSubsystem`. On `Initialize` it binds `UEnhancedInputUserSettings::OnSettingsChanged`
-once and runs the mapping-context registration scan (below). It keeps a flat `TArray<FWatcherEntry>`
+once and runs the mapping-context registration scan (below). Before either, it ensures LOUDLY (once)
+when `bEnableUserSettings` is off project-wide — the ENGINE default is false, and while it is off no
+key profile is ever created, so `GetUserSettings()` is null forever and every retry below would keep
+returning quietly. That one case is separated from the ordinary not-ready-yet early-out precisely
+because it never resolves; `UCk_InputSource_Subsystem`'s identical early-out stays silent rather than
+firing a second ensure for the same misconfiguration. It keeps a flat `TArray<FWatcherEntry>`
 of (MappingName, Slot, CachedKey, delegate); on each settings-changed broadcast it re-reads every
 watched mapping's key and fires `FCk_OnMappingKeyChanged(MappingName, OldKey, NewKey)` only for the
 ones that actually moved. `FCk_Handle_KeybindListener` is the opaque bind receipt — it is a plain
@@ -633,7 +638,9 @@ subsystem, not part of either namespace.
 7. **Missing-profile failures are silent.** Every query does `CK_ENSURE_IF_NOT` on the player
    controller, then plain early-outs on a null settings object or null profile. A wrong-`MappingName`
    query is indistinguishable from an unregistered-context one — both return an invalid `FKey`. Start
-   diagnosis at `Get_AllRemappableKeys`.
+   diagnosis at `Get_AllRemappableKeys`. The one cause that is NOT silent is `bEnableUserSettings`
+   being off, which `UCk_KeyBinding_Subsystem` ensures on at boot; check
+   `Get_AreUserSettingsEnabled()` before blaming the scan paths.
 8. **Local player only.** Everything resolves through `APlayerController::GetLocalPlayer()`; on a
    remote or server-side controller the accessors return null and the utils quietly no-op.
 9. **Don't poll the inbox — it drains every frame.** `FProcessor_InputLayer_Route` copies

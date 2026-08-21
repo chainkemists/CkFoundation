@@ -140,6 +140,10 @@ auto
     if (ck::Is_NOT_Valid(EISubsystem))
     { return; }
 
+    // Null here is either the transient not-ready-yet above or user settings being disabled project-wide,
+    // which is permanent. The disabled case is diagnosed once by UCk_KeyBinding_Subsystem — the other
+    // LocalPlayerSubsystem that comes up beside this one — so this early-out stays quiet on purpose
+    // rather than firing a second ensure for the same misconfiguration.
     auto* Settings = EISubsystem->GetUserSettings();
     if (ck::Is_NOT_Valid(Settings))
     { return; }
