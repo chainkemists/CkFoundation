@@ -93,7 +93,7 @@ Consumer side, the registry contract, and the three-state honesty rule: `CkCore/
 | G4 | `FCkAutoTestWrapperGenerator::GenerateAll` | `<Plugin>_AutoTestActors.as` |
 | G5 | `FCkAutoTestNetStubGenerator::GenerateAll` | net-test `.spec.cpp` writes + prunes |
 | G6 | `FCkAngelscriptWrapperGenerator::GenerateAllWrappers` | ~250 wrapper writes + manifest deletes (boot-time Early bind) |
-| G7 | `UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry` | `DynamicHandleTypes.json` (button → Warning + `OnGenerationComplete.Broadcast(0,false)`) |
+| G7 | `UCkDynamicHandleSubsystem::GenerateHandleTypeRegistry` | `DynamicHandleTypes.json` (Asset Registry settle / successful AS compile drift reconciliation / button → Warning + `OnGenerationComplete.Broadcast(0,false)`) |
 | G8 | `UCkAssetRegistrySubsystem::GenerateAssetRegistryForConfig_Internal` | all `*Assets.as` writes (single choke point; secondary clears the queue, broadcasts complete, never sets `IsGenerationInProgress`) |
 | G9 | self-heal drains (`OnModalLoopTick`, `Drain_PendingActions_Headless`, `OnTicker_DrainActions`) | every dispatcher file mutation; secondary drops `sPendingActions`, self-cleans the subscription, and relies on the owner's heals arriving via the hot-reload watcher |
 | G10 | `ShutdownModule` | `Release()` (symmetry / in-process module reload; OS covers crashes) |
