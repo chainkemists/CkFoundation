@@ -9,6 +9,7 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 
 #include "CkQueue_Fragment_Data.generated.h"
 
@@ -151,6 +152,12 @@ private:
               meta = (AllowPrivateAccess = true, TitleProperty = "_Weight"))
     TArray<FCk_Queue_Origin> _Origins;
 
+    // Optional service category. When set, Add also stamps this as the owner's CkEntityTag so
+    // gameplay can discover queues such as Queue.Category.Checkout without retaining a handle.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "Queue.Category"))
+    FGameplayTag _Category;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
     float _SlotSpacingUu = 120.0f;
@@ -202,6 +209,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Origins);
+    CK_PROPERTY(_Category);
     CK_PROPERTY(_SlotSpacingUu);
     CK_PROPERTY(_SoftLimit);
     CK_PROPERTY(_HardLimit);
@@ -220,6 +228,104 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// Detached debug data. These structures intentionally contain only copied values: they never retain an ECS handle,
+// registry, fragment reference, or UObject. Consumers can cache one frame's snapshot safely across queue teardown.
+USTRUCT(BlueprintType)
+struct CKQUEUE_API FCk_Queue_DebugMemberSnapshot
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Queue_DebugMemberSnapshot);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int64 _MemberIdentity = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int64 _MoverIdentity = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _MemberDebugName;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _MoverDebugName;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _HasMoverWorldTransform = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FTransform _MoverWorldTransform = FTransform::Identity;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int64 _Ticket = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _OriginIndex = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _Rank = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FTransform _TargetWorldTransform = FTransform::Identity;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _AssignmentRevision = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _MovementSuppressed = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_Queue_MemberState _State = ECk_Queue_MemberState::None;
+
+public:
+    CK_PROPERTY_GET(_MemberIdentity);
+    CK_PROPERTY_GET(_MoverIdentity);
+    CK_PROPERTY_GET(_MemberDebugName);
+    CK_PROPERTY_GET(_MoverDebugName);
+    CK_PROPERTY_GET(_HasMoverWorldTransform);
+    CK_PROPERTY_GET(_MoverWorldTransform);
+    CK_PROPERTY_GET(_Ticket);
+    CK_PROPERTY_GET(_OriginIndex);
+    CK_PROPERTY_GET(_Rank);
+    CK_PROPERTY_GET(_TargetWorldTransform);
+    CK_PROPERTY_GET(_AssignmentRevision);
+    CK_PROPERTY_GET(_MovementSuppressed);
+    CK_PROPERTY_GET(_State);
+
+public:
+    FCk_Queue_DebugMemberSnapshot() = default;
+
+    FCk_Queue_DebugMemberSnapshot(
+        int64 InMemberIdentity,
+        int64 InMoverIdentity,
+        FName InMemberDebugName,
+        FName InMoverDebugName,
+        bool InHasMoverWorldTransform,
+        FTransform InMoverWorldTransform,
+        int64 InTicket,
+        int32 InOriginIndex,
+        int32 InRank,
+        FTransform InTargetWorldTransform,
+        int32 InAssignmentRevision,
+        bool InMovementSuppressed,
+        ECk_Queue_MemberState InState)
+        : _MemberIdentity(InMemberIdentity)
+        , _MoverIdentity(InMoverIdentity)
+        , _MemberDebugName(InMemberDebugName)
+        , _MoverDebugName(InMoverDebugName)
+        , _HasMoverWorldTransform(InHasMoverWorldTransform)
+        , _MoverWorldTransform(MoveTemp(InMoverWorldTransform))
+        , _Ticket(InTicket)
+        , _OriginIndex(InOriginIndex)
+        , _Rank(InRank)
+        , _TargetWorldTransform(MoveTemp(InTargetWorldTransform))
+        , _AssignmentRevision(InAssignmentRevision)
+        , _MovementSuppressed(InMovementSuppressed)
+        , _State(InState)
+    {}
+};
 
 USTRUCT(BlueprintType)
 struct CKQUEUE_API FCk_Queue_MemberSnapshot
@@ -433,6 +539,92 @@ public:
         _Reason,
         _QueueRevision,
         _RetryEpisode);
+};
+
+// Detached debug data. These structures intentionally contain only copied values: they never retain an ECS handle,
+// registry, fragment reference, or UObject. Consumers can cache one frame's snapshot safely across queue teardown.
+USTRUCT(BlueprintType)
+struct CKQUEUE_API FCk_Queue_DebugSnapshot
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Queue_DebugSnapshot);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int64 _QueueIdentity = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _QueueDebugName;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FGameplayTag _Category;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FTransform _OwnerWorldTransform = FTransform::Identity;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_Queue_State _State = ECk_Queue_State::NeedsSetup;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _Revision = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _RetryEpisode = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_Queue_LayoutAlgorithm _LayoutAlgorithm = ECk_Queue_LayoutAlgorithm::OrthogonalSnake;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Queue_Pressure _Pressure;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TArray<FTransform> _OriginWorldTransforms;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TArray<FCk_Queue_DebugMemberSnapshot> _Members;
+
+public:
+    CK_PROPERTY_GET(_QueueIdentity);
+    CK_PROPERTY_GET(_QueueDebugName);
+    CK_PROPERTY_GET(_Category);
+    CK_PROPERTY_GET(_OwnerWorldTransform);
+    CK_PROPERTY_GET(_State);
+    CK_PROPERTY_GET(_Revision);
+    CK_PROPERTY_GET(_RetryEpisode);
+    CK_PROPERTY_GET(_LayoutAlgorithm);
+    CK_PROPERTY_GET(_Pressure);
+    CK_PROPERTY_GET(_OriginWorldTransforms);
+    CK_PROPERTY_GET(_Members);
+
+public:
+    FCk_Queue_DebugSnapshot() = default;
+
+    FCk_Queue_DebugSnapshot(
+        int64 InQueueIdentity,
+        FName InQueueDebugName,
+        FGameplayTag InCategory,
+        FTransform InOwnerWorldTransform,
+        ECk_Queue_State InState,
+        int32 InRevision,
+        int32 InRetryEpisode,
+        ECk_Queue_LayoutAlgorithm InLayoutAlgorithm,
+        FCk_Queue_Pressure InPressure,
+        TArray<FTransform> InOriginWorldTransforms,
+        TArray<FCk_Queue_DebugMemberSnapshot> InMembers)
+        : _QueueIdentity(InQueueIdentity)
+        , _QueueDebugName(InQueueDebugName)
+        , _Category(InCategory)
+        , _OwnerWorldTransform(MoveTemp(InOwnerWorldTransform))
+        , _State(InState)
+        , _Revision(InRevision)
+        , _RetryEpisode(InRetryEpisode)
+        , _LayoutAlgorithm(InLayoutAlgorithm)
+        , _Pressure(MoveTemp(InPressure))
+        , _OriginWorldTransforms(MoveTemp(InOriginWorldTransforms))
+        , _Members(MoveTemp(InMembers))
+    {}
 };
 
 // --------------------------------------------------------------------------------------------------------------------

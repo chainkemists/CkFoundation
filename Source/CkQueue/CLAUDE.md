@@ -7,6 +7,8 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 ## Boundary
 
 - Add Queue to a spatial owner that already has Ck Transform with `utils_queue::Add`.
+- `_Category` is an optional semantic `Queue.Category.*` tag. `Add` also stamps a valid category through
+  CkEntityTag, so gameplay and debuggers can group physical queues by service without a game-specific census.
 - The queue owner is the sole source of truth. Consumers retain the `FCk_Handle_Queue` they requested and
   reconcile through `Get_Members`, `TryGet_MemberSnapshot`, `Get_Pressure`, `Get_State`, and `Get_Revision`.
   Do not add a second writable membership fragment to members.
@@ -58,6 +60,18 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - Suppression, leave, invalidation, mover mismatch, and teardown stop only an episode whose correlation belongs
   to the adapter. Unrelated movement is never blanket-cancelled.
 - Outcome polling reports reached/failed only when both Queue revision and Crowd correlation still match.
+- Once Crowd reaches the slot and becomes idle, the adapter maintains the assignment rotation after Crowd's normal
+  facing pass. Non-front slots face their assigned origin; the coincident front slot uses the authored origin rotation.
+
+## Diagnostics
+
+- `Get_DebugSnapshots` returns detached, value-only queue/category/origin/reservation data for one ECS world. It
+  never returns handles, registry references, fragment references, or UObjects.
+- `ck.Queue.DebugDraw 1` enables the PIE world overlay: origin arrows, reservation points and facing, formation
+  links, member-to-slot links, rank/ticket/state labels, and formation/retry state. It is off by default.
+- `Get_IsDebugDrawEnabled` / `Set_DebugDrawEnabled` let a scoped development tool preserve and restore the prior
+  overlay state instead of blindly owning the global CVar.
+- CkGameplayDebugger consumes the same snapshot in the Crowd debugger. CkQueue never depends on debugger UI.
 
 ## Events and teardown
 
@@ -72,7 +86,8 @@ optional mover does not destroy the semantic member.
 - Runtime AS tests: `CkTests/Script/CkQueue/CkAutoTest_Queue_*.as`.
 - Manual visual gym: `CkTests/Script/CkQueue/CkQueueGym_*` and the `Queue` registry entry. The gym exercises live
   Crowd movement, origin reflow, weighted origins, layout switching, impossible-nav recovery, limits, destruction,
-  and the four GOAP-facing signal streams.
+  and the four GOAP-facing signal streams. `Ck_GymQueue_AddAgents <count>` extends the live queue up to its normal
+  hard limit of 30; `Ck_GymQueue_Overfill` remains the explicit rejection test.
 
 ## Non-goals
 

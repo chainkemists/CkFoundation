@@ -188,6 +188,26 @@ namespace ck::queue::layout::details
         }
         return Best;
     }
+
+    auto
+        OrientPlacementsTowardOrigin(
+            const FTransform& InOriginWorld,
+            TArray<FPlacement>& InOutPlacements)
+        -> void
+    {
+        for (auto& Placement : InOutPlacements)
+        {
+            auto DirectionToOrigin = InOriginWorld.GetLocation()
+                - Placement.TargetWorldTransform.GetLocation();
+            DirectionToOrigin.Z = 0.0f;
+
+            const auto HasDirectionToOrigin = DirectionToOrigin.Normalize();
+            const auto FacingRotation = HasDirectionToOrigin
+                ? FQuat{FRotator{0.0f, DirectionToOrigin.Rotation().Yaw, 0.0f}}
+                : InOriginWorld.GetRotation();
+            Placement.TargetWorldTransform.SetRotation(FacingRotation);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -308,6 +328,8 @@ namespace ck::queue::layout
             }
             else
             { return Result; }
+
+            details::OrientPlacementsTowardOrigin(OriginWorld, OriginPlacements);
 
             AllPlacements.Append(OriginPlacements);
         }

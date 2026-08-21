@@ -7,7 +7,13 @@
 
 #include "CkQueue/Queue/CkQueue_Fragment.h"
 
+#include <NativeGameplayTags.h>
+
 #include "CkQueue_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CKQUEUE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Queue_CategoryName);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -108,6 +114,38 @@ public:
     static TArray<FCk_Queue_Origin>
     Get_Origins(
         const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Category")
+    static FGameplayTag
+    Get_Category(
+        const FCk_Handle_Queue& InQueue);
+
+    // A copied diagnostic view for debugger and PIE rendering. InAnyEntityInWorld only selects an ECS world; no
+    // returned value retains that entity, a registry, an ECS handle, a fragment, or a UObject.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Debug Snapshots",
+              meta = (DevelopmentOnly))
+    static TArray<FCk_Queue_DebugSnapshot>
+    Get_DebugSnapshots(
+        const FCk_Handle& InAnyEntityInWorld);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Is Debug Draw Enabled",
+              meta = (DevelopmentOnly))
+    static bool
+    Get_IsDebugDrawEnabled();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Set Debug Draw Enabled",
+              meta = (DevelopmentOnly))
+    static void
+    Set_DebugDrawEnabled(
+        bool InEnabled);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Queue",

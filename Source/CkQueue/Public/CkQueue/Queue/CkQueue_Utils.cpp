@@ -7,7 +7,20 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkEntityTag/CkEntityTag_Utils.h"
+
 #include "CkQueue/CkQueue_Log.h"
+
+#include "HAL/IConsoleManager.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG(Tag_Queue_CategoryName, TEXT("Queue.Category"));
+
+namespace
+{
+    constexpr auto QueueDebugDrawCVarName = TEXT("ck.Queue.DebugDraw");
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -151,6 +164,9 @@ auto
     InOwner.Add<ck::FFragment_Queue_Current>();
     InOwner.Add<ck::FTag_Queue_NeedsSetup>();
 
+    if (InParams.Get_Category().IsValid())
+    { UCk_Utils_EntityTag_UE::Add_UsingGameplayTag(InOwner, InParams.Get_Category()); }
+
     return Cast(InOwner);
 }
 
@@ -258,6 +274,129 @@ auto
     { return {}; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Origins();
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_Category(
+        const FCk_Handle_Queue& InQueue)
+    -> FGameplayTag
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Category called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return FGameplayTag::EmptyTag; }
+
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_Category();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_DebugSnapshots(
+        const FCk_Handle& InAnyEntityInWorld)
+    -> TArray<FCk_Queue_DebugSnapshot>
+{
+    // Debug consumers race normal PIE teardown. An invalid selector means the world is gone, not a malformed
+    // gameplay request, so fail closed without turning expected teardown into an ensure.
+    if (ck::Is_NOT_Valid(InAnyEntityInWorld))
+    { return {}; }
+
+    const auto Registry = InAnyEntityInWorld.Get_RegistryView();
+    auto Result = TArray<FCk_Queue_DebugSnapshot>{};
+    Registry.View<ck::FFragment_Queue_Params, ck::FFragment_Queue_Current, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&Result, Registry](FCk_Entity InQueueEntity,
+                            const ck::FFragment_Queue_Params& InParams,
+                            const ck::FFragment_Queue_Current& InCurrent)
+        {
+            const auto Queue = FCk_Handle{InQueueEntity, Registry.Get_RegistryHandle()};
+            const auto QueueTransform = UCk_Utils_Transform_UE::Cast(Queue);
+            if (ck::Is_NOT_Valid(QueueTransform))
+            { return; }
+
+            const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
+            auto OriginWorldTransforms = TArray<FTransform>{};
+            OriginWorldTransforms.Reserve(InCurrent.Get_Origins().Num());
+            for (const auto& Origin : InCurrent.Get_Origins())
+            { OriginWorldTransforms.Add(Origin.Get_LocalTransform() * OwnerWorldTransform); }
+
+            auto Members = TArray<FCk_Queue_DebugMemberSnapshot>{};
+            Members.Reserve(InCurrent.Get_Members().Num());
+            for (const auto& Member : InCurrent.Get_Members())
+            {
+                const auto MemberHandle = Member.Get_Member();
+                const auto Mover = Member.Get_Mover();
+                const auto MemberIsValid = ck::IsValid(MemberHandle);
+                const auto MoverIsValid = ck::IsValid(Mover);
+                const auto MoverHasTransform = MoverIsValid && UCk_Utils_Transform_UE::Has(Mover);
+                const auto MoverTransform = MoverHasTransform
+                    ? UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(Mover))
+                    : FTransform::Identity;
+                Members.Emplace(
+                    MemberIsValid ? static_cast<int64>(MemberHandle.Get_Entity().Get_ID()) : 0,
+                    MoverIsValid ? static_cast<int64>(Mover.Get_Entity().Get_ID()) : 0,
+                    MemberIsValid ? MemberHandle.Get_DebugName() : NAME_None,
+                    MoverIsValid ? Mover.Get_DebugName() : NAME_None,
+                    MoverHasTransform,
+                    MoverTransform,
+                    Member.Get_Ticket(),
+                    Member.Get_OriginIndex(),
+                    Member.Get_Rank(),
+                    Member.Get_TargetWorldTransform(),
+                    Member.Get_AssignmentRevision(),
+                    Member.Get_MovementSuppressed(),
+                    Member.Get_State());
+            }
+
+            Result.Emplace(
+                static_cast<int64>(InQueueEntity.Get_ID()),
+                Queue.Get_DebugName(),
+                InParams.Get_Category(),
+                OwnerWorldTransform,
+                InCurrent.Get_State(),
+                InCurrent.Get_Revision(),
+                InCurrent.Get_RetryEpisode(),
+                InCurrent.Get_LayoutAlgorithm(),
+                InCurrent.Get_Pressure(),
+                MoveTemp(OriginWorldTransforms),
+                MoveTemp(Members));
+        });
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_IsDebugDrawEnabled()
+    -> bool
+{
+    const auto* DebugDraw = IConsoleManager::Get().FindConsoleVariable(QueueDebugDrawCVarName);
+    return DebugDraw != nullptr && DebugDraw->GetInt() != 0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Set_DebugDrawEnabled(
+        bool InEnabled)
+    -> void
+{
+    auto* DebugDraw = IConsoleManager::Get().FindConsoleVariable(QueueDebugDrawCVarName);
+    const auto DebugDrawIsRegistered = DebugDraw != nullptr;
+    CK_ENSURE_IF_NOT(DebugDrawIsRegistered, TEXT("Queue debug draw CVar is not registered"))
+    {}
+    if (NOT DebugDrawIsRegistered)
+    { return; }
+
+    DebugDraw->Set(InEnabled ? 1 : 0, ECVF_SetByConsole);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Queue_UE::

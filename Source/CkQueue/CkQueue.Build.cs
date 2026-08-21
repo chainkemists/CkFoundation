@@ -20,6 +20,7 @@ public class CkQueue : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsExt",
+            "CkEntityTag",
             "CkLabel",
             "CkLog",
             "CkNavigation",
