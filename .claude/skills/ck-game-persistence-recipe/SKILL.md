@@ -30,10 +30,18 @@ disagreement with this skill**.
 3. **Only a consumer whose lifetime is decoupled from what it reads** (widget, subsystem,
    cross-entity task) needs `Promise_OnLoadComplete`.
 
-**One predicate, said once.** When your code must ask "is a load running?", the consumer spelling is
-**load-in-progress, read at the instant the work is DECIDED** — `Get_IsLoadInProgress`.
-`Get_IsRebuildInProgress` is the **framework-internal spawn-suppression** predicate: not a consumer
-guard, and never a way to time a read.
+**One predicate, one job.** When your code must ask "is a load running?", it is asking to guard a
+**WRITE** — a seed, a spawn, a one-shot that stamps world state. `Get_IsRebuildInProgress` is the
+producer-side predicate for exactly that, and it is what the framework's own probes use;
+`Get_IsLoadInProgress` is the wider window, true through the phases after the payload queue drains,
+which is what a construction-time seed needs. Read either **at the instant the work is DECIDED** —
+arm time for a timer, callback entry for a promise — because by the time deferred work runs the load
+is over and the question has no answer.
+
+**Neither times a READ.** A load holds a restored entity out of every non-kernel processor's view
+until its payloads have applied, so a Setup processor reading a Durable fragment is already in the
+clear, and everyone else binds `Promise_OnHydrated`. Code that polls either predicate to decide
+*when a value is safe to read* is describing a race that no longer exists.
 
 ---
 
@@ -41,14 +49,20 @@ guard, and never a way to time a read.
 
 *Some of this feature's state must survive a save. What do you write?* If the feature is
 AngelScript, almost certainly no handler: every AS-declared fragment already rides CkDynamic's
-blanket `Produce`/`HydrationApply` pair.
+blanket `Produce`/`HydrationApply` pair. (A **C++** feature registers its own through a named
+participation shape — `Register_SaveOnly`, `Register_NetAndSave_SharedApply`/`_SplitApply` — where a
+`Produce` without a `HydrationApply` does not compile: `CkEcs/Persistence/CkPersistenceHandlerRegistry.h`.)
 
 | # | Rule | Anchor |
 |---|---|---|
-| 1.1 | Compose a persisted feature in `DoConstruct` or `DoBeginPlay` — never from a gameplay-signal callback, whose firing processor is held during a load, so the feature never exists when its payload applies and the payload is dropped at the apply timeout. | `CkSnapshot/Claude.md` § "NotReady-before-any-mutation" |
-| 1.2 | Declare a posture on every fragment the feature adds — that IS participation; an AS feature writes no handler of its own. | `CkDynamic/CkDynamic_Fragment.cpp` blanket registrar |
-| 1.3 | Rebuild every Session fact from the Durable ones in the feature's own resident Setup/reconcile — the framework offers no restore hook, and a load-keyed "restore rebind" processor is an anti-pattern. | `CkSnapshot/Claude.md` § Anti-patterns |
-| 1.4 | Register a C++ feature through a named participation shape (`Register_SaveOnly`, `Register_NetAndSave_SharedApply`/`_SplitApply`) — a `Produce` without a `HydrationApply` does not compile. | `CkEcs/Persistence/CkPersistenceHandlerRegistry.h` |
+| 1.1 | **Root the persisted subtree on something the loader can rebuild** — a bridged, snapshot-respawnable actor. v3 rebuild is actor-first, so a tree hanging off a transient root is not "saved but broken", it is **absent** after a load, silently and completely. | `Get_IsSnapshotRespawnable()` override; capture rules 4/4a |
+| 1.2 | Compose a persisted feature in `DoConstruct` or `DoBeginPlay` — never from a gameplay-signal callback, whose firing processor is held during a load, so the feature never exists when its payload applies and the payload is dropped at the apply timeout. | `CkSnapshot/Claude.md` § "NotReady-before-any-mutation" |
+| 1.3 | Declare a posture on every fragment the feature adds — that IS participation; an AS feature writes no handler of its own. | `CkDynamic/CkDynamic_Fragment.cpp` blanket registrar |
+| 1.4 | Rebuild every Session fact from the Durable ones in the feature's own resident Setup/reconcile — the framework offers no restore hook, and a load-keyed "restore rebind" processor is an anti-pattern. | `CkSnapshot/Claude.md` § Anti-patterns |
+
+A **test or probe** rooted on a transient entity is legitimate only when the probe is not the
+persisted thing — when the subject it spawns is its own bridged root. If the probe itself is what
+must come back, it needs the respawnable root.
 
 ---
 
@@ -80,6 +94,19 @@ Nowhere else, by contract.
 | 3.2 | Make the reconcile **resident and idempotent against the Durable fact**, dirty-marked by the feature — then it is correct on construct, on mutation, and after a load, without knowing a load happened. | `CkSnapshot/Claude.md` C3; the game's own exemplar index |
 | 3.3 | Track work Setup still owes with a Session marker consumed by Setup and removed by the hydration handler — never by comparing a value against its starting param, which is indistinguishable for the entity whose saved value IS that param. | `CkSnapshot/Claude.md` § "The mirror rule" |
 | 3.4 | When a value arrives through the handler's deferred requests, read it from the feature's own request-drain/reconcile, not at the hydrated edge — `Applied` means enqueued, and the write lands later. | `CkTimer/.../CkTimer_Fragment.cpp:52-79` |
+
+**On `_MarkedDirtyBy` / `MarkedDirtyBy` — treat it as an optimization hint, not a correctness
+mechanism.** Both the C++ trait (`CkProcessorTraits.inl.h:223-233`) and the AngelScript
+`default _MarkedDirtyBy` (`CkDynamic_ScriptProcessor_Host.cpp:109-130`) build the same
+`_IsDirtyChecker`: **`Has_AnyLiveEntityWith<Marker>` — a registry-WIDE presence question**, not a
+per-entity filter. So it can skip a processor whose marker nothing in the world carries; in a
+populated world it is simply true, and pointing it at an unrelated fragment does not stop the pass
+(measured — the naive per-entity model is false).
+
+Your reconcile's correctness therefore comes from being **resident + idempotent**, with its actual
+scoping in `Query.Require(...)`. Never let a dirty marker be the reason a pass is correct — a
+processor that only converges when someone remembers to dirty it is the edge-driven shape a load
+breaks. The AS mechanism is otherwise undocumented; the open framework question is **GW-73**.
 
 ---
 
