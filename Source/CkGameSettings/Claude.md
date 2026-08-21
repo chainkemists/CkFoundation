@@ -46,6 +46,16 @@ from these).
 - **CVar-bound:** registered CVar → `INTERNAL_Set_*`; unregistered CVar → deferred queue retried at
   1 Hz, LOUD ensure after `ck.GameSettings.DeferredApplyTimeoutSecs` (value retained, never
   deleted). In PIE only the terminal CVar WRITE is skipped.
+  **Registration REJECTS a CVar binding onto a console variable `UGameUserSettings` owns** — the
+  twelve `sg.*` scalability groups, `r.VSync`, `t.MaxFPS` (`ck::game_settings::Get_IsCVarOwnedByGameUserSettings`).
+  `UGameUserSettings` mirrors those in its own fields and rewrites them from that copy on every
+  `ApplyNonResolutionSettings`, which the ENGINE triggers on an F11 fullscreen toggle and on any
+  resolution change — so the setting would revert at a moment the player cannot connect to it, and
+  its stored value would still read as the one they chose. This is exactly the split-brain the
+  AutoSettings plugin worked around by demanding a `UGameUserSettings` subclass with an emptied
+  `ApplyNonResolutionSettings`; the Video pack's External policy makes `UGameUserSettings` the one
+  store instead, and this guard keeps a new setting from re-opening the hole. Declare such a value
+  External over the matching `UGameUserSettings` accessor.
 - **Handler-bound:** `Request_RegisterApplyHandler_*` — registering a handler for a stored value
   applies the CURRENT value immediately.
 - **External:** `Request_RegisterExternalAccessors_*` (getter + setter pair) — reads route through
@@ -129,12 +139,18 @@ null-guarded in C++:
    deliberately render nothing.
 6. Don't register the same key twice — re-registration is rejected; keys are global per
    GameInstance.
+7. Don't reach for a CVar binding to drive a graphics quality, vsync or frame-limit value — those
+   CVars have a second writer (`UGameUserSettings`) that wins on the next F11. Registration rejects
+   it; the Video pack key or an External declaration over the `UGameUserSettings` accessor is the
+   route. The pack currently covers seven of the twelve `sg.*` groups — GlobalIllumination,
+   Reflection, Shading and Landscape have no pack key, so a game wanting those declares them
+   External itself rather than binding the CVar.
 
 ---
 
 ## Tests
 
-`Ck.CkGameSettings.{Registry×7,Store×3,Packs×1,UI×1}` C++ specs (pattern-run only — the toolbox
+`Ck.CkGameSettings.{Registry×8,Store×3,Packs×1,UI×2}` C++ specs (pattern-run only — the toolbox
 no-pattern suite excludes name-based `Ck.*` families) + 9 `Ck_AutoTest_GameSettings_*` AS
 AutoTests in CkTests. Gym: "Game Settings" (CkTests) — plumbing surface; styling verification
 belongs to the consuming game's WBPs.

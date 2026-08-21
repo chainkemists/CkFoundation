@@ -7,6 +7,7 @@
 #include "CkGameSettings/Settings/CkGameSettings_Settings.h"
 #include "CkGameSettings/Subsystem/CkGameSettings_Subsystem.h"
 
+#include <ComponentRecreateRenderStateContext.h>
 #include <Engine/Engine.h>
 #include <GameFramework/GameUserSettings.h>
 #include <Misc/App.h>
@@ -350,7 +351,7 @@ auto
 {
     if (ck::game_settings::Get_IsHeadlessPresentation())
     {
-        ck::game_settings::Display(TEXT("Video pack: ApplySettings suppressed (headless presentation)"));
+        ck::game_settings::Display(TEXT("Video pack: ApplyNonResolutionSettings suppressed (headless presentation)"));
         return;
     }
 
@@ -359,8 +360,10 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return; }
 
-    constexpr auto CheckForCommandLineOverrides = false;
-    Settings->ApplySettings(CheckForCommandLineOverrides);
+    // Scoped exactly as UGameUserSettings::ApplySettings scopes it: the quality CVars underneath each dirty
+    // render state, and the context collapses that into one recreate instead of one per CVar sink.
+    const auto RecreateRenderStateOnce = FGlobalComponentRecreateRenderStateContext{};
+    Settings->ApplyNonResolutionSettings();
 }
 
 auto
@@ -516,6 +519,35 @@ namespace ck::game_settings
         -> bool
     {
         return IsRunningCommandlet() || NOT FApp::CanEverRender();
+    }
+
+    auto
+        Get_IsCVarOwnedByGameUserSettings(
+            FName InCVar)
+        -> bool
+    {
+        // The twelve sg.* come from Scalability::SetQualityLevels(ScalabilityQuality); r.VSync is written
+        // inline and t.MaxFPS through GEngine->SetMaxFPS. All three sources read UGameUserSettings' OWN
+        // fields, so it is a second writer of any of these and the last ApplyNonResolutionSettings wins.
+        static const auto OwnedCVars = TSet<FName>
+        {
+            TEXT("sg.ResolutionQuality"),
+            TEXT("sg.ViewDistanceQuality"),
+            TEXT("sg.AntiAliasingQuality"),
+            TEXT("sg.ShadowQuality"),
+            TEXT("sg.GlobalIlluminationQuality"),
+            TEXT("sg.ReflectionQuality"),
+            TEXT("sg.PostProcessQuality"),
+            TEXT("sg.TextureQuality"),
+            TEXT("sg.EffectsQuality"),
+            TEXT("sg.FoliageQuality"),
+            TEXT("sg.ShadingQuality"),
+            TEXT("sg.LandscapeQuality"),
+            TEXT("r.VSync"),
+            TEXT("t.MaxFPS"),
+        };
+
+        return OwnedCVars.Contains(InCVar);
     }
 
     auto
