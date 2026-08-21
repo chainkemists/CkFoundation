@@ -135,6 +135,17 @@ public:
 
     // --- Core ---
 
+    /**
+     * Whether Enhanced Input user settings are enabled project-wide (Project Settings > Engine >
+     * Enhanced Input > Enable User Settings). The ENGINE default is false, and while it is off the
+     * engine never creates a key profile: every query, remap and key-changed delegate on this class
+     * is permanently inert, and returns empty rather than failing. Gate a rebinding screen on this
+     * rather than on an empty remappable-key list, which cannot tell "disabled" from "none authored".
+     */
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Are User Settings Enabled")
+    static bool
+    Get_AreUserSettingsEnabled();
+
     /** Get the Enhanced Input User Settings for the given player controller. */
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input|KeyBinding", DisplayName = "[Ck][KeyBinding] Get Input User Settings")
     static UEnhancedInputUserSettings*
