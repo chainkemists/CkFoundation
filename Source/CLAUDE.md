@@ -75,6 +75,7 @@ Before writing any code, navigate the documentation in this order:
 | AI perception → ECS | `CkPerception` |
 | navmesh integration (paths, projection) | `CkNavigation` |
 | crowd steering / avoidance | `CkCrowd` |
+| spatial queues (tickets, limits, multi-origin slots, nav recovery) | `CkQueue` (+ optional `CkCrowd` movement adapter) |
 | sidewalk/path preference + authoring (ZoneGraph-lite) | `CkPathNetwork` (+ `CkPathNetworkEditor` tooling) |
 | GOAP planner (A* over Action entities) | `CkGoap` |
 | grid-based pathfinding | `CkAStar` + `CkGrid` |
@@ -190,7 +191,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkCompass | Camera,Core,Ecs,EcsExt,EntityTag,Log,Poi,PoiDisplayDefinition,Record,UICore,VisibleRange (UI→UICore 2026-08-14 — needs only the widget base) |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
 | CkConsoleCommands | Core,Ecs,Label,Log,Record,Settings |
-| CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Record,Settings,Shapes,SpatialQuery |
+| CkCrowd | Core,Ecs,EcsExt,Label,Log,Navigation,Physics,Pmg,Projectile,Queue,Record,Settings,Shapes,SpatialQuery |
 | CkCue | ActorRelay,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkDialog | Core,Ecs,EcsExt,EntityTag,Label,Log,Profile,Record,Settings |
 | CkDynamic | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
@@ -223,6 +224,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkPoi | Core,Ecs,EcsExt,EntityTag,Label,Log |
 | CkPoiDisplayDefinition | Core,Ecs,EcsExt,Label,Log,Record,Settings,VisibleRange |
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
+| CkQueue | Core,Ecs,EcsExt,Label,Log,Navigation |
 | CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |
 | CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkRenderTarget | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,ResourceLoader,Settings,Timer |

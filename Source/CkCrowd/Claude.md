@@ -916,7 +916,7 @@ Steering or the sampler from here. Coverage:
 
 ## Limitations / known issues
 
-- **No queueing logic.** The contract is "move agent to a target." Queue managers (slot reservation, "you're 3rd in line", line-up at counter) are gameplay-side — typically implemented in GOAP or per-gym fragments that pick the target the agent steers toward. Counter clumping in this module's purview is the *expected* behavior of separation-force-only avoidance; lining up is a different concern.
+- **No queue ownership logic.** `CkQueue` owns admission, tickets, origins, slots, limits, and planner-facing events. `CkCrowd/Public/CkCrowd/Queue` is only the optional framework adapter that translates a revisioned Queue assignment into a correlated `MoveTo` and reports its outcome. While an agent is queued, the adapter reacquires the assignment if another movement consumer replaces or stops its episode; use Queue suppression or leave before deliberately handing that agent to another locomotion owner. Counter clumping without `CkQueue` remains the expected behavior of separation-force-only avoidance.
 - **NPCs are non-blocking to the player.** They have no `UPrimitiveComponent`, so the player's `UCharacterMovementComponent` has nothing to collide with. The player can walk through any NPC that soft-push didn't displace in time. This is the design — the only mitigation in scope is the soft-push amplification when the player is a separation-neighbor. Hard pushback (an NPC-side collider that physically blocks the player) is a future-work item, not a bug.
 - ~~No stuck / block detection~~ — **BUILT (2026-07-14).** See "Blocked goals" below. Older copies of this doc claimed a `ProgressEval`/`TriggerReplan` tier existed when nothing did; a real one now does, under different names.
 - **PushApart does NOT guarantee zero interpenetration.** It is a faithful dtCrowd port: resolve factor 0.7, 4 iterations — deliberately under-relaxed, so it does not fully resolve overlap in a single frame. Under sustained inward pressure (e.g. N agents driving at one shared point) a small residual overlap is expected and is not a bug. Stock UE ships dtCrowd's version *disabled* entirely and relies on physics capsules instead.
@@ -934,7 +934,7 @@ Steering or the sampler from here. Coverage:
 - Agent-following / leashing.
 - Off-mesh link traversal (jumps, ladders).
 - Async path queries.
-- Anchor / queue gameplay primitives (currently gameplay-side; could move into the module if the queue pattern stabilizes and is reused across games).
+- Additional queue layout algorithms and movement adapters belong behind `CkQueue`'s existing extension seams; CkCrowd must not absorb queue ownership.
 - Hard pushback collider on NPCs (`CkOverlapBody`-based) so the player physically can't pass through. ~0.5 day; intentionally deferred.
 
 ## Implementation notes
