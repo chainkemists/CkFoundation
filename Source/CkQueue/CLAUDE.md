@@ -26,6 +26,9 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - Queue-wide and per-origin hard limits reject before membership or movement is published. Soft limits only
   update pressure. A Crowd adapter rejected by one queue may immediately try another from its completion
   callback.
+- `_SlotClaimPolicy` defaults to `ReserveOnFormation`, which preserves eager reservation behavior. Opt into
+  `ClaimFirstAvailableOnReach` when one mover per origin should be offered the next unclaimed rank while later
+  members remain pending; `AtFront`/`AtSlot` is then the authoritative claimed prefix.
 - `AdvanceOrigin` succeeds only when that origin's rank-zero member has reported `AtFront`.
 
 ## Formation
@@ -37,6 +40,12 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
   Pawn-channel capsule overlap, and any post-projection same- or cross-origin overlap.
 - Any reflow invalidates old assignment revisions before the movement adapter can consume them. Stale movement
   outcomes are successful no-ops.
+- A `MovementFailed` outcome relinquishes its target/rank/revision, keeps its ticket, moves the member behind
+  viable members, and waits for a navigation generation change. It still counts toward pressure/limits but has
+  no slot; viable survivors reflow without a synchronous runtime navigation query.
+- A semantic member whose previously valid optional mover is destroyed enters `WaitingForMover`: its mover and
+  assignment are cleared and navigation changes do not rearm it. Rejoin that same member with a valid new mover
+  to return it to pending formation. Initial no-mover joins remain supported for synthetic/external reporters.
 
 ## Navigation recovery
 

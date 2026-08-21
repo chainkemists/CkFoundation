@@ -36,6 +36,15 @@ namespace ck_queue_utils
     }
 
     auto
+    IsValidSlotClaimPolicy(
+        ECk_Queue_SlotClaimPolicy InPolicy)
+    -> bool
+    {
+        return InPolicy == ECk_Queue_SlotClaimPolicy::ReserveOnFormation
+            || InPolicy == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
+    }
+
+    auto
     IsValidMovementOutcome(
         ECk_Queue_MovementOutcome InOutcome)
     -> bool
@@ -141,6 +150,7 @@ auto
         && InParams.Get_HardLimit() >= 0
         && (InParams.Get_HardLimit() == 0 || InParams.Get_SoftLimit() <= InParams.Get_HardLimit());
     const auto OtherParamsAreValid = ck_queue_utils::IsValidLayoutAlgorithm(InParams.Get_LayoutAlgorithm())
+        && ck_queue_utils::IsValidSlotClaimPolicy(InParams.Get_SlotClaimPolicy())
         && InParams.Get_TransformEpsilonUu() >= 0.0f
         && InParams.Get_RotationEpsilonDegrees() >= 0.0f
         && InParams.Get_MaxNavigationRetries() >= 0
