@@ -30,6 +30,7 @@ Two settled rulings frame everything below (maintainer, 2026-07-03):
 | Wire the feature into a world-owner ("driver") and its discovery | `ck-game-driver-architecture` |
 | Make the feature replicate correctly / spawn replicated entities | `ck-game-replication-patterns` |
 | Write/run the AutoTests the arc requires | `ck-game-testing-discipline` |
+| Make the feature's state survive save/load (postures, restored reads, references across a load) | `ck-game-persistence-recipe` |
 | Fix `DynamicHandleTypes.json` / "not a data type" breakage | `ck-angelscript-interop` (framework skill) |
 | Add C++ fragments/processors to CkFoundation itself | `ck-macros-and-codegen` + `ck-game-framework-boundary` |
 | A "feature" that is pure UI, a one-shot cue, or a behavior node | §8 routing table below |
