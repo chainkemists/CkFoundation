@@ -81,6 +81,14 @@ namespace ck
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent,
+            const FCk_Request_Queue_RestoreJoin& InRequest)
+            -> bool;
+
+        static auto
+        DoHandleRequest(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
             const FCk_Request_Queue_Leave& InRequest)
             -> bool;
 

@@ -370,6 +370,13 @@ auto
                 InCurrent.Get_Revision(),
                 InCurrent.Get_RetryEpisode(),
                 InCurrent.Get_LayoutAlgorithm(),
+                InParams.Get_SlotSpacingUu(),
+                InParams.Get_SlotClaimPolicy(),
+                FCk_Queue_FormationState{
+                    InCurrent.Get_State(),
+                    ECk_Queue_EventReason::None,
+                    InCurrent.Get_Revision(),
+                    InCurrent.Get_RetryEpisode()},
                 InCurrent.Get_Pressure(),
                 MoveTemp(OriginWorldTransforms),
                 MoveTemp(Members));
@@ -421,6 +428,40 @@ auto
     { return ECk_Queue_LayoutAlgorithm::OrthogonalSnake; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_LayoutAlgorithm();
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_SlotClaimPolicy(
+        const FCk_Handle_Queue& InQueue)
+    -> ECk_Queue_SlotClaimPolicy
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotClaimPolicy called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return ECk_Queue_SlotClaimPolicy::ReserveOnFormation; }
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotClaimPolicy();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_SlotSpacingUu(
+        const FCk_Handle_Queue& InQueue)
+    -> float
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotSpacingUu called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return 0.0f; }
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotSpacingUu();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Queue_UE::
@@ -478,6 +519,34 @@ auto
     const auto RequestIsValid = ck::IsValid(InRequest.Get_Member());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue Join on [{}]: queue, authority, or member is invalid"), InQueue)
+    {}
+    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQueue;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+    InQueue.AddOrGet<ck::FFragment_Queue_Requests>()._Requests.Emplace(InRequest);
+    return InQueue;
+}
+
+auto
+    UCk_Utils_Queue_UE::
+    Request_RestoreJoin(
+        FCk_Handle_Queue& InQueue,
+        const FCk_Request_Queue_RestoreJoin& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_Queue
+{
+    const auto QueueIsValid = ck_queue_utils::CanAcceptRequests(InQueue);
+    const auto HasAuthority = QueueIsValid && UCk_Utils_Net_UE::Get_HasAuthority(InQueue);
+    const auto TicketIsValid = InRequest.Get_RestoredTicket() > 0
+        && InRequest.Get_RestoredTicket() < MAX_int64;
+    const auto RequestIsValid = ck::IsValid(InRequest.Get_Member()) && TicketIsValid;
+    CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
+        TEXT("Cannot enqueue Queue Restore Join on [{}]: queue, authority, member, or ticket is invalid"), InQueue)
     {}
     if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {

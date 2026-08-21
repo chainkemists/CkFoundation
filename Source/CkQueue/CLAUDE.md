@@ -12,6 +12,8 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - The queue owner is the sole source of truth. Consumers retain the `FCk_Handle_Queue` they requested and
   reconcile through `Get_Members`, `TryGet_MemberSnapshot`, `Get_Pressure`, `Get_State`, and `Get_Revision`.
   Do not add a second writable membership fragment to members.
+- Consumers that need to display or verify authored geometry read `Get_SlotClaimPolicy` and
+  `Get_SlotSpacingUu`; they never inspect the Queue params fragment directly.
 - Runtime membership is reconstructible and is not persisted. Rejoining the same semantic member is
   idempotent and may refresh its mover without minting a new ticket.
 - All mutations are deferred requests. Request completions are planner-visible outcomes; signals carry the

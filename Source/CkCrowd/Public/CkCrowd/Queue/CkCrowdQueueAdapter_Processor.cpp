@@ -102,6 +102,21 @@ namespace ck
             InAdapter._Queue = {};
             InAdapter._PendingQueueRevision = 0;
         }
+        else if (NOT HasSnapshot)
+        {
+            // An established membership can disappear without an adapter-issued Leave:
+            // service AdvanceOrigin and owner-side removal are authoritative queue outcomes.
+            // Release only this adapter's episode and routing state, so a later queue join is
+            // not rejected as a conflicting stale adapter.
+            StopOwnedEpisode(Agent, InAdapter);
+            InAdapter._Queue = {};
+            InAdapter._JoinPending = false;
+            InAdapter._PendingQueueRevision = 0;
+            InAdapter._IssuedQueueAssignmentRevision = 0;
+            InAdapter._IssuedCrowdCorrelationId = 0;
+            InAdapter._ReportedQueueAssignmentRevision = 0;
+            return;
+        }
 
         const auto MoverMatches = HasSnapshot && Snapshot.Get_Mover() == FCk_Handle{InAgent};
         const auto CanMove = HasSnapshot
