@@ -27,6 +27,17 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdQueue",
+              DisplayName = "[Ck][CrowdQueue] Request Restore Join Queue",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_CrowdAgent
+    Request_RestoreJoinQueue(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        UPARAM(ref) FCk_Handle_Queue& InQueue,
+        int64 InRestoredTicket,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdQueue",
               DisplayName = "[Ck][CrowdQueue] Request Leave Queue",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent

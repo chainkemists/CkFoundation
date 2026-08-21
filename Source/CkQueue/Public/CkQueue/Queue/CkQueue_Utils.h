@@ -156,6 +156,20 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Slot Claim Policy")
+    static ECk_Queue_SlotClaimPolicy
+    Get_SlotClaimPolicy(
+        const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Slot Spacing")
+    static float
+    Get_SlotSpacingUu(
+        const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
               DisplayName = "[Ck][Queue] Get Is Member")
     static bool
     Get_IsMember(
@@ -180,6 +194,16 @@ public:
     Request_Join(
         UPARAM(ref) FCk_Handle_Queue& InQueue,
         const FCk_Request_Queue_Join& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Request Restore Join",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Queue
+    Request_RestoreJoin(
+        UPARAM(ref) FCk_Handle_Queue& InQueue,
+        const FCk_Request_Queue_RestoreJoin& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
