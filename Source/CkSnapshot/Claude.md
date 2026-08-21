@@ -241,8 +241,6 @@ and `FCk_Snapshot_Session` (rebuilt by the feature's own construction/setup). C+
 AngelScript structs cannot inherit, so the script spelling is a **field** of that type, and the resolver accepts
 either. There is deliberately no metadata spelling — Game and cooked targets strip metadata behind
 `WITH_METADATA` (`CkDynamic/Claude.md`), so a `meta=(...)` opt-out is silently inert in a packaged build.
-`FCk_Snapshot_Session` is the **deprecated** spelling of `FCk_Snapshot_Session` and still
-resolves Session, so the script sites carrying it keep behaving identically; new code writes the new name.
 
 **Some postures are DERIVED, and a derivation is a proof rather than a default** — it says the declared
 alternative is unachievable, not that nobody got round to declaring:
@@ -618,14 +616,20 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   from `DoHydrate_Enqueue`, before payloads are enqueued; its deferred Transform requests / `SetActorTransform` calls
   land in the load-kernel settle pumps. Actor-backed entities are driven through the ACTOR only.
 - **`FTag_Hydration_WasHydratedThisLoad` is stamped on every mapped entity before the gate opens**, beside the
-  quarantine, and is never removed. Game-side rebind processors (BusterBlock's `Bb_SnapshotRestore` fleet) key off
-  it to re-resolve handles their persisted fragments carry. The Model-A purge deleted the old stamp site and
-  silently killed every consumer; v3 restores the semantic. Because it is permanent it answers "was this entity
-  ever hydrated", not "is its restored state ready" — the latter is `Promise_OnHydrated`, and the reason the
-  rename says `WasHydratedThisLoad` rather than `JustRestored` is that "just" was the part that was never true.
-  Its reflected form is `UCk_Utils_Snapshot_UE::Get_WasHydratedThisLoad`, and its one sanctioned use is the
-  restored-vs-replaced discriminator (adopt the subordinate the loader rebuilt, or spawn a second one). The
-  deprecated alias of this tag and its "just restored" accessor are gone.
+  quarantine, and is never removed. Because it is permanent it answers "was this entity ever hydrated", not "is
+  its restored state ready" — the latter is `Promise_OnHydrated`, and the reason the rename says
+  `WasHydratedThisLoad` rather than `JustRestored` is that "just" was the part that was never true. Its reflected
+  form is `UCk_Utils_Snapshot_UE::Get_WasHydratedThisLoad`.
+  **It is not a feature-consumer mechanism, and a feature reading it is the bug the marker used to enable.** The
+  load-only "rebind" processor fleet that keyed off it is gone: those processors were doing, on a load-keyed
+  branch, work the feature's own setup owes unconditionally, so each one dissolved into a resident reconcile that
+  converges from the Durable fact whether or not a load happened. The two shapes that replaced its consumer uses:
+  a **restored-vs-replaced** discriminator reads the Durable CARRIER handle the loader remapped (valid ⇒ adopt
+  what it rebuilt, invalid ⇒ spawn), which needs no marker and no world scan; an **ordering-sensitive** consumer
+  becomes a resident idempotent reconcile, because the marker's permanence was doing ordering work a level-
+  triggered pass does correctly. What legitimately still reads it: the load machinery itself, and test-side
+  identity assertions ("this entity IS the restored one"). `Promise_OnHydrated` is NOT an alternative
+  discriminator — it fires immediately for a fresh entity too.
 - **Orphan accounting is per-entry, not a subtraction.** It used to be a bare `N - mapped - skipped` count; the walk
   enumerates the identical set (`_SavedIdMap` / `_SkippedIds` are disjoint subsets of the entity table) but emits one
   Warning + one report record per orphan, so a lossy load is self-explaining.
@@ -753,8 +757,14 @@ Three properties that contract rests on, each of which used to be one edit away 
   the fact as NEVER ARRIVED — a healthy slow load misreported as a broken one, in the load shape most likely to
   be slow.
 
-**What the promise may claim.** `Promise_OnLoadComplete` = ready to resume. It does NOT mean "nothing has
-simulated": construction and `DoBeginPlay` run throughout a load by `[G1-D16]`, so code there must be idempotent.
+**What the promise may claim.** `Promise_OnLoadComplete` = ready to resume, which means every payload applied,
+every request those applies issued drained, physics stepped, probe overlaps converged, and no game time elapsed
+since the load began — **and nothing more**. It does NOT mean "nothing has simulated": construction and
+`DoBeginPlay` run throughout a load, so code there must be idempotent. It does not mean every restored VALUE is
+written: a handler that returns `Applied` having only enqueued its deferred requests is waiting on its own
+`HandleRequests` pass. And it does not mean a subsystem that rebuilds on its own retry cadence has finished —
+an input stack, a discovery ticket, an async asset load are all still rebuilding after the world is handed back.
+A consumer that needs one of those facts reads it level-triggered from durable state, never once at this edge.
 
 ---
 
@@ -866,6 +876,34 @@ consumer that would otherwise have to poll every tick.
    the save set.
 4. **Don't look for `CK_REGISTER_SNAPSHOTABLE`, a "fidelity oracle", or a byte-image snapshot** — all deleted with
    Model A (2026-07-13). Persistence is the `Produce`/`HydrationApply` handler and nothing else.
+
+---
+
+## Known gaps
+
+Recorded so an author who hits one recognises it instead of rediscovering it. None is a mystery; each is a
+decision or an open fork.
+
+- **AngelScript cannot declare a save-transient exclusion.** `utils_snapshot.as` has no marker/exclusion API, so
+  an AS-added probe or infrastructure tag on a persisted subtree produces a capture AUDIT Warning that script has
+  no way to silence. The C++ markers (`FTag_Snapshot_SaveTransient`, `FTag_Snapshot_ReconstructOnly`) exist; the
+  AS surface for them does not.
+- **The quarantine is not stamped on mapped-but-unhydrated entities on the ESCALATED path.** The stamp happens
+  when an entity's hydration BEGINS, but escalation runs FULL-scope ticks before that, so a one-shot Setup on a
+  mapped row can observe construct defaults — content-heavy loads escalate routinely. Proven red-then-green;
+  **both attempted fixes were reverted** after a controlled A/B, because holding the mapped set out of the
+  escalated window changes WHAT runs there, not just when (staged construction and trigger/probe Setups
+  legitimately run in it, and the rebuild waits on them). Open fork: kernel membership for the staged-construction
+  processors escalation waits on, versus a subtree-resolved quarantine. The consumer-side answer is sound
+  regardless — a resident reconcile that converges from the Durable fact does not care when Setup first ran.
+- **`Get_PlacementForOccupant`'s back-ref is dead post-load when the occupant never remaps.**
+  `Request_AddPlacement` writes the occupant's `PlacementRef` only for a valid occupant, and the load path passes
+  possibly-invalid occupants by design — so the occupant→placement chain is broken for exactly the entities a load
+  repairs. Branch on grid validity first.
+- **The posture ratchet does not structurally flag a `Durable` fragment holding a handle to a non-persisted
+  target.** That is the C1 structural rule's own prohibited shape, and the type-level walk cannot see it: whether
+  the TARGET persists is a runtime fact. The capture-time AUDIT is the detector, and it names the offender on
+  every save — which is why a save log is worth reading even when the load looks fine.
 
 ---
 
