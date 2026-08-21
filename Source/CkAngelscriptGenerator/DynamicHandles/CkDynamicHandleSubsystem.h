@@ -80,11 +80,14 @@ public:
     FOnHandleTypeGenerationComplete OnGenerationComplete;
 
 private:
+    auto ReconcileRegistryIfNeeded() -> void;
+
     auto DiscoverAllDefinitions() const -> TArray<UCkDynamic_HandleDefinition*>;
     auto BuildJsonContent(const TArray<UCkDynamic_HandleDefinition*>& InDefinitions) const -> FString;
     auto ComputeDefinitionsHash(const TArray<UCkDynamic_HandleDefinition*>& InDefinitions) const -> uint32;
 
 private:
+    FDelegateHandle _AssetRegistryFilesLoadedHandle;
     uint32 LastGeneratedHash = 0;
 };
 

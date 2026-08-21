@@ -32,6 +32,17 @@ auto
 {
     Super::Initialize(Collection);
     ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Initialized"));
+
+    auto& AssetRegistry = FAssetRegistryModule::GetRegistry();
+    if (AssetRegistry.IsLoadingAssets())
+    {
+        _AssetRegistryFilesLoadedHandle = AssetRegistry.OnFilesLoaded().AddUObject(
+            this, &UCkDynamicHandleSubsystem::ReconcileRegistryIfNeeded);
+    }
+    else
+    {
+        ReconcileRegistryIfNeeded();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +52,38 @@ auto
     Deinitialize()
     -> void
 {
+    if (_AssetRegistryFilesLoadedHandle.IsValid())
+    {
+        if (auto* Module = FModuleManager::GetModulePtr<FAssetRegistryModule>(TEXT("AssetRegistry")))
+        {
+            Module->Get().OnFilesLoaded().Remove(_AssetRegistryFilesLoadedHandle);
+        }
+        _AssetRegistryFilesLoadedHandle.Reset();
+    }
+
     Super::Deinitialize();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkDynamicHandleSubsystem::
+    ReconcileRegistryIfNeeded()
+    -> void
+{
+    if (_AssetRegistryFilesLoadedHandle.IsValid())
+    {
+        FAssetRegistryModule::GetRegistry().OnFilesLoaded().Remove(_AssetRegistryFilesLoadedHandle);
+        _AssetRegistryFilesLoadedHandle.Reset();
+    }
+
+    if (NOT IsRegenerationNeeded())
+    { return; }
+
+    ck::angelscriptgenerator::Log(
+        TEXT("[DynamicHandleSubsystem] Live handle definitions differ from the canonical registry; regenerating."));
+    GenerateHandleTypeRegistry();
+    FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -111,8 +153,17 @@ auto
     -> bool
 {
     auto Definitions = DiscoverAllDefinitions();
-    const auto CurrentHash = ComputeDefinitionsHash(Definitions);
-    return CurrentHash != LastGeneratedHash;
+    Definitions.Sort([](const UCkDynamic_HandleDefinition& A, const UCkDynamic_HandleDefinition& B)
+    {
+        return A.TypeName < B.TypeName;
+    });
+
+    const auto ExpectedJson = BuildJsonContent(Definitions);
+    auto CurrentJson = FString{};
+    if (NOT FFileHelper::LoadFileToString(CurrentJson, *Get_RegistryFilePath()))
+    { return true; }
+
+    return CurrentJson != ExpectedJson;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
