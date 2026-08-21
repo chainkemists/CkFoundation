@@ -826,6 +826,17 @@ auto
         ck::Is_NOT_Valid(InDefinition.Get_CVar()))
     { return ck::Format_UE(TEXT("Setting [{}] has a CVar apply binding but its CVar name is unset"), Key); }
 
+    if (InDefinition.Get_ApplyBindingType() == ECk_GameSettings_ApplyBindingType::CVar &&
+        ck::game_settings::Get_IsCVarOwnedByGameUserSettings(InDefinition.Get_CVar().Get_Name()))
+    {
+        return ck::Format_UE(
+            TEXT("Setting [{}] binds its apply to CVar [{}], which UGameUserSettings mirrors and rewrites from its "
+                 "own copy on every ApplyNonResolutionSettings (an F11 fullscreen toggle or any resolution change "
+                 "triggers one) — the setting would revert silently. Declare it PersistencePolicy::External over the "
+                 "matching UGameUserSettings accessor instead, the way the Video pack does for the keys it covers"),
+            Key, InDefinition.Get_CVar().Get_Name());
+    }
+
     const auto HasMinOrMax = NOT InDefinition.Get_MinValue().IsEmpty() || NOT InDefinition.Get_MaxValue().IsEmpty();
     const auto IsNumeric = ValueType == ECk_GameSettings_ValueType::Int32 || ValueType == ECk_GameSettings_ValueType::Float;
 
