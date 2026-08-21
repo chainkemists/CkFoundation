@@ -1,0 +1,81 @@
+# CkQueue
+
+`CkQueue` is the server-authoritative spatial queue capability. It owns admission, stable FIFO tickets,
+multi-origin assignment, revisioned slot targets, limits, formation retry, teardown reconciliation, and
+semantic signals. It does not move entities and does not depend on `CkCrowd`.
+
+## Boundary
+
+- Add Queue to a spatial owner that already has Ck Transform with `utils_queue::Add`.
+- The queue owner is the sole source of truth. Consumers retain the `FCk_Handle_Queue` they requested and
+  reconcile through `Get_Members`, `TryGet_MemberSnapshot`, `Get_Pressure`, `Get_State`, and `Get_Revision`.
+  Do not add a second writable membership fragment to members.
+- Runtime membership is reconstructible and is not persisted. Rejoining the same semantic member is
+  idempotent and may refresh its mover without minting a new ticket.
+- All mutations are deferred requests. Request completions are planner-visible outcomes; signals carry the
+  semantic reason and revision needed by GOAP or another AI consumer.
+
+## Admission and ordering
+
+- Tickets form one global, monotonic admission stream. Multiple origins each expose an independent rank-zero
+  front; service at one origin does not serialize the others.
+- Origin assignment minimizes `load / weight`, breaks ties by origin index, and is recomputed deterministically
+  after topology or membership changes. Tickets never change when origins/ranks do.
+- Queue-wide and per-origin hard limits reject before membership or movement is published. Soft limits only
+  update pressure. A Crowd adapter rejected by one queue may immediately try another from its completion
+  callback.
+- `AdvanceOrigin` succeeds only when that origin's rank-zero member has reported `AtFront`.
+
+## Formation
+
+- `OrthogonalSnake` is the default: exact configured spacing on a non-revisiting lattice with forward/left/right
+  search only, so turns are 90 degrees and immediate reversal is impossible. `Linear` is the first alternative.
+- The pure builder is atomic and bounded by `_MaxFormationSearchNodes`; no partial placement array is published.
+- The runtime validator projects every slot to navigation, rejects excessive projection shift, blocked nav rays,
+  Pawn-channel capsule overlap, and any post-projection same- or cross-origin overlap.
+- Any reflow invalidates old assignment revisions before the movement adapter can consume them. Stale movement
+  outcomes are successful no-ops.
+
+## Navigation recovery
+
+- A failed formation performs the configured bounded retry episodes, then enters
+  `WaitingForNavigationChange` and emits `NavigationRetryExhausted`.
+- `UCk_Queue_NavigationRevisionSubsystem_UE` lazily binds to the NavSystem. First successful binding advances its
+  revision, so a NavSystem that appears after world-subsystem initialization cannot strand a waiting queue.
+- A navigation-generation change emits `NavigationChanged`, resets the retry episode, and retries the complete
+  formation. Search-budget exhaustion also waits for an explicit topology/configuration change instead of
+  spinning.
+
+## CkCrowd adapter
+
+`CkCrowd/Public/CkCrowd/Queue` is an optional adapter owned by `CkCrowd`; dependency direction is
+`CkCrowd -> CkQueue` only.
+
+- `Request_JoinQueue` uses the CrowdAgent as both Queue member and mover.
+- Dispatch issues one nonzero-correlated Crowd `MoveTo` for the current Queue assignment revision.
+- The adapter verifies assignment revision, correlation, active goal, and movement state. If another Crowd
+  consumer replaces or stops the episode, the adapter reacquires its still-current assignment.
+- Suppression, leave, invalidation, mover mismatch, and teardown stop only an episode whose correlation belongs
+  to the adapter. Unrelated movement is never blanket-cancelled.
+- Outcome polling reports reached/failed only when both Queue revision and Crowd correlation still match.
+
+## Events and teardown
+
+The public signals are member-state changed, pressure changed, formation-state changed, and invalidated. Owner
+destruction publishes member invalidation and Queue invalidation before pending request completions are cancelled,
+so callbacks cannot re-enter a live partial queue. Destroyed members are removed and survivors reflow; a destroyed
+optional mover does not destroy the semantic member.
+
+## Verification homes
+
+- Pure layout tests: `CkTests/Private/UnitTests/CkQueue/Test_Queue_Layout.cpp` (`Ck.Queue.Layout`).
+- Runtime AS tests: `CkTests/Script/CkQueue/CkAutoTest_Queue_*.as`.
+- Manual visual gym: `CkTests/Script/CkQueue/CkQueueGym_*` and the `Queue` registry entry. The gym exercises live
+  Crowd movement, origin reflow, weighted origins, layout switching, impossible-nav recovery, limits, destruction,
+  and the four GOAP-facing signal streams.
+
+## Non-goals
+
+Purchases, service policy, GOAP fact names, speech, inventory, and persistence identity remain consumer-owned.
+Never write Queue or member transforms directly, add game collision channels, or introduce an arbitrary per-frame
+Blueprint/AngelScript layout callback.
