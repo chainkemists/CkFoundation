@@ -63,6 +63,9 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawNavStatusProc);
 
+        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        { return; }
+
         if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPathTrouble())
         { return; }
 
