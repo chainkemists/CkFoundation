@@ -117,6 +117,14 @@ public:
     static bool
     Get_IsRagdolling(const FCk_Handle_IskmProxy& InHandle);
 
+    // True when this proxy is ragdolling AND every rigid body in the ragdoll has gone to sleep, i.e. the
+    // body has physically come to rest. Chaos auto-sleeps bodies at rest, so this is exact and needs no
+    // velocity threshold. False when not ragdolling at all: a body that never fell has not settled.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Is Ragdoll Settled")
+    static bool
+    Get_IsRagdollSettled(const FCk_Handle_IskmProxy& InHandle);
+
     // True once the entity outline (ck::FFragment_Usf_OutlineTarget) is applied to this proxy's SKMCs —
     // see CkUsf/Claude.md § Entity outlines. Used by autotests/gyms.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",

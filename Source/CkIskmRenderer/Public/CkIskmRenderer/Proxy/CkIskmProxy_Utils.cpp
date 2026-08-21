@@ -227,6 +227,24 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Get_IsRagdollSettled(const FCk_Handle_IskmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    if (NOT InHandle.Has<ck::FTag_IskmProxy_Ragdolling>())
+    { return false; }
+
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    if (ck::Is_NOT_Valid(SKMC))
+    { return false; }
+
+    return NOT SKMC->IsAnyRigidBodyAwake();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_IsOutlineApplied(const FCk_Handle_IskmProxy& InHandle)
     -> bool
 {
