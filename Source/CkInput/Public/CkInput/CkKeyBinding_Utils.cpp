@@ -5,6 +5,7 @@
 #include "CkInput/CkPlayerMappableKeySettings.h"
 #include "CkInput/Subsystem/CkKeyBinding_Subsystem.h"
 
+#include <EnhancedInputDeveloperSettings.h>
 #include <EnhancedInputSubsystems.h>
 #include <InputAction.h>
 #include <InputMappingContext.h>
@@ -29,6 +30,14 @@ namespace ck_key_binding_utils
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_KeyBinding_UE::
+    Get_AreUserSettingsEnabled()
+    -> bool
+{
+    return GetDefault<UEnhancedInputDeveloperSettings>()->bEnableUserSettings;
+}
 
 auto
     UCk_Utils_KeyBinding_UE::
