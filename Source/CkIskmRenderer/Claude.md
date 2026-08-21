@@ -42,6 +42,13 @@ its coverage.
 - `UCk_Utils_IskmProxy_UE::Request_SetCustomDataFloat_Late` — opt-in custom-data lane consumed in
   `FGroup_DeferredApply`, after `FGroup_PostTransform`; it mirrors the value to the CPU cache, base
   SKMC, and attached submesh SKMCs without changing the normal `Request_SetCustomDataFloat` lane.
+- `UCk_Utils_IskmProxy_UE::Get_IsRagdollSettled` — true once the proxy is ragdolling **and** no rigid
+  body on its BaseSKMC is still awake, i.e. the body has physically come to rest. Chaos auto-sleeps
+  bodies at rest, so this is exact and takes no velocity threshold or tuned timer; a caller gating a
+  death/respawn beat on it waits exactly as long as the fall takes. False while not ragdolling — a
+  body that never fell has not settled — so it cannot be used to mean "is at rest" in general.
+  Note the settle is only reachable if the body has something to land on: in free fall the velocity
+  never drops below the sleep thresholds. Companion query: `Get_IsRagdolling`.
 - `UCk_Utils_IskmProxy_UE::BindTo_OnAnimationFinished/OnAnimationNotify/OnMontageFinished` — ECS signals fired by the bridging `UCk_IskmNotify_AnimInstance`.
 - **Entity-level outline (Plan-1):** driven by `CkUsf`'s `UCk_Utils_Usf_Outline_UE::Request_ApplyOutline(Handle, Preset, Scope)`.
   Sets Custom Depth/Stencil on the proxy's BaseSKMC **and** every outfit submesh, re-asserted per frame so submeshes
