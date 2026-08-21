@@ -362,4 +362,55 @@ bool FCkTest_GameSettings_Registry_RangeViolationRejected::RunTest(const FString
 
 // --------------------------------------------------------------------------------------------------------------------
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_GameSettings_Registry_GameUserSettingsCVarBindingRejected,
+    "Ck.CkGameSettings.Registry.GameUserSettingsCVarBindingRejected",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_GameSettings_Registry_GameUserSettingsCVarBindingRejected::RunTest(const FString&)
+{
+    auto* Subsystem = ck_game_settings_registry_spec::Make_Subsystem();
+
+    AddExpectedError(TEXT("which UGameUserSettings mirrors"), EAutomationExpectedErrorFlags::Contains, 0);
+
+    TestFalse(TEXT("scalability-group CVar binding rejected"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("gus.shadow"), ECk_GameSettings_ValueType::Int32, TEXT("2")}
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::CVar)
+            .Set_CVar(FCk_CVarRef{TEXT("sg.ShadowQuality"), ECk_CVarType::Int32})));
+
+    TestFalse(TEXT("r.VSync binding rejected"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("gus.vsync"), ECk_GameSettings_ValueType::Bool, TEXT("true")}
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::CVar)
+            .Set_CVar(FCk_CVarRef{TEXT("r.VSync"), ECk_CVarType::Bool})));
+
+    TestFalse(TEXT("t.MaxFPS binding rejected"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("gus.fps"), ECk_GameSettings_ValueType::Float, TEXT("60")}
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::CVar)
+            .Set_CVar(FCk_CVarRef{TEXT("t.MaxFPS"), ECk_CVarType::Float})));
+
+    // FName comparison is case-insensitive, so a differently-cased spelling must not slip past the set.
+    TestFalse(TEXT("differently-cased scalability CVar still rejected"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("gus.texture"), ECk_GameSettings_ValueType::Int32, TEXT("3")}
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::CVar)
+            .Set_CVar(FCk_CVarRef{TEXT("SG.TEXTUREQUALITY"), ECk_CVarType::Int32})));
+
+    TestEqual(TEXT("nothing registered from any rejected binding"), Subsystem->Get_AllSettingKeys().Num(), 0);
+
+    // A game-owned CVar with a colliding-looking name is NOT owned by UGameUserSettings and must register.
+    TestTrue(TEXT("unrelated CVar binding still registers"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("game.shadow_style"), ECk_GameSettings_ValueType::Int32, TEXT("1")}
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::CVar)
+            .Set_CVar(FCk_CVarRef{TEXT("bb.ShadowQuality"), ECk_CVarType::Int32})));
+
+    // The same value reached the sanctioned way — External, over the UGameUserSettings accessor.
+    TestTrue(TEXT("External declaration of the same value accepted"), Subsystem->Request_RegisterSetting(
+        FCk_GameSettings_SettingDefinition{TEXT("video.sg.shadow"), ECk_GameSettings_ValueType::Int32, TEXT("2")}
+            .Set_PersistencePolicy(ECk_GameSettings_PersistencePolicy::External)
+            .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::Handler)));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif // WITH_DEV_AUTOMATION_TESTS

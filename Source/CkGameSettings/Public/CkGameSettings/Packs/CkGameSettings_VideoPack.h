@@ -18,9 +18,10 @@ class UGameUserSettings;
 /**
  * External read/write-through accessors for every Video-pack setting. All values live in
  * UGameUserSettings (resolved EXCLUSIVELY through GEngine->GetGameUserSettings()) — the settings
- * store never holds a copy. Non-resolution setters ApplySettings + SaveSettings; resolution/mode
- * setters ApplyResolutionSettings + SaveSettings. Apply calls are suppressed (Display log) under
- * null-RHI/commandlet so headless automation stays green; the object writes and reads still work.
+ * store never holds a copy. Non-resolution setters ApplyNonResolutionSettings + SaveSettings;
+ * resolution/mode setters ApplyResolutionSettings + SaveSettings. Apply calls are suppressed
+ * (Display log) under null-RHI/commandlet so headless automation stays green; the object writes
+ * and reads still work.
  */
 UCLASS(NotBlueprintable)
 class CKGAMESETTINGS_API UCk_GameSettings_VideoPackHandlers_UE : public UObject
@@ -142,6 +143,18 @@ namespace ck::game_settings
     /** True when Apply/benchmark-style presentation work must be suppressed (null-RHI or commandlet). */
     CKGAMESETTINGS_API auto
     Get_IsHeadlessPresentation() -> bool;
+
+    /**
+     * True when InCVar is a console variable UGameUserSettings mirrors in its own fields and rewrites
+     * from them on every ApplyNonResolutionSettings — which the engine itself triggers on an F11
+     * fullscreen toggle and on any resolution change. A setting whose apply writes such a CVar is the
+     * second writer of that value and loses, silently, at a moment the player did not connect to it.
+     * Registration rejects that binding; route the value through the Video pack's key where one exists,
+     * or declare it External over the matching UGameUserSettings accessor as the pack itself does.
+     */
+    CKGAMESETTINGS_API auto
+    Get_IsCVarOwnedByGameUserSettings(
+        FName InCVar) -> bool;
 
     /**
      * Registers every Video-pack setting (all External policy, Handler binding) plus its
