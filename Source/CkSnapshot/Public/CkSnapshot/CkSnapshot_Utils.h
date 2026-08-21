@@ -120,14 +120,15 @@ public:
     Get_IsLoadInProgress(
         const FCk_Handle& InHandle);
 
-    // FRAMEWORK-INTERNAL: the spawn-suppression predicate. True for the WHOLE of a load on the world the entity
-    // lives in — every phase, from the moment the old world starts being demolished to the moment the loader hands
-    // the world back — and it exists to answer the framework's own question about whether the loader is currently
-    // the sole legitimate creator of world population.
+    // The PRODUCER-side guard: true for the WHOLE of a load on the world the entity lives in — every phase, from
+    // the moment the old world starts being demolished to the moment the loader hands the world back. It exists
+    // for exactly one caller: something whose CONSTRUCTION seeds or spawns a separately-persisted entity, which
+    // must not do that while the loader is the sole legitimate creator of world population, or the world ends up
+    // holding the loader's copy and its own. This is what the framework's own probes ask before seeding.
     //
-    // GAME CODE SHOULD NOT REACH FOR THIS. The consumer spelling of "is a load running" is Get_IsLoadInProgress
-    // above; carrying two spellings for one job is how a codebase ends up guarding half its producers on one
-    // predicate and half on the other, with no way to tell which sites were considered and which were copied.
+    // Both this and Get_IsLoadInProgress guard a WRITE, and the difference is only the window: this one is the
+    // load gate (kernel or escalated), that one additionally spans the phases after the payload queue drains.
+    // Neither is a way to time a READ — see the last paragraph.
     //
     // The window is the whole load because construction runs throughout one: DoConstruct and DoBeginPlay are
     // never held, so a level-triggered producer runs in every phase — including the phases after the payload
