@@ -139,6 +139,7 @@ namespace ck
         static auto
         InvalidateAssignmentsForReflow(
             HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent)
             -> void;
 

@@ -109,7 +109,8 @@ namespace ck
             && NOT LeaveRequested
             && NOT Snapshot.Get_MovementSuppressed()
             && Snapshot.Get_AssignmentRevision() > 0
-            && Snapshot.Get_State() == ECk_Queue_MemberState::Assigned;
+            && (Snapshot.Get_State() == ECk_Queue_MemberState::Assigned
+                || Snapshot.Get_State() == ECk_Queue_MemberState::MovingToSlot);
 
         if (NOT CanMove)
         {

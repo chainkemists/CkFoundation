@@ -23,6 +23,16 @@ enum class ECk_Queue_LayoutAlgorithm : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_LayoutAlgorithm);
 
+// ReserveOnFormation preserves the original eager behavior. ClaimFirstAvailableOnReach exposes one movement offer
+// per origin; the following reservation is not offered until the current mover reports Reached.
+UENUM(BlueprintType)
+enum class ECk_Queue_SlotClaimPolicy : uint8
+{
+    ReserveOnFormation,
+    ClaimFirstAvailableOnReach
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_SlotClaimPolicy);
+
 UENUM(BlueprintType)
 enum class ECk_Queue_State : uint8
 {
@@ -45,6 +55,7 @@ enum class ECk_Queue_MemberState : uint8
     AtFront,
     MovementSuppressed,
     WaitingForNavigationChange,
+    WaitingForMover,
     Serving,
     Rejected,
     Invalidated
@@ -176,6 +187,10 @@ private:
     ECk_Queue_LayoutAlgorithm _LayoutAlgorithm = ECk_Queue_LayoutAlgorithm::OrthogonalSnake;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Queue_SlotClaimPolicy _SlotClaimPolicy = ECk_Queue_SlotClaimPolicy::ReserveOnFormation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _TransformEpsilonUu = 25.0f;
 
@@ -214,6 +229,7 @@ public:
     CK_PROPERTY(_SoftLimit);
     CK_PROPERTY(_HardLimit);
     CK_PROPERTY(_LayoutAlgorithm);
+    CK_PROPERTY(_SlotClaimPolicy);
     CK_PROPERTY(_TransformEpsilonUu);
     CK_PROPERTY(_RotationEpsilonDegrees);
     CK_PROPERTY(_MaxNavigationRetries);
