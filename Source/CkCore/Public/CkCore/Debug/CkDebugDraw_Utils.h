@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -7,6 +7,18 @@
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkDebugDraw_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::debug_draw
+{
+    /**
+     * Runtime policy for marketing captures. This is true when either -CkStreamerMode or
+     * ck.Debug.StreamerMode 1 requests that Ck diagnostic rendering stay off-screen.
+     */
+    CKCORE_API auto
+    Is_SuppressedForStreamerMode() -> bool;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

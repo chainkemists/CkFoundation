@@ -1,5 +1,6 @@
 #include "CkJoltDebugDraw_Processor.h"
 
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -70,6 +71,21 @@ namespace ck
 
         auto Targets = TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>{};
         Subsystem->Get_DemandingDebugDrawTargets(Targets);
+
+        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        {
+            for (const auto& Target : Targets)
+            {
+                Target->HideAll();
+            }
+
+            if (const auto DefaultTarget = Subsystem->Get_DefaultDebugDrawTarget(); DefaultTarget.IsValid())
+            {
+                DefaultTarget->HideAll();
+            }
+
+            return;
+        }
 
         // A closed debugger still costs one map walk and no more, unless something asks for contacts — the
         // in-world target is captured from the subsystem's Tick, so the replay is the only thing this processor

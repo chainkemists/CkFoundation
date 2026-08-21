@@ -1,6 +1,7 @@
 #include "CkRaySense_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
 
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 
@@ -38,6 +39,13 @@ namespace ck_raysense
         static auto CVar_DebugDrawTraceDuration = FAutoConsoleVariableRef(TEXT("ck.RaySense.DebugDrawTraceDuration"),
             DebugDrawTraceDuration,
             TEXT("How long should RaySense trace debug draw last"));
+    }
+
+    auto
+        ShouldDrawTraces()
+        -> bool
+    {
+        return cvar::DebugDrawAllTraces && NOT ck::debug_draw::Is_SuppressedForStreamerMode();
     }
 }
 
@@ -181,7 +189,7 @@ namespace ck
             UEngineTypes::ConvertToTraceType(InParams.Get_CollisionChannel()),
             TraceComplex,
             ck_raysense::Get_ResolvedActorsToIgnore(InParams),
-            ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+            ck_raysense::ShouldDrawTraces() ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
             HitResult,
             IgnoreSelf,
             FLinearColor::Red,
@@ -229,7 +237,7 @@ namespace ck
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
                     ck_raysense::Get_ResolvedActorsToIgnore(InP),
-                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    ck_raysense::ShouldDrawTraces() ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,
                     FLinearColor::Red,
@@ -272,7 +280,7 @@ namespace ck
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
                     ck_raysense::Get_ResolvedActorsToIgnore(InP),
-                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    ck_raysense::ShouldDrawTraces() ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,
                     FLinearColor::Red,
@@ -316,7 +324,7 @@ namespace ck
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
                     ck_raysense::Get_ResolvedActorsToIgnore(InP),
-                    ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+                    ck_raysense::ShouldDrawTraces() ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,
                     FLinearColor::Red,

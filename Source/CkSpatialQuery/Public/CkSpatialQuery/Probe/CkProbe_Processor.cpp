@@ -1,6 +1,7 @@
 #include "CkProbe_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -829,6 +830,9 @@ namespace ck
                 const FFragment_Transform& InTransform)
             -> void
         {
+            if (ck::debug_draw::Is_SuppressedForStreamerMode())
+            { return; }
+
             using namespace JPH;
 
             const auto& EntityPosition = InTransform.Get_Transform().GetLocation();

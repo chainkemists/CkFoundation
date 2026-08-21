@@ -1,9 +1,11 @@
 #include "CkDebugDraw_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <DrawDebugHelpers.h>
 #include <GameFramework/HUD.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,6 +76,14 @@ auto
         UCanvas* InCanvas)
     -> void
 {
+    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    {
+        FlushPersistentDebugLines(GetWorld());
+        FlushDebugStrings(GetWorld());
+        _PendingDrawRequests.Reset();
+        return;
+    }
+
     auto DrawRequests = decltype(_PendingDrawRequests){};
     Swap(_PendingDrawRequests, DrawRequests);
 
