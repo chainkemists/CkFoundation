@@ -79,6 +79,7 @@ namespace ck
     public:
         using RequestType = std::variant<
             FCk_Request_Queue_Join,
+            FCk_Request_Queue_RestoreJoin,
             FCk_Request_Queue_Leave,
             FCk_Request_Queue_AdvanceOrigin,
             FCk_Request_Queue_SetOrigins,

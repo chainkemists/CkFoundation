@@ -97,6 +97,107 @@ namespace ck
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent,
+            const FCk_Request_Queue_RestoreJoin& InRequest)
+        -> bool
+    {
+        const auto MemberIsValid = ck::IsValid(InRequest.Get_Member());
+        const auto TicketIsValid = InRequest.Get_RestoredTicket() > 0
+            && InRequest.Get_RestoredTicket() < MAX_int64;
+        CK_ENSURE_IF_NOT(MemberIsValid && TicketIsValid,
+            TEXT("Queue [{}] cannot restore join member [{}] with ticket [{}]"),
+            InQueue, InRequest.Get_Member(), InRequest.Get_RestoredTicket())
+        {}
+        if (NOT MemberIsValid || NOT TicketIsValid)
+        { return false; }
+
+        const auto ExistingIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        const auto TicketOwnerIndex = InCurrent._Members.IndexOfByPredicate(
+            [&InRequest](const FCk_Queue_MemberSnapshot& InMember)
+            { return InMember.Get_Ticket() == InRequest.Get_RestoredTicket(); });
+        const auto TicketBelongsToAnotherMember = TicketOwnerIndex != INDEX_NONE
+            && TicketOwnerIndex != ExistingIndex;
+        CK_ENSURE_IF_NOT(NOT TicketBelongsToAnotherMember,
+            TEXT("Queue [{}] restore ticket [{}] is already owned by another member"),
+            InQueue, InRequest.Get_RestoredTicket())
+        {}
+        if (TicketBelongsToAnotherMember)
+        { return false; }
+
+        if (ExistingIndex != INDEX_NONE)
+        {
+            const auto Existing = InCurrent._Members[ExistingIndex];
+            const auto TicketMatches = Existing.Get_Ticket() == InRequest.Get_RestoredTicket();
+            CK_ENSURE_IF_NOT(TicketMatches,
+                TEXT("Queue [{}] restore member [{}] conflicts with existing ticket [{}]"),
+                InQueue, InRequest.Get_Member(), Existing.Get_Ticket())
+            {}
+            if (NOT TicketMatches)
+            { return false; }
+
+            const auto Mover = ck::IsValid(InRequest.Get_Mover())
+                ? InRequest.Get_Mover()
+                : Existing.Get_Mover();
+            const auto WaitingForMoverNeedsReplacement = Existing.Get_State() == ECk_Queue_MemberState::WaitingForMover
+                && NOT ck::IsValid(InRequest.Get_Mover());
+            if (WaitingForMoverNeedsReplacement)
+            { return false; }
+            if (Mover == Existing.Get_Mover())
+            { return true; }
+
+            ++InCurrent._Revision;
+            InCurrent._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
+                Existing.Get_Member(), Mover, Existing.Get_Ticket(), INDEX_NONE, INDEX_NONE,
+                FTransform::Identity, 0, Existing.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
+            MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Rejoined);
+            BroadcastMemberEvent(InQueue, InCurrent._Members[ExistingIndex], Existing.Get_State(),
+                ECk_Queue_EventReason::Rejoined, InCurrent._Revision);
+            return true;
+        }
+
+        const auto HardLimit = InParams.Get_HardLimit();
+        if (HardLimit > 0 && InCurrent._Members.Num() >= HardLimit)
+        {
+            ++InCurrent._Revision;
+            const auto Rejected = FCk_Queue_MemberSnapshot{
+                InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE, INDEX_NONE,
+                FTransform::Identity, 0, false, ECk_Queue_MemberState::Rejected};
+            BroadcastMemberEvent(InQueue, Rejected, ECk_Queue_MemberState::None,
+                ECk_Queue_EventReason::HardLimitReached, InCurrent._Revision);
+            return false;
+        }
+
+        if (NOT HasOriginCapacityForCount(InCurrent._Origins, InCurrent._Members.Num() + 1))
+        {
+            ++InCurrent._Revision;
+            const auto Rejected = FCk_Queue_MemberSnapshot{
+                InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE, INDEX_NONE,
+                FTransform::Identity, 0, false, ECk_Queue_MemberState::Rejected};
+            BroadcastMemberEvent(InQueue, Rejected, ECk_Queue_MemberState::None,
+                ECk_Queue_EventReason::OriginHardLimitReached, InCurrent._Revision);
+            return false;
+        }
+
+        ++InCurrent._Revision;
+        InCurrent._Members.Emplace(InRequest.Get_Member(), InRequest.Get_Mover(), InRequest.Get_RestoredTicket(),
+            0, 0, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission);
+        InCurrent._Members.Sort([](const FCk_Queue_MemberSnapshot& InA, const FCk_Queue_MemberSnapshot& InB)
+        { return InA.Get_Ticket() < InB.Get_Ticket(); });
+        InCurrent._NextTicket = FMath::Max(InCurrent._NextTicket, InRequest.Get_RestoredTicket() + 1);
+        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Joined);
+        RefreshPressure(InQueue, InParams, InCurrent);
+
+        const auto RestoredIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        BroadcastMemberEvent(InQueue, InCurrent._Members[RestoredIndex], ECk_Queue_MemberState::None,
+            ECk_Queue_EventReason::Joined, InCurrent._Revision);
+        return true;
+    }
+
+    auto
+        FProcessor_Queue_HandleRequests::
+        DoHandleRequest(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
             const FCk_Request_Queue_Join& InRequest)
         -> bool
     {
@@ -195,7 +296,17 @@ namespace ck
             return false;
         }
 
-        const auto Ticket = InCurrent._NextTicket++;
+        const auto TicketIsAvailable = InCurrent._NextTicket > 0
+            && InCurrent._NextTicket < MAX_int64;
+        CK_ENSURE_IF_NOT(TicketIsAvailable,
+            TEXT("Queue [{}] cannot join member [{}]: admission ticket space is exhausted"),
+            InQueue, InRequest.Get_Member())
+        {}
+        if (NOT TicketIsAvailable)
+        { return false; }
+
+        const auto Ticket = InCurrent._NextTicket;
+        InCurrent._NextTicket = Ticket + 1;
         const auto Rank = InCurrent._Members.Num();
 
         ++InCurrent._Revision;

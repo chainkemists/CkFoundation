@@ -593,6 +593,15 @@ private:
     ECk_Queue_LayoutAlgorithm _LayoutAlgorithm = ECk_Queue_LayoutAlgorithm::OrthogonalSnake;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _SlotSpacingUu = 120.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_Queue_SlotClaimPolicy _SlotClaimPolicy = ECk_Queue_SlotClaimPolicy::ReserveOnFormation;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Queue_FormationState _FormationState;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_Queue_Pressure _Pressure;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -610,6 +619,9 @@ public:
     CK_PROPERTY_GET(_Revision);
     CK_PROPERTY_GET(_RetryEpisode);
     CK_PROPERTY_GET(_LayoutAlgorithm);
+    CK_PROPERTY_GET(_SlotSpacingUu);
+    CK_PROPERTY_GET(_SlotClaimPolicy);
+    CK_PROPERTY_GET(_FormationState);
     CK_PROPERTY_GET(_Pressure);
     CK_PROPERTY_GET(_OriginWorldTransforms);
     CK_PROPERTY_GET(_Members);
@@ -626,6 +638,9 @@ public:
         int32 InRevision,
         int32 InRetryEpisode,
         ECk_Queue_LayoutAlgorithm InLayoutAlgorithm,
+        float InSlotSpacingUu,
+        ECk_Queue_SlotClaimPolicy InSlotClaimPolicy,
+        FCk_Queue_FormationState InFormationState,
         FCk_Queue_Pressure InPressure,
         TArray<FTransform> InOriginWorldTransforms,
         TArray<FCk_Queue_DebugMemberSnapshot> InMembers)
@@ -637,6 +652,9 @@ public:
         , _Revision(InRevision)
         , _RetryEpisode(InRetryEpisode)
         , _LayoutAlgorithm(InLayoutAlgorithm)
+        , _SlotSpacingUu(InSlotSpacingUu)
+        , _SlotClaimPolicy(InSlotClaimPolicy)
+        , _FormationState(MoveTemp(InFormationState))
         , _Pressure(MoveTemp(InPressure))
         , _OriginWorldTransforms(MoveTemp(InOriginWorldTransforms))
         , _Members(MoveTemp(InMembers))
@@ -669,6 +687,34 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Queue_Join, _Member);
+};
+
+USTRUCT(BlueprintType)
+struct CKQUEUE_API FCk_Request_Queue_RestoreJoin : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Queue_RestoreJoin);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Queue_RestoreJoin);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle _Member;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle _Mover;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "1"))
+    int64 _RestoredTicket = 1;
+
+public:
+    CK_PROPERTY_GET(_Member);
+    CK_PROPERTY(_Mover);
+    CK_PROPERTY_GET(_RestoredTicket);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Queue_RestoreJoin, _Member, _RestoredTicket);
 };
 
 USTRUCT(BlueprintType)
