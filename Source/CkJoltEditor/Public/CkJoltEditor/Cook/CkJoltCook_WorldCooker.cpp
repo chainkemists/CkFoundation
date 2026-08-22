@@ -350,7 +350,8 @@ namespace ck_jolt_cook_world_cooker
     /// world alone would delete it — the same silent truncation the incremental path exists to
     /// avoid, just cell-scoped. Unset = a restore failed and the cell must not be written.
     static auto DoCarryOver_ActorsInUnloadedLevels(
-        const UCk_Jolt_CookedCell_UE& InCookedCell,
+        const FCk_Jolt_CookedCellRef& InCookedCellRef,
+        const TArray<FCk_Jolt_CookedActorGroup>& InCookedGroups,
         const TSet<FName>& InPresentActorNames,
         const TSet<FName>& InLoadedLevelPackages,
         TArray<FActorCookData>& OutActors)
@@ -362,13 +363,24 @@ namespace ck_jolt_cook_world_cooker
                 && NOT InLoadedLevelPackages.Contains(Get_LevelPackageOfCookedActor(InGroup));
         };
 
-        const auto Stranded = ck::algo::Filter(InCookedCell.Get_ActorGroups(), Get_NeedsCarryOver);
+        const auto Stranded = ck::algo::Filter(InCookedGroups, Get_NeedsCarryOver);
 
         if (Stranded.IsEmpty())
         { return 0; }
 
+        // Loaded HERE and released before the caller writes the replacement asset: the cook creates
+        // the new cell under the same package and name, which cannot free the old object while
+        // anything still holds a reference to it.
+        const auto* CookedCell = InCookedCellRef.Get_CellAsset().LoadSynchronous();
+
+        const auto CellIsLoaded = ck::IsValid(CookedCell);
+        CK_ENSURE_IF_NOT(CellIsLoaded,
+            TEXT("Cooked Jolt cell [{}] could not be re-loaded to carry over its unloaded-level actors"),
+            InCookedCellRef.Get_CellId())
+        { return {}; }
+
         auto RestoredShapes = TArray<JPH::Ref<JPH::Shape>>{};
-        if (NOT DoRestore_CellShapes(InCookedCell, RestoredShapes))
+        if (NOT DoRestore_CellShapes(*CookedCell, RestoredShapes))
         { return {}; }
 
         auto NumBodies = 0;
@@ -554,8 +566,11 @@ struct FCk_Jolt_IncrementalCookDriver::FImpl
     float _CellSize = 0.0f;
     ck::jolt::bake::FCk_Jolt_BakeFilter _BakeFilter;
 
-    TStrongObjectPtr<UCk_Jolt_CookedWorldIndex_UE> _Index;
-    TArray<TStrongObjectPtr<UCk_Jolt_CookedCell_UE>> _CookedCells;
+    // Snapshots, never the assets themselves. A UObject held across steps is both a GC problem and
+    // — because TStrongObjectPtr refcounts the FUObjectItem — a hard block on NewObject reusing that
+    // package/name when the cook rewrites it.
+    TArray<FCk_Jolt_CookedCellRef> _ExistingCellRefs;
+    TArray<TArray<FCk_Jolt_CookedActorGroup>> _CookedActorGroupsByCell;
     TArray<FIntPoint> _CookedCellIds;
     TMap<FIntPoint, int32> _CookedCellIdToIndex;
 
@@ -635,22 +650,25 @@ auto
     { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_WorldPartition, TEXT("World Partition world")); }
 
     const auto IndexPath = Get_CookedIndexAssetPath(_RootPath, _MapPackageName);
-    _Index.Reset(LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath, nullptr,
-        LOAD_NoWarn | LOAD_Quiet));
+    const auto* Index = LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath, nullptr,
+        LOAD_NoWarn | LOAD_Quiet);
 
-    if (ck::Is_NOT_Valid(_Index.Get()))
+    if (ck::Is_NOT_Valid(Index))
     { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_NoExistingIndex, TEXT("map was never cooked")); }
 
-    const auto VersionsMatch = _Index->Get_CookVersion() == CookVersion_Current
-        && _Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
+    const auto VersionsMatch = Index->Get_CookVersion() == CookVersion_Current
+        && Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
     if (NOT VersionsMatch)
     { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("cook/Jolt version drift")); }
 
-    if (_Index->Get_BakeFilterHash() != _BakeFilter.ComputeHash())
+    if (Index->Get_BakeFilterHash() != _BakeFilter.ComputeHash())
     { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("bake-filter settings changed")); }
 
-    _CookedCellIds = ck::algo::Transform<TArray<FIntPoint>>(_Index->Get_Cells(),
+    _ExistingCellRefs = Index->Get_Cells();
+    _RemapInput._ExistingActorLookup = Index->Get_ActorLookup();
+
+    _CookedCellIds = ck::algo::Transform<TArray<FIntPoint>>(_ExistingCellRefs,
         [](const FCk_Jolt_CookedCellRef& InCellRef) { return InCellRef.Get_CellId(); });
 
     for (auto CellIndex = 0; CellIndex < _CookedCellIds.Num(); ++CellIndex)
@@ -694,8 +712,8 @@ auto
 
     while (_Cursor < _CookedCellIds.Num())
     {
-        const auto& CellRef = _Index->Get_Cells()[_Cursor];
-        auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
+        const auto& CellRef = _ExistingCellRefs[_Cursor];
+        const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
 
         if (ck::Is_NOT_Valid(CellAsset))
         {
@@ -703,7 +721,7 @@ auto
                 ck::Format_UE(TEXT("cell [{}] failed to load"), CellRef.Get_CellId()));
         }
 
-        _CookedCells.Emplace(TStrongObjectPtr<UCk_Jolt_CookedCell_UE>{CellAsset});
+        _CookedActorGroupsByCell.Emplace(CellAsset->Get_ActorGroups());
 
         for (const auto& Group : CellAsset->Get_ActorGroups())
         {
@@ -859,7 +877,6 @@ auto
     }
 
     _RemapInput._DirtyCellIds = _Plan._DirtyCellIds;
-    _RemapInput._ExistingActorLookup = _Index->Get_ActorLookup();
     _RemapInput._ExistingCellIdsByCellIndex = _CookedCellIds;
 
     _Cursor = 0;
@@ -907,8 +924,8 @@ auto
         if (const auto* CookedCellIndex = _CookedCellIdToIndex.Find(DirtyCellId))
         {
             const auto CarriedOver = DoCarryOver_ActorsInUnloadedLevels(
-                *_CookedCells[*CookedCellIndex].Get(), _PresentActorNames, _PlanInput._LoadedLevelPackages,
-                Cell._Actors);
+                _ExistingCellRefs[*CookedCellIndex], _CookedActorGroupsByCell[*CookedCellIndex],
+                _PresentActorNames, _PlanInput._LoadedLevelPackages, Cell._Actors);
 
             if (NOT CarriedOver.IsSet())
             {
@@ -975,7 +992,7 @@ auto
         if (NewCellIndex == INDEX_NONE)
         { continue; }
 
-        NewCellRefs[NewCellIndex] = _Index->Get_Cells()[CellIndex];
+        NewCellRefs[NewCellIndex] = _ExistingCellRefs[CellIndex];
     }
 
     for (const auto& [WrittenCellId, NewCellIndex] : Remap._NewCellIndexByWrittenCellId)
