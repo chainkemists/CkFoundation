@@ -1054,6 +1054,20 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   Bake Filter block (`_BakeMobilityPolicy`, `_BakeExcludedActorClasses`, `_BakeExcludedActorTags`,
   `_BakeExcludedComponentTags`, `_BakeExcludedObjectChannels`, `_BakeExcludedCollisionProfiles`,
   `_BakeExcludeOverlapOnlyComponents`).
+- **`_RestitutionCombineMode`** deserves its own line, because its Jolt default is WRONG for a
+  project migrating off Chaos. Jolt combines a contact pair's restitution with `max(rA, rB)`;
+  Chaos reads `UPhysicsSettingsCore::RestitutionCombineMode`, which is `Average` in a default UE
+  project. Symmetric pairs agree either way, so nothing looks broken until two surfaces disagree —
+  and there the gap is total: a restitution-1.0 bouncy material on a default-0.3 floor combines to
+  1.0 under `max()`, a perfectly elastic collision that never stops bouncing and rebounds off any
+  surface it is set down on. A physical material carries its authored numbers over from Chaos
+  unchanged, so the MODE has to come over too — hence the `Average` default here. Pinned by
+  `Ck_AutoTest_CkJolt_RestitutionCombinesAsAverageNotMax`. Two known limits: FRICTION is still on
+  Jolt's `sqrt(fA * fB)` (differs from Chaos's average by a few percent on asymmetric pairs — not
+  worth re-tuning every contact), and Jolt's combine is ONE GLOBAL FUNCTION whereas Chaos picks
+  per-material via `bOverrideRestitutionCombineMode`, so a material that overrides its own mode is
+  not honoured. Honouring it would mean keying a per-body mode off `Body::GetUserData` inside the
+  combine lambda.
 - **Startup-only CVars/cmdline**: `jolt.EnableParallelPhysics`,
   `jolt.EnableAsyncPhysicsUpdate` (cmdline-first).
 - **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,

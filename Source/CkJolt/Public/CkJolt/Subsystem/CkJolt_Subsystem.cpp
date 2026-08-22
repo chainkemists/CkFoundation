@@ -26,6 +26,7 @@
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 
@@ -568,6 +569,52 @@ auto
         PhysicsSettings.mPointVelocitySleepThreshold  = 3.0f;      // 0.03 m/s
         PhysicsSettings.mMinVelocityForRestitution    = 100.0f;    // 1 m/s
         _PhysicsSystem->SetPhysicsSettings(PhysicsSettings);
+    }
+
+    // Jolt's stock combine is max(r1, r2); Chaos reads UPhysicsSettingsCore::RestitutionCombineMode,
+    // which is Average in a default UE project. Symmetric pairs agree either way, so the divergence is
+    // invisible until two surfaces disagree -- and there it is total: a restitution-1.0 bouncy material
+    // landing on a default-0.3 floor keeps 100% of its normal velocity under max() (a perfectly elastic
+    // collision -- it never stops bouncing, and it hops straight back off any surface it is set down on)
+    // against 65% under Average. A physical material carries its numbers over from Chaos unchanged, so
+    // the mode has to come over too; the project setting defaults to Average for exactly that reason.
+    //
+    // Friction is deliberately LEFT on Jolt's sqrt(f1 * f2). It diverges from Chaos's average on the
+    // same asymmetric pairs, but the geometric and arithmetic means sit within a few percent over the
+    // range real materials use, which does not justify re-tuning every contact in the game.
+    const auto RestitutionCombineMode = UCk_Utils_Jolt_ProjectSettings::Get_RestitutionCombineMode();
+    ck::jolt::Log(TEXT("Jolt: RestitutionCombineMode [{}]"), RestitutionCombineMode);
+
+    switch (RestitutionCombineMode)
+    {
+        case ECk_Jolt_RestitutionCombineMode::Average:
+        {
+            _PhysicsSystem->SetCombineRestitution(
+                [](const Body& InBodyA, const SubShapeID&, const Body& InBodyB, const SubShapeID&)
+                { return 0.5f * (InBodyA.GetRestitution() + InBodyB.GetRestitution()); });
+            break;
+        }
+        case ECk_Jolt_RestitutionCombineMode::Min:
+        {
+            _PhysicsSystem->SetCombineRestitution(
+                [](const Body& InBodyA, const SubShapeID&, const Body& InBodyB, const SubShapeID&)
+                { return FMath::Min(InBodyA.GetRestitution(), InBodyB.GetRestitution()); });
+            break;
+        }
+        case ECk_Jolt_RestitutionCombineMode::Multiply:
+        {
+            _PhysicsSystem->SetCombineRestitution(
+                [](const Body& InBodyA, const SubShapeID&, const Body& InBodyB, const SubShapeID&)
+                { return InBodyA.GetRestitution() * InBodyB.GetRestitution(); });
+            break;
+        }
+        case ECk_Jolt_RestitutionCombineMode::Max:
+        {
+            _PhysicsSystem->SetCombineRestitution(
+                [](const Body& InBodyA, const SubShapeID&, const Body& InBodyB, const SubShapeID&)
+                { return FMath::Max(InBodyA.GetRestitution(), InBodyB.GetRestitution()); });
+            break;
+        }
     }
 
     _BodyActivationListener = MakePimpl<CkBodyActivationListener>();
