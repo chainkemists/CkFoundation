@@ -45,9 +45,9 @@ void FCkJoltEditorModule::StartupModule()
             LOCTEXT("CookJoltStaticWorldIncremental", "Cook Jolt Static World (Current Map, Incremental)"),
             LOCTEXT("CookJoltStaticWorldIncremental_Tooltip",
                 "Rewrites only the bake-grid cells whose actors changed since the last cook. Leaves cooked "
-                "actors in unloaded sublevels untouched."),
+                "actors in unloaded sublevels untouched. Runs in the background with a progress notification."),
             [](UCk_JoltCook_EditorSubsystem_UE& InSubsystem)
-            { InSubsystem.Cook_CurrentWorld_Incremental(); });
+            { InSubsystem.Request_CookStaticWorld(); });
 
         DoAdd_CookEntry(Section,
             "CkJolt_CookCurrentWorld",
