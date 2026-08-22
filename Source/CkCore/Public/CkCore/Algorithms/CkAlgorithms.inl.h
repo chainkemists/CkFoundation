@@ -9,6 +9,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Algo/Count.h>
+#include <Algo/IsSorted.h>
 #include <Algo/Sort.h>
 #include <Algo/Find.h>
 #include <Algo/RemoveIf.h>
@@ -1147,6 +1148,110 @@ namespace ck::algo
         }
 
         return Sum;
+    }
+
+    template <typename T_Container>
+    auto
+        HarmonicMean(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        if (InContainer.Num() == 0)
+        { return {}; }
+
+        // The reciprocal of zero is undefined, and a set containing "no headroom at all" harmonises
+        // to exactly that. Answering zero is the limit of the function rather than a special case.
+        if (AnyOf(InContainer, [](const auto& InValue) { return static_cast<double>(InValue) <= 0.0; }))
+        { return 0.0; }
+
+        const auto SumOfReciprocals = SumBy(InContainer, [](const auto& InValue)
+        { return 1.0 / static_cast<double>(InValue); });
+
+        return static_cast<double>(InContainer.Num()) / SumOfReciprocals;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        IsSorted(
+            const T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> bool
+    {
+        return Algo::IsSorted(InContainer, InFunc);
+    }
+
+    template <typename T_Container>
+    auto
+        IsSorted(
+            const T_Container& InContainer)
+        -> bool
+    {
+        return Algo::IsSorted(InContainer);
+    }
+
+    template <typename T_Container>
+    auto
+        TakeLast(
+            const T_Container& InContainer,
+            int32 InCount)
+        -> T_Container
+    {
+        const auto Count = FMath::Clamp(InCount, 0, InContainer.Num());
+
+        return T_Container{InContainer.GetData() + (InContainer.Num() - Count), Count};
+    }
+
+    template <typename T_Container>
+    auto
+        TakeFirst(
+            const T_Container& InContainer,
+            int32 InCount)
+        -> T_Container
+    {
+        return T_Container{InContainer.GetData(), FMath::Clamp(InCount, 0, InContainer.Num())};
+    }
+
+    template <typename T_Container, typename T_ProjectionFunction>
+    auto
+        CountBy(
+            const T_Container& InContainer,
+            T_ProjectionFunction InProjection)
+        -> TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>, int32>
+    {
+        auto Counts = TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>, int32>{};
+
+        for (const auto& Element : InContainer)
+        {
+            Counts.FindOrAdd(std::invoke(InProjection, Element)) += 1;
+        }
+
+        return Counts;
+    }
+
+    template <class T_ReturnContainer, class T_Container, class T_PredicateFunction, class T_TransformFunc>
+    auto
+        TransformIf(
+            const T_Container& InContainer,
+            T_PredicateFunction InPredicate,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+
+        for (const auto& Element : InContainer)
+        {
+            if (NOT std::invoke(InPredicate, Element))
+            { continue; }
+
+            ToRet.Add(std::invoke(InFunc, Element));
+        }
+
+        return ToRet;
     }
 }
 
