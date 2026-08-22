@@ -754,6 +754,28 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_Debug_FrameLocalSettlePassCount(
+        const UObject* InWorldContextObject,
+        int64 InFrameNumber)
+    -> int32
+{
+    auto Result = int32{-1};
+
+#if !UE_BUILD_SHIPPING
+    ck_ecs_world_subsystem::DoVisitSchedulerFrameSnapshots(InWorldContextObject, InFrameNumber,
+        [&](const ck::FSchedulerDebug_FrameSnapshot& InSnapshot) -> void
+        {
+            Result = FMath::Max(Result, InSnapshot.LocalSettlePassCount);
+        });
+#endif
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if !UE_BUILD_SHIPPING
 
 // Render the output with: `dot -Tsvg SchedulerGraph.dot -o SchedulerGraph.svg`

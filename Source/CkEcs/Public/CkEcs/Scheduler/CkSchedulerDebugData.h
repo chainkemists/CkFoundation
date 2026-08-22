@@ -34,7 +34,10 @@ namespace ck
         CK_GENERATED_BODY(FSchedulerDebug_FrameSnapshot);
 
         TArray<FSchedulerDebug_ProcessorTiming> ProcessorTimings;
+        // GLOBAL pump passes only. Group-local settle passes are counted beside this, in
+        // LocalSettlePassCount, never folded into it -- see FProcessorScheduler::Tick.
         int32 PumpIterationCount = 0;
+        int32 LocalSettlePassCount = 0;
         double TotalFrameTimeMs = 0.0;
         uint64 FrameNumber = 0;
         int32 SkippedEmptyViewCount = 0;

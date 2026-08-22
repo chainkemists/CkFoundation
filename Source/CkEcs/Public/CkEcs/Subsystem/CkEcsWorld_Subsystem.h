@@ -389,6 +389,14 @@ public:
     static int32
     Get_Debug_FramePumpIterationCount(const UObject* InWorldContextObject, int64 InFrameNumber);
 
+    // Group-local settle passes for the frame, which share the pump BUDGET with the global loop but are
+    // deliberately not part of Get_Debug_FramePumpIterationCount. Read both when a frame costs more
+    // passes than expected -- the split says which loop spent them.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EcsWorld|Debug",
+              DisplayName="[Ck][EcsWorld] Get Debug Frame Local Settle Pass Count")
+    static int32
+    Get_Debug_FrameLocalSettlePassCount(const UObject* InWorldContextObject, int64 InFrameNumber);
+
 public:
     template <typename T_SubsystemClass>
     [[nodiscard]]
