@@ -40,10 +40,16 @@ miss, a *present but wrong* one is always a defect.
 - `ck::jolt::cook::ComputeIncrementalPlan` / `ComputeIndexRemap` — the PURE halves of the
   incremental cook (which cells are dirty; how the index renumbers around them). Unit-tested by
   `Ck.Jolt.Cook.IncrementalPlan` / `Ck.Jolt.Cook.IndexRemap` in CkTests.
+- `FCk_Jolt_IncrementalCookDriver` — the incremental cook as a resumable stepper
+  (`Step(budget)` -> InProgress / Done / Failed / FullCookRequired). `Cook_World_Incremental` is
+  this driven to completion in one call, so there is ONE implementation behind both the blocking
+  and the sliced path. It holds the Jolt globals and roots the assets it loaded for its lifetime,
+  because the shapes it carries between steps survive neither being released.
 - `UCk_JoltCook_EditorSubsystem_UE` — the PRIMARY cook vehicle (world already booted by the
   editor): `Cook_CurrentWorld()`, `Cook_CurrentWorld_Incremental()`, `Cook_CurrentWorld_DryRun()`,
-  `Validate_CurrentWorld()`, `Cook_MeshShapes()` (blocking), `Request_CookMeshShapes()` (sliced).
-  BlueprintCallable for editor-utility widgets + Tools-menu entries. Also owns the save hooks.
+  `Validate_CurrentWorld()`, `Cook_MeshShapes()` (all blocking), plus `Request_CookMeshShapes()`
+  and `Request_CookStaticWorld()` (sliced, progress notification — what the Tools menu invokes).
+  BlueprintCallable for editor-utility widgets. Also owns the save hooks.
 - `UCk_JoltCook_UserSettings_UE` — per-user auto-cook toggles (Editor Preferences -> CkFoundation
   -> Jolt Cook).
 - `UCk_JoltCook_Commandlet` — headless cross-map + mesh-shape cook
@@ -58,7 +64,9 @@ miss, a *present but wrong* one is always a defect.
 `UCk_JoltCook_EditorSubsystem_UE` hooks `FEditorDelegates::PostSaveWorldWithContext` (→ incremental
 map cook) and `UPackage::PackageSavedWithContextEvent` (→ per-mesh shape cook), debounces them
 through a timer, and drains the queue sliced across frames behind a status-bar progress
-notification (the convention in `Source/EDITOR_MODULES.md` rule 5).
+notification (the convention in `Source/EDITOR_MODULES.md` rule 5). The mesh sweep slices per mesh; the map cook slices per cooked
+cell, per swept actor, and per rewritten cell. Only the FULL map cook still blocks — its World
+Partition walk owns its own loop — and it is reached only on a first cook or a contract change.
 
 Four things are load-bearing:
 

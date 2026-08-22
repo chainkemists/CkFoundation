@@ -13,6 +13,7 @@
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 
 #include <Engine/Level.h>
+#include <Math/NumericLimits.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
 #include <Misc/ScopeExit.h>
@@ -350,14 +351,14 @@ namespace ck_jolt_cook_world_cooker
     /// avoid, just cell-scoped. Unset = a restore failed and the cell must not be written.
     static auto DoCarryOver_ActorsInUnloadedLevels(
         const UCk_Jolt_CookedCell_UE& InCookedCell,
-        const TMap<FName, TObjectPtr<AActor>>& InPresentActors,
+        const TSet<FName>& InPresentActorNames,
         const TSet<FName>& InLoadedLevelPackages,
         TArray<FActorCookData>& OutActors)
         -> TOptional<int32>
     {
         const auto Get_NeedsCarryOver = [&](const FCk_Jolt_CookedActorGroup& InGroup)
         {
-            return NOT InPresentActors.Contains(InGroup.Get_SourceActorName())
+            return NOT InPresentActorNames.Contains(InGroup.Get_SourceActorName())
                 && NOT InLoadedLevelPackages.Contains(Get_LevelPackageOfCookedActor(InGroup));
         };
 
@@ -528,113 +529,136 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Jolt_IncrementalCookDriver::FImpl
+{
+    enum class EPhase : uint8
+    {
+        Prepare,
+        LoadCells,
+        Sweep,
+        Plan,
+        WriteCells,
+        WriteIndex,
+        Complete,
+        Failed,
+        FullCookRequired
+    };
+
+    TWeakObjectPtr<UWorld> _World;
+    ck::jolt::cook::ECk_Jolt_CookMode _Mode = ck::jolt::cook::ECk_Jolt_CookMode::Cook;
+    EPhase _Phase = EPhase::Prepare;
+
+    FString _RootPath;
+    FString _MapPackageName;
+    FString _MapSubPath;
+    float _CellSize = 0.0f;
+    ck::jolt::bake::FCk_Jolt_BakeFilter _BakeFilter;
+
+    TStrongObjectPtr<UCk_Jolt_CookedWorldIndex_UE> _Index;
+    TArray<TStrongObjectPtr<UCk_Jolt_CookedCell_UE>> _CookedCells;
+    TArray<FIntPoint> _CookedCellIds;
+    TMap<FIntPoint, int32> _CookedCellIdToIndex;
+
+    TArray<TWeakObjectPtr<AActor>> _ActorsToSweep;
+    TMap<FName, TWeakObjectPtr<AActor>> _PresentActors;
+    TSet<FName> _PresentActorNames;
+    TMap<FName, const ck::jolt::cook::FCk_Jolt_IncrementalCookedActor*> _CookedByName;
+
+    ck::jolt::cook::FCk_Jolt_IncrementalPlanInput _PlanInput;
+    ck::jolt::cook::FCk_Jolt_IncrementalPlan _Plan;
+    TArray<FIntPoint> _DirtyCellIds;
+    TMap<FIntPoint, TArray<FName>> _PresentActorNamesByDirtyCell;
+
+    ck::jolt::bake::FCk_Jolt_ShapeCache _ShapeCache;
+    ck::jolt::cook::FCk_Jolt_IndexRemapInput _RemapInput;
+    TMap<FIntPoint, FCk_Jolt_CookedCellRef> _FreshCellRefs;
+
+    FCk_Jolt_WorldCooker::FCookStats _Stats;
+
+    int32 _Cursor = 0;
+    int32 _CompletedUnits = 0;
+
+    auto Get_TotalUnits() const -> int32
+    {
+        return _CookedCellIds.Num() + _ActorsToSweep.Num() + _DirtyCellIds.Num() + 1;
+    }
+
+    auto DoDecline(ck::jolt::cook::ECk_Jolt_IncrementalOutcome InOutcome, const FString& InReason)
+        -> ck::jolt::cook::ECk_Jolt_CookStepResult
+    {
+        ck::jolt::Log(TEXT("JoltCook: incremental cook of [{}] declined ({}) — a FULL cook is required"),
+            _MapPackageName, InReason);
+
+        _Stats._Outcome = InOutcome;
+        _Phase = EPhase::FullCookRequired;
+        return ck::jolt::cook::ECk_Jolt_CookStepResult::FullCookRequired;
+    }
+
+    auto DoStep_Prepare() -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+    auto DoStep_LoadCells(FCk_Time InBudget) -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+    auto DoStep_Sweep(FCk_Time InBudget) -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+    auto DoStep_Plan() -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+    auto DoStep_WriteCells(FCk_Time InBudget) -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+    auto DoStep_WriteIndex() -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
-    FCk_Jolt_WorldCooker::
-    Cook_World_Incremental(
-        UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
-    -> FCookStats
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_Prepare()
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
 {
     using namespace ck_jolt_cook_world_cooker;
     using namespace ck::jolt;
     using namespace ck::jolt::bake;
     using namespace ck::jolt::cook;
 
-    const auto RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
-    const auto MapPackageName = InWorld.PersistentLevel->GetOutermost()->GetName();
+    auto* World = _World.Get();
 
-    const auto DoFullCook = [&](ECk_Jolt_IncrementalOutcome InOutcome, const FString& InReason) -> FCookStats
+    const auto WorldIsValid = ck::IsValid(World);
+    CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Incremental Jolt cook lost its world"))
     {
-        ck::jolt::Log(TEXT("JoltCook: incremental cook of [{}] declined ({}) — running a FULL cook"),
-            MapPackageName, InReason);
+        _Phase = EPhase::Failed;
+        return ECk_Jolt_CookStepResult::Failed;
+    }
 
-        auto FullStats = Cook_World(InWorld, InMode);
-        FullStats._Outcome = InOutcome;
-        return FullStats;
-    };
+    _RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
+    _MapPackageName = World->PersistentLevel->GetOutermost()->GetName();
+    _MapSubPath = Get_MapSubPath(_MapPackageName);
+    _CellSize = UCk_Utils_Jolt_ProjectSettings::Get_BakeGridCellSize();
+    _BakeFilter = FCk_Jolt_BakeFilter::Make_FromProjectSettings();
 
-    // ForEachActorWithLoading releases each actor once its batch is done, so a World Partition world
-    // cannot be revisited to re-extract the actors that share a dirty cell with a changed one.
-    if (InWorld.GetWorldPartition() != nullptr)
-    { return DoFullCook(ECk_Jolt_IncrementalOutcome::FullCook_WorldPartition, TEXT("World Partition world")); }
+    // ForEachActorWithLoading releases each actor once its batch is done, so the actors sharing a
+    // dirty cell with a changed one cannot be revisited.
+    if (World->GetWorldPartition() != nullptr)
+    { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_WorldPartition, TEXT("World Partition world")); }
 
-    const auto IndexPath = Get_CookedIndexAssetPath(RootPath, MapPackageName);
-    const auto* Index = LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath, nullptr,
-        LOAD_NoWarn | LOAD_Quiet);
+    const auto IndexPath = Get_CookedIndexAssetPath(_RootPath, _MapPackageName);
+    _Index.Reset(LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath, nullptr,
+        LOAD_NoWarn | LOAD_Quiet));
 
-    if (ck::Is_NOT_Valid(Index))
-    { return DoFullCook(ECk_Jolt_IncrementalOutcome::FullCook_NoExistingIndex, TEXT("map was never cooked")); }
+    if (ck::Is_NOT_Valid(_Index.Get()))
+    { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_NoExistingIndex, TEXT("map was never cooked")); }
 
-    auto Stats = FCookStats{};
-
-    Request_GlobalJoltInit();
-    ON_SCOPE_EXIT { Request_GlobalJoltShutdown(); };
-
-    const auto CellSize = UCk_Utils_Jolt_ProjectSettings::Get_BakeGridCellSize();
-    const auto BakeFilter = FCk_Jolt_BakeFilter::Make_FromProjectSettings();
-
-    const auto VersionsMatch = Index->Get_CookVersion() == CookVersion_Current
-        && Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
+    const auto VersionsMatch = _Index->Get_CookVersion() == CookVersion_Current
+        && _Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
     if (NOT VersionsMatch)
-    { return DoFullCook(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("cook/Jolt version drift")); }
+    { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("cook/Jolt version drift")); }
 
-    if (Index->Get_BakeFilterHash() != BakeFilter.ComputeHash())
-    { return DoFullCook(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("bake-filter settings changed")); }
+    if (_Index->Get_BakeFilterHash() != _BakeFilter.ComputeHash())
+    { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift, TEXT("bake-filter settings changed")); }
 
-    // ---- Flatten the cooked state -----------------------------------------------------------------
+    _CookedCellIds = ck::algo::Transform<TArray<FIntPoint>>(_Index->Get_Cells(),
+        [](const FCk_Jolt_CookedCellRef& InCellRef) { return InCellRef.Get_CellId(); });
 
-    const auto& Cells = Index->Get_Cells();
+    for (auto CellIndex = 0; CellIndex < _CookedCellIds.Num(); ++CellIndex)
+    { _CookedCellIdToIndex.Add(_CookedCellIds[CellIndex], CellIndex); }
 
-    auto CookedCellAssets = TArray<const UCk_Jolt_CookedCell_UE*>{};
-    CookedCellAssets.Reserve(Cells.Num());
+    _PlanInput._LoadedLevelPackages = Get_LoadedLevelPackages(*World);
 
-    for (const auto& CellRef : Cells)
-    {
-        const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
-
-        if (ck::Is_NOT_Valid(CellAsset))
-        {
-            return DoFullCook(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift,
-                ck::Format_UE(TEXT("cell [{}] failed to load"), CellRef.Get_CellId()));
-        }
-
-        CookedCellAssets.Emplace(CellAsset);
-    }
-
-    auto PlanInput = FCk_Jolt_IncrementalPlanInput{};
-    PlanInput._LoadedLevelPackages = Get_LoadedLevelPackages(InWorld);
-
-    for (auto CellIndex = 0; CellIndex < Cells.Num(); ++CellIndex)
-    {
-        for (const auto& Group : CookedCellAssets[CellIndex]->Get_ActorGroups())
-        {
-            auto CookedActor = FCk_Jolt_IncrementalCookedActor{};
-            CookedActor._ActorName = Group.Get_SourceActorName();
-            CookedActor._SourceHash = Group.Get_SourceHash();
-            CookedActor._CellId = Cells[CellIndex].Get_CellId();
-            CookedActor._OwningLevelPackage = Get_LevelPackageOfCookedActor(Group);
-
-            PlanInput._Cooked.Emplace(MoveTemp(CookedActor));
-        }
-    }
-
-    auto CookedCellIdToIndex = TMap<FIntPoint, int32>{};
-    for (auto CellIndex = 0; CellIndex < Cells.Num(); ++CellIndex)
-    { CookedCellIdToIndex.Add(Cells[CellIndex].Get_CellId(), CellIndex); }
-
-    auto CookedByName = TMap<FName, const FCk_Jolt_IncrementalCookedActor*>{};
-    ck::algo::ForEach(PlanInput._Cooked, [&](const FCk_Jolt_IncrementalCookedActor& InCooked)
-    {
-        CookedByName.Add(InCooked._ActorName, &InCooked);
-    });
-
-    // ---- Sweep the world ---------------------------------------------------------------------------
-
-    auto ShapeCache = FCk_Jolt_ShapeCache{};
-    auto PresentActors = TMap<FName, TObjectPtr<AActor>>{};
-
-    for (const auto& Level : InWorld.GetLevels())
+    for (const auto& Level : World->GetLevels())
     {
         if (ck::Is_NOT_Valid(Level))
         { continue; }
@@ -644,177 +668,445 @@ auto
             if (ck::Is_NOT_Valid(Actor))
             { continue; }
 
-            const auto ActorName = Actor->GetFName();
-            const auto SourceHash = ComputeSourceHash(*Actor, BakeFilter);
-
-            auto Present = FCk_Jolt_IncrementalPresentActor{};
-            Present._ActorName = ActorName;
-            Present._SourceHash = SourceHash;
-
-            const auto* const* CookedActor = CookedByName.Find(ActorName);
-            const auto IsUnchanged = CookedActor != nullptr && (*CookedActor)->_SourceHash == SourceHash;
-
-            if (IsUnchanged)
-            {
-                // The hash covers the quantized world transform, so it cannot have changed cells.
-                Present._CurrentCellId = (*CookedActor)->_CellId;
-                Present._HasBodies = true;
-            }
-            else
-            {
-                auto Extracted = TArray<FActorCookData>{};
-                DoExtract_Actor(*Actor, ShapeCache, BakeFilter, Extracted);
-
-                Present._HasBodies = Extracted.Num() > 0;
-
-                if (Present._HasBodies)
-                { Present._CurrentCellId = Get_CellIdForActor(Extracted[0], CellSize); }
-            }
-
-            if (Present._HasBodies)
-            { ++Stats._NumActors; }
-
-            PresentActors.Add(ActorName, Actor);
-            PlanInput._Present.Emplace(MoveTemp(Present));
+            _ActorsToSweep.Emplace(Actor);
         }
     }
 
-    const auto Plan = ComputeIncrementalPlan(PlanInput);
+    _Cursor = 0;
+    _Phase = EPhase::LoadCells;
+    return ECk_Jolt_CookStepResult::InProgress;
+}
 
-    Stats._NumActorsUpToDate = Plan._NumUnchangedActors;
-    Stats._NumCells = Cells.Num();
-    Stats._Outcome = ECk_Jolt_IncrementalOutcome::Incremental;
+// --------------------------------------------------------------------------------------------------------------------
 
-    if (Plan._DirtyCellIds.IsEmpty())
+auto
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_LoadCells(
+        FCk_Time InBudget)
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck_jolt_cook_world_cooker;
+    using namespace ck::jolt;
+    using namespace ck::jolt::bake;
+    using namespace ck::jolt::cook;
+
+    const auto SliceStart = FPlatformTime::Seconds();
+
+    while (_Cursor < _CookedCellIds.Num())
+    {
+        const auto& CellRef = _Index->Get_Cells()[_Cursor];
+        auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
+
+        if (ck::Is_NOT_Valid(CellAsset))
+        {
+            return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_ContractDrift,
+                ck::Format_UE(TEXT("cell [{}] failed to load"), CellRef.Get_CellId()));
+        }
+
+        _CookedCells.Emplace(TStrongObjectPtr<UCk_Jolt_CookedCell_UE>{CellAsset});
+
+        for (const auto& Group : CellAsset->Get_ActorGroups())
+        {
+            auto CookedActor = FCk_Jolt_IncrementalCookedActor{};
+            CookedActor._ActorName = Group.Get_SourceActorName();
+            CookedActor._SourceHash = Group.Get_SourceHash();
+            CookedActor._CellId = CellRef.Get_CellId();
+            CookedActor._OwningLevelPackage = Get_LevelPackageOfCookedActor(Group);
+
+            _PlanInput._Cooked.Emplace(MoveTemp(CookedActor));
+        }
+
+        ++_Cursor;
+        ++_CompletedUnits;
+
+        if (FCk_Time{FPlatformTime::Seconds() - SliceStart} >= InBudget)
+        { break; }
+    }
+
+    if (_Cursor < _CookedCellIds.Num())
+    { return ECk_Jolt_CookStepResult::InProgress; }
+
+    // Pointers into _PlanInput._Cooked, which is complete and never resized again.
+    ck::algo::ForEach(_PlanInput._Cooked, [&](const FCk_Jolt_IncrementalCookedActor& InCooked)
+    {
+        _CookedByName.Add(InCooked._ActorName, &InCooked);
+    });
+
+    _Cursor = 0;
+    _Phase = EPhase::Sweep;
+    return ECk_Jolt_CookStepResult::InProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_Sweep(
+        FCk_Time InBudget)
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck_jolt_cook_world_cooker;
+    using namespace ck::jolt;
+    using namespace ck::jolt::bake;
+    using namespace ck::jolt::cook;
+
+    const auto SliceStart = FPlatformTime::Seconds();
+
+    while (_Cursor < _ActorsToSweep.Num())
+    {
+        auto* Actor = _ActorsToSweep[_Cursor].Get();
+        ++_Cursor;
+        ++_CompletedUnits;
+
+        if (ck::Is_NOT_Valid(Actor))
+        { continue; }
+
+        const auto ActorName = Actor->GetFName();
+        const auto SourceHash = ComputeSourceHash(*Actor, _BakeFilter);
+
+        auto Present = FCk_Jolt_IncrementalPresentActor{};
+        Present._ActorName = ActorName;
+        Present._SourceHash = SourceHash;
+
+        const auto* const* CookedActor = _CookedByName.Find(ActorName);
+        const auto IsUnchanged = CookedActor != nullptr && (*CookedActor)->_SourceHash == SourceHash;
+
+        if (IsUnchanged)
+        {
+            // The hash covers the quantized world transform, so it cannot have changed cells.
+            Present._CurrentCellId = (*CookedActor)->_CellId;
+            Present._HasBodies = true;
+        }
+        else
+        {
+            auto Extracted = TArray<FActorCookData>{};
+            DoExtract_Actor(*Actor, _ShapeCache, _BakeFilter, Extracted);
+
+            Present._HasBodies = Extracted.Num() > 0;
+
+            if (Present._HasBodies)
+            { Present._CurrentCellId = Get_CellIdForActor(Extracted[0], _CellSize); }
+        }
+
+        if (Present._HasBodies)
+        { ++_Stats._NumActors; }
+
+        _PresentActors.Add(ActorName, Actor);
+        _PresentActorNames.Add(ActorName);
+        _PlanInput._Present.Emplace(MoveTemp(Present));
+
+        if (FCk_Time{FPlatformTime::Seconds() - SliceStart} >= InBudget)
+        { break; }
+    }
+
+    if (_Cursor < _ActorsToSweep.Num())
+    { return ECk_Jolt_CookStepResult::InProgress; }
+
+    _Phase = EPhase::Plan;
+    return ECk_Jolt_CookStepResult::InProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_Plan()
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck_jolt_cook_world_cooker;
+    using namespace ck::jolt;
+    using namespace ck::jolt::bake;
+    using namespace ck::jolt::cook;
+
+    _Plan = ComputeIncrementalPlan(_PlanInput);
+
+    _Stats._NumActorsUpToDate = _Plan._NumUnchangedActors;
+    _Stats._NumCells = _CookedCellIds.Num();
+    _Stats._Outcome = ECk_Jolt_IncrementalOutcome::Incremental;
+
+    if (_Plan._DirtyCellIds.IsEmpty())
     {
         ck::jolt::Log(TEXT("JoltCook incremental: map [{}] is up to date — [{}] actors checked, [{}] preserved "
             "in unloaded levels, nothing rewritten"),
-            MapPackageName, Plan._NumUnchangedActors, Plan._NumPreservedUnloadedActors);
-        Stats._Success = true;
-        return Stats;
+            _MapPackageName, _Plan._NumUnchangedActors, _Plan._NumPreservedUnloadedActors);
+
+        _Stats._Success = true;
+        _Phase = EPhase::Complete;
+        return ECk_Jolt_CookStepResult::Done;
     }
 
-    if (InMode == ECk_Jolt_CookMode::DryRun)
+    if (_Mode == ECk_Jolt_CookMode::DryRun)
     {
         ck::jolt::Log(TEXT("JoltCook incremental DRY RUN: map [{}] — [{}] changed, [{}] added, [{}] removed, "
             "[{}] unchanged, [{}] preserved in unloaded levels -> [{}] of [{}] cells would be rewritten"),
-            MapPackageName, Plan._NumChangedActors, Plan._NumAddedActors, Plan._RemovedActorNames.Num(),
-            Plan._NumUnchangedActors, Plan._NumPreservedUnloadedActors, Plan._DirtyCellIds.Num(), Cells.Num());
-        Stats._Success = true;
-        return Stats;
+            _MapPackageName, _Plan._NumChangedActors, _Plan._NumAddedActors, _Plan._RemovedActorNames.Num(),
+            _Plan._NumUnchangedActors, _Plan._NumPreservedUnloadedActors, _Plan._DirtyCellIds.Num(),
+            _CookedCellIds.Num());
+
+        _Stats._Success = true;
+        _Phase = EPhase::Complete;
+        return ECk_Jolt_CookStepResult::Done;
     }
 
-    // ---- Rebuild the dirty cells -------------------------------------------------------------------
+    _DirtyCellIds = _Plan._DirtyCellIds.Array();
 
-    auto DirtyCellCookData = TMap<FIntPoint, FCellCookData>{};
-
-    for (const auto& DirtyCellId : Plan._DirtyCellIds)
+    for (const auto& Present : _PlanInput._Present)
     {
-        auto& Cell = DirtyCellCookData.Add(DirtyCellId);
+        if (NOT Present._HasBodies || NOT _Plan._DirtyCellIds.Contains(Present._CurrentCellId))
+        { continue; }
+
+        _PresentActorNamesByDirtyCell.FindOrAdd(Present._CurrentCellId).Emplace(Present._ActorName);
+    }
+
+    _RemapInput._DirtyCellIds = _Plan._DirtyCellIds;
+    _RemapInput._ExistingActorLookup = _Index->Get_ActorLookup();
+    _RemapInput._ExistingCellIdsByCellIndex = _CookedCellIds;
+
+    _Cursor = 0;
+    _Phase = EPhase::WriteCells;
+    return ECk_Jolt_CookStepResult::InProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_WriteCells(
+        FCk_Time InBudget)
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck_jolt_cook_world_cooker;
+    using namespace ck::jolt;
+    using namespace ck::jolt::bake;
+    using namespace ck::jolt::cook;
+
+    const auto SliceStart = FPlatformTime::Seconds();
+
+    while (_Cursor < _DirtyCellIds.Num())
+    {
+        const auto DirtyCellId = _DirtyCellIds[_Cursor];
+        ++_Cursor;
+        ++_CompletedUnits;
+
+        auto Cell = FCellCookData{};
         Cell._CellId = DirtyCellId;
-    }
 
-    for (const auto& Present : PlanInput._Present)
-    {
-        if (NOT Present._HasBodies)
-        { continue; }
+        if (const auto* ActorNames = _PresentActorNamesByDirtyCell.Find(DirtyCellId))
+        {
+            for (const auto& ActorName : *ActorNames)
+            {
+                auto* Actor = _PresentActors.FindRef(ActorName).Get();
 
-        auto* Cell = DirtyCellCookData.Find(Present._CurrentCellId);
-        if (Cell == nullptr)
-        { continue; }
+                if (ck::Is_NOT_Valid(Actor))
+                { continue; }
 
-        const auto* Actor = PresentActors.Find(Present._ActorName);
-        if (Actor == nullptr || ck::Is_NOT_Valid(*Actor))
-        { continue; }
+                _Stats._NumBodies += DoExtract_Actor(*Actor, _ShapeCache, _BakeFilter, Cell._Actors);
+            }
+        }
 
-        Stats._NumBodies += DoExtract_Actor(**Actor, ShapeCache, BakeFilter, Cell->_Actors);
-    }
+        if (const auto* CookedCellIndex = _CookedCellIdToIndex.Find(DirtyCellId))
+        {
+            const auto CarriedOver = DoCarryOver_ActorsInUnloadedLevels(
+                *_CookedCells[*CookedCellIndex].Get(), _PresentActorNames, _PlanInput._LoadedLevelPackages,
+                Cell._Actors);
 
-    for (const auto& DirtyCellId : Plan._DirtyCellIds)
-    {
-        const auto* CookedCellIndex = CookedCellIdToIndex.Find(DirtyCellId);
-        if (CookedCellIndex == nullptr)
-        { continue; }
+            if (NOT CarriedOver.IsSet())
+            {
+                _Phase = EPhase::Failed;
+                return ECk_Jolt_CookStepResult::Failed;
+            }
 
-        const auto CarriedOver = DoCarryOver_ActorsInUnloadedLevels(
-            *CookedCellAssets[*CookedCellIndex], PresentActors, PlanInput._LoadedLevelPackages,
-            DirtyCellCookData[DirtyCellId]._Actors);
+            _Stats._NumBodies += CarriedOver.GetValue();
+        }
 
-        if (NOT CarriedOver.IsSet())
-        { return Stats; }
-
-        Stats._NumBodies += CarriedOver.GetValue();
-    }
-
-    const auto MapSubPath = Get_MapSubPath(MapPackageName);
-
-    auto RemapInput = FCk_Jolt_IndexRemapInput{};
-    RemapInput._DirtyCellIds = Plan._DirtyCellIds;
-    RemapInput._ExistingActorLookup = Index->Get_ActorLookup();
-    RemapInput._ExistingCellIdsByCellIndex = ck::algo::Transform<TArray<FIntPoint>>(Cells,
-        [](const FCk_Jolt_CookedCellRef& InCellRef) { return InCellRef.Get_CellId(); });
-
-    auto FreshCellRefs = TMap<FIntPoint, FCk_Jolt_CookedCellRef>{};
-
-    for (const auto& [CellId, Cell] : DirtyCellCookData)
-    {
         if (Cell._Actors.IsEmpty())
         {
             ck::jolt::Warning(TEXT("JoltCook incremental: cell [{}] of map [{}] no longer holds any baked actor "
                 "— it is dropped from the index and its cooked asset is now ORPHANED; delete it by hand"),
-                CellId, MapPackageName);
+                DirtyCellId, _MapPackageName);
             continue;
         }
 
-        const auto Written = DoWrite_Cell(Cell, RootPath, MapSubPath);
+        const auto Written = DoWrite_Cell(Cell, _RootPath, _MapSubPath);
 
         if (NOT Written._Success)
-        { return Stats; }
+        {
+            _Phase = EPhase::Failed;
+            return ECk_Jolt_CookStepResult::Failed;
+        }
 
-        FreshCellRefs.Add(CellId, Written._CellRef);
-        RemapInput._WrittenCellIds.Emplace(CellId);
-        RemapInput._WrittenActorNamesByCell.Add(CellId, Written._ActorNamesByGroupIndex);
-        ++Stats._NumCellsWritten;
+        _FreshCellRefs.Add(DirtyCellId, Written._CellRef);
+        _RemapInput._WrittenCellIds.Emplace(DirtyCellId);
+        _RemapInput._WrittenActorNamesByCell.Add(DirtyCellId, Written._ActorNamesByGroupIndex);
+        ++_Stats._NumCellsWritten;
+
+        if (FCk_Time{FPlatformTime::Seconds() - SliceStart} >= InBudget)
+        { break; }
     }
 
-    // ---- Rebuild the index -------------------------------------------------------------------------
+    if (_Cursor < _DirtyCellIds.Num())
+    { return ECk_Jolt_CookStepResult::InProgress; }
 
-    const auto Remap = ComputeIndexRemap(RemapInput);
+    _Phase = EPhase::WriteIndex;
+    return ECk_Jolt_CookStepResult::InProgress;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Jolt_IncrementalCookDriver::FImpl::
+    DoStep_WriteIndex()
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck_jolt_cook_world_cooker;
+    using namespace ck::jolt;
+    using namespace ck::jolt::bake;
+    using namespace ck::jolt::cook;
+
+    const auto Remap = ComputeIndexRemap(_RemapInput);
 
     auto NewCellRefs = TArray<FCk_Jolt_CookedCellRef>{};
     NewCellRefs.SetNum(Remap._NumNewCells);
 
-    for (auto CellIndex = 0; CellIndex < Cells.Num(); ++CellIndex)
+    for (auto CellIndex = 0; CellIndex < _CookedCellIds.Num(); ++CellIndex)
     {
         const auto NewCellIndex = Remap._NewCellIndexByOldCellIndex[CellIndex];
 
         if (NewCellIndex == INDEX_NONE)
         { continue; }
 
-        NewCellRefs[NewCellIndex] = Cells[CellIndex];
+        NewCellRefs[NewCellIndex] = _Index->Get_Cells()[CellIndex];
     }
 
     for (const auto& [WrittenCellId, NewCellIndex] : Remap._NewCellIndexByWrittenCellId)
-    { NewCellRefs[NewCellIndex] = FreshCellRefs[WrittenCellId]; }
+    { NewCellRefs[NewCellIndex] = _FreshCellRefs[WrittenCellId]; }
 
-    Stats._NumCells = NewCellRefs.Num();
-    Stats._NumUniqueShapes = ShapeCache.Get_NumUniqueShapes();
+    _Stats._NumCells = NewCellRefs.Num();
+    _Stats._NumUniqueShapes = _ShapeCache.Get_NumUniqueShapes();
 
     auto NewActorLookup = Remap._ActorLookup;
-
     auto IndexPackageName = FString{};
-    if (NOT DoWrite_Index(RootPath, MapSubPath, MapPackageName, BakeFilter,
+
+    if (NOT DoWrite_Index(_RootPath, _MapSubPath, _MapPackageName, _BakeFilter,
         MoveTemp(NewCellRefs), MoveTemp(NewActorLookup), IndexPackageName))
-    { return Stats; }
+    {
+        _Phase = EPhase::Failed;
+        return ECk_Jolt_CookStepResult::Failed;
+    }
+
+    ++_CompletedUnits;
 
     ck::jolt::Log(TEXT("JoltCook incremental: map [{}] — [{}] changed, [{}] added, [{}] removed, [{}] unchanged, "
         "[{}] preserved in unloaded levels -> [{}] of [{}] cells rewritten -> [{}]"),
-        MapPackageName, Plan._NumChangedActors, Plan._NumAddedActors, Plan._RemovedActorNames.Num(),
-        Plan._NumUnchangedActors, Plan._NumPreservedUnloadedActors, Stats._NumCellsWritten, Cells.Num(),
-        IndexPackageName);
+        _MapPackageName, _Plan._NumChangedActors, _Plan._NumAddedActors, _Plan._RemovedActorNames.Num(),
+        _Plan._NumUnchangedActors, _Plan._NumPreservedUnloadedActors, _Stats._NumCellsWritten,
+        _CookedCellIds.Num(), IndexPackageName);
 
-    Stats._Success = true;
-    return Stats;
+    _Stats._Success = true;
+    _Phase = EPhase::Complete;
+    return ECk_Jolt_CookStepResult::Done;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_Jolt_IncrementalCookDriver::
+    FCk_Jolt_IncrementalCookDriver(
+        UWorld& InWorld,
+        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+    : _Impl{MakeUnique<FImpl>()}
+{
+    ck::jolt::Request_GlobalJoltInit();
+
+    _Impl->_World = &InWorld;
+    _Impl->_Mode = InMode;
+}
+
+FCk_Jolt_IncrementalCookDriver::
+    ~FCk_Jolt_IncrementalCookDriver()
+{
+    // The impl holds JPH::Refs; they must die before the factory that made them.
+    _Impl.Reset();
+
+    ck::jolt::Request_GlobalJoltShutdown();
+}
+
+auto
+    FCk_Jolt_IncrementalCookDriver::
+    Step(
+        FCk_Time InBudget)
+    -> ck::jolt::cook::ECk_Jolt_CookStepResult
+{
+    using namespace ck::jolt::cook;
+    using EPhase = FImpl::EPhase;
+
+    switch (_Impl->_Phase)
+    {
+        case EPhase::Prepare:          return _Impl->DoStep_Prepare();
+        case EPhase::LoadCells:        return _Impl->DoStep_LoadCells(InBudget);
+        case EPhase::Sweep:            return _Impl->DoStep_Sweep(InBudget);
+        case EPhase::Plan:             return _Impl->DoStep_Plan();
+        case EPhase::WriteCells:       return _Impl->DoStep_WriteCells(InBudget);
+        case EPhase::WriteIndex:       return _Impl->DoStep_WriteIndex();
+        case EPhase::Complete:         return ECk_Jolt_CookStepResult::Done;
+        case EPhase::Failed:           return ECk_Jolt_CookStepResult::Failed;
+        case EPhase::FullCookRequired: return ECk_Jolt_CookStepResult::FullCookRequired;
+    }
+
+    return ECk_Jolt_CookStepResult::Failed;
+}
+
+auto
+    FCk_Jolt_IncrementalCookDriver::
+    Get_CompletedUnits() const
+    -> int32
+{
+    return _Impl->_CompletedUnits;
+}
+
+auto
+    FCk_Jolt_IncrementalCookDriver::
+    Get_TotalUnits() const
+    -> int32
+{
+    return _Impl->Get_TotalUnits();
+}
+
+auto
+    FCk_Jolt_IncrementalCookDriver::
+    Get_Stats() const
+    -> FCk_Jolt_WorldCooker::FCookStats
+{
+    return _Impl->_Stats;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Jolt_WorldCooker::
+    Cook_World_Incremental(
+        UWorld& InWorld,
+        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+    -> FCookStats
+{
+    using namespace ck::jolt::cook;
+
+    auto Driver = FCk_Jolt_IncrementalCookDriver{InWorld, InMode};
+
+    // Synchronous callers (commandlet, editor-utility Blueprints) want it finished on return.
+    constexpr auto NoBudget = FCk_Time{TNumericLimits<double>::Max()};
+
+    auto Result = ECk_Jolt_CookStepResult::InProgress;
+    while (Result == ECk_Jolt_CookStepResult::InProgress)
+    { Result = Driver.Step(NoBudget); }
+
+    if (Result == ECk_Jolt_CookStepResult::FullCookRequired)
+    {
+        auto FullStats = Cook_World(InWorld, InMode);
+        FullStats._Outcome = Driver.Get_Stats()._Outcome;
+        return FullStats;
+    }
+
+    return Driver.Get_Stats();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

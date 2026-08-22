@@ -101,6 +101,7 @@ auto
 
     Dismiss_DrainTicker();
     Dismiss_ProgressNotification();
+    _WorldCookDriver.Reset();
     DoRelease_JoltGlobals();
 
     Super::Deinitialize();
@@ -305,6 +306,44 @@ auto
     using namespace ck_jolt_cook_editor_subsystem;
     using namespace ck::jolt::cook;
 
+    Tick_MeshCooks(SliceBudget);
+
+    const auto MeshCooksRemain = NOT _PendingMeshCooks.IsEmpty() || _SweepNextIndex < _SweepCandidates.Num();
+
+    if (_ActiveProgressNotification.IsValid())
+    {
+        // A save landing mid-drain appends work, and the world cook only knows its own size once it
+        // has read the index — so the total is re-reported rather than captured.
+        const auto WorldCookUnitsRemaining = _WorldCookDriver.IsValid()
+            ? _WorldCookDriver->Get_TotalUnits() - _WorldCookDriver->Get_CompletedUnits()
+            : 0;
+
+        _DrainTotalItems = FMath::Max(_DrainTotalItems,
+            _DrainCompletedItems + _PendingMeshCooks.Num() + (_SweepCandidates.Num() - _SweepNextIndex)
+                + WorldCookUnitsRemaining);
+
+        FSlateNotificationManager::Get().UpdateProgressNotification(
+            _ActiveProgressNotification, _DrainCompletedItems, _DrainTotalItems);
+    }
+
+    if (MeshCooksRemain)
+    { return true; }
+
+    if (_DrainWorldCookPending)
+    { return Tick_WorldCook(SliceBudget); }
+
+    Finish_Drain();
+    return false;
+}
+
+auto
+    UCk_JoltCook_EditorSubsystem_UE::
+    Tick_MeshCooks(
+        FCk_Time InBudget)
+    -> void
+{
+    using namespace ck::jolt::cook;
+
     const auto SliceStart = FPlatformTime::Seconds();
 
     while (NOT _PendingMeshCooks.IsEmpty() || _SweepNextIndex < _SweepCandidates.Num())
@@ -339,43 +378,70 @@ auto
 
         FCk_Jolt_MeshShapeCooker::Accumulate_SingleResult(Result, _DrainStats);
 
-        if (FCk_Time{FPlatformTime::Seconds() - SliceStart} >= SliceBudget)
-        { break; }
+        if (FCk_Time{FPlatformTime::Seconds() - SliceStart} >= InBudget)
+        { return; }
     }
+}
 
-    if (_ActiveProgressNotification.IsValid())
+auto
+    UCk_JoltCook_EditorSubsystem_UE::
+    Tick_WorldCook(
+        FCk_Time InBudget)
+    -> bool
+{
+    using namespace ck_jolt_cook_editor_subsystem;
+    using namespace ck::jolt::cook;
+
+    // A drain spans many frames, so PIE can have started since it began.
+    if (NOT Get_IsAutoCookAllowed())
     {
-        // A save landing mid-drain appends work, so the total is re-reported rather than captured.
-        _DrainTotalItems = FMath::Max(_DrainTotalItems,
-            _DrainCompletedItems + _PendingMeshCooks.Num() + (_SweepCandidates.Num() - _SweepNextIndex));
-
-        FSlateNotificationManager::Get().UpdateProgressNotification(
-            _ActiveProgressNotification, _DrainCompletedItems, _DrainTotalItems);
-    }
-
-    if (NOT _PendingMeshCooks.IsEmpty() || _SweepNextIndex < _SweepCandidates.Num())
-    { return true; }
-
-    if (_DrainWorldCookPending)
-    {
+        _PendingWorldCook = true;
         _DrainWorldCookPending = false;
+        _WorldCookDriver.Reset();
+        Finish_Drain();
+        return false;
+    }
 
-        if (NOT Get_IsAutoCookAllowed())
+    if (_WorldCookDriver.IsValid() == false)
+    {
+        auto* EditorWorld = Get_EditorWorld();
+
+        if (ck::Is_NOT_Valid(EditorWorld))
         {
-            _PendingWorldCook = true;
+            _DrainWorldCookPending = false;
             Finish_Drain();
             return false;
         }
 
-        if (auto* EditorWorld = Get_EditorWorld())
-        { FCk_Jolt_WorldCooker::Cook_World_Incremental(*EditorWorld, ECk_Jolt_CookMode::Cook); }
-
-        ++_DrainCompletedItems;
-        return true;
+        _WorldCookDriver = MakeUnique<FCk_Jolt_IncrementalCookDriver>(*EditorWorld, ECk_Jolt_CookMode::Cook);
+        _WorldCookUnitsCounted = 0;
     }
 
-    Finish_Drain();
-    return false;
+    const auto Result = _WorldCookDriver->Step(InBudget);
+
+    // The driver's unit count only firms up as it discovers the map; feed the delta through so the
+    // bar advances instead of jumping at the end.
+    const auto Completed = _WorldCookDriver->Get_CompletedUnits();
+    _DrainCompletedItems += Completed - _WorldCookUnitsCounted;
+    _WorldCookUnitsCounted = Completed;
+
+    if (Result == ECk_Jolt_CookStepResult::InProgress)
+    { return true; }
+
+    if (Result == ECk_Jolt_CookStepResult::FullCookRequired)
+    {
+        auto* EditorWorld = Get_EditorWorld();
+        _WorldCookDriver.Reset();
+
+        // The full cook cannot be sliced (its World Partition walk owns its own loop), so this one
+        // blocks. It only happens on a first cook or a contract change, never on a routine save.
+        if (ck::IsValid(EditorWorld))
+        { FCk_Jolt_WorldCooker::Cook_World(*EditorWorld, ECk_Jolt_CookMode::Cook); }
+    }
+
+    _WorldCookDriver.Reset();
+    _DrainWorldCookPending = false;
+    return true;
 }
 
 auto
@@ -402,6 +468,7 @@ auto
     _DrainTotalItems = 0;
     _DrainCompletedItems = 0;
 
+    _WorldCookDriver.Reset();
     _DrainTickerHandle.Reset();
     Dismiss_ProgressNotification();
     DoRelease_JoltGlobals();
@@ -475,6 +542,21 @@ auto
     { return false; }
 
     return FCk_Jolt_WorldCooker::Cook_World(*World, ck::jolt::cook::ECk_Jolt_CookMode::Cook)._Success;
+}
+
+auto
+    UCk_JoltCook_EditorSubsystem_UE::
+    Request_CookStaticWorld()
+    -> bool
+{
+    if (_DrainTickerHandle.IsValid())
+    {
+        ck::jolt::Warning(TEXT("JoltCook: a cook is already running — ignoring the request"));
+        return false;
+    }
+
+    _PendingWorldCook = true;
+    return Start_Drain(LOCTEXT("JoltWorldCookProgress", "Cooking Jolt static world"));
 }
 
 auto

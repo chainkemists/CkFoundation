@@ -39,6 +39,15 @@ namespace ck::jolt::cook
         FullCook_WorldPartition
     };
 
+    enum class ECk_Jolt_CookStepResult : uint8
+    {
+        InProgress,
+        Done,
+        Failed,
+        /// The incremental path declined; the caller must run a full cook instead.
+        FullCookRequired
+    };
+
     // ----------------------------------------------------------------------------------------------------------------
 
     struct CKJOLTEDITOR_API FCk_Jolt_IncrementalCookedActor
