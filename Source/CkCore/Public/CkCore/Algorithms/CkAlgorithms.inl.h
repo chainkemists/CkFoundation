@@ -1075,6 +1075,79 @@ namespace ck::algo
 
         return Mean(Deviations);
     }
+
+    template <typename T_Container>
+    auto
+        Variance(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        const auto MeanValue = Mean(InContainer);
+
+        if (NOT MeanValue.IsSet())
+        { return {}; }
+
+        auto SquaredDeviations = TArray<double>{};
+        SquaredDeviations.Reserve(InContainer.Num());
+
+        for (const auto& Value : InContainer)
+        {
+            const auto Deviation = static_cast<double>(Value) - *MeanValue;
+            SquaredDeviations.Add(Deviation * Deviation);
+        }
+
+        return Mean(SquaredDeviations);
+    }
+
+    template <typename T_Container>
+    auto
+        StandardDeviation(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        const auto VarianceValue = Variance(InContainer);
+
+        if (NOT VarianceValue.IsSet())
+        { return {}; }
+
+        return FMath::Sqrt(*VarianceValue);
+    }
+
+    template <typename T_Container>
+    auto
+        CoefficientOfVariation(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        const auto MeanValue = Mean(InContainer);
+
+        if (NOT MeanValue.IsSet() || FMath::IsNearlyZero(*MeanValue))
+        { return {}; }
+
+        const auto StandardDeviationValue = StandardDeviation(InContainer);
+
+        if (NOT StandardDeviationValue.IsSet())
+        { return {}; }
+
+        return *StandardDeviationValue / *MeanValue;
+    }
+
+    template <typename T_Container, typename T_ProjectionFunction>
+    auto
+        SumBy(
+            const T_Container& InContainer,
+            T_ProjectionFunction InProjection)
+        -> double
+    {
+        auto Sum = 0.0;
+
+        for (const auto& Element : InContainer)
+        {
+            Sum += static_cast<double>(std::invoke(InProjection, Element));
+        }
+
+        return Sum;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -339,6 +339,31 @@ namespace ck::algo
     template <typename T_Container>
     [[nodiscard]]
     auto MeanAbsoluteDeviation(const T_Container& InContainer) -> TOptional<double>;
+
+    // Population variance and its square root. Population rather than sample because these describe
+    // the values in hand, not an estimate of some larger set they were drawn from.
+    template <typename T_Container>
+    [[nodiscard]]
+    auto Variance(const T_Container& InContainer) -> TOptional<double>;
+
+    template <typename T_Container>
+    [[nodiscard]]
+    auto StandardDeviation(const T_Container& InContainer) -> TOptional<double>;
+
+    /**
+     * Standard deviation relative to the mean. Scale-free, so one threshold describes "steady"
+     * whether the values are milliseconds or metres. Unset for an empty container, and for a mean of
+     * zero, where the ratio has no meaning rather than an infinite one.
+     */
+    template <typename T_Container>
+    [[nodiscard]]
+    auto CoefficientOfVariation(const T_Container& InContainer) -> TOptional<double>;
+
+    // Sum of a projection over a container. Zero for an empty container: unlike an average, a sum of
+    // nothing has an unambiguous answer.
+    template <typename T_Container, typename T_ProjectionFunction>
+    [[nodiscard]]
+    auto SumBy(const T_Container& InContainer, T_ProjectionFunction InProjection) -> double;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
