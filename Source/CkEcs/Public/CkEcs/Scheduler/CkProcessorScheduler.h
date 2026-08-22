@@ -92,7 +92,11 @@ namespace ck
         bool _UseEmptyViewMainPassSkip = false;
 
     private:
+        // SHARED BUDGET, not a report: the global pump loop and every group-local settle loop both
+        // advance this so the two together respect _MaxPumpIterations. What each spent separately is
+        // what consumers actually want, so local settle keeps its own tally.
         int32 _LastFramePumpCount = 0;
+        int32 _LastFrameLocalSettleCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
 
         double _LastPumpWarningTime = 0.0;
@@ -118,6 +122,7 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Partition);
         CK_PROPERTY_GET(_LastFramePumpCount);
+        CK_PROPERTY_GET(_LastFrameLocalSettleCount);
         CK_PROPERTY_GET(_LastGraphBuildTimeMs);
         CK_PROPERTY(_MaxPumpIterations);
 

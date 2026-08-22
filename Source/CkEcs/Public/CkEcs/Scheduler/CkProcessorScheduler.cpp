@@ -232,6 +232,7 @@ auto
 
     const auto& MainOrder = InScope == ECk_SchedulerTickScope::LoadKernel ? _LoadPassOrder : _MainPassOrder;
     _LastFramePumpCount = 0;
+    _LastFrameLocalSettleCount = 0;
 
 #if !UE_BUILD_SHIPPING
     const auto DebugTimingEnabled = Get_IsDebugTimingWanted();
@@ -352,7 +353,13 @@ auto
     }
 
 #if !UE_BUILD_SHIPPING
-    _DebugCurrentFrame.PumpIterationCount = _LastFramePumpCount;
+    // PumpIterationCount means GLOBAL pump passes, and only those. _LastFramePumpCount is the shared
+    // budget, which group-local settle also advances -- folding those in would silently change what
+    // this number MEANS the moment any group grows a settle barrier, and every consumer (Scheduler
+    // Debugger, the pump AutoTests) reads it as 'how many times the global pump loop ran'. Local
+    // settle is reported beside it, not inside it.
+    _DebugCurrentFrame.PumpIterationCount = _LastFramePumpCount - _LastFrameLocalSettleCount;
+    _DebugCurrentFrame.LocalSettlePassCount = _LastFrameLocalSettleCount;
     _DebugCurrentFrame.TotalFrameTimeMs = (FPlatformTime::Seconds() - FrameStartTime) * 1000.0;
     DoDebugEndFrame();
 #endif
@@ -412,12 +419,13 @@ auto
 
 #if !UE_BUILD_SHIPPING
             const auto DebugTimingEnabled = CVar_SchedulerDebugTiming.GetValueOnGameThread();
+            ck::GDebug_LastProcessedEntityCount = 0;
+
             auto ProcessorStartTime = 0.0;
             if (DebugTimingEnabled)
             {
                 SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
                 ProcessorStartTime = FPlatformTime::Seconds();
-                ck::GDebug_LastProcessedEntityCount = 0;
             }
 #endif
 
@@ -432,17 +440,22 @@ auto
             }
 
 #if !UE_BUILD_SHIPPING
-            if (DebugTimingEnabled)
-            {
-                SCOPE_CYCLE_COUNTER(STAT_Scheduler_DebugRecord);
-                const auto ProcessorElapsedMs = (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0;
-                DoDebugRecordProcessorPump(NodeIndex, SettlePassIndex, ProcessorElapsedMs,
-                    VisitedCount >= 0 ? VisitedCount : ck::GDebug_LastProcessedEntityCount);
-            }
+            // Pump counts, entity counts and pass indices are ALWAYS recorded -- only the elapsed-ms
+            // numbers are demand-driven, which is exactly what ck.Scheduler.DebugTiming documents. Gating
+            // the whole record on it made group-local settle dispatches invisible to the Scheduler Debugger
+            // and to Get_Debug_ProcessorPumpCountForFrame on the default settings, so a settle-dispatched
+            // processor read as never having pumped. DoPump records on the same terms.
+            const auto ProcessorElapsedMs = DebugTimingEnabled
+                ? (FPlatformTime::Seconds() - ProcessorStartTime) * 1000.0
+                : 0.0;
+
+            DoDebugRecordProcessorPump(NodeIndex, SettlePassIndex, ProcessorElapsedMs,
+                VisitedCount >= 0 ? VisitedCount : ck::GDebug_LastProcessedEntityCount);
 #endif
         }
 
         ++_LastFramePumpCount;
+        ++_LastFrameLocalSettleCount;
     }
 
     if (NOT DoHasDirtyLocalSettleTrigger(InPlan, InRegistry))
