@@ -638,6 +638,9 @@ namespace ck::snapshot
             uint32               _OwnerSavedId = 0;
             const UScriptStruct* _Type = nullptr;
             FInstancedStruct     _Payload;
+            // Carried for the census below only. A handle is a cheap value; it is stringified for at most a
+            // SMALL capture, so a BB-sized world never pays for the ToString.
+            FCk_Handle           _Owner;
         };
         auto PendingPayloads = TArray<FPendingPayload>{};
 
@@ -762,7 +765,43 @@ namespace ck::snapshot
                     Produced.GetValue().GetMutableMemory(), Handle, Item._SavedId, OutReport);
 
                 DistinctTypePaths.Add(Type);
-                PendingPayloads.Emplace(FPendingPayload{Item._SavedId, Type, MoveTemp(Produced.GetValue())});
+                PendingPayloads.Emplace(FPendingPayload{Item._SavedId, Type, MoveTemp(Produced.GetValue()), Handle});
+            }
+        }
+
+        // ---- Payload census: WHAT was captured, by type ------------------------------------------------------------
+        // The report's buckets partition payloads by OUTCOME, never by type, so they cannot answer "why does a save
+        // taken after a load carry one more payload than the save that built that world". This names the producers.
+        // Bounded by the DISTINCT-type count rather than the payload count, so a BB-sized world still logs one line.
+        {
+            auto CensusByType = TMap<FString, int32>{};
+            for (const auto& Pending : PendingPayloads)
+            { CensusByType.FindOrAdd(GetNameSafe(Pending._Type)) += 1; }
+
+            auto CensusKeys = TArray<FString>{};
+            CensusByType.GetKeys(CensusKeys);
+            CensusKeys.Sort();
+
+            auto CensusParts = TArray<FString>{};
+            CensusParts.Reserve(CensusKeys.Num());
+            for (const auto& Key : CensusKeys)
+            { CensusParts.Emplace(FString::Printf(TEXT("%s x%d"), *Key, CensusByType[Key])); }
+
+            ck::snapshot::Display(TEXT("v3 capture CENSUS: [{}] payloads over [{}] type(s) - {}"),
+                PendingPayloads.Num(), CensusKeys.Num(), FString::Join(CensusParts, TEXT(", ")));
+
+            // A per-type count says WHAT grew; it cannot say WHICH entity grew it, and for the idempotency
+            // question ("a save taken after a load carries one more payload than the save that built the world")
+            // the owner is the whole answer. Small captures only: gate is on the payload count so a BB world
+            // never stringifies thousands of handles.
+            static constexpr auto k_CensusOwnerDetailMaxPayloads = 32;
+            if (PendingPayloads.Num() <= k_CensusOwnerDetailMaxPayloads)
+            {
+                for (auto& Pending : PendingPayloads)
+                {
+                    ck::snapshot::Display(TEXT("v3 capture CENSUS OWNER: [{}] saved-id [{}] on [{}]"),
+                        GetNameSafe(Pending._Type), Pending._OwnerSavedId, Pending._Owner);
+                }
             }
         }
 
