@@ -82,6 +82,13 @@ public:
     bool
     Request_CookMeshShapes();
 
+    /// Cooks just these meshes, sliced. Joins a drain already in flight rather than refusing, so a
+    /// second selection while the first is cooking is additive. Orphans are NOT reported — only a
+    /// full sweep knows the complete in-use set.
+    bool
+    Request_CookMeshShapes_ForAssets(
+        const TArray<FAssetData>& InMeshAssets);
+
 private:
     auto DoHandle_PostSaveWorld(UWorld* InWorld, FObjectPostSaveContext InContext) -> void;
     auto DoHandle_PackageSaved(const FString& InPackageFileName, UPackage* InPackage,
