@@ -51,6 +51,29 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_BakeMobilityPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/// How a contact pair's two restitutions resolve into the one the solver uses. Mirrors UE's
+/// EFrictionCombineMode (Chaos reads the same four modes off UPhysicsSettingsCore), because a
+/// physical material authored against Chaos carries its numbers here unchanged and has to land on
+/// the same value.
+UENUM(BlueprintType)
+enum class ECk_Jolt_RestitutionCombineMode : uint8
+{
+    // (rA + rB) / 2 — what Chaos does when no material overrides the mode, which is the default in
+    // every UE project. (Default)
+    Average,
+    // min(rA, rB) — the least bouncy surface wins.
+    Min,
+    // rA * rB.
+    Multiply,
+    // max(rA, rB) — Jolt's own stock behaviour, and NOT what a Chaos-authored material expects: it
+    // lets one bouncy surface impose full elasticity on every dead surface it touches.
+    Max
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_RestitutionCombineMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "Jolt"))
 class CKJOLT_API UCk_Jolt_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
@@ -105,6 +128,14 @@ private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Simulation",
               meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 16, UIMin = 1, UIMax = 16))
     int32 _MaxPhysicsStepsPerFrame = 4;
+
+    // How a contact pair's two restitutions combine. Jolt's own default is Max, which diverges from
+    // Chaos on any pair whose surfaces disagree — a restitution-1.0 bouncy material keeps 100% of its
+    // normal velocity against a default-0.3 floor and never stops bouncing. Average is Chaos's
+    // behaviour and the default here.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Simulation",
+              meta = (AllowPrivateAccess = true))
+    ECk_Jolt_RestitutionCombineMode _RestitutionCombineMode = ECk_Jolt_RestitutionCombineMode::Average;
 
     // Enable multi-threaded physics simulation using Jolt's JobSystemThreadPool.
     // When disabled, all physics runs on a single thread (JobSystemSingleThreaded).
@@ -220,6 +251,7 @@ public:
     CK_PROPERTY_GET(_CollisionSteps);
     CK_PROPERTY_GET(_FixedTimestepHz);
     CK_PROPERTY_GET(_MaxPhysicsStepsPerFrame);
+    CK_PROPERTY_GET(_RestitutionCombineMode);
     CK_PROPERTY_GET(_EnableParallelPhysics);
     CK_PROPERTY_GET(_NumPhysicsThreads);
     CK_PROPERTY_GET(_EnableAsyncPhysicsUpdate);
@@ -253,6 +285,7 @@ public:
     static auto Get_CollisionSteps() -> int32;
     static auto Get_FixedTimestepHz() -> int32;
     static auto Get_MaxPhysicsStepsPerFrame() -> int32;
+    static auto Get_RestitutionCombineMode() -> ECk_Jolt_RestitutionCombineMode;
     static auto Get_EnableParallelPhysics() -> bool;
     static auto Get_NumPhysicsThreads() -> int32;
     static auto Get_EnableAsyncPhysicsUpdate() -> bool;
