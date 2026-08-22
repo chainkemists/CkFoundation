@@ -39,19 +39,6 @@ namespace ck_jolt_mesh_shape_utils
 #endif
     }
 
-    static auto Get_IsUnderBakedRoot(const FString& InMeshPackagePath) -> bool
-    {
-        const auto Roots = UCk_Utils_Jolt_ProjectSettings::Get_BakedMeshShapeRoots();
-
-        for (const auto& Root : Roots)
-        {
-            if (InMeshPackagePath.StartsWith(Root))
-            { return true; }
-        }
-
-        return false;
-    }
-
     static auto Restore_SingleShapeFromBlob(
         const TArray<uint8>& InBlob,
         const FString& InDebugName) -> JPH::Ref<JPH::Shape>
@@ -237,6 +224,27 @@ namespace ck::jolt::bake::mesh_shape_utils
         { return {}; }
 
         return Result.Get();
+    }
+
+    auto
+        Get_IsUnderBakedRoot(
+            const FString& InMeshPackagePath)
+        -> bool
+    {
+        const auto Roots = UCk_Utils_Jolt_ProjectSettings::Get_BakedMeshShapeRoots();
+
+        return Roots.ContainsByPredicate([&](const FString& InRoot)
+        {
+            return InMeshPackagePath.StartsWith(InRoot);
+        });
+    }
+
+    auto
+        Invalidate_CacheForMesh(
+            const FString& InMeshPackagePath)
+        -> void
+    {
+        Cache.Remove(FName{*InMeshPackagePath});
     }
 
     auto

@@ -57,12 +57,24 @@ namespace ck::jolt::bake
         CKJOLT_API auto Get_IsWorthPreBaking(
             const UBodySetup& InBodySetup) -> bool;
 
+        /// True when the mesh package sits under one of the configured _BakedMeshShapeRoots — the
+        /// content the per-mesh pre-bake covers. Shared by the cooker's candidate rule, the on-save
+        /// auto-cook filter, and the runtime miss-loudness rule so the three can never disagree.
+        CKJOLT_API auto Get_IsUnderBakedRoot(
+            const FString& InMeshPackagePath) -> bool;
+
         /// <Root>/Meshes<MeshSubPath>_JoltShape.<Name>_JoltShape — /Game-rooted meshes only
         /// (engine-content meshes are pure primitives and never pre-baked). Empty string for
         /// unsupported roots.
         CKJOLT_API auto Get_CookedMeshShapeAssetPath(
             const FString& InCookedDataRootPath,
             const FString& InMeshPackagePath) -> FString;
+
+        /// Drops the cached entry for ONE mesh. A cook that rewrites a mesh's shape asset must call
+        /// this: the cache memoizes MISSES and STALE results for process lifetime, so without it the
+        /// running editor keeps serving the pre-cook answer until it is restarted.
+        CKJOLT_API auto Invalidate_CacheForMesh(
+            const FString& InMeshPackagePath) -> void;
 
         /// Test seam: drops every cached root shape and the negative-lookup memo.
         CKJOLT_API auto Reset_CacheForTesting() -> void;
