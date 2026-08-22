@@ -20,6 +20,8 @@ public class CkJoltEditor : CkModuleRules
             "SourceControl",
             "AssetRegistry",
             "ToolMenus",
+            // The per-user auto-cook toggles are a UDeveloperSettings subclass (CkSettings' user-settings base).
+            "DeveloperSettings",
             "Landscape",
             // The mesh-shape cook reads UBodySetupCore trace flags directly.
             "PhysicsCore",
@@ -30,6 +32,7 @@ public class CkJoltEditor : CkModuleRules
             "CkEcs",
             "CkJolt",
             "CkLog",
+            "CkSettings",
             "CkThirdParty",
         });
     }

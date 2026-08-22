@@ -4,6 +4,8 @@
 
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Data.h"
 
+#include "CkJoltEditor/Cook/CkJoltCook_Types.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UWorld;
@@ -24,16 +26,37 @@ public:
         int32 _NumCells = 0;
         int32 _NumUniqueShapes = 0;
         int32 _NumActorsUpToDate = 0;
+        int32 _NumCellsWritten = 0;
+        ck::jolt::cook::ECk_Jolt_IncrementalOutcome _Outcome =
+            ck::jolt::cook::ECk_Jolt_IncrementalOutcome::Incremental;
         bool _Success = false;
     };
 
 public:
-    /// On World Partition maps, unloaded actors are visited in batches via
-    /// FWorldPartitionHelpers::ForEachActorWithLoading. DryRun extracts + reports, saving nothing.
+    /// Rebuilds the map's cooked data from scratch: every cell asset and the index are rewritten
+    /// from whatever the world currently holds. On World Partition maps, unloaded actors are visited
+    /// in batches via FWorldPartitionHelpers::ForEachActorWithLoading. DryRun extracts + reports,
+    /// saving nothing.
+    ///
+    /// The index it writes describes ONLY the levels loaded at the time of the cook — on a
+    /// streaming-sublevel map, running this with sublevels unloaded drops their actors from the
+    /// index entirely, and a dropped actor gets NO static collision at runtime (a missing lookup
+    /// entry is not an error, it is "this actor was never baked"). Prefer Cook_World_Incremental,
+    /// which cannot truncate.
     static auto
     Cook_World(
         UWorld& InWorld,
-        bool InDryRun = false) -> FCookStats;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook) -> FCookStats;
+
+    /// Rewrites only the bake-grid cells whose actors actually changed since the last cook, leaving
+    /// every other cell asset and every cooked actor in an UNLOADED level untouched. Falls back to a
+    /// full Cook_World — and says so in _Outcome — when there is no existing index, when the index
+    /// was cooked under a different cook/Jolt version or bake filter, or on a World Partition world
+    /// (whose actors cannot be revisited after the streaming walk releases them).
+    static auto
+    Cook_World_Incremental(
+        UWorld& InWorld,
+        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook) -> FCookStats;
 
     /// Reports stale/missing/up-to-date counts against the existing cooked index; writes nothing.
     static auto
