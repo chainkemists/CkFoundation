@@ -970,3 +970,111 @@ namespace ck::algo
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    template <typename T_Container>
+    auto
+        Mean(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        if (InContainer.Num() == 0)
+        { return {}; }
+
+        auto Sum = 0.0;
+
+        for (const auto& Value : InContainer)
+        {
+            Sum += static_cast<double>(Value);
+        }
+
+        return Sum / static_cast<double>(InContainer.Num());
+    }
+
+    template <typename T_Container>
+    auto
+        Percentile(
+            const T_Container& InContainer,
+            double InPercentile)
+        -> TOptional<double>
+    {
+        if (InContainer.Num() == 0)
+        { return {}; }
+
+        auto Sorted = TArray<double>{};
+        Sorted.Reserve(InContainer.Num());
+
+        for (const auto& Value : InContainer)
+        {
+            Sorted.Add(static_cast<double>(Value));
+        }
+
+        Algo::Sort(Sorted);
+
+        // Linear interpolation between the two ranks straddling the requested fraction. With a
+        // single sample both ranks collapse onto it, which is why no separate case is needed.
+        const auto Clamped   = FMath::Clamp(InPercentile, 0.0, 1.0);
+        const auto Rank      = Clamped * static_cast<double>(Sorted.Num() - 1);
+        const auto LowerRank = FMath::FloorToInt32(Rank);
+        const auto UpperRank = FMath::Min(LowerRank + 1, Sorted.Num() - 1);
+        const auto Fraction  = Rank - static_cast<double>(LowerRank);
+
+        return FMath::Lerp(Sorted[LowerRank], Sorted[UpperRank], Fraction);
+    }
+
+    template <typename T_Container>
+    auto
+        Median(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        return Percentile(InContainer, 0.5);
+    }
+
+    template <typename T_Container>
+    auto
+        MedianAbsoluteDeviation(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        const auto MedianValue = Median(InContainer);
+
+        if (NOT MedianValue.IsSet())
+        { return {}; }
+
+        auto Deviations = TArray<double>{};
+        Deviations.Reserve(InContainer.Num());
+
+        for (const auto& Value : InContainer)
+        {
+            Deviations.Add(FMath::Abs(static_cast<double>(Value) - *MedianValue));
+        }
+
+        return Median(Deviations);
+    }
+
+    template <typename T_Container>
+    auto
+        MeanAbsoluteDeviation(
+            const T_Container& InContainer)
+        -> TOptional<double>
+    {
+        const auto MedianValue = Median(InContainer);
+
+        if (NOT MedianValue.IsSet())
+        { return {}; }
+
+        auto Deviations = TArray<double>{};
+        Deviations.Reserve(InContainer.Num());
+
+        for (const auto& Value : InContainer)
+        {
+            Deviations.Add(FMath::Abs(static_cast<double>(Value) - *MedianValue));
+        }
+
+        return Mean(Deviations);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

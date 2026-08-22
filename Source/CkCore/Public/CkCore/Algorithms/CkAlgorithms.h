@@ -304,6 +304,45 @@ namespace ck::algo
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Summary statistics over a numeric container. Each returns an unset TOptional for an empty input
+// rather than a zero, because zero is a legitimate statistic and "nothing to measure" is not. Each
+// copies and sorts internally, so the caller's container is never reordered.
+namespace ck::algo
+{
+    template <typename T_Container>
+    [[nodiscard]]
+    auto Mean(const T_Container& InContainer) -> TOptional<double>;
+
+    template <typename T_Container>
+    [[nodiscard]]
+    auto Median(const T_Container& InContainer) -> TOptional<double>;
+
+    // Linear-interpolated percentile. InPercentile is a fraction in [0, 1]; values outside are
+    // clamped. Percentile(c, 0.5) agrees with Median(c).
+    template <typename T_Container>
+    [[nodiscard]]
+    auto Percentile(const T_Container& InContainer, double InPercentile) -> TOptional<double>;
+
+    // Median of |value - median|. A robust spread estimator that, unlike standard deviation, is not
+    // dragged around by the very outliers it is used to identify.
+    //
+    // Caveat worth knowing before relying on it: MAD collapses to zero whenever more than half the
+    // values are identical, which is common in tightly clustered data. Callers using it as an
+    // outlier threshold should fall back to MeanAbsoluteDeviation when it returns zero.
+    template <typename T_Container>
+    [[nodiscard]]
+    auto MedianAbsoluteDeviation(const T_Container& InContainer) -> TOptional<double>;
+
+    // Mean of |value - median|. Less robust than the median form — outliers do move it — but it does
+    // not collapse when most values agree, which makes it the natural fallback for exactly the case
+    // MedianAbsoluteDeviation cannot describe.
+    template <typename T_Container>
+    [[nodiscard]]
+    auto MeanAbsoluteDeviation(const T_Container& InContainer) -> TOptional<double>;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #include "CkAlgorithms.inl.h"
 
 // --------------------------------------------------------------------------------------------------------------------
