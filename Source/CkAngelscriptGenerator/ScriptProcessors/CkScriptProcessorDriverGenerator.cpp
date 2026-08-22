@@ -38,6 +38,11 @@ namespace ck::scriptprocessor_driver_generator
     static const auto GDriverSuffix = FString{TEXT("_Driver")};
     static const auto GGeneratedDirSegment = FString{TEXT("/Script/Generated/")};
 
+    // Editor-only script root. The Angelscript fork skips this whole directory when bUseEditorScripts is false,
+    // which is how every non-editor boot runs -- Gauntlet among them (Config/DefaultGame.ini: "AngelScript
+    // classes (under Script/Dev/, skipped when bUseEditorScripts=false)").
+    static const auto GEditorOnlyScriptDirSegment = FString{TEXT("/Script/Dev/")};
+
     // ----------------------------------------------------------------------------------------------------------------
 
     struct FForEachParam
@@ -284,6 +289,38 @@ namespace ck::scriptprocessor_driver_generator
         return Out;
     }
 
+    // A dev class under an EDITOR-ONLY script root gets no generated driver, and that is a correctness rule
+    // rather than a tidiness one. The generated file is compiled in EVERY configuration; the dev class it
+    // subclasses is not. Emit the pair anyway and a non-editor boot meets a driver whose super does not exist --
+    // which is not a localised failure, because `unknown super type` aborts Angelscript preprocessing outright,
+    // so NOTHING compiles and every test in that configuration dies at once.
+    //
+    // One dev-only processor did exactly that to the entire Gauntlet layer, and the editor-side gate could not
+    // see it: `--test` boots WITH editor scripts, the super resolves, and the suite stays green while the other
+    // configuration is dark. A generator emitting into an always-compiled file has to answer for the
+    // configurations it cannot observe.
+    auto
+    Is_EditorOnlyScriptClass(
+        UClass* InClass)
+        -> bool
+    {
+#if WITH_ANGELSCRIPT_CK
+        auto* AsClass = UASClass::GetFirstASClass(InClass);
+        if (AsClass == nullptr)
+        { return false; }
+
+        const auto SourcePath = AsClass->GetSourceFilePath();
+        if (SourcePath.IsEmpty())
+        { return false; }
+
+        auto Normalized = FPaths::ConvertRelativePathToFull(SourcePath);
+        FPaths::NormalizeFilename(Normalized);
+        return Normalized.Contains(GEditorOnlyScriptDirSegment, ESearchCase::IgnoreCase);
+#else
+        return false;
+#endif
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
     // Candidate filter — the same staleness/placeholder chain the AutoTest generator uses.
 
@@ -442,32 +479,51 @@ namespace ck::scriptprocessor_driver_generator
         for (auto* Class : InClasses)
         {
             auto PluginName = FString{};
-            auto OutputDir  = FString{};
+            auto ScriptRoot = FString{};
 
             if (const auto Plugin = Find_PluginForClass(Class, ModuleToPlugin))
             {
                 PluginName = Plugin->GetName();
-                OutputDir  = Plugin->GetBaseDir() / TEXT("Script") / TEXT("Generated");
+                ScriptRoot = Plugin->GetBaseDir() / TEXT("Script");
             }
             else
             {
                 PluginName = FApp::GetProjectName();
-                OutputDir  = FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated");
+                ScriptRoot = FPaths::ProjectDir() / TEXT("Script");
             }
 
-            if (NOT BucketMap.Contains(PluginName))
+            // A driver has to live wherever its SUPER lives, because the two are compiled or skipped together.
+            // An editor-only dev class is absent from every non-editor boot, so its driver goes under the same
+            // editor-only root and disappears with it; emitting it beside the shipping drivers instead is what
+            // leaves a subclass of a class that does not exist, and `unknown super type` does not fail just that
+            // driver -- it aborts Angelscript preprocessing, so the whole configuration compiles nothing.
+            //
+            // Skipping generation instead would be worse than the bug: the driver IS the dispatch (its ForEachBatch
+            // is what ever calls ForEachEntity), so a dev processor without one silently stops running in the
+            // editor too, taking whatever depends on it -- Bb.Snapshot.DemoPlaqueRestore, for one -- down with it.
+            const auto IsEditorOnly = Is_EditorOnlyScriptClass(Class);
+            const auto OutputDir    = IsEditorOnly
+                ? ScriptRoot / TEXT("Dev") / TEXT("Generated")
+                : ScriptRoot / TEXT("Generated");
+
+            // Keyed apart so the two never share a bucket; the FILE name stays the plugin's, since the directory
+            // is what distinguishes them.
+            const auto BucketKey = IsEditorOnly ? PluginName + TEXT("[EditorOnly]") : PluginName;
+
+            if (NOT BucketMap.Contains(BucketKey))
             {
                 auto Bucket = FPluginBucket{};
                 Bucket._PluginName     = PluginName;
                 Bucket._OutputFilePath = OutputDir / (PluginName + TEXT("_ScriptProcessorDrivers.as"));
-                BucketMap.Add(PluginName, MoveTemp(Bucket));
+                BucketMap.Add(BucketKey, MoveTemp(Bucket));
             }
-            BucketMap[PluginName]._Classes.Add(Class);
+            BucketMap[BucketKey]._Classes.Add(Class);
         }
 
         auto Result = TArray<FPluginBucket>{};
         BucketMap.GenerateValueArray(Result);
-        Result.Sort([](const FPluginBucket& A, const FPluginBucket& B) { return A._PluginName < B._PluginName; });
+        // By PATH, not name: a plugin can now own two buckets (shipping + editor-only) that share _PluginName.
+        Result.Sort([](const FPluginBucket& A, const FPluginBucket& B) { return A._OutputFilePath < B._OutputFilePath; });
         return Result;
     }
 
