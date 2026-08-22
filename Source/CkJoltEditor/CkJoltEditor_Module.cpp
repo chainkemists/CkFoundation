@@ -1,5 +1,6 @@
 #include "CkJoltEditor_Module.h"
 
+#include "CkJoltEditor/AssetAction/CkJoltMeshShapeCook_AssetAction.h"
 #include "CkJoltEditor/Cook/CkJoltCook_EditorSubsystem.h"
 
 #include <ToolMenus.h>
@@ -74,6 +75,8 @@ void FCkJoltEditorModule::StartupModule()
                 "Reports which of the current map's actors are stale in the cooked data. Writes nothing."),
             [](UCk_JoltCook_EditorSubsystem_UE& InSubsystem)
             { InSubsystem.Validate_CurrentWorld(); });
+
+        ck::jolt::cook::RegisterMeshShapeCookContextMenu();
     }));
 }
 
