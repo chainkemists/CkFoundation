@@ -241,6 +241,20 @@ Processor phase vocabulary (observed census): `Setup`, `HandleRequests`, `EndPla
 `CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Setup);` — the old ProcessorInjector mechanism is
 retired; any doc mentioning it is stale.
 
+**Domain types over primitives.** A quantity that has a unit gets the type that carries it —
+never a bare `float`/`double`/`int32` on a member, parameter, return, or reflected property:
+
+| Quantity | Type | Not |
+|---|---|---|
+| a duration, delay, interval, timeout, cooldown, budget | `FCk_Time` (`CkCore/Time/CkTime.h`) | `float _DelaySeconds` |
+| a bounded range + normalize | `FCk_ValueRange` (`CkCore/Math/ValueRange`) | a min/max float pair |
+| an on/off option | `ECk_EnableDisable` (and the enum family) | `bool` |
+
+`FCk_Time` is `constexpr`-constructible (`constexpr FCk_Time{0.008}`), so it is usable for
+compile-time constants too — a local slice budget is still a duration. Convert at the boundary the
+engine forces on you (`SetTimer` takes a float: `static_cast<float>(Time.Get_Seconds())`), not
+throughout your own code. Naming a field `_XSeconds` is the tell that the type is wrong.
+
 **Encapsulation.** Private `_Members` + `CK_PROPERTY`/`CK_PROPERTY_GET` generated accessors.
 Reads always via `Get_*`; direct `_Member` writes ONLY inside classes the fragment declares as
 friends (its processors and Utils). Canonical fragment-data shape:

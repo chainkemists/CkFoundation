@@ -90,9 +90,9 @@ Dynamic behavior editor — shows the behavior stack on a selected entity, lets 
 Inventory grid editor — visualizes item slot layout, lets designers configure grid sizes and item constraints.
 
 ### `CkJoltEditor`
-**Runtime twin:** `CkJolt`. **Depends on:** `CkCore`, `CkEcs`, `CkJolt`, `CkLog`, `CkThirdParty` (+ UnrealEd, EditorSubsystem, AssetRegistry, ToolMenus, Landscape). Type: Editor.
+**Runtime twin:** `CkJolt`. **Depends on:** `CkCore`, `CkEcs`, `CkJolt`, `CkLog`, `CkSettings`, `CkThirdParty` (+ UnrealEd, EditorSubsystem, AssetRegistry, ToolMenus, DeveloperSettings, Landscape). Type: Editor.
 
-Jolt static-world cooker — `FCk_Jolt_WorldCooker` (shared with nothing else; the runtime uses the same `ck::jolt::bake` extraction), `UCk_JoltCook_EditorSubsystem_UE` (Cook/Validate current map, Tools-menu entry), `UCk_JoltCook_Commandlet` (`-run=CkJoltCook`).
+Jolt static-world cooker — `FCk_Jolt_WorldCooker` (shared with nothing else; the runtime uses the same `ck::jolt::bake` extraction), `FCk_Jolt_MeshShapeCooker`, `UCk_JoltCook_EditorSubsystem_UE` (Cook/Validate current map, auto-cook-on-save, Tools-menu entries), `UCk_JoltCook_Commandlet` (`-run=Ck_JoltCook_Commandlet`). Auto-cook policy is per-user (`UCk_JoltCook_UserSettings_UE`). Full detail: `CkJoltEditor/Claude.md`.
 
 ### `CkOverlapBodyEditor`
 **Runtime twin:** `CkOverlapBody`. **Depends on:** `CkCore`, `CkLog`.
@@ -174,6 +174,29 @@ Entity template data assets and the associated spawn infrastructure. See `CkTemp
 2. **All editor UI lives in `*Editor` modules.** Don't put `WITH_EDITOR` blocks with substantial logic in runtime modules — move them to the paired `*Editor` module.
 3. **Share editor style** — use `CkEditorStyle` for icons, colors, and fonts. Don't embed raw `FSlateIcon` literals in individual editor modules.
 4. **Graph editors all build on `CkCueEditor` or `CkEditorGraph`.** Don't create a new graph canvas from scratch; extend the existing infrastructure.
+5. **Work that can take seconds must not block the editor.** Anything that sweeps content, loads
+   assets in bulk, or cooks — a "how long is this going to take?" operation — runs SLICED across
+   frames behind a **status-bar progress notification**, never behind a modal `FScopedSlowTask`.
+   The shape (both current adopters follow it verbatim — copy from either):
+   - Decompose the job into a cheap *collect* step (asset registry only, loads nothing) and a
+     *per-item* step, so the driver owns the loop rather than the library.
+   - Drive it from an `FTSTicker` with a wall-clock slice budget (`0.008s` is the house value);
+     break out of the inner loop when the budget is spent and return `true` to continue next frame.
+   - Report through `FSlateNotificationManager::StartProgressNotification` /
+     `UpdateProgressNotification` / `CancelProgressNotification`. It no-ops silently on headless
+     boots, which is exactly what a commandlet wants.
+   - Debounce the trigger through `GEditor->GetTimerManager()` so a burst (Save All) coalesces into
+     one pass, and re-schedule from the completion path for work that arrived mid-drain.
+   - Keep a synchronous entry point too — commandlets and editor-utility callers want the blocking
+     "do it now and tell me the result" form.
+
+   Adopters: `UCkAssetRegistrySubsystem` (`CkAngelscriptGenerator`) and
+   `UCk_JoltCook_EditorSubsystem_UE` (`CkJoltEditor`).
+
+   **Off-thread is usually NOT the answer.** `UObject`/reflection/`FAssetData` reads,
+   `CreatePackage`/`NewObject`/`SavePackage`, and source-control checkout are all game-thread-only;
+   slicing gets the responsive editor without a threading story. Move work to a worker only when a
+   genuinely pure stage (geometry math, serialization of already-copied data) dominates the profile.
 
 ---
 
