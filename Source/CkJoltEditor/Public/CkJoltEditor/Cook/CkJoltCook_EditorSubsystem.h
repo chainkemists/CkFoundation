@@ -4,6 +4,7 @@
 
 #include "CkJoltEditor/Cook/CkJoltCook_MeshShapeCooker.h"
 #include "CkJoltEditor/Cook/CkJoltCook_Types.h"
+#include "CkJoltEditor/Cook/CkJoltCook_WorldCooker.h"
 
 #include <AssetRegistry/AssetData.h>
 #include <Containers/Ticker.h>
@@ -44,10 +45,18 @@ public:
     Cook_CurrentWorld();
 
     /// What auto-cook-on-save runs. Falls back to a full cook when the incremental path declines.
+    /// BLOCKS until finished; prefer Request_CookStaticWorld from interactive code.
     UFUNCTION(BlueprintCallable, Category = "Ck|Jolt",
               DisplayName = "[Ck][Jolt] Cook Static World (Current Map, Incremental)")
     bool
     Cook_CurrentWorld_Incremental();
+
+    /// The same incremental cook, sliced across frames behind a progress notification. False when a
+    /// cook is already running.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Jolt",
+              DisplayName = "[Ck][Jolt] Cook Static World (Current Map, Non-Blocking)")
+    bool
+    Request_CookStaticWorld();
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Jolt",
               DisplayName = "[Ck][Jolt] Cook Static World (Current Map, Dry Run)")
@@ -87,6 +96,8 @@ private:
 
     auto Start_Drain(const FText& InProgressLabel) -> bool;
     auto Tick_Drain() -> bool;
+    auto Tick_MeshCooks(FCk_Time InBudget) -> void;
+    auto Tick_WorldCook(FCk_Time InBudget) -> bool;
     auto Finish_Drain() -> void;
 
     auto DoAcquire_JoltGlobals() -> void;
@@ -108,6 +119,8 @@ private:
     int32 _DrainCompletedItems = 0;
     int32 _DrainTotalItems = 0;
     bool _DrainWorldCookPending = false;
+    TUniquePtr<FCk_Jolt_IncrementalCookDriver> _WorldCookDriver;
+    int32 _WorldCookUnitsCounted = 0;
 
     /// Held for the whole drain: a per-frame release would UnregisterTypes and delete the Factory
     /// out from under the JPH::Refs the runtime shape cache holds.

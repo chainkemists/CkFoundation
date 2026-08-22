@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
+
+#include <Templates/UniquePtr.h>
 
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayer_Data.h"
 
@@ -62,6 +65,45 @@ public:
     static auto
     Validate_World(
         UWorld& InWorld) -> FCookStats;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/// The incremental cook as a resumable stepper, so the editor stays interactive while it runs.
+/// Cook_World_Incremental is this driven to completion in one call; the editor subsystem drives it a
+/// time-slice per frame instead. Holds the Jolt globals and roots the assets it loaded for its whole
+/// lifetime, because the shapes it carries between steps do not survive either being released.
+///
+/// The world may be edited between steps. That produces a cook of the state at sweep time, never a
+/// corrupt one, and the edit dirties the actor's hash again so the next cook picks it up.
+class CKJOLTEDITOR_API FCk_Jolt_IncrementalCookDriver
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_IncrementalCookDriver);
+
+    FCk_Jolt_IncrementalCookDriver(
+        UWorld& InWorld,
+        ck::jolt::cook::ECk_Jolt_CookMode InMode);
+
+    ~FCk_Jolt_IncrementalCookDriver();
+
+    FCk_Jolt_IncrementalCookDriver(const FCk_Jolt_IncrementalCookDriver&) = delete;
+    auto operator=(const FCk_Jolt_IncrementalCookDriver&) -> FCk_Jolt_IncrementalCookDriver& = delete;
+
+public:
+    /// Advances until InBudget is spent or the current phase ends, whichever comes first. A zero
+    /// budget still advances one unit, so a caller cannot livelock on a budget it set too low.
+    auto
+    Step(
+        FCk_Time InBudget) -> ck::jolt::cook::ECk_Jolt_CookStepResult;
+
+    auto Get_CompletedUnits() const -> int32;
+    auto Get_TotalUnits() const -> int32;
+    auto Get_Stats() const -> FCk_Jolt_WorldCooker::FCookStats;
+
+private:
+    struct FImpl;
+    TUniquePtr<FImpl> _Impl;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
