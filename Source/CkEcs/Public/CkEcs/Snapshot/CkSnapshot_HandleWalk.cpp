@@ -4,6 +4,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_Posture.h" // ck::Get_FragmentPosture — the audit walk's descent gate
 
 #include "UObject/UnrealType.h"    // FStructProperty / FArrayProperty / FScriptArrayHelper / TFieldIterator
+#include "UObject/SoftObjectPtr.h" // FSoftObjectPtr::Get — the object-ref audit resolves at capture
 
 #include <StructUtils/InstancedStruct.h> // FInstancedStruct (nested-payload recursion)
 
@@ -203,6 +204,133 @@ namespace ck::snapshot
                 InVisitor(InOutHandle);
             },
             ck_snapshot_handlewalk::FWalkOptions{}, FString{});
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    namespace ck_snapshot_objectrefwalk
+    {
+        // Mirrors WalkHandles' descent (transient skip, arrays, sets, maps, durable-only instanced payloads) but
+        // visits object properties instead of handle structs. The duplication is deliberate: see the header on why
+        // this is not a flag on the shared walk.
+        auto
+            WalkObjectRefs(
+                const UScriptStruct* InStruct,
+                void* InMemory,
+                const TFunctionRef<void(const UObject&, const FString&)>& InVisit,
+                const FString& InPath)
+            -> void
+        {
+            if (InStruct == nullptr || InMemory == nullptr)
+            { return; }
+
+            const auto MakePath = [&](const FString& InLeaf) -> FString
+            {
+                return InPath.IsEmpty() ? InLeaf : InPath + TEXT(".") + InLeaf;
+            };
+
+            // Resolves without loading. A soft ref to an asset that is merely not in memory yields null and is
+            // skipped -- that path is valid and resolves after a load, so reporting it would be a false positive.
+            const auto VisitObject = [&](const UObject* InObject, const FString& InFieldPath) -> void
+            {
+                if (InObject == nullptr)
+                { return; }
+
+                InVisit(*InObject, InFieldPath);
+            };
+
+            const auto VisitLeaf = [&](const FProperty* InProperty, void* InValueMemory,
+                                       const FString& InLeafPath) -> void
+            {
+                if (const auto* SoftProp = CastField<FSoftObjectProperty>(InProperty))
+                {
+                    const auto& Soft = *static_cast<const FSoftObjectPtr*>(InValueMemory);
+                    if (Soft.IsNull())
+                    { return; }
+
+                    VisitObject(Soft.Get(), InLeafPath);
+                }
+                else if (const auto* ObjectProp = CastField<FObjectProperty>(InProperty))
+                { VisitObject(ObjectProp->GetObjectPropertyValue(InValueMemory), InLeafPath); }
+                else if (const auto* StructProp = CastField<FStructProperty>(InProperty))
+                {
+                    if (StructProp->Struct == FInstancedStruct::StaticStruct())
+                    {
+                        auto& Instanced = *static_cast<FInstancedStruct*>(InValueMemory);
+                        if (NOT Instanced.IsValid())
+                        { return; }
+
+                        // Same descent gate as the handle audit: a SESSION payload is rebuilt by its owner's setup,
+                        // so whatever it names is not this save's problem.
+                        if (ck::Get_FragmentPosture(Instanced.GetScriptStruct()) != ECk_Snapshot_Posture::Durable)
+                        { return; }
+
+                        WalkObjectRefs(Instanced.GetScriptStruct(), Instanced.GetMutableMemory(), InVisit,
+                            Instanced.GetScriptStruct() != nullptr
+                                ? InLeafPath + TEXT("<") + Instanced.GetScriptStruct()->GetName() + TEXT(">")
+                                : InLeafPath);
+                        return;
+                    }
+
+                    WalkObjectRefs(StructProp->Struct, InValueMemory, InVisit, InLeafPath);
+                }
+            };
+
+            for (TFieldIterator<FProperty> PropIt(InStruct); PropIt; ++PropIt)
+            {
+                const FProperty* Property = *PropIt;
+
+                // CPF_Transient is the author saying "never persisted" -- the same exclusion the handle walk makes,
+                // and for the same reason: the field is a live-session injection, not part of the saved world.
+                if (Property->HasAnyPropertyFlags(CPF_Transient))
+                { continue; }
+
+                if (const auto* ArrayProp = CastField<FArrayProperty>(Property))
+                {
+                    auto ArrayHelper = FScriptArrayHelper{ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(InMemory)};
+
+                    const auto ArrayPath = MakePath(ArrayProp->GetName());
+                    for (auto Index = 0; Index < ArrayHelper.Num(); ++Index)
+                    {
+                        VisitLeaf(ArrayProp->Inner, ArrayHelper.GetRawPtr(Index),
+                            FString::Printf(TEXT("%s[%d]"), *ArrayPath, Index));
+                    }
+                }
+                else if (const auto* SetProp = CastField<FSetProperty>(Property))
+                {
+                    auto SetHelper = FScriptSetHelper{SetProp, SetProp->ContainerPtrToValuePtr<void>(InMemory)};
+
+                    const auto SetPath = MakePath(SetProp->GetName());
+                    for (auto It = SetHelper.CreateIterator(); It; ++It)
+                    { VisitLeaf(SetProp->ElementProp, SetHelper.GetElementPtr(It), SetPath); }
+                }
+                else if (const auto* MapProp = CastField<FMapProperty>(Property))
+                {
+                    auto MapHelper = FScriptMapHelper{MapProp, MapProp->ContainerPtrToValuePtr<void>(InMemory)};
+
+                    const auto MapPath = MakePath(MapProp->GetName());
+                    for (auto It = MapHelper.CreateIterator(); It; ++It)
+                    {
+                        VisitLeaf(MapProp->KeyProp,   MapHelper.GetKeyPtr(It),   MapPath + TEXT("<key>"));
+                        VisitLeaf(MapProp->ValueProp, MapHelper.GetValuePtr(It), MapPath + TEXT("<value>"));
+                    }
+                }
+                else
+                { VisitLeaf(Property, Property->ContainerPtrToValuePtr<void>(InMemory), MakePath(Property->GetName())); }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        ForEachDurableObjectRef(
+            const UScriptStruct* InStruct,
+            void* InMemory,
+            const TFunctionRef<void(const UObject&, const FString&)>& InVisitor)
+        -> void
+    {
+        ck_snapshot_objectrefwalk::WalkObjectRefs(InStruct, InMemory, InVisitor, FString{});
     }
 
     // ----------------------------------------------------------------------------------------------------------------

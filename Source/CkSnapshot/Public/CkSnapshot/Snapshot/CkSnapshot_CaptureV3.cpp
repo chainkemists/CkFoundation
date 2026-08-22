@@ -278,6 +278,57 @@ namespace ck::snapshot
                     OutReport.Add_Loss(MoveTemp(Loss));
                 });
         }
+
+        // ------------------------------------------------------------------------------------------------------
+
+        // The object-reference sibling of Audit_DurableHandles. Same question, other kind of reference: a durable
+        // payload may name an OBJECT no load will bring back. The reference that motivates it is the runtime-built
+        // material instance -- created per session, stored into a durable field as a soft path, and on load that
+        // path names nothing, so the feature comes back with a reference it cannot resolve.
+        //
+        // The discriminator runs HERE, at capture, because this is the only moment the object still exists and can
+        // be asked what it is. At load all that survives is a path that failed, where "was never an asset" and
+        // "asset was deleted" are indistinguishable.
+        //
+        // REPORT-ONLY for now, deliberately, and NOT an ensure like its handle sibling: the predicate below is a
+        // first approximation over a population nobody has enumerated yet, so its first job is to produce a census
+        // to judge, not to halt a save on a rule that has never been tested against real content. Promote it to an
+        // ensure once the census is clean and the predicate has been shown to have no false positives.
+        auto Audit_DurableObjectRefs(
+            const UScriptStruct*        InPayloadType,
+            void*                       InPayloadMemory,
+            const FCk_Handle&           InOwner,
+            uint32                      InOwnerSavedId,
+            FCk_Snapshot_SaveReport&    OutReport) -> void
+        {
+            if (InPayloadType == nullptr || InPayloadMemory == nullptr)
+            { return; }
+
+            ck::snapshot::ForEachDurableObjectRef(InPayloadType, InPayloadMemory,
+                [&](const UObject& InObject, const FString& InFieldPath) -> void
+                {
+                    // An ASSET has a package on disk, so its path resolves in any future session -- that is the
+                    // whole of what makes a reference persistable.
+                    if (InObject.IsAsset())
+                    { return; }
+
+                    // Not an asset, but not necessarily unsaveable: a level actor or component is not an asset and
+                    // its path DOES name something a loaded level rebuilds. RF_Transient is the author of the
+                    // object saying it belongs to this session only, which is what separates the runtime-built
+                    // material instance from the placed actor.
+                    if (NOT InObject.HasAnyFlags(RF_Transient))
+                    { return; }
+
+                    auto Loss = FCk_Snapshot_SaveLossRecord{};
+                    Loss.Set_PayloadType(InPayloadType->GetPathName());
+                    Loss.Set_FieldPath(InFieldPath);
+                    Loss.Set_OwnerSavedId(InOwnerSavedId);
+                    Loss.Set_TargetIdentity(InObject.GetPathName());
+                    Loss.Set_Reason(TEXT("transient object reference in a durable payload"));
+
+                    OutReport.Add_Loss(MoveTemp(Loss));
+                });
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -640,6 +691,8 @@ namespace ck::snapshot
                     auto ParamsCopy = FInstancedStruct{Recipe.Get_SpawnParams()};
                     ck_snapshot_capturev3_audit::Audit_DurableHandles(ParamsCopy.GetScriptStruct(),
                         ParamsCopy.GetMutableMemory(), Handle, Item._SavedId, PersistedIds, OutReport);
+                    ck_snapshot_capturev3_audit::Audit_DurableObjectRefs(ParamsCopy.GetScriptStruct(),
+                        ParamsCopy.GetMutableMemory(), Handle, Item._SavedId, OutReport);
                     // Assigned through the mutable getter: the generated Set_ takes const& and would copy the blob.
                     Entry.Get_SpawnParamsBytes() = SerializeInstancedStruct(Recipe.Get_SpawnParams());
 
@@ -705,6 +758,8 @@ namespace ck::snapshot
                 // payload per entity — the copy it used to take is exactly the kind this path was cleaned of.
                 ck_snapshot_capturev3_audit::Audit_DurableHandles(Produced.GetValue().GetScriptStruct(),
                     Produced.GetValue().GetMutableMemory(), Handle, Item._SavedId, PersistedIds, OutReport);
+                ck_snapshot_capturev3_audit::Audit_DurableObjectRefs(Produced.GetValue().GetScriptStruct(),
+                    Produced.GetValue().GetMutableMemory(), Handle, Item._SavedId, OutReport);
 
                 DistinctTypePaths.Add(Type);
                 PendingPayloads.Emplace(FPendingPayload{Item._SavedId, Type, MoveTemp(Produced.GetValue())});
@@ -785,6 +840,36 @@ namespace ck::snapshot
                      "Set CkSnapshot's CaptureAuditMode to Detailed for the per-entity payload dump."),
                 DroppedPayloadCount, UnlabeledWithPayloadAudit, SaveTransientWithPayloadAudit,
                 FString::Join(AuditExamples, TEXT(", ")));
+        }
+
+        // The transient-object-reference census. Audit_DurableObjectRefs only RECORDS -- unlike its handle sibling it
+        // does not ensure -- so without this line its findings would sit in the report unread, which is a worse
+        // failure than a log nobody reads. One aggregated line per save, naming distinct offenders: the population is
+        // per-TYPE, so a world with 300 customized characters is one entry, not three hundred.
+        if (const auto& AllLosses = OutReport.Get_Losses();
+            AllLosses.Num() > 0)
+        {
+            auto ObjectRefOffenders = TSet<FString>{};
+            for (const auto& Loss : AllLosses)
+            {
+                if (Loss.Get_Reason() != TEXT("transient object reference in a durable payload"))
+                { continue; }
+
+                ObjectRefOffenders.Add(FString::Printf(TEXT("%s.%s"), *Loss.Get_PayloadType(), *Loss.Get_FieldPath()));
+            }
+
+            if (ObjectRefOffenders.Num() > 0)
+            {
+                auto Sorted = ObjectRefOffenders.Array();
+                Sorted.Sort();
+
+                ck::snapshot::Warning(
+                    TEXT("v3 capture AUDIT: [{}] durable field(s) hold a SESSION-ONLY object that no load will bring "
+                         "back -- the field returns a path resolving to nothing and the feature comes back unable to "
+                         "resolve its own reference. Either store what the value is DERIVED FROM and rebuild it at "
+                         "setup, or split the field into the feature's session fragment. Offenders: {}"),
+                    Sorted.Num(), FString::Join(Sorted, TEXT(", ")));
+            }
         }
 
         // A DIFFERENT population from the audit above: those entities were skipped by an explicit rule, these were
