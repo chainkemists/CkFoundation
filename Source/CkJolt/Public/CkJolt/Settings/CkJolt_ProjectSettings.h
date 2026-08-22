@@ -184,7 +184,8 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1))
     int32 _BroadphaseOptimizeThreshold = 512;
 
-    // Map path prefixes excluded from Cook_AllMaps (e.g. /Game/Developers).
+    // Map path prefixes excluded from cooking (e.g. /Game/Developers) — honored by the commandlet's
+    // Cook_AllMaps sweep AND by the editor's auto-cook-on-level-save.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Jolt Physics|Static World",
               meta = (AllowPrivateAccess = true, LongPackageName))
     TArray<FDirectoryPath> _CookExcludedMapPathPrefixes;

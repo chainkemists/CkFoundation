@@ -56,7 +56,9 @@ auto
     auto ParamsMap = TMap<FString, FString>{};
     ParseCommandLine(*InParams, Tokens, Switches, ParamsMap);
 
-    const auto DryRun = Switches.Contains(TEXT("DryRun"));
+    const auto CookMode = Switches.Contains(TEXT("DryRun"))
+        ? ck::jolt::cook::ECk_Jolt_CookMode::DryRun
+        : ck::jolt::cook::ECk_Jolt_CookMode::Cook;
 
     ck_jolt_cook_commandlet::DoEnsure_AlwaysCookEntry();
 
@@ -68,7 +70,7 @@ auto
     if (CookMeshShapes)
     {
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
-        MeshShapesFailed = NOT FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(DryRun)._Success;
+        MeshShapesFailed = NOT FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode)._Success;
     }
 
     auto MapsToCook = TArray<FString>{};
@@ -121,7 +123,7 @@ auto
 
     for (const auto& MapPackageName : MapsToCook)
     {
-        if (NOT DoCook_Map(MapPackageName, DryRun))
+        if (NOT DoCook_Map(MapPackageName, CookMode))
         { ++FailureCount; }
     }
 
@@ -135,7 +137,7 @@ auto
     UCk_JoltCook_Commandlet::
     DoCook_Map(
         const FString& InMapPackageName,
-        bool InDryRun)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode)
     -> bool
 {
     ck::jolt::Log(TEXT("CkJoltCook: loading map [{}]"), InMapPackageName);
@@ -168,7 +170,7 @@ auto
         constexpr auto RerunConstructionScripts = false;
         World->UpdateWorldComponents(RerunConstructionScripts, true);
 
-        Cooked = FCk_Jolt_WorldCooker::Cook_World(*World, InDryRun)._Success;
+        Cooked = FCk_Jolt_WorldCooker::Cook_World(*World, InMode)._Success;
     }
     World->RemoveFromRoot();
 

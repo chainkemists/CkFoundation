@@ -157,11 +157,17 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
   rejects (`IsValidScale` — non-uniform on spheres/capsules or rotated compound children;
   `MakeScaleValid` is deliberately NOT used, approximated collision is silently wrong), or any
   negative scale. A miss ensures loudly ONLY when cooked data is expected (packaged / PIE-Cooked)
-  AND the mesh sits under a baked root AND its collision is worth pre-baking. Cook via
-  `-run=Ck_JoltCook_Commandlet -MeshShapes` (combinable with `-Map`/`-AllMaps`; the FULL class
-  token is required — `-run=CkJoltCook` resolves to no class) — the Tools-menu entry cooks
-  only the CURRENT WORLD (`Cook_CurrentWorld`), never mesh shapes;
-  incremental by BodySetupGuid; orphans logged, never auto-deleted.
+  AND the mesh sits under a baked root AND its collision is worth pre-baking (`Get_IsUnderBakedRoot`
+  is shared with the cooker and the on-save hook for the same reason). The STALE and ORPHAN ensures
+  are NOT so gated — a present-but-wrong blob is always a defect, and it is consumed in LiveExtract
+  PIE too. Cook via `-run=Ck_JoltCook_Commandlet -MeshShapes` (combinable with `-Map`/`-AllMaps`;
+  the FULL class token is required — `-run=CkJoltCook` resolves to no class), the
+  `Cook Jolt Mesh Shapes` Tools-menu entry, or automatically on saving a mesh under a baked root
+  (per-user, `UCk_JoltCook_UserSettings_UE`); incremental by BodySetupGuid; orphans logged, never
+  auto-deleted.
+  **The cache memoizes MISSES and STALE results for process lifetime**, so anything that rewrites a
+  mesh's cooked shape must call `mesh_shape_utils::Invalidate_CacheForMesh` — otherwise the running
+  editor keeps serving the pre-cook answer until it restarts. The cook already does.
 - `UCk_Utils_JoltStaticActor_UE` — typesafe-handle BPFL over the attribution entity: `Has`,
   `Cast`/`DoCast`/`DoCastChecked`, `Get_SourceActor` (may be null after the actor dies),
   `Get_SourceActorName` (cached, survives actor death), `Get_NumBodies`.
