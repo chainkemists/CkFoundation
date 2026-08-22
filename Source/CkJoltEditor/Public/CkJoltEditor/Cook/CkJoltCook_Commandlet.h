@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkJoltEditor/Cook/CkJoltCook_Types.h"
+
 #include <Commandlets/Commandlet.h>
 
 #include "CkJoltCook_Commandlet.generated.h"
@@ -43,7 +45,7 @@ private:
     auto
     DoCook_Map(
         const FString& InMapPackageName,
-        bool InDryRun) -> bool;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
