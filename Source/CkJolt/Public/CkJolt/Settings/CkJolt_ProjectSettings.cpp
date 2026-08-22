@@ -37,6 +37,7 @@ namespace ck_jolt_constants
     constexpr int32 Fallback_CollisionSteps = 1;
     constexpr int32 Fallback_FixedTimestepHz = 60;
     constexpr int32 Fallback_MaxPhysicsStepsPerFrame = 4;
+    constexpr auto  Fallback_RestitutionCombineMode = ECk_Jolt_RestitutionCombineMode::Average;
     constexpr bool  Fallback_EnableParallelPhysics = false;
     constexpr int32 Fallback_NumPhysicsThreads = 0;
     constexpr bool  Fallback_EnableAsyncPhysicsUpdate = false;
@@ -382,6 +383,19 @@ auto
     { return ECk_EnableDisable::Disable; }
 
     return Settings->Get_BakeExcludeOverlapOnlyComponents();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
+    Get_RestitutionCombineMode()
+    -> ECk_Jolt_RestitutionCombineMode
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ck_jolt_constants::Fallback_RestitutionCombineMode; }
+
+    return Settings->Get_RestitutionCombineMode();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
