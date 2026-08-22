@@ -66,6 +66,16 @@ auto
 
 auto
     UCk_Utils_IO_UE::
+    Get_IsInGameThread()
+    -> bool
+{
+    return IsInGameThread();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IO_UE::
     Get_IsRunningCommandlet()
     -> bool
 {
