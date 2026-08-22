@@ -611,6 +611,24 @@ auto
 
 auto
     UCk_JoltCook_EditorSubsystem_UE::
+    Request_CookMeshShapes_ForAssets(
+        const TArray<FAssetData>& InMeshAssets)
+    -> bool
+{
+    if (InMeshAssets.IsEmpty())
+    { return false; }
+
+    _SweepCandidates.Append(InMeshAssets);
+
+    // The drain reads _SweepCandidates.Num() every slice, so appending mid-flight is picked up.
+    if (_DrainTickerHandle.IsValid())
+    { return true; }
+
+    return Start_Drain(LOCTEXT("JoltMeshCookSelectionProgress", "Cooking Jolt mesh shapes"));
+}
+
+auto
+    UCk_JoltCook_EditorSubsystem_UE::
     Request_CookMeshShapes()
     -> bool
 {

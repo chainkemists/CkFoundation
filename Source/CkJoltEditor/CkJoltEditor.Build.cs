@@ -20,6 +20,8 @@ public class CkJoltEditor : CkModuleRules
             "SourceControl",
             "AssetRegistry",
             "ToolMenus",
+            // The Content Browser context-menu entry reads the selection as FAssetData (never loading it).
+            "ContentBrowser",
             // The per-user auto-cook toggles are a UDeveloperSettings subclass (CkSettings' user-settings base).
             "DeveloperSettings",
             "Landscape",
