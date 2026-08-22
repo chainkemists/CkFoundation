@@ -364,6 +364,58 @@ namespace ck::algo
     template <typename T_Container, typename T_ProjectionFunction>
     [[nodiscard]]
     auto SumBy(const T_Container& InContainer, T_ProjectionFunction InProjection) -> double;
+
+    /**
+     * Dominated by the smallest value rather than balanced around the middle. The aggregation to
+     * reach for when one bad element must NOT be averaged away by good ones — a set containing a
+     * zero aggregates to zero, which is the honest limit rather than a division error.
+     */
+    template <typename T_Container>
+    [[nodiscard]]
+    auto HarmonicMean(const T_Container& InContainer) -> TOptional<double>;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    // Sorted-ness as a question, so it can be asserted in the same vocabulary the sorting was
+    // written in rather than as a hand-rolled adjacent-pair loop.
+    template <typename T_Container, typename T_PredicateFunction>
+    [[nodiscard]]
+    auto IsSorted(const T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
+
+    template <typename T_Container>
+    [[nodiscard]]
+    auto IsSorted(const T_Container& InContainer) -> bool;
+
+    // The last (or first) N elements, clamped to what is there — asking for more than exists yields
+    // everything rather than reading off the end.
+    template <typename T_Container>
+    [[nodiscard]]
+    auto TakeLast(const T_Container& InContainer, int32 InCount) -> T_Container;
+
+    template <typename T_Container>
+    [[nodiscard]]
+    auto TakeFirst(const T_Container& InContainer, int32 InCount) -> T_Container;
+
+    // Occurrences of each projected key: the counting half of "what is there most of".
+    template <typename T_Container, typename T_ProjectionFunction>
+    [[nodiscard]]
+    auto CountBy(const T_Container& InContainer, T_ProjectionFunction InProjection)
+        -> TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>, int32>;
+
+    /**
+     * Filter and project in one pass.
+     *
+     * Exists because Filter returns a copy of the container: filtering elements only to project them
+     * and throw the copies away is a real cost when the element owns storage, and that cost is why
+     * call sites reach for a raw loop instead.
+     */
+    template <class T_ReturnContainer, class T_Container, class T_PredicateFunction, class T_TransformFunc>
+    [[nodiscard]]
+    auto TransformIf(const T_Container& InContainer, T_PredicateFunction InPredicate, T_TransformFunc InFunc)
+        -> T_ReturnContainer;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
