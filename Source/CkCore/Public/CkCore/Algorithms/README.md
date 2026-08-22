@@ -13,6 +13,10 @@ Small header-only helpers in `ck::algo` — `Overload` for inline `std::visit`, 
 | `Percentile(container, fraction)` | linear-interpolated percentile; `fraction` in `[0, 1]`, clamped |
 | `MedianAbsoluteDeviation(container)` | median of the absolute deviations from the median — a spread estimator outliers do not drag around, which is what makes it usable for *finding* outliers |
 | `MeanAbsoluteDeviation(container)` | mean of the same deviations — less robust, but it does not collapse when most values agree |
+| `Variance(container)` | population variance |
+| `StandardDeviation(container)` | its square root |
+| `CoefficientOfVariation(container)` | standard deviation ÷ mean — scale-free, so one threshold describes "steady" whatever the unit. Unset when the mean is zero, where the ratio has no meaning rather than an infinite one |
+| `SumBy(container, projection)` | sum of a projection; **zero** for an empty container, since unlike an average a sum of nothing is unambiguous |
 
 **Choosing between the two deviation measures.** `MedianAbsoluteDeviation` returns **zero whenever
 more than half the values are identical**, which is common in tightly clustered data — and taken
