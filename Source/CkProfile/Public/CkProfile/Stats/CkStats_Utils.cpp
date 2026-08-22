@@ -15,12 +15,37 @@
 #include <Misc/App.h>
 #include <Stats/StatsData.h>
 
+#include <DynamicRHI.h>
+#include <RHIGlobals.h>
+#include <RenderTimer.h>
+
 ENGINE_API extern float  GAverageFPS;
 extern ENGINE_API uint64 GFrameCounter;
 
 namespace ck_stats_utils
 {
     constexpr double InvGB = 1.0 / (1024.0 * 1024.0 * 1024.0);
+
+    // The engine's own test for whether a GPU timing exists is `RawGPUFrameTime > 0`
+    // (FStatUnitData::DrawStat). Zero cycles means the RHI handed back no timestamp, so reporting it
+    // as a zero-millisecond cost would read as an infinitely fast GPU.
+    auto
+        Get_GpuAvailability(
+            uint32 InGpuCycles)
+        -> ECk_Stats_MetricAvailability
+    {
+        if (GUsingNullRHI)
+        {
+            return ECk_Stats_MetricAvailability::Unavailable_NullRhi;
+        }
+
+        if (InGpuCycles == 0)
+        {
+            return ECk_Stats_MetricAvailability::Unavailable_NoGpuTimestamps;
+        }
+
+        return ECk_Stats_MetricAvailability::Available;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,6 +72,36 @@ auto
     -> int64
 {
     return static_cast<int64>(GFrameCounter);
+}
+
+auto
+    UCk_Utils_Stats_UE::
+    Get_ThreadTimings()
+    -> FCk_Stats_ThreadTimings
+{
+    // Every expression below mirrors FStatUnitData::DrawStat (Engine/Private/UnrealClient.cpp) so
+    // these numbers and `stat unit`'s cannot drift apart. The frame delta is deliberately last
+    // frame's rather than FApp::GetDeltaTime(): the engine uses that form there because it accounts
+    // for end-of-frame idling and therefore lines up with the thread times beside it.
+    const auto FrameTimeMs        = static_cast<float>((FApp::GetCurrentTime() - FApp::GetLastTime()) * 1000.0);
+    const auto GameThreadTimeMs   = static_cast<float>(FPlatformTime::ToMilliseconds(GGameThreadTime));
+    const auto RenderThreadTimeMs = static_cast<float>(FPlatformTime::ToMilliseconds(GRenderThreadTime));
+    const auto RhiThreadTimeMs    = static_cast<float>(FPlatformTime::ToMilliseconds(GRHIThreadTime));
+
+    // Index 0 only: a level-performance reading on a workstation. Splitting per-GPU would need a
+    // whole reporting axis, so the multi-GPU case is a deliberate omission rather than an oversight.
+    const auto GpuCycles = RHIGetGPUFrameCycles();
+    const auto GpuTimeMs = static_cast<float>(FPlatformTime::ToMilliseconds(GpuCycles));
+
+    return FCk_Stats_ThreadTimings
+    {
+        FrameTimeMs,
+        GameThreadTimeMs,
+        RenderThreadTimeMs,
+        RhiThreadTimeMs,
+        GpuTimeMs,
+        ck_stats_utils::Get_GpuAvailability(GpuCycles)
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,6 +14,13 @@ public class CkProfile : CkModuleRules
             "CoreUObject",
             "Engine",
 
+            // GGameThreadTime / GRenderThreadTime / GRHIThreadTime — the cycle counters `stat unit`
+            // reports, read by Get_ThreadTimings.
+            "RenderCore",
+
+            // RHIGetGPUFrameCycles and GUsingNullRHI, for the GPU timing and its availability test.
+            "RHI",
+
             "CkCore",
             "CkLog"
         });
