@@ -29,4 +29,17 @@ container is never reordered), and return `TOptional<double>`. **An empty contai
 optional, not a zero** — zero is a legitimate statistic and "nothing to measure" is not, so the
 distinction lives in the type rather than in a comment.
 
+## Keying a container
+
+| Call | Returns |
+|---|---|
+| `CountBy(container, projection)` | `TMap<Key, int32>` — occurrences of each projected key, the counting half of "what is there most of" |
+| `IndexBy(container, keyProjection)` | `TMap<Key, Element>` — a lookup, the indexing half of "find this one again by its key" |
+
+`IndexBy` exists because `Transform` cannot target a `TMap`, so building a lookup was the one common
+shape with no algo behind it — and it was being spelled three different ways across the plugin tree.
+Later duplicates overwrite earlier ones, matching `TMap::Add`: a projection that is not unique keeps
+the **last** element rather than silently dropping the collision. It reserves up front, which is the
+part a hand-rolled loop reliably forgets.
+
 For the full use-case table and how this folder fits with the rest of CkCore, see [`../../Claude.md`](../../Claude.md).

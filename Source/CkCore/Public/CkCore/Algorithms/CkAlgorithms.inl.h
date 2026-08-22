@@ -1233,6 +1233,27 @@ namespace ck::algo
         return Counts;
     }
 
+    template <typename T_Container, typename T_ProjectionFunction>
+    auto
+        IndexBy(
+            const T_Container& InContainer,
+            T_ProjectionFunction InKeyProjection)
+        -> TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>,
+                typename T_Container::ElementType>
+    {
+        auto Index = TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>,
+                          typename T_Container::ElementType>{};
+
+        Index.Reserve(InContainer.Num());
+
+        for (const auto& Element : InContainer)
+        {
+            Index.Add(std::invoke(InKeyProjection, Element), Element);
+        }
+
+        return Index;
+    }
+
     template <class T_ReturnContainer, class T_Container, class T_PredicateFunction, class T_TransformFunc>
     auto
         TransformIf(
