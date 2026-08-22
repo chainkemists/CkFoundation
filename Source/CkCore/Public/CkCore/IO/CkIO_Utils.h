@@ -271,6 +271,12 @@ public:
     static bool
     Get_IsRunningCommandlet();
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Is In Game Thread")
+    static bool
+    Get_IsInGameThread();
+
     // Only for callers running at/after OnFEngineLoopInitComplete but ahead of CkCore's own
     // registrar in that delegate's add-order — or from a commandlet's Main: -run= commandlets
     // execute inside FEngineLoop::PreInit, FEngineLoop::Init never runs, and the delegate never
