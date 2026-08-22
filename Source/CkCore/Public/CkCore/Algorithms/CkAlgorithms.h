@@ -406,6 +406,19 @@ namespace ck::algo
         -> TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>, int32>;
 
     /**
+     * A lookup keyed by a projection: the indexing half of "find this one again by its key".
+     *
+     * Later duplicates overwrite earlier ones, matching `TMap::Add`, so a projection that is not
+     * unique keeps the LAST element rather than silently dropping the collision. Reserves up front,
+     * which is the part a hand-rolled loop reliably forgets.
+     */
+    template <typename T_Container, typename T_ProjectionFunction>
+    [[nodiscard]]
+    auto IndexBy(const T_Container& InContainer, T_ProjectionFunction InKeyProjection)
+        -> TMap<std::invoke_result_t<T_ProjectionFunction, typename T_Container::ElementType>,
+                typename T_Container::ElementType>;
+
+    /**
      * Filter and project in one pass.
      *
      * Exists because Filter returns a copy of the container: filtering elements only to project them
