@@ -89,9 +89,11 @@ namespace ck_jolt_cook_world_cooker
         const auto LevelKey = ck::jolt::Get_LevelLookupKey(*Level);
 
         // A Level Instance's package is named <Path>_LevelInstance_<N> from a PROCESS-GLOBAL counter,
-        // so the suffix the cook sees is not the suffix the runtime sees. Baking that identity
-        // produces a lookup that misses silently. Say so at cook time — the actor is better left
-        // unbaked (and rebuilt live) than baked under a name that cannot round-trip.
+        // so the suffix the cook sees is not the suffix the runtime sees. The entry IS still written,
+        // under a key the runtime will never ask for — and a packaged build has no per-actor live
+        // fallback (DoAdd_BodiesForLevel_Cooked just skips a missing entry), so that actor ships with
+        // no collision. Nothing here can round-trip such an identity; the ensure exists so the loss
+        // is loud at cook time instead of invisible in a build.
         const auto LevelKeyString = LevelKey.ToString();
         const auto LevelIdentityIsStable = NOT LevelKeyString.Contains(TEXT("_LevelInstance_"))
             && NOT LevelKeyString.StartsWith(TEXT("/Temp/"));
@@ -510,6 +512,10 @@ auto
     constexpr auto RerunConstructionScripts = true;
     InWorld.UpdateWorldComponents(RerunConstructionScripts, false);
 
+    // Again after the rerun: construction scripts can themselves kick a compile, and that one would
+    // otherwise still be in flight when the sweep reads its collision. No-op when nothing is queued.
+    FAssetCompilingManager::Get().FinishAllCompilation();
+
     const auto CellSize = UCk_Utils_Jolt_ProjectSettings::Get_BakeGridCellSize();
     const auto RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
     const auto MapPackageName = InWorld.PersistentLevel->GetOutermost()->GetName();
@@ -615,9 +621,10 @@ auto
             // owes it a level; catch the one that forgot here rather than in a shipped build.
             CK_ENSURE_IF_NOT(NOT ActorKey._LevelPackage.IsNone(),
                 TEXT("JoltCook: actor [{}] has NO owning level package — its cooked entry would be "
-                     "unreachable at runtime and its collision would silently vanish"),
+                     "unreachable at runtime and its collision would silently vanish. FAILING the cook: "
+                     "a bake nobody can look up is worse than no new bake"),
                 ActorKey._ActorName)
-            {}
+            { return Stats; }
 
             auto& ActorsByName = ActorLookup.FindOrAdd(ActorKey._LevelPackage).Get_ActorsByName();
 
@@ -625,12 +632,15 @@ auto
             // — two ULevels sharing a package name, e.g. the same sublevel instanced twice — say so,
             // because the Add below would SILENTLY drop one actor's collision, which is precisely the
             // failure mode this key exists to kill.
+            // TMap::Add OVERWRITES, so continuing here would silently drop one actor's collision —
+            // the exact bug this key exists to kill. Fail the cook instead of shipping a bake that
+            // has already lost an actor.
             CK_ENSURE_IF_NOT(NOT ActorsByName.Contains(ActorKey._ActorName),
-                TEXT("JoltCook: duplicate cooked actor key [{}] in level [{}] — two actors share an identity, "
-                     "so one of them would lose its collision. Cooking it anyway would reintroduce the "
-                     "stale-bake bug this key exists to prevent."),
+                TEXT("JoltCook: duplicate cooked actor key [{}] in level [{}] — two actors share one "
+                     "identity, so one of them would lose its collision. FAILING the cook rather than "
+                     "reintroducing the stale-bake bug this key exists to prevent."),
                 ActorKey._ActorName, ActorKey._LevelPackage)
-            {}
+            { return Stats; }
 
             ActorsByName.Add(ActorKey._ActorName,
                 FCk_Jolt_CookedActorRef{}.Set_CellIndex(CellIndex).Set_GroupIndex(GroupIndex));
@@ -772,6 +782,12 @@ auto
 
     if (ck::Is_NOT_Valid(Index))
     { return DoDecline(ECk_Jolt_IncrementalOutcome::FullCook_NoExistingIndex, TEXT("map was never cooked")); }
+
+    // Same reason as the full cook, and this is the path that runs on EVERY map save — i.e. exactly
+    // when the meshes the designer just touched are most likely still compiling. An unsettled sweep
+    // re-hashes those actors against half-built state and bakes a hash the runtime cannot reproduce.
+    // Cheap when nothing is compiling.
+    FAssetCompilingManager::Get().FinishAllCompilation();
 
     const auto VersionsMatch = Index->Get_CookVersion() == WorldCookVersion_Current
         && Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
