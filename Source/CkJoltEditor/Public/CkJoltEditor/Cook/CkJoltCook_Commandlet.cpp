@@ -24,6 +24,26 @@ namespace ck_jolt_cook_commandlet
     // The cooked-data root must be force-cooked into packaged builds — nothing hard-references
     // the assets (index is found by path convention), so a missing entry ships builds with NO
     // Jolt static world. Loud, with the exact line to add.
+    /// The ULevel a streaming level refers to. GetLoadedLevel() is unset for a sublevel whose package
+    /// was already in memory, but the ULevel is perfectly good — so resolve it from the package rather
+    /// than treating it as absent. Both the load pass and the post-condition MUST agree on what
+    /// "resolved" means, or the fallback silently fails the check it just satisfied.
+    static auto Get_ResolvedLevel(const ULevelStreaming& InStreamingLevel) -> ULevel*
+    {
+        if (auto* Loaded = InStreamingLevel.GetLoadedLevel(); ck::IsValid(Loaded))
+        { return Loaded; }
+
+        auto* LevelPackage = FindPackage(nullptr, *InStreamingLevel.GetWorldAssetPackageName());
+        if (LevelPackage == nullptr)
+        { return nullptr; }
+
+        auto* LevelWorld = UWorld::FindWorldInPackage(LevelPackage);
+        if (ck::Is_NOT_Valid(LevelWorld))
+        { return nullptr; }
+
+        return LevelWorld->PersistentLevel;
+    }
+
     static auto DoEnsure_AlwaysCookEntry() -> void
     {
         const auto RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
@@ -149,27 +169,13 @@ auto
         if (ck::Is_NOT_Valid(StreamingLevel))
         { continue; }
 
-        auto* LoadedLevel = StreamingLevel->GetLoadedLevel();
+        auto* LoadedLevel = ck_jolt_cook_commandlet::Get_ResolvedLevel(*StreamingLevel);
 
-        // LoadSecondaryLevels leaves the loaded-level pointer unset for a sublevel whose package was
-        // already in memory; the ULevel is perfectly good, so resolve it from the package instead of
-        // refusing the whole map.
-        if (ck::Is_NOT_Valid(LoadedLevel))
-        {
-            if (auto* LevelPackage = FindPackage(nullptr, *StreamingLevel->GetWorldAssetPackageName()))
-            {
-                if (auto* LevelWorld = UWorld::FindWorldInPackage(LevelPackage))
-                {
-                    LoadedLevel = LevelWorld->PersistentLevel;
-
-                    // Component registration runs against OwningWorld, which here is still the
-                    // sublevel's own standalone world. Repoint before adding, exactly as
-                    // UWorld::LoadSecondaryLevels does, or components register into the wrong world.
-                    if (ck::IsValid(LoadedLevel))
-                    { LoadedLevel->OwningWorld = &InWorld; }
-                }
-            }
-        }
+        // Component registration runs against OwningWorld, which for a level resolved from its own
+        // package is still that sublevel's standalone world. Repoint before adding, exactly as
+        // UWorld::LoadSecondaryLevels does, or components register into the wrong world.
+        if (ck::IsValid(LoadedLevel))
+        { LoadedLevel->OwningWorld = &InWorld; }
 
         // Fail CLOSED. Cooking on a partially-loaded world writes a bake that is missing the
         // unloaded sublevels' actors, and a missing actor reads as "no collision here" at runtime —
@@ -204,7 +210,7 @@ auto
         if (ck::Is_NOT_Valid(StreamingLevel))
         { continue; }
 
-        const auto* LoadedLevel = StreamingLevel->GetLoadedLevel();
+        const auto* LoadedLevel = ck_jolt_cook_commandlet::Get_ResolvedLevel(*StreamingLevel);
 
         CK_ENSURE_IF_NOT(ck::IsValid(LoadedLevel) && InWorld.GetLevels().Contains(LoadedLevel),
             TEXT("CkJoltCook: streaming level [{}] did not end up in the world after AddToWorld — REFUSING "
