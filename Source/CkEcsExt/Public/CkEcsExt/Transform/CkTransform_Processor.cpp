@@ -217,7 +217,14 @@ namespace ck
             for (const auto& UndrainedEntity : UndrainedOwners)
             {
                 auto Owner = MakeHandle(UndrainedEntity, this->_TransientEntity);
-                const auto& Requests = Owner.Get<FFragment_Transform_Requests>();
+
+                // The undrained set is BY DEFINITION the owners the main pass refused, and the common
+                // case is an Entity mid-destroy (the drain carries TExclude<FTag_DestroyEntity_Initiate>).
+                // A default-policy Get treats a Teardown Entity as invalid: it ensures, and hands back the
+                // shared static Invalid_Fragment -- so the cancellations below would run over an EMPTY pool
+                // and the very callers this pass exists to serve would never hear back. IncludePendingKill
+                // is the policy that matches this pass's own contract.
+                const auto& Requests = Owner.Get<FFragment_Transform_Requests, ck::IsValid_Policy_IncludePendingKill>();
 
                 request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
                 request::FireCancelledForPending(Owner, Requests.Get_RotationRequests());
