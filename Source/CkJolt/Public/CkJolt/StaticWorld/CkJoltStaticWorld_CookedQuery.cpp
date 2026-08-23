@@ -141,7 +141,7 @@ namespace ck::jolt
         }
 
         const auto IndexMatchesMap = Index->Get_SourceMapPackage() == FName{*InRequest._MapPackageName};
-        const auto IndexMatchesVersion = Index->Get_CookVersion() == CookVersion_Current &&
+        const auto IndexMatchesVersion = Index->Get_CookVersion() == WorldCookVersion_Current &&
                                          Index->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
         const auto IndexMatchesBakeFilter = Index->Get_BakeFilterHash() ==
             bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings().ComputeHash();
@@ -175,7 +175,7 @@ namespace ck::jolt
                 return _Impl->_Result;
             }
 
-            const auto CellMatchesVersion = CellAsset->Get_CookVersion() == CookVersion_Current &&
+            const auto CellMatchesVersion = CellAsset->Get_CookVersion() == WorldCookVersion_Current &&
                                             CellAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
             CK_ENSURE_IF_NOT(CellMatchesVersion, TEXT("Cooked Jolt query cell [{}] is stale"), CellRef.Get_CellId())
@@ -212,7 +212,8 @@ namespace ck::jolt
 
             for (const auto& Group : CellAsset->Get_ActorGroups())
             {
-                const auto* CurrentRuntimeHash = InRequest._CurrentActorRuntimeHashes.Find(Group.Get_SourceActorName());
+                const auto* CurrentRuntimeHash = InRequest._CurrentActorRuntimeHashes.Find(
+                    FCk_Jolt_CookedActorKey{Group.Get_SourceLevelPackage(), Group.Get_SourceActorName()});
                 const auto ActorHashMatches = CurrentRuntimeHash != nullptr && *CurrentRuntimeHash == Group.Get_RuntimeCheckHash();
                 const auto ActorHashIsAccepted = NOT InRequest._RequireCurrentActorRuntimeHashes || ActorHashMatches;
 

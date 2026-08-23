@@ -158,7 +158,7 @@ namespace ck::jolt::bake::mesh_shape_utils
             return Memoize({});
         }
 
-        const auto VersionsMatch = ShapeAsset->Get_CookVersion() == ck::jolt::CookVersion_Current
+        const auto VersionsMatch = ShapeAsset->Get_CookVersion() == ck::jolt::MeshShapeCookVersion_Current
             && ShapeAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
         const auto SourceMatches = ShapeAsset->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && ShapeAsset->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
@@ -181,7 +181,7 @@ namespace ck::jolt::bake::mesh_shape_utils
             TEXT("Cooked Jolt shape for mesh [{}] is STALE (cook version [{}] vs [{}], Jolt [{}] vs [{}], "
                  "BodySetup guid/trace-flag drift: [{}]) — the blob is skipped and the shape is built at "
                  "runtime. Re-run the Jolt mesh cook."),
-            MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::CookVersion_Current,
+            MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current,
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
         { return Memoize({}); }
 

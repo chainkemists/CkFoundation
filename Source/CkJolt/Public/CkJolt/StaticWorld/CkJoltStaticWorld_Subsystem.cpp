@@ -66,6 +66,34 @@ namespace ck::jolt
         return ck::Format_UE(TEXT("{}{}/JoltCell_{}_{}.JoltCell_{}_{}"), InCookedDataRootPath, MapSubPath,
             InCellId.X, InCellId.Y, InCellId.X, InCellId.Y);
     }
+
+    auto
+        Get_PackageLookupKey(
+            const FString& InPackageName)
+        -> FName
+    {
+        // No-op on a non-PIE name, so this is safe to funnel every caller through.
+        return FName{*UWorld::RemovePIEPrefix(InPackageName)};
+    }
+
+    auto
+        Get_LevelLookupKey(
+            const ULevel& InLevel)
+        -> FName
+    {
+        // A World Partition runtime cell is a GENERATED level whose package name only exists at
+        // runtime (/Game/<Map>/_Generated_/...). The cook never sees it — it walks WP actors through
+        // the editor world, where they belong to the PERSISTENT level — so a cell must be keyed by
+        // its map. Key it by its own generated name and every WP map loses its entire static world.
+        if (InLevel.IsWorldPartitionRuntimeCell())
+        {
+            if (const auto* OwningWorld = InLevel.GetWorld();
+                ck::IsValid(OwningWorld) && ck::IsValid(OwningWorld->PersistentLevel))
+            { return Get_PackageLookupKey(OwningWorld->PersistentLevel->GetOutermost()->GetName()); }
+        }
+
+        return Get_PackageLookupKey(InLevel.GetOutermost()->GetName());
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -605,7 +633,20 @@ auto
     if (BodyInterface == nullptr)
     { return; }
 
-    const auto& ActorLookup = _CookedIndex->Get_ActorLookup();
+    // ONE lookup per level, not per actor: the index files actors under their owning level because an
+    // actor name is unique only within its level. A level absent from the index simply had nothing
+    // baked (all-excluded, or added after the cook) — not an error, and NOT a per-actor ensure storm.
+    const auto LevelKey = ck::jolt::Get_LevelLookupKey(InLevel);
+    const auto* ActorsInLevel = _CookedIndex->Get_ActorLookupByLevel().Find(LevelKey);
+
+    if (ActorsInLevel == nullptr)
+    {
+        ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] has no cooked actor table in the index — "
+            "nothing was baked for it"), LevelKey);
+        return;
+    }
+
+    const auto& ActorLookup = ActorsInLevel->Get_ActorsByName();
     const auto& Cells = _CookedIndex->Get_Cells();
     auto UsedCellIndices = TSet<int32>{};
 
@@ -643,9 +684,9 @@ auto
 
         const auto CurrentHash = ck::jolt::bake::ComputeRuntimeCheckHash(*Actor, BakeFilter);
         CK_ENSURE_IF_NOT(CurrentHash == Group.Get_RuntimeCheckHash(),
-            TEXT("STALE cooked Jolt data for actor [{}] (hash [{}] vs cooked [{}]) — its bodies are SKIPPED, "
-                 "not silently substituted. Re-cook the map."),
-            Actor->GetFName(), CurrentHash, Group.Get_RuntimeCheckHash())
+            TEXT("STALE cooked Jolt data for actor [{}] in level [{}] (hash [{}] vs cooked [{}]) — its bodies "
+                 "are SKIPPED, not silently substituted. Re-cook the map."),
+            Actor->GetFName(), LevelKey, CurrentHash, Group.Get_RuntimeCheckHash())
         { continue; }
 
         if (Group.Get_Bodies().IsEmpty())
@@ -931,7 +972,8 @@ auto
 
     _CookedIndexLoadAttempted = true;
 
-    const auto MapPackageName = GetWorld()->PersistentLevel->GetOutermost()->GetName();
+    const auto MapPackageName = ck::jolt::Get_PackageLookupKey(
+        GetWorld()->PersistentLevel->GetOutermost()->GetName()).ToString();
     const auto IndexPath = ck::jolt::Get_CookedIndexAssetPath(
         UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath(), MapPackageName);
 
@@ -945,13 +987,13 @@ auto
         return false;
     }
 
-    const auto CookVersionMatches = _CookedIndex->Get_CookVersion() == ck::jolt::CookVersion_Current;
+    const auto CookVersionMatches = _CookedIndex->Get_CookVersion() == ck::jolt::WorldCookVersion_Current;
     const auto JoltVersionMatches = _CookedIndex->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
     CK_ENSURE_IF_NOT(CookVersionMatches && JoltVersionMatches,
         TEXT("Cooked Jolt index for [{}] is STALE (cook version [{}] vs [{}], Jolt version [{}] vs [{}]) — "
              "the entire map's cooked Jolt data is SKIPPED. Re-cook the map."),
-        MapPackageName, _CookedIndex->Get_CookVersion(), ck::jolt::CookVersion_Current,
+        MapPackageName, _CookedIndex->Get_CookVersion(), ck::jolt::WorldCookVersion_Current,
         _CookedIndex->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID))
     {
         _CookedIndex = nullptr;
@@ -995,12 +1037,12 @@ auto
         InCellIndex, CellRef.Get_CellAsset().ToString())
     { return nullptr; }
 
-    const auto CookVersionMatches = CellAsset->Get_CookVersion() == ck::jolt::CookVersion_Current;
+    const auto CookVersionMatches = CellAsset->Get_CookVersion() == ck::jolt::WorldCookVersion_Current;
     const auto JoltVersionMatches = CellAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
     CK_ENSURE_IF_NOT(CookVersionMatches && JoltVersionMatches,
         TEXT("Cooked Jolt cell [{}] is STALE (cook version [{}] vs [{}], Jolt version [{}] vs [{}]) — skipped"),
-        InCellIndex, CellAsset->Get_CookVersion(), ck::jolt::CookVersion_Current,
+        InCellIndex, CellAsset->Get_CookVersion(), ck::jolt::WorldCookVersion_Current,
         CellAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID))
     { return nullptr; }
 

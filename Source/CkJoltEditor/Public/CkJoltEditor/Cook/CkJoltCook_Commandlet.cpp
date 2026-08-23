@@ -9,7 +9,10 @@
 
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <AssetRegistry/IAssetRegistry.h>
+#include <Engine/Level.h>
+#include <Engine/LevelStreaming.h>
 #include <Engine/World.h>
+#include <FileHelpers.h>
 #include <Misc/PackageName.h>
 #include <UObject/Package.h>
 #include <WorldPartition/WorldPartition.h>
@@ -135,6 +138,86 @@ auto
 
 auto
     UCk_JoltCook_Commandlet::
+    DoEnsure_StreamingLevelsInWorld(
+        UWorld& InWorld)
+    -> bool
+{
+    auto NumAdded = 0;
+
+    for (auto* StreamingLevel : InWorld.GetStreamingLevels())
+    {
+        if (ck::Is_NOT_Valid(StreamingLevel))
+        { continue; }
+
+        auto* LoadedLevel = StreamingLevel->GetLoadedLevel();
+
+        // LoadSecondaryLevels leaves the loaded-level pointer unset for a sublevel whose package was
+        // already in memory; the ULevel is perfectly good, so resolve it from the package instead of
+        // refusing the whole map.
+        if (ck::Is_NOT_Valid(LoadedLevel))
+        {
+            if (auto* LevelPackage = FindPackage(nullptr, *StreamingLevel->GetWorldAssetPackageName()))
+            {
+                if (auto* LevelWorld = UWorld::FindWorldInPackage(LevelPackage))
+                {
+                    LoadedLevel = LevelWorld->PersistentLevel;
+
+                    // Component registration runs against OwningWorld, which here is still the
+                    // sublevel's own standalone world. Repoint before adding, exactly as
+                    // UWorld::LoadSecondaryLevels does, or components register into the wrong world.
+                    if (ck::IsValid(LoadedLevel))
+                    { LoadedLevel->OwningWorld = &InWorld; }
+                }
+            }
+        }
+
+        // Fail CLOSED. Cooking on a partially-loaded world writes a bake that is missing the
+        // unloaded sublevels' actors, and a missing actor reads as "no collision here" at runtime —
+        // silently, and indistinguishably from a correct bake. Better no new bake than a short one.
+        CK_ENSURE_IF_NOT(ck::IsValid(LoadedLevel),
+            TEXT("CkJoltCook: streaming level [{}] of map [{}] did not load — REFUSING to cook, because a "
+                 "partial world would write a bake that silently omits that sublevel's collision"),
+            StreamingLevel->GetWorldAssetPackageName(), InWorld.GetOutermost()->GetName())
+        { return false; }
+
+        ck::jolt::Log(TEXT("CkJoltCook: streaming level [{}] -> [{}] actor(s)"),
+            StreamingLevel->GetWorldAssetPackageName(), LoadedLevel->Actors.Num());
+
+        if (InWorld.GetLevels().Contains(LoadedLevel))
+        { continue; }
+
+        // LoadSecondaryLevels only sets the streaming level's loaded-level pointer; the ULevel is not
+        // in the world (so its components never register and the sweep cannot see its actors) until
+        // it is added here.
+        constexpr auto ConsiderTimeLimit = false;
+        InWorld.AddToWorld(LoadedLevel, StreamingLevel->LevelTransform, ConsiderTimeLimit);
+        ++NumAdded;
+    }
+
+    ck::jolt::Log(TEXT("CkJoltCook: loaded [{}] streaming level(s) for map [{}] — [{}] level(s) total"),
+        NumAdded, InWorld.GetOutermost()->GetName(), InWorld.GetLevels().Num());
+
+    // AddToWorld can decline silently (visibility budget, CanAddLoadedLevelToWorld), and a guard that
+    // assumes it succeeded reproduces the very truncation it exists to prevent. Re-check the world.
+    for (const auto* StreamingLevel : InWorld.GetStreamingLevels())
+    {
+        if (ck::Is_NOT_Valid(StreamingLevel))
+        { continue; }
+
+        const auto* LoadedLevel = StreamingLevel->GetLoadedLevel();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(LoadedLevel) && InWorld.GetLevels().Contains(LoadedLevel),
+            TEXT("CkJoltCook: streaming level [{}] did not end up in the world after AddToWorld — REFUSING "
+                 "to cook rather than write a bake missing its collision"),
+            StreamingLevel->GetWorldAssetPackageName())
+        { return false; }
+    }
+
+    return true;
+}
+
+auto
+    UCk_JoltCook_Commandlet::
     DoCook_Map(
         const FString& InMapPackageName,
         ck::jolt::cook::ECk_Jolt_CookMode InMode)
@@ -142,41 +225,26 @@ auto
 {
     ck::jolt::Log(TEXT("CkJoltCook: loading map [{}]"), InMapPackageName);
 
-    auto* Package = LoadPackage(nullptr, *InMapPackageName, LOAD_None);
+    // The EDITOR's map loader, not LoadPackage. LoadPackage yields the persistent level alone, and
+    // on a level-streamed map that is a nearly empty world — the cook then reports "no static
+    // collision to cook" (or, worse, writes a bake missing almost every actor). LoadMap brings in
+    // the streaming sublevels and registers their components, which is what the sweep needs and
+    // what the editor-subsystem cook vehicle has always had for free.
+    const auto MapFilename = FPackageName::LongPackageNameToFilename(
+        InMapPackageName, FPackageName::GetMapPackageExtension());
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Package),
-        TEXT("CkJoltCook: failed to load map package [{}]"), InMapPackageName)
+    auto* World = UEditorLoadingAndSavingUtils::LoadMap(MapFilename);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("CkJoltCook: failed to load map [{}] (file [{}])"), InMapPackageName, MapFilename)
     { return false; }
 
-    auto* World = UWorld::FindWorldInPackage(Package);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("CkJoltCook: package [{}] contains no UWorld"), InMapPackageName)
+    // Validation, not loading: LoadMap should have brought every sublevel in. Anything still missing
+    // means a partial world, and cooking that writes a bake that silently omits its collision.
+    if (NOT DoEnsure_StreamingLevelsInWorld(*World))
     { return false; }
 
-    World->AddToRoot();
-
-    auto Cooked = false;
-    {
-        const auto InitializationValues = UWorld::InitializationValues{}
-            .RequiresHitProxies(false)
-            .ShouldSimulatePhysics(false)
-            .EnableTraceCollision(false)
-            .CreateNavigation(false)
-            .CreateAISystem(false);
-
-        if (NOT World->bIsWorldInitialized)
-        { World->InitWorld(InitializationValues); }
-
-        constexpr auto RerunConstructionScripts = false;
-        World->UpdateWorldComponents(RerunConstructionScripts, true);
-
-        Cooked = FCk_Jolt_WorldCooker::Cook_World(*World, InMode)._Success;
-    }
-    World->RemoveFromRoot();
-
-    CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
-
-    return Cooked;
+    return FCk_Jolt_WorldCooker::Cook_World(*World, InMode)._Success;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
