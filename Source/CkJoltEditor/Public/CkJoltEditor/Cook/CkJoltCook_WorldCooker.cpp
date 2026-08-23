@@ -2,6 +2,8 @@
 
 #include "CkJoltCook_AssetSave.h"
 
+#include <AssetCompilingManager.h>
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -496,6 +498,17 @@ auto
 
     if (NOT Get_WorldIsCompleteEnoughForFullCook(InWorld))
     { return Stats; }
+
+    // Settle the world BEFORE extracting, or the bake is not reproducible. A mesh whose collision is
+    // still compiling contributes no bodies, and a Packed Level Actor whose construction has not run
+    // reports a different ISM instance count — and instance count is a RUNTIME-CHECK HASH INPUT, so
+    // an unsettled cook bakes a hash the runtime will never reproduce and the actor loses its
+    // collision. Measured before this: three consecutive cooks of the same map produced 4084 / 4066 /
+    // 4065 actors.
+    FAssetCompilingManager::Get().FinishAllCompilation();
+
+    constexpr auto RerunConstructionScripts = true;
+    InWorld.UpdateWorldComponents(RerunConstructionScripts, false);
 
     const auto CellSize = UCk_Utils_Jolt_ProjectSettings::Get_BakeGridCellSize();
     const auto RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
