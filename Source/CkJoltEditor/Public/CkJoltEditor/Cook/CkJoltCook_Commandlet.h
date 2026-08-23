@@ -42,6 +42,12 @@ public:
         const FString& InParams) -> int32 override;
 
 private:
+    /// Brings the map's streaming sublevels into the world so the sweep can see their actors.
+    /// False = at least one sublevel did not load and the map MUST NOT be cooked.
+    auto
+    DoEnsure_StreamingLevelsInWorld(
+        UWorld& InWorld) -> bool;
+
     auto
     DoCook_Map(
         const FString& InMapPackageName,

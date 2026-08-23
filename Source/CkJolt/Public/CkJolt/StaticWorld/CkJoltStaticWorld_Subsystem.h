@@ -46,6 +46,15 @@ namespace ck::jolt
         const FString& InCookedDataRootPath,
         const FString& InMapPackageName,
         FIntPoint InCellId) -> FString;
+
+    /// Normalizes a package name into the form the COOK recorded. PIE renames every level package to
+    /// /Game/Path/UEDPIE_<N>_Name; the cook only ever runs on non-PIE worlds, so a raw PIE name matches
+    /// nothing and the cooked path silently degrades to a live sweep. Everything that looks cooked data
+    /// up by package name goes through here.
+    CKJOLT_API auto Get_PackageLookupKey(const FString& InPackageName) -> FName;
+
+    /// The key a level's cooked actor table is filed under in the index. See Get_PackageLookupKey.
+    CKJOLT_API auto Get_LevelLookupKey(const ULevel& InLevel) -> FName;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

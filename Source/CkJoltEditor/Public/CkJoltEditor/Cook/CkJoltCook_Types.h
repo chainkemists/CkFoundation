@@ -61,6 +61,9 @@ namespace ck::jolt::cook
     struct CKJOLTEDITOR_API FCk_Jolt_IncrementalPresentActor
     {
         FName _ActorName;
+        // Half of the actor's identity — see FCk_Jolt_CookedActorKey. Matching a present actor to a
+        // cooked one by NAME alone pairs actors across sublevels and rewrites the wrong cell.
+        FName _OwningLevelPackage;
         uint64 _SourceHash = 0;
         FIntPoint _CurrentCellId = FIntPoint::ZeroValue;
         bool _HasBodies = false;
@@ -76,7 +79,7 @@ namespace ck::jolt::cook
     struct CKJOLTEDITOR_API FCk_Jolt_IncrementalPlan
     {
         TSet<FIntPoint> _DirtyCellIds;
-        TSet<FName> _RemovedActorNames;
+        TSet<FCk_Jolt_CookedActorKey> _RemovedActorKeys;
         int32 _NumChangedActors = 0;
         int32 _NumAddedActors = 0;
         int32 _NumUnchangedActors = 0;
@@ -101,15 +104,15 @@ namespace ck::jolt::cook
         TArray<FIntPoint> _ExistingCellIdsByCellIndex;
         TSet<FIntPoint> _DirtyCellIds;
         TArray<FIntPoint> _WrittenCellIds;
-        TMap<FName, FCk_Jolt_CookedActorRef> _ExistingActorLookup;
-        TMap<FIntPoint, TArray<FName>> _WrittenActorNamesByCell;
+        TMap<FName, FCk_Jolt_CookedActorsInLevel> _ExistingActorLookup;
+        TMap<FIntPoint, TArray<FCk_Jolt_CookedActorKey>> _WrittenActorKeysByCell;
     };
 
     struct CKJOLTEDITOR_API FCk_Jolt_IndexRemap
     {
         TArray<int32> _NewCellIndexByOldCellIndex;
         TMap<FIntPoint, int32> _NewCellIndexByWrittenCellId;
-        TMap<FName, FCk_Jolt_CookedActorRef> _ActorLookup;
+        TMap<FName, FCk_Jolt_CookedActorsInLevel> _ActorLookup;
         int32 _NumNewCells = 0;
     };
 
