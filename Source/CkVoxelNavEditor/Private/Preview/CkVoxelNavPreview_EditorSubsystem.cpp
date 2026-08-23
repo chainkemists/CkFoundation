@@ -5,6 +5,7 @@
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_CookedQuery.h"
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 #include "CkJoltEditor/Cook/CkJoltCook_WorldCooker.h"
 
 #include "CkVoxelNav/Authoring/CkVoxelNavVolume_Actor.h"
@@ -69,9 +70,9 @@ namespace ck_voxelnav_preview_editor_subsystem
         }
     }
 
-    auto Build_CurrentActorRuntimeHashes(UWorld& InWorld) -> TMap<FName, uint64>
+    auto Build_CurrentActorRuntimeHashes(UWorld& InWorld) -> TMap<FCk_Jolt_CookedActorKey, uint64>
     {
-        auto Result = TMap<FName, uint64>{};
+        auto Result = TMap<FCk_Jolt_CookedActorKey, uint64>{};
 
         // Same filter the cooked static world was baked under — hashes must cover the same population.
         const auto BakeFilter = ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings();
@@ -81,12 +82,15 @@ namespace ck_voxelnav_preview_editor_subsystem
             if (Level == nullptr)
             { continue; }
 
+            const auto LevelKey = ck::jolt::Get_LevelLookupKey(*Level);
+
             for (const auto& Actor : Level->Actors)
             {
                 if (Actor == nullptr)
                 { continue; }
 
-                Result.Add(Actor->GetFName(), ck::jolt::bake::ComputeRuntimeCheckHash(*Actor, BakeFilter));
+                Result.Add(FCk_Jolt_CookedActorKey{LevelKey, Actor->GetFName()},
+                    ck::jolt::bake::ComputeRuntimeCheckHash(*Actor, BakeFilter));
             }
         }
         return Result;
@@ -527,7 +531,8 @@ auto
     auto Query = MakeUnique<ck::jolt::FCk_Jolt_CookedWorldQuery>();
     auto Request = ck::jolt::FCk_Jolt_CookedWorldQueryLoadRequest{};
     Request._CookedDataRootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
-    Request._MapPackageName = InActor.GetWorld()->PersistentLevel->GetOutermost()->GetName();
+    Request._MapPackageName = ck::jolt::Get_PackageLookupKey(
+        InActor.GetWorld()->PersistentLevel->GetOutermost()->GetName()).ToString();
     Request._OptionalBounds = AuthoredParams.Get_VolumeBounds();
     Request._RequireCurrentActorRuntimeHashes = true;
     Request._CurrentActorRuntimeHashes = ck_voxelnav_preview_editor_subsystem::Build_CurrentActorRuntimeHashes(

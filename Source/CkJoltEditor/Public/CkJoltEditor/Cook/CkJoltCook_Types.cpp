@@ -16,19 +16,25 @@ namespace ck::jolt::cook
     {
         auto Plan = FCk_Jolt_IncrementalPlan{};
 
-        auto CookedByName = TMap<FName, const FCk_Jolt_IncrementalCookedActor*>{};
-        CookedByName.Reserve(InInput._Cooked.Num());
+        const auto Get_CookedKey = [](const FCk_Jolt_IncrementalCookedActor& InCooked)
+        { return FCk_Jolt_CookedActorKey{InCooked._OwningLevelPackage, InCooked._ActorName}; };
+
+        const auto Get_PresentKey = [](const FCk_Jolt_IncrementalPresentActor& InPresent)
+        { return FCk_Jolt_CookedActorKey{InPresent._OwningLevelPackage, InPresent._ActorName}; };
+
+        auto CookedByKey = TMap<FCk_Jolt_CookedActorKey, const FCk_Jolt_IncrementalCookedActor*>{};
+        CookedByKey.Reserve(InInput._Cooked.Num());
         ck::algo::ForEach(InInput._Cooked, [&](const FCk_Jolt_IncrementalCookedActor& InCooked)
         {
-            CookedByName.Add(InCooked._ActorName, &InCooked);
+            CookedByKey.Add(Get_CookedKey(InCooked), &InCooked);
         });
 
-        const auto PresentNames = ck::algo::Transform<TSet<FName>>(InInput._Present,
-            [](const FCk_Jolt_IncrementalPresentActor& InPresent) { return InPresent._ActorName; });
+        const auto PresentKeys = ck::algo::Transform<TSet<FCk_Jolt_CookedActorKey>>(InInput._Present,
+            Get_PresentKey);
 
         for (const auto& PresentActor : InInput._Present)
         {
-            const auto* const* CookedEntry = CookedByName.Find(PresentActor._ActorName);
+            const auto* const* CookedEntry = CookedByKey.Find(Get_PresentKey(PresentActor));
 
             if (CookedEntry == nullptr)
             {
@@ -54,12 +60,12 @@ namespace ck::jolt::cook
             if (PresentActor._HasBodies)
             { Plan._DirtyCellIds.Add(PresentActor._CurrentCellId); }
             else
-            { Plan._RemovedActorNames.Add(PresentActor._ActorName); }
+            { Plan._RemovedActorKeys.Add(Get_PresentKey(PresentActor)); }
         }
 
         for (const auto& CookedActor : InInput._Cooked)
         {
-            if (PresentNames.Contains(CookedActor._ActorName))
+            if (PresentKeys.Contains(Get_CookedKey(CookedActor)))
             { continue; }
 
             const auto OwningLevelIsLoaded = InInput._LoadedLevelPackages.Contains(CookedActor._OwningLevelPackage);
@@ -70,7 +76,7 @@ namespace ck::jolt::cook
                 continue;
             }
 
-            Plan._RemovedActorNames.Add(CookedActor._ActorName);
+            Plan._RemovedActorKeys.Add(Get_CookedKey(CookedActor));
             Plan._DirtyCellIds.Add(CookedActor._CellId);
         }
 
@@ -107,31 +113,36 @@ namespace ck::jolt::cook
 
         Remap._NumNewCells = NextNewCellIndex;
 
-        for (const auto& [ActorName, ActorRef] : InInput._ExistingActorLookup)
+        for (const auto& [LevelPackage, ActorsInLevel] : InInput._ExistingActorLookup)
         {
-            if (NOT Remap._NewCellIndexByOldCellIndex.IsValidIndex(ActorRef.Get_CellIndex()))
-            { continue; }
+            for (const auto& [ActorName, ActorRef] : ActorsInLevel.Get_ActorsByName())
+            {
+                if (NOT Remap._NewCellIndexByOldCellIndex.IsValidIndex(ActorRef.Get_CellIndex()))
+                { continue; }
 
-            const auto NewCellIndex = Remap._NewCellIndexByOldCellIndex[ActorRef.Get_CellIndex()];
-            const auto CellWasRewritten = NewCellIndex == INDEX_NONE;
+                const auto NewCellIndex = Remap._NewCellIndexByOldCellIndex[ActorRef.Get_CellIndex()];
+                const auto CellWasRewritten = NewCellIndex == INDEX_NONE;
 
-            if (CellWasRewritten)
-            { continue; }
+                if (CellWasRewritten)
+                { continue; }
 
-            Remap._ActorLookup.Add(ActorName,
-                FCk_Jolt_CookedActorRef{}.Set_CellIndex(NewCellIndex).Set_GroupIndex(ActorRef.Get_GroupIndex()));
+                Remap._ActorLookup.FindOrAdd(LevelPackage).Get_ActorsByName().Add(ActorName,
+                    FCk_Jolt_CookedActorRef{}.Set_CellIndex(NewCellIndex).Set_GroupIndex(ActorRef.Get_GroupIndex()));
+            }
         }
 
-        for (const auto& [WrittenCellId, ActorNames] : InInput._WrittenActorNamesByCell)
+        for (const auto& [WrittenCellId, ActorKeys] : InInput._WrittenActorKeysByCell)
         {
             const auto* NewCellIndex = Remap._NewCellIndexByWrittenCellId.Find(WrittenCellId);
 
             if (NewCellIndex == nullptr)
             { continue; }
 
-            for (auto GroupIndex = 0; GroupIndex < ActorNames.Num(); ++GroupIndex)
+            for (auto GroupIndex = 0; GroupIndex < ActorKeys.Num(); ++GroupIndex)
             {
-                Remap._ActorLookup.Add(ActorNames[GroupIndex],
+                const auto& ActorKey = ActorKeys[GroupIndex];
+
+                Remap._ActorLookup.FindOrAdd(ActorKey._LevelPackage).Get_ActorsByName().Add(ActorKey._ActorName,
                     FCk_Jolt_CookedActorRef{}.Set_CellIndex(*NewCellIndex).Set_GroupIndex(GroupIndex));
             }
         }
