@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
+
 #include <CoreMinimal.h>
 #include <Templates/UniquePtr.h>
 
@@ -33,7 +35,9 @@ namespace ck::jolt
         FString _MapPackageName;
         FBox _OptionalBounds = FBox{ForceInit};
         bool _RequireCurrentActorRuntimeHashes = false;
-        TMap<FName, uint64> _CurrentActorRuntimeHashes;
+        // Keyed by (level, actor) — a bare actor name is unique only within its level, so a flat
+        // name->hash map drops all but one same-named actor and spuriously fails the rest.
+        TMap<FCk_Jolt_CookedActorKey, uint64> _CurrentActorRuntimeHashes;
     };
 
     struct CKJOLT_API FCk_Jolt_CookedWorldQueryLoadResult

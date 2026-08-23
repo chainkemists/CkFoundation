@@ -132,7 +132,7 @@ auto
     if (const auto* Existing = LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr,
         LOAD_NoWarn | LOAD_Quiet))
     {
-        const auto UpToDate = Existing->Get_CookVersion() == CookVersion_Current
+        const auto UpToDate = Existing->Get_CookVersion() == MeshShapeCookVersion_Current
             && Existing->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID)
             && Existing->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && Existing->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
@@ -165,7 +165,7 @@ auto
         TEXT("JoltMeshCook: failed to create shape asset [{}]"), AssetPath)
     { return ECk_Jolt_MeshShapeCookResult::Failed; }
 
-    ShapeAsset->Set_CookVersion(CookVersion_Current);
+    ShapeAsset->Set_CookVersion(MeshShapeCookVersion_Current);
     ShapeAsset->Set_JoltVersionId(static_cast<uint32>(JPH_VERSION_ID));
     ShapeAsset->Set_SourceMesh(FSoftObjectPath{&InMesh});
     ShapeAsset->Set_BodySetupGuid(BodySetup->BodySetupGuid);
