@@ -586,6 +586,27 @@ auto
     Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()), InDelegate);
 }
 
+namespace ck_transform_utils
+{
+    // Cast() collapses TWO distinct failures into one empty handle: a stale/destroyed entity, and a
+    // live entity that simply has no Transform (CkHandle_TypeSafe.h). Every TypeUnsafe entry point
+    // below then reported only the second -- "does NOT have Transform" -- which sends the reader
+    // hunting a missing fragment when the entity is actually gone. That misdirection cost real
+    // debugging time on a RaySense write against an entity mid-destroy, where the fragment was
+    // provably present (the calling processor takes FFragment_Transform in its view) and the ENTITY
+    // was the thing that had died. Name which of the two happened.
+    auto Get_TransformCastFailureReason(const FCk_Handle& InHandle) -> FString
+    {
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))
+        { return TEXT("the ENTITY is no longer valid (destroyed, or a stale handle version) -- the Transform fragment is not the problem"); }
+
+        if (NOT UCk_Utils_Transform_UE::Has(InHandle))
+        { return TEXT("the entity is alive but does NOT have a Transform fragment"); }
+
+        return TEXT("Cast failed even though the entity is valid AND has a Transform -- this should be unreachable");
+    }
+}
+
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetLocation(
@@ -597,7 +618,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -618,7 +640,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -639,7 +662,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -660,7 +684,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -680,7 +705,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -701,7 +727,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -722,7 +749,8 @@ auto
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
-    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
     if (NOT TransformHandleIsValid)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -739,7 +767,8 @@ auto
     -> FTransform
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Transform READ on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) { return {}; }
     return UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
 }
 
@@ -751,7 +780,8 @@ auto
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Transform READ on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) { return {}; }
     return UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 }
 
@@ -762,7 +792,8 @@ auto
     -> FRotator
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Transform READ on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) { return {}; }
     return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle);
 }
 
@@ -773,7 +804,8 @@ auto
     -> FVector
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Transform READ on Handle [{}] REFUSED: {}"),
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) { return {}; }
     return UCk_Utils_Transform_UE::Get_EntityCurrentScale(TransformHandle);
 }
 
