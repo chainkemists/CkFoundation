@@ -217,8 +217,13 @@ namespace ck
         }
         else
         {
+            // Has<Transform> is NOT a liveness check: fragments survive until Finalize, so it stays true for
+            // the whole teardown window and lets a read through on a dying entity. Tracked defaults to the
+            // target itself at construction (CkAggroTarget_Utils.cpp), so it is never unset -- an invalid
+            // Tracked means the tracked entity DIED, which the forget pass already models as
+            // ECk_Aggro_ForgetReason::TargetInvalid. Expected, not a defect: keep the last known location.
             const auto Tracked = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InTarget);
-            if (UCk_Utils_Transform_UE::Has(Tracked))
+            if (ck::IsValid(Tracked) && UCk_Utils_Transform_UE::Has(Tracked))
             { InPerception._LastKnownLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Tracked); }
         }
     }
