@@ -307,6 +307,14 @@ auto
 
     const auto SourceHandle = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InResolver);
 
+    // Get_ContextOwner reads with IncludePendingKill on purpose, so a child can still name a dying parent.
+    // A cascade stamps the parent before the child, making "owner tearing down, resolver not yet" a
+    // structural one-frame window -- ordering targets around a source that is leaving is meaningless, and
+    // reading its Transform would ensure. NOT an error: leave the order untouched. The Has check below
+    // cannot stand in for this, because fragments live until Finalize.
+    if (ck::Is_NOT_Valid(SourceHandle))
+    { return; }
+
     if (NOT UCk_Utils_Transform_UE::Has(SourceHandle))
     {
         CK_ENSURE_IF_NOT(false,
@@ -321,7 +329,10 @@ auto
         const auto TargetOwnerA = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InA);
         const auto TargetOwnerB = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InB);
 
-        if (NOT UCk_Utils_Transform_UE::Has(TargetOwnerA) || NOT UCk_Utils_Transform_UE::Has(TargetOwnerB))
+        // Same teardown window as the source above, one level down: a target's owner can be stamped while
+        // the target itself (a child probe node) is still valid, and the outer loop only filters the TARGETS.
+        if (ck::Is_NOT_Valid(TargetOwnerA) || ck::Is_NOT_Valid(TargetOwnerB) ||
+            NOT UCk_Utils_Transform_UE::Has(TargetOwnerA) || NOT UCk_Utils_Transform_UE::Has(TargetOwnerB))
         { return false; }
 
         const auto LocationA = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(TargetOwnerA);
