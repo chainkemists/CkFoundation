@@ -106,6 +106,21 @@ namespace ck::jolt
     CKJOLT_API auto Request_GlobalJoltInit() -> void;
     CKJOLT_API auto Request_GlobalJoltShutdown() -> void;
 
+    /// RAII form of the pair above, for callers whose hold is exactly one scope — i.e. the unit tests.
+    /// Ref-counting makes nesting safe; non-copyable/non-movable so a stray copy cannot double-release.
+    /// Production holders whose lifetime deliberately spans scopes (the cook drain keeps the globals
+    /// across frames so the runtime cache's JPH::Refs are not stranded) keep the explicit calls.
+    struct CKJOLT_API FCk_Jolt_ScopedGlobalInit
+    {
+        FCk_Jolt_ScopedGlobalInit() { Request_GlobalJoltInit(); }
+        ~FCk_Jolt_ScopedGlobalInit() { Request_GlobalJoltShutdown(); }
+
+        FCk_Jolt_ScopedGlobalInit(const FCk_Jolt_ScopedGlobalInit&) = delete;
+        FCk_Jolt_ScopedGlobalInit(FCk_Jolt_ScopedGlobalInit&&) = delete;
+        auto operator=(const FCk_Jolt_ScopedGlobalInit&) -> FCk_Jolt_ScopedGlobalInit& = delete;
+        auto operator=(FCk_Jolt_ScopedGlobalInit&&) -> FCk_Jolt_ScopedGlobalInit& = delete;
+    };
+
     /// Returns an INVALID handle when the hit is InSelf itself, or when the body's entity is no longer alive
     /// (a body can briefly outlive its entity — deferred end-of-frame destroy, or a snapshot restore that
     /// wipes the registry first). Callers treat both as "skip this hit".

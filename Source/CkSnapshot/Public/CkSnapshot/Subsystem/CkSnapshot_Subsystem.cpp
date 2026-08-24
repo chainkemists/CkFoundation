@@ -1310,6 +1310,16 @@ auto
     // enqueued yet, so this pump never applies hydration — it only settles construction (avoids the Setup-stomp).
     EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::LoadKernel);
 
+    // A RuntimeSpawned row is MAPPED at its under-construction entity so dependents can reference it, but the
+    // rebuild is not DONE until that construction finishes: every phase that follows reads what construction
+    // composes — DoApply_SavedTransforms silently skips an entity that has no Transform fragment yet, leaving a
+    // restored NPC standing at its recipe SpawnTransform (the reported "employee spawns at the portal after a
+    // load"). DefinitionBuilt dependents already wait on this exact set (above); the phase gate must too. A
+    // construction that needs a GAME processor to finish is what the escalated full-scope rebuild runs, and one
+    // that never finishes is diagnosed by the stalled/escalated path rather than hanging the load.
+    if (NOT _RuntimeEntityScriptsAwaitingConstruction.IsEmpty())
+    { AnyUnresolved = true; }
+
     return NOT AnyUnresolved;
 }
 
@@ -3067,8 +3077,8 @@ auto
                 _RebuildStallTicks = 0;
                 _LoadFrameCount = 0;
                 _V3LoadReport.Set_UsedEscalatedRebuild(true);
-                ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped — escalating to zero-time full-scope ticks"),
-                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num());
+                ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped ([{}] mapped rows still awaiting construction) — escalating to zero-time full-scope ticks"),
+                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), _RuntimeEntityScriptsAwaitingConstruction.Num());
                 return true;
             }
 
@@ -3094,11 +3104,13 @@ auto
                 }
                 _V3LoadReport.Set_UnresolvedAfterEscalation(UnEngine + UnConstruct + UnRuntime + UnDefinitionBuilt);
                 ck::snapshot::Error(TEXT("Request_Load: ESCALATED rebuild {} — [{}]/[{}] mapped; unresolved by provenance: "
-                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], DefinitionBuilt [{}]. The full processor "
-                    "scope quiesced and these rows still cannot resolve (content drift, or an identity the fresh world "
-                    "never re-creates) — every payload under them will be recorded as orphaned. Proceeding (partial load)."),
+                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], DefinitionBuilt [{}]; mapped rows still "
+                    "awaiting construction [{}]. The full processor scope quiesced and these rows still cannot resolve "
+                    "(content drift, or an identity the fresh world never re-creates) — every payload under them will be "
+                    "recorded as orphaned. Proceeding (partial load)."),
                     Stalled ? TEXT("stalled (no progress)") : TEXT("hit frame cap"),
-                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), UnEngine, UnConstruct, UnRuntime, UnDefinitionBuilt);
+                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), UnEngine, UnConstruct, UnRuntime, UnDefinitionBuilt,
+                    _RuntimeEntityScriptsAwaitingConstruction.Num());
             }
 
             ck::snapshot::Display(TEXT("DIAG: rebuild complete after [{}] frames — [{}]/[{}] entities mapped ([{}] skipped), hydrating"),
