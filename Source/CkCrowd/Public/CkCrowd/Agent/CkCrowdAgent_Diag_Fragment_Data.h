@@ -222,9 +222,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag")
     float _Speed = 0.0f;
 
-    // Heading in radians, atan2(VelY, VelX). Zero when speed is zero.
+    // Heading in radians, atan2(VelY, VelX). Meaningless unless _HasDir -- a purely
+    // vertical velocity (a spawn-frame fall) has no heading, and atan2(0, 0) returns 0,
+    // which reads as "facing +X" rather than "no heading".
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag")
     float _DirRad = 0.0f;
+
+    // True when the HORIZONTAL velocity was large enough for _DirRad to mean anything.
+    // Gated on the 2D magnitude, not _Speed: _Speed is 3D, so a falling agent clears any
+    // speed test while contributing no heading at all.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag")
+    bool _HasDir = false;
 
     // Stage outputs captured on the same physics frame as this post-Constrain observation.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag")
@@ -242,6 +250,7 @@ public:
     CK_PROPERTY_GET(_Pos);
     CK_PROPERTY_GET(_Speed);
     CK_PROPERTY_GET(_DirRad);
+    CK_PROPERTY_GET(_HasDir);
     CK_PROPERTY_GET(_Pipeline);
     CK_PROPERTY_GET(_AvoidanceSampleTraceIndex);
     CK_PROPERTY_GET(_AvoidanceSampleTraceAgeFrames);
