@@ -51,6 +51,13 @@ namespace ck
         if (Iterations <= 0)
         { return; }
 
+        // Overlap below the slop is left alone. COLLISION_RESOLVE_FACTOR removes a FRACTION of the
+        // penetration per iteration, so without a floor the correction decays geometrically and
+        // never terminates -- a settled pile keeps issuing sub-millimetre pushes, and because each
+        // agent resolves against a one-frame-old neighbour cache those pushes chase each other and
+        // the formation creeps forever instead of coming to rest.
+        const auto SlopCm = FMath::Max(0.0f, UCk_Utils_Crowd_Settings_UE::Get_PushApartSlopCm());
+
         const auto& Neighbors = InNeighborCache.Get_Neighbors();
         if (Neighbors.Num() == 0)
         { return; }
@@ -95,7 +102,10 @@ namespace ck
                     const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
                     const auto CombinedRadius = SelfRadius + NeighborRadius;
 
-                    if (Dist >= CombinedRadius)
+                    // The resting contact distance, not the geometric one: an overlap the solver
+                    // has already brought inside the slop is DONE, and re-correcting it is what
+                    // denies the pile a fixed point.
+                    if (Dist >= CombinedRadius - SlopCm)
                     { continue; }
 
                     if (Dist < KINDA_SMALL_NUMBER)
@@ -115,7 +125,9 @@ namespace ck
                         continue;
                     }
 
-                    const auto Penetration = CombinedRadius - Dist;
+                    // Resolve only the part of the overlap that exceeds the slop, so an agent
+                    // arriving at the resting distance is not then pushed past it.
+                    const auto Penetration = (CombinedRadius - SlopCm) - Dist;
                     const auto PenetrationScale = (Penetration * PairShare) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
                     Displacement += PushFromNeighbor * PenetrationScale;
                 }

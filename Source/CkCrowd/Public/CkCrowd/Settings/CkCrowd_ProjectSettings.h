@@ -336,6 +336,25 @@ private:
             ToolTip = "Post-integration physical resolution of overlapping agents. Standard = 4 iterations per dtCrowd. Disabled allows brief overlap during sampling latency."))
     ECk_PushApartMode _PushApartMode = ECk_PushApartMode::Standard;
 
+    // Overlap this small is left alone. Without it the resolver has no fixed point: it removes
+    // COLLISION_RESOLVE_FACTOR of the penetration per iteration, which decays geometrically and
+    // never reaches zero, so a SETTLED pile keeps issuing sub-millimetre corrections forever. Each
+    // agent reads a one-frame-old neighbour cache, so in a dense pile those corrections chase each
+    // other and the formation creeps indefinitely -- measured 0.55 cm/s per agent across 15 agents
+    // still drifting 9.6s after they had all dropped below the settled speed. The slop gives the
+    // solver a fixed point of finite width to land in, which is why every physics solver has one.
+    // Agents come to rest at (radius sum - slop), so the slop is bounded on BOTH sides and the
+    // corridor is narrow. Floor: it must exceed the residual per-frame correction, measured at
+    // ~0.27mm (0.55 cm/s of creep per agent at 20Hz, 15 agents). Ceiling: Crowd_BunchUp asserts
+    // at-rest separation >= 84.0cm with a 0.1cm tolerance, so anything at or above 0.1 rests the
+    // pile below that floor and trades this defect for a separation failure. 0.05 sits between
+    // the two with roughly a factor of two either way -- raising it needs that assertion re-derived
+    // first. 0 restores the old never-terminating behaviour.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
+        meta = (AllowPrivateAccess = true, ClampMin = "0.0",
+            ToolTip = "Penetration below this (cm) is not corrected. Gives the push-apart solver a resting point instead of an asymptote it chases forever. 0 = correct any overlap, however small."))
+    float _PushApartSlopCm = 0.05f;
+
 public:
     CK_PROPERTY_GET(_AccelClampMode);
     CK_PROPERTY_GET(_AvoidanceSampleTrigger);
@@ -357,6 +376,7 @@ public:
     CK_PROPERTY_GET(_CorridorStandDown);
     CK_PROPERTY_GET(_CorridorStandDownSlackCm);
     CK_PROPERTY_GET(_PushApartMode);
+    CK_PROPERTY_GET(_PushApartSlopCm);
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_StationaryMarkupMode);
     CK_PROPERTY_GET(_StationaryMarkupDelaySeconds);
@@ -419,6 +439,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static float Get_PushApartSlopCm();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdNavmeshConstraintMode Get_NavmeshConstraintMode();
