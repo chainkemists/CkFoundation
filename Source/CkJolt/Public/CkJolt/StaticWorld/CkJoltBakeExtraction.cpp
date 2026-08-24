@@ -416,10 +416,24 @@ namespace ck_jolt_bake_extraction
         Triangles.reserve(NumTris);
 
         // Chaos and Jolt disagree on triangle winding — swap b/c so faces point outward.
+        //
+        // A MIRRORING scale (negative determinant — odd count of negative components) flips the
+        // handedness of the vertices baked above, which flips the winding a second time. Without
+        // compensating, every mirrored ComplexAsSimple instance bakes INSIDE-OUT: invisible to
+        // Jolt's single-sided mesh collision and to the CCD LinearCast (which ignores back faces)
+        // from its visually-front side — a thrown item passes straight through a mirrored wall.
+        // The pre-baked ScaledShape path never had this hole (Jolt's ScaleHelpers handles
+        // inside-out scale internally), so the two paths also disagreed per-instance until this.
+        const bool ScaleIsInsideOut = (InScale.X * InScale.Y * InScale.Z) < 0.0;
         const auto PushTriangle = [&](uint32 InA, uint32 InB, uint32 InC) -> void
         {
             if (InA < static_cast<uint32>(NumVerts) && InB < static_cast<uint32>(NumVerts) && InC < static_cast<uint32>(NumVerts))
-            { Triangles.push_back(JPH::IndexedTriangle(InA, InC, InB)); }
+            {
+                if (ScaleIsInsideOut)
+                { Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
+                else
+                { Triangles.push_back(JPH::IndexedTriangle(InA, InC, InB)); }
+            }
         };
 
         if (Elements.RequiresLargeIndices())
