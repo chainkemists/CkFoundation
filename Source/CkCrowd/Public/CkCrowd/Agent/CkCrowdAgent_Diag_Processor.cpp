@@ -499,7 +499,15 @@ namespace ck
         const auto ActualVelocity = InCurrentVelocity.Get_CurrentVelocity();
         Pipeline._FinalCurrentVelocity = ActualVelocity;
         const auto Speed = static_cast<float>(ActualVelocity.Size());
-        const auto DirRad = Speed > KINDA_SMALL_NUMBER
+        // Heading comes off the HORIZONTAL velocity only, so it must be gated on the
+        // horizontal magnitude. Gating it on Speed (3D) let a purely vertical velocity --
+        // every agent's spawn-frame fall -- pass as "moving" while atan2(0, 0) returned 0,
+        // stamping a phantom +X heading on the first sample. The next sample's real heading
+        // then read as a swing of exactly the agent's bearing off +X, so _MaxAngularDeltaDeg
+        // measured spawn geometry instead of motion.
+        const auto Speed2D = static_cast<float>(ActualVelocity.Size2D());
+        const auto HasDir = Speed2D > KINDA_SMALL_NUMBER;
+        const auto DirRad = HasDir
             ? static_cast<float>(FMath::Atan2(ActualVelocity.Y, ActualVelocity.X))
             : 0.0f;
 
@@ -508,6 +516,7 @@ namespace ck
         Sample._Pos = Pos;
         Sample._Speed = Speed;
         Sample._DirRad = DirRad;
+        Sample._HasDir = HasDir;
         Sample._Pipeline = Pipeline;
         const auto RecorderFrame = static_cast<int32>(GFrameCounter);
         const auto& LatestAvoidanceTrace = InRecorder._LatestAvoidanceSampleTrace;
@@ -542,7 +551,7 @@ namespace ck
         if (InRecorder._Samples.Num() >= 1)
         {
             const auto& Prev = InRecorder._Samples.Last();
-            if (Prev._Speed > KINDA_SMALL_NUMBER && Speed > KINDA_SMALL_NUMBER)
+            if (Prev._HasDir && HasDir)
             {
                 auto DeltaRad = DirRad - Prev._DirRad;
                 while (DeltaRad > PI) { DeltaRad -= 2.0f * PI; }
