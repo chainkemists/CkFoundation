@@ -111,6 +111,12 @@ auto
     if (ck::Is_NOT_Valid(InCondition))
     { return InCondition; }
 
+    // A target already in the destruction pipeline gets its exit from the EntityScript EndPlay
+    // path (Active-deduped); tagging it here would leave a pending-exit key no Exit processor
+    // can reach (their views skip dying entities), which pins the settle barrier's presence check.
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InCondition, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+    { return InCondition; }
+
     InCondition.AddOrGet<ck::FTag_SmCondition_PendingExit>();
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InCondition);
     return InCondition;
