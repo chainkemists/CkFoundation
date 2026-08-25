@@ -231,6 +231,12 @@ _(Executor: append and END THE SESSION instead of improvising — phase, step, e
   `Plugins/AutoSettings/`, CkF `Content/CkIsm` sidecars; two populator-staged wrapper uassets remain
   in the BB index (editor was open — unstage or commit with the map at PR time).
 
+## [EDITOR-VERIFY] results (2026-08-25, Neil, PIE)
+- Rewind station: the same-frame fix is confirmed — the issue no longer reproduces and it looks fixed.
+- Basic store loop (customers into the store + checkout): no visible breakage.
+- Not yet run: the place-item giant-scale-flash off/on check and the 60s polled-HFSM log soak
+  (VALIDATION items 2-3) — the polled tripwire AutoTest covers item 3's mechanism headlessly.
+
 ## Sync onto upstream (2026-08-25)
 - Branch rebased onto CkF `origin/dev` tip `aa68202c5` (+81 upstream commits under it; behind=0,
   ahead=6, backup `backup/gameplay-cascade-settle-barrier-pre-rebase-20260825` = `ecad45fde`).
