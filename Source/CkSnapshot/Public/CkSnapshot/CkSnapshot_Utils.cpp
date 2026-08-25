@@ -210,6 +210,67 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
+    Request_BeginSaveKeyRelocation(
+        const FCk_Handle& InSource)
+    -> FGuid
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey relocation requires a valid source entity"))
+    { }
+    if (NOT SourceIsValid)
+    { return {}; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
+    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("SaveKey relocation source [{}] has no snapshot subsystem"), InSource)
+    { }
+    if (NOT HasSubsystem)
+    { return {}; }
+
+    return Subsystem->Request_BeginSaveKeyRelocation(InSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CompleteSaveKeyRelocation(
+        FCk_Handle& InDestination,
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto DestinationIsValid = ck::IsValid(InDestination);
+    CK_ENSURE_IF_NOT(DestinationIsValid,
+        TEXT("SaveKey relocation requires a valid destination entity"))
+    { }
+    if (NOT DestinationIsValid)
+    { return false; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InDestination);
+    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("SaveKey relocation destination [{}] has no snapshot subsystem"), InDestination)
+    { }
+    if (NOT HasSubsystem)
+    { return false; }
+
+    return Subsystem->Request_CompleteSaveKeyRelocation(InDestination, InSaveKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
     Get_HasSaveKey(
         const FCk_Handle& InHandle)
     -> bool

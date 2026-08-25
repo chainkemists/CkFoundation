@@ -279,6 +279,23 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FString& InHistoricalIdentity);
 
+    // Starts a unique level-entity relocation. Store the returned key on the caller's durable transfer token and
+    // complete it only after the replacement has constructed successfully. An invalid return leaves the source in place.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Begin Save Key Relocation")
+    static FGuid
+    Request_BeginSaveKeyRelocation(
+        const FCk_Handle& InSource);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Complete Save Key Relocation")
+    static bool
+    Request_CompleteSaveKeyRelocation(
+        UPARAM(ref) FCk_Handle& InDestination,
+        const FGuid& InSaveKey);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Has Save Key")
