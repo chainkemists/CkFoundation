@@ -91,7 +91,7 @@ namespace ck
                 // Stamped here rather than on the queue entity: the queue entity is bookkeeping that dies this
                 // tick, and this is the first moment the payload the level-placed spawner owns actually exists.
                 if (NOT SaveKeyIdentity.IsEmpty())
-                { ck::save_key::Assign(EntityUnderConstruction, SaveKeyIdentity); }
+                { ck::save_key::AssignLevelPlaced(EntityUnderConstruction, SaveKeyIdentity); }
             });
 
         // The lambda carries the entity-script class forward; destroying the queue entity is what stops re-entry.

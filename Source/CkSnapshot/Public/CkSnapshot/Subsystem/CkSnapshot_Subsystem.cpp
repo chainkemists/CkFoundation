@@ -400,10 +400,14 @@ auto
 
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
+    auto SuppressedSaveKeys = _SuppressedSaveKeys.Array();
+    SuppressedSaveKeys.Sort([](const FGuid& InA, const FGuid& InB)
+    { return InA.ToString(EGuidFormats::Digits) < InB.ToString(EGuidFormats::Digits); });
+    HeaderV3.Set_SuppressedSaveKeys(MoveTemp(SuppressedSaveKeys));
     _LastSaveReport = FCk_Snapshot_SaveReport{};
     auto CaptureTimings = ck::snapshot::FCaptureTimings{};
     const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3,
-        _LastSaveReport, &CaptureTimings);
+        _LastSaveReport, &_SuppressedSaveKeys, &CaptureTimings);
     _LastSaveReport.Set_Result(CaptureResultV3);
 
     auto DoFinish = [&](ECk_SnapshotResult InResult) -> void
@@ -597,6 +601,28 @@ void
             return;
         }
     }
+
+    auto SuppressedKeysAreValid = true;
+    for (const auto& Key : _V3Header.Get_SuppressedSaveKeys())
+    {
+        if (NOT Key.IsValid())
+        {
+            SuppressedKeysAreValid = false;
+            break;
+        }
+    }
+    CK_ENSURE_IF_NOT(SuppressedKeysAreValid,
+        TEXT("Request_Load: slot [{}] contains an invalid suppressed SaveKey"), InSlotName)
+    { }
+    if (NOT SuppressedKeysAreValid)
+    {
+        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt));
+        return;
+    }
+    _SuppressedSaveKeys.Reset();
+    for (const auto& Key : _V3Header.Get_SuppressedSaveKeys())
+    { _SuppressedSaveKeys.Add(Key); }
+    _SuppressedSaveKeyDestroyQueued.Reset();
 
     // ---- Latch the load (spans real frames + a level reload from here) -------------------------------------
     _LoadInProgress      = true;
@@ -872,6 +898,20 @@ auto
         { continue; }
 
         const auto& Frag = RawRegistry->get<FFragment_SaveKey>(Entity);
+        const auto IsSuppressedLevelKey = _SuppressedSaveKeys.Contains(Frag.Get_Key()) &&
+            Frag.Get_IsLevelPlacedRoot();
+        if (IsSuppressedLevelKey)
+        {
+            if (NOT _SuppressedSaveKeyDestroyQueued.Contains(Handle))
+            {
+                _SuppressedSaveKeyDestroyQueued.Add(Handle);
+                auto MutableHandle = Handle;
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MutableHandle);
+                ck::snapshot::Display(TEXT("v3 relocation: suppressing fresh level entity [{}] with carried SaveKey [{}]"),
+                    Handle, Frag.Get_Key());
+            }
+            continue;
+        }
         if (TryPublish_SaveKey(Frag.Get_Key(), Handle))
         { ++PublishedCount; }
         for (const auto& Alias : Frag.Get_Aliases())
@@ -1320,6 +1360,17 @@ auto
     // Drain kernel work (construction cascades, actor bridges) so pending spawns resolve next tick. No payloads are
     // enqueued yet, so this pump never applies hydration — it only settles construction (avoids the Setup-stomp).
     EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::LoadKernel);
+
+    // A suppressed level root must be fully gone before the load can expose the world. Merely queueing its destroy
+    // would allow the rebuild to advance in the same tick and briefly hand gameplay both the carried replacement
+    // token and the freshly-authored original. The kernel pump above owns teardown; this gate verifies completion.
+    for (auto It = _SuppressedSaveKeyDestroyQueued.CreateIterator(); It; ++It)
+    {
+        if (ck::Is_NOT_Valid(*It))
+        { It.RemoveCurrent(); }
+        else
+        { AnyUnresolved = true; }
+    }
 
     // A RuntimeSpawned row is MAPPED at its under-construction entity so dependents can reference it, but the
     // rebuild is not DONE until that construction finishes: every phase that follows reads what construction
@@ -3665,6 +3716,121 @@ auto
     -> void
 {
     _SaveKeyResolverMap.Remove(InKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_BeginSaveKeyRelocation(
+        const FCk_Handle& InSource)
+    -> FGuid
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey relocation refused: source entity is invalid"))
+    { }
+    if (NOT SourceIsValid)
+    { return {}; }
+
+    const auto HasSaveKey = InSource.Has<FFragment_SaveKey>();
+    CK_ENSURE_IF_NOT(HasSaveKey,
+        TEXT("SaveKey relocation refused: source entity [{}] has no save identity"), InSource)
+    { }
+    if (NOT HasSaveKey)
+    { return {}; }
+
+    const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
+    const auto Key = SaveKey.Get_Key();
+    const auto KeyIsValid = Key.IsValid();
+    CK_ENSURE_IF_NOT(KeyIsValid,
+        TEXT("SaveKey relocation refused: source entity [{}] has an invalid save identity"), InSource)
+    { }
+    if (NOT KeyIsValid)
+    { return {}; }
+
+    const auto IsUniqueKey = NOT SaveKey.Get_IsSharedRendezvousGroup();
+    CK_ENSURE_IF_NOT(IsUniqueKey,
+        TEXT("SaveKey relocation refused: source entity [{}] uses a shared infrastructure SaveKey [{}]"), InSource, Key)
+    { }
+    if (NOT IsUniqueKey)
+    { return {}; }
+
+    const auto IsLevelPlacedRoot = SaveKey.Get_IsLevelPlacedRoot();
+    CK_ENSURE_IF_NOT(IsLevelPlacedRoot,
+        TEXT("SaveKey relocation refused: source entity [{}] was not created from a level-authored root"), InSource)
+    { }
+    if (NOT IsLevelPlacedRoot)
+    { return {}; }
+
+    const auto IsNotAlreadySuppressed = NOT _SuppressedSaveKeys.Contains(Key);
+    CK_ENSURE_IF_NOT(IsNotAlreadySuppressed,
+        TEXT("SaveKey relocation refused: source entity [{}] already has an unfinished relocation for SaveKey [{}]"),
+        InSource, Key)
+    { }
+    if (NOT IsNotAlreadySuppressed)
+    { return {}; }
+
+    _SuppressedSaveKeys.Add(Key);
+    return Key;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CompleteSaveKeyRelocation(
+        FCk_Handle& InDestination,
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto DestinationIsValid = ck::IsValid(InDestination);
+    CK_ENSURE_IF_NOT(DestinationIsValid,
+        TEXT("SaveKey relocation completion refused: destination entity is invalid"))
+    { }
+    if (NOT DestinationIsValid)
+    { return false; }
+
+    const auto KeyIsValid = InSaveKey.IsValid();
+    CK_ENSURE_IF_NOT(KeyIsValid,
+        TEXT("SaveKey relocation completion refused: supplied SaveKey is invalid"))
+    { }
+    if (NOT KeyIsValid)
+    { return false; }
+
+    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
+    CK_ENSURE_IF_NOT(IsSuppressed,
+        TEXT("SaveKey relocation completion refused: SaveKey [{}] is not held by an unfinished relocation"), InSaveKey)
+    { }
+    if (NOT IsSuppressed)
+    { return false; }
+
+    const auto DestinationHasNoSaveKey = NOT InDestination.Has<FFragment_SaveKey>();
+    CK_ENSURE_IF_NOT(DestinationHasNoSaveKey,
+        TEXT("SaveKey relocation completion refused: destination entity [{}] already has a SaveKey"), InDestination)
+    { }
+    if (NOT DestinationHasNoSaveKey)
+    { return false; }
+
+    const auto* ExistingPublisher = _SaveKeyResolverMap.Find(InSaveKey);
+    const auto ExistingPublisherIsAvailable = ExistingPublisher == nullptr || ck::Is_NOT_Valid(*ExistingPublisher);
+    CK_ENSURE_IF_NOT(ExistingPublisherIsAvailable,
+        TEXT("SaveKey relocation completion refused: SaveKey [{}] is still published by live entity [{}]"),
+        InSaveKey, ExistingPublisher != nullptr ? *ExistingPublisher : FCk_Handle{})
+    { }
+    if (NOT ExistingPublisherIsAvailable)
+    { return false; }
+
+    if (ExistingPublisher != nullptr)
+    { _SaveKeyResolverMap.Remove(InSaveKey); }
+
+    // Every validation above completed before either mutation. The replacement now owns the ORIGINAL canonical key,
+    // so capture records it as EngineOwned and the next load adopts the map-spawner's fresh copy at its saved pose.
+    InDestination.AddOrReplace<FFragment_SaveKey>(InSaveKey);
+    InDestination.Get<FFragment_SaveKey>().MarkLevelPlacedRoot();
+    _SuppressedSaveKeys.Remove(InSaveKey);
+    _SaveKeyResolverMap.Add(InSaveKey, InDestination);
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

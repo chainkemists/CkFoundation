@@ -40,6 +40,11 @@ private:
     UPROPERTY(Transient)
     bool _IsSharedRendezvousGroup = false;
 
+    // True when this canonical identity originated from a level-placed root. Relocation may temporarily suppress
+    // only this population; a unique key on ordinary gameplay/system state is not authority to delete its fresh copy.
+    UPROPERTY(Transient)
+    bool _IsLevelPlacedRoot = false;
+
 public:
     CK_PROPERTY_GET(_Key);
     CK_DEFINE_CONSTRUCTORS(FFragment_SaveKey, _Key);
@@ -58,6 +63,12 @@ public:
 
     auto MarkSharedRendezvousGroup() -> void
     { _IsSharedRendezvousGroup = true; }
+
+    auto Get_IsLevelPlacedRoot() const -> bool
+    { return _IsLevelPlacedRoot; }
+
+    auto MarkLevelPlacedRoot() -> void
+    { _IsLevelPlacedRoot = true; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -86,6 +97,12 @@ namespace ck::save_key
      */
     CKECS_API auto
     AssignSharedRendezvousGroup(
+        FCk_Handle& InEntity,
+        const FString& InStableIdentity) -> void;
+
+    /** Assigns the unique identity of a root the level re-creates on every boot. */
+    CKECS_API auto
+    AssignLevelPlaced(
         FCk_Handle& InEntity,
         const FString& InStableIdentity) -> void;
 

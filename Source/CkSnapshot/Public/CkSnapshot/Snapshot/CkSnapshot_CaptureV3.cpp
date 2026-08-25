@@ -439,6 +439,7 @@ namespace ck::snapshot
             FArchive& InByteWriter,
             FCk_Snapshot_HeaderV3& InOutHeader,
             FCk_Snapshot_SaveReport& OutReport,
+            const TSet<FGuid>* InSuppressedSaveKeys,
             FCaptureTimings* OutTimings)
         -> ECk_SnapshotResult
     {
@@ -707,6 +708,18 @@ namespace ck::snapshot
 
             if (NOT bPersist)
             { continue; }
+
+            const auto HasSaveKey = Handle.Has<FFragment_SaveKey>();
+            const auto SaveKey = HasSaveKey ? Handle.Get<FFragment_SaveKey>().Get_Key() : FGuid{};
+            const auto HasSuppressedSaveKey = InSuppressedSaveKeys != nullptr && HasSaveKey &&
+                InSuppressedSaveKeys->Contains(SaveKey);
+            CK_ENSURE_IF_NOT(NOT HasSuppressedSaveKey,
+                TEXT("v3 capture refused: entity [{}] still carries SaveKey [{}] that an unfinished relocation suppresses. "
+                     "Complete or cancel the relocation before saving."),
+                Handle, SaveKey)
+            { }
+            if (HasSuppressedSaveKey)
+            { return ECk_SnapshotResult::Failed_NotQuiescent; }
 
             PersistedIds.Add(RawId);
             Classified.Add(FClassified{Handle, RawId, Provenance, Ancestry._Depth});
@@ -1033,6 +1046,7 @@ namespace ck::snapshot
             FArchive& InByteWriter,
             FCk_Snapshot_HeaderV3& InOutHeader,
             FCk_Snapshot_SaveReport& OutReport,
+            const TSet<FGuid>* InSuppressedSaveKeys,
             FCaptureTimings* OutTimings)
         -> ECk_SnapshotResult
     {
@@ -1054,7 +1068,7 @@ namespace ck::snapshot
         InOutHeader.Set_WorldAssetPath(FSoftObjectPath{&InWorld});
 
         return Run_CaptureV3_Registry(*RawRegistry, CkRegistry.Get_RegistryHandle(), &InWorld, InByteWriter,
-            InOutHeader, OutReport, OutTimings);
+            InOutHeader, OutReport, InSuppressedSaveKeys, OutTimings);
     }
 }
 
