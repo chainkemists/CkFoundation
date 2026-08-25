@@ -207,6 +207,7 @@ auto
             StartNode._TraceName = detail::Get_NodeTraceName(Descriptor);
             StartNode._HasDirtyMarker = Descriptor._HasDirtyMarker;
             StartNode._IsDirtyChecker = Descriptor._IsDirtyChecker;
+            StartNode._IsDirtyChecker_Consumable = Descriptor._IsDirtyChecker_Consumable;
             StartNode._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
             StartNode._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             StartNode._PumpPolicy = Descriptor._PumpPolicy;
@@ -248,6 +249,7 @@ auto
             Node._TraceName = detail::Get_NodeTraceName(Descriptor);
             Node._HasDirtyMarker = Descriptor._HasDirtyMarker;
             Node._IsDirtyChecker = Descriptor._IsDirtyChecker;
+            Node._IsDirtyChecker_Consumable = Descriptor._IsDirtyChecker_Consumable;
             Node._DirtyMarkerHashes = Descriptor._DirtyMarkerHashes;
             Node._DirtyMarkerNames = Descriptor._DirtyMarkerNames;
             Node._CanSkipWhenViewEmpty = Descriptor._CanSkipWhenViewEmpty;
