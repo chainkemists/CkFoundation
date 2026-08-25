@@ -3,6 +3,7 @@
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/Settings/CkSnapshot_Settings.h"
+#include "CkSnapshot/Snapshot/CkSnapshot_RuntimeSpawnPolicy.h"
 
 #include "CkCore/Format/CkFormat.h" // ck::Format_UE — naming an entity the capture did not carry
 
@@ -230,11 +231,67 @@ namespace ck::snapshot
 
     namespace ck_snapshot_capturev3_audit
     {
-        // A durable value that names an entity the save is NOT writing comes back as a tombstone: the feature is
-        // structurally present and functionally dead. Nothing earlier can catch it — whether a target is persisted
-        // is a property of that ENTITY at this instant, not of the field's type — so the capture is the first and
-        // last point at which the fact exists. It is reported here rather than dropped quietly, and the save still
-        // proceeds: a world that loads with one named gap beats a save nobody can write.
+        auto
+            Find_RuntimeSpawnedRebuildBlocker(
+                const FCk_Handle&    InTarget,
+                const TSet<uint32>&  InPersistedIds)
+            -> FCk_Handle
+        {
+            constexpr auto MaxOwnerDepth = 256;
+            auto Current = InTarget;
+
+            for (auto Depth = 0; Depth < MaxOwnerDepth; ++Depth)
+            {
+                const auto CurrentIsNonBridgedRuntimeSpawned =
+                    Current.Has<ck::FFragment_SpawnRecipe>() &&
+                    NOT Current.Has<FFragment_ActorSpawnIntent>();
+                const auto CurrentDependsOnLifetimeOwner =
+                    CurrentIsNonBridgedRuntimeSpawned || Current.Has<ck::FTag_ConstructSpawned>();
+                if (NOT CurrentDependsOnLifetimeOwner)
+                { return {}; }
+
+                if (NOT Current.Has<ck::FFragment_LifetimeOwner>())
+                { return {}; }
+
+                const auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Current);
+                if (ck::Is_NOT_Valid(Owner) || Owner == Current)
+                { return {}; }
+
+                if (CurrentIsNonBridgedRuntimeSpawned)
+                {
+                    const auto& Recipe = Current.Get<ck::FFragment_SpawnRecipe>();
+                    const auto ScriptClass = Recipe.Get_ScriptClass();
+                    const auto* ScriptDefault = ck::IsValid(ScriptClass.Get())
+                        ? ScriptClass->GetDefaultObject<UCk_EntityScript_UE>()
+                        : nullptr;
+                    if (ck::IsValid(ScriptDefault))
+                    {
+                        const auto OwnerSavedId = static_cast<uint32>(Owner.Get_Entity().Get_ID());
+                        const auto CanRebuildCurrent =
+                            ck::snapshot::runtime_spawn_policy::CanRebuildRuntimeSpawnedWithOwnerPolicy(
+                                ScriptDefault->Get_IsSnapshotRespawnable(), OwnerSavedId, InPersistedIds);
+                        if (NOT CanRebuildCurrent)
+                        { return Current; }
+                    }
+                }
+
+                const auto OwnerSavedId = static_cast<uint32>(Owner.Get_Entity().Get_ID());
+                if (NOT InPersistedIds.Contains(OwnerSavedId))
+                { return {}; }
+
+                Current = Owner;
+            }
+
+            return {};
+        }
+
+        // ------------------------------------------------------------------------------------------------------
+
+        // A durable value that names an entity the save does not write, or writes but cannot rebuild, comes back as
+        // a tombstone: the feature is structurally present and functionally dead. Nothing earlier can catch it —
+        // persistence and reconstruction are properties of that ENTITY at this instant, not of the field's type —
+        // so capture is the first and last point at which the fact exists. It is reported here rather than dropped
+        // quietly, and the save still proceeds: a world that loads with one named gap beats a save nobody can write.
         auto Audit_DurableHandles(
             const UScriptStruct*        InPayloadType,
             void*                       InPayloadMemory,
@@ -253,12 +310,43 @@ namespace ck::snapshot
                     { return; }
 
                     const auto TargetId = static_cast<uint32>(InTarget.Get_Entity().Get_ID());
-                    if (InPersistedIds.Contains(TargetId))
-                    { return; }
-
                     const auto TargetIdentity = UCk_Utils_GameplayLabel_UE::Has(InTarget)
                         ? UCk_Utils_GameplayLabel_UE::Get_Label(InTarget).ToString()
-                        : FString{};
+                        : ck::Format_UE(TEXT("{}"), InTarget);
+                    if (InPersistedIds.Contains(TargetId))
+                    {
+                        // The existing target is in the table, but it can still depend on a row the loader skips.
+                        // Walk that saved ownership chain while the live recipes are available.
+                        const auto RebuildBlocker = Find_RuntimeSpawnedRebuildBlocker(InTarget, InPersistedIds);
+                        if (ck::Is_NOT_Valid(RebuildBlocker))
+                        { return; }
+
+                        const auto RebuildBlockerOwner =
+                            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(RebuildBlocker);
+                        const auto& RebuildBlockerRecipe = RebuildBlocker.Get<ck::FFragment_SpawnRecipe>();
+                        const auto RebuildBlockerScriptClass = RebuildBlockerRecipe.Get_ScriptClass();
+
+                        CK_ENSURE_IF_NOT(false,
+                            TEXT("v3 capture: lasting payload [{}] on source entity [{}] holds a handle at [{}] to "
+                                 "target entity [{}]. The target is saved, but its owner chain includes "
+                                 "runtime-created entity [{}] with temporary owner [{}] that is not saved. Its entity "
+                                 "script [{}] is not marked to return after loading, so the target will not return and "
+                                 "this lasting reference will be empty. Mark the named blocked entity "
+                                 "snapshot-respawnable, persist its owner, or make this reference session-only."),
+                            InPayloadType, InOwner, InFieldPath, InTarget, RebuildBlocker, RebuildBlockerOwner,
+                            RebuildBlockerScriptClass.Get()) {}
+
+                        auto Loss = FCk_Snapshot_SaveLossRecord{};
+                        Loss.Set_PayloadType(InPayloadType->GetPathName());
+                        Loss.Set_FieldPath(InFieldPath);
+                        Loss.Set_OwnerSavedId(InOwnerSavedId);
+                        Loss.Set_TargetEntityId(TargetId);
+                        Loss.Set_TargetIdentity(TargetIdentity);
+                        Loss.Set_Reason(
+                            TEXT("runtime owner-chain entity is not snapshot-respawnable and cannot reconstruct"));
+                        OutReport.Add_Loss(MoveTemp(Loss));
+                        return;
+                    }
 
                     CK_ENSURE_IF_NOT(false,
                         TEXT("v3 capture: durable payload [{}] on entity [{}] holds a handle at [{}] to entity [{}], "
