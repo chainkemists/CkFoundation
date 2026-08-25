@@ -414,7 +414,10 @@ auto
         for (const auto NodeIndex : InPlan._ParticipantNodeIndices)
         {
             auto& Node = _Partition._Nodes[NodeIndex];
-            if (Node._HasDirtyMarker and NOT Node._IsDirtyChecker(InRegistry))
+            const auto& NodeDirtyChecker = Node._IsDirtyChecker_Consumable
+                ? Node._IsDirtyChecker_Consumable
+                : Node._IsDirtyChecker;
+            if (Node._HasDirtyMarker and NOT NodeDirtyChecker(InRegistry))
             { continue; }
 
 #if !UE_BUILD_SHIPPING
@@ -465,7 +468,10 @@ auto
     for (const auto TriggerNodeIndex : InPlan._TriggerNodeIndices)
     {
         const auto& TriggerNode = _Partition._Nodes[TriggerNodeIndex];
-        if (TriggerNode._IsDirtyChecker(InRegistry))
+        const auto& TriggerDirtyChecker = TriggerNode._IsDirtyChecker_Consumable
+            ? TriggerNode._IsDirtyChecker_Consumable
+            : TriggerNode._IsDirtyChecker;
+        if (TriggerDirtyChecker(InRegistry))
         { StillDirtyNames.Add(TriggerNode._ProcessorName); }
     }
 
@@ -492,7 +498,10 @@ auto
     for (const auto TriggerNodeIndex : InPlan._TriggerNodeIndices)
     {
         const auto& TriggerNode = _Partition._Nodes[TriggerNodeIndex];
-        if (TriggerNode._IsDirtyChecker(InRegistry))
+        const auto& TriggerDirtyChecker = TriggerNode._IsDirtyChecker_Consumable
+            ? TriggerNode._IsDirtyChecker_Consumable
+            : TriggerNode._IsDirtyChecker;
+        if (TriggerDirtyChecker(InRegistry))
         { return true; }
     }
 

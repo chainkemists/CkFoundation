@@ -57,6 +57,25 @@ namespace ck
             {
                 return (InRegistry.Has_AnyLiveEntityWith<T_Markers>() || ...);
             };
+            OutDescriptor._IsDirtyChecker_Consumable = [](const FCk_Registry& InRegistry) -> bool
+            {
+                return (InRegistry.Has_AnyLiveEntityWith_Excluding<T_Markers,
+                    ck::FTag_DestroyEntity_EndPlay, ck::FTag_DestroyEntity_Teardown,
+                    ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>() || ...);
+            };
+        }
+
+        // ----------------------------------------------------------------------------------------------------------------
+        template <typename... T_Fragments>
+        auto
+        MakeViewConsumableChecker(
+            entt::type_list<T_Fragments...>)
+            -> FDirtyChecker
+        {
+            return [](const FCk_Registry& InRegistry) -> bool
+            {
+                return InRegistry.View<UnwrapAccessPolicy_T<T_Fragments>...>().HasAny();
+            };
         }
 
         // ----------------------------------------------------------------------------------------------------------------
@@ -244,12 +263,37 @@ namespace ck
             {
                 return InRegistry.Has_AnyLiveEntityWith<DirtyFragment>();
             };
+            Descriptor._IsDirtyChecker_Consumable = [](const FCk_Registry& InRegistry) -> bool
+            {
+                return InRegistry.Has_AnyLiveEntityWith_Excluding<DirtyFragment,
+                    ck::FTag_DestroyEntity_EndPlay, ck::FTag_DestroyEntity_Teardown,
+                    ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+            };
         }
         else if constexpr (requires { typename T_Processor::MarkedDirtyByAnyOf; })
         {
             detail::ExtractDirtyMarkers(
                 typename T_Processor::MarkedDirtyByAnyOf::Types{},
                 Descriptor);
+        }
+
+        // The settle barrier needs "consumable work", not "marker present": a marker stranded on an
+        // entity the processor's own view skips (dying, exited, request-excluded) must not read as
+        // dirty, or the barrier spins its whole pass budget on work no pass can drain. Rebuild the
+        // consumable checker from the processor's actual runtime view when one is exposed; the
+        // pending-kill tag approximation set above remains the fallback (script processors).
+        if (Descriptor._HasDirtyMarker)
+        {
+            if constexpr (requires { typename T_Processor::RuntimeVariantFragments; })
+            {
+                Descriptor._IsDirtyChecker_Consumable =
+                    detail::MakeViewConsumableChecker(typename T_Processor::RuntimeVariantFragments{});
+            }
+            else if constexpr (requires { typename T_Processor::FragmentList; })
+            {
+                Descriptor._IsDirtyChecker_Consumable =
+                    detail::MakeViewConsumableChecker(typename T_Processor::FragmentList{});
+            }
         }
 
         if constexpr (requires { typename T_Processor::FragmentList; })

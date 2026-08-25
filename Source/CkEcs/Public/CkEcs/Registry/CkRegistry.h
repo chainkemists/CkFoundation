@@ -6,6 +6,8 @@
 #include "CkCore/Policy/CkPolicy.h"
 
 #include "CkEcs/Entity/CkEntity.h"
+
+#include <tuple>
 #include "CkEcs/Registry/CkRegistry_Handle.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -164,7 +166,51 @@ public:
             DoForEach(InFunc, FragmentsAndTags{}, OnlyExcludes{}, OnlyFragments{});
         }
 
+        // True when the view would visit at least one entity — the exact "this processor has
+        // consumable work" test the settle-barrier dirty checks need. Early-outs at the first match.
+        auto HasAny() -> bool
+        {
+            if (_Registry == nullptr)
+            { return false; }
+
+            return DoHasAny(FragmentsAndTags{}, OnlyExcludes{});
+        }
+
     private:
+        template <typename T_Lead, typename... T_Rest, typename... T_OnlyExcludes>
+        auto DoHasAny(entt::type_list<T_Lead, T_Rest...>, entt::type_list<T_OnlyExcludes...>) -> bool
+        {
+            // Hand-rolled instead of a multi-storage view: the const path must not create missing
+            // pools, and entt's multi-view over a null storage is UB. A never-used include pool means
+            // zero matching entities; a never-used exclude pool excludes nothing.
+            const auto AllIncludePoolsExist =
+                (_Registry->template storage<T_Lead>() != nullptr)
+                && ((_Registry->template storage<T_Rest>() != nullptr) && ...);
+            if (NOT AllIncludePoolsExist)
+            { return false; }
+
+            const auto RestStorages = std::tuple{_Registry->template storage<T_Rest>()...};
+            const auto ExcludeStorages = std::tuple{_Registry->template storage<T_OnlyExcludes>()...};
+
+            // The single-storage view skips in_place tombstones, so every visited entity is live.
+            for (const auto Entity : _Registry->template view<T_Lead>())
+            {
+                const auto HasAllIncludes = std::apply([&](auto*... InStorage)
+                { return (InStorage->contains(Entity) && ...); }, RestStorages);
+                if (NOT HasAllIncludes)
+                { continue; }
+
+                const auto HasAnyExclude = std::apply([&](auto*... InStorage)
+                { return ((InStorage != nullptr && InStorage->contains(Entity)) || ...); }, ExcludeStorages);
+                if (HasAnyExclude)
+                { continue; }
+
+                return true;
+            }
+
+            return false;
+        }
+
         template <typename T_Func, typename... T_FragmentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyFragments>
         auto DoForEach(T_Func InFunc, entt::type_list<T_FragmentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyFragments...>)
         {
@@ -249,6 +295,12 @@ public:
     // walks past tombstones — O(leading holes), so use it for change-gated checks, not hot paths.
     template <typename T_Fragment>
     auto Has_AnyLiveEntityWith() const -> bool;
+
+    // Same, but skipping entities that also carry any of T_Exclude — the settle-barrier trigger check
+    // uses this with the pending-kill tags so a marker stranded on a dying entity (which no
+    // CK_IGNORE_PENDING_KILL view can consume) does not read as pending work.
+    template <typename T_Fragment, typename... T_Exclude>
+    auto Has_AnyLiveEntityWith_Excluding() const -> bool;
 
     // Per-fragment-type counter the scheduler's pump pass uses to short-circuit dirty-marker checks; every
     // Add/Replace/AddOrReplace/Remove/Try_Remove/Clear bumps it. Returns 0 for a never-mutated hash.
@@ -429,6 +481,20 @@ auto
     // The const view overload does not create a missing pool, and single-storage views skip in_place
     // tombstones — so begin() == end() means zero LIVE entities regardless of tombstone residue.
     const auto View = Reg->template view<T_Fragment>();
+    return View.begin() != View.end();
+}
+
+template <typename T_Fragment, typename... T_Exclude>
+auto
+    FCk_Registry::
+    Has_AnyLiveEntityWith_Excluding() const
+    -> bool
+{
+    const auto* Reg = Resolve();
+    if (Reg == nullptr)
+    { return false; }
+
+    const auto View = Reg->template view<T_Fragment>(entt::exclude<T_Exclude...>);
     return View.begin() != View.end();
 }
 
