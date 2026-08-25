@@ -80,8 +80,9 @@ namespace ck_snapshot_subsystem
     // engine's own default floor is 0.0001, four orders of magnitude under it.
     constexpr auto k_MaxFrozenTimeDilation = 0.01f;
 
-    // Replays the capture's ArIsSaveGame tagged-property blob onto a deferred-spawn actor. Empty bytes mean the saved
-    // class declared no SaveGame property (or the row predates the field), and the spawn proceeds untouched.
+    // Replays the capture's ArIsSaveGame tagged-property blob onto an actor. Respawned actors receive it before
+    // BeginPlay; an adopted fresh-world actor receives it before its saved entity payloads hydrate. Empty bytes mean
+    // the saved class declared no SaveGame property (or the row predates the field), and the actor stays untouched.
     auto
         DoApply_ActorSaveFields(
             AActor* InActor,
@@ -1030,12 +1031,11 @@ auto
                             if (auto* AdoptedActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Found);
                                 AdoptedActor != nullptr)
                             {
-                                const auto ActorSaveFieldsAreNotDiscarded = Entry.Get_ActorSaveFieldBytes().IsEmpty();
-                                CK_ENSURE_IF_NOT(ActorSaveFieldsAreNotDiscarded,
-                                    TEXT("Save/load reused existing actor [{}] for saved entity [{}], but that actor has saved properties that were not restored. "
-                                        "Move lasting gameplay state to persistent entity data, or add a restore step for this reused actor."),
-                                    AdoptedActor, SavedId)
-                                {}
+                                // GameMode-created actors have already run BeginPlay, but their saved actor state must
+                                // still converge before entity hydration resumes. Feature topology belongs in durable
+                                // entity data; ordinary SaveGame actor fields use the same replay path as respawns.
+                                ck_snapshot_subsystem::DoApply_ActorSaveFields(
+                                    AdoptedActor, Entry.Get_ActorSaveFieldBytes());
 
                                 constexpr auto Sweep = false;
                                 AdoptedActor->SetActorTransform(Entry.Get_ActorSpawnTransform(), Sweep,
