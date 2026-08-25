@@ -37,8 +37,8 @@ the duration is being derived, the existing zero-duration ensure rejects the who
 `Create_TweenSceneNodeOffsetLocation/Rotation/Scale/Transform` and their Location/Rotation
 `CurveOffset` siblings tween a `SceneNode`'s relative offset through `Request_UpdateOffset`; they do
 not write the child world transform. Use them for a parent-driven scene node. The world-transform,
-follow-target, spline-follow, and world curve-offset creators reject that exact shape (externally
-driven SceneNode with a current offset and parent) with one actionable ensure, because its parent
+follow-target, spline-follow, and world curve-offset creators reject that exact shape (an attached
+SceneNode whose parent owns its world transform) with one actionable ensure, because its parent
 will overwrite a world-space tween. Roots, detached nodes, and anchor-driven nodes are intentionally
 not rejected and retain the existing world-transform APIs.
 
