@@ -7,6 +7,7 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/CkEcsExt_Log.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/Settings/CkEcsExt_Settings.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -259,6 +260,81 @@ namespace ck
         -> void
     {
         InComp.Set_ComponentsModified(ECk_TransformComponents::None);
+
+        // A parent-driven SceneNode's Transform is derived from its local SceneNode offset and
+        // its parent's world transform. Writing the derived Transform works only until the parent
+        // moves, at which point the SceneNode processor overwrites the write. The three fragments
+        // below are the complete contract: externally-driven alone is not enough, because a stale
+        // tag must not reject an ordinary Transform entity.
+        const auto IsParentDrivenSceneNode =
+            InHandle.Has<FTag_Transform_ExternallyDriven>()
+            && InHandle.Has<FFragment_SceneNode_Current>()
+            && InHandle.Has<SceneNodeParent>();
+
+        const auto HasMutationRequests =
+            NOT InRequestsComp._LocationRequests.IsEmpty()
+            || NOT InRequestsComp._RotationRequests.IsEmpty()
+            || InRequestsComp._ScaleRequests.IsSet();
+
+        const auto CanApplyWorldMutation = NOT IsParentDrivenSceneNode || NOT HasMutationRequests;
+        CK_ENSURE_IF_NOT(CanApplyWorldMutation,
+            TEXT("Transform request rejected on parent-driven SceneNode [{}]. Its world transform is derived from "
+                 "its parent and local offset, so the change would be lost when the parent moves. Update the "
+                 "SceneNode offset instead, or detach the node before moving it."),
+            InHandle)
+        {}
+
+        if (IsParentDrivenSceneNode)
+        {
+            // Diagnostics can compile out, but the rejection cannot. Drain every mutation request
+            // atomically without touching InComp, so a mixed batch never leaves a partial world pose.
+            // ForceRefresh is observation-only and remains supported below.
+            InHandle.CopyAndRemove(InRequestsComp,
+            [&](FFragment_Transform_Requests& InRequests)
+            {
+                const auto Reject = [&](const auto& InRequest) -> void
+                {
+                    InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed);
+
+                    if (InRequest.Get_IsRequestHandleValid())
+                    {
+                        InRequest.GetAndDestroyRequestHandle();
+                    }
+                };
+
+                algo::ForEachRequest(InRequests._LocationRequests, Visitor(
+                [&](const auto& InRequest) -> void
+                {
+                    Reject(InRequest);
+                }));
+
+                algo::ForEachRequest(InRequests._RotationRequests, Visitor(
+                [&](const auto& InRequest) -> void
+                {
+                    Reject(InRequest);
+                }));
+
+                if (InRequests._ScaleRequests.IsSet())
+                {
+                    Reject(InRequests._ScaleRequests.GetValue());
+                    InRequests._ScaleRequests.Reset();
+                }
+
+                if (NOT InRequests._ForceRefreshRequests.IsEmpty())
+                {
+                    InHandle.AddOrGet<FTag_Transform_Updated>();
+
+                    algo::ForEachRequest(InRequests._ForceRefreshRequests,
+                    [&](const FCk_Request_Transform_ForceRefresh& InRequest)
+                    {
+                        InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Succeeded);
+                    }, policy::DontResetContainer{});
+
+                    InRequests._ForceRefreshRequests.Reset();
+                }
+            });
+            return;
+        }
 
         const auto HasStaticRootComponent = InHandle.Has<FFragment_Transform_RootComponent>() && NOT InHandle.Has<FTag_Transform_Movable>();
 

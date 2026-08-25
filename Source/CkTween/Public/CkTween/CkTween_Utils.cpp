@@ -5,6 +5,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 #include "CkTween/CkTween_Fragment.h"
 
@@ -14,6 +16,51 @@
 
 namespace ck_tween_utils
 {
+    auto
+        IsParentDrivenSceneNode(
+            const FCk_Handle& InHandle)
+        -> bool
+    {
+        return InHandle.Has<ck::FTag_Transform_ExternallyDriven>()
+            && InHandle.Has<ck::FFragment_SceneNode_Current>()
+            && InHandle.Has<ck::SceneNodeParent>();
+    }
+
+    auto
+    CanCreateWorldTransformTween(
+            const FCk_Handle& InHandle,
+            const TCHAR* InCreator)
+        -> bool
+    {
+        const auto CanCreate = NOT IsParentDrivenSceneNode(InHandle);
+        CK_ENSURE_IF_NOT(CanCreate,
+            TEXT("{} cannot target parent-driven SceneNode [{}] in world space. Use the Create_TweenSceneNodeOffset* API so the tween updates its relative offset instead."),
+            InCreator, InHandle)
+        {}
+
+        if (NOT CanCreate)
+        { return false; }
+
+        return true;
+    }
+
+    auto
+        CanCreateSceneNodeOffsetTween(
+            const FCk_Handle_SceneNode& InSceneNode,
+            const TCHAR* InCreator)
+        -> bool
+    {
+        const auto IsSceneNodeValid = ck::IsValid(InSceneNode);
+        CK_ENSURE_IF_NOT(IsSceneNodeValid,
+            TEXT("{} needs a valid SceneNode handle."), InCreator)
+        {}
+
+        if (NOT IsSceneNodeValid)
+        { return false; }
+
+        return true;
+    }
+
     // The resolved counterpart of FCk_TweenCurveChannels: what the tween actually samples, once the
     // authored soft paths have been checked for residency.
     struct FResidentCurveChannels
@@ -229,6 +276,92 @@ auto
     return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
 }
 
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetLocation(
+        FCk_Handle_SceneNode& InSceneNode,
+        FVector InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetLocation")))
+    { return {}; }
+
+    const auto StartValue = UCk_Utils_SceneNode_UE::Get_Offset(InSceneNode).GetLocation();
+    return DoCreateTween(InSceneNode, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::SceneNodeOffset_Location, InCompletionBehavior);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetRotation(
+        FCk_Handle_SceneNode& InSceneNode,
+        FRotator InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetRotation")))
+    { return {}; }
+
+    const auto StartValue = UCk_Utils_SceneNode_UE::Get_Offset(InSceneNode).GetRotation().Rotator();
+    return DoCreateTween(InSceneNode, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::SceneNodeOffset_Rotation, InCompletionBehavior);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetScale(
+        FCk_Handle_SceneNode& InSceneNode,
+        FVector InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetScale")))
+    { return {}; }
+
+    const auto StartValue = UCk_Utils_SceneNode_UE::Get_Offset(InSceneNode).GetScale3D();
+    return DoCreateTween(InSceneNode, FCk_TweenValue{StartValue}, FCk_TweenValue{InEndValue},
+        InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, ECk_TweenTarget::SceneNodeOffset_Scale, InCompletionBehavior);
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetTransform(
+        FCk_Handle_SceneNode& InSceneNode,
+        FTransform InEndTransform,
+        float InDuration,
+        ECk_TweenEasing InEasing,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_TweenTransformResult
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetTransform")))
+    { return {}; }
+
+    const auto LocationTween = Create_TweenSceneNodeOffsetLocation(InSceneNode, InEndTransform.GetLocation(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
+    const auto RotationTween = Create_TweenSceneNodeOffsetRotation(InSceneNode, InEndTransform.GetRotation().Rotator(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
+    const auto ScaleTween = Create_TweenSceneNodeOffsetScale(InSceneNode, InEndTransform.GetScale3D(), InDuration, InEasing, InLoopType, InLoopCount, InYoyoDelay, InCompletionBehavior);
+
+    return FCk_TweenTransformResult{LocationTween, RotationTween, ScaleTween};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -324,6 +457,9 @@ auto
         ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
+    if (NOT ck_tween_utils::CanCreateWorldTransformTween(InEntity, TEXT("Create_TweenEntityTransform_FollowSpline")))
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InSpline),
         TEXT("Cannot create a spline-follow tween with an invalid Spline handle."))
     { return {}; }
@@ -446,6 +582,98 @@ auto
     auto NewTween = DoCreateTween(InEntity, FCk_TweenValue{BaseLocation}, FCk_TweenValue{BaseLocation},
         Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
         ECk_TweenTarget::Transform_Location, InCompletionBehavior);
+
+    auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{ResidentChannels._X};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Y};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Z};
+    CurveDrive._Output = ECk_TweenCurveOutput::VectorOffset;
+    CurveDrive._TimeInput = InTimeInput;
+    CurveDrive._BaseValue = FCk_TweenValue{BaseLocation};
+
+    return NewTween;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetRotation_CurveOffset(
+        FCk_Handle_SceneNode& InSceneNode,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration,
+        ECk_TweenCurveTimeInput InTimeInput,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetRotation_CurveOffset")))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
+        TEXT("Cannot create a scene-node offset curve rotation tween on [{}]: no channel has a curve authored."), InSceneNode)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
+        TEXT("Cannot create a scene-node offset curve rotation tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InSceneNode)
+    { return {}; }
+
+    const auto ResidentChannels = ck_tween_utils::DoResolve_ResidentChannels(InChannels);
+    const auto Duration = InDuration > 0.0f ? InDuration : ck_tween_utils::DoGet_MaxTime(ResidentChannels);
+    CK_ENSURE_IF_NOT(Duration > 0.0f,
+        TEXT("Cannot create a scene-node offset curve rotation tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InSceneNode)
+    { return {}; }
+
+    const auto BaseRotation = UCk_Utils_SceneNode_UE::Get_Offset(InSceneNode).GetRotation().Rotator();
+    auto NewTween = DoCreateTween(InSceneNode, FCk_TweenValue{BaseRotation}, FCk_TweenValue{BaseRotation},
+        Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
+        ECk_TweenTarget::SceneNodeOffset_Rotation, InCompletionBehavior);
+
+    auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
+    CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{ResidentChannels._X};
+    CurveDrive._Curve_Y = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Y};
+    CurveDrive._Curve_Z = TStrongObjectPtr<UCurveFloat>{ResidentChannels._Z};
+    CurveDrive._Output = ECk_TweenCurveOutput::RotatorOffset;
+    CurveDrive._TimeInput = InTimeInput;
+    CurveDrive._BaseValue = FCk_TweenValue{BaseRotation};
+
+    return NewTween;
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Create_TweenSceneNodeOffsetLocation_CurveOffset(
+        FCk_Handle_SceneNode& InSceneNode,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration,
+        ECk_TweenCurveTimeInput InTimeInput,
+        ECk_TweenLoopType InLoopType,
+        int32 InLoopCount,
+        float InYoyoDelay,
+        ECk_TweenCompletionBehavior InCompletionBehavior)
+    -> FCk_Handle_Tween
+{
+    if (NOT ck_tween_utils::CanCreateSceneNodeOffsetTween(InSceneNode, TEXT("Create_TweenSceneNodeOffsetLocation_CurveOffset")))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InChannels.Get_HasAnyCurve(),
+        TEXT("Cannot create a scene-node offset curve location tween on [{}]: no channel has a curve authored."), InSceneNode)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InLoopType != ECk_TweenLoopType::Yoyo,
+        TEXT("Cannot create a scene-node offset curve location tween on [{}] with Yoyo looping: curve-driven tweens sample forward-only, so the return leg would replay identically. Author the return in the curve's own keys instead."), InSceneNode)
+    { return {}; }
+
+    const auto ResidentChannels = ck_tween_utils::DoResolve_ResidentChannels(InChannels);
+    const auto Duration = InDuration > 0.0f ? InDuration : ck_tween_utils::DoGet_MaxTime(ResidentChannels);
+    CK_ENSURE_IF_NOT(Duration > 0.0f,
+        TEXT("Cannot create a scene-node offset curve location tween on [{}]: derived duration is 0 (no curve has a key past t=0)."), InSceneNode)
+    { return {}; }
+
+    const auto BaseLocation = UCk_Utils_SceneNode_UE::Get_Offset(InSceneNode).GetLocation();
+    auto NewTween = DoCreateTween(InSceneNode, FCk_TweenValue{BaseLocation}, FCk_TweenValue{BaseLocation},
+        Duration, ECk_TweenEasing::Linear, InLoopType, InLoopCount, InYoyoDelay,
+        ECk_TweenTarget::SceneNodeOffset_Location, InCompletionBehavior);
 
     auto& CurveDrive = NewTween.AddOrGet<ck::FFragment_Tween_CurveDrive>();
     CurveDrive._Curve_X = TStrongObjectPtr<UCurveFloat>{ResidentChannels._X};
@@ -972,6 +1200,12 @@ auto
         ECk_TweenCompletionBehavior InCompletionBehavior)
     -> FCk_Handle_Tween
 {
+    const auto IsWorldTransformTarget = InTarget == ECk_TweenTarget::Transform_Location
+        || InTarget == ECk_TweenTarget::Transform_Rotation
+        || InTarget == ECk_TweenTarget::Transform_Scale;
+    if (IsWorldTransformTarget && NOT ck_tween_utils::CanCreateWorldTransformTween(InOwner, TEXT("Tween creation")))
+    { return {}; }
+
     auto TweenEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
 
     auto Params = FCk_Fragment_Tween_ParamsData{InStartValue, InEndValue, InDuration, InEasing}
