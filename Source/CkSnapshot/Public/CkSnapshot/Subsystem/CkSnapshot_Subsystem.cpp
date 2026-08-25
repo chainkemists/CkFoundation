@@ -269,6 +269,7 @@ auto
     _IsReadyToResume = false;
     _LoadPhase = ELoadPhase::Idle;
     _RuntimeEntityScriptsAwaitingConstruction.Reset();
+    _PendingHydrationPromises.Reset();
     _LoadStateChannelEntity = FCk_Handle{};
     _PendingLoadStateChannel = FCk_Handle_PendingActorRelay{};
 
@@ -624,6 +625,7 @@ void
 
     _SavedIdMap.Reset();
     _MappedLiveEntities.Reset();
+    _PendingHydrationPromises.Reset();
     _SpawnedRuntimeIds.Reset();
     _RuntimeEntityScriptsAwaitingConstruction.Reset();
     _SkippedIds.Reset();
@@ -1301,6 +1303,7 @@ auto
 
             _SavedIdMap.Add(SavedId, Resolved);
             _MappedLiveEntities.Add(Resolved);
+            DoBind_PendingHydrationPromises(Resolved);
         }
         else if (NOT _SkippedIds.Contains(SavedId))
         { AnyUnresolved = true; } // still pending (bridge linking, owner not yet mapped) — retry next tick
@@ -1696,6 +1699,64 @@ auto
     { return; }
 
     _PendingLoadCompletePromises.Emplace(InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_AddHydrationPromise(
+        const FCk_Handle& InHandle,
+        const FCk_Delegate_Hydration_OnHydrated& InDelegate)
+    -> bool
+{
+    // The same GameInstance spans the pre-travel and seamless-transition worlds. Only the destination can produce
+    // a handle this rebuild will map; queueing the others would delay legitimate pre-existing entities for no gain.
+    const auto* PromiseWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+    const auto CanStillMap = _LoadInProgress
+        && NOT _QuarantineLifted
+        && ck::IsValid(PromiseWorld)
+        && DoIs_WorldOwnedByThisLoad(*PromiseWorld);
+    if (NOT CanStillMap || NOT InDelegate.IsBound())
+    { return false; }
+
+    _PendingHydrationPromises.Emplace(FPendingHydrationPromise{InHandle, InDelegate});
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoBind_PendingHydrationPromises(
+        const FCk_Handle& InMappedHandle)
+    -> void
+{
+    auto Delegates = TArray<FCk_Delegate_Hydration_OnHydrated>{};
+    for (auto Index = 0; Index < _PendingHydrationPromises.Num();)
+    {
+        auto& Pending = _PendingHydrationPromises[Index];
+        if (Pending._Handle != InMappedHandle)
+        {
+            ++Index;
+            continue;
+        }
+
+        Delegates.Emplace(MoveTemp(Pending._Delegate));
+        _PendingHydrationPromises.RemoveAt(Index);
+    }
+
+    // Preserve bind order when more than one consumer promised against the same entity before mapping.
+    for (const auto& Delegate : Delegates)
+    {
+        if (NOT Delegate.IsBound())
+        { continue; }
+
+        auto Source = InMappedHandle;
+        CK_SIGNAL_BIND(ck::UUtils_Signal_Hydration_OnHydrated, Source, Delegate,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::Unbind);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -3315,6 +3376,24 @@ auto
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
     _LoadInProgress = false;
+
+    // Move this list while the mapped-set evidence still exists. A mapped handle should have been removed from
+    // the queue and rebound to its entity signal at the instant its saved row was claimed. Finding one here is an
+    // exact lifecycle regression, while an unmatched destination-world entity is a legitimate fresh spawn.
+    const auto HydrationPromises = MoveTemp(_PendingHydrationPromises);
+    _PendingHydrationPromises.Reset();
+    for (const auto& Promise : HydrationPromises)
+    {
+        const auto PostLoadRefreshWasScheduledCorrectly = NOT _MappedLiveEntities.Contains(Promise._Handle);
+        CK_ENSURE_IF_NOT(PostLoadRefreshWasScheduledCorrectly,
+            TEXT("Save/load timing problem for object [{}]. Its saved data was restored, but its post-load refresh ")
+            TEXT("was delayed until the end of loading. Visuals or behavior that depend on the saved data may be ")
+            TEXT("out of date. ")
+            TEXT("Please include this object name when reporting the issue"),
+            Promise._Handle)
+        {}
+    }
+
     _ConvergenceFramesSatisfied = 0;
     _ConvergencePendingLastFrame.Reset();
     _ConvergencePumpSeries.Reset();
@@ -3344,6 +3423,11 @@ auto
 
     for (const auto& Promise : Promises)
     { Promise.ExecuteIfBound(Source, _LastLoadReport); }
+
+    // A queued handle that never mapped has no entity signal to receive. The promise still resolves exactly once,
+    // with the original handle, after the load has become non-pending; callbacks cannot re-queue themselves here.
+    for (const auto& Promise : HydrationPromises)
+    { Promise._Delegate.ExecuteIfBound(Promise._Handle); }
 
     Delegate.ExecuteIfBound(_LastLoadReport);
 }
