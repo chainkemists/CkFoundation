@@ -205,6 +205,32 @@ _(Executor: append and END THE SESSION instead of improvising — phase, step, e
   documents, so the tag was pure dead-signal there. Semantics-preserving; flagged for Saad's review
   at PR time. The `SmCondition_Exit` invalid-script consume (review Q2) is also in.
 
+## Final gate of record (2026-08-25, `Build/barrier_final_gate.log`)
+- Full suite: **1817 total / 1803 passed / 14 failed** vs baseline 1817/1807/10.
+- By NAME vs baseline — fixed: the campaign spec (now green) + `Employee_Task_Checkout_MansCounter`
+  + `NpcCombat_WeaponDrawLatchesPerEncounter` (both known run-to-run churn). New: **`Npc_DormancyReleasesLookoutAdmission`
+  (the ONE genuine open regression — Blockers)**; `Ck_AutoTest_Timer_Jump_Backward` and
+  `Bb_AutoTest_EmployeeOrders_RewindFetchesFromBin` (both red in ISOLATION on pre-barrier binaries —
+  pre-existing isolation-sensitive, surfaced by lane re-slicing); `ThrowItem_PointBlankThrow` (green
+  in isolation — lane-load flake); `Ck_AutoTest_Crowd_Facing_CalmWhilePressingBlockedGap` (the
+  known-flaky Crowd family: baseline itself had 4 other Crowd reds, 2 of which went green here).
+- Warning gates: `Local settle after group` **0** · `Dirty marker conflict` **0** · `Pump limit` **1**
+  (the same pre-existing GeometryCollection pump storm — baseline also has exactly 1).
+- A/B causality: the spec is red on pre-barrier binaries (baseline run + the original Phase-0 red)
+  and green with the barrier; the barrier-limit livelock guard is green in both worlds.
+
+## Shipped state (2026-08-25, local branches — NOTHING pushed)
+- CkFoundation `feature/gameplay-cascade-settle-barrier` (base `bfd1d9a55` ∈ origin/dev): 5 commits
+  `0dfe84454` docs(package) · `09a67ebcf` feat(barrier traits) · `a38207832` fix(consumable checker)
+  · `9410a4789` fix(pending-exit fences) · `cb2e41a03` fix(DoFinishConstruction claim).
+  Rebase onto CkF dev tip + push at PR time (ck-ship-pr).
+- BusterBlock `feature/gameplay-cascade-settle-barrier` (`3010049da`, on origin/dev): the two spec
+  tests only. The generated wrapper .as + AutoTests map external actors are deliberately NOT
+  committed (branch-derived; regenerate on first AS recompile). Gitlink bump follows at PR time.
+- Left untouched in the working tree (other sessions' property): `Config/DefaultGameplayTags.ini`,
+  `Plugins/AutoSettings/`, CkF `Content/CkIsm` sidecars; two populator-staged wrapper uassets remain
+  in the BB index (editor was open — unstage or commit with the map at PR time).
+
 ## Session log
 - 2026-08-21 · fresh-eyes review · 3 Opus traces + reviewer re-read of the load-bearing sources; package corrected; awaiting Saad (Q3, Q7).
 - 2026-08-24 · exec · Phase 0 red captured; Phase 1 traits applied; first green run stayed red →
