@@ -1,7 +1,7 @@
 #include "CkJolt_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -714,7 +714,7 @@ auto
     {
         const auto ConsumerGateOpen = _DebugDrawGate && _DebugDrawGate();
         const auto CVarDrawEnabled  = ck_jolt_subsystem::cvar::DebugDrawEnabled;
-        const auto IsSuppressedForStreamerMode = ck::debug_draw::Is_SuppressedForStreamerMode();
+        const auto IsSuppressedForStreamerMode = ck::diagnostic_visibility::Is_HiddenForStreamerMode();
 
         if (_DefaultDebugDrawTarget.IsValid())
         {

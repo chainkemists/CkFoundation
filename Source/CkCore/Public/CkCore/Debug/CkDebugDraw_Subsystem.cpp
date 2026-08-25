@@ -1,6 +1,7 @@
 #include "CkDebugDraw_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -76,7 +77,7 @@ auto
         UCanvas* InCanvas)
     -> void
 {
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     {
         FlushPersistentDebugLines(GetWorld());
         FlushDebugStrings(GetWorld());

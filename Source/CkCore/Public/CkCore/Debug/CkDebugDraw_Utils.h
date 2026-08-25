@@ -13,8 +13,8 @@
 namespace ck::debug_draw
 {
     /**
-     * Runtime policy for marketing captures. This is true when either -CkStreamerMode or
-     * ck.Debug.StreamerMode 1 requests that Ck diagnostic rendering stay off-screen.
+     * Compatibility forwarding API. New diagnostic consumers should use
+     * ck::diagnostic_visibility::Is_HiddenForStreamerMode directly.
      */
     CKCORE_API auto
     Is_SuppressedForStreamerMode() -> bool;

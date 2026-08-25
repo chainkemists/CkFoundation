@@ -6,6 +6,7 @@
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -63,7 +64,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawNavStatusProc);
 
-        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
         { return; }
 
         if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPathTrouble())

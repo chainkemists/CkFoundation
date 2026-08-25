@@ -2,7 +2,7 @@
 
 #include "CkActor/ActorModifier/CkActorModifier_Utils.h"
 
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -132,7 +132,7 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
 {
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InOuter), TEXT("Invalid Outer supplied to DoDraw_MarkerOrSensor_DebugLines"))

@@ -67,6 +67,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | `ck::Format(TEXT("{}"), Value)`, `ck::Format_UE`, `ck::Format_ANSI` (fmt-based wide-char format) | `Format` | `CkFormat.h`, `CkFormat_Defaults.h` | `ck::Format(TEXT("Count={}"), N)` |
 | Stack trace helpers, debug name verbosity enum, debug utils for printing | `Debug` | `CkDebug_Utils.h` | diagnostic formatting |
 | Draw debug lines / progress bars / ASCII visualization | `Debug` | `CkDebugDraw_Utils.h`, `CkDebugDraw_Subsystem.h` | `UCk_Utils_DebugDraw_UE` |
+| Hide all Ck runtime diagnostics for a capture | `Diagnostics` | `CkDiagnosticVisibility.h` | `-CkStreamerMode` / `ck.Debug.StreamerMode 1` |
 | Log category includes (the CkCore-side wrapper of CkLog) | `Log` | `CkLog.h` | `ck::core::Verbose(TEXT("…"))` |
 
 ### Unreal Engine wrappers
@@ -203,6 +204,7 @@ const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
 …write a GameWorldSubsystem base     → Subsystems/
 …define a Blueprint-visible shared value (bool/float/int) | SharedValues/
 …draw debug lines / progress bars    → Debug/DebugDraw
+…hide runtime diagnostics for capture → Diagnostics/CkDiagnosticVisibility
 …print a stack trace / debug name    → Debug/CkDebug_Utils
 …define a replicated UObject         → ObjectReplication/
 ```

@@ -126,6 +126,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKPMG_API FProcessor_Pmg_Donut_ApplyRuntimeVisibility : public ck_exp::TProcessor<
+            FProcessor_Pmg_Donut_ApplyRuntimeVisibility,
+            FCk_Handle_Pmg_Donut,
+            ck::TReadOnly<FFragment_Pmg_Donut_Current>,
+            TExclude<FTag_Pmg_Donut_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Pmg_Donut_HandleRequests>;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_Donut_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPMG_API FProcessor_Pmg_Donut_EndPlay : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_EndPlay,
             FCk_Handle_Pmg_Donut,

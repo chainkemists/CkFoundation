@@ -8,6 +8,7 @@
 #include "CkPmg/CkPmg_Utils_DebugShapes.h"
 
 #include "CkCore/Math/Vector/CkVector_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "Interfaces/IPluginManager.h"
@@ -127,7 +128,8 @@ namespace ck_pmg_processor_text_shapes_impl
         CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent), TEXT("Invalid mesh component"))
         { return; }
 
-        const auto ShouldBeVisible = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden;
+        const auto ShouldBeVisible = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
         InMeshComponent->SetVisibility(ShouldBeVisible, true);
         InMeshComponent->SetHiddenInGame(!ShouldBeVisible);
         InMeshComponent->bHiddenInGame = !ShouldBeVisible;

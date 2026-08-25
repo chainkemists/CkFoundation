@@ -3,6 +3,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -66,7 +67,10 @@ namespace ck_pmg_processor_angular_shapes
         CK_ENSURE_IF_NOT(ck::IsValid(InMeshComponent), TEXT("MeshComponent is invalid"))
         { return; }
 
-        InMeshComponent->SetVisibility(true);
+        const auto ShouldBeVisible = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
+        InMeshComponent->SetVisibility(ShouldBeVisible, true);
+        InMeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
         InMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
         auto TranslucentMaterial = LoadObject<UMaterial>(
