@@ -1029,6 +1029,13 @@ auto
                             if (auto* AdoptedActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Found);
                                 AdoptedActor != nullptr)
                             {
+                                const auto ActorSaveFieldsAreNotDiscarded = Entry.Get_ActorSaveFieldBytes().IsEmpty();
+                                CK_ENSURE_IF_NOT(ActorSaveFieldsAreNotDiscarded,
+                                    TEXT("Save/load reused existing actor [{}] for saved entity [{}], but that actor has saved properties that were not restored. "
+                                        "Move lasting gameplay state to persistent entity data, or add a restore step for this reused actor."),
+                                    AdoptedActor, SavedId)
+                                {}
+
                                 constexpr auto Sweep = false;
                                 AdoptedActor->SetActorTransform(Entry.Get_ActorSpawnTransform(), Sweep,
                                     nullptr, ETeleportType::TeleportPhysics);
