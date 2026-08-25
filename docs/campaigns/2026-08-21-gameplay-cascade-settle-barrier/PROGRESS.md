@@ -205,6 +205,57 @@ _(Executor: append and END THE SESSION instead of improvising — phase, step, e
   documents, so the tag was pure dead-signal there. Semantics-preserving; flagged for Saad's review
   at PR time. The `SmCondition_Exit` invalid-script consume (review Q2) is also in.
 
+## Final gate of record (2026-08-25, `Build/barrier_final_gate.log`)
+- Full suite: **1817 total / 1803 passed / 14 failed** vs baseline 1817/1807/10.
+- By NAME vs baseline — fixed: the campaign spec (now green) + `Employee_Task_Checkout_MansCounter`
+  + `NpcCombat_WeaponDrawLatchesPerEncounter` (both known run-to-run churn). New: **`Npc_DormancyReleasesLookoutAdmission`
+  (the ONE genuine open regression — Blockers)**; `Ck_AutoTest_Timer_Jump_Backward` and
+  `Bb_AutoTest_EmployeeOrders_RewindFetchesFromBin` (both red in ISOLATION on pre-barrier binaries —
+  pre-existing isolation-sensitive, surfaced by lane re-slicing); `ThrowItem_PointBlankThrow` (green
+  in isolation — lane-load flake); `Ck_AutoTest_Crowd_Facing_CalmWhilePressingBlockedGap` (the
+  known-flaky Crowd family: baseline itself had 4 other Crowd reds, 2 of which went green here).
+- Warning gates: `Local settle after group` **0** · `Dirty marker conflict` **0** · `Pump limit` **1**
+  (the same pre-existing GeometryCollection pump storm — baseline also has exactly 1).
+- A/B causality: the spec is red on pre-barrier binaries (baseline run + the original Phase-0 red)
+  and green with the barrier; the barrier-limit livelock guard is green in both worlds.
+
+## Shipped state (2026-08-25, local branches — NOTHING pushed)
+- CkFoundation `feature/gameplay-cascade-settle-barrier` (base `bfd1d9a55` ∈ origin/dev): 5 commits
+  `0dfe84454` docs(package) · `09a67ebcf` feat(barrier traits) · `a38207832` fix(consumable checker)
+  · `9410a4789` fix(pending-exit fences) · `cb2e41a03` fix(DoFinishConstruction claim).
+  Rebase onto CkF dev tip + push at PR time (ck-ship-pr).
+- BusterBlock `feature/gameplay-cascade-settle-barrier` (`3010049da`, on origin/dev): the two spec
+  tests only. The generated wrapper .as + AutoTests map external actors are deliberately NOT
+  committed (branch-derived; regenerate on first AS recompile). Gitlink bump follows at PR time.
+- Left untouched in the working tree (other sessions' property): `Config/DefaultGameplayTags.ini`,
+  `Plugins/AutoSettings/`, CkF `Content/CkIsm` sidecars; two populator-staged wrapper uassets remain
+  in the BB index (editor was open — unstage or commit with the map at PR time).
+
+## [EDITOR-VERIFY] results (2026-08-25, Neil, PIE)
+- Rewind station: the same-frame fix is confirmed — the issue no longer reproduces and it looks fixed.
+- Basic store loop (customers into the store + checkout): no visible breakage.
+- Not yet run: the place-item giant-scale-flash off/on check and the 60s polled-HFSM log soak
+  (VALIDATION items 2-3) — the polled tripwire AutoTest covers item 3's mechanism headlessly.
+
+## Sync onto upstream (2026-08-25)
+- Branch rebased onto CkF `origin/dev` tip `aa68202c5` (+81 upstream commits under it; behind=0,
+  ahead=6, backup `backup/gameplay-cascade-settle-barrier-pre-rebase-20260825` = `ecad45fde`).
+  One conflicted commit (the trait declarations): upstream added `HydrationQuarantinePolicy` lines at
+  the same anchors — resolved KEEP-BOTH in `CkEntityScript_Processor.h` (4 hunks) + `CkEcs/Claude.md` (1).
+- **The rebased tip is COMPILE- AND TEST-UNVERIFIED**: this worktree's BusterBlock branch
+  (`feature/fixture-ghost-visual-layout`, another session's) predates the upstream CkF API changes
+  (`FTag_Snapshot_JustRestored` gone, `CkActorRebind_Utils.h` moved, `Get_IsSnapshotTransient`
+  renamed), so a dev-paired build is impossible here. Verify at PR time on a BB-dev-paired checkout
+  (BB origin/dev pins exactly `aa68202c5` + CkTests `6cdd0df88` + CkGameplayDebugger `7c2dc3af4` +
+  CkAuto `c90c76730` — the pairing that must build). Highest-risk spots: the keep-both hunks and the
+  consumable-checker files against 81 commits of scheduler churn.
+- The BusterBlock spec branch `feature/gameplay-cascade-settle-barrier` (`3010049da`) was already on
+  the current BB origin/dev — nothing to do.
+- Worktree restored afterwards to the LAST-GATED configuration (CkF detached at the pre-rebase
+  backup tip = fixture pin `bfd1d9a55` + the 6 campaign commits; CkTests/CkGameplayDebugger/CkAuto
+  back at the fixture pins); rebuilt, both specs 2/2 green — the shared tree is healthy and the
+  fixture session's pins/dirt untouched.
+
 ## Session log
 - 2026-08-21 · fresh-eyes review · 3 Opus traces + reviewer re-read of the load-bearing sources; package corrected; awaiting Saad (Q3, Q7).
 - 2026-08-24 · exec · Phase 0 red captured; Phase 1 traits applied; first green run stayed red →
