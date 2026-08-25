@@ -5,6 +5,7 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
+#include "CkEcs/Processor/CkProcessor.h"
 
 #include <entt/core/type_info.hpp>
 
@@ -87,10 +88,11 @@ namespace ck
         // with the destruction-pipeline tags, since a dying entity's marker is one no
         // CK_IGNORE_PENDING_KILL view could consume either. One TExclude per type — TIsExcluded only
         // matches the single-argument form, so TExclude<A, B> would be read as an INCLUDE.
-        template <typename... T_Markers>
+        template <typename... T_Markers, typename... T_ExtraExcludes>
         auto
         MakeMarkerConsumableChecker(
-            entt::type_list<T_Markers...>)
+            entt::type_list<T_Markers...>,
+            entt::type_list<T_ExtraExcludes...>)
             -> FDirtyChecker
         {
             return [](const FCk_Registry& InRegistry) -> bool
@@ -99,7 +101,8 @@ namespace ck
                             ck::TExclude<ck::FTag_DestroyEntity_EndPlay>,
                             ck::TExclude<ck::FTag_DestroyEntity_Teardown>,
                             ck::TExclude<ck::FTag_DestroyEntity_Await>,
-                            ck::TExclude<ck::FTag_DestroyEntity_Finalize>>().HasAny() || ...);
+                            ck::TExclude<ck::FTag_DestroyEntity_Finalize>,
+                            T_ExtraExcludes...>().HasAny() || ...);
             };
         }
 
@@ -110,12 +113,22 @@ namespace ck
             entt::type_list<T_Markers...> InMarkers)
             -> FDirtyChecker
         {
+            // Every real processor view appends the hydration-quarantine exclusion unless the
+            // processor opted out (MakeProcessorView -> TProcessorViewFragments). The consumable
+            // check must see the SAME view: quarantined entities carry markers no non-exempt pass
+            // can drain, and counting them pinned the barrier at its pass limit for the whole v3
+            // load window (measured: Sm_Setup / Sm_HandleRequests, 2026-08-25).
+            using QuarantineExcludes = std::conditional_t<
+                Get_IsHydrationQuarantineExempt<T_Processor>(),
+                entt::type_list<>,
+                entt::type_list<ck::TExclude<ck::FTag_Hydration_Quarantine>>>;
+
             if constexpr (requires { typename T_Processor::RuntimeVariantFragments; })
-            { return MakeViewConsumableChecker(InMarkers, typename T_Processor::RuntimeVariantFragments{}); }
+            { return MakeViewConsumableChecker(InMarkers, entt::type_list_cat_t<typename T_Processor::RuntimeVariantFragments, QuarantineExcludes>{}); }
             else if constexpr (requires { typename T_Processor::FragmentList; })
-            { return MakeViewConsumableChecker(InMarkers, typename T_Processor::FragmentList{}); }
+            { return MakeViewConsumableChecker(InMarkers, entt::type_list_cat_t<typename T_Processor::FragmentList, QuarantineExcludes>{}); }
             else
-            { return MakeMarkerConsumableChecker(InMarkers); }
+            { return MakeMarkerConsumableChecker(InMarkers, QuarantineExcludes{}); }
         }
 
         // ----------------------------------------------------------------------------------------------------------------
