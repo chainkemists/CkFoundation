@@ -4,6 +4,7 @@
 #include "CkCore/Math/ValueRange/CkValueRange_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
 #include "CkTween/CkTween_Easing_Utils.h"
 #include "CkTween/CkTween_Utils.h"
@@ -72,6 +73,28 @@ namespace ck_tween
                 {
                     UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()}, {});
                 }
+                break;
+            }
+            case ECk_TweenTarget::SceneNodeOffset_Location:
+            case ECk_TweenTarget::SceneNodeOffset_Rotation:
+            case ECk_TweenTarget::SceneNodeOffset_Scale:
+            {
+                auto SceneNode = UCk_Utils_SceneNode_UE::Cast(TargetEntity);
+                if (ck::Is_NOT_Valid(SceneNode))
+                { break; }
+
+                auto Offset = UCk_Utils_SceneNode_UE::Get_Offset(SceneNode);
+                if (InTarget == ECk_TweenTarget::SceneNodeOffset_Location && InValue.IsVector())
+                { Offset.SetLocation(InValue.GetAsVector()); }
+                else if (InTarget == ECk_TweenTarget::SceneNodeOffset_Rotation && InValue.IsRotator())
+                { Offset.SetRotation(InValue.GetAsRotator().Quaternion()); }
+                else if (InTarget == ECk_TweenTarget::SceneNodeOffset_Scale && InValue.IsVector())
+                { Offset.SetScale3D(InValue.GetAsVector()); }
+                else
+                { break; }
+
+                UCk_Utils_SceneNode_UE::Request_UpdateOffset(
+                    SceneNode, FCk_Request_SceneNode_UpdateRelativeTransform{Offset}, {});
                 break;
             }
             case ECk_TweenTarget::Custom:
@@ -599,20 +622,42 @@ namespace ck
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        auto MaybeTransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
-        if (ck::Is_NOT_Valid(MaybeTransformHandle))
-        { return; }
+        const auto Target = InHandle.Get<FFragment_Tween_Params>().Get_Target();
 
         switch (CurveDrive.Get_Output())
         {
             case ECk_TweenCurveOutput::VectorOffset:
             {
-                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentLocation(MaybeTransformHandle)};
+                if (Target == ECk_TweenTarget::SceneNodeOffset_Location)
+                {
+                    auto SceneNode = UCk_Utils_SceneNode_UE::Cast(TargetEntity);
+                    if (ck::Is_NOT_Valid(SceneNode))
+                    { return; }
+                    CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_SceneNode_UE::Get_Offset(SceneNode).GetLocation()};
+                    break;
+                }
+
+                auto TransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
+                if (ck::Is_NOT_Valid(TransformHandle))
+                { return; }
+                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle)};
                 break;
             }
             case ECk_TweenCurveOutput::RotatorOffset:
             {
-                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentRotation(MaybeTransformHandle)};
+                if (Target == ECk_TweenTarget::SceneNodeOffset_Rotation)
+                {
+                    auto SceneNode = UCk_Utils_SceneNode_UE::Cast(TargetEntity);
+                    if (ck::Is_NOT_Valid(SceneNode))
+                    { return; }
+                    CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_SceneNode_UE::Get_Offset(SceneNode).GetRotation().Rotator()};
+                    break;
+                }
+
+                auto TransformHandle = UCk_Utils_Transform_UE::Cast(TargetEntity);
+                if (ck::Is_NOT_Valid(TransformHandle))
+                { return; }
+                CurveDrive._BaseValue = FCk_TweenValue{UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle)};
                 break;
             }
             default:

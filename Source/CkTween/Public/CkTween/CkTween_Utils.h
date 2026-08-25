@@ -7,6 +7,7 @@
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
@@ -152,6 +153,64 @@ public:
         float InYoyoDelay = 0.0f,
         ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
 
+    // Scene nodes driven by a parent own their world transform. These variants tween the relative
+    // offset instead, so the scene-node processor remains the sole world-transform writer.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset (Location)")
+    static FCk_Handle_Tween
+    Create_TweenSceneNodeOffsetLocation(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        FVector InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset (Rotation)")
+    static FCk_Handle_Tween
+    Create_TweenSceneNodeOffsetRotation(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        FRotator InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset (Scale)")
+    static FCk_Handle_Tween
+    Create_TweenSceneNodeOffsetScale(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        FVector InEndValue,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset (Transform)")
+    static FCk_TweenTransformResult
+    Create_TweenSceneNodeOffsetTransform(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        FTransform InEndTransform,
+        float InDuration,
+        ECk_TweenEasing InEasing = ECk_TweenEasing::OutCubic,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable,
@@ -265,6 +324,34 @@ public:
     static FCk_Handle_Tween
     Create_TweenEntityLocation_CurveOffset(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration = 0.0f,
+        ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset Rotation (Curve Offset)")
+    static FCk_Handle_Tween
+    Create_TweenSceneNodeOffsetRotation_CurveOffset(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        const FCk_TweenCurveChannels& InChannels,
+        float InDuration = 0.0f,
+        ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,
+        ECk_TweenLoopType InLoopType = ECk_TweenLoopType::None,
+        int32 InLoopCount = 0,
+        float InYoyoDelay = 0.0f,
+        ECk_TweenCompletionBehavior InCompletionBehavior = ECk_TweenCompletionBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Create Tween SceneNode Offset Location (Curve Offset)")
+    static FCk_Handle_Tween
+    Create_TweenSceneNodeOffsetLocation_CurveOffset(
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
         const FCk_TweenCurveChannels& InChannels,
         float InDuration = 0.0f,
         ECk_TweenCurveTimeInput InTimeInput = ECk_TweenCurveTimeInput::ElapsedSeconds,

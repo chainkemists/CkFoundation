@@ -151,7 +151,10 @@ enum class ECk_TweenTarget : uint8
     Custom,
     Transform_Location,
     Transform_Rotation,
-    Transform_Scale
+    Transform_Scale,
+    SceneNodeOffset_Location,
+    SceneNodeOffset_Rotation,
+    SceneNodeOffset_Scale
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TweenTarget);
