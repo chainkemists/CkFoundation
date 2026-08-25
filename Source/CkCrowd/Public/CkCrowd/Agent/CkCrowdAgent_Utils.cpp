@@ -2,8 +2,10 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_DebugColor_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
+#include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "CkCore/Color/CkColor_Utils.h"
 
@@ -41,6 +43,14 @@ auto
     InOwner.Add<ck::FFragment_CrowdAgent_ProbeRef>();
     InOwner.Add<ck::FFragment_CrowdAgent_BlockDetect>();
     InOwner.Add<ck::FFragment_CrowdAgent_PendingDisplacement>();
+
+    // Phase-seed the grounding lease so a crowd composed on one frame does not verify on one frame forever.
+    auto GroundingFragment = ck::FFragment_CrowdAgent_Grounding{};
+    GroundingFragment._SecondsSinceVerified =
+        ck::ck_crowd_agent_constrain_to_navmesh_algorithm::Get_GroundingVerifyPhaseSeconds(
+            GetTypeHash(InOwner), UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyIntervalSeconds());
+    InOwner.Add<ck::FFragment_CrowdAgent_Grounding>(GroundingFragment);
+
     InOwner.Add<ck::FFragment_CrowdAgent_NavMarkup>();
     InOwner.Add<ck::FFragment_CrowdAgent_PathTrouble>();
     InOwner.Add<ck::FFragment_CrowdAgent_TransientPersonalSpace>();
@@ -687,6 +697,40 @@ auto
 
     const auto& Markup = InAgent.Get<ck::FFragment_CrowdAgent_NavMarkup>();
     return Markup.Get_Markup().IsValid() && Markup.Get_ConfirmedOnMesh();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_IsOffNavmesh(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_IsOffNavmesh"), InAgent)
+    { return false; }
+
+    if (NOT InAgent.Has<ck::FFragment_CrowdAgent_Grounding>())
+    { return false; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_Grounding>().Get_IsOffNavmesh();
+}
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_SecondsOffNavmesh(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_SecondsOffNavmesh"), InAgent)
+    { return 0.0f; }
+
+    if (NOT InAgent.Has<ck::FFragment_CrowdAgent_Grounding>())
+    { return 0.0f; }
+
+    return InAgent.Get<ck::FFragment_CrowdAgent_Grounding>().Get_SecondsOffNavmesh();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

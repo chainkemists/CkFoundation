@@ -277,6 +277,25 @@ private:
             ToolTip = "Master switch for the navmesh movement constraint. Enabled walks every per-frame agent displacement along the navmesh surface (dtCrowd movePosition semantics) so no force can push an agent off the mesh. Disabled restores free-space integration — for A/B comparison only. Worlds without nav data are unaffected either way."))
     ECk_CrowdNavmeshConstraintMode _NavmeshConstraintMode = ECk_CrowdNavmeshConstraintMode::Enabled;
 
+    // The grounding lease. The constraint's grounding used to run only when the frame staged
+    // displacement, which meant a STATIONARY agent's Z was never reconciled — for years the only
+    // reason settled agents stayed grounded was the push-apart solver's never-terminating
+    // sub-millimetre corrections keeping the constraint alive by accident. _PushApartSlopCm ended
+    // that, and stationary agents froze at whatever Z they had (the floating-NPC regression:
+    // permanent NoRouteFound for the rest of the session). The lease is the deliberate
+    // replacement: cost is roughly StationaryPopulation / (Interval x FPS) navmesh projections
+    // per frame — at 300 stationary agents and 1s, ~5/frame, versus the 300/frame the old
+    // accident silently paid.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
+        meta = (AllowPrivateAccess = true, ClampMin = "0.0",
+            ToolTip = "Max seconds a stationary (zero-displacement) agent may go without being reconciled against the navmesh. Every ordinary displacing frame already reconciles and resets the clock, so only resting agents pay the lease — one navmesh projection each, once per interval, phase-spread across agents. The idle correction is Z-only past the dead-band, so a settled formation cannot creep. 0 disables the idle verify entirely, restoring the pre-lease behaviour where a stationary agent's elevation error is permanent — for A/B comparison only."))
+    float _GroundingVerifyIntervalSeconds = 1.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
+        meta = (AllowPrivateAccess = true, ClampMin = "0.0",
+            ToolTip = "Vertical drift below this (cm) is not corrected by an idle grounding verify, so a correctly-grounded resting crowd issues ZERO transform requests. Keep it above the navmesh projection's own jitter and below anything a player could see."))
+    float _GroundingVerifyMinCorrectionCm = 0.5f;
+
     // ---- Stationary markup ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
         meta = (AllowPrivateAccess = true,
@@ -378,6 +397,8 @@ public:
     CK_PROPERTY_GET(_PushApartMode);
     CK_PROPERTY_GET(_PushApartSlopCm);
     CK_PROPERTY_GET(_NavmeshConstraintMode);
+    CK_PROPERTY_GET(_GroundingVerifyIntervalSeconds);
+    CK_PROPERTY_GET(_GroundingVerifyMinCorrectionCm);
     CK_PROPERTY_GET(_StationaryMarkupMode);
     CK_PROPERTY_GET(_StationaryMarkupDelaySeconds);
     CK_PROPERTY_GET(_StationaryMarkupSpeedThreshold);
@@ -445,6 +466,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdNavmeshConstraintMode Get_NavmeshConstraintMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static float Get_GroundingVerifyIntervalSeconds();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static float Get_GroundingVerifyMinCorrectionCm();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdStationaryMarkupMode Get_StationaryMarkupMode();

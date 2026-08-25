@@ -186,6 +186,30 @@ namespace ck
         CK_PROPERTY_GET(_Displacement);
     };
 
+    // Grounding-lease state (see CkCrowd/CLAUDE.md § "Navmesh constraint"). The lease clock is
+    // reset by every constraint pass, so an ordinary displacing frame IS a verify; a stationary
+    // agent is reconciled against the navmesh once per interval instead of never — grounding must
+    // not depend on the avoidance solver happening to emit displacement. The off-mesh fields turn
+    // "stranded beyond recovery" from an invisible terminal state into queryable state.
+    struct CKCROWD_API FFragment_CrowdAgent_Grounding
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_Grounding);
+
+        friend class FProcessor_CrowdAgent_ConstrainToNavmesh;
+        friend class ::UCk_Utils_CrowdAgent_UE;
+
+    private:
+        float _SecondsSinceVerified = 0.0f;
+        float _SecondsOffNavmesh = 0.0f;
+        bool _IsOffNavmesh = false;
+
+    public:
+        CK_PROPERTY_GET(_SecondsSinceVerified);
+        CK_PROPERTY_GET(_SecondsOffNavmesh);
+        CK_PROPERTY_GET(_IsOffNavmesh);
+    };
+
     // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The strong ptr owns the painter
     // object's lifetime — UE GC does not trace fragment members.
     struct CKCROWD_API FFragment_CrowdAgent_NavMarkup
