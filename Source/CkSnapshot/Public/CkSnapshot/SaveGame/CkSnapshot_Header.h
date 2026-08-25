@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Misc/Guid.h>
+
 #include "UObject/SoftObjectPath.h"
 
 #include "CkSnapshot_Header.generated.h"
@@ -324,6 +326,8 @@ public:
     //       (Authored as "7" on bugfix/saveload-core-tenets; renumbered to 8 when that branch rebased onto dev,
     //       which had independently taken 7 for the bulk-serializer change above. Both changes apply, and a save
     //       written by either lone predecessor is genuinely unreadable here — so it gets its own number.)
+    // Suppressed relocation keys were later added to the tagged header, not these native tables, so existing v8
+    // streams remain byte-compatible and deserialize the new header property as an empty array.
     static constexpr uint16 CurrentFormatVersion = 8;
 
     static constexpr int32 k_AuditNotMeasured = -1;
@@ -343,6 +347,11 @@ private:
 
     UPROPERTY()
     FSoftObjectPath _WorldAssetPath;
+
+    // Additive tagged-header state (not part of the native v3 table wire format): unique level-authored identities
+    // held by an in-progress relocation. Existing v8 saves deserialize this as empty and remain compatible.
+    UPROPERTY()
+    TArray<FGuid> _SuppressedSaveKeys;
 
     UPROPERTY()
     int32 _EntityCount = 0;
@@ -380,6 +389,7 @@ public:
     CK_PROPERTY(_PluginBuildHash);
     CK_PROPERTY(_TimestampUTC);
     CK_PROPERTY(_WorldAssetPath);
+    CK_PROPERTY(_SuppressedSaveKeys);
     CK_PROPERTY(_EntityCount);
     CK_PROPERTY(_EngineOwnedCount);
     CK_PROPERTY(_ConstructSpawnedCount);

@@ -9,6 +9,8 @@
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h" // ECk_SnapshotResult
 #include "CkSnapshot/Snapshot/CkSnapshot_SaveReport.h"
 
+#include <Misc/Guid.h>
+
 class UWorld;
 class FArchive;
 struct FCk_Snapshot_HeaderV3;
@@ -43,6 +45,7 @@ namespace ck::snapshot
         FArchive& InByteWriter,
         FCk_Snapshot_HeaderV3& InOutHeader,
         FCk_Snapshot_SaveReport& OutReport,
+        const TSet<FGuid>* InSuppressedSaveKeys = nullptr,
         FCaptureTimings* OutTimings = nullptr) -> ECk_SnapshotResult;
 
     CKSNAPSHOT_API auto
@@ -51,6 +54,7 @@ namespace ck::snapshot
         FArchive& InByteWriter,
         FCk_Snapshot_HeaderV3& InOutHeader,
         FCk_Snapshot_SaveReport& OutReport,
+        const TSet<FGuid>* InSuppressedSaveKeys = nullptr,
         FCaptureTimings* OutTimings = nullptr) -> ECk_SnapshotResult;
 }
 

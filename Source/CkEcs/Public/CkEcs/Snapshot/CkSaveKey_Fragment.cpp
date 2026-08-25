@@ -18,7 +18,8 @@ namespace ck::save_key
             DoAssign(
                 FCk_Handle& InEntity,
                 const FString& InStableIdentity,
-                bool InIsSharedRendezvousGroup)
+                bool InIsSharedRendezvousGroup,
+                bool InIsLevelPlacedRoot)
             -> void
         {
             const auto EntityIsValid = ck::IsValid(InEntity);
@@ -36,6 +37,8 @@ namespace ck::save_key
             InEntity.AddOrReplace<FFragment_SaveKey>(FGuid::NewDeterministicGuid(InStableIdentity));
             if (InIsSharedRendezvousGroup)
             { InEntity.Get<FFragment_SaveKey>().MarkSharedRendezvousGroup(); }
+            if (InIsLevelPlacedRoot)
+            { InEntity.Get<FFragment_SaveKey>().MarkLevelPlacedRoot(); }
         }
     }
 
@@ -45,7 +48,7 @@ namespace ck::save_key
             const FString& InStableIdentity)
         -> void
     {
-        DoAssign(InEntity, InStableIdentity, false);
+        DoAssign(InEntity, InStableIdentity, false, false);
     }
 
     auto
@@ -54,7 +57,16 @@ namespace ck::save_key
             const FString& InStableIdentity)
         -> void
     {
-        DoAssign(InEntity, InStableIdentity, true);
+        DoAssign(InEntity, InStableIdentity, true, false);
+    }
+
+    auto
+        AssignLevelPlaced(
+            FCk_Handle& InEntity,
+            const FString& InStableIdentity)
+        -> void
+    {
+        DoAssign(InEntity, InStableIdentity, false, true);
     }
 
     auto

@@ -190,6 +190,11 @@ public:
     auto TryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> bool;
     auto Consume_SaveKey(FGuid InKey) -> void;
 
+    // A player may carry a level-authored fixture across a save. Its unique key is suppressed until a completed
+    // placement transfers that identity to the replacement entity.
+    auto Request_BeginSaveKeyRelocation(const FCk_Handle& InSource) -> FGuid;
+    auto Request_CompleteSaveKeyRelocation(FCk_Handle& InDestination, const FGuid& InSaveKey) -> bool;
+
 public:
     // True from the start of a Request_Load until OnLoadComplete fires (spans real frames). Distinct from the
     // synchronous _SnapshotInProgress save guard. Consumers that must not act mid-load poll this.
@@ -497,6 +502,8 @@ private:
 private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
+    TSet<FGuid> _SuppressedSaveKeys;
+    TSet<FCk_Handle> _SuppressedSaveKeyDestroyQueued;
 
     bool _SnapshotInProgress = false;
     int32 _LastPumpCount = 0;

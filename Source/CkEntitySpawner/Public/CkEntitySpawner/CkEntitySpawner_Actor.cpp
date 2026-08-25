@@ -453,7 +453,7 @@ auto
     UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle, {});
 
     if (NOT SaveKeyIdentity.IsEmpty())
-    { ck::save_key::Assign(_RuntimeEntityHandle, SaveKeyIdentity); }
+    { ck::save_key::AssignLevelPlaced(_RuntimeEntityHandle, SaveKeyIdentity); }
 }
 
 auto
