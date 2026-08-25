@@ -264,12 +264,16 @@ namespace ck
         // A parent-driven SceneNode's Transform is derived from its local SceneNode offset and
         // its parent's world transform. Writing the derived Transform works only until the parent
         // moves, at which point the SceneNode processor overwrites the write. The three fragments
-        // below are the complete contract: externally-driven alone is not enough, because a stale
-        // tag must not reject an ordinary Transform entity.
+        // below mirror TProcessor_SceneNode_Update's complete contract. Unreal-anchor followers
+        // use a separate processor. Root/socket anchored nodes remain anchor-authoritative unless
+        // they explicitly opt into parent-driven transforms.
+        const auto HasTransformAnchor =
+            InHandle.Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>();
         const auto IsParentDrivenSceneNode =
-            InHandle.Has<FTag_Transform_ExternallyDriven>()
-            && InHandle.Has<FFragment_SceneNode_Current>()
-            && InHandle.Has<SceneNodeParent>();
+            InHandle.Has<FFragment_SceneNode_Current>()
+            && InHandle.Has<SceneNodeParent>()
+            && NOT InHandle.Has<FFragment_SceneNode_UnrealAnchor>()
+            && (NOT HasTransformAnchor || InHandle.Has<FTag_Transform_ExternallyDriven>());
 
         const auto HasMutationRequests =
             NOT InRequestsComp._LocationRequests.IsEmpty()
@@ -278,9 +282,10 @@ namespace ck
 
         const auto CanApplyWorldMutation = NOT IsParentDrivenSceneNode || NOT HasMutationRequests;
         CK_ENSURE_IF_NOT(CanApplyWorldMutation,
-            TEXT("Transform request rejected on parent-driven SceneNode [{}]. Its world transform is derived from "
-                 "its parent and local offset, so the change would be lost when the parent moves. Update the "
-                 "SceneNode offset instead, or detach the node before moving it."),
+            TEXT("Transform request rejected on parent-driven SceneNode [{}]. The parent owns this child's world "
+                 "transform, so this change can snap back when the parent moves or restore incorrectly after "
+                 "save/load rebuilds the hierarchy. Update the SceneNode offset instead, or detach the node before "
+                 "moving it independently."),
             InHandle)
         {}
 
