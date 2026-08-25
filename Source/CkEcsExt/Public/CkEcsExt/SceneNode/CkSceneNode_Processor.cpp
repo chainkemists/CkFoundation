@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_RestoreRebase.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
@@ -159,6 +160,7 @@ namespace ck
         const auto ParentEntity = InParent.Get_Entity().Get_Entity();
         auto ReadOnlyParent = InHandle.ReadEntity(ParentEntity);
         const auto ParentHasTransformUpdated = ReadOnlyParent.template Has<FTag_Transform_Updated>();
+        const auto ParentHasRestoreRebase = ReadOnlyParent.template Has<FTag_Transform_RestoreRebase>();
 
         if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
         { return; }
@@ -188,6 +190,11 @@ namespace ck
             ECk_TransformComponents::Scale))
         {
             InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
+
+            if (ParentHasRestoreRebase)
+            {
+                InHandle.template DeferAddOrGet<FTag_Transform_RestoreRebase>();
+            }
         }
     }
 
