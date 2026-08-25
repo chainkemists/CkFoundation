@@ -6,6 +6,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+#include "CkEcs/Persistence/CkPersistenceHydration.h" // FCk_Delegate_Hydration_OnHydrated
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // ECk_EcsWorld_LoadHold — the hold this subsystem owns
 
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
@@ -169,6 +170,17 @@ public:
      */
     auto Request_AddLoadCompletePromise(const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate) -> void;
 
+    /**
+     * Holds an OnHydrated promise made in this load's destination world while a load can still claim InHandle, but
+     * before that claim is visible in _MappedLiveEntities. Returns false for the pre-travel/transition worlds, once
+     * this load has lifted its quarantine, or when not loading, so the caller can satisfy the ordinary no-pending-work
+     * half of the promise immediately. A mapped entry is rebound to the entity's normal one-shot signal; a never-mapped
+     * entry fires at load completion with its original handle.
+     */
+    auto Request_AddHydrationPromise(
+        const FCk_Handle& InHandle,
+        const FCk_Delegate_Hydration_OnHydrated& InDelegate) -> bool;
+
 public:
     // SaveKey resolver -- maps a stable FGuid (stored on the FFragment_SaveKey of a saved entity) to the
     // live FCk_Handle. Populated during load so post-load consumers can re-acquire entities by key.
@@ -226,12 +238,11 @@ public:
     // None means do not seed.
     auto DoGet_ShouldHoldWorldAtBoot(UWorld& InWorld) -> ECk_EcsWorld_LoadHold;
 
-    // True while THIS entity's restored state is still the load's to write: a load is in flight, the load
-    // mapped this entity, and the global quarantine lift has not run yet. It answers "will an OnHydrated edge
-    // still arrive for this handle?" — false for a fresh spawn, a client, a world with no load in flight, and
-    // an entity whose lift has already happened, all of which mean the same thing: nothing is pending, so
-    // hydration is as complete as it will ever be. Membership is what covers the window between row mapping and
-    // the quarantine stamp, where the entity is already the load's but carries no tag yet.
+    // True while THIS mapped entity's restored state is still the load's to write: a load is in flight, the load
+    // mapped this entity, and the global quarantine lift has not run yet. False alone does not prove completion in
+    // the destination world's pre-map window; Promise_OnHydrated resolves that ambiguity through the subsystem's
+    // pending-promise queue. Membership covers the window between row mapping and the quarantine stamp, where the
+    // entity is already the load's but carries no tag yet.
     auto Get_IsHydrationPending(const FCk_Handle& InHandle) const -> bool;
 
     // True only for the duration of the SYNCHRONOUS Request_Save call, so it never reads true from
@@ -351,6 +362,7 @@ private:
     auto DoRehydrate_SaveKeyResolver() -> int32;
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
     auto DoRebuild_Tick() -> bool;                       // resolve/spawn each entry into _SavedIdMap; true == complete
+    auto DoBind_PendingHydrationPromises(const FCk_Handle& InMappedHandle) -> void;
     UFUNCTION()
     void
     DoOnRuntimeEntityScriptConstructed(
@@ -495,6 +507,14 @@ private:
     // ONE delegate the Request_Load caller passed: different delegate type (it carries no handle), one slot by
     // definition, and already travel-safe for the same reason this list is — both live on the subsystem.
     TArray<FCk_Delegate_Snapshot_OnLoadComplete> _PendingLoadCompletePromises;
+    struct FPendingHydrationPromise
+    {
+        FCk_Handle _Handle;
+        FCk_Delegate_Hydration_OnHydrated _Delegate;
+    };
+    // Pre-map only: entities already in _MappedLiveEntities bind directly to their signal. This stays on the
+    // GameInstance because the destination entity has no hydration signal edge until its saved row maps to it.
+    TArray<FPendingHydrationPromise> _PendingHydrationPromises;
     TArray<FCk_Handle> _PendingTeardownRoots;
     FTSTicker::FDelegateHandle _LoadTickerHandle;
     int32 _LoadFrameCount = 0;
