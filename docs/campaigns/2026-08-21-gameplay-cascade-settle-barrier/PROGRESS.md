@@ -231,6 +231,25 @@ _(Executor: append and END THE SESSION instead of improvising — phase, step, e
   `Plugins/AutoSettings/`, CkF `Content/CkIsm` sidecars; two populator-staged wrapper uassets remain
   in the BB index (editor was open — unstage or commit with the map at PR time).
 
+## Sync onto upstream (2026-08-25)
+- Branch rebased onto CkF `origin/dev` tip `aa68202c5` (+81 upstream commits under it; behind=0,
+  ahead=6, backup `backup/gameplay-cascade-settle-barrier-pre-rebase-20260825` = `ecad45fde`).
+  One conflicted commit (the trait declarations): upstream added `HydrationQuarantinePolicy` lines at
+  the same anchors — resolved KEEP-BOTH in `CkEntityScript_Processor.h` (4 hunks) + `CkEcs/Claude.md` (1).
+- **The rebased tip is COMPILE- AND TEST-UNVERIFIED**: this worktree's BusterBlock branch
+  (`feature/fixture-ghost-visual-layout`, another session's) predates the upstream CkF API changes
+  (`FTag_Snapshot_JustRestored` gone, `CkActorRebind_Utils.h` moved, `Get_IsSnapshotTransient`
+  renamed), so a dev-paired build is impossible here. Verify at PR time on a BB-dev-paired checkout
+  (BB origin/dev pins exactly `aa68202c5` + CkTests `6cdd0df88` + CkGameplayDebugger `7c2dc3af4` +
+  CkAuto `c90c76730` — the pairing that must build). Highest-risk spots: the keep-both hunks and the
+  consumable-checker files against 81 commits of scheduler churn.
+- The BusterBlock spec branch `feature/gameplay-cascade-settle-barrier` (`3010049da`) was already on
+  the current BB origin/dev — nothing to do.
+- Worktree restored afterwards to the LAST-GATED configuration (CkF detached at the pre-rebase
+  backup tip = fixture pin `bfd1d9a55` + the 6 campaign commits; CkTests/CkGameplayDebugger/CkAuto
+  back at the fixture pins); rebuilt, both specs 2/2 green — the shared tree is healthy and the
+  fixture session's pins/dirt untouched.
+
 ## Session log
 - 2026-08-21 · fresh-eyes review · 3 Opus traces + reviewer re-read of the load-bearing sources; package corrected; awaiting Saad (Q3, Q7).
 - 2026-08-24 · exec · Phase 0 red captured; Phase 1 traits applied; first green run stayed red →
