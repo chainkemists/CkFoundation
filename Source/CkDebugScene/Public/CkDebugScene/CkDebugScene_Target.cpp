@@ -3,6 +3,7 @@
 #include "CkDebugScene/CkDebugScene_Materials.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Components/LineBatchComponent.h>
@@ -598,6 +599,20 @@ auto
     _Impl->_StagedLineChannels = _Impl->_LineChannels;
     _Impl->_StagedLabelChannels = _Impl->_LabelChannels;
     _Impl->_StagedVectorChannels = _Impl->_VectorChannels;
+
+    const auto IsRuntimeVisible = NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
+    for (auto& [Key, Bucket] : _Impl->_Buckets)
+    {
+        if (ck::IsValid(Bucket._Component.Get()))
+        {
+            Bucket._Component->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible && IsRuntimeVisible &&
+                                             NOT _Impl->_HiddenRenderClasses.Contains(Key._RenderClassId));
+        }
+    }
+    if (auto* Lines = _Impl->_Lines.Get(); ck::IsValid(Lines))
+    {
+        Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible && IsRuntimeVisible);
+    }
 }
 
 auto
@@ -932,7 +947,8 @@ auto
     if (FrameCreatedLines.IsValid())
     {
         _Impl->_Lines = MoveTemp(FrameCreatedLines);
-        _Impl->_Lines->SetVisibility(ck_debug_scene_target::IsVisible);
+        _Impl->_Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode());
     }
     _Impl->_LineChannels = MoveTemp(_Impl->_StagedLineChannels);
     _Impl->_LabelChannels = MoveTemp(_Impl->_StagedLabelChannels);
@@ -980,7 +996,8 @@ auto
         if (ck::IsValid(Bucket._Component.Get()))
         {
             Bucket._Component->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
-                                             NOT _Impl->_HiddenRenderClasses.Contains(Key._RenderClassId));
+                                              NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode() &&
+                                              NOT _Impl->_HiddenRenderClasses.Contains(Key._RenderClassId));
         }
     }
     Set_WireframeMode(_Impl->_WireframeMode);
@@ -1118,7 +1135,8 @@ auto
             }
 
             const auto IsVisible = NOT _Impl->_HiddenRenderClasses.Contains(Key._RenderClassId) && _Impl->_IsDesired &&
-                                   _Impl->_RenderVisible;
+                                   _Impl->_RenderVisible &&
+                                   NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
             Component->SetVisibility(IsVisible);
             const auto InstanceId = Component->AddInstanceById(
                 Submission.Get_Transform(), ck_debug_scene_target::IsWorldSpace);
@@ -1294,12 +1312,14 @@ auto
         if (ck::IsValid(Bucket._Component.Get()))
         {
             Bucket._Component->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
+                                             NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode() &&
                                              NOT _Impl->_HiddenRenderClasses.Contains(Key._RenderClassId));
         }
     }
     if (auto* Lines = _Impl->_Lines.Get(); ck::IsValid(Lines))
     {
-        Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible);
+        Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
+                             NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode());
     }
 }
 
@@ -1346,7 +1366,8 @@ auto
     {
         if (Key._RenderClassId == InRenderClassId && ck::IsValid(Bucket._Component.Get()))
         {
-            Bucket._Component->SetVisibility(InIsVisible && _Impl->_IsDesired && _Impl->_RenderVisible);
+            Bucket._Component->SetVisibility(InIsVisible && _Impl->_IsDesired && _Impl->_RenderVisible &&
+                                             NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode());
         }
     }
 }
@@ -1411,6 +1432,8 @@ auto
         Lines->SetMobility(EComponentMobility::Movable);
         Lines->SetWorldLocation(FVector::ZeroVector);
         Lines->SetHiddenInGame(ck_debug_scene_target::IsHiddenInGame);
+        Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
+                             NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode());
         Lines->RegisterComponentWithWorld(World);
         _Impl->_Lines.Reset(Lines);
     }
@@ -1428,6 +1451,8 @@ auto
         }
         Lines->DrawLines(Batched);
     }
+    Lines->SetVisibility(_Impl->_IsDesired && _Impl->_RenderVisible &&
+                         NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode());
     return true;
 }
 
@@ -1806,7 +1831,7 @@ auto
     {
         return {};
     }
-    if (NOT _Impl->_RenderVisible)
+    if (NOT _Impl->_RenderVisible || ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     {
         return {};
     }

@@ -1,7 +1,7 @@
 #include "CkRaySense_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 
@@ -45,7 +45,7 @@ namespace ck_raysense
         ShouldDrawTraces()
         -> bool
     {
-        return cvar::DebugDrawAllTraces && NOT ck::debug_draw::Is_SuppressedForStreamerMode();
+        return cvar::DebugDrawAllTraces && NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
     }
 }
 

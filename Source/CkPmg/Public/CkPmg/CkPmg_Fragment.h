@@ -53,6 +53,7 @@ namespace ck
         friend class FProcessor_Pmg_Donut_Setup;
         friend class FProcessor_Pmg_Donut_HandleRequests;
         friend class FProcessor_Pmg_Donut_UpdateTransform;
+        friend class FProcessor_Pmg_Donut_ApplyRuntimeVisibility;
         friend class FProcessor_Pmg_Donut_EndPlay;
         friend class UCk_Utils_Pmg_Donut_UE;
 
@@ -203,6 +204,7 @@ namespace ck
 
     public:
         friend class FProcessor_Pmg_DebugShape_UpdateTransform;
+        friend class FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility;
         friend class FProcessor_Pmg_DebugShape_CheckDuration;
         friend class FProcessor_Pmg_DebugShape_EndPlay;
         friend class FProcessor_Pmg_DebugShape_HandleRequests;

@@ -1,4 +1,4 @@
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include <HAL/IConsoleManager.h>
 #include <Misc/AutomationTest.h>
@@ -11,12 +11,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FCkTest_DebugDraw_StreamerMode,
-    "Ck.CkCore.DebugDraw.StreamerMode.CVar",
+    FCkTest_DiagnosticVisibility,
+    "Ck.CkCore.Diagnostics.Visibility.CVar",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool
-    FCkTest_DebugDraw_StreamerMode::
+    FCkTest_DiagnosticVisibility::
     RunTest(
         const FString& Parameters)
 {
@@ -32,15 +32,22 @@ bool
     };
 
     CVar->Set(1, ECVF_SetByCode);
-    TestTrue(TEXT("CVar enables diagnostic draw suppression"), ck::debug_draw::Is_SuppressedForStreamerMode());
+    TestEqual(TEXT("CVar selects hidden diagnostic visibility"),
+              ck::diagnostic_visibility::Get_Mode(),
+              ECk_DiagnosticVisibility_Mode::HiddenForStreamerMode);
+    TestTrue(TEXT("CVar hides diagnostics"), ck::diagnostic_visibility::Is_HiddenForStreamerMode());
 
+    CVar->Set(0, ECVF_SetByCode);
     const auto HasLaunchOverride = FParse::Param(FCommandLine::Get(), TEXT("CkStreamerMode"));
-    if (NOT HasLaunchOverride)
-    {
-        CVar->Set(0, ECVF_SetByCode);
-        TestFalse(TEXT("CVar disable restores diagnostic draw when no launch override is present"),
-                  ck::debug_draw::Is_SuppressedForStreamerMode());
-    }
+    const auto ExpectedMode = HasLaunchOverride
+                                  ? ECk_DiagnosticVisibility_Mode::HiddenForStreamerMode
+                                  : ECk_DiagnosticVisibility_Mode::Visible;
+    TestEqual(TEXT("Launch override remains authoritative when the CVar is disabled"),
+              ck::diagnostic_visibility::Get_Mode(),
+              ExpectedMode);
+    TestEqual(TEXT("Hidden predicate matches the resolved visibility mode"),
+              ck::diagnostic_visibility::Is_HiddenForStreamerMode(),
+              HasLaunchOverride);
 
     return true;
 }

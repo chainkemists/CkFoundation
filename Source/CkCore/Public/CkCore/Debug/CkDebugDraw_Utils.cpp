@@ -1,6 +1,7 @@
 #include "CkDebugDraw_Utils.h"
 
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Math/Geometry/CkGeometry_Utils.h"
@@ -9,29 +10,14 @@
 #include <GameFramework/HUD.h>
 
 #include <Kismet/KismetSystemLibrary.h>
-#include <Misc/CommandLine.h>
-#include <Misc/Parse.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::debug_draw
 {
-    namespace streamer_mode
-    {
-        TAutoConsoleVariable<int32> CVar_Enabled(
-            TEXT("ck.Debug.StreamerMode"),
-            0,
-            TEXT("Hide all Ck runtime diagnostic drawing for marketing captures. "
-                 "0 = show diagnostic drawing, 1 = hide diagnostic drawing. "
-                 "The -CkStreamerMode launch parameter also enables this policy."),
-            ECVF_Default);
-    }
-
     auto
     Is_SuppressedForStreamerMode() -> bool
     {
-        return FParse::Param(FCommandLine::Get(), TEXT("CkStreamerMode")) ||
-               streamer_mode::CVar_Enabled.GetValueOnAnyThread() != 0;
+        return ck::diagnostic_visibility::Is_HiddenForStreamerMode();
     }
 }
 
@@ -133,7 +119,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugSphere(InWorldContextObject, InCenter, InRadius, InSegments, InLineColor, InDuration, InThickness);
 #endif
@@ -151,7 +137,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugLine(InWorldContextObject, InLineStart, InLineEnd, InLineColor, InDuration, InThickness);
 #endif
@@ -173,7 +159,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugCircle(InWorldContextObject, InCenter, InRadius, InNumSegments, InLineColor, InDuration, InThickness, InYAxis, InZAxis, InDrawAxis);
 #endif
@@ -193,7 +179,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     auto YAxis = FVector::ZeroVector;
     auto ZAxis = FVector::ZeroVector;
@@ -241,7 +227,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugPoint(InWorldContextObject, InPosition, InSize, InPointColor, InDuration);
 #endif
@@ -260,7 +246,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugArrow(InWorldContextObject, InLineStart, InLineEnd, InArrowSize, InLineColor, InDuration, InThickness);
 #endif
@@ -279,7 +265,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugBox(InWorldContextObject, InCenter, InExtent, InLineColor, InRotation, InDuration, InThickness);
 #endif
@@ -299,7 +285,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugCylinder(InWorldContextObject, InStart, InEnd, InRadius, InSegments, InLineColor, InDuration, InThickness);
 #endif
@@ -321,7 +307,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugCone(InWorldContextObject, InOrigin, InDirection, InLength, InAngleWidth, InAngleHeight, InNumSides, InLineColor, InDuration, InThickness);
 #endif
@@ -341,7 +327,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugCapsule(InWorldContextObject, InCenter, InHalfHeight, InRadius, InRotation, InLineColor, InDuration, InThickness);
 #endif
@@ -358,7 +344,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugString(InWorldContextObject, InTextLocation, InText, nullptr, InTextColor, InDuration);
 #endif
@@ -378,7 +364,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     const auto ForwardVector = FRotationMatrix(InDirection).GetScaledAxis(EAxis::X);
     const auto RightVector = FRotationMatrix(InDirection).GetScaledAxis(EAxis::Y);
@@ -417,7 +403,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     const auto& Origin = InTransform.GetLocation();
     const auto& Rotation = InTransform.GetRotation();
@@ -470,7 +456,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugCoordinateSystem(InWorldContextObject, InAxisLoc, InAxisRot, InScale, InDuration, InThickness);
 #endif
@@ -488,7 +474,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugPlane(InWorldContextObject, InPlaneCoordinates, InLocation, InSize, InPlaneColor, InDuration);
 #endif
@@ -505,7 +491,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugFrustum(InWorldContextObject, InFrustumTransform, InFrustumColor, InDuration, InThickness);
 #endif
@@ -523,7 +509,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugFloatHistoryTransform(InWorldContextObject, InFloatHistory, InDrawTransform, InDrawSize, InDrawColor, InDuration);
 #endif
@@ -541,7 +527,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::DrawDebugFloatHistoryLocation(InWorldContextObject, InFloatHistory, InDrawLocation, InDrawSize, InDrawColor, InDuration);
 #endif
@@ -554,7 +540,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::FlushPersistentDebugLines(InWorldContextObject);
 #endif
@@ -567,7 +553,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     UKismetSystemLibrary::FlushDebugStrings(InWorldContextObject);
 #endif
@@ -588,7 +574,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     const auto HalfGridSize = InGridSize * 0.5f;
     const auto LineSpacing = InGridSize / InGridLines;
@@ -625,7 +611,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     const auto HalfSize = InSize * 0.5f;
 
@@ -658,7 +644,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     if (InDirection.IsNearlyZero())
     { return; }
@@ -693,7 +679,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     for (int32 Ring = 0; Ring <= InRings; ++Ring)
     {
@@ -733,7 +719,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     DrawDebugLine(InWorldContextObject,
                  InVertex1, InVertex2, InLineColor, InDuration, InThickness);
@@ -756,7 +742,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     if (InVertices.Num() < 2)
     { return; }
@@ -788,7 +774,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     const auto Transform = FTransform(InRotation, InCenter);
     const auto HalfExtent = InExtent;
@@ -853,7 +839,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     if (ck::Is_NOT_Valid(InWorldContextObject))
     { return; }
@@ -895,7 +881,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     CK_ENSURE_IF_NOT(InNumPoints >= 3, TEXT("Star must have at least 3 points"))
     { return; }
@@ -951,7 +937,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     DrawDebugCircle_PlaneAxis(InWorldContextObject, InCenter, InRadius, InPlaneAxis,
                              InNumSegments, InCircleColor, InDuration, InThickness);
@@ -1010,7 +996,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     if (ck::Is_NOT_Valid(InWorldContextObject))
     { return; }
@@ -1038,7 +1024,7 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    if (ck::debug_draw::Is_SuppressedForStreamerMode())
+    if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
     { return; }
     if (ck::Is_NOT_Valid(InWorldContextObject))
     { return; }

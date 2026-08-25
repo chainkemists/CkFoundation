@@ -1,5 +1,6 @@
 #include "CkWatermark_Panel_Widget.h"
 
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Engine/CkGameState.h"
 #include "CkCore/Net/CkNetVersionSubsystem.h"
@@ -1358,7 +1359,13 @@ auto
 
     // ---- Full layout --------------------------------------------------------
     TSharedRef<SOverlay> Panel = SNew(SOverlay)
-        .Visibility(EVisibility::HitTestInvisible)
+        // Streamer mode is a presentation override only: clearing it restores the configured policy.
+        .Visibility_Lambda([]() -> EVisibility
+        {
+            return ck::diagnostic_visibility::Is_HiddenForStreamerMode()
+                ? EVisibility::Collapsed
+                : EVisibility::HitTestInvisible;
+        })
 
         + SOverlay::Slot()
         .HAlign(ck_watermark_panel_widget::GetHAlign(_StatsGroupPlacement.Anchor))

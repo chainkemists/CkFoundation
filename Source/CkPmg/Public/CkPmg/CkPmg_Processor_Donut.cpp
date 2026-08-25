@@ -1,6 +1,7 @@
 #include "CkPmg_Processor_Donut.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -20,6 +21,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_ApplyRuntimeVisibility);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
 
 namespace ck_pmg
@@ -206,8 +208,8 @@ namespace ck
             MeshComponent->BeginPlay();
         }
 
-        MeshComponent->SetVisibility(true);
-        MeshComponent->SetHiddenInGame(false);
+        MeshComponent->SetVisibility(false);
+        MeshComponent->SetHiddenInGame(true);
         MeshComponent->SetCastShadow(true);
 
         const auto& MaterialPreloadBatch = InCurrent._MaterialPreloadBatch;
@@ -240,10 +242,11 @@ namespace ck
             InCurrent._FillAngle,
             InCurrent._RenderMode);
 
-        const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden;
+        const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
         MeshComponent->SetVisibility(ShouldBeVisible, true);
-        MeshComponent->SetHiddenInGame(!ShouldBeVisible);
-        MeshComponent->bHiddenInGame = !ShouldBeVisible;
+        MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
+        MeshComponent->bHiddenInGame = NOT ShouldBeVisible;
         MeshComponent->SetRenderInMainPass(true);
         MeshComponent->SetRenderInDepthPass(true);
 
@@ -400,9 +403,10 @@ namespace ck
             const auto OldRenderMode = InCurrent._RenderMode;
             InCurrent._RenderMode = InRequest.Get_RenderMode().GetValue();
 
-            const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden;
+            const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+                                         NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
             MeshComponent->SetVisibility(ShouldBeVisible, true);
-            MeshComponent->SetHiddenInGame(!ShouldBeVisible);
+            MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
 
             const auto OldIsDoubleSided = OldRenderMode == ECk_Pmg_RenderMode::DoubleSided;
             const auto NewIsDoubleSided = InCurrent._RenderMode == ECk_Pmg_RenderMode::DoubleSided;
@@ -464,6 +468,27 @@ namespace ck
 
         const auto& CurrentTransform = InTransform.Get_Transform();
         MeshComponent->SetWorldTransform(CurrentTransform);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_Donut_ApplyRuntimeVisibility::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_Donut_Current& InCurrent)
+            -> void
+    {
+        auto* MeshComponent = InCurrent._MeshComponent.Get();
+        if (ck::Is_NOT_Valid(MeshComponent))
+        { return; }
+
+        const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
+        MeshComponent->SetVisibility(ShouldBeVisible, true);
+        MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
+        MeshComponent->bHiddenInGame = NOT ShouldBeVisible;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
