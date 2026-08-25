@@ -38,6 +38,7 @@ namespace ck
 
         bool _HasDirtyMarker = false;
         FDirtyChecker _IsDirtyChecker;
+        FDirtyChecker _IsDirtyChecker_Consumable;
         FProcessorFactory _Factory;
 
         // Lets the pump pass query FCk_Registry::Get_DirtyMarkerVersion without the original types.

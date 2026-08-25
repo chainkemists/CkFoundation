@@ -131,6 +131,11 @@ namespace ck
         // and name arrays are index-aligned; _IsDirtyChecker is true when ANY marker has entities.
         bool _HasDirtyMarker = false;
         FDirtyChecker _IsDirtyChecker;
+
+        // Settle-barrier variant of the check: a marker only counts when it sits on an entity a
+        // CK_IGNORE_PENDING_KILL view could still consume. The tail pump keeps the plain checker —
+        // its version-compare + zero-visit accounting already defuse stranded markers there.
+        FDirtyChecker _IsDirtyChecker_Consumable;
         TArray<uint32> _DirtyMarkerHashes;
         TArray<FName> _DirtyMarkerNames;
 
