@@ -66,6 +66,13 @@ enum class ECk_CrowdCrowdedGoalBlockMode : uint8
 };
 
 UENUM(BlueprintType)
+enum class ECk_CrowdOffMeshDisplacementMode : uint8
+{
+    Hold,           // an off-mesh agent beyond recovery holds position (reported via the grounding fragment)
+    PassThrough,    // pre-fix behaviour: displacement applies in free space — a walker glides off cliff edges at constant Z. A/B only
+};
+
+UENUM(BlueprintType)
 enum class ECk_CrowdNavmeshConstraintMode : uint8
 {
     Disabled,    // agents integrate in free space; separation/avoidance/push-apart can displace them off the navmesh
@@ -296,6 +303,24 @@ private:
             ToolTip = "Vertical drift below this (cm) is not corrected by an idle grounding verify, so a correctly-grounded resting crowd issues ZERO transform requests. Keep it above the navmesh projection's own jitter and below anything a player could see."))
     float _GroundingVerifyMinCorrectionCm = 0.5f;
 
+    // Crowd agents have no gravity and no floor collision: their Z only ever changes through this
+    // constraint. Passing displacement through while off-mesh therefore let a walker step off a
+    // cliff edge and keep walking IN THE AIR at constant Z — measured live: 800+ uu of open-air
+    // travel at Z=1 over a beach at Z=-382, ending as a permanent hoverer beyond the ±Height
+    // recovery reach. Hold is the dtCrowd contract (an agent cannot leave the navmesh); the
+    // corner-leak self-heal still works because the held agent's next pass runs the 4x-radius
+    // recovery, and a genuinely stranded agent terminates boundedly through block detection
+    // instead of sailing away.
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "What the constraint does with a displacing agent that is off the navmesh beyond recovery. Hold keeps it in place (reported through the grounding fragment) so bad geometry produces a held, self-reporting agent instead of a flying one. PassThrough restores the pre-fix free-space glide — for A/B comparison only."))
+    ECk_CrowdOffMeshDisplacementMode _OffMeshDisplacementMode = ECk_CrowdOffMeshDisplacementMode::Hold;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
+        meta = (AllowPrivateAccess = true, ClampMin = "0.0",
+            ToolTip = "An off-mesh recovery may lift the agent at most this many cm. Mesh higher than a step is an elevated island the agent could never have walked onto (foliage top, berm, stacked geometry), and snapping up onto it ratchets the agent skyward island by island. Downward recovery is never limited. 0 disables the clamp, restoring the unbounded upward snap — for A/B comparison only."))
+    float _GroundingRecoveryMaxStepUpCm = 50.0f;
+
     // ---- Stationary markup ----
     UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
         meta = (AllowPrivateAccess = true,
@@ -399,6 +424,8 @@ public:
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_GroundingVerifyIntervalSeconds);
     CK_PROPERTY_GET(_GroundingVerifyMinCorrectionCm);
+    CK_PROPERTY_GET(_OffMeshDisplacementMode);
+    CK_PROPERTY_GET(_GroundingRecoveryMaxStepUpCm);
     CK_PROPERTY_GET(_StationaryMarkupMode);
     CK_PROPERTY_GET(_StationaryMarkupDelaySeconds);
     CK_PROPERTY_GET(_StationaryMarkupSpeedThreshold);
@@ -472,6 +499,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static float Get_GroundingVerifyMinCorrectionCm();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdOffMeshDisplacementMode Get_OffMeshDisplacementMode();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static float Get_GroundingRecoveryMaxStepUpCm();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdStationaryMarkupMode Get_StationaryMarkupMode();

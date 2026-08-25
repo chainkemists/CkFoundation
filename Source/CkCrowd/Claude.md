@@ -1048,6 +1048,19 @@ magnitude only and left direction free to snap.
   the dominant Z-error sources have no settle edge; a "grounding dirty" tag has an unbounded
   writer set and NO writer at all when a nav tile rebuilds under a motionless agent. **Do not
   reintroduce a plain zero-displacement early-out as an optimisation.**
+- **Off-mesh displacement is HELD, and recovery never lifts beyond a step.** Two follow-on
+  defects the lease exposed (BusterBlock, 2026-08-25, both measured live): (1) agents have no
+  gravity, so the old both-projections-fail pass-through let a walker step off a cliff edge and
+  keep walking IN THE AIR at constant Z — 800+ uu of open-air travel at Z=1 over a beach at
+  Z=-382, ending as a permanent hoverer; `_OffMeshDisplacementMode` (default Hold) now keeps the
+  agent in place instead, reported, and block detection terminates the episode boundedly.
+  (2) the 4×radius recovery searching ±Height vertically would snap an agent UP onto elevated
+  navmesh islands (foliage tops, berms) it could never have walked onto — each snap raising the
+  feet into reach of the next island, a ratchet measured climbing Z 3→319 in 16s;
+  `_GroundingRecoveryMaxStepUpCm` (default 50) refuses lifts beyond a step (`[RECOVERY-REJECT]`),
+  while downward recovery stays unlimited. A stranded agent also re-reports every 30s
+  (`still OFF the navmesh after ...`), so a long session's log names its floaters without having
+  caught the transition edge.
 - **`Get_EscapedQueryStart` gates on PAINTED, not `_ConfirmedOnMesh`** — unlike the re-path trigger.
   The escape is pure geometry: planning from a pushed-out start is valid the moment the disc exists
   and merely arrives early when the rebake hasn't landed. Gating it on `_ConfirmedOnMesh` opened a
