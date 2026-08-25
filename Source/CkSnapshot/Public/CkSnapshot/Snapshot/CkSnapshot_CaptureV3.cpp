@@ -242,9 +242,19 @@ namespace ck::snapshot
 
             for (auto Depth = 0; Depth < MaxOwnerDepth; ++Depth)
             {
+                // Match capture/load reconstruction precedence before consulting lifetime ownership. Actor-intent
+                // rows are rebuilt from their actor recipe, and SaveKey rows rendezvous with the fresh world's
+                // keyed entity; neither depends on its temporary runtime owner returning in the snapshot.
+                const auto CurrentHasValidActorSpawnIntent = Current.Has<FFragment_ActorSpawnIntent>() &&
+                    NOT Current.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath().IsEmpty();
+                const auto CurrentHasValidSaveKey = Current.Has<FFragment_SaveKey>() &&
+                    Current.Get<FFragment_SaveKey>().Get_Key().IsValid();
+                if (CurrentHasValidActorSpawnIntent || CurrentHasValidSaveKey)
+                { return {}; }
+
                 const auto CurrentIsNonBridgedRuntimeSpawned =
                     Current.Has<ck::FFragment_SpawnRecipe>() &&
-                    NOT Current.Has<FFragment_ActorSpawnIntent>();
+                    NOT CurrentHasValidActorSpawnIntent;
                 const auto CurrentDependsOnLifetimeOwner =
                     CurrentIsNonBridgedRuntimeSpawned || Current.Has<ck::FTag_ConstructSpawned>();
                 if (NOT CurrentDependsOnLifetimeOwner)
