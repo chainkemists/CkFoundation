@@ -6,6 +6,7 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -20,6 +21,8 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_ConstrainToNavmesh);
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Crowd::ConstrainToNavmesh"), STAT_CkCrowd_ConstrainToNavmeshProc, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Grounding Verifies"), STAT_CkCrowd_GroundingVerifies, STATGROUP_CkCrowd);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Crowd Agents Off Navmesh"), STAT_CkCrowd_AgentsOffNavmesh, STATGROUP_CkCrowd);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,25 +44,48 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            FFragment_CrowdAgent_PendingDisplacement& InPending)
+            FFragment_CrowdAgent_PendingDisplacement& InPending,
+            FFragment_CrowdAgent_Grounding& InGrounding)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_ConstrainToNavmeshProc);
 
+        using namespace ck_crowd_agent_constrain_to_navmesh_algorithm;
+
+        InGrounding._SecondsSinceVerified += static_cast<float>(InDeltaT.Get_Seconds());
+        const auto SecondsSinceLastPass = InGrounding.Get_SecondsSinceVerified();
+
         const auto Displacement = InPending.Get_Displacement();
-        if (Displacement.IsNearlyZero())
+        const auto IsDisplacing = NOT Displacement.IsNearlyZero();
+        const auto IsVerifyDue = Get_ShouldVerifyGrounding(
+            SecondsSinceLastPass, UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyIntervalSeconds());
+
+        if (NOT IsDisplacing && NOT IsVerifyDue)
         { return; }
 
         InPending._Displacement = FVector::ZeroVector;
+        InGrounding._SecondsSinceVerified = 0.0f;
+
+        if (NOT IsDisplacing)
+        { INC_DWORD_STAT(STAT_CkCrowd_GroundingVerifies); }
 
         auto SelfTransform = UCk_Utils_Transform_UE::Cast(InHandle);
 
         const auto EnqueueOffset = [&](const FVector& InOffset) -> void
         {
+            if (InOffset.IsNearlyZero())
+            { return; }
+
             UCk_Utils_Transform_UE::Request_AddLocationOffset(
                 SelfTransform,
                 FCk_Request_Transform_AddLocationOffset{InOffset}
                     .Set_LocalWorld(ECk_LocalWorld::World), {});
+        };
+
+        const auto MarkOnMesh = [&]() -> void
+        {
+            InGrounding._IsOffNavmesh = false;
+            InGrounding._SecondsOffNavmesh = 0.0f;
         };
 
         if (UCk_Utils_Crowd_Settings_UE::Get_NavmeshConstraintMode() == ECk_CrowdNavmeshConstraintMode::Disabled)
@@ -88,7 +114,6 @@ namespace ck
         }
 
         const auto From = InTransform.Get_Transform().GetLocation();
-        using ck_crowd_agent_constrain_to_navmesh_algorithm::ResolveSurfaceOffset;
 
         const auto HorizontalExtent = InParams.Get_Radius();
         const auto VerticalExtent = InParams.Get_Height();
@@ -109,11 +134,55 @@ namespace ck
             auto Recovered = FNavLocation{};
             if (NavSys->ProjectPointToNavigation(From, Recovered, RecoveryExtent))
             {
-                EnqueueOffset(ResolveSurfaceOffset(From, Recovered.Location));
+                const auto RecoveryOffset = ResolveSurfaceOffset(From, Recovered.Location);
+
+                if (RecoveryOffset.Size() > InParams.Get_Radius())
+                {
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] recovered onto the navmesh at [{}] — correction [{}]uu (dz [{}]uu)"),
+                        InHandle, From, RecoveryOffset.Size(), RecoveryOffset.Z);
+                }
+
+                MarkOnMesh();
+                EnqueueOffset(RecoveryOffset);
                 return;
             }
 
+            INC_DWORD_STAT(STAT_CkCrowd_AgentsOffNavmesh);
+
+            if (NOT InGrounding.Get_IsOffNavmesh())
+            {
+                InGrounding._IsOffNavmesh = true;
+                InGrounding._SecondsOffNavmesh = 0.0f;
+
+                ck::crowd::Verbose(
+                    TEXT("CrowdAgent [{}] is OFF the navmesh beyond recovery at [{}] — reported, not moved"),
+                    InHandle, From);
+            }
+            else
+            {
+                InGrounding._SecondsOffNavmesh += SecondsSinceLastPass;
+            }
+
             EnqueueOffset(Displacement);
+            return;
+        }
+
+        MarkOnMesh();
+
+        if (NOT IsDisplacing)
+        {
+            const auto VerticalOffset = ResolveVerticalDriftOffset(
+                From, StartOnMesh.Location, UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm());
+
+            if (FMath::Abs(VerticalOffset.Z) > InParams.Get_Radius())
+            {
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] grounding verify corrected dz [{}]uu at [{}]"),
+                    InHandle, VerticalOffset.Z, From);
+            }
+
+            EnqueueOffset(VerticalOffset);
             return;
         }
 
