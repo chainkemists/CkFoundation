@@ -77,6 +77,16 @@ auto UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm() -> float
     return Get()->Get_GroundingVerifyMinCorrectionCm();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_OffMeshDisplacementMode() -> ECk_CrowdOffMeshDisplacementMode
+{
+    return Get()->Get_OffMeshDisplacementMode();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_GroundingRecoveryMaxStepUpCm() -> float
+{
+    return Get()->Get_GroundingRecoveryMaxStepUpCm();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() -> ECk_CrowdStationaryMarkupMode
 {
     return Get()->Get_StationaryMarkupMode();
