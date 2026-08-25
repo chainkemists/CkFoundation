@@ -35,6 +35,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
+#include "CkEcsExt/Transform/CkTransform_RestoreRebase.h"     // one-shot provenance for restored static dependents
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"          // parent-driven transforms derive from local offsets
 
 #include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
@@ -1524,6 +1525,9 @@ auto
         if (auto* Actor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Entity);
             ck::IsValid(Actor))
         {
+            // The actor bridge publishes this movement after quarantine lifts. Record the exact pose now; Transform
+            // arms the active rebase marker only when that pose is the one it actually publishes.
+            Entity.AddOrReplace<ck::FFragment_Transform_PendingRestoreRebase>(Saved);
             constexpr auto bSweep = false;
             Actor->SetActorTransform(Saved, bSweep, nullptr, ETeleportType::TeleportPhysics);
             continue;
@@ -1533,6 +1537,7 @@ auto
         // Construct-seeded transform requests (FIFO), so the saved value wins.
         if (UCk_Utils_Transform_UE::Has(Entity))
         {
+            Entity.AddOrReplace<ck::FFragment_Transform_PendingRestoreRebase>(Saved);
             UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(
                 Entity, FCk_Request_Transform_SetTransform{Saved}, {});
         }

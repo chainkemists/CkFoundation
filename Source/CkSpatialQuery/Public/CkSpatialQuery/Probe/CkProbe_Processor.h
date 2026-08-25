@@ -199,7 +199,8 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_LinearCast>,
-            TExclude<FTag_Probe_MotionType_Static>,
+            // Static probes normally return without moving and the DEBUG processor diagnoses them. A snapshot
+            // restore-rebase is the one explicit exception, handled in ForEachEntity without changing MotionType.
             TExclude<FTag_Probe_Disabled>,
             TExclude<FTag_Probe_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>

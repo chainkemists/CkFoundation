@@ -4,6 +4,7 @@
 #include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_RestoreRebase.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -712,6 +713,11 @@ namespace ck
             const FFragment_Transform& InTransform) const
         -> void
     {
+        const auto IsStatic = InHandle.Has<FTag_Probe_MotionType_Static>();
+        const auto IsRestoreRebase = InHandle.Has<FTag_Transform_RestoreRebase>();
+        if (IsStatic && NOT IsRestoreRebase)
+        { return; }
+
         const auto EntityPosition = InTransform.Get_Transform().GetLocation();
         const auto EntityRotation = InTransform.Get_Transform().GetRotation();
 
@@ -814,6 +820,9 @@ namespace ck
             FFragment_Probe_Current& InCurrent)
             -> void
     {
+        if (InHandle.Has<FTag_Transform_RestoreRebase>())
+        { return; }
+
         CK_TRIGGER_ENSURE(TEXT("Probe [{}] with MotionType [{}] had its Transform changed.\n"
                 "If this Probe is meant to move its MotionType shouldn't be [{}]"),
             InHandle,

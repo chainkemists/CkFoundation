@@ -224,6 +224,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Restore-rebase provenance crosses the PrePhysics -> PostPhysics partition: restored actor transforms publish
+    // in Transform_SyncFrom, SceneNode propagates them, and static runtime representations consume them in Overlap.
+    // A separate end-of-frame cleanup keeps that marker alive through the complete cross-partition transaction.
+    class CKECSEXT_API FProcessor_Transform_RestoreRebaseCleanup
+        : public TProcessorBase<FProcessor_Transform_RestoreRebaseCleanup>
+    {
+    public:
+        using RunAfter = TDepList<ck::FGroup_Overlap>;
+        static constexpr auto TickGroup = TG_PostPhysics;
+
+    private:
+        using Super = TProcessorBase;
+        friend class Super;
+
+    public:
+        explicit FProcessor_Transform_RestoreRebaseCleanup(const RegistryType& InRegistry);
+
+    public:
+        auto DoTick(TimeType) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECSEXT_API FProcessor_Transform_Replicate : public ck_exp::TProcessor<
             FProcessor_Transform_Replicate,
             FCk_Handle_Transform,
