@@ -21,9 +21,13 @@ namespace ck_tween_utils
             const FCk_Handle& InHandle)
         -> bool
     {
-        return InHandle.Has<ck::FTag_Transform_ExternallyDriven>()
-            && InHandle.Has<ck::FFragment_SceneNode_Current>()
-            && InHandle.Has<ck::SceneNodeParent>();
+        const auto HasTransformAnchor =
+            InHandle.Has_Any<ck::FFragment_Transform_MeshSocket, ck::FFragment_Transform_RootComponent>();
+
+        return InHandle.Has<ck::FFragment_SceneNode_Current>()
+            && InHandle.Has<ck::SceneNodeParent>()
+            && NOT InHandle.Has<ck::FFragment_SceneNode_UnrealAnchor>()
+            && (NOT HasTransformAnchor || InHandle.Has<ck::FTag_Transform_ExternallyDriven>());
     }
 
     auto
@@ -34,7 +38,7 @@ namespace ck_tween_utils
     {
         const auto CanCreate = NOT IsParentDrivenSceneNode(InHandle);
         CK_ENSURE_IF_NOT(CanCreate,
-            TEXT("{} cannot target parent-driven SceneNode [{}] in world space. Use the Create_TweenSceneNodeOffset* API so the tween updates its relative offset instead."),
+            TEXT("{} cannot animate parent-driven SceneNode [{}] in world space. The parent owns this child's world transform, so the animation can snap back when the parent moves or restore incorrectly after save/load rebuilds the hierarchy. Use the Create_TweenSceneNodeOffset* API so the tween updates the child's relative offset instead."),
             InCreator, InHandle)
         {}
 
