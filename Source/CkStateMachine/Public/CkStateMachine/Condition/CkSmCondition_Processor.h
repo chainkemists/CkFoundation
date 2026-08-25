@@ -84,6 +84,8 @@ namespace ck
         using Group         = FGroup_Gameplay_AI;
         using RunAfter      = TDepList<FProcessor_SmTransition_Exit>;
         using MarkedDirtyBy = FTag_SmCondition_PendingExit;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;

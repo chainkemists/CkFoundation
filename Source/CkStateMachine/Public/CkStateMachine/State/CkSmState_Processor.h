@@ -60,6 +60,8 @@ namespace ck
         // first frame after a state becomes Active runs no Evaluate at all.
         using RunAfter = TDepList<FProcessor_Sm_HandleRequests, FProcessor_SmState_Update>;
         using MarkedDirtyBy = FTag_SmState_NeedsEvaluation;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -86,6 +88,8 @@ namespace ck
         // which run before any active processor.
         using RunAfter      = TDepList<FProcessor_Sm_HandleRequests>;
         using MarkedDirtyBy = FTag_SmState_PendingExit;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;

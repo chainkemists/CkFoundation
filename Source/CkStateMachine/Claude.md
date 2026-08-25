@@ -71,6 +71,33 @@ After `FProcessor_SmCondition_Polled` computes a result it always does `ParentTr
 
 ---
 
+## Cascade convergence (Gameplay_Script settle barrier)
+
+A transition cascade (task result → state evaluate → transition → commit → new state/task
+EntityScript spawn → `BeginPlay` → `EnterTask`) is a chain of consumed-marker processors, each
+needing its own dispatch. Since 2026-08-24 the chain's processors declare
+`LocalSettleAfter = FGroup_Gameplay_Script` + `LocalSettleTrigger` (see `CkEcs/Claude.md`
+§ Group-local settle barriers), so the **event-driven** cascade converges at the end of
+`FGroup_Gameplay_Script` — before Chaos/Physics/Transform/PostTransform/Replication — instead of
+in the global tail pump after the push slot. A transform request enqueued in `DoEnterTask`
+therefore reaches the component the same frame the new state becomes observable
+(pinned by BB `Bb_AutoTest_Sm_CascadeWriteReachesComponentSameFrame`).
+
+Deliberately fenced OUT of the barrier — do not add them:
+
+- `SmTask_Tick` (real DeltaT into user code; ignition stays main-pass — the barrier only drains
+  what the main pass ignited).
+- `SmCondition_Polled` + `SmState_Update` (marker-less ⇒ replayed every pass; Polled's unconditional
+  parent wake + `Request_ResetCondition`'s re-arm form a guaranteed 2-pass livelock — pinned by
+  `Bb_AutoTest_Sm_PolledTransitionDoesNotTripBarrier`). Polled/vacuous transitions of a state
+  entered inside the barrier arm in the NEXT main pass, exactly as before the barrier.
+- `SmCondition_ResetEveryFrame` (frame-scoped reset; replaying it mid-cascade wipes armed state).
+- `Sm_ApplyReplicatedHistory` / `Sm_FlushPendingReplication_Drain` (`ReplayQueue` is presence-sticky
+  and deliberately one-event-per-tick; clients still converge same-frame because the main-pass drain
+  feeds `FFragment_Sm_PendingTransition`, which IS a trigger).
+
+---
+
 ## Replication
 
 State machines are replicatable. Opt in by setting `FCk_Fragment_StateMachine_ParamsData::_Replication = Replicates`; the default is `DoesNotReplicate` and local-only SMs cost nothing extra.
