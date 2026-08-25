@@ -125,8 +125,35 @@ auto
     const auto MaterialSlotName = FName{TEXT("CkDebugScene")};
     Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroup] = MaterialSlotName;
 
+    // Reserve up front. Without this the mesh description reallocates its way through a
+    // city-sized navmesh one vertex at a time.
+    const auto TriangleCount = Result->_Triangles.Num();
+    Description.ReserveNewVertices(TriangleCount * 3);
+    Description.ReserveNewVertexInstances(TriangleCount * 3);
+    Description.ReserveNewTriangles(TriangleCount);
+    Description.ReserveNewPolygons(TriangleCount);
+
+    auto VertexInstanceNormals = Attributes.GetVertexInstanceNormals();
+    auto VertexInstanceTangents = Attributes.GetVertexInstanceTangents();
+    auto VertexInstanceBinormalSigns = Attributes.GetVertexInstanceBinormalSigns();
+
     for (const auto& Triangle : Result->_Triangles)
     {
+        // Flat face normal, taken from the cross product this function already needs for its area
+        // check. Debug geometry is flat-shaded triangle soup with no shared vertices, so the
+        // smoothing-group aware FStaticMeshOperations pass that used to run here had nothing to
+        // smooth — it just cost ~53ms per rebuild on a real navmesh, measured. Tangents only matter
+        // to normal-mapped materials, which debug draw does not use, so an arbitrary consistent
+        // basis is enough.
+        // Cross order is (C-A) x (B-A), matching the orientation FStaticMeshOperations used to
+        // produce here. The opposite order yields unit normals pointing the wrong way, which
+        // Ck.Jolt.DebugDraw.SingleTriangleBuild catches as "the UE winding preserves Jolt's
+        // exterior normal" while still passing its normalized check.
+        const auto Edge1 = Triangle._B - Triangle._A;
+        const auto Edge2 = Triangle._C - Triangle._A;
+        const auto Normal = FVector3f{FVector::CrossProduct(Edge2, Edge1).GetSafeNormal()};
+        const auto Tangent = FVector3f{Edge1.GetSafeNormal()};
+
         auto VertexInstances = TArray<FVertexInstanceID>{};
         VertexInstances.Reserve(3);
 
@@ -134,15 +161,15 @@ auto
         {
             const auto Vertex = Description.CreateVertex();
             VertexPositions[Vertex] = FVector3f{Position};
-            VertexInstances.Emplace(Description.CreateVertexInstance(Vertex));
+            const auto Instance = Description.CreateVertexInstance(Vertex);
+            VertexInstanceNormals[Instance] = Normal;
+            VertexInstanceTangents[Instance] = Tangent;
+            VertexInstanceBinormalSigns[Instance] = 1.0f;
+            VertexInstances.Emplace(Instance);
         }
 
         Description.CreatePolygon(PolygonGroup, VertexInstances);
     }
-
-    FStaticMeshOperations::ComputeTriangleTangentsAndNormals(Description);
-    FStaticMeshOperations::ComputeTangentsAndNormals(Description,
-                                                     EComputeNTBsFlags::Normals | EComputeNTBsFlags::Tangents);
 
     auto* Mesh = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
     const auto MeshWasCreated = ck::IsValid(Mesh);
