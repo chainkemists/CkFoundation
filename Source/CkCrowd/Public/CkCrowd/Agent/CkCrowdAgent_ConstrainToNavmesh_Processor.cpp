@@ -33,6 +33,10 @@ namespace ck_crowd_agent_constrain_to_navmesh
     // vertically. Widening only the horizontal search self-heals a corner leak without treating a
     // deliberately elevated or deeply displaced agent as ordinary navmesh drift.
     constexpr auto RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0f;
+
+    // A stranded agent re-reports on this cadence so a long session's log names it without
+    // needing to have caught the transition edge.
+    constexpr auto OFF_MESH_REPORT_PERIOD_SECONDS = 30.0f;
 }
 
 namespace ck
@@ -131,11 +135,22 @@ namespace ck
                 VerticalExtent
             };
 
+            auto RecoveryAccepted = false;
+            auto RecoveryRejectedForLift = false;
+            auto RecoveryOffset = FVector::ZeroVector;
+
             auto Recovered = FNavLocation{};
             if (NavSys->ProjectPointToNavigation(From, Recovered, RecoveryExtent))
             {
-                const auto RecoveryOffset = ResolveSurfaceOffset(From, Recovered.Location);
+                RecoveryOffset = ResolveSurfaceOffset(From, Recovered.Location);
+                RecoveryRejectedForLift = Get_RecoveryExceedsStepUp(
+                    static_cast<float>(RecoveryOffset.Z),
+                    UCk_Utils_Crowd_Settings_UE::Get_GroundingRecoveryMaxStepUpCm());
+                RecoveryAccepted = NOT RecoveryRejectedForLift;
+            }
 
+            if (RecoveryAccepted)
+            {
                 if (RecoveryOffset.Size() > InParams.Get_Radius())
                 {
                     ck::crowd::Log(
@@ -150,21 +165,53 @@ namespace ck
 
             INC_DWORD_STAT(STAT_CkCrowd_AgentsOffNavmesh);
 
+            const auto IsHolding =
+                IsDisplacing &&
+                UCk_Utils_Crowd_Settings_UE::Get_OffMeshDisplacementMode() == ECk_CrowdOffMeshDisplacementMode::Hold;
+
             if (NOT InGrounding.Get_IsOffNavmesh())
             {
                 InGrounding._IsOffNavmesh = true;
                 InGrounding._SecondsOffNavmesh = 0.0f;
 
-                ck::crowd::Verbose(
-                    TEXT("CrowdAgent [{}] is OFF the navmesh beyond recovery at [{}] — reported, not moved"),
-                    InHandle, From);
+                if (RecoveryRejectedForLift)
+                {
+                    ck::crowd::Log(
+                        TEXT("[RECOVERY-REJECT] CrowdAgent [{}] at [{}]: nearest mesh is [{}]uu ABOVE — refusing to lift beyond step height ({})"),
+                        InHandle, From, RecoveryOffset.Z,
+                        IsHolding ? TEXT("holding") : TEXT("reported"));
+                }
+                else if (IsHolding)
+                {
+                    ck::crowd::Log(
+                        TEXT("[GLIDE-HOLD] CrowdAgent [{}] went OFF the navmesh at [{}] — displacement held, not applied in free space"),
+                        InHandle, From);
+                }
+                else
+                {
+                    ck::crowd::Verbose(
+                        TEXT("CrowdAgent [{}] is OFF the navmesh beyond recovery at [{}] — reported, not moved"),
+                        InHandle, From);
+                }
             }
             else
             {
+                const auto PrevReportBucket =
+                    FMath::FloorToInt32(InGrounding._SecondsOffNavmesh / OFF_MESH_REPORT_PERIOD_SECONDS);
                 InGrounding._SecondsOffNavmesh += SecondsSinceLastPass;
+                const auto NewReportBucket =
+                    FMath::FloorToInt32(InGrounding._SecondsOffNavmesh / OFF_MESH_REPORT_PERIOD_SECONDS);
+
+                if (NewReportBucket > PrevReportBucket)
+                {
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] still OFF the navmesh after [{}]s at [{}]"),
+                        InHandle, InGrounding.Get_SecondsOffNavmesh(), From);
+                }
             }
 
-            EnqueueOffset(Displacement);
+            if (NOT IsHolding)
+            { EnqueueOffset(Displacement); }
             return;
         }
 

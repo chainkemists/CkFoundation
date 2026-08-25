@@ -56,6 +56,22 @@ namespace ck::ck_crowd_agent_constrain_to_navmesh_algorithm
         return Phase * InIntervalSeconds;
     }
 
+    // A recovery may pull an agent DOWN any distance (returning a floater to the surface, healing
+    // an under-mesh excursion) but may LIFT it at most a step: navmesh higher than the agent could
+    // have walked onto is an elevated island (a foliage top, a berm, stacked geometry), and
+    // snapping up onto it turns the recovery into a RATCHET — each snap raises the feet, the next
+    // search reaches the next-higher island, and the agent climbs into the sky. Measured live:
+    // +190cm snaps stair-stepping an agent from Z=3 to Z=319 in 16 seconds.
+    inline auto Get_RecoveryExceedsStepUp(
+        float InOffsetZ,
+        float InMaxStepUpCm) -> bool
+    {
+        if (InMaxStepUpCm <= 0.0f)
+        { return false; }
+
+        return InOffsetZ > InMaxStepUpCm;
+    }
+
     // The idle-verify correction is Z-ONLY, past a dead-band. ProjectPointToNavigation returns the
     // nearest poly point, which near a navmesh edge carries a LATERAL nudge — folding that XY into
     // a resting agent's offset would shove a settled pile a little every lease, re-creating the

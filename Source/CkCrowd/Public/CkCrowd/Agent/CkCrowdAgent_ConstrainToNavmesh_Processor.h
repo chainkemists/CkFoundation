@@ -30,9 +30,12 @@ namespace ck
     // Worlds with no nav data pass displacements through untouched (nav-less tests / gameplay).
     // An agent found off-mesh while nav data exists is snapped back if a horizontally wider,
     // body-height projection finds the mesh (self-healing — a one-frame corner leak must not
-    // disable the clamp forever). Vertical displacement beyond the agent's body height remains
-    // deliberate free movement for a MOVING agent; a stationary one that far off the mesh is
-    // reported through FFragment_CrowdAgent_Grounding rather than recovered.
+    // disable the clamp forever) — but the snap may LIFT at most _GroundingRecoveryMaxStepUpCm:
+    // mesh higher than a step is an elevated island the agent could never have walked onto, and
+    // recovering upward onto it ratchets the agent skyward island by island. Beyond recovery, the
+    // agent is reported through FFragment_CrowdAgent_Grounding and — because agents have no
+    // gravity, so free-space displacement is a constant-Z glide off every cliff edge — its
+    // displacement is HELD, not applied (_OffMeshDisplacementMode).
     //
     // Grounding runs on a LEASE, never only on displacement: a zero-displacement agent is still
     // reconciled against the navmesh once per _GroundingVerifyIntervalSeconds (Z-only, dead-banded
