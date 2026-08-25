@@ -67,6 +67,16 @@ auto UCk_Utils_Crowd_Settings_UE::Get_NavmeshConstraintMode() -> ECk_CrowdNavmes
     return Get()->Get_NavmeshConstraintMode();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyIntervalSeconds() -> float
+{
+    return Get()->Get_GroundingVerifyIntervalSeconds();
+}
+
+auto UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm() -> float
+{
+    return Get()->Get_GroundingVerifyMinCorrectionCm();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() -> ECk_CrowdStationaryMarkupMode
 {
     return Get()->Get_StationaryMarkupMode();

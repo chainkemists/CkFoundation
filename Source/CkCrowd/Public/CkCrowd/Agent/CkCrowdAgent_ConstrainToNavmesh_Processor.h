@@ -30,7 +30,20 @@ namespace ck
     // Worlds with no nav data pass displacements through untouched (nav-less tests / gameplay).
     // An agent found off-mesh while nav data exists is snapped back if a horizontally wider,
     // body-height projection finds the mesh (self-healing — a one-frame corner leak must not
-    // disable the clamp forever). Larger vertical displacements remain deliberate free movement.
+    // disable the clamp forever). Vertical displacement beyond the agent's body height remains
+    // deliberate free movement for a MOVING agent; a stationary one that far off the mesh is
+    // reported through FFragment_CrowdAgent_Grounding rather than recovered.
+    //
+    // Grounding runs on a LEASE, never only on displacement: a zero-displacement agent is still
+    // reconciled against the navmesh once per _GroundingVerifyIntervalSeconds (Z-only, dead-banded
+    // — no planar correction, so a settled formation cannot creep). Do NOT reintroduce a plain
+    // zero-displacement early-out as an optimisation: this processor is the ONLY thing that can
+    // return an elevated agent's Z to the surface, and for years the only reason stationary agents
+    // stayed grounded was the push-apart solver never terminating — sub-millimetre corrections
+    // kept this processor running by accident. The push-apart slop ended that, stationary agents'
+    // Z froze wherever it was, and every path they asked for returned NoRouteFound for the rest of
+    // the session (the floating-NPC regression). The lease is the deliberate replacement for that
+    // accident.
     //
     // Group: FGroup_Physics. RunAfter PushApart (the last staging writer). The resulting
     // AddLocationOffset request is drained by Transform_HandleRequests.
@@ -44,6 +57,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
+            ck::TReadWrite<FFragment_CrowdAgent_Grounding>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
@@ -62,7 +76,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            FFragment_CrowdAgent_PendingDisplacement& InPending) -> void;
+            FFragment_CrowdAgent_PendingDisplacement& InPending,
+            FFragment_CrowdAgent_Grounding& InGrounding) -> void;
     };
 }
 

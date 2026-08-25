@@ -1023,6 +1023,31 @@ magnitude only and left direction free to snap.
   avoidance velocity, push-apart shove) moved the transform straight through a navmesh boundary,
   wall-eroded band included. `RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0` self-healing exists so a
   one-frame corner leak cannot disable the clamp forever.
+- **Grounding runs on a LEASE (`FFragment_CrowdAgent_Grounding`), never only on displacement.**
+  The constraint used to early-out whenever the frame staged zero displacement, which coupled a
+  stationary agent's grounding to the avoidance solver happening to emit something. For years that
+  coupling held by ACCIDENT: PushApart's resolver never terminated (geometric decay toward exact
+  contact), so every settled agent with a touching neighbour got sub-millimetre displacement every
+  frame and was re-grounded every frame. `_PushApartSlopCm` ended the non-termination — correctly —
+  and stationary agents' Z froze wherever it was: any elevation error (spawn-frame fall, long-frame
+  unclamped vertical integration, ramp edges) became permanent, the agent floated, and every path
+  it asked for returned NoRouteFound for the rest of the session (the BusterBlock floating-NPC
+  regression, 2026-08). The lease is the deliberate replacement: `_SecondsSinceVerified` ticks
+  every frame and is reset by ANY constraint pass, so a displacing frame IS a verify and costs
+  nothing extra, while a resting agent is reconciled once per `_GroundingVerifyIntervalSeconds`
+  (default 1s, phase-spread by entity hash so a same-frame-composed crowd doesn't verify in
+  lockstep). The idle verify corrects **Z only**, past `_GroundingVerifyMinCorrectionCm` — the
+  projection's nearest-poly answer carries a lateral nudge near navmesh edges, and folding that XY
+  into a resting agent would creep settled formations, re-creating what the slop fixed. Cost:
+  ~`StationaryPop / (Interval × FPS)` projections per frame (~5/frame at 300 stationary agents),
+  vs. the 300/frame the old accident silently paid. A verify that finds no mesh within ±body
+  height records `_IsOffNavmesh`/`_SecondsOffNavmesh` (`Get_IsOffNavmesh`,
+  `Get_SecondsOffNavmesh`) instead of silently leaving the agent stranded — deliberately elevated
+  agents are REPORTED, never pulled down (the recovery extent stays ±`Height`). Why not the
+  alternatives: a settle-edge one-shot cannot retry (mid-bake spawn stays stranded forever) and
+  the dominant Z-error sources have no settle edge; a "grounding dirty" tag has an unbounded
+  writer set and NO writer at all when a nav tile rebuilds under a motionless agent. **Do not
+  reintroduce a plain zero-displacement early-out as an optimisation.**
 - **`Get_EscapedQueryStart` gates on PAINTED, not `_ConfirmedOnMesh`** — unlike the re-path trigger.
   The escape is pure geometry: planning from a pushed-out start is valid the moment the disc exists
   and merely arrives early when the rebake hasn't landed. Gating it on `_ConfirmedOnMesh` opened a

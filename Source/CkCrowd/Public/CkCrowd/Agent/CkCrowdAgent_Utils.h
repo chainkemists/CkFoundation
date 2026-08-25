@@ -345,6 +345,27 @@ public:
     Get_IsStationaryMarkupConfirmed(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // True while the grounding verify finds no navmesh within the agent's radius horizontally
+    // (4x on recovery) and body height vertically of its feet — genuinely stranded, reported
+    // rather than moved. A deliberately elevated agent reads true by design. Refreshed at the
+    // grounding-lease cadence, so a stranded agent is detected within one interval, not never.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Off Navmesh")
+    static bool
+    Get_IsOffNavmesh(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    // Seconds the agent has continuously been off the navmesh beyond recovery (0 while on-mesh).
+    // The instrument for the "how far gone is this floater" question a packaged-build log needs
+    // answered.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Seconds Off Navmesh")
+    static float
+    Get_SecondsOffNavmesh(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // ---- Identity colour ---------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable,
