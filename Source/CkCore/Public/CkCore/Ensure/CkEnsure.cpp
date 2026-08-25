@@ -21,6 +21,24 @@ namespace ck::ensure
 {
     static thread_local int32 EnsureFromScriptDepth = 0;
 
+    auto Get_OutsidePieDialogSuppressionFile() -> const FName&
+    {
+        static const auto File = FName{TEXT("CkEnsure.SuppressOutsidePieDialogs")};
+        return File;
+    }
+
+    auto Get_IsOutsidePieDialogSuppressed() -> bool
+    {
+        return UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(Get_OutsidePieDialogSuppressionFile(), MAX_int32);
+    }
+
+    auto Request_SuppressOutsidePieDialogs() -> void
+    {
+        // Reuse session ignored state so Clear All and the normal game-world teardown reset this choice.
+        UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLine(
+            Get_OutsidePieDialogSuppressionFile(), MAX_int32);
+    }
+
     auto Request_GetCurrentScriptSiteIdentity() -> FString
     {
     #if WITH_ANGELSCRIPT_CK
@@ -292,9 +310,9 @@ namespace ck::ensure
         ck::ensure::Error(TEXT("{}"), MessagePlusBpCallStack);
 
         const auto IsInPIE = GIsPlayInEditorWorld;
-        const auto ShouldShowEditorNotification = GIsEditor && NOT IsInPIE;
+        const auto IsOutsidePieInEditor = GIsEditor && NOT IsInPIE;
 
-        if (ShouldShowEditorNotification)
+        if (IsOutsidePieInEditor)
         {
             // The callstack is omitted deliberately — it triggers UI bugs in the notification widget.
             const auto& SimpleMessage = ck::Format_UE(
@@ -327,8 +345,6 @@ namespace ck::ensure
             || IsRunningCommandlet())
         { return; }
 
-        if (ShouldShowEditorNotification)
-        { return; }
     #else
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         {
@@ -354,6 +370,13 @@ namespace ck::ensure
             { UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(BpStackTrace + AsStackTrace); }
             return;
         }
+
+    #if WITH_EDITOR
+        // Suppression is dialog-only: the Error log and editor message above remain visible. Clear All or the
+        // normal game-world teardown removes the reserved session ignore and restores outside-PIE dialogs.
+        if (IsOutsidePieInEditor && Get_IsOutsidePieDialogSuppressed())
+        { return; }
+    #endif
 
         const auto& TrimmedCppStack = Request_TrimEngineBoilerplateFrames(StackTraceFromEnsureCaller);
 
@@ -467,7 +490,8 @@ namespace ck::ensure
             .Set_EnableDisable(HasAsStack ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable));
         }
 
-        if (GIsEditor)
+    #if WITH_EDITOR
+        if (GIsEditor && IsInPIE)
         {
             Buttons.Add(DialogButton{FText::FromString(TEXT("Abort PIE")), FSimpleDelegate::CreateLambda([&]()
             {
@@ -475,6 +499,21 @@ namespace ck::ensure
                 UCk_Utils_EditorOnly_UE::Request_AbortPIE();
             })}.Set_Color(FLinearColor{1.0f, 0.1f, 0.1f, 1.0f}));
         }
+
+        if (IsOutsidePieInEditor)
+        {
+            Buttons.Add(DialogButton{
+                FText::FromString(TEXT("Suppress All Outside-PIE Ensures")),
+                FSimpleDelegate::CreateLambda([]()
+                {
+                    Request_SuppressOutsidePieDialogs();
+                })}
+                .Set_Color(FLinearColor{0.45f, 0.25f, 0.55f, 1.0f})
+                .Set_Tooltip(FText::FromString(TEXT(
+                    "Suppress outside-PIE ensure dialogs until Clear All Ignored Ensures or the next game-world "
+                    "teardown. Ensures continue to log."))));
+        }
+    #endif
 
         if (const auto& ButtonIndex = UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, ClipboardMessage, FText::FromString(Title), Buttons);
             ButtonIndex == 4)
