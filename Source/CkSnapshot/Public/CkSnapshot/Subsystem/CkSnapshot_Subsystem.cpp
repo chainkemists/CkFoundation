@@ -35,6 +35,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"             // G1 saved-world-transform restore (actor + pure-ECS)
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"     // FCk_Request_Transform_SetTransform (pure-ECS mover)
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"          // parent-driven transforms derive from local offsets
 
 #include "CkCore/Algorithms/CkAlgorithms.h"                  // ck::algo::NoneOf
 #include "CkCore/GameplayTag/CkGameplayTag_Utils.h"          // ResolveGameplayTag — the ActorRelay group tag
@@ -1453,6 +1454,19 @@ auto
         if (Mapped == nullptr || ck::Is_NOT_Valid(*Mapped))
         { continue; }
         auto Entity = *Mapped;
+
+        // A parent-driven SceneNode's world transform is derived from its local offset and restored parent. Replaying
+        // the captured world pose would fight that ownership contract and is rejected by Transform request handling.
+        // Keep this predicate aligned with FProcessor_Transform_HandleRequests::ForEachEntity.
+        const auto HasTransformAnchor =
+            Entity.Has_Any<ck::FFragment_Transform_MeshSocket, ck::FFragment_Transform_RootComponent>();
+        const auto IsParentDrivenSceneNode =
+            Entity.Has<ck::FFragment_SceneNode_Current>()
+            && Entity.Has<ck::SceneNodeParent>()
+            && NOT Entity.Has<ck::FFragment_SceneNode_UnrealAnchor>()
+            && (NOT HasTransformAnchor || Entity.Has<ck::FTag_Transform_ExternallyDriven>());
+        if (IsParentDrivenSceneNode)
+        { continue; }
 
         // Actor-backed entity (EngineOwned player pawn, EngineOwned SaveKey level actor): drive the ACTOR only. NEVER
         // the entity-side Transform — FProcessor_Transform_SyncFromActor stomps it back from the actor every tick.
