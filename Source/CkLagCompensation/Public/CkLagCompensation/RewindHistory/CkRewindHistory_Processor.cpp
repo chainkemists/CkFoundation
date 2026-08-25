@@ -1,6 +1,6 @@
 #include "CkRewindHistory_Processor.h"
 
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -180,7 +180,7 @@ namespace ck
         InCurrent._LastRecordTime = Now;
 
 #if !UE_BUILD_SHIPPING
-        if (NOT ck::debug_draw::Is_SuppressedForStreamerMode() &&
+        if (NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode() &&
             rewind_history_cvars::CVarDebugDraw.GetValueOnGameThread())
         {
             rewind_history_detail::DoDraw_OldestFrame(World, InCurrent.Get_Frames(),

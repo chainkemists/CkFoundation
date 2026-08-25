@@ -11,6 +11,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPmg/CkPmg_Log.h"
@@ -36,6 +37,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Pmg Debug Lines"), STAT_Pmg_DebugLines, STATGRO
 CK_REGISTER_GROUP(ck::FGroup_Pmg_DebugShape_Setup);
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_BakeLines);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_HandleRequests);
@@ -95,6 +97,28 @@ namespace ck
         { return; }
 
         MeshComponent->SetWorldTransform(InTransform.Get_Transform());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            -> void
+    {
+        auto* MeshComponent = InCurrent._MeshComponent.Get();
+        if (ck::Is_NOT_Valid(MeshComponent))
+        { return; }
+
+        const auto IsLocallyVisible = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden;
+        const auto ShouldBeVisible = IsLocallyVisible &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
+        MeshComponent->SetVisibility(ShouldBeVisible, true);
+        MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -241,7 +265,8 @@ namespace ck
             WireframeMID->SetVectorParameterValue(FName(TEXT("Color")), WireframeColor);
         }
 
-        const auto bShouldShow = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden;
+        const auto bShouldShow = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden &&
+                                 NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
         MeshComponent->SetMeshSectionVisible(pmg_bake_lines_helpers::WireframeSectionIndex, bShouldShow);
     }
 
@@ -421,7 +446,8 @@ namespace ck
         // Mirrors the visibility logic in FinalizeMeshComponent_Basic.
         if (auto* Mesh = InCurrent._MeshComponent.Get())
         {
-            const auto ShouldBeVisible = NewMode != ECk_Pmg_RenderMode::Hidden;
+            const auto ShouldBeVisible = NewMode != ECk_Pmg_RenderMode::Hidden &&
+                                         NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
             Mesh->SetVisibility(ShouldBeVisible, true);
             Mesh->SetHiddenInGame(NOT ShouldBeVisible);
         }

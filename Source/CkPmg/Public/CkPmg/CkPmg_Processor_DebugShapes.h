@@ -71,6 +71,34 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Applies the global diagnostic-visibility policy without changing the shape's local render
+    // mode. A live streamer-mode CVar therefore hides retained debug shapes and restores their
+    // caller-selected visibility when the override is removed.
+    class CKPMG_API FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility : public ck_exp::TProcessor<
+            FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility,
+            FCk_Handle_Pmg_DebugShape,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Current>,
+            TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Pmg_DebugShape_UpdateTransform, FProcessor_Pmg_DebugShape_BakeLines>;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPMG_API FProcessor_Pmg_DebugShape_CheckDuration : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_CheckDuration,
             FCk_Handle_Pmg_DebugShape,

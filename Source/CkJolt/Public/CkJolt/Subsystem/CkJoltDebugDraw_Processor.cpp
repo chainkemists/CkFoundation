@@ -1,6 +1,6 @@
 #include "CkJoltDebugDraw_Processor.h"
 
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -72,7 +72,7 @@ namespace ck
         auto Targets = TArray<TSharedPtr<FCk_Jolt_DebugDrawTarget>>{};
         Subsystem->Get_DemandingDebugDrawTargets(Targets);
 
-        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
         {
             for (const auto& Target : Targets)
             {

@@ -1,6 +1,6 @@
 #include "CkPathNetwork_DebugDraw_Processor.h"
 
-#include "CkCore/Debug/CkDebugDraw_Utils.h"
+#include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 #include "CkPathNetwork/CkPathNetwork_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -48,7 +48,7 @@ namespace ck
 #if ENABLE_DRAW_DEBUG
         using namespace ck_pathnetwork_debugdraw;
 
-        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
         { return; }
 
         const auto DrawLevel = CVarPathNetworkDebugDraw.GetValueOnGameThread();
@@ -123,7 +123,7 @@ namespace ck
 #if ENABLE_DRAW_DEBUG
         using namespace ck_pathnetwork_debugdraw;
 
-        if (ck::debug_draw::Is_SuppressedForStreamerMode())
+        if (ck::diagnostic_visibility::Is_HiddenForStreamerMode())
         { return; }
 
         if (CVarPathNetworkDebugDraw.GetValueOnGameThread() <= 0)
