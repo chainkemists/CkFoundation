@@ -10,6 +10,7 @@
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/Settings/CkEcsExt_Settings.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_RestoreRebase.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
@@ -35,9 +36,47 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncToActor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_Cleanup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_RestoreRebaseCleanup);
 
 namespace ck_transform
 {
+    template <typename THandle>
+    auto
+        ResolveRestoreRebase(
+            THandle& InHandle,
+            const FTransform& InAppliedWorldTransform,
+            bool InTransformChanged)
+        -> void
+    {
+        if (NOT InHandle.template Has<ck::FFragment_Transform_PendingRestoreRebase>())
+        { return; }
+
+        const auto Expected = InHandle.template Get<ck::FFragment_Transform_PendingRestoreRebase>()
+            .Get_ExpectedWorldTransform();
+        if constexpr (requires { InHandle.template DeferRemove<ck::FFragment_Transform_PendingRestoreRebase>(); })
+        {
+            InHandle.template DeferRemove<ck::FFragment_Transform_PendingRestoreRebase>();
+        }
+        else
+        {
+            InHandle.template Remove<ck::FFragment_Transform_PendingRestoreRebase>();
+        }
+
+        // A later gameplay request may share this drain. Only the exact saved result is restoration; any other final
+        // pose remains an ordinary movement and must retain every Static-movement diagnostic.
+        if (InTransformChanged && InAppliedWorldTransform.Equals(Expected))
+        {
+            if constexpr (requires { InHandle.template DeferAddOrGet<ck::FTag_Transform_RestoreRebase>(); })
+            {
+                InHandle.template DeferAddOrGet<ck::FTag_Transform_RestoreRebase>();
+            }
+            else
+            {
+                InHandle.template AddOrGet<ck::FTag_Transform_RestoreRebase>();
+            }
+        }
+    }
+
     auto
         CalculateTeleportType(
             const USceneComponent* InComponent)
@@ -126,7 +165,10 @@ namespace ck
         const auto& RootCompTransform = RootComponent->GetComponentToWorld();
 
         if (InTransform.Get_Transform().Equals(RootCompTransform))
-        { return; }
+        {
+            ck_transform::ResolveRestoreRebase(InHandle, RootCompTransform, false);
+            return;
+        }
 
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, RootCompTransform);
@@ -136,7 +178,12 @@ namespace ck
             ECk_TransformComponents::Rotation |
             ECk_TransformComponents::Scale))
         {
+            ck_transform::ResolveRestoreRebase(InHandle, RootCompTransform, true);
             InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
+        }
+        else
+        {
+            ck_transform::ResolveRestoreRebase(InHandle, RootCompTransform, false);
         }
     }
 
@@ -453,7 +500,11 @@ namespace ck
             InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
         }
 
-        if (EnumHasAnyFlags(InComp.Get_ComponentsModified(), ECk_TransformComponents::Location | ECk_TransformComponents::Rotation | ECk_TransformComponents::Scale))
+        const auto TransformChanged = EnumHasAnyFlags(InComp.Get_ComponentsModified(),
+            ECk_TransformComponents::Location | ECk_TransformComponents::Rotation | ECk_TransformComponents::Scale);
+        ck_transform::ResolveRestoreRebase(InHandle, NewTransform, TransformChanged);
+
+        if (TransformChanged)
         {
             ecs_extension::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
@@ -698,6 +749,27 @@ namespace ck
         // and the load writes restored transforms, so preserving it would leave every restored entity permanently
         // dirty to every consumer that polls it.
         _TransientEntity.Clear_Unconditional<FTag_Transform_Updated>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Transform_RestoreRebaseCleanup::
+    FProcessor_Transform_RestoreRebaseCleanup(
+        const RegistryType& InRegistry)
+        : Super(InRegistry)
+    {
+    }
+
+    auto
+        FProcessor_Transform_RestoreRebaseCleanup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        // Ordinary Clear preserves mapped roots while hydration quarantine still owns them. On their first released
+        // frame this runs after the PostPhysics Overlap group, by which point SceneNode children and static probes have
+        // consumed the marker, and removes every remaining copy before ordinary gameplay can move a static object.
+        _TransientEntity.Clear<FTag_Transform_RestoreRebase>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
