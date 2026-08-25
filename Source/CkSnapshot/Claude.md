@@ -557,15 +557,18 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   This is a contract, not a timing accident: the quarantine is what makes the Setup half of it reliable, and it
   is why a feature that needs a restored value reads it from Setup rather than from construction.
   `UCk_Utils_Snapshot_UE::Promise_OnHydrated` is the other half, for a consumer with no Setup processor of its
-  own — a widget, a subsystem, another entity. Bind it FROM `DoBeginPlay`; that is the pairing the contract is
-  built around, and it is why holding BeginPlay was never necessary.
+  own — a widget, a subsystem, another entity. Bind it FROM `DoBeginPlay`; if the destination entity has not been
+  mapped yet, the GameInstance subsystem parks that promise and transfers it to the entity's lift edge when the
+  saved row claims the handle. That pairing is why holding BeginPlay was never necessary.
   `Ck.Snapshot.Ordering.BeginPlayObservesConstructDefaults` pins both halves so a future change cannot quietly
   start holding BeginPlay instead.
 - **`Promise_OnHydrated` fires once, after this entity's payloads — and every other mapped entity's — have
-  applied, or immediately if nothing is pending for it.** The immediate path is not a degenerate case: a fresh
-  spawn, a client, a world with no load in flight, and a bind made after the lift all mean the same thing, and
-  a promise that stayed silent on any of them would put every consumer back to polling a marker. It fires for a
-  cap-forced entity too, with that entity's loss already recorded in the report — see the two escapes below.
+  applied, or immediately when no active load can still claim it.** During the destination world's pre-map
+  interval, “not mapped” is ambiguous rather than fresh: the subsystem holds the promise, transfers it to the
+  ordinary lift edge if a saved row later claims that exact handle, and releases a never-mapped fresh entity at
+  load completion. Clients, worlds with no load in flight, pre-travel entities, and binds made after the lift still
+  fire immediately. It fires for a cap-forced entity too, with that entity's loss already recorded in the report —
+  see the two escapes below.
 - **The SaveKey resolver is re-swept every rebuild tick, not once at world-ready.** On-demand infrastructure
   (ActorRelay channels) stamps its key ticks after BeginPlay, so a one-shot sweep left every such `EngineOwned` row
   unresolvable and orphaned its whole owned subtree. The sweep Resets and rescans the live

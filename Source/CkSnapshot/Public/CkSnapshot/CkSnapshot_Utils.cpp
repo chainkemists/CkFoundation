@@ -158,20 +158,28 @@ auto
         ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
         : nullptr;
 
-    // Nothing pending for this entity means hydration is as complete as it will ever be — a fresh spawn, a
-    // client, a world with no load in flight, or a load that already lifted. All four are the same answer, and
-    // deferring any of them would strand a consumer on an edge that is never going to come.
-    if (ck::Is_NOT_Valid(Subsystem) || NOT Subsystem->Get_IsHydrationPending(InHandle))
+    if (ck::Is_NOT_Valid(Subsystem))
     { FireImmediately(); return; }
 
-    // Pending, so the lift WILL broadcast for this entity: bind one-shot and ignore any payload in flight. The
-    // signal is per-entity and fires at most once per entity per load, so there is nothing stale to replay —
-    // the policy is here to keep a bind made during Rebuilding from being satisfied by anything but this load's
-    // own lift.
-    auto Source = InHandle;
-    CK_SIGNAL_BIND(ck::UUtils_Signal_Hydration_OnHydrated, Source, InDelegate,
-        ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
-        ECk_Signal_PostFireBehavior::Unbind);
+    // A mapped entity has a definite lift edge. Bind to it directly rather than sending the promise through the
+    // subsystem's pre-map queue.
+    if (Subsystem->Get_IsHydrationPending(InHandle))
+    {
+        auto Source = InHandle;
+        CK_SIGNAL_BIND(ck::UUtils_Signal_Hydration_OnHydrated, Source, InDelegate,
+            ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+            ECk_Signal_PostFireBehavior::Unbind);
+        return;
+    }
+
+    // Before rebuild has mapped this handle, false does not mean the entity is fresh: it is also the unavoidable
+    // pre-map interval. Let the GameInstance subsystem carry that ambiguity until mapping completes. It transfers
+    // a mapped promise to the ordinary one-shot lift signal, or executes a never-mapped promise at load completion.
+    if (Subsystem->Request_AddHydrationPromise(InHandle, InDelegate))
+    { return; }
+
+    // No load can still map this entity: a fresh spawn, client, no load in flight, or a quarantine already lifted.
+    FireImmediately();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
