@@ -46,7 +46,12 @@ namespace ck
 
         auto* Script = Cast<UCk_SmCondition_EntityScript>(InScriptFragment.Get_Script().Get());
         if (ck::Is_NOT_Valid(Script))
-        { return; }
+        {
+            // Still clear the dirty key — this processor is MarkedDirtyBy the tag, so leaving it
+            // makes the entity re-match every pump until its deferred destroy lands.
+            InHandle.Try_Remove<FTag_SmCondition_PendingExit>();
+            return;
+        }
 
         const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(InHandle);
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
