@@ -57,25 +57,65 @@ namespace ck
             {
                 return (InRegistry.Has_AnyLiveEntityWith<T_Markers>() || ...);
             };
-            OutDescriptor._IsDirtyChecker_Consumable = [](const FCk_Registry& InRegistry) -> bool
-            {
-                return (InRegistry.Has_AnyLiveEntityWith_Excluding<T_Markers,
-                    ck::FTag_DestroyEntity_EndPlay, ck::FTag_DestroyEntity_Teardown,
-                    ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>() || ...);
-            };
         }
 
         // ----------------------------------------------------------------------------------------------------------------
-        template <typename... T_Fragments>
+        // The settle barrier needs "consumable work", not "marker present": a marker stranded on an
+        // entity the processor's own view skips (dying, exited, request-excluded) must not read as
+        // dirty, or the barrier spins its whole pass budget on work no pass can drain.
+        //
+        // The marker is named explicitly rather than relied upon to be inside the fragment list.
+        // MarkedDirtyByAnyOf markers are ALTERNATIVES, so a view cannot require them all and usually
+        // requires none — building the check from the view alone would silently degrade it to
+        // "does this processor have any work at all", which never goes quiet. Naming the marker also
+        // puts the small pool in front of entt's lead-pick.
+        template <typename... T_Markers, typename... T_Fragments>
         auto
         MakeViewConsumableChecker(
+            entt::type_list<T_Markers...>,
             entt::type_list<T_Fragments...>)
             -> FDirtyChecker
         {
             return [](const FCk_Registry& InRegistry) -> bool
             {
-                return InRegistry.View<UnwrapAccessPolicy_T<T_Fragments>...>().HasAny();
+                return (InRegistry.View<T_Markers, UnwrapAccessPolicy_T<T_Fragments>...>().HasAny() || ...);
             };
+        }
+
+        // ----------------------------------------------------------------------------------------------------------------
+        // Fallback for processors that expose no view (script processors): approximate "consumable"
+        // with the destruction-pipeline tags, since a dying entity's marker is one no
+        // CK_IGNORE_PENDING_KILL view could consume either. One TExclude per type — TIsExcluded only
+        // matches the single-argument form, so TExclude<A, B> would be read as an INCLUDE.
+        template <typename... T_Markers>
+        auto
+        MakeMarkerConsumableChecker(
+            entt::type_list<T_Markers...>)
+            -> FDirtyChecker
+        {
+            return [](const FCk_Registry& InRegistry) -> bool
+            {
+                return (InRegistry.View<T_Markers,
+                            ck::TExclude<ck::FTag_DestroyEntity_EndPlay>,
+                            ck::TExclude<ck::FTag_DestroyEntity_Teardown>,
+                            ck::TExclude<ck::FTag_DestroyEntity_Await>,
+                            ck::TExclude<ck::FTag_DestroyEntity_Finalize>>().HasAny() || ...);
+            };
+        }
+
+        // ----------------------------------------------------------------------------------------------------------------
+        template <typename T_Processor, typename... T_Markers>
+        auto
+        MakeConsumableChecker(
+            entt::type_list<T_Markers...> InMarkers)
+            -> FDirtyChecker
+        {
+            if constexpr (requires { typename T_Processor::RuntimeVariantFragments; })
+            { return MakeViewConsumableChecker(InMarkers, typename T_Processor::RuntimeVariantFragments{}); }
+            else if constexpr (requires { typename T_Processor::FragmentList; })
+            { return MakeViewConsumableChecker(InMarkers, typename T_Processor::FragmentList{}); }
+            else
+            { return MakeMarkerConsumableChecker(InMarkers); }
         }
 
         // ----------------------------------------------------------------------------------------------------------------
@@ -263,37 +303,16 @@ namespace ck
             {
                 return InRegistry.Has_AnyLiveEntityWith<DirtyFragment>();
             };
-            Descriptor._IsDirtyChecker_Consumable = [](const FCk_Registry& InRegistry) -> bool
-            {
-                return InRegistry.Has_AnyLiveEntityWith_Excluding<DirtyFragment,
-                    ck::FTag_DestroyEntity_EndPlay, ck::FTag_DestroyEntity_Teardown,
-                    ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
-            };
+            Descriptor._IsDirtyChecker_Consumable =
+                detail::MakeConsumableChecker<T_Processor>(entt::type_list<DirtyFragment>{});
         }
         else if constexpr (requires { typename T_Processor::MarkedDirtyByAnyOf; })
         {
-            detail::ExtractDirtyMarkers(
-                typename T_Processor::MarkedDirtyByAnyOf::Types{},
-                Descriptor);
-        }
+            using DirtyFragments = typename T_Processor::MarkedDirtyByAnyOf::Types;
 
-        // The settle barrier needs "consumable work", not "marker present": a marker stranded on an
-        // entity the processor's own view skips (dying, exited, request-excluded) must not read as
-        // dirty, or the barrier spins its whole pass budget on work no pass can drain. Rebuild the
-        // consumable checker from the processor's actual runtime view when one is exposed; the
-        // pending-kill tag approximation set above remains the fallback (script processors).
-        if (Descriptor._HasDirtyMarker)
-        {
-            if constexpr (requires { typename T_Processor::RuntimeVariantFragments; })
-            {
-                Descriptor._IsDirtyChecker_Consumable =
-                    detail::MakeViewConsumableChecker(typename T_Processor::RuntimeVariantFragments{});
-            }
-            else if constexpr (requires { typename T_Processor::FragmentList; })
-            {
-                Descriptor._IsDirtyChecker_Consumable =
-                    detail::MakeViewConsumableChecker(typename T_Processor::FragmentList{});
-            }
+            detail::ExtractDirtyMarkers(DirtyFragments{}, Descriptor);
+            Descriptor._IsDirtyChecker_Consumable =
+                detail::MakeConsumableChecker<T_Processor>(DirtyFragments{});
         }
 
         if constexpr (requires { typename T_Processor::FragmentList; })

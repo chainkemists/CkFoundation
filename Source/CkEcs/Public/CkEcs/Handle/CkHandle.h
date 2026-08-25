@@ -244,10 +244,6 @@ public:
     template <typename T_Fragment>
     auto Has_AnyLiveEntityWith() const -> bool;
 
-    // Same, but skipping entities that also carry any of T_Exclude (e.g. the pending-kill tags).
-    template <typename T_Fragment, typename... T_Exclude>
-    auto Has_AnyLiveEntityWith_Excluding() const -> bool;
-
     template <typename T_Fragment>
     auto Get() -> T_Fragment&;
 
@@ -1042,20 +1038,6 @@ auto
     { return {}; }
 
     return Get_RegistryView().Has_AnyLiveEntityWith<T_Fragment>();
-}
-
-template <typename T_Fragment, typename... T_Exclude>
-auto
-    FCk_Handle::
-    Has_AnyLiveEntityWith_Excluding() const
-    -> bool
-{
-    CK_ENSURE_IF_NOT(IsRegistryValid(),
-        TEXT("Unable to perform Has_AnyLiveEntityWith_Excluding query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ck::Get_RuntimeTypeToString<T_Fragment>(), *this)
-    { return {}; }
-
-    return Get_RegistryView().Has_AnyLiveEntityWith_Excluding<T_Fragment, T_Exclude...>();
 }
 
 template <typename T_Fragment>

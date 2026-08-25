@@ -7,7 +7,6 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 
-#include <tuple>
 #include "CkEcs/Registry/CkRegistry_Handle.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 #include "CkEcs/Tag/CkTag.h"
@@ -166,49 +165,34 @@ public:
             DoForEach(InFunc, FragmentsAndTags{}, OnlyExcludes{}, OnlyFragments{});
         }
 
-        // True when the view would visit at least one entity — the exact "this processor has
-        // consumable work" test the settle-barrier dirty checks need. Early-outs at the first match.
-        auto HasAny() -> bool
+        // True when the view would visit at least one entity — "is there anything here", asked
+        // without materialising an iteration. Early-outs at the first match.
+        auto HasAny() const -> bool
         {
             if (_Registry == nullptr)
             { return false; }
 
-            return DoHasAny(FragmentsAndTags{}, OnlyExcludes{});
+            // Duplicates are legal in the include list (a caller naming a fragment the view already
+            // requires, e.g. a dirty marker) — entt's view does not dedupe, so do it here.
+            return DoHasAny(entt::type_list_unique_t<FragmentsAndTags>{}, OnlyExcludes{});
         }
 
     private:
-        template <typename T_Lead, typename... T_Rest, typename... T_OnlyExcludes>
-        auto DoHasAny(entt::type_list<T_Lead, T_Rest...>, entt::type_list<T_OnlyExcludes...>) -> bool
+        template <typename... T_Includes, typename... T_OnlyExcludes>
+        auto DoHasAny(entt::type_list<T_Includes...>, entt::type_list<T_OnlyExcludes...>) const -> bool
         {
-            // Hand-rolled instead of a multi-storage view: the const path must not create missing
-            // pools, and entt's multi-view over a null storage is UB. A never-used include pool means
-            // zero matching entities; a never-used exclude pool excludes nothing.
-            const auto AllIncludePoolsExist =
-                (_Registry->template storage<T_Lead>() != nullptr)
-                && ((_Registry->template storage<T_Rest>() != nullptr) && ...);
-            if (NOT AllIncludePoolsExist)
-            { return false; }
+            // The CONST overload of registry::view is load-bearing: it SKIPS pools that do not exist
+            // (leaving the view empty and well-defined) and never assures one into being. The
+            // non-const overload creates every pool it names, which would have a read-only query
+            // allocating storage. TView is instantiated both const and non-const, so pin it here.
+            const auto* ConstRegistry = static_cast<const std::remove_const_t<RegistryType>*>(_Registry);
 
-            const auto RestStorages = std::tuple{_Registry->template storage<T_Rest>()...};
-            const auto ExcludeStorages = std::tuple{_Registry->template storage<T_OnlyExcludes>()...};
-
-            // The single-storage view skips in_place tombstones, so every visited entity is live.
-            for (const auto Entity : _Registry->template view<T_Lead>())
-            {
-                const auto HasAllIncludes = std::apply([&](auto*... InStorage)
-                { return (InStorage->contains(Entity) && ...); }, RestStorages);
-                if (NOT HasAllIncludes)
-                { continue; }
-
-                const auto HasAnyExclude = std::apply([&](auto*... InStorage)
-                { return ((InStorage != nullptr && InStorage->contains(Entity)) || ...); }, ExcludeStorages);
-                if (HasAnyExclude)
-                { continue; }
-
-                return true;
-            }
-
-            return false;
+            // entt leads iteration with the SMALLEST include pool (basic_common_view::unchecked_refresh)
+            // and view_iterator's ctor seeks to the first entity satisfying every include and no
+            // exclude — so begin() != end() is exactly "would this view visit anything", with
+            // tombstones already skipped. Cost does not depend on the order the caller wrote.
+            const auto View = ConstRegistry->template view<T_Includes...>(entt::exclude<T_OnlyExcludes...>);
+            return View.begin() != View.end();
         }
 
         template <typename T_Func, typename... T_FragmentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyFragments>
@@ -295,12 +279,6 @@ public:
     // walks past tombstones — O(leading holes), so use it for change-gated checks, not hot paths.
     template <typename T_Fragment>
     auto Has_AnyLiveEntityWith() const -> bool;
-
-    // Same, but skipping entities that also carry any of T_Exclude — the settle-barrier trigger check
-    // uses this with the pending-kill tags so a marker stranded on a dying entity (which no
-    // CK_IGNORE_PENDING_KILL view can consume) does not read as pending work.
-    template <typename T_Fragment, typename... T_Exclude>
-    auto Has_AnyLiveEntityWith_Excluding() const -> bool;
 
     // Per-fragment-type counter the scheduler's pump pass uses to short-circuit dirty-marker checks; every
     // Add/Replace/AddOrReplace/Remove/Try_Remove/Clear bumps it. Returns 0 for a never-mutated hash.
@@ -481,20 +459,6 @@ auto
     // The const view overload does not create a missing pool, and single-storage views skip in_place
     // tombstones — so begin() == end() means zero LIVE entities regardless of tombstone residue.
     const auto View = Reg->template view<T_Fragment>();
-    return View.begin() != View.end();
-}
-
-template <typename T_Fragment, typename... T_Exclude>
-auto
-    FCk_Registry::
-    Has_AnyLiveEntityWith_Excluding() const
-    -> bool
-{
-    const auto* Reg = Resolve();
-    if (Reg == nullptr)
-    { return false; }
-
-    const auto View = Reg->template view<T_Fragment>(entt::exclude<T_Exclude...>);
     return View.begin() != View.end();
 }
 
