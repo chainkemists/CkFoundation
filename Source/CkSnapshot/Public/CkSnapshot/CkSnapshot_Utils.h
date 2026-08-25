@@ -208,19 +208,21 @@ public:
      * feature's own Setup processor, which is the other correct place, is only available to a feature that HAS a
      * Setup processor. This is the hook for everyone else: a widget, a subsystem, a consumer on another entity.
      *
-     * It fires on the global quarantine lift — after every mapped entity's payloads have applied, not just this
-     * one's — so a callback may read its own entity AND its siblings. If nothing is pending for this handle
-     * (a fresh spawn, a client, no load in flight, or a load whose lift already happened) it fires IMMEDIATELY
-     * and synchronously, because hydration is then as complete as it will ever be. A promise that stayed silent
-     * on an un-restored entity would push every consumer back into "poll a marker and hope", which is the
-     * failure mode this replaces.
+     * For a mapped entity it fires on the global quarantine lift — after every mapped entity's payloads have
+     * applied, not just this one's — so a callback may read its own entity AND its siblings. A destination-world
+     * entity can bind from BeginPlay before the loader has mapped it; that promise is held until mapping and then
+     * attached to the same lift edge. If the load never maps it, it is a fresh entity and fires at load completion.
+     * Outside that ambiguous pre-map window (a client, no load in flight, a pre-travel entity, or a load whose lift
+     * already happened) it fires IMMEDIATELY and synchronously. No caller needs to poll a marker or guess at load
+     * ordering.
      *
      * It fires for a forced-release entity too — with that entity's loss already recorded in the load report —
      * so a consumer is never left waiting on an edge that will not arrive.
      *
-     * Fires at the GLOBAL quarantine lift, strictly BEFORE convergence — so it means "this entity's restored
-     * values are final", and it does NOT imply physics or overlap facts about the world around it. A consumer
-     * that needs those waits on Promise_OnLoadComplete instead.
+     * A mapped entity fires at the GLOBAL quarantine lift, strictly BEFORE convergence — so it means "this
+     * entity's restored values are final", and it does NOT imply physics or overlap facts about the world around
+     * it. The never-mapped fresh-entity fallback fires at load completion because no per-entity lift exists. A
+     * consumer that always needs world convergence waits on Promise_OnLoadComplete instead.
      *
      * Note "final" is about the PAYLOAD, not about every value the feature will end up with: a handler built to
      * the [G1-D38] shape returns Applied having only ENQUEUED deferred requests, and the feature's own processor
