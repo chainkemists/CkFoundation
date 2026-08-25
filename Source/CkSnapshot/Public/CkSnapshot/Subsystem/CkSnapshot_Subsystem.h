@@ -264,8 +264,9 @@ public:
     Get_LastLoadReport() const;
 
     // The report of the most recently attempted SAVE. Carries the result plus any durable value the capture
-    // could not carry — today, a durable payload holding a handle to an entity the save did not persist. The
-    // save's own return value stays a bare result, so no caller has to change to keep working.
+    // could not carry — a durable payload holding a handle to an entity the save did not persist, or to one whose
+    // saved row cannot rebuild. The save's own return value stays a bare result, so no caller has to change to keep
+    // working.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Last Save Report")

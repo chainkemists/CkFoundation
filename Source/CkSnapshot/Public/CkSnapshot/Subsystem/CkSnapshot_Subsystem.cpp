@@ -4,6 +4,7 @@
 #include "CkSnapshot/Inspection/CkSnapshot_Inspection.h" // shared identity/provenance rendering + the DumpSlot census
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path)
+#include "CkSnapshot/Snapshot/CkSnapshot_RuntimeSpawnPolicy.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_LoadState.h" // the ready-to-resume fact clients read
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 
@@ -1139,20 +1140,19 @@ auto
                         {
                             // Owner absent from the saved table ⇒ the world root/transient (never persisted). Opted-in
                             // entities respawn there; boot infra is skipped so the fresh world's copy is not duplicated.
-                            if (NOT _PersistedIds.Contains(OwnerSavedId))
+                            if (NOT ck::snapshot::runtime_spawn_policy::CanRebuildRuntimeSpawnedWithOwnerPolicy(
+                                bSnapshotRespawnable, OwnerSavedId, _PersistedIds))
                             {
-                                if (NOT bSnapshotRespawnable)
-                                {
-                                    ck::snapshot::Warning(
-                                        TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
-                                        SavedId, ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()),
-                                        ck::snapshot::Get_IdentityText(Entry), OwnerSavedId,
-                                        ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
-                                    DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
-                                    break;
-                                }
+                                ck::snapshot::Warning(
+                                    TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
+                                    SavedId, ck::snapshot::Get_ProvenanceText(Entry.Get_Provenance()),
+                                    ck::snapshot::Get_IdentityText(Entry), OwnerSavedId,
+                                    ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
+                                DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
+                                break;
                             }
-                            else
+
+                            if (_PersistedIds.Contains(OwnerSavedId))
                             {
                                 const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
                                 if (MappedOwner == nullptr || ck::Is_NOT_Valid(*MappedOwner))
