@@ -261,6 +261,15 @@ public:
     static FRotator
     Get_ViewRotation(
         const FCk_Handle_Camera& InCamera);
+
+    // The persistent user-controlled orbit rotation before transient framing, collision, noise,
+    // or view-target layers affect the final rendered view.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Get Boom Rotation")
+    static FRotator
+    Get_BoomRotation(
+        const FCk_Handle_Camera& InCamera);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

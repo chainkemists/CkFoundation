@@ -382,6 +382,15 @@ auto
     return Get_ViewInfo(InCamera).Rotation;
 }
 
+auto
+    UCk_Utils_Camera_UE::
+    Get_BoomRotation(
+        const FCk_Handle_Camera& InCamera)
+    -> FRotator
+{
+    return InCamera.Get<ck::FFragment_Camera_Current>().Get_PovState()._BoomArmRotation;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // MATERIALIZE + ASSEMBLE
 // --------------------------------------------------------------------------------------------------------------------
