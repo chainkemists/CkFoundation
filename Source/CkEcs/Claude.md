@@ -314,6 +314,30 @@ Re-derive: read every `DoTick` body under `Source` and classify it on two questi
 `DoTick` on EVERY path, and does it write `_LastVisitedCount` on the paths that do not. Changing the default
 (making `-1` mean "no work") is a silent behaviour change for all 25 bodies at once and is a maintainer decision;
 adopting Shape 3 per-processor is not, and is where the cheap wins are.
+Declared barriers: `Transform_HandleRequests` (trigger) + the `SceneNode_Update` layers (replay)
+after `FGroup_Transform_Derived`; and since 2026-08-24 the **SM cascade barrier** after
+`FGroup_Gameplay_Script` — 16 triggers (the CkStateMachine decision/exit chain in
+`FGroup_Gameplay_AI`, `SmScript_CommitPendingAttach`, and the four EntityScript pipeline
+processors), zero replay-only participants. It converges the event-driven SM transition cascade
+(task result → condition → transition → commit → exit → new state/task spawn →
+BeginPlay/EnterTask) before physics and the transform phases; polled and vacuous transitions
+still arm in the next main pass via `SmState_Update` (excluded on purpose — see
+`CkStateMachine/Claude.md` § Cascade convergence).
+
+Two semantics that are easy to miss: (1) a participant **without** a dirty marker is replayed on
+**every** barrier pass — only marker-bearing nodes are skipped when clean — so a marker-less
+participant that re-dirties a trigger (e.g. `SmCondition_Polled`'s unconditional parent wake) is
+a non-convergent livelock and must never join a barrier; (2) trigger dirtiness is **consumable
+work, not marker presence** (2026-08-24): the barrier's dirty checks rebuild themselves from the
+processor's own runtime view (`_IsDirtyChecker_Consumable`, `TView::HasAny`), so a marker stranded
+on an entity the view skips — dying (`CK_IGNORE_PENDING_KILL`), exited (a required include like
+`FTag_SmState_Active` gone), or request-excluded (`TExclude<FTag_DestroyEntity_Initiate>`) — does
+not count. Plain marker presence pinned the barrier at the pass limit on every SM-adjacent
+teardown and every polled-SM transition (measured: 351 limit warnings across one full suite). A
+trigger whose consumer drains-but-retains its marker fragment (e.g. `FFragment_Sm_ReplayQueue`)
+still pins the barrier, so every trigger must REMOVE its marker. Script processors fall back to a
+pending-kill-excluding tag check; the tail pump keeps the plain presence checker — its
+version-compare + zero-visit accounting already defuse stranded markers there.
 
 ### Paced work (`CkPacedWork.h`)
 

@@ -47,6 +47,8 @@ namespace ck
         using RunAfter = TDepList<FGroup_Gameplay_TimeDelta>;
     };
 
+    // Decision-logic tier — state machines, state trees, planners. SM transition cascades
+    // converge at the Gameplay_Script settle barrier, after their EntityScript spawn pipeline.
     struct FGroup_Gameplay_AI
     {
         using RunAfter = TDepList<FGroup_Gameplay>;

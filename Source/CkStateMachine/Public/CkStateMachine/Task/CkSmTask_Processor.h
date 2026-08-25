@@ -58,6 +58,8 @@ namespace ck
         using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_SmTask_Tick>;
         using MarkedDirtyBy = FTag_SmTask_ResultDirty;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -84,6 +86,8 @@ namespace ck
         using Group         = FGroup_Gameplay_AI;
         using RunAfter      = TDepList<FProcessor_SmState_Exit>;
         using MarkedDirtyBy = FTag_SmTask_PendingExit;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
