@@ -1,0 +1,30 @@
+// /CkUsf/Looks/DebugScene.ush
+//
+// The debug-scene look — the flat, unlit fill CkDebugScene draws every debug primitive with:
+// navmesh triangles, path-network ribbons, agent capsules, queue boxes and the Jolt debug
+// renderer's collision geometry.
+//
+// It is deliberately the simplest look in the pack. Debug geometry is flat-shaded triangle soup
+// that must read identically from any angle and must never take part in lighting, so the entire
+// shader is "emit the colour you were handed".
+//
+// OPACITY IS A SEPARATE SCALAR, NOT Colour.a. CkUsf passes vector parameters into a look as
+// `.rgb` (see CkUsf_Generator's ECk_Usf_ParamType::Vector case), so a vector parameter's alpha
+// never reaches the look function. The hand-authored materials this look replaces carried
+// opacity in the alpha of their Color parameter, which is why the consumer has to be updated to
+// drive Opacity explicitly when it adopts this look.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_DebugScene(
+    FCkUsf_SurfaceInput In,
+    float3              Color,
+    float               Opacity)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    O.EmissiveColor = Color;
+    O.Opacity       = Opacity;
+
+    return O;
+}
