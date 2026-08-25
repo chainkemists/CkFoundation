@@ -32,6 +32,8 @@ namespace ck
         using Group         = FGroup_Gameplay_Script;
         using RunBefore     = TDepList<FProcessor_EntityScript_ContinueConstruction>;
         using MarkedDirtyBy = FTag_SmScript_PendingAttach;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -59,6 +61,8 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_AI;
         using MarkedDirtyBy = FTag_Sm_RequiresSetup;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -87,6 +91,8 @@ namespace ck
         using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_Sm_Setup>;
         using MarkedDirtyBy = FFragment_Sm_Requests;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
         friend class FProcessor_Sm_CommitPendingTransition;
         friend class FProcessor_Sm_FirstSyncInitialState;
@@ -218,6 +224,8 @@ namespace ck
         using RunAfter      = TDepList<FProcessor_Sm_FlushPendingReplication_Drain>;
         using RunBefore     = TDepList<FProcessor_Sm_ApplyReplicatedHistory>;
         using MarkedDirtyBy = FTag_Sm_NeedsInitialStateEntry;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -315,6 +323,8 @@ namespace ck
         using Group         = FGroup_Gameplay_AI;
         using RunAfter      = TDepList<FProcessor_SmCondition_Exit>;
         using MarkedDirtyBy = FFragment_Sm_PendingTransition;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;

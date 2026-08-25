@@ -29,6 +29,8 @@ namespace ck
         using Group = FGroup_Gameplay_AI;
         using RunAfter = TDepList<FProcessor_SmState_Evaluate>;
         using MarkedDirtyBy = FTag_SmTransition_Evaluating;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
@@ -54,6 +56,8 @@ namespace ck
         using Group         = FGroup_Gameplay_AI;
         using RunAfter      = TDepList<FProcessor_SmTask_Exit>;
         using MarkedDirtyBy = FTag_SmTransition_PendingExit;
+        using LocalSettleAfter = FGroup_Gameplay_Script;
+        static constexpr auto LocalSettleTrigger = true;
 
     public:
         using TProcessor::TProcessor;
