@@ -267,3 +267,55 @@ _(Executor: append and END THE SESSION instead of improvising — phase, step, e
   script-less) entities → barrier spins to the 30-pass limit on the teardown frame with
   `Still dirty: FProcessor_SmState_Exit` — the review's Q2 sharp edge, now confirmed at runtime;
   needs a fence before ship (see Blockers).
+## Review application + dev-paired verification (2026-08-25)
+
+The maintainer's review (three points, one coherent edit) is applied and verified on a
+**dev-paired build** — the pairing became available when the fixture session moved BusterBlock_alt
+to BB `origin/dev` pins (CkF `aa68202c5`). **The "rebased tip compile- and test-unverified" caveat
+from the sync record above is RETIRED**: the unmodified rebased tip built clean and ran
+116 tests (114 green) before any review edit was applied, including both specs green — the
+keep-both `HydrationQuarantinePolicy` hunks and the consumable-checker files survived the 81
+upstream commits intact.
+
+Commits:
+- `8abb30ad9` — the review verbatim: `TView::HasAny` routed through entt's const registry view
+  (null-pool-safe, smallest-pool lead, const, deduped includes) replacing the hand-roll; the
+  dirty marker threaded explicitly into `MakeConsumableChecker<T_Processor>` so a
+  `MarkedDirtyByAnyOf` participant cannot degrade to a view-only check; the trailing overwrite
+  block deleted; `Has_AnyLiveEntityWith_Excluding` dropped (registry + the `FCk_Handle` mirror —
+  the review predates the mirror; callers use `View<M, TExclude<...>>().HasAny()`).
+- `d13394df2` — one extension beyond the review's letter, from a measured finding: the baseline
+  showed the barrier pinned at its 30-pass limit (`Sm_Setup` / `Sm_HandleRequests` still-dirty)
+  for the whole v3 load window. Cause: upstream's hydration quarantine excludes quarantined
+  entities from every non-exempt processor's VIEW (`MakeProcessorView` →
+  `TProcessorViewFragments`), but the consumable checker built from the declared list never saw
+  that exclusion — quarantined markers read as drainable work no pass could drain. Fix:
+  `MakeConsumableChecker` mirrors the same policy via `ck::detail::Get_IsHydrationQuarantineExempt`
+  (single source of truth, no mirrored policy check). With it, the verification run's warning
+  gates are **0 / 0 / 0** (`Local settle … reached` / `Pump limit [` / `Dirty marker conflict`)
+  — the baseline had multiple of the first two in the load window.
+- CkTests `f81b8d0f` (branch `feature/gameplay-cascade-settle-barrier`) — the review's six pinned
+  `Ck.Registry.ViewHasAny.*` cases: never-created include pool (must not be assured into
+  existence), never-created exclude pool, tombstone-only pool, unsatisfied conjunction +
+  excluded sole-match, duplicate include, single-include baseline. Branch is based on the
+  BB-recorded pin `6cdd0df88`, NOT the CkTests dev tip — the tip's new crowd tests need CkCrowd
+  symbols newer than CkF `aa68202c5` and cannot build in this pairing (measured: first
+  verification attempt failed in `Test_Crowd_ConstrainToNavmesh.cpp`, zero errors in our code).
+
+Gate record (Sm pattern, 116 tests, dev-paired, 2 lanes):
+- Baseline (rebased tip, pre-review): 114 green; red = `CandyDealer_RestockSmGatesInteract`,
+  `FixtureFootprints.ReportSmoke`. Plus barrier-limit + pump-limit warnings in every v3 load
+  window (non-escalating — C++ snapshot specs don't escalate warnings; the campaign's
+  zero-warning gate still counts them).
+- Applied (both commits): 113 green; same two reds by name (both pre-existing on this BB tip —
+  CandyDealer is SM-adjacent and was ALSO red on the pre-review baseline binaries, so it is not
+  a review regression; `ReportSmoke` is fixture-domain, the fixture session's still-untested
+  work), plus `NpcCombat_AttackTracksMovingTarget` red once under 2-lane load and **green solo on
+  the same binaries** and green in the NpcCombat group re-run (15/16 — the one red was a different family member, `HigherThreatStealsAggro`, one-off) — classified as a lane-load flake (the documented wall-clock-under-lanes class), not a review regression.
+- Both specs green in every run. `ViewHasAny`: **6/6 green**, first run. `Transform` pattern:
+  **51/51 green** (the other declared barrier unaffected).
+
+Attribution still open (not review-caused, recorded for the owners): `CandyDealer_RestockSmGatesInteract`
+red on this BB tip in both baseline and applied runs — green in the campaign's full gate, so the
+delta arrived with the BB-side/upstream changes, not with the review edit; it is on the campaign's
+Q8 frame-sensitivity watch list and needs an owner's look before the BB PR's full-suite gate.
