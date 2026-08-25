@@ -84,9 +84,11 @@ auto
         TEXT("Called Finish Construction on EntityScript [{}] that has ALREADY BegunPlay"), _AssociatedEntity)
     { return; }
 
-    CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has<ck::FTag_EntityScript_ContinueConstruction>()),
-        TEXT("Called Finish Construction on EntityScript [{}] that was NOT ONGOING Construction"), _AssociatedEntity)
-    { return; }
+    // A script may legitimately finish before its ContinueConstruction hook was dispatched — an async
+    // completion bound during Construct can resolve within the same frame (even the same pump pass).
+    // Claim the pending hook instead of rejecting the finish: the script itself declared construction
+    // done, so the hook is moot.
+    _AssociatedEntity.Try_Remove<ck::FTag_EntityScript_ContinueConstruction>();
 
     CK_ENSURE_IF_NOT(NOT (_AssociatedEntity.Has<ck::FTag_EntityScript_FinishConstruction>()),
         TEXT("Called Finish Construction on EntityScript [{}] that has already FINISHED Construction"), _AssociatedEntity)
