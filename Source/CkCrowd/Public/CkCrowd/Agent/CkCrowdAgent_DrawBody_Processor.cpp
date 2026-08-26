@@ -66,6 +66,21 @@ namespace ck
 {
     auto
         FProcessor_CrowdAgent_DrawBody_Setup::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        // No bodies while the toggle is off — pending agents keep their missing setup tag, so an
+        // on-flip spawns them all next tick. The one-frame delay is imperceptible for a debug view
+        // and buys every normal run ~2 PMG entities per agent that no longer exist at all.
+        if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody())
+        { return; }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_CrowdAgent_DrawBody_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
