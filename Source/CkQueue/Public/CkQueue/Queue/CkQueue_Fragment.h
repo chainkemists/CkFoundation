@@ -53,7 +53,7 @@ namespace ck
 
         // A ClaimFirstAvailableOnReach slot-reached report leaves _State Ready by design (the request
         // drain must stay Ready for same-frame reports from other origins), so this flag is what
-        // carries "the next offer must be opened" past the formation processor's settled early-out.
+        // carries "the remaining contenders must be retargeted" past the formation processor's settled early-out.
         bool _HasPendingClaimOffer = false;
 
     public:

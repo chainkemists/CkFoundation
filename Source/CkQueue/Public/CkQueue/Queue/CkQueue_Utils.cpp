@@ -141,6 +141,12 @@ auto
 
     const auto OriginsAreValid = ck_queue_utils::AreValidOrigins(InParams.Get_Origins());
     const auto SlotSpacingIsValid = InParams.Get_SlotSpacingUu() > 0.0f;
+    const auto SlotMovementRadiiAreValid = FMath::IsFinite(InParams.Get_SlotClaimRadiusUu())
+        && FMath::IsFinite(InParams.Get_SlotSettleRadiusUu())
+        && FMath::IsFinite(InParams.Get_SlotReacquireRadiusUu())
+        && InParams.Get_SlotSettleRadiusUu() > 0.0f
+        && InParams.Get_SlotReacquireRadiusUu() >= InParams.Get_SlotSettleRadiusUu()
+        && InParams.Get_SlotClaimRadiusUu() >= InParams.Get_SlotReacquireRadiusUu();
     const auto SearchBudgetIsValid = InParams.Get_MaxFormationSearchNodes() > 0;
     const auto RadiusIsValid = InParams.Get_AgentRadiusUu() > 0.0f;
     const auto HalfHeightIsValid = InParams.Get_AgentHalfHeightUu() >= InParams.Get_AgentRadiusUu();
@@ -158,6 +164,7 @@ auto
         && InParams.Get_ClearanceMarginUu() >= 0.0f;
     const auto ParamsAreValid = OriginsAreValid
         && SlotSpacingIsValid
+        && SlotMovementRadiiAreValid
         && SearchBudgetIsValid
         && RadiusIsValid
         && HalfHeightIsValid
@@ -459,6 +466,54 @@ auto
     if (NOT QueueIsValid)
     { return 0.0f; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotSpacingUu();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_SlotClaimRadiusUu(
+        const FCk_Handle_Queue& InQueue)
+    -> float
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotClaimRadiusUu called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return 0.0f; }
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotClaimRadiusUu();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_SlotSettleRadiusUu(
+        const FCk_Handle_Queue& InQueue)
+    -> float
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotSettleRadiusUu called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return 0.0f; }
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotSettleRadiusUu();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Queue_UE::
+    Get_SlotReacquireRadiusUu(
+        const FCk_Handle_Queue& InQueue)
+    -> float
+{
+    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
+    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotReacquireRadiusUu called with invalid Queue [{}]"), InQueue)
+    {}
+    if (NOT QueueIsValid)
+    { return 0.0f; }
+    return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotReacquireRadiusUu();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

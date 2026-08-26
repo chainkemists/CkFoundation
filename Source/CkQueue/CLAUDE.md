@@ -12,8 +12,9 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - The queue owner is the sole source of truth. Consumers retain the `FCk_Handle_Queue` they requested and
   reconcile through `Get_Members`, `TryGet_MemberSnapshot`, `Get_Pressure`, `Get_State`, and `Get_Revision`.
   Do not add a second writable membership fragment to members.
-- Consumers that need to display or verify authored geometry read `Get_SlotClaimPolicy` and
-  `Get_SlotSpacingUu`; they never inspect the Queue params fragment directly.
+- Consumers that need to display or verify authored geometry read `Get_SlotClaimPolicy`,
+  `Get_SlotSpacingUu`, and the slot claim/settle/reacquire radii; they never inspect the Queue params
+  fragment directly.
 - Runtime membership is reconstructible and is not persisted. Rejoining the same semantic member is
   idempotent and may refresh its mover without minting a new ticket.
 - All mutations are deferred requests. Request completions are planner-visible outcomes; signals carry the
@@ -28,9 +29,15 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - Queue-wide and per-origin hard limits reject before membership or movement is published. Soft limits only
   update pressure. A Crowd adapter rejected by one queue may immediately try another from its completion
   callback.
-- `_SlotClaimPolicy` defaults to `ReserveOnFormation`, which preserves eager reservation behavior. Opt into
-  `ClaimFirstAvailableOnReach` when one mover per origin should be offered the next unclaimed rank while later
-  members remain pending; `AtFront`/`AtSlot` is then the authoritative claimed prefix.
+- `_SlotClaimPolicy` defaults to `ReserveOnFormation`, which preserves eager distinct-slot reservation behavior.
+  Opt into `ClaimFirstAvailableOnReach` when every unclaimed member of an origin should move toward its next free
+  slot. The first current-revision mover to report `Reached` claims that rank; the other contenders are immediately
+  retargeted to the following rank with a newer revision. `AtFront`/`AtSlot` remains the authoritative claimed prefix.
+- `_SlotClaimRadiusUu` (30 by default) is the semantic arrival boundary. Movement adapters may report the current
+  revision reached at that boundary while continuing toward `_SlotSettleRadiusUu` (10 by default). A claimed mover
+  displaced past `_SlotReacquireRadiusUu` (20 by default) may reacquire the same slot without another `SlotReached`
+  event or assignment revision. All three radii must be finite, and validation requires
+  `0 < settle <= reacquire <= claim`.
 - `AdvanceOrigin` succeeds only when that origin's rank-zero member has reported `AtFront`.
 
 ## Formation
@@ -40,8 +47,13 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - The pure builder is atomic and bounded by `_MaxFormationSearchNodes`; no partial placement array is published.
 - The runtime validator projects every slot to navigation, rejects excessive projection shift, blocked nav rays,
   Pawn-channel capsule overlap, and any post-projection same- or cross-origin overlap.
-- Any reflow invalidates old assignment revisions before the movement adapter can consume them. Stale movement
-  outcomes are successful no-ops.
+- Any materially changed reflow invalidates old assignment revisions before the movement adapter can consume
+  them. Stale movement outcomes are successful no-ops.
+- A navigation-generation revalidation preserves an arrived reservation whose origin, rank, and projected target
+  are unchanged, including its `AtFront`/`AtSlot` state and assignment revision. En-route reservations still receive
+  a fresh revision so their Crowd adapter replans a possibly invalid corridor, but the replacement `MoveTo` retains
+  momentum. Only materially changed assignments publish member reflow events; nav rebuilds must not create an
+  arrival/reflow feedback loop.
 - A `MovementFailed` outcome relinquishes its target/rank/revision, keeps its ticket, moves the member behind
   viable members, and waits for a navigation generation change. It still counts toward pressure/limits but has
   no slot; viable survivors reflow without a synchronous runtime navigation query.
@@ -66,6 +78,9 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 
 - `Request_JoinQueue` uses the CrowdAgent as both Queue member and mover.
 - Dispatch issues one nonzero-correlated Crowd `MoveTo` for the current Queue assignment revision.
+- Crowd reports the Queue claim at the configured claim radius but keeps its owned movement episode until the tighter
+  settle radius. Once claimed, the adapter retains station keeping: displacement past the reacquire radius starts a
+  fresh correlated move to the same target, without re-reporting the already-claimed assignment revision.
 - The adapter verifies assignment revision, correlation, active goal, and movement state. If another Crowd
   consumer replaces or stops the episode, the adapter reacquires its still-current assignment.
 - Suppression, leave, invalidation, mover mismatch, and teardown stop only an episode whose correlation belongs

@@ -119,15 +119,20 @@ namespace ck
         }
 
         const auto MoverMatches = HasSnapshot && Snapshot.Get_Mover() == FCk_Handle{InAgent};
-        const auto CanMove = HasSnapshot
+        const auto IsMovingToAssignment = HasSnapshot
+            && (Snapshot.Get_State() == ECk_Queue_MemberState::Assigned
+                || Snapshot.Get_State() == ECk_Queue_MemberState::MovingToSlot);
+        const auto IsClaimedAssignment = HasSnapshot
+            && (Snapshot.Get_State() == ECk_Queue_MemberState::AtSlot
+                || Snapshot.Get_State() == ECk_Queue_MemberState::AtFront);
+        const auto CanOwnAssignment = HasSnapshot
             && MoverMatches
             && NOT LeaveRequested
             && NOT Snapshot.Get_MovementSuppressed()
             && Snapshot.Get_AssignmentRevision() > 0
-            && (Snapshot.Get_State() == ECk_Queue_MemberState::Assigned
-                || Snapshot.Get_State() == ECk_Queue_MemberState::MovingToSlot);
+            && (IsMovingToAssignment || IsClaimedAssignment);
 
-        if (NOT CanMove)
+        if (NOT CanOwnAssignment)
         {
             StopOwnedEpisode(Agent, InAdapter);
             InAdapter._IssuedQueueAssignmentRevision = 0;
@@ -136,37 +141,78 @@ namespace ck
             return;
         }
 
+        const auto TargetLocation = Snapshot.Get_TargetWorldTransform().GetLocation();
+        const auto CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+            UCk_Utils_Transform_UE::CastChecked(Agent));
+        const auto DistanceToTarget = FVector::Dist(CurrentLocation, TargetLocation);
+        const auto ReacquireRadius = UCk_Utils_Queue_UE::Get_SlotReacquireRadiusUu(InAdapter._Queue);
+
         if (InAdapter._IssuedQueueAssignmentRevision == Snapshot.Get_AssignmentRevision())
         {
             const auto ActiveCorrelation = UCk_Utils_CrowdAgent_UE::Get_ActiveMoveCorrelationId(Agent);
             const auto ActiveGoalMatches = UCk_Utils_CrowdAgent_UE::Get_ActiveGoal(Agent).Equals(
-                Snapshot.Get_TargetWorldTransform().GetLocation(),
+                TargetLocation,
                 1.0f);
             const auto MovementState = UCk_Utils_CrowdAgent_UE::Get_MovementState(Agent);
+            const auto OwnedEpisodeIsBlocked = UCk_Utils_CrowdAgent_UE::Get_IsGoalBlocked(Agent);
+            const auto OwnedEpisodeIsFailedHeld = UCk_Utils_CrowdAgent_UE::Get_IsGoalFailedHold(Agent);
             const auto OwnedEpisodeIsTerminal = UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(Agent)
-                || UCk_Utils_CrowdAgent_UE::Get_IsGoalFailedHold(Agent);
+                || OwnedEpisodeIsBlocked
+                || OwnedEpisodeIsFailedHeld;
             const auto OwnedEpisodeIsIntact = InAdapter._IssuedCrowdCorrelationId > 0
                 && ActiveCorrelation == InAdapter._IssuedCrowdCorrelationId
                 && ActiveGoalMatches
                 && (MovementState != ECk_CrowdAgent_MovementState::Idle || OwnedEpisodeIsTerminal);
             if (OwnedEpisodeIsIntact)
-            { return; }
+            {
+                const auto ClaimedAndDisplaced = IsClaimedAssignment
+                    && MovementState == ECk_CrowdAgent_MovementState::Idle
+                    && DistanceToTarget > ReacquireRadius
+                    && NOT OwnedEpisodeIsBlocked
+                    && NOT OwnedEpisodeIsFailedHeld;
+                if (NOT ClaimedAndDisplaced)
+                { return; }
+            }
         }
 
-        StopOwnedEpisode(Agent, InAdapter);
+        // A claimed member inside its station-keeping hysteresis needs no active Crowd episode. If
+        // another consumer owns movement, reclaim only after it actually displaces the member from
+        // the slot; service AdvanceOrigin removes membership before issuing its exit movement.
+        if (IsClaimedAssignment && DistanceToTarget <= ReacquireRadius)
+        { return; }
+
+        if (IsClaimedAssignment)
+        {
+            // Crossing the reacquire radius is the explicit ownership boundary: station keeping is
+            // now taking over even if another consumer authored the active episode. Stop first so
+            // HandleRequests zeros its outward desired velocity; a bare replacement MoveTo preserves
+            // momentum by design and can otherwise send the agent around a wide return arc.
+            UCk_Utils_CrowdAgent_UE::Request_Stop(Agent, {});
+        }
+        // An ordinary unclaimed assignment revision is a retarget, not a terminal movement
+        // transition. MoveTo deliberately preserves momentum across back-to-back goals; inserting
+        // Stop here creates a visible Stop -> PathPending -> accelerate pulse for every queue reflow.
         InAdapter._IssuedQueueAssignmentRevision = 0;
         InAdapter._IssuedCrowdCorrelationId = 0;
         InAdapter._ReportedQueueAssignmentRevision = 0;
         InAdapter._JoinPending = false;
         InAdapter._PendingQueueRevision = 0;
         const auto Correlation = NextNonZeroCorrelation(InAdapter._NextCrowdCorrelationId);
-        auto MoveTo = FCk_Request_CrowdAgent_MoveTo{Snapshot.Get_TargetWorldTransform().GetLocation()};
-        MoveTo.Set_CorrelationId(Correlation);
+        auto MoveTo = FCk_Request_CrowdAgent_MoveTo{TargetLocation};
+        MoveTo.Set_CorrelationId(Correlation)
+            .Set_ArrivalRadiusOverrideMode(ECk_Override::Override)
+            .Set_ArrivalRadiusOverrideValue(
+                UCk_Utils_Queue_UE::Get_SlotSettleRadiusUu(InAdapter._Queue));
         UCk_Utils_CrowdAgent_UE::Request_MoveTo(Agent, MoveTo, {});
 
         InAdapter._IssuedQueueAssignmentRevision = Snapshot.Get_AssignmentRevision();
         InAdapter._IssuedCrowdCorrelationId = Correlation;
-        InAdapter._ReportedQueueAssignmentRevision = 0;
+        // Station keeping is a new Crowd episode for the SAME claimed assignment, not another
+        // semantic arrival. Preserve the reported revision so ObserveOutcome cannot emit a second
+        // SlotReached merely because push-apart displaced the member.
+        InAdapter._ReportedQueueAssignmentRevision = IsClaimedAssignment
+            ? Snapshot.Get_AssignmentRevision()
+            : 0;
     }
 
     auto
@@ -191,14 +237,16 @@ namespace ck
             || UCk_Utils_CrowdAgent_UE::Get_ActiveMoveCorrelationId(Agent) != InAdapter._IssuedCrowdCorrelationId)
         { return; }
 
+        const auto CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+            UCk_Utils_Transform_UE::CastChecked(Agent));
+        const auto DistanceToTarget = FVector::Dist(
+            CurrentLocation,
+            Snapshot.Get_TargetWorldTransform().GetLocation());
+        const auto ClaimRadius = UCk_Utils_Queue_UE::Get_SlotClaimRadiusUu(InAdapter._Queue);
+
         auto Outcome = TOptional<ECk_Queue_MovementOutcome>{};
-        if (UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(Agent))
-        {
-            if (UCk_Utils_CrowdAgent_UE::Get_MovementState(Agent)
-                != ECk_CrowdAgent_MovementState::Idle)
-            { return; }
-            Outcome = ECk_Queue_MovementOutcome::Reached;
-        }
+        if (DistanceToTarget <= ClaimRadius)
+        { Outcome = ECk_Queue_MovementOutcome::Reached; }
         else if (UCk_Utils_CrowdAgent_UE::Get_IsGoalFailedHold(Agent))
         { Outcome = ECk_Queue_MovementOutcome::Failed; }
 

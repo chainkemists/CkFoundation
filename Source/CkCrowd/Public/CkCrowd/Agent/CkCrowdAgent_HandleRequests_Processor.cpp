@@ -488,6 +488,10 @@ namespace ck
         -> void
     {
         InDesired._Velocity = FVector::ZeroVector;
+        // AccelClamp reconstructs this frame's output from _LastVelocity. Clear its baseline too,
+        // otherwise a Stop followed by a MoveTo in the same request batch inherits the old heading
+        // and can arc away from the new goal despite Stop's immediate-halt contract.
+        InDesired._LastVelocity = FVector::ZeroVector;
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ProtectedLeadingWaypointCount = 0;
         InHandle.Get<FFragment_CrowdAgent_PathTrouble>() = FFragment_CrowdAgent_PathTrouble{};
