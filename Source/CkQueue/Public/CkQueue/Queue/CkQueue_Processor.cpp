@@ -668,7 +668,10 @@ namespace ck
             && InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
         {
             // Keep this request drain Ready: another origin may report its own current offer reached this frame.
-            // Formation runs after the drain and opens the next offer per origin.
+            // Formation runs after the drain and opens the next offer per origin. The flag is required
+            // because the formation processor early-outs on a settled Ready queue — without it the
+            // reach event is swallowed and the next member is never offered a slot.
+            InCurrent._HasPendingClaimOffer = true;
             InQueue.AddOrGet<FTag_Queue_NeedsFormation>();
         }
         return true;
