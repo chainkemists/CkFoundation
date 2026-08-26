@@ -69,7 +69,13 @@ namespace ck
 
         using namespace ck_crowd_agent_stationary_markup;
 
-        if (UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Disabled ||
+        // A permeable agent is not an obstacle, so it must not paint one. Left in the view rather
+        // than TExclude'd because THIS processor is the only thing that unpaints: excluding an
+        // agent that became permeable while already painted would strand its cost disc on the
+        // navmesh forever, and every other agent would keep planning around a body it can walk
+        // straight through.
+        if (InHandle.Has<FTag_CrowdAgent_Permeable>() ||
+            UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Disabled ||
             NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {
             Remove_Markup(InMarkup);

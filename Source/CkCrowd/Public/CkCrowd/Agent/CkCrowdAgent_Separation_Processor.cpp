@@ -37,6 +37,16 @@ namespace ck
         const auto SeparationWeight = InParams.Get_SeparationWeight();
         const auto MaxSpeed = InParams.Get_MaxSpeed();
 
+        // A permeable agent passes THROUGH bodies, so it has no repulsion at all. Handled here
+        // rather than by TExclude precisely because this processor is the only writer of the force
+        // and Steering reads it unconditionally: excluding the agent would freeze the last force it
+        // computed and Steering would keep applying it as a constant lateral bias forever.
+        if (InHandle.Has<FTag_CrowdAgent_Permeable>())
+        {
+            InSeparationForce._Force = FVector::ZeroVector;
+            return;
+        }
+
         // Zeroing any of these in params is the documented way to opt out of separation.
         if (SeparationRadius <= 0.0f || SeparationWeight <= 0.0f || MaxSpeed <= 0.0f)
         {

@@ -813,6 +813,55 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Request_SetPermeable(
+        FCk_Handle_CrowdAgent& InAgent,
+        ECk_EnableDisable InPermeable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetPermeable"), InAgent)
+    {
+        InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAgent;
+    }
+
+    if (InPermeable == ECk_EnableDisable::Enable)
+    { InAgent.AddOrGet<ck::FTag_CrowdAgent_Permeable>(); }
+    else
+    { InAgent.Try_Remove<ck::FTag_CrowdAgent_Permeable>(); }
+
+    // NOTE: the stale-separation-force hazard is handled in FProcessor_CrowdAgent_Separation, not
+    // here. Separation is the only writer of that fragment and only zeroes it on a frame it runs;
+    // Steering reads and adds it unconditionally. So the processor keeps the agent in its view and
+    // zeroes-then-returns on the tag, rather than being TExclude'd — which also means the tag works
+    // when set by any path, not only through this function.
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Succeeded);
+
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_IsPermeable(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InAgent))
+    { return false; }
+
+    return InAgent.Has<ck::FTag_CrowdAgent_Permeable>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CrowdAgent_UE, FCk_Handle_CrowdAgent, ck::FFragment_CrowdAgent_Params);
 
 // --------------------------------------------------------------------------------------------------------------------

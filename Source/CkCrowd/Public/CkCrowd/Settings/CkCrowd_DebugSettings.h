@@ -68,6 +68,11 @@ private:
                       ToolTip = "Draw the orbit-diagnosis rings for every crowd agent: arrival ring (green) + predicted-orbit ring (red, = MaxSpeed/MaxTurnRate) at the goal, the turn-radius circle (blue, = speed/MaxTurnRate) tangent to the agent, and the velocity vector (yellow). The selected agent is always drawn regardless of this toggle."))
     bool _DrawAgentRings = false;
 
+    UPROPERTY(Config, EditAnywhere, Category = "Visualization",
+              meta = (AllowPrivateAccess = true,
+                      ToolTip = "Draw a filled floor disc under every HELD crowd agent, coloured by block cause (GoalOccupied orange / GoalCrowded magenta / NoProgress red), plus a line to the agent that is holding it. The disc is a retained CkPmg shape created once per agent and toggled, not redrawn per frame. Cause, boundedness and crowd depth are reported as TEXT by the entity debug overlay's Crowd provider, not here. Free when nothing is blocked."))
+    bool _DrawBlockStatus = true;
+
 public:
     CK_PROPERTY(_DrawAgentBody);
     CK_PROPERTY(_DrawSeparation);
@@ -76,6 +81,7 @@ public:
     CK_PROPERTY(_DrawPathTrouble);
     CK_PROPERTY(_DrawNavProjection);
     CK_PROPERTY(_DrawAgentRings);
+    CK_PROPERTY(_DrawBlockStatus);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -117,6 +123,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool
     Get_DrawAgentRings();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
+    static bool
+    Get_DrawBlockStatus();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
