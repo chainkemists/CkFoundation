@@ -49,6 +49,7 @@ namespace ck
         const auto NavigationRevision = RevisionSubsystem->Get_Revision();
         if (InCurrent._LastNavigationRevision == INDEX_NONE)
         { InCurrent._LastNavigationRevision = NavigationRevision; }
+        const auto NavigationChanged = InCurrent._LastNavigationRevision != NavigationRevision;
 
         const auto HasPartialWaiters = [&InCurrent]()
         {
@@ -309,6 +310,10 @@ namespace ck
         PlacementByMember.Init(INDEX_NONE, InCurrent._Members.Num());
         auto PlacementIsUsed = TArray<bool>{};
         PlacementIsUsed.Init(false, LayoutResult.Placements.Num());
+        auto MemberAssignmentChanged = TArray<bool>{};
+        MemberAssignmentChanged.Init(false, InCurrent._Members.Num());
+        auto NextUnclaimedPlacementByOrigin = TArray<int32>{};
+        NextUnclaimedPlacementByOrigin.Init(INDEX_NONE, InCurrent._Origins.Num());
         if (ClaimOnReach)
         {
             // Claims are identified by their slot identity, never their current member-array index. Weighted
@@ -333,10 +338,55 @@ namespace ck
                 }
             }
 
+            // Preserve the weighted member-to-origin allocation below, but give every unclaimed member of
+            // an origin this origin's next free slot as a provisional target. Reached reports then decide
+            // who actually owns that slot; the winner remains claimed while the next formation retargets the
+            // other contenders with a newer assignment revision.
+            for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
+            {
+                if (PlacementIsUsed[PlacementIndex]) { continue; }
+
+                const auto& Placement = LayoutResult.Placements[PlacementIndex];
+                if (NOT NextUnclaimedPlacementByOrigin.IsValidIndex(Placement.OriginIndex)) { continue; }
+
+                const auto CurrentNextPlacement = NextUnclaimedPlacementByOrigin[Placement.OriginIndex];
+                if (CurrentNextPlacement == INDEX_NONE
+                    || Placement.OriginRank
+                        < LayoutResult.Placements[CurrentNextPlacement].OriginRank)
+                {
+                    NextUnclaimedPlacementByOrigin[Placement.OriginIndex] = PlacementIndex;
+                }
+            }
+
+            const auto TakeUnusedPlacementForOrigin = [&LayoutResult, &PlacementIsUsed](int32 InOriginIndex) -> int32
+            {
+                if (InOriginIndex == INDEX_NONE) { return INDEX_NONE; }
+
+                for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
+                {
+                    if (PlacementIsUsed[PlacementIndex]
+                        || LayoutResult.Placements[PlacementIndex].OriginIndex != InOriginIndex)
+                    { continue; }
+
+                    PlacementIsUsed[PlacementIndex] = true;
+                    return PlacementIndex;
+                }
+                return INDEX_NONE;
+            };
+
             auto NextPlacementIndex = 0;
             for (const auto MemberIndex : ActiveMemberIndices)
             {
                 if (PlacementByMember[MemberIndex] != INDEX_NONE) { continue; }
+
+                const auto PreviousOriginIndex = PreviousMembers[MemberIndex].Get_OriginIndex();
+                const auto RetainedOriginPlacement = TakeUnusedPlacementForOrigin(PreviousOriginIndex);
+                if (RetainedOriginPlacement != INDEX_NONE)
+                {
+                    PlacementByMember[MemberIndex] = RetainedOriginPlacement;
+                    continue;
+                }
+
                 while (PlacementIsUsed.IsValidIndex(NextPlacementIndex) && PlacementIsUsed[NextPlacementIndex])
                 { ++NextPlacementIndex; }
                 if (NOT PlacementIsUsed.IsValidIndex(NextPlacementIndex)) { break; }
@@ -369,6 +419,33 @@ namespace ck
             }
 
             const auto& Placement = LayoutResult.Placements[PlacementIndex];
+            const auto ProvisionalPlacementIndex = ClaimOnReach
+                && NextUnclaimedPlacementByOrigin.IsValidIndex(Placement.OriginIndex)
+                && NextUnclaimedPlacementByOrigin[Placement.OriginIndex] != INDEX_NONE
+                ? NextUnclaimedPlacementByOrigin[Placement.OriginIndex]
+                : PlacementIndex;
+            const auto& ProvisionalPlacement = LayoutResult.Placements[ProvisionalPlacementIndex];
+            const auto PreviousWasArrived = Previous.Get_State() == ECk_Queue_MemberState::AtFront
+                || Previous.Get_State() == ECk_Queue_MemberState::AtSlot;
+            const auto RetainedReservation = NOT ClaimOnReach
+                && Previous.Get_AssignmentRevision() > 0
+                && (Previous.Get_State() == ECk_Queue_MemberState::Assigned
+                    || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot
+                    || PreviousWasArrived)
+                && (NOT NavigationChanged || PreviousWasArrived)
+                && Previous.Get_OriginIndex() == Placement.OriginIndex
+                && Previous.Get_Rank() == Placement.OriginRank
+                && Previous.Get_TargetWorldTransform().Equals(Placement.TargetWorldTransform);
+            if (RetainedReservation)
+            {
+                // A non-navigation reflow may retain any materially unchanged reservation. During
+                // navigation revalidation only an ARRIVED reservation is stable: an en-route mover
+                // still needs a fresh assignment revision so Crowd replans a possibly invalid corridor.
+                // Preserving the arrived state prevents a settled mover from reporting SlotReached
+                // again every time its own stationary nav markup finishes rebuilding.
+                InCurrent._Members[MemberIndex] = Previous;
+                continue;
+            }
             const auto RetainedClaim = ClaimOnReach
                 && (Previous.Get_State() == ECk_Queue_MemberState::AtFront || Previous.Get_State() == ECk_Queue_MemberState::AtSlot)
                 && Previous.Get_OriginIndex() == Placement.OriginIndex
@@ -379,50 +456,29 @@ namespace ck
                 continue;
             }
 
+            const auto RetainedProvisional = ClaimOnReach
+                && NOT NavigationChanged
+                && Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot
+                && Previous.Get_AssignmentRevision() > 0
+                && Previous.Get_OriginIndex() == ProvisionalPlacement.OriginIndex
+                && Previous.Get_Rank() == ProvisionalPlacement.OriginRank
+                && Previous.Get_TargetWorldTransform().Equals(ProvisionalPlacement.TargetWorldTransform);
+            if (RetainedProvisional)
+            {
+                InCurrent._Members[MemberIndex] = Previous;
+                continue;
+            }
+
             InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(), Previous.Get_Mover(), Previous.Get_Ticket(),
-                ClaimOnReach ? INDEX_NONE : Placement.OriginIndex,
-                ClaimOnReach ? INDEX_NONE : Placement.OriginRank,
-                ClaimOnReach ? FTransform::Identity : Placement.TargetWorldTransform,
-                ClaimOnReach ? 0 : AssignmentRevision,
+                ClaimOnReach ? ProvisionalPlacement.OriginIndex : Placement.OriginIndex,
+                ClaimOnReach ? ProvisionalPlacement.OriginRank : Placement.OriginRank,
+                ClaimOnReach ? ProvisionalPlacement.TargetWorldTransform : Placement.TargetWorldTransform,
+                AssignmentRevision,
                 Previous.Get_MovementSuppressed(),
                 Previous.Get_MovementSuppressed() ? ECk_Queue_MemberState::MovementSuppressed
-                    : ClaimOnReach ? ECk_Queue_MemberState::PendingAdmission : ECk_Queue_MemberState::Assigned};
-        }
-
-        if (ClaimOnReach)
-        {
-            // Retained AtFront/AtSlot members form a contiguous prefix. Offer exactly the next rank per origin;
-            // all later members remain unassigned until that mover reaches its slot.
-            for (auto OriginIndex = 0; OriginIndex < InCurrent._Origins.Num(); ++OriginIndex)
-            {
-                auto NextRank = 0;
-                while (true)
-                {
-                    auto MemberIndex = int32{INDEX_NONE};
-                    auto PlacementIndex = int32{INDEX_NONE};
-                    for (auto CandidateIndex = 0; CandidateIndex < InCurrent._Members.Num(); ++CandidateIndex)
-                    {
-                        const auto CandidatePlacement = PlacementByMember[CandidateIndex];
-                        if (CandidatePlacement == INDEX_NONE) { continue; }
-                        const auto& Candidate = LayoutResult.Placements[CandidatePlacement];
-                        if (Candidate.OriginIndex == OriginIndex && Candidate.OriginRank == NextRank)
-                        { MemberIndex = CandidateIndex; PlacementIndex = CandidatePlacement; break; }
-                    }
-                    if (MemberIndex == INDEX_NONE) { break; }
-                    const auto Existing = InCurrent._Members[MemberIndex];
-                    if (Existing.Get_State() == ECk_Queue_MemberState::AtFront || Existing.Get_State() == ECk_Queue_MemberState::AtSlot)
-                    { ++NextRank; continue; }
-
-                    const auto& Offer = LayoutResult.Placements[PlacementIndex];
-                    InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
-                        Existing.Get_Member(), Existing.Get_Mover(), Existing.Get_Ticket(),
-                        Offer.OriginIndex, Offer.OriginRank, Offer.TargetWorldTransform, AssignmentRevision,
-                        Existing.Get_MovementSuppressed(), Existing.Get_MovementSuppressed()
-                            ? ECk_Queue_MemberState::MovementSuppressed : ECk_Queue_MemberState::MovingToSlot};
-                    break;
-                }
-            }
+                    : ClaimOnReach ? ECk_Queue_MemberState::MovingToSlot : ECk_Queue_MemberState::Assigned};
+            MemberAssignmentChanged[MemberIndex] = true;
         }
 
         InCurrent._State = ECk_Queue_State::Ready;
@@ -445,6 +501,9 @@ namespace ck
 
         for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
         {
+            if (NOT MemberAssignmentChanged[MemberIndex])
+            { continue; }
+
             const auto& Previous = PreviousMembers[MemberIndex];
             const auto& Current = InCurrent._Members[MemberIndex];
             const auto Reason = Previous.Get_OriginIndex() == INDEX_NONE

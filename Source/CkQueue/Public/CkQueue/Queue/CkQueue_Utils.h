@@ -170,6 +170,27 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Slot Claim Radius")
+    static float
+    Get_SlotClaimRadiusUu(
+        const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Slot Settle Radius")
+    static float
+    Get_SlotSettleRadiusUu(
+        const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
+              DisplayName = "[Ck][Queue] Get Slot Reacquire Radius")
+    static float
+    Get_SlotReacquireRadiusUu(
+        const FCk_Handle_Queue& InQueue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Queue",
               DisplayName = "[Ck][Queue] Get Is Member")
     static bool
     Get_IsMember(
