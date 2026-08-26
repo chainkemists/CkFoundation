@@ -1,11 +1,13 @@
 #include "CkLoadingScreen_Module.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkLoadingScreen/CkLoadingScreen_Log.h"
 #include "CkLoadingScreen/Settings/CkLoadingScreen_Settings.h"
 #include "CkLoadingScreen/Subsystem/CkLoadingScreen_Subsystem.h"
+#include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_MoviePlayerSafe_Interface.h"
 #include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_TransitionAttributes.h"
 #include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_TransitionScreen.h"
 
@@ -142,6 +144,14 @@ auto
             : ECk_LoadingScreen_TransitionMode::ParityAutoComplete;
     }();
 
+    if (RequestedMode == ECk_LoadingScreen_TransitionMode::ModeA_UmgHandOff &&
+        UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionWaitForGameThreadScreen())
+    {
+        ck::loading_screen::Log(
+            TEXT("[_TransitionModeA_UMGHandOff] wins the mode branch, so [_TransitionWaitForGameThreadScreen] does "
+                 "not apply - the handshake is only reached if Mode A fails to build a widget."));
+    }
+
     auto ResolvedMode = RequestedMode;
     auto Widget = RequestedMode == ECk_LoadingScreen_TransitionMode::ModeA_UmgHandOff
         ? DoBuildModeAWidget()
@@ -234,6 +244,15 @@ auto
         UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenWidget().TryLoadClass<UUserWidget>()};
 
     if (ck::Is_NOT_Valid(WidgetClass))
+    { return nullptr; }
+
+    const auto* ResolvedWidgetClass = WidgetClass.Get();
+    const auto WidgetIsMoviePlayerSafe = ICk_LoadingScreen_MoviePlayerSafe::Get_IsMoviePlayerSafe(ResolvedWidgetClass);
+
+    CK_ENSURE_IF_NOT(WidgetIsMoviePlayerSafe,
+        TEXT("Mode A UMG hand-off refused - widget class [{}] does not declare ICk_LoadingScreen_MoviePlayerSafe. "
+             "The MoviePlayer ticks this widget on the Slate loading thread."),
+        ResolvedWidgetClass->GetPathName())
     { return nullptr; }
 
     const auto UserWidget = UUserWidget::CreateWidgetInstance(*GameInstance, WidgetClass, NAME_None);
