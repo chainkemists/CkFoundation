@@ -40,6 +40,9 @@ namespace ck_timer_categorizer_tests
         // Ck scopes declared with a bare subsystem prefix instead of a ck:: / Ck_ token.
         {TEXT("Scheduler::Dispatch"),              TEXT("ECS (CK)")},
         {TEXT("Scheduler::EmptyViewCheck"),        TEXT("ECS (CK)")},
+        // The script-processor dispatch UFUNCTION — 2.9-4.6 ms/frame reported as "Other" in the
+        // 2026-08-26 captures. Exact-match keyword ("=ForEachBatch").
+        {TEXT("ForEachBatch"),                     TEXT("ECS (CK)")},
         {TEXT("SmTask::Tick (proc)"),              TEXT("ECS (CK)")},
         {TEXT("Sm::ComputeNetContext"),            TEXT("ECS (CK)")},
         {TEXT("EntityTag::ForEach_Entity"),        TEXT("ECS (CK)")},
