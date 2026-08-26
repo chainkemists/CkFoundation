@@ -249,7 +249,16 @@ namespace ck
         // drift and vertical drift both fold into this frame's surface correction. Using the
         // integrator's raw Z here lets downward momentum overshoot the surface and eventually
         // escape the projection extent.
-        EnqueueOffset(ResolveSurfaceOffset(From, Constrained.Location));
+        const auto SurfaceOffset = ResolveSurfaceOffset(From, Constrained.Location);
+
+        if (FMath::Abs(SurfaceOffset.Z) > InParams.Get_Radius())
+        {
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] surface walk folded dz [{}]uu at [{}]"),
+                InHandle, SurfaceOffset.Z, From);
+        }
+
+        EnqueueOffset(SurfaceOffset);
     }
 }
 
