@@ -731,6 +731,18 @@ observable, and absolute zero was simply the wrong question. Measured: framework
 content worlds in 7. Every phase is bounded, and each escape NAMES what it gave up on (`_ConvergenceUnmet`,
 `Succeeded_WithLoss`).
 
+**The stall report's per-processor half is a NON-SHIPPING capability.** `DoReport_ConvergenceStall` names
+the processors that kept the world awake by reading `FProcessorScheduler::Get_DebugFrameHistory()`, which
+lives inside `#if !UE_BUILD_SHIPPING`. A shipping build therefore has no per-processor record to attribute
+a stall with, and says so in one line rather than reporting nothing — which would read as "no processor
+was pumping". The destroy-queue census needs none of it and is emitted in every configuration.
+
+The loader also arms `ck.Scheduler.DebugTiming` once the phase is visibly stuck, but that CVar gates only the
+ELAPSED-MS columns: `DoDebugRecordProcessorPump` is called OUTSIDE the timing branch, so pump counts and entity
+counts are recorded on every non-shipping tick regardless. The report names processors from the pump counts
+alone, so the arm/restore pair buys this consumer nothing — it predates the 2026-08-20 demand-driven timing
+change and is a candidate for deletion. Do not describe that CVar as populating the history.
+
 **The client contract.** A client has no load, no report and no completion of its own, but on a listen-server
 reload it travels and rebuilds too. It ARMS from the travel URL's `?CkLoad=<epoch>` option — readable at its first
 world tick, and safe because `FURL::GetOption` matches by prefix so the engine's `load`-named-option trap does not

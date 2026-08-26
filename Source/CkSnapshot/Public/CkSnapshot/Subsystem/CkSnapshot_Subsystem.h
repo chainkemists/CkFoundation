@@ -557,8 +557,12 @@ private:
     // reader cannot reconstruct from the outcome alone: the questions that matter afterwards are WHICH facts were
     // slow, and what the pump was still finding while they were. These three are what makes that answerable from
     // any log, and they are bounded — a rolling window, never a per-frame transcript.
+    // Guarded with the only pair that reads them: both halves of arm/restore are non-shipping, so a shipping
+    // build has nothing that would reference these.
+#if !UE_BUILD_SHIPPING
     bool _ConvergenceDebugTimingArmed = false;         // this load turned ck.Scheduler.DebugTiming on
     bool _ConvergenceDebugTimingPrior = false;          // ...and this is what it was before, restored on exit
+#endif
     TSet<FName> _ConvergencePendingLastFrame;          // to spot the frame a row flips Pending -> Satisfied
     TArray<int32> _ConvergencePumpSeries;              // trailing window of per-frame pump counts
     TArray<int32> _ConvergenceSkippedSeries;           // trailing window of per-frame skipped-tick-group counts

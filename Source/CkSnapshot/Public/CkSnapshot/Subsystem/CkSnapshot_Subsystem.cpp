@@ -2420,11 +2420,18 @@ auto
     DoArm_ConvergenceDebugTiming()
     -> void
 {
+#if !UE_BUILD_SHIPPING
     if (_ConvergenceDebugTimingArmed)
     { return; }
 
     auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Scheduler.DebugTiming"));
-    if (CVar == nullptr)
+    // The CVar is registered beside the history, inside the same #if, so wherever this body compiles
+    // the CVar exists. It forces the ELAPSED-MS columns on; the pump counts this report reads are
+    // recorded every tick regardless, so a miss costs the ms detail, not the attribution.
+    const auto CVarIsRegistered = ck::IsValid(CVar, ck::IsValid_Policy_NullptrOnly{});
+    CK_ENSURE_IF_NOT(CVarIsRegistered,
+        TEXT("ck.Scheduler.DebugTiming is not registered — the convergence stall report loses its ")
+        TEXT("per-processor millisecond columns; the pump counts it names them from are unaffected"))
     { return; }
 
     _ConvergenceDebugTimingPrior = CVar->GetBool();
@@ -2437,6 +2444,7 @@ auto
 
     ck::snapshot::Display(TEXT("DIAG: v3 convergence still pending at frame [{}] — enabling ck.Scheduler.DebugTiming "
         "so the stall report can name the processors keeping the world awake"), _LoadFrameCount);
+#endif
 }
 
 auto
@@ -2444,6 +2452,7 @@ auto
     DoRestore_ConvergenceDebugTiming()
     -> void
 {
+#if !UE_BUILD_SHIPPING
     if (NOT _ConvergenceDebugTimingArmed)
     { return; }
 
@@ -2454,6 +2463,7 @@ auto
 
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Scheduler.DebugTiming")))
     { CVar->Set(false, ECVF_SetByCode); }
+#endif
 }
 
 auto
@@ -2465,6 +2475,10 @@ auto
     if (ck::Is_NOT_Valid(EcsWorld))
     { return; }
 
+    // Per-processor attribution is a NON-SHIPPING capability: the frame history it reads lives inside
+    // #if !UE_BUILD_SHIPPING in CkProcessorScheduler.h, so a shipping build has no record to attribute
+    // a stall with. The destroy-queue block below needs none of it and stays unconditional.
+#if !UE_BUILD_SHIPPING
     // Per tick group, in the order they are pumped, so the report reads the way the frame ran.
     auto OrderedTickGroups = TArray<TEnumAsByte<ETickingGroup>>{};
     EcsWorld->Get_WorldActors().GenerateKeyArray(OrderedTickGroups);
@@ -2485,7 +2499,7 @@ auto
         if (History.IsEmpty())
         {
             ck::snapshot::Display(TEXT("DIAG: v3 convergence stall — tick group [{}] has no debug frame history "
-                "(per-processor timing was not enabled long enough to record one)"), TickGroup);
+                "(the scheduler recorded no frame for this tick group)"), TickGroup);
             continue;
         }
 
@@ -2525,6 +2539,14 @@ auto
             "last recorded frame; top [{}] by pump count: {}"),
             TickGroup, Pumped.Num(), Lines.Num(), FString::Join(Lines, TEXT(" | ")));
     }
+#else
+    // Reporting nothing here would read as "no processor was pumping" — a different, and false,
+    // claim. Name what this configuration CAN answer: the pump/skip series the cap line printed just
+    // above, and the destroy-queue census that follows this block unconditionally.
+    ck::snapshot::Display(TEXT("DIAG: v3 convergence stall at frame [{}] — per-processor attribution ")
+        TEXT("is not compiled into this configuration (UE_BUILD_SHIPPING); the pump/skip series above ")
+        TEXT("and the destroy-queue census below are what this build can say"), _LoadFrameCount);
+#endif
 
     // The other row that hit the cap in practice. A destroy queue that never drains is a set of entities, and
     // naming a few of them is the difference between "something is being destroyed" and a lead.
