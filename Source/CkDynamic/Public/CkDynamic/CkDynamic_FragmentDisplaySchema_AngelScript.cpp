@@ -5,8 +5,13 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkDynamic/CkDynamic_Log.h"
+
 #include <AngelscriptCodeModule.h>
 #include <AngelscriptManager.h>
+#include <Containers/Ticker.h>
+#include <HAL/CriticalSection.h>
+#include <Misc/ScopeLock.h>
 #include <UObject/Class.h>
 #include <UObject/UnrealType.h>
 
@@ -16,6 +21,11 @@ namespace ck_dynamic_fragment_display_schema_as
 {
     const auto DisplayNameKey = FName{TEXT("DisplayName")};
     auto PostCompileHandle = FDelegateHandle{};
+
+    // The ticker handle is published from whichever thread AngelScript compiled on and consumed on the game thread at
+    // module shutdown, so the handle itself needs the lock even though FTSTicker's own add/remove are thread-safe.
+    auto PendingRefreshTickerLock = FCriticalSection{};
+    auto PendingRefreshTickerHandle = FTSTicker::FDelegateHandle{};
 
     auto MakeFragmentFallback(const UScriptStruct& InFragmentType) -> FString
     {
@@ -202,7 +212,43 @@ auto
         }
     }
 
-    return Replace_AngelscriptFragmentDisplaySchemas(MoveTemp(Schemas));
+    const auto SchemaCount = Schemas.Num();
+    const auto ObservedPathCount = ObservedPaths.Num();
+
+    if (NOT Replace_AngelscriptFragmentDisplaySchemas(MoveTemp(Schemas)))
+    { return false; }
+
+    ck::dynamic::Display(
+        TEXT("AngelScript Dynamic Fragment display schemas published: [{}] schema(s) from [{}] observed path(s)"),
+        SchemaCount, ObservedPathCount);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::dynamic::
+    Request_RefreshAngelscriptFragmentDisplaySchemas()
+    -> void
+{
+    if (IsInGameThread())
+    {
+        Refresh_AngelscriptFragmentDisplaySchemas();
+        return;
+    }
+
+    // No coalescing on purpose: a compile broadcasts PostCompile at most once, and the refresh rebuilds the whole
+    // generation from the live modules, so a duplicate marshal republishes the same values.
+    constexpr auto FireOnNextTick = 0.0f;
+    auto Handle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) -> bool
+    {
+        Refresh_AngelscriptFragmentDisplaySchemas();
+        return false;
+    }), FireOnNextTick);
+
+    auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::PendingRefreshTickerLock};
+    ck_dynamic_fragment_display_schema_as::PendingRefreshTickerHandle = MoveTemp(Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -218,7 +264,7 @@ auto
     ck_dynamic_fragment_display_schema_as::PostCompileHandle =
         FAngelscriptCodeModule::GetPostCompile().AddLambda([]
         {
-            Refresh_AngelscriptFragmentDisplaySchemas();
+            Request_RefreshAngelscriptFragmentDisplaySchemas();
         });
 
     if (FAngelscriptManager::IsInitialized())
@@ -232,6 +278,15 @@ auto
     Shutdown_AngelscriptFragmentDisplaySchemas()
     -> void
 {
+    {
+        auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::PendingRefreshTickerLock};
+        if (ck_dynamic_fragment_display_schema_as::PendingRefreshTickerHandle.IsValid())
+        {
+            FTSTicker::RemoveTicker(ck_dynamic_fragment_display_schema_as::PendingRefreshTickerHandle);
+            ck_dynamic_fragment_display_schema_as::PendingRefreshTickerHandle.Reset();
+        }
+    }
+
     if (NOT ck_dynamic_fragment_display_schema_as::PostCompileHandle.IsValid())
     { return; }
 

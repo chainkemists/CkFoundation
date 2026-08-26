@@ -4,8 +4,19 @@
 #include "CkDynamic/CkDynamic_Fragment_Data.h"
 #include "CkDynamic/CkDynamic_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure_Tracker.h"
+#include "CkCore/Macros/CkMacros.h"
+
+#include "Async/Async.h"
+#include "Containers/Ticker.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/UnrealType.h"
+
+#include <atomic>
+
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptManager.h>
+#endif
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -25,6 +36,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_DynamicFragment_DisplaySchema_Resolution,
     "Ck.CkDynamic.DisplaySchema.ExactResolutionAndFallback",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+#if WITH_ANGELSCRIPT_CK
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_DynamicFragment_DisplaySchema_WorkerThreadRefresh,
+    "Ck.CkDynamic.DisplaySchema.WorkerThreadRefreshMarshalsToGameThread",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -214,5 +232,84 @@ bool FCkTest_DynamicFragment_DisplaySchema_Resolution::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_ANGELSCRIPT_CK
+
+bool FCkTest_DynamicFragment_DisplaySchema_WorkerThreadRefresh::RunTest(const FString&)
+{
+    // Cooked AngelScript initializes on a worker, so its PostCompile broadcast arrives off the game thread. The
+    // refresh's game-thread invariant is what this marshal exists to satisfy - without it the packaged boot ensures
+    // and publishes nothing.
+    if (NOT FAngelscriptManager::IsInitialized())
+    {
+        AddInfo(TEXT("AngelScript is not initialized in this host - the marshal cannot be exercised"));
+        return true;
+    }
+
+    const auto NativePath = FString{TEXT("/Script/CkDynamic.Tests.DisplaySchema.WorkerThreadNative")};
+    const auto StaleAsPath = FString{TEXT("/Script/Angelscript.Tests.DisplaySchema.WorkerThreadStale")};
+    const auto PreviousAsSchemas = ck::dynamic::Get_AngelscriptFragmentDisplaySchemas();
+    auto PreviousNativeSchema = ck::dynamic::FFragmentDisplaySchema{};
+    const auto HadPreviousNativeSchema = ck::dynamic::TryGet_NativeFragmentDisplaySchema(
+        NativePath, PreviousNativeSchema);
+
+    auto NativeSchema = ck::dynamic::FFragmentDisplaySchema{};
+    NativeSchema.FragmentDisplayName = TEXT("Native Survives The Marshal");
+    TestTrue(TEXT("native baseline is registered"),
+        ck::dynamic::Register_NativeFragmentDisplaySchema(NativePath, MoveTemp(NativeSchema)));
+
+    // A sentinel generation no observed path can produce, so its DISAPPEARANCE is the proof that the refresh ran.
+    auto StaleSchema = ck::dynamic::FFragmentDisplaySchema{};
+    StaleSchema.FragmentDisplayName = TEXT("Stale AS Generation");
+    auto StaleGeneration = TMap<FString, ck::dynamic::FFragmentDisplaySchema>{};
+    StaleGeneration.Add(StaleAsPath, MoveTemp(StaleSchema));
+    TestTrue(TEXT("stale AS generation is seeded"),
+        ck::dynamic::Replace_AngelscriptFragmentDisplaySchemas(MoveTemp(StaleGeneration)));
+
+    const auto EnsureCountBefore = ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount();
+
+    std::atomic<bool> RequestRanOnWorker = false;
+    auto Future = Async(EAsyncExecution::ThreadPool, [&RequestRanOnWorker]()
+    {
+        RequestRanOnWorker = NOT IsInGameThread();
+        ck::dynamic::Request_RefreshAngelscriptFragmentDisplaySchemas();
+    });
+    Future.Wait();
+
+    TestTrue(TEXT("the request is issued off the game thread"), RequestRanOnWorker.load());
+
+    // The worker leg is the whole point: it may not touch the registry and it may not ensure. Scoped tightly to the
+    // Async window because the ticker pump below runs every OTHER pending core ticker too.
+    TestEqual(TEXT("the worker leg fires no ensure"),
+        ck::ensure::Get_EnsureOccurrenceTracker().GetTotalCount(), EnsureCountBefore);
+
+    auto Stored = ck::dynamic::FFragmentDisplaySchema{};
+    TestTrue(TEXT("the worker leg does not publish - the stale generation is still standing"),
+        ck::dynamic::TryGet_FragmentDisplaySchema(StaleAsPath, Stored));
+
+    FTSTicker::GetCoreTicker().Tick(0.0f);
+
+    TestFalse(TEXT("the game-thread pump replaced the AS generation"),
+        ck::dynamic::TryGet_FragmentDisplaySchema(StaleAsPath, Stored));
+    TestTrue(TEXT("native entries survive the marshalled refresh"),
+        ck::dynamic::TryGet_FragmentDisplaySchema(NativePath, Stored));
+    TestEqual(TEXT("the native entry is unchanged"),
+        Stored.FragmentDisplayName, FString{TEXT("Native Survives The Marshal")});
+
+    TestTrue(TEXT("prior AS registry is restored"),
+        ck::dynamic::Replace_AngelscriptFragmentDisplaySchemas(PreviousAsSchemas));
+    TestTrue(TEXT("native fixture is removed"),
+        ck::dynamic::Unregister_NativeFragmentDisplaySchema(NativePath));
+    if (HadPreviousNativeSchema)
+    {
+        TestTrue(TEXT("prior native fixture path is restored"),
+            ck::dynamic::Register_NativeFragmentDisplaySchema(NativePath, MoveTemp(PreviousNativeSchema)));
+    }
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#endif // WITH_ANGELSCRIPT_CK
 
 #endif
