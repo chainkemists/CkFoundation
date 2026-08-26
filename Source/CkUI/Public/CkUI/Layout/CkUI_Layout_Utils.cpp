@@ -107,6 +107,22 @@ auto
 
 auto
     UCk_Utils_UI_Layout_UE::
+    PreWarmWidgetOnLayer_Soft(
+        const APlayerController* InPlayerController,
+        FGameplayTag InLayerTag,
+        TSoftClassPtr<UCommonActivatableWidget> InWidgetClass)
+    -> void
+{
+    auto* Subsystem = Get_LayoutSubsystem(InPlayerController);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->PreWarmWidgetOnLayer_Soft(InLayerTag, InWidgetClass);
+}
+
+auto
+    UCk_Utils_UI_Layout_UE::
     PushWidgetToLayer_Instance(
         const APlayerController* InPlayerController,
         FGameplayTag InLayerTag,

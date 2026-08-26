@@ -83,6 +83,18 @@ public:
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget);
 
+    /**
+     * Async-loads the class if needed, then pre-builds its widget + Slate tree into the layer's
+     * pool off the interaction path. No-op for classes without _KeepSlateAliveWhenPooled.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Pre-Warm Widget On Layer (Soft)",
+        meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
+    static void PreWarmWidgetOnLayer_Soft(
+        const APlayerController* InPlayerController,
+        FGameplayTag InLayerTag,
+        TSoftClassPtr<UCommonActivatableWidget> InWidgetClass);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout", BlueprintCosmetic,
         DisplayName = "[Ck][UI] Pop Widget From Layer",
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))

@@ -7,6 +7,7 @@
 
 #include <CommonActivatableWidget.h>
 #include <Widgets/CommonActivatableWidgetContainer.h>
+#include <UObject/ObjectKey.h>
 
 #include "CkStack_Widget.generated.h"
 
@@ -73,6 +74,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
     void ClearAllWidgets();
 
+    /**
+     * Builds the widget AND its full Slate tree for the given class through the container's own
+     * pool, then returns it to the pool as an inactive instance while this stack keeps the Slate
+     * tree alive — so the first real push (and every later one) reuses both the UObject and the
+     * Slate with no RebuildWidget. Only classes opted in via
+     * UCk_ActivatableWidget_UE::_KeepSlateAliveWhenPooled are warmed; anything else is a no-op
+     * (warming a class whose Slate the release would drop again buys nothing).
+     * Construct fires here, once per Slate build — the class must tolerate that (see the flag's
+     * contract note).
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
+    void PreWarmWidgetClass(TSubclassOf<UCommonActivatableWidget> InWidgetClass);
+
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -120,6 +134,25 @@ protected:
 #if WITH_EDITOR
     virtual auto GetPaletteCategory() -> const FText override;
 #endif
+
+    virtual auto ReleaseSlateResources(bool bReleaseChildren) -> void override;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+private:
+    auto DoTryKeepSlateAlive(UCommonActivatableWidget* InWidget) -> void;
+    auto DoForgetKeptSlate(UCommonActivatableWidget* InWidget) -> void;
+
+    /**
+     * Slate trees deliberately kept alive across release-to-pool for opted-in widget classes
+     * (UCk_ActivatableWidget_UE::_KeepSlateAliveWhenPooled). The CommonUI pool retains the
+     * UObject on release but drops its Slate ref (bReleaseSlate=true), so without this every
+     * reopen pays a full RebuildWidget of the authored tree — 25+ ms for a large panel. The held
+     * SObjectWidget also roots its UUserWidget for GC. Entries are dropped when their widget is
+     * pushed (the container owns the tree while displayed) and re-added on pop; the whole map is
+     * cleared with this stack's own Slate.
+     */
+    TMap<FObjectKey, TSharedPtr<SWidget>> _KeptAliveSlate;
 
     // ----------------------------------------------------------------------------------------------------------------
 

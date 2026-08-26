@@ -5,6 +5,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkUICore/Types/CkUI_Types.h"
+#include "CkUICore/UserWidget/CkActivatableWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +26,10 @@ auto
 
     if (ck::Is_NOT_Valid(Widget))
     { return nullptr; }
+
+    // The container owns the Slate tree while the widget is displayed — the keep-alive ref is
+    // only needed across the pooled (popped) window, and is re-taken on pop.
+    DoForgetKeptSlate(Widget);
 
     OnPostWidgetPush(Widget);
     OnWidgetPushed.Broadcast(Widget);
@@ -48,6 +53,7 @@ auto
 
     OnPreWidgetPush(InWidgetInstance);
     AddWidgetInstance(*InWidgetInstance);
+    DoForgetKeptSlate(InWidgetInstance);
     OnPostWidgetPush(InWidgetInstance);
 
     OnWidgetPushed.Broadcast(InWidgetInstance);
@@ -66,6 +72,7 @@ auto
     { return nullptr; }
 
     OnPreWidgetPop(TopWidget);
+    DoTryKeepSlateAlive(TopWidget);
     RemoveWidget(*TopWidget);
     OnPostWidgetPop(TopWidget);
 
@@ -87,6 +94,7 @@ auto
     { return false; }
 
     OnPreWidgetPop(InWidget);
+    DoTryKeepSlateAlive(InWidget);
     RemoveWidget(*InWidget);
     OnPostWidgetPop(InWidget);
 
@@ -105,6 +113,7 @@ auto
     ck::algo::ForEachIsValid(WidgetsCopy, [this](UCommonActivatableWidget* InWidget)
     {
         OnPreWidgetPop(InWidget);
+        DoTryKeepSlateAlive(InWidget);
     });
 
     ClearWidgets();
@@ -115,6 +124,74 @@ auto
     });
 
     OnAllWidgetsCleared.Broadcast();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_WidgetStack_UE::
+    PreWarmWidgetClass(
+        TSubclassOf<UCommonActivatableWidget> InWidgetClass)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWidgetClass))
+    { return; }
+
+    const auto* WidgetCDO = Cast<UCk_ActivatableWidget_UE>(InWidgetClass->GetDefaultObject());
+    if (WidgetCDO == nullptr || NOT WidgetCDO->Get_KeepSlateAliveWhenPooled())
+    { return; }
+
+    auto* Widget = GeneratedWidgetsPool.GetOrCreateInstance(InWidgetClass);
+    if (ck::Is_NOT_Valid(Widget))
+    { return; }
+
+    // TakeWidget builds the authored tree NOW, off the interaction path (Construct fires here,
+    // once — the opt-in flag's documented contract). Our ref outlives the pool release below, so
+    // the first real push finds MyGCWidget alive and skips RebuildWidget entirely.
+    _KeptAliveSlate.Add(FObjectKey{Widget}, Widget->TakeWidget());
+    GeneratedWidgetsPool.Release(Widget, /*bReleaseSlate=*/true);
+}
+
+auto
+    UCk_WidgetStack_UE::
+    DoTryKeepSlateAlive(
+        UCommonActivatableWidget* InWidget)
+    -> void
+{
+    const auto* CkWidget = Cast<UCk_ActivatableWidget_UE>(InWidget);
+    if (CkWidget == nullptr || NOT CkWidget->Get_KeepSlateAliveWhenPooled())
+    { return; }
+
+    const auto CachedWidget = InWidget->GetCachedWidget();
+    if (NOT CachedWidget.IsValid())
+    { return; }
+
+    _KeptAliveSlate.Add(FObjectKey{InWidget}, CachedWidget);
+}
+
+auto
+    UCk_WidgetStack_UE::
+    DoForgetKeptSlate(
+        UCommonActivatableWidget* InWidget)
+    -> void
+{
+    if (InWidget == nullptr)
+    { return; }
+
+    _KeptAliveSlate.Remove(FObjectKey{InWidget});
+}
+
+auto
+    UCk_WidgetStack_UE::
+    ReleaseSlateResources(
+        bool bReleaseChildren)
+    -> void
+{
+    Super::ReleaseSlateResources(bReleaseChildren);
+
+    // The stack's own Slate is going away (world/layout teardown) — kept trees must go with it,
+    // or they would outlive the viewport they were built for.
+    _KeptAliveSlate.Empty();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

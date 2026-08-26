@@ -100,6 +100,19 @@ public:
         TSoftClassPtr<UCommonActivatableWidget> InWidgetClass,
         FCk_Delegate_UI_OnWidgetReady InOnWidgetReady);
 
+    /**
+     * Async-loads the class if needed, then pre-builds its widget + Slate tree into the layer's
+     * pool off the interaction path (UCk_WidgetStack_UE::PreWarmWidgetClass). No-op for classes
+     * without _KeepSlateAliveWhenPooled. Never suspends input — this is a background warm, not
+     * a push.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
+        DisplayName = "[Ck][UI] Pre-Warm Widget On Layer (Soft)",
+        meta = (Categories = "UI.Layer"))
+    void PreWarmWidgetOnLayer_Soft(
+        FGameplayTag InLayerTag,
+        TSoftClassPtr<UCommonActivatableWidget> InWidgetClass);
+
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Layout",
         DisplayName = "[Ck][UI] Push Widget To Layer (Instance)",
         meta = (Categories = "UI.Layer"))
