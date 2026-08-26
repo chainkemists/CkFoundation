@@ -324,6 +324,13 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
 
     inline auto ShouldSample(const FCk_Handle_CrowdAgent& InAgent, const FFragment_CrowdAgent_NeighborCache& InCache) -> bool
     {
+        // Permeable outranks EVERY other gate, including the explicit per-agent SamplingAlways
+        // override below. Predictive avoidance of a body you pass straight through is not a
+        // preference to honour, it is a contradiction — and a sampled permeable agent still swerves
+        // around neighbours it never collides with, which is the deadlock this tag exists to end.
+        if (InAgent.Has<FTag_CrowdAgent_Permeable>())
+        { return false; }
+
         if (InAgent.Has<FFragment_CrowdAgent_AvoidancePolicy>())
         {
             switch (InAgent.Get<FFragment_CrowdAgent_AvoidancePolicy>().Get_Policy())

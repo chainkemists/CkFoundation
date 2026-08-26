@@ -410,7 +410,12 @@ namespace ck
         const auto EngagementRange =
             (2.0f * SelfRadius) + ArrivalRadius + BrakingDistance + EngagementSlackCm;
 
-        if (DistanceToFinal <= EngagementRange)
+        // A permeable agent walks THROUGH the body standing on its goal, so an occupied goal is not
+        // occupied for it. Both crowd detectors are gated; NoProgress deliberately is NOT — walls
+        // and fixtures still stop a permeable agent and something must still notice.
+        const auto IsPermeable = InHandle.Has<FTag_CrowdAgent_Permeable>();
+
+        if (NOT IsPermeable && DistanceToFinal <= EngagementRange)
         {
             auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(InHandle);
             const auto SelfVel = ck::IsValid(SelfVelocity)
@@ -447,7 +452,7 @@ namespace ck
         // deeper than one braking distance from its goal, and the agents this rule exists for are
         // exactly the ones that never come near the goal at all. Contact with a settled obstruction
         // standing on the destination IS the engagement.
-        if (Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
+        if (NOT IsPermeable && Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
         {
             const auto CrowdBlocker = ck_crowdagent_blockdetect::Get_CrowdedGoalBlocker(
                 SelfLoc,
@@ -704,7 +709,19 @@ namespace ck
 
         const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
-        if (ck_crowdagent_blockdetect::Does_RememberedBlockerStillObstruct(
+        // An agent that became permeable while already HELD is the case that matters most, and it
+        // is not covered by gating block CONSTRUCTION alone: this recheck owns existing holds, and
+        // both its re-validation and its two scans are permeability-blind — a settled body still
+        // occupies the ground whether or not the observer can walk through it. So a crowd-cause
+        // hold on a permeable agent is released here by falling straight through to the resume
+        // path. NoProgress is deliberately excluded: static geometry blocks a permeable agent
+        // exactly as much as any other.
+        const auto ReleaseCrowdHoldForPermeable =
+            InHandle.Has<FTag_CrowdAgent_Permeable>() &&
+            InBlockDetect.Get_BlockedCause() != ECk_CrowdAgent_BlockedReason::NoProgress;
+
+        if (NOT ReleaseCrowdHoldForPermeable &&
+            ck_crowdagent_blockdetect::Does_RememberedBlockerStillObstruct(
                 SelfLoc,
                 InPathFollow.Get_ActiveGoal(),
                 InParams.Get_Radius(),
@@ -727,7 +744,7 @@ namespace ck
             Settings->Get_BlockedStationarySpeedThreshold(),
             InNeighborCache);
 
-        if (ck::IsValid(Blocker))
+        if (NOT ReleaseCrowdHoldForPermeable && ck::IsValid(Blocker))
         { return; }  // still taken — keep holding
 
         // Symmetric with BlockDetect's cluster rule, and load-bearing: an agent whose anchor is a
@@ -735,7 +752,8 @@ namespace ck
         // it would resume every cadence, walk back into it, re-block, and — on a NoProgress cause —
         // spend the whole retry budget doing it before failing outright. Holding costs no retry:
         // the pack is made of agents and will drain, exactly like an occupied goal.
-        if (Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
+        if (NOT ReleaseCrowdHoldForPermeable &&
+            Settings->Get_CrowdedGoalBlockMode() == ECk_CrowdCrowdedGoalBlockMode::Enabled)
         {
             const auto CrowdBlocker = ck_crowdagent_blockdetect::Get_CrowdedGoalBlocker(
                 SelfLoc,

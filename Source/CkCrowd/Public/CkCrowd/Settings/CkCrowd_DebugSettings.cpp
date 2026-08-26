@@ -18,6 +18,7 @@ namespace ck_crowd_debug_settings_cvars
     static int32 GDrawPathTrouble   = 1;
     static int32 GDrawNavProjection = 0;
     static int32 GDrawAgentRings    = 0;
+    static int32 GDrawBlockStatus   = 1;
 
     template <typename TFieldGetter, typename TFieldSetter>
     auto WriteToSettings(TFieldGetter&& InFieldGetter, TFieldSetter&& InFieldSetter, IConsoleVariable* InCVar) -> void
@@ -146,6 +147,27 @@ namespace ck_crowd_debug_settings_cvars
                 InCVar);
         }),
         ECVF_Cheat);
+
+    static FAutoConsoleVariableRef CVarDrawBlockStatus(
+        TEXT("ck.Crowd.DrawBlockStatus"),
+        GDrawBlockStatus,
+        TEXT("Draw a filled floor disc under every HELD crowd agent.\n")
+        TEXT("  0 = off\n")
+        TEXT("  1 = on (default) - disc coloured by block cause (GoalOccupied orange /\n")
+        TEXT("        GoalCrowded magenta / NoProgress red), plus a line to the agent holding it.\n")
+        TEXT("        Retained CkPmg geometry: created once per agent that is ever blocked and\n")
+        TEXT("        toggled thereafter, never redrawn per frame.\n")
+        TEXT("        Cause, boundedness and crowd depth are TEXT and live on the entity debug\n")
+        TEXT("        overlay's Crowd provider instead of competing with it in world space.\n")
+        TEXT("        Free when nothing is blocked."),
+        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
+        {
+            WriteToSettings(
+                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawBlockStatus(); },
+                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawBlockStatus(InV); },
+                InCVar);
+        }),
+        ECVF_Cheat);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -176,6 +198,11 @@ auto
     { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
     { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
+    // Defaults ON, so it needs PathTrouble's explicit-priority Set rather than
+    // SetWithCurrentPriority: hydrating a default-1 CVar at its own current (default) priority is a
+    // no-op, which would silently ignore a user who turned it OFF in a previous session.
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawBlockStatus")))
+    { CVar->Set(_DrawBlockStatus ? 1 : 0, ECVF_SetByGameSetting); }
 }
 
 #if WITH_EDITOR
@@ -229,6 +256,17 @@ auto
     {
         if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
         { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
+    }
+    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawBlockStatus))
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawBlockStatus")))
+        {
+            CVar->SetWithCurrentPriority(
+                _DrawBlockStatus ? 1 : 0,
+                NAME_None,
+                ECVF_SetByConsole,
+                ECVF_SetByScalability);
+        }
     }
 }
 #endif
@@ -310,6 +348,17 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawAgentRings();
+}
+
+auto
+    UCk_Utils_Crowd_DebugSettings_UE::
+    Get_DrawBlockStatus()
+    -> bool
+{
+    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+    return Settings->Get_DrawBlockStatus();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
