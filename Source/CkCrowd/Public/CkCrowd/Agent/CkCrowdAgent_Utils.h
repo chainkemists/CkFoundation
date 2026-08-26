@@ -405,6 +405,32 @@ public:
     Get_HasDebugOverride(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // ---- Permeability (agents pass through each other) ----------------------------------------
+
+    // Makes the agent pass THROUGH other agents: no avoidance sampling, no separation force, no
+    // de-overlap, and no crowd-cause block detection. Bodies interpenetrate. Use where throughput
+    // matters more than the look of a crowd — a packed interior where agents would otherwise
+    // deadlock each other.
+    //
+    // Server-side: it changes simulated movement, exactly like Request_MoveTo. A client only ever
+    // renders the resulting replicated transforms.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Set Permeable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_CrowdAgent
+    Request_SetPermeable(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        ECk_EnableDisable InPermeable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Permeable")
+    static bool
+    Get_IsPermeable(
+        const FCk_Handle_CrowdAgent& InAgent);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|CrowdAgent",

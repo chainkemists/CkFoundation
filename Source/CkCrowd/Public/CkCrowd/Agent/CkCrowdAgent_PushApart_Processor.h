@@ -29,6 +29,11 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
+            // A permeable agent does not de-overlap: bodies interpenetrate on purpose. Safe as a
+            // view exclusion (unlike Separation) because this processor STAGES into
+            // PendingDisplacement, which ConstrainToNavmesh consumes and clears every frame -- a
+            // skipped agent leaves nothing stale behind.
+            TExclude<FTag_CrowdAgent_Permeable>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -293,6 +293,20 @@ namespace ck
     // Cleared by any external MoveTo or Stop.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalBlocked);
 
+    // The agent passes THROUGH other agents: no avoidance sampling, no separation force, no
+    // post-integration de-overlap, and no crowd-cause block detection. Bodies interpenetrate, and
+    // that is the point — it trades the look of a crowd for the guarantee that agents can never
+    // deadlock each other.
+    //
+    // This is ONE tag rather than four switches because every consumer has to agree. Turning off
+    // only the sampler leaves agents shoved apart; turning off only the forces leaves them standing
+    // INSIDE each other while still `GoalBlocked` on one another, which looks like a fix and is not.
+    //
+    // What it deliberately does NOT disable: `ConstrainToNavmesh` (still the single transform
+    // writer, so a permeable agent still cannot leave the navmesh) and the `NoProgress` block
+    // detector (walls and fixtures still stop agents, and something must still notice).
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Permeable);
+
     // A movement episode ended because no usable path exists or a bounded NoProgress retry
     // budget was exhausted. The active goal remains in PathFollow for diagnostics and an
     // explicit ForceRepath/new-goal wake, but identical ordinary MoveTo requests are inert.
