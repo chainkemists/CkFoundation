@@ -260,7 +260,11 @@ namespace ck::scriptprocessor_driver_generator
         Out += TEXT("    {\n");
         // Batch level, not per-entity: authored ForEachEntity bodies stay free of stat boilerplate.
         Out += TEXT("        auto _CkPerfScope = ck::ScopedStat();\n");
-        Out += TEXT("        for (int32 i = 0; i < Batch.Num(); ++i)\n");
+        // Hoisted: every Batch accessor resolves the live batch state under a global lock
+        // (CkDynamic_ScriptQueryBatch.cpp), so Num() in the for-condition paid one lock per
+        // entity per processor per frame. The count cannot change mid-batch by contract.
+        Out += TEXT("        const int32 NumEntities = Batch.Num();\n");
+        Out += TEXT("        for (int32 i = 0; i < NumEntities; ++i)\n");
         Out += TEXT("        {\n");
 
         auto CallArgs = FString{TEXT("InDeltaT")};
