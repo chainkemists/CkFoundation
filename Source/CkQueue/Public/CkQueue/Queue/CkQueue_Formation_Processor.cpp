@@ -60,6 +60,18 @@ namespace ck
             return false;
         };
 
+        // A settled queue holds FTag_Queue_NeedsFormation purely as a navigation-revision subscription.
+        // This processor is the only thing that re-solves a formation, and no caller can send a "the world
+        // changed" request, so a line that has already placed everyone must keep listening or it never
+        // notices an obstacle appearing inside it -- a fixture dropped mid-queue otherwise leaves the
+        // members walking to slots that now sit inside the new geometry. The subscription is the
+        // mechanism; this early-out is what makes holding it every frame cheap.
+        if (InCurrent._State == ECk_Queue_State::Ready
+            && InCurrent._LastNavigationRevision == NavigationRevision
+            && NOT HasPartialWaiters()
+            && NOT InCurrent._HasPendingClaimOffer)
+        { return; }
+
         // A failed mover stays counted for admission pressure but has no slot. Once navigation changes, it is
         // deterministically rearmed behind the viable members that were allowed to reflow meanwhile.
         if (HasPartialWaiters() && InCurrent._LastNavigationRevision != NavigationRevision)
@@ -84,7 +96,8 @@ namespace ck
                 MakePayload(InQueue, FCk_Queue_FormationState{
                     InCurrent._State, ECk_Queue_EventReason::NavigationChanged, InCurrent._Revision, InCurrent._RetryEpisode}));
         }
-        else if (HasPartialWaiters() && InCurrent._State == ECk_Queue_State::Ready)
+        else if (HasPartialWaiters() && InCurrent._State == ECk_Queue_State::Ready
+            && NOT InCurrent._HasPendingClaimOffer)
         {
             // Keep the tag as a cheap nav-revision listener, but do not rebuild the viable prefix every frame.
             return;
@@ -220,6 +233,7 @@ namespace ck
         if (ActiveMemberIndices.IsEmpty())
         {
             InCurrent._State = ECk_Queue_State::Ready;
+            InCurrent._HasPendingClaimOffer = false;
             auto EmptyOriginCounts = TArray<int32>{};
             EmptyOriginCounts.Init(0, InCurrent._Origins.Num());
             InCurrent._Pressure = FCk_Queue_Pressure{
@@ -228,8 +242,10 @@ namespace ck
                 InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
                 EmptyOriginCounts, InCurrent._Revision};
             UUtils_Signal_OnQueuePressureChanged::Broadcast(InQueue, MakePayload(InQueue, InCurrent._Pressure));
-            if (HasPartialWaiters()) { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
-            else { InQueue.Remove<MarkedDirtyBy>(); }
+            // Retained while the queue has members: the tag is this formation's nav-revision
+            // subscription (see the settled early-out above), not just a "needs work now" flag.
+            if (InCurrent._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
+            else { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
             return;
         }
 
@@ -413,6 +429,7 @@ namespace ck
         InCurrent._RetryEpisode = 0;
         InCurrent._NextFormationRetryWorldSeconds = 0.0;
         InCurrent._LastNavigationRevision = NavigationRevision;
+        InCurrent._HasPendingClaimOffer = false;
         InCurrent._Pressure = FCk_Queue_Pressure{
             InCurrent._Members.Num(),
             InParams.Get_SoftLimit(),
@@ -421,8 +438,10 @@ namespace ck
             InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
             OriginCounts,
             InCurrent._Revision};
-        if (HasPartialWaiters()) { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
-        else { InQueue.Remove<MarkedDirtyBy>(); }
+        // Retained while the queue has members: the tag is this formation's nav-revision
+        // subscription (see the settled early-out above), not just a "needs work now" flag.
+        if (InCurrent._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
+        else { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
 
         for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
         {
