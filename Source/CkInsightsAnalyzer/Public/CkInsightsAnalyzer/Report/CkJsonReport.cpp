@@ -524,6 +524,19 @@ auto
             static_cast<double>(Stats.ExcludedScreenshotFrameCount));
     }
 
+    // Screenshot frames that stayed in the averages but were skipped by the worst-frame ranking
+    // (capture cost, not game cost). Absent when screenshots were off or excluded.
+    if (Stats.ScreenshotFrameIndices.Num() > 0)
+    {
+        const auto ScreenshotValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(
+            Stats.ScreenshotFrameIndices,
+            [](uint64 InFrameIndex) -> TSharedPtr<FJsonValue>
+            {
+                return MakeShared<FJsonValueNumber>(static_cast<double>(InFrameIndex));
+            });
+        Multi->SetArrayField(TEXT("screenshotFrames"), ScreenshotValues);
+    }
+
     Root->SetObjectField(TEXT("multiFrame"), Multi);
     return ToJsonString(Root);
 }

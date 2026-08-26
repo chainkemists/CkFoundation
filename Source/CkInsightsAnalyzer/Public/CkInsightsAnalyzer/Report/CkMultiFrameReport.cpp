@@ -239,10 +239,15 @@ auto
         FCk_FrameAnalysisResult Result = FCk_FrameAnalyzer::AnalyzeFrame(Session, FrameIdx);
         if (NOT Result.IsValid()) continue;
 
-        if (_Config.ExcludeScreenshotFrames && DoIs_ScreenshotFrame(Result, TimerNames))
+        const bool IsScreenshotFrame = DoIs_ScreenshotFrame(Result, TimerNames);
+        if (_Config.ExcludeScreenshotFrames && IsScreenshotFrame)
         {
             ++_Stats.ExcludedScreenshotFrameCount;
             continue;
+        }
+        if (IsScreenshotFrame)
+        {
+            _Stats.ScreenshotFrameIndices.Add(FrameIdx);
         }
 
         const double DurationMs = Result.FrameDurationMs;
@@ -255,6 +260,7 @@ auto
         Summary.DurationMs = DurationMs;
         Summary.DominantCost = MoveTemp(DomCost);
         Summary.DominantCostMs = DomMs;
+        Summary.IsScreenshotFrame = IsScreenshotFrame;
         AllSummaries.Add(MoveTemp(Summary));
 
         TMap<FString, double> FrameCatExcl;
@@ -323,19 +329,32 @@ auto
         return A.DurationMs > B.DurationMs;
     });
 
-    const int32 WorstCount = FMath::Min(AllSummaries.Num(), _Config.WorstFrameCount);
-    for (int32 i = 0; i < WorstCount; ++i)
+    // Screenshot frames are capture cost, not game cost: the readback stall + PNG compress made
+    // them own this list on every screenshot-enabled capture (2026-08-26: 6 of the 10 worst-frame
+    // slots across both reports), drowning the real spikes. They stay in the averages when not
+    // excluded — ScreenshotFrameIndices reports them so the ranking skip hides nothing.
+    for (const FCk_FrameSummary& Candidate : AllSummaries)
     {
-        _Stats.WorstFrames.Add(AllSummaries[i]);
+        if (_Stats.WorstFrames.Num() >= _Config.WorstFrameCount)
+        { break; }
+        if (Candidate.IsScreenshotFrame)
+        { continue; }
 
-        FCk_FrameAnalysisResult Analysis = FCk_FrameAnalyzer::AnalyzeFrame(Session, AllSummaries[i].FrameIndex);
+        _Stats.WorstFrames.Add(Candidate);
+
+        FCk_FrameAnalysisResult Analysis = FCk_FrameAnalyzer::AnalyzeFrame(Session, Candidate.FrameIndex);
         if (Analysis.IsValid())
         {
-            _Stats.HotFrames.Add(FCk_HotFrameDetails{AllSummaries[i], MoveTemp(Analysis)});
+            _Stats.HotFrames.Add(FCk_HotFrameDetails{Candidate, MoveTemp(Analysis)});
         }
     }
-    if (AllSummaries.Num() > 0)
+    if (_Stats.WorstFrames.Num() > 0)
     {
+        _Stats.WorstFrameIndex = _Stats.WorstFrames[0].FrameIndex;
+    }
+    else if (AllSummaries.Num() > 0)
+    {
+        // Every analysed frame was a screenshot frame — degenerate, but stay truthful.
         _Stats.WorstFrameIndex = AllSummaries[0].FrameIndex;
     }
 

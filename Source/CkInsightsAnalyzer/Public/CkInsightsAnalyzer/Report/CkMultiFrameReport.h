@@ -97,6 +97,9 @@ struct FCk_FrameSummary
     /** The dominant cost in this frame (category + timer name). */
     FString DominantCost;
     double DominantCostMs = 0.0;
+
+    /** Capture-tooling frame (contains a trace-screenshot scope). Never ranked as a worst frame. */
+    bool IsScreenshotFrame = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -137,6 +140,13 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
 
     /** How many frames were skipped because they contained a trace-screenshot scope. */
     uint64 ExcludedScreenshotFrameCount = 0;
+
+    /**
+     * Screenshot frames that stayed in the averages (ExcludeScreenshotFrames off). Reported so
+     * their exclusion from the worst-frame ranking hides nothing: readback stalls made them own
+     * that list on every capture with screenshots enabled, drowning the real spikes.
+     */
+    TArray<uint64> ScreenshotFrameIndices;
 
     /** Per-category average exclusive time across all frames. */
     struct FCategoryStats
@@ -234,11 +244,15 @@ private:
                               const TMap<uint32, FString>& TimerNames) const
         -> TPair<FString, double>;
 
-    /** Whether this frame contains a trace-screenshot scope, i.e. is capture-tooling polluted. */
+public:
+    /** Whether this frame contains a trace-screenshot scope, i.e. is capture-tooling polluted.
+     *  Public like Percentile: a pure predicate the spec pins directly. */
     static auto DoIs_ScreenshotFrame(
         const FCk_FrameAnalysisResult& InResult,
         const TMap<uint32, FString>& InTimerNames)
         -> bool;
+
+private:
 
     /** Reduce the per-frame timer accumulators into _Stats.TimerAverages. Sorts the exclusive samples in place. */
     auto DoBuild_TimerAverages(
