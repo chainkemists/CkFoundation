@@ -100,6 +100,19 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
     bool _DoNotDestroyDuringTransitions = false;
 
+    /**
+     * Opt-in for UCk_WidgetStack_UE's Slate keep-alive: the widget pool retains this UObject on
+     * close but drops its Slate tree (bReleaseSlate=true), so every reopen pays a full
+     * RebuildWidget of the authored tree. With this set, the stack pins the tree across the
+     * release and a reopen (or a PreWarmWidgetClass) reuses it — no rebuild.
+     *
+     * CONTRACT CHANGE the widget must be written for: with the tree surviving, Construct/Destruct
+     * fire once per Slate build (SObjectWidget lifetime), NOT once per open/close. Per-open logic
+     * belongs on OnActivated/OnDeactivated; per-close cleanup must be driven explicitly.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
+    bool _KeepSlateAliveWhenPooled = false;
+
     UPROPERTY(Transient, BlueprintReadOnly, Category = "Ck|UI|Lifecycle")
     FGameplayTag _CurrentLayerTag;
 
@@ -108,6 +121,7 @@ public:
     CK_PROPERTY_GET(_InheritContextFromParent);
     CK_PROPERTY_GET(_ClearContextWhenDeactivated);
     CK_PROPERTY_GET(_DoNotDestroyDuringTransitions);
+    CK_PROPERTY_GET(_KeepSlateAliveWhenPooled);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -182,6 +182,38 @@ auto
 
 auto
     UCk_UI_Layout_Subsystem_UE::
+    PreWarmWidgetOnLayer_Soft(
+        FGameplayTag InLayerTag,
+        TSoftClassPtr<UCommonActivatableWidget> InWidgetClass)
+    -> void
+{
+    if (ck::Is_NOT_Valid(_Layout) || InWidgetClass.IsNull())
+    { return; }
+
+    if (InWidgetClass.IsValid())
+    {
+        if (auto* Layer = Get_Layer(InLayerTag); ck::IsValid(Layer))
+        { Layer->PreWarmWidgetClass(InWidgetClass.Get()); }
+        return;
+    }
+
+    auto& StreamableManager = UAssetManager::GetStreamableManager();
+    StreamableManager.RequestAsyncLoad(
+        InWidgetClass.ToSoftObjectPath(),
+        FStreamableDelegate::CreateWeakLambda(this,
+            [this, InLayerTag, InWidgetClass]() mutable
+        {
+            const auto LoadedClass = InWidgetClass.Get();
+            if (ck::Is_NOT_Valid(LoadedClass))
+            { return; }
+
+            if (auto* Layer = Get_Layer(InLayerTag); ck::IsValid(Layer))
+            { Layer->PreWarmWidgetClass(LoadedClass); }
+        }));
+}
+
+auto
+    UCk_UI_Layout_Subsystem_UE::
     PushWidgetToLayer_Instance(
         FGameplayTag InLayerTag,
         UCommonActivatableWidget* InWidget)
