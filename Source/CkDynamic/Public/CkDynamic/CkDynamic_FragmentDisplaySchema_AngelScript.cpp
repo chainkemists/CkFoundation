@@ -22,8 +22,7 @@ namespace ck_dynamic_fragment_display_schema_as
     const auto DisplayNameKey = FName{TEXT("DisplayName")};
     auto PostCompileHandle = FDelegateHandle{};
 
-    // The ticker handle is published from whichever thread AngelScript compiled on and consumed on the game thread at
-    // module shutdown, so the handle itself needs the lock even though FTSTicker's own add/remove are thread-safe.
+    // FTSTicker's add/remove are thread-safe; the handle crossing from the compile worker to shutdown is not.
     auto PendingRefreshTickerLock = FCriticalSection{};
     auto PendingRefreshTickerHandle = FTSTicker::FDelegateHandle{};
 
@@ -238,8 +237,7 @@ auto
         return;
     }
 
-    // No coalescing on purpose: a compile broadcasts PostCompile at most once, and the refresh rebuilds the whole
-    // generation from the live modules, so a duplicate marshal republishes the same values.
+    // No coalescing: at most one PostCompile per compile, and the refresh is an idempotent full rebuild.
     constexpr auto FireOnNextTick = 0.0f;
     auto Handle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) -> bool
     {

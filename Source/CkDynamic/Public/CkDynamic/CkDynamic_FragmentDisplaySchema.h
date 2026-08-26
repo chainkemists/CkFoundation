@@ -94,11 +94,7 @@ namespace ck::dynamic
     CKDYNAMIC_API auto
     Refresh_AngelscriptFragmentDisplaySchemas() -> bool;
 
-    /**
-     * Thread-safe entry point for producers that cannot promise a thread. AngelScript initializes on a worker in
-     * cooked builds, so its PostCompile broadcast arrives off the game thread and calling the refresh directly there
-     * fails the game-thread invariant instead of publishing anything.
-     */
+    /** Marshals to the game thread when needed - cooked AngelScript broadcasts PostCompile from a worker. */
     CKDYNAMIC_API auto
     Request_RefreshAngelscriptFragmentDisplaySchemas() -> void;
 

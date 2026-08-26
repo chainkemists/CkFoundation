@@ -237,9 +237,8 @@ bool FCkTest_DynamicFragment_DisplaySchema_Resolution::RunTest(const FString&)
 
 bool FCkTest_DynamicFragment_DisplaySchema_WorkerThreadRefresh::RunTest(const FString&)
 {
-    // Cooked AngelScript initializes on a worker, so its PostCompile broadcast arrives off the game thread. The
-    // refresh's game-thread invariant is what this marshal exists to satisfy - without it the packaged boot ensures
-    // and publishes nothing.
+    // Cooked AngelScript broadcasts PostCompile from a worker; without the marshal the packaged boot ensures and
+    // publishes nothing.
     if (NOT FAngelscriptManager::IsInitialized())
     {
         AddInfo(TEXT("AngelScript is not initialized in this host - the marshal cannot be exercised"));
