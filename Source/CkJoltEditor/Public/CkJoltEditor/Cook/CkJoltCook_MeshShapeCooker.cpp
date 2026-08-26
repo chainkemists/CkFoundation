@@ -132,13 +132,26 @@ auto
     if (const auto* Existing = LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr,
         LOAD_NoWarn | LOAD_Quiet))
     {
-        const auto UpToDate = Existing->Get_CookVersion() == MeshShapeCookVersion_Current
-            && Existing->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID)
+        const auto SourceMatches = Existing->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID)
             && Existing->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && Existing->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
 
-        if (UpToDate)
+        if (SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
         { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
+
+        // A pre-winding-fix (v2) blob shares the current encoding, and only its TRI-MESH content is
+        // wrong (inverted by the bake's pre-fix b/c swap). Peek the blob: a convex v2 blob is
+        // declared up to date rather than rewritten, keeping the fix's re-cook — and its Git LFS
+        // lock footprint — to the blobs that are actually defective. Mirrors the runtime rule in
+        // TryGet_ScaleOneShape.
+        if (SourceMatches && Existing->Get_CookVersion() == mesh_shape_utils::PreWindingFixMeshShapeCookVersion)
+        {
+            const auto Restored = mesh_shape_utils::TryRestore_ShapeBlob(
+                Existing->Get_ShapeBlob(), MeshPackagePath);
+
+            if (ck::IsValid(Restored) && Restored->GetSubType() != JPH::EShapeSubType::Mesh)
+            { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
+        }
     }
 
     auto Blob = TArray<uint8>{};
