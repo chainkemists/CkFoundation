@@ -415,24 +415,30 @@ namespace ck_jolt_bake_extraction
         auto Triangles = JPH::IndexedTriangleList{};
         Triangles.reserve(NumTris);
 
-        // Chaos and Jolt disagree on triangle winding — swap b/c so faces point outward.
+        // Chaos and Jolt AGREE on triangle winding — copy indices as-is. UE authors front faces
+        // LEFT-handed (VectorUtil::Normal reverses its cross product, saying why), and every
+        // collision provider marks its raw triangles bFlipNormals=true so the Chaos cook stores
+        // them RIGHT-handed — which is exactly Jolt's front-face convention. This code shipped for
+        // months with an extra b/c swap here that flipped the stored winding BACK to left-handed,
+        // baking every tri-mesh INSIDE-OUT (proven by Ck.Jolt.Bake.StaticMesh.
+        // EngineCubeTriMeshBakesOutward measuring the canonical engine cube at ratio -1). The
+        // DynamicMesh winding specs did not catch it because their fixtures were authored under
+        // the same reversed assumption — two errors cancelling; they are now authored in UE
+        // convention and pin the corrected chain.
         //
         // A MIRRORING scale (negative determinant — odd count of negative components) flips the
-        // handedness of the vertices baked above, which flips the winding a second time. Without
-        // compensating, every mirrored ComplexAsSimple instance bakes INSIDE-OUT: invisible to
-        // Jolt's single-sided mesh collision and to the CCD LinearCast (which ignores back faces)
-        // from its visually-front side — a thrown item passes straight through a mirrored wall.
-        // The pre-baked ScaledShape path never had this hole (Jolt's ScaleHelpers handles
-        // inside-out scale internally), so the two paths also disagreed per-instance until this.
+        // handedness of the vertices baked above, so the index order must flip WITH it to keep the
+        // final orientation outward. The pre-baked ScaledShape path never needs this (Jolt's
+        // ScaleHelpers handles inside-out scale internally).
         const bool ScaleIsInsideOut = (InScale.X * InScale.Y * InScale.Z) < 0.0;
         const auto PushTriangle = [&](uint32 InA, uint32 InB, uint32 InC) -> void
         {
             if (InA < static_cast<uint32>(NumVerts) && InB < static_cast<uint32>(NumVerts) && InC < static_cast<uint32>(NumVerts))
             {
                 if (ScaleIsInsideOut)
-                { Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
-                else
                 { Triangles.push_back(JPH::IndexedTriangle(InA, InC, InB)); }
+                else
+                { Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
             }
         };
 
@@ -446,6 +452,23 @@ namespace ck_jolt_bake_extraction
             for (const auto& Triangle : Elements.GetSmallIndexBuffer())
             { PushTriangle(Triangle[0], Triangle[1], Triangle[2]); }
         }
+
+        // Jolt mesh collision is SINGLE-SIDED: a mesh whose triangles face inward lets items through
+        // its visually-front side (they stop on the far face, inside the mesh) and the back-face-culled
+        // debug draw shows it as a hollow shell. The bake cannot repair winding — that is a source-asset
+        // defect — so it reports loudly and still bakes: refusing would downgrade wrong-sided collision
+        // to NO collision at all.
+        constexpr auto InsideOutWindingRatioThreshold = -0.05;
+        const auto WindingRatio = ComputeMeshWindingRatio(Vertices, Triangles);
+
+        CK_ENSURE_IF_NOT(WindingRatio >= InsideOutWindingRatioThreshold,
+            TEXT("Tri-mesh for [{}] baked INSIDE-OUT (signed-volume/bounds ratio [{}]): its single-sided "
+                 "Jolt collision faces INWARD — items pass through from outside and collide inside the "
+                 "mesh, and the Jolt debug draw shows a hollow shell. The SOURCE mesh's triangle winding "
+                 "is inverted: flip the normals in the DCC (or author simple collision on the asset). "
+                 "The shape is baked anyway so collision is not silently absent."),
+            InDebugName, WindingRatio)
+        {}
 
         const auto Settings = JPH::MeshShapeSettings{Vertices, Triangles};
         return Create_ShapeFromSettings(Settings, InDebugName);
@@ -640,6 +663,115 @@ namespace ck::jolt::bake
         }
 
         return Combine_Leaves(MoveTemp(Leaves), InDebugName);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        ComputeMeshWindingRatio(
+            const JPH::VertexList& InVertices,
+            const JPH::IndexedTriangleList& InTriangles)
+        -> double
+    {
+        if (InVertices.empty() || InTriangles.empty())
+        { return 0.0; }
+
+        auto BoundsMin = FVector{TNumericLimits<double>::Max()};
+        auto BoundsMax = FVector{TNumericLimits<double>::Lowest()};
+
+        for (const auto& Vertex : InVertices)
+        {
+            BoundsMin.X = FMath::Min(BoundsMin.X, static_cast<double>(Vertex.x));
+            BoundsMin.Y = FMath::Min(BoundsMin.Y, static_cast<double>(Vertex.y));
+            BoundsMin.Z = FMath::Min(BoundsMin.Z, static_cast<double>(Vertex.z));
+            BoundsMax.X = FMath::Max(BoundsMax.X, static_cast<double>(Vertex.x));
+            BoundsMax.Y = FMath::Max(BoundsMax.Y, static_cast<double>(Vertex.y));
+            BoundsMax.Z = FMath::Max(BoundsMax.Z, static_cast<double>(Vertex.z));
+        }
+
+        // Thinner than 1mm in any axis is effectively an open sheet — no volume verdict exists, and
+        // dividing by a near-zero bounds volume would manufacture one out of float noise.
+        const auto BoundsSize = BoundsMax - BoundsMin;
+        constexpr auto MinJudgeableExtent = 0.1;
+        if (BoundsSize.GetMin() <= MinJudgeableExtent)
+        { return 0.0; }
+
+        const auto BoundsVolume = BoundsSize.X * BoundsSize.Y * BoundsSize.Z;
+        const auto Center = (BoundsMin + BoundsMax) * 0.5;
+        const auto NumVertices = static_cast<uint32>(InVertices.size());
+
+        auto SignedVolumeSum = 0.0;
+
+        for (const auto& Triangle : InTriangles)
+        {
+            const auto& Indices = Triangle.mIdx;
+            if (Indices[0] >= NumVertices || Indices[1] >= NumVertices || Indices[2] >= NumVertices)
+            { continue; }
+
+            const auto A = FVector{InVertices[Indices[0]].x, InVertices[Indices[0]].y, InVertices[Indices[0]].z} - Center;
+            const auto B = FVector{InVertices[Indices[1]].x, InVertices[Indices[1]].y, InVertices[Indices[1]].z} - Center;
+            const auto C = FVector{InVertices[Indices[2]].x, InVertices[Indices[2]].y, InVertices[Indices[2]].z} - Center;
+
+            SignedVolumeSum += FVector::DotProduct(A, FVector::CrossProduct(B, C));
+        }
+
+        return (SignedVolumeSum / 6.0) / BoundsVolume;
+    }
+
+    auto
+        ComputeShapeWindingRatio(
+            const JPH::Shape& InShape)
+        -> double
+    {
+        if (InShape.GetSubType() != JPH::EShapeSubType::Mesh)
+        { return 0.0; }
+
+        const auto Bounds = InShape.GetLocalBounds();
+        const auto BoundsSize = Bounds.GetSize();
+
+        constexpr auto MinJudgeableExtent = 0.1f;
+        if (BoundsSize.ReduceMin() <= MinJudgeableExtent)
+        { return 0.0; }
+
+        const auto BoundsVolume = static_cast<double>(BoundsSize.GetX()) *
+            static_cast<double>(BoundsSize.GetY()) * static_cast<double>(BoundsSize.GetZ());
+        const auto Center = Bounds.GetCenter();
+
+        auto Context = JPH::Shape::GetTrianglesContext{};
+        InShape.GetTrianglesStart(Context, JPH::AABox::sBiggest(),
+            JPH::Vec3::sZero(), JPH::Quat::sIdentity(), JPH::Vec3::sReplicate(1.0f));
+
+        constexpr auto BatchSize = 256;
+        static_assert(BatchSize >= JPH::Shape::cGetTrianglesMinTrianglesRequested);
+
+        auto TriangleVertices = TArray<JPH::Float3>{};
+        TriangleVertices.SetNumUninitialized(BatchSize * 3);
+
+        auto SignedVolumeSum = 0.0;
+
+        for (;;)
+        {
+            const auto NumTriangles = InShape.GetTrianglesNext(Context, BatchSize, TriangleVertices.GetData());
+            if (NumTriangles <= 0)
+            { break; }
+
+            const auto ToCentered = [&](const JPH::Float3& InVertex) -> FVector
+            {
+                return FVector{
+                    InVertex.x - Center.GetX(), InVertex.y - Center.GetY(), InVertex.z - Center.GetZ()};
+            };
+
+            for (auto Index = 0; Index < NumTriangles; ++Index)
+            {
+                const auto A = ToCentered(TriangleVertices[Index * 3 + 0]);
+                const auto B = ToCentered(TriangleVertices[Index * 3 + 1]);
+                const auto C = ToCentered(TriangleVertices[Index * 3 + 2]);
+
+                SignedVolumeSum += FVector::DotProduct(A, FVector::CrossProduct(B, C));
+            }
+        }
+
+        return (SignedVolumeSum / 6.0) / BoundsVolume;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -15,6 +15,8 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Reference.h>
 #include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Geometry/IndexedTriangle.h>
+#include <Jolt/Math/Float3.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 
@@ -181,6 +183,20 @@ namespace ck::jolt::bake
         const UBodySetup& InBodySetup,
         const FVector& InScale,
         const FString& InDebugName) -> JPH::Ref<JPH::Shape>;
+
+    /// Signed enclosed volume of the triangle list (front face = right-handed winding, matching Jolt's
+    /// single-sided mesh collision), normalized by AABB volume and measured about the AABB center so an
+    /// open sheet stays near zero wherever the mesh sits. ~+1 for an outward-wound solid, strongly
+    /// negative for INSIDE-OUT geometry, ~0 for open/flat/degenerate input — 0 is "no verdict", not
+    /// "healthy". Drives the inside-out ensure in the tri-mesh bake.
+    CKJOLT_API auto ComputeMeshWindingRatio(
+        const JPH::VertexList& InVertices,
+        const JPH::IndexedTriangleList& InTriangles) -> double;
+
+    /// Same metric, measured by walking an already-created shape's triangles (mesh shapes only —
+    /// every other subtype returns 0 = no verdict). This is the form that audits a RESTORED
+    /// pre-baked blob, which never passes through the tri-mesh build above.
+    CKJOLT_API auto ComputeShapeWindingRatio(const JPH::Shape& InShape) -> double;
 
     /// Heights are UE-row-major in world-height units (landscape local height x scale.Z already applied),
     /// InSampleCount x InSampleCount, indexed [y * InSampleCount + x]; InScaleXY = landscape quad scale.
