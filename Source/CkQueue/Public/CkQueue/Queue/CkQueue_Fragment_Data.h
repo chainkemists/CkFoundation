@@ -23,8 +23,8 @@ enum class ECk_Queue_LayoutAlgorithm : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_LayoutAlgorithm);
 
-// ReserveOnFormation preserves the original eager behavior. ClaimFirstAvailableOnReach exposes one movement offer
-// per origin; the following reservation is not offered until the current mover reports Reached.
+// ReserveOnFormation eagerly reserves distinct slots. ClaimFirstAvailableOnReach provisionally assigns every
+// unclaimed member of an origin to its next free slot; the first valid Reached report claims it and retargets losers.
 UENUM(BlueprintType)
 enum class ECk_Queue_SlotClaimPolicy : uint8
 {
@@ -190,6 +190,24 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Queue_SlotClaimPolicy _SlotClaimPolicy = ECk_Queue_SlotClaimPolicy::ReserveOnFormation;
 
+    // A movement adapter may claim the current assignment once the mover enters this radius. This is
+    // deliberately wider than the settle radius: claim-first losers can retarget before the winner
+    // finishes closing the final gap.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _SlotClaimRadiusUu = 30.0f;
+
+    // The final physical stop radius for movement adapters that support station keeping.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _SlotSettleRadiusUu = 10.0f;
+
+    // A claimed mover displaced farther than this radius should reacquire its slot. Keeping this
+    // above the settle radius provides hysteresis against request chatter near the stop boundary.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _SlotReacquireRadiusUu = 20.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _TransformEpsilonUu = 25.0f;
@@ -230,6 +248,9 @@ public:
     CK_PROPERTY(_HardLimit);
     CK_PROPERTY(_LayoutAlgorithm);
     CK_PROPERTY(_SlotClaimPolicy);
+    CK_PROPERTY(_SlotClaimRadiusUu);
+    CK_PROPERTY(_SlotSettleRadiusUu);
+    CK_PROPERTY(_SlotReacquireRadiusUu);
     CK_PROPERTY(_TransformEpsilonUu);
     CK_PROPERTY(_RotationEpsilonDegrees);
     CK_PROPERTY(_MaxNavigationRetries);

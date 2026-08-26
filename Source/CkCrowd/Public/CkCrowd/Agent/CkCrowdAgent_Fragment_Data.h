@@ -501,8 +501,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Public request — "go to this world location". _ArrivalRadiusOverride lets a caller stop further
-// out than the params' _ArrivalRadius (e.g. a queue position shy of the counter).
+// Public request — "go to this world location". _ArrivalRadiusOverride lets a caller choose a
+// tighter or wider final-stop radius than the agent default for this movement episode.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Request_CrowdAgent_MoveTo : public FCk_Request_Base
 {

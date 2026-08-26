@@ -18,6 +18,42 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Queue_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_queue_processor
+{
+    auto
+    IsClaimed(
+        const FCk_Queue_MemberSnapshot& InMember)
+        -> bool
+    {
+        return InMember.Get_State() == ECk_Queue_MemberState::AtFront
+            || InMember.Get_State() == ECk_Queue_MemberState::AtSlot;
+    }
+
+    auto
+    InvalidateLaterClaims(
+        TArray<FCk_Queue_MemberSnapshot>& InOutMembers,
+        const FCk_Queue_MemberSnapshot& InRemovedOrUnavailable)
+        -> void
+    {
+        if (NOT IsClaimed(InRemovedOrUnavailable)) { return; }
+
+        for (auto& Member : InOutMembers)
+        {
+            if (NOT IsClaimed(Member)
+                || Member.Get_OriginIndex() != InRemovedOrUnavailable.Get_OriginIndex()
+                || Member.Get_Rank() <= InRemovedOrUnavailable.Get_Rank())
+            { continue; }
+
+            Member = FCk_Queue_MemberSnapshot{
+                Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
+                INDEX_NONE, INDEX_NONE, FTransform::Identity, 0,
+                Member.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -350,15 +386,8 @@ namespace ck
         InCurrent._Members.RemoveAt(MemberIndex);
         ++InCurrent._Revision;
 
-        if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
-        {
-            for (auto& Member : InCurrent._Members)
-            {
-                if (Member.Get_OriginIndex() != Removed.Get_OriginIndex() || Member.Get_MovementSuppressed()) { continue; }
-                Member = FCk_Queue_MemberSnapshot{Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
-                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
-            }
-        }
+        const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
+        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
 
         const auto RemovedSnapshot = FCk_Queue_MemberSnapshot{
             Removed.Get_Member(),
@@ -371,7 +400,7 @@ namespace ck
             false,
             ECk_Queue_MemberState::None};
 
-        RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Reflowed);
+        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Reflowed); }
         MarkFormationDirty(InQueue, InCurrent, InRequest.Get_Reason());
         RefreshPressure(InQueue, InParams, InCurrent);
         BroadcastMemberEvent(
@@ -416,15 +445,8 @@ namespace ck
         InCurrent._Members.RemoveAt(MemberIndex);
         ++InCurrent._Revision;
 
-        if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
-        {
-            for (auto& Member : InCurrent._Members)
-            {
-                if (Member.Get_OriginIndex() != Removed.Get_OriginIndex() || Member.Get_MovementSuppressed()) { continue; }
-                Member = FCk_Queue_MemberSnapshot{Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
-                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
-            }
-        }
+        const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
+        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
 
         const auto Serving = FCk_Queue_MemberSnapshot{
             Removed.Get_Member(),
@@ -437,7 +459,7 @@ namespace ck
             false,
             ECk_Queue_MemberState::Serving};
 
-        RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Advanced);
+        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Advanced); }
         MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Advanced);
         RefreshPressure(InQueue, InParams, InCurrent);
         BroadcastMemberEvent(
@@ -592,6 +614,20 @@ namespace ck
                 || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot);
         if (NOT HasIssuedAssignment)
         { return false; }
+
+        const auto ClaimAlreadyExists = InRequest.Get_Outcome() == ECk_Queue_MovementOutcome::Reached
+            && InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach
+            && InCurrent._Members.ContainsByPredicate([&Previous](const FCk_Queue_MemberSnapshot& InMember)
+            {
+                return (InMember.Get_State() == ECk_Queue_MemberState::AtFront
+                        || InMember.Get_State() == ECk_Queue_MemberState::AtSlot)
+                    && InMember.Get_OriginIndex() == Previous.Get_OriginIndex()
+                    && InMember.Get_Rank() == Previous.Get_Rank();
+            });
+        // Queue requests drain serially. The first current-revision arrival claims the provisional slot;
+        // same-drain contenders that arrive after it succeed as no-ops and are retargeted by the reflow it opens.
+        if (ClaimAlreadyExists)
+        { return true; }
 
         auto State = Previous.Get_State();
         auto Reason = ECk_Queue_EventReason::None;
@@ -980,39 +1016,23 @@ namespace ck
 
         ++InCurrent._Revision;
 
-        auto RemovedOrigins = TArray<int32>{};
-        for (const auto& Removed : RemovedMembers) { RemovedOrigins.AddUnique(Removed.Get_OriginIndex()); }
-
-        auto OriginRanks = TArray<int32>{};
-        OriginRanks.Init(0, InCurrent._Origins.Num());
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
+        if (ClaimOnReach)
         {
-            const auto Previous = InCurrent._Members[MemberIndex];
-            const auto OriginIndex = InCurrent._Origins.IsValidIndex(Previous.Get_OriginIndex())
-                ? Previous.Get_OriginIndex()
-                : 0;
-            const auto Rank = OriginRanks.IsValidIndex(OriginIndex)
-                ? OriginRanks[OriginIndex]++
-                : MemberIndex;
+            for (const auto& Removed : RemovedMembers)
+            { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
 
-            const auto MoverWasDestroyed = MembersWithDestroyedMovers.Contains(Previous.Get_Member());
-            const auto ClaimWasInvalidatedByRemoval = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach
-                && RemovedOrigins.Contains(Previous.Get_OriginIndex());
-            const auto ClearsAssignment = MoverWasDestroyed || ClaimWasInvalidatedByRemoval;
-            InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
-                Previous.Get_Member(),
-                MoverWasDestroyed ? FCk_Handle{} : Previous.Get_Mover(),
-                Previous.Get_Ticket(),
-                ClearsAssignment ? INDEX_NONE : OriginIndex,
-                ClearsAssignment ? INDEX_NONE : Rank,
-                ClearsAssignment ? FTransform::Identity : Previous.Get_TargetWorldTransform(),
-                ClearsAssignment ? 0 : Previous.Get_AssignmentRevision(),
-                Previous.Get_MovementSuppressed(),
-                MoverWasDestroyed ? ECk_Queue_MemberState::WaitingForMover
-                    : ClaimWasInvalidatedByRemoval ? ECk_Queue_MemberState::PendingAdmission : Previous.Get_State()};
-
-            if (MoverWasDestroyed)
+            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
             {
+                const auto Previous = InCurrent._Members[MemberIndex];
+                if (NOT MembersWithDestroyedMovers.Contains(Previous.Get_Member())) { continue; }
+
+                ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Previous);
+                InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+                    Previous.Get_Member(), FCk_Handle{}, Previous.Get_Ticket(),
+                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0,
+                    Previous.Get_MovementSuppressed(), ECk_Queue_MemberState::WaitingForMover};
+
                 UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
                     InQueue,
                     MakePayload(
@@ -1023,6 +1043,47 @@ namespace ck
                             Previous.Get_State(),
                             ECk_Queue_EventReason::MovementFailed,
                             InCurrent._Revision}));
+            }
+        }
+        else
+        {
+            auto OriginRanks = TArray<int32>{};
+            OriginRanks.Init(0, InCurrent._Origins.Num());
+            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+            {
+                const auto Previous = InCurrent._Members[MemberIndex];
+                const auto OriginIndex = InCurrent._Origins.IsValidIndex(Previous.Get_OriginIndex())
+                    ? Previous.Get_OriginIndex()
+                    : 0;
+                const auto Rank = OriginRanks.IsValidIndex(OriginIndex)
+                    ? OriginRanks[OriginIndex]++
+                    : MemberIndex;
+
+                const auto MoverWasDestroyed = MembersWithDestroyedMovers.Contains(Previous.Get_Member());
+                InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+                    Previous.Get_Member(),
+                    MoverWasDestroyed ? FCk_Handle{} : Previous.Get_Mover(),
+                    Previous.Get_Ticket(),
+                    MoverWasDestroyed ? INDEX_NONE : OriginIndex,
+                    MoverWasDestroyed ? INDEX_NONE : Rank,
+                    MoverWasDestroyed ? FTransform::Identity : Previous.Get_TargetWorldTransform(),
+                    MoverWasDestroyed ? 0 : Previous.Get_AssignmentRevision(),
+                    Previous.Get_MovementSuppressed(),
+                    MoverWasDestroyed ? ECk_Queue_MemberState::WaitingForMover : Previous.Get_State()};
+
+                if (MoverWasDestroyed)
+                {
+                    UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
+                        InQueue,
+                        MakePayload(
+                            InQueue,
+                            FCk_Queue_MemberEvent{
+                                InQueue,
+                                InCurrent._Members[MemberIndex],
+                                Previous.Get_State(),
+                                ECk_Queue_EventReason::MovementFailed,
+                                InCurrent._Revision}));
+                }
             }
         }
 
