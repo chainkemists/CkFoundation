@@ -24,7 +24,10 @@ namespace ck::jolt
     /// Per-mesh Jolt shape blobs under <CookedRoot>/Meshes. Staleness is ALSO guarded per-asset by the
     /// source BodySetup GUID, so this only needs to move when the blob encoding itself changes.
     /// v2: current shape blob encoding.
-    constexpr uint32 MeshShapeCookVersion_Current = 2;
+    /// v3: tri-mesh winding corrected (the bake's extra b/c swap flipped Chaos's already-right-handed
+    ///     stored triangles back to left-handed, so every v2 tri-mesh blob is INSIDE-OUT — one-sided
+    ///     Jolt collision facing inward). v2 blobs are unusable regardless of GUID freshness.
+    constexpr uint32 MeshShapeCookVersion_Current = 3;
 
     /// The per-map JoltIndex + JoltCell assets.
     /// v2: settings-driven bake filter (mobility policy + exclusions) changed the baked population.
@@ -32,7 +35,9 @@ namespace ck::jolt
     ///     only WITHIN a level — a streamed map routinely holds one `StaticMeshActor_0` PER SUBLEVEL,
     ///     so every colliding actor but one resolved to a stranger's cooked group, failed the runtime
     ///     hash check, and had its bodies SKIPPED. v2 data cannot be disambiguated after the fact.
-    constexpr uint32 WorldCookVersion_Current = 3;
+    /// v4: same tri-mesh winding correction as mesh-shape v3 — cell blobs embed the baked shapes, so
+    ///     every v3 cell containing a tri-mesh body is inside-out.
+    constexpr uint32 WorldCookVersion_Current = 4;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
