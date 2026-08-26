@@ -51,6 +51,11 @@ namespace ck
         int32 _LastNavigationRevision = INDEX_NONE;
         double _NextFormationRetryWorldSeconds = 0.0;
 
+        // A ClaimFirstAvailableOnReach slot-reached report leaves _State Ready by design (the request
+        // drain must stay Ready for same-frame reports from other origins), so this flag is what
+        // carries "the next offer must be opened" past the formation processor's settled early-out.
+        bool _HasPendingClaimOffer = false;
+
     public:
         CK_PROPERTY_GET(_Members);
         CK_PROPERTY_GET(_Origins);
