@@ -6,6 +6,7 @@
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
 
 #include <Engine/StaticMesh.h>
@@ -158,7 +159,14 @@ namespace ck::jolt::bake::mesh_shape_utils
             return Memoize({});
         }
 
-        const auto VersionsMatch = ShapeAsset->Get_CookVersion() == ck::jolt::MeshShapeCookVersion_Current
+        // A pre-winding-fix (v2) blob shares the current ENCODING — the version moved to record a
+        // semantic defect that only affects tri-meshes. Restoring it is safe, and whether it is
+        // actually stale is judged AFTER restore by shape subtype, so convex v2 blobs stay
+        // consumable instead of forcing an LFS-locked rewrite of every shape asset in the project.
+        const auto CookVersionIsCurrent =
+            ShapeAsset->Get_CookVersion() == ck::jolt::MeshShapeCookVersion_Current;
+        const auto VersionsMatch = (CookVersionIsCurrent
+                || ShapeAsset->Get_CookVersion() == PreWindingFixMeshShapeCookVersion)
             && ShapeAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
         const auto SourceMatches = ShapeAsset->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && ShapeAsset->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
@@ -185,7 +193,47 @@ namespace ck::jolt::bake::mesh_shape_utils
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
         { return Memoize({}); }
 
-        return Memoize(Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob(), MeshPackagePath));
+        auto RestoredShape = Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob(), MeshPackagePath);
+
+        // The one thing a v2 blob can be wrong about: its tri-mesh winding is inverted by
+        // construction (the bake's pre-fix b/c swap). Convex v2 content is untouched by the fix and
+        // passes through below. A Warning, not an ensure, on purpose: the runtime fallback build is
+        // CORRECT collision post-fix, so the only consequence is a skipped optimization — and every
+        // checkout hits this on every pre-fix blob until the cook re-runs, so an ensure here would
+        // red every map-loading automation test project-wide over a migration, not a defect. The
+        // winding AUDIT below stays the hard detector for genuinely inverted current content.
+        if (ck::IsValid(RestoredShape) && NOT CookVersionIsCurrent
+            && RestoredShape->GetSubType() == JPH::EShapeSubType::Mesh)
+        {
+            ck::jolt::Warning(
+                TEXT("Cooked Jolt shape for mesh [{}] predates the tri-mesh WINDING FIX (cook version [{}] "
+                     "vs [{}]) — its baked collision is inside-out by construction, so the blob is skipped "
+                     "and the shape is built (correctly) at runtime. Re-run the Jolt mesh cook to refresh it."),
+                MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current);
+            return Memoize({});
+        }
+
+        if (ck::IsValid(RestoredShape))
+        {
+            // A pre-baked blob is a FAITHFUL bake of the source mesh, so an inside-out source ships
+            // inside-out cooked collision — and this restore is the only chokepoint every valid blob
+            // passes (the build-time detector in Build_TriMeshShape never runs for one). Once per
+            // mesh per session via the memoization below.
+            constexpr auto InsideOutWindingRatioThreshold = -0.05;
+            const auto WindingRatio = ComputeShapeWindingRatio(*RestoredShape);
+
+            CK_ENSURE_IF_NOT(WindingRatio >= InsideOutWindingRatioThreshold,
+                TEXT("Cooked Jolt shape for mesh [{}] is INSIDE-OUT (signed-volume/bounds ratio [{}]): its "
+                     "single-sided collision faces INWARD — items pass through from outside and collide "
+                     "inside the mesh, and the Jolt debug draw shows a hollow shell. The blob faithfully "
+                     "bakes a source mesh whose triangle winding is inverted: flip the normals in the DCC "
+                     "(or author simple collision on the asset), then re-save so the mesh cook refreshes "
+                     "this blob. The shape is used as-is meanwhile."),
+                MeshPackagePath, WindingRatio)
+            {}
+        }
+
+        return Memoize(RestoredShape);
     }
 
     auto
@@ -237,6 +285,15 @@ namespace ck::jolt::bake::mesh_shape_utils
         {
             return InMeshPackagePath.StartsWith(InRoot);
         });
+    }
+
+    auto
+        TryRestore_ShapeBlob(
+            const TArray<uint8>& InBlob,
+            const FString& InDebugName)
+        -> JPH::Ref<JPH::Shape>
+    {
+        return Restore_SingleShapeFromBlob(InBlob, InDebugName);
     }
 
     auto

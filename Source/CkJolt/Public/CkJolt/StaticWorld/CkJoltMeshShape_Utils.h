@@ -76,6 +76,20 @@ namespace ck::jolt::bake
         CKJOLT_API auto Invalidate_CacheForMesh(
             const FString& InMeshPackagePath) -> void;
 
+        /// Restores a cooked shape blob (SaveWithChildren format) or null, ensuring on a corrupt
+        /// stream. Exposed for the cooker's up-to-date peek: a pre-winding-fix (v2) blob is stale
+        /// only if it actually holds a tri-mesh, and the blob itself is the only place that fact
+        /// lives. Requires Jolt globals (Factory) to be registered.
+        CKJOLT_API auto TryRestore_ShapeBlob(
+            const TArray<uint8>& InBlob,
+            const FString& InDebugName) -> JPH::Ref<JPH::Shape>;
+
+        /// The cook version that predates the tri-mesh winding fix. Blobs stamped with it share the
+        /// current ENCODING and their convex content is still valid — only tri-mesh blobs from that
+        /// cook are inside-out. Shared by the runtime consumer and the cooker's up-to-date rule so
+        /// the two can never disagree on what v2 means.
+        inline constexpr uint32 PreWindingFixMeshShapeCookVersion = 2;
+
         /// Test seam: drops every cached root shape and the negative-lookup memo.
         CKJOLT_API auto Reset_CacheForTesting() -> void;
     }
