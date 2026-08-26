@@ -49,11 +49,23 @@ namespace ck_dynamic_script_query_batch
 
             const auto Generation = AllocateGeneration();
             _LiveGenerations.Add(&InState, Generation);
+
+            // Arm the same-thread fast path: ForEachBatch runs synchronously on this thread, so
+            // for the whole open window this (state, generation) pair proves liveness by
+            // comparison alone — see Resolve.
+            _ThreadOpenState      = &InState;
+            _ThreadOpenGeneration = Generation;
             return Generation;
         }
 
         auto Close(FCk_ScriptQueryBatchState& InState, uint64 InGeneration) -> void
         {
+            if (_ThreadOpenState == &InState)
+            {
+                _ThreadOpenState      = nullptr;
+                _ThreadOpenGeneration = 0;
+            }
+
             const auto Lock = FScopeLock{&_Mutex};
             const auto* LiveGeneration = _LiveGenerations.Find(&InState);
 
@@ -78,6 +90,16 @@ namespace ck_dynamic_script_query_batch
             if (InBatch._State == nullptr || InBatch._Generation == 0)
             { return nullptr; }
 
+            // Fast path: the accessor is resolving the batch its own ForEachBatch call is
+            // iterating (the only shape generated drivers produce). Pure comparison against the
+            // thread-local open slot — no lock, and no dereference of an unproven pointer, so the
+            // stale-stash protection below is untouched. With ~40 dispatching processors × N
+            // entities × (2 + F) accessor calls per frame, this is thousands of game-thread lock
+            // acquisitions removed. A nested or foreign open merely displaces the slot and the
+            // displaced batch's accessors fall back to the locked registry: slower, never wrong.
+            if (InBatch._State == _ThreadOpenState && InBatch._Generation == _ThreadOpenGeneration)
+            { return InBatch._State; }
+
             const auto Lock = FScopeLock{&_Mutex};
             const auto* LiveGeneration = _LiveGenerations.Find(InBatch._State);
             if (LiveGeneration == nullptr || *LiveGeneration != InBatch._Generation)
@@ -101,7 +123,16 @@ namespace ck_dynamic_script_query_batch
         FCriticalSection                         _Mutex;
         TMap<FCk_ScriptQueryBatchState*, uint64> _LiveGenerations;
         uint64                                   _NextGeneration = 1;
+
+        // The one batch state opened by THIS thread's in-flight DoDispatchBatch, if any. Written
+        // only under Open/Close on the owning thread; read lock-free by Resolve on the same
+        // thread. Never dereferenced — only compared.
+        static thread_local FCk_ScriptQueryBatchState* _ThreadOpenState;
+        static thread_local uint64                     _ThreadOpenGeneration;
     };
+
+    thread_local FCk_ScriptQueryBatchState* FLiveStateResolver::_ThreadOpenState      = nullptr;
+    thread_local uint64                     FLiveStateResolver::_ThreadOpenGeneration = 0;
 
     auto
         GetLiveStateResolver()
