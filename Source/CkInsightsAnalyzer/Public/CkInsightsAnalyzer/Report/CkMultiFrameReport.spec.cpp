@@ -87,4 +87,47 @@ bool FCkTest_MultiFrameReport_PercentileWithLeadingZerosMatchesPadded::RunTest(c
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// The screenshot predicate decides which frames the worst-frame ranking skips as capture cost;
+// a drift here silently re-pollutes (over-match) or re-admits (under-match) the ranking, so the
+// substring contract is pinned: any "ScreenshotTracing*" scope marks the frame, case-insensitively,
+// and nothing else does.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_ScreenshotFrameDetection,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.ScreenshotFrameDetection",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_ScreenshotFrameDetection::RunTest(const FString&)
+{
+    auto TimerNames = TMap<uint32, FString>{};
+    TimerNames.Add(1, TEXT("GameThreadWaitForTask"));
+    TimerNames.Add(2, TEXT("ScreenshotTracing_Prepare"));
+    TimerNames.Add(3, TEXT("screenshottracing_execute"));
+    TimerNames.Add(4, TEXT("FScreenshotRequest"));   // not a ScreenshotTracing scope
+
+    const auto MakeResult = [](const TArray<uint32>& InTimerIndices)
+    {
+        auto Result = FCk_FrameAnalysisResult{};
+        for (const auto TimerIndex : InTimerIndices)
+        { Result.TimerExclusive.Add(TimerIndex, 0.001); }
+        return Result;
+    };
+
+    TestFalse(TEXT("plain frame"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({1}), TimerNames));
+    TestTrue(TEXT("ScreenshotTracing_Prepare marks the frame"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({1, 2}), TimerNames));
+    TestTrue(TEXT("case-insensitive sibling scope marks the frame"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({3}), TimerNames));
+    TestFalse(TEXT("a non-tracing screenshot scope does not"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({4}), TimerNames));
+    TestFalse(TEXT("timer index with no name entry does not"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({99}), TimerNames));
+    TestFalse(TEXT("empty frame"),
+        FCk_MultiFrameReport::DoIs_ScreenshotFrame(MakeResult({}), TimerNames));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif // WITH_DEV_AUTOMATION_TESTS
