@@ -327,6 +327,11 @@ auto
         TEXT("AC_Fragment"), TEXT("ObjectReplicator"), TEXT("EcsWorld"),
         TEXT("script::"),   // scheduler-emitted script-processor scopes (see CkProcessorScheduler.cpp)
 
+        // The AngelScript-side dispatch event every script processor runs through — the aggregate
+        // sibling of the per-processor script:: rows above. Exact-match: it is a bare UFUNCTION
+        // name, and a substring form could claim unrelated scopes that merely contain it.
+        TEXT("=ForEachBatch"),
+
         TEXT("Scheduler::"), TEXT("SmTask::"), TEXT("Sm::"), TEXT("EntityTag::"),
         TEXT("Record::ForEach"), TEXT("Ism::"), TEXT("DestroyEntities"),
     });
