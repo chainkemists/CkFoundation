@@ -246,6 +246,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,ResourceLoader,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
+| CkVisualLod | Camera,Core,Ecs,EcsExt,IskmRenderer,Log,ResourceLoader (budgeted SKMC-proxy ↔ batched-crowd LOD arbitration; added 2026-08-27, under construction — see its CLAUDE.md) |
 | CkVoiceChat | ActorRelay,Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings,Shapes,SpatialQuery (P4 2026-08-04 — feature-complete; engine deps AudioMixer/DeveloperSettings/GameplayTags/NetCore/Voice; never Relationship) |
 | CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UICore (UI→UICore 2026-08-14) |
