@@ -57,14 +57,14 @@ int32 UCkAngelscriptGenerator_DriftCommandlet::Main(const FString& /*InParams*/)
         else
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[DriftCommandlet] UCkDynamicHandleSubsystem unavailable — ")
+                TEXT("[DriftCommandlet] UCkDynamicHandleSubsystem unavailable - ")
                 TEXT("DynamicHandleTypes.json drift not checked."));
         }
     }
     else
     {
         ck::angelscriptgenerator::Warning(
-            TEXT("[DriftCommandlet] GEditor null despite IsEditor=true — ")
+            TEXT("[DriftCommandlet] GEditor null despite IsEditor=true - ")
             TEXT("DynamicHandleTypes.json drift not checked."));
     }
 

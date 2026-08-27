@@ -381,7 +381,7 @@ auto
     if (NOT UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads())
     {
         ck::angelscriptgenerator::Log(
-            TEXT("GenerateAllAssetRegistries requested pre-engine-init — deferring to OnFEngineLoopInitComplete."));
+            TEXT("GenerateAllAssetRegistries requested pre-engine-init - deferring to OnFEngineLoopInitComplete."));
 
         FCoreDelegates::OnFEngineLoopInitComplete.AddWeakLambda(this, [this]()
         {
@@ -396,7 +396,7 @@ auto
     if (IsGenerationInProgress)
     {
         ck::angelscriptgenerator::Warning(
-            TEXT("GenerateAllAssetRegistries requested while a generation is in progress — rescheduling."));
+            TEXT("GenerateAllAssetRegistries requested while a generation is in progress - rescheduling."));
         Request_ScheduleRegeneration();
         return;
     }
@@ -451,7 +451,7 @@ auto
     if (IsGenerationInProgress)
     {
         ck::angelscriptgenerator::Warning(
-            TEXT("GenerateAssetRegistryForConfig requested while a generation is in progress — rescheduling."));
+            TEXT("GenerateAssetRegistryForConfig requested while a generation is in progress - rescheduling."));
         Request_ScheduleRegeneration();
         return;
     }
@@ -479,7 +479,7 @@ auto
             TEXT("AssetRegistrySubsystem.GenerateAssetRegistryForConfig")))
     {
         ck::angelscriptgenerator::Warning(
-            TEXT("[AssetRegistry] Skipped generation for [{}] — this editor instance is a SECONDARY ")
+            TEXT("[AssetRegistry] Skipped generation for [{}] - this editor instance is a SECONDARY ")
             TEXT("(another instance owns Script/Generated regen)."), InConfig->GetDisplayName());
         PendingGenerationQueue.Empty();
         OnAssetRegistryComplete.Broadcast(0, 0, 0);

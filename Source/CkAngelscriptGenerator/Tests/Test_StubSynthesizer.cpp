@@ -244,9 +244,9 @@ bool FCkTest_StubSynthesizer_FindTargetFile_ByContent::RunTest(const FString&)
     const auto FileB      = TempRoot / TEXT("PluginB_EntitySpawnParams.as");
     const auto FileC      = TempRoot / TEXT("PluginC_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
-    FFileHelper::SaveStringToFile(FString{TEXT("// PluginA — references UBb_Foo_EntityScript here\n")}, *FileA);
-    FFileHelper::SaveStringToFile(FString{TEXT("// PluginB — no relevant content\n")},                  *FileB);
-    FFileHelper::SaveStringToFile(FString{TEXT("// PluginC — also references UBb_Foo_EntityScript\n")}, *FileC);
+    FFileHelper::SaveStringToFile(FString{TEXT("// PluginA - references UBb_Foo_EntityScript here\n")}, *FileA);
+    FFileHelper::SaveStringToFile(FString{TEXT("// PluginB - no relevant content\n")},                  *FileB);
+    FFileHelper::SaveStringToFile(FString{TEXT("// PluginC - also references UBb_Foo_EntityScript\n")}, *FileC);
 
     {
         const auto Match = FCkAsStubSynthesizer::Find_TargetFile_ByContent(
@@ -289,7 +289,7 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
 
     // Corrupted-canonical fixture: struct intact, namespace renamed.
     const auto Original = FString{TEXT(
-        "// Auto-generated EntityScript spawn-params — DO NOT EDIT.\n"
+        "// Auto-generated EntityScript spawn-params - DO NOT EDIT.\n"
         "\n"
         "USTRUCT()\n"
         "struct FBb_DeliveryTruck_EntityScript_SpawnParams\n"
@@ -354,7 +354,7 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
     const auto Original = FString{TEXT(
-        "// Auto-generated EntityScript spawn-params — DO NOT EDIT.\n"
+        "// Auto-generated EntityScript spawn-params - DO NOT EDIT.\n"
         "// (No FBb_Orphan_EntityScript_SpawnParams struct present.)\n"
         "// Reference: UBb_Orphan_EntityScript appears as a string in this comment.\n")};
     FFileHelper::SaveStringToFile(Original, *FixtureFile,

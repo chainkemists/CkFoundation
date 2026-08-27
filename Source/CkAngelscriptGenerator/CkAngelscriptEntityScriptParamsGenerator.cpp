@@ -416,18 +416,18 @@ namespace ck_entity_script_params_generator
     // ---- File content --------------------------------------------------
 
     static const TCHAR* FileHeader =
-        TEXT("// Auto-generated EntityScript spawn-params — DO NOT EDIT.\n")
+        TEXT("// Auto-generated EntityScript spawn-params - DO NOT EDIT.\n")
         TEXT("// This file is regenerated on editor startup and after every AngelScript recompile.\n")
         TEXT("//\n")
         TEXT("// For each UCk_EntityScript_UE subclass, two declarations are emitted:\n")
-        TEXT("//   - FCk_MyEntityScript_SpawnParams  (file-scope USTRUCT, unique name — avoids the\n")
+        TEXT("//   - FCk_MyEntityScript_SpawnParams  (file-scope USTRUCT, unique name - avoids the\n")
         TEXT("//     `Params` name-collision across namespaces that trips the Unreal naming check)\n")
         TEXT("//   - namespace UCk_MyEntityScript { FCk_MyEntityScript_SpawnParams Params() { ... } }\n")
         TEXT("//     so callers can still write `UCk_MyEntityScript::Params()`.\n")
         TEXT("//\n")
         TEXT("// Properties are flattened across the hierarchy (AS has no struct inheritance). Non-\n")
         TEXT("// trivial struct defaults outside the CkReflection_Utils allowlist are emitted without\n")
-        TEXT("// an initializer — set them on the instance before calling Request_SpawnEntity.\n\n");
+        TEXT("// an initializer - set them on the instance before calling Request_SpawnEntity.\n\n");
 
 #endif // WITH_EDITOR
 }
@@ -539,7 +539,7 @@ auto
             else
             {
                 ck::angelscriptgenerator::Log(
-                    TEXT("[CkAS ES Params] [{}] rewrite reason: line-count change only — old lines: {}, new lines: {}, first extra line: [{}]"),
+                    TEXT("[CkAS ES Params] [{}] rewrite reason: line-count change only - old lines: {}, new lines: {}, first extra line: [{}]"),
                     Bucket.PluginName, ExistingLines.Num(), NewLines.Num(),
                     ExistingLines.Num() > NewLines.Num()
                         ? ExistingLines[CommonLineCount]
@@ -572,7 +572,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[CkAS ES Params] Done — {} plugins, {} classes, {} properties total"),
+        TEXT("[CkAS ES Params] Done - {} plugins, {} classes, {} properties total"),
         Buckets.Num(), TotalClasses, TotalProperties);
 
 #endif // WITH_EDITOR

@@ -98,7 +98,7 @@ namespace ck_angelscript_generator_module
                     if (NOT IFileManager::Get().FileExists(*CanonicalPath))
                     {
                         ck::angelscriptgenerator::Log(
-                            TEXT("[Module] Retaining self-heal stub (its canonical is absent — the stub is ")
+                            TEXT("[Module] Retaining self-heal stub (its canonical is absent - the stub is ")
                             TEXT("the bootstrap for the next AS compile): {}"), File);
                         continue;
                     }
@@ -106,7 +106,7 @@ namespace ck_angelscript_generator_module
                     if (IFileManager::Get().Delete(*File, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true))
                     {
                         ck::angelscriptgenerator::Log(
-                            TEXT("[Module] Self-heal stub file served its purpose — deleting: {}"), File);
+                            TEXT("[Module] Self-heal stub file served its purpose - deleting: {}"), File);
                         ++DeletedCount;
                     }
                     else
@@ -172,7 +172,7 @@ namespace ck_angelscript_generator_module
         if (NOT GEditor)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but GEditor is null — skipping. ")
+                TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but GEditor is null - skipping. ")
                 TEXT("JSON stays in synthesized-stub state until user clicks 'Generate Handle Type Registry' manually."));
             return;
         }
@@ -182,7 +182,7 @@ namespace ck_angelscript_generator_module
         {
             ck::angelscriptgenerator::Warning(
                 TEXT("[Module] Deferred DynamicHandle JSON regen wanted, but UCkDynamicHandleSubsystem ")
-                TEXT("isn't loaded — skipping."));
+                TEXT("isn't loaded - skipping."));
             return;
         }
 
@@ -196,7 +196,7 @@ namespace ck_angelscript_generator_module
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed — strict validators active."));
+            TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed - strict validators active."));
     }
 
     auto Has_AssetRegistryStubRecoveryFiles_OnDisk() -> bool
@@ -231,7 +231,7 @@ namespace ck_angelscript_generator_module
         if (sg_AnyAssetRegistryRegenInFlight)
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] Cold-start AssetRegistry regen wanted, but a regen is already in flight — bailing."));
+                TEXT("[Module] Cold-start AssetRegistry regen wanted, but a regen is already in flight - bailing."));
             return;
         }
 
@@ -246,7 +246,7 @@ namespace ck_angelscript_generator_module
         if (NOT GEditor)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred AssetRegistry regen wanted, but GEditor is null — skipping."));
+                TEXT("[Module] Deferred AssetRegistry regen wanted, but GEditor is null - skipping."));
             return;
         }
 
@@ -254,7 +254,7 @@ namespace ck_angelscript_generator_module
         if (Subsystem == nullptr)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] Deferred AssetRegistry regen wanted, but UCkAssetRegistrySubsystem isn't loaded — skipping."));
+                TEXT("[Module] Deferred AssetRegistry regen wanted, but UCkAssetRegistrySubsystem isn't loaded - skipping."));
             return;
         }
 
@@ -296,9 +296,9 @@ namespace ck_angelscript_generator_module
                             if (Hit_HardCap && NOT Settled)
                             {
                                 ck::angelscriptgenerator::Warning(
-                                    TEXT("[Module] Idle-wait hit hard cap at {} polls — shaders idle [{}] "
+                                    TEXT("[Module] Idle-wait hit hard cap at {} polls - shaders idle [{}] "
                                          "(jobs remaining [{}]), AR idle [{}]. Firing AssetRegistry regen "
-                                         "anyway — partial *Assets.as output is possible if AR is still cataloging."),
+                                         "anyway - partial *Assets.as output is possible if AR is still cataloging."),
                                     *WaitTicks,
                                     ShadersIdle,
                                     GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
@@ -317,7 +317,7 @@ namespace ck_angelscript_generator_module
                             if (NOT GEditor)
                             {
                                 ck::angelscriptgenerator::Warning(
-                                    TEXT("[Module] GEditor went null while waiting to regen — abandoning."));
+                                    TEXT("[Module] GEditor went null while waiting to regen - abandoning."));
                                 sg_AnyAssetRegistryRegenInFlight = false;
                                 return false;
                             }
@@ -325,7 +325,7 @@ namespace ck_angelscript_generator_module
                             if (Subsystem == nullptr)
                             {
                                 ck::angelscriptgenerator::Warning(
-                                    TEXT("[Module] UCkAssetRegistrySubsystem unavailable at regen time — abandoning."));
+                                    TEXT("[Module] UCkAssetRegistrySubsystem unavailable at regen time - abandoning."));
                                 sg_AnyAssetRegistryRegenInFlight = false;
                                 return false;
                             }
@@ -354,7 +354,7 @@ namespace ck_angelscript_generator_module
             if (HasStubRecovery)
             {
                 ck::angelscriptgenerator::Warning(
-                    TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null — skipping."));
+                    TEXT("[Module] PostCompile DynamicHandle regen wanted, but GEditor is null - skipping."));
             }
             return;
         }
@@ -363,7 +363,7 @@ namespace ck_angelscript_generator_module
         if (Subsystem == nullptr)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[Module] PostCompile DynamicHandle regen wanted, but UCkDynamicHandleSubsystem isn't loaded — skipping."));
+                TEXT("[Module] PostCompile DynamicHandle regen wanted, but UCkDynamicHandleSubsystem isn't loaded - skipping."));
             return;
         }
 
@@ -389,7 +389,7 @@ namespace ck_angelscript_generator_module
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
 
         ck::angelscriptgenerator::Log(
-            TEXT("[Module] PostCompile DynamicHandle regen complete — strict validators active."));
+            TEXT("[Module] PostCompile DynamicHandle regen complete - strict validators active."));
     }
 
     // Narrowly gated: a full GenerateAllAssetRegistries on every successful AS recompile is far
@@ -403,7 +403,7 @@ namespace ck_angelscript_generator_module
         if (sg_AnyAssetRegistryRegenInFlight)
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] PostCompile fired but AssetRegistry regen already in flight — bailing."));
+                TEXT("[Module] PostCompile fired but AssetRegistry regen already in flight - bailing."));
             return;
         }
 
@@ -439,8 +439,8 @@ namespace ck_angelscript_generator_module
                     if (Hit_HardCap && NOT Settled)
                     {
                         ck::angelscriptgenerator::Warning(
-                            TEXT("[Module] PostCompile idle-wait hit hard cap at {} polls — shaders idle [{}] "
-                                 "(jobs remaining [{}]), AR idle [{}]. Firing regen anyway — partial output possible."),
+                            TEXT("[Module] PostCompile idle-wait hit hard cap at {} polls - shaders idle [{}] "
+                                 "(jobs remaining [{}]), AR idle [{}]. Firing regen anyway - partial output possible."),
                             *WaitTicks,
                             ShadersIdle,
                             GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0,
@@ -486,7 +486,7 @@ namespace ck_angelscript_generator_module
         if (FParse::Param(FCommandLine::Get(), TEXT("NoCkAsRegen")))
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] -NoCkAsRegen specified — AS bootstrap self-heal disabled."));
+                TEXT("[Module] -NoCkAsRegen specified - AS bootstrap self-heal disabled."));
             return false;
         }
 
@@ -494,7 +494,7 @@ namespace ck_angelscript_generator_module
             Settings != nullptr && NOT Settings->Get_EnableAsBootstrapSelfHeal())
         {
             ck::angelscriptgenerator::Log(
-                TEXT("[Module] CkSettings disabled AS bootstrap self-heal — skipping OnReloadHadErrors hook."));
+                TEXT("[Module] CkSettings disabled AS bootstrap self-heal - skipping OnReloadHadErrors hook."));
             return false;
         }
 
@@ -603,7 +603,7 @@ void FCkAngelscriptGeneratorModule::StartupModule()
         {
             ck::angelscriptgenerator::Log(
                 TEXT("[Module] AS bootstrap self-heal armed in SECONDARY mode (Rev 12, cycle cap {}) ")
-                TEXT("— recovery writes are deferred to the owning instance; this instance takes over ")
+                TEXT("- recovery writes are deferred to the owning instance; this instance takes over ")
                 TEXT("automatically if the owner exits."),
                 ck::angelscriptgenerator::self_heal::FCkAsRecoveryDispatcher::MaxCycles);
         }
