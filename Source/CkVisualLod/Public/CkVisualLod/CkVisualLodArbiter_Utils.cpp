@@ -2,6 +2,8 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -79,6 +81,21 @@ auto
     return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_UnbudgetedPromotedCount();
 }
 
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_Crowd(
+        const FCk_Handle_VisualLodArbiter& InHandle,
+        int32 InCrowdIndex)
+    -> ACk_Iskm_BatchedCrowd_Actor*
+{
+    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter_Current>();
+
+    if (NOT Current._Crowds.IsValidIndex(InCrowdIndex))
+    { return nullptr; }
+
+    return Current._Crowds[InCrowdIndex]._Crowd.Get();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -114,6 +131,32 @@ auto
 
     InHandle.AddOrGet<ck::FFragment_VisualLodArbiter_Requests>()._Requests.Emplace(InRequest);
 
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    BindTo_OnCrowdCreated(
+        FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Delegate_VisualLodArbiter_CrowdCreated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_VisualLodArbiter
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnVisualLodArbiter_CrowdCreated, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    UnbindFrom_OnCrowdCreated(
+        FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Delegate_VisualLodArbiter_CrowdCreated& InDelegate)
+    -> FCk_Handle_VisualLodArbiter
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnVisualLodArbiter_CrowdCreated, InHandle, InDelegate);
     return InHandle;
 }
 

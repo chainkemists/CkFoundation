@@ -280,3 +280,12 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// Fired once per crowd, right after Finalize — the game's window to push slot override materials
+// and default custom data onto the crowd actor (Get_Crowd resolves it)
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_VisualLodArbiter_CrowdCreated,
+    FCk_Handle_VisualLodArbiter, InHandle,
+    int32, InCrowdIndex);
+
+// --------------------------------------------------------------------------------------------------------------------

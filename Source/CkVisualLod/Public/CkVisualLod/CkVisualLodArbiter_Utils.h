@@ -8,7 +8,13 @@
 #include "CkVisualLod/CkVisualLodArbiter_Fragment.h"
 #include "CkVisualLod/CkVisualLodArbiter_Fragment_Data.h"
 
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
 #include "CkVisualLodArbiter_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class ACk_Iskm_BatchedCrowd_Actor;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -107,6 +113,15 @@ public:
     Get_UnbudgetedPromotedCount(
         const FCk_Handle_VisualLodArbiter& InHandle);
 
+    // Null until the crowd stands up (lazily, on the first entity that needs a slot)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName="[Ck][VisualLodArbiter] Get Crowd")
+    static ACk_Iskm_BatchedCrowd_Actor*
+    Get_Crowd(
+        const FCk_Handle_VisualLodArbiter& InHandle,
+        int32 InCrowdIndex);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisualLodArbiter",
@@ -127,6 +142,25 @@ public:
         UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
         const FCk_Request_VisualLodArbiter_ClearObserver& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName = "[Ck][VisualLodArbiter] Bind To OnCrowdCreated")
+    static FCk_Handle_VisualLodArbiter
+    BindTo_OnCrowdCreated(
+        UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Delegate_VisualLodArbiter_CrowdCreated& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName = "[Ck][VisualLodArbiter] Unbind From OnCrowdCreated")
+    static FCk_Handle_VisualLodArbiter
+    UnbindFrom_OnCrowdCreated(
+        UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Delegate_VisualLodArbiter_CrowdCreated& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

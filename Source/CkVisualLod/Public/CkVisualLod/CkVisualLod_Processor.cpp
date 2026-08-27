@@ -2,11 +2,17 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h"
+#include "CkIskmRenderer/Renderer/CkIskm_BatchedUtils.h"
+
 #include "CkVisualLod/CkVisualLod_Log.h"
 #include "CkVisualLod/CkVisualLod_Utils.h"
+#include "CkVisualLod/CkVisualLodArbiter_Processor.h"
+#include "CkVisualLod/CkVisualLodArbiter_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VisualLod_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VisualLod_HandleRequests);
@@ -105,6 +111,9 @@ namespace ck
         -> void
     {
         InCurrent._RendererOverride = InRequest.Get_Renderer();
+
+        // The rooted batch pins the PREVIOUS renderer; the next promote must load the new one
+        InCurrent._LoadedAssets = {};
     }
 
     auto
@@ -139,6 +148,40 @@ namespace ck
             FFragment_VisualLod_Current& InCurrent)
         -> void
     {
+        const auto Crowd = InCurrent._Crowd.Get();
+        if (ck::IsValid(Crowd) && InCurrent._MemberIndex != INDEX_NONE)
+        {
+            UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, InCurrent._MemberIndex, false);
+            UCk_Utils_IskmBatched_UE::Clear_CrowdMemberCosmetics(Crowd, InCurrent._MemberIndex);
+        }
+
+        auto Arbiter = InCurrent._Arbiter;
+        if (ck::IsValid(Arbiter) && UCk_Utils_VisualLodArbiter_UE::Has(Arbiter))
+        {
+            auto& ArbiterCurrent = Arbiter.Get<FFragment_VisualLodArbiter_Current>();
+
+            if (InCurrent._MemberIndex != INDEX_NONE)
+            {
+                FProcessor_VisualLodArbiter_Update::DoRecycle_Slot(ArbiterCurrent,
+                    InHandle.Get<FFragment_VisualLod_Params>().Get_CrowdIndex(),
+                    InHandle, InCurrent._MemberIndex);
+            }
+
+            if (InCurrent._Promoted)
+            { FProcessor_VisualLodArbiter_Update::DoRefund_Charge(ArbiterCurrent, InHandle, InCurrent); }
+        }
+
+        // The node is a lifetime descendant and would cascade anyway; the explicit request makes
+        // the pooled-SKMC release deterministic rather than cascade-ordered
+        if (ck::IsValid(InCurrent._VisualNode))
+        {
+            auto Node = InCurrent._VisualNode;
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Node);
+        }
+
+        InCurrent._MemberIndex = INDEX_NONE;
+        InCurrent._Crowd       = nullptr;
+        InCurrent._Promoted    = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
