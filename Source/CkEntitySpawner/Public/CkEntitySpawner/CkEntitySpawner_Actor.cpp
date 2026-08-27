@@ -280,6 +280,9 @@ auto
 
     EditorOnly_DestroyEntity();
 
+    _EditorActorTransformAtPreviewConstruction = GetActorTransform();
+    _EditorEntityTransformRelativeToActor.Reset();
+
     if (ck::Is_NOT_Valid(_EntityScript))
     { return; }
 
@@ -352,9 +355,19 @@ auto
     if (ck::Is_NOT_Valid(TransformHandle))
     { return; }
 
+    if (NOT _EditorEntityTransformRelativeToActor.IsSet())
+    {
+        const auto EntityTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+        _EditorEntityTransformRelativeToActor =
+            EntityTransform.GetRelativeTransform(_EditorActorTransformAtPreviewConstruction);
+    }
+
+    const auto EntityTransform =
+        _EditorEntityTransformRelativeToActor.GetValue() * GetActorTransform();
+
     UCk_Utils_Transform_UE::Request_SetTransform(
         TransformHandle,
-        FCk_Request_Transform_SetTransform{GetActorTransform()}, {});
+        FCk_Request_Transform_SetTransform{EntityTransform}, {});
 }
 #endif
 
