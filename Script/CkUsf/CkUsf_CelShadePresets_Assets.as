@@ -1,13 +1,13 @@
 // Language=angelscript
 
 //============================================================================
-// CEL SHADE PRESETS — the six authored styles, applied via the subsystem:
+// CEL SHADE PRESETS - the six authored styles, applied via the subsystem:
 //   UCkUsf_CelShadeSubsystem::Get_CelShadeSubsystem().Apply_Preset(CkUsf::DA_Cel_CleanAnime);
 //
 // Needs the CelShade master on disk (console: "Ck_Usf_GenerateLooks CelShade"
 // on a fresh checkout) and r.CustomDepth 3 for the per-object stencil contract.
 // Every field left unstated is the FCk_Usf_CelShade_Params default, which IS
-// the Balanced style — so each preset below reads as its delta from Balanced.
+// the Balanced style - so each preset below reads as its delta from Balanced.
 //============================================================================
 
 namespace CkUsf
@@ -72,7 +72,7 @@ namespace CkUsf
     }
 
     // Pen-and-ink: crosshatch instead of dots, more bands so the hatching has several densities to move
-    // through, and no specular — a hatched drawing has no highlights, it has unhatched paper.
+    // through, and no specular - a hatched drawing has no highlights, it has unhatched paper.
     asset DA_Cel_InkCrosshatch of UCkUsf_CelShadePreset
     {
         _Enabled                = ECk_EnableDisable::Enable;
@@ -114,10 +114,10 @@ namespace CkUsf
         _MetallicStrength = 0.5;
     }
 
-    // UNEQUAL BANDS — the demonstration of ECk_Usf_CelDistribution::CustomEdges. Three bands from two
+    // UNEQUAL BANDS - the demonstration of ECk_Usf_CelDistribution::CustomEdges. Three bands from two
     // edges, both crowded into the bottom third of the ramp: the shadows get two boundaries close
     // together and everything above 0.35 resolves to one wide lit band. An exponent cannot produce this
-    // shape — it moves every boundary together, so pulling the first two down drags the third with them.
+    // shape - it moves every boundary together, so pulling the first two down drags the third with them.
     //
     // Read it on the gym's gradient wall: two dark bands visibly close to each other with a large flat
     // region above, not three evenly spread steps.
@@ -135,7 +135,7 @@ namespace CkUsf
     }
 
     // The A/B reference. Everything else is Balanced, so switching to this and back proves the effect is
-    // the only difference — the frame must come back completely clean.
+    // the only difference - the frame must come back completely clean.
     asset DA_Cel_Off of UCkUsf_CelShadePreset
     {
         _Enabled = ECk_EnableDisable::Disable;

@@ -1,13 +1,13 @@
 // Language=angelscript
 
 //============================================================================
-// HAND DRAWN — the paint / ink / shadow-stroke / paper illustration look.
+// HAND DRAWN - the paint / ink / shadow-stroke / paper illustration look.
 //
 // Shader: /CkUsf/Looks/HandDrawn.ush. Driven at runtime by
 // UCkUsf_HandDrawnSubsystem, which owns the whole-view blendable and writes
 // these parameters by NAME from FCk_Usf_HandDrawn_Params.
 //
-// _Parameters order MUST equal CkUsf_PP_HandDrawn's declaration order — the
+// _Parameters order MUST equal CkUsf_PP_HandDrawn's declaration order - the
 // generator binds positionally and the validator enforces it. The defaults
 // below are the "StorybookInk" preset, so an un-driven master already renders
 // that style.
@@ -30,7 +30,7 @@ namespace CkUsf
 
         // The default trio (SceneColor/Depth/Normal) is exactly what the ink detectors, the sky test and
         // the stroke projection read; CustomStencil is the effect mask's. Stated explicitly because
-        // _SceneTextures is all-or-nothing — a non-empty list REPLACES the default trio rather than
+        // _SceneTextures is all-or-nothing - a non-empty list REPLACES the default trio rather than
         // extending it. Nothing here needs the GBuffer: this look never reconstructs illumination the way
         // CelShade does, so opting in would cost pins for nothing.
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);

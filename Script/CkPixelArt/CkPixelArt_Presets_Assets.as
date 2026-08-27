@@ -1,7 +1,7 @@
 // Language=angelscript
 
 //============================================================================
-// PIXEL ART PRESETS — the authored styles, applied via the subsystem:
+// PIXEL ART PRESETS - the authored styles, applied via the subsystem:
 //   UCkPixelArt_Subsystem::Get_PixelArtSubsystem().Apply_Preset(CkPixelArt::DA_PixelArt_Crisp16);
 //   UCkPixelArt_Subsystem::Get_PixelArtSubsystem().Request_SetEnabled(ECk_EnableDisable::Enable);
 //
@@ -9,7 +9,7 @@
 // renderer on is gated on engine settings that a preset has no business overriding.
 //
 // The look half needs the PixelArt master on disk (console: "Ck_Usf_GenerateLooks PixelArt" on a fresh
-// checkout). The renderer half does not — it runs with _ApplyLook disabled and simply renders sharp
+// checkout). The renderer half does not - it runs with _ApplyLook disabled and simply renders sharp
 // low-resolution, which is also how to tell the two halves apart when something looks wrong.
 //============================================================================
 
@@ -35,7 +35,7 @@ namespace CkPixelArt
 
     // Softer and more forgiving: five bands with a wide transition, flat edge colours instead of a band
     // shift, and per-channel steps rather than a fixed palette. Reads as toon shading rather than as
-    // pixel art, which is what makes it the useful A/B against Crisp16 — the palette and the edge rule
+    // pixel art, which is what makes it the useful A/B against Crisp16 - the palette and the edge rule
     // are what carry the style, not the low resolution on its own.
     asset DA_PixelArt_SoftRamp of UCkPixelArt_Preset
     {
@@ -58,8 +58,8 @@ namespace CkPixelArt
 
     // Crisp16 moved into OKLab: the same palette and band-shift edges, but the ladder spaced by PERCEIVED
     // lightness, palette entries matched perceptually, and the reference warm/cool drift with band
-    // brightness. The A/B against Crisp16 is the point — same style, same colours, different spacing of
-    // the same bands — and [O] in the gym flips any station into this treatment for the comparison.
+    // brightness. The A/B against Crisp16 is the point - same style, same colours, different spacing of
+    // the same bands - and [O] in the gym flips any station into this treatment for the comparison.
     asset DA_PixelArt_OKLab of UCkPixelArt_Preset
     {
         _ResolutionMode = ECk_PixelArt_ResolutionMode::FixedHeight;
