@@ -112,7 +112,10 @@ private:
     // lives in an ECS fragment, GC never walks the EnTT registry, and a hard ref there roots nothing - it DANGLES
     // when the montage is collected rather than nulling. The snapshot capture walks and serializes this payload, so
     // a dangling ref is dereferenced there (QA 2026-08-26 crashed in Audit_DurableObjectRefs on exactly this field).
-    // The saved form is unchanged: the persistent archive already wrote a hard ref as its path string.
+    // The saved BYTES still name the montage by path, as the persistent archive already did for a hard ref - but
+    // the property TAG changes ObjectProperty->SoftObjectProperty, so an older save loads through
+    // FSoftObjectProperty::ConvertFromType's ObjectProperty branch. That conversion exists for exactly this
+    // migration; it is not pinned by a fixture here, so treat it as supported-by-design, not measured.
     UPROPERTY()
     TSoftObjectPtr<UAnimMontage> _Montage;
 

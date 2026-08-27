@@ -98,7 +98,10 @@ namespace ck
     // fragment that GC does not visit — so a hard UObject ref there dangles instead of nulling and the capture
     // dereferences it (QA 2026-08-26). Two narrowings are deliberate, and they narrow only THIS question, never the
     // shared GC-safety contract the analyzer defaults to:
-    //   - class refs are accepted: a loaded UClass outlives any one holder, a far weaker exposure than an asset;
+    //   - class refs are accepted, which is a JUDGEMENT rather than a proof: a UClass is collectable, and the
+    //     residual fields are TSubclassOf<UCk_SmState_EntityScript> - AngelScript classes, which a script reload
+    //     DOES replace, so the dangle is reachable in the editor. It is not reachable in a packaged build (no
+    //     reload path), which is the exposure the QA crash came from. Migrating them is a recorded follow-up;
     //   - a GC-traced carrier is a boundary: FInstancedStruct sets STRUCT_AddStructReferencedObjects, and the
     //     entries CkDynamic puts in one are schema-validated where they are inserted.
     CKECS_API auto
