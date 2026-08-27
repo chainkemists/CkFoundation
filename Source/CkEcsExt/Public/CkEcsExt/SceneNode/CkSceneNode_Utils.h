@@ -32,6 +32,9 @@ public:
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
         FTransform InLocalTransform);
 
+    // InLocalTransform is the offset from the owner (KeepRelative semantics): the node's world becomes
+    // InLocalTransform * ownerWorld and tracks the owner as it moves. Identity == glued exactly to the
+    // owner. Offset is runtime-mutable via Request_UpdateOffset.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SceneNode",
               DisplayName="[Ck][SceneNode] Create")

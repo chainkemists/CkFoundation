@@ -47,7 +47,7 @@ auto
 
     const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
 
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, OwnerTransform, ECk_Replication::DoesNotReplicate);
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, InLocalTransform * OwnerTransform, ECk_Replication::DoesNotReplicate);
 
     return DoAdd(SceneNodeWithTransform, InOwner, InLocalTransform, ECk_SceneNode_DrivenBy::Anchor);
 }
