@@ -206,7 +206,7 @@ namespace ck
         Ctx._Config  = Config;
         Ctx._World   = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InArbiter);
 
-        Ctx._View = DoResolve_View(Current, *Config);
+        Ctx._View = DoResolve_View(InArbiter, Current, *Config);
 
         // No view, no decisions: nothing promotes, demotes, or updates (dedicated server, or no
         // observer wired yet). Mirrors the BB drivers' whole-batch skip
@@ -229,21 +229,34 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_Update::
         DoResolve_View(
+            const FCk_Handle_VisualLodArbiter& InArbiter,
             const FFragment_VisualLodArbiter_Current& InCurrent,
             const UCk_VisualLodArbiter_Data& InConfig)
         -> FVisualLod_LocalView
     {
         auto View = FVisualLod_LocalView{};
 
-        auto Observer = InCurrent.Get_Observer();
-        if (ck::Is_NOT_Valid(Observer))
-        { return View; }
+        auto ViewInfo = FMinimalViewInfo{};
+        auto Resolved = false;
 
-        const auto Camera = UCk_Utils_Camera_UE::Cast(Observer);
-        if (ck::Is_NOT_Valid(Camera))
-        { return View; }
+        // An explicit observer wins (split-screen-proof, test-wireable); unset falls back to
+        // local-view discovery. No view either way (dedicated server, editor world) ⇒ no-op
+        if (const auto Observer = InCurrent.Get_Observer();
+            ck::IsValid(Observer))
+        {
+            const auto Camera = UCk_Utils_Camera_UE::Cast(Observer);
+            if (ck::IsValid(Camera))
+            {
+                ViewInfo = UCk_Utils_Camera_UE::Get_ViewInfo(Camera);
+                Resolved = true;
+            }
+        }
 
-        const auto ViewInfo = UCk_Utils_Camera_UE::Get_ViewInfo(Camera);
+        if (NOT Resolved)
+        { Resolved = UCk_Utils_Camera_UE::TryGet_LocalViewInfo(InArbiter, ViewInfo); }
+
+        if (NOT Resolved)
+        { return View; }
 
         View._IsValid     = true;
         View._Location    = ViewInfo.Location;
