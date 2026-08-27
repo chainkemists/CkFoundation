@@ -4,11 +4,15 @@
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
+#include <Framework/Text/TextLayout.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
+#include <Layout/Margin.h>
 #include <Math/Color.h>
 #include <Math/Vector2D.h>
+#include <Types/SlateEnums.h>
 #include <UObject/SoftObjectPath.h>
 #include <UObject/SoftObjectPtr.h>
+#include <Widgets/Layout/SScaleBox.h>
 
 #include "CkLoadingScreen_Settings.generated.h"
 
@@ -114,10 +118,21 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector2D _TransitionLogoSize = FVector2D{192.0, 192.0};
 
-    /** Inset from the bottom-right corner. Negative values move the logo inward. */
+    /**
+     * Inset from the corner/edge the logo is anchored to (see the alignment settings below).
+     * Negative values move the logo inward. Ignored on a centered axis.
+     */
     UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
               meta = (AllowPrivateAccess = true))
     FVector2D _TransitionLogoOffset = FVector2D{-40.0, -40.0};
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<EHorizontalAlignment> _TransitionLogoHAlign = HAlign_Right;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<EVerticalAlignment> _TransitionLogoVAlign = VAlign_Bottom;
 
     /** Full 1 -> min -> 1 opacity cycle. Zero or negative leaves the logo static. */
     UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
@@ -148,6 +163,44 @@ private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
               meta = (AllowPrivateAccess = true))
     TArray<FText> _TransitionTipTexts;
+
+    /**
+     * Text style for the tip line. Point this at the SAME CommonTextStyle asset the game-thread
+     * UMG loading widget's tip block uses and the two halves of a load render tips identically -
+     * one asset, zero drift. Resolved on the game thread before the load blocks; empty falls back
+     * to the engine default font (Roboto Regular 20, white), the pre-setting look.
+     */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, MetaClass = "/Script/CommonUI.CommonTextStyle"))
+    FSoftClassPath _TransitionTipStyle;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<EHorizontalAlignment> _TransitionTipHAlign = HAlign_Center;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<EVerticalAlignment> _TransitionTipVAlign = VAlign_Bottom;
+
+    /** Inset of the tip block from the screen edges its alignment anchors it to. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    FMargin _TransitionTipPadding = FMargin{0.0f, 0.0f, 0.0f, 64.0f};
+
+    /** Wrap width in Slate units. Zero = never wrap, so a long tip runs as a single line. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+    float _TransitionTipWrapTextAt = 0.0f;
+
+    /** Only observable on tips that wrap to more than one line. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<ETextJustify::Type> _TransitionTipJustification = ETextJustify::Center;
+
+    /** How the backdrop image fills the screen. */
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Transition Screen",
+              meta = (AllowPrivateAccess = true))
+    TEnumAsByte<EStretch::Type> _TransitionBackdropStretch = EStretch::ScaleToFill;
 
     /**
      * Boot logo movies, relative to Content/Movies.
@@ -197,11 +250,20 @@ public:
     CK_PROPERTY_GET(_TransitionLogoTexture);
     CK_PROPERTY_GET(_TransitionLogoSize);
     CK_PROPERTY_GET(_TransitionLogoOffset);
+    CK_PROPERTY_GET(_TransitionLogoHAlign);
+    CK_PROPERTY_GET(_TransitionLogoVAlign);
     CK_PROPERTY_GET(_TransitionLogoThrobPeriod);
     CK_PROPERTY_GET(_TransitionLogoMinOpacity);
     CK_PROPERTY_GET(_TransitionBackgroundImages);
     CK_PROPERTY_GET(_TransitionBackgroundTint);
+    CK_PROPERTY_GET(_TransitionBackdropStretch);
     CK_PROPERTY_GET(_TransitionTipTexts);
+    CK_PROPERTY_GET(_TransitionTipStyle);
+    CK_PROPERTY_GET(_TransitionTipHAlign);
+    CK_PROPERTY_GET(_TransitionTipVAlign);
+    CK_PROPERTY_GET(_TransitionTipPadding);
+    CK_PROPERTY_GET(_TransitionTipWrapTextAt);
+    CK_PROPERTY_GET(_TransitionTipJustification);
     CK_PROPERTY_GET(_StartupMoviePaths);
     CK_PROPERTY_GET(_TransitionWaitForGameThreadScreen);
     CK_PROPERTY_GET(_TransitionModeA_UMGHandOff);
@@ -258,6 +320,12 @@ public:
     Get_TransitionLogoOffset() -> FVector2D;
 
     static auto
+    Get_TransitionLogoHAlign() -> EHorizontalAlignment;
+
+    static auto
+    Get_TransitionLogoVAlign() -> EVerticalAlignment;
+
+    static auto
     Get_TransitionLogoThrobPeriod() -> float;
 
     static auto
@@ -270,7 +338,28 @@ public:
     Get_TransitionBackgroundTint() -> FLinearColor;
 
     static auto
+    Get_TransitionBackdropStretch() -> EStretch::Type;
+
+    static auto
     Get_TransitionTipTexts() -> const TArray<FText>&;
+
+    static auto
+    Get_TransitionTipStyle() -> const FSoftClassPath&;
+
+    static auto
+    Get_TransitionTipHAlign() -> EHorizontalAlignment;
+
+    static auto
+    Get_TransitionTipVAlign() -> EVerticalAlignment;
+
+    static auto
+    Get_TransitionTipPadding() -> FMargin;
+
+    static auto
+    Get_TransitionTipWrapTextAt() -> float;
+
+    static auto
+    Get_TransitionTipJustification() -> ETextJustify::Type;
 
     static auto
     Get_StartupMoviePaths() -> const TArray<FString>&;
