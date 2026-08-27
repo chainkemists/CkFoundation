@@ -35,6 +35,15 @@ namespace ck_untraced_struct_safety
         return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
     }
 
+    // Path-matched for the same link-avoidance reason as IsApprovedGcIndependentStruct. FInstancedStruct is the
+    // one carrier whose contents are validated where they are INSERTED (ck::dynamic::Validate_FragmentSchema),
+    // which is what earns it a boundary rather than a rejection.
+    auto IsBlessedTracedCarrier(const UScriptStruct* InStruct) -> bool
+    {
+        static const auto BlessedPaths = TSet<FString>{TEXT("/Script/CoreUObject.InstancedStruct")};
+        return InStruct != nullptr && BlessedPaths.Contains(InStruct->GetPathName());
+    }
+
     auto Accept() -> FResult
     { return {.Safety = EResult::GcIndependent}; }
 
@@ -136,7 +145,11 @@ namespace ck_untraced_struct_safety
         // An untraced sink cannot invoke a custom reference collector, so retaining this value needs a traced holder.
         if (InStruct->StructFlags & STRUCT_AddStructReferencedObjects)
         {
-            if (InPolicy.GcTracedStructs == ck::ECk_UntracedStructSafety_GcTracedStructs::TreatAsBoundary)
+            // The boundary is the CARRIER, never "anything that traces its own references". This branch returns
+            // before the property walk, so a blanket accept would wave through an ASRO struct holding a hard ref
+            // - which the capture serializes and dereferences regardless of what this analyzer decided.
+            if (InPolicy.GcTracedStructs == ck::ECk_UntracedStructSafety_GcTracedStructs::TreatAsBoundary &&
+                IsBlessedTracedCarrier(InStruct))
             { return Accept(); }
 
             return Reject(EResult::RequiresGcTracing, InPath,
