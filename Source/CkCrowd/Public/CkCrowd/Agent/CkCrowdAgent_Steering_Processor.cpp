@@ -50,6 +50,8 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SteeringProc);
 
+        InDesired._CloseGoalStrafeActive = false;
+
         const auto DoZeroDesiredVelocity = [&]()
         {
             InDesired._Velocity = FVector::ZeroVector;
@@ -253,8 +255,13 @@ namespace ck
         // Without this, a turning radius (v / MaxTurnRate) larger than the remaining distance makes
         // the agent physically unable to curve onto its goal, so it ORBITS instead. Only bites in
         // the final ~60cm at defaults.
+        const auto IsCloseGoalStrafe = InParams.Get_CloseGoalStrafe() == ECk_EnableDisable::Enable
+            && InPathResult.Get_Status() == ECk_Nav_PathStatus::Ready
+            && IsTargetingFinal
+            && DistanceToNext > InPathFollow.Get_ActiveArrivalRadius()
+            && DistanceToNext <= InParams.Get_CloseGoalStrafeDistanceUu();
         auto TurnRadiusSpeedCap = MaxSpeed;
-        if (MaxTurnRate > 0.0f)
+        if (MaxTurnRate > 0.0f && NOT IsCloseGoalStrafe)
         {
             TurnRadiusSpeedCap = MaxTurnRate * DistanceToFinal;
         }
@@ -293,6 +300,7 @@ namespace ck
 
         const auto Combined = Direction * NewSpeed + SeparationVec;
         InDesired._Velocity = Combined.GetClampedToMaxSize(MaxSpeed);
+        InDesired._CloseGoalStrafeActive = IsCloseGoalStrafe;
     }
 }
 
