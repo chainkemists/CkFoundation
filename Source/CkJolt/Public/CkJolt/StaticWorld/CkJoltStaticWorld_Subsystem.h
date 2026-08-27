@@ -16,6 +16,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class ULevel;
+class UPrimitiveComponent;
 
 namespace JPH
 {
@@ -64,6 +65,12 @@ namespace ck::jolt
  * streaming (World Partition runtime cells stream as ULevels, so one delegate pair covers WP and legacy
  * sublevels uniformly). Stale cooked data (version or per-actor hash mismatch) is ENSURED loudly and
  * skipped — never silently used, never re-extracted at runtime. See CkJolt/CLAUDE.md § Static world.
+ *
+ * Collision sync: every tracked source component's OnComponentCollisionSettingsChangedEvent is bound at
+ * bake time, so SetActorEnableCollision / SetCollisionEnabled flips the attribution entity's bodies out
+ * of (and back into) the scene automatically — the Jolt static world tracks engine collision state with
+ * no game-code Jolt call. Visibility is deliberately NOT a sync key: hidden-but-solid is a legitimate
+ * authored state.
  */
 UCLASS(DisplayName = "CkSubsystem_JoltStaticWorld")
 class CKJOLT_API UCk_JoltStaticWorld_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
@@ -124,10 +131,20 @@ public:
 
     /// The single idempotent funnel for freeing a source actor's bodies, ending in EMPTYING the fragment's
     /// body-id array (that emptiness is the idempotence guard, since both the removal paths and
-    /// FProcessor_JoltStaticActor_EndPlay call it). Does NOT destroy the entity.
+    /// FProcessor_JoltStaticActor_EndPlay call it). Also unbinds the entity's collision-sync routes.
+    /// Does NOT destroy the entity.
     auto
     Request_RemoveBodiesForEntity(
         FCk_Handle_JoltStaticActor& InActorEntity) -> void;
+
+private:
+    // Collision-sync reconcile: routed from a tracked component's OnComponentCollisionSettingsChangedEvent.
+    // Recomputes the desired in-scene state from engine collision truth and flips the entity's bodies when
+    // it changed; a component-path entity re-BAKES on re-enable instead (its pose may be stale).
+    UFUNCTION()
+    void
+    OnTrackedComponentCollisionSettingsChanged(
+        UPrimitiveComponent* InChangedComponent);
 
 private:
     auto
@@ -192,6 +209,46 @@ private:
     DoNote_BodiesChanged(
         int32 InCount) -> void;
 
+    // Binds the collision-sync event routes for a freshly created attribution entity: the actor overload
+    // binds ALL of the source actor's primitives (the cooked path retains no per-component attribution,
+    // and an unbaked component still participates in the desired-state OR); the component overload binds
+    // the one source component and stamps the fragment's _SourceComponent.
+    auto
+    DoBind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InActorEntity,
+        const AActor& InSourceActor) -> void;
+
+    auto
+    DoBind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InComponentEntity,
+        const UPrimitiveComponent& InSourceComponent) -> void;
+
+    auto
+    DoBind_ComponentRoute(
+        FCk_Handle_JoltStaticActor& InEntity,
+        UPrimitiveComponent& InComponent) -> void;
+
+    auto
+    DoUnbind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InEntity) -> void;
+
+    // Removes the entity's bodies from the broadphase WITHOUT destroying them (or re-adds them). The
+    // caller owns the async-step guard (see OnTrackedComponentCollisionSettingsChanged).
+    auto
+    DoSet_BodiesInScene(
+        FCk_Handle_JoltStaticActor& InEntity,
+        bool InInScene) -> void;
+
+    // Unset when every bound component is dead (source tearing down — EndPlay owns the free).
+    auto
+    DoGet_DesiredBodiesInScene(
+        const FCk_Handle_JoltStaticActor& InEntity) const -> TOptional<bool>;
+
+    // House rule for broadphase mutation outside the Jolt processors (see FProcessor_JoltStaticActor_EndPlay):
+    // an in-flight async step is still READING the broadphase a flip mutates.
+    auto
+    DoWait_ForAsyncStepInFlight() -> void;
+
     auto
     Get_BodyInterface() const -> JPH::BodyInterface*;
 
@@ -249,6 +306,11 @@ private:
     TMap<TWeakObjectPtr<const AActor>, FCk_Handle_JoltStaticActor> _ManualActorEntities;
     TMap<TWeakObjectPtr<const UPrimitiveComponent>, FCk_Handle_JoltStaticActor> _ManualComponentEntities;
     TMap<int32, FLoadedCell> _LoadedCells;
+
+    // Collision-sync event routing: every bound source component -> its attribution entity. Populated by
+    // DoBind_ComponentRoute, cleaned per-entity by DoUnbind_CollisionSync (weak keys hash by index+serial,
+    // so removal works after the component dies).
+    TMap<TWeakObjectPtr<UPrimitiveComponent>, FCk_Handle_JoltStaticActor> _ComponentEventRoutes;
 
     int32 _NumStaticBodies = 0;
     int32 _BodyChurnSinceOptimize = 0;

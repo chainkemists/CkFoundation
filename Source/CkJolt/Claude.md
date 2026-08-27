@@ -107,6 +107,20 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
   `UCk_EcsWorld_Subsystem_UE` so the registry outlives it. A level added before the ECS world is
   ready is SKIPPED (Verbose) and re-attempted by the `OnWorldBeginPlay` sweep — bodies are never
   baked without an entity.
+- **Collision sync (engine collision is the source of truth):** every tracked source component's
+  `OnComponentCollisionSettingsChangedEvent` is bound at bake time (all primitives of an actor-path
+  entity; the one source component of a component-path entity), so `SetActorEnableCollision` /
+  `SetCollisionEnabled` flips the attribution entity's bodies out of / back into the scene
+  automatically — no game-code Jolt call. Invariant: *body in scene ⇔ some bound component's
+  owner-aware `GetCollisionEnabled() != NoCollision`*. Flipped-out bodies still exist (ids kept in
+  the fragment) and re-add without re-extraction, preserving cooked shapes exactly; a
+  component-path entity instead RE-BAKES on re-enable because its pose may have gone stale while
+  disabled (transform re-bakes extract nothing from a NoCollision component). The removal funnel
+  destroys flipped-out bodies without removing them again. Visibility (`SetActorHiddenInGame`) is
+  deliberately NOT a sync key — hidden-but-solid is a legitimate authored state. Known corner: an
+  actor disabled BEFORE its level's bake (streaming races the disable) extracts nothing, so a later
+  re-enable has nothing to flip in — pre-existing extraction behavior, Chaos-side collision is
+  unaffected.
 - **Level-sweep admission is settings-driven (`FCk_Jolt_BakeFilter`).** Built from project settings
   once per sweep/cook (`Make_FromProjectSettings`) and passed explicitly through
   `ExtractActor`/`ExtractComponent` AND the source hashes — tests construct filters directly, no CDO
