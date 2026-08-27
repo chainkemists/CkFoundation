@@ -1127,9 +1127,16 @@ magnitude only and left direction free to snap.
   spamming line calls) anchored at the feet to show the floor-projected force zone. Neighbour lines
   are drawn before the arrow so the arrow paints on top. Immediate-mode `DrawDebug` is chosen over PMG
   entity overlays because it is always-current, never-persistent, and allocates nothing per tick.
-- **Diag recorder sizing.** `ck.Crowd.SampleHz` defaults to 10Hz — over a 9s diag-gym cycle that is
-  ~90 samples per agent, cheap in memory and trimmed when the agent destructs at cycle end. Consumers
-  are the diagnostic gym's `EmitDigest` and the debugger's world-draw breadcrumb overlay.
+- **Diag recorder sizing.** `ck.Crowd.SampleHz` defaults to 20Hz — over a 9s diag-gym cycle that is
+  ~180 samples per agent. Consumers are the diagnostic gym's `EmitDigest` and the retained PMG
+  breadcrumb overlay. Raw history is bounded by `ck.Crowd.MaxRecordedSamples` (default 4096,
+  minimum 256) and trims the oldest quarter in one amortized batch; accumulated cycle metrics remain
+  intact while path/pipeline detail becomes a recent window in unusually long tracking episodes.
+  Active spatial-loop radius samples are likewise capped at 512 so median calculation cannot grow
+  with episode lifetime.
+  Breadcrumb rendering consumes only the unread sample suffix, skips sub-1cm movement, and retains
+  at most eight 128-segment PMG chunks per agent. Completed chunks bake once; only the active bounded
+  chunk can rebake when a new moving sample arrives.
   `_StartPos`/`_GoalPos` are captured at `Track()` time so efficiency (`path_len / straight`) is
   computable at digest time without re-querying the agent. Breadcrumbs are lifted
   `BreadcrumbLiftZ = 96` (the diag gym's capsule half-height) purely for display; recorder data stores

@@ -1,7 +1,11 @@
 #include "CkPmg_Utils_DebugLines.h"
 
+#include "CkPmg_Utils_DebugShapes.h"
+
 #include "CkCore/Math/Vector/CkVector_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +38,48 @@ namespace ck::pmg
             const auto& Transform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
             return Transform.InverseTransformPosition(InWorld);
         }
+    }
+
+    auto
+        Create_DebugLineSet(
+            FCk_Handle& InOwningEntity,
+            const FTransform& InTransform,
+            const FLinearColor& InColor,
+            float InThickness,
+            ECk_Pmg_RenderMode InRenderMode)
+        -> FCk_Handle_Pmg_DebugShape
+    {
+        const auto OwnerIsValid = ck::IsValid(InOwningEntity);
+        CK_ENSURE_IF_NOT(OwnerIsValid,
+            TEXT("Cannot create a retained PMG line set under invalid owner [{}]"),
+            InOwningEntity)
+        {}
+        if (NOT OwnerIsValid)
+        { return {}; }
+
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
+        const auto EntityWasCreated = ck::IsValid(NewEntity);
+        CK_ENSURE_IF_NOT(EntityWasCreated,
+            TEXT("Cannot create a retained PMG line-set entity under owner [{}]"),
+            InOwningEntity)
+        {}
+        if (NOT EntityWasCreated)
+        { return {}; }
+
+        auto Common = FFragment_Pmg_DebugShape_Common{};
+        Common.Set_Color(InColor);
+        Common.Set_DrawLines(true);
+        Common.Set_LineThickness(InThickness);
+        Common.Set_Duration(FCk_Time{-1.0f});
+        Common.Set_RenderMode(InRenderMode);
+        pmg_debug_shape::AddCommon(NewEntity, Common);
+
+        NewEntity.Add<FFragment_Pmg_DebugShape_Current>();
+        NewEntity.Add<FTag_Pmg_DebugShape_LineSet>();
+        NewEntity.Add<FTag_Pmg_DebugShape_NeedsSetup>();
+        UCk_Utils_Transform_UE::Add(NewEntity, InTransform, ECk_Replication::DoesNotReplicate);
+
+        return UCk_Utils_Pmg_DebugShape_UE::CastChecked(NewEntity);
     }
 
     auto

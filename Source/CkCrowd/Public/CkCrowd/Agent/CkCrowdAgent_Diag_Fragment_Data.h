@@ -20,6 +20,7 @@ namespace ck
     class FProcessor_CrowdAgent_DiagApplyOffsetTap;
     class FProcessor_CrowdAgent_DiagPushApartTap;
     class FProcessor_CrowdAgent_DiagRecorder;
+    class FProcessor_CrowdAgent_DiagDrawBreadcrumb;
 }
 
 class UCk_Utils_CrowdAgent_Diag_UE;
@@ -270,6 +271,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DiagRecorderData
     CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_DiagRecorderData);
 
     friend class ck::FProcessor_CrowdAgent_DiagRecorder;
+    friend class ck::FProcessor_CrowdAgent_DiagDrawBreadcrumb;
     friend class ck::FProcessor_CrowdAgent_DiagSensorTap;
     friend class ck::FProcessor_CrowdAgent_DiagSeparationTap;
     friend class ck::FProcessor_CrowdAgent_DiagSteeringTap;
@@ -282,12 +284,15 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_DiagRecorderData
     friend class ::UCk_Utils_CrowdAgent_Diag_UE;
 
 private:
-    // Append-only sample buffer. ck.Crowd.SampleHz controls the cadence; default 20Hz over
-    // a 9s diag-gym cycle = ~180 samples per agent. Cheap to keep in memory; trimmed when the
-    // agent destructs at cycle end.
+    // Chronological recent-sample buffer. ck.Crowd.SampleHz controls cadence; the oldest quarter
+    // is trimmed in one batch when ck.Crowd.MaxRecordedSamples is exceeded.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag",
               meta = (AllowPrivateAccess = true))
     TArray<FCk_CrowdDiag_PathSample> _Samples;
+
+    // Incremented whenever Track() starts a new diagnostic episode. Retained visualization uses
+    // this explicit generation to discard the prior episode even when both sample counts are zero.
+    int32 _TrackGeneration = 0;
 
     // Seconds since tracking started; a sample's _T is this value at sample time.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag",
@@ -303,6 +308,10 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag",
               meta = (AllowPrivateAccess = true))
     FVector _StartPos = FVector::ZeroVector;
+
+    // Start of the bounded retained sample window. Unlike _StartPos, this advances when old raw
+    // diagnostic samples are trimmed and is used only to reconnect retained breadcrumb geometry.
+    FVector _RetainedHistoryStartPos = FVector::ZeroVector;
 
     // Goal location at Track() time.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ck|CrowdDiag",

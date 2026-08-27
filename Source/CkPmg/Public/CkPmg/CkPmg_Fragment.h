@@ -103,6 +103,10 @@ namespace ck
 
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LinesNeedBaking);
 
+    // A retained wireframe-only shape. Its setup creates the procmesh component that BakeLines
+    // writes without manufacturing a filled primitive solely to host the line section.
+    CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LineSet);
+
     // Shapes with a negative duration never expire and must stay out of the per-frame duration view.
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_PersistentDuration);
 
@@ -186,6 +190,7 @@ namespace ck
 
     public:
         friend class FProcessor_Pmg_DebugShape_BakeLines;
+        friend class FProcessor_Pmg_DebugShape_HandleRequests;
         friend class FProcessor_Pmg_Text_Setup;
 
     public:

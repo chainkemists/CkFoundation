@@ -8,6 +8,17 @@
 
 namespace ck::pmg
 {
+    // Creates a retained, wireframe-only child entity. Append_DebugLine_World marks its mesh
+    // section dirty; the PMG line baker rebuilds it once and then leaves it retained.
+    CKPMG_API auto
+    Create_DebugLineSet(
+        FCk_Handle& InOwningEntity,
+        const FTransform& InTransform,
+        const FLinearColor& InColor,
+        float InThickness,
+        ECk_Pmg_RenderMode InRenderMode = ECk_Pmg_RenderMode::DoubleSided)
+        -> FCk_Handle_Pmg_DebugShape;
+
     // World-space endpoints in, stored entity-local; adds FFragment_Pmg_DebugShape_Lines on first call.
     CKPMG_API auto
     Append_DebugLine_World(

@@ -2,6 +2,7 @@
 
 #include "CkPmg_Fragment.h"
 #include "CkPmg_ProcessorGroups.h"
+#include "CkPmg_Processor_TextShapes.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
@@ -13,6 +14,33 @@
 
 namespace ck
 {
+    class CKPMG_API FProcessor_Pmg_DebugShape_LineSet_Setup : public ck_exp::TProcessor<
+            FProcessor_Pmg_DebugShape_LineSet_Setup,
+            FCk_Handle_Pmg_DebugShape,
+            ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            FTag_Pmg_DebugShape_LineSet,
+            FTag_Pmg_DebugShape_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Pmg_DebugShape_Setup;
+        using RunAfter = TDepList<FProcessor_Pmg_Text_Setup>;
+        using MarkedDirtyBy = FTag_Pmg_DebugShape_NeedsSetup;
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPMG_API FProcessor_Pmg_DebugShape_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_UpdateTransform,
             FCk_Handle_Pmg_DebugShape,
