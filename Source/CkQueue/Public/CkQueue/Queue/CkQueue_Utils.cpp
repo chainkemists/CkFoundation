@@ -45,6 +45,15 @@ namespace ck_queue_utils
     }
 
     auto
+    IsValidReserveAssignmentPolicy(
+        ECk_Queue_ReserveAssignmentPolicy InPolicy)
+    -> bool
+    {
+        return InPolicy == ECk_Queue_ReserveAssignmentPolicy::DistanceThenTicket
+            || InPolicy == ECk_Queue_ReserveAssignmentPolicy::TicketOrder;
+    }
+
+    auto
     IsValidMovementOutcome(
         ECk_Queue_MovementOutcome InOutcome)
     -> bool
@@ -61,25 +70,6 @@ namespace ck_queue_utils
     {
         return InValue == ECk_EnableDisable::Enable
             || InValue == ECk_EnableDisable::Disable;
-    }
-
-    auto
-    AreValidOrigins(
-        const TArray<FCk_Queue_Origin>& InOrigins)
-    -> bool
-    {
-        if (InOrigins.IsEmpty())
-        { return false; }
-
-        for (const auto& Origin : InOrigins)
-        {
-            if (Origin.Get_LocalTransform().ContainsNaN()
-                || Origin.Get_Weight() <= 0
-                || Origin.Get_HardLimitOverride() < INDEX_NONE)
-            { return false; }
-        }
-
-        return true;
     }
 
     auto
@@ -139,7 +129,6 @@ auto
     if (NOT OwnerHasTransform)
     { return {}; }
 
-    const auto OriginsAreValid = ck_queue_utils::AreValidOrigins(InParams.Get_Origins());
     const auto SlotSpacingIsValid = InParams.Get_SlotSpacingUu() > 0.0f;
     const auto SlotMovementRadiiAreValid = FMath::IsFinite(InParams.Get_SlotClaimRadiusUu())
         && FMath::IsFinite(InParams.Get_SlotSettleRadiusUu())
@@ -157,13 +146,18 @@ auto
         && (InParams.Get_HardLimit() == 0 || InParams.Get_SoftLimit() <= InParams.Get_HardLimit());
     const auto OtherParamsAreValid = ck_queue_utils::IsValidLayoutAlgorithm(InParams.Get_LayoutAlgorithm())
         && ck_queue_utils::IsValidSlotClaimPolicy(InParams.Get_SlotClaimPolicy())
+        && ck_queue_utils::IsValidReserveAssignmentPolicy(InParams.Get_ReserveAssignmentPolicy())
+        && FMath::IsFinite(InParams.Get_ReserveAssignmentRefreshSeconds())
+        && InParams.Get_ReserveAssignmentRefreshSeconds() >= 0.0f
+        && ck_queue_utils::IsValidEnableDisable(InParams.Get_ReserveAssignmentRefreshPhaseSpread())
+        && FMath::IsFinite(InParams.Get_ReserveAssignmentHysteresisUu())
+        && InParams.Get_ReserveAssignmentHysteresisUu() >= 0.0f
         && InParams.Get_TransformEpsilonUu() >= 0.0f
         && InParams.Get_RotationEpsilonDegrees() >= 0.0f
         && InParams.Get_MaxNavigationRetries() >= 0
         && InParams.Get_NavigationRetryDelaySeconds() >= 0.0f
         && InParams.Get_ClearanceMarginUu() >= 0.0f;
-    const auto ParamsAreValid = OriginsAreValid
-        && SlotSpacingIsValid
+    const auto ParamsAreValid = SlotSpacingIsValid
         && SlotMovementRadiiAreValid
         && SearchBudgetIsValid
         && RadiusIsValid
@@ -266,6 +260,16 @@ auto
 
 auto
     UCk_Utils_Queue_UE::
+    Get_CanAcceptRequests(
+        const FCk_Handle_Queue& InQueue)
+    -> bool
+{
+    return ck_queue_utils::CanAcceptRequests(InQueue)
+        && UCk_Utils_Net_UE::Get_HasAuthority(InQueue);
+}
+
+auto
+    UCk_Utils_Queue_UE::
     Get_Revision(
         const FCk_Handle_Queue& InQueue)
     -> int32
@@ -277,22 +281,6 @@ auto
     { return 0; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Revision();
 }
-
-auto
-    UCk_Utils_Queue_UE::
-    Get_Origins(
-        const FCk_Handle_Queue& InQueue)
-    -> TArray<FCk_Queue_Origin>
-{
-    const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
-    CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Origins called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
-    { return {}; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_Origins();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Queue_UE::
@@ -335,10 +323,6 @@ auto
             { return; }
 
             const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
-            auto OriginWorldTransforms = TArray<FTransform>{};
-            OriginWorldTransforms.Reserve(InCurrent.Get_Origins().Num());
-            for (const auto& Origin : InCurrent.Get_Origins())
-            { OriginWorldTransforms.Add(Origin.Get_LocalTransform() * OwnerWorldTransform); }
 
             auto Members = TArray<FCk_Queue_DebugMemberSnapshot>{};
             Members.Reserve(InCurrent.Get_Members().Num());
@@ -360,7 +344,6 @@ auto
                     MoverHasTransform,
                     MoverTransform,
                     Member.Get_Ticket(),
-                    Member.Get_OriginIndex(),
                     Member.Get_Rank(),
                     Member.Get_TargetWorldTransform(),
                     Member.Get_AssignmentRevision(),
@@ -385,7 +368,6 @@ auto
                     InCurrent.Get_Revision(),
                     InCurrent.Get_RetryEpisode()},
                 InCurrent.Get_Pressure(),
-                MoveTemp(OriginWorldTransforms),
                 MoveTemp(Members));
         });
     return Result;
@@ -643,45 +625,18 @@ auto
 
 auto
     UCk_Utils_Queue_UE::
-    Request_AdvanceOrigin(
+    Request_Advance(
         FCk_Handle_Queue& InQueue,
-        const FCk_Request_Queue_AdvanceOrigin& InRequest,
+        const FCk_Request_Queue_Advance& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Queue
 {
     const auto QueueIsValid = ck_queue_utils::CanAcceptRequests(InQueue);
     const auto HasAuthority = QueueIsValid && UCk_Utils_Net_UE::Get_HasAuthority(InQueue);
-    const auto RequestIsValid = InRequest.Get_OriginIndex() >= 0;
-    CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
-        TEXT("Cannot enqueue Queue AdvanceOrigin on [{}]: queue, authority, or origin index is invalid"), InQueue)
+    CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority,
+        TEXT("Cannot enqueue Queue Advance on [{}]: queue or authority is invalid"), InQueue)
     {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
-    {
-        InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
-        return InQueue;
-    }
-
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
-    InQueue.AddOrGet<ck::FFragment_Queue_Requests>()._Requests.Emplace(InRequest);
-    return InQueue;
-}
-
-auto
-    UCk_Utils_Queue_UE::
-    Request_SetOrigins(
-        FCk_Handle_Queue& InQueue,
-        const FCk_Request_Queue_SetOrigins& InRequest,
-        const FCk_Delegate_Request_OnCompleted& InDelegate)
-    -> FCk_Handle_Queue
-{
-    const auto QueueIsValid = ck_queue_utils::CanAcceptRequests(InQueue);
-    const auto HasAuthority = QueueIsValid && UCk_Utils_Net_UE::Get_HasAuthority(InQueue);
-    const auto RequestIsValid = ck_queue_utils::AreValidOrigins(InRequest.Get_Origins());
-    CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
-        TEXT("Cannot enqueue Queue SetOrigins on [{}]: queue, authority, or origins are invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
+    if (NOT QueueIsValid || NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;

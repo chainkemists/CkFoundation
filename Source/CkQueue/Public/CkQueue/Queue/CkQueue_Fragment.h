@@ -40,7 +40,6 @@ namespace ck
 
     private:
         TArray<FCk_Queue_MemberSnapshot> _Members;
-        TArray<FCk_Queue_Origin> _Origins;
         int64 _NextTicket = 1;
         int32 _Revision = 0;
         int32 _RetryEpisode = 0;
@@ -50,15 +49,15 @@ namespace ck
         FTransform _LastOwnerWorldTransform = FTransform::Identity;
         int32 _LastNavigationRevision = INDEX_NONE;
         double _NextFormationRetryWorldSeconds = 0.0;
+        double _NextReserveAssignmentRefreshWorldSeconds = 0.0;
 
         // A ClaimFirstAvailableOnReach slot-reached report leaves _State Ready by design (the request
-        // drain must stay Ready for same-frame reports from other origins), so this flag is what
+        // drain must stay Ready for same-frame contender reports), so this flag is what
         // carries "the remaining contenders must be retargeted" past the formation processor's settled early-out.
         bool _HasPendingClaimOffer = false;
 
     public:
         CK_PROPERTY_GET(_Members);
-        CK_PROPERTY_GET(_Origins);
         CK_PROPERTY_GET(_NextTicket);
         CK_PROPERTY_GET(_Revision);
         CK_PROPERTY_GET(_RetryEpisode);
@@ -68,6 +67,7 @@ namespace ck
         CK_PROPERTY_GET(_LastOwnerWorldTransform);
         CK_PROPERTY_GET(_LastNavigationRevision);
         CK_PROPERTY_GET(_NextFormationRetryWorldSeconds);
+        CK_PROPERTY_GET(_NextReserveAssignmentRefreshWorldSeconds);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -86,8 +86,7 @@ namespace ck
             FCk_Request_Queue_Join,
             FCk_Request_Queue_RestoreJoin,
             FCk_Request_Queue_Leave,
-            FCk_Request_Queue_AdvanceOrigin,
-            FCk_Request_Queue_SetOrigins,
+            FCk_Request_Queue_Advance,
             FCk_Request_Queue_SetLayout,
             FCk_Request_Queue_SetMovementSuppressed,
             FCk_Request_Queue_ReportMovementOutcome>;

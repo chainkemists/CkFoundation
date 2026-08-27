@@ -24,7 +24,7 @@ enum class ECk_Queue_LayoutAlgorithm : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_LayoutAlgorithm);
 
 // ReserveOnFormation eagerly reserves distinct slots. ClaimFirstAvailableOnReach provisionally assigns every
-// unclaimed member of an origin to its next free slot; the first valid Reached report claims it and retargets losers.
+// unclaimed member to the next free slot; the first valid Reached report claims it and retargets losers.
 UENUM(BlueprintType)
 enum class ECk_Queue_SlotClaimPolicy : uint8
 {
@@ -32,6 +32,16 @@ enum class ECk_Queue_SlotClaimPolicy : uint8
     ClaimFirstAvailableOnReach
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_SlotClaimPolicy);
+
+// ReserveOnFormation can either continuously prefer the nearest mover for each open slot or preserve
+// admission-ticket order. DistanceThenTicket is the default so a distant early join cannot block nearer movers.
+UENUM(BlueprintType)
+enum class ECk_Queue_ReserveAssignmentPolicy : uint8
+{
+    DistanceThenTicket,
+    TicketOrder
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_ReserveAssignmentPolicy);
 
 UENUM(BlueprintType)
 enum class ECk_Queue_State : uint8
@@ -71,15 +81,11 @@ enum class ECk_Queue_EventReason : uint8
     Left,
     Advanced,
     Reflowed,
-    OriginAssigned,
-    OriginReassigned,
-    OriginsChanged,
     LayoutChanged,
     MovementSuppressed,
     MovementResumed,
     SlotReached,
     HardLimitReached,
-    OriginHardLimitReached,
     SoftLimitEntered,
     SoftLimitExited,
     InvalidRequest,
@@ -118,39 +124,6 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Queue);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKQUEUE_API FCk_Queue_Origin
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Queue_Origin);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FTransform _LocalTransform = FTransform::Identity;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = "1"))
-    int32 _Weight = 1;
-
-    // INDEX_NONE inherits the queue-wide limit; zero disables the per-origin limit.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = "-1"))
-    int32 _HardLimitOverride = INDEX_NONE;
-
-public:
-    CK_PROPERTY(_LocalTransform);
-    CK_PROPERTY(_Weight);
-    CK_PROPERTY(_HardLimitOverride);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Queue_Origin, _LocalTransform);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
 struct CKQUEUE_API FCk_Fragment_Queue_ParamsData
 {
     GENERATED_BODY()
@@ -159,10 +132,6 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_Queue_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, TitleProperty = "_Weight"))
-    TArray<FCk_Queue_Origin> _Origins;
-
     // Optional service category. When set, Add also stamps this as the owner's CkEntityTag so
     // gameplay can discover queues such as Queue.Category.Checkout without retaining a handle.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -189,6 +158,26 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Queue_SlotClaimPolicy _SlotClaimPolicy = ECk_Queue_SlotClaimPolicy::ReserveOnFormation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Queue_ReserveAssignmentPolicy _ReserveAssignmentPolicy
+        = ECk_Queue_ReserveAssignmentPolicy::DistanceThenTicket;
+
+    // How often a settled ReserveOnFormation queue rechecks live mover distances. Zero evaluates every frame.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+    float _ReserveAssignmentRefreshSeconds = 0.25f;
+
+    // Spreads distance-refresh work from otherwise synchronized queues across the refresh interval.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _ReserveAssignmentRefreshPhaseSpread = ECk_EnableDisable::Enable;
+
+    // An existing reservation is retained unless another mover is at least this much closer to the slot.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+    float _ReserveAssignmentHysteresisUu = 50.0f;
 
     // A movement adapter may claim the current assignment once the mover enters this radius. This is
     // deliberately wider than the settle radius: claim-first losers can retarget before the winner
@@ -241,13 +230,16 @@ private:
     float _ClearanceMarginUu = 8.0f;
 
 public:
-    CK_PROPERTY_GET(_Origins);
     CK_PROPERTY(_Category);
     CK_PROPERTY(_SlotSpacingUu);
     CK_PROPERTY(_SoftLimit);
     CK_PROPERTY(_HardLimit);
     CK_PROPERTY(_LayoutAlgorithm);
     CK_PROPERTY(_SlotClaimPolicy);
+    CK_PROPERTY(_ReserveAssignmentPolicy);
+    CK_PROPERTY(_ReserveAssignmentRefreshSeconds);
+    CK_PROPERTY(_ReserveAssignmentRefreshPhaseSpread);
+    CK_PROPERTY(_ReserveAssignmentHysteresisUu);
     CK_PROPERTY(_SlotClaimRadiusUu);
     CK_PROPERTY(_SlotSettleRadiusUu);
     CK_PROPERTY(_SlotReacquireRadiusUu);
@@ -260,8 +252,6 @@ public:
     CK_PROPERTY(_AgentHalfHeightUu);
     CK_PROPERTY(_ClearanceMarginUu);
 
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Queue_ParamsData, _Origins);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -299,9 +289,6 @@ private:
     int64 _Ticket = 0;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    int32 _OriginIndex = INDEX_NONE;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     int32 _Rank = INDEX_NONE;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -324,7 +311,6 @@ public:
     CK_PROPERTY_GET(_HasMoverWorldTransform);
     CK_PROPERTY_GET(_MoverWorldTransform);
     CK_PROPERTY_GET(_Ticket);
-    CK_PROPERTY_GET(_OriginIndex);
     CK_PROPERTY_GET(_Rank);
     CK_PROPERTY_GET(_TargetWorldTransform);
     CK_PROPERTY_GET(_AssignmentRevision);
@@ -342,7 +328,6 @@ public:
         bool InHasMoverWorldTransform,
         FTransform InMoverWorldTransform,
         int64 InTicket,
-        int32 InOriginIndex,
         int32 InRank,
         FTransform InTargetWorldTransform,
         int32 InAssignmentRevision,
@@ -355,7 +340,6 @@ public:
         , _HasMoverWorldTransform(InHasMoverWorldTransform)
         , _MoverWorldTransform(MoveTemp(InMoverWorldTransform))
         , _Ticket(InTicket)
-        , _OriginIndex(InOriginIndex)
         , _Rank(InRank)
         , _TargetWorldTransform(MoveTemp(InTargetWorldTransform))
         , _AssignmentRevision(InAssignmentRevision)
@@ -387,10 +371,6 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    int32 _OriginIndex = INDEX_NONE;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
     int32 _Rank = INDEX_NONE;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -413,7 +393,6 @@ public:
     CK_PROPERTY_GET(_Member);
     CK_PROPERTY_GET(_Mover);
     CK_PROPERTY_GET(_Ticket);
-    CK_PROPERTY_GET(_OriginIndex);
     CK_PROPERTY_GET(_Rank);
     CK_PROPERTY_GET(_TargetWorldTransform);
     CK_PROPERTY_GET(_AssignmentRevision);
@@ -426,7 +405,6 @@ public:
         _Member,
         _Mover,
         _Ticket,
-        _OriginIndex,
         _Rank,
         _TargetWorldTransform,
         _AssignmentRevision,
@@ -511,10 +489,6 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    TArray<int32> _OriginMemberCounts;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
     int32 _QueueRevision = 0;
 
 public:
@@ -523,7 +497,6 @@ public:
     CK_PROPERTY_GET(_HardLimit);
     CK_PROPERTY_GET(_IsSoftLimited);
     CK_PROPERTY_GET(_IsHardLimited);
-    CK_PROPERTY_GET(_OriginMemberCounts);
     CK_PROPERTY_GET(_QueueRevision);
 
 public:
@@ -534,7 +507,6 @@ public:
         _HardLimit,
         _IsSoftLimited,
         _IsHardLimited,
-        _OriginMemberCounts,
         _QueueRevision);
 };
 
@@ -626,9 +598,6 @@ private:
     FCk_Queue_Pressure _Pressure;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    TArray<FTransform> _OriginWorldTransforms;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TArray<FCk_Queue_DebugMemberSnapshot> _Members;
 
 public:
@@ -644,7 +613,6 @@ public:
     CK_PROPERTY_GET(_SlotClaimPolicy);
     CK_PROPERTY_GET(_FormationState);
     CK_PROPERTY_GET(_Pressure);
-    CK_PROPERTY_GET(_OriginWorldTransforms);
     CK_PROPERTY_GET(_Members);
 
 public:
@@ -663,7 +631,6 @@ public:
         ECk_Queue_SlotClaimPolicy InSlotClaimPolicy,
         FCk_Queue_FormationState InFormationState,
         FCk_Queue_Pressure InPressure,
-        TArray<FTransform> InOriginWorldTransforms,
         TArray<FCk_Queue_DebugMemberSnapshot> InMembers)
         : _QueueIdentity(InQueueIdentity)
         , _QueueDebugName(InQueueDebugName)
@@ -677,7 +644,6 @@ public:
         , _SlotClaimPolicy(InSlotClaimPolicy)
         , _FormationState(MoveTemp(InFormationState))
         , _Pressure(MoveTemp(InPressure))
-        , _OriginWorldTransforms(MoveTemp(InOriginWorldTransforms))
         , _Members(MoveTemp(InMembers))
     {}
 };
@@ -765,45 +731,13 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKQUEUE_API FCk_Request_Queue_AdvanceOrigin : public FCk_Request_Base
+struct CKQUEUE_API FCk_Request_Queue_Advance : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_Queue_AdvanceOrigin);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Queue_AdvanceOrigin);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    int32 _OriginIndex = INDEX_NONE;
-
-public:
-    CK_PROPERTY_GET(_OriginIndex);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Queue_AdvanceOrigin, _OriginIndex);
-};
-
-USTRUCT(BlueprintType)
-struct CKQUEUE_API FCk_Request_Queue_SetOrigins : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_Queue_SetOrigins);
-    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Queue_SetOrigins);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TArray<FCk_Queue_Origin> _Origins;
-
-public:
-    CK_PROPERTY_GET(_Origins);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Queue_SetOrigins, _Origins);
+    CK_GENERATED_BODY(FCk_Request_Queue_Advance);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Queue_Advance);
 };
 
 USTRUCT(BlueprintType)

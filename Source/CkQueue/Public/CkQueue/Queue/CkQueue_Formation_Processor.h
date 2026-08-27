@@ -35,6 +35,15 @@ namespace ck
 
     private:
         static auto
+        ScheduleNextReserveAssignmentRefresh(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
+            double InWorldTimeSeconds,
+            bool InWasSettledRefresh)
+            -> void;
+
+        static auto
         RecordRetryableFailure(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,

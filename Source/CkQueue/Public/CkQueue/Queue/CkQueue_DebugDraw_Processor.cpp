@@ -18,19 +18,19 @@ namespace ck_queue_debug_draw_processor
     static TAutoConsoleVariable<int32> CVarQueueDebugDraw(
         TEXT("ck.Queue.DebugDraw"),
         0,
-        TEXT("Draw queue origins, reservations, member-to-slot links, and formation state. 0 = off, 1 = on."),
+        TEXT("Draw queue targets, reservations, member-to-slot links, and formation state. 0 = off, 1 = on."),
         ECVF_Cheat);
 
     constexpr auto DurationOneFrame = 0.0f;
     constexpr auto LineThickness = 2.0f;
-    constexpr auto OriginArrowLength = 120.0f;
-    constexpr auto OriginArrowSize = 24.0f;
+    constexpr auto QueueArrowLength = 120.0f;
+    constexpr auto QueueArrowSize = 24.0f;
     constexpr auto TargetMarkerHeight = 140.0f;
     constexpr auto TargetMarkerRadius = 52.0f;
     constexpr auto SlotRadius = 32.0f;
     constexpr auto SlotSegments = 16;
 
-    const auto OriginColor = FLinearColor{0.15f, 0.9f, 1.0f, 0.9f};
+    const auto QueueTargetColor = FLinearColor{0.15f, 0.9f, 1.0f, 0.9f};
     const auto ReservationColor = FLinearColor{0.95f, 0.85f, 0.2f, 0.9f};
     const auto WaitingColor = FLinearColor{1.0f, 0.2f, 0.15f, 0.95f};
 
@@ -85,49 +85,42 @@ namespace ck
             StateColor,
             ck_queue_debug_draw_processor::DurationOneFrame);
 
-        for (auto OriginIndex = 0; OriginIndex < InCurrent.Get_Origins().Num(); ++OriginIndex)
-        {
-            const auto OriginWorld = InCurrent.Get_Origins()[OriginIndex].Get_LocalTransform() * OwnerWorldTransform;
-            const auto OriginLocation = OriginWorld.GetLocation();
-            const auto OriginForward = OriginWorld.GetUnitAxis(EAxis::X);
-            UCk_Utils_DebugDraw_UE::DrawDebugCylinder(
-                World,
-                OriginLocation,
-                OriginLocation + FVector{0.0f, 0.0f, ck_queue_debug_draw_processor::TargetMarkerHeight},
-                ck_queue_debug_draw_processor::TargetMarkerRadius,
-                16,
-                ck_queue_debug_draw_processor::OriginColor,
-                ck_queue_debug_draw_processor::DurationOneFrame,
-                4.0f);
-            UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
-                World,
-                OriginLocation,
-                ck_queue_debug_draw_processor::TargetMarkerRadius * 1.35f,
-                ECk_Plane_Axis::XY,
-                24,
-                ck_queue_debug_draw_processor::OriginColor,
-                ck_queue_debug_draw_processor::DurationOneFrame,
-                4.0f);
-            UCk_Utils_DebugDraw_UE::DrawDebugArrow(
-                World,
-                OriginLocation,
-                OriginLocation + OriginForward * ck_queue_debug_draw_processor::OriginArrowLength,
-                ck_queue_debug_draw_processor::OriginArrowSize,
-                ck_queue_debug_draw_processor::OriginColor,
-                ck_queue_debug_draw_processor::DurationOneFrame,
-                ck_queue_debug_draw_processor::LineThickness);
-            UCk_Utils_DebugDraw_UE::DrawDebugString(
-                World,
-                OriginLocation + FVector{0.0f, 0.0f, ck_queue_debug_draw_processor::TargetMarkerHeight + 20.0f},
-                FString::Printf(TEXT("QUEUE TARGET / ORIGIN %d | weight %d"),
-                    OriginIndex,
-                    InCurrent.Get_Origins()[OriginIndex].Get_Weight()),
-                ck_queue_debug_draw_processor::OriginColor,
-                ck_queue_debug_draw_processor::DurationOneFrame);
-        }
+        const auto QueueLocation = OwnerWorldTransform.GetLocation();
+        const auto QueueForward = OwnerWorldTransform.GetUnitAxis(EAxis::X);
+        UCk_Utils_DebugDraw_UE::DrawDebugCylinder(
+            World,
+            QueueLocation,
+            QueueLocation + FVector{0.0f, 0.0f, ck_queue_debug_draw_processor::TargetMarkerHeight},
+            ck_queue_debug_draw_processor::TargetMarkerRadius,
+            16,
+            ck_queue_debug_draw_processor::QueueTargetColor,
+            ck_queue_debug_draw_processor::DurationOneFrame,
+            4.0f);
+        UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
+            World,
+            QueueLocation,
+            ck_queue_debug_draw_processor::TargetMarkerRadius * 1.35f,
+            ECk_Plane_Axis::XY,
+            24,
+            ck_queue_debug_draw_processor::QueueTargetColor,
+            ck_queue_debug_draw_processor::DurationOneFrame,
+            4.0f);
+        UCk_Utils_DebugDraw_UE::DrawDebugArrow(
+            World,
+            QueueLocation,
+            QueueLocation + QueueForward * ck_queue_debug_draw_processor::QueueArrowLength,
+            ck_queue_debug_draw_processor::QueueArrowSize,
+            ck_queue_debug_draw_processor::QueueTargetColor,
+            ck_queue_debug_draw_processor::DurationOneFrame,
+            ck_queue_debug_draw_processor::LineThickness);
+        UCk_Utils_DebugDraw_UE::DrawDebugString(
+            World,
+            QueueLocation + FVector{0.0f, 0.0f, ck_queue_debug_draw_processor::TargetMarkerHeight + 20.0f},
+            TEXT("QUEUE TARGET"),
+            ck_queue_debug_draw_processor::QueueTargetColor,
+            ck_queue_debug_draw_processor::DurationOneFrame);
 
-        auto PreviousByOrigin = TArray<TOptional<FTransform>>{};
-        PreviousByOrigin.SetNum(InCurrent.Get_Origins().Num());
+        auto PreviousTarget = TOptional<FTransform>{};
         for (const auto& Member : InCurrent.Get_Members())
         {
             const auto HasTarget = Member.Get_AssignmentRevision() > 0
@@ -157,27 +150,24 @@ namespace ck
             UCk_Utils_DebugDraw_UE::DrawDebugString(
                 World,
                 TargetLocation + FVector{0.0f, 0.0f, 20.0f},
-                FString::Printf(TEXT("o%d r%d t%lld %s"),
-                    Member.Get_OriginIndex(),
+                FString::Printf(TEXT("r%d t%lld %s"),
                     Member.Get_Rank(),
                     Member.Get_Ticket(),
                     *StaticEnum<ECk_Queue_MemberState>()->GetNameStringByValue(static_cast<int64>(Member.Get_State()))),
                 StateColor,
                 ck_queue_debug_draw_processor::DurationOneFrame);
 
-            if (PreviousByOrigin.IsValidIndex(Member.Get_OriginIndex())
-                && PreviousByOrigin[Member.Get_OriginIndex()].IsSet())
+            if (PreviousTarget.IsSet())
             {
                 UCk_Utils_DebugDraw_UE::DrawDebugLine(
                     World,
-                    PreviousByOrigin[Member.Get_OriginIndex()]->GetLocation(),
+                    PreviousTarget->GetLocation(),
                     TargetLocation,
                     StateColor,
                     ck_queue_debug_draw_processor::DurationOneFrame,
                     ck_queue_debug_draw_processor::LineThickness);
             }
-            if (PreviousByOrigin.IsValidIndex(Member.Get_OriginIndex()))
-            { PreviousByOrigin[Member.Get_OriginIndex()] = Target; }
+            PreviousTarget = Target;
 
             const auto Mover = Member.Get_Mover();
             const auto MoverHasTransform = ck::IsValid(Mover) && UCk_Utils_Transform_UE::Has(Mover);

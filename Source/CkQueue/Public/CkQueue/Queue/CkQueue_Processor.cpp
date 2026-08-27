@@ -40,13 +40,12 @@ namespace ck_queue_processor
         for (auto& Member : InOutMembers)
         {
             if (NOT IsClaimed(Member)
-                || Member.Get_OriginIndex() != InRemovedOrUnavailable.Get_OriginIndex()
                 || Member.Get_Rank() <= InRemovedOrUnavailable.Get_Rank())
             { continue; }
 
             Member = FCk_Queue_MemberSnapshot{
                 Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
-                INDEX_NONE, INDEX_NONE, FTransform::Identity, 0,
+                INDEX_NONE, FTransform::Identity, 0,
                 Member.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
         }
     }
@@ -65,21 +64,17 @@ namespace ck
             FFragment_Queue_Current& InCurrent)
         -> void
     {
-        InCurrent._Origins = InParams.Get_Origins();
         InCurrent._LayoutAlgorithm = InParams.Get_LayoutAlgorithm();
         const auto QueueTransform = UCk_Utils_Transform_UE::Cast(InQueue);
         InCurrent._LastOwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
         InCurrent._State = ECk_Queue_State::Ready;
         InCurrent._Revision = 1;
-        auto OriginCounts = TArray<int32>{};
-        OriginCounts.Init(0, InCurrent._Origins.Num());
         InCurrent._Pressure = FCk_Queue_Pressure{
             0,
             InParams.Get_SoftLimit(),
             InParams.Get_HardLimit(),
             false,
             false,
-            OriginCounts,
             InCurrent._Revision};
 
         InQueue.Remove<MarkedDirtyBy>();
@@ -126,6 +121,76 @@ namespace ck
         if (InRequests._Requests.IsEmpty())
         { InQueue.Remove<MarkedDirtyBy>(); }
     }
+
+    auto
+        FProcessor_Queue_HandleRequests::
+        TryApplyReachedClaim(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
+            int32 InMemberIndex,
+            TOptional<int32> InExpectedAssignmentRevision)
+        -> bool
+    {
+        if (NOT InCurrent._Members.IsValidIndex(InMemberIndex)
+            || InCurrent._State != ECk_Queue_State::Ready)
+        { return false; }
+
+        const auto Previous = InCurrent._Members[InMemberIndex];
+        const auto HasExpectedAssignment = NOT InExpectedAssignmentRevision.IsSet()
+            || Previous.Get_AssignmentRevision() == InExpectedAssignmentRevision.GetValue();
+        const auto HasClaimableAssignment = HasExpectedAssignment
+            && Previous.Get_AssignmentRevision() > 0
+            && Previous.Get_Rank() != INDEX_NONE
+            && NOT Previous.Get_MovementSuppressed()
+            && (Previous.Get_State() == ECk_Queue_MemberState::Assigned
+                || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot);
+        if (NOT HasClaimableAssignment)
+        { return false; }
+
+        const auto ClaimAlreadyExists = InCurrent._Members.ContainsByPredicate(
+            [&Previous](const FCk_Queue_MemberSnapshot& InMember)
+            {
+                return ck_queue_processor::IsClaimed(InMember)
+                    && InMember.Get_Rank() == Previous.Get_Rank();
+            });
+        // Queue requests drain serially. The first current-revision arrival claims the provisional slot;
+        // same-drain contenders that arrive after it succeed as no-ops and are retargeted by the reflow it opens.
+        if (ClaimAlreadyExists)
+        { return true; }
+
+        ++InCurrent._Revision;
+        InCurrent._Members[InMemberIndex] = FCk_Queue_MemberSnapshot{
+            Previous.Get_Member(),
+            Previous.Get_Mover(),
+            Previous.Get_Ticket(),
+            Previous.Get_Rank(),
+            Previous.Get_TargetWorldTransform(),
+            Previous.Get_AssignmentRevision(),
+            Previous.Get_MovementSuppressed(),
+            Previous.Get_Rank() == 0
+                ? ECk_Queue_MemberState::AtFront
+                : ECk_Queue_MemberState::AtSlot};
+
+        BroadcastMemberEvent(
+            InQueue,
+            InCurrent._Members[InMemberIndex],
+            Previous.Get_State(),
+            ECk_Queue_EventReason::SlotReached,
+            InCurrent._Revision);
+        if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
+        {
+            // Keep this request drain Ready: another contender may report the current offer reached this frame.
+            // Formation runs after the drain and opens the next offer. The flag is required
+            // because the formation processor early-outs on a settled Ready queue — without it the
+            // reach event is swallowed and the next member is never offered a slot.
+            InCurrent._HasPendingClaimOffer = true;
+            InQueue.AddOrGet<FTag_Queue_NeedsFormation>();
+        }
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_Queue_HandleRequests::
@@ -182,7 +247,7 @@ namespace ck
 
             ++InCurrent._Revision;
             InCurrent._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
-                Existing.Get_Member(), Mover, Existing.Get_Ticket(), INDEX_NONE, INDEX_NONE,
+                Existing.Get_Member(), Mover, Existing.Get_Ticket(), INDEX_NONE,
                 FTransform::Identity, 0, Existing.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
             MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Rejoined);
             BroadcastMemberEvent(InQueue, InCurrent._Members[ExistingIndex], Existing.Get_State(),
@@ -195,27 +260,16 @@ namespace ck
         {
             ++InCurrent._Revision;
             const auto Rejected = FCk_Queue_MemberSnapshot{
-                InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE, INDEX_NONE,
+                InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE,
                 FTransform::Identity, 0, false, ECk_Queue_MemberState::Rejected};
             BroadcastMemberEvent(InQueue, Rejected, ECk_Queue_MemberState::None,
                 ECk_Queue_EventReason::HardLimitReached, InCurrent._Revision);
             return false;
         }
 
-        if (NOT HasOriginCapacityForCount(InCurrent._Origins, InCurrent._Members.Num() + 1))
-        {
-            ++InCurrent._Revision;
-            const auto Rejected = FCk_Queue_MemberSnapshot{
-                InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE, INDEX_NONE,
-                FTransform::Identity, 0, false, ECk_Queue_MemberState::Rejected};
-            BroadcastMemberEvent(InQueue, Rejected, ECk_Queue_MemberState::None,
-                ECk_Queue_EventReason::OriginHardLimitReached, InCurrent._Revision);
-            return false;
-        }
-
         ++InCurrent._Revision;
         InCurrent._Members.Emplace(InRequest.Get_Member(), InRequest.Get_Mover(), InRequest.Get_RestoredTicket(),
-            0, 0, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission);
+            0, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission);
         InCurrent._Members.Sort([](const FCk_Queue_MemberSnapshot& InA, const FCk_Queue_MemberSnapshot& InB)
         { return InA.Get_Ticket() < InB.Get_Ticket(); });
         InCurrent._NextTicket = FMath::Max(InCurrent._NextTicket, InRequest.Get_RestoredTicket() + 1);
@@ -267,7 +321,6 @@ namespace ck
                 Existing.Get_Member(),
                 Mover,
                 Existing.Get_Ticket(),
-                Existing.Get_OriginIndex(),
                 Existing.Get_Rank(),
                 FTransform::Identity,
                 0,
@@ -294,7 +347,6 @@ namespace ck
                 InRequest.Get_Mover(),
                 0,
                 INDEX_NONE,
-                INDEX_NONE,
                 FTransform::Identity,
                 0,
                 false,
@@ -305,29 +357,6 @@ namespace ck
                 Rejected,
                 ECk_Queue_MemberState::None,
                 ECk_Queue_EventReason::HardLimitReached,
-                InCurrent._Revision);
-            return false;
-        }
-
-        if (NOT HasOriginCapacityForCount(InCurrent._Origins, InCurrent._Members.Num() + 1))
-        {
-            ++InCurrent._Revision;
-            const auto Rejected = FCk_Queue_MemberSnapshot{
-                InRequest.Get_Member(),
-                InRequest.Get_Mover(),
-                0,
-                INDEX_NONE,
-                INDEX_NONE,
-                FTransform::Identity,
-                0,
-                false,
-                ECk_Queue_MemberState::Rejected};
-
-            BroadcastMemberEvent(
-                InQueue,
-                Rejected,
-                ECk_Queue_MemberState::None,
-                ECk_Queue_EventReason::OriginHardLimitReached,
                 InCurrent._Revision);
             return false;
         }
@@ -351,7 +380,6 @@ namespace ck
             InRequest.Get_Member(),
             InRequest.Get_Mover(),
             Ticket,
-            0,
             Rank,
             FTransform::Identity,
             0,
@@ -393,7 +421,6 @@ namespace ck
             Removed.Get_Member(),
             Removed.Get_Mover(),
             Removed.Get_Ticket(),
-            Removed.Get_OriginIndex(),
             Removed.Get_Rank(),
             Removed.Get_TargetWorldTransform(),
             Removed.Get_AssignmentRevision(),
@@ -418,23 +445,13 @@ namespace ck
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent,
-            const FCk_Request_Queue_AdvanceOrigin& InRequest)
+            const FCk_Request_Queue_Advance& /*InRequest*/)
         -> bool
     {
-        const auto OriginIsValid = InCurrent._Origins.IsValidIndex(InRequest.Get_OriginIndex());
-        CK_ENSURE_IF_NOT(OriginIsValid,
-            TEXT("Queue [{}] cannot advance invalid origin index [{}]"),
-            InQueue,
-            InRequest.Get_OriginIndex())
-        {}
-        if (NOT OriginIsValid)
-        { return false; }
-
         const auto MemberIndex = InCurrent._Members.IndexOfByPredicate(
         [&](const FCk_Queue_MemberSnapshot& InMember)
         {
-            return InMember.Get_OriginIndex() == InRequest.Get_OriginIndex()
-                && InMember.Get_Rank() == 0
+            return InMember.Get_Rank() == 0
                 && InMember.Get_State() == ECk_Queue_MemberState::AtFront;
         });
 
@@ -452,7 +469,6 @@ namespace ck
             Removed.Get_Member(),
             Removed.Get_Mover(),
             Removed.Get_Ticket(),
-            Removed.Get_OriginIndex(),
             Removed.Get_Rank(),
             Removed.Get_TargetWorldTransform(),
             Removed.Get_AssignmentRevision(),
@@ -477,51 +493,6 @@ namespace ck
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent,
-            const FCk_Request_Queue_SetOrigins& InRequest)
-        -> bool
-    {
-        const auto OriginsAreValid = NOT InRequest.Get_Origins().IsEmpty()
-            && algo::AllOf(InRequest.Get_Origins(), [](const FCk_Queue_Origin& InOrigin)
-            {
-                return InOrigin.Get_Weight() > 0 && InOrigin.Get_HardLimitOverride() >= INDEX_NONE;
-            });
-
-        CK_ENSURE_IF_NOT(OriginsAreValid,
-            TEXT("Queue [{}] rejected invalid origin configuration"),
-            InQueue)
-        {}
-        if (NOT OriginsAreValid)
-        { return false; }
-
-        const auto OriginsHaveCapacity = HasOriginCapacityForCount(
-            InRequest.Get_Origins(),
-            InCurrent._Members.Num());
-        if (NOT OriginsHaveCapacity)
-        { return false; }
-
-        InCurrent._Origins = InRequest.Get_Origins();
-        ++InCurrent._Revision;
-        if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
-        {
-            for (auto& Member : InCurrent._Members)
-            {
-                if (Member.Get_MovementSuppressed()) { continue; }
-                Member = FCk_Queue_MemberSnapshot{Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
-                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
-            }
-        }
-        RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::OriginReassigned);
-        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::OriginsChanged);
-        RefreshPressure(InQueue, InParams, InCurrent);
-        return true;
-    }
-
-    auto
-        FProcessor_Queue_HandleRequests::
-        DoHandleRequest(
-            HandleType InQueue,
-            const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
             const FCk_Request_Queue_SetLayout& InRequest)
         -> bool
     {
@@ -536,7 +507,7 @@ namespace ck
             {
                 if (Member.Get_MovementSuppressed()) { continue; }
                 Member = FCk_Queue_MemberSnapshot{Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
-                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
+                    INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
             }
         }
         MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::LayoutChanged);
@@ -569,7 +540,6 @@ namespace ck
             Previous.Get_Member(),
             Previous.Get_Mover(),
             Previous.Get_Ticket(),
-            Previous.Get_OriginIndex(),
             Previous.Get_Rank(),
             Suppressed ? Previous.Get_TargetWorldTransform() : FTransform::Identity,
             0,
@@ -615,33 +585,21 @@ namespace ck
         if (NOT HasIssuedAssignment)
         { return false; }
 
-        const auto ClaimAlreadyExists = InRequest.Get_Outcome() == ECk_Queue_MovementOutcome::Reached
-            && InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach
-            && InCurrent._Members.ContainsByPredicate([&Previous](const FCk_Queue_MemberSnapshot& InMember)
-            {
-                return (InMember.Get_State() == ECk_Queue_MemberState::AtFront
-                        || InMember.Get_State() == ECk_Queue_MemberState::AtSlot)
-                    && InMember.Get_OriginIndex() == Previous.Get_OriginIndex()
-                    && InMember.Get_Rank() == Previous.Get_Rank();
-            });
-        // Queue requests drain serially. The first current-revision arrival claims the provisional slot;
-        // same-drain contenders that arrive after it succeed as no-ops and are retargeted by the reflow it opens.
-        if (ClaimAlreadyExists)
-        { return true; }
+        if (InRequest.Get_Outcome() == ECk_Queue_MovementOutcome::Reached)
+        {
+            return TryApplyReachedClaim(
+                InQueue,
+                InParams,
+                InCurrent,
+                MemberIndex,
+                TOptional<int32>{InRequest.Get_AssignmentRevision()});
+        }
 
         auto State = Previous.Get_State();
         auto Reason = ECk_Queue_EventReason::None;
 
         switch (InRequest.Get_Outcome())
         {
-            case ECk_Queue_MovementOutcome::Reached:
-            {
-                State = Previous.Get_Rank() == 0
-                    ? ECk_Queue_MemberState::AtFront
-                    : ECk_Queue_MemberState::AtSlot;
-                Reason = ECk_Queue_EventReason::SlotReached;
-                break;
-            }
             case ECk_Queue_MovementOutcome::Failed:
             {
                 // A failed mover no longer owns a reservation. Keep its ticket, but move it behind viable
@@ -651,7 +609,6 @@ namespace ck
                     Previous.Get_Member(),
                     Previous.Get_Mover(),
                     Previous.Get_Ticket(),
-                    INDEX_NONE,
                     INDEX_NONE,
                     FTransform::Identity,
                     0,
@@ -687,7 +644,6 @@ namespace ck
             Previous.Get_Member(),
             Previous.Get_Mover(),
             Previous.Get_Ticket(),
-            Previous.Get_OriginIndex(),
             Previous.Get_Rank(),
             Previous.Get_TargetWorldTransform(),
             Previous.Get_AssignmentRevision(),
@@ -700,16 +656,6 @@ namespace ck
             Previous.Get_State(),
             Reason,
             InCurrent._Revision);
-        if (InRequest.Get_Outcome() == ECk_Queue_MovementOutcome::Reached
-            && InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
-        {
-            // Keep this request drain Ready: another origin may report its own current offer reached this frame.
-            // Formation runs after the drain and opens the next offer per origin. The flag is required
-            // because the formation processor early-outs on a settled Ready queue — without it the
-            // reach event is swallowed and the next member is never offered a slot.
-            InCurrent._HasPendingClaimOffer = true;
-            InQueue.AddOrGet<FTag_Queue_NeedsFormation>();
-        }
         return true;
     }
 
@@ -725,26 +671,6 @@ namespace ck
         {
             return InSnapshot.Get_Member() == InMember;
         });
-    }
-
-    auto
-    FProcessor_Queue_HandleRequests::
-    HasOriginCapacityForCount(
-            const TArray<FCk_Queue_Origin>& InOrigins,
-            int32 InMemberCount)
-        -> bool
-    {
-        auto TotalCapacity = int64{0};
-        for (const auto& Origin : InOrigins)
-        {
-            const auto OriginLimit = Origin.Get_HardLimitOverride();
-            if (OriginLimit <= 0)
-            { return true; }
-
-            TotalCapacity += static_cast<int64>(OriginLimit);
-        }
-
-        return static_cast<int64>(InMemberCount) <= TotalCapacity;
     }
 
     auto
@@ -772,7 +698,6 @@ namespace ck
                 Previous.Get_Member(),
                 Previous.Get_Mover(),
                 Previous.Get_Ticket(),
-                Previous.Get_OriginIndex(),
                 Previous.Get_Rank(),
                 FTransform::Identity,
                 0,
@@ -789,36 +714,28 @@ namespace ck
     }
 
     auto
-        FProcessor_Queue_HandleRequests::
+    FProcessor_Queue_HandleRequests::
         RebuildRanks(
             HandleType InQueue,
             FFragment_Queue_Current& InCurrent,
             ECk_Queue_EventReason InReason)
         -> void
     {
-        auto OriginRanks = TArray<int32>{};
-        OriginRanks.Init(0, InCurrent._Origins.Num());
-
+        auto NextRank = 0;
         for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
         {
             const auto Previous = InCurrent._Members[MemberIndex];
             if (Previous.Get_State() == ECk_Queue_MemberState::WaitingForMover)
             { continue; }
-            const auto OriginIndex = InCurrent._Origins.IsValidIndex(Previous.Get_OriginIndex())
-                ? Previous.Get_OriginIndex()
-                : 0;
-            const auto Rank = OriginRanks.IsValidIndex(OriginIndex)
-                ? OriginRanks[OriginIndex]++
-                : MemberIndex;
+            const auto Rank = NextRank++;
 
-            if (Previous.Get_OriginIndex() == OriginIndex && Previous.Get_Rank() == Rank)
+            if (Previous.Get_Rank() == Rank)
             { continue; }
 
             InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(),
                 Previous.Get_Mover(),
                 Previous.Get_Ticket(),
-                OriginIndex,
                 Rank,
                 Previous.Get_TargetWorldTransform(),
                 Previous.Get_AssignmentRevision(),
@@ -842,14 +759,6 @@ namespace ck
             FFragment_Queue_Current& InCurrent)
         -> void
     {
-        auto OriginCounts = TArray<int32>{};
-        OriginCounts.Init(0, InCurrent._Origins.Num());
-        for (const auto& Member : InCurrent._Members)
-        {
-            if (OriginCounts.IsValidIndex(Member.Get_OriginIndex()))
-            { ++OriginCounts[Member.Get_OriginIndex()]; }
-        }
-
         const auto Count = InCurrent._Members.Num();
         const auto SoftLimited = InParams.Get_SoftLimit() > 0 && Count >= InParams.Get_SoftLimit();
         const auto HardLimited = InParams.Get_HardLimit() > 0 && Count >= InParams.Get_HardLimit();
@@ -860,7 +769,6 @@ namespace ck
             InParams.Get_HardLimit(),
             SoftLimited,
             HardLimited,
-            OriginCounts,
             InCurrent._Revision};
 
         UUtils_Signal_OnQueuePressureChanged::Broadcast(
@@ -941,9 +849,9 @@ namespace ck
         const auto ScaleChanged = NOT OwnerWorldTransform.GetScale3D().Equals(
             InCurrent._LastOwnerWorldTransform.GetScale3D(),
             KINDA_SMALL_NUMBER);
-        const auto OriginMoved = LocationMoved || RotationMoved || ScaleChanged;
+        const auto OwnerMoved = LocationMoved || RotationMoved || ScaleChanged;
 
-        if (OriginMoved)
+        if (OwnerMoved)
         {
             InCurrent._LastOwnerWorldTransform = OwnerWorldTransform;
             if (NOT InCurrent._Members.IsEmpty())
@@ -960,7 +868,6 @@ namespace ck
                         Previous.Get_Member(),
                         Previous.Get_Mover(),
                         Previous.Get_Ticket(),
-                        Previous.Get_OriginIndex(),
                         Previous.Get_Rank(),
                         FTransform::Identity,
                         0,
@@ -990,6 +897,49 @@ namespace ck
                             ECk_Queue_EventReason::Reflowed,
                             InCurrent._Revision,
                             InCurrent._RetryEpisode}));
+            }
+        }
+
+        const auto ReconcileArrivals = InCurrent._State == ECk_Queue_State::Ready;
+        if (ReconcileArrivals)
+        {
+            // HandleRequests has already consumed explicit outcomes this frame. This stable member
+            // iteration therefore only supplies a transform-backed fallback for an unreported arrival.
+            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+            {
+                const auto Previous = InCurrent._Members[MemberIndex];
+                const auto Member = Previous.Get_Member();
+                const auto MemberIsLive = ck::IsValid(Member) && NOT Member.Has<FTag_DestroyEntity_Initiate>();
+                const auto HasCurrentAssignment = MemberIsLive
+                    && Previous.Get_AssignmentRevision() > 0
+                    && Previous.Get_Rank() != INDEX_NONE
+                    && NOT Previous.Get_MovementSuppressed()
+                    && (Previous.Get_State() == ECk_Queue_MemberState::Assigned
+                        || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot);
+                if (NOT HasCurrentAssignment)
+                { continue; }
+
+                const auto Mover = Previous.Get_Mover();
+                const auto MoverHasTransform = ck::IsValid(Mover)
+                    && NOT Mover.Has<FTag_DestroyEntity_Initiate>()
+                    && UCk_Utils_Transform_UE::Has(Mover);
+                if (NOT MoverHasTransform || Previous.Get_TargetWorldTransform().ContainsNaN())
+                { continue; }
+
+                const auto MoverLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+                    UCk_Utils_Transform_UE::CastChecked(Mover));
+                const auto ReachedCurrentReservation = NOT MoverLocation.ContainsNaN()
+                    && FVector::Dist(MoverLocation, Previous.Get_TargetWorldTransform().GetLocation())
+                        <= InParams.Get_SlotClaimRadiusUu();
+                if (NOT ReachedCurrentReservation)
+                { continue; }
+
+                FProcessor_Queue_HandleRequests::TryApplyReachedClaim(
+                    InQueue,
+                    InParams,
+                    InCurrent,
+                    MemberIndex,
+                    TOptional<int32>{Previous.Get_AssignmentRevision()});
             }
         }
 
@@ -1030,7 +980,7 @@ namespace ck
                 ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Previous);
                 InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                     Previous.Get_Member(), FCk_Handle{}, Previous.Get_Ticket(),
-                    INDEX_NONE, INDEX_NONE, FTransform::Identity, 0,
+                    INDEX_NONE, FTransform::Identity, 0,
                     Previous.Get_MovementSuppressed(), ECk_Queue_MemberState::WaitingForMover};
 
                 UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
@@ -1047,25 +997,17 @@ namespace ck
         }
         else
         {
-            auto OriginRanks = TArray<int32>{};
-            OriginRanks.Init(0, InCurrent._Origins.Num());
+            auto NextRank = 0;
             for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
             {
                 const auto Previous = InCurrent._Members[MemberIndex];
-                const auto OriginIndex = InCurrent._Origins.IsValidIndex(Previous.Get_OriginIndex())
-                    ? Previous.Get_OriginIndex()
-                    : 0;
-                const auto Rank = OriginRanks.IsValidIndex(OriginIndex)
-                    ? OriginRanks[OriginIndex]++
-                    : MemberIndex;
-
                 const auto MoverWasDestroyed = MembersWithDestroyedMovers.Contains(Previous.Get_Member());
+                const auto Rank = MoverWasDestroyed ? INDEX_NONE : NextRank++;
                 InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                     Previous.Get_Member(),
                     MoverWasDestroyed ? FCk_Handle{} : Previous.Get_Mover(),
                     Previous.Get_Ticket(),
-                    MoverWasDestroyed ? INDEX_NONE : OriginIndex,
-                    MoverWasDestroyed ? INDEX_NONE : Rank,
+                    Rank,
                     MoverWasDestroyed ? FTransform::Identity : Previous.Get_TargetWorldTransform(),
                     MoverWasDestroyed ? 0 : Previous.Get_AssignmentRevision(),
                     Previous.Get_MovementSuppressed(),
@@ -1096,14 +1038,6 @@ namespace ck
         else
         { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
 
-        auto OriginCounts = TArray<int32>{};
-        OriginCounts.Init(0, InCurrent._Origins.Num());
-        for (const auto& Member : InCurrent._Members)
-        {
-            if (OriginCounts.IsValidIndex(Member.Get_OriginIndex()))
-            { ++OriginCounts[Member.Get_OriginIndex()]; }
-        }
-
         const auto Count = InCurrent._Members.Num();
         InCurrent._Pressure = FCk_Queue_Pressure{
             Count,
@@ -1111,7 +1045,6 @@ namespace ck
             InParams.Get_HardLimit(),
             InParams.Get_SoftLimit() > 0 && Count >= InParams.Get_SoftLimit(),
             InParams.Get_HardLimit() > 0 && Count >= InParams.Get_HardLimit(),
-            OriginCounts,
             InCurrent._Revision};
 
         for (const auto& Removed : RemovedMembers)
@@ -1120,7 +1053,6 @@ namespace ck
                 Removed.Get_Member(),
                 Removed.Get_Mover(),
                 Removed.Get_Ticket(),
-                Removed.Get_OriginIndex(),
                 Removed.Get_Rank(),
                 Removed.Get_TargetWorldTransform(),
                 Removed.Get_AssignmentRevision(),
@@ -1183,7 +1115,6 @@ namespace ck
                 Member.Get_Member(),
                 Member.Get_Mover(),
                 Member.Get_Ticket(),
-                Member.Get_OriginIndex(),
                 Member.Get_Rank(),
                 Member.Get_TargetWorldTransform(),
                 Member.Get_AssignmentRevision(),
@@ -1209,7 +1140,6 @@ namespace ck
             InCurrent._Pressure.Get_HardLimit(),
             false,
             false,
-            TArray<int32>{},
             InCurrent._Revision};
 
         const auto FormationState = FCk_Queue_FormationState{
