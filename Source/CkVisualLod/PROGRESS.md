@@ -32,6 +32,16 @@ discharging the CkCamera chip) + CkTests gym/autotest coverage.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-27 — Gate 2 first half: local-view discovery (compile-green)
+- Wrote: `UCk_Utils_Camera_UE::TryGet_LocalViewInfo` (CkCamera — surgical addition): first
+  locally-player-controlled camera entity's composed FMinimalViewInfo, PCM fallback with real
+  `GetFOVAngle()` (BB assumed 90°), false on dedicated server/editor worlds (null-safe
+  `Get_PrimaryPlayerController`). **Discharges the standing "upstream TryGet_LocalCamera into
+  CkCamera" chip.** Arbiter `DoResolve_View` now falls back to it when no observer is wired.
+- Ran: toolbox `--build` ×2 → `=== Build succeeded ===`, 0 error lines. Fix: const-handle
+  `View<>` with lifetime filters doesn't convert — mutable handle copy (house call sites agree).
+- Remaining for Gate 2: CkTests gym + AS autotests (next session; own submodule + skill load).
+
 ### 2026-08-27 — Gate 1 landed (mechanism, compile-green)
 - Wrote: the full flip driver in `FProcessor_VisualLodArbiter_Update` — shadowed `DoTick`
   (snapshot arbiters/members from `Handle.View<>`, mechanism runs OUTSIDE live iteration because
