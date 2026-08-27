@@ -915,6 +915,16 @@ decision or an open fork.
   `Request_AddPlacement` writes the occupant's `PlacementRef` only for a valid occupant, and the load path passes
   possibly-invalid occupants by design — so the occupant→placement chain is broken for exactly the entities a load
   repairs. Branch on grid validity first.
+- **A `Durable` payload holding a hard UObject ref is now flagged — this gap is CLOSED at the type level.**
+  ECS fragments are invisible to UE GC, so such a field dangles instead of nulling and the capture dereferences it
+  (`Audit_DurableObjectRefs`' `IsAsset()`, then `Serialize_OwnedStruct`'s `GetPathName()` — the latter on a
+  `ParallelFor` worker, which is why hardening the audit was never the fix). QA 2026-08-26 crashed on
+  `FCk_MontagePlayer_State::_Montage`. `Ck.Snapshot.Meta.FragmentPostureCoverage` now reds any registered Durable
+  payload carrying one, using `ck::Get_DurablePayloadObjectRefPolicy`. Two narrowings are deliberate and pinned by
+  `Ck.Snapshot.DurablePayloadRefs`: class refs are accepted (a loaded UClass outlives any one holder), and an
+  `FInstancedStruct` carrier is a boundary rather than a rejection (CkDynamic schema-validates its entries at
+  insertion). **The residual hole is the class refs** — four `TSubclassOf` fields in CkStateMachine's two saved
+  payloads are walked and dereferenced by the capture and are NOT flagged.
 - **The posture ratchet does not structurally flag a `Durable` fragment holding a handle to a non-persisted
   target.** That is the C1 structural rule's own prohibited shape, and the type-level walk cannot see it: whether
   the TARGET persists is a runtime fact. The capture-time AUDIT is the detector, and it names the offender on

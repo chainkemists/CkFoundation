@@ -9,6 +9,7 @@ namespace ck_untraced_struct_safety
 {
     using EResult = ck::ECk_UntracedStructSafety;
     using FResult = ck::FCk_UntracedStructSafetyResult;
+    using FPolicy = ck::FCk_UntracedStructSafety_Policy;
 
     auto IsAngelScriptStruct(const UScriptStruct* InStruct) -> bool
     {
@@ -51,11 +52,13 @@ namespace ck_untraced_struct_safety
     auto AnalyzeStruct(
         const UScriptStruct* InStruct,
         const FString& InPath,
+        const FPolicy& InPolicy,
         TSet<const UScriptStruct*>& InOutActiveStructs) -> FResult;
 
     auto AnalyzeProperty(
         const FProperty* InProperty,
         const FString& InPath,
+        const FPolicy& InPolicy,
         TSet<const UScriptStruct*>& InOutActiveStructs) -> FResult
     {
         if (InProperty == nullptr)
@@ -78,6 +81,12 @@ namespace ck_untraced_struct_safety
             CastField<const FMulticastDelegateProperty>(InProperty) != nullptr)
         { return Accept(); }
 
+        // FClassProperty derives FObjectProperty, so a class ref reaches the reject below unless a caller has
+        // declared class refs out of scope for the question it is asking.
+        if (InPolicy.ClassRefs == ck::ECk_UntracedStructSafety_ClassRefs::Accept &&
+            CastField<const FClassProperty>(InProperty) != nullptr)
+        { return Accept(); }
+
         if (CastField<const FObjectPropertyBase>(InProperty) != nullptr)
         {
             return Reject(EResult::RequiresGcTracing, InPath,
@@ -92,25 +101,25 @@ namespace ck_untraced_struct_safety
         }
 
         if (const auto* ArrayProperty = CastField<const FArrayProperty>(InProperty))
-        { return AnalyzeProperty(ArrayProperty->Inner, InPath + TEXT("[]"), InOutActiveStructs); }
+        { return AnalyzeProperty(ArrayProperty->Inner, InPath + TEXT("[]"), InPolicy, InOutActiveStructs); }
 
         if (const auto* SetProperty = CastField<const FSetProperty>(InProperty))
-        { return AnalyzeProperty(SetProperty->ElementProp, InPath + TEXT("{}"), InOutActiveStructs); }
+        { return AnalyzeProperty(SetProperty->ElementProp, InPath + TEXT("{}"), InPolicy, InOutActiveStructs); }
 
         if (const auto* MapProperty = CastField<const FMapProperty>(InProperty))
         {
-            auto Result = AnalyzeProperty(MapProperty->KeyProp, InPath + TEXT("{Key}"), InOutActiveStructs);
+            auto Result = AnalyzeProperty(MapProperty->KeyProp, InPath + TEXT("{Key}"), InPolicy, InOutActiveStructs);
             if (NOT Result.IsGcIndependent())
             { return Result; }
 
-            return AnalyzeProperty(MapProperty->ValueProp, InPath + TEXT("{Value}"), InOutActiveStructs);
+            return AnalyzeProperty(MapProperty->ValueProp, InPath + TEXT("{Value}"), InPolicy, InOutActiveStructs);
         }
 
         if (const auto* OptionalProperty = CastField<const FOptionalProperty>(InProperty))
-        { return AnalyzeProperty(OptionalProperty->GetValueProperty(), InPath + TEXT("?"), InOutActiveStructs); }
+        { return AnalyzeProperty(OptionalProperty->GetValueProperty(), InPath + TEXT("?"), InPolicy, InOutActiveStructs); }
 
         if (const auto* StructProperty = CastField<const FStructProperty>(InProperty))
-        { return AnalyzeStruct(StructProperty->Struct, InPath, InOutActiveStructs); }
+        { return AnalyzeStruct(StructProperty->Struct, InPath, InPolicy, InOutActiveStructs); }
 
         return Accept();
     }
@@ -118,6 +127,7 @@ namespace ck_untraced_struct_safety
     auto AnalyzeStruct(
         const UScriptStruct* InStruct,
         const FString& InPath,
+        const FPolicy& InPolicy,
         TSet<const UScriptStruct*>& InOutActiveStructs) -> FResult
     {
         if (ck::Is_NOT_Valid(InStruct))
@@ -126,6 +136,9 @@ namespace ck_untraced_struct_safety
         // An untraced sink cannot invoke a custom reference collector, so retaining this value needs a traced holder.
         if (InStruct->StructFlags & STRUCT_AddStructReferencedObjects)
         {
+            if (InPolicy.GcTracedStructs == ck::ECk_UntracedStructSafety_GcTracedStructs::TreatAsBoundary)
+            { return Accept(); }
+
             return Reject(EResult::RequiresGcTracing, InPath,
                 FString::Printf(TEXT("opaque struct [%s] owns references through AddStructReferencedObjects"),
                     *InStruct->GetPathName()));
@@ -140,7 +153,7 @@ namespace ck_untraced_struct_safety
         {
             HasReflectedProperty = true;
             const auto* Property = *PropertyIt;
-            auto Result = AnalyzeProperty(Property, AppendPath(InPath, Property->GetName()), InOutActiveStructs);
+            auto Result = AnalyzeProperty(Property, AppendPath(InPath, Property->GetName()), InPolicy, InOutActiveStructs);
             if (NOT Result.IsGcIndependent())
             {
                 InOutActiveStructs.Remove(InStruct);
@@ -184,7 +197,8 @@ auto
 auto
     ck::
     Analyze_UntracedStructSafety(
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        const FCk_UntracedStructSafety_Policy& InPolicy)
     -> FCk_UntracedStructSafetyResult
 {
     if (ck::Is_NOT_Valid(InStructType))
@@ -196,5 +210,5 @@ auto
     }
 
     auto ActiveStructs = TSet<const UScriptStruct*>{};
-    return ck_untraced_struct_safety::AnalyzeStruct(InStructType, InStructType->GetName(), ActiveStructs);
+    return ck_untraced_struct_safety::AnalyzeStruct(InStructType, InStructType->GetName(), InPolicy, ActiveStructs);
 }
