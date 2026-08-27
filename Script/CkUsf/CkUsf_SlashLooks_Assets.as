@@ -1,20 +1,20 @@
 // Language=angelscript
 
 //============================================================================
-// VEFECTS "DissolveAdd" FAMILY — the ported parameterizations
+// VEFECTS "DissolveAdd" FAMILY - the ported parameterizations
 //============================================================================
 //
 // All of them share ONE shader (/CkUsf/Looks/DissolveAdd.ush) because the source
 // ships one parent graph (M_VFX_DissolveAdd) and one material INSTANCE per
 // emitter. A look here is therefore a set of parameter defaults, read out of
-// the extracted corpus — never a second copy of the math.
+// the extracted corpus - never a second copy of the math.
 //
 // Every default below is quoted in a recipe's per-material delta table:
-// CkFoundation/Source/CkParticles/Cookbook/NS_BasicAttack.md §4 (the five Slash
-// looks) and NS_Gunshot_Projectile.md / NS_Arrow_Projectile.md §4 (PartDisAdd01).
+// CkFoundation/Source/CkParticles/Cookbook/NS_BasicAttack.md Sec.4 (the five Slash
+// looks) and NS_Gunshot_Projectile.md / NS_Arrow_Projectile.md Sec.4 (PartDisAdd01).
 //
 // Textures are the plugin's own PROCEDURAL stand-ins, parameterized from
-// measured characteristics of the source paints (recipe §7). No pack art is
+// measured characteristics of the source paints (recipe Sec.7). No pack art is
 // imported for this effect.
 //
 //============================================================================
@@ -49,7 +49,7 @@ namespace CkUsf
         return Param;
     }
 
-    // The family's parameter list, in the ORDER CkUsf_Look_DissolveAdd declares them — the validator
+    // The family's parameter list, in the ORDER CkUsf_Look_DissolveAdd declares them - the validator
     // enforces that order positionally, so this function is the single place it is stated.
     TArray<FCk_Usf_ParamDesc> Usf_DissolveAddParams(
         FString InShapeTexture,
@@ -89,7 +89,7 @@ namespace CkUsf
         Params.Add(CkUsf::Usf_Vector(n"CoreColor", FLinearColor(1.0, 1.0, 1.0, 1.0)));
         Params.Add(CkUsf::Usf_Scalar(n"Brightness", InBrightness));
         Params.Add(CkUsf::Usf_Scalar(n"DissolveSpeed", InDissolveSpeedX));
-        // Erosion edge softness — the source expresses this through a SmoothStep in the parent graph, so the
+        // Erosion edge softness - the source expresses this through a SmoothStep in the parent graph, so the
         // value is inferred rather than read. Shared with RingDissolveAdd.
         Params.Add(CkUsf::Usf_Scalar(n"DissolveEdge", 0.15));
         Params.Add(CkUsf::Usf_Scalar(n"DistortScale", InDistortScale));
@@ -124,7 +124,7 @@ namespace CkUsf
 
 namespace CkUsf
 {
-    // M_VFX_DisAdd_Slash01 — the reference instance. The only one in the family with a live distortion
+    // M_VFX_DisAdd_Slash01 - the reference instance. The only one in the family with a live distortion
     // branch (Distortion_Intensity 1) and a two-axis dissolve pan.
     asset SlashDisAdd01 of UCkUsf_LookDefinition
     {
@@ -151,7 +151,7 @@ namespace CkUsf
             1.0, 1.0);    // MainTex_Scale
     }
 
-    // M_VFX_DisAdd_Slash02 — the hot core line: Brightness 40, no dissolve pan, no distortion.
+    // M_VFX_DisAdd_Slash02 - the hot core line: Brightness 40, no dissolve pan, no distortion.
     asset SlashDisAdd02 of UCkUsf_LookDefinition
     {
         _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
@@ -177,7 +177,7 @@ namespace CkUsf
             1.0, 1.0);
     }
 
-    // M_VFX_DisAdd_Slash04 — worn by the emitter named Slash_03 (a naming skew in the source that is
+    // M_VFX_DisAdd_Slash04 - worn by the emitter named Slash_03 (a naming skew in the source that is
     // deliberately preserved). Carries a -0.1 static dissolve bias and a stretched main-tex V.
     asset SlashDisAdd04 of UCkUsf_LookDefinition
     {
@@ -204,7 +204,7 @@ namespace CkUsf
             1.0, 1.2);
     }
 
-    // M_VFX_DisAdd_Pan_Wind02 — the dim wind ghost: Brightness 1, a shrunken dissolve tile and the only
+    // M_VFX_DisAdd_Pan_Wind02 - the dim wind ghost: Brightness 1, a shrunken dissolve tile and the only
     // instance whose distortion UVs pan.
     asset WindDisAdd02 of UCkUsf_LookDefinition
     {
@@ -231,12 +231,12 @@ namespace CkUsf
             1.0, 1.0);
     }
 
-    // M_VFX_DisAdd_Part01 — the reference instance of the whole family: every scalar sits at the parent's
+    // M_VFX_DisAdd_Part01 - the reference instance of the whole family: every scalar sits at the parent's
     // default. Worn by the Glow_01 head of both projectile recreations (behaviors 18 and 19), on a
     // velocity-aligned sprite for the Gunshot and on the shared camera sprite for the Arrow.
     //
     // OpacityBoldness 0.5 is the first value in the cookbook that is NOT 1.0, and the family shader multiplies
-    // it straight into Opacity — so it halves this layer's coverage rather than being inert.
+    // it straight into Opacity - so it halves this layer's coverage rather than being inert.
     asset PartDisAdd01 of UCkUsf_LookDefinition
     {
         _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
@@ -254,16 +254,16 @@ namespace CkUsf
         _Parameters = CkUsf::Usf_DissolveAddParams(
             "SoftParticle", "SoftParticle",
             1.0,          // Brightness
-            0.0, 0.0,     // Dissolve_Speed — static erosion, the pattern never pans
+            0.0, 0.0,     // Dissolve_Speed - static erosion, the pattern never pans
             0.0,          // Dissolve (static bias)
             1.0, 1.0,     // Dissolve_Scale
-            0.0,          // Distortion_Intensity — the distortion branch is dead on this instance
+            0.0,          // Distortion_Intensity - the distortion branch is dead on this instance
             0.0, 0.0,     // Distortion_Speed
             1.0, 1.0,     // MainTex_Scale
             0.5);         // Opacity_Boldness
     }
 
-    // M_VFX_DisAdd_Part04 — the spark streaks, and the two tails of both projectile recreations. On a SPRITE
+    // M_VFX_DisAdd_Part04 - the spark streaks, and the two tails of both projectile recreations. On a SPRITE
     // renderer, so it takes the sprite usage flag rather than the mesh-particle one.
     asset PartDisAdd04 of UCkUsf_LookDefinition
     {

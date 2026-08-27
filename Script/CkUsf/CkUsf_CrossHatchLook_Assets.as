@@ -1,13 +1,13 @@
 // Language=angelscript
 
 //============================================================================
-// CROSS HATCH — the normal-aligned engraving / hatching look.
+// CROSS HATCH - the normal-aligned engraving / hatching look.
 //
 // Shader: /CkUsf/Looks/CrossHatch.ush. Driven at runtime by
 // UCkUsf_CrossHatchSubsystem, which owns the whole-view blendable and writes
 // these parameters by NAME from FCk_Usf_CrossHatch_Params.
 //
-// _Parameters order MUST equal CkUsf_PP_CrossHatch's declaration order — the
+// _Parameters order MUST equal CkUsf_PP_CrossHatch's declaration order - the
 // generator binds positionally and the validator enforces it. The defaults
 // below are the "Sketch" preset, so an un-driven master already renders that
 // style.
@@ -22,14 +22,14 @@ namespace CkUsf
         _Domain          = ECk_Usf_Domain::PostProcess;
         _LookName        = n"CrossHatch";
 
-        // Reads Custom Stencil for the effect mask, which is rendered with the TAA-jittered projection —
+        // Reads Custom Stencil for the effect mask, which is rendered with the TAA-jittered projection
         // thresholding it after tonemapping shimmers on a stationary camera. Consequence: the input and
         // output are scene-referred LINEAR, which is the space PaperColor is authored in.
         _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
 
         // The default trio plus CustomStencil. SceneNormal is the load-bearing one here: the hatch
         // direction IS the projected normal, so without it every stroke would run at AngleOffset and the
-        // look would be a screen-space texture rather than hatching. No GBuffer reads — nothing here
+        // look would be a screen-space texture rather than hatching. No GBuffer reads - nothing here
         // reconstructs illumination.
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);

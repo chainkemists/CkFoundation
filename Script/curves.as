@@ -1,5 +1,5 @@
 // --------------------------------------------------------------------------------------------------------------------
-// curves.as — the easings.net easing functions as script-literal UCurveFloat assets.
+// curves.as - the easings.net easing functions as script-literal UCurveFloat assets.
 //
 // Every easing from https://easings.net/# is exposed as a curve::CurveFloatEase<Name> asset,
 // usable anywhere a UCurveFloat is expected, e.g. with CkTween / CurveFloat.GetFloatValue(t).
@@ -11,14 +11,14 @@
 //   Cubic, Quart, Quint, Expo, Circ and Back families (24 functions). A CSS cubic bezier has
 //   fixed endpoints P0=(0,0) and P3=(1,1) and two control points P1=(x1,y1), P2=(x2,y2).
 //   We reproduce it exactly with two weighted-tangent keys: at each endpoint the tangent slope
-//   is the direction toward its control point and the tangent weight is the distance to it —
+//   is the direction toward its control point and the tangent weight is the distance to it
 //   which is precisely how UE's RCTWM_WeightedBoth eval reconstructs the bezier handle
 //   (handle = (cos(atan(slope)), sin(atan(slope))) * weight). So these curves are bit-faithful
 //   to the CSS originals, not approximations.
 //
 // ELASTIC AND BOUNCE
-//   The Elastic (×3) and Bounce (×3) easings oscillate / overshoot and have NO cubic-bezier
-//   form — easings.net implements them as JS math, not a bezier. We sample the reference math
+//   The Elastic (x3) and Bounce (x3) easings oscillate / overshoot and have NO cubic-bezier
+//   form - easings.net implements them as JS math, not a bezier. We sample the reference math
 //   into a dense set of cubic-auto keys instead. If you only wanted the cubic-bezier set,
 //   delete the "SAMPLED EASINGS" section and its 6 assets.
 //
@@ -42,7 +42,7 @@ namespace curve
         auto       DX = ControlPoint.X - Coordinate.X;
         const auto DY = ControlPoint.Y - Coordinate.Y;
 
-        // Vertical handle → infinite slope. Nudge DX to a tiny signed value so the slope stays
+        // Vertical handle -> infinite slope. Nudge DX to a tiny signed value so the slope stays
         // finite. The sign points the handle the right way: a start key (x < 0.5) leans right (+dx),
         // an end key leans left (-dx). Without the sign fix the arrive-side handle (easeInCirc)
         // would mirror to the wrong side.
@@ -199,7 +199,7 @@ namespace curve
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // CIRC  (the In/Out variants have a vertical handle — see AddCurveKeyWithCoordinateAndControlPoint)
+    // CIRC  (the In/Out variants have a vertical handle - see AddCurveKeyWithCoordinateAndControlPoint)
     // ----------------------------------------------------------------------------------------------------------------
 
     // https://easings.net/#easeInCirc
@@ -221,7 +221,7 @@ namespace curve
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // BACK  (overshoots past 0 / 1 — expected)
+    // BACK  (overshoots past 0 / 1 - expected)
     // ----------------------------------------------------------------------------------------------------------------
 
     // https://easings.net/#easeInBack
@@ -243,7 +243,7 @@ namespace curve
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // SAMPLED EASINGS — Elastic & Bounce (no cubic-bezier form; sampled from the reference math)
+    // SAMPLED EASINGS - Elastic & Bounce (no cubic-bezier form; sampled from the reference math)
     // ----------------------------------------------------------------------------------------------------------------
 
     enum ECk_Easing_Sampled
@@ -256,7 +256,7 @@ namespace curve
         InOutBounce
     }
 
-    // https://easings.net/#easeOutBounce — the primitive the other two Bounce variants build on.
+    // https://easings.net/#easeOutBounce - the primitive the other two Bounce variants build on.
     float EaseOutBounce(float InX)
     {
         const auto N1 = 7.5625;

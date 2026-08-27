@@ -15,7 +15,7 @@ namespace CkUsf
         _ThicknessScale    = 1.0;
     }
 
-    // See-through green highlight with a faint fill — visible even when the object is occluded.
+    // See-through green highlight with a faint fill - visible even when the object is occluded.
     asset DA_Outline_SeeThrough of UCkUsf_OutlinePreset
     {
         _OutlineType       = ECk_Usf_OutlineType::SeeThrough;
@@ -27,7 +27,7 @@ namespace CkUsf
         _FillOpacity       = 0.15;
     }
 
-    // Masked see-through (stippled fill) — e.g. an objective/quest marker readable through cover.
+    // Masked see-through (stippled fill) - e.g. an objective/quest marker readable through cover.
     asset DA_Outline_MaskedObjective of UCkUsf_OutlinePreset
     {
         _OutlineType       = ECk_Usf_OutlineType::MaskedSeeThrough;

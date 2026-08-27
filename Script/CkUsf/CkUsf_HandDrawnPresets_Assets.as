@@ -1,12 +1,12 @@
 // Language=angelscript
 
 //============================================================================
-// HAND DRAWN PRESETS — the six authored styles, applied via the subsystem:
+// HAND DRAWN PRESETS - the six authored styles, applied via the subsystem:
 //   UCkUsf_HandDrawnSubsystem::Get_HandDrawnSubsystem().Apply_Preset(CkUsf::DA_HandDrawn_SoftPainted);
 //
 // Needs the HandDrawn master on disk (console: "Ck_Usf_GenerateLooks HandDrawn"
 // on a fresh checkout). Every field left unstated is the
-// FCk_Usf_HandDrawn_Params default, which IS the StorybookInk style — so each
+// FCk_Usf_HandDrawn_Params default, which IS the StorybookInk style - so each
 // preset below reads as its delta from StorybookInk.
 //============================================================================
 
@@ -24,7 +24,7 @@ namespace CkUsf
     }
 
     // Watercolour rather than pen: many soft-edged regions, almost no line, no hatching at all, and the
-    // paper doing most of the work. A painting has no contours — its edges are where two washes meet, so
+    // paper doing most of the work. A painting has no contours - its edges are where two washes meet, so
     // the ink is turned down rather than retuned.
     asset DA_HandDrawn_SoftPainted of UCkUsf_HandDrawnPreset
     {
@@ -97,7 +97,7 @@ namespace CkUsf
 
     // Graphite on paper: colour nearly gone, no posterized regions to speak of, a light line and loose
     // scribbled shading. World-attached strokes so the hatching sits ON the architecture rather than
-    // sliding across it — this is the preset the gym's static judge scene is built to test.
+    // sliding across it - this is the preset the gym's static judge scene is built to test.
     asset DA_HandDrawn_PencilWash of UCkUsf_HandDrawnPreset
     {
         _Enabled                 = ECk_EnableDisable::Enable;
@@ -127,7 +127,7 @@ namespace CkUsf
     }
 
     // The A/B reference. Everything else is StorybookInk, so switching to this and back proves the effect
-    // is the only difference — the frame must come back completely clean.
+    // is the only difference - the frame must come back completely clean.
     asset DA_HandDrawn_Off of UCkUsf_HandDrawnPreset
     {
         _Enabled = ECk_EnableDisable::Disable;
