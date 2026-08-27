@@ -22,6 +22,7 @@ public class CkVisualLod : CkModuleRules
             "CkEcsExt",
             "CkIskmRenderer",
             "CkLog",
+            "CkPhysics",
             "CkResourceLoader",
         });
     }
