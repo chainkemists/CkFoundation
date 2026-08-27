@@ -992,12 +992,30 @@ namespace ck
             InCurrent._PinnedCmdAssets.Emplace(TStrongObjectPtr<UObject>{InAsset});
         };
 
+        // Resolve-then-LOAD, and the load half is load-bearing. DoApplyBatch funnels three callers: local
+        // authoring (whose request kicked its own batch), a channel replayed from a SAVE, and a batch received
+        // from the wire. Only the first has a loader. The hard ref this field replaced did the other two's load
+        // implicitly - the save archive resolves with LoadIfFindFails - so resolving resident-or-null here would
+        // turn a restored draw into an ensure and a skipped cmd. The warm path never reaches LoadSynchronous.
+        //
+        // The systemic alternative, deliberately not taken in a crash fix: root the channel through a
+        // CkResourceLoader batch as it is hydrated or received, and defer the apply until that batch is ready.
+        // That restructures all three callers of DoApplyBatch and belongs in its own change.
+        const auto ResolveForPin = [](const TSoftObjectPtr<UObject>& InSoft) -> UObject*
+        {
+            if (ck::Is_NOT_Valid(InSoft))
+            { return nullptr; }
+
+            auto* Resident = InSoft.Get();
+            return Resident != nullptr ? Resident : InSoft.LoadSynchronous();
+        };
+
         for (const auto& Cmd : InCmds)
         {
-            PinAsset(Cmd.Get_Asset().Get());
+            PinAsset(ResolveForPin(Cmd.Get_Asset()));
 
             for (const auto& Extra : Cmd.Get_ExtraAssets())
-            { PinAsset(Extra.Get()); }
+            { PinAsset(ResolveForPin(Extra)); }
         }
     }
 
