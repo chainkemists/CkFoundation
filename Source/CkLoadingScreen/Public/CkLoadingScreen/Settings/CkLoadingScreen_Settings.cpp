@@ -124,6 +124,22 @@ auto
 
 auto
     UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionLogoHAlign()
+    -> EHorizontalAlignment
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionLogoHAlign();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionLogoVAlign()
+    -> EVerticalAlignment
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionLogoVAlign();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
     Get_TransitionLogoThrobPeriod()
     -> float
 {
@@ -156,10 +172,66 @@ auto
 
 auto
     UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionBackdropStretch()
+    -> EStretch::Type
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionBackdropStretch();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
     Get_TransitionTipTexts()
     -> const TArray<FText>&
 {
     return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipTexts();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipStyle()
+    -> const FSoftClassPath&
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipStyle();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipHAlign()
+    -> EHorizontalAlignment
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipHAlign();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipVAlign()
+    -> EVerticalAlignment
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipVAlign();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipPadding()
+    -> FMargin
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipPadding();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipWrapTextAt()
+    -> float
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipWrapTextAt();
+}
+
+auto
+    UCk_Utils_LoadingScreen_Settings_UE::
+    Get_TransitionTipJustification()
+    -> ETextJustify::Type
+{
+    return GetDefault<UCk_LoadingScreen_ProjectSettings_UE>()->Get_TransitionTipJustification();
 }
 
 auto

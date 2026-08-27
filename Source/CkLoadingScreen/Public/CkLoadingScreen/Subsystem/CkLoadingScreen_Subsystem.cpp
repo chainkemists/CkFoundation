@@ -782,11 +782,18 @@ auto
         PathsToLoad.Add(BackgroundPath);
     }
 
+    // The tip style class pulls the font its CDO references as a hard dependency, so one entry
+    // makes the whole text look resident.
+    if (const auto& TipStylePath = UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipStyle();
+        NOT TipStylePath.IsNull())
+    { PathsToLoad.Add(TipStylePath); }
+
     if (PathsToLoad.IsEmpty())
     { return; }
 
     // Async and unwaited-on. If the very first travel beats the load in, the module simply builds
-    // no brush for whatever is not resident yet - never a sync load, never a block.
+    // no brush (or falls back to the default tip font) for whatever is not resident yet - never a
+    // sync load, never a block.
     _TransitionAssetsHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad);
 }
 

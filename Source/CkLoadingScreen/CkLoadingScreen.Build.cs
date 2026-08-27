@@ -21,6 +21,7 @@ public class CkLoadingScreen : CkModuleRules
             "RenderCore",
             "DeveloperSettings",
             "UMG",
+            "CommonUI",
 
             "CkCore",
             "CkLog",

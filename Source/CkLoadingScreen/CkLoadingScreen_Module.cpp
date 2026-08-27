@@ -10,12 +10,14 @@
 #include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_TransitionScreen.h"
 
 #include <Blueprint/UserWidget.h>
+#include <CommonTextBlock.h>
 #include <Engine/Engine.h>
 #include <Engine/GameInstance.h>
 #include <Engine/Texture2D.h>
 #include <Framework/Application/SlateApplication.h>
 #include <MoviePlayer.h>
 #include <Slate/DeferredCleanupSlateBrush.h>
+#include <Styling/SlateTypes.h>
 
 #define LOCTEXT_NAMESPACE "FCkLoadingScreenModule"
 
@@ -211,14 +213,54 @@ auto
         return Tips[FMath::RandRange(0, Tips.Num() - 1)];
     }();
 
+    // ResolveClass, never TryLoadClass - the brush doctrine above applies to the style too: the
+    // subsystem's FStreamableHandle made the class (and the font its CDO hard-references) resident
+    // and GC-rooted ahead of time. A miss degrades to the engine-default tip font, never to a sync
+    // load. Flattened to a plain FTextBlockStyle here because the widget is barred from UObjects.
+    const auto TipStyleCDO = [&]() -> const UCommonTextStyle*
+    {
+        const auto& TipStylePath = UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipStyle();
+        if (TipStylePath.IsNull())
+        { return nullptr; }
+
+        const auto StyleClass = TipStylePath.ResolveClass();
+        if (ck::Is_NOT_Valid(StyleClass) || NOT StyleClass->IsChildOf<UCommonTextStyle>())
+        { return nullptr; }
+
+        return GetDefault<UCommonTextStyle>(StyleClass);
+    }();
+
+    auto TipStyle = TSharedPtr<FTextBlockStyle>{};
+    auto TipTextMargin = FMargin{};
+    auto TipLineHeightPercentage = 1.0f;
+
+    if (ck::IsValid(TipStyleCDO))
+    {
+        TipStyle = MakeShared<FTextBlockStyle>(FTextBlockStyle::GetDefault());
+        TipStyleCDO->ToTextBlockStyle(*TipStyle);
+        TipTextMargin = TipStyleCDO->Margin;
+        TipLineHeightPercentage = TipStyleCDO->LineHeightPercentage;
+    }
+
     return SNew(SCk_LoadingScreen_Transition)
         .LogoBrush(LogoBrush)
         .BackdropBrush(BackdropBrush)
         .BackgroundTint(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionBackgroundTint())
+        .BackdropStretch(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionBackdropStretch())
         .LogoOffset(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoOffset())
+        .LogoHAlign(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoHAlign())
+        .LogoVAlign(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoVAlign())
         .ThrobPeriod(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoThrobPeriod())
         .ThrobMinOpacity(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionLogoMinOpacity())
-        .TipText(TipText);
+        .TipText(TipText)
+        .TipStyle(TipStyle)
+        .TipHAlign(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipHAlign())
+        .TipVAlign(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipVAlign())
+        .TipPadding(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipPadding())
+        .TipWrapTextAt(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipWrapTextAt())
+        .TipJustification(UCk_Utils_LoadingScreen_Settings_UE::Get_TransitionTipJustification())
+        .TipTextMargin(TipTextMargin)
+        .TipLineHeightPercentage(TipLineHeightPercentage);
 }
 
 auto

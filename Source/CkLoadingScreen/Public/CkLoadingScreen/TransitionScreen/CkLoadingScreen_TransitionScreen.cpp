@@ -15,7 +15,6 @@
 namespace ck_loading_screen_transition_screen
 {
     constexpr auto TwoPi = 6.28318530718f;
-    constexpr auto TipBottomPadding = 64.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,7 +49,7 @@ auto
         Overlay->AddSlot()
         [
             SNew(SScaleBox)
-            .Stretch(EStretch::ScaleToFill)
+            .Stretch(InArgs._BackdropStretch)
             [
                 SNew(SImage)
                 .Image(_BackdropBrush->GetSlateBrush())
@@ -60,12 +59,33 @@ auto
 
     if (_LogoBrush.IsValid())
     {
+        // The offset insets from whichever corner/edge the alignment anchors to; a centered axis
+        // has no anchored edge to inset from, so the offset is inert there by construction.
+        const auto LogoPadding = [&]
+        {
+            auto Padding = FMargin{};
+
+            switch (InArgs._LogoHAlign)
+            {
+                case HAlign_Left:  Padding.Left  = static_cast<float>(-InArgs._LogoOffset.X); break;
+                case HAlign_Right: Padding.Right = static_cast<float>(-InArgs._LogoOffset.X); break;
+                default: break;
+            }
+
+            switch (InArgs._LogoVAlign)
+            {
+                case VAlign_Top:    Padding.Top    = static_cast<float>(-InArgs._LogoOffset.Y); break;
+                case VAlign_Bottom: Padding.Bottom = static_cast<float>(-InArgs._LogoOffset.Y); break;
+                default: break;
+            }
+
+            return Padding;
+        }();
+
         Overlay->AddSlot()
-        .HAlign(HAlign_Right)
-        .VAlign(VAlign_Bottom)
-        .Padding(FMargin{0.0f, 0.0f,
-            static_cast<float>(-InArgs._LogoOffset.X),
-            static_cast<float>(-InArgs._LogoOffset.Y)})
+        .HAlign(InArgs._LogoHAlign)
+        .VAlign(InArgs._LogoVAlign)
+        .Padding(LogoPadding)
         [
             SAssignNew(_LogoImage, SImage)
             .Image(_LogoBrush->GetSlateBrush())
@@ -74,15 +94,28 @@ auto
 
     if (NOT InArgs._TipText.IsEmpty())
     {
+        _TipStyle = InArgs._TipStyle;
+
+        if (NOT _TipStyle.IsValid())
+        {
+            // The pre-TipStyle shipping look, preserved verbatim for callers that configure nothing.
+            _TipStyle = MakeShared<FTextBlockStyle>(FTextBlockStyle::GetDefault());
+            _TipStyle->SetFont(FCoreStyle::GetDefaultFontStyle("Regular", 20.0f));
+            _TipStyle->SetColorAndOpacity(FSlateColor{FLinearColor::White});
+        }
+
         Overlay->AddSlot()
-        .HAlign(HAlign_Center)
-        .VAlign(VAlign_Bottom)
-        .Padding(FMargin{0.0f, 0.0f, 0.0f, ck_loading_screen_transition_screen::TipBottomPadding})
+        .HAlign(InArgs._TipHAlign)
+        .VAlign(InArgs._TipVAlign)
+        .Padding(InArgs._TipPadding)
         [
             SNew(STextBlock)
             .Text(InArgs._TipText)
-            .Font(FCoreStyle::GetDefaultFontStyle("Regular", 20.0f))
-            .ColorAndOpacity(FSlateColor{FLinearColor::White})
+            .TextStyle(_TipStyle.Get())
+            .Justification(InArgs._TipJustification)
+            .WrapTextAt(InArgs._TipWrapTextAt)
+            .Margin(InArgs._TipTextMargin)
+            .LineHeightPercentage(InArgs._TipLineHeightPercentage)
         ];
     }
 
