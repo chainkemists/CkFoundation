@@ -1,14 +1,18 @@
 # CkVisualLod campaign — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-08-27 (CkFoundation @ 5d1ac9e83, detached — no campaign branch cut yet):**
-Design written ([DESIGN_CkVisualLod.md](DESIGN_CkVisualLod.md)) and awaiting maintainer review of
-the written spec. No code exists.
-**Baseline being diffed against:** none yet — captured at Gate 0 entry (full-suite counts before
-scaffold lands).
-**Next action:** maintainer reviews the design doc; on approval cut `feature/ckvisuallod` in
-CkFoundation, author `Plan/Gate_00_*.md`, scaffold.
-**Blocked on:** maintainer spec review.
+**As of 2026-08-27 (CkFoundation @ feature/ckvisuallod, docs commit a9283eed9):**
+Design approved without line-review (maintainer: "proceed with implementation"). Gate 0 scaffold
+fully written (module + data surface + utils + processor skeletons + uplugin entry + tier row);
+compile gate in flight.
+**Baseline being diffed against:** build `Result: Succeeded` (754s, full rebuild of stale worktree
+binaries) at a9283eed9 / code tip 5d1ac9e83, 2026-08-27. **No test baseline** — maintainer
+directive (see decision log): the agent runs no test suites this campaign; compile gates +
+maintainer visual checks replace them.
+**Next action:** Gate 1 (mechanism: pools, acquisition, flip, fades, budgets, whole-query ranking,
+EndPlay release) — author its gate contract first.
+**Blocked on:** nothing. Maintainer [EDITOR-VERIFY] for Gate 0 (editor boot + BP surface) is open
+but non-blocking for Gate 1 code work.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -22,8 +26,30 @@ CkFoundation, author `Plan/Gate_00_*.md`, scaffold.
 | 2026-08-27 | Exhaustion policy is per-arbiter config (FallbackPromote / StayFar_Ensure) | Unifies roster/ambient fork | — |
 | 2026-08-27 | Budget accounting: near / lock / unbudgeted counted separately | Fixes BB budget-inflation defect | — |
 | 2026-08-27 | BB view-ranked promotion change = design intent only (uncommitted, compile-unverified) | Maintainer confirmed unverified; C++ port carries its own tests | BB lands + verifies it first |
+| 2026-08-27 | **Agent runs NO test suites this campaign** — compile-only gates; tests are authored but maintainer-run; runtime behavior verified visually by maintainer via [EDITOR-VERIFY] lists | Maintainer: "Don't run gauntlets or other tests. It takes too long." | maintainer lifts it |
+| 2026-08-27 | Signals carry (handle, memberIndex); crowd read via Get_Crowd at handler time | No precedent for raw AActor* in replayable signal payloads; dangling-on-replay risk | — |
+| 2026-08-27 | Promote locks = immediate mutators (Timer's ChangeCountDirection shape), not deferred requests | Counter bump with no side effects; arbiter evaluates next tick either way | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-27 — Gate 0 landed (scaffold + data surface, compile-green)
+- Wrote: module boilerplate (Build.cs/CkModuleRules, Module, Log), member + arbiter quartets
+  (fragments, config asset `UCk_VisualLodArbiter_Data`, requests, 4 signals, utils, 8 registered
+  processor skeletons), pure ranking port (`CkVisualLod_Ranking.h/.cpp`), uplugin entry,
+  Source/CLAUDE.md tier row, module CLAUDE.md.
+- Ran: toolbox `--build` ×3 → final `=== Build succeeded ===` (log tail read directly; 0 error
+  lines). Fix 1: `auto Worst = INDEX_NONE` deduced the unnamed-enum type → cast to int32.
+  Fix 2: `Has_Any` declared but not covered by `CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE` →
+  hand-defined forwarding to `Has` (Timer defines its own against its record; direct-attach
+  features forward).
+- Confirmed: 8/8 `CK_REGISTER_PROCESSOR` lines (grep). Arbiter Setup implements the rooted-batch
+  config load (consumer id `"VisualLodArbiter.Setup"`); member/arbiter HandleRequests drain with
+  completion guards; cancel processors fire `Failed_Cancelled`.
+- Inferred (unconfirmed, [EDITOR-VERIFY]): editor boots clean with the new module; BP/AS surface
+  renders. Maintainer checks visually per standing directive.
+- Implemented beyond skeleton (deliberate, low-risk): request handlers that only write state
+  (arbiter cache, hidden latch, far anim, renderer override, suspend tags), lock immediate
+  mutators, ranking implementation. Mechanism (pools/flips/fades) remains Gate 1.
 
 ### 2026-08-27 — Design phase complete
 - Read: all four BB spec-by-example files + both BB design docs (cosmetic parity, fade inc-⑤) +
