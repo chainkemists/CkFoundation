@@ -117,11 +117,25 @@ public:
     Request_DeleteSaveSlot(
         FName InSlotName);
 
+    // Existence, nothing more — true for ANY file occupying the slot, including one Request_Load
+    // would refuse. The right question for "may I write/delete here"; the wrong one for occupancy.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Has Save Slot")
     bool
     Get_HasSaveSlot(
+        FName InSlotName) const;
+
+    // Loadability, not existence: true only when the slot holds a save Request_Load would accept
+    // (CkSnapshot envelope at the current v3 format version, non-empty payload). A foreign file —
+    // a legacy SPUD-era save, another game's USaveGame — reports FALSE here while Get_HasSaveSlot
+    // reports true, so a menu keying occupancy off THIS renders such slots as empty instead of as
+    // undead rows whose load click silently fails.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Has Compatible Save Slot")
+    bool
+    Get_HasCompatibleSaveSlot(
         FName InSlotName) const;
 
     // Every snapshot slot on disk, sidecar slots filtered out. Unordered — a menu that wants

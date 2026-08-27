@@ -571,7 +571,10 @@ void
         return;
     }
 
-    auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
+    // Guarded, never raw LoadGameFromSlot: a foreign file on the slot name (a legacy SPUD-era save) is FATAL in
+    // the engine's no-tag fallback, not an error return — see TryLoad_SlotSaveGame_Guarded.
+    auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(
+        ck::snapshot::TryLoad_SlotSaveGame_Guarded(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
     if (ck::Is_NOT_Valid(SaveGame))
     {
         ck::snapshot::Error(TEXT("Request_Load: no/invalid save in slot [{}]"), InSlotName);
@@ -579,8 +582,7 @@ void
         return;
     }
 
-    if (SaveGame->_HeaderV3.Get_FormatVersion() != FCk_Snapshot_HeaderV3::CurrentFormatVersion ||
-        SaveGame->_SnapshotBytesV3.IsEmpty())
+    if (NOT ck::snapshot::Get_HasCompatiblePayload(*SaveGame))
     {
         ck::snapshot::Error(TEXT("Request_Load: slot [{}] has no compatible v3 payload (v3 version [{}], [{}] bytes) — "
             "rebuild+hydrate requires a v3 save"), InSlotName,
@@ -3543,6 +3545,24 @@ bool
 
 // --------------------------------------------------------------------------------------------------------------------
 
+bool
+    UCk_Snapshot_Subsystem_UE::
+    Get_HasCompatibleSaveSlot(
+        FName InSlotName) const
+{
+    if (NOT UGameplayStatics::DoesSaveGameExist(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex))
+    { return false; }
+
+    if (ck::snapshot::Get_SlotHoldsCompatibleSave(InSlotName, ck_snapshot_subsystem::UserIndex))
+    { return true; }
+
+    ck::snapshot::Verbose(TEXT("Get_HasCompatibleSaveSlot: slot [{}] has a file on disk that is not a loadable "
+        "CkSnapshot save (foreign or stale format) — answering false"), InSlotName);
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 TArray<FName>
     UCk_Snapshot_Subsystem_UE::
     Get_AllSaveSlotNames() const
@@ -3581,7 +3601,7 @@ FCk_Snapshot_SlotMeta
     Get_SaveSlotMeta(
         FName InSlotName) const
 {
-    auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(UGameplayStatics::LoadGameFromSlot(
+    auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(ck::snapshot::TryLoad_SlotSaveGame_Guarded(
         ck::snapshot::slot_meta::Get_MetaSlotName(InSlotName), ck_snapshot_subsystem::UserIndex));
 
     if (ck::Is_NOT_Valid(MetaSaveGame))
@@ -3630,9 +3650,10 @@ FCk_Snapshot_Header
     Get_SaveSlotHeader(
         FName InSlotName) const
 {
-    auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
+    auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(
+        ck::snapshot::TryLoad_SlotSaveGame_Guarded(InSlotName.ToString(), ck_snapshot_subsystem::UserIndex));
     if (ck::Is_NOT_Valid(SaveGame) || SaveGame->_SnapshotBytesV3.Num() == 0)
-    { return {}; } // invalid slot, or a pre-v3 slot with no v3 header of record
+    { return {}; } // invalid/foreign slot, or a pre-v3 slot with no v3 header of record
 
     // The SaveGame stores only the v3 header; this frozen BP return type is synthesized from the six overlapping
     // fields. The legacy-only stream field (manifest) has no v3 source and stays default.
