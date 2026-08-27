@@ -392,27 +392,58 @@ namespace ck
                 MoverHasTransform[MemberIndex] = true;
             }
 
-            // An arrived reservation is authoritative. Distance ordering only reshuffles movers that are
-            // still travelling, so service readiness and SlotReached remain stable while the tail adapts.
+            // A live reservation is authoritative. Reservation ownership, not physical reach, defines
+            // incumbency: reach controls readiness, while rank controls line order. Compact valid incumbents
+            // into the prefix before distance matching so a folded formation cannot send its nearby tail
+            // toward the front while the established line advances.
+            auto IncumbentMemberIndices = TArray<int32>{};
             for (const auto MemberIndex : ActiveMemberIndices)
             {
                 const auto& Previous = PreviousMembers[MemberIndex];
-                const auto WasArrived = Previous.Get_State() == ECk_Queue_MemberState::AtFront
+                const auto HasReservationState = Previous.Get_State() == ECk_Queue_MemberState::Assigned
+                    || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot
+                    || Previous.Get_State() == ECk_Queue_MemberState::AtFront
                     || Previous.Get_State() == ECk_Queue_MemberState::AtSlot;
-                if (NOT WasArrived) { continue; }
+                const auto HasLiveReservation = HasReservationState
+                    && Previous.Get_AssignmentRevision() > 0
+                    && Previous.Get_Rank() != INDEX_NONE
+                    && MoverHasTransform[MemberIndex]
+                    && NOT MoverLocations[MemberIndex].ContainsNaN()
+                    && NOT Previous.Get_TargetWorldTransform().ContainsNaN();
+                if (NOT HasLiveReservation) { continue; }
 
-                for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
-                {
-                    const auto& Placement = LayoutResult.Placements[PlacementIndex];
-                    if (PlacementIsUsed[PlacementIndex]
-                        || Placement.Rank != Previous.Get_Rank())
-                    { continue; }
+                IncumbentMemberIndices.Add(MemberIndex);
+            }
 
-                    PlacementByMember[MemberIndex] = PlacementIndex;
-                    PlacementIsUsed[PlacementIndex] = true;
-                    MemberIsUsed[MemberIndex] = true;
-                    break;
-                }
+            IncumbentMemberIndices.Sort([&PreviousMembers](int32 InLeftIndex, int32 InRightIndex)
+            {
+                const auto& Left = PreviousMembers[InLeftIndex];
+                const auto& Right = PreviousMembers[InRightIndex];
+                if (Left.Get_Rank() != Right.Get_Rank())
+                { return Left.Get_Rank() < Right.Get_Rank(); }
+                return Left.Get_Ticket() < Right.Get_Ticket();
+            });
+
+            auto PlacementIndicesByRank = TArray<int32>{};
+            PlacementIndicesByRank.Reserve(LayoutResult.Placements.Num());
+            for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
+            { PlacementIndicesByRank.Add(PlacementIndex); }
+            PlacementIndicesByRank.Sort([&LayoutResult](int32 InLeftIndex, int32 InRightIndex)
+            {
+                return LayoutResult.Placements[InLeftIndex].Rank
+                    < LayoutResult.Placements[InRightIndex].Rank;
+            });
+
+            const auto IncumbentCount = FMath::Min(
+                IncumbentMemberIndices.Num(),
+                PlacementIndicesByRank.Num());
+            for (auto IncumbentIndex = 0; IncumbentIndex < IncumbentCount; ++IncumbentIndex)
+            {
+                const auto MemberIndex = IncumbentMemberIndices[IncumbentIndex];
+                const auto PlacementIndex = PlacementIndicesByRank[IncumbentIndex];
+                PlacementByMember[MemberIndex] = PlacementIndex;
+                PlacementIsUsed[PlacementIndex] = true;
+                MemberIsUsed[MemberIndex] = true;
             }
 
             const auto TryGetMoverLocation = [&MoverLocations, &MoverHasTransform](
@@ -468,10 +499,7 @@ namespace ck
                 {
                     auto CurrentLocation = FVector::ZeroVector;
                     const auto CurrentHasTransform = TryGetMoverLocation(CurrentMemberIndex, CurrentLocation);
-                    if (NOT CurrentHasTransform
-                        && PreviousMembers[CurrentMemberIndex].Get_AssignmentRevision() > 0)
-                    { SelectedMemberIndex = CurrentMemberIndex; }
-                    else if (CurrentHasTransform && BestMemberIndex != INDEX_NONE)
+                    if (CurrentHasTransform && BestMemberIndex != INDEX_NONE)
                     {
                         const auto CurrentDistanceUu = FVector::Dist2D(
                             CurrentLocation,

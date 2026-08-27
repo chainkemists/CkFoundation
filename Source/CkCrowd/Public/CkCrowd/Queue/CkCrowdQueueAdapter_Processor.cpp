@@ -125,7 +125,9 @@ namespace ck
         const auto IsClaimedAssignment = HasSnapshot
             && (Snapshot.Get_State() == ECk_Queue_MemberState::AtSlot
                 || Snapshot.Get_State() == ECk_Queue_MemberState::AtFront);
-        const auto CanOwnAssignment = HasSnapshot
+        const auto QueueIsReady = HasSnapshot
+            && UCk_Utils_Queue_UE::Get_State(InAdapter._Queue) == ECk_Queue_State::Ready;
+        const auto CanOwnAssignment = QueueIsReady
             && MoverMatches
             && NOT LeaveRequested
             && NOT Snapshot.Get_MovementSuppressed()
@@ -240,6 +242,17 @@ namespace ck
             return;
         }
 
+        if (UCk_Utils_Queue_UE::Get_State(InAdapter._Queue) != ECk_Queue_State::Ready)
+        {
+            // Reserve reflow may retain the old snapshot as private compaction input. It is not a
+            // driveable assignment until Formation publishes a complete Ready mapping.
+            ck_crowd_queue_adapter_processor::StopOwnedEpisode(Agent, InAdapter);
+            InAdapter._IssuedQueueAssignmentRevision = 0;
+            InAdapter._IssuedCrowdCorrelationId = 0;
+            InAdapter._ReportedQueueAssignmentRevision = 0;
+            return;
+        }
+
         auto Snapshot = FCk_Queue_MemberSnapshot{};
         if (NOT ck_crowd_queue_adapter_processor::GetCurrentSnapshot(Agent, InAdapter, Snapshot)
             || Snapshot.Get_Mover() != FCk_Handle{InAgent}
@@ -306,6 +319,7 @@ namespace ck
         auto Agent = InAgent;
         auto Snapshot = FCk_Queue_MemberSnapshot{};
         if (NOT ck_crowd_queue_adapter_processor::GetCurrentSnapshot(Agent, InAdapter, Snapshot)
+            || UCk_Utils_Queue_UE::Get_State(InAdapter.Get_Queue()) != ECk_Queue_State::Ready
             || Snapshot.Get_Mover() != FCk_Handle{InAgent}
             || (Snapshot.Get_State() != ECk_Queue_MemberState::AtSlot
                 && Snapshot.Get_State() != ECk_Queue_MemberState::AtFront))
