@@ -357,3 +357,15 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::
+    Get_DurablePayloadObjectRefPolicy()
+    -> FCk_UntracedStructSafety_Policy
+{
+    return FCk_UntracedStructSafety_Policy
+    {
+        .ClassRefs = ECk_UntracedStructSafety_ClassRefs::Accept,
+        .GcTracedStructs = ECk_UntracedStructSafety_GcTracedStructs::TreatAsBoundary,
+    };
+}

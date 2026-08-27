@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkUntracedStructSafety.h"
 
 #include "CkSnapshot_Posture.generated.h"
 
@@ -91,6 +92,17 @@ namespace ck
     CKECS_API auto
     Get_FragmentPosture(
         const UScriptStruct* InStructType) -> ECk_Snapshot_Posture;
+
+    // The object-reference rule for a DURABLE payload, as one named decision rather than a policy literal repeated
+    // at each fence. A Durable payload is walked and serialized by the snapshot capture, and it lives in an ECS
+    // fragment that GC does not visit — so a hard UObject ref there dangles instead of nulling and the capture
+    // dereferences it (QA 2026-08-26). Two narrowings are deliberate, and they narrow only THIS question, never the
+    // shared GC-safety contract the analyzer defaults to:
+    //   - class refs are accepted: a loaded UClass outlives any one holder, a far weaker exposure than an asset;
+    //   - a GC-traced carrier is a boundary: FInstancedStruct sets STRUCT_AddStructReferencedObjects, and the
+    //     entries CkDynamic puts in one are schema-validated where they are inserted.
+    CKECS_API auto
+    Get_DurablePayloadObjectRefPolicy() -> FCk_UntracedStructSafety_Policy;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
