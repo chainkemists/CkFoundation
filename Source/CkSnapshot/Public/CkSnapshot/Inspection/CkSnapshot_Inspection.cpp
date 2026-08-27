@@ -33,29 +33,8 @@ namespace ck::snapshot
         // Mirrors ck_snapshot_subsystem::UserIndex — the slot index every CK save is written under.
         constexpr auto k_UserIndex = 0;
 
-        // FSaveGameHeader::FileTypeTag, written first as an int32 by every engine save envelope. The engine's own
-        // UE_SAVEGAME_FILE_TYPE_TAG lives in Runtime/Engine/Private/GameplayStatics.cpp as a file-local static and
-        // is exported by no public header, so it is named here rather than left bare at the comparison site.
-        constexpr auto k_SaveGameFileTypeTag = 0x53415647;
-
-        // ------------------------------------------------------------------------------------------------------------
-
-        auto
-            Get_HasSaveGameEnvelopeTag(
-                const TArray<uint8>& InBytes)
-            -> bool
-        {
-            if (InBytes.Num() < 4)
-            { return false; }
-
-            const auto Tag = static_cast<int32>(
-                  static_cast<uint32>(InBytes[0])
-                | (static_cast<uint32>(InBytes[1]) << 8)
-                | (static_cast<uint32>(InBytes[2]) << 16)
-                | (static_cast<uint32>(InBytes[3]) << 24));
-
-            return Tag == k_SaveGameFileTypeTag;
-        }
+        // The envelope-tag predicate this file used to define locally now lives in CkSnapshot_SaveGame.h
+        // (ck::snapshot::Get_HasSaveGameEnvelopeTag) — one definition, shared with the guarded slot loader.
 
         // ------------------------------------------------------------------------------------------------------------
 
@@ -1234,6 +1213,11 @@ namespace ck::snapshot
             if (NOT FFileHelper::LoadFileToArray(SidecarBytes, *SidecarPath))
             { return; }
 
+            // Tag-gated for the same reason as the main envelope: un-tagged bytes are FATAL inside
+            // LoadGameFromMemory's legacy fallback, and a sidecar path is as foreign-file-prone as any other.
+            if (NOT Get_HasSaveGameEnvelopeTag(SidecarBytes))
+            { return; }
+
             const auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(
                 UGameplayStatics::LoadGameFromMemory(SidecarBytes));
 
@@ -1252,7 +1236,7 @@ namespace ck::snapshot
             { return; }
 
             const auto* MetaSaveGame = Cast<UCk_Snapshot_SlotMetaSaveGame>(
-                UGameplayStatics::LoadGameFromSlot(SidecarSlot, k_UserIndex));
+                TryLoad_SlotSaveGame_Guarded(SidecarSlot, k_UserIndex));
 
             DoProject_SlotMeta(InOutDocument, MetaSaveGame, SidecarSlot);
         }
