@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Misc/Optional.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
@@ -68,6 +70,19 @@ namespace ck
             -> void;
 
     private:
+        friend class FProcessor_Queue_Reconcile;
+
+        // The request drain is authoritative when a movement adapter reports an arrival. Reconcile
+        // invokes this same transition only as a transform-backed liveness fallback after that drain.
+        static auto
+        TryApplyReachedClaim(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
+            int32 InMemberIndex,
+            TOptional<int32> InExpectedAssignmentRevision)
+            -> bool;
+
         static auto
         DoHandleRequest(
             HandleType InQueue,
@@ -97,15 +112,7 @@ namespace ck
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
             FFragment_Queue_Current& InCurrent,
-            const FCk_Request_Queue_AdvanceOrigin& InRequest)
-            -> bool;
-
-        static auto
-        DoHandleRequest(
-            HandleType InQueue,
-            const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
-            const FCk_Request_Queue_SetOrigins& InRequest)
+            const FCk_Request_Queue_Advance& InRequest)
             -> bool;
 
         static auto
@@ -137,12 +144,6 @@ namespace ck
             const FFragment_Queue_Current& InCurrent,
             const FCk_Handle& InMember)
             -> int32;
-
-        static auto
-        HasOriginCapacityForCount(
-            const TArray<FCk_Queue_Origin>& InOrigins,
-            int32 InMemberCount)
-            -> bool;
 
         static auto
         InvalidateAssignmentsForReflow(

@@ -14,7 +14,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_ObserveOutcome);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_MaintainFacing);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdQueueAdapter_EndPlay);
 
-namespace
+namespace ck_crowd_queue_adapter_processor
 {
     auto
     NextNonZeroCorrelation(
@@ -77,7 +77,7 @@ namespace ck
 
         auto Agent = InAgent;
         auto Snapshot = FCk_Queue_MemberSnapshot{};
-        const auto HasSnapshot = GetCurrentSnapshot(Agent, InAdapter, Snapshot);
+        const auto HasSnapshot = ck_crowd_queue_adapter_processor::GetCurrentSnapshot(Agent, InAdapter, Snapshot);
         const auto LeaveRequested = InAgent.Has<FTag_CrowdQueueAdapter_LeaveRequested>();
 
         if (HasSnapshot)
@@ -105,10 +105,10 @@ namespace ck
         else if (NOT HasSnapshot)
         {
             // An established membership can disappear without an adapter-issued Leave:
-            // service AdvanceOrigin and owner-side removal are authoritative queue outcomes.
+            // service Advance and owner-side removal are authoritative queue outcomes.
             // Release only this adapter's episode and routing state, so a later queue join is
             // not rejected as a conflicting stale adapter.
-            StopOwnedEpisode(Agent, InAdapter);
+            ck_crowd_queue_adapter_processor::StopOwnedEpisode(Agent, InAdapter);
             InAdapter._Queue = {};
             InAdapter._JoinPending = false;
             InAdapter._PendingQueueRevision = 0;
@@ -134,7 +134,7 @@ namespace ck
 
         if (NOT CanOwnAssignment)
         {
-            StopOwnedEpisode(Agent, InAdapter);
+            ck_crowd_queue_adapter_processor::StopOwnedEpisode(Agent, InAdapter);
             InAdapter._IssuedQueueAssignmentRevision = 0;
             InAdapter._IssuedCrowdCorrelationId = 0;
             InAdapter._ReportedQueueAssignmentRevision = 0;
@@ -177,7 +177,7 @@ namespace ck
 
         // A claimed member inside its station-keeping hysteresis needs no active Crowd episode. If
         // another consumer owns movement, reclaim only after it actually displaces the member from
-        // the slot; service AdvanceOrigin removes membership before issuing its exit movement.
+        // the slot; service Advance removes membership before issuing its exit movement.
         if (IsClaimedAssignment && DistanceToTarget <= ReacquireRadius)
         { return; }
 
@@ -197,7 +197,8 @@ namespace ck
         InAdapter._ReportedQueueAssignmentRevision = 0;
         InAdapter._JoinPending = false;
         InAdapter._PendingQueueRevision = 0;
-        const auto Correlation = NextNonZeroCorrelation(InAdapter._NextCrowdCorrelationId);
+        const auto Correlation = ck_crowd_queue_adapter_processor::NextNonZeroCorrelation(
+            InAdapter._NextCrowdCorrelationId);
         auto MoveTo = FCk_Request_CrowdAgent_MoveTo{TargetLocation};
         MoveTo.Set_CorrelationId(Correlation)
             .Set_ArrivalRadiusOverrideMode(ECk_Override::Override)
@@ -227,14 +228,39 @@ namespace ck
         { return; }
 
         auto Agent = InAgent;
+        if (NOT UCk_Utils_Queue_UE::Get_CanAcceptRequests(InAdapter._Queue))
+        {
+            ck_crowd_queue_adapter_processor::StopOwnedEpisode(Agent, InAdapter);
+            InAdapter._Queue = {};
+            InAdapter._JoinPending = false;
+            InAdapter._PendingQueueRevision = 0;
+            InAdapter._IssuedQueueAssignmentRevision = 0;
+            InAdapter._IssuedCrowdCorrelationId = 0;
+            InAdapter._ReportedQueueAssignmentRevision = 0;
+            return;
+        }
+
         auto Snapshot = FCk_Queue_MemberSnapshot{};
-        if (NOT GetCurrentSnapshot(Agent, InAdapter, Snapshot)
+        if (NOT ck_crowd_queue_adapter_processor::GetCurrentSnapshot(Agent, InAdapter, Snapshot)
             || Snapshot.Get_Mover() != FCk_Handle{InAgent}
             || Snapshot.Get_MovementSuppressed()
             || Snapshot.Get_AssignmentRevision() != InAdapter._IssuedQueueAssignmentRevision
             || InAdapter._IssuedQueueAssignmentRevision <= 0
             || InAdapter._ReportedQueueAssignmentRevision == InAdapter._IssuedQueueAssignmentRevision
             || UCk_Utils_CrowdAgent_UE::Get_ActiveMoveCorrelationId(Agent) != InAdapter._IssuedCrowdCorrelationId)
+        { return; }
+
+        const auto IsClaimedAssignment = Snapshot.Get_State() == ECk_Queue_MemberState::AtSlot
+            || Snapshot.Get_State() == ECk_Queue_MemberState::AtFront;
+        if (IsClaimedAssignment)
+        {
+            InAdapter._ReportedQueueAssignmentRevision = Snapshot.Get_AssignmentRevision();
+            return;
+        }
+
+        const auto IsMovingToAssignment = Snapshot.Get_State() == ECk_Queue_MemberState::Assigned
+            || Snapshot.Get_State() == ECk_Queue_MemberState::MovingToSlot;
+        if (NOT IsMovingToAssignment)
         { return; }
 
         const auto CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
@@ -279,7 +305,7 @@ namespace ck
 
         auto Agent = InAgent;
         auto Snapshot = FCk_Queue_MemberSnapshot{};
-        if (NOT GetCurrentSnapshot(Agent, InAdapter, Snapshot)
+        if (NOT ck_crowd_queue_adapter_processor::GetCurrentSnapshot(Agent, InAdapter, Snapshot)
             || Snapshot.Get_Mover() != FCk_Handle{InAgent}
             || (Snapshot.Get_State() != ECk_Queue_MemberState::AtSlot
                 && Snapshot.Get_State() != ECk_Queue_MemberState::AtFront))
@@ -309,7 +335,7 @@ namespace ck
         -> void
     {
         auto Agent = InAgent;
-        StopOwnedEpisode(Agent, InAdapter);
+        ck_crowd_queue_adapter_processor::StopOwnedEpisode(Agent, InAdapter);
         InAdapter._IssuedQueueAssignmentRevision = 0;
         InAdapter._IssuedCrowdCorrelationId = 0;
         InAdapter._ReportedQueueAssignmentRevision = 0;
