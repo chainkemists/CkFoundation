@@ -5,6 +5,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkQueue/Navigation/CkQueue_NavigationRevisionSubsystem.h"
 #include "CkQueue/Queue/CkQueue_Layout_Algorithm.h"
 
@@ -50,6 +52,11 @@ namespace ck
         if (InCurrent._LastNavigationRevision == INDEX_NONE)
         { InCurrent._LastNavigationRevision = NavigationRevision; }
         const auto NavigationChanged = InCurrent._LastNavigationRevision != NavigationRevision;
+        const auto WorldTimeSeconds = static_cast<double>(World->GetTimeSeconds());
+        const auto DistanceAwareReservation = InParams.Get_SlotClaimPolicy()
+                == ECk_Queue_SlotClaimPolicy::ReserveOnFormation
+            && InParams.Get_ReserveAssignmentPolicy()
+                == ECk_Queue_ReserveAssignmentPolicy::DistanceThenTicket;
 
         const auto HasPartialWaiters = [&InCurrent]()
         {
@@ -67,11 +74,16 @@ namespace ck
         // notices an obstacle appearing inside it -- a fixture dropped mid-queue otherwise leaves the
         // members walking to slots that now sit inside the new geometry. The subscription is the
         // mechanism; this early-out is what makes holding it every frame cheap.
-        if (InCurrent._State == ECk_Queue_State::Ready
+        const auto IsSettledFormation = InCurrent._State == ECk_Queue_State::Ready
             && InCurrent._LastNavigationRevision == NavigationRevision
             && NOT HasPartialWaiters()
-            && NOT InCurrent._HasPendingClaimOffer)
-        { return; }
+            && NOT InCurrent._HasPendingClaimOffer;
+        if (IsSettledFormation)
+        {
+            if (NOT DistanceAwareReservation
+                || WorldTimeSeconds < InCurrent._NextReserveAssignmentRefreshWorldSeconds)
+            { return; }
+        }
 
         // A failed mover stays counted for admission pressure but has no slot. Once navigation changes, it is
         // deterministically rearmed behind the viable members that were allowed to reflow meanwhile.
@@ -84,7 +96,7 @@ namespace ck
                 if (Member.Get_State() != ECk_Queue_MemberState::WaitingForNavigationChange) { continue; }
                 const auto Previous = Member;
                 Member = FCk_Queue_MemberSnapshot{
-                    Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(), INDEX_NONE, INDEX_NONE,
+                    Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(), INDEX_NONE,
                     FTransform::Identity, 0, Member.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
                 UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
                     InQueue,
@@ -126,7 +138,6 @@ namespace ck
                         InCurrent._RetryEpisode}));
         }
 
-        const auto WorldTimeSeconds = static_cast<double>(World->GetTimeSeconds());
         if (WorldTimeSeconds < InCurrent._NextFormationRetryWorldSeconds)
         { return; }
 
@@ -235,13 +246,11 @@ namespace ck
         {
             InCurrent._State = ECk_Queue_State::Ready;
             InCurrent._HasPendingClaimOffer = false;
-            auto EmptyOriginCounts = TArray<int32>{};
-            EmptyOriginCounts.Init(0, InCurrent._Origins.Num());
             InCurrent._Pressure = FCk_Queue_Pressure{
                 InCurrent._Members.Num(), InParams.Get_SoftLimit(), InParams.Get_HardLimit(),
                 InParams.Get_SoftLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_SoftLimit(),
                 InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
-                EmptyOriginCounts, InCurrent._Revision};
+                InCurrent._Revision};
             UUtils_Signal_OnQueuePressureChanged::Broadcast(InQueue, MakePayload(InQueue, InCurrent._Pressure));
             // Retained while the queue has members: the tag is this formation's nav-revision
             // subscription (see the settled early-out above), not just a "needs work now" flag.
@@ -252,7 +261,6 @@ namespace ck
 
         const auto LayoutResult = queue::layout::Build(
             InCurrent._LastOwnerWorldTransform,
-            InCurrent._Origins,
             ActiveMemberIndices.Num(),
             InParams.Get_SlotSpacingUu(),
             InParams.Get_MaxFormationSearchNodes(),
@@ -300,11 +308,7 @@ namespace ck
         { return; }
 
         const auto PreviousMembers = InCurrent._Members;
-        ++InCurrent._Revision;
-        const auto AssignmentRevision = InCurrent._Revision;
-
-        auto OriginCounts = TArray<int32>{};
-        OriginCounts.Init(0, InCurrent._Origins.Num());
+        const auto AssignmentRevision = InCurrent._Revision + 1;
 
         auto PlacementByMember = TArray<int32>{};
         PlacementByMember.Init(INDEX_NONE, InCurrent._Members.Num());
@@ -312,12 +316,10 @@ namespace ck
         PlacementIsUsed.Init(false, LayoutResult.Placements.Num());
         auto MemberAssignmentChanged = TArray<bool>{};
         MemberAssignmentChanged.Init(false, InCurrent._Members.Num());
-        auto NextUnclaimedPlacementByOrigin = TArray<int32>{};
-        NextUnclaimedPlacementByOrigin.Init(INDEX_NONE, InCurrent._Origins.Num());
+        auto NextUnclaimedPlacement = int32{INDEX_NONE};
         if (ClaimOnReach)
         {
-            // Claims are identified by their slot identity, never their current member-array index. Weighted
-            // layout recomputation may reorder the unclaimed candidates while another origin's prefix is stable.
+            // Claims are identified by their queue-wide rank, never their current member-array index.
             for (auto MemberIndex = 0; MemberIndex < PreviousMembers.Num(); ++MemberIndex)
             {
                 const auto& Previous = PreviousMembers[MemberIndex];
@@ -328,8 +330,7 @@ namespace ck
                 {
                     const auto& Placement = LayoutResult.Placements[PlacementIndex];
                     if (NOT PlacementIsUsed[PlacementIndex]
-                        && Placement.OriginIndex == Previous.Get_OriginIndex()
-                        && Placement.OriginRank == Previous.Get_Rank())
+                        && Placement.Rank == Previous.Get_Rank())
                     {
                         PlacementByMember[MemberIndex] = PlacementIndex;
                         PlacementIsUsed[PlacementIndex] = true;
@@ -338,35 +339,21 @@ namespace ck
                 }
             }
 
-            // Preserve the weighted member-to-origin allocation below, but give every unclaimed member of
-            // an origin this origin's next free slot as a provisional target. Reached reports then decide
-            // who actually owns that slot; the winner remains claimed while the next formation retargets the
-            // other contenders with a newer assignment revision.
+            // Every unclaimed contender receives the same next free rank as a provisional target. Reached
+            // reports decide who owns it; the winner remains claimed while the next formation retargets the
+            // remaining contenders with a newer assignment revision.
             for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
             {
                 if (PlacementIsUsed[PlacementIndex]) { continue; }
-
-                const auto& Placement = LayoutResult.Placements[PlacementIndex];
-                if (NOT NextUnclaimedPlacementByOrigin.IsValidIndex(Placement.OriginIndex)) { continue; }
-
-                const auto CurrentNextPlacement = NextUnclaimedPlacementByOrigin[Placement.OriginIndex];
-                if (CurrentNextPlacement == INDEX_NONE
-                    || Placement.OriginRank
-                        < LayoutResult.Placements[CurrentNextPlacement].OriginRank)
-                {
-                    NextUnclaimedPlacementByOrigin[Placement.OriginIndex] = PlacementIndex;
-                }
+                NextUnclaimedPlacement = PlacementIndex;
+                break;
             }
 
-            const auto TakeUnusedPlacementForOrigin = [&LayoutResult, &PlacementIsUsed](int32 InOriginIndex) -> int32
+            const auto TakeNextUnusedPlacement = [&LayoutResult, &PlacementIsUsed]() -> int32
             {
-                if (InOriginIndex == INDEX_NONE) { return INDEX_NONE; }
-
                 for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
                 {
-                    if (PlacementIsUsed[PlacementIndex]
-                        || LayoutResult.Placements[PlacementIndex].OriginIndex != InOriginIndex)
-                    { continue; }
+                    if (PlacementIsUsed[PlacementIndex]) { continue; }
 
                     PlacementIsUsed[PlacementIndex] = true;
                     return PlacementIndex;
@@ -374,25 +361,144 @@ namespace ck
                 return INDEX_NONE;
             };
 
-            auto NextPlacementIndex = 0;
             for (const auto MemberIndex : ActiveMemberIndices)
             {
                 if (PlacementByMember[MemberIndex] != INDEX_NONE) { continue; }
 
-                const auto PreviousOriginIndex = PreviousMembers[MemberIndex].Get_OriginIndex();
-                const auto RetainedOriginPlacement = TakeUnusedPlacementForOrigin(PreviousOriginIndex);
-                if (RetainedOriginPlacement != INDEX_NONE)
+                const auto NextPlacement = TakeNextUnusedPlacement();
+                if (NextPlacement == INDEX_NONE) { break; }
+                PlacementByMember[MemberIndex] = NextPlacement;
+            }
+        }
+        else if (DistanceAwareReservation)
+        {
+            auto MemberIsUsed = TArray<bool>{};
+            MemberIsUsed.Init(false, InCurrent._Members.Num());
+
+            // Read every active mover once. The matching pass is intentionally O(M^2), but querying an
+            // entity transform inside that inner loop magnifies the cost and can mix locations from frames.
+            auto MoverLocations = TArray<FVector>{};
+            MoverLocations.Init(FVector::ZeroVector, InCurrent._Members.Num());
+            auto MoverHasTransform = TArray<bool>{};
+            MoverHasTransform.Init(false, InCurrent._Members.Num());
+            for (const auto MemberIndex : ActiveMemberIndices)
+            {
+                const auto Mover = PreviousMembers[MemberIndex].Get_Mover();
+                const auto HasTransform = ck::IsValid(Mover) && UCk_Utils_Transform_UE::Has(Mover);
+                if (NOT HasTransform) { continue; }
+
+                MoverLocations[MemberIndex] = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
+                    UCk_Utils_Transform_UE::CastChecked(Mover)).GetLocation();
+                MoverHasTransform[MemberIndex] = true;
+            }
+
+            // An arrived reservation is authoritative. Distance ordering only reshuffles movers that are
+            // still travelling, so service readiness and SlotReached remain stable while the tail adapts.
+            for (const auto MemberIndex : ActiveMemberIndices)
+            {
+                const auto& Previous = PreviousMembers[MemberIndex];
+                const auto WasArrived = Previous.Get_State() == ECk_Queue_MemberState::AtFront
+                    || Previous.Get_State() == ECk_Queue_MemberState::AtSlot;
+                if (NOT WasArrived) { continue; }
+
+                for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
                 {
-                    PlacementByMember[MemberIndex] = RetainedOriginPlacement;
-                    continue;
+                    const auto& Placement = LayoutResult.Placements[PlacementIndex];
+                    if (PlacementIsUsed[PlacementIndex]
+                        || Placement.Rank != Previous.Get_Rank())
+                    { continue; }
+
+                    PlacementByMember[MemberIndex] = PlacementIndex;
+                    PlacementIsUsed[PlacementIndex] = true;
+                    MemberIsUsed[MemberIndex] = true;
+                    break;
+                }
+            }
+
+            const auto TryGetMoverLocation = [&MoverLocations, &MoverHasTransform](
+                int32 InMemberIndex,
+                FVector& OutLocation) -> bool
+            {
+                if (NOT MoverHasTransform.IsValidIndex(InMemberIndex)
+                    || NOT MoverHasTransform[InMemberIndex])
+                { return false; }
+
+                OutLocation = MoverLocations[InMemberIndex];
+                return true;
+            };
+
+            const auto HysteresisUu = InParams.Get_ReserveAssignmentHysteresisUu();
+            for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
+            {
+                if (PlacementIsUsed[PlacementIndex]) { continue; }
+
+                const auto& Placement = LayoutResult.Placements[PlacementIndex];
+                auto CurrentMemberIndex = int32{INDEX_NONE};
+                auto BestMemberIndex = int32{INDEX_NONE};
+                auto BestDistanceUu = TNumericLimits<float>::Max();
+
+                for (const auto MemberIndex : ActiveMemberIndices)
+                {
+                    if (MemberIsUsed[MemberIndex]) { continue; }
+
+                    const auto& Previous = PreviousMembers[MemberIndex];
+                    if (Previous.Get_Rank() == Placement.Rank)
+                    { CurrentMemberIndex = MemberIndex; }
+
+                    auto MoverLocation = FVector::ZeroVector;
+                    if (NOT TryGetMoverLocation(MemberIndex, MoverLocation)) { continue; }
+
+                    const auto DistanceUu = FVector::Dist2D(
+                        MoverLocation,
+                        Placement.TargetWorldTransform.GetLocation());
+                    const auto IsCloser = DistanceUu < BestDistanceUu - KINDA_SMALL_NUMBER;
+                    const auto IsDistanceTie = FMath::IsNearlyEqual(DistanceUu, BestDistanceUu, KINDA_SMALL_NUMBER);
+                    if (BestMemberIndex == INDEX_NONE
+                        || IsCloser
+                        || (IsDistanceTie
+                            && Previous.Get_Ticket() < PreviousMembers[BestMemberIndex].Get_Ticket()))
+                    {
+                        BestMemberIndex = MemberIndex;
+                        BestDistanceUu = DistanceUu;
+                    }
                 }
 
-                while (PlacementIsUsed.IsValidIndex(NextPlacementIndex) && PlacementIsUsed[NextPlacementIndex])
-                { ++NextPlacementIndex; }
-                if (NOT PlacementIsUsed.IsValidIndex(NextPlacementIndex)) { break; }
-                PlacementByMember[MemberIndex] = NextPlacementIndex;
-                PlacementIsUsed[NextPlacementIndex] = true;
-                ++NextPlacementIndex;
+                auto SelectedMemberIndex = BestMemberIndex;
+                if (CurrentMemberIndex != INDEX_NONE)
+                {
+                    auto CurrentLocation = FVector::ZeroVector;
+                    const auto CurrentHasTransform = TryGetMoverLocation(CurrentMemberIndex, CurrentLocation);
+                    if (NOT CurrentHasTransform
+                        && PreviousMembers[CurrentMemberIndex].Get_AssignmentRevision() > 0)
+                    { SelectedMemberIndex = CurrentMemberIndex; }
+                    else if (CurrentHasTransform && BestMemberIndex != INDEX_NONE)
+                    {
+                        const auto CurrentDistanceUu = FVector::Dist2D(
+                            CurrentLocation,
+                            Placement.TargetWorldTransform.GetLocation());
+                        if (CurrentDistanceUu <= BestDistanceUu + HysteresisUu)
+                        { SelectedMemberIndex = CurrentMemberIndex; }
+                    }
+                }
+
+                if (SelectedMemberIndex == INDEX_NONE)
+                {
+                    // No remaining mover exposes Transform. Preserve deterministic FIFO behavior until
+                    // distance evidence exists rather than stealing an established reservation blindly.
+                    for (const auto MemberIndex : ActiveMemberIndices)
+                    {
+                        if (MemberIsUsed[MemberIndex]) { continue; }
+                        if (SelectedMemberIndex == INDEX_NONE
+                            || PreviousMembers[MemberIndex].Get_Ticket()
+                                < PreviousMembers[SelectedMemberIndex].Get_Ticket())
+                        { SelectedMemberIndex = MemberIndex; }
+                    }
+                }
+
+                if (SelectedMemberIndex == INDEX_NONE) { continue; }
+                PlacementByMember[SelectedMemberIndex] = PlacementIndex;
+                PlacementIsUsed[PlacementIndex] = true;
+                MemberIsUsed[SelectedMemberIndex] = true;
             }
         }
         else
@@ -402,12 +508,6 @@ namespace ck
                 PlacementByMember[ActiveMemberIndices[PlacementIndex]] = PlacementIndex;
             }
         }
-        for (auto PlacementIndex = 0; PlacementIndex < LayoutResult.Placements.Num(); ++PlacementIndex)
-        {
-            const auto& Placement = LayoutResult.Placements[PlacementIndex];
-            if (OriginCounts.IsValidIndex(Placement.OriginIndex)) { ++OriginCounts[Placement.OriginIndex]; }
-        }
-
         for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
         {
             const auto& Previous = PreviousMembers[MemberIndex];
@@ -420,9 +520,8 @@ namespace ck
 
             const auto& Placement = LayoutResult.Placements[PlacementIndex];
             const auto ProvisionalPlacementIndex = ClaimOnReach
-                && NextUnclaimedPlacementByOrigin.IsValidIndex(Placement.OriginIndex)
-                && NextUnclaimedPlacementByOrigin[Placement.OriginIndex] != INDEX_NONE
-                ? NextUnclaimedPlacementByOrigin[Placement.OriginIndex]
+                && NextUnclaimedPlacement != INDEX_NONE
+                ? NextUnclaimedPlacement
                 : PlacementIndex;
             const auto& ProvisionalPlacement = LayoutResult.Placements[ProvisionalPlacementIndex];
             const auto PreviousWasArrived = Previous.Get_State() == ECk_Queue_MemberState::AtFront
@@ -433,8 +532,7 @@ namespace ck
                     || Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot
                     || PreviousWasArrived)
                 && (NOT NavigationChanged || PreviousWasArrived)
-                && Previous.Get_OriginIndex() == Placement.OriginIndex
-                && Previous.Get_Rank() == Placement.OriginRank
+                && Previous.Get_Rank() == Placement.Rank
                 && Previous.Get_TargetWorldTransform().Equals(Placement.TargetWorldTransform);
             if (RetainedReservation)
             {
@@ -448,8 +546,7 @@ namespace ck
             }
             const auto RetainedClaim = ClaimOnReach
                 && (Previous.Get_State() == ECk_Queue_MemberState::AtFront || Previous.Get_State() == ECk_Queue_MemberState::AtSlot)
-                && Previous.Get_OriginIndex() == Placement.OriginIndex
-                && Previous.Get_Rank() == Placement.OriginRank;
+                && Previous.Get_Rank() == Placement.Rank;
             if (RetainedClaim)
             {
                 InCurrent._Members[MemberIndex] = Previous;
@@ -460,8 +557,7 @@ namespace ck
                 && NOT NavigationChanged
                 && Previous.Get_State() == ECk_Queue_MemberState::MovingToSlot
                 && Previous.Get_AssignmentRevision() > 0
-                && Previous.Get_OriginIndex() == ProvisionalPlacement.OriginIndex
-                && Previous.Get_Rank() == ProvisionalPlacement.OriginRank
+                && Previous.Get_Rank() == ProvisionalPlacement.Rank
                 && Previous.Get_TargetWorldTransform().Equals(ProvisionalPlacement.TargetWorldTransform);
             if (RetainedProvisional)
             {
@@ -471,8 +567,7 @@ namespace ck
 
             InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(), Previous.Get_Mover(), Previous.Get_Ticket(),
-                ClaimOnReach ? ProvisionalPlacement.OriginIndex : Placement.OriginIndex,
-                ClaimOnReach ? ProvisionalPlacement.OriginRank : Placement.OriginRank,
+                ClaimOnReach ? ProvisionalPlacement.Rank : Placement.Rank,
                 ClaimOnReach ? ProvisionalPlacement.TargetWorldTransform : Placement.TargetWorldTransform,
                 AssignmentRevision,
                 Previous.Get_MovementSuppressed(),
@@ -480,6 +575,19 @@ namespace ck
                     : ClaimOnReach ? ECk_Queue_MemberState::MovingToSlot : ECk_Queue_MemberState::Assigned};
             MemberAssignmentChanged[MemberIndex] = true;
         }
+
+        const auto AnyMemberAssignmentChanged = MemberAssignmentChanged.Contains(true);
+        ScheduleNextReserveAssignmentRefresh(
+            InQueue,
+            InParams,
+            InCurrent,
+            WorldTimeSeconds,
+            IsSettledFormation && DistanceAwareReservation);
+        if (IsSettledFormation && DistanceAwareReservation && NOT AnyMemberAssignmentChanged)
+        { return; }
+
+        ++InCurrent._Revision;
+        check(InCurrent._Revision == AssignmentRevision);
 
         InCurrent._State = ECk_Queue_State::Ready;
         InCurrent._RetryEpisode = 0;
@@ -492,7 +600,6 @@ namespace ck
             InParams.Get_HardLimit(),
             InParams.Get_SoftLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_SoftLimit(),
             InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
-            OriginCounts,
             InCurrent._Revision};
         // Retained while the queue has members: the tag is this formation's nav-revision
         // subscription (see the settled early-out above), not just a "needs work now" flag.
@@ -506,12 +613,6 @@ namespace ck
 
             const auto& Previous = PreviousMembers[MemberIndex];
             const auto& Current = InCurrent._Members[MemberIndex];
-            const auto Reason = Previous.Get_OriginIndex() == INDEX_NONE
-                ? ECk_Queue_EventReason::OriginAssigned
-                : Previous.Get_OriginIndex() != Current.Get_OriginIndex()
-                    ? ECk_Queue_EventReason::OriginReassigned
-                    : ECk_Queue_EventReason::Reflowed;
-
             UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
                 InQueue,
                 MakePayload(
@@ -520,7 +621,7 @@ namespace ck
                         InQueue,
                         Current,
                         Previous.Get_State(),
-                        Reason,
+                        ECk_Queue_EventReason::Reflowed,
                         InCurrent._Revision}));
         }
 
@@ -537,6 +638,62 @@ namespace ck
                     InCurrent._Revision,
                     InCurrent._RetryEpisode}));
     }
+
+    auto
+        FProcessor_Queue_Formation::
+        ScheduleNextReserveAssignmentRefresh(
+            HandleType InQueue,
+            const FFragment_Queue_Params& InParams,
+            FFragment_Queue_Current& InCurrent,
+            double InWorldTimeSeconds,
+            bool InWasSettledRefresh)
+        -> void
+    {
+        const auto RefreshSeconds = static_cast<double>(InParams.Get_ReserveAssignmentRefreshSeconds());
+        if (RefreshSeconds <= 0.0)
+        {
+            // Zero intentionally means one atomic distance reassignment per frame.
+            InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds;
+            return;
+        }
+
+        const auto PhaseSpreadEnabled = InParams.Get_ReserveAssignmentRefreshPhaseSpread()
+            == ECk_EnableDisable::Enable;
+        if (NOT PhaseSpreadEnabled)
+        {
+            InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + RefreshSeconds;
+            return;
+        }
+
+        if (InWasSettledRefresh)
+        {
+            const auto PreviousDeadline = InCurrent._NextReserveAssignmentRefreshWorldSeconds;
+            const auto DeadlineIsUsable = FMath::IsFinite(PreviousDeadline)
+                && PreviousDeadline <= InWorldTimeSeconds;
+            if (DeadlineIsUsable)
+            {
+                const auto MissedPeriods = FMath::FloorToDouble(
+                    (InWorldTimeSeconds - PreviousDeadline) / RefreshSeconds) + 1.0;
+                InCurrent._NextReserveAssignmentRefreshWorldSeconds = PreviousDeadline
+                    + MissedPeriods * RefreshSeconds;
+                return;
+            }
+        }
+
+        // Same-registry entity hashes are commonly sequential, so scramble the stable handle hash before
+        // mapping it to [0, 1). The denominator keeps the phase strictly below one full interval.
+        auto PhaseHash = GetTypeHash(InQueue);
+        PhaseHash ^= PhaseHash >> 16;
+        PhaseHash *= 0x7feb352dU;
+        PhaseHash ^= PhaseHash >> 15;
+        PhaseHash *= 0x846ca68bU;
+        PhaseHash ^= PhaseHash >> 16;
+        constexpr auto Uint32Range = 4294967296.0;
+        const auto PhaseFraction = static_cast<double>(PhaseHash) / Uint32Range;
+        InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + PhaseFraction * RefreshSeconds;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_Queue_Formation::

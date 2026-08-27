@@ -13,12 +13,6 @@ namespace ck::queue::layout::details
         { return X == InOther.X && Y == InOther.Y; }
     };
 
-    struct FAssignment
-    {
-        int32 OriginIndex = INDEX_NONE;
-        int32 OriginRank = INDEX_NONE;
-    };
-
     auto
         IsPlacementClear(
             const FTransform& InCandidate,
@@ -39,27 +33,26 @@ namespace ck::queue::layout::details
     struct FSnakeSearch
     {
         const FTransform& OwnerWorldTransform;
-        const FCk_Queue_Origin& Origin;
         float SpacingUu = 0.0f;
         int32 MaxNodes = 0;
         FPlacementValidator Validator;
-        const TArray<FPlacement>& AllPlacements;
         int32& SearchNodesVisited;
         bool BudgetExhausted = false;
-        int32 OriginIndex = INDEX_NONE;
         TArray<FCell> Path;
-        TArray<FPlacement> OriginPlacements;
+        TArray<FPlacement> Placements;
 
         auto
             MakeTransform(
                 const FCell& InCell) const
             -> FTransform
         {
-            const auto OriginWorld = Origin.Get_LocalTransform() * OwnerWorldTransform;
-            const auto Location = OriginWorld.GetLocation()
-                + OriginWorld.GetUnitAxis(EAxis::X) * (static_cast<float>(InCell.X) * SpacingUu)
-                + OriginWorld.GetUnitAxis(EAxis::Y) * (static_cast<float>(InCell.Y) * SpacingUu);
-            return FTransform{OriginWorld.GetRotation(), Location, OriginWorld.GetScale3D()};
+            const auto Location = OwnerWorldTransform.GetLocation()
+                + OwnerWorldTransform.GetUnitAxis(EAxis::X) * (static_cast<float>(InCell.X) * SpacingUu)
+                + OwnerWorldTransform.GetUnitAxis(EAxis::Y) * (static_cast<float>(InCell.Y) * SpacingUu);
+            return FTransform{
+                OwnerWorldTransform.GetRotation(),
+                Location,
+                OwnerWorldTransform.GetScale3D()};
         }
 
         auto
@@ -84,13 +77,12 @@ namespace ck::queue::layout::details
             ++SearchNodesVisited;
 
             OutCandidate = MakeTransform(InCell);
-            const auto Previous = OriginPlacements.IsEmpty()
+            const auto Previous = Placements.IsEmpty()
                 ? TOptional<FTransform>{}
-                : TOptional<FTransform>{OriginPlacements.Last().TargetWorldTransform};
+                : TOptional<FTransform>{Placements.Last().TargetWorldTransform};
 
             return Validator(OutCandidate, Previous)
-                && IsPlacementClear(OutCandidate, SpacingUu, OriginPlacements)
-                && IsPlacementClear(OutCandidate, SpacingUu, AllPlacements);
+                && IsPlacementClear(OutCandidate, SpacingUu, Placements);
         }
 
         auto
@@ -100,7 +92,7 @@ namespace ck::queue::layout::details
                 const FCell& InHeading)
             -> bool
         {
-            if (OriginPlacements.Num() == InNeeded)
+            if (Placements.Num() == InNeeded)
             { return true; }
 
             const auto Directions = TArray<FCell>{
@@ -120,15 +112,12 @@ namespace ck::queue::layout::details
                 }
 
                 Path.Add(Next);
-                OriginPlacements.Add(FPlacement{
-                    OriginIndex,
-                    OriginPlacements.Num(),
-                    Candidate});
+                Placements.Add(FPlacement{Placements.Num(), Candidate});
 
                 if (Search(InNeeded, Next, Direction))
                 { return true; }
 
-                OriginPlacements.Pop(EAllowShrinking::No);
+                Placements.Pop(EAllowShrinking::No);
                 Path.Pop(EAllowShrinking::No);
 
                 if (BudgetExhausted)
@@ -148,63 +137,28 @@ namespace ck::queue::layout::details
             { return false; }
 
             Path.Add(FrontCell);
-            OriginPlacements.Add(FPlacement{
-                OriginIndex,
-                0,
-                FrontTransform});
+            Placements.Add(FPlacement{0, FrontTransform});
 
             return Search(InNeeded, FrontCell, FCell{-1, 0});
         }
     };
 
     auto
-        IsOriginAvailable(
-            const FCk_Queue_Origin& InOrigin,
-            int32 InLoad)
-        -> bool
-    {
-        const auto Cap = InOrigin.Get_HardLimitOverride();
-        return Cap <= 0 || InLoad < Cap;
-    }
-
-    auto
-        SelectLeastLoadedOrigin(
-            const TArray<FCk_Queue_Origin>& InOrigins,
-            const TArray<int32>& InLoads)
-        -> int32
-    {
-        auto Best = int32{INDEX_NONE};
-        for (auto Index = 0; Index < InOrigins.Num(); ++Index)
-        {
-            if (NOT IsOriginAvailable(InOrigins[Index], InLoads[Index]))
-            { continue; }
-
-            const auto IsLessLoaded = Best == INDEX_NONE
-                || static_cast<int64>(InLoads[Index]) * InOrigins[Best].Get_Weight()
-                    < static_cast<int64>(InLoads[Best]) * InOrigins[Index].Get_Weight();
-
-            if (IsLessLoaded)
-            { Best = Index; }
-        }
-        return Best;
-    }
-
-    auto
-        OrientPlacementsTowardOrigin(
-            const FTransform& InOriginWorld,
+        OrientPlacementsTowardOwner(
+            const FTransform& InOwnerWorldTransform,
             TArray<FPlacement>& InOutPlacements)
         -> void
     {
         for (auto& Placement : InOutPlacements)
         {
-            auto DirectionToOrigin = InOriginWorld.GetLocation()
+            auto DirectionToOwner = InOwnerWorldTransform.GetLocation()
                 - Placement.TargetWorldTransform.GetLocation();
-            DirectionToOrigin.Z = 0.0f;
+            DirectionToOwner.Z = 0.0f;
 
-            const auto HasDirectionToOrigin = DirectionToOrigin.Normalize();
-            const auto FacingRotation = HasDirectionToOrigin
-                ? FQuat{FRotator{0.0f, DirectionToOrigin.Rotation().Yaw, 0.0f}}
-                : InOriginWorld.GetRotation();
+            const auto HasDirectionToOwner = DirectionToOwner.Normalize();
+            const auto FacingRotation = HasDirectionToOwner
+                ? FQuat{FRotator{0.0f, DirectionToOwner.Rotation().Yaw, 0.0f}}
+                : InOwnerWorldTransform.GetRotation();
             Placement.TargetWorldTransform.SetRotation(FacingRotation);
         }
     }
@@ -217,7 +171,6 @@ namespace ck::queue::layout
     auto
         Build(
             const FTransform& InOwnerWorldTransform,
-            const TArray<FCk_Queue_Origin>& InOrigins,
             int32 InMemberCount,
             float InSpacingUu,
             int32 InMaxSearchNodes,
@@ -228,8 +181,7 @@ namespace ck::queue::layout
         auto Result = FBuildResult{};
         const auto InputIsValid = InMemberCount >= 0
             && InSpacingUu > 0.0f
-            && InMaxSearchNodes > 0
-            && NOT InOrigins.IsEmpty();
+            && InMaxSearchNodes > 0;
         if (NOT InputIsValid)
         { return Result; }
 
@@ -239,116 +191,61 @@ namespace ck::queue::layout
             return Result;
         }
 
-        auto Loads = TArray<int32>{};
-        Loads.Init(0, InOrigins.Num());
+        auto Placements = TArray<FPlacement>{};
+        Placements.Reserve(InMemberCount);
 
-        auto Assignments = TArray<details::FAssignment>{};
-        Assignments.Reserve(InMemberCount);
-
-        for (auto MemberIndex = 0; MemberIndex < InMemberCount; ++MemberIndex)
+        if (InLayoutAlgorithm == ECk_Queue_LayoutAlgorithm::Linear)
         {
-            const auto OriginIndex = details::SelectLeastLoadedOrigin(InOrigins, Loads);
-            if (OriginIndex == INDEX_NONE)
-            { return Result; }
-
-            Assignments.Add(details::FAssignment{OriginIndex, Loads[OriginIndex]});
-            ++Loads[OriginIndex];
-        }
-
-        auto PerOriginPlacements = TArray<TArray<FPlacement>>{};
-        PerOriginPlacements.SetNum(InOrigins.Num());
-        auto AllPlacements = TArray<FPlacement>{};
-        AllPlacements.Reserve(InMemberCount);
-
-        for (auto OriginIndex = 0; OriginIndex < InOrigins.Num(); ++OriginIndex)
-        {
-            const auto Needed = Loads[OriginIndex];
-            if (Needed == 0)
-            { continue; }
-
-            auto& OriginPlacements = PerOriginPlacements[OriginIndex];
-            const auto OriginWorld = InOrigins[OriginIndex].Get_LocalTransform() * InOwnerWorldTransform;
-
-            if (InLayoutAlgorithm == ECk_Queue_LayoutAlgorithm::Linear)
+            for (auto Rank = 0; Rank < InMemberCount; ++Rank)
             {
-                for (auto Rank = 0; Rank < Needed; ++Rank)
+                if (Result.SearchNodesVisited >= InMaxSearchNodes)
                 {
-                    if (Result.SearchNodesVisited >= InMaxSearchNodes)
-                    {
-                        Result.Outcome = EBuildOutcome::SearchBudgetExhausted;
-                        return Result;
-                    }
-                    ++Result.SearchNodesVisited;
-
-                    const auto Location = OriginWorld.GetLocation()
-                        - OriginWorld.GetUnitAxis(EAxis::X) * (InSpacingUu * Rank);
-                    auto Candidate = FTransform{
-                        OriginWorld.GetRotation(),
-                        Location,
-                        OriginWorld.GetScale3D()};
-                    const auto Previous = OriginPlacements.IsEmpty()
-                        ? TOptional<FTransform>{}
-                        : TOptional<FTransform>{OriginPlacements.Last().TargetWorldTransform};
-
-                    if (NOT InValidator(Candidate, Previous)
-                        || NOT details::IsPlacementClear(
-                            Candidate,
-                            InSpacingUu,
-                            OriginPlacements)
-                        || NOT details::IsPlacementClear(
-                            Candidate,
-                            InSpacingUu,
-                            AllPlacements))
-                    { return Result; }
-
-                    OriginPlacements.Add(FPlacement{OriginIndex, Rank, Candidate});
-                }
-            }
-            else if (InLayoutAlgorithm == ECk_Queue_LayoutAlgorithm::OrthogonalSnake)
-            {
-                auto Search = details::FSnakeSearch{
-                    InOwnerWorldTransform,
-                    InOrigins[OriginIndex],
-                    InSpacingUu,
-                    InMaxSearchNodes,
-                    InValidator,
-                    AllPlacements,
-                    Result.SearchNodesVisited,
-                    false,
-                    OriginIndex};
-
-                if (NOT Search.Build(Needed))
-                {
-                    Result.Outcome = Search.BudgetExhausted
-                        ? EBuildOutcome::SearchBudgetExhausted
-                        : EBuildOutcome::NoViablePlacement;
+                    Result.Outcome = EBuildOutcome::SearchBudgetExhausted;
                     return Result;
                 }
-                OriginPlacements = MoveTemp(Search.OriginPlacements);
+                ++Result.SearchNodesVisited;
+
+                const auto Location = InOwnerWorldTransform.GetLocation()
+                    - InOwnerWorldTransform.GetUnitAxis(EAxis::X) * (InSpacingUu * Rank);
+                auto Candidate = FTransform{
+                    InOwnerWorldTransform.GetRotation(),
+                    Location,
+                    InOwnerWorldTransform.GetScale3D()};
+                const auto Previous = Placements.IsEmpty()
+                    ? TOptional<FTransform>{}
+                    : TOptional<FTransform>{Placements.Last().TargetWorldTransform};
+
+                if (NOT InValidator(Candidate, Previous)
+                    || NOT details::IsPlacementClear(Candidate, InSpacingUu, Placements))
+                { return Result; }
+
+                Placements.Add(FPlacement{Rank, Candidate});
             }
-            else
-            { return Result; }
-
-            details::OrientPlacementsTowardOrigin(OriginWorld, OriginPlacements);
-
-            AllPlacements.Append(OriginPlacements);
         }
-
-        Result.Placements.Reserve(InMemberCount);
-        for (const auto& Assignment : Assignments)
+        else if (InLayoutAlgorithm == ECk_Queue_LayoutAlgorithm::OrthogonalSnake)
         {
-            const auto PlacementExists = PerOriginPlacements.IsValidIndex(Assignment.OriginIndex)
-                && PerOriginPlacements[Assignment.OriginIndex].IsValidIndex(Assignment.OriginRank);
-            if (NOT PlacementExists)
+            auto Search = details::FSnakeSearch{
+                InOwnerWorldTransform,
+                InSpacingUu,
+                InMaxSearchNodes,
+                InValidator,
+                Result.SearchNodesVisited};
+
+            if (NOT Search.Build(InMemberCount))
             {
-                Result.Placements.Reset();
+                Result.Outcome = Search.BudgetExhausted
+                    ? EBuildOutcome::SearchBudgetExhausted
+                    : EBuildOutcome::NoViablePlacement;
                 return Result;
             }
-
-            Result.Placements.Add(
-                PerOriginPlacements[Assignment.OriginIndex][Assignment.OriginRank]);
+            Placements = MoveTemp(Search.Placements);
         }
+        else
+        { return Result; }
 
+        details::OrientPlacementsTowardOwner(InOwnerWorldTransform, Placements);
+
+        Result.Placements = MoveTemp(Placements);
         Result.Outcome = EBuildOutcome::Success;
         return Result;
     }

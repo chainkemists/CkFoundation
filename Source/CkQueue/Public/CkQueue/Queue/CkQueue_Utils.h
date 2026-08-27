@@ -103,16 +103,16 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Queue",
-              DisplayName = "[Ck][Queue] Get Revision")
-    static int32
-    Get_Revision(
+              DisplayName = "[Ck][Queue] Get Can Accept Requests")
+    static bool
+    Get_CanAcceptRequests(
         const FCk_Handle_Queue& InQueue);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Queue",
-              DisplayName = "[Ck][Queue] Get Origins")
-    static TArray<FCk_Queue_Origin>
-    Get_Origins(
+              DisplayName = "[Ck][Queue] Get Revision")
+    static int32
+    Get_Revision(
         const FCk_Handle_Queue& InQueue);
 
     UFUNCTION(BlueprintPure,
@@ -239,22 +239,12 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Queue",
-              DisplayName = "[Ck][Queue] Request Advance Origin",
+              DisplayName = "[Ck][Queue] Request Advance",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Queue
-    Request_AdvanceOrigin(
+    Request_Advance(
         UPARAM(ref) FCk_Handle_Queue& InQueue,
-        const FCk_Request_Queue_AdvanceOrigin& InRequest,
-        const FCk_Delegate_Request_OnCompleted& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Queue",
-              DisplayName = "[Ck][Queue] Request Set Origins",
-              meta = (AutoCreateRefTerm = "InDelegate"))
-    static FCk_Handle_Queue
-    Request_SetOrigins(
-        UPARAM(ref) FCk_Handle_Queue& InQueue,
-        const FCk_Request_Queue_SetOrigins& InRequest,
+        const FCk_Request_Queue_Advance& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,

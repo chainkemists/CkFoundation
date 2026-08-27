@@ -18,8 +18,7 @@ namespace ck::queue::layout
 
     struct CKQUEUE_API FPlacement
     {
-        int32 OriginIndex = INDEX_NONE;
-        int32 OriginRank = INDEX_NONE;
+        int32 Rank = INDEX_NONE;
         FTransform TargetWorldTransform = FTransform::Identity;
     };
 
@@ -34,15 +33,14 @@ namespace ck::queue::layout
     };
 
     // The validator owns all environment knowledge. It receives the candidate and the preceding placement in the
-    // same origin (none for the front), and must not retain either reference after returning.
+    // queue (none for the front), and must not retain either reference after returning.
     using FPlacementValidator = TFunctionRef<bool(FTransform&, const TOptional<FTransform>&)>;
 
     // Builds every requested placement or returns an empty, explicit failure result. No partially viable formation is
-    // ever published. Origin assignment is fixed before layout search: least normalized load, then origin index.
+    // ever published. Placements are a single contiguous rank sequence behind the queue owner's transform.
     CKQUEUE_API auto
         Build(
             const FTransform& InOwnerWorldTransform,
-            const TArray<FCk_Queue_Origin>& InOrigins,
             int32 InMemberCount,
             float InSpacingUu,
             int32 InMaxSearchNodes,
