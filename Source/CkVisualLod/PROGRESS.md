@@ -9,10 +9,10 @@ compile gate in flight.
 binaries) at a9283eed9 / code tip 5d1ac9e83, 2026-08-27. **No test baseline** — maintainer
 directive (see decision log): the agent runs no test suites this campaign; compile gates +
 maintainer visual checks replace them.
-**Next action:** Gate 1 (mechanism: pools, acquisition, flip, fades, budgets, whole-query ranking,
-EndPlay release) — author its gate contract first.
-**Blocked on:** nothing. Maintainer [EDITOR-VERIFY] for Gate 0 (editor boot + BP surface) is open
-but non-blocking for Gate 1 code work.
+**Next action:** Gate 2 — `UCk_Utils_Camera_UE::TryGet_LocalViewInfo` (viewer discovery fallback,
+discharging the CkCamera chip) + CkTests gym/autotest coverage.
+**Blocked on:** nothing. Maintainer items open (non-blocking): Gate 0+1 [EDITOR-VERIFY] and the
+[MAINTAINER-RUN] test pass — consolidated list in the 2026-08-27 Gate 1 entry below.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -31,6 +31,38 @@ but non-blocking for Gate 1 code work.
 | 2026-08-27 | Promote locks = immediate mutators (Timer's ChangeCountDirection shape), not deferred requests | Counter bump with no side effects; arbiter evaluates next tick either way | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-27 — Gate 1 landed (mechanism, compile-green)
+- Wrote: the full flip driver in `FProcessor_VisualLodArbiter_Update` — shadowed `DoTick`
+  (snapshot arbiters/members from `Handle.View<>`, mechanism runs OUTSIDE live iteration because
+  promotes create scene-node entities; a never-dispatched `ForEachEntity` satisfies the CRTP
+  contract and ensures loudly if the shadow is removed; `_LastVisitedCount` written for pump
+  truth). Ported all BB semantics: stale-crowd invalidation, hidden handling, lazy crowd stand-up
+  (rooted-batch collection load, `OnCrowdCreated` fires synchronously post-Finalize for the game's
+  material push), slot pools + owner-checked recycle, lock-gated inline promotes (lock budget),
+  exhaustion policies (PromoteInstead / Unrendered+ensure), distance-only demote, whole-domain
+  ranked flips, all inc-⑤ fade semantics (dissolve-before-visible, reversals, preempt suppression,
+  lock override, hidden-snap, member-vanish), fail-closed recovery (generalizes ambient
+  Recover_NearFailure; fires OnDemoteFinishing so the game re-registers far cosmetics), async
+  renderer loads (cold promote defers, stays candidate), three-counter budget accounting
+  (near/locked/unbudgeted — fixes the BB budget-inflation defect), deterministic EndPlay release
+  + refund, amortized sweep as reconciliation.
+- Wrote: 5 ranking automation tests (`Ck.CkVisualLod.Ranking.*` in CkVisualLod_Ranking.spec.cpp)
+  — expectations hand-derived incl. partial-sort truncation and preempt-cursor blocking. NOT run
+  (standing directive).
+- Ran: toolbox `--build` ×2 → `=== Build succeeded ===`, 0 error lines (log read directly).
+  Fix: ck_exp::TProcessor requires ForEachEntity to exist even under a DoTick shadow.
+- Confirmed: signal Broadcast is synchronous (CkSignal_Utils.inl.h:144-181) — the
+  acquire-before-visible and promote/demote signal windows are sound.
+- Deliberate deltas from BB (recorded): promote defers on a cold renderer instead of
+  LoadAsset_Blocking; `As_Presentation` registration is game-side (bind OnPromoted); crowd slot
+  override materials are game-side via OnCrowdCreated; sweep is per-member-call cadence like BB.
+- **[MAINTAINER-RUN] when convenient:** `--test --test-pattern VisualLod` (5 ranking tests; needs
+  the relink that just happened — new automation tests need fresh binaries).
+- **[EDITOR-VERIFY] (Gates 0+1 consolidated):** (1) editor boots with no ensures naming VisualLod;
+  (2) BP palette shows [Ck][VisualLod]/[Ck][VisualLodArbiter] nodes + `<AsVisualLod>` autocast;
+  (3) AS: `utils_visual_lod` / `utils_visual_lod_arbiter` resolve after script regen. Behavior
+  verification (promote ring, crossfades, budgets) lands with the Gate 2 gym.
 
 ### 2026-08-27 — Gate 0 landed (scaffold + data surface, compile-green)
 - Wrote: module boilerplate (Build.cs/CkModuleRules, Module, Log), member + arbiter quartets
@@ -69,8 +101,10 @@ but non-blocking for Gate 1 code work.
 ## Open items
 | Item | Status | Next step |
 |---|---|---|
-| Maintainer review of DESIGN_CkVisualLod.md | Open | Review; amendments folded in before Gate 0 |
-| Signal in-tick delivery guarantee (acquire-before-visible) | Open | Verify in Gate 1 against signal machinery |
-| Campaign branch + Gate 0 contract | Open | After design approval |
+| Maintainer review of DESIGN_CkVisualLod.md | Closed 2026-08-27 | Waived line-review; "proceed with implementation" — in-chat design summary approved |
+| Signal in-tick delivery guarantee (acquire-before-visible) | **Resolved 2026-08-27** | Confirmed from source: `TUtils_Signal::Broadcast` publishes to bound delegates inline (CkSignal_Utils.inl.h:144-181). Synchronous; no fallback needed |
+| Campaign branch + Gate 0 contract | Closed 2026-08-27 | feature/ckvisuallod cut; Gate 0 landed a6a2ef14c |
+| Gate 0 [EDITOR-VERIFY] (editor boot + BP/AS surface) | Open (maintainer) | See Gate_00_Scaffold.md exit list |
+| Gate 1 promote-path entity creation vs registry-locked iteration | Open | Deferred-creation idiom per CkEcs doctrine; survey in flight |
 
 **Rule: no completion claim may be written anywhere in this file while any row here is unresolved.**
