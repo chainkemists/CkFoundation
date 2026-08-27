@@ -40,9 +40,12 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 - `ReserveOnFormation` arrival is level-triggered: Queue reconciles each current mover transform against its unique
   reservation every tick and promotes it at the claim radius. Adapter `Reached` reports remain the responsive path,
   but a stale or missed report cannot leave a physically arrived rank-zero member permanently unserviceable.
-- Distance-aware ReserveOnFormation reassignment refreshes at `_ReserveAssignmentRefreshSeconds` (zero means every
-  frame). `_ReserveAssignmentRefreshPhaseSpread` defaults to enabled and deterministically spreads independent queues
-  across that interval; disable it only when synchronized refresh timing is specifically required.
+- Distance-aware ReserveOnFormation assigns members without a valid reservation by mover distance, then ticket.
+  Once a live mover owns a slot, its current lower rank is authoritative during compaction; physical reach controls
+  readiness, not ordering, so later members that happen to be close across a folded line cannot jump ahead.
+  `_ReserveAssignmentRefreshSeconds` controls rechecks for unreserved candidates (zero means every frame).
+  `_ReserveAssignmentRefreshPhaseSpread` defaults to enabled and deterministically spreads independent queues across
+  that interval; disable it only when synchronized refresh timing is specifically required.
 - `Advance` succeeds only when the Queue's rank-zero member is authoritatively `AtFront`.
 
 ## Formation
@@ -54,6 +57,9 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
   Pawn-channel capsule overlap, and any post-projection slot overlap.
 - Any materially changed reflow invalidates old assignment revisions before the movement adapter can consume
   them. Stale movement outcomes are successful no-ops.
+- Reserve reflow keeps the previous reservation map only as private compaction input while Queue is
+  `WaitingForFormation`; adapters and movement outcomes cannot consume it in that state. Formation validates live
+  movers and publishes one complete replacement mapping, so no partial incumbent prefix becomes externally runnable.
 - A navigation-generation revalidation preserves an arrived reservation whose rank and projected target
   are unchanged, including its `AtFront`/`AtSlot` state and assignment revision. En-route reservations still receive
   a fresh revision so their Crowd adapter replans a possibly invalid corridor, but the replacement `MoveTo` retains
@@ -111,6 +117,9 @@ It does not create, own, destroy, advance, or move those Queues.
 - Before reporting an outcome, the adapter asks Queue whether the handle is still authoritative and request-accepting.
   A queue that is invalidating or has lost authority terminates only the adapter-owned movement episode and clears the
   stale routing state; it never calls `Request_ReportMovementOutcome` on a queue that must reject requests.
+- A retained Reserve snapshot is non-driveable while Queue is not `Ready`. Dispatch, outcome observation, and facing
+  all gate on Ready; an unresolved formation stops only the adapter-owned episode and clears its issued/report markers
+  so a later successful formation can dispatch and report the reservation again.
 - Suppression, leave, invalidation, mover mismatch, and teardown stop only an episode whose correlation belongs
   to the adapter. Unrelated movement is never blanket-cancelled.
 - Outcome polling reports reached/failed only when both Queue revision and Crowd correlation still match.

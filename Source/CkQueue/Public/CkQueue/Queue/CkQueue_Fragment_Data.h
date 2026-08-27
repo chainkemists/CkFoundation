@@ -33,8 +33,9 @@ enum class ECk_Queue_SlotClaimPolicy : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Queue_SlotClaimPolicy);
 
-// ReserveOnFormation can either continuously prefer the nearest mover for each open slot or preserve
-// admission-ticket order. DistanceThenTicket is the default so a distant early join cannot block nearer movers.
+// ReserveOnFormation can initially assign unreserved movers by distance or preserve admission-ticket order.
+// DistanceThenTicket is the default: live reservations compact in existing rank order, then distance and ticket
+// choose among members that do not yet own a slot. A folded line therefore cannot reorder its incumbents by proximity.
 UENUM(BlueprintType)
 enum class ECk_Queue_ReserveAssignmentPolicy : uint8
 {
@@ -164,7 +165,7 @@ private:
     ECk_Queue_ReserveAssignmentPolicy _ReserveAssignmentPolicy
         = ECk_Queue_ReserveAssignmentPolicy::DistanceThenTicket;
 
-    // How often a settled ReserveOnFormation queue rechecks live mover distances. Zero evaluates every frame.
+    // How often a settled ReserveOnFormation queue rechecks unreserved mover distances. Zero evaluates every frame.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _ReserveAssignmentRefreshSeconds = 0.25f;
@@ -174,7 +175,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _ReserveAssignmentRefreshPhaseSpread = ECk_EnableDisable::Enable;
 
-    // An existing reservation is retained unless another mover is at least this much closer to the slot.
+    // Among unreserved movers, retain the current candidate unless another is at least this much closer.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _ReserveAssignmentHysteresisUu = 50.0f;
