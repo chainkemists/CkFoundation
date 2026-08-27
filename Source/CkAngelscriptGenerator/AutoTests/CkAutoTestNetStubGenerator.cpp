@@ -219,7 +219,7 @@ namespace ck_autotest_netstub_generator
         Block += ck::Format_UE(TEXT("// Auto-generated from AS class {} ({}-mode).\n"),
             InEntityScriptClass->GetName(),
             IsReplicated ? TEXT("Replicated") : TEXT("ServerAndClientsIndependent"));
-        Block += TEXT("// DO NOT EDIT — regenerated on editor startup and every successful AS recompile.\n\n");
+        Block += TEXT("// DO NOT EDIT - regenerated on editor startup and every successful AS recompile.\n\n");
 
         Block += TEXT("namespace\n");
         Block += TEXT("{\n");
@@ -455,14 +455,14 @@ namespace ck_autotest_netstub_generator
         if (SkippedNoCkTests > 0)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[CkAS Net Stubs] CkTests plugin not enabled — {} plugin-authored net-mode ")
+                TEXT("[CkAS Net Stubs] CkTests plugin not enabled - {} plugin-authored net-mode ")
                 TEXT("test stub(s) can't be written to disk; skipped."),
                 SkippedNoCkTests);
         }
         if (SkippedNoProjectDir > 0)
         {
             ck::angelscriptgenerator::Warning(
-                TEXT("[CkAS Net Stubs] Project module source dir [{}] not found — {} project-")
+                TEXT("[CkAS Net Stubs] Project module source dir [{}] not found - {} project-")
                 TEXT("authored net-mode test stub(s) can't be written to disk; skipped."),
                 FPaths::GameSourceDir() / FApp::GetProjectName(), SkippedNoProjectDir);
         }
@@ -499,7 +499,7 @@ namespace ck_autotest_netstub_generator
     // ---- File content -------------------------------------------------
 
     static const TCHAR* FileHeader =
-        TEXT("// Auto-generated multi-client AutoTest C++ stubs — DO NOT EDIT.\n")
+        TEXT("// Auto-generated multi-client AutoTest C++ stubs - DO NOT EDIT.\n")
         TEXT("// Regenerated on editor startup and after every AngelScript recompile.\n")
         TEXT("//\n")
         TEXT("// =====================================================================\n")
@@ -509,13 +509,13 @@ namespace ck_autotest_netstub_generator
         TEXT("// Each block below is the C++ orchestration glue for one AS-authored net\n")
         TEXT("// test. The actual test body lives in the corresponding .as file under\n")
         TEXT("// `Plugins/<X>/Script/Ck<Feature>/CkAutoTest_Net_*.as`. AS authors write\n")
-        TEXT("// one .as file — this generator produces the C++ stub from the AS class's\n")
+        TEXT("// one .as file - this generator produces the C++ stub from the AS class's\n")
         TEXT("// CDO `_NetMode` default, choosing the Replicated- or Independent-mode\n")
         TEXT("// shape automatically.\n")
         TEXT("//\n")
         TEXT("// `Replicated`-mode stubs spawn an `ACk_AutoTest_NetSubject` on the server\n")
         TEXT("// then run the AS body on every world. `ServerAndClientsIndependent` stubs\n")
-        TEXT("// skip the spawn — the AS body operates on each world's TransientEntity\n")
+        TEXT("// skip the spawn - the AS body operates on each world's TransientEntity\n")
         TEXT("// without cross-world coordination.\n")
         TEXT("//\n")
         TEXT("// To author a new net test:\n")
@@ -523,7 +523,7 @@ namespace ck_autotest_netstub_generator
         TEXT("//   2. Subclass `UCk_AutoTest_NetBase` (defaults to Replicated) or set\n")
         TEXT("//      `default _NetMode = ECk_AutoTest_NetMode::ServerAndClientsIndependent;`\n")
         TEXT("//      on a `UCk_AutoTest_Base` subclass.\n")
-        TEXT("//   3. Recompile AS — the generator emits the matching stub here on the\n")
+        TEXT("//   3. Recompile AS - the generator emits the matching stub here on the\n")
         TEXT("//      next PostCompile. No C++ edits required.\n")
         TEXT("// =====================================================================\n")
         TEXT("\n")
@@ -633,7 +633,7 @@ auto
     if (ck::Is_NOT_Valid(AutoTestBase))
     {
         ck::angelscriptgenerator::Log(
-            TEXT("[CkAS Net Stubs] Ck_AutoTest_Base not found in object table — ")
+            TEXT("[CkAS Net Stubs] Ck_AutoTest_Base not found in object table - ")
             TEXT("skipping pass (CkTests not loaded yet, or AS not yet compiled)."));
         return;
     }
@@ -691,7 +691,7 @@ auto
     else
     {
         ck::angelscriptgenerator::Log(
-            TEXT("[CkAS Net Stubs] No net-mode classes discovered — skipping stale-file prune ")
+            TEXT("[CkAS Net Stubs] No net-mode classes discovered - skipping stale-file prune ")
             TEXT("(conservative: can't distinguish all-deleted from a broken discovery pass)."));
     }
 
@@ -753,7 +753,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[CkAS Net Stubs] Done — {} feature buckets, {} stubs emitted."),
+        TEXT("[CkAS Net Stubs] Done - {} feature buckets, {} stubs emitted."),
         Buckets.Num(), TotalEmitted);
 
 #endif // WITH_EDITOR

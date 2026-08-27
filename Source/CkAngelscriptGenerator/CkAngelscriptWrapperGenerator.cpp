@@ -1257,7 +1257,7 @@ auto
 
     if (AllNames.IsEmpty())
     {
-        ck::angelscriptgenerator::Log(TEXT("No CVars found — skipping cvar.as generation"));
+        ck::angelscriptgenerator::Log(TEXT("No CVars found - skipping cvar.as generation"));
         return;
     }
 
@@ -1335,7 +1335,7 @@ auto
     auto* CollisionProfile = UCollisionProfile::Get();
     if (ck::Is_NOT_Valid(CollisionProfile))
     {
-        ck::angelscriptgenerator::Warning(TEXT("Cannot generate collision constants — UCollisionProfile not available"));
+        ck::angelscriptgenerator::Warning(TEXT("Cannot generate collision constants - UCollisionProfile not available"));
         return;
     }
 
@@ -1543,7 +1543,7 @@ auto
     auto* PhysicsSettings = UPhysicsSettings::Get();
     if (ck::Is_NOT_Valid(PhysicsSettings))
     {
-        ck::angelscriptgenerator::Warning(TEXT("Cannot generate physical surface constants — UPhysicsSettings not available"));
+        ck::angelscriptgenerator::Warning(TEXT("Cannot generate physical surface constants - UPhysicsSettings not available"));
         return;
     }
 

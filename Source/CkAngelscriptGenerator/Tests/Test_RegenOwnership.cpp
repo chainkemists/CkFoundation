@@ -54,7 +54,7 @@ bool FCkTest_RegenOwnership_SecondOpenFails::RunTest(const FString&)
     auto SecondHandle = FCkAngelscriptGenerator_RegenOwnership::Try_OpenExclusiveWriteHandle(LockPath);
     TestFalse(TEXT("second open on a held path fails (sharing violation)"), SecondHandle.IsValid());
 #else
-    AddInfo(TEXT("POSIX OpenWrite does not enforce write exclusivity — conflict assertion skipped ")
+    AddInfo(TEXT("POSIX OpenWrite does not enforce write exclusivity - conflict assertion skipped ")
             TEXT("(the guard degrades to always-owner off-Windows by design)."));
 #endif
 

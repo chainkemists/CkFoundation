@@ -521,7 +521,7 @@ namespace ck::angelscriptgenerator::self_heal
                     Result.TargetFilePath = StubPath;
                     Result.ErrorMessage   = FString::Printf(
                         TEXT("Same-arity ambiguity: an overload of %s::%s with arity %d already exists in the sibling ")
-                        TEXT("(fallback-typed on one side) — appending another would be mutually ambiguous at every call ")
+                        TEXT("(fallback-typed on one side) - appending another would be mutually ambiguous at every call ")
                         TEXT("site, and the existing one does not satisfy this caller. Escalation required."),
                         *InError.TargetNamespace, *InError.FunctionName, NewArity);
                     return Result;
@@ -757,7 +757,7 @@ namespace ck::angelscriptgenerator::self_heal
 
             Result.FailReason   = ECk_StubInjectFailReason::FullShapeOnDiskStillMismatched;
             Result.ErrorMessage = FString::Printf(
-                TEXT("Full shape for '%s' already in the sibling (from a prior compile) but this Params overload is still unmatched — defer to the per-signature path."),
+                TEXT("Full shape for '%s' already in the sibling (from a prior compile) but this Params overload is still unmatched - defer to the per-signature path."),
                 *InClassName);
             return Result;
         }
@@ -768,7 +768,7 @@ namespace ck::angelscriptgenerator::self_heal
         {
             Result.FailReason   = ECk_StubInjectFailReason::StructExistsInCanonical;
             Result.ErrorMessage = FString::Printf(
-                TEXT("Struct '%s' already defined in the canonical — stale-canonical drift; quarantine escalation applies."),
+                TEXT("Struct '%s' already defined in the canonical - stale-canonical drift; quarantine escalation applies."),
                 *StructName);
             return Result;
         }
@@ -776,7 +776,7 @@ namespace ck::angelscriptgenerator::self_heal
         {
             Result.FailReason   = ECk_StubInjectFailReason::StructExistsInSibling;
             Result.ErrorMessage = FString::Printf(
-                TEXT("Struct '%s' already defined in the sibling stub — full-shape synthesis defers to the per-signature path."),
+                TEXT("Struct '%s' already defined in the sibling stub - full-shape synthesis defers to the per-signature path."),
                 *StructName);
             return Result;
         }
@@ -950,7 +950,7 @@ namespace ck::angelscriptgenerator::self_heal
             {
                 Result.FailReason    = ECk_StubInjectFailReason::WriteFailed;
                 Result.ErrorMessage += FString::Printf(
-                    TEXT("Could not delete stale canonical '%s' — quarantine aborted (sibling was already dropped; ")
+                    TEXT("Could not delete stale canonical '%s' - quarantine aborted (sibling was already dropped; ")
                     TEXT("the next heal cycle re-enters here)."), *InCanonicalPath);
                 return Result;
             }
