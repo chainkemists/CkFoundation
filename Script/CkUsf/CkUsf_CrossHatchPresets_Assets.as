@@ -1,12 +1,12 @@
 // Language=angelscript
 
 //============================================================================
-// CROSS HATCH PRESETS — the four authored styles, applied via the subsystem:
+// CROSS HATCH PRESETS - the four authored styles, applied via the subsystem:
 //   UCkUsf_CrossHatchSubsystem::Get_CrossHatchSubsystem().Apply_Preset(CkUsf::DA_CrossHatch_Engraving);
 //
 // Needs the CrossHatch master on disk (console: "Ck_Usf_GenerateLooks CrossHatch"
 // on a fresh checkout). Every field left unstated is the
-// FCk_Usf_CrossHatch_Params default, which IS the Sketch style — so each preset
+// FCk_Usf_CrossHatch_Params default, which IS the Sketch style - so each preset
 // below reads as its delta from Sketch.
 //
 // Every colour here is SCENE-REFERRED LINEAR (the look sits pre-tonemap), which
@@ -29,7 +29,7 @@ namespace CkUsf
     }
 
     // Copperplate: fine, tightly-spaced, highly regular lines at four layers, on a cool bright sheet.
-    // Irregularity is pulled almost to zero on purpose — an engraved line is cut, not drawn, and any
+    // Irregularity is pulled almost to zero on purpose - an engraved line is cut, not drawn, and any
     // wobble reads as a mistake rather than as a hand.
     asset DA_CrossHatch_Engraving of UCkUsf_CrossHatchPreset
     {
@@ -45,7 +45,7 @@ namespace CkUsf
         _PaperColor         = FLinearColor(2.35, 2.32, 2.20, 1.0);
     }
 
-    // Technical drawing: white ink on a saturated blue ground, one layer only, and NO normal alignment —
+    // Technical drawing: white ink on a saturated blue ground, one layer only, and NO normal alignment
     // a blueprint's hatching is a fill convention at a fixed angle, not a description of form. The
     // NormalAlignment of 0 is what makes this preset the control that proves the alignment does
     // something in the other three.
@@ -66,7 +66,7 @@ namespace CkUsf
     }
 
     // The A/B reference. Everything else is Sketch, so switching to this and back proves the effect is
-    // the only difference — the frame must come back completely clean.
+    // the only difference - the frame must come back completely clean.
     asset DA_CrossHatch_Off of UCkUsf_CrossHatchPreset
     {
         _Enabled = ECk_EnableDisable::Disable;

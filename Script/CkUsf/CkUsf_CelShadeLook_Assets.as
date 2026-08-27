@@ -1,13 +1,13 @@
 // Language=angelscript
 
 //============================================================================
-// CEL SHADE — the quantized-band / halftone-transition look.
+// CEL SHADE - the quantized-band / halftone-transition look.
 //
 // Shader: /CkUsf/Looks/CelShade.ush. Driven at runtime by
 // UCkUsf_CelShadeSubsystem, which owns the whole-view blendable and writes
 // these parameters by NAME from FCk_Usf_CelShade_Params.
 //
-// _Parameters order MUST equal CkUsf_PP_CelShade's declaration order — the
+// _Parameters order MUST equal CkUsf_PP_CelShade's declaration order - the
 // generator binds positionally and the validator enforces it. The defaults
 // below are the "Balanced" preset, so an un-driven master already renders
 // that style.
@@ -29,7 +29,7 @@ namespace CkUsf
 
         // The illumination reconstruction needs BaseColor; the Metallic group and the specular roughness
         // cutoff need Metallic and Roughness; the per-object contract needs CustomStencil. PPI_Specular
-        // is deliberately NOT wired — nothing in the shader reads it, and every wired input costs a pin
+        // is deliberately NOT wired - nothing in the shader reads it, and every wired input costs a pin
         // and a GBuffer fetch on this already-wide node.
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);
@@ -125,7 +125,7 @@ namespace CkUsf
         // the whole list has to stay grouped by type in the order the .ush declares it.
         _Parameters.Add(CkUsf::Usf_Scalar(n"DistributionMode", 0.0));   // ECk_Usf_CelDistribution::Exponent
         _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdgeCount", 1.0));
-        // The list is a FIXED 8 slots + a live count, the ScreenDither palette precedent — a material has
+        // The list is a FIXED 8 slots + a live count, the ScreenDither palette precedent - a material has
         // no array parameters. Unused slots are written 1.0 by the subsystem: past the count the shader
         // ignores them, and 1.0 is the only value that could not fabricate a band if it ever did not.
         _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge0", 0.5));

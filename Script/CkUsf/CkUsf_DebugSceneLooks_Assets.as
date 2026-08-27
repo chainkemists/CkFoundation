@@ -1,7 +1,7 @@
 // Language=angelscript
 
 //============================================================================
-// DEBUG SCENE LOOKS — the two materials CkDebugScene draws everything with
+// DEBUG SCENE LOOKS - the two materials CkDebugScene draws everything with
 //============================================================================
 //
 // Replacements for the hand-authored /CkFoundation/DebugScene/M_CkDebugScene_Opaque and
@@ -13,8 +13,8 @@
 // The hand-authored pair are single-sided, and nothing about them says so where anyone can read
 // it: UE only serializes non-default material properties, so `Two Sided` being off is the ABSENCE
 // of a token in a binary asset. That cost real performance. Because the materials cull backfaces,
-// the Crowd debugger's scene adapter fakes two-sidedness in geometry — AppendTwoSidedTriangle
-// emits every navmesh triangle twice with reversed winding — which doubles the vertex count, the
+// the Crowd debugger's scene adapter fakes two-sidedness in geometry - AppendTwoSidedTriangle
+// emits every navmesh triangle twice with reversed winding - which doubles the vertex count, the
 // mesh-description build and the tangent pass on every navmesh rebuild. Measured at 194ms for one
 // rebuild on BusterBlock's main map, roughly half of it attributable to the duplication.
 //
@@ -25,7 +25,7 @@
 // CkUsf passes vector parameters into a look as `.rgb` (CkUsf_Generator, ECk_Usf_ParamType::Vector),
 // so a vector parameter's alpha never reaches the shader. The hand-authored materials carried
 // opacity in the alpha of their `Color` parameter. These looks therefore expose `Opacity` as its
-// own scalar, and CkDebugScene must set it alongside `Color` when it adopts them — see the
+// own scalar, and CkDebugScene must set it alongside `Color` when it adopts them - see the
 // adoption notes at the bottom of this file. Without that change the translucent navmesh overlay
 // renders fully opaque.
 //============================================================================
@@ -45,7 +45,7 @@ namespace CkUsf
         return Params;
     }
 
-    // Opaque fill — agent capsules, queue origin/reservation boxes, and every Jolt collision shape
+    // Opaque fill - agent capsules, queue origin/reservation boxes, and every Jolt collision shape
     // drawn in solid mode.
     asset DebugSceneOpaque of UCkUsf_LookDefinition
     {
@@ -67,7 +67,7 @@ namespace CkUsf
         _Parameters = CkUsf::Usf_DebugSceneParams(1.0);
     }
 
-    // Translucent fill — the navmesh overlay, path-network ribbons, and the queue reservation
+    // Translucent fill - the navmesh overlay, path-network ribbons, and the queue reservation
     // boxes, all of which are drawn over world geometry and must not hide it.
     asset DebugSceneTranslucent of UCkUsf_LookDefinition
     {
@@ -86,7 +86,7 @@ namespace CkUsf
 }
 
 //============================================================================
-// ADOPTION — what still has to happen for these to replace the hand-authored pair
+// ADOPTION - what still has to happen for these to replace the hand-authored pair
 //============================================================================
 //
 // These definitions are inert on their own. Generating them changes nothing until the consumer is
@@ -99,7 +99,7 @@ namespace CkUsf
 //  3. Set the Opacity scalar in CkDebugScene_Target.cpp everywhere ColorParameter is set today
 //     (two call sites: the wire MID and the base MID), sourcing it from the appearance colour's
 //     alpha, which is where that value lives now.
-//  4. Delete AppendTwoSidedTriangle's duplicate emit in CkCrowdDebugger_3dSceneAdapter — the
+//  4. Delete AppendTwoSidedTriangle's duplicate emit in CkCrowdDebugger_3dSceneAdapter - the
 //     reason for the migration. Ck.Jolt.DebugDraw.SingleTriangleBuild already asserts that one
 //     source triangle produces exactly one rendered triangle, so it covers this directly.
 //  5. Re-run Ck.Jolt.DebugDraw.* and Ck.CrowdDebugger.Viewport3d.*, and look at the navmesh

@@ -1,8 +1,8 @@
-// CkVat look definitions — decode shaders in Source/CkVat/Shaders/CkVat/Vat.ush.
+// CkVat look definitions - decode shaders in Source/CkVat/Shaders/CkVat/Vat.ush.
 //
 // Param ORDER is load-bearing twice over: the validator matches it positionally against the HLSL
 // entry points, and the 12 per-instance scalars map to custom-data slots in DECLARATION ORDER
-// (the CkVat runtime writes floats [0..11] in exactly this order — contract:
+// (the CkVat runtime writes floats [0..11] in exactly this order - contract:
 // Source/CkVat/Plan/Gate_02_Material.md). Do not reorder.
 namespace CkVat
 {
@@ -27,7 +27,7 @@ namespace CkVat
         PosVat._Type = ECk_Usf_ParamType::Texture2D;
         _Parameters.Add(PosVat);
 
-        // Tangent-space normal atlas (uniform, not per-instance — inserting it here does NOT shift
+        // Tangent-space normal atlas (uniform, not per-instance - inserting it here does NOT shift
         // the per-instance slots below: slots accrue over _PerInstance params only).
         FCk_Usf_ParamDesc NrmVat;
         NrmVat._Name = n"NrmVat";
@@ -168,7 +168,7 @@ namespace CkVat
         BoneRotVat._Type = ECk_Usf_ParamType::Texture2D;
         _Parameters.Add(BoneRotVat);
 
-        // WeightTexture storage carriers (unbound for MeshChannels collections — the WeightStorage
+        // WeightTexture storage carriers (unbound for MeshChannels collections - the WeightStorage
         // uniform branch never samples them there).
         FCk_Usf_ParamDesc BoneIdxTex;
         BoneIdxTex._Name = n"BoneIdxTex";

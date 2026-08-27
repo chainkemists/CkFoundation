@@ -1,12 +1,12 @@
 // Language=angelscript
 
 //============================================================================
-// "CHIP GRID" SCAN — the CkUsf port of the AdvancedScan post-process
+// "CHIP GRID" SCAN - the CkUsf port of the AdvancedScan post-process
 //============================================================================
 //
 // Source: /Game/Developers/Stephen/AdvancedScan/PP_ChipGrid_Initialize, plus the
 // five MF_ScanEffect_* material functions it calls. Every default and every
-// parameter GROUP below is read from those .ckexport sidecars — the groups are
+// parameter GROUP below is read from those .ckexport sidecars - the groups are
 // the source material's own (`props.Group` on each parameter node), not names
 // invented here, so the generated master's parameter panel reads the way the
 // original does.
@@ -69,7 +69,7 @@ namespace CkUsf
         _LookName        = n"ScanChipGrid";
 
         // Pre-TSR/TAA, for the same reason SolidOutline is: the Outline layer thresholds the world-NORMAL
-        // buffer, which is rendered with the TAA-jittered projection every frame — threshold that after
+        // buffer, which is rendered with the TAA-jittered projection every frame - threshold that after
         // the resolve and the outline shimmers on a stationary camera. Pre-TAA is also pre-tonemap, which
         // is the colour space the boost amounts of 20 were authored against (they read as a bright rim
         // there, and as clipped white on a tonemapped 0..1 image), and it lets bloom see the wavefront.
@@ -78,7 +78,7 @@ namespace CkUsf
         // _SceneTextures left empty = the default trio (SceneColor / SceneDepth / SceneNormal), which is
         // exactly what this look taps. Declaring them is what legalizes its raw SceneTextureLookup()s.
 
-        // The source's seven StaticSwitchParameters become defines — a static switch IS a permutation,
+        // The source's seven StaticSwitchParameters become defines - a static switch IS a permutation,
         // and CkUsf spells permutations as _Defines. Flip one off and regenerate to drop that layer.
         _Defines.Add("CKUSF_SCAN_USE_VOXELIZE=1");
         _Defines.Add("CKUSF_SCAN_USE_OUTLINE=1");
