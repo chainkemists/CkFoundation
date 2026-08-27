@@ -245,6 +245,21 @@ public:
     Get_ViewInfo(
         const FCk_Handle_Camera& InCamera);
 
+    // The view that will RENDER this frame for the LOCAL player: the first camera entity in the
+    // world that is locally player-controlled (the ECS fragment is authoritative;
+    // APlayerCameraManager is downstream and one frame stale), falling back to the primary
+    // player controller's camera manager for worlds that never stood a camera director up.
+    // False — with no fallback guess — on dedicated servers and editor worlds. Callers that mean
+    // a SPECIFIC viewer (split-screen, spectators) should resolve their own camera handle and
+    // call Get_ViewInfo instead.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Try Get Local View Info")
+    static bool
+    TryGet_LocalViewInfo(
+        const FCk_Handle& InAnyHandleInWorld,
+        FMinimalViewInfo& OutViewInfo);
+
     // The composed view's attachable transform presence. Scene-node-attach here to have content follow
     // the rendered view; children compose in the transform-local settle barrier after the POV publish.
     UFUNCTION(BlueprintPure,
