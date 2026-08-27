@@ -354,7 +354,8 @@ namespace ck
                 InDesired.Get_LastVelocity(),
                 InParams.Get_MaxAcceleration(),
                 InParams.Get_MaxTurnRate(),
-                static_cast<float>(InDeltaT.Get_Seconds())),
+                static_cast<float>(InDeltaT.Get_Seconds()),
+                InDesired.Get_CloseGoalStrafeActive()),
             ck_crowd_agent_avoidance_sample_algorithm::FWallParameters{AgentLocation, Walls}};
         auto Cloud = ck_crowd_agent_avoidance_sample_algorithm::BuildSampleCloud(
             DesiredVelocity, Parameters._MaxSpeed, Settings->Get_AvoidanceVelBias(),

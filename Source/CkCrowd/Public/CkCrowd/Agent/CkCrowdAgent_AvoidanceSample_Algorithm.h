@@ -38,6 +38,7 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         float _MaxAcceleration = 0.0f;
         float _MaxTurnRate = 0.0f;
         float _DeltaSeconds = 0.0f;
+        bool _AllowImmediateDirection = false;
     };
 
     inline auto MakeReachabilityParameters(
@@ -45,14 +46,16 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         const FVector& InLastVelocity,
         const float InMaxAcceleration,
         const float InMaxTurnRate,
-        const float InDeltaSeconds) -> FReachabilityParameters
+        const float InDeltaSeconds,
+        const bool InAllowImmediateDirection = false) -> FReachabilityParameters
     {
         return {
             InMode == ECk_AccelClampMode::Enabled,
             InLastVelocity,
             InMaxAcceleration,
             InMaxTurnRate,
-            InDeltaSeconds};
+            InDeltaSeconds,
+            InAllowImmediateDirection};
     }
 
     // A cached navmesh wall in the shape the scorer wants. _Touching is dtCrowd's seg->touch, which
@@ -500,7 +503,8 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
             InParameters._MaxSpeed,
             InParameters._Reachability._MaxAcceleration,
             InParameters._Reachability._MaxTurnRate,
-            InParameters._Reachability._DeltaSeconds);
+            InParameters._Reachability._DeltaSeconds,
+            InParameters._Reachability._AllowImmediateDirection);
     }
 
     inline auto CalculateCandidateScoreForNeighbors(

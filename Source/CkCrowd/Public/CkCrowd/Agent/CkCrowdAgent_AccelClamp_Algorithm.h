@@ -17,7 +17,8 @@ namespace ck::ck_crowd_agent_accel_clamp_algorithm
         const float InMaxSpeed,
         const float InMaxAcceleration,
         const float InMaxTurnRate,
-        const float InDeltaSeconds) -> FVector
+        const float InDeltaSeconds,
+        const bool InAllowImmediateDirection = false) -> FVector
     {
         const auto InputsAreValid =
             NOT InLastVelocity.ContainsNaN() &&
@@ -72,7 +73,7 @@ namespace ck::ck_crowd_agent_accel_clamp_algorithm
         const auto Angle = FMath::Acos(FMath::Clamp(CosAngle, -1.0f, 1.0f));
 
         auto TargetDirection = FVector::ZeroVector;
-        if (Angle <= MaxAngleDelta || Angle < KINDA_SMALL_NUMBER)
+        if (InAllowImmediateDirection || Angle <= MaxAngleDelta || Angle < KINDA_SMALL_NUMBER)
         {
             TargetDirection = RequestedDirection;
         }

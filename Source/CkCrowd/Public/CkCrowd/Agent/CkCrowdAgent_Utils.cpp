@@ -24,6 +24,18 @@ auto
         const FCk_Fragment_CrowdAgent_ParamsData& InParams)
     -> FCk_Handle_CrowdAgent
 {
+    const auto HasValidCloseGoalStrafe =
+        (InParams.Get_CloseGoalStrafe() == ECk_EnableDisable::Enable
+            || InParams.Get_CloseGoalStrafe() == ECk_EnableDisable::Disable)
+        && FMath::IsFinite(InParams.Get_CloseGoalStrafeDistanceUu())
+        && InParams.Get_CloseGoalStrafeDistanceUu() >= 0.0f;
+    CK_ENSURE_IF_NOT(HasValidCloseGoalStrafe,
+        TEXT("Invalid CrowdAgent close-goal strafe params (mode [{}], distance [{}])"),
+        InParams.Get_CloseGoalStrafe(), InParams.Get_CloseGoalStrafeDistanceUu())
+    {}
+    if (NOT HasValidCloseGoalStrafe)
+    { return {}; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
         TEXT("Invalid owner handle [{}] passed to UCk_Utils_CrowdAgent_UE::Add"), InOwner)
     { return {}; }

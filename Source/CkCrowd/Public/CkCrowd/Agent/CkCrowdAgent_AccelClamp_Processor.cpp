@@ -46,6 +46,8 @@ namespace ck
         const auto NewVel = InHandle.Has<FTag_CrowdAgent_Idle>()
             ? FVector::ZeroVector
             : InDesired.Get_Velocity();
+        const auto AllowImmediateDirection = InHandle.Has<FTag_CrowdAgent_Walking>()
+            && InDesired.Get_CloseGoalStrafeActive();
 
         InDesired._Velocity = ck_crowd_agent_accel_clamp_algorithm::ProjectVelocity(
             LastVel,
@@ -53,7 +55,8 @@ namespace ck
             MaxSpeed,
             MaxAccel,
             MaxTurnRate,
-            Dt);
+            Dt,
+            AllowImmediateDirection);
         InDesired._LastVelocity = InDesired._Velocity;
     }
 }

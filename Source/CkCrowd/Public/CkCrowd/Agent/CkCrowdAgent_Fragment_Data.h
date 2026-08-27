@@ -201,6 +201,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _ArrivalRadius = 30.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_EnableDisable _CloseGoalStrafe = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _CloseGoalStrafeDistanceUu = 60.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _WaypointArrivalRadius = 25.0f;
 
@@ -262,6 +268,8 @@ public:
     CK_PROPERTY(_NavQueryFilter);
     CK_PROPERTY(_NavQueryFilterStrict);
     CK_PROPERTY(_ArrivalRadius);
+    CK_PROPERTY(_CloseGoalStrafe);
+    CK_PROPERTY(_CloseGoalStrafeDistanceUu);
     CK_PROPERTY(_WaypointArrivalRadius);
     CK_PROPERTY(_SeparationRadius);
     CK_PROPERTY(_SeparationLookahead);
@@ -452,9 +460,13 @@ private:
     UPROPERTY()
     FVector _LastVelocity = FVector::ZeroVector;
 
+    UPROPERTY()
+    bool _CloseGoalStrafeActive = false;
+
 public:
     CK_PROPERTY_GET(_Velocity);
     CK_PROPERTY_GET(_LastVelocity);
+    CK_PROPERTY_GET(_CloseGoalStrafeActive);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
