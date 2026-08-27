@@ -15,12 +15,14 @@ Mixing these up is a recurring footgun. They produce different output:
 
 | API | Output | When to use |
 |---|---|---|
-| `ck::pmg::Append_Debug*_World(InHandle, ...)` | **Wireframe lines only.** No procmesh. `FProcessor_Pmg_DebugShape_DrawLines` re-emits each segment via `UCk_Utils_DebugDraw_UE::DrawDebugLine` every tick. | Inherently line-shaped overlays — paths, polylines, drop indicators. Not for "filled" or "real" shapes. |
+| `ck::pmg::Create_DebugLineSet(...)` + `Append_Debug*_World(...)` | **Retained wireframe-only procmesh.** Create the owner-child once; each append dirties section 1 for a one-shot bake. | Inherently line-shaped overlays — paths, polylines, drop indicators. Chunk an indefinitely growing stream so dirty rebuild cost stays bounded. |
 | `UCk_Utils_Pmg_BasicShapes::Add_*(InHandle, FTransform, ...)` | **Filled procmesh + auto-wireframe** when `InDrawLines=true`. Setup processor builds the mesh AND internally calls the matching `Append_Debug*_World` for the outline. Adds Common + Params + Current + NeedsSetup tag + Transform to `InHandle`. | Default for "I want a debug shape attached to this entity." The entity *becomes* the shape. |
 | `UCk_Utils_Pmg_BasicShapes::Create_*(InOwningEntity, FTransform, ...)` | Same as `Add_*`, but spawns a **new child entity** owned by `InOwningEntity` and applies the shape there. | When the shape should sit alongside other geometry on a parent overlay entity, and should cascade-destroy when the owner does. |
 | `UCk_Utils_Pmg_BasicShapes::DrawFilled*(WorldContext, FVector, ..., Duration)` | Fire-and-forget. Spawns a one-off entity in the world. | Single-shot debug calls (one tick or short duration). Not for live tracking. |
 
-**Rule:** `Append_Debug*_World` does not draw a "shape" — it draws line segments. If you want a filled capsule on an entity, you want `Add_Capsule` (or `Create_Capsule`), not `Append_DebugCapsule_World`.
+**Rule:** `Append_Debug*_World` adds line segments to an existing PMG shape. Use
+`Create_DebugLineSet` when no filled primitive exists. If you want a filled capsule, use
+`Add_Capsule` (or `Create_Capsule`), not `Append_DebugCapsule_World`.
 
 ---
 
@@ -42,16 +44,17 @@ For live-tracking overlays (e.g. a debugger capsule following a selected entity)
 
 | Fragment / tag | Role | Added by |
 |---|---|---|
-| `FFragment_Pmg_DebugShape_Common` | Color, thickness, draw-lines toggle, render mode, duration. **Required** by every render path (Setup processors AND `DrawLines` processor). | `Add_*` calls; also `GetOrAddLinesFragment` so `Append_Debug*_World` works on debug-only entities. |
+| `FFragment_Pmg_DebugShape_Common` | Color, thickness, draw-lines toggle, render mode, duration. **Required** by every render path. | `Add_*` and `Create_DebugLineSet`; also defaulted by `Append_Debug*_World`. |
 | `FFragment_Pmg_<Shape>_Params` | Per-shape geometry (radius, half-height, segments, axis…). | `Add_*` calls only. |
 | `FFragment_Pmg_DebugShape_Lines` | Cached wireframe segments in entity-local space. | `Append_Debug*_World` (and indirectly by `Add_*` when `InDrawLines=true`). |
-| `FFragment_Pmg_DebugShape_Current` | Owns the live `UProceduralMeshComponent`. | `Add_*` calls only. |
+| `FFragment_Pmg_DebugShape_Current` | Owns the live `UProceduralMeshComponent`. | `Add_*` and `Create_DebugLineSet`. |
 | `FFragment_Transform` | Required by every render path. | `Add_*` calls; otherwise call site. |
-| `FTag_Pmg_DebugShape_NeedsSetup` | One-shot Setup gate; cleared after Setup runs. | `Add_*` calls. |
+| `FTag_Pmg_DebugShape_NeedsSetup` | One-shot Setup gate; cleared after Setup runs. | `Add_*` and `Create_DebugLineSet`. |
 
-A line-only entity needs **Common + Lines + Transform**. A filled-shape entity needs **Common + Params + Current + Transform + NeedsSetup**.
-
-The DrawLines processor matches on `Common + Lines + Transform`. Forgetting any of those = silent no-op (no error, no log — geometry just never appears). Historically `Append_Debug*_World` only added Lines; `Common` had to come from a shape Setup. That's why it now AddOrGets Common in `GetOrAddLinesFragment` — to make line-only consumers work without the caller having to know.
+A retained line set needs **Common + Current + LineSet + Transform + NeedsSetup**; appending adds
+**Lines + LinesNeedBaking**. A filled shape substitutes its shape Params for LineSet. Bare
+`Append_Debug*_World` cannot create the mesh component, so line-only consumers start with
+`Create_DebugLineSet` rather than manually composing fragments.
 
 ---
 
@@ -134,10 +137,9 @@ DrawLines processor is stale.** Detail worth knowing before touching the bake:
   origin, which is what makes the midpoint direction a usable "outward".
 - Section 1's visibility is set from `Common._RenderMode` at the end of the bake, so an entity
   hidden before any lines were appended does not start showing wireframes when the bake runs.
-- **Known gap:** `Request_SetLineThickness` updates the cached `Common._LineThickness` and
-  re-stamps the bake gate, but the bake reads the per-line thickness written into each
-  `FCk_Pmg_DebugLine` by the `Append_*` call. The uniform override therefore does not take
-  effect until the lines are re-appended.
+- `Request_SetLineThickness` updates both Common and every cached line, then re-stamps the bake
+  gate. Existing retained geometry therefore changes thickness without re-appending its source
+  segments.
 
 **Setup runs in its own scheduler group.** `FGroup_Pmg_DebugShape_Setup` (`CkPmg_ProcessorGroups.h`)
 runs every per-shape Setup ahead of `FGroup_Gameplay_Rendering`. Without that barrier,

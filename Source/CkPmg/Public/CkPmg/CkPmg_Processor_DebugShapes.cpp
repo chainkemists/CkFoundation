@@ -36,6 +36,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Pmg Debug Lines"), STAT_Pmg_DebugLines, STATGRO
 
 CK_REGISTER_GROUP(ck::FGroup_Pmg_DebugShape_Setup);
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_LineSet_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_BakeLines);
@@ -80,6 +81,68 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DashedLine_Setup);
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_DebugShape_LineSet_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Common& InCommon,
+            FFragment_Pmg_DebugShape_Current& InCurrent)
+        -> void
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        auto MeshComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UProceduralMeshComponent>(
+            UCk_Utils_Pmg_DebugShape_UE::Get_MeshComponentOuter(World, InHandle),
+            UProceduralMeshComponent::StaticClass(),
+            nullptr,
+            FCk_ObjectPooling_PoolParams{}.Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease),
+            nullptr);
+        if (ck::Is_NOT_Valid(MeshComponent))
+        { return; }
+
+        MeshComponent->SetWorldLocation(FVector::ZeroVector);
+        MeshComponent->RegisterComponentWithWorld(World);
+        if (MeshComponent->HasBegunPlay() == false)
+        { MeshComponent->BeginPlay(); }
+        MeshComponent->SetCastShadow(false);
+        MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+        auto* TranslucentMaterial = LoadObject<UMaterial>(
+            nullptr,
+            TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
+        if (ck::IsValid(TranslucentMaterial))
+        {
+            auto* DynamicMaterial = UMaterialInstanceDynamic::Create(TranslucentMaterial, MeshComponent);
+            if (ck::IsValid(DynamicMaterial))
+            {
+                DynamicMaterial->SetVectorParameterValue(
+                    FName(TEXT("Color")),
+                    pmg_debug_shape::Get_FillColor(InCommon.Get_Color()));
+                MeshComponent->SetMaterial(0, DynamicMaterial);
+            }
+        }
+        else
+        {
+            ck::pmg::Warning(TEXT("Failed to load M_SimpleUnlitTranslucent for Pmg line set [{}]"), InHandle);
+        }
+
+        const auto ShouldBeVisible = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden &&
+                                     NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
+        MeshComponent->SetVisibility(ShouldBeVisible, true);
+        MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
+
+        if (InHandle.Has<FFragment_Transform>())
+        { MeshComponent->SetWorldTransform(InHandle.Get<FFragment_Transform>().Get_Transform()); }
+
+        InCurrent = FFragment_Pmg_DebugShape_Current{MeshComponent, FCk_Time{InDeltaT.Get_Seconds()}};
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
@@ -400,8 +463,13 @@ namespace ck
             const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
         -> void
     {
-        InCommon._LineThickness = InRequest.Get_NewLineThickness();
-        // Re-bakes existing geometry only — the bake reads per-line thickness (known gap, CkPmg/Claude.md).
+        const auto NewThickness = InRequest.Get_NewLineThickness();
+        InCommon._LineThickness = NewThickness;
+        if (InHandle.Has<FFragment_Pmg_DebugShape_Lines>())
+        {
+            for (auto& Line : InHandle.Get<FFragment_Pmg_DebugShape_Lines>()._Lines)
+            { Line._Thickness = NewThickness; }
+        }
         InHandle.AddOrGet<FTag_Pmg_DebugShape_LinesNeedBaking>();
     }
 

@@ -40,6 +40,13 @@ namespace ck_crowd_agent_diag_processor
         TEXT("Higher = more granular diagnostics and memory per tracked agent. Default 20Hz."),
         ECVF_Cheat);
 
+    static TAutoConsoleVariable<int32> CVarMaximumRecordedSamples(
+        TEXT("ck.Crowd.MaxRecordedSamples"),
+        ck::crowd_diag_breadcrumb::DefaultMaximumRecordedSamples,
+        TEXT("Maximum retained raw CrowdDiag samples per tracked agent. History trims in batches.\n")
+        TEXT("Minimum 256; default 4096."),
+        ECVF_Cheat);
+
     constexpr auto ReversalAngleDeg = 90.0f;
     constexpr auto LoopMinSpeedCm = 20.0f;
     constexpr auto LoopMinSamples = 20;
@@ -47,6 +54,8 @@ namespace ck_crowd_agent_diag_processor
     constexpr auto LoopMinTurnDeg = 360.0f;
     constexpr auto LoopMaxReverseDeg = 45.0f;
     constexpr auto LoopPathFraction = 0.8f;
+    constexpr auto MaximumSpatialLoopRadii = 512;
+    constexpr auto SpatialLoopRadiiTrimCount = 128;
 
     auto MedianRadius(const TArray<float>& InRadii) -> float
     {
@@ -536,6 +545,62 @@ namespace ck
         InRecorder._BestTrackGoalDistance = FMath::Min(InRecorder._BestTrackGoalDistance, TrackGoalDistance);
         Sample._TrackGoalDistance = TrackGoalDistance;
         Sample._BestTrackGoalDistance = InRecorder._BestTrackGoalDistance;
+
+        const auto AppendSample = [&InRecorder](const FCk_CrowdDiag_PathSample& InSample)
+        {
+            InRecorder._Samples.Add(InSample);
+
+            const auto ConfiguredMaximum =
+                ck_crowd_agent_diag_processor::CVarMaximumRecordedSamples.GetValueOnGameThread();
+            const auto RemoveCount = crowd_diag_breadcrumb::GetRecorderTrimCount(
+                InRecorder._Samples.Num(),
+                ConfiguredMaximum);
+            if (RemoveCount == 0)
+            { return; }
+
+            InRecorder._RetainedHistoryStartPos = InRecorder._Samples[RemoveCount - 1].Get_Pos();
+            InRecorder._Samples.RemoveAt(0, RemoveCount, EAllowShrinking::No);
+
+            if (InRecorder._QualifiedSpatialLoopLastSampleIndex != INDEX_NONE)
+            {
+                InRecorder._QualifiedSpatialLoopLastSampleIndex -= RemoveCount;
+                if (InRecorder._QualifiedSpatialLoopLastSampleIndex < 0)
+                { InRecorder._QualifiedSpatialLoopLastSampleIndex = INDEX_NONE; }
+            }
+
+            auto FirstReferencedTrace = MAX_int32;
+            for (auto& RetainedSample : InRecorder._Samples)
+            {
+                const auto TraceIndex = RetainedSample._AvoidanceSampleTraceIndex;
+                if (TraceIndex == INDEX_NONE)
+                { continue; }
+                if (NOT InRecorder._AvoidanceSampleTraces.IsValidIndex(TraceIndex))
+                {
+                    RetainedSample._AvoidanceSampleTraceIndex = INDEX_NONE;
+                    RetainedSample._AvoidanceSampleTraceAgeFrames = INDEX_NONE;
+                    continue;
+                }
+                FirstReferencedTrace = FMath::Min(FirstReferencedTrace, TraceIndex);
+            }
+
+            if (FirstReferencedTrace == MAX_int32)
+            {
+                InRecorder._AvoidanceSampleTraces.Reset();
+                return;
+            }
+            if (FirstReferencedTrace == 0)
+            { return; }
+
+            InRecorder._AvoidanceSampleTraces.RemoveAt(
+                0,
+                FirstReferencedTrace,
+                EAllowShrinking::No);
+            for (auto& RetainedSample : InRecorder._Samples)
+            {
+                if (RetainedSample._AvoidanceSampleTraceIndex != INDEX_NONE)
+                { RetainedSample._AvoidanceSampleTraceIndex -= FirstReferencedTrace; }
+            }
+        };
         // NeighborCache is sorted nearest-first and stores centre-to-centre distance.
         const auto& Neighbors = InNeighborCache.Get_Neighbors();
         if (Neighbors.Num() > 0)
@@ -652,7 +717,7 @@ namespace ck
                 InRecorder._CurrentSpatialWindowStartGoalDistance = 0.0f;
                 InRecorder._CurrentSpatialWindowQualified = false;
             }
-            InRecorder._Samples.Add(Sample);
+            AppendSample(Sample);
             return;
         }
 
@@ -679,6 +744,13 @@ namespace ck
         InRecorder._LastEligibleSpatialPosition = Pos;
         InRecorder._HasLastEligibleSpatialPosition = true;
         InRecorder._EligibleSpatialRadii.Add(Radius);
+        if (InRecorder._EligibleSpatialRadii.Num() > ck_crowd_agent_diag_processor::MaximumSpatialLoopRadii)
+        {
+            InRecorder._EligibleSpatialRadii.RemoveAt(
+                0,
+                ck_crowd_agent_diag_processor::SpatialLoopRadiiTrimCount,
+                EAllowShrinking::No);
+        }
         InRecorder._SpatialLoopMinRadius = FMath::Min(InRecorder._SpatialLoopMinRadius, Radius);
         InRecorder._SpatialLoopMaxRadius = FMath::Max(InRecorder._SpatialLoopMaxRadius, Radius);
         ++InRecorder._EligibleSpatialSamples;
@@ -742,7 +814,7 @@ namespace ck
             InRecorder._QualifiedSpatialWindowNetGoalProgress =
                 InRecorder._CurrentSpatialWindowStartGoalDistance - TrackGoalDistance;
         }
-        InRecorder._Samples.Add(Sample);
+        AppendSample(Sample);
     }
 }
 

@@ -36,10 +36,12 @@ auto
     InAgent.AddOrGet<ck::FTag_CrowdDiag_Tracked>();
 
     auto& Recorder = InAgent.AddOrGet<ck::FFragment_CrowdAgent_DiagRecorder>();
+    ++Recorder._TrackGeneration;
     Recorder._Samples.Reset();
     Recorder._ElapsedSec = 0.0f;
     Recorder._SecsSinceLastSample = 0.0f;
     Recorder._StartPos = InStartPos;
+    Recorder._RetainedHistoryStartPos = InStartPos;
     Recorder._GoalPos = InProgressGoalPos;
     Recorder._SpatialCenterPos = InSpatialCenterPos;
     Recorder._InitialTrackGoalDistance = FVector::Dist2D(InStartPos, InProgressGoalPos);
@@ -79,6 +81,7 @@ auto
     Recorder._SpatialLoopMinRadius = TNumericLimits<float>::Max();
     Recorder._SpatialLoopMaxRadius = 0.0f;
     Recorder._CurrentSpatialWindowQualified = false;
+
     Recorder._SpatialLoopQualified = false;
     Recorder._QualifiedSpatialLoopWindowId = INDEX_NONE;
     Recorder._QualifiedSpatialLoopLastSampleIndex = INDEX_NONE;
@@ -113,6 +116,8 @@ auto
     Recorder._BestCompletedSpatialResetMinimumSpeed = 0.0f;
     Recorder._BestCompletedSpatialResetRadius = 0.0f;
     Recorder._BestCompletedSpatialResetMinimumRadius = 0.0f;
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_DiagBreadcrumb>();
 
     return InAgent;
 }
