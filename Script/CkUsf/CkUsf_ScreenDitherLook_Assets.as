@@ -1,13 +1,13 @@
 // Language=angelscript
 
 //============================================================================
-// SCREEN DITHER — the screen dithering / palette reduction look.
+// SCREEN DITHER - the screen dithering / palette reduction look.
 //
 // Shader: /CkUsf/Looks/ScreenDither.ush. Driven at runtime by
 // UCkUsf_ScreenDitherSubsystem, which owns the whole-view blendable and writes
 // these parameters by NAME from FCk_Usf_ScreenDither_Params.
 //
-// _Parameters order MUST equal CkUsf_PP_ScreenDither's declaration order — the
+// _Parameters order MUST equal CkUsf_PP_ScreenDither's declaration order - the
 // generator binds positionally and the validator enforces it. The defaults below
 // are the "Balanced" preset, so an un-driven master already renders that style.
 //============================================================================
@@ -29,7 +29,7 @@ namespace CkUsf
         // The default trio is stated explicitly because CustomStencil has to be added for the effect
         // mask, and _SceneTextures is all-or-nothing: a non-empty list replaces the default trio rather
         // than extending it. Only SceneColor and CustomStencil are actually read; depth and normal are
-        // the historical default this look has always carried. The GBuffer reads stay out — nothing here
+        // the historical default this look has always carried. The GBuffer reads stay out - nothing here
         // reconstructs illumination, so they would cost pins for nothing.
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);

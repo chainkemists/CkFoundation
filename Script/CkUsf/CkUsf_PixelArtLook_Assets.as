@@ -1,12 +1,12 @@
 // Language=angelscript
 
 //============================================================================
-// PIXEL ART — the 1-texel outline / band / palette look.
+// PIXEL ART - the 1-texel outline / band / palette look.
 //
 // Shader: /CkUsf/Looks/PixelArt.ush. Driven at runtime by UCkPixelArt_Subsystem,
 // which writes these parameters by NAME from FCk_PixelArt_LookParams.
 //
-// _Parameters order MUST equal CkUsf_PP_PixelArt's declaration order — the
+// _Parameters order MUST equal CkUsf_PP_PixelArt's declaration order - the
 // generator binds positionally and the validator enforces it. The defaults below
 // are the "Crisp16" preset, so an un-driven master already renders that style.
 //============================================================================
@@ -20,13 +20,13 @@ namespace CkUsf
         _Domain          = ECk_Usf_Domain::PostProcess;
         _LookName        = n"PixelArt";
 
-        // RENDER resolution, pre-TAA — the one placement this look can have. An outline is exactly one
+        // RENDER resolution, pre-TAA - the one placement this look can have. An outline is exactly one
         // texel wide only if it is computed at the resolution the scene was rasterized at; after
         // tonemapping the kernel steps in display pixels instead, and a "1-pixel" line comes out as wide
         // as the upscale factor. That is the entire thing the pixel-art renderer exists to prevent.
         _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
 
-        // The default trio, stated explicitly: all three are genuinely read here — colour for the banding
+        // The default trio, stated explicitly: all three are genuinely read here - colour for the banding
         // and palette, depth for silhouettes, world normal for creases and the convex/concave decision.
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
         _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);

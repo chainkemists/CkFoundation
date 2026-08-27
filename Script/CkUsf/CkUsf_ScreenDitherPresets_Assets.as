@@ -1,12 +1,12 @@
 // Language=angelscript
 
 //============================================================================
-// SCREEN DITHER PRESETS — the seven authored styles, applied via the subsystem:
+// SCREEN DITHER PRESETS - the seven authored styles, applied via the subsystem:
 //   UCkUsf_ScreenDitherSubsystem::Get_ScreenDitherSubsystem().Apply_Preset(CkUsf::DA_Dither_RetroPixel);
 //
 // Needs the ScreenDither master on disk (console: "Ck_Usf_GenerateLooks ScreenDither"
 // on a fresh checkout). Every field left unstated is the FCk_Usf_ScreenDither_Params
-// default, which IS the Balanced style — so each preset below reads as its delta
+// default, which IS the Balanced style - so each preset below reads as its delta
 // from Balanced.
 //============================================================================
 
@@ -54,7 +54,7 @@ namespace CkUsf
         _Weight              = 1.0;
     }
 
-    // Four colours, full stop — the custom-palette path rather than the monochrome one, so the four
+    // Four colours, full stop - the custom-palette path rather than the monochrome one, so the four
     // entries are authored rather than derived from a tint ramp. The coarsest pattern (2x2) is what makes
     // the dither read as deliberate texture at this palette size instead of as noise.
     asset DA_Dither_FourColorHandheld of UCkUsf_ScreenDitherPreset
@@ -76,7 +76,7 @@ namespace CkUsf
     }
 
     // Screen-printed poster: five tone steps, but on the LUMINANCE only, so every surface keeps its own
-    // hue and saturation and steps only in brightness — the way an ink separation behaves. Deliberately
+    // hue and saturation and steps only in brightness - the way an ink separation behaves. Deliberately
     // shares Balanced's pattern, scale and strength, so the only thing separating the two is what gets
     // quantized: at this step count the per-channel path visibly walks a saturated surface's hue at each
     // band edge, and this one does not. The demonstration preset for ECk_Usf_PaletteMode::LuminanceSteps.
@@ -106,7 +106,7 @@ namespace CkUsf
     }
 
     // The A/B reference. Everything else is Balanced, so switching to this and back proves the effect is
-    // the only difference — the frame must come back byte-for-byte clean.
+    // the only difference - the frame must come back byte-for-byte clean.
     asset DA_Dither_Off of UCkUsf_ScreenDitherPreset
     {
         _Enabled = ECk_EnableDisable::Disable;

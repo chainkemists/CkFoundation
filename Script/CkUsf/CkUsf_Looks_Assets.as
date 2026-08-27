@@ -356,7 +356,7 @@ namespace CkUsf
         _Domain          = ECk_Usf_Domain::SurfaceUnlit;
         _LookName        = n"PerInstanceHue";
 
-        // Per-instance scalar: on an ISM each instance writes its own slot-0 value → distinct colours from ONE material.
+        // Per-instance scalar: on an ISM each instance writes its own slot-0 value -> distinct colours from ONE material.
         FCk_Usf_ParamDesc Hue;
         Hue._Name = n"Hue";
         Hue._Type = ECk_Usf_ParamType::Scalar;
@@ -377,7 +377,7 @@ namespace CkUsf
         _UshFunctionName = n"CkUsf_Look_Glass";
         _Domain          = ECk_Usf_Domain::SurfaceLit;
         _BlendMode       = ECk_Usf_BlendMode::Translucent;
-        // Lit translucency defaults to volumetric non-directional, which reads flat on glass —
+        // Lit translucency defaults to volumetric non-directional, which reads flat on glass
         // forward per-pixel lighting is the mode glass-like surfaces want.
         _TranslucencyLighting = ECk_Usf_TranslucencyLighting::SurfacePerPixel;
         _LookName        = n"Glass";
@@ -847,7 +847,7 @@ namespace CkUsf
 
     // Reads the Custom Stencil buffer back out as greyscale so a consumer can recover the byte. Used by the
     // Optimization Debugger's snapshots to identify which mesh is at each pixel, but there is nothing
-    // debugger-specific in it — it is the generic "show me the stencil" pass.
+    // debugger-specific in it - it is the generic "show me the stencil" pass.
     asset StencilId of UCkUsf_LookDefinition
     {
         _UshIncludePath  = "/CkUsf/Looks/StencilId.ush";
@@ -856,7 +856,7 @@ namespace CkUsf
         _LookName        = n"StencilId";
 
         // The ONLY correct placement for this one. Every other location leaves the tonemapper to run
-        // afterwards, and a tone curve applied to an identifier corrupts it — worst near the batch
+        // afterwards, and a tone curve applied to an identifier corrupts it - worst near the batch
         // boundaries, where a misread names a different mesh rather than no mesh. Replacing the tonemapper
         // means what this writes IS the final image.
         _BlendableLocation = ECk_Usf_BlendableLocation::ReplacingTonemapper;
@@ -912,11 +912,11 @@ namespace CkUsf
         _Domain          = ECk_Usf_Domain::PostProcess;
         _LookName        = n"SolidOutline";
 
-        // Pre-TSR/TAA so the stencil-derived outline is temporally accumulated like geometry edges —
+        // Pre-TSR/TAA so the stencil-derived outline is temporally accumulated like geometry edges
         // after-tonemapping placement shimmers under the TAA projection jitter (see SolidOutline.ush).
         _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
 
-        // Square (Chebyshev) corners instead of the octagonal default — convex corners come to a sharp
+        // Square (Chebyshev) corners instead of the octagonal default - convex corners come to a sharp
         // point at full edge thickness rather than pinching to 0.707x. Global to all outlined objects
         // (one shared material); revert by removing this define. See SolidOutline.ush for the trade-off.
         _Defines.Add("CKUSF_OUTLINE_SQUARE_CORNERS=1");
@@ -956,7 +956,7 @@ namespace CkUsf
 
     // ---- Decal (fake-light splash) ----
     // Emissive-only radial gradient projected onto whatever surface the decal box
-    // intersects — reads as light cast on the surface without any actual light.
+    // intersects - reads as light cast on the surface without any actual light.
     // Apply via a UDecalComponent projecting toward the surface; tune per instance
     // through a MID (Create_MID_ForLook).
 
@@ -1001,7 +1001,7 @@ namespace CkUsf
 
 namespace CkUsf
 {
-    // Recreation of the Vefects "DissolveAdd" sprite material family (M_VFX_DisAdd_Ring04 — the material
+    // Recreation of the Vefects "DissolveAdd" sprite material family (M_VFX_DisAdd_Ring04 - the material
     // NS_Lightning_Range's sprite renderer binds). Parameter DEFAULTS are the source instance's own
     // effective values, read out of the extracted corpus; the CkParticles behavior supplies the animated
     // part through the Niagara dynamic material parameter.
@@ -1022,7 +1022,7 @@ namespace CkUsf
         _ParticleColor           = true;
         _ParticleDynamicParameter = true;
 
-        // The SOURCE material's own channel names — kept verbatim so the generated master reads the same
+        // The SOURCE material's own channel names - kept verbatim so the generated master reads the same
         // as the asset it recreates.
         _ParticleDynamicParameterNames.Add("dissolve");
         _ParticleDynamicParameterNames.Add("distortion");
@@ -1054,7 +1054,7 @@ namespace CkUsf
         CoreColor._DefaultVector = FLinearColor(1.0, 1.0, 1.0, 1.0);
         _Parameters.Add(CoreColor);
 
-        // Brightness = 30 on the source instance — this is what makes the ring read as additive-bright.
+        // Brightness = 30 on the source instance - this is what makes the ring read as additive-bright.
         FCk_Usf_ParamDesc Brightness;
         Brightness._Name = n"Brightness";
         Brightness._Type = ECk_Usf_ParamType::Scalar;
@@ -1068,7 +1068,7 @@ namespace CkUsf
         DissolveSpeed._DefaultScalar = 0.2;
         _Parameters.Add(DissolveSpeed);
 
-        // Erosion edge softness — the source expresses this through a SmoothStep in the parent graph.
+        // Erosion edge softness - the source expresses this through a SmoothStep in the parent graph.
         FCk_Usf_ParamDesc DissolveEdge;
         DissolveEdge._Name = n"DissolveEdge";
         DissolveEdge._Type = ECk_Usf_ParamType::Scalar;
@@ -1099,7 +1099,7 @@ namespace CkUsf
         _Parameters.Add(CkUsf::Usf_Vector(n"DistortSpeed",     FLinearColor(0.0, 0.0, 0.0, 1.0)));
         _Parameters.Add(CkUsf::Usf_Vector(n"MainTexScale",     FLinearColor(1.0, 1.0, 0.0, 1.0)));
 
-        // Gradient-map chain at the PARENT graph's defaults, whose flat white ramp makes it inert — the source
+        // Gradient-map chain at the PARENT graph's defaults, whose flat white ramp makes it inert - the source
         // instance points GradientMap_Tex at T_VFX_WhitePixel for exactly the same reason.
         _Parameters.Add(CkUsf::Usf_ParticlesTexture(n"GradientMap", "LutWhite"));
         _Parameters.Add(CkUsf::Usf_Scalar(n"GradientMapDisplacement", 0.1));

@@ -1,7 +1,7 @@
 // Language=angelscript
 
 //============================================================================
-// VEFECTS "Bomb" TOON-BANDED FAMILY — the ported parameterizations
+// VEFECTS "Bomb" TOON-BANDED FAMILY - the ported parameterizations
 //============================================================================
 //
 // The third Vefects material family, and the only one that draws a PROP rather
@@ -10,14 +10,14 @@
 //
 // Every default below is the effective value on the source instance MI_VFX_Bomb
 // (corpus sidecar materials/Vefects/Anime_VFX/Shared/Materials/Parents/MI_VFX_Bomb.json).
-// Note Color_01 and Color_02 carry channels ABOVE 1 — the source authored this
+// Note Color_01 and Color_02 carry channels ABOVE 1 - the source authored this
 // prop with HDR keys, and the look passes them through unclamped.
 //
 //============================================================================
 
 namespace CkUsf
 {
-    // MI_VFX_Bomb — the bomb prop's shell. The band EDGES are not in the corpus (the source keeps them as
+    // MI_VFX_Bomb - the bomb prop's shell. The band EDGES are not in the corpus (the source keeps them as
     // unnamed graph constants), so they start at an even three-way split.
     asset BombToon of UCkUsf_LookDefinition
     {
