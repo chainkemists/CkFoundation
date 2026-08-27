@@ -3,6 +3,10 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+#include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Signal/CkSignal_Utils.h"
+#include "CkEcs/Signal/CkSignal_Fragment.h"
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
@@ -126,6 +130,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKVISUALLOD_API, OnVisualLodArbiter_CrowdCreated, FCk_Delegate_VisualLodArbiter_CrowdCreated, FCk_Handle_VisualLodArbiter, int32);
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_VisualLodArbiter_Requests);
 }
