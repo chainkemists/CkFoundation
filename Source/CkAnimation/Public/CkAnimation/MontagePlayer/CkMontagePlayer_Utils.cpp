@@ -360,6 +360,19 @@ auto
             .Set_AuthoritativePlayInstanceId(InState.Get_PlayInstanceId())
             .Set_AuthoritativeServerStartTime(InState.Get_ServerStartTime())
             .Set_FromReplication(true);
+
+        // This path enqueues straight onto the queue instead of going through Request_Play, so it has to kick its
+        // own batch. The state's montage is a soft ref that roots nothing, and with no batch the drain resolves it
+        // resident-or-null — so a replicated or RESTORED montage that is not already loaded would silently not
+        // play. Before the state's ref became soft this was accidental: the save archive resolves with
+        // LoadIfFindFails, i.e. it synchronously loaded the montage on restore. The batch is that loader, made
+        // explicit and asynchronous, and it stalls this entity's queue until the montage lands (order preserved).
+        if (ck::IsValid(InState.Get_Montage()))
+        {
+            Req.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                TEXT("MontagePlayer.ReplicatedState"), {InState.Get_Montage().ToSoftObjectPath()}));
+        }
+
         return Req;
     };
 

@@ -108,8 +108,13 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
+    // Soft for the same reason the Play request's montage is (see FCk_Request_MontagePlayer_Play below): this state
+    // lives in an ECS fragment, GC never walks the EnTT registry, and a hard ref there roots nothing - it DANGLES
+    // when the montage is collected rather than nulling. The snapshot capture walks and serializes this payload, so
+    // a dangling ref is dereferenced there (QA 2026-08-26 crashed in Audit_DurableObjectRefs on exactly this field).
+    // The saved form is unchanged: the persistent archive already wrote a hard ref as its path string.
     UPROPERTY()
-    TObjectPtr<UAnimMontage> _Montage;
+    TSoftObjectPtr<UAnimMontage> _Montage;
 
     UPROPERTY()
     FName _SectionName = NAME_None;

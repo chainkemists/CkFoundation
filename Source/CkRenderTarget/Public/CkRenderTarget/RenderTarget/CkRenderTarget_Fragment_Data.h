@@ -128,8 +128,14 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RenderTarget);
 // --------------------------------------------------------------------------------------------------------------------
 
 // Wire/storage form of a single draw operation, flat so a batch replicates as one homogeneous
-// array. _Asset replicates as an asset reference, so the object must exist on clients —
-// runtime-created textures are unsupported. Per-_Type field usage: CkRenderTarget/Claude.md.
+// array. _Asset names an asset reference, so the object must exist on clients - runtime-created
+// textures are unsupported. Per-_Type field usage: CkRenderTarget/Claude.md.
+//
+// The asset refs are SOFT because this struct is durable snapshot payload held in an ECS fragment:
+// GC never walks the EnTT registry, so a hard ref here roots nothing and DANGLES when its target is
+// collected, and the capture walks and serializes this payload (QA 2026-08-26 crashed on the sibling
+// case in CkAnimation). DoPinCmdAssets remains the ROOT that keeps a resolved asset alive for the
+// draw; the soft ref only removes the dangling-address hazard from the stored form.
 USTRUCT(BlueprintType)
 struct CKRENDERTARGET_API FCk_RenderTarget_DrawCmd
 {
@@ -181,11 +187,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UObject> _Asset;
+    TSoftObjectPtr<UObject> _Asset;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))
-    TArray<TObjectPtr<UObject>> _ExtraAssets;
+    TArray<TSoftObjectPtr<UObject>> _ExtraAssets;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
         meta = (AllowPrivateAccess = true))

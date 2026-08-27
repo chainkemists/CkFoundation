@@ -820,7 +820,7 @@ namespace ck
     {
         const auto& PreloadBatch = InRequest.Get_PreloadBatch();
 
-        auto ExtraAssets = TArray<TObjectPtr<UObject>>{};
+        auto ExtraAssets = TArray<TSoftObjectPtr<UObject>>{};
         ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_BackgroundTexture(), PreloadBatch));
         ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_LeftBorderTexture(), PreloadBatch));
         ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_RightBorderTexture(), PreloadBatch));
@@ -994,10 +994,10 @@ namespace ck
 
         for (const auto& Cmd : InCmds)
         {
-            PinAsset(Cmd.Get_Asset());
+            PinAsset(Cmd.Get_Asset().Get());
 
             for (const auto& Extra : Cmd.Get_ExtraAssets())
-            { PinAsset(Extra); }
+            { PinAsset(Extra.Get()); }
         }
     }
 
@@ -1018,7 +1018,7 @@ namespace ck
             }
             case ECk_RenderTarget_DrawCmdType::Texture:
             {
-                auto* Texture = ::Cast<UTexture>(InCmd.Get_Asset());
+                auto* Texture = ::Cast<UTexture>(InCmd.Get_Asset().Get());
 
                 CK_ENSURE_IF_NOT(ck::IsValid(Texture),
                     TEXT("DrawTexture cmd has an invalid or non-UTexture asset [{}] — skipping. "
@@ -1033,7 +1033,7 @@ namespace ck
             }
             case ECk_RenderTarget_DrawCmdType::Material:
             {
-                auto* Material = ::Cast<UMaterialInterface>(InCmd.Get_Asset());
+                auto* Material = ::Cast<UMaterialInterface>(InCmd.Get_Asset().Get());
 
                 CK_ENSURE_IF_NOT(ck::IsValid(Material),
                     TEXT("DrawMaterial cmd has an invalid or non-UMaterialInterface asset [{}] — skipping. "
@@ -1047,7 +1047,7 @@ namespace ck
             }
             case ECk_RenderTarget_DrawCmdType::Text:
             {
-                auto* Font = ::Cast<UFont>(InCmd.Get_Asset());
+                auto* Font = ::Cast<UFont>(InCmd.Get_Asset().Get());
 
                 if (ck::Is_NOT_Valid(Font))
                 { Font = GEngine->GetSmallFont(); }
@@ -1065,7 +1065,7 @@ namespace ck
             case ECk_RenderTarget_DrawCmdType::Border:
             {
                 const auto& Extra = InCmd.Get_ExtraAssets();
-                auto* BorderTexture = ::Cast<UTexture>(InCmd.Get_Asset());
+                auto* BorderTexture = ::Cast<UTexture>(InCmd.Get_Asset().Get());
                 auto* BackgroundTexture = Extra.Num() > 0 ? ::Cast<UTexture>(Extra[0].Get()) : nullptr;
                 auto* LeftTexture = Extra.Num() > 1 ? ::Cast<UTexture>(Extra[1].Get()) : nullptr;
                 auto* RightTexture = Extra.Num() > 2 ? ::Cast<UTexture>(Extra[2].Get()) : nullptr;
@@ -1089,7 +1089,7 @@ namespace ck
             }
             case ECk_RenderTarget_DrawCmdType::Triangles:
             {
-                auto* Texture = ::Cast<UTexture>(InCmd.Get_Asset());
+                auto* Texture = ::Cast<UTexture>(InCmd.Get_Asset().Get());
 
                 CK_ENSURE_IF_NOT(ck::IsValid(Texture),
                     TEXT("DrawTriangles cmd has an invalid or non-UTexture asset [{}] — skipping."),
@@ -1102,7 +1102,7 @@ namespace ck
             case ECk_RenderTarget_DrawCmdType::Polygon:
             {
                 // Texture is optional — K2_DrawPolygon substitutes the engine's white texture.
-                InCanvas.K2_DrawPolygon(::Cast<UTexture>(InCmd.Get_Asset()),
+                InCanvas.K2_DrawPolygon(::Cast<UTexture>(InCmd.Get_Asset().Get()),
                     InCmd.Get_PositionA(), InCmd.Get_Size(), InCmd.Get_Sides(), InCmd.Get_Color());
                 break;
             }
