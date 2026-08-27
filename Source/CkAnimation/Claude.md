@@ -90,11 +90,17 @@ authored asset refs are therefore soft:
   `IsAsset()` through it (`Audit_DurableObjectRefs`) and `GetPathName()` through it (`Serialize_OwnedStruct`, which
   sets `ArIsSaveGame = false`, so every non-Transient object property is serialized). The same fragment already
   held the montage weakly in `_ActiveMontage`; the hard sibling was the outlier.
-  - **The saved form is unchanged** — the persistent archive already wrote a hard ref as its path string, so a soft
-    ref serializes identically. What changes is the LOAD: a hard ref came back through
-    `FObjectAndNameAsStringProxyArchive` with `LoadIfFindFails = true`, i.e. a SYNCHRONOUS load during hydration;
-    a soft ref resolves resident-or-null through the preload batch instead. A save restored when the montage is not
-    resident still reads null there, exactly as before.
+  - **The saved bytes still name the montage by path**, as the archive already did for a hard ref — but the
+    property TAG changes `ObjectProperty` → `SoftObjectProperty`, so an older save loads through
+    `FSoftObjectProperty::ConvertFromType`'s `ObjectProperty` branch, which exists for exactly this migration
+    (*"used to be a raw FObjectProperty Foo\* but is now a TSoftObjectPtr<Foo>"*). **No fixture pins that**, so it
+    is supported-by-design rather than measured — a committed pre-change blob + load test is the honest follow-up.
+    What definitely changes is the LOAD: the hard ref came back through `FObjectAndNameAsStringProxyArchive` with
+    `LoadIfFindFails = true`, i.e. a SYNCHRONOUS load during hydration, which the preload batch now replaces.
+  - **A montage that cannot be resolved now ENSURES rather than silently not playing.** The batch reports
+    `Get_HasFailed` and the drain ensures. That is the intended direction (fail loud, not silent), but it IS a
+    semantic change on the wire and on restore: with a mismatched cook or an unmounted pak chunk, what used to be
+    a cosmetic miss is now an ensure — and ensures stay live in Shipping in this codebase.
   - **The wire form did change** — it travels as a path rather than a NetGUID. A client already needs the montage
     resident to play it, and the `"MontagePlayer.Play"` batch is what makes it so.
   - **A second consumer id came with it: `"MontagePlayer.ReplicatedState"`.** `DoDispatchReplicatedState` enqueues
