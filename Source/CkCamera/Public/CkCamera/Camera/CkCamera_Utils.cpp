@@ -9,7 +9,10 @@
 #include "CkCamera/Camera/CameraLayer/CkCameraLayer_Utils.h"
 #include "CkCamera/Camera/CameraLayer/EntityScripts/CkCameraLayer_EntityScript.h"
 
+#include "CkCore/Game/CkGame_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
@@ -20,7 +23,9 @@
 #include "CkAttribute/RotatorAttribute/CkRotatorAttribute_Utils.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
+#include <Camera/PlayerCameraManager.h>
 #include <GameFramework/Actor.h>
+#include <GameFramework/PlayerController.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -175,6 +180,49 @@ auto
     -> FCk_Handle_Transform
 {
     return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewAnchor();
+}
+
+auto
+    UCk_Utils_Camera_UE::
+    TryGet_LocalViewInfo(
+        const FCk_Handle& InAnyHandleInWorld,
+        FMinimalViewInfo& OutViewInfo)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InAnyHandleInWorld))
+    { return false; }
+
+    auto Found = false;
+    auto AnyHandle = InAnyHandleInWorld;
+    AnyHandle.View<ck::FFragment_Camera_Current, CK_IGNORE_PENDING_KILL>().ForEach(
+    [&](FCk_Entity InEntity, const ck::FFragment_Camera_Current& InCurrent)
+    {
+        if (Found)
+        { return; }
+
+        const auto CameraEntity = ck::MakeHandle(InEntity, InAnyHandleInWorld);
+        if (UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(CameraEntity)
+            != ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled)
+        { return; }
+
+        OutViewInfo = InCurrent.Get_ViewInfo();
+        Found = true;
+    });
+
+    if (Found)
+    { return true; }
+
+    const auto PlayerController = UCk_Utils_Game_UE::Get_PrimaryPlayerController(
+        UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandleInWorld));
+    if (ck::Is_NOT_Valid(PlayerController) || ck::Is_NOT_Valid(PlayerController->PlayerCameraManager))
+    { return false; }
+
+    const auto CameraManager = PlayerController->PlayerCameraManager;
+    OutViewInfo = FMinimalViewInfo{};
+    OutViewInfo.Location = CameraManager->GetCameraLocation();
+    OutViewInfo.Rotation = CameraManager->GetCameraRotation();
+    OutViewInfo.FOV      = CameraManager->GetFOVAngle();
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

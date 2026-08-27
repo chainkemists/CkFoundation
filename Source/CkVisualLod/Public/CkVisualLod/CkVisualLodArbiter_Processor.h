@@ -138,6 +138,7 @@ namespace ck
 
         static auto
         DoResolve_View(
+            const FCk_Handle_VisualLodArbiter& InArbiter,
             const FFragment_VisualLodArbiter_Current& InCurrent,
             const UCk_VisualLodArbiter_Data& InConfig) -> FVisualLod_LocalView;
 
