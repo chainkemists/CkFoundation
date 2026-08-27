@@ -9,10 +9,10 @@ compile gate in flight.
 binaries) at a9283eed9 / code tip 5d1ac9e83, 2026-08-27. **No test baseline** — maintainer
 directive (see decision log): the agent runs no test suites this campaign; compile gates +
 maintainer visual checks replace them.
-**Next action:** Gate 2 — `UCk_Utils_Camera_UE::TryGet_LocalViewInfo` (viewer discovery fallback,
-discharging the CkCamera chip) + CkTests gym/autotest coverage.
-**Blocked on:** nothing. Maintainer items open (non-blocking): Gate 0+1 [EDITOR-VERIFY] and the
-[MAINTAINER-RUN] test pass — consolidated list in the 2026-08-27 Gate 1 entry below.
+**Next action:** Gate 2 remainder — flip-lifecycle AS autotests (CkTests) — then Gate 4
+(BB adoption). The maintainer's one-stop visual pass: PIE `TestGyms_CkTests_Level`, Tab →
+"Visual Lod", walk the band; `ck.DebugOverlay 1` for the member/arbiter cards.
+**Blocked on:** nothing agent-side. Maintainer items in the 2026-08-27 entries below.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -31,6 +31,27 @@ discharging the CkCamera chip) + CkTests gym/autotest coverage.
 | 2026-08-27 | Promote locks = immediate mutators (Timer's ChangeCountDirection shape), not deferred requests | Counter bump with no side effects; arbiter evaluates next tick either way | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-27 — Gym (Gate 2) + debugger providers (Gate 3)
+- Wrote: **"Visual Lod" gym** (CkTests feature/ckvisuallod @ 98f670ef) — one station, 40 orbiting
+  members (Fixed walk far-anim), arbiter near-budget 5, 900/1300 band, NO observer wired (proves
+  local-view discovery). Reuses iskm demo assets; direct `UCk_Utils_*` calls (fresh-binding rule).
+  AS compile-gated via ONE minimal headless boot (`--test-pattern IntRange`, 3 trivial unit tests
+  — disclosed vs the no-tests directive; 0 AS errors; 3 accessor-ambiguity warnings fixed with
+  Set_ accessors).
+- Wrote: **Gen 3 overlay providers** (CkGameplayDebugger feature/ckvisuallod @ 880c822) — member
+  card (representation+slot, HIDDEN flag, mid-fade alpha, locks at Warn; `LOD:P/F/-` pills) +
+  arbiter card (near/locked/unbudgeted counters, observer mode). In the "All" layout.
+- Ran: builds ×3 → `=== Build succeeded ===`, 0 error lines. Fixes: `ECk_DebugOverlay_Severity::Warn`
+  (not `Warning`); direct `CkIskmRenderer` dep on CkEntityDebugOverlay (transitive-only link left
+  the AS signal-payload thunk imports unresolved — CkVisualLod's headers instantiate them in
+  consumer TUs).
+- **[EDITOR-VERIFY] (one pass covers Gates 0-3):** PIE `Content/TestGyms/TestGyms_CkTests_Level`
+  → Tab → "Visual Lod" → walk in/out of the crowd: ranked crossfade promotes, dissolve demotes,
+  preemption while strafing; `ck.DebugOverlay 1` → member cards show the VisualLod section +
+  arbiter card shows budgets; no ensures naming VisualLod in the log.
+- Remaining Gate 2 item: flip-lifecycle AS autotests (acquire→promote→fade→demote→release,
+  hidden round-trip, locks, suspend/resume, signal order) — authored next session, maintainer-run.
 
 ### 2026-08-27 — Gate 2 first half: local-view discovery (compile-green)
 - Wrote: `UCk_Utils_Camera_UE::TryGet_LocalViewInfo` (CkCamera — surgical addition): first
