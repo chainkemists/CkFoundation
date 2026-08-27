@@ -425,7 +425,7 @@ bool FCkTest_Dispatcher_BootstrapMode_FlipFlop::RunTest(const FString&)
     TestFalse(TEXT("after Mark_BootstrapComplete, Is_BootstrapMode returns false"),
         FCkAsRecoveryDispatcher::Is_BootstrapMode());
 
-    TestEqual(TEXT("cycle counter reset to 0 at bootstrap→mid-session transition"),
+    TestEqual(TEXT("cycle counter reset to 0 at bootstrap->mid-session transition"),
         FCkAsRecoveryDispatcher::Get_CyclesRun(), 0);
 
     (void)WasBootstrap;
