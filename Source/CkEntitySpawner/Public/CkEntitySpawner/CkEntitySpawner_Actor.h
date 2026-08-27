@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include <GameFramework/Info.h>
+#include <Misc/Optional.h>
 
 #include "CkEntitySpawner_Actor.generated.h"
 
@@ -151,6 +152,11 @@ private:
     // Non-UPROPERTY: must not round-trip through the transaction buffer — a restored handle
     // would point at an already-dead registry entry. PostEditUndo rebuilds fresh.
     FCk_Handle _EditorEntityHandle;
+
+    // PostEditMove observes the actor after it moved, so the construction frame is required to
+    // recover and preserve any transform delta authored by the EntityScript.
+    FTransform _EditorActorTransformAtPreviewConstruction = FTransform::Identity;
+    TOptional<FTransform> _EditorEntityTransformRelativeToActor;
 
     bool _EditorRebuildPending = false;
     FDelegateHandle _EditorRebuildEndFrameHandle;
