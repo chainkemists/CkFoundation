@@ -355,14 +355,14 @@ namespace ck_autotest_wrapper_generator
     // ---- File content --------------------------------------------------
 
     static const TCHAR* FileHeader =
-        TEXT("// Auto-generated AutoTest actor wrappers — DO NOT EDIT.\n")
+        TEXT("// Auto-generated AutoTest actor wrappers - DO NOT EDIT.\n")
         TEXT("// Regenerated on editor startup and after every AngelScript recompile.\n")
         TEXT("//\n")
         TEXT("// =====================================================================\n")
         TEXT("// WHY DO THESE WRAPPERS LOOK SO WEIRD?\n")
         TEXT("// =====================================================================\n")
         TEXT("//\n")
-        TEXT("// You'd normally write a wrapper like this — short, type-safe:\n")
+        TEXT("// You'd normally write a wrapper like this - short, type-safe:\n")
         TEXT("//\n")
         TEXT("//   class A<TestName>_Actor : ACk_AutoTestRunner\n")
         TEXT("//   {\n")
@@ -374,8 +374,8 @@ namespace ck_autotest_wrapper_generator
         TEXT("//\n")
         TEXT("//   1. AS file watcher misses the delete for one cycle.\n")
         TEXT("//   2. Generator emits a wrapper still referencing U<TestName>.\n")
-        TEXT("//   3. AS recompiles the generated file → fails because U<TestName> is\n")
-        TEXT("//      gone → PostCompile stops firing → generator can't fix the file\n")
+        TEXT("//   3. AS recompiles the generated file -> fails because U<TestName> is\n")
+        TEXT("//      gone -> PostCompile stops firing -> generator can't fix the file\n")
         TEXT("//      it just emitted. Editor stays broken until manual recovery.\n")
         TEXT("//\n")
         TEXT("// The runtime-resolved form below sidesteps the deadlock: the entity-\n")
@@ -403,7 +403,7 @@ namespace ck_autotest_wrapper_generator
         TEXT("// The generator detects hand-authored wrappers by class name + source\n")
         TEXT("// path and skips emission for that test, leaving yours authoritative.\n")
         TEXT("// (Hand-authored wrappers don't carry the deletion-race risk because\n")
-        TEXT("// deleting the .as file removes BOTH classes atomically — no stale\n")
+        TEXT("// deleting the .as file removes BOTH classes atomically - no stale\n")
         TEXT("// generated file to get out of sync.)\n\n");
 
 #endif // WITH_EDITOR
@@ -431,7 +431,7 @@ auto
         // Normal during early startup. Log rather than VeryVerbose so the silent-no-write case
         // stays diagnosable.
         ck::angelscriptgenerator::Log(
-            TEXT("[CkAS AutoTest Wrappers] Ck_AutoTest_Base not found in object table — ")
+            TEXT("[CkAS AutoTest Wrappers] Ck_AutoTest_Base not found in object table - ")
             TEXT("skipping pass (CkTests not loaded yet, or AS not yet compiled)."));
         return;
     }
@@ -460,7 +460,7 @@ auto
         {
             ++SkippedCount;
             ck::angelscriptgenerator::VeryVerbose(
-                TEXT("[CkAS AutoTest Wrappers] Skipping {} — hand-authored {} already exists."),
+                TEXT("[CkAS AutoTest Wrappers] Skipping {} - hand-authored {} already exists."),
                 Class->GetName(),
                 ck_autotest_wrapper_generator::Get_WrapperSourceName(Class));
             continue;
@@ -469,7 +469,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[CkAS AutoTest Wrappers] Discovered {} subclasses of Ck_AutoTest_Base — ")
+        TEXT("[CkAS AutoTest Wrappers] Discovered {} subclasses of Ck_AutoTest_Base - ")
         TEXT("{} will be emitted, {} have hand-authored wrappers (skipped)."),
         AllSubclasses.Num(), Emittable.Num(), SkippedCount);
 
@@ -544,7 +544,7 @@ auto
     }
 
     ck::angelscriptgenerator::Log(
-        TEXT("[CkAS AutoTest Wrappers] Done — {} plugins, {} wrappers emitted, {} skipped (hand-authored)"),
+        TEXT("[CkAS AutoTest Wrappers] Done - {} plugins, {} wrappers emitted, {} skipped (hand-authored)"),
         Buckets.Num(), TotalEmitted, SkippedCount);
 
 #endif // WITH_EDITOR

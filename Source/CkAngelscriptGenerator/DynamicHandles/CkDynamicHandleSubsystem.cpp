@@ -109,7 +109,7 @@ auto
             TEXT("DynamicHandleSubsystem.GenerateHandleTypeRegistry")))
     {
         ck::angelscriptgenerator::Warning(
-            TEXT("[DynamicHandleSubsystem] Skipped registry generation — this editor instance is a ")
+            TEXT("[DynamicHandleSubsystem] Skipped registry generation - this editor instance is a ")
             TEXT("SECONDARY (another instance owns Script/Generated regen). Close the other instance ")
             TEXT("or run this from the owning one."));
         OnGenerationComplete.Broadcast(0, false);

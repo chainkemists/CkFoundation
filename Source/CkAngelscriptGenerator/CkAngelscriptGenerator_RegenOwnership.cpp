@@ -45,7 +45,7 @@ auto
         {
             ck_angelscript_generator_regen_ownership::sWarnedDeclineOnce = true;
             ck::angelscriptgenerator::Log(
-                TEXT("[RegenOwnership] -CkAsDeclineRegenOwnership set — this read-only boot declines ")
+                TEXT("[RegenOwnership] -CkAsDeclineRegenOwnership set - this read-only boot declines ")
                 TEXT("Script/Generated ownership at every gate (first: [{}]); the lock is left free ")
                 TEXT("for a concurrent test editor. Generator writes + self-heal are inert here."),
                 FString{InGateSite});
@@ -73,7 +73,7 @@ auto
         {
             ck_angelscript_generator_regen_ownership::sWasSecondary = false;
             ck::angelscriptgenerator::Log(
-                TEXT("[RegenOwnership] Ownership ACQUIRED at gate [{}] — the prior owner exited. ")
+                TEXT("[RegenOwnership] Ownership ACQUIRED at gate [{}] - the prior owner exited. ")
                 TEXT("Generator writes + self-heal file mutations re-enabled in this instance."),
                 FString{InGateSite});
         }
@@ -98,7 +98,7 @@ auto
     else
     {
         ck::angelscriptgenerator::VeryVerbose(
-            TEXT("[RegenOwnership] Gate [{}] skipped — secondary instance."), FString{InGateSite});
+            TEXT("[RegenOwnership] Gate [{}] skipped - secondary instance."), FString{InGateSite});
     }
 
     return false;

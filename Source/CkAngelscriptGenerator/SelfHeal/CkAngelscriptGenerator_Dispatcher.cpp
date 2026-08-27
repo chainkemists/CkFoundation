@@ -182,14 +182,14 @@ namespace ck::angelscriptgenerator::self_heal
             const auto CanonicalJsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
             if (CanonicalJsonPath.IsEmpty())
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: Get_RegistryFilePath returned empty — skipping."));
+                Warning(TEXT("[SelfHeal] DynamicHandle: Get_RegistryFilePath returned empty - skipping."));
                 return false;
             }
 
             const auto StubJsonPath = Derive_DynamicHandleStubPath(CanonicalJsonPath);
             if (StubJsonPath.IsEmpty())
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to derive stub sibling path — skipping."));
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to derive stub sibling path - skipping."));
                 return false;
             }
 
@@ -197,7 +197,7 @@ namespace ck::angelscriptgenerator::self_heal
             const auto StubExisted = FFileHelper::LoadFileToString(ExistingContent, *StubJsonPath);
             if (NOT StubExisted)
             {
-                Log(TEXT("[SelfHeal] DynamicHandle: stub sibling missing at '{}' — synthesizing fresh."), StubJsonPath);
+                Log(TEXT("[SelfHeal] DynamicHandle: stub sibling missing at '{}' - synthesizing fresh."), StubJsonPath);
                 ExistingContent = TEXT("{\"_WARNING\":\"AUTO-GENERATED RECOVERY STUBS. This file is gitignored and self-cleans after successful AS compile. Do not edit by hand.\",\"HandleTypes\":[]}");
             }
 
@@ -205,7 +205,7 @@ namespace ck::angelscriptgenerator::self_heal
             auto JsonReader = TJsonReaderFactory<>::Create(ExistingContent);
             if (NOT FJsonSerializer::Deserialize(JsonReader, RootObj) || NOT RootObj.IsValid())
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to parse stub JSON at '{}' — skipping."), StubJsonPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to parse stub JSON at '{}' - skipping."), StubJsonPath);
                 return false;
             }
 
@@ -222,7 +222,7 @@ namespace ck::angelscriptgenerator::self_heal
                 const auto Obj = Entry->AsObject();
                 if (Obj.IsValid() && Obj->GetStringField(TEXT("TypeName")) == InError.MissingIdentifier)
                 {
-                    Log(TEXT("[SelfHeal] DynamicHandle: stub entry for '{}' already present — refreshing in-memory registry."),
+                    Log(TEXT("[SelfHeal] DynamicHandle: stub entry for '{}' already present - refreshing in-memory registry."),
                         InError.MissingIdentifier);
 
                     FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
@@ -251,7 +251,7 @@ namespace ck::angelscriptgenerator::self_heal
             auto Writer     = TJsonWriterFactory<>::Create(&NewContent);
             if (NOT FJsonSerializer::Serialize(RootObj.ToSharedRef(), Writer))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to re-serialize stub JSON — skipping."));
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to re-serialize stub JSON - skipping."));
                 return false;
             }
 
@@ -260,12 +260,12 @@ namespace ck::angelscriptgenerator::self_heal
 
             if (NOT FFileHelper::SaveStringToFile(NewContent, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to write temp stub JSON at '{}' — skipping."), TempPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to write temp stub JSON at '{}' - skipping."), TempPath);
                 return false;
             }
             if (NOT IFileManager::Get().Move(*StubJsonPath, *TempPath, /*Replace=*/true))
             {
-                Warning(TEXT("[SelfHeal] DynamicHandle: failed to move temp stub JSON into place at '{}' — skipping."), StubJsonPath);
+                Warning(TEXT("[SelfHeal] DynamicHandle: failed to move temp stub JSON into place at '{}' - skipping."), StubJsonPath);
                 return false;
             }
 
@@ -327,20 +327,20 @@ namespace ck::angelscriptgenerator::self_heal
             // future caller can't route a TRACKED generated file into a delete.
             if (NOT Is_EntitySpawnParamsCanonicalPath(CanonicalPath))
             {
-                Warning(TEXT("[SelfHeal] Refusing quarantine — '{}' is not an EntitySpawnParams canonical."),
+                Warning(TEXT("[SelfHeal] Refusing quarantine - '{}' is not an EntitySpawnParams canonical."),
                     CanonicalPath);
                 return false;
             }
 
             if (sQuarantinedEspCanonicals.Contains(CanonicalPath))
             {
-                Log(TEXT("[SelfHeal] Canonical '{}' already quarantined this session — not retrying."),
+                Log(TEXT("[SelfHeal] Canonical '{}' already quarantined this session - not retrying."),
                     CanonicalPath);
                 return false;
             }
             sQuarantinedEspCanonicals.Add(CanonicalPath);
 
-            Log(TEXT("[SelfHeal] Stale canonical '{}' references a deleted symbol ('{}' @ {}:{}) — ")
+            Log(TEXT("[SelfHeal] Stale canonical '{}' references a deleted symbol ('{}' @ {}:{}) - ")
                 TEXT("quarantining + rebuilding full shapes from source."),
                 CanonicalPath, InError.MissingIdentifier, InError.Line, InError.Column);
 
@@ -382,7 +382,7 @@ namespace ck::angelscriptgenerator::self_heal
 
                     if (ClassName.IsEmpty())
                     {
-                        Warning(TEXT("[SelfHeal] Cannot derive an entity-script class from '{}' — no stub synthesized."),
+                        Warning(TEXT("[SelfHeal] Cannot derive an entity-script class from '{}' - no stub synthesized."),
                             StructIdentifier);
                         return false;
                     }
@@ -406,7 +406,7 @@ namespace ck::angelscriptgenerator::self_heal
                     // exact-typed bulk resynthesis can.
                     if (SourceDerived.FailReason == ECk_StubInjectFailReason::StructExistsInCanonical)
                     {
-                        Log(TEXT("[SelfHeal] Stale canonical detected for {} ('{}') — escalating to quarantine + full-shape resynthesis."),
+                        Log(TEXT("[SelfHeal] Stale canonical detected for {} ('{}') - escalating to quarantine + full-shape resynthesis."),
                             ClassName, SourceDerived.CanonicalFilePath);
 
                         const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
@@ -425,7 +425,7 @@ namespace ck::angelscriptgenerator::self_heal
                         return false;
                     }
 
-                    Log(TEXT("[SelfHeal] Source-derived synthesis unavailable for {} ({}) — falling back to error-text stub."),
+                    Log(TEXT("[SelfHeal] Source-derived synthesis unavailable for {} ({}) - falling back to error-text stub."),
                         ClassName, SourceDerived.ErrorMessage);
 
                     // Error-text fallback. Direct-construction errors carry no
@@ -458,7 +458,7 @@ namespace ck::angelscriptgenerator::self_heal
                     // per-signature — escalate to exact-typed full shapes.
                     if (Result.FailReason == ECk_StubInjectFailReason::SameArityAmbiguous)
                     {
-                        Log(TEXT("[SelfHeal] Same-arity wedge for {}::{} — escalating to quarantine + full-shape resynthesis."),
+                        Log(TEXT("[SelfHeal] Same-arity wedge for {}::{} - escalating to quarantine + full-shape resynthesis."),
                             FallbackError.TargetNamespace, FallbackError.FunctionName);
 
                         const auto Quarantined = FCkAsStubSynthesizer::Quarantine_And_ResynthesizeFullShapes(
@@ -520,10 +520,10 @@ namespace ck::angelscriptgenerator::self_heal
                     // No auto-fix — modifying user source is out of contract.
                     // Returns TRUE anyway: diagnosing IS the recognized action, and
                     // the outer flow must not fall through to "all actions failed".
-                    Error(TEXT("[SelfHeal] AS compile error at {}:{}:{} — adjacent string literals not supported. ")
+                    Error(TEXT("[SelfHeal] AS compile error at {}:{}:{} - adjacent string literals not supported. ")
                           TEXT("AngelScript does not splice `\"foo \" \"bar\"` C-style across lines. ")
                           TEXT("Fix: join the literals into one string, or chain via f\"{{Base}}continuation\" / a local variable. ")
-                          TEXT("(In headless test runs the editor stalls after AS post-compile without this diagnostic — ")
+                          TEXT("(In headless test runs the editor stalls after AS post-compile without this diagnostic - ")
                           TEXT("the matching error in toolbox stdout is your tip-off.)"),
                         InError.FilePath, InError.Line, InError.Column);
                     return true;
@@ -532,7 +532,7 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::Unrecognized:
                 default:
                 {
-                    Warning(TEXT("[SelfHeal] Unrecognized root cause at {}:{}:{} — no strategy applies."),
+                    Warning(TEXT("[SelfHeal] Unrecognized root cause at {}:{}:{} - no strategy applies."),
                         InError.FilePath, InError.Line, InError.Column);
                     return false;
                 }
@@ -577,7 +577,7 @@ namespace ck::angelscriptgenerator::self_heal
             }
 
             Error(TEXT("[SelfHeal] Convergence failed for {} after {} synthesis attempts. ")
-                  TEXT("Root cause is upstream of self-heal — likely a caller/entity-script ")
+                  TEXT("Root cause is upstream of self-heal - likely a caller/entity-script ")
                   TEXT("signature mismatch (arg order, mutability, or type drift).{}")
                   TEXT("Callers seen:{}{}")
                   TEXT("Self-heal will NOT retry this signature for the rest of this session. ")
@@ -604,7 +604,7 @@ namespace ck::angelscriptgenerator::self_heal
             MessageLog.Error(FText::Format(
                 LOCTEXT("ConvergenceFailedMessageLog",
                     "Self-heal CONVERGENCE FAILED for {0} after {1} synthesis attempts.\n"
-                    "Root cause is upstream of self-heal — caller or entity-script signature "
+                    "Root cause is upstream of self-heal - caller or entity-script signature "
                     "mismatch (arg order, mutability, or type drift).\n"
                     "Callers seen:\n{2}\n"
                     "Self-heal will not retry this signature for the rest of this session. "
@@ -694,7 +694,7 @@ namespace ck::angelscriptgenerator::self_heal
 
             auto Info = FNotificationInfo{LOCTEXT("RecoveryInProgressToast",
                 "AngelScript self-heal is attempting to recover from the compile errors shown.\n"
-                "This is normal — please wait a moment before closing the editor.")};
+                "This is normal - please wait a moment before closing the editor.")};
             Info.bFireAndForget       = true;
             Info.ExpireDuration       = 30.0f;
             Info.bUseLargeFont        = false;
@@ -1008,7 +1008,7 @@ namespace ck::angelscriptgenerator::self_heal
             Show_TerminalToast(FText::Format(
                 LOCTEXT("ConvergenceFailedToast",
                     "AngelScript self-heal: convergence failed for {0} after {1} attempts. "
-                    "Manual intervention required — see the Message Log."),
+                    "Manual intervention required - see the Message Log."),
                 FText::FromString(Key),
                 FText::AsNumber(FCkAsRecoveryDispatcher::MaxPerSignatureRepeats)));
             return false;
@@ -1024,7 +1024,7 @@ namespace ck::angelscriptgenerator::self_heal
 
             const auto QueuedCount = sPendingActions.Num();
             sPendingActions.Reset();
-            Log(TEXT("[SelfHeal] {} recovery action(s) suppressed — SECONDARY instance (another ")
+            Log(TEXT("[SelfHeal] {} recovery action(s) suppressed - SECONDARY instance (another ")
                 TEXT("editor owns Script/Generated regen). The owning instance's self-heal writes ")
                 TEXT("reach this process via its hot-reload watcher; this instance takes over if the ")
                 TEXT("owner exits."), QueuedCount);
@@ -1064,7 +1064,7 @@ namespace ck::angelscriptgenerator::self_heal
                 return;
             }
 
-            Log(TEXT("[SelfHeal] Modal-tick deferred apply firing — draining {} pending action(s)."),
+            Log(TEXT("[SelfHeal] Modal-tick deferred apply firing - draining {} pending action(s)."),
                 sPendingActions.Num());
 
             // DrainScanCache is drain-LOCAL by contract — never hoist it out.
@@ -1098,7 +1098,7 @@ namespace ck::angelscriptgenerator::self_heal
                 Log_TerminalBanner_AllUnactionable(QueuedCount);
                 Show_TerminalToast(LOCTEXT("RecoveryFailedToast",
                     "AngelScript self-heal could not act on the current compile errors. "
-                    "Manual intervention required — see the Message Log for details."));
+                    "Manual intervention required - see the Message Log for details."));
             }
 
             // Unsubscribe — next OnReloadHadErrors invocation will resubscribe.
@@ -1121,7 +1121,7 @@ namespace ck::angelscriptgenerator::self_heal
             if (Should_SuppressDrain_AsSecondary(TEXT("Dispatcher.Drain_PendingActions_Headless")))
             { return; }
 
-            Log(TEXT("[SelfHeal] Headless bootstrap — applying {} recovery action(s) synchronously ")
+            Log(TEXT("[SelfHeal] Headless bootstrap - applying {} recovery action(s) synchronously ")
                 TEXT("(no modal pump in commandlet/unattended mode)."),
                 sPendingActions.Num());
 
@@ -1146,7 +1146,7 @@ namespace ck::angelscriptgenerator::self_heal
                 ++sCyclesRun;
                 Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies synchronously. ")
                     TEXT("If this process exits with 'Cannot run when angelscript has failed to ")
-                    TEXT("compile', RE-RUN THE SAME COMMAND — the next run compiles against the ")
+                    TEXT("compile', RE-RUN THE SAME COMMAND - the next run compiles against the ")
                     TEXT("synthesized recovery stubs and regenerates the canonical files."),
                     sCyclesRun, AppliedActions.Num());
 
@@ -1190,7 +1190,7 @@ namespace ck::angelscriptgenerator::self_heal
                 return false;
             }
 
-            Log(TEXT("[SelfHeal] Mid-session ticker firing — draining {} pending action(s)."),
+            Log(TEXT("[SelfHeal] Mid-session ticker firing - draining {} pending action(s)."),
                 sPendingActions.Num());
 
             // DrainScanCache is drain-LOCAL by contract — never hoist it out.
@@ -1224,7 +1224,7 @@ namespace ck::angelscriptgenerator::self_heal
                 Log_TerminalBanner_AllUnactionable(QueuedCount);
                 Show_TerminalToast(LOCTEXT("RecoveryFailedToast_MidSession",
                     "AngelScript self-heal could not act on the current compile errors. "
-                    "Manual intervention required — see the Message Log for details."));
+                    "Manual intervention required - see the Message Log for details."));
             }
 
             sTickerHandle.Reset();
@@ -1361,7 +1361,7 @@ namespace ck::angelscriptgenerator::self_heal
     {
         if (ck_angelscript_generator_dispatcher::sPendingActions.Num() > 0)
         {
-            Log(TEXT("[SelfHeal] Compile succeeded with {} stale queued recovery action(s) — dropping them. ")
+            Log(TEXT("[SelfHeal] Compile succeeded with {} stale queued recovery action(s) - dropping them. ")
                 TEXT("(A deferred drain firing after a clean compile would re-synthesize stubs from stale ")
                 TEXT("error records and re-corrupt a healthy state.)"),
                 ck_angelscript_generator_dispatcher::sPendingActions.Num());
@@ -1434,7 +1434,7 @@ namespace ck::angelscriptgenerator::self_heal
             ck_angelscript_generator_dispatcher::Log_TerminalBanner_MaxCyclesExceeded();
             ck_angelscript_generator_dispatcher::Show_TerminalToast(FText::Format(
                 LOCTEXT("CycleCapToast",
-                    "AngelScript self-heal cycle cap ({0}) exceeded. Manual intervention required — "
+                    "AngelScript self-heal cycle cap ({0}) exceeded. Manual intervention required - "
                     "restart the editor after fixing the underlying AS issue."),
                 FText::AsNumber(MaxCycles)));
             return;
@@ -1478,7 +1478,7 @@ namespace ck::angelscriptgenerator::self_heal
             ck_angelscript_generator_dispatcher::Ensure_TickerSubscribed();
         }
 #else
-        Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK — no-op."));
+        Warning(TEXT("[SelfHeal] OnAngelscriptReloadHadErrors invoked without WITH_ANGELSCRIPT_CK - no-op."));
 #endif
     }
 }
