@@ -9,7 +9,7 @@ Living state: [PROGRESS.md](PROGRESS.md)
 
 | Gate | Name | Status |
 |---|---|---|
-| 0 | Scaffold + data surface (module boilerplate, fragments, config asset, handles; compiles C++/BP/AS) | ⏳ Pending |
+| 0 | Scaffold + data surface (module boilerplate, fragments, config asset, handles; compiles C++/BP/AS) | ✅ Done (2026-08-27) |
 | 1 | Mechanism (pools, acquisition, flip, fades, budgets, locks, whole-query ranking; EndPlay + sweep reconciliation) + C++ automation tests | ⏳ Pending |
 | 2 | Game seam (signals + timing verification), `TryGet_LocalViewInfo` in CkCamera, full request surface, CkTests autotests + gym | ⏳ Pending |
 | 3 | Debugger surface (bridge category: budget/pool panel, view-cone + state overlay) | ⏳ Pending |
