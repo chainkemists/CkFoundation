@@ -82,9 +82,29 @@ authored asset refs are therefore soft:
   `FTag_MontagePlayer_PendingAssetLoad`; teardown fires `Failed_Cancelled` for stalled entries. The played
   montage is rooted by the AnimInstance's montage instance after `Montage_Play`, so the batch dies with
   the consumed request.
-- **`FCk_MontagePlayer_State::_Montage` stays a hard `TObjectPtr` deliberately** — it is replicated AND
-  save-serialized (`Register_NetAndSave_SharedApply`), so flipping it is a wire/save-format change gated
-  on a maintainer ruling. A save restored when the montage is not resident still reads null there.
+- **`FCk_MontagePlayer_State::_Montage` is soft too, since 2026-08-26 — the ruling this file used to defer.**
+  It had stayed a hard `TObjectPtr` pending a maintainer decision, because it is replicated AND save-serialized
+  (`Register_NetAndSave_SharedApply`) so flipping it is a wire/save-format change. That deferral is what QA's
+  2026-08-26 crash landed on: the field lives in an ECS fragment, GC never walks the EnTT registry, so it rooted
+  nothing and **dangled instead of nulling** when the montage was collected — and the snapshot capture reads
+  `IsAsset()` through it (`Audit_DurableObjectRefs`) and `GetPathName()` through it (`Serialize_OwnedStruct`, which
+  sets `ArIsSaveGame = false`, so every non-Transient object property is serialized). The same fragment already
+  held the montage weakly in `_ActiveMontage`; the hard sibling was the outlier.
+  - **The saved form is unchanged** — the persistent archive already wrote a hard ref as its path string, so a soft
+    ref serializes identically. What changes is the LOAD: a hard ref came back through
+    `FObjectAndNameAsStringProxyArchive` with `LoadIfFindFails = true`, i.e. a SYNCHRONOUS load during hydration;
+    a soft ref resolves resident-or-null through the preload batch instead. A save restored when the montage is not
+    resident still reads null there, exactly as before.
+  - **The wire form did change** — it travels as a path rather than a NetGUID. A client already needs the montage
+    resident to play it, and the `"MontagePlayer.Play"` batch is what makes it so.
+  - **A second consumer id came with it: `"MontagePlayer.ReplicatedState"`.** `DoDispatchReplicatedState` enqueues
+    its Play request straight onto the queue instead of calling `Request_Play`, so it kicks its own batch. Without
+    one the drain resolves the soft ref resident-or-null and a replicated or RESTORED montage that is not already
+    loaded silently does not play — which the hard ref used to hide, because the save archive resolves with
+    `LoadIfFindFails` and therefore synchronously LOADED the montage on restore. The batch is that loader made
+    explicit and asynchronous; a cold one stalls that entity's queue, order preserved, exactly as an authored Play.
+  - The rule is enforced now rather than remembered: `Ck.Snapshot.Meta.FragmentPostureCoverage` reds any registered
+    Durable payload carrying a hard object ref, through `ck::Get_DurablePayloadObjectRefPolicy`.
 
 ---
 
