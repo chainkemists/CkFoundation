@@ -13,6 +13,7 @@
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJolt/StaticWorld/CkJoltStaticActor_Fragment.h"
+#include "CkJolt/World/CkJoltWorld.h"
 
 #include <Components/PrimitiveComponent.h>
 #include <Engine/Level.h>
@@ -167,6 +168,7 @@ auto
     _ManualActorEntities.Empty();
     _ManualComponentEntities.Empty();
     _LoadedCells.Empty();
+    _ComponentEventRoutes.Empty();
     _NumStaticBodies = 0;
 
     Super::Deinitialize();
@@ -418,6 +420,9 @@ auto
 
     auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
 
+    // Before the empty-guard: a bodiless entity still owes its event-route cleanup. Idempotent.
+    DoUnbind_CollisionSync(InActorEntity);
+
     // Empty body-id array = already freed: the idempotence guard of the bidirectional lifecycle.
     if (Fragment.Get_BodyIds().IsEmpty())
     { return; }
@@ -435,19 +440,268 @@ auto
     for (const auto& RawBodyId : Fragment.Get_BodyIds())
     { BodyIds.Emplace(JPH::BodyID{RawBodyId}); }
 
-    BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
+    // Bodies the collision sync flipped OUT of the scene were already removed from the broadphase —
+    // removing them again asserts in Jolt. They still need destroying, and the scene did not change.
+    if (Fragment.Get_BodiesInScene())
+    { BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num()); }
+
     BodyInterface->DestroyBodies(BodyIds.GetData(), BodyIds.Num());
 
-    _NumStaticBodies -= BodyIds.Num();
-    _BodyChurnSinceOptimize += BodyIds.Num();
-
-    if (ck::IsValid(_JoltSubsystem))
+    if (Fragment.Get_BodiesInScene())
     {
-        _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
-        _JoltSubsystem->Request_NoteStaticSceneChanged();
+        _NumStaticBodies -= BodyIds.Num();
+        _BodyChurnSinceOptimize += BodyIds.Num();
+
+        if (ck::IsValid(_JoltSubsystem))
+        {
+            _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
+            _JoltSubsystem->Request_NoteStaticSceneChanged();
+        }
     }
 
     Fragment._BodyIds.Empty();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    OnTrackedComponentCollisionSettingsChanged(
+        UPrimitiveComponent* InChangedComponent)
+        -> void
+{
+    if (ck::Is_NOT_Valid(InChangedComponent))
+    { return; }
+
+    const auto* FoundRoute = _ComponentEventRoutes.Find(InChangedComponent);
+    if (FoundRoute == nullptr)
+    { return; }
+
+    // Copy — the re-bake below destroys the routed entity and mutates the map under us.
+    auto Entity = *FoundRoute;
+
+    if (ck::Is_NOT_Valid(Entity))
+    {
+        _ComponentEventRoutes.Remove(InChangedComponent);
+        return;
+    }
+
+    const auto Desired = DoGet_DesiredBodiesInScene(Entity);
+    if (NOT Desired.IsSet())
+    { return; }
+
+    const auto& Fragment = Entity.Get<ck::FFragment_JoltStaticActor_Current>();
+    if (Fragment.Get_BodiesInScene() == *Desired)
+    { return; }
+
+    DoWait_ForAsyncStepInFlight();
+
+    // A component-path entity re-BAKES on re-enable instead of re-adding: transform re-bakes extract
+    // nothing while collision is off, so the preserved bodies' pose can be stale — a fresh bake at the
+    // current pose replaces them. Actor-path bodies never move and their cooked shapes must be
+    // preserved exactly, so they flip in place.
+    if (*Desired && Fragment.Get_SourceComponent().IsValid())
+    {
+        // Captured before the re-bake: the replace destroys the entity this Fragment ref lives on.
+        const auto SourceName = Fragment.Get_SourceActorName();
+
+        const auto NumRebaked = Request_BakeComponent(*Fragment.Get_SourceComponent().Get());
+
+        if (NumRebaked == 0)
+        {
+            ck::jolt::Verbose(TEXT("JoltStaticWorld: collision re-enable on [{}] re-baked ZERO bodies — its "
+                "bakeable geometry is gone (mesh cleared while disabled?). Nothing is in the scene for it."),
+                SourceName);
+        }
+
+        return;
+    }
+
+    DoSet_BodiesInScene(Entity, *Desired);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoBind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InActorEntity,
+        const AActor& InSourceActor)
+        -> void
+{
+    // Every primitive is bound, not just the ones that produced bodies: the cooked path retains no
+    // per-component attribution, and an unbaked component still participates in the desired-state OR
+    // (erring toward "stay solid" for partial per-component toggles on multi-primitive actors).
+    auto Components = TInlineComponentArray<UPrimitiveComponent*>{};
+    InSourceActor.GetComponents(Components);
+
+    for (auto* Component : Components)
+    {
+        if (ck::Is_NOT_Valid(Component))
+        { continue; }
+
+        DoBind_ComponentRoute(InActorEntity, *Component);
+    }
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoBind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InComponentEntity,
+        const UPrimitiveComponent& InSourceComponent)
+        -> void
+{
+    auto& Fragment = InComponentEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    Fragment._SourceComponent = &InSourceComponent;
+
+    // Binding mutates only the delegate's invocation list, never the component's collision state —
+    // the bake API stays const-ref on the component to keep its public contract honest.
+    DoBind_ComponentRoute(InComponentEntity, const_cast<UPrimitiveComponent&>(InSourceComponent));
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoBind_ComponentRoute(
+        FCk_Handle_JoltStaticActor& InEntity,
+        UPrimitiveComponent& InComponent)
+        -> void
+{
+    InComponent.OnComponentCollisionSettingsChangedEvent.AddUniqueDynamic(
+        this, &ThisType::OnTrackedComponentCollisionSettingsChanged);
+
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    Fragment._BoundComponents.Emplace(&InComponent);
+
+    // Last-wins by design, but never silently: two attributions over one component means it was baked
+    // TWICE (level sweep + manual?), which also duplicates its bodies — the route overwrite is the
+    // symptom worth a breadcrumb, not the disease.
+    if (const auto* ExistingRoute = _ComponentEventRoutes.Find(&InComponent);
+        ExistingRoute != nullptr && *ExistingRoute != InEntity && ck::IsValid(*ExistingRoute))
+    {
+        ck::jolt::Verbose(TEXT("JoltStaticWorld: component [{}] already routes to attribution entity [{}] — "
+            "rebinding to [{}]. The component appears to be baked twice (its bodies are duplicated too)."),
+            InComponent.GetFName(), *ExistingRoute, InEntity);
+    }
+
+    _ComponentEventRoutes.Add(&InComponent, InEntity);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoUnbind_CollisionSync(
+        FCk_Handle_JoltStaticActor& InEntity)
+        -> void
+{
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+
+    for (const auto& WeakComponent : Fragment._BoundComponents)
+    {
+        // Weak keys hash by index+serial, so the route entry is removable after the component dies.
+        _ComponentEventRoutes.Remove(WeakComponent);
+
+        if (auto* Component = WeakComponent.Get())
+        { Component->OnComponentCollisionSettingsChangedEvent.RemoveAll(this); }
+    }
+
+    Fragment._BoundComponents.Empty();
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoSet_BodiesInScene(
+        FCk_Handle_JoltStaticActor& InEntity,
+        bool InInScene)
+        -> void
+{
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+
+    if (Fragment.Get_BodiesInScene() == InInScene)
+    { return; }
+
+    if (Fragment.Get_BodyIds().IsEmpty())
+    {
+        Fragment._BodiesInScene = InInScene;
+        return;
+    }
+
+    auto* BodyInterface = Get_BodyInterface();
+    if (BodyInterface == nullptr)
+    { return; }
+
+    if (InInScene)
+    {
+        DoBatchAdd_Bodies(Fragment.Get_BodyIds());
+        DoNote_BodiesChanged(Fragment.Get_BodyIds().Num());
+    }
+    else
+    {
+        auto BodyIds = TArray<JPH::BodyID>{};
+        BodyIds.Reserve(Fragment.Get_BodyIds().Num());
+        for (const auto& RawBodyId : Fragment.Get_BodyIds())
+        { BodyIds.Emplace(JPH::BodyID{RawBodyId}); }
+
+        BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
+
+        _NumStaticBodies -= BodyIds.Num();
+        _BodyChurnSinceOptimize += BodyIds.Num();
+
+        if (ck::IsValid(_JoltSubsystem))
+        {
+            _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
+            _JoltSubsystem->Request_NoteStaticSceneChanged();
+        }
+    }
+
+    Fragment._BodiesInScene = InInScene;
+
+    ck::jolt::Verbose(TEXT("JoltStaticWorld: [{}] bodies for [{}] {} the scene (total [{}])"),
+        Fragment.Get_BodyIds().Num(), Fragment.Get_SourceActorName(),
+        InInScene ? FString(TEXT("re-entered")) : FString(TEXT("left")), _NumStaticBodies);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoGet_DesiredBodiesInScene(
+        const FCk_Handle_JoltStaticActor& InEntity) const
+        -> TOptional<bool>
+{
+    const auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+
+    auto AnyAlive = false;
+
+    for (const auto& WeakComponent : Fragment.Get_BoundComponents())
+    {
+        const auto* Component = WeakComponent.Get();
+        if (Component == nullptr)
+        { continue; }
+
+        AnyAlive = true;
+
+        // Owner-aware: GetCollisionEnabled() answers NoCollision when the OWNING ACTOR's collision is
+        // disabled, so one predicate covers SetActorEnableCollision and SetCollisionEnabled alike.
+        if (Component->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+        { return true; }
+    }
+
+    if (NOT AnyAlive)
+    { return {}; }
+
+    return false;
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoWait_ForAsyncStepInFlight()
+        -> void
+{
+    const auto TransientEntity = DoGet_TransientEntity();
+    if (ck::Is_NOT_Valid(TransientEntity))
+    { return; }
+
+    const auto* JoltWorldPtr = TransientEntity.Get_RegistryView().TryGetContext<TSharedPtr<ck::FJoltWorld>>();
+    if (JoltWorldPtr == nullptr || NOT JoltWorldPtr->IsValid())
+    { return; }
+
+    if ((*JoltWorldPtr)->Get_AsyncFuture().IsValid())
+    { (*JoltWorldPtr)->WaitForAsyncStep(); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -775,7 +1029,10 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceComponent.GetFName());
 
-    return UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
+    auto TypedEntity = UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
+    DoBind_CollisionSync(TypedEntity, InSourceComponent);
+
+    return TypedEntity;
 }
 
 auto
@@ -797,7 +1054,10 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceActor.GetFName());
 
-    return UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
+    auto TypedEntity = UCk_Utils_JoltStaticActor_UE::CastChecked(NewEntity);
+    DoBind_CollisionSync(TypedEntity, InSourceActor);
+
+    return TypedEntity;
 }
 
 auto
