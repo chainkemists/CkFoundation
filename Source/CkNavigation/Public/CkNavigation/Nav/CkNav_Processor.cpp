@@ -442,7 +442,9 @@ namespace ck
                         ProjectionVerticalExtent,
                         /*InAgentRadiusForFirstSkip*/ 0.0f,
                         InResult,
-                        FilterClass);
+                        FilterClass,
+                        /*InCornerOffsetDistance*/ 0.0f,
+                        InFindPath.Get_QueryFilterOverlay());
                     InResult._RequestRevision = InFindPath.Get_RequestRevision();
 
                     const auto& Diagnostics = InResult.Get_Diagnostics();

@@ -8,6 +8,7 @@
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
+#include <NavAreas/NavArea.h>
 #include <Templates/SubclassOf.h>
 
 #include "CkNav_Fragment_Data.generated.h"
@@ -16,6 +17,7 @@
 
 struct FCk_Nav_Algorithm;
 class UNavigationQueryFilter;
+class UNavArea;
 namespace ck
 {
     class FProcessor_Nav_HandleRequests;
@@ -167,6 +169,25 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Value-only additions to a resolved navigation query filter. The resolver copies the base
+// filter before applying these rules, so arbitrary host filter classes keep their own costs,
+// flags, and exclusions.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Nav_QueryFilterOverlay
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Nav_QueryFilterOverlay);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    TArray<TSubclassOf<UNavArea>> _ExcludedAreaClasses;
+
+public:
+    CK_PROPERTY(_ExcludedAreaClasses);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKNAVIGATION_API FCk_Request_Nav_FindPath : public FCk_Request_Base
 {
@@ -193,6 +214,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     TSubclassOf<UNavigationQueryFilter> _QueryFilterClassOverride;
 
+    // Value-only additions applied to a private copy of the resolved base filter for this query.
+    // This never mutates the NavData cache shared by other callers.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
     // Plan from _StartOverrideLocation instead of the entity's transform.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
@@ -210,6 +236,7 @@ public:
     CK_PROPERTY(_AllowPartialPath);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_QueryFilterClassOverride);
+    CK_PROPERTY(_QueryFilterOverlay);
     CK_PROPERTY(_StartOverride);
     CK_PROPERTY(_StartOverrideLocation);
     CK_PROPERTY(_RequestRevision);

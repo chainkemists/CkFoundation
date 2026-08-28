@@ -103,12 +103,14 @@ namespace ck
         FCk_PathNetwork_RouteResult _Result;
         FCk_Handle_PathNetwork _Network;
         FGameplayTag _NavQueryFilter;
+        FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
         int32 _NetworkEpoch = 0;
 
     public:
         CK_PROPERTY_GET(_Result);
         CK_PROPERTY_GET(_Network);
         CK_PROPERTY_GET(_NavQueryFilter);
+        CK_PROPERTY_GET(_QueryFilterOverlay);
         CK_PROPERTY_GET(_NetworkEpoch);
     };
 

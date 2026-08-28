@@ -625,6 +625,7 @@ auto
         ? Request.Get_Network()
         : Params.Get_Network();
     Corridor._NavQueryFilter = Request.Get_NavQueryFilter();
+    Corridor._QueryFilterOverlay = Request.Get_QueryFilterOverlay();
     auto& Result = Corridor._Result;
     Result._Status = ECk_PathNetwork_RouteStatus::Pending;
     Result._GoalLocation = Request.Get_GoalLocation();
