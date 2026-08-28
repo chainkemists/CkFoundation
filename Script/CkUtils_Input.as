@@ -6,6 +6,13 @@ class UCk_Boolean_InputAction : UInputAction
 };
 
 UCLASS()
+class UCk_Axis1d_InputAction : UInputAction
+{
+    default ValueType = EInputActionValueType::Axis1D;
+    default bConsumeInput = false;
+};
+
+UCLASS()
 class UCk_Axis2d_InputAction : UInputAction
 {
     default ValueType = EInputActionValueType::Axis2D;
