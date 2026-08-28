@@ -140,11 +140,11 @@ namespace ck
         const auto HalfExtents = FVector{HalfExtentXY, HalfExtentXY, InParams.Get_Height()};
 
         auto GenericHandle = static_cast<FCk_Handle>(InHandle);
-        InMarkup._Markup = TStrongObjectPtr{UCk_Utils_NavAreaMarkup_UE::Request_Create(
+        InMarkup._Markup = UCk_Utils_NavAreaMarkup_UE::Request_Create(
             GenericHandle,
             FTransform{FQuat::Identity, Location},
             HalfExtents,
-            UCk_NavArea_CrowdAgent::StaticClass())};
+            UCk_NavArea_CrowdAgent::StaticClass());
         InMarkup._MarkupLocation = Location;
         InMarkup._MarkupRadiusUu = HalfExtentXY;
         InMarkup._MarkupVerticalHalfExtentUu = HalfExtents.Z;

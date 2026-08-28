@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment_Data.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -55,6 +56,29 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Neighbors);
+    };
+
+    // Value-only obstacle state copied from the overlap broadphase before avoidance sampling. A
+    // worker never dereferences a volume entity, so transform changes cannot race the parallel
+    // sampler. The transform is the physical box centre/orientation; _HalfExtents excludes the
+    // probe-only influence range.
+    struct CKCROWD_API FCk_CrowdAvoidanceVolume_Obstacle
+    {
+        FTransform _Transform = FTransform::Identity;
+        FVector _HalfExtents = FVector::ZeroVector;
+    };
+
+    struct CKCROWD_API FFragment_CrowdAgent_AvoidanceVolumeCache
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_AvoidanceVolumeCache);
+        friend class FProcessor_CrowdAgent_NeighborSync;
+
+    private:
+        TArray<FCk_CrowdAvoidanceVolume_Obstacle> _Obstacles;
+
+    public:
+        CK_PROPERTY_GET(_Obstacles);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Avoidance_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -66,6 +67,9 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         FVector _Start = FVector::ZeroVector;
         FVector _End = FVector::ZeroVector;
         bool _Touching = false;
+        // Recast walls block motion towards their outward normal; avoidance-volume walls are the
+        // inverse because their outward normal faces the legal exterior.
+        bool _BlocksPositiveNormalAtTouch = true;
     };
 
     using FWallSegments = TArray<FWallSegment, TInlineAllocator<FFragment_CrowdAgent_LocalBoundary::MaxSegments>>;
@@ -325,7 +329,10 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         return Owner.Get<FFragment_CrowdAgent_Params>().Get_Tags().HasTagExact(InTag);
     }
 
-    inline auto ShouldSample(const FCk_Handle_CrowdAgent& InAgent, const FFragment_CrowdAgent_NeighborCache& InCache) -> bool
+    inline auto ShouldSample(
+        const FCk_Handle_CrowdAgent& InAgent,
+        const FFragment_CrowdAgent_NeighborCache& InCache,
+        const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache) -> bool
     {
         // Permeable outranks EVERY other gate, including the explicit per-agent SamplingAlways
         // override below. Predictive avoidance of a body you pass straight through is not a
@@ -354,11 +361,12 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         const auto AlwaysTagSet = HasAvoidanceTag(InAgent, TAG_CrowdAvoidance_AlwaysSample);
         const auto Threshold = UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleNeighborThreshold();
         const auto NeighborGate = InCache.Get_Neighbors().Num() >= Threshold;
+        const auto HasAvoidanceVolume = NOT InAvoidanceVolumeCache.Get_Obstacles().IsEmpty();
         switch (Trigger)
         {
-            case ECk_AvoidanceSampleTrigger::NeighborCountOnly: return NeighborGate;
-            case ECk_AvoidanceSampleTrigger::ZoneTagOnly: return AlwaysTagSet;
-            case ECk_AvoidanceSampleTrigger::NeighborCountAndZoneTag: return NeighborGate || AlwaysTagSet;
+            case ECk_AvoidanceSampleTrigger::NeighborCountOnly: return NeighborGate || HasAvoidanceVolume;
+            case ECk_AvoidanceSampleTrigger::ZoneTagOnly: return AlwaysTagSet || HasAvoidanceVolume;
+            case ECk_AvoidanceSampleTrigger::NeighborCountAndZoneTag: return NeighborGate || AlwaysTagSet || HasAvoidanceVolume;
             default: return false;
         }
     }
@@ -381,9 +389,84 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
     }
 
     // Keep the production order: round-robin first, then trigger/override/tag evaluation.
-    inline auto ShouldRunSampling(const FCk_Handle_CrowdAgent& InAgent, const FFragment_CrowdAgent_NeighborCache& InCache) -> bool
+    inline auto ShouldRunSampling(
+        const FCk_Handle_CrowdAgent& InAgent,
+        const FFragment_CrowdAgent_NeighborCache& InCache,
+        const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache) -> bool
     {
-        return IsSamplingFrame(InAgent) && ShouldSample(InAgent, InCache);
+        return IsSamplingFrame(InAgent) && ShouldSample(InAgent, InCache, InAvoidanceVolumeCache);
+    }
+
+    struct FAvoidanceVolumeWallBuild final
+    {
+        FWallSegments _Walls;
+        FVector _EscapeDirection = FVector::ZeroVector;
+    };
+
+    inline auto BuildAvoidanceVolumeWalls(
+        const FVector& InAgentPosition,
+        const float InAgentRadius,
+        TConstArrayView<FCk_CrowdAvoidanceVolume_Obstacle> InObstacles) -> FAvoidanceVolumeWallBuild
+    {
+        auto Result = FAvoidanceVolumeWallBuild{};
+        auto NearestExitDistance = TNumericLimits<double>::Max();
+        for (const auto& Obstacle : InObstacles)
+        {
+            const auto Obb = crowd_avoidance_volume::MakeObb(
+                Obstacle._Transform,
+                Obstacle._HalfExtents).ExpandedXY(InAgentRadius);
+            if (NOT Obb.IsFiniteAndPositive())
+            { continue; }
+
+            // MakeObb has already applied authored scale exactly once and retained a scale-one
+            // yaw-only transform, so local geometry never applies scale a second time.
+            const auto& YawOnlyTransform = Obb._YawTransform;
+            const auto& Half = Obb._WorldHalfExtents;
+            const auto Local = YawOnlyTransform.InverseTransformPositionNoScale(InAgentPosition);
+            if (FMath::Abs(Local.Z) > Half.Z)
+            { continue; }
+
+            const auto IsInside = FMath::Abs(Local.X) < Half.X && FMath::Abs(Local.Y) < Half.Y;
+            if (IsInside)
+            {
+                const auto DistX = Half.X - FMath::Abs(Local.X);
+                const auto DistY = Half.Y - FMath::Abs(Local.Y);
+                const auto ExitLocal = DistX <= DistY
+                    ? FVector{Local.X >= 0.0 ? 1.0 : -1.0, 0.0, 0.0}
+                    : FVector{0.0, Local.Y >= 0.0 ? 1.0 : -1.0, 0.0};
+                const auto ExitDistance = FMath::Min(DistX, DistY);
+                if (ExitDistance < NearestExitDistance)
+                {
+                    NearestExitDistance = ExitDistance;
+                    Result._EscapeDirection = YawOnlyTransform.TransformVectorNoScale(ExitLocal).GetSafeNormal2D();
+                }
+                continue;
+            }
+
+            const auto Centre = YawOnlyTransform.GetLocation();
+            const auto AxisX = YawOnlyTransform.GetUnitAxis(EAxis::X);
+            const auto AxisY = YawOnlyTransform.GetUnitAxis(EAxis::Y);
+            const auto X = Centre + (AxisX * Half.X) + (AxisY * Half.Y);
+            const auto Y = Centre + (AxisX * Half.X) - (AxisY * Half.Y);
+            const auto Z = Centre - (AxisX * Half.X) - (AxisY * Half.Y);
+            const auto W = Centre - (AxisX * Half.X) + (AxisY * Half.Y);
+            // Clockwise winding makes MakeWallOutwardNormal point away from the box. Preserve the
+            // touch flag as well: at exact contact, the inverse normal convention must let a
+            // candidate leave the box rather than assigning immediate impact in both directions.
+            constexpr auto TouchRadius = 0.01;
+            const auto AddWall = [&](const FVector& InStart, const FVector& InEnd) -> void
+            {
+                auto Wall = FWallSegment{InStart, InEnd, false, false};
+                Wall._Touching = DistancePointSegmentSquared2D(
+                    InAgentPosition, InStart, InEnd) < (TouchRadius * TouchRadius);
+                Result._Walls.Emplace(MoveTemp(Wall));
+            };
+            AddWall(X, Y);
+            AddWall(Y, Z);
+            AddWall(Z, W);
+            AddWall(W, X);
+        }
+        return Result;
     }
 
     inline auto BuildCandidatePattern(
@@ -563,7 +646,11 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
                 // Standing on the wall: a candidate that projects negatively onto the outward
                 // normal is heading back into the walkable interior and cannot collide with it.
                 // Anything else is aimed INTO the wall and takes the immediate-collision time.
-                if (Dot2D(MakeWallOutwardNormal(Wall), ScoredCandidate) < 0.0)
+                const auto NormalProjection = Dot2D(MakeWallOutwardNormal(Wall), ScoredCandidate);
+                const auto MovesAwayFromWall = Wall._BlocksPositiveNormalAtTouch
+                    ? NormalProjection < 0.0
+                    : NormalProjection > 0.0;
+                if (MovesAwayFromWall)
                 { continue; }
             }
             else if (NOT IntersectRaySegment2D(

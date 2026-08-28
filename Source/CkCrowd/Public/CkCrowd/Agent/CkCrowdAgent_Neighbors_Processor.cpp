@@ -2,6 +2,10 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Algorithm.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Fragment.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -35,12 +39,14 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
             const FFragment_Transform& InTransform,
-            FFragment_CrowdAgent_NeighborCache& InNeighborCache) const
+            FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_NeighborSyncProc);
 
         InNeighborCache._Neighbors.Reset();
+        InAvoidanceVolumeCache._Obstacles.Reset();
 
         auto ProbeHandle = InProbeRef.Get_ProbeChild();
         if (ck::Is_NOT_Valid(ProbeHandle) || NOT ProbeHandle.Has<FFragment_Probe_Current>())
@@ -85,6 +91,52 @@ namespace ck
                 auto OtherTransform = UCk_Utils_Transform_UE::Cast(OtherAgent);
                 if (ck::Is_NOT_Valid(OtherTransform))
                 { continue; }
+
+                if (UCk_Utils_CrowdAvoidanceVolume_UE::Has(OtherAgent))
+                {
+                    const auto HasRuntimeState =
+                        OtherAgent.Has<FTag_CrowdAvoidanceVolume_HasRuntime>() &&
+                        OtherAgent.Has<FFragment_CrowdAvoidanceVolume_ProbeRef>();
+                    if (NOT HasRuntimeState)
+                    { continue; }
+
+                    const auto& Runtime = OtherAgent.Get<FFragment_CrowdAvoidanceVolume_ProbeRef>();
+                    const auto& Obb = Runtime.Get_AuthoredObb();
+                    const auto RuntimeIsValid = Runtime.Get_Markup().IsValid()
+                        && Obb.IsFiniteAndPositive();
+                    CK_ENSURE_IF_NOT(RuntimeIsValid,
+                        TEXT("CrowdAvoidanceVolume [{}] has runtime state but no valid canonical OBB/markup"),
+                        OtherAgent)
+                    {}
+                    if (NOT RuntimeIsValid)
+                    { continue; }
+
+                    const auto ExpandedObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                        Obb, Runtime.Get_PaintedObb(), InParams.Get_Radius());
+                    const auto ExpandedObbIsValid = ExpandedObb.IsFiniteAndPositive();
+                    CK_ENSURE_IF_NOT(ExpandedObbIsValid,
+                        TEXT("CrowdAvoidanceVolume [{}] produced an invalid agent-expanded OBB"),
+                        OtherAgent)
+                    {}
+                    if (NOT ExpandedObbIsValid)
+                    { continue; }
+
+                    const auto KeepForRebuildOrEscape = NOT Runtime.Get_ConfirmedOnMesh()
+                        || crowd_avoidance_volume::ContainsPoint(ExpandedObb, SelfLoc);
+                    if (KeepForRebuildOrEscape)
+                    {
+                        // The cached OBB is canonical: yaw-only scale-one transform plus world extents.
+                        // The parallel sampler therefore cannot apply authored scale a second time.
+                        InAvoidanceVolumeCache._Obstacles.Emplace(FCk_CrowdAvoidanceVolume_Obstacle{
+                            Obb._YawTransform,
+                            Obb._WorldHalfExtents});
+                    }
+                    continue;
+                }
+
+                if (NOT UCk_Utils_CrowdAgent_UE::Has(OtherAgent))
+                { continue; }
+
                 const auto OtherLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(OtherTransform);
 
                 auto OtherVelocity = UCk_Utils_Velocity_UE::Cast(OtherAgent);

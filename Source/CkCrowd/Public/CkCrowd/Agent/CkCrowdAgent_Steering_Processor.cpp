@@ -1,17 +1,22 @@
 #include "CkCrowdAgent_Steering_Processor.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
+
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "NavigationSystem.h"
-#include "NavigationData.h"
+#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -85,9 +90,11 @@ namespace ck
         // Resolved on the first frame a retirement condition actually fires — at corners, not on
         // every frame of a straight run — so an agent between corners pays nothing for the gate.
         auto NavDataIsResolved = false;
-        auto NavData = static_cast<ANavigationData*>(nullptr);
+        auto NavData = static_cast<ARecastNavMesh*>(nullptr);
+        auto QueryFilterIsResolved = false;
+        auto QueryFilter = FSharedConstNavQueryFilter{};
 
-        const auto Get_NavDataForGate = [&]() -> ANavigationData*
+        const auto Get_NavDataForGate = [&]() -> ARecastNavMesh*
         {
             if (NavDataIsResolved)
             { return NavData; }
@@ -109,8 +116,8 @@ namespace ck
                 : static_cast<UNavigationSystemV1*>(nullptr);
 
             NavData = ck::IsValid(NavSys)
-                ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
-                : static_cast<ANavigationData*>(nullptr);
+                ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+                : static_cast<ARecastNavMesh*>(nullptr);
 
             return NavData;
         };
@@ -155,12 +162,28 @@ namespace ck
                 if (ck::Is_NOT_Valid(GateNavData))
                 { return true; }
 
+                if (NOT QueryFilterIsResolved)
+                {
+                    QueryFilterIsResolved = true;
+                    const auto FilterClass =
+                        InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::PathNetwork
+                        ? UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InParams.Get_NavQueryFilter())
+                        : FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterClass(
+                            InParams, InPathFollow);
+                    QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
+                        *GateNavData,
+                        FilterClass,
+                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+                }
+                if (NOT QueryFilter.IsValid())
+                { return false; }
+
                 auto HitLocation = FVector::ZeroVector;
                 return NOT GateNavData->Raycast(
                     CurrentLoc,
                     Waypoints[InPathFollow._WaypointIndex + 1],
                     HitLocation,
-                    FSharedConstNavQueryFilter{});
+                    QueryFilter);
             }();
 
             if (NOT ChordIsNavigable)

@@ -236,13 +236,15 @@ namespace ck
         const FFragment_Transform& InTransform,
         const FFragment_CrowdAgent_Params& InParams,
         const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+        const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache,
         FFragment_CrowdAgent_DesiredVelocity& InDesired,
         FFragment_CrowdAgent_LocalBoundary& InBoundary) const -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_AvoidanceSampleProc);
 
         const auto SelfAgent = UCk_Utils_CrowdAgent_UE::Cast(ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity));
-        if (NOT ck_crowd_agent_avoidance_sample_algorithm::ShouldRunSampling(SelfAgent, InNeighborCache))
+        if (NOT ck_crowd_agent_avoidance_sample_algorithm::ShouldRunSampling(
+            SelfAgent, InNeighborCache, InAvoidanceVolumeCache))
         { return; }
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
@@ -269,13 +271,14 @@ namespace ck
             Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled;
 
         if (SuppressionCm > 0.0f &&
+            InAvoidanceVolumeCache.Get_Obstacles().IsEmpty() &&
             NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
             ck_crowd_agent_avoidance_sample::Is_InFinalApproachEnvelope(
                 SelfAgent, AgentLocation, SuppressionCm, MarkupAnchorsEnabled, InNeighborCache))
         { return; }
 
         INC_DWORD_STAT(STAT_CkCrowd_AgentsSampled);
-        if (InNeighborCache.Get_Neighbors().Num() == 0)
+        if (InNeighborCache.Get_Neighbors().Num() == 0 && InAvoidanceVolumeCache.Get_Obstacles().Num() == 0)
         { return; }
 
         auto Walls = ck_crowd_agent_avoidance_sample_algorithm::FWallSegments{};
@@ -311,6 +314,7 @@ namespace ck
             // separation slide the body visibly tracks (measured: 128° of yaw travel against the
             // 90° ceiling the moment this gate ran without the veto).
             if (Settings->Get_CorridorStandDown() == ECk_CrowdCorridorStandDownMode::Enabled &&
+                InAvoidanceVolumeCache.Get_Obstacles().IsEmpty() &&
                 NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
                 ck_crowd_agent_avoidance_sample_algorithm::Is_InTightCorridor(
                     AgentLocation,
@@ -341,7 +345,12 @@ namespace ck
             }
         }
 
-        const auto DesiredVelocity = InDesired.Get_Velocity();
+        auto DesiredVelocity = InDesired.Get_Velocity();
+        const auto VolumeWallBuild = ck_crowd_agent_avoidance_sample_algorithm::BuildAvoidanceVolumeWalls(
+            AgentLocation, InParams.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
+        Walls.Append(VolumeWallBuild._Walls);
+        if (NOT VolumeWallBuild._EscapeDirection.IsNearlyZero())
+        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InParams.Get_MaxSpeed(); }
         const auto Velocity = UCk_Utils_Velocity_UE::Cast(SelfAgent);
         const auto CurrentVelocity = ck::IsValid(Velocity) ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(Velocity) : FVector::ZeroVector;
         const auto Parameters = ck_crowd_agent_avoidance_sample_algorithm::FScoringParameters{

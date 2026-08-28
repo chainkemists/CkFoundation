@@ -14,6 +14,7 @@
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Settled_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -819,35 +820,20 @@ namespace ck
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+            FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
+                NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {
-            InPathFollow._ProtectedLeadingWaypointCount = 0;
-            // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor.
-            FCk_Nav_Algorithm::MarkPathPending(
-                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
-
             // The resume itself is the new evidence — the recheck just saw the blocker gone — so
             // the strict phase gets a fresh attempt.
             InPathFollow._StrictPlanFailed = false;
-
-            auto Request = FCk_Request_Nav_FindPath{Goal};
-            FProcessor_CrowdAgent_HandleRequests::ApplyPlanPhase(InParams, InPathFollow, Request);
-            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
-
-            // A held agent may have been shoved inside painted stationary markup — resuming from
-            // inside the band would pick "through". See Get_EscapedQueryStart.
-            const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
-                NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());
-            if (Escaped.IsSet())
-            {
-                Request.Set_StartOverride(ECk_EnableDisable::Enable)
-                       .Set_StartOverrideLocation(*Escaped);
-            }
-
-            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request, {});
+            FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                NonConstHandle, InParams, InPathFollow, Goal);
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"), InHandle, Goal);
