@@ -3,6 +3,8 @@
 #include "CkNavigation/NavAreaMarkup/CkNavArea_Restricted.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/ObjectPooling/CkObjectPooling_Params.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
@@ -48,21 +50,71 @@ auto
         TSubclassOf<UNavArea> InAreaClass)
     -> UCk_NavAreaMarkup_UE*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAreaClass.Get()),
+    const auto OwnerIsValid = ck::IsValid(InOwnerEntity);
+    CK_ENSURE_IF_NOT(OwnerIsValid,
+        TEXT("NavAreaMarkup Request_Create requires a valid owner entity"))
+    {}
+    if (NOT OwnerIsValid)
+    { return {}; }
+
+    const auto TransformIsFinite = NOT InWorldTransform.ContainsNaN();
+    CK_ENSURE_IF_NOT(TransformIsFinite,
+        TEXT("NavAreaMarkup Request_Create on [{}] requires a finite transform"), InOwnerEntity)
+    {}
+    if (NOT TransformIsFinite)
+    { return {}; }
+
+    const auto HalfExtentsAreValid = FMath::IsFinite(InHalfExtents.X)
+        && FMath::IsFinite(InHalfExtents.Y)
+        && FMath::IsFinite(InHalfExtents.Z)
+        && InHalfExtents.X > 0.0f
+        && InHalfExtents.Y > 0.0f
+        && InHalfExtents.Z > 0.0f;
+    CK_ENSURE_IF_NOT(HalfExtentsAreValid,
+        TEXT("NavAreaMarkup Request_Create on [{}] requires finite positive half extents [{}]"),
+        InOwnerEntity, InHalfExtents)
+    {}
+    if (NOT HalfExtentsAreValid)
+    { return {}; }
+
+    const auto AreaClassIsValid = ck::IsValid(InAreaClass.Get());
+    CK_ENSURE_IF_NOT(AreaClassIsValid,
         TEXT("NavAreaMarkup Request_Create on [{}] requires a valid AreaClass"), InOwnerEntity)
+    {}
+    if (NOT AreaClassIsValid)
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InOwnerEntity);
-    CK_ENSURE_IF_NOT(ck::IsValid(World),
+    const auto WorldIsValid = ck::IsValid(World);
+    CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("NavAreaMarkup Request_Create: no World for entity [{}]"), InOwnerEntity)
+    {}
+    if (NOT WorldIsValid)
     { return {}; }
 
-    auto Markup = NewObject<UCk_NavAreaMarkup_UE>(World);
-    Markup->_Transform   = InWorldTransform;
-    Markup->_HalfExtents = InHalfExtents;
-    Markup->_AreaClass   = InAreaClass;
+    const auto PoolParams = FCk_ObjectPooling_PoolParams{}
+        .Set_RecyclePolicy(ECk_ObjectPooling_RecyclePolicy::DestroyOnRelease);
+    auto* Markup = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_NavAreaMarkup_UE>(
+        World,
+        UCk_NavAreaMarkup_UE::StaticClass(),
+        nullptr,
+        PoolParams,
+        [&](auto* InMarkup)
+        {
+            InMarkup->_Transform = InWorldTransform;
+            InMarkup->_HalfExtents = InHalfExtents;
+            InMarkup->_AreaClass = InAreaClass;
+            InMarkup->_IsRegistered = false;
+        });
+    const auto MarkupIsValid = ck::IsValid(Markup);
+    CK_ENSURE_IF_NOT(MarkupIsValid,
+        TEXT("NavAreaMarkup Request_Create on [{}] could not acquire a rooted markup object"), InOwnerEntity)
+    {}
+    if (NOT MarkupIsValid)
+    { return {}; }
 
     UNavigationSystemV1::OnNavRelevantObjectRegistered(*Markup);
+    Markup->_IsRegistered = true;
     return Markup;
 }
 
@@ -75,5 +127,11 @@ auto
     if (ck::Is_NOT_Valid(InMarkup))
     { return; }
 
-    UNavigationSystemV1::OnNavRelevantObjectUnregistered(*InMarkup);
+    if (InMarkup->_IsRegistered)
+    {
+        UNavigationSystemV1::OnNavRelevantObjectUnregistered(*InMarkup);
+        InMarkup->_IsRegistered = false;
+    }
+
+    UCk_Utils_Object_UE::TryReleaseToPool(InMarkup);
 }

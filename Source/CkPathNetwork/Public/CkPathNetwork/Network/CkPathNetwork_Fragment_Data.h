@@ -7,6 +7,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
 #include "CkPathNetwork/Network/CkPathNetwork_Types.h"
 
 #include <CoreMinimal.h>
@@ -549,6 +551,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _NavQueryFilter;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FVector _StartOverrideLocation = FVector::ZeroVector;
+
     int32 _TuningRevision = 0;
 
     // Optional opaque caller-owned revision. The route result mirrors it unchanged
@@ -559,6 +570,9 @@ public:
     CK_PROPERTY_GET(_GoalLocation);
     CK_PROPERTY(_Network);
     CK_PROPERTY(_NavQueryFilter);
+    CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_StartOverride);
+    CK_PROPERTY(_StartOverrideLocation);
     CK_PROPERTY(_TuningRevision);
     CK_PROPERTY(_RequestRevision);
 

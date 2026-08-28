@@ -29,6 +29,77 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Waypoints Extracted"), STAT_Nav_WaypointsEx
 
 auto
     FCk_Nav_Algorithm::
+    ResolveQueryFilter(
+        ARecastNavMesh& InNavData,
+        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        const FCk_Nav_QueryFilterOverlay& InOverlay)
+    -> FSharedConstNavQueryFilter
+{
+    const auto FilterClassIsValid = InFilterClass.Get() == nullptr
+        || ck::IsValid(InFilterClass.Get());
+    CK_ENSURE_IF_NOT(FilterClassIsValid,
+        TEXT("Nav query filter resolution received an invalid filter class"))
+    {}
+    if (NOT FilterClassIsValid)
+    { return {}; }
+
+    auto BaseFilter = InNavData.GetDefaultQueryFilter();
+    if (InFilterClass.Get() != nullptr)
+    { BaseFilter = UNavigationQueryFilter::GetQueryFilter(InNavData, InFilterClass); }
+
+    const auto BaseFilterIsValid = BaseFilter.IsValid();
+    CK_ENSURE_IF_NOT(BaseFilterIsValid,
+        TEXT("Nav query filter resolution failed: base filter [{}] is invalid"),
+        GetNameSafe(InFilterClass.Get()))
+    {}
+    if (NOT BaseFilterIsValid)
+    { return {}; }
+
+    if (InOverlay.Get_ExcludedAreaClasses().IsEmpty())
+    { return BaseFilter; }
+
+    auto OverlayFilter = BaseFilter->GetCopy();
+    const auto OverlayFilterIsValid = OverlayFilter.IsValid();
+    CK_ENSURE_IF_NOT(OverlayFilterIsValid,
+        TEXT("Nav query filter resolution failed: could not copy base filter [{}]"),
+        GetNameSafe(InFilterClass.Get()))
+    {}
+    if (NOT OverlayFilterIsValid)
+    { return {}; }
+
+    auto SeenAreaClasses = TSet<UClass*>{};
+    for (const auto AreaClass : InOverlay.Get_ExcludedAreaClasses())
+    {
+        const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
+        CK_ENSURE_IF_NOT(AreaClassIsValid,
+            TEXT("Nav query filter overlay contains an invalid excluded area class"))
+        {}
+        if (NOT AreaClassIsValid)
+        { return {}; }
+
+        if (SeenAreaClasses.Contains(AreaClass.Get()))
+        { continue; }
+        SeenAreaClasses.Add(AreaClass.Get());
+
+        const auto AreaId = InNavData.GetAreaID(AreaClass);
+        const auto AreaIsRegistered = AreaId != INDEX_NONE;
+        CK_ENSURE_IF_NOT(AreaIsRegistered,
+            TEXT("Nav query filter overlay area [{}] is not registered on NavData [{}]"),
+            GetNameSafe(AreaClass.Get()), InNavData.GetName())
+        {}
+        if (NOT AreaIsRegistered)
+        { return {}; }
+
+        OverlayFilter->SetExcludedArea(static_cast<uint8>(AreaId));
+    }
+
+    return OverlayFilter;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
     FindPathSync(
         UNavigationSystemV1& InNavSys,
         ARecastNavMesh&      InNavData,
@@ -40,7 +111,8 @@ auto
         float                InAgentRadiusForFirstSkip,
         FCk_Nav_PathResult&  OutResult,
         TSubclassOf<UNavigationQueryFilter> InFilterClass,
-        float                InCornerOffsetDistance)
+        float                InCornerOffsetDistance,
+        const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay)
         -> bool
 {
     SCOPE_CYCLE_COUNTER(STAT_Nav_FindPathSync);
@@ -58,14 +130,24 @@ auto
         ? InProjectionHalfExtent
         : InProjectionVerticalHalfExtent;
     const auto ProjectionExtent = FVector{InProjectionHalfExtent, InProjectionHalfExtent, VerticalHalfExtent};
+    const auto QueryFilter = ResolveQueryFilter(InNavData, InFilterClass, InQueryFilterOverlay);
+    if (NOT QueryFilter.IsValid())
+    {
+        OutResult._Status    = ECk_Nav_PathStatus::Failed;
+        Diag._LastFailReason = ECk_Nav_PathFailReason::NoDefaultFilter;
+        Diag._LastQueryDurationMs = static_cast<float>(
+            (FPlatformTime::Seconds() - Diag._LastQueryWallTime) * 1000.0);
+        return false;
+    }
+
     auto StartProj = FNavLocation{};
     auto EndProj   = FNavLocation{};
     auto bStartProjected = false;
     auto bEndProjected   = false;
     {
         SCOPE_CYCLE_COUNTER(STAT_Nav_ProjectStartEnd);
-        bStartProjected = InNavSys.ProjectPointToNavigation(InStart, StartProj, ProjectionExtent, &InNavData);
-        bEndProjected   = InNavSys.ProjectPointToNavigation(InEnd,   EndProj,   ProjectionExtent, &InNavData);
+        bStartProjected = InNavData.ProjectPoint(InStart, StartProj, ProjectionExtent, QueryFilter);
+        bEndProjected   = InNavData.ProjectPoint(InEnd,   EndProj,   ProjectionExtent, QueryFilter);
     }
 
     Diag._StartProjected     = bStartProjected;
@@ -127,18 +209,6 @@ auto
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
         Diag._LastFailReason = ECk_Nav_PathFailReason::EndProjectFailed;
         LogProjectionFailure(FString{TEXT("End")}, InEnd);
-        FinishWithDuration();
-        return false;
-    }
-
-    auto QueryFilter = InNavData.GetDefaultQueryFilter();
-    if (InFilterClass.Get() != nullptr)
-    { QueryFilter = UNavigationQueryFilter::GetQueryFilter(InNavData, InFilterClass); }
-
-    if (NOT QueryFilter.IsValid())
-    {
-        OutResult._Status    = ECk_Nav_PathStatus::Failed;
-        Diag._LastFailReason = ECk_Nav_PathFailReason::NoDefaultFilter;
         FinishWithDuration();
         return false;
     }
@@ -240,6 +310,37 @@ auto
 
     OutResult._Waypoints = MoveTemp(NewWaypoints);
     OutResult._Status    = InNavResult.IsPartial() ? ECk_Nav_PathStatus::Partial : ECk_Nav_PathStatus::Ready;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Nav_Algorithm::
+    PrependWaypoints(
+        FCk_Nav_PathResult& InOutResult,
+        TArray<FVector> InLeadingWaypoints)
+    -> int32
+{
+    if (InLeadingWaypoints.IsEmpty())
+    { return 0; }
+
+    constexpr auto MergeDistanceUu = 1.0f;
+    auto Combined = TArray<FVector>{};
+    Combined.Reserve(InLeadingWaypoints.Num() + InOutResult._Waypoints.Num());
+    const auto AppendDistinct = [&](const FVector& InPoint)
+    {
+        if (Combined.IsEmpty() ||
+            FVector::DistSquared(Combined.Last(), InPoint) > FMath::Square(MergeDistanceUu))
+        { Combined.Add(InPoint); }
+    };
+    for (const auto& Point : InLeadingWaypoints)
+    { AppendDistinct(Point); }
+    const auto PrefixCount = Combined.Num();
+    for (const auto& Point : InOutResult._Waypoints)
+    { AppendDistinct(Point); }
+    InOutResult._Waypoints = MoveTemp(Combined);
+    InOutResult._Diagnostics._ExtractedWaypointCount = InOutResult._Waypoints.Num();
+    return PrefixCount;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
