@@ -2,6 +2,7 @@
 
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
+#include <AI/Navigation/NavQueryFilter.h>
 #include <CoreMinimal.h>
 #include <Templates/SubclassOf.h>
 
@@ -19,6 +20,13 @@ struct FPathFindingResult;
 
 struct CKNAVIGATION_API FCk_Nav_Algorithm
 {
+    // Resolves a host-selected base filter, then applies value-only exclusions to a private copy.
+    // A non-empty malformed overlay fails closed rather than silently weakening the caller's path policy.
+    static auto ResolveQueryFilter(
+        ARecastNavMesh& InNavData,
+        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        const FCk_Nav_QueryFilterOverlay& InOverlay) -> FSharedConstNavQueryFilter;
+
     // True on Ready/Partial, false on Failed/Invalid. OutResult._Waypoints is preserved on
     // failure so consumers can keep walking the previous path.
     static auto FindPathSync(
@@ -32,7 +40,8 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass
         FCk_Nav_PathResult&  OutResult,
         TSubclassOf<UNavigationQueryFilter> InFilterClass = {}, // null -> NavData's default filter
-        float InCornerOffsetDistance = 0.0f) -> bool; // cm; 0 preserves the raw Recast corridor corners
+        float InCornerOffsetDistance = 0.0f, // cm; 0 preserves the raw Recast corridor corners
+        const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay = {}) -> bool;
 
     // InAgentRadius > 0 drops the first waypoint when it is within ~2x radius of InAgentLocation:
     // UE includes the agent's own position as the first point, which reads as a backtrack-to-start.
@@ -49,6 +58,12 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         TArray<FVector> InWaypoints,
         const FVector&  InDestination,
         int32           InRequestRevision = 0) -> void;
+
+    // Prepends a caller-owned physical approach/escape prefix without changing the provider's
+    // status, destination, diagnostics, or revision. Returns the retained prefix count.
+    static auto PrependWaypoints(
+        FCk_Nav_PathResult& InOutResult,
+        TArray<FVector> InLeadingWaypoints) -> int32;
 
     // Parks the result at Pending while an external provider computes, so pollers don't consume
     // the PREVIOUS Ready result as the answer to the new request. Creates the fragment if absent.
