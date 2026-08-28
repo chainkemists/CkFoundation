@@ -436,6 +436,7 @@ namespace ck
             const FVector& InSelfLocation,
             const FVector& InEscapedLocation,
             const FFragment_CrowdAgent_Params& InParams,
+            ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             TArray<FVector>& OutWaypoints)
         -> bool
     {
@@ -479,7 +480,9 @@ namespace ck
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             InParams.Get_Radius(),
             EscapeResult,
-            FilterClass);
+            FilterClass,
+            0.0f,
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
         if (NOT FoundEscape || EscapeResult.Get_Waypoints().IsEmpty())
         { return false; }
 
@@ -681,6 +684,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             float InArrivalRadius,
             const TArray<FVector>& InCorridorWaypoints,
+            ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             TArray<FVector>& OutWaypoints)
         -> bool
     {
@@ -816,7 +820,7 @@ namespace ck
             DetourResult,
             FilterClass,
             0.0f,
-            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
         if (NOT FoundDetour || DetourResult.Get_Waypoints().IsEmpty())
         {
             ck::crowd::Verbose(
@@ -1047,6 +1051,8 @@ namespace ck
 
         InPathFollow._WaypointIndex = 0;
         FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+        InPathFollow._StrictPlanFailed = false;
+        InPathFollow._StrictStandingCrowdPlanFailed = false;
 
         // A detour is longer than the path it replaces, so carrying the old remaining-distance
         // baseline across would read the re-route itself as lost progress.
@@ -1060,9 +1066,17 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            InPathFollow._PlanPhase =
+                FProcessor_CrowdAgent_HandleRequests::Get_ShouldPlanStrict(NonConstHandle, InPathFollow)
+                ? ECk_CrowdAgent_PlanPhase::Strict
+                : ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
             Request.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                        ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                        : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
             FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
                 NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
@@ -1071,7 +1085,6 @@ namespace ck
         else
         {
             // A newly confirmed disc IS new markup evidence — the strict phase gets a fresh attempt.
-            InPathFollow._StrictPlanFailed = false;
             FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                 NonConstHandle, InParams, InPathFollow, Goal);
         }

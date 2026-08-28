@@ -8,6 +8,12 @@
 
 #include "CkCrowdAvoidanceVolume_Utils.generated.h"
 
+enum class ECk_CrowdAvoidanceVolume_QueryPhase : uint8
+{
+    Strict,
+    Permissive
+};
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_CrowdAvoidanceVolume"))
 class CKCROWD_API UCk_Utils_CrowdAvoidanceVolume_UE : public UBlueprintFunctionLibrary
 {
@@ -18,8 +24,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_CrowdAvoidanceVolume);
 
 public:
-    // Composes a static physical OBB, local-steering probe, and finite-cost nav-area markup.
-    // Crowd query overlays exclude the marked area after Recast confirms its rebuild.
+    // Composes a static physical OBB, local-steering probe, and policy-selected finite-cost nav-area markup.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CrowdAvoidanceVolume",
         DisplayName = "[Ck][CrowdAvoidanceVolume] Add Feature")
     static FCk_Handle_CrowdAvoidanceVolume
@@ -39,10 +44,33 @@ public:
     Get_IsNavigationConfirmed(
         const FCk_Handle_CrowdAvoidanceVolume& InVolume);
 
-    // Canonical permanent exclusion for every Crowd path phase and provider. This is C++ only:
-    // requests own the value and CkNavigation applies it to a private copy of the host filter.
+    // A copied diagnostic view for debugger and PIE rendering. InAnyEntityInWorld only selects an ECS world; no
+    // returned value retains that entity, a registry, an ECS handle, a fragment, or a UObject.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|CrowdAvoidanceVolume",
+        DisplayName = "[Ck][CrowdAvoidanceVolume] Get Debug Snapshots", meta = (DevelopmentOnly))
+    static TArray<FCk_CrowdAvoidanceVolume_DebugSnapshot>
+    Get_DebugSnapshots(
+        const FCk_Handle& InAnyEntityInWorld);
+
+    // Returns true only while this ECS world has a live, painted AvoidIfPossible volume. Invalid or
+    // teardown selectors fail closed without an ensure, because debugger and PIE callers may race teardown.
+    static bool
+    Get_HasAvoidIfPossibleVolumes(
+        const FCk_Handle& InAnyEntityInWorld);
+
+    // Pure policy contract shared by overlay construction and unit coverage. Invalid enum values
+    // fail closed as excluded.
+    static bool
+    Get_IsTraversalPolicyExcluded(
+        ECk_CrowdAvoidanceVolume_TraversalPolicy InTraversalPolicy,
+        ECk_CrowdAvoidanceVolume_QueryPhase InPhase);
+
+    // Phase-specific Recast exclusions. Strict excludes AvoidIfPossible and HardExclude; Permissive
+    // excludes HardExclude only. CostOnly is never excluded. Requests own this value and CkNavigation
+    // applies it to a private copy of the host filter.
     static FCk_Nav_QueryFilterOverlay
-    Get_NavQueryFilterOverlay();
+    Get_NavQueryFilterOverlay(
+        ECk_CrowdAvoidanceVolume_QueryPhase InPhase);
 
 private:
     UFUNCTION(BlueprintCallable,

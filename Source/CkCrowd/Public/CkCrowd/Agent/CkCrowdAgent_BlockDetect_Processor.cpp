@@ -676,7 +676,7 @@ namespace ck
                     FCk_CrowdAgent_GoalFailedInfo{
                         ECk_CrowdAgent_GoalFailReason::BlockedFailMovePolicy,
                         ECk_Nav_PathFailReason::None,
-                        PathFollow.Get_StrictPlanFailed(),
+                        PathFollow.Get_StrictStandingCrowdPlanFailed(),
                         PathFollow.Get_ActiveGoal()}));
         }
     }
@@ -810,6 +810,8 @@ namespace ck
 
         const auto Goal = InPathFollow.Get_ActiveGoal();
         FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+        InPathFollow._StrictPlanFailed = false;
+        InPathFollow._StrictStandingCrowdPlanFailed = false;
 
         if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
         {
@@ -819,9 +821,17 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            InPathFollow._PlanPhase =
+                FProcessor_CrowdAgent_HandleRequests::Get_ShouldPlanStrict(NonConstHandle, InPathFollow)
+                ? ECk_CrowdAgent_PlanPhase::Strict
+                : ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
             Request.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                        ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                        : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
             FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
                 NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
@@ -831,7 +841,6 @@ namespace ck
         {
             // The resume itself is the new evidence — the recheck just saw the blocker gone — so
             // the strict phase gets a fresh attempt.
-            InPathFollow._StrictPlanFailed = false;
             FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                 NonConstHandle, InParams, InPathFollow, Goal);
         }
@@ -880,7 +889,7 @@ namespace ck
                 FCk_CrowdAgent_GoalFailedInfo{
                     ECk_CrowdAgent_GoalFailReason::NoProgressRetriesExhausted,
                     ECk_Nav_PathFailReason::None,
-                    InPathFollow.Get_StrictPlanFailed(),
+                    InPathFollow.Get_StrictStandingCrowdPlanFailed(),
                     InPathFollow.Get_ActiveGoal()}));
     }
 }

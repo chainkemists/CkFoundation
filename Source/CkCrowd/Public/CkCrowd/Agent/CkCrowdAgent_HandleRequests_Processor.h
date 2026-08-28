@@ -97,10 +97,16 @@ namespace ck
 		// _StrictPlanFailed exactly as the fallback set it.
 		static auto
 		ApplyPlanPhase(
+			HandleType InHandle,
 			const FFragment_CrowdAgent_Params& InParams,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FCk_Request_Nav_FindPath& InOutRequest,
 			bool InForcePermissive = false) -> void;
+
+        static auto
+        Get_ShouldPlanStrict(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow) -> bool;
 
         static auto
         ApplyMarkupEscapeStart(

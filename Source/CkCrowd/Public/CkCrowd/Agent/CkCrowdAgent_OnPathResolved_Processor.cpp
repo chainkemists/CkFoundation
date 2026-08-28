@@ -110,11 +110,10 @@ namespace ck
         }
 
         // ---- Strict → permissive fallback ---------------------------------------------------------
-        // The strict phase treats stationary-crowd markup as impassable, so its honest answer for
-        // a goal with no crowd-free route is Failed — or, more often, Partial ending short (Recast
+        // The strict phase treats configured soft policy areas as impassable, so its honest answer
+        // when no strict route exists is Failed — or, more often, Partial ending short (Recast
         // returns the closest reachable poly outside the excluded band). Neither is terminal for
-        // the EPISODE: re-dispatch once with the permissive toll filter, which is how queue-joiners
-        // still reach a slot beside standing bodies. Runs BEFORE the path-trouble stamp and the
+        // the EPISODE: re-dispatch once with the permissive toll filter. Runs BEFORE the path-trouble stamp and the
         // switch — a strict miss is expected control flow, not trouble for the overlay to flag and
         // never a caller-facing failure.
         if (IsTerminalPathResult &&
@@ -166,10 +165,12 @@ namespace ck
             if (StrictFailedOnRoute || StrictEndsShortOfGoal)
             {
                 ck::crowd::Verbose(
-                    TEXT("CrowdAgent [{}] no crowd-free route (strict result: {}) — re-planning with the toll filter"),
+                    TEXT("CrowdAgent [{}] no strict-policy route (strict result: {}) — re-planning with the toll filter"),
                     InHandle, InPathResult.Get_Status());
 
                 InPathFollow._StrictPlanFailed = true;
+                InPathFollow._StrictStandingCrowdPlanFailed =
+                    InPathFollow.Get_PlanUsesStrictStandingCrowdFilter();
 
                 FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
 
@@ -276,7 +277,10 @@ namespace ck
                         *NavDataForGate,
                         FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterClass(
                             InParams, InPathFollow),
-                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay())
+                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                            InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                                ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                                : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive))
                     : FSharedConstNavQueryFilter{};
 
                 auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
@@ -336,7 +340,7 @@ namespace ck
                         FCk_CrowdAgent_GoalFailedInfo{
                             ECk_CrowdAgent_GoalFailReason::PathFailed,
                             InPathResult.Get_Diagnostics().Get_LastFailReason(),
-                            InPathFollow.Get_StrictPlanFailed(),
+                            InPathFollow.Get_StrictStandingCrowdPlanFailed(),
                             InPathFollow.Get_ActiveGoal()}));
 
                 ck::crowd::Warning(TEXT("CrowdAgent [{}] PathPending → Idle (path failed: {})"),
