@@ -40,6 +40,7 @@ namespace ck
             TReadOnly<FFragment_Transform>,
             TReadOnly<FFragment_CrowdAgent_Params>,
             TReadOnly<FFragment_CrowdAgent_NeighborCache>,
+            TReadOnly<FFragment_CrowdAgent_AvoidanceVolumeCache>,
             TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TReadWrite<FFragment_CrowdAgent_LocalBoundary>,
             TExclude<FTag_CrowdAgent_Asleep>,
@@ -61,6 +62,7 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_LocalBoundary& InBoundary) const -> void;
 

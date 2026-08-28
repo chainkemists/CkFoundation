@@ -38,6 +38,11 @@ static FCk_Handle_CrowdAgent Request_MoveTo(
 static FCk_Handle_CrowdAgent Request_Stop(
     UPARAM(ref) FCk_Handle_CrowdAgent& InAgent);
 
+// Add a static path-aware oriented obstacle to any transform-bearing entity.
+static FCk_Handle_CrowdAvoidanceVolume Add(
+    UPARAM(ref) FCk_Handle_Transform& InOwner,
+    const FCk_Fragment_CrowdAvoidanceVolume_ParamsData& InParams);
+
 // Bind to lifecycle signals.
 static void BindTo_OnGoalReached(UPARAM(ref) FCk_Handle_CrowdAgent& InAgent, const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate, ...);
 static void BindTo_OnGoalFailed (UPARAM(ref) FCk_Handle_CrowdAgent& InAgent, const FCk_Delegate_CrowdAgent_OnGoalFailed&  InDelegate, ...);
@@ -638,7 +643,38 @@ Gates (project settings): `_AvoidanceSampleTrigger` = `NeighborCountAndZoneTag`,
 
 Four independent gates must all pass: triggered (project trigger mode + per-agent `AvoidancePolicy`
 override + zone tags), on this agent's 1-in-N frame (round-robin stride), NOT inside the
-final-approach envelope (below), and at least one cached neighbour.
+final-approach envelope (below), and at least one cached neighbour or avoidance volume.
+
+### Avoidance volumes — path-aware nav areas with local rebuild-window steering
+
+`UCk_Utils_CrowdAvoidanceVolume_UE::Add` composes a yaw-oriented box on a Transform entity. A
+query-only Jolt probe supplies broadphase overlap while a pooled `UCk_NavAreaMarkup_UE` paints the
+dedicated `UCk_NavArea_CrowdAvoidanceVolume` into Recast. Crowd navigation requests deep-copy their
+resolved host filter and exclude that area; the base filter's costs, flags, and exclusions survive.
+`_PathPlanningClearance` expands the painted XY bounds (default 50uu) so Recast centre-line paths
+clear ordinary agent bodies. PathNetwork persists the same overlay through route, tuning, and epoch
+replans and uses it for its projections, raycasts, clearance, shortcuts, and Recast detours.
+
+`NeighborSync` copies the canonical yaw-only box transform and world extents into each overlapping
+agent's value-only cache before the parallel sampler runs. The local cache remains active only
+until Recast confirms the painted area, or while the agent is inside the effective per-agent OBB
+(`max(painted clearance, physical footprint + agent radius)`).
+The sampler converts the radius-inflated OBB to four wall segments and scores them in the same
+time-to-impact term as nav-boundary walls. An agent already inside receives a nearest-face escape
+direction. Flyers and permeable agents preserve their existing sampler exclusions.
+
+Markup ownership is rooted by CkObjectPooling; ECS fragments retain weak references. Volumes are
+static after composition: transform drift fails closed and requires destroy/recreate. Confirmation
+shares PathRefresh's process-wide monotonic serial, so a route installed during async tile rebuild
+is invalidated exactly once after the area appears. An agent composed inside painted markup plans
+from a bounded-union escape point while retaining and protecting a physically followable prefix.
+Removal has the symmetric contract: EndPlay snapshots a value-only retirement record on the
+world's transient root before unregistering the painter. CkNavigation exposes a world-scoped
+generation revision; once the default NavData completes a later generation and no build remains in
+progress, PathRefresh issues one removal serial and replans paths whose direct chord crosses the
+retired OBB. This removes first-reset stale detours without timers and remains correct when another
+avoidance volume overlaps the retired region.
+`UCk_CrowdAvoidanceVolume_EntityScript` remains non-replicated and placeable/runtime-spawnable.
 
 ### The final-approach envelope — the sampler stands down for the last stretch
 

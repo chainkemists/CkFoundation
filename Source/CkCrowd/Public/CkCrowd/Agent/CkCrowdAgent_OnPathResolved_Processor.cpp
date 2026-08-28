@@ -5,6 +5,7 @@
 #include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -12,10 +13,12 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkNavigation/Nav/CkNav_Algorithm.h"
+
 #include "HAL/PlatformTime.h"
 
 #include "NavigationSystem.h"
-#include "NavigationData.h"
+#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,7 +35,7 @@ namespace ck_crowd_agent_on_path_resolved_processor
     // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
     // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
     // to its projection-only form.
-    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ANavigationData*
+    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ARecastNavMesh*
     {
         if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
             ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
@@ -44,8 +47,8 @@ namespace ck_crowd_agent_on_path_resolved_processor
             : static_cast<UNavigationSystemV1*>(nullptr);
 
         return ck::IsValid(NavSys)
-            ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
-            : static_cast<ANavigationData*>(nullptr);
+            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+            : static_cast<ARecastNavMesh*>(nullptr);
     }
 }
 
@@ -57,7 +60,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
@@ -208,6 +212,11 @@ namespace ck
             case ECk_Nav_PathStatus::Ready:
             case ECk_Nav_PathStatus::Partial:
             {
+                InPathFollow._ProtectedLeadingWaypointCount =
+                    FCk_Nav_Algorithm::PrependWaypoints(
+                        InPathResult, MoveTemp(InPathFollow._PendingEscapePrefix));
+                InPathFollow._PendingEscapePrefix.Reset();
+
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
@@ -262,14 +271,23 @@ namespace ck
                 // the planner routed around.
                 const auto NavDataForGate =
                     ck_crowd_agent_on_path_resolved_processor::Get_NavDataForChordGate(InHandle);
+                const auto ChordQueryFilter = ck::IsValid(NavDataForGate)
+                    ? FCk_Nav_Algorithm::ResolveQueryFilter(
+                        *NavDataForGate,
+                        FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterClass(
+                            InParams, InPathFollow),
+                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay())
+                    : FSharedConstNavQueryFilter{};
 
                 auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
                 {
                     if (ck::Is_NOT_Valid(NavDataForGate))
                     { return true; }
+                    if (NOT ChordQueryFilter.IsValid())
+                    { return false; }
 
                     auto HitLocation = FVector::ZeroVector;
-                    return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, FSharedConstNavQueryFilter{});
+                    return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, ChordQueryFilter);
                 };
 
                 const auto SkippedWaypointCount =
@@ -301,6 +319,8 @@ namespace ck
             }
             case ECk_Nav_PathStatus::Failed:
             {
+                InPathFollow._PendingEscapePrefix.Reset();
+                InPathFollow._ProtectedLeadingWaypointCount = 0;
                 InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();

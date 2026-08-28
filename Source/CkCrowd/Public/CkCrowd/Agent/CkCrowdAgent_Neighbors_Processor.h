@@ -26,6 +26,7 @@ namespace ck
             TReadOnly<FFragment_CrowdAgent_ProbeRef>,
             TReadOnly<FFragment_Transform>,
             TReadWrite<FFragment_CrowdAgent_NeighborCache>,
+            TReadWrite<FFragment_CrowdAgent_AvoidanceVolumeCache>,
             TExclude<FTag_CrowdAgent_Asleep>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -44,7 +45,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
             const FFragment_Transform& InTransform,
-            FFragment_CrowdAgent_NeighborCache& InNeighborCache) const -> void;
+            FFragment_CrowdAgent_NeighborCache& InNeighborCache,
+            FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache) const -> void;
     };
 }
 

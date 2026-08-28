@@ -210,8 +210,8 @@ namespace ck
         CK_PROPERTY_GET(_IsOffNavmesh);
     };
 
-    // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The strong ptr owns the painter
-    // object's lifetime — UE GC does not trace fragment members.
+    // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The CkCore ObjectPooling subsystem
+    // owns the painter's lifetime; the fragment observes it weakly.
     struct CKCROWD_API FFragment_CrowdAgent_NavMarkup
     {
     public:
@@ -224,7 +224,7 @@ namespace ck
     private:
         float _StationarySeconds = 0.0f;
         FVector _MarkupLocation = FVector::ZeroVector;
-        TStrongObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
+        TWeakObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
 
         // Stillness is sampled over a window, not instantaneously, so a push-apart shove spike
         // cannot unpaint a standing queue.

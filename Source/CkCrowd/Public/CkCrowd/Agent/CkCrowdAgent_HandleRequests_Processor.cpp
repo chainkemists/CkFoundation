@@ -12,9 +12,11 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_NavQueryFilter.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
@@ -108,6 +110,55 @@ namespace ck
                 DoForceReplan(InHandle, InParams, InPathFollow, InDesired);
             }
         });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        GetPlanQueryFilterClass(
+            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> TSubclassOf<UNavigationQueryFilter>
+    {
+        if (InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict)
+        {
+            if (InParams.Get_NavQueryFilterStrict().IsValid())
+            {
+                return UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
+                    InParams.Get_NavQueryFilterStrict());
+            }
+            return UCk_NavQueryFilter_AvoidStandingCrowds::StaticClass();
+        }
+        return UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InParams.Get_NavQueryFilter());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        ApplyMarkupEscapeStart(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InGoal,
+            FCk_Request_PathNetworkFollower_FindRoute& InOutRequest)
+        -> void
+    {
+        auto Transform = UCk_Utils_Transform_UE::Cast(InHandle);
+        if (NOT ck::IsValid(Transform))
+        { return; }
+
+        const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
+            InHandle,
+            InHandle.Get_Entity(),
+            UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Transform),
+            InGoal,
+            InParams.Get_Radius());
+        if (Escaped.IsSet())
+        {
+            InOutRequest.Set_StartOverride(ECk_EnableDisable::Enable)
+                        .Set_StartOverrideLocation(Escaped.GetValue());
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -215,6 +266,8 @@ namespace ck
         auto Request = FCk_Request_Nav_FindPath{InGoal};
         ApplyPlanPhase(InParams, InPathFollow, Request, InForcePermissivePlan);
         Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
+        InPathFollow._PendingEscapePrefix.Reset();
+        InPathFollow._ProtectedLeadingWaypointCount = 0;
 
         // A MoveTo issued while the agent stands inside painted stationary markup would plan
         // "through" the band — see Get_EscapedQueryStart.
@@ -229,8 +282,19 @@ namespace ck
                 InParams.Get_Radius());
             if (Escaped.IsSet())
             {
-                Request.Set_StartOverride(ECk_EnableDisable::Enable)
-                       .Set_StartOverrideLocation(*Escaped);
+                auto EscapePrefix = TArray<FVector>{};
+                if (FProcessor_CrowdAgent_PathRefresh::Try_BuildStationaryMarkupEscapePath(
+                    InHandle,
+                    InHandle.Get_Entity(),
+                    UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
+                    Escaped.GetValue(),
+                    InParams,
+                    EscapePrefix))
+                {
+                    Request.Set_StartOverride(ECk_EnableDisable::Enable)
+                           .Set_StartOverrideLocation(EscapePrefix.Last());
+                    InPathFollow._PendingEscapePrefix = MoveTemp(EscapePrefix);
+                }
             }
         }
 
@@ -254,6 +318,9 @@ namespace ck
             bool InForcePermissive)
         -> void
     {
+        InOutRequest.Set_QueryFilterOverlay(
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+
         if (InForcePermissive)
         {
             InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
@@ -428,6 +495,9 @@ namespace ck
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+            ApplyMarkupEscapeStart(InHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
             return;

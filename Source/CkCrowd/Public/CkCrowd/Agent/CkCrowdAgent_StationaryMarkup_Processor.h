@@ -64,8 +64,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Unregisters the painted area on entity teardown — the fragment's strong ptr alone would
-    // keep the UObject alive but leave a stale registration in the nav octree.
+    // Unregisters and releases the subsystem-pinned painter on entity teardown, so no stale
+    // registration remains in the nav octree.
     class CKCROWD_API FProcessor_CrowdAgent_NavMarkup_EndPlay : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_NavMarkup_EndPlay,
             FCk_Handle_CrowdAgent,

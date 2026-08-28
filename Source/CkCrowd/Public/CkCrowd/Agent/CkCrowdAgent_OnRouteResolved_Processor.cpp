@@ -4,6 +4,7 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -13,11 +14,12 @@
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
+#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include "HAL/PlatformTime.h"
 
 #include "NavigationSystem.h"
-#include "NavigationData.h"
+#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,7 +36,7 @@ namespace ck_crowd_agent_on_route_resolved_processor
     // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
     // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
     // to its projection-only form.
-    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ANavigationData*
+    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ARecastNavMesh*
     {
         if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
             ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
@@ -46,8 +48,8 @@ namespace ck_crowd_agent_on_route_resolved_processor
             : static_cast<UNavigationSystemV1*>(nullptr);
 
         return ck::IsValid(NavSys)
-            ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
-            : static_cast<ANavigationData*>(nullptr);
+            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+            : static_cast<ARecastNavMesh*>(nullptr);
     }
 }
 
@@ -249,14 +251,23 @@ namespace ck
                     // route was spliced around, which installs an aim the navmesh clamp then eats.
                     const auto NavDataForGate =
                         ck_crowd_agent_on_route_resolved_processor::Get_NavDataForChordGate(InHandle);
+                    const auto ChordQueryFilter = ck::IsValid(NavDataForGate)
+                        ? FCk_Nav_Algorithm::ResolveQueryFilter(
+                            *NavDataForGate,
+                            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
+                                InCorridor.Get_NavQueryFilter()),
+                            InCorridor.Get_QueryFilterOverlay())
+                        : FSharedConstNavQueryFilter{};
 
                     auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
                     {
                         if (ck::Is_NOT_Valid(NavDataForGate))
                         { return true; }
+                        if (NOT ChordQueryFilter.IsValid())
+                        { return false; }
 
                         auto HitLocation = FVector::ZeroVector;
-                        return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, FSharedConstNavQueryFilter{});
+                        return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, ChordQueryFilter);
                     };
 
                     const auto SkippedWaypointCount =

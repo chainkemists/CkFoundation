@@ -10,6 +10,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Request_Nav_FindPath;
+struct FCk_Request_PathNetworkFollower_FindRoute;
+class UNavigationQueryFilter;
 
 namespace ck
 {
@@ -99,6 +101,19 @@ namespace ck
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FCk_Request_Nav_FindPath& InOutRequest,
 			bool InForcePermissive = false) -> void;
+
+        static auto
+        ApplyMarkupEscapeStart(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InGoal,
+            FCk_Request_PathNetworkFollower_FindRoute& InOutRequest) -> void;
+
+        static auto
+        GetPlanQueryFilterClass(
+            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow)
+            -> TSubclassOf<UNavigationQueryFilter>;
 
     private:
         static auto

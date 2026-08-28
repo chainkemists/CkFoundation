@@ -122,25 +122,33 @@ namespace ck
         const FFragment_Transform& InTransform,
         const FFragment_CrowdAgent_Params& InParams,
         const FFragment_CrowdAgent_NeighborCache& InCache,
+        const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache,
         const FFragment_CrowdAgent_LocalBoundary& InBoundary,
         const FFragment_CrowdAgent_DesiredVelocity& InDesired,
         FFragment_CrowdAgent_DiagRecorder& InRecorder) const -> void
     {
         const auto SelfAgent = UCk_Utils_CrowdAgent_UE::Cast(
             ck::MakeHandle(InHandle.Get_Entity(), _TransientEntity));
-        if (NOT ck_crowd_agent_avoidance_sample_algorithm::ShouldRunSampling(SelfAgent, InCache))
+        if (NOT ck_crowd_agent_avoidance_sample_algorithm::ShouldRunSampling(
+            SelfAgent, InCache, InAvoidanceVolumeCache))
         { return; }
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
-        if (NOT IsValid(Settings) || InCache.Get_Neighbors().Num() == 0)
+        if (NOT IsValid(Settings) ||
+            (InCache.Get_Neighbors().Num() == 0 && InAvoidanceVolumeCache.Get_Obstacles().Num() == 0))
         { return; }
 
         const auto AgentLocation = InTransform.Get_Transform().GetLocation();
-        const auto Walls = Settings->Get_AvoidanceWallSegments() == ECk_AvoidanceWallSegmentsMode::Enabled
+        auto Walls = Settings->Get_AvoidanceWallSegments() == ECk_AvoidanceWallSegmentsMode::Enabled
             ? ck_crowd_agent_avoidance_sample_algorithm::BuildWallSegments(AgentLocation, InBoundary)
             : ck_crowd_agent_avoidance_sample_algorithm::FWallSegments{};
 
-        const auto DesiredVelocity = InDesired.Get_Velocity();
+        auto DesiredVelocity = InDesired.Get_Velocity();
+        auto VolumeWallBuild = ck_crowd_agent_avoidance_sample_algorithm::BuildAvoidanceVolumeWalls(
+            AgentLocation, InParams.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
+        Walls.Append(VolumeWallBuild._Walls);
+        if (NOT VolumeWallBuild._EscapeDirection.IsNearlyZero())
+        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InParams.Get_MaxSpeed(); }
         const auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfAgent);
         const auto CurrentVelocity = ck::IsValid(SelfVelocity)
             ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocity)
