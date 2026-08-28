@@ -296,6 +296,33 @@ public:
         UPARAM(ref) FCk_Handle& InDestination,
         const FGuid& InSaveKey);
 
+    /**
+     * Suppresses a unique level-authored entity identity permanently. Cancel with the returned key if the
+     * operation that removes the source does not commit; otherwise destroy the source before the next save.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Begin Save Key Retirement")
+    static FGuid
+    Request_BeginSaveKeyRetirement(
+        const FCk_Handle& InSource);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Commit Save Key Retirement")
+    static bool
+    Request_CommitSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Cancel Save Key Retirement")
+    static bool
+    Request_CancelSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Has Save Key")

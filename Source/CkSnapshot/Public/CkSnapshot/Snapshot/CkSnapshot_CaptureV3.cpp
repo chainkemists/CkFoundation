@@ -714,8 +714,9 @@ namespace ck::snapshot
             const auto HasSuppressedSaveKey = InSuppressedSaveKeys != nullptr && HasSaveKey &&
                 InSuppressedSaveKeys->Contains(SaveKey);
             CK_ENSURE_IF_NOT(NOT HasSuppressedSaveKey,
-                TEXT("v3 capture refused: entity [{}] still carries SaveKey [{}] that an unfinished relocation suppresses. "
-                     "Complete or cancel the relocation before saving."),
+                TEXT("v3 capture refused: entity [{}] still carries SaveKey [{}] that an unfinished relocation or "
+                     "retirement suppresses. Complete the relocation, cancel the retirement, or destroy the retired "
+                     "source before saving."),
                 Handle, SaveKey)
             { }
             if (HasSuppressedSaveKey)

@@ -271,6 +271,86 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
+    Request_BeginSaveKeyRetirement(
+        const FCk_Handle& InSource)
+    -> FGuid
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey retirement requires a valid source entity"))
+    { return {}; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
+    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
+    { return {}; }
+
+    return Subsystem->Request_BeginSaveKeyRetirement(InSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CommitSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey retirement commit requires a valid source entity"))
+    { return false; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
+    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
+    { return false; }
+
+    return Subsystem->Request_CommitSaveKeyRetirement(InSaveKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CancelSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey retirement cancellation requires a valid source entity"))
+    { return false; }
+
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
+    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+    const auto Subsystem = ck::IsValid(GameInstance)
+        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+        : nullptr;
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
+    { return false; }
+
+    return Subsystem->Request_CancelSaveKeyRetirement(InSource, InSaveKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
     Get_HasSaveKey(
         const FCk_Handle& InHandle)
     -> bool

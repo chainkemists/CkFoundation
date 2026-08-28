@@ -204,10 +204,20 @@ public:
     auto TryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> bool;
     auto Consume_SaveKey(FGuid InKey) -> void;
 
-    // A player may carry a level-authored fixture across a save. Its unique key is suppressed until a completed
-    // placement transfers that identity to the replacement entity.
+    // A level-authored entity can either relocate its identity to a replacement or retire that identity
+    // permanently. Both paths suppress the authored root; retirement cancellation is the atomic rollback path.
     auto Request_BeginSaveKeyRelocation(const FCk_Handle& InSource) -> FGuid;
     auto Request_CompleteSaveKeyRelocation(FCk_Handle& InDestination, const FGuid& InSaveKey) -> bool;
+    auto
+    Request_BeginSaveKeyRetirement(
+        const FCk_Handle& InSource) -> FGuid;
+    auto
+    Request_CommitSaveKeyRetirement(
+        const FGuid& InSaveKey) -> bool;
+    auto
+    Request_CancelSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey) -> bool;
 
 public:
     // True from the start of a Request_Load until OnLoadComplete fires (spans real frames). Distinct from the
@@ -300,6 +310,8 @@ public:
     auto TestOnly_LastPumpCount() const -> int32 { return _LastPumpCount; }
     auto TestOnly_TryPublish_SaveKeyWithoutDiagnostics(FGuid InKey, FCk_Handle InHandle) -> bool
     { return DoTryPublish_SaveKey(InKey, InHandle, false); }
+    auto TestOnly_Get_IsSaveKeySuppressed(const FGuid& InKey) const -> bool
+    { return _SuppressedSaveKeys.Contains(InKey); }
 
     // The hydrate frame cap is the quarantine's bounded escape, and proving an escape fires means reaching it —
     // 600 frames of a load that is deliberately going nowhere. Shortening the fence does not weaken what the test
@@ -517,6 +529,7 @@ private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
     TSet<FGuid> _SuppressedSaveKeys;
+    TSet<FGuid> _PendingSaveKeyRetirements;
     TSet<FCk_Handle> _SuppressedSaveKeyDestroyQueued;
 
     bool _SnapshotInProgress = false;

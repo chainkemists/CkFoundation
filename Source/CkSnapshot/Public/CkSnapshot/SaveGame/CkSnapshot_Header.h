@@ -349,7 +349,8 @@ private:
     FSoftObjectPath _WorldAssetPath;
 
     // Additive tagged-header state (not part of the native v3 table wire format): unique level-authored identities
-    // held by an in-progress relocation. Existing v8 saves deserialize this as empty and remain compatible.
+    // suppressed by an in-progress relocation or a permanently retired level root. Existing v8 saves
+    // deserialize this as empty and remain compatible.
     UPROPERTY()
     TArray<FGuid> _SuppressedSaveKeys;
 
