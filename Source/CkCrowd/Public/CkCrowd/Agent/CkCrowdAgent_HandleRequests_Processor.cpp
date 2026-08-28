@@ -121,7 +121,7 @@ namespace ck
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> TSubclassOf<UNavigationQueryFilter>
     {
-        if (InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict)
+        if (InPathFollow.Get_PlanUsesStrictStandingCrowdFilter())
         {
             if (InParams.Get_NavQueryFilterStrict().IsValid())
             {
@@ -237,6 +237,7 @@ namespace ck
         // and the strict planning phase gets a fresh attempt.
         DoClearBlockedState(InHandle);
         InPathFollow._StrictPlanFailed = false;
+        InPathFollow._StrictStandingCrowdPlanFailed = false;
 
         RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
 
@@ -264,7 +265,7 @@ namespace ck
             InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
         auto Request = FCk_Request_Nav_FindPath{InGoal};
-        ApplyPlanPhase(InParams, InPathFollow, Request, InForcePermissivePlan);
+        ApplyPlanPhase(InHandle, InParams, InPathFollow, Request, InForcePermissivePlan);
         Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
         InPathFollow._PendingEscapePrefix.Reset();
         InPathFollow._ProtectedLeadingWaypointCount = 0;
@@ -289,6 +290,9 @@ namespace ck
                     UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
                     Escaped.GetValue(),
                     InParams,
+                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                        ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                        : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
                     EscapePrefix))
                 {
                     Request.Set_StartOverride(ECk_EnableDisable::Enable)
@@ -311,20 +315,43 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_HandleRequests::
+        Get_ShouldPlanStrict(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> bool
+    {
+        if (InPathFollow.Get_StrictPlanFailed())
+        { return false; }
+
+        const auto StationaryStrictWanted =
+            UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
+                ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
+            UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() ==
+                ECk_CrowdStationaryMarkupMode::Enabled;
+        return StationaryStrictWanted ||
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_HasAvoidIfPossibleVolumes(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
         ApplyPlanPhase(
+            HandleType InHandle,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FCk_Request_Nav_FindPath& InOutRequest,
             bool InForcePermissive)
         -> void
     {
-        InOutRequest.Set_QueryFilterOverlay(
-            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
-
         if (InForcePermissive)
         {
             InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
             InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            InOutRequest.Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                    ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
             return;
         }
 
@@ -334,21 +361,35 @@ namespace ck
         // the flag themselves. The stall ladder's re-paths carry no new evidence: retrying strict
         // there re-fails against the same plugged route and doubles every rung's Pending stop-start
         // cycle, which the body visibly tracks (measured as a facing-whip regression).
-        const auto StrictWanted =
-            (NOT InPathFollow.Get_StrictPlanFailed()) &&
+        const auto StationaryStrictWanted =
             UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
                 ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
             UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() ==
                 ECk_CrowdStationaryMarkupMode::Enabled;
+        const auto StrictWanted = Get_ShouldPlanStrict(InHandle, InPathFollow);
 
         if (NOT StrictWanted)
         {
             InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
             InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            InOutRequest.Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                    ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
             return;
         }
 
         InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Strict;
+        InPathFollow._PlanUsesStrictStandingCrowdFilter = StationaryStrictWanted;
+        InOutRequest.Set_QueryFilterOverlay(
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                ECk_CrowdAvoidanceVolume_QueryPhase::Strict));
+
+        if (NOT StationaryStrictWanted)
+        {
+            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
+            return;
+        }
 
         if (InParams.Get_NavQueryFilterStrict().IsValid())
         {
@@ -472,6 +513,8 @@ namespace ck
             InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
 
             InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::VoxelNav;
+            InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
 
             auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(InHandle);
             const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
@@ -494,9 +537,16 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            InPathFollow._PlanPhase = Get_ShouldPlanStrict(InHandle, InPathFollow)
+                ? ECk_CrowdAgent_PlanPhase::Strict
+                : ECk_CrowdAgent_PlanPhase::Permissive;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
             Request.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                        ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                        : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
             ApplyMarkupEscapeStart(InHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
@@ -632,6 +682,7 @@ namespace ck
 
         // A caller force-replan says the world changed — the strict phase gets a fresh attempt.
         InPathFollow._StrictPlanFailed = false;
+        InPathFollow._StrictStandingCrowdPlanFailed = false;
 
         // Query filters are a Recast policy. A Voxel route cannot apply one,
         // and replacing its in-flight job without a provider-owned revision

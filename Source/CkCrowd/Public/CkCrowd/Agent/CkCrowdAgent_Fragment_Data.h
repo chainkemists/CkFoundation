@@ -137,10 +137,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_PathProvider);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Which filter the in-flight CkNavigation query planned with. Strict treats stationary-crowd
-// markup as impassable — passers-by route around standing crowds or fail fast; a strict answer of
-// Failed (or Partial ending short of the goal) re-dispatches the episode once with Permissive (the
-// cost toll), which is what queue-joiners whose destination sits beside standing bodies land on.
+// Whether the in-flight or installed route used its strict policy pass. Strict can exclude authored
+// AvoidIfPossible volumes, stationary-crowd markup, or both. A genuine strict no-route verdict
+// re-dispatches once with Permissive, which admits finite-cost soft areas while preserving hard ones.
 UENUM(BlueprintType)
 enum class ECk_CrowdAgent_PlanPhase : uint8
 {
@@ -414,12 +413,21 @@ private:
     UPROPERTY()
     ECk_CrowdAgent_PlanPhase _PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
 
-    // A strict plan failed during this movement episode: at plan time, no crowd-free route to the
-    // goal existed. Feeds the goal-failed payload so gameplay can tell "blocked by standing bodies
-    // right now — may clear when they move" from "no route at all". Reset whenever a dispatch
-    // tries strict again.
+    // _PlanPhase can be Strict solely because AvoidIfPossible volumes are active. Persist whether
+    // this installed query also used the stationary-crowd exclusion filter so chord gates do not
+    // re-derive a different base filter after settings change.
+    UPROPERTY()
+    bool _PlanUsesStrictStandingCrowdFilter = false;
+
+    // A strict plan failed during this movement episode. This suppresses repeated strict retries
+    // for both standing-crowd and AvoidIfPossible-volume policy.
     UPROPERTY()
     bool _StrictPlanFailed = false;
+
+    // The public goal-failed payload specifically promises that standing bodies blocked the strict
+    // route. Keep that meaning separate now that a volume-only strict phase can also fall back.
+    UPROPERTY()
+    bool _StrictStandingCrowdPlanFailed = false;
 
 public:
     CK_PROPERTY_GET(_WaypointIndex);
@@ -435,7 +443,9 @@ public:
     CK_PROPERTY_GET(_ActiveProvider);
     CK_PROPERTY_GET(_PathSerial);
     CK_PROPERTY_GET(_PlanPhase);
+    CK_PROPERTY_GET(_PlanUsesStrictStandingCrowdFilter);
     CK_PROPERTY_GET(_StrictPlanFailed);
+    CK_PROPERTY_GET(_StrictStandingCrowdPlanFailed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

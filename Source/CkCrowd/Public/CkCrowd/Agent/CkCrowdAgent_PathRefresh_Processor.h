@@ -9,6 +9,7 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
@@ -104,6 +105,7 @@ namespace ck
             const FVector& InSelfLocation,
             const FVector& InEscapedLocation,
             const FFragment_CrowdAgent_Params& InParams,
+            ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             TArray<FVector>& OutWaypoints) -> bool;
 
         // PathNetwork corridors are preferred geometry, not hard movement boundaries. When a
@@ -121,6 +123,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             float InArrivalRadius,
             const TArray<FVector>& InCorridorWaypoints,
+            ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             TArray<FVector>& OutWaypoints) -> bool;
 
     private:
