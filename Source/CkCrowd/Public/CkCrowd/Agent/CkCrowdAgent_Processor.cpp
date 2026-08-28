@@ -65,10 +65,13 @@ namespace ck
         const auto CylinderParams = FCk_Fragment_ShapeCylinder_ParamsData{CylinderDimensions};
         UCk_Utils_ShapeCylinder_UE::Add(ProbeChildEntity, CylinderParams);
 
-        // Name AND filter are TAG_Crowd_Agent so any two crowd probes mutually overlap; Kinematic
-        // so Jolt lets the probe move every frame without the static-not-moved ensure firing.
+        // Keep the probe NAME specific to agents while its filter also admits the local-steering
+        // avoidance volumes. This prevents unrelated Crowd.Agent probe queries from receiving
+        // volume entities while preserving mutual crowd-agent overlaps.
         auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_Agent};
-        ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
+        auto ProbeFilter = FGameplayTagContainer{TAG_Crowd_Agent};
+        ProbeFilter.AddTag(TAG_Crowd_AvoidanceVolume);
+        ProbeParams.Set_Filter(ProbeFilter);
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
         ProbeParams.Set_MotionType(ECk_MotionType::Kinematic);
 

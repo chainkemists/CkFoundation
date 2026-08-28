@@ -50,6 +50,7 @@ auto
     InOwner.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
     InOwner.Add<ck::FFragment_CrowdAgent_FaceAngle>();
     InOwner.Add<ck::FFragment_CrowdAgent_NeighborCache>();
+    InOwner.Add<ck::FFragment_CrowdAgent_AvoidanceVolumeCache>();
     InOwner.Add<ck::FFragment_CrowdAgent_LocalBoundary>();
     InOwner.Add<ck::FFragment_CrowdAgent_SeparationForce>();
     InOwner.Add<ck::FFragment_CrowdAgent_ProbeRef>();

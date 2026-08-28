@@ -1,6 +1,8 @@
 #include "CkCrowdAgent_PathRefresh_Processor.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Fragment.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
@@ -11,6 +13,7 @@
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
+#include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
@@ -49,6 +52,8 @@ namespace ck
         -> void
     {
         _SettledDiscs.Reset();
+        _SettledVolumes.Reset();
+        _SettledRetirements.Reset();
         _MaxConfirmationSerial = 0;
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
@@ -90,8 +95,7 @@ namespace ck
                             static_cast<int32>(NavMesh->GetPolyAreaID(PolyRef)) != CrowdAreaID)
                         { return; }
 
-                        InMarkup._ConfirmationSerial =
-                            ++ck_crowd_agent_path_refresh::GConfirmationSerial;
+                        InMarkup._ConfirmationSerial = IssueConfirmationSerial();
                         InMarkup._ConfirmedOnMesh = true;
                     }
 
@@ -105,6 +109,74 @@ namespace ck
                             _MaxConfirmationSerial,
                             InMarkup.Get_ConfirmationSerial());
                 });
+            }
+        }
+
+        if (IsValid(Settings) &&
+            Settings->Get_PathRefreshMode() == ECk_CrowdPathRefreshMode::Enabled)
+        {
+            this->_TransientEntity.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
+                [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
+            {
+                if (NOT InRuntime.Get_Markup().IsValid() ||
+                    NOT InRuntime.Get_ConfirmedOnMesh() ||
+                    NOT InRuntime.Get_AuthoredObb().IsFiniteAndPositive() ||
+                    InRuntime.Get_ConfirmationSerial() == 0)
+                { return; }
+
+                _SettledVolumes.Add(FSettledVolume{
+                    InEntity,
+                    InRuntime.Get_AuthoredObb(),
+                    InRuntime.Get_PaintedObb(),
+                    InRuntime.Get_ConfirmationSerial()});
+                _MaxConfirmationSerial = FMath::Max(
+                    _MaxConfirmationSerial,
+                    InRuntime.Get_ConfirmationSerial());
+            });
+        }
+
+        auto Transient = this->_TransientEntity;
+        if (ck::IsValid(Transient) &&
+            Transient.Has<FFragment_CrowdAvoidanceVolume_Retirements>())
+        {
+            auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Transient);
+            auto* NavSystem = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
+            auto* RevisionSubsystem = IsValid(World)
+                ? World->GetSubsystem<UCk_NavigationRevisionSubsystem_UE>()
+                : nullptr;
+            const auto CanObserveRevision = IsValid(RevisionSubsystem) &&
+                RevisionSubsystem->TryEnsureBound();
+            if (CanObserveRevision && NavSystem != nullptr &&
+                NOT NavSystem->IsNavigationBuildInProgress())
+            {
+                const auto NavigationRevision = RevisionSubsystem->Get_Revision();
+                auto& Records = Transient.Get<FFragment_CrowdAvoidanceVolume_Retirements>()._Records;
+                for (auto RecordIndex = Records.Num() - 1; RecordIndex >= 0; --RecordIndex)
+                {
+                    const auto& Record = Records[RecordIndex];
+                    const auto RecordIsValid = Record._PhysicalObb.IsFiniteAndPositive() &&
+                        Record._PaintedObb.IsFiniteAndPositive();
+                    CK_ENSURE_IF_NOT(RecordIsValid,
+                        TEXT("CrowdAvoidanceVolume retirement record contains invalid OBB geometry"))
+                    { }
+                    if (NOT RecordIsValid)
+                    {
+                        Records.RemoveAtSwap(RecordIndex);
+                        continue;
+                    }
+
+                    if (NavigationRevision == Record._NavigationRevisionAtUnregister)
+                    { continue; }
+
+                    const auto ConfirmationSerial = IssueConfirmationSerial();
+                    _SettledRetirements.Add(FSettledRetirement{
+                        Record._PhysicalObb,
+                        Record._PaintedObb,
+                        ConfirmationSerial});
+                    _MaxConfirmationSerial = FMath::Max(
+                        _MaxConfirmationSerial, ConfirmationSerial);
+                    Records.RemoveAtSwap(RecordIndex);
+                }
             }
         }
 
@@ -141,38 +213,47 @@ namespace ck
         { return {}; }
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
-        if (NOT IsValid(Settings) ||
-            Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled ||
-            Settings->Get_StationaryMarkupMode() != ECk_CrowdStationaryMarkupMode::Enabled)
-        {
-            ck::crowd::Verbose(TEXT("EscapedQueryStart: disabled by settings (self at {})"), InSelfLocation);
-            return {};
-        }
+        const auto UseStationaryMarkup = IsValid(Settings) &&
+            Settings->Get_PathRefreshMode() == ECk_CrowdPathRefreshMode::Enabled &&
+            Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled;
 
         auto Centers = TArray<FVector, TInlineAllocator<32>>{};
         auto Radii = TArray<float, TInlineAllocator<32>>{};
-        InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
-            [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
+        if (UseStationaryMarkup)
         {
-            if (InEntity == InSelfEntity)
-            { return; }
-            // PAINTED is enough here, deliberately NOT ConfirmedOnMesh: the escape is pure
-            // geometry and is valid the moment the disc exists.
-            const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
-            const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
-            if (NOT InMarkup.Get_Markup().IsValid() ||
-                MarkupLocation.ContainsNaN() ||
-                NOT FMath::IsFinite(MarkupRadius) ||
-                MarkupRadius <= 0.0f)
-            { return; }
+            InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
+                [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
+            {
+                if (InEntity == InSelfEntity)
+                { return; }
+                // PAINTED is enough here, deliberately NOT ConfirmedOnMesh: the escape is pure
+                // geometry and is valid the moment the disc exists.
+                const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
+                const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
+                if (NOT InMarkup.Get_Markup().IsValid() ||
+                    MarkupLocation.ContainsNaN() ||
+                    NOT FMath::IsFinite(MarkupRadius) ||
+                    MarkupRadius <= 0.0f)
+                { return; }
 
-            Centers.Add(MarkupLocation);
-            Radii.Add(MarkupRadius);
+                Centers.Add(MarkupLocation);
+                Radii.Add(MarkupRadius);
+            });
+        }
+
+        auto Volumes = TArray<crowd_avoidance_volume::FCk_Obb, TInlineAllocator<16>>{};
+        InAnyWorldHandle.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
+        {
+            const auto EffectiveObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                InRuntime.Get_AuthoredObb(), InRuntime.Get_PaintedObb(), InAgentRadius);
+            if (InRuntime.Get_Markup().IsValid() && EffectiveObb.IsFiniteAndPositive())
+            { Volumes.Add(EffectiveObb); }
         });
 
-        if (Centers.IsEmpty())
+        if (Centers.IsEmpty() && Volumes.IsEmpty())
         {
-            ck::crowd::Verbose(TEXT("EscapedQueryStart: no painted discs in view (self at {})"), InSelfLocation);
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: no painted markup in view (self at {})"), InSelfLocation);
             return {};
         }
 
@@ -183,13 +264,18 @@ namespace ck
                 if (FVector::Dist2D(InPoint, Centers[Idx]) <= Radii[Idx])
                 { return true; }
             }
+            for (const auto& Volume : Volumes)
+            {
+                if (crowd_avoidance_volume::ContainsPoint(
+                    Volume, InPoint))
+                { return true; }
+            }
             return false;
         };
 
         if (NOT IsInsideAny(InSelfLocation))
         {
-            ck::crowd::Verbose(TEXT("EscapedQueryStart: self at {} not inside any of {} discs (first disc centre {}, r={})"),
-                InSelfLocation, Centers.Num(), Centers[0], Radii[0]);
+            ck::crowd::Verbose(TEXT("EscapedQueryStart: self at {} not inside painted markup"), InSelfLocation);
             return {};
         }
         if (IsInsideAny(InGoal))
@@ -198,8 +284,8 @@ namespace ck
             return {};
         }
 
-        // Ray-march, NOT a pairwise push: along a fixed ray each convex disc is exited at most
-        // once, so the march provably terminates within one step per disc.
+        // Ray-march, NOT a pairwise push: along a fixed ray each convex region is exited at most
+        // once, so the march provably terminates within one step per region.
         constexpr auto MarginUu = 10.0f;
 
         auto CandidateDirections = TArray<FVector2D, TInlineAllocator<24>>{};
@@ -237,6 +323,13 @@ namespace ck
         AddCandidateDirection(-GoalDirection);
         AddCandidateDirection(FVector2D{GoalDirection.Y, -GoalDirection.X});
         AddCandidateDirection(FVector2D{-GoalDirection.Y, GoalDirection.X});
+        for (const auto& Volume : Volumes)
+        {
+            const auto Escape = crowd_avoidance_volume::FindNearestFaceEscapePoint(
+                Volume, InSelfLocation, MarginUu);
+            if (Escape.IsSet())
+            { AddCandidateDirection(FVector2D{Escape.GetValue() - InSelfLocation}); }
+        }
 
         const auto IsInsideExpandedUnion = [&](const FVector2D& InPoint) -> bool
         {
@@ -246,6 +339,13 @@ namespace ck
                 if ((InPoint - FVector2D{Centers[Idx]}).SizeSquared() < Required * Required)
                 { return true; }
             }
+            const auto WorldPoint = FVector{InPoint.X, InPoint.Y, InSelfLocation.Z};
+            for (const auto& Volume : Volumes)
+            {
+                if (crowd_avoidance_volume::ContainsPoint(
+                    Volume.ExpandedXY(MarginUu), WorldPoint))
+                { return true; }
+            }
             return false;
         };
 
@@ -253,15 +353,15 @@ namespace ck
         auto BestDistanceSq = TNumericLimits<double>::Max();
         for (const auto& RayDir : CandidateDirections)
         {
-            auto Point = Self2D;
-            for (auto Step = 0; Step <= Centers.Num(); ++Step)
+            auto Point = FVector{InSelfLocation};
+            for (auto Step = 0; Step <= Centers.Num() + Volumes.Num(); ++Step)
             {
                 auto Moved = false;
                 for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
                 {
                     const auto Required = Radii[Idx] + InAgentRadius + MarginUu;
                     const auto Centre2D = FVector2D{Centers[Idx]};
-                    const auto ToCentre = Centre2D - Point;
+                    const auto ToCentre = Centre2D - FVector2D{Point};
                     if (ToCentre.SizeSquared() >= Required * Required)
                     { continue; }
 
@@ -273,20 +373,34 @@ namespace ck
                         (Required * Required - ToCentre.SizeSquared());
                     const auto ExitT =
                         ProjectionOntoRay + FMath::Sqrt(FMath::Max(0.0f, Discriminant));
-                    Point += RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
+                    const auto MovedPoint = FVector2D{Point} + RayDir * (ExitT + UE_KINDA_SMALL_NUMBER);
+                    Point.X = MovedPoint.X;
+                    Point.Y = MovedPoint.Y;
+                    Moved = true;
+                }
+                for (const auto& Volume : Volumes)
+                {
+                    if (NOT crowd_avoidance_volume::ContainsPoint(Volume, Point))
+                    { continue; }
+
+                    const auto Exit = crowd_avoidance_volume::FindRayExitPoint(
+                        Volume, Point, RayDir, MarginUu + UE_KINDA_SMALL_NUMBER);
+                    if (NOT Exit.IsSet())
+                    { continue; }
+                    Point = Exit.GetValue();
                     Moved = true;
                 }
                 if (NOT Moved)
                 { break; }
             }
 
-            if (IsInsideExpandedUnion(Point))
+            if (IsInsideExpandedUnion(FVector2D{Point}))
             { continue; }
 
-            const auto DistanceSq = (Point - Self2D).SizeSquared();
+            const auto DistanceSq = (FVector2D{Point} - Self2D).SizeSquared();
             if (DistanceSq < BestDistanceSq)
             {
-                BestPoint = Point;
+                BestPoint = FVector2D{Point};
                 BestDistanceSq = DistanceSq;
             }
         }
@@ -308,7 +422,7 @@ namespace ck
             InSelfLocation,
             Escape,
             CandidateDirections.Num(),
-            Centers.Num());
+            Centers.Num() + Volumes.Num());
         return Escape;
     }
 
@@ -373,6 +487,7 @@ namespace ck
         auto ProjectedEscapeIsClear = NOT ProjectedEscape.ContainsNaN();
         auto PaintedCenters = TArray<FVector2D, TInlineAllocator<32>>{};
         auto PaintedExpandedRadii = TArray<float, TInlineAllocator<32>>{};
+        auto PaintedVolumes = TArray<crowd_avoidance_volume::FCk_Obb, TInlineAllocator<16>>{};
         InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
             [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
         {
@@ -410,6 +525,27 @@ namespace ck
                 ProjectedEscapeIsClear = false;
             }
         });
+        InAnyWorldHandle.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
+        {
+            if (NOT ProjectedEscapeIsClear || NOT InRuntime.Get_Markup().IsValid())
+            { return; }
+
+            constexpr auto EndpointMarginUu = 1.0f;
+            const auto Effective = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                InRuntime.Get_AuthoredObb(),
+                InRuntime.Get_PaintedObb(),
+                InParams.Get_Radius());
+            const auto Expanded = Effective.ExpandedXY(EndpointMarginUu);
+            if (NOT Expanded.IsFiniteAndPositive())
+            {
+                ProjectedEscapeIsClear = false;
+                return;
+            }
+            PaintedVolumes.Add(Expanded);
+            if (crowd_avoidance_volume::ContainsPoint(Expanded, ProjectedEscape))
+            { ProjectedEscapeIsClear = false; }
+        });
         if (NOT ProjectedEscapeIsClear)
         {
             ck::crowd::Verbose(
@@ -426,6 +562,7 @@ namespace ck
         // can cross a disc while both of its corners remain clear.
         auto HasExitedPaintedUnion = false;
         auto SegmentStart = FVector2D{InSelfLocation};
+        auto WorldSegmentStart = InSelfLocation;
         for (const auto& Waypoint : EscapeResult.Get_Waypoints())
         {
             if (Waypoint.ContainsNaN())
@@ -458,6 +595,13 @@ namespace ck
                 const auto ExitT = FMath::Min(1.0f, (-B + Root) / Denominator);
                 if (EnterT <= ExitT)
                 { InsideIntervals.Emplace(EnterT, ExitT); }
+            }
+            for (const auto& Volume : PaintedVolumes)
+            {
+                const auto Interval = crowd_avoidance_volume::GetSegmentInsideInterval(
+                    Volume, WorldSegmentStart, Waypoint);
+                if (Interval.IsSet())
+                { InsideIntervals.Add(Interval.GetValue()); }
             }
 
             InsideIntervals.Sort(
@@ -498,6 +642,7 @@ namespace ck
             if (MergedIntervals.IsEmpty())
             { HasExitedPaintedUnion = true; }
             SegmentStart = SegmentEnd;
+            WorldSegmentStart = Waypoint;
         }
         if (NOT HasExitedPaintedUnion)
         { return false; }
@@ -509,11 +654,19 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_CrowdAgent_PathRefresh::
+    FProcessor_CrowdAgent_PathRefresh::
         Get_CurrentConfirmationSerial()
         -> uint64
     {
         return ck_crowd_agent_path_refresh::GConfirmationSerial;
+    }
+
+    auto
+        FProcessor_CrowdAgent_PathRefresh::
+        IssueConfirmationSerial()
+        -> uint64
+    {
+        return ++ck_crowd_agent_path_refresh::GConfirmationSerial;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -536,13 +689,13 @@ namespace ck
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
         if (NOT IsValid(Settings) ||
-            Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled ||
-            Settings->Get_StationaryMarkupMode() != ECk_CrowdStationaryMarkupMode::Enabled)
+            Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled)
         { return false; }
 
         auto Discs = TArray<FSettledDisc, TInlineAllocator<32>>{};
         const auto GoalExemptionPad = InArrivalRadius + InParams.Get_Radius();
-        InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
+        if (Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled)
+        { InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
             [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
         {
             if (InEntity == InSelfEntity ||
@@ -561,9 +714,23 @@ namespace ck
                 InMarkup.Get_MarkupLocation(),
                 InMarkup.Get_MarkupRadiusUu(),
                 InMarkup.Get_ConfirmationSerial()});
+        }); }
+
+        auto Volumes = TArray<crowd_avoidance_volume::FCk_Obb, TInlineAllocator<16>>{};
+        InAnyWorldHandle.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
+        {
+            if (NOT InRuntime.Get_Markup().IsValid() || NOT InRuntime.Get_ConfirmedOnMesh())
+            { return; }
+            const auto Expanded = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                InRuntime.Get_AuthoredObb(),
+                InRuntime.Get_PaintedObb(),
+                InParams.Get_Radius());
+            if (Expanded.IsFiniteAndPositive())
+            { Volumes.Add(Expanded); }
         });
 
-        if (Discs.IsEmpty())
+        if (Discs.IsEmpty() && Volumes.IsEmpty())
         { return false; }
 
         const auto GetPoint = [&](int32 InPointIndex) -> const FVector&
@@ -577,9 +744,12 @@ namespace ck
         auto LastHitSegment = int32{INDEX_NONE};
         for (auto SegmentIndex = 0; SegmentIndex < InCorridorWaypoints.Num(); ++SegmentIndex)
         {
-            const auto SegmentStart = FVector2D{GetPoint(SegmentIndex)};
-            const auto SegmentEnd = FVector2D{GetPoint(SegmentIndex + 1)};
+            const auto& WorldSegmentStart = GetPoint(SegmentIndex);
+            const auto& WorldSegmentEnd = GetPoint(SegmentIndex + 1);
+            const auto SegmentStart = FVector2D{WorldSegmentStart};
+            const auto SegmentEnd = FVector2D{WorldSegmentEnd};
 
+            auto SegmentHit = false;
             for (const auto& Disc : Discs)
             {
                 const auto DiscCenter = FVector2D{Disc._Center};
@@ -591,7 +761,21 @@ namespace ck
                 if (FirstHitSegment == INDEX_NONE)
                 { FirstHitSegment = SegmentIndex; }
                 LastHitSegment = SegmentIndex;
+                SegmentHit = true;
                 break;
+            }
+            if (NOT SegmentHit)
+            {
+                for (const auto& Volume : Volumes)
+                {
+                    if (NOT crowd_avoidance_volume::IntersectsSegment(
+                        Volume, WorldSegmentStart, WorldSegmentEnd))
+                    { continue; }
+                    if (FirstHitSegment == INDEX_NONE)
+                    { FirstHitSegment = SegmentIndex; }
+                    LastHitSegment = SegmentIndex;
+                    break;
+                }
             }
         }
 
@@ -630,7 +814,9 @@ namespace ck
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             InParams.Get_Radius(),
             DetourResult,
-            FilterClass);
+            FilterClass,
+            0.0f,
+            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
         if (NOT FoundDetour || DetourResult.Get_Waypoints().IsEmpty())
         {
             ck::crowd::Verbose(
@@ -677,8 +863,9 @@ namespace ck
         // Confirmation proves the cost reached Recast, but retain a total failure path: a custom
         // filter may deliberately make the crowd area cheap enough to cross. In that case the
         // corridor remains valid preferred geometry, so do not claim or install a fake detour.
-        auto CandidateCrossesDisc = false;
+        auto CandidateCrossesMarkup = false;
         auto SegmentStart = FVector2D{InStartLocation};
+        auto WorldSegmentStart = InStartLocation;
         for (const auto& Waypoint : Candidate)
         {
             const auto SegmentEnd = FVector2D{Waypoint};
@@ -689,16 +876,29 @@ namespace ck
                     FMath::ClosestPointOnSegment2D(DiscCenter, SegmentStart, SegmentEnd);
                 if (FVector2D::Distance(Closest, DiscCenter) <= Disc._Radius)
                 {
-                    CandidateCrossesDisc = true;
+                    CandidateCrossesMarkup = true;
                     break;
                 }
             }
-            if (CandidateCrossesDisc)
+            if (NOT CandidateCrossesMarkup)
+            {
+                for (const auto& Volume : Volumes)
+                {
+                    if (crowd_avoidance_volume::IntersectsSegment(
+                        Volume, WorldSegmentStart, Waypoint))
+                    {
+                        CandidateCrossesMarkup = true;
+                        break;
+                    }
+                }
+            }
+            if (CandidateCrossesMarkup)
             { break; }
             SegmentStart = SegmentEnd;
+            WorldSegmentStart = Waypoint;
         }
 
-        if (CandidateCrossesDisc)
+        if (CandidateCrossesMarkup)
         {
             ck::crowd::Verbose(
                 TEXT("Stationary-markup corridor splice [{} -> {}] still crosses confirmed markup"),
@@ -750,7 +950,7 @@ namespace ck
         const auto SelfEntity = InHandle.Get_Entity();
         const auto FirstIdx = FMath::Clamp(InPathFollow.Get_WaypointIndex(), 0, Waypoints.Num() - 1);
 
-        auto CrossesFreshDisc = false;
+        auto CrossesFreshMarkup = false;
         for (const auto& Disc : _SettledDiscs)
         {
             // Only a disc confirmed AFTER this path can invalidate it — the planner already saw
@@ -774,21 +974,71 @@ namespace ck
                 const auto Closest = FMath::ClosestPointOnSegment2D(DiscCenter2D, SegStart, SegEnd);
                 if (FVector2D::Distance(Closest, DiscCenter2D) <= Disc._Radius)
                 {
-                    CrossesFreshDisc = true;
+                    CrossesFreshMarkup = true;
                     break;
                 }
                 SegStart = SegEnd;
             }
 
-            if (CrossesFreshDisc)
+            if (CrossesFreshMarkup)
             { break; }
+        }
+
+        if (NOT CrossesFreshMarkup)
+        {
+            for (const auto& Volume : _SettledVolumes)
+            {
+                if (Volume._ConfirmationSerial <= PathSerial)
+                { continue; }
+
+                const auto ExpandedObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                    Volume._PhysicalObb, Volume._PaintedObb, InParams.Get_Radius());
+                if (NOT ExpandedObb.IsFiniteAndPositive())
+                { continue; }
+
+                auto SegmentStart = SelfLoc;
+                for (auto Idx = FirstIdx; Idx < Waypoints.Num(); ++Idx)
+                {
+                    if (crowd_avoidance_volume::IntersectsSegment(
+                        ExpandedObb, SegmentStart, Waypoints[Idx]))
+                    {
+                        CrossesFreshMarkup = true;
+                        break;
+                    }
+                    SegmentStart = Waypoints[Idx];
+                }
+
+                if (CrossesFreshMarkup)
+                { break; }
+            }
+        }
+
+        if (NOT CrossesFreshMarkup)
+        {
+            for (const auto& Retirement : _SettledRetirements)
+            {
+                if (Retirement._ConfirmationSerial <= PathSerial)
+                { continue; }
+
+                const auto EffectiveObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                    Retirement._PhysicalObb,
+                    Retirement._PaintedObb,
+                    InParams.Get_Radius());
+                if (EffectiveObb.IsFiniteAndPositive() &&
+                    crowd_avoidance_volume::IntersectsSegment(
+                        EffectiveObb, SelfLoc, Goal))
+                {
+                    CrossesFreshMarkup = true;
+                    break;
+                }
+            }
         }
 
         // Path and discs are both static, so a clean scan against the current set stays clean —
         // fast-forward the serial either way; a re-path's install re-stamps it anyway.
         InPathFollow._PathSerial = _MaxConfirmationSerial;
 
-        if (NOT CrossesFreshDisc)
+        if (NOT CrossesFreshMarkup)
         { return; }
 
         auto NonConstHandle = InHandle;
@@ -811,35 +1061,22 @@ namespace ck
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
             Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+            FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
+                NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {
-            InPathFollow._ProtectedLeadingWaypointCount = 0;
-            // Park the slot at Pending so OnPathResolved can't consume the stale Ready result —
-            // which is the exact path that crosses the fresh markup, defeating this re-path.
-            FCk_Nav_Algorithm::MarkPathPending(
-                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
-
             // A newly confirmed disc IS new markup evidence — the strict phase gets a fresh attempt.
             InPathFollow._StrictPlanFailed = false;
-
-            auto Request = FCk_Request_Nav_FindPath{Goal};
-            FProcessor_CrowdAgent_HandleRequests::ApplyPlanPhase(InParams, InPathFollow, Request);
-            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
-
-            const auto Escaped = Get_EscapedQueryStart(NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());
-            if (Escaped.IsSet())
-            {
-                Request.Set_StartOverride(ECk_EnableDisable::Enable)
-                       .Set_StartOverrideLocation(*Escaped);
-            }
-
-            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request, {});
+            FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                NonConstHandle, InParams, InPathFollow, Goal);
         }
 
-        ck::crowd::Verbose(TEXT("CrowdAgent [{}] remaining path crosses fresh stationary markup — re-pathing to {}"),
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] remaining path crosses fresh nav-area markup — re-pathing to {}"),
             InHandle, Goal);
     }
 }

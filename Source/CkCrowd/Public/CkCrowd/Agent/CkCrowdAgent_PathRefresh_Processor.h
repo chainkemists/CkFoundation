@@ -8,6 +8,7 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Processor.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
@@ -52,7 +53,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
-        using RunAfter = TDepList<FProcessor_CrowdAgent_StationaryMarkup>;
+        using RunAfter = TDepList<
+            FProcessor_CrowdAgent_StationaryMarkup,
+            FProcessor_CrowdAvoidanceVolume_Monitor>;
 
     public:
         using TProcessor::TProcessor;
@@ -64,6 +67,10 @@ namespace ck
         // Path installers stamp this value; any later confirmation remains strictly newer.
         static auto
         Get_CurrentConfirmationSerial() -> uint64;
+
+        // Shared by every nav-area producer so confirmation serials remain globally monotonic.
+        static auto
+        IssueConfirmationSerial() -> uint64;
 
         auto ForEachEntity(
             TimeType InDeltaT,
@@ -125,8 +132,25 @@ namespace ck
             uint64 _ConfirmationSerial = 0;
         };
 
+        struct FSettledVolume
+        {
+            FCk_Entity _Owner;
+            crowd_avoidance_volume::FCk_Obb _PhysicalObb;
+            crowd_avoidance_volume::FCk_Obb _PaintedObb;
+            uint64 _ConfirmationSerial = 0;
+        };
+
+        struct FSettledRetirement
+        {
+            crowd_avoidance_volume::FCk_Obb _PhysicalObb;
+            crowd_avoidance_volume::FCk_Obb _PaintedObb;
+            uint64 _ConfirmationSerial = 0;
+        };
+
         // Rebuilt in DoTick; read by the per-entity pass the same tick.
         TArray<FSettledDisc> _SettledDiscs;
+        TArray<FSettledVolume> _SettledVolumes;
+        TArray<FSettledRetirement> _SettledRetirements;
         uint64 _MaxConfirmationSerial = 0;
     };
 }
