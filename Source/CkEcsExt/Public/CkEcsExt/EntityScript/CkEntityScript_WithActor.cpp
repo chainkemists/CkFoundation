@@ -57,7 +57,7 @@ auto
     if (const auto PlacedIdentity = ck::save_key::Get_LevelPlacedIdentity(_OwningActor.Get());
         NOT PlacedIdentity.IsEmpty())
     {
-        ck::save_key::Assign(InHandle, PlacedIdentity);
+        ck::save_key::AssignLevelPlaced(InHandle, PlacedIdentity);
     }
     else if (Get_IsSnapshotRespawnable())
     {

@@ -96,59 +96,53 @@ bool FCkTest_Snapshot_SaveKeyPublicationPolicy::RunTest(const FString&)
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FCkTest_Snapshot_SaveKeyRetirement,
-    "Ck.CkSnapshot.SaveKeyRetirement",
+    FCkTest_Snapshot_PersistentEntityMutationTicket,
+    "Ck.CkSnapshot.SaveKey.PersistentEntityMutationTicket",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FCkTest_Snapshot_SaveKeyRetirement::RunTest(const FString&)
+bool FCkTest_Snapshot_PersistentEntityMutationTicket::RunTest(const FString&)
 {
-    auto EnttRegistry = ck::registry_table::EnttRegistryType{};
-    const auto RegistryHandle = ck::registry_table::Allocate(&EnttRegistry);
-    auto Registry = FCk_Registry{RegistryHandle};
-    ON_SCOPE_EXIT { ck::registry_table::Free(RegistryHandle); };
+    const auto* ReferenceHandleProperty = FindFProperty<FProperty>(
+        FCk_PersistentEntityAuthorityReference::StaticStruct(), TEXT("_NetworkHandle"));
+    const auto* ReferenceSaveKeyProperty = FindFProperty<FProperty>(
+        FCk_PersistentEntityAuthorityReference::StaticStruct(), TEXT("_AuthoredSaveKey"));
+    const auto* OperationIdProperty = FindFProperty<FProperty>(
+        FCk_PersistentEntityMutationTicket::StaticStruct(), TEXT("_OperationId"));
+    const auto* BeginResultProperty = FindFProperty<FProperty>(
+        FCk_PersistentEntityMutationTicket::StaticStruct(), TEXT("_BeginResult"));
 
-    auto LevelRoot = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-    ck::save_key::Assign(LevelRoot, TEXT("Spec.SaveKey.Retirement"));
-    LevelRoot.Get<FFragment_SaveKey>().MarkLevelPlacedRoot();
+    TestNotNull(TEXT("opaque authority reference handle remains reflected"), ReferenceHandleProperty);
+    TestNotNull(TEXT("opaque authority reference SaveKey remains reflected"), ReferenceSaveKeyProperty);
+    TestNotNull(TEXT("opaque mutation operation id remains reflected"), OperationIdProperty);
+    TestNotNull(TEXT("mutation begin result remains reflected"), BeginResultProperty);
+    if (ReferenceHandleProperty != nullptr)
+    {
+        TestFalse(TEXT("authority reference handle is not Blueprint visible"),
+            ReferenceHandleProperty->HasAnyPropertyFlags(CPF_BlueprintVisible));
+    }
+    if (ReferenceSaveKeyProperty != nullptr)
+    {
+        TestFalse(TEXT("authority reference SaveKey is not Blueprint visible"),
+            ReferenceSaveKeyProperty->HasAnyPropertyFlags(CPF_BlueprintVisible));
+    }
+    if (OperationIdProperty != nullptr)
+    {
+        TestTrue(TEXT("mutation operation id is transient"),
+            OperationIdProperty->HasAnyPropertyFlags(CPF_Transient));
+        TestFalse(TEXT("mutation operation id is not Blueprint visible"),
+            OperationIdProperty->HasAnyPropertyFlags(CPF_BlueprintVisible));
+    }
+    if (BeginResultProperty != nullptr)
+    {
+        TestTrue(TEXT("mutation begin result is transient"),
+            BeginResultProperty->HasAnyPropertyFlags(CPF_Transient));
+        TestTrue(TEXT("mutation begin result is Blueprint visible"),
+            BeginResultProperty->HasAnyPropertyFlags(CPF_BlueprintVisible));
+    }
 
-    auto GameInstance = NewObject<UGameInstance>();
-    TestNotNull(TEXT("snapshot subsystem game-instance outer is valid"), GameInstance);
-    if (GameInstance == nullptr)
-    { return false; }
-
-    auto Subsystem = NewObject<UCk_Snapshot_Subsystem_UE>(GameInstance);
-    TestNotNull(TEXT("snapshot subsystem test instance is valid"), Subsystem);
-    if (Subsystem == nullptr)
-    { return false; }
-
-    AddExpectedError(
-        TEXT("SaveKey retirement cancellation refused: supplied SaveKey is invalid"),
-        EAutomationExpectedErrorFlags::Contains,
-        0);
-    TestFalse(TEXT("an invalid retirement key is rejected"),
-        Subsystem->Request_CancelSaveKeyRetirement(LevelRoot, FGuid{}));
-
-    const auto ExpectedKey = LevelRoot.Get<FFragment_SaveKey>().Get_Key();
-    const auto FirstRetirement = Subsystem->Request_BeginSaveKeyRetirement(LevelRoot);
-    TestEqual(TEXT("retirement returns the level root's canonical key"), FirstRetirement, ExpectedKey);
-    TestTrue(TEXT("retirement suppresses the authored level root"),
-        Subsystem->TestOnly_Get_IsSaveKeySuppressed(ExpectedKey));
-
-    TestTrue(TEXT("a failed outer operation can cancel retirement"),
-        Subsystem->Request_CancelSaveKeyRetirement(LevelRoot, FirstRetirement));
-    TestFalse(TEXT("cancellation restores the authored level root"),
-        Subsystem->TestOnly_Get_IsSaveKeySuppressed(ExpectedKey));
-
-    const auto CommittedRetirement = Subsystem->Request_BeginSaveKeyRetirement(LevelRoot);
-    TestEqual(TEXT("the same level root can be retired after a cancellation"), CommittedRetirement, ExpectedKey);
-    TestTrue(TEXT("a successful outer operation commits retirement"),
-        Subsystem->Request_CommitSaveKeyRetirement(CommittedRetirement));
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(LevelRoot);
-    LevelRoot.Add<ck::FTag_DestroyEntity_Teardown>();
-    TestFalse(TEXT("the retired source enters teardown"), ck::IsValid(LevelRoot));
-    TestTrue(TEXT("destroying the retired source leaves its authored key suppressed for save/load"),
-        Subsystem->TestOnly_Get_IsSaveKeySuppressed(ExpectedKey));
-
+    const auto Ticket = FCk_PersistentEntityMutationTicket{};
+    TestEqual(TEXT("default ticket fails as an invalid ticket"), Ticket.Get_BeginResult(),
+        ECk_PersistentEntityMutationResult::Failed_InvalidTicket);
     return true;
 }
 

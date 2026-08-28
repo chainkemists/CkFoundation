@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // FCk_Delegate_Hydration_OnHydrated
 
+#include "CkSnapshot/Persistence/CkSnapshot_PersistentEntityMutation.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h" // FCk_Delegate_Snapshot_OnLoadComplete
 
@@ -279,48 +280,76 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FString& InHistoricalIdentity);
 
-    // Starts a unique level-entity relocation. Store the returned key on the caller's durable transfer token and
-    // complete it only after the replacement has constructed successfully. An invalid return leaves the source in place.
+    /** Capture one opaque value that authority code can resolve without gameplay handling a SaveKey. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Make Persistent Entity Authority Reference")
+    static FCk_PersistentEntityAuthorityReference
+    Make_PersistentEntityAuthorityReference(
+        const FCk_Handle& InEntity);
+
+    /** Resolve an authority reference in the world of InWorldContext; returns invalid on mismatch or absence. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Resolve Persistent Entity Authority Reference")
+    static FCk_Handle
+    Resolve_PersistentEntityAuthorityReference(
+        const FCk_Handle& InWorldContext,
+        const FCk_PersistentEntityAuthorityReference& InReference);
+
+    /** Reserve an unkeyed runtime entity or unique level-authored root for atomic removal. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Request Begin Save Key Relocation")
-    static FGuid
-    Request_BeginSaveKeyRelocation(
+              DisplayName = "[Ck][Snapshot] Request Begin Entity Removal")
+    static FCk_PersistentEntityMutationTicket
+    Request_BeginEntityRemoval(
+        const FCk_Handle& InSource);
+
+    /** Commit suppression when required and request source destruction. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Commit Entity Removal")
+    static ECk_PersistentEntityMutationResult
+    Request_CommitEntityRemoval(
+        const FCk_PersistentEntityMutationTicket& InTicket);
+
+    /** Release a pending removal or relocation reservation, even if its source has torn down. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Cancel Persistent Mutation")
+    static ECk_PersistentEntityMutationResult
+    Request_CancelPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Destroy Entity Persistently")
+    static ECk_PersistentEntityMutationResult
+    Request_DestroyEntityPersistently(
         const FCk_Handle& InSource);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Request Complete Save Key Relocation")
-    static bool
-    Request_CompleteSaveKeyRelocation(
+              DisplayName = "[Ck][Snapshot] Request Begin Persistent Relocation")
+    static FCk_PersistentEntityMutationTicket
+    Request_BeginPersistentRelocation(
+        const FCk_Handle& InSource);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Complete Persistent Relocation")
+    static ECk_PersistentEntityMutationResult
+    Request_CompletePersistentRelocation(
         UPARAM(ref) FCk_Handle& InDestination,
-        const FGuid& InSaveKey);
+        const FCk_PersistentEntityMutationTicket& InTicket);
 
-    /**
-     * Suppresses a unique level-authored entity identity permanently. Cancel with the returned key if the
-     * operation that removes the source does not commit; otherwise destroy the source before the next save.
-     */
+    /** Compatibility adapter for durable raw keys written by the retired relocation-token workflow. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Request Begin Save Key Retirement")
-    static FGuid
-    Request_BeginSaveKeyRetirement(
-        const FCk_Handle& InSource);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Request Commit Save Key Retirement")
-    static bool
-    Request_CommitSaveKeyRetirement(
-        const FCk_Handle& InSource,
-        const FGuid& InSaveKey);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Snapshot",
-              DisplayName = "[Ck][Snapshot] Request Cancel Save Key Retirement")
-    static bool
-    Request_CancelSaveKeyRetirement(
-        const FCk_Handle& InSource,
+              DisplayName = "[Ck][Snapshot] Request Complete Legacy Save Key Relocation")
+    static ECk_PersistentEntityMutationResult
+    Request_CompleteLegacySaveKeyRelocation(
+        UPARAM(ref) FCk_Handle& InDestination,
         const FGuid& InSaveKey);
 
     UFUNCTION(BlueprintPure,
@@ -441,4 +470,9 @@ public:
     static bool
     Get_DidLoadComplete(
         const FCk_Snapshot_LoadReport& InReport);
+
+private:
+    static FCk_PersistentEntityMutationTicket
+    DoMakeFailedPersistentMutationTicket(
+        ECk_PersistentEntityMutationResult InResult);
 };

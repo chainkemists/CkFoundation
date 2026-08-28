@@ -390,6 +390,32 @@ construction by whoever creates the entity, and it turns on who re-creates the t
 `UCk_EntityScript_WithActor_UE::Construct` and `ACk_EntitySpawner_UE` both apply exactly this split, which is why a
 snapshot-respawnable opt-in on a class that is ALSO placed in a level is inert rather than a duplicate source.
 
+### Persistent entity mutation
+
+Gameplay must not move or suppress a `SaveKey` directly. Use the semantic mutation API in
+`UCk_Utils_Snapshot_UE`:
+
+```cpp
+auto Ticket = UCk_Utils_Snapshot_UE::Request_BeginEntityRemoval(Source);
+if (Ticket.Get_BeginResult() != ECk_PersistentEntityMutationResult::Succeeded)
+{ return; }
+
+// Perform the fallible external operation. Cancel its reservation on failure.
+const auto Result = ExternalOperationSucceeded
+    ? UCk_Utils_Snapshot_UE::Request_CommitEntityRemoval(Ticket)
+    : UCk_Utils_Snapshot_UE::Request_CancelPersistentMutation(Ticket);
+```
+
+The ticket is opaque: it binds operation kind, source, world and authored identity inside the snapshot subsystem.
+Begin reserves only runtime state. Commit owns source destruction and, for a unique level-authored root, durable
+suppression. Cancel is source-independent so teardown cannot strand the reservation. Save and load fail with
+`Failed_NotQuiescent` while any ticket is pending, which prevents either half of a mutation becoming durable.
+
+`Request_BeginPersistentRelocation` / `Request_CompletePersistentRelocation` transfer a unique level-authored
+identity to a replacement. `Request_CompleteLegacySaveKeyRelocation` is the sole raw-`FGuid` adapter and exists only
+for already-saved relocation tokens; new gameplay must not use it. Shared keys and keyed non-authored entities fail
+closed because neither identity grants authority to suppress a level root.
+
 ---
 
 ## Capture classification rules

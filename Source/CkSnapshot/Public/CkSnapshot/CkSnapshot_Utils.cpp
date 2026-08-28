@@ -18,6 +18,37 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_snapshot_utils
+{
+    auto
+    DoGet_Subsystem(
+        const FCk_Handle& InHandle)
+    -> UCk_Snapshot_Subsystem_UE*
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
+        return ck::IsValid(GameInstance)
+            ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
+            : nullptr;
+    }
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    DoMakeFailedPersistentMutationTicket(
+        ECk_PersistentEntityMutationResult InResult)
+    -> FCk_PersistentEntityMutationTicket
+{
+    auto Ticket = FCk_PersistentEntityMutationTicket{};
+    Ticket._BeginResult = InResult;
+    return Ticket;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Snapshot_UE::
     Get_WasHydratedThisLoad(
@@ -210,141 +241,228 @@ auto
 
 auto
     UCk_Utils_Snapshot_UE::
-    Request_BeginSaveKeyRelocation(
-        const FCk_Handle& InSource)
-    -> FGuid
+    Make_PersistentEntityAuthorityReference(
+        const FCk_Handle& InEntity)
+    -> FCk_PersistentEntityAuthorityReference
 {
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey relocation requires a valid source entity"))
-    { }
-    if (NOT SourceIsValid)
-    { return {}; }
+    auto Reference = FCk_PersistentEntityAuthorityReference{};
+    if (ck::Is_NOT_Valid(InEntity))
+    { return Reference; }
 
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
-    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
-    const auto Subsystem = ck::IsValid(GameInstance)
-        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
-        : nullptr;
-    const auto HasSubsystem = ck::IsValid(Subsystem);
-    CK_ENSURE_IF_NOT(HasSubsystem,
-        TEXT("SaveKey relocation source [{}] has no snapshot subsystem"), InSource)
-    { }
-    if (NOT HasSubsystem)
-    { return {}; }
-
-    return Subsystem->Request_BeginSaveKeyRelocation(InSource);
+    Reference._NetworkHandle = InEntity;
+    if (InEntity.Has<FFragment_SaveKey>())
+    {
+        const auto& SaveKey = InEntity.Get<FFragment_SaveKey>();
+        if (SaveKey.Get_IsLevelPlacedRoot() && NOT SaveKey.Get_IsSharedRendezvousGroup())
+        { Reference._AuthoredSaveKey = SaveKey.Get_Key(); }
+    }
+    return Reference;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Snapshot_UE::
-    Request_CompleteSaveKeyRelocation(
+    Resolve_PersistentEntityAuthorityReference(
+        const FCk_Handle& InWorldContext,
+        const FCk_PersistentEntityAuthorityReference& InReference)
+    -> FCk_Handle
+{
+    if (ck::Is_NOT_Valid(InWorldContext))
+    { return {}; }
+
+    auto* ExpectedWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InWorldContext);
+    if (ck::Is_NOT_Valid(ExpectedWorld))
+    { return {}; }
+
+    if (ck::IsValid(InReference._NetworkHandle) &&
+        UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InReference._NetworkHandle) == ExpectedWorld)
+    {
+        if (NOT InReference._AuthoredSaveKey.IsValid())
+        { return InReference._NetworkHandle; }
+
+        if (InReference._NetworkHandle.Has<FFragment_SaveKey>() &&
+            InReference._NetworkHandle.Get<FFragment_SaveKey>().Get_Key() == InReference._AuthoredSaveKey)
+        { return InReference._NetworkHandle; }
+
+        return {};
+    }
+
+    if (NOT InReference._AuthoredSaveKey.IsValid())
+    { return {}; }
+
+    const auto* GameInstance = ExpectedWorld->GetGameInstance();
+    auto* Subsystem = ck::IsValid(GameInstance) ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>() : nullptr;
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return {}; }
+
+    auto Resolved = FCk_Handle{};
+    if (NOT Subsystem->TryResolve_SaveKey(InReference._AuthoredSaveKey, Resolved))
+    { return {}; }
+    return Resolved;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_BeginEntityRemoval(
+        const FCk_Handle& InSource)
+    -> FCk_PersistentEntityMutationTicket
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("Persistent entity removal requires a valid source entity"))
+    { }
+    if (NOT SourceIsValid)
+    { return DoMakeFailedPersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_InvalidSource); }
+
+    const auto Subsystem = ck_snapshot_utils::DoGet_Subsystem(InSource);
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent entity removal source [{}] has no snapshot subsystem"), InSource)
+    { }
+    if (NOT HasSubsystem)
+    { return DoMakeFailedPersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_WorldUnavailable); }
+
+    return Subsystem->Request_BeginEntityRemoval(InSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CommitEntityRemoval(
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    const auto Subsystem = InTicket._OwningSubsystem.Get();
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent entity removal commit requires a live mutation ticket"))
+    { }
+    if (NOT HasSubsystem)
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+
+    return Subsystem->Request_CommitEntityRemoval(InTicket);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CancelPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    const auto Subsystem = InTicket._OwningSubsystem.Get();
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent mutation cancellation requires a live mutation ticket"))
+    { }
+    if (NOT HasSubsystem)
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+
+    return Subsystem->Request_CancelPersistentMutation(InTicket);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_DestroyEntityPersistently(
+        const FCk_Handle& InSource)
+    -> ECk_PersistentEntityMutationResult
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("Persistent entity destruction requires a valid source entity"))
+    { }
+    if (NOT SourceIsValid)
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidSource; }
+
+    const auto Subsystem = ck_snapshot_utils::DoGet_Subsystem(InSource);
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent entity destruction source [{}] has no snapshot subsystem"), InSource)
+    { }
+    if (NOT HasSubsystem)
+    { return ECk_PersistentEntityMutationResult::Failed_WorldUnavailable; }
+
+    return Subsystem->Request_DestroyEntityPersistently(InSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_BeginPersistentRelocation(
+        const FCk_Handle& InSource)
+    -> FCk_PersistentEntityMutationTicket
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("Persistent relocation requires a valid source entity"))
+    { }
+    if (NOT SourceIsValid)
+    { return DoMakeFailedPersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_InvalidSource); }
+
+    const auto Subsystem = ck_snapshot_utils::DoGet_Subsystem(InSource);
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent relocation source [{}] has no snapshot subsystem"), InSource)
+    { }
+    if (NOT HasSubsystem)
+    { return DoMakeFailedPersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_WorldUnavailable); }
+
+    return Subsystem->Request_BeginPersistentRelocation(InSource);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CompletePersistentRelocation(
+        FCk_Handle& InDestination,
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    const auto Subsystem = InTicket._OwningSubsystem.Get();
+    const auto HasSubsystem = ck::IsValid(Subsystem);
+    CK_ENSURE_IF_NOT(HasSubsystem,
+        TEXT("Persistent relocation completion requires a live mutation ticket"))
+    { }
+    if (NOT HasSubsystem)
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+
+    return Subsystem->Request_CompletePersistentRelocation(InDestination, InTicket);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_CompleteLegacySaveKeyRelocation(
         FCk_Handle& InDestination,
         const FGuid& InSaveKey)
-    -> bool
+    -> ECk_PersistentEntityMutationResult
 {
     const auto DestinationIsValid = ck::IsValid(InDestination);
     CK_ENSURE_IF_NOT(DestinationIsValid,
-        TEXT("SaveKey relocation requires a valid destination entity"))
+        TEXT("Legacy SaveKey relocation requires a valid destination entity"))
     { }
     if (NOT DestinationIsValid)
-    { return false; }
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidDestination; }
 
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InDestination);
-    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
-    const auto Subsystem = ck::IsValid(GameInstance)
-        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
-        : nullptr;
+    const auto Subsystem = ck_snapshot_utils::DoGet_Subsystem(InDestination);
     const auto HasSubsystem = ck::IsValid(Subsystem);
     CK_ENSURE_IF_NOT(HasSubsystem,
-        TEXT("SaveKey relocation destination [{}] has no snapshot subsystem"), InDestination)
+        TEXT("Legacy SaveKey relocation destination [{}] has no snapshot subsystem"), InDestination)
     { }
     if (NOT HasSubsystem)
-    { return false; }
+    { return ECk_PersistentEntityMutationResult::Failed_WorldUnavailable; }
 
-    return Subsystem->Request_CompleteSaveKeyRelocation(InDestination, InSaveKey);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Snapshot_UE::
-    Request_BeginSaveKeyRetirement(
-        const FCk_Handle& InSource)
-    -> FGuid
-{
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey retirement requires a valid source entity"))
-    { return {}; }
-
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
-    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
-    const auto Subsystem = ck::IsValid(GameInstance)
-        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
-        : nullptr;
-    const auto HasSubsystem = ck::IsValid(Subsystem);
-    CK_ENSURE_IF_NOT(HasSubsystem,
-        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
-    { return {}; }
-
-    return Subsystem->Request_BeginSaveKeyRetirement(InSource);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Snapshot_UE::
-    Request_CommitSaveKeyRetirement(
-        const FCk_Handle& InSource,
-        const FGuid& InSaveKey)
-    -> bool
-{
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey retirement commit requires a valid source entity"))
-    { return false; }
-
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
-    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
-    const auto Subsystem = ck::IsValid(GameInstance)
-        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
-        : nullptr;
-    const auto HasSubsystem = ck::IsValid(Subsystem);
-    CK_ENSURE_IF_NOT(HasSubsystem,
-        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
-    { return false; }
-
-    return Subsystem->Request_CommitSaveKeyRetirement(InSaveKey);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Snapshot_UE::
-    Request_CancelSaveKeyRetirement(
-        const FCk_Handle& InSource,
-        const FGuid& InSaveKey)
-    -> bool
-{
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey retirement cancellation requires a valid source entity"))
-    { return false; }
-
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
-    const auto GameInstance = ck::IsValid(World) ? World->GetGameInstance() : nullptr;
-    const auto Subsystem = ck::IsValid(GameInstance)
-        ? GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>()
-        : nullptr;
-    const auto HasSubsystem = ck::IsValid(Subsystem);
-    CK_ENSURE_IF_NOT(HasSubsystem,
-        TEXT("SaveKey retirement source [{}] has no snapshot subsystem"), InSource)
-    { return false; }
-
-    return Subsystem->Request_CancelSaveKeyRetirement(InSource, InSaveKey);
+    return Subsystem->Request_CompleteLegacySaveKeyRelocation(InDestination, InSaveKey);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

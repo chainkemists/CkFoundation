@@ -11,6 +11,7 @@
 
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
+#include "CkSnapshot/Persistence/CkSnapshot_PersistentEntityMutation.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_LoadReport.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_SaveReport.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Delegates.h"
@@ -204,20 +205,29 @@ public:
     auto TryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle) -> bool;
     auto Consume_SaveKey(FGuid InKey) -> void;
 
-    // A level-authored entity can either relocate its identity to a replacement or retire that identity
-    // permanently. Both paths suppress the authored root; retirement cancellation is the atomic rollback path.
-    auto Request_BeginSaveKeyRelocation(const FCk_Handle& InSource) -> FGuid;
-    auto Request_CompleteSaveKeyRelocation(FCk_Handle& InDestination, const FGuid& InSaveKey) -> bool;
     auto
-    Request_BeginSaveKeyRetirement(
-        const FCk_Handle& InSource) -> FGuid;
+    Request_BeginEntityRemoval(
+        const FCk_Handle& InSource) -> FCk_PersistentEntityMutationTicket;
     auto
-    Request_CommitSaveKeyRetirement(
-        const FGuid& InSaveKey) -> bool;
+    Request_CommitEntityRemoval(
+        const FCk_PersistentEntityMutationTicket& InTicket) -> ECk_PersistentEntityMutationResult;
     auto
-    Request_CancelSaveKeyRetirement(
-        const FCk_Handle& InSource,
-        const FGuid& InSaveKey) -> bool;
+    Request_CancelPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket) -> ECk_PersistentEntityMutationResult;
+    auto
+    Request_DestroyEntityPersistently(
+        const FCk_Handle& InSource) -> ECk_PersistentEntityMutationResult;
+    auto
+    Request_BeginPersistentRelocation(
+        const FCk_Handle& InSource) -> FCk_PersistentEntityMutationTicket;
+    auto
+    Request_CompletePersistentRelocation(
+        FCk_Handle& InDestination,
+        const FCk_PersistentEntityMutationTicket& InTicket) -> ECk_PersistentEntityMutationResult;
+    auto
+    Request_CompleteLegacySaveKeyRelocation(
+        FCk_Handle& InDestination,
+        const FGuid& InSaveKey) -> ECk_PersistentEntityMutationResult;
 
 public:
     // True from the start of a Request_Load until OnLoadComplete fires (spans real frames). Distinct from the
@@ -312,6 +322,8 @@ public:
     { return DoTryPublish_SaveKey(InKey, InHandle, false); }
     auto TestOnly_Get_IsSaveKeySuppressed(const FGuid& InKey) const -> bool
     { return _SuppressedSaveKeys.Contains(InKey); }
+    auto TestOnly_Get_NumRememberedTerminalPersistentMutations() const -> int32
+    { return _TerminalPersistentEntityMutationIds.Num(); }
 
     // The hydrate frame cap is the quarantine's bounded escape, and proving an escape fires means reaching it —
     // 600 frames of a load that is deliberately going nowhere. Shortening the fence does not weaken what the test
@@ -350,7 +362,43 @@ public:
 
 private:
     auto DoTryPublish_SaveKey(FGuid InKey, FCk_Handle InHandle, bool InDiagnoseCollision) -> bool;
-    auto DoGet_SnapshotSource() const -> FCk_Handle;
+    enum class EPersistentEntityMutationKind : uint8 { Removal, Relocation };
+    struct FPersistentEntityMutationOperation
+    {
+        EPersistentEntityMutationKind _Kind = EPersistentEntityMutationKind::Removal;
+        FCk_Handle _Source;
+        FGuid _AuthoredSaveKey;
+        TWeakObjectPtr<UWorld> _World;
+    };
+    auto
+    DoBeginPersistentEntityMutation(
+        const FCk_Handle& InSource,
+        EPersistentEntityMutationKind InKind) -> FCk_PersistentEntityMutationTicket;
+    auto
+    DoGetPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket,
+        const TOptional<EPersistentEntityMutationKind>& InExpectedKind,
+        FPersistentEntityMutationOperation*& OutOperation) -> ECk_PersistentEntityMutationResult;
+    auto
+    DoHasLiveSaveKeyCollision(
+        UWorld& InWorld,
+        const FCk_Handle& InAllowedSource,
+        FGuid InSaveKey) const -> bool;
+    auto
+    DoHasPendingPersistentMutationSource(
+        const FCk_Handle& InSource,
+        const FGuid& InAllowedOperationId = {}) const -> bool;
+    auto
+    DoPrunePersistentMutationsOutsideWorld(
+        const UWorld& InWorld) -> void;
+    auto
+    DoTerminalizePersistentMutation(
+        const FGuid& InOperationId) -> void;
+    auto
+    DoMakePersistentMutationTicket(
+        ECk_PersistentEntityMutationResult InResult) -> FCk_PersistentEntityMutationTicket;
+    auto
+    DoGet_SnapshotSource() const -> FCk_Handle;
 
     // Shared body of Request_Save / Request_Save_WithMetadata. InMetadata is written to the sidecar
     // only when InWriteSidecar is set, so the metadata-free entry point leaves no sidecar behind.
@@ -529,7 +577,8 @@ private:
     UPROPERTY(Transient)
     TMap<FGuid, FCk_Handle> _SaveKeyResolverMap;
     TSet<FGuid> _SuppressedSaveKeys;
-    TSet<FGuid> _PendingSaveKeyRetirements;
+    TMap<FGuid, FPersistentEntityMutationOperation> _PendingPersistentEntityMutations;
+    TArray<FGuid> _TerminalPersistentEntityMutationIds;
     TSet<FCk_Handle> _SuppressedSaveKeyDestroyQueued;
 
     bool _SnapshotInProgress = false;

@@ -375,6 +375,21 @@ auto
         return;
     }
 
+    DoPrunePersistentMutationsOutsideWorld(*World);
+    if (NOT _PendingPersistentEntityMutations.IsEmpty())
+    {
+        ck::snapshot::Warning(
+            TEXT("Request_Save refused: [{}] persistent entity mutation(s) are pending"),
+            _PendingPersistentEntityMutations.Num());
+        _LastSaveReport = FCk_Snapshot_SaveReport{};
+        _LastSaveReport.Set_Result(ECk_SnapshotResult::Failed_NotQuiescent);
+        auto Source = DoGet_SnapshotSource();
+        ck::UUtils_Signal_Snapshot_OnSaveComplete::Broadcast(
+            Source, ck::MakePayload(Source, ECk_SnapshotResult::Failed_NotQuiescent));
+        InDelegate.ExecuteIfBound(ECk_SnapshotResult::Failed_NotQuiescent);
+        return;
+    }
+
     _SnapshotInProgress = true;
     ON_SCOPE_EXIT { _SnapshotInProgress = false; };
 
@@ -571,6 +586,20 @@ void
         return;
     }
 
+    DoPrunePersistentMutationsOutsideWorld(*World);
+    if (NOT _PendingPersistentEntityMutations.IsEmpty())
+    {
+        ck::snapshot::Warning(
+            TEXT("Request_Load refused: [{}] persistent entity mutation(s) are pending"),
+            _PendingPersistentEntityMutations.Num());
+        _LastLoadReport = MakeFailureReport(ECk_SnapshotResult::Failed_NotQuiescent);
+        auto Source = DoGet_SnapshotSource();
+        ck::UUtils_Signal_Snapshot_OnLoadComplete::Broadcast(
+            Source, ck::MakePayload(Source, _LastLoadReport));
+        InDelegate.ExecuteIfBound(_LastLoadReport);
+        return;
+    }
+
     // Guarded, never raw LoadGameFromSlot: a foreign file on the slot name (a legacy SPUD-era save) is FATAL in
     // the engine's no-tag fallback, not an error return — see TryLoad_SlotSaveGame_Guarded.
     auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(
@@ -625,7 +654,7 @@ void
     _SuppressedSaveKeys.Reset();
     for (const auto& Key : _V3Header.Get_SuppressedSaveKeys())
     { _SuppressedSaveKeys.Add(Key); }
-    _PendingSaveKeyRetirements.Reset();
+    _TerminalPersistentEntityMutationIds.Reset();
     _SuppressedSaveKeyDestroyQueued.Reset();
 
     // ---- Latch the load (spans real frames + a level reload from here) -------------------------------------
@@ -3715,6 +3744,21 @@ bool
         TEXT("Cannot publish Snapshot SaveKey [{}] for an invalid Entity Handle"), InKey)
     { return false; }
 
+    for (const auto& [OperationId, Operation] : _PendingPersistentEntityMutations)
+    {
+        if (Operation._AuthoredSaveKey == InKey && Operation._Source != InHandle)
+        {
+            if (InDiagnoseCollision)
+            {
+                CK_ENSURE_IF_NOT(false,
+                    TEXT("Snapshot SaveKey [{}] is reserved by persistent mutation [{}]; rejecting Entity [{}]"),
+                    InKey, OperationId, InHandle)
+                {}
+            }
+            return false;
+        }
+    }
+
     if (const auto* Existing = _SaveKeyResolverMap.Find(InKey))
     {
         if (*Existing == InHandle)
@@ -3771,202 +3815,382 @@ auto
 
 auto
     UCk_Snapshot_Subsystem_UE::
-    Request_BeginSaveKeyRelocation(
-        const FCk_Handle& InSource)
-    -> FGuid
+    DoMakePersistentMutationTicket(
+        ECk_PersistentEntityMutationResult InResult)
+    -> FCk_PersistentEntityMutationTicket
 {
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey relocation refused: source entity is invalid"))
-    { }
-    if (NOT SourceIsValid)
-    { return {}; }
-
-    const auto HasSaveKey = InSource.Has<FFragment_SaveKey>();
-    CK_ENSURE_IF_NOT(HasSaveKey,
-        TEXT("SaveKey relocation refused: source entity [{}] has no save identity"), InSource)
-    { }
-    if (NOT HasSaveKey)
-    { return {}; }
-
-    const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
-    const auto Key = SaveKey.Get_Key();
-    const auto KeyIsValid = Key.IsValid();
-    CK_ENSURE_IF_NOT(KeyIsValid,
-        TEXT("SaveKey relocation refused: source entity [{}] has an invalid save identity"), InSource)
-    { }
-    if (NOT KeyIsValid)
-    { return {}; }
-
-    const auto IsUniqueKey = NOT SaveKey.Get_IsSharedRendezvousGroup();
-    CK_ENSURE_IF_NOT(IsUniqueKey,
-        TEXT("SaveKey relocation refused: source entity [{}] uses a shared infrastructure SaveKey [{}]"), InSource, Key)
-    { }
-    if (NOT IsUniqueKey)
-    { return {}; }
-
-    const auto IsLevelPlacedRoot = SaveKey.Get_IsLevelPlacedRoot();
-    CK_ENSURE_IF_NOT(IsLevelPlacedRoot,
-        TEXT("SaveKey relocation refused: source entity [{}] was not created from a level-authored root"), InSource)
-    { }
-    if (NOT IsLevelPlacedRoot)
-    { return {}; }
-
-    const auto IsNotAlreadySuppressed = NOT _SuppressedSaveKeys.Contains(Key);
-    CK_ENSURE_IF_NOT(IsNotAlreadySuppressed,
-        TEXT("SaveKey relocation refused: source entity [{}] already has an unfinished relocation for SaveKey [{}]"),
-        InSource, Key)
-    { }
-    if (NOT IsNotAlreadySuppressed)
-    { return {}; }
-
-    _SuppressedSaveKeys.Add(Key);
-    return Key;
+    auto Ticket = FCk_PersistentEntityMutationTicket{};
+    Ticket._BeginResult = InResult;
+    if (InResult == ECk_PersistentEntityMutationResult::Succeeded)
+    { Ticket._OwningSubsystem = this; }
+    return Ticket;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Snapshot_Subsystem_UE::
-    Request_BeginSaveKeyRetirement(
-        const FCk_Handle& InSource)
-    -> FGuid
-{
-    const auto Key = Request_BeginSaveKeyRelocation(InSource);
-    if (Key.IsValid())
-    { _PendingSaveKeyRetirements.Add(Key); }
-    return Key;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Snapshot_Subsystem_UE::
-    Request_CommitSaveKeyRetirement(
-        const FGuid& InSaveKey)
+    DoHasLiveSaveKeyCollision(
+        UWorld& InWorld,
+        const FCk_Handle& InAllowedSource,
+        FGuid InSaveKey) const
     -> bool
 {
-    const auto KeyIsValid = InSaveKey.IsValid();
-    CK_ENSURE_IF_NOT(KeyIsValid,
-        TEXT("SaveKey retirement commit refused: supplied SaveKey is invalid"))
+    if (const auto* Existing = _SaveKeyResolverMap.Find(InSaveKey);
+        Existing != nullptr && ck::IsValid(*Existing) && *Existing != InAllowedSource)
+    { return true; }
+
+    auto* EcsWorld = InWorld.GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (ck::Is_NOT_Valid(EcsWorld))
     { return false; }
 
-    const auto IsPendingRetirement = _PendingSaveKeyRetirements.Contains(InSaveKey);
-    CK_ENSURE_IF_NOT(IsPendingRetirement,
-        TEXT("SaveKey retirement commit refused: SaveKey [{}] has no pending retirement"), InSaveKey)
+    auto& CkRegistry = EcsWorld->Get_Registry();
+    auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
+    if (RawRegistry == nullptr)
     { return false; }
 
-    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
-    CK_ENSURE_IF_NOT(IsSuppressed,
-        TEXT("SaveKey retirement commit refused: SaveKey [{}] is not suppressed"), InSaveKey)
-    { return false; }
+    for (const auto Entity : RawRegistry->view<FFragment_SaveKey>())
+    {
+        const auto& SaveKey = RawRegistry->get<FFragment_SaveKey>(Entity);
+        if (SaveKey.Get_Key() != InSaveKey)
+        { continue; }
 
-    _PendingSaveKeyRetirements.Remove(InSaveKey);
-    return true;
+        const auto Candidate = ck::MakeHandle(FCk_Entity{Entity}, CkRegistry);
+        if (Candidate != InAllowedSource && ck::IsValid(Candidate))
+        { return true; }
+    }
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Snapshot_Subsystem_UE::
-    Request_CancelSaveKeyRetirement(
+    DoHasPendingPersistentMutationSource(
         const FCk_Handle& InSource,
-        const FGuid& InSaveKey)
+        const FGuid& InAllowedOperationId) const
     -> bool
 {
-    const auto SourceIsValid = ck::IsValid(InSource);
-    CK_ENSURE_IF_NOT(SourceIsValid,
-        TEXT("SaveKey retirement cancellation refused: source entity is invalid"))
-    { return false; }
-
-    const auto KeyIsValid = InSaveKey.IsValid();
-    CK_ENSURE_IF_NOT(KeyIsValid,
-        TEXT("SaveKey retirement cancellation refused: supplied SaveKey is invalid"))
-    { return false; }
-
-    const auto SourceHasSaveKey = InSource.Has<FFragment_SaveKey>();
-    CK_ENSURE_IF_NOT(SourceHasSaveKey,
-        TEXT("SaveKey retirement cancellation refused: source entity [{}] has no save identity"), InSource)
-    { return false; }
-
-    const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
-    const auto SourceOwnsKey = SaveKey.Get_Key() == InSaveKey;
-    CK_ENSURE_IF_NOT(SourceOwnsKey,
-        TEXT("SaveKey retirement cancellation refused: source entity [{}] does not own SaveKey [{}]"),
-        InSource, InSaveKey)
-    { return false; }
-
-    const auto IsPendingRetirement = _PendingSaveKeyRetirements.Contains(InSaveKey);
-    CK_ENSURE_IF_NOT(IsPendingRetirement,
-        TEXT("SaveKey retirement cancellation refused: SaveKey [{}] has no pending retirement"), InSaveKey)
-    { return false; }
-
-    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
-    CK_ENSURE_IF_NOT(IsSuppressed,
-        TEXT("SaveKey retirement cancellation refused: SaveKey [{}] is not suppressed"), InSaveKey)
-    { return false; }
-
-    _PendingSaveKeyRetirements.Remove(InSaveKey);
-    _SuppressedSaveKeys.Remove(InSaveKey);
-    return true;
+    for (const auto& [OperationId, Operation] : _PendingPersistentEntityMutations)
+    {
+        if (OperationId != InAllowedOperationId && Operation._Source == InSource)
+        { return true; }
+    }
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Snapshot_Subsystem_UE::
-    Request_CompleteSaveKeyRelocation(
+    DoTerminalizePersistentMutation(
+        const FGuid& InOperationId)
+    -> void
+{
+    _PendingPersistentEntityMutations.Remove(InOperationId);
+    _TerminalPersistentEntityMutationIds.Add(InOperationId);
+
+    constexpr auto MaxRememberedTerminalOperations = 256;
+    if (_TerminalPersistentEntityMutationIds.Num() > MaxRememberedTerminalOperations)
+    {
+        _TerminalPersistentEntityMutationIds.RemoveAt(
+            0, _TerminalPersistentEntityMutationIds.Num() - MaxRememberedTerminalOperations,
+            EAllowShrinking::No);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoPrunePersistentMutationsOutsideWorld(
+        const UWorld& InWorld)
+    -> void
+{
+    auto StaleOperationIds = TArray<FGuid>{};
+    for (const auto& [OperationId, Operation] : _PendingPersistentEntityMutations)
+    {
+        if (Operation._World.Get() != &InWorld)
+        { StaleOperationIds.Add(OperationId); }
+    }
+    for (const auto& OperationId : StaleOperationIds)
+    { DoTerminalizePersistentMutation(OperationId); }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoBeginPersistentEntityMutation(
+        const FCk_Handle& InSource,
+        EPersistentEntityMutationKind InKind)
+    -> FCk_PersistentEntityMutationTicket
+{
+    if (ck::Is_NOT_Valid(InSource))
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_InvalidSource); }
+
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
+    if (ck::Is_NOT_Valid(World))
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_WorldUnavailable); }
+
+    const auto* GameInstance = World->GetGameInstance();
+    if (ck::Is_NOT_Valid(GameInstance) || GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>() != this)
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_WrongWorld); }
+
+    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(World))
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_NotAuthority); }
+    if (_SnapshotInProgress || _LoadInProgress)
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_SnapshotBusy); }
+
+    DoPrunePersistentMutationsOutsideWorld(*World);
+    if (DoHasPendingPersistentMutationSource(InSource))
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_SourceAlreadyReserved); }
+
+    auto AuthoredSaveKey = FGuid{};
+    if (InSource.Has<FFragment_SaveKey>())
+    {
+        const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
+        AuthoredSaveKey = SaveKey.Get_Key();
+        if (SaveKey.Get_IsSharedRendezvousGroup())
+        { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_SharedSaveKeySource); }
+        if (NOT AuthoredSaveKey.IsValid() || NOT SaveKey.Get_IsLevelPlacedRoot())
+        { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_KeyedNonAuthoredSource); }
+        if (_SuppressedSaveKeys.Contains(AuthoredSaveKey))
+        { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_SourceAlreadyReserved); }
+        if (DoHasLiveSaveKeyCollision(*World, InSource, AuthoredSaveKey))
+        { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_DuplicateLivePublisher); }
+    }
+    else if (InKind == EPersistentEntityMutationKind::Relocation)
+    { return DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Failed_RelocationRequiresAuthoredSource); }
+
+    auto Ticket = DoMakePersistentMutationTicket(ECk_PersistentEntityMutationResult::Succeeded);
+    Ticket._OperationId = FGuid::NewGuid();
+    _PendingPersistentEntityMutations.Add(Ticket._OperationId, {
+        ._Kind = InKind,
+        ._Source = InSource,
+        ._AuthoredSaveKey = AuthoredSaveKey,
+        ._World = World,
+    });
+    return Ticket;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoGetPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket,
+        const TOptional<EPersistentEntityMutationKind>& InExpectedKind,
+        FPersistentEntityMutationOperation*& OutOperation)
+    -> ECk_PersistentEntityMutationResult
+{
+    OutOperation = nullptr;
+    if (InTicket._BeginResult != ECk_PersistentEntityMutationResult::Succeeded || NOT InTicket._OperationId.IsValid())
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+    if (InTicket._OwningSubsystem.Get() != this)
+    { return ck::IsValid(InTicket._OwningSubsystem.Get())
+        ? ECk_PersistentEntityMutationResult::Failed_WrongWorld
+        : ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+
+    auto* Operation = _PendingPersistentEntityMutations.Find(InTicket._OperationId);
+    if (Operation == nullptr)
+    {
+        return _TerminalPersistentEntityMutationIds.Contains(InTicket._OperationId)
+            ? ECk_PersistentEntityMutationResult::Failed_AlreadyTerminal
+            : ECk_PersistentEntityMutationResult::Failed_StaleTicket;
+    }
+    if (InExpectedKind.IsSet() && Operation->_Kind != InExpectedKind.GetValue())
+    { return ECk_PersistentEntityMutationResult::Failed_WrongOperationKind; }
+
+    OutOperation = Operation;
+    return ECk_PersistentEntityMutationResult::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_BeginEntityRemoval(
+        const FCk_Handle& InSource)
+    -> FCk_PersistentEntityMutationTicket
+{
+    return DoBeginPersistentEntityMutation(InSource, EPersistentEntityMutationKind::Removal);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_BeginPersistentRelocation(
+        const FCk_Handle& InSource)
+    -> FCk_PersistentEntityMutationTicket
+{
+    return DoBeginPersistentEntityMutation(InSource, EPersistentEntityMutationKind::Relocation);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CommitEntityRemoval(
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    auto* Operation = static_cast<FPersistentEntityMutationOperation*>(nullptr);
+    const auto ResolveResult = DoGetPersistentMutation(InTicket, EPersistentEntityMutationKind::Removal, Operation);
+    if (ResolveResult != ECk_PersistentEntityMutationResult::Succeeded)
+    { return ResolveResult; }
+
+    auto* World = Operation->_World.Get();
+    if (ck::Is_NOT_Valid(World))
+    {
+        DoTerminalizePersistentMutation(InTicket._OperationId);
+        return ECk_PersistentEntityMutationResult::Failed_StaleTicket;
+    }
+    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(World))
+    {
+        DoTerminalizePersistentMutation(InTicket._OperationId);
+        return ECk_PersistentEntityMutationResult::Failed_NotAuthority;
+    }
+
+    auto Source = Operation->_Source;
+    if (Operation->_AuthoredSaveKey.IsValid())
+    {
+        if (ck::IsValid(Source) && Source.Has<FFragment_SaveKey>() &&
+            Source.Get<FFragment_SaveKey>().Get_Key() == Operation->_AuthoredSaveKey)
+        {
+            Source.Remove<FFragment_SaveKey>();
+        }
+        _SuppressedSaveKeys.Add(Operation->_AuthoredSaveKey);
+        _SaveKeyResolverMap.Remove(Operation->_AuthoredSaveKey);
+    }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Source);
+    DoTerminalizePersistentMutation(InTicket._OperationId);
+    return ECk_PersistentEntityMutationResult::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CancelPersistentMutation(
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    auto* Operation = static_cast<FPersistentEntityMutationOperation*>(nullptr);
+    const auto ResolveResult = DoGetPersistentMutation(
+        InTicket, TOptional<EPersistentEntityMutationKind>{}, Operation);
+    if (ResolveResult != ECk_PersistentEntityMutationResult::Succeeded)
+    { return ResolveResult; }
+
+    // Cancellation only releases runtime reservation state. The successful begin already proved authority,
+    // and cleanup must remain possible after the source or its world has torn down.
+    DoTerminalizePersistentMutation(InTicket._OperationId);
+    return ECk_PersistentEntityMutationResult::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_DestroyEntityPersistently(
+        const FCk_Handle& InSource)
+    -> ECk_PersistentEntityMutationResult
+{
+    const auto Ticket = Request_BeginEntityRemoval(InSource);
+    if (Ticket.Get_BeginResult() != ECk_PersistentEntityMutationResult::Succeeded)
+    { return Ticket.Get_BeginResult(); }
+
+    return Request_CommitEntityRemoval(Ticket);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CompletePersistentRelocation(
+        FCk_Handle& InDestination,
+        const FCk_PersistentEntityMutationTicket& InTicket)
+    -> ECk_PersistentEntityMutationResult
+{
+    auto* Operation = static_cast<FPersistentEntityMutationOperation*>(nullptr);
+    const auto ResolveResult = DoGetPersistentMutation(InTicket, EPersistentEntityMutationKind::Relocation, Operation);
+    if (ResolveResult != ECk_PersistentEntityMutationResult::Succeeded)
+    { return ResolveResult; }
+    if (ck::Is_NOT_Valid(InDestination))
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidDestination; }
+
+    auto* World = Operation->_World.Get();
+    const auto* DestinationWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InDestination);
+    if (ck::Is_NOT_Valid(World) || ck::Is_NOT_Valid(DestinationWorld))
+    { return ECk_PersistentEntityMutationResult::Failed_WorldUnavailable; }
+    if (World != DestinationWorld)
+    { return ECk_PersistentEntityMutationResult::Failed_WrongWorld; }
+    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(World))
+    { return ECk_PersistentEntityMutationResult::Failed_NotAuthority; }
+    if (DoHasPendingPersistentMutationSource(InDestination, InTicket._OperationId))
+    { return ECk_PersistentEntityMutationResult::Failed_DestinationAlreadyReserved; }
+    if (InDestination.Has<FFragment_SaveKey>())
+    { return ECk_PersistentEntityMutationResult::Failed_DestinationAlreadyKeyed; }
+    if (DoHasLiveSaveKeyCollision(*World, Operation->_Source, Operation->_AuthoredSaveKey))
+    { return ECk_PersistentEntityMutationResult::Failed_DuplicateLivePublisher; }
+
+    auto Source = Operation->_Source;
+    if (ck::IsValid(Source))
+    {
+        const auto SourceStillOwnsAuthoredKey = Source.Has<FFragment_SaveKey>() &&
+            Source.Get<FFragment_SaveKey>().Get_Key() == Operation->_AuthoredSaveKey;
+        if (NOT SourceStillOwnsAuthoredKey)
+        { return ECk_PersistentEntityMutationResult::Failed_SourceIdentityChanged; }
+        Source.Remove<FFragment_SaveKey>();
+    }
+    InDestination.AddOrReplace<FFragment_SaveKey>(Operation->_AuthoredSaveKey);
+    InDestination.Get<FFragment_SaveKey>().MarkLevelPlacedRoot();
+    _SaveKeyResolverMap.Add(Operation->_AuthoredSaveKey, InDestination);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Source);
+    DoTerminalizePersistentMutation(InTicket._OperationId);
+    return ECk_PersistentEntityMutationResult::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CompleteLegacySaveKeyRelocation(
         FCk_Handle& InDestination,
         const FGuid& InSaveKey)
-    -> bool
+    -> ECk_PersistentEntityMutationResult
 {
-    const auto DestinationIsValid = ck::IsValid(InDestination);
-    CK_ENSURE_IF_NOT(DestinationIsValid,
-        TEXT("SaveKey relocation completion refused: destination entity is invalid"))
-    { }
-    if (NOT DestinationIsValid)
-    { return false; }
+    if (ck::Is_NOT_Valid(InDestination))
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidDestination; }
+    if (NOT InSaveKey.IsValid())
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidSaveKey; }
 
-    const auto KeyIsValid = InSaveKey.IsValid();
-    CK_ENSURE_IF_NOT(KeyIsValid,
-        TEXT("SaveKey relocation completion refused: supplied SaveKey is invalid"))
-    { }
-    if (NOT KeyIsValid)
-    { return false; }
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InDestination);
+    if (ck::Is_NOT_Valid(World))
+    { return ECk_PersistentEntityMutationResult::Failed_WorldUnavailable; }
+    const auto* GameInstance = World->GetGameInstance();
+    if (ck::Is_NOT_Valid(GameInstance) || GameInstance->GetSubsystem<UCk_Snapshot_Subsystem_UE>() != this)
+    { return ECk_PersistentEntityMutationResult::Failed_WrongWorld; }
+    if (NOT ck_snapshot_subsystem::DoGet_HasWorldAuthority(World))
+    { return ECk_PersistentEntityMutationResult::Failed_NotAuthority; }
+    if (_SnapshotInProgress || _LoadInProgress)
+    { return ECk_PersistentEntityMutationResult::Failed_SnapshotBusy; }
+    if (NOT _SuppressedSaveKeys.Contains(InSaveKey))
+    { return ECk_PersistentEntityMutationResult::Failed_InvalidTicket; }
+    if (DoHasPendingPersistentMutationSource(InDestination))
+    { return ECk_PersistentEntityMutationResult::Failed_DestinationAlreadyReserved; }
+    if (InDestination.Has<FFragment_SaveKey>())
+    { return ECk_PersistentEntityMutationResult::Failed_DestinationAlreadyKeyed; }
+    if (DoHasLiveSaveKeyCollision(*World, FCk_Handle{}, InSaveKey))
+    { return ECk_PersistentEntityMutationResult::Failed_DuplicateLivePublisher; }
 
-    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
-    CK_ENSURE_IF_NOT(IsSuppressed,
-        TEXT("SaveKey relocation completion refused: SaveKey [{}] is not held by an unfinished relocation"), InSaveKey)
-    { }
-    if (NOT IsSuppressed)
-    { return false; }
-
-    const auto DestinationHasNoSaveKey = NOT InDestination.Has<FFragment_SaveKey>();
-    CK_ENSURE_IF_NOT(DestinationHasNoSaveKey,
-        TEXT("SaveKey relocation completion refused: destination entity [{}] already has a SaveKey"), InDestination)
-    { }
-    if (NOT DestinationHasNoSaveKey)
-    { return false; }
-
-    const auto* ExistingPublisher = _SaveKeyResolverMap.Find(InSaveKey);
-    const auto ExistingPublisherIsAvailable = ExistingPublisher == nullptr || ck::Is_NOT_Valid(*ExistingPublisher);
-    CK_ENSURE_IF_NOT(ExistingPublisherIsAvailable,
-        TEXT("SaveKey relocation completion refused: SaveKey [{}] is still published by live entity [{}]"),
-        InSaveKey, ExistingPublisher != nullptr ? *ExistingPublisher : FCk_Handle{})
-    { }
-    if (NOT ExistingPublisherIsAvailable)
-    { return false; }
-
-    if (ExistingPublisher != nullptr)
-    { _SaveKeyResolverMap.Remove(InSaveKey); }
-
-    // Every validation above completed before either mutation. The replacement now owns the ORIGINAL canonical key,
-    // so capture records it as EngineOwned and the next load adopts the map-spawner's fresh copy at its saved pose.
     InDestination.AddOrReplace<FFragment_SaveKey>(InSaveKey);
     InDestination.Get<FFragment_SaveKey>().MarkLevelPlacedRoot();
     _SuppressedSaveKeys.Remove(InSaveKey);
     _SaveKeyResolverMap.Add(InSaveKey, InDestination);
-    return true;
+    return ECk_PersistentEntityMutationResult::Succeeded;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
