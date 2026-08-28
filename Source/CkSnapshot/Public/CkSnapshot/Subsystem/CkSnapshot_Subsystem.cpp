@@ -625,6 +625,7 @@ void
     _SuppressedSaveKeys.Reset();
     for (const auto& Key : _V3Header.Get_SuppressedSaveKeys())
     { _SuppressedSaveKeys.Add(Key); }
+    _PendingSaveKeyRetirements.Reset();
     _SuppressedSaveKeyDestroyQueued.Reset();
 
     // ---- Latch the load (spans real frames + a level reload from here) -------------------------------------
@@ -910,7 +911,7 @@ auto
                 _SuppressedSaveKeyDestroyQueued.Add(Handle);
                 auto MutableHandle = Handle;
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MutableHandle);
-                ck::snapshot::Display(TEXT("v3 relocation: suppressing fresh level entity [{}] with carried SaveKey [{}]"),
+                ck::snapshot::Display(TEXT("v3 SaveKey suppression: removing fresh level entity [{}] with suppressed key [{}]"),
                     Handle, Frag.Get_Key());
             }
             continue;
@@ -3821,6 +3822,93 @@ auto
 
     _SuppressedSaveKeys.Add(Key);
     return Key;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_BeginSaveKeyRetirement(
+        const FCk_Handle& InSource)
+    -> FGuid
+{
+    const auto Key = Request_BeginSaveKeyRelocation(InSource);
+    if (Key.IsValid())
+    { _PendingSaveKeyRetirements.Add(Key); }
+    return Key;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CommitSaveKeyRetirement(
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto KeyIsValid = InSaveKey.IsValid();
+    CK_ENSURE_IF_NOT(KeyIsValid,
+        TEXT("SaveKey retirement commit refused: supplied SaveKey is invalid"))
+    { return false; }
+
+    const auto IsPendingRetirement = _PendingSaveKeyRetirements.Contains(InSaveKey);
+    CK_ENSURE_IF_NOT(IsPendingRetirement,
+        TEXT("SaveKey retirement commit refused: SaveKey [{}] has no pending retirement"), InSaveKey)
+    { return false; }
+
+    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
+    CK_ENSURE_IF_NOT(IsSuppressed,
+        TEXT("SaveKey retirement commit refused: SaveKey [{}] is not suppressed"), InSaveKey)
+    { return false; }
+
+    _PendingSaveKeyRetirements.Remove(InSaveKey);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    Request_CancelSaveKeyRetirement(
+        const FCk_Handle& InSource,
+        const FGuid& InSaveKey)
+    -> bool
+{
+    const auto SourceIsValid = ck::IsValid(InSource);
+    CK_ENSURE_IF_NOT(SourceIsValid,
+        TEXT("SaveKey retirement cancellation refused: source entity is invalid"))
+    { return false; }
+
+    const auto KeyIsValid = InSaveKey.IsValid();
+    CK_ENSURE_IF_NOT(KeyIsValid,
+        TEXT("SaveKey retirement cancellation refused: supplied SaveKey is invalid"))
+    { return false; }
+
+    const auto SourceHasSaveKey = InSource.Has<FFragment_SaveKey>();
+    CK_ENSURE_IF_NOT(SourceHasSaveKey,
+        TEXT("SaveKey retirement cancellation refused: source entity [{}] has no save identity"), InSource)
+    { return false; }
+
+    const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
+    const auto SourceOwnsKey = SaveKey.Get_Key() == InSaveKey;
+    CK_ENSURE_IF_NOT(SourceOwnsKey,
+        TEXT("SaveKey retirement cancellation refused: source entity [{}] does not own SaveKey [{}]"),
+        InSource, InSaveKey)
+    { return false; }
+
+    const auto IsPendingRetirement = _PendingSaveKeyRetirements.Contains(InSaveKey);
+    CK_ENSURE_IF_NOT(IsPendingRetirement,
+        TEXT("SaveKey retirement cancellation refused: SaveKey [{}] has no pending retirement"), InSaveKey)
+    { return false; }
+
+    const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
+    CK_ENSURE_IF_NOT(IsSuppressed,
+        TEXT("SaveKey retirement cancellation refused: SaveKey [{}] is not suppressed"), InSaveKey)
+    { return false; }
+
+    _PendingSaveKeyRetirements.Remove(InSaveKey);
+    _SuppressedSaveKeys.Remove(InSaveKey);
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
