@@ -39,6 +39,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
             const FFragment_Transform& InTransform,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache) const
         -> void
@@ -101,6 +102,7 @@ namespace ck
                     { continue; }
 
                     const auto& Runtime = OtherAgent.Get<FFragment_CrowdAvoidanceVolume_ProbeRef>();
+                    const auto& VolumeParams = OtherAgent.Get<FFragment_CrowdAvoidanceVolume_Params>();
                     const auto& Obb = Runtime.Get_AuthoredObb();
                     const auto RuntimeIsValid = Runtime.Get_Markup().IsValid()
                         && Obb.IsFiniteAndPositive();
@@ -121,8 +123,31 @@ namespace ck
                     if (NOT ExpandedObbIsValid)
                     { continue; }
 
-                    const auto KeepForRebuildOrEscape = NOT Runtime.Get_ConfirmedOnMesh()
-                        || crowd_avoidance_volume::ContainsPoint(ExpandedObb, SelfLoc);
+                    const auto IsHardExclude = VolumeParams.Get_TraversalPolicy() ==
+                        ECk_CrowdAvoidanceVolume_TraversalPolicy::HardExclude;
+                    const auto IsVoxelRoute = InHandle.Has<FTag_CrowdAgent_Flying>() ||
+                        InPathFollow.Get_ActiveProvider() ==
+                            ECk_CrowdAgent_PathProvider::VoxelNav;
+                    const auto PolicyAllowsInstalledPath =
+                        VolumeParams.Get_TraversalPolicy() ==
+                            ECk_CrowdAvoidanceVolume_TraversalPolicy::CostOnly ||
+                        (VolumeParams.Get_TraversalPolicy() ==
+                            ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible &&
+                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Permissive);
+                    const auto HasInstalledTraversableWalk =
+                        Runtime.Get_ConfirmedOnMesh() &&
+                        InHandle.Has<FTag_CrowdAgent_Walking>() &&
+                        NOT InHandle.Has<FTag_CrowdAgent_PathPending>() &&
+                        NOT IsVoxelRoute &&
+                        PolicyAllowsInstalledPath;
+
+                    // A confirmed route that deliberately pays this volume's cost owns the motion
+                    // decision, including while the body is inside the OBB. Every other state keeps
+                    // the local wall: async paint/rebuild, idle or pushed-inside escape, an in-flight
+                    // replacement path, VoxelNav (which cannot consume Recast area policy), and hard
+                    // exclusion.
+                    const auto KeepForRebuildOrEscape = IsHardExclude ||
+                        NOT HasInstalledTraversableWalk;
                     if (KeepForRebuildOrEscape)
                     {
                         // The cached OBB is canonical: yaw-only scale-one transform plus world extents.

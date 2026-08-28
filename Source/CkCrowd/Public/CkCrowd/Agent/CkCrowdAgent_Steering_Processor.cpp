@@ -173,7 +173,10 @@ namespace ck
                     QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
                         *GateNavData,
                         FilterClass,
-                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay());
+                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                            InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                                ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                                : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
                 }
                 if (NOT QueryFilter.IsValid())
                 { return false; }
@@ -253,7 +256,7 @@ namespace ck
                         FCk_CrowdAgent_GoalFailedInfo{
                             ECk_CrowdAgent_GoalFailReason::PathEndsShortOfGoal,
                             ECk_Nav_PathFailReason::None,
-                            InPathFollow.Get_StrictPlanFailed(),
+                            InPathFollow.Get_StrictStandingCrowdPlanFailed(),
                             InPathFollow.Get_ActiveGoal()}));
                 return;
             }

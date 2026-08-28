@@ -41,6 +41,7 @@ namespace ck
         InRuntime._AuthoredObb = {};
         InRuntime._PaintedObb = {};
         InRuntime._AuthoredTransform = FTransform::Identity;
+        InRuntime._TraversalPolicy = ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible;
         InRuntime._SecondsSincePaint = 0.0f;
         InRuntime._ConfirmationSerial = 0;
         InRuntime._ConfirmedOnMesh = false;
@@ -58,13 +59,16 @@ namespace ck
         const auto Obb = crowd_avoidance_volume::MakeObb(AuthoredTransform, InParams.Get_HalfExtents());
         const auto Influence = InParams.Get_InfluenceRange();
         const auto PathPlanningClearance = InParams.Get_PathPlanningClearance();
+        const auto TraversalPolicy = InParams.Get_TraversalPolicy();
+        const auto NavAreaClass = crowd_avoidance_volume::Get_NavAreaClass(TraversalPolicy);
         const auto PaintedObb = Obb.ExpandedXY(PathPlanningClearance);
         const auto IsValidInput = Obb.IsFiniteAndPositive() && FMath::IsFinite(Influence) && Influence >= 0.0f &&
             PaintedObb.IsFiniteAndPositive() &&
             FMath::IsFinite(Obb._WorldHalfExtents.X + Influence) &&
-            FMath::IsFinite(Obb._WorldHalfExtents.Y + Influence);
+            FMath::IsFinite(Obb._WorldHalfExtents.Y + Influence) &&
+            IsValid(NavAreaClass.Get());
         CK_ENSURE_IF_NOT(IsValidInput,
-            TEXT("CrowdAvoidanceVolume [{}] requires a finite static Transform, positive world extents, and non-negative influence."),
+            TEXT("CrowdAvoidanceVolume [{}] requires a finite static Transform, positive world extents, non-negative influence, and a valid traversal policy."),
             Volume)
         { }
         if (NOT IsValidInput)
@@ -145,7 +149,7 @@ namespace ck
             GenericVolume,
             PaintedObb._YawTransform,
             PaintedObb._WorldHalfExtents,
-            UCk_NavArea_CrowdAvoidanceVolume::StaticClass());
+            NavAreaClass);
         const auto HasMarkup = IsValid(Markup);
         CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] failed to register nav-area markup."), Volume)
         { }
@@ -157,6 +161,7 @@ namespace ck
         InRuntime._AuthoredObb = Obb;
         InRuntime._PaintedObb = PaintedObb;
         InRuntime._AuthoredTransform = AuthoredTransform;
+        InRuntime._TraversalPolicy = TraversalPolicy;
         InRuntime._SecondsSincePaint = 0.0f;
         InRuntime._ConfirmationSerial = 0;
         InRuntime._ConfirmedOnMesh = false;
@@ -198,8 +203,9 @@ namespace ck
         auto* NavMesh = NavSystem != nullptr
             ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
             : nullptr;
-        const auto AreaId = NavMesh != nullptr
-            ? NavMesh->GetAreaID(UCk_NavArea_CrowdAvoidanceVolume::StaticClass())
+        const auto NavAreaClass = crowd_avoidance_volume::Get_NavAreaClass(InRuntime.Get_TraversalPolicy());
+        const auto AreaId = NavMesh != nullptr && IsValid(NavAreaClass.Get())
+            ? NavMesh->GetAreaID(NavAreaClass)
             : INDEX_NONE;
         if (NavMesh == nullptr || AreaId == INDEX_NONE)
         { return; }
@@ -255,8 +261,13 @@ namespace ck
             CanTrackRetirement)
         {
             _PendingRetirements.Add(FCk_CrowdAvoidanceVolume_Retirement{
+                static_cast<int64>(InHandle.Get_Entity().Get_ID()),
+                InHandle.Get_DebugName(),
+                InRuntime._AuthoredObb._YawTransform,
+                InRuntime._TraversalPolicy,
                 InRuntime._AuthoredObb,
                 InRuntime._PaintedObb,
+                InRuntime._ConfirmationSerial,
                 RevisionSubsystem->Get_Revision()});
         }
         FProcessor_CrowdAvoidanceVolume_Monitor::Release_Runtime(InRuntime);

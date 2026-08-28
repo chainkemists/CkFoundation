@@ -32,6 +32,8 @@ namespace ck
         crowd_avoidance_volume::FCk_Obb _AuthoredObb;
         crowd_avoidance_volume::FCk_Obb _PaintedObb;
         FTransform _AuthoredTransform = FTransform::Identity;
+        ECk_CrowdAvoidanceVolume_TraversalPolicy _TraversalPolicy =
+            ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible;
         float _SecondsSincePaint = 0.0f;
         uint64 _ConfirmationSerial = 0;
         bool _ConfirmedOnMesh = false;
@@ -42,6 +44,7 @@ namespace ck
         CK_PROPERTY_GET(_AuthoredObb);
         CK_PROPERTY_GET(_PaintedObb);
         CK_PROPERTY_GET(_AuthoredTransform);
+        CK_PROPERTY_GET(_TraversalPolicy);
         CK_PROPERTY_GET(_SecondsSincePaint);
         CK_PROPERTY_GET(_ConfirmationSerial);
         CK_PROPERTY_GET(_ConfirmedOnMesh);
@@ -49,8 +52,14 @@ namespace ck
 
     struct FCk_CrowdAvoidanceVolume_Retirement
     {
+        int64 _VolumeIdentity = 0;
+        FName _VolumeDebugName;
+        FTransform _YawWorldTransform = FTransform::Identity;
+        ECk_CrowdAvoidanceVolume_TraversalPolicy _TraversalPolicy =
+            ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible;
         crowd_avoidance_volume::FCk_Obb _PhysicalObb;
         crowd_avoidance_volume::FCk_Obb _PaintedObb;
+        uint64 _ConfirmationSerial = 0;
         uint64 _NavigationRevisionAtUnregister = 0;
     };
 
