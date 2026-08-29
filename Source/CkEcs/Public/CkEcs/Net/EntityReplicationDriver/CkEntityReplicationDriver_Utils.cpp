@@ -1,4 +1,6 @@
 #include "CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/Persistence/CkRuntimeArchetype_Registry.h"
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
@@ -259,17 +261,7 @@ auto
         ON_SCOPE_EXIT { NewEntity.Remove<ck::FTag_DefinitionBuild_InProgress>(); };
 
         for (const auto& ConstructionInfo : InConstructionInfos)
-        {
-            if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
-            {
-                ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(NewEntity);
-            }
-            else
-            {
-                ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-                    NewEntity);
-            }
-        }
+        { ck::entity_replication_driver::Construct_FromInfo(ConstructionInfo, NewEntity); }
     }
 
     // Construct consumes the ConstructionInfos, so retain them for save capture. Stamped BEFORE the
@@ -637,6 +629,42 @@ auto
 
         return SelectedWorldRepDriver->Get_AssociatedEntity();
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::entity_replication_driver::
+    Construct_FromInfo(
+        const FCk_EntityReplicationDriver_ConstructionInfo& InInfo,
+        FCk_Handle& InEntity)
+    -> void
+{
+    if (const auto* Archetype = InInfo.Get_ConstructionScriptArchetype().Get();
+        ck::IsValid(Archetype))
+    {
+        Archetype->Construct(InEntity);
+        return;
+    }
+
+    // A runtime-minted archetype has no path this process can load, and the info carries the path anyway so the
+    // identity survives. A client reaches this with a path its own catalog CAN mint from, which is why the retry
+    // lives here rather than only in the loader: the authority resolved it once, and the client has to resolve it
+    // for itself or come back holding a husk the server does not have.
+    if (const auto& UnresolvedPath = InInfo.Get_UnresolvedArchetypePath();
+        NOT UnresolvedPath.IsEmpty())
+    {
+        if (auto* Minted = ck::FCk_RuntimeArchetypeRegistry::TryResolve(FSoftObjectPath{UnresolvedPath});
+            ck::IsValid(Minted))
+        {
+            Minted->Construct(InEntity);
+            return;
+        }
+    }
+
+    InInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(InEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

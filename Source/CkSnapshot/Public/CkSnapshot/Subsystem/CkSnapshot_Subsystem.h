@@ -406,6 +406,12 @@ private:
         ECk_Request_OperationResult InResult);
     // The ONLY way an entry enters _SkippedIds: pairs the set membership with its reasoned per-entity record.
     auto DoRecord_Skip(const FCk_Snapshot_V3_EntityEntry& InEntry, ECk_Snapshot_SkipReason InReason) -> void;
+
+    // Destroys every entity the rebuild had to construct from a class default because nothing could resolve its
+    // archetype, and NAMES each one on the report. The husk is built rather than dropped so its container hydrates
+    // intact (the inventory handlers are all-or-nothing); this is the other half of that trade - without it the
+    // player keeps an inventory slot and a grid cell that look occupied and can never be used again.
+    auto DoReap_UnresolvedArchetypeHusks(FCk_Snapshot_LoadReport& InOutReport) -> void;
     auto DoRestore_SavedOwnership() -> void;             // restore mapped lifetime/context links before hydration
     auto DoApply_SavedTransforms() -> void;              // restore each mapped entity's saved WORLD transform (G1)
     auto DoHydrate_Enqueue() -> void;                    // write payloads -> FFragment_PendingHydration + tag (once)

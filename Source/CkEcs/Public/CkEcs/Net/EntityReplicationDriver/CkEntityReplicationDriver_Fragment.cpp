@@ -179,17 +179,7 @@ auto
     });
 
     for (const auto& ConstructionInfo : ConstructionInfos)
-    {
-        if (ck::IsValid(ConstructionInfo.Get_ConstructionScriptArchetype()))
-        {
-            ConstructionInfo.Get_ConstructionScriptArchetype()->Construct(_AssociatedEntity);
-        }
-        else
-        {
-            ConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-                _AssociatedEntity);
-        }
-    }
+    { ck::entity_replication_driver::Construct_FromInfo(ConstructionInfo, _AssociatedEntity); }
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(FCk_ReplicatedObjects::ToStrong(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects())));
