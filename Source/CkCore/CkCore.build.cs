@@ -118,9 +118,14 @@ public class CkCore : CkModuleRules
 
             foreach (string branch in s_ReferenceBranches)
             {
-                // Try the local branch first, then the remote tracking branch.
-                string fullBase = RunGit(RepoDir, "merge-base HEAD " + branch)
-                               ?? RunGit(RepoDir, "merge-base HEAD origin/" + branch);
+                // A local branch ref only moves when someone checks it out or pulls it, so it can be
+                // arbitrarily stale — and a stale local ref that is an ancestor of HEAD is its own
+                // merge-base, an old commit unrelated to the real divergence point. Compute against
+                // both the local and remote-tracking refs and keep whichever result is nearest to
+                // HEAD (the descendant of the other).
+                string localBase  = RunGit(RepoDir, "merge-base HEAD " + branch);
+                string remoteBase = RunGit(RepoDir, "merge-base HEAD origin/" + branch);
+                string fullBase   = PickNearestToHead(RepoDir, localBase, remoteBase);
                 string hash = (fullBase != null)
                     ? (RunGit(RepoDir, "rev-parse --short " + fullBase.Trim()) ?? "unknown")
                     : "unknown";
@@ -167,6 +172,18 @@ public class CkCore : CkModuleRules
                 File.WriteAllText(outPath, content);
         }
         catch { /* silently ignore write failure — header may exist from a prior build */ }
+    }
+
+    // Both candidates are merge-bases of HEAD, so when both exist one is an ancestor of the other;
+    // the descendant is the nearest to HEAD and therefore the true divergence point.
+    private static string PickNearestToHead(string RepoDir, string A, string B)
+    {
+        if (A == null) return B;
+        if (B == null) return A;
+        if (A == B)    return A;
+
+        // "merge-base --is-ancestor A B" exits 0 (non-null) when A is an ancestor of B.
+        return (RunGit(RepoDir, "merge-base --is-ancestor " + A + " " + B) != null) ? B : A;
     }
 
     private static string RunGit(string WorkDir, string Args)
