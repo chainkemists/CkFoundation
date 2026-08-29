@@ -355,6 +355,12 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_UnresolvedArchetypeRecord> _UnresolvedArchetypes;
 
+    // When the loaded slot was WRITTEN - lets a consumer scope save-era assumptions (e.g. the pre-identity-fix
+    // husk carve-out). Copied verbatim from FCk_Snapshot_HeaderV3::_TimestampUTC on the load path; a report that
+    // never read a header (a failure report, or the immediate no-load-in-progress promise) leaves it at zero.
+    UPROPERTY()
+    FDateTime _SaveTimestamp = FDateTime{0};
+
 public:
     CK_PROPERTY(_Result);
     CK_PROPERTY(_EntitiesTotal);
@@ -381,6 +387,7 @@ public:
     CK_PROPERTY(_PayloadLosses);
     CK_PROPERTY(_UnresolvedArchetypes);
     CK_PROPERTY(_ConvergenceUnmet);
+    CK_PROPERTY(_SaveTimestamp);
 
 public:
     /**
