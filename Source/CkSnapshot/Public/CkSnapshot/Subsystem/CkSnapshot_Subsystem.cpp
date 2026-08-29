@@ -1303,12 +1303,26 @@ auto
                             {
                                 // Carry the path forward so this failure cannot ERASE it: these infos become the rebuilt
                                 // entity's recipe, and the next capture writes whatever they hold.
-                                Info.Set_UnresolvedArchetypePath(ArchetypePath);
+                                Info.Set_ArchetypeIdentityPath(ArchetypePath);
                                 AnyArchetypeUnresolved = true;
                             }
 
                             if (ArchetypeResolved)
                             { Info.Set_ConstructionScriptArchetype(Archetype); }
+                        }
+                        else
+                        {
+                            // A legal shape that no production producer emits: every builder names the archetype it
+                            // built from. The recipe therefore carries no archetype identity at all, so this replay
+                            // has nothing to resolve and nothing to record as unresolved either - the loss, if there
+                            // is one, is already ERASED by the time it gets here. If what the step builds turns out
+                            // semantically empty, its feature's own construct guard is what tags it for reaping.
+                            ck::snapshot::Warning(
+                                TEXT("v3 load: DefinitionBuilt entity [{}] replays construction script [{}] with an EMPTY ")
+                                TEXT("archetype path - the recipe carries no archetype identity, so nothing names what this ")
+                                TEXT("step was meant to build. A save written by an older build that already rebuilt this ")
+                                TEXT("entity once and captured its null archetype back as nothing looks exactly like this"),
+                                SavedId, Step.Get_ScriptClassPath());
                         }
                         ConstructionInfos.Emplace(MoveTemp(Info));
                     }
@@ -1476,37 +1490,96 @@ auto
         FCk_Snapshot_LoadReport& InOutReport)
     -> void
 {
-    // The tag IS the list, deliberately: a parallel array of husk handles would be a mirror of registry state that
-    // nothing reconciles, and it would go stale the moment one of them was destroyed by something else first.
-    auto Records = TArray<FCk_Snapshot_UnresolvedArchetypeRecord>{};
+    // Taken from an entity the load MAPPED, not from GetWorld(): DoFinish_Load also runs on the abort routes,
+    // where the live world is not necessarily the one the load was rebuilding. The live world is the fallback
+    // for a load that mapped nothing at all, because a husk minted by some other route can still be sitting in it.
+    auto Registry = FCk_Registry{};
+    auto RegistryIsResolved = false;
 
     for (auto Restored : _MappedLiveEntities)
     {
-        if (ck::Is_NOT_Valid(Restored) || NOT Restored.Has<ck::FTag_Snapshot_UnresolvedArchetype>())
+        if (ck::Is_NOT_Valid(Restored))
         { continue; }
 
-        auto Record = FCk_Snapshot_UnresolvedArchetypeRecord{};
-        Record.Set_Identity(ck::Format_UE(TEXT("{}"), Restored));
+        Registry = Restored.Get_RegistryView();
+        RegistryIsResolved = true;
+        break;
+    }
 
-        // Read the path back off the recipe the rebuild carried it into, so the report names WHAT was lost rather
-        // than only that something was.
-        if (Restored.Has<ck::FFragment_BuildRecipe>())
+    if (NOT RegistryIsResolved)
+    {
+        auto* EcsWorld = DoGet_LoadWorldEcs();
+        if (ck::Is_NOT_Valid(EcsWorld))
+        { return; }
+
+        Registry = EcsWorld->Get_Registry();
+    }
+
+    // The tag IS the list, deliberately: a parallel array of husk handles would be a mirror of registry state that
+    // nothing reconciles, and it would go stale the moment one of them was destroyed by something else first. The
+    // view is over the TAG rather than over _MappedLiveEntities because the mapped set answers a different
+    // question — whose husk this is — and a husk minted by a live route while the load was running is not in it
+    // yet still holds a slot the player can never clear.
+    auto Husks = TArray<FCk_Handle>{};
+    Registry.View<ck::FTag_Snapshot_UnresolvedArchetype,
+                  ck::TExclude<ck::FTag_DestroyEntity_Initiate>,
+                  CK_IGNORE_PENDING_KILL>().ForEach(
+    [&](FCk_Entity InEntity)
+    {
+        Husks.Emplace(ck::MakeHandle(InEntity, Registry));
+    });
+
+    // Collected first: the destroy below stamps tags on the very entities the view is iterating, and the list is
+    // short by construction.
+    auto Records = TArray<FCk_Snapshot_UnresolvedArchetypeRecord>{};
+
+    for (auto Husk : Husks)
+    {
+        if (ck::Is_NOT_Valid(Husk))
+        { continue; }
+
+        // Read the path back off the recipe the rebuild carried it into, so the diagnostic names WHAT was lost
+        // rather than only that something was.
+        auto ArchetypePath = FString{};
+        if (Husk.Has<ck::FFragment_BuildRecipe>())
         {
-            for (const auto& Info : Restored.Get<ck::FFragment_BuildRecipe>().Get_ConstructionInfos())
+            for (const auto& Info : Husk.Get<ck::FFragment_BuildRecipe>().Get_ConstructionInfos())
             {
-                if (const auto& Path = Info.Get_UnresolvedArchetypePath(); NOT Path.IsEmpty())
+                if (const auto& Path = Info.Get_ArchetypeIdentityPath(); NOT Path.IsEmpty())
                 {
-                    Record.Set_ArchetypePath(Path);
+                    ArchetypePath = Path;
                     break;
                 }
             }
         }
 
-        Records.Emplace(MoveTemp(Record));
+        // Only a husk THIS load produced may be charged to the load report: the report partitions what the SAVE
+        // contained, and blaming it for an item the save never held turns a live-route defect into a phantom
+        // "N items could not be restored" the player is shown and nobody can reproduce.
+        if (_MappedLiveEntities.Contains(Husk))
+        {
+            ck::snapshot::Warning(
+                TEXT("v3 load: reaping unresolved-archetype husk [{}] (archetype [{}]) - it was rebuilt from a class ")
+                TEXT("default, so it is destroyed rather than left holding a slot nothing can use"),
+                Husk, ArchetypePath);
+
+            auto Record = FCk_Snapshot_UnresolvedArchetypeRecord{};
+            Record.Set_Identity(ck::Format_UE(TEXT("{}"), Husk));
+            Record.Set_ArchetypePath(ArchetypePath);
+            Records.Emplace(MoveTemp(Record));
+        }
+        else
+        {
+            ck::snapshot::Error(
+                TEXT("v3 load: reaping unresolved-archetype husk [{}] (archetype [{}]) that this load never mapped - ")
+                TEXT("it was minted by a route the load cannot account for. Reaped so its slot is released, but NOT ")
+                TEXT("recorded as a restore loss: the save never contained it"),
+                Husk, ArchetypePath);
+        }
 
         // Through the ordinary destroy path, which is what releases its inventory record entry and grid cell. A husk
         // removed any other way would free the entity and leave the container still counting it.
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Restored);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Husk);
     }
 
     if (NOT Records.IsEmpty())
