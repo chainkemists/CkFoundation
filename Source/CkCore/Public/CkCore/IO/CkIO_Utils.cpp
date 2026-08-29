@@ -2,6 +2,7 @@
 
 #include "CkCore/CkCoreLog.h"
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/IO/CkDeferredAssetInit_AngelScript.h"
 
 #include <CoreGlobals.h>
 #include <Misc/CommandLine.h>
@@ -519,31 +520,51 @@ auto
         return FCk_Utils_Object_AssetSearchResult_Array{};
     }
 
-    if (SearchStrategy == ECk_AssetSearchStrategy::ExactOnly)
+    const auto Results = [&]() -> FCk_Utils_Object_AssetSearchResult_Array
     {
-        return DoFastExactLookup(AssetName, AssetClass, SearchScope);
-    }
-
-    if (SearchStrategy == ECk_AssetSearchStrategy::ExactThenFuzzy)
-    {
-        if (auto ExactResults = DoFastExactLookup(AssetName, AssetClass, SearchScope);
-            ExactResults.Get_Results().Num() > 0)
+        if (SearchStrategy == ECk_AssetSearchStrategy::ExactOnly)
         {
-            return ExactResults;
+            return DoFastExactLookup(AssetName, AssetClass, SearchScope);
         }
 
-        // A qualified object path cannot match DoFuzzySearch: fuzzy matching compares
-        // AssetData.AssetName (the leaf name) against the complete input string.
-        // Avoid scanning every asset for a fallback that cannot succeed.
-        if (AssetName.StartsWith(TEXT("/")))
+        if (SearchStrategy == ECk_AssetSearchStrategy::ExactThenFuzzy)
         {
-            return FCk_Utils_Object_AssetSearchResult_Array{};
+            if (auto ExactResults = DoFastExactLookup(AssetName, AssetClass, SearchScope);
+                ExactResults.Get_Results().Num() > 0)
+            {
+                return ExactResults;
+            }
+
+            // A qualified object path cannot match DoFuzzySearch: fuzzy matching compares
+            // AssetData.AssetName (the leaf name) against the complete input string.
+            // Avoid scanning every asset for a fallback that cannot succeed.
+            if (AssetName.StartsWith(TEXT("/")))
+            {
+                return FCk_Utils_Object_AssetSearchResult_Array{};
+            }
+
+            return DoFuzzySearch(AssetName, AssetClass, SearchScope);
         }
 
-        return DoFuzzySearch(AssetName, AssetClass, SearchScope);
+        return DoFullAssetScan(AssetName, AssetClass, SearchScope, SearchStrategy);
+    }();
+
+    // Every lookup here resolves through the asset registry, which has not scanned yet during
+    // Angelscript module load — so an empty result before the engine is safe for blocking loads
+    // means "not scanned", not "does not exist". Note it against the initializer that asked, so
+    // UCk_DeferredAssetInit_UE re-runs that one instead of leaving the caller holding null for the
+    // whole session. This is the same seam assets::load::* reaches through
+    // ck::EnsureIfNot_PrematureAssetLoad; without it, a literal asset assigned via LoadAssetByName
+    // is never healed.
+    //
+    // IsEngineSafeForBlockingLoads() is the QUERYING getter on purpose: its side effect is what
+    // stops ResolveAllPending short-circuiting on "nothing was deferred this boot".
+    if (Results.Get_Results().IsEmpty() && NOT IsEngineSafeForBlockingLoads())
+    {
+        UCk_DeferredAssetInit_UE::Note_DeferredAssetLoad_FromActiveContext();
     }
 
-    return DoFullAssetScan(AssetName, AssetClass, SearchScope, SearchStrategy);
+    return Results;
 }
 
 auto
