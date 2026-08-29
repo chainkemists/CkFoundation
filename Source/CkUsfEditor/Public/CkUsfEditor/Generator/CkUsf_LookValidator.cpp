@@ -359,6 +359,30 @@ namespace ck::usf_editor
                     TEXT("Look [%s]: param [%s] is _PerInstance but not Scalar/Vector — textures cannot ride per-instance custom data"),
                     *LookName.ToString(), *Name));
             }
+
+            if (Param._CustomPrimitiveData
+                && Param._Type != ECk_Usf_ParamType::Scalar
+                && Param._Type != ECk_Usf_ParamType::Vector)
+            {
+                Result.Errors.Add(FString::Printf(
+                    TEXT("Look [%s]: param [%s] is _CustomPrimitiveData but not Scalar/Vector — textures cannot ride custom primitive data"),
+                    *LookName.ToString(), *Name));
+            }
+
+            if (Param._CustomPrimitiveData && Param._PerInstance)
+            {
+                Result.Errors.Add(FString::Printf(
+                    TEXT("Look [%s]: param [%s] declares both _PerInstance and _CustomPrimitiveData — they are two different data sources and the generator emits one node per param"),
+                    *LookName.ToString(), *Name));
+            }
+
+            // A negative index would cast to 255 and silently read a slot nothing writes.
+            if (Param._CustomPrimitiveData && Param._CustomPrimitiveDataIndex < 0)
+            {
+                Result.Errors.Add(FString::Printf(
+                    TEXT("Look [%s]: param [%s] is _CustomPrimitiveData but its _CustomPrimitiveDataIndex is [%d] — the CPD layout is owned by the writer, so the index must be set explicitly"),
+                    *LookName.ToString(), *Name, Param._CustomPrimitiveDataIndex));
+            }
         }
 
         const auto IsSurfaceDomain = InDef->_Domain == ECk_Usf_Domain::SurfaceLit

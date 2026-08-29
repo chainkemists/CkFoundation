@@ -143,6 +143,13 @@ public:
     static int32
     Get_CrowdMemberSequenceIndex(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
 
+    // Monotonic seconds on the member's animation clock (advances even while hidden). NOT
+    // loop-wrapped — fmod against the playing sequence's length yourself.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Animation Time")
+    static float
+    Get_CrowdMemberAnimationTime(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
     // Hide/show a member in its batched tile. Hide a member so a per-SKMC proxy can stand in for it (ragdoll/montage);
     // show it to return to batched rendering.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",

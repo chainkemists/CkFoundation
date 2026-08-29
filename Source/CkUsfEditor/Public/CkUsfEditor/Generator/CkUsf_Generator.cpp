@@ -374,6 +374,11 @@ namespace ck::usf_editor
                         InMaterial, UMaterialExpressionScalarParameter::StaticClass(), -800, InRow));
                 S->ParameterName = P._Name; S->DefaultValue = P._DefaultScalar;
                 S->Group = P._Group; S->SortPriority = P._SortPriority;
+                if (P._CustomPrimitiveData)
+                {
+                    S->bUseCustomPrimitiveData = true;
+                    S->PrimitiveDataIndex = static_cast<uint8>(P._CustomPrimitiveDataIndex);
+                }
                 return S;
             }
             case ECk_Usf_ParamType::Vector:
@@ -383,6 +388,11 @@ namespace ck::usf_editor
                         InMaterial, UMaterialExpressionVectorParameter::StaticClass(), -800, InRow));
                 V->ParameterName = P._Name; V->DefaultValue = P._DefaultVector;
                 V->Group = P._Group; V->SortPriority = P._SortPriority;
+                if (P._CustomPrimitiveData)
+                {
+                    V->bUseCustomPrimitiveData = true;
+                    V->PrimitiveDataIndex = static_cast<uint8>(P._CustomPrimitiveDataIndex);
+                }
                 return V;
             }
             default: // Texture2D / TextureCube

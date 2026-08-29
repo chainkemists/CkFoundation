@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Time/CkTime.h"
@@ -183,13 +184,38 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fade",
               meta = (AllowPrivateAccess = true))
-    FCk_Time _FadeDuration = FCk_Time{0.3};
+    FCk_Time _FadeDuration = FCk_Time{0.1};
 
     // Per-instance custom-data float carrying the member's dither alpha (1 = solid, 0 = dissolved).
     // The crowd's material must read the same slot
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fade",
               meta = (AllowPrivateAccess = true, ClampMin = 2, ClampMax = 15))
     int32 _FadeCustomDataSlot = 13;
+
+    // Custom-primitive-data float on the PROMOTED PROXY's mesh carrying the SAME alpha as the crowd
+    // slot above — one value, two complementary dither masks. The near mesh's material must dither
+    // itself OUT as the value rises (1 = far crowd member solid, 0 = near mesh solid), so the two
+    // masks are complements and the crossfade is seamless. Written through the proxy's custom-data
+    // lane, so the member's RendererData must declare _NumCustomDataFloat > this slot (the writes
+    // ensure loudly otherwise), and a near material that ignores the slot pops instead of dithering
+    // — loud by design, not a silent fallback
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fade",
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 31))
+    int32 _FadeNearCustomPrimitiveDataSlot = 0;
+
+    // The near mesh's play anchor leads the crowd clock by this many frame-times: the play request
+    // applies one frame after the anchor is read, and the crowd's clock advances once more in
+    // between. 1 cancels that latency exactly; tune by eye if a game's frame pacing says otherwise
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fade",
+              meta = (AllowPrivateAccess = true))
+    float _FadeAnchorLeadFrames = 1.0f;
+
+    // ...and pulls BACK by this many bake intervals: the crowd displays trunc(time x SampleFrequency),
+    // lagging its own clock by half an interval on average while the promoted mesh interpolates
+    // smoothly. 0.5 centres the mesh on the crowd's displayed frame; tune by eye
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fade",
+              meta = (AllowPrivateAccess = true))
+    float _FadeAnchorBakeLagIntervals = 0.5f;
 
     // ---- pool ----
 
@@ -216,6 +242,9 @@ public:
     CK_PROPERTY_GET(_MaxPreemptsPerTick);
     CK_PROPERTY_GET(_FadeDuration);
     CK_PROPERTY_GET(_FadeCustomDataSlot);
+    CK_PROPERTY_GET(_FadeNearCustomPrimitiveDataSlot);
+    CK_PROPERTY_GET(_FadeAnchorLeadFrames);
+    CK_PROPERTY_GET(_FadeAnchorBakeLagIntervals);
     CK_PROPERTY_GET(_ParkZ);
     CK_PROPERTY_GET(_CrowdConfigs);
 };
@@ -277,6 +306,31 @@ struct CKVISUALLOD_API FCk_Request_VisualLodArbiter_ClearObserver : public FCk_R
 public:
     CK_GENERATED_BODY(FCk_Request_VisualLodArbiter_ClearObserver);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VisualLodArbiter_ClearObserver);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_Request_VisualLodArbiter_SetFrozen : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VisualLodArbiter_SetFrozen);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VisualLodArbiter_SetFrozen);
+
+private:
+    // Enable holds the arbiter on its current decisions (in-flight fades still finish); Disable
+    // resumes ordinary arbitration on the next update
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _Frozen = ECk_EnableDisable::Enable;
+
+public:
+    CK_PROPERTY_GET(_Frozen);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VisualLodArbiter_SetFrozen, _Frozen);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

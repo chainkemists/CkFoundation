@@ -18,6 +18,17 @@ class ACk_Iskm_BatchedCrowd_Actor;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// One crowd runtime's pool occupancy, flattened for tooling. PoolSize is the live slot-owner array,
+// which is the crowd's fixed member count once it has stood up (0 before that)
+struct CKVISUALLOD_API FCk_VisualLodArbiter_CrowdPoolDebugInfo
+{
+    int32 PoolSize = 0;
+    int32 FreeSlots = 0;
+    TWeakObjectPtr<ACk_Iskm_BatchedCrowd_Actor> Crowd;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_VisualLodArbiter"))
 class CKVISUALLOD_API UCk_Utils_VisualLodArbiter_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -121,6 +132,52 @@ public:
     Get_Crowd(
         const FCk_Handle_VisualLodArbiter& InHandle,
         int32 InCrowdIndex);
+
+public:
+    /**
+     * Inspection surface. C++ only: the returns are ck:: types and raw per-tick counters that no
+     * Blueprint or AngelScript consumer has a use for — the debugger reads them directly.
+     */
+
+    // The view resolved on the arbiter's last update, including the invalid one it resolves to
+    // when no observer and no local view were available that tick
+    static auto
+    Get_LastView(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> ck::FVisualLod_LocalView;
+
+    // Flips STARTED by the most recent update. A frozen or view-less arbiter reports zero
+    static auto
+    Get_PromotesThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> int32;
+
+    static auto
+    Get_DemotesThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> int32;
+
+    static auto
+    Get_PreemptsThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> int32;
+
+    static auto
+    Get_IsFrozen(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> bool;
+
+    // Deferred like every other arbiter request — the hold takes effect from the next update
+    static auto
+    Request_SetFrozen(
+        FCk_Handle_VisualLodArbiter& InHandle,
+        bool InFrozen) -> void;
+
+    // Configured crowd count; a crowd stands up lazily, so most will be empty runtimes early on
+    static auto
+    Get_NumCrowds(
+        const FCk_Handle_VisualLodArbiter& InHandle) -> int32;
+
+    // Default-constructed for an out-of-range index
+    static auto
+    Get_CrowdPoolDebugInfo(
+        const FCk_Handle_VisualLodArbiter& InHandle,
+        int32 InCrowdIndex) -> FCk_VisualLodArbiter_CrowdPoolDebugInfo;
 
 public:
     UFUNCTION(BlueprintCallable,

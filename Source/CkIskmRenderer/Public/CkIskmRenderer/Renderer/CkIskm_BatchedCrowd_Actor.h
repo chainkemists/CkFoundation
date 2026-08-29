@@ -48,6 +48,10 @@ public:
     int32      Get_MemberCount() const { return _Members.Num(); }
     FTransform Get_MemberWorldTransform(int32 InIndex) const;
     int32      Get_MemberSequenceIndex(int32 InIndex) const;
+    // Monotonic seconds on the member's animation clock (advances even while hidden, at the member's
+    // rate — that is what lets a flip-demoted member rejoin in phase). NOT loop-wrapped: fmod it
+    // against the playing sequence's length yourself.
+    float      Get_MemberAnimationTime(int32 InIndex) const;
     bool       Get_MemberVisible(int32 InIndex) const;
 
     // In-tile moves ride the light per-frame push; crossing a tile border migrates the member (rebuilds both).

@@ -129,6 +129,19 @@ struct CKUSF_API FCk_Usf_ParamDesc
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     int32 _PerInstanceSlot = -1;
 
+    // Scalar/Vector-only: source this param from the primitive's CUSTOM PRIMITIVE DATA instead of a
+    // uniform — the per-component channel a UPrimitiveComponent carries (SetCustomPrimitiveDataFloat),
+    // which is what a per-entity SKMC has where an ISM has per-instance custom data. Mutually exclusive
+    // with _PerInstance. Safe on any primitive: an unwritten CPD slot reads 0.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _CustomPrimitiveData = false;
+
+    // Custom-primitive-data params only: which CPD index this param reads. The layout is owned by the
+    // writer (there is no auto-assignment the way per-instance slots have one), so it must be set
+    // whenever _CustomPrimitiveData is.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    int32 _CustomPrimitiveDataIndex = -1;
+
     // Object path for Texture2D / TextureCube params, e.g.
     // "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap".
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")

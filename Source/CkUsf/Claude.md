@@ -124,6 +124,19 @@ legal only on Scalar/Vector params (textures cannot ride per-instance custom dat
 `_UshIncludePath` must resolve through the registered shader source directory mappings
 (`AddShaderSourceDirectoryMapping`) — an unresolvable virtual path is an error, not a silent skip.
 
+**Custom primitive data is the third param source**, beside a uniform and per-instance custom data:
+`_CustomPrimitiveData` + `_CustomPrimitiveDataIndex` stamp `bUseCustomPrimitiveData` /
+`PrimitiveDataIndex` onto the generated Scalar/Vector parameter node. It is what reaches a param on a
+plain `UPrimitiveComponent` — a per-entity SKMC has CPD where an ISM has per-instance data
+(`UCk_Utils_IskmProxy_UE::Request_SetCustomDataFloat` writes it) — so a look drawn on both paths
+declares one param per source, not one param for both. Same Scalar/Vector-only rule as `_PerInstance`,
+mutually exclusive with it, and the index is REQUIRED when the flag is set: the layout is the writer's,
+there is no `Get_PerInstanceSlotOf` equivalent to auto-assign one, and a negative index would cast to
+255 and read a slot nothing writes. Every field defaults off, so looks that predate it regenerate
+byte-identically. Shipped pair: `VisualLodCrowdFade` (per-instance) / `VisualLodNearFade` (CPD) — the
+two halves of CkVisualLod's crossfade, sharing `CkUsf_VisualLod_FadeThreshold` from `Common.ush` so
+their masks stay exact complements.
+
 ## Traps cookbook
 
 - **Never raw `.Sample()` in a lit or WPO'd look** — lit looks compile ray-tracing hit permutations
