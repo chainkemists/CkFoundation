@@ -19,6 +19,8 @@
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
+#include "Animation/AnimSequenceBase.h"
+
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
 
 #include "CkVisualLod/CkVisualLod_Log.h"
@@ -145,6 +147,20 @@ namespace ck
         InCurrent._Observer = FCk_Handle{};
     }
 
+    auto
+        FProcessor_VisualLodArbiter_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_SetFrozen& InRequest)
+        -> void
+    {
+        if (InRequest.Get_Frozen() == ECk_EnableDisable::Enable)
+        { InHandle.AddOrGet<FTag_VisualLodArbiter_Frozen>(); }
+        else
+        { InHandle.Try_Remove<FTag_VisualLodArbiter_Frozen>(); }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
@@ -207,11 +223,19 @@ namespace ck
         Ctx._World   = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InArbiter);
 
         Ctx._View = DoResolve_View(InArbiter, Current, *Config);
+        Current._LastView = Ctx._View;
+
+        Current._PromotesThisTick = 0;
+        Current._DemotesThisTick  = 0;
+        Current._PreemptsThisTick = 0;
 
         // No view, no decisions: nothing promotes, demotes, or updates (dedicated server, or no
         // observer wired yet). Mirrors the BB drivers' whole-batch skip
         if (NOT Ctx._View._IsValid)
         { return 0; }
+
+        if (InArbiter.Has<FTag_VisualLodArbiter_Frozen>())
+        { return DoUpdate_ArbiterFrozen(Ctx); }
 
         DoGather_Members(Ctx);
 
@@ -300,6 +324,34 @@ namespace ck
 
     auto
         FProcessor_VisualLodArbiter_Update::
+        DoUpdate_ArbiterFrozen(
+            FUpdateContext& InCtx)
+        -> int32
+    {
+        // Deliberately NOT DoGather_Members: that pass also claims unowned members by domain tag,
+        // which is a resolution a frozen arbiter must not make. Only entities it already owns
+        InCtx._Arbiter.View<FFragment_VisualLod_Params, FFragment_VisualLod_Current, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_VisualLod_Params&, const FFragment_VisualLod_Current& InMemberCurrent)
+        {
+            auto Generic = ck::MakeHandle(InEntity, InCtx._Arbiter);
+
+            if (Generic.Has<FTag_VisualLod_NeedsSetup>() || Generic.Has<FTag_VisualLod_Suspended>())
+            { return; }
+
+            if (InMemberCurrent.Get_Arbiter() == InCtx._Arbiter)
+            { InCtx._Members.Emplace(UCk_Utils_VisualLod_UE::CastChecked(Generic)); }
+        });
+
+        // Outside the view: the recovery path destroys the proxy's scene node, and entity
+        // destruction inside a live view is exactly what the DoTick shadow exists to avoid
+        for (const auto& Member : InCtx._Members)
+        { DoProcess_Member_Frozen(InCtx, Member); }
+
+        return InCtx._Members.Num();
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_Update::
         DoProcess_Member(
             FUpdateContext& InCtx,
             int32 InScratchIdx,
@@ -336,6 +388,10 @@ namespace ck
                 MemberCurrent._FadePhase     = EVisualLod_FadePhase::None;
                 MemberCurrent._FadeAlpha     = 1.0f;
                 MemberCurrent._PreemptDemote = false;
+
+                // The crossfade force-ends at the solid state, so a kept proxy must stop dithering —
+                // otherwise it freezes at its last partway mask with no far member behind it
+                DoWrite_ProxyFade(MemberCurrent, Config.Get_FadeNearCustomPrimitiveDataSlot(), 0.0f);
 
                 // A promoted member keeps its proxy, but still needs a replacement slot parked
                 // underneath so it can demote normally later
@@ -400,6 +456,12 @@ namespace ck
         }
 
         const auto Distance = static_cast<float>((MemberXf.GetLocation() - InCtx._View._Location).Size());
+        const auto InView   = visual_lod::Get_IsInView(MemberXf.GetLocation(), InCtx._View,
+            Config.Get_AlwaysInViewDistance(), Distance);
+
+        // Retained for tooling: the rank inputs the two candidate/incumbent branches below read
+        MemberCurrent._LastDistance = Distance;
+        MemberCurrent._LastInView   = InView;
 
         // A held lock blocks demotion outright, with NO distance term: an SKMC committed to a
         // ragdoll keeps it for the whole downed window. The lock distance gates only STARTING
@@ -408,12 +470,18 @@ namespace ck
 
         if (MemberCurrent._FadePhase != EVisualLod_FadePhase::None)
         {
-            DoTick_Fade(InCtx, InMember, MemberCurrent, MemberXf, Distance, LockHeld);
+            constexpr auto AllowReversal = true;
+            DoTick_Fade(InCtx, InMember, MemberCurrent, MemberXf, Distance, LockHeld, AllowReversal);
             return;
         }
 
         if (MemberCurrent._Promoted)
         {
+            // Keep the proxy's locomotion tracking the far-anim (a SpeedDriven member speeds up /
+            // idles while promoted). No-op for Fixed, and for a game-overridden proxy the cache
+            // stops us re-issuing over its choice unless the far resolution actually changes
+            DoDrive_ProxyAnim(InCtx, InMember, MemberCurrent);
+
             // Refund on release rather than at demote: a recovered member standing next to the
             // camera is an ordinary near promote from here on, and must stop charging the lock budget
             if (MemberCurrent._PromotedViaLock && NOT LockHeld)
@@ -440,8 +508,7 @@ namespace ck
                 auto Incumbent = FVisualLod_RankEntry{};
                 Incumbent._Index    = InScratchIdx;
                 Incumbent._Distance = Distance;
-                Incumbent._InView   = visual_lod::Get_IsInView(MemberXf.GetLocation(), InCtx._View,
-                    Config.Get_AlwaysInViewDistance(), Distance);
+                Incumbent._InView   = InView;
                 InCtx._Current->_Incumbents.Add(Incumbent);
             }
             return;
@@ -467,13 +534,47 @@ namespace ck
                 auto Candidate = FVisualLod_RankEntry{};
                 Candidate._Index    = InScratchIdx;
                 Candidate._Distance = Distance;
-                Candidate._InView   = visual_lod::Get_IsInView(MemberXf.GetLocation(), InCtx._View,
-                    Config.Get_AlwaysInViewDistance(), Distance);
+                Candidate._InView   = InView;
                 InCtx._Current->_Candidates.Add(Candidate);
             }
         }
 
         DoUpdate_FarMember(InCtx, InMember, MemberCurrent, MemberXf);
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_Update::
+        DoProcess_Member_Frozen(
+            FUpdateContext& InCtx,
+            FCk_Handle_VisualLod InMember)
+        -> void
+    {
+        auto& MemberCurrent = InMember.Get<FFragment_VisualLod_Current>();
+
+        // Freeze holds decisions, not correctness: an externally torn-down proxy still has to fail
+        // closed to the far representation rather than be ticked as a corpse for the whole hold
+        if (MemberCurrent._Promoted
+            && (ck::Is_NOT_Valid(MemberCurrent._Proxy) || ck::Is_NOT_Valid(MemberCurrent._VisualNode)))
+        {
+            DoRecover_FailClosed(InCtx, InMember, MemberCurrent);
+            return;
+        }
+
+        if (MemberCurrent._FadePhase == EVisualLod_FadePhase::None)
+        { return; }
+
+        const auto MemberXfHandle = UCk_Utils_Transform_UE::Cast(InMember);
+        if (ck::Is_NOT_Valid(MemberXfHandle))
+        { return; }
+        const auto MemberXf = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(MemberXfHandle);
+
+        const auto Distance = static_cast<float>((MemberXf.GetLocation() - InCtx._View._Location).Size());
+
+        // The fade runs out on the course it started: both the lock re-aim and the band reversal
+        // are promote/demote decisions, and a frozen arbiter makes none
+        constexpr auto LockHeld      = false;
+        constexpr auto AllowReversal = false;
+        DoTick_Fade(InCtx, InMember, MemberCurrent, MemberXf, Distance, LockHeld, AllowReversal);
     }
 
     auto
@@ -515,6 +616,8 @@ namespace ck
             { continue; }
 
             MemberCurrent._PreemptDemote = true;
+            ++Current._PreemptsThisTick;
+
             DoDemote_Begin(InCtx, Member, MemberCurrent,
                 UCk_Utils_Transform_UE::Get_EntityCurrentTransform(XfHandle));
         }
@@ -585,6 +688,7 @@ namespace ck
         { UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, Idx, false); }
 
         Runtime._Crowd = Crowd;
+        Runtime._Collection = Collection;
         Runtime._FreeSlots.Reset();
         Runtime._SlotOwners.Reset();
         for (auto Idx = CrowdConfig.Get_PoolSize() - 1; Idx >= 0; --Idx)
@@ -740,8 +844,15 @@ namespace ck
             return;
         }
 
+        InMemberCurrent._Proxy = Proxy;
+
+        // Put the proxy on the far member's locomotion as a single looping sequence (no AnimBP)
+        // BEFORE the game seam fires, so it walks exactly as it did at range. A game that wants a
+        // richer look here (its own AnimBP, a montage) overrides it by enqueuing after us
+        DoDrive_ProxyAnim(InCtx, InMember, InMemberCurrent);
+
         // The proxy is live: the game applies its look (wardrobe, material overrides, socket
-        // followers, animation) synchronously here
+        // followers, an animation override) synchronously here
         UUtils_Signal_OnVisualLod_Promoted::Broadcast(InMember, MakePayload(InMember, Proxy));
 
         if (InMemberCurrent._Hidden)
@@ -756,22 +867,34 @@ namespace ck
 
         // Don't hide the member — it dithers out under the SKMC; the fade owns member visibility
         // from here. No-slot promotes (exhaustion fallback) and hidden members keep instant behavior
-        if (ck::IsValid(Crowd) && InMemberCurrent._MemberIndex != INDEX_NONE && NOT InMemberCurrent._Hidden)
+        const auto Crossfading = ck::IsValid(Crowd)
+            && InMemberCurrent._MemberIndex != INDEX_NONE
+            && NOT InMemberCurrent._Hidden;
+
+        if (Crossfading)
         {
             InMemberCurrent._FadePhase = EVisualLod_FadePhase::PromoteFade;
             InMemberCurrent._FadeAlpha = 1.0f;
         }
 
+        // Declare the near mask before anything can render this proxy: fully dithered OUT over the
+        // still-solid far member for a crossfade, solid for an unfaded promote that has no far
+        // member to cross with. The request waits for IskmProxy Setup (which zero-fills the slot to
+        // solid) and applies in the same drain, ahead of the proxy's first rendered frame — this
+        // write is what keeps that first frame flash-free
+        DoWrite_ProxyFade(InMemberCurrent, InCtx._Config->Get_FadeNearCustomPrimitiveDataSlot(),
+            Crossfading ? InMemberCurrent._FadeAlpha : 0.0f);
+
         InMemberCurrent._Promoted           = true;
         InMemberCurrent._PromotedViaLock    = InChargeClass == EChargeClass::Locked;
         InMemberCurrent._PromotedUnbudgeted = InChargeClass == EChargeClass::Unbudgeted;
         InMemberCurrent._VisualNode         = NodeGeneric;
-        InMemberCurrent._Proxy              = Proxy;
 
         InMember.AddOrGet<FTag_VisualLod_Promoted>();
 
         auto& ArbiterCurrent = *InCtx._Current;
         ArbiterCurrent._PromotedOwners.Add(InMember);
+        ++ArbiterCurrent._PromotesThisTick;
         switch (InChargeClass)
         {
             case EChargeClass::Near:       ++ArbiterCurrent._NearPromotedCount; break;
@@ -789,6 +912,11 @@ namespace ck
             const FTransform& InMemberXf)
         -> void
     {
+        // A preempt-demote was already counted by the ranked pass that chose it — it is a ranking
+        // outcome, not one of this tick's distance demotes
+        if (NOT InMemberCurrent._PreemptDemote)
+        { ++InCtx._Current->_DemotesThisTick; }
+
         // Hidden members don't animate a fade — tear the proxy down now; the member stays hidden
         if (InMemberCurrent._Hidden)
         {
@@ -822,6 +950,10 @@ namespace ck
 
         InMemberCurrent._FadePhase = EVisualLod_FadePhase::DemoteFade;
         InMemberCurrent._FadeAlpha = 0.0f;
+
+        // The proxy starts this fade solid and dithers OUT as the member comes back
+        DoWrite_ProxyFade(InMemberCurrent, InCtx._Config->Get_FadeNearCustomPrimitiveDataSlot(),
+            InMemberCurrent._FadeAlpha);
     }
 
     auto
@@ -850,6 +982,8 @@ namespace ck
         InMemberCurrent._PromotedUnbudgeted = false;
         InMemberCurrent._VisualNode         = FCk_Handle{};
         InMemberCurrent._Proxy              = FCk_Handle_IskmProxy{};
+        InMemberCurrent._ProxySequenceIndex = INDEX_NONE;
+        InMemberCurrent._ProxyRate          = 1.0f;
         InMemberCurrent._FadePhase          = EVisualLod_FadePhase::None;
         InMemberCurrent._PreemptDemote      = false;
 
@@ -879,6 +1013,8 @@ namespace ck
         InMemberCurrent._PromotedUnbudgeted = false;
         InMemberCurrent._VisualNode         = FCk_Handle{};
         InMemberCurrent._Proxy              = FCk_Handle_IskmProxy{};
+        InMemberCurrent._ProxySequenceIndex = INDEX_NONE;
+        InMemberCurrent._ProxyRate          = 1.0f;
         InMemberCurrent._FadePhase          = EVisualLod_FadePhase::None;
         InMemberCurrent._FadeAlpha          = 1.0f;
         InMemberCurrent._PreemptDemote      = false;
@@ -906,11 +1042,13 @@ namespace ck
             FFragment_VisualLod_Current& InMemberCurrent,
             const FTransform& InMemberXf,
             float InDistance,
-            bool InLockHeld)
+            bool InLockHeld,
+            bool InAllowReversal)
         -> void
     {
         const auto Crowd    = InMemberCurrent._Crowd.Get();
         const auto FadeSlot = InCtx._Config->Get_FadeCustomDataSlot();
+        const auto NearSlot = InCtx._Config->Get_FadeNearCustomPrimitiveDataSlot();
 
         // 1. Member vanished mid-fade (slot reclaimed / crowd gone): resolve the promote state
         if (ck::Is_NOT_Valid(Crowd) || InMemberCurrent._MemberIndex == INDEX_NONE)
@@ -918,13 +1056,18 @@ namespace ck
             if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::DemoteFade)
             { DoDemote_Finish(InCtx, InMember, InMemberCurrent); }
             else
-            { InMemberCurrent._FadePhase = EVisualLod_FadePhase::None; }
+            {
+                // Proxy is now the sole representation, steady and solid — stop dithering it
+                DoWrite_ProxyFade(InMemberCurrent, NearSlot, 0.0f);
+                InMemberCurrent._FadePhase = EVisualLod_FadePhase::None;
+            }
             return;
         }
 
         // 2. Dormancy hid the member mid-fade: snap it out, leave the fade slot clean at 1.0
         if (InMemberCurrent._Hidden)
         {
+            DoWrite_ProxyFade(InMemberCurrent, NearSlot, 0.0f);
             UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, InMemberCurrent._MemberIndex, false);
             DoWrite_MemberFade(Crowd, InMemberCurrent._MemberIndex, FadeSlot, 1.0f);
             InMemberCurrent._FadeAlpha = 1.0f;
@@ -939,19 +1082,23 @@ namespace ck
         //    proxy/slot churn, so band oscillation is nearly free. A lock taken mid-demote
         //    outranks the distance test outright (a downed member has to come BACK to the proxy);
         //    it also clears a preempt demote. A preempted member is inside the promote band by
-        //    construction, so the near-side reversal must not see it
-        if (InLockHeld)
+        //    construction, so the near-side reversal must not see it. A frozen arbiter passes
+        //    InAllowReversal false — re-aiming a fade is a decision, and it makes none
+        if (InAllowReversal)
         {
-            InMemberCurrent._FadePhase     = EVisualLod_FadePhase::PromoteFade;
-            InMemberCurrent._PreemptDemote = false;
+            if (InLockHeld)
+            {
+                InMemberCurrent._FadePhase     = EVisualLod_FadePhase::PromoteFade;
+                InMemberCurrent._PreemptDemote = false;
+            }
+            else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::PromoteFade
+                && InDistance > InCtx._Config->Get_DemoteDistance())
+            { InMemberCurrent._FadePhase = EVisualLod_FadePhase::DemoteFade; }
+            else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::DemoteFade
+                && NOT InMemberCurrent._PreemptDemote
+                && InDistance < InCtx._Config->Get_PromoteDistance())
+            { InMemberCurrent._FadePhase = EVisualLod_FadePhase::PromoteFade; }
         }
-        else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::PromoteFade
-            && InDistance > InCtx._Config->Get_DemoteDistance())
-        { InMemberCurrent._FadePhase = EVisualLod_FadePhase::DemoteFade; }
-        else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::DemoteFade
-            && NOT InMemberCurrent._PreemptDemote
-            && InDistance < InCtx._Config->Get_PromoteDistance())
-        { InMemberCurrent._FadePhase = EVisualLod_FadePhase::PromoteFade; }
 
         // 4. Step alpha toward the phase target
         const auto FadeSeconds = static_cast<float>(InCtx._Config->Get_FadeDuration().Get_Seconds());
@@ -963,8 +1110,10 @@ namespace ck
         else
         { InMemberCurrent._FadeAlpha = FMath::Min(InMemberCurrent._FadeAlpha + Step, 1.0f); }
 
-        // 5. Push the current alpha to the member's fade slot
+        // 5. Push the current alpha to BOTH sides of the crossfade — one value, two complementary
+        //    dither masks: the far member solidifies as it rises, the near proxy dithers out
         DoWrite_MemberFade(Crowd, InMemberCurrent._MemberIndex, FadeSlot, InMemberCurrent._FadeAlpha);
+        DoWrite_ProxyFade(InMemberCurrent, NearSlot, InMemberCurrent._FadeAlpha);
 
         // 6. Keep the member walking with the entity while it dissolves
         DoUpdate_FarMember(InCtx, InMember, InMemberCurrent, InMemberXf);
@@ -977,6 +1126,10 @@ namespace ck
             DoWrite_MemberFade(Crowd, InMemberCurrent._MemberIndex, FadeSlot, 1.0f);
             InMemberCurrent._FadeAlpha = 1.0f;
             InMemberCurrent._FadePhase = EVisualLod_FadePhase::None;
+
+            // The steady near state is exactly 0, not merely the last sub-step: _FadeAlpha was just
+            // reset to 1.0 for the FAR slot's clean parking value and no longer speaks for the proxy
+            DoWrite_ProxyFade(InMemberCurrent, NearSlot, 0.0f);
         }
         else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::DemoteFade && InMemberCurrent._FadeAlpha >= 1.0f)
         {
@@ -1011,6 +1164,126 @@ namespace ck
             InMemberCurrent._CurrentSequenceIndex = Seq;
             InMemberCurrent._CurrentRate          = Rate;
         }
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_Update::
+        DoDrive_ProxyAnim(
+            FUpdateContext& InCtx,
+            FCk_Handle_VisualLod InMember,
+            FFragment_VisualLod_Current& InMemberCurrent)
+        -> void
+    {
+        auto Proxy = InMemberCurrent._Proxy;
+        if (ck::Is_NOT_Valid(Proxy))
+        { return; }
+
+        const auto CrowdIndex = InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex();
+        if (NOT InCtx._Current->_Crowds.IsValidIndex(CrowdIndex))
+        { return; }
+
+        // Only a crowd-backed member has a shared anim collection to mirror. AlwaysPromoted /
+        // exhaustion-fallback proxies have no far representation — their animation is the game's
+        const auto Collection = InCtx._Current->_Crowds[CrowdIndex]._Collection.Get();
+        if (ck::Is_NOT_Valid(Collection))
+        { return; }
+
+        const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[CrowdIndex];
+        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdConfig, DoGet_PlanarSpeed(InMember));
+
+        const auto SeqChanged  = Seq != InMemberCurrent._ProxySequenceIndex;
+        const auto RateChanged = FMath::Abs(Rate - InMemberCurrent._ProxyRate) > 0.1f;
+        if (NOT SeqChanged && NOT RateChanged)
+        { return; }
+
+        const auto SeqInRange = Collection->Get_Sequences().IsValidIndex(Seq);
+        CK_ENSURE_IF_NOT(SeqInRange,
+            TEXT("VisualLod far-anim sequence index [{}] is outside crowd [{}]'s anim collection ([{}] sequences) — proxy [{}] keeps its current pose"),
+            Seq, CrowdIndex, Collection->Get_Sequences().Num(), InMember)
+        { return; }
+
+        UAnimSequenceBase* const SeqAsset = Collection->Get_Sequences()[Seq].Get_Sequence();
+        if (ck::Is_NOT_Valid(SeqAsset))
+        { return; }
+
+        // The crowd member's clock is THE clock (it advances even while hidden, at the member's
+        // rate), so the proxy starts mid-sequence wherever the crowd currently is — the two
+        // representations crossfade over each other, and a phase offset between them is the one
+        // seam the overlapped dither masks cannot hide
+        auto StartAt = 0.0f;
+        const auto Crowd = InMemberCurrent._Crowd.Get();
+        const auto HasCrowdSlot = ck::IsValid(Crowd) && InMemberCurrent._MemberIndex != INDEX_NONE;
+        if (HasCrowdSlot)
+        {
+            const auto SeqLength = SeqAsset->GetPlayLength();
+            if (SeqLength > 0.0f)
+            {
+                // Two systematic offsets are cancelled at the anchor — together they read as the
+                // two bodies walking one frame apart: the play request applies NEXT frame, during
+                // which the crowd's clock advances once more; and the crowd DISPLAYS
+                // trunc(time * SampleFrequency), lagging its own clock by half a bake interval on
+                // average. Both magnitudes are config-tunable — the mechanics say 1.0 and 0.5, the
+                // game's eye gets the final word
+                const auto Lead =
+                    static_cast<float>(InCtx._DeltaT.Get_Seconds()) * Rate * InCtx._Config->Get_FadeAnchorLeadFrames()
+                    - InCtx._Config->Get_FadeAnchorBakeLagIntervals()
+                        / static_cast<float>(FMath::Max(1, Collection->Get_SampleFrequency()));
+
+                StartAt = FMath::Fmod(UCk_Utils_IskmBatched_UE::Get_CrowdMemberAnimationTime(
+                    Crowd, InMemberCurrent._MemberIndex) + Lead, SeqLength);
+                if (StartAt < 0.0f)
+                { StartAt += SeqLength; }
+            }
+        }
+
+        // Sequence pose mode (drop any RendererData AnimBP) so PlayAnimation is not ignored, then
+        // play the far sequence looping at the far rate. _Unique makes a same-sequence re-issue a
+        // no-op, so only rate changes actually re-drive
+        UCk_Utils_IskmProxy_UE::Request_SetAnimInstanceClass(Proxy, nullptr, FCk_Delegate_Request_OnCompleted{});
+
+        const auto PlayRequest = FCk_Request_IskmProxy_PlayAnimation{TSoftObjectPtr<UAnimSequenceBase>{SeqAsset}}
+            .Set_Loop(true)
+            .Set_PlayRate(Rate)
+            .Set_StartAt(StartAt)
+            .Set_Unique(true);
+        UCk_Utils_IskmProxy_UE::Request_PlayAnimation(Proxy, PlayRequest, FCk_Delegate_Request_OnCompleted{});
+
+        InMemberCurrent._ProxySequenceIndex = Seq;
+        InMemberCurrent._ProxyRate          = Rate;
+
+        // Keep the hidden member's seq/rate current too, or its clock advances at a stale rate
+        // while promoted and the phases drift apart — surfacing exactly at the next crossfade
+        if (HasCrowdSlot)
+        {
+            UCk_Utils_IskmBatched_UE::Set_CrowdMemberAnimation(Crowd, InMemberCurrent._MemberIndex,
+                Seq, Rate, false);
+            InMemberCurrent._CurrentSequenceIndex = Seq;
+            InMemberCurrent._CurrentRate          = Rate;
+        }
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_Update::
+        DoWrite_ProxyFade(
+            const FFragment_VisualLod_Current& InMemberCurrent,
+            int32 InNearSlot,
+            float InAlpha)
+        -> void
+    {
+        auto Proxy = InMemberCurrent.Get_Proxy();
+        if (ck::Is_NOT_Valid(Proxy))
+        { return; }
+
+        // The custom-data lane rather than a direct SKMC write: it mirrors the value to every
+        // attached submesh (the whole body fades as one), caches it across SKMC re-acquisition,
+        // and its Setup zero-fill resets recycled proxies. The renderer data must declare
+        // _NumCustomDataFloat > InNearSlot or the handler ensures loudly — that IS the contract.
+        // The LATE lane specifically: the normal lane's handler has already run this frame (it
+        // precedes this arbiter update), so it would display each alpha one frame behind the
+        // crowd's slot and skew the two complementary masks against each other mid-fade
+        UCk_Utils_IskmProxy_UE::Request_SetCustomDataFloat_Late(Proxy,
+            FCk_Request_IskmProxy_SetCustomDataFloat{InNearSlot, InAlpha},
+            FCk_Delegate_Request_OnCompleted{});
     }
 
     auto

@@ -329,6 +329,16 @@ auto
 
 auto
     UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberAnimationTime(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+    -> float
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0.0f; }
+    return InCrowd->Get_MemberAnimationTime(InIndex);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
     Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InVisible)
     -> void
 {

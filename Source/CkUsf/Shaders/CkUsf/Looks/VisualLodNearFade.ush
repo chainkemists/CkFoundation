@@ -1,0 +1,30 @@
+// /CkUsf/Looks/VisualLodNearFade.ush
+//
+// NEAR half of the CkVisualLod dithered crossfade: paired with VisualLodCrowdFade.ush through the
+// shared overlapped mask pair in Common.ush — it fills in from the top of the threshold range as
+// the crowd empties from the bottom, with deliberate mid-fade overlap so surface disagreement
+// between the two renders never opens holes. FadeAlpha arrives on custom primitive data index 0,
+// written per tick on the proxy; the value is the SAME one the crowd reads, so 1 = near mesh fully
+// faded out and 0 = near mesh solid. Shading constants are shared verbatim with the crowd look.
+#pragma once
+#include "/CkUsf/Common.ush"
+
+// Params: BaseColor (Vector), FadeAlpha (Scalar CUSTOM PRIMITIVE DATA, index 0)
+FCkUsf_SurfaceOutput CkUsf_Look_VisualLodNearFade(
+    FCkUsf_SurfaceInput In,
+    float3 BaseColor,
+    float FadeAlpha)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.BaseColor = BaseColor;
+    O.Metallic  = 0.0;
+    O.Specular  = 0.4;
+    O.Roughness = 0.65;
+
+    // At 0.0 the guard skips the mask entirely, so a promoted mesh that is not fading renders
+    // identically to one drawn by a look with no fade at all.
+    if (FadeAlpha > 0.0)
+    { O.OpacityMask = CkUsf_VisualLod_NearFadeMask(In.UV, FadeAlpha); }
+
+    return O;
+}
