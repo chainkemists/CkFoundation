@@ -46,15 +46,17 @@ Cross-inventory placement logic that is NOT a request on a single inventory:
   it is NOT a mixin on an inventory handle. `AnyHandle` is any live handle, used only to resolve
   world/registry context + authority. The
   churn (`FProcessor_Inventory_MassTransfer_Churn`, in `CkInventory_Processor.{h,cpp}`,
-  `FGroup_Gameplay`, `RunAfter` both shapes' HandleRequests) drains one item per pass via
-  `ck::RunPacedSteps`, executing each transfer **synchronously** through
-  `inventory_handlers::ExecuteTransferNow` (the same `DoTransfer` body the deferred
-  `Request_TransferItem_*` path uses) so deferred stack-count writes fold before the next item resolves
-  capacity — coherent reads, no over-commit. `OnComplete` fires once with the result +
+  `FGroup_Gameplay`, `RunAfter` both shapes' HandleRequests) resolves one item per pass and routes it
+  through the target inventory's shared operation FIFO. The typed target coordinator executes the
+  transfer **synchronously** through `inventory_handlers::ExecuteTransferNow` (the same `DoTransfer`
+  body the deferred `Request_TransferItem_*` path uses). One operation per target per frame lets
+  deferred stack-count writes fold before the next capacity read — coherent reads, no over-commit.
+  `OnComplete` fires once with the result +
   `(UnitsMoved, ItemsFullyMoved, ItemsFailed)`. There is **no public cancel** — a teardown net
   (`FProcessor_Inventory_MassTransfer_CancelOnEndPlay`) fires `Failed_OperationCancelled` if the op
   is destroyed mid-flight (world teardown). The in-flight fragment + completion signal live in
-  `CkInventory_Fragment.h`; the processors in `CkInventory_Processor.{h,cpp}`. This is the canonical
+  `CkInventory_Fragment.h`; queued transfer state lives in `CkInventory_OperationQueue_Fragment.h`;
+  the processors live in `CkInventory_Processor.{h,cpp}`. This is the canonical
   "standalone paced operation" pattern (mirrors CkGoap / CkAudioTrack transient-owned ops).
   **Pump budget:** each merge-step cascades extra pump passes (deferred fold + inventory signal), so the
   request's `_MaxStepsPerFrame` defaults to **1** — at 2+ merge-steps/frame the worst case trips the
@@ -175,7 +177,8 @@ Mirrors CkAttribute's pattern: templated processor in the root, per-shape folder
 - **`CkInventory_RequestHandlers.h`** (root) — declares one `TXxx<TInventoryHandle, TAddon = FCk_EmptyAddon>` struct per request operation (`TAddItem`, `TRemoveItem`, `TStackItems`, `TSplitStack`, `TAddByDefinition`, `TSort`, `TTransfer<TSource, TTarget>`, `TRelocate`). Each carries `Entry`, `Result`, and a static `Handle(...)` method. Bodies live in `CkInventory_RequestHandlers.cpp` with explicit instantiations per concrete (Handle, Addon) pair.
 - **`TInventoryRequestTraits<TInventoryHandle>`** — primary template declared in the root header, **specialized in each typed inventory's folder** (`Spatial/CkInventory_Spatial_RequestTraits.h`, `DataOnly/CkInventory_DataOnly_RequestTraits.h`). Each specialization aliases the operations its shape supplies (e.g. `using AddItem = inventory_handlers::TAddItem<FCk_Handle_Inventory_Spatial, FCk_SpatialPlacement>`) and exposes a `Variant` typedef built from those operations' `Entry` types. **Adding a new typed inventory is a single file.**
 - **`TFragment_Inventory_Requests<TInventoryHandle>::RequestType`** is `Traits::Variant`. The variant is auto-derived — the trait bundle is the single source of truth for "what does this inventory shape support."
-- **`TProcessor_Inventory_HandleRequests_Base<T_Derived, TInventoryHandle, TRequestsFragment>`** in `CkInventory_Processor.h` — templated processor. Its `ForEachEntity` drains the variant and calls `inventory_handlers::DispatchToHandler<Traits>(...)`, which routes each entry to the matching `Traits::Xxx::Handle(...)` via a centralized `if constexpr` chain. The static_assert at the end catches any entry type that the Traits bundle doesn't cover.
+- **`TProcessor_Inventory_HandleRequests_Base<T_Derived, TInventoryHandle, TRequestsFragment>`** in `CkInventory_Processor.h` — typed request router. It moves one source request at a time into the operation owner's FIFO: ordinary operations stay source-owned; transfers become target-owned. `FTag_Inventory_OperationRouted` blocks the source until that request completes, preserving source order while independent sources share one target queue.
+- **`TProcessor_Inventory_OperationQueue_Churn_Base<T_Derived, TInventoryHandle, TInventoryTypeTag>`** — typed target coordinator. Its DataOnly and Spatial derived processors execute one FIFO entry per target per frame and call `inventory_handlers::DispatchToHandler<Traits>(...)`, which routes each entry to the matching `Traits::Xxx::Handle(...)` via the centralized `if constexpr` chain. MassTransfer steps use the same FIFO. EndPlay siblings cancel queued ordinary requests and release queued MassTransfer steps for retry.
 - **Concrete processor classes** (`FProcessor_Inventory_Spatial_HandleRequests`, `FProcessor_Inventory_DataOnly_HandleRequests`) are thin derived classes — Group/RunAfter/MarkedDirtyBy declarations only; body inherited from the templated base.
 - **Shared algorithmic bodies** (`inventory_helpers::DoStackItems<T>`, `DoSplitStack<T>`, `DoAddByDefinition<T>`) are templated functions in `Internal_Helpers.cpp` with explicit instantiations per shape. Shape divergence inside them uses typed-overload helpers (`Stack_OnSourceFullyConsumed`, `SplitStack_TryPlace`, `AddByDefinition_TryPlace`) — overloaded per shape, no captured lambdas. Sort and Relocate bodies are too shape-divergent to template usefully and are defined per-shape directly.
 

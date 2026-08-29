@@ -31,6 +31,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayHaveChanged);
+    CK_DEFINE_ECS_TAG(FTag_Inventory_OperationRouted);
+    CK_DEFINE_ECS_TAG(FTag_Inventory_MassTransferStepRouted);
 
     // --------------------------------------------------------------------------------------------------------------------
 
