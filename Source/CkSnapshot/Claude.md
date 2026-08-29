@@ -390,6 +390,54 @@ construction by whoever creates the entity, and it turns on who re-creates the t
 `UCk_EntityScript_WithActor_UE::Construct` and `ACk_EntitySpawner_UE` both apply exactly this split, which is why a
 snapshot-respawnable opt-in on a class that is ALSO placed in a level is inert rather than a duplicate source.
 
+### Unresolvable archetypes — the husk contract
+
+A **husk** is an entity carrying `ck::FTag_Snapshot_UnresolvedArchetype`
+(`CkEcs/Snapshot/CkSnapshot_RestoreMarker.h`): structurally an entity, semantically nothing, and still occupying
+whatever slot or grid cell its owner counts it in. The contract splits detection from reaping, and each half is
+owned by a different layer.
+
+**Detection is two-sided, and the framework only owns one side.** The loader detects the case it can see — a
+`DefinitionBuilt` recipe naming an archetype path that neither loaded nor was claimed by a runtime-archetype
+provider — and tags the rebuilt entity itself; that half is feature-agnostic. It CANNOT see the **erased** case,
+where the recipe carries no archetype identity at all (an empty path — a legal shape no production producer emits,
+and what an older build wrote back after rebuilding the entity once already). The loader warns on that shape, but
+it has nothing to name as unresolved. **So a feature whose entities are `DefinitionBuilt` must detect the erased
+case itself, in `DoConstruct`, and add the tag** — by what the entity IS (built from the class default) rather
+than by how it was made, with no load or net-mode branch. `UCk_InventoryItem_Definition::DoConstruct_Implementation`
+is the reference: it warns, tags, and deliberately CONTINUES composing, because the inventory hydration handlers
+are all-or-nothing and refusing there would cost the player the whole container instead of the one broken entry.
+
+**Reaping is guaranteed on every route**, because "how was this minted" is a question the detector cannot answer
+and the framework must not depend on:
+
+| Route | Reaper | Attribution |
+|---|---|---|
+| the load's own rebuild | `DoReap_UnresolvedArchetypeHusks` at `DoFinish_Load` | a `FCk_Snapshot_UnresolvedArchetypeRecord` in `_UnresolvedArchetypes` — the player-facing "N items could not be restored" — but **only for entities in `_MappedLiveEntities`** |
+| anything else | `ck::FProcessor_UnresolvedHusk_Reap` (`CkEcs/Snapshot/CkSnapshot_UnresolvedHusk_Processor.h`), resident | a loud ensure + a per-occurrence Error + the `Snapshot_OnUnresolvedHuskReaped` signal |
+
+Both reap through `UCk_Utils_EntityLifetime_UE::Request_DestroyEntity`, never a raw registry destroy — the
+ordinary destroy path is what runs the inventory EndPlay processor that frees the slot and the grid cell. A husk
+removed any other way leaves the container still counting it, which is the worse of the two bugs.
+
+Three properties of that split are load-bearing:
+
+- **A husk the load did not map is reaped but NOT charged to the load report.** It was minted by a live route
+  inside the load window, so the save never contained it; recording it would show the player a phantom restore
+  loss nobody can reproduce. It gets an Error naming the unknown route instead.
+- **The resident reaper is loud on purpose.** Every KNOWN producer is a load, and the load reaps its own — so a
+  husk reaching the resident reaper means a producer nobody has accounted for. Hence `CK_TRIGGER_ENSURE` (once
+  per site) plus an unconditional Error (once per occurrence, because the ensure will not fire again) plus the
+  world-scoped `ck::UUtils_Signal_Snapshot_OnUnresolvedHuskReaped` broadcast on the world's transient entity,
+  which is what closes "a terminal outcome must reach a consumer" for the non-load route.
+- **The resident reaper is authority-only and gated during load**, and both matter. It declares no `LoadPolicy`
+  (so the default `GatedDuringLoad` keeps it out of the kernel) and no `HydrationQuarantinePolicy` (so quarantined
+  entities are outside its view), and it additionally early-outs on `Get_IsLoadGateActive()` — because
+  `Draining` and `Converging` tick the FULL processor scope *after* the quarantine has been lifted, which is
+  exactly the window in which it would otherwise destroy the load's own husks before the report could name them.
+  **Clients never reap:** a client husk mirrors an entity the authority still owns, and deleting half a
+  replicated pair is worse than leaving the husk, so it stays alive there.
+
 ---
 
 ## Capture classification rules
