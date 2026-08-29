@@ -100,6 +100,99 @@ auto
 
 auto
     UCk_Utils_VisualLodArbiter_UE::
+    Get_LastView(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> ck::FVisualLod_LocalView
+{
+    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_LastView();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_PromotesThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_PromotesThisTick();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_DemotesThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_DemotesThisTick();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_PreemptsThisTick(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_PreemptsThisTick();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_IsFrozen(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FTag_VisualLodArbiter_Frozen>();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Request_SetFrozen(
+        FCk_Handle_VisualLodArbiter& InHandle,
+        bool InFrozen)
+    -> void
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_VisualLodArbiter_Requests, InHandle);
+
+    const auto Request = FCk_Request_VisualLodArbiter_SetFrozen{
+        InFrozen ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable};
+
+    InHandle.AddOrGet<ck::FFragment_VisualLodArbiter_Requests>()._Requests.Emplace(Request);
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_NumCrowds(
+        const FCk_Handle_VisualLodArbiter& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>()._Crowds.Num();
+}
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
+    Get_CrowdPoolDebugInfo(
+        const FCk_Handle_VisualLodArbiter& InHandle,
+        int32 InCrowdIndex)
+    -> FCk_VisualLodArbiter_CrowdPoolDebugInfo
+{
+    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter_Current>();
+
+    if (NOT Current._Crowds.IsValidIndex(InCrowdIndex))
+    { return {}; }
+
+    const auto& Runtime = Current._Crowds[InCrowdIndex];
+
+    auto Info = FCk_VisualLodArbiter_CrowdPoolDebugInfo{};
+    Info.PoolSize  = Runtime._SlotOwners.Num();
+    Info.FreeSlots = Runtime._FreeSlots.Num();
+    Info.Crowd     = Runtime._Crowd;
+
+    return Info;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VisualLodArbiter_UE::
     Request_SetObserver(
         FCk_Handle_VisualLodArbiter& InHandle,
         const FCk_Request_VisualLodArbiter_SetObserver& InRequest,

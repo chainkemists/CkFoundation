@@ -18,6 +18,7 @@
 
 class UCk_Utils_VisualLodArbiter_UE;
 class ACk_Iskm_BatchedCrowd_Actor;
+class UCk_IskmAnimCollection_Data;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,6 +33,11 @@ namespace ck
 
     // Observability only: present while the arbiter's config asset batch is still loading
     CK_DEFINE_ECS_TAG(FTag_VisualLodArbiter_PendingAssetLoad);
+
+    // Inspection hold (Request_SetFrozen): the arbiter takes no new LOD decisions while present —
+    // no gather, rank, flips, preempts or far updates. In-flight fades still step to completion so
+    // no member is stranded mid-crossfade, and external-teardown recovery still fails closed
+    CK_DEFINE_ECS_TAG(FTag_VisualLodArbiter_Frozen);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,6 +61,11 @@ namespace ck
 
         // Roots the crowd's anim collection for the crowd actor's lifetime
         FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
+
+        // Resolved anim collection (rooted by _LoadedAssets). Source for the promoted proxy's
+        // single-sequence locomotion, so a near proxy mirrors the far member's animation without a
+        // heavy AnimBP. Invalid until the crowd stands up
+        TWeakObjectPtr<const UCk_IskmAnimCollection_Data> _Collection;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -98,6 +109,17 @@ namespace ck
         TArray<FVisualLod_RankEntry> _Candidates;
         TArray<FVisualLod_RankEntry> _Incumbents;
 
+        // The view this arbiter resolved on its last update, retained so tooling reads the same
+        // view the ranking used. Invalid = no observer and no local view that tick
+        FVisualLod_LocalView _LastView;
+
+        // Flip accounting for the update in progress; all three reset at the top of every arbiter
+        // update, so a frozen or view-less arbiter reads zero. A preempt-demote counts in Preempts
+        // only — it is a ranking outcome, not a distance demote
+        int32 _PromotesThisTick = 0;
+        int32 _DemotesThisTick = 0;
+        int32 _PreemptsThisTick = 0;
+
     public:
         CK_PROPERTY_GET(_Config);
         CK_PROPERTY_GET(_Observer);
@@ -105,6 +127,10 @@ namespace ck
         CK_PROPERTY_GET(_NearPromotedCount);
         CK_PROPERTY_GET(_LockedPromotedCount);
         CK_PROPERTY_GET(_UnbudgetedPromotedCount);
+        CK_PROPERTY_GET(_LastView);
+        CK_PROPERTY_GET(_PromotesThisTick);
+        CK_PROPERTY_GET(_DemotesThisTick);
+        CK_PROPERTY_GET(_PreemptsThisTick);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -121,7 +147,8 @@ namespace ck
     public:
         using RequestType = std::variant<
             FCk_Request_VisualLodArbiter_SetObserver,
-            FCk_Request_VisualLodArbiter_ClearObserver>;
+            FCk_Request_VisualLodArbiter_ClearObserver,
+            FCk_Request_VisualLodArbiter_SetFrozen>;
         using RequestList = TArray<RequestType>;
 
     private:

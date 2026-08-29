@@ -131,6 +131,58 @@ public:
         const FCk_Handle_VisualLod& InHandle);
 
 public:
+    /**
+     * Inspection surface. C++ only: Get_FadePhase returns a ck:: enum, and the rest are the
+     * arbiter's raw per-member bookkeeping — the debugger reads them directly, no game does.
+     */
+
+    // Distance to the view as of the last arbiter update that RANKED this member. -1 until the
+    // arbiter has ranked it once; stale on any tick the member was skipped before that point
+    // (suspended, hidden with no slot, or promoted through the pool-exhaustion fallback)
+    static auto
+    Get_LastDistance(
+        const FCk_Handle_VisualLod& InHandle) -> float;
+
+    // In-view as the ranking saw it, with the same staleness as Get_LastDistance
+    static auto
+    Get_LastInView(
+        const FCk_Handle_VisualLod& InHandle) -> bool;
+
+    static auto
+    Get_FadePhase(
+        const FCk_Handle_VisualLod& InHandle) -> ck::EVisualLod_FadePhase;
+
+    static auto
+    Get_PromotedViaLock(
+        const FCk_Handle_VisualLod& InHandle) -> bool;
+
+    static auto
+    Get_PromotedUnbudgeted(
+        const FCk_Handle_VisualLod& InHandle) -> bool;
+
+    static auto
+    Get_PreemptDemote(
+        const FCk_Handle_VisualLod& InHandle) -> bool;
+
+    // Last sequence/rate pushed to the PROMOTED PROXY; INDEX_NONE while not promoted
+    static auto
+    Get_ProxySequenceIndex(
+        const FCk_Handle_VisualLod& InHandle) -> int32;
+
+    static auto
+    Get_ProxyRate(
+        const FCk_Handle_VisualLod& InHandle) -> float;
+
+    // Last sequence/rate pushed to the CROWD SLOT; INDEX_NONE while the member holds no slot
+    static auto
+    Get_FarSequenceIndex(
+        const FCk_Handle_VisualLod& InHandle) -> int32;
+
+    static auto
+    Get_FarRate(
+        const FCk_Handle_VisualLod& InHandle) -> float;
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisualLod",
               DisplayName="[Ck][VisualLod] Request Set Arbiter",
