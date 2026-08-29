@@ -144,3 +144,21 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::entity_replication_driver
+{
+    // Runs ONE construction step onto InEntity, and is the only place that decides what to do when the step's
+    // archetype is absent. Both construction sites - the authority's Request_BuildAndReplicate and the client's
+    // OnRep - go through here, because an archetype that resolves on one and not the other is precisely the
+    // divergence that produces a half-built entity nobody can explain.
+    //
+    // Falling back to the class default is the LAST resort and is deliberately silent here: the caller that knows
+    // the step came from a save (the loader) has already diagnosed the miss and marked the entity for reaping, and
+    // a step that legitimately carries no archetype at all is the ordinary case.
+    CKECS_API auto
+    Construct_FromInfo(
+        const FCk_EntityReplicationDriver_ConstructionInfo& InInfo,
+        FCk_Handle& InEntity) -> void;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
