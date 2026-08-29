@@ -6,6 +6,8 @@
 #include "CkCore/IO/CkIO_Utils.h"
 
 #include <Misc/CoreDelegates.h>
+#include <Misc/ScopeLock.h>
+#include <HAL/CriticalSection.h>
 #include <HAL/IConsoleManager.h>
 #include <UObject/FastReferenceCollector.h>
 #include <UObject/Package.h>
@@ -141,9 +143,46 @@ namespace ck_deferred_asset_init_angelscript
     // re-run only those. An unreadable AS context sets GAttributionUncertain → full sweep; never under-heal.
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Attribution is RECORDED off the game thread and CONSUMED on it.
+    //
+    // A cooked build initializes AngelScript threaded by default (FAngelscriptManager::Initialize ->
+    // AsyncTask(AnyHiPriThreadHiPriTask) -> Initialize_AnyThread -> InitialCompile -> CompileModules
+    // -> PerformReload -> CallPostInitFunctions / InitDefaultObjects), so CDO DefaultsFunctions and
+    // literal `__Init_<Name>` bodies — and every `assets::load::*` or LoadAssetByName they call —
+    // execute on a worker thread. The game thread meanwhile spins inside Initialize() pumping
+    // ProcessThreadUntilIdle, so a queued game-thread task can reach these concurrently. Editor
+    // defaults to un-threaded, which is why this has never been observed here.
+    FCriticalSection              GAttributionLock;
     TSet<TWeakObjectPtr<UObject>> GDeferredLoadCDOs;     // Phase 1: CDOs whose defaults deferred a load
     TSet<FString>                 GDeferredLiteralNames;  // Phase 2: literal assets whose __Init deferred
     bool                          GAttributionUncertain = false;
+
+    struct FAttributionSnapshot
+    {
+        TSet<TWeakObjectPtr<UObject>> DeferredCdos;
+        TSet<FString>                 DeferredLiteralNames;
+        bool                          Uncertain = false;
+    };
+
+    // Moves the recorded attribution out under the lock and leaves it empty, so the heal — which
+    // executes AngelScript and is far too slow to hold a lock across — works on a private copy.
+    // This is also the single-use reset the sweep needs, so a later hot reload starts clean.
+    auto Consume_Attribution() -> FAttributionSnapshot
+    {
+        auto Snapshot = FAttributionSnapshot{};
+
+        const auto Lock = FScopeLock{&GAttributionLock};
+
+        Snapshot.DeferredCdos         = MoveTemp(GDeferredLoadCDOs);
+        Snapshot.DeferredLiteralNames = MoveTemp(GDeferredLiteralNames);
+        Snapshot.Uncertain            = GAttributionUncertain;
+
+        GDeferredLoadCDOs.Reset();
+        GDeferredLiteralNames.Reset();
+        GAttributionUncertain = false;
+
+        return Snapshot;
+    }
 
     bool GForceFullAssetHeal = false;
     static FAutoConsoleVariableRef CVar_ForceFullAssetHeal(
@@ -163,11 +202,16 @@ namespace ck_deferred_asset_init_angelscript
         auto* Context = FAngelscriptManager::GetCurrentScriptContext();
         if (Context == nullptr)
         {
+            const auto Lock = FScopeLock{&GAttributionLock};
             GAttributionUncertain = true;
             return;
         }
 
         static const auto LiteralInitPrefix = FString{TEXT("__Init_")};
+
+        // The callstack walk reads only this thread's own AngelScript context, so the lock covers the
+        // shared sets and nothing else.
+        const auto Lock = FScopeLock{&GAttributionLock};
 
         const auto StackDepth = static_cast<int32>(Context->GetCallstackSize());
         for (auto Frame = 0; Frame < StackDepth; ++Frame)
@@ -266,12 +310,14 @@ namespace ck_deferred_asset_init_angelscript
         return SucceededCount;
     }
 
-    // Returns the number of distinct CDOs re-run.
-    auto ReRunDeferredClassDefaults() -> int32
+    // Returns the number of distinct CDOs re-run. Takes the attributed set by value-snapshot rather
+    // than reading the global, so no lock is held while AngelScript executes.
+    auto ReRunDeferredClassDefaults(
+        const TSet<TWeakObjectPtr<UObject>>& InDeferredCdos) -> int32
     {
         auto SucceededCount = int32{0};
 
-        for (const auto& WeakCdo : GDeferredLoadCDOs)
+        for (const auto& WeakCdo : InDeferredCdos)
         {
             auto* CDO = WeakCdo.Get();
             if (ck::Is_NOT_Valid(CDO))
@@ -300,7 +346,9 @@ namespace ck_deferred_asset_init_angelscript
     };
 
     // Full heal is the safety fallback and the hot-reload path, where first-pass attribution never applied.
-    auto ReRunLiteralAssetInits(bool InFullHeal) -> FPhase2Stats
+    auto ReRunLiteralAssetInits(
+        bool                 InFullHeal,
+        const TSet<FString>& InDeferredNames) -> FPhase2Stats
     {
         auto Stats = FPhase2Stats{};
 
@@ -321,7 +369,7 @@ namespace ck_deferred_asset_init_angelscript
 
             ck::algo::ForEach(Module->DeclaredLiteralAssets, [&](const FString& AssetName)
             {
-                if (NOT InFullHeal && NOT GDeferredLiteralNames.Contains(AssetName))
+                if (NOT InFullHeal && NOT InDeferredNames.Contains(AssetName))
                 { return; }
 
                 ++Stats.Declared;
@@ -525,9 +573,15 @@ auto
     ck::core::Verbose(TEXT("[DeferredAssetInit] Engine init complete — re-running Angelscript default inits"));
 #endif
 
-    const auto UseFullHeal = ck_deferred_asset_init_angelscript::GForceFullAssetHeal || ck_deferred_asset_init_angelscript::GAttributionUncertain;
+    // Take the attribution once, atomically, and work from the copy: the recording side can still be
+    // running on an AngelScript worker thread, and the heal below executes script for seconds.
+    const auto Attribution = ck_deferred_asset_init_angelscript::Consume_Attribution();
+
+    const auto UseFullHeal = ck_deferred_asset_init_angelscript::GForceFullAssetHeal || Attribution.Uncertain;
     const auto HealMode    = UseFullHeal ? FString(TEXT("full")) : FString(TEXT("surgical"));
-    const auto CdoCount    = UseFullHeal ? ck_deferred_asset_init_angelscript::ReRunAllClassDefaults() : ck_deferred_asset_init_angelscript::ReRunDeferredClassDefaults();
+    const auto CdoCount    = UseFullHeal
+        ? ck_deferred_asset_init_angelscript::ReRunAllClassDefaults()
+        : ck_deferred_asset_init_angelscript::ReRunDeferredClassDefaults(Attribution.DeferredCdos);
 
 #if WITH_EDITOR
     ck::core::Display(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
@@ -535,7 +589,8 @@ auto
     ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
 #endif
 
-    const auto LiteralAssetStats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(UseFullHeal);
+    const auto LiteralAssetStats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(
+        UseFullHeal, Attribution.DeferredLiteralNames);
     if (LiteralAssetStats.Succeeded < LiteralAssetStats.Declared)
     {
         // Warning in EVERY config — a discrepancy here is a real signal.
@@ -568,10 +623,8 @@ auto
     }
     UCk_Utils_IO_UE::Reset_PrematureAssetLoadReport();
 
-    // Attribution is single-use per boot sweep — clear so a later hot-reload starts clean.
-    ck_deferred_asset_init_angelscript::GDeferredLoadCDOs.Reset();
-    ck_deferred_asset_init_angelscript::GDeferredLiteralNames.Reset();
-    ck_deferred_asset_init_angelscript::GAttributionUncertain = false;
+    // No reset here: Consume_Attribution already emptied the shared state under the lock, and
+    // anything recorded since belongs to the next sweep rather than being silently discarded.
 
 #endif // WITH_ANGELSCRIPT_CK
 }
@@ -606,7 +659,9 @@ auto
     // Always ALL literals: the reload happens engine-safe so first-pass attribution never fired, and the
     // full re-run is what undoes the `_Arr.Add(...)` doubling the reload causes.
     constexpr auto FullHeal = true;
-    const auto Stats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(FullHeal);
+    // FullHeal re-runs every declared literal asset, so the attributed set is not consulted.
+    const auto Stats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(
+        FullHeal, TSet<FString>{});
     if (Stats.Succeeded < Stats.Declared)
     {
         ck::core::Warning(TEXT("[DeferredAssetInit] Post-reload: re-initialized {}/{} literal asset(s) — missing entries indicate AS preprocessor drift"),
