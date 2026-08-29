@@ -15,10 +15,9 @@
 #include <UObject/UObjectGlobals.h>
 
 #if WITH_ANGELSCRIPT_CK
-#include <AngelscriptManager.h>
 #include <ClassGenerator/ASClass.h>
 #include <angelscript.h>
-#include <as_context.h>
+#include <as_scriptobject.h>
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -515,34 +514,24 @@ auto
 #if WITH_ANGELSCRIPT_CK
     // AngelScript members declared WITHOUT UPROPERTY() exist only as script-object properties, so the
     // reflected sweep above cannot see them and a recycled instance would resume its previous life's
-    // state. CopyScriptPropertiesFrom must go through an execution context: the fork's asIScriptObject
-    // methods are non-virtual and not DLL-exported, so a direct call fails to link outside AngelscriptCode.
+    // state. The engine registers UObject::CopyScriptPropertiesFrom for exactly this copy, but a
+    // packaged build booting from a precompiled script cache deletes that registration as unused (no
+    // .as bytecode calls it), so it must not be resolved by name here. Its entire native body is
+    // asCScriptObject::PerformCopy — exported from AngelscriptCode — so call that directly instead.
     if (Cast<UASClass>(InObject->GetClass()) != nullptr)
     {
-        static asIScriptFunction* CopyScriptPropertiesFunc = nullptr;
+        auto* ScriptType = static_cast<asCObjectType*>(InObject->GetClass()->ScriptTypePtr);
+        const auto CanCopyScriptProperties = ScriptType != nullptr &&
+            InObject->GetClass() == InArchetype->GetClass();
 
-        if (CopyScriptPropertiesFunc == nullptr)
-        {
-            if (const auto* TypeInfo = FAngelscriptManager::Get().GetScriptEngine()->GetTypeInfoByName("UObject");
-                TypeInfo != nullptr)
-            { CopyScriptPropertiesFunc = TypeInfo->GetMethodByName("CopyScriptPropertiesFrom"); }
-        }
-
-        CK_ENSURE_IF_NOT(CopyScriptPropertiesFunc != nullptr,
-            TEXT("Could not resolve UObject::CopyScriptPropertiesFrom from the script engine — "
-                 "recycled [{}] keeps its previous life's script-only members"), InObject)
+        CK_ENSURE_IF_NOT(CanCopyScriptProperties,
+            TEXT("Cannot reset script-only members on recycled [{}] — it needs a valid script type shared "
+                 "with archetype [{}]. The instance keeps its previous life's script-only state"),
+            InObject, InArchetype)
         { return; }
 
-        auto Context = FAngelscriptContext{InObject};
-        Context.PrepareExternal(CopyScriptPropertiesFunc);
-
-        // Dispatch through asIScriptContext: its virtual methods resolve via vtable, so the module
-        // never has to import asCContext symbols it does not export.
-        asIScriptContext* ScriptContext = static_cast<asCContext*>(Context);
-        ScriptContext->SetObject(InObject);
-        ScriptContext->SetArgObject(0, const_cast<UObject*>(InArchetype));
-
-        Context.ExecuteExternal();
+        reinterpret_cast<asCScriptObject*>(InObject)->PerformCopy(
+            reinterpret_cast<asCScriptObject*>(const_cast<UObject*>(InArchetype)), ScriptType);
     }
 #endif
 
