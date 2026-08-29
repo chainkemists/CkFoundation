@@ -15,9 +15,27 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_inventory_processor
+{
+    template <typename... TFunctions>
+    struct TOverloaded : TFunctions...
+    {
+        using TFunctions::operator()...;
+    };
+
+    template <typename... TFunctions>
+    TOverloaded(TFunctions...) -> TOverloaded<TFunctions...>;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_MassTransfer_Churn);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_MassTransfer_CancelOnEndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_OperationQueue_Churn);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_OperationQueue_Churn);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_DataOnly_OperationQueue_CancelOnEndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Inventory_Spatial_OperationQueue_CancelOnEndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -73,7 +91,7 @@ namespace ck
         // The in-flight fragment IS the dirty marker; RunPacedSteps removes it on Done. The completing
         // step snapshots the result into Finish BEFORE that removal — never read InFlight past Done.
         const auto Done = ck::RunPacedSteps<FFragment_Inventory_MassTransfer_InFlight>(
-            Base, Pacer, InDeltaT, [&]() -> ck::EPacedStepResult { return DoOneStep(InFlight, Finish); });
+            Base, Pacer, InDeltaT, [&]() -> ck::EPacedStepResult { return DoOneStep(InHandle, InFlight, Finish); });
 
         if (NOT Done)
         { return; }
@@ -94,10 +112,14 @@ namespace ck
     auto
         FProcessor_Inventory_MassTransfer_Churn::
         DoOneStep(
+            FCk_Handle InOperation,
             FFragment_Inventory_MassTransfer_InFlight& InFlight,
             FFinishSnapshot& OutFinish)
         -> ck::EPacedStepResult
     {
+        if (InOperation.Has<FTag_Inventory_MassTransferStepRouted>())
+        { return ck::EPacedStepResult::Continue; }
+
         // Items can be destroyed mid-op by another system — skip the dead cursor entries.
         while (InFlight._Cursor < InFlight._Pending.Num()
             && ck::Is_NOT_Valid(InFlight._Pending[InFlight._Cursor]))
@@ -125,6 +147,32 @@ namespace ck
             return ck::EPacedStepResult::Continue;
         }
 
+        if (ck::IsValid(Source) && Source.Has<FTag_Inventory_OperationRouted>())
+        { return ck::EPacedStepResult::Continue; }
+
+        if (ck::IsValid(Source))
+        { Source.Add<FTag_Inventory_OperationRouted>(); }
+        InOperation.Add<FTag_Inventory_MassTransferStepRouted>();
+
+        Target.AddOrGet<FFragment_Inventory_OperationQueue>().Get_OperationsMutable().Emplace(
+            FQueuedInventoryOperation_MassTransferStep{InOperation, Item, Source, Target});
+
+        return ck::EPacedStepResult::Continue;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Inventory_MassTransfer_Churn::
+        ExecuteQueuedStep(
+            FFragment_Inventory_MassTransfer_InFlight& InFlight,
+            FCk_Handle_Item InItem,
+            FCk_Handle_Inventory InSource,
+            FCk_Handle_Inventory InTarget) -> void
+    {
+        auto Item   = InItem;
+        auto Target = InTarget;
+
         const auto Units = inventory_handlers::ExecuteTransferNow(
             Item, Target, InFlight._TargetResolution.Get_AddPolicy());
 
@@ -134,8 +182,8 @@ namespace ck
             InFlight._AnyUnitMoved = true;
 
             const auto ItemLeftSource = ck::Is_NOT_Valid(Item)
-                || ck::Is_NOT_Valid(Source)
-                || NOT UCk_Utils_Inventory_UE::Get_ContainsItem(Source, Item);
+                || ck::Is_NOT_Valid(InSource)
+                || NOT UCk_Utils_Inventory_UE::Get_ContainsItem(InSource, Item);
             if (ItemLeftSource)
             { ++InFlight._ItemsFullyMoved; }
         }
@@ -145,7 +193,6 @@ namespace ck
         }
 
         ++InFlight._Cursor;
-        return ck::EPacedStepResult::Continue;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -190,6 +237,135 @@ namespace ck
 
         InFlight.Get_CompletionDelegate().ExecuteIfBound(InHandle,
             ECk_Request_OperationResult::Failed_Cancelled);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        inventory_operation_queue::
+        Execute(
+            const FQueuedInventoryOperation& InOperation) -> void
+    {
+        std::visit(ck_inventory_processor::TOverloaded{
+            [](const FQueuedInventoryOperation_DataOnlySource& InQueued)
+            {
+                auto Source = InQueued.Source;
+                using Traits = TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>;
+
+                std::visit([&](const auto& InEntry)
+                {
+                    if (ck::IsValid(Source) && Source.Has<FFragment_Inventory_Params>())
+                    {
+                        inventory_handlers::DispatchToHandler<Traits>(
+                            Source, Source.Get<FFragment_Inventory_Params>(), InEntry);
+                    }
+                    else
+                    { inventory_handlers::DispatchCancel<Traits>(Source, InEntry); }
+                }, InQueued.Request);
+
+                if (ck::IsValid(Source))
+                { UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(Source); }
+                ReleaseSource(Source);
+            },
+            [](const FQueuedInventoryOperation_SpatialSource& InQueued)
+            {
+                auto Source = InQueued.Source;
+                using Traits = TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>;
+
+                std::visit([&](const auto& InEntry)
+                {
+                    if (ck::IsValid(Source) && Source.Has<FFragment_Inventory_Params>())
+                    {
+                        inventory_handlers::DispatchToHandler<Traits>(
+                            Source, Source.Get<FFragment_Inventory_Params>(), InEntry);
+                    }
+                    else
+                    { inventory_handlers::DispatchCancel<Traits>(Source, InEntry); }
+                }, InQueued.Request);
+
+                if (ck::IsValid(Source))
+                { UCk_Utils_Inventory_UE::Request_MarkInventory_AsMayHaveChanged(Source); }
+                ReleaseSource(Source);
+            },
+            [](const FQueuedInventoryOperation_MassTransferStep& InQueued)
+            {
+                auto Operation = InQueued.Operation;
+                if (ck::IsValid(Operation)
+                    && Operation.Has<FFragment_Inventory_MassTransfer_InFlight>())
+                {
+                    auto& InFlight = Operation.Get<FFragment_Inventory_MassTransfer_InFlight>();
+                    FProcessor_Inventory_MassTransfer_Churn::ExecuteQueuedStep(
+                        InFlight, InQueued.Item, InQueued.Source, InQueued.Target);
+
+                    Operation.Try_Remove<FTag_Inventory_MassTransferStepRouted>();
+                    Operation.AddOrGet<FFragment_Inventory_MassTransfer_InFlight>();
+                }
+
+                ReleaseSource(InQueued.Source);
+            }}, InOperation);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        inventory_operation_queue::
+        ReleaseSource(
+            FCk_Handle_Inventory InSource) -> void
+    {
+        if (ck::Is_NOT_Valid(InSource))
+        { return; }
+
+        InSource.Try_Remove<FTag_Inventory_OperationRouted>();
+
+        if (InSource.Has<FFragment_Inventory_DataOnly_Requests>())
+        { InSource.AddOrGet<FFragment_Inventory_DataOnly_Requests>(); }
+        else if (InSource.Has<FFragment_Inventory_Spatial_Requests>())
+        { InSource.AddOrGet<FFragment_Inventory_Spatial_Requests>(); }
+        else
+        { InSource.Try_Remove<FFragment_PacedWork>(); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        inventory_operation_queue::
+        CancelAll(
+            const FFragment_Inventory_OperationQueue& InQueue) -> void
+    {
+        // Cancellation delegates are user code and may re-enter this inventory. Iterate a snapshot so
+        // callbacks cannot invalidate the container being traversed.
+        const auto Operations = InQueue.Get_Operations();
+        for (const auto& Operation : Operations)
+        {
+            std::visit(ck_inventory_processor::TOverloaded{
+                [](const FQueuedInventoryOperation_DataOnlySource& InQueued)
+                {
+                    auto Source = InQueued.Source;
+                    using Traits = TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>;
+                    std::visit([&](const auto& InEntry)
+                    { inventory_handlers::DispatchCancel<Traits>(Source, InEntry); }, InQueued.Request);
+                    ReleaseSource(Source);
+                },
+                [](const FQueuedInventoryOperation_SpatialSource& InQueued)
+                {
+                    auto Source = InQueued.Source;
+                    using Traits = TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>;
+                    std::visit([&](const auto& InEntry)
+                    { inventory_handlers::DispatchCancel<Traits>(Source, InEntry); }, InQueued.Request);
+                    ReleaseSource(Source);
+                },
+                [](const FQueuedInventoryOperation_MassTransferStep& InQueued)
+                {
+                    auto Operation = InQueued.Operation;
+                    if (ck::IsValid(Operation)
+                        && Operation.Has<FFragment_Inventory_MassTransfer_InFlight>())
+                    {
+                        Operation.Try_Remove<FTag_Inventory_MassTransferStepRouted>();
+                        Operation.AddOrGet<FFragment_Inventory_MassTransfer_InFlight>();
+                    }
+                    ReleaseSource(InQueued.Source);
+                }}, Operation);
+        }
     }
 }
 
