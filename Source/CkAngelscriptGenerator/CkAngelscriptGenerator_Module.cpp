@@ -11,6 +11,7 @@
 #include "CkAngelscriptGenerator/DynamicHandles/CkDynamicHandleSubsystem.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_Dispatcher.h"
 #include "CkAngelscriptGenerator/Settings/CkAngelscriptGenerator_Settings.h"
+#include "CkAngelscriptGenerator/WriteBack/CkAngelscriptGenerator_AssetWriteBack.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkDynamic/CkDynamic_AngelScript.h"
@@ -536,6 +537,8 @@ void FCkAngelscriptGeneratorModule::StartupModule()
             InitOptions);
     }
 
+    ck::angelscriptgenerator::write_back::FCkAsAssetWriteBack::Register_ToolbarExtension();
+
     _PostEngineInitHandle = FCoreDelegates::OnPostEngineInit.AddLambda([]()
     {
         ck_angelscript_generator_module::Run_AllGenerators();
@@ -615,6 +618,8 @@ void FCkAngelscriptGeneratorModule::StartupModule()
 void FCkAngelscriptGeneratorModule::ShutdownModule()
 {
 #if WITH_EDITOR
+    ck::angelscriptgenerator::write_back::FCkAsAssetWriteBack::Unregister_ToolbarExtension();
+
     if (_PostEngineInitHandle.IsValid())
     {
         FCoreDelegates::OnPostEngineInit.Remove(_PostEngineInitHandle);
