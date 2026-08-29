@@ -9,6 +9,7 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
+#include <GameFramework/Actor.h>
 #include <NavigationSystem.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -238,6 +239,28 @@ auto
     { OutSnappedPosition = Projected.Location; }
 
     return bSuccess;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_UE::
+    Request_SetActorNavigationRegistered(
+        AActor* InActor,
+        bool InRegistered)
+    -> void
+{
+    const auto ActorIsValid = ck::IsValid(InActor);
+    CK_ENSURE_IF_NOT(ActorIsValid,
+        TEXT("Invalid actor passed to Request_SetActorNavigationRegistered"))
+    {}
+    if (NOT ActorIsValid)
+    { return; }
+
+    if (InRegistered)
+    { UNavigationSystemV1::OnActorRegistered(InActor); }
+    else
+    { UNavigationSystemV1::OnActorUnregistered(InActor); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

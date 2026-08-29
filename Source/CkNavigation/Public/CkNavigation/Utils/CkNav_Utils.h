@@ -17,6 +17,8 @@
 // with a Transform feature; the result fragment is added lazily on first request.
 // --------------------------------------------------------------------------------------------------------------------
 
+class AActor;
+
 UCLASS(NotBlueprintable)
 class CKNAVIGATION_API UCk_Utils_Nav_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -122,6 +124,16 @@ public:
         float InHalfExtentUu,
         FVector& OutSnappedPosition,
         float InVerticalHalfExtentUu = -1.0f);
+
+    // Actor-level registration is required for nav-relevant actors such as NavModifierVolumes,
+    // whose BrushComponent contribution is not controlled by a NavModifierComponent toggle.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Nav",
+              DisplayName = "[Ck][Nav] Request Set Actor Navigation Registered")
+    static void
+    Request_SetActorNavigationRegistered(
+        AActor* InActor,
+        bool InRegistered);
 
 public:
     UFUNCTION(BlueprintCallable,
