@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include <Misc/DataValidation.h>
 
@@ -18,6 +19,27 @@ auto
         FCk_Handle& InHandle) const
     -> void
 {
+    // An item whose definition is the CLASS DEFAULT is not an item. It has no traits, no name and no icon, and
+    // is still structurally valid enough to hold an inventory slot and a grid cell for the rest of the save's
+    // life - invisible, unusable, and impossible for the player to clear.
+    //
+    // Nothing produces one deliberately: Create always sets an archetype and Add is handed a real definition.
+    // The one producer is a snapshot load whose recorded archetype path did not resolve, which falls back to
+    // constructing from this CDO. Catching it HERE catches it by what the entity IS rather than by how it was
+    // made, which is why it also covers the case CkSnapshot cannot see: a recipe whose path is EMPTY because an
+    // older build already rebuilt it once and captured the null archetype back as nothing.
+    //
+    // Composition deliberately CONTINUES. The entity stays structurally an item so its container hydrates
+    // intact - the inventory handlers are all-or-nothing, and refusing here would fail the whole container
+    // rather than the one broken entry. The tag is what gets this destroyed before the world is handed back.
+    const auto DefinitionIsUsable = NOT HasAnyFlags(RF_ClassDefaultObject);
+    CK_ENSURE_IF_NOT(DefinitionIsUsable,
+        TEXT("An item is being constructed from the CLASS DEFAULT of [{}], so it has no traits and no identity. ")
+        TEXT("This is what a save whose item definition could not be resolved rebuilds into; the entity is ")
+        TEXT("marked so the load destroys it instead of leaving it holding a slot nothing can ever use"),
+        GetClass())
+    { InHandle.AddOrGet<ck::FTag_Snapshot_UnresolvedArchetype>(); }
+
     InHandle.Add<ck::FFragment_InventoryItem>(TWeakObjectPtr(this));
 
     auto SeenTraitClasses = TSet<const UClass*>{};
