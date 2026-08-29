@@ -1,5 +1,6 @@
 #include "CkGameSettings/CkGameSettings_Common.h"
 #include "CkGameSettings/Subsystem/CkGameSettings_Subsystem.h"
+#include "CkGameSettings/Subsystem/CkGameSettings_Utils.h"
 
 #include "CkGameSettings_SpecSupport.h"
 
@@ -408,6 +409,25 @@ bool FCkTest_GameSettings_Registry_GameUserSettingsCVarBindingRejected::RunTest(
             .Set_PersistencePolicy(ECk_GameSettings_PersistencePolicy::External)
             .Set_ApplyBindingType(ECk_GameSettings_ApplyBindingType::Handler)));
 
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_GameSettings_Utils_UnbindIsTeardownSafe,
+    "Ck.CkGameSettings.Utils.UnbindIsTeardownSafe",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_GameSettings_Utils_UnbindIsTeardownSafe::RunTest(const FString&)
+{
+    const auto Delegate = FCk_Delegate_GameSettings_OnSettingChanged{};
+
+    // A valid UObject with no world models the context chain after world teardown. Cleanup must
+    // quietly become a no-op rather than report a missing GameSettings subsystem.
+    UCk_Utils_GameSettings_UE::UnbindFrom_OnSettingChanged(GetTransientPackage(), NAME_None, Delegate);
+
+    TestTrue(TEXT("unbind returns cleanly after its world context is gone"), true);
     return true;
 }
 

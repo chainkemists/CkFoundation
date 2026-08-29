@@ -209,6 +209,11 @@ public:
         FName InKey,
         const FCk_Delegate_GameSettings_OnSettingChanged& InDelegate);
 
+    /**
+     * Removes a change binding when the registry is still alive. Cleanup-safe during world and
+     * GameInstance teardown: if the context chain is already gone, the binding is already inert
+     * and this call is a no-op.
+     */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GameSettings",
               DisplayName = "[Ck][GameSettings] Unbind From OnSettingChanged",
@@ -441,6 +446,10 @@ public:
         const UObject* InWorldContextObject);
 
 private:
+    static auto
+    DoTryGet_Subsystem(
+        const UObject* InWorldContextObject) -> UCk_GameSettings_Subsystem_UE*;
+
     static auto
     DoGet_Subsystem(
         const UObject* InWorldContextObject) -> UCk_GameSettings_Subsystem_UE*;
