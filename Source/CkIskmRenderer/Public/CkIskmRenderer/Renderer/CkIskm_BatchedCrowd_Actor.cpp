@@ -506,6 +506,18 @@ auto
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberAnimationTime(int32 InIndex) const
+    -> float
+{
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return 0.0f; }
+
+    return _Members[InIndex].Inst.Time;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
     Get_MemberVisible(int32 InIndex) const
     -> bool
 {

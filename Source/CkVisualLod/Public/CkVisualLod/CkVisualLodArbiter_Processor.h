@@ -69,6 +69,12 @@ namespace ck
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
             const FCk_Request_VisualLodArbiter_ClearObserver& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_SetFrozen& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -146,10 +152,22 @@ namespace ck
         DoGather_Members(
             FUpdateContext& InCtx) -> void;
 
+        // The frozen arbiter's whole update: revisit the members it ALREADY owns (a frozen arbiter
+        // claims no new ones by tag) to finish in-flight fades and fail closed on externally torn
+        // down proxies. No gather-by-tag, ranking, flips, preempts or steady-state far updates
+        static auto
+        DoUpdate_ArbiterFrozen(
+            FUpdateContext& InCtx) -> int32;
+
         static auto
         DoProcess_Member(
             FUpdateContext& InCtx,
             int32 InScratchIdx,
+            FCk_Handle_VisualLod InMember) -> void;
+
+        static auto
+        DoProcess_Member_Frozen(
+            FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember) -> void;
 
         static auto
@@ -201,6 +219,9 @@ namespace ck
             FCk_Handle_VisualLod InMember,
             FFragment_VisualLod_Current& InMemberCurrent) -> void;
 
+        // InAllowReversal gates the band/lock re-aim that lets a fade turn around mid-flight. That
+        // re-aim IS a promote/demote decision, so a frozen arbiter passes false and the fade runs
+        // out on the course it started
         static auto
         DoTick_Fade(
             FUpdateContext& InCtx,
@@ -208,7 +229,8 @@ namespace ck
             FFragment_VisualLod_Current& InMemberCurrent,
             const FTransform& InMemberXf,
             float InDistance,
-            bool InLockHeld) -> void;
+            bool InLockHeld,
+            bool InAllowReversal) -> void;
 
         static auto
         DoUpdate_FarMember(
@@ -216,6 +238,17 @@ namespace ck
             FCk_Handle_VisualLod InMember,
             FFragment_VisualLod_Current& InMemberCurrent,
             const FTransform& InMemberXf) -> void;
+
+        // Mirrors the member's resolved far-anim onto the promoted proxy as a single looping
+        // sequence (sequence pose mode, no AnimBP) so the near proxy keeps walking exactly as the
+        // far member did. Idempotent per (seq, rate) via the proxy cache; a game wanting a richer
+        // AnimBP overrides it in its OnVisualLod_Promoted handler (its request wins by FIFO order).
+        // No-op when the member holds no crowd collection (AlwaysPromoted / exhaustion-fallback)
+        static auto
+        DoDrive_ProxyAnim(
+            FUpdateContext& InCtx,
+            FCk_Handle_VisualLod InMember,
+            FFragment_VisualLod_Current& InMemberCurrent) -> void;
 
         static auto
         DoCompute_FarAnim(
@@ -237,6 +270,16 @@ namespace ck
         static auto
         DoSweep_Step(
             FUpdateContext& InCtx) -> void;
+
+        // Near-side twin of DoWrite_MemberFade: the promoted proxy's mesh carries the SAME alpha on
+        // its custom primitive data (submesh-mirrored via the proxy's custom-data lane), and its
+        // material dithers itself OUT as that value rises — so the near and far masks are complements.
+        // No release-path reset needed: proxy Setup zeroes declared slots on every (re)acquire
+        static auto
+        DoWrite_ProxyFade(
+            const FFragment_VisualLod_Current& InMemberCurrent,
+            int32 InNearSlot,
+            float InAlpha) -> void;
 
     public:
         // Shared with FProcessor_VisualLod_EndPlay (deterministic death-path release + refund)

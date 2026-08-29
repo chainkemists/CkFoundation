@@ -104,6 +104,12 @@ namespace ck
         int32 _CurrentSequenceIndex = INDEX_NONE;
         float _CurrentRate = 1.0f;
 
+        // Last sequence/rate pushed to the PROMOTED PROXY (distinct from the crowd-slot cache
+        // above), so the promote drive only re-issues PlayAnimation on an actual change. Reset when
+        // the proxy is torn down
+        int32 _ProxySequenceIndex = INDEX_NONE;
+        float _ProxyRate = 1.0f;
+
         // Scene-node child hosting the promoted proxy (valid only while promoted). Destroying it
         // routes the pooled SKMC release through the framework's own IskmProxy EndPlay
         FCk_Handle _VisualNode;
@@ -116,16 +122,32 @@ namespace ck
         // Roots the resolved renderer data across a promote (see Source/CLAUDE.md rooted-batch rules)
         FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
 
+        // The rank inputs the arbiter last computed for this member, retained so tooling can read
+        // what the ranking actually saw. -1 distance = the arbiter has never ranked this member;
+        // both go stale on any tick the arbiter skips it before the distance is computed
+        float _LastDistance = -1.0f;
+        bool _LastInView = false;
+
     public:
         CK_PROPERTY_GET(_Arbiter);
         CK_PROPERTY_GET(_MemberIndex);
         CK_PROPERTY_GET(_Crowd);
         CK_PROPERTY_GET(_Promoted);
+        CK_PROPERTY_GET(_PromotedViaLock);
+        CK_PROPERTY_GET(_PromotedUnbudgeted);
         CK_PROPERTY_GET(_PromoteLock);
         CK_PROPERTY_GET(_Hidden);
+        CK_PROPERTY_GET(_FadePhase);
         CK_PROPERTY_GET(_FadeAlpha);
+        CK_PROPERTY_GET(_PreemptDemote);
+        CK_PROPERTY_GET(_CurrentSequenceIndex);
+        CK_PROPERTY_GET(_CurrentRate);
+        CK_PROPERTY_GET(_ProxySequenceIndex);
+        CK_PROPERTY_GET(_ProxyRate);
         CK_PROPERTY_GET(_Proxy);
         CK_PROPERTY_GET(_VisualNode);
+        CK_PROPERTY_GET(_LastDistance);
+        CK_PROPERTY_GET(_LastInView);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

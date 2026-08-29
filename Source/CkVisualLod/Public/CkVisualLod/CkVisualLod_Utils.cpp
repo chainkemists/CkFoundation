@@ -110,6 +110,98 @@ auto
 
 auto
     UCk_Utils_VisualLod_UE::
+    Get_LastDistance(
+        const FCk_Handle_VisualLod& InHandle)
+    -> float
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_LastDistance();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_LastInView(
+        const FCk_Handle_VisualLod& InHandle)
+    -> bool
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_LastInView();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_FadePhase(
+        const FCk_Handle_VisualLod& InHandle)
+    -> ck::EVisualLod_FadePhase
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_FadePhase();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_PromotedViaLock(
+        const FCk_Handle_VisualLod& InHandle)
+    -> bool
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PromotedViaLock();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_PromotedUnbudgeted(
+        const FCk_Handle_VisualLod& InHandle)
+    -> bool
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PromotedUnbudgeted();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_PreemptDemote(
+        const FCk_Handle_VisualLod& InHandle)
+    -> bool
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PreemptDemote();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_ProxySequenceIndex(
+        const FCk_Handle_VisualLod& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_ProxySequenceIndex();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_ProxyRate(
+        const FCk_Handle_VisualLod& InHandle)
+    -> float
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_ProxyRate();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_FarSequenceIndex(
+        const FCk_Handle_VisualLod& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_CurrentSequenceIndex();
+}
+
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_FarRate(
+        const FCk_Handle_VisualLod& InHandle)
+    -> float
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_CurrentRate();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VisualLod_UE::
     Request_SetArbiter(
         FCk_Handle_VisualLod& InHandle,
         const FCk_Request_VisualLod_SetArbiter& InRequest,
