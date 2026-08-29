@@ -671,6 +671,7 @@ void
     _PendingBridgeActors.Reset();
     _V3LoadReport = FCk_Snapshot_LoadReport{};
     _V3LoadReport.Set_Result(ECk_SnapshotResult::Success);
+    _V3LoadReport.Set_SaveTimestamp(_V3Header.Get_TimestampUTC());
     _HydrationEnqueued = false;
     _QuarantineStamped = false;
     _QuarantineLifted  = false;
