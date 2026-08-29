@@ -313,6 +313,17 @@ namespace ck::game_settings_ui
         bool InIsChecked) -> FText;
 
     /**
+     * A numeric slider's readout. An options-backed slider uses the matching option label; this
+     * lets a ranged endpoint present a semantic value such as "Unlimited" while preserving the
+     * numeric value used for persistence and validation. Other values use the normal numeric
+     * precision and display-scale rules.
+     */
+    CKGAMESETTINGS_API auto
+    Get_SliderValueText(
+        const FCk_GameSettings_SettingDefinition& InDefinition,
+        float InValue) -> FText;
+
+    /**
      * Type→row-class mapping: the definition's own _OptionalRowClassOverride wins over everything; then
      * options-present → _SelectRowClassOverride else built-in Select; otherwise per-type override
      * else built-in default (Bool → Toggle; numeric with a FULL [min, max] range → Slider;

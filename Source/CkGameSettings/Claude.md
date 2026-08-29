@@ -41,6 +41,7 @@ from these).
   set returns true without firing. `Request_ResetToDefault` (rejects External keys — their schema
   defaults are placeholders), `Request_ResetAllToDefaults` (skips External).
 - `BindTo_OnSettingChanged(Key, Delegate)` / `UnbindFrom_...` — per-key; `Key == None` = wildcard.
+  Unbind is teardown-safe and quietly no-ops after its world/GameInstance registry is gone.
 
 ### Apply routing
 - **CVar-bound:** registered CVar → `INTERNAL_Set_*`; unregistered CVar → deferred queue retried at
@@ -98,8 +99,9 @@ null-guarded in C++:
 - Rows: `UCk_GameSettingsUI_RowWidget_{Toggle,Slider,Select,Dropdown}` — subclass in a WBP, bind
   `_DisplayNameText` + the control slots (`_ValueCheckBox` / `_ValueSlider`+`_ValueText` /
   `_PrevButton`+`_NextButton`+`_ValueText` / `_ValueComboBox`). `InjectSetting(ctx, key)` binds by
-  key, rebind-safe. Slider commits on capture release only; Select cycles options or steps
-  rangeless numerics. Dropdown (ComboBoxString, mouse/keyboard) is NEVER a resolution default —
+  key, rebind-safe. Slider commits on capture release only; an options-backed slider displays the
+  matching option label, enabling semantic endpoints such as `Unlimited`. Select cycles options or
+  steps rangeless numerics. Dropdown (ComboBoxString, mouse/keyboard) is NEVER a resolution default —
   games opt in via `_SelectRowClassOverride`; it commits by index so duplicate labels stay
   unambiguous, and renders display-only for definitions without options.
 - Screen: `UCk_GameSettingsUI_ScreenWidget` (ActivatableWidget layer participant) — bind
@@ -150,7 +152,7 @@ null-guarded in C++:
 
 ## Tests
 
-`Ck.CkGameSettings.{Registry×8,Store×3,Packs×1,UI×2}` C++ specs (pattern-run only — the toolbox
+`Ck.CkGameSettings.{Registry×8,Store×3,Packs×1,UI×3,Utils×1}` C++ specs (pattern-run only — the toolbox
 no-pattern suite excludes name-based `Ck.*` families) + 9 `Ck_AutoTest_GameSettings_*` AS
 AutoTests in CkTests. Gym: "Game Settings" (CkTests) — plumbing surface; styling verification
 belongs to the consuming game's WBPs.

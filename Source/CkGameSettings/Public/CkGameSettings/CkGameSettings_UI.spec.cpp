@@ -187,4 +187,39 @@ bool FCkTest_GameSettings_UI_ToggleStateText::RunTest(const FString&)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_GameSettings_UI_SliderValueText,
+    "Ck.CkGameSettings.UI.SliderValueText",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_GameSettings_UI_SliderValueText::RunTest(const FString&)
+{
+    using ck::game_settings_ui::Get_SliderValueText;
+
+    const auto Numeric = FCk_GameSettings_SettingDefinition{
+        FName{TEXT("spec.ui.slider.numeric")}, ECk_GameSettings_ValueType::Int32, TEXT("16")}
+        .Set_MinValue(TEXT("5"))
+        .Set_MaxValue(TEXT("65"));
+
+    TestEqual(TEXT("An unlabelled Int32 slider keeps its numeric readout"),
+        Get_SliderValueText(Numeric, 16.0f).ToString(), TEXT("16"));
+
+    const auto Labelled = FCk_GameSettings_SettingDefinition{
+        FName{TEXT("spec.ui.slider.labelled")}, ECk_GameSettings_ValueType::Int32, TEXT("16")}
+        .Set_MinValue(TEXT("5"))
+        .Set_MaxValue(TEXT("65"))
+        .Set_Options({
+            FCk_GameSettings_SettingOption{FText::FromString(TEXT("16")), TEXT("16")},
+            FCk_GameSettings_SettingOption{FText::FromString(TEXT("Unlimited")), TEXT("65")}});
+
+    TestEqual(TEXT("An options-backed slider uses the matching endpoint label"),
+        Get_SliderValueText(Labelled, 65.0f).ToString(), TEXT("Unlimited"));
+    TestEqual(TEXT("An options-backed slider falls back to a numeric readout when no label matches"),
+        Get_SliderValueText(Labelled, 20.0f).ToString(), TEXT("20"));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif // WITH_DEV_AUTOMATION_TESTS
