@@ -28,6 +28,37 @@
 #include <numeric>
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_entity_replication_driver_utils
+{
+    // A runtime-minted archetype is RF_Transient, so it is not net-addressable: the object reference in the
+    // ConstructionInfo arrives NULL on every client, which then builds from the class default and comes back
+    // holding a husk the server does not have. The PATH is the identity a registered runtime-archetype provider
+    // re-mints from on the far side, so every builder stamps it rather than only the loader that first needed
+    // it. An ASSET archetype is skipped: a NetGUID already carries that reference, so the path is pure wire cost.
+    auto
+        DoStamp_ArchetypeIdentity(
+            TArray<FCk_EntityReplicationDriver_ConstructionInfo> InConstructionInfos)
+        -> TArray<FCk_EntityReplicationDriver_ConstructionInfo>
+    {
+        for (auto& ConstructionInfo : InConstructionInfos)
+        {
+            const auto* Archetype = ConstructionInfo.Get_ConstructionScriptArchetype().Get();
+
+            if (ck::Is_NOT_Valid(Archetype) || Archetype->IsAsset())
+            { continue; }
+
+            if (NOT ConstructionInfo.Get_ArchetypeIdentityPath().IsEmpty())
+            { continue; }
+
+            ConstructionInfo.Set_ArchetypeIdentityPath(Archetype->GetPathName());
+        }
+
+        return InConstructionInfos;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     TryAdd(
@@ -248,6 +279,8 @@ auto
         InHandle)
     { return {}; }
 
+    const auto ConstructionInfos = ck_entity_replication_driver_utils::DoStamp_ArchetypeIdentity(InConstructionInfos);
+
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
 
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
@@ -260,7 +293,7 @@ auto
         NewEntity.Add<ck::FTag_DefinitionBuild_InProgress>();
         ON_SCOPE_EXIT { NewEntity.Remove<ck::FTag_DefinitionBuild_InProgress>(); };
 
-        for (const auto& ConstructionInfo : InConstructionInfos)
+        for (const auto& ConstructionInfo : ConstructionInfos)
         { ck::entity_replication_driver::Construct_FromInfo(ConstructionInfo, NewEntity); }
     }
 
@@ -270,7 +303,7 @@ auto
         ck::IsValid(World))
     {
         auto* Recipe = NewObject<UCk_BuildRecipe_UE>(World);
-        Recipe->Populate(InConstructionInfos);
+        Recipe->Populate(ConstructionInfos);
         NewEntity.Add<ck::FFragment_BuildRecipe>(TStrongObjectPtr<UCk_BuildRecipe_UE>{Recipe});
     }
 
@@ -295,7 +328,7 @@ auto
             (
                 FCk_EntityReplicationDriver_ReplicationData
                 {
-                    InConstructionInfos,
+                    ConstructionInfos,
                     FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
                 }
                 .Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
@@ -351,6 +384,8 @@ auto
         InReplicatedOwner, InExistingEntity)
     { return; }
 
+    const auto ConstructionInfos = ck_entity_replication_driver_utils::DoStamp_ArchetypeIdentity(InConstructionInfos);
+
     switch (const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InReplicatedOwner))
     {
         case ECk_Net_NetModeType::Host:
@@ -370,7 +405,7 @@ auto
             (
                 FCk_EntityReplicationDriver_ReplicationData
                 {
-                    InConstructionInfos,
+                    ConstructionInfos,
                     FCk_EntityReplicationDriver_ReplicateObjects_Data{FCk_ReplicatedObjects::ToWeak(ReplicatedObjects.Get_ReplicatedObjects())}
                 }
                 .Set_OwningEntityDriver(InReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
@@ -649,14 +684,14 @@ auto
         return;
     }
 
-    // A runtime-minted archetype has no path this process can load, and the info carries the path anyway so the
-    // identity survives. A client reaches this with a path its own catalog CAN mint from, which is why the retry
-    // lives here rather than only in the loader: the authority resolved it once, and the client has to resolve it
-    // for itself or come back holding a husk the server does not have.
-    if (const auto& UnresolvedPath = InInfo.Get_UnresolvedArchetypePath();
-        NOT UnresolvedPath.IsEmpty())
+    // A runtime-minted archetype has no path this process can load, and the info carries its identity anyway so
+    // the archetype survives without the object reference. A client reaches this with a path its own catalog CAN
+    // mint from, which is why the retry lives here rather than only in the loader: the authority resolved it
+    // once, and the client has to resolve it for itself or come back holding a husk the server does not have.
+    if (const auto& IdentityPath = InInfo.Get_ArchetypeIdentityPath();
+        NOT IdentityPath.IsEmpty())
     {
-        if (auto* Minted = ck::FCk_RuntimeArchetypeRegistry::TryResolve(FSoftObjectPath{UnresolvedPath});
+        if (auto* Minted = ck::FCk_RuntimeArchetypeRegistry::TryResolve(FSoftObjectPath{IdentityPath});
             ck::IsValid(Minted))
         {
             Minted->Construct(InEntity);
