@@ -838,14 +838,14 @@ namespace ck::snapshot
                         if (const auto* Archetype = Info.Get_ConstructionScriptArchetype().Get();
                             ck::IsValid(Archetype))
                         { Step.Set_ArchetypePath(Archetype->GetPathName()); }
-                        else if (const auto& UnresolvedPath = Info.Get_UnresolvedArchetypePath();
-                            NOT UnresolvedPath.IsEmpty())
+                        else if (const auto& IdentityPath = Info.Get_ArchetypeIdentityPath();
+                            NOT IdentityPath.IsEmpty())
                         {
-                            // This entity was rebuilt by a load that could not resolve the path, so the object is null
-                            // while the identity is still known. Writing the path back is what stops one unresolvable
-                            // load from erasing the identity for every load after it - a later build that CAN resolve it
-                            // (an asset restored, a provider registered) then restores the entity in full.
-                            Step.Set_ArchetypePath(UnresolvedPath);
+                            // The archetype OBJECT is gone while its identity is still known - a load that could not
+                            // resolve the path rebuilt this entity from the class default. Writing the identity back is
+                            // what stops one unresolvable load from erasing it for every load after it: a later build
+                            // that CAN resolve it (an asset restored, a provider registered) restores the entity in full.
+                            Step.Set_ArchetypePath(IdentityPath);
                         }
                         Steps.Emplace(MoveTemp(Step));
                     }
