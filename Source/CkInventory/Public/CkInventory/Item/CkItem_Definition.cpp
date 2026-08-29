@@ -5,10 +5,11 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
-#include <Misc/DataValidation.h>
-
+#include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Item/CkItem_Fragment.h"
 #include "CkInventory/ItemTrait/CkItemTrait.h"
+
+#include <Misc/DataValidation.h>
 
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,21 +25,35 @@ auto
     // life - invisible, unusable, and impossible for the player to clear.
     //
     // Nothing produces one deliberately: Create always sets an archetype and Add is handed a real definition.
-    // The one producer is a snapshot load whose recorded archetype path did not resolve, which falls back to
+    // The KNOWN producer is a snapshot load whose recorded archetype path did not resolve, which falls back to
     // constructing from this CDO. Catching it HERE catches it by what the entity IS rather than by how it was
-    // made, which is why it also covers the case CkSnapshot cannot see: a recipe whose path is EMPTY because an
-    // older build already rebuilt it once and captured the null archetype back as nothing.
+    // made, which is the whole point: it stays route-agnostic, so it also covers the case CkSnapshot cannot see
+    // - a recipe whose path is EMPTY because an older build already rebuilt it once and captured the null
+    // archetype back as nothing - and any producer nobody has thought of yet. There is deliberately no load or
+    // net-mode branch here; deciding which route minted it is the reaper's job, not the detector's.
     //
     // Composition deliberately CONTINUES. The entity stays structurally an item so its container hydrates
     // intact - the inventory handlers are all-or-nothing, and refusing here would fail the whole container
-    // rather than the one broken entry. The tag is what gets this destroyed before the world is handed back.
+    // rather than the one broken entry. The tag is what gets this reaped: at load finish when the load owns it,
+    // and by ck::FProcessor_UnresolvedHusk_Reap on every other route.
     const auto DefinitionIsUsable = NOT HasAnyFlags(RF_ClassDefaultObject);
-    CK_ENSURE_IF_NOT(DefinitionIsUsable,
-        TEXT("An item is being constructed from the CLASS DEFAULT of [{}], so it has no traits and no identity. ")
-        TEXT("This is what a save whose item definition could not be resolved rebuilds into; the entity is ")
-        TEXT("marked so the load destroys it instead of leaving it holding a slot nothing can ever use"),
-        GetClass())
-    { InHandle.AddOrGet<ck::FTag_Snapshot_UnresolvedArchetype>(); }
+
+    if (NOT DefinitionIsUsable)
+    {
+        // A Warning and not an ensure, deliberately, and this is the ONE place in the husk contract where that is
+        // the right level: reaching here is a statement about the DATA - a save naming content this build cannot
+        // resolve - and it fires once per broken item on every load of that save, which is a condition the player
+        // is already told about through the load report. The loud channel belongs to the reaper, which knows
+        // something this guard cannot: whether a load owns this husk. A husk that arrives by any other route means
+        // an unaccounted-for producer, and THAT is a code defect, so it ensures there.
+        ck::inventory::Warning(
+            TEXT("Item entity [{}] is being constructed from the CLASS DEFAULT of [{}], so it has no traits and no ")
+            TEXT("identity. This is what a save whose item definition could not be resolved rebuilds into; the entity ")
+            TEXT("is marked so it is reaped instead of left holding a slot nothing can ever use"),
+            InHandle, GetClass());
+
+        InHandle.AddOrGet<ck::FTag_Snapshot_UnresolvedArchetype>();
+    }
 
     InHandle.Add<ck::FFragment_InventoryItem>(TWeakObjectPtr(this));
 
