@@ -486,20 +486,10 @@ auto
         const FCk_GameSettings_SettingDefinition& InDefinition)
     -> void
 {
-    using namespace ck_game_settings_ui_row_widgets;
-
     if (ck::Is_NOT_Valid(_ValueText))
     { return; }
 
-    const auto AuthoredPrecision = InDefinition.Get_OptionalDisplayPrecision();
-    const auto Precision = AuthoredPrecision >= 0
-        ? AuthoredPrecision
-        : (InDefinition.Get_ValueType() == ECk_GameSettings_ValueType::Int32 ? 0 : DefaultFloatPrecision);
-
-    const auto DisplayScale = InDefinition.Get_OptionalDisplayScale();
-    const auto DisplayValue = Get_SnappedValue(InValue, InDefinition) * (DisplayScale > 0.0f ? DisplayScale : 1.0f);
-
-    _ValueText->SetText(FText::FromString(Format_Readout(DisplayValue, Precision)));
+    _ValueText->SetText(ck::game_settings_ui::Get_SliderValueText(InDefinition, InValue));
 }
 
 auto
@@ -766,6 +756,53 @@ namespace ck::game_settings_ui
         return InIsChecked
             ? NSLOCTEXT("CkGameSettings", "ToggleOn", "On")
             : NSLOCTEXT("CkGameSettings", "ToggleOff", "Off");
+    }
+
+    auto
+        Get_SliderValueText(
+            const FCk_GameSettings_SettingDefinition& InDefinition,
+            float InValue)
+        -> FText
+    {
+        using namespace ck_game_settings_ui_row_widgets;
+
+        const auto SnappedValue = Get_SnappedValue(InValue, InDefinition);
+
+        for (const auto& Option : InDefinition.Get_Options())
+        {
+            switch (InDefinition.Get_ValueType())
+            {
+                case ECk_GameSettings_ValueType::Int32:
+                {
+                    auto OptionValue = int32{};
+
+                    if (LexTryParseString(OptionValue, *Option.Get_Value()) &&
+                        OptionValue == FMath::RoundToInt32(SnappedValue))
+                    { return Option.Get_Label(); }
+                    break;
+                }
+                case ECk_GameSettings_ValueType::Float:
+                {
+                    auto OptionValue = float{};
+
+                    if (LexTryParseString(OptionValue, *Option.Get_Value()) &&
+                        FMath::IsNearlyEqual(OptionValue, SnappedValue, FloatOptionMatchTolerance))
+                    { return Option.Get_Label(); }
+                    break;
+                }
+                default:
+                { break; }
+            }
+        }
+
+        const auto AuthoredPrecision = InDefinition.Get_OptionalDisplayPrecision();
+        const auto Precision = AuthoredPrecision >= 0
+            ? AuthoredPrecision
+            : (InDefinition.Get_ValueType() == ECk_GameSettings_ValueType::Int32 ? 0 : DefaultFloatPrecision);
+        const auto DisplayScale = InDefinition.Get_OptionalDisplayScale();
+        const auto DisplayValue = SnappedValue * (DisplayScale > 0.0f ? DisplayScale : 1.0f);
+
+        return FText::FromString(Format_Readout(DisplayValue, Precision));
     }
 
     auto
