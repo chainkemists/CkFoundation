@@ -302,7 +302,11 @@ auto
         const FCk_Delegate_GameSettings_OnSettingChanged& InDelegate)
     -> void
 {
-    auto* Subsystem = DoGet_Subsystem(InWorldContextObject);
+    // Unbinding is teardown cleanup. The World, GameInstance, or registry may already have been
+    // destroyed, in which case the UObject-bound delegate is inert and there is nothing left to
+    // remove. Keep this path diagnostic-free while ordinary operations continue through the
+    // fail-loud DoGet_Subsystem helper.
+    auto* Subsystem = DoTryGet_Subsystem(InWorldContextObject);
 
     if (ck::Is_NOT_Valid(Subsystem))
     { return; }
@@ -633,6 +637,28 @@ auto
     { return nullptr; }
 
     return Subsystem->Get_StorageProvider();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_GameSettings_UE::
+    DoTryGet_Subsystem(
+        const UObject* InWorldContextObject)
+    -> UCk_GameSettings_Subsystem_UE*
+{
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return nullptr; }
+
+    const auto* World = InWorldContextObject->GetWorld();
+    if (ck::Is_NOT_Valid(World))
+    { return nullptr; }
+
+    const auto* GameInstance = World->GetGameInstance();
+    if (ck::Is_NOT_Valid(GameInstance))
+    { return nullptr; }
+
+    return GameInstance->GetSubsystem<UCk_GameSettings_Subsystem_UE>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
