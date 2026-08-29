@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
-#include "CkInventory/Inventory/CkInventory_OperationQueue_Fragment.h"
+#include "CkInventory/Inventory/Coordinator/CkInventory_OperationCoordinator_Utils.h"
 #include "CkInventory/Inventory/CkInventory_RequestHandlers.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 
@@ -19,56 +19,6 @@
 
 namespace ck
 {
-    namespace inventory_operation_queue
-    {
-        CKINVENTORY_API auto Execute(const FQueuedInventoryOperation& InOperation) -> void;
-        CKINVENTORY_API auto ReleaseSource(FCk_Handle_Inventory InSource) -> void;
-        CKINVENTORY_API auto CancelAll(const FFragment_Inventory_OperationQueue& InQueue) -> void;
-
-        template <typename TInventoryHandle, typename TEntry>
-        auto
-        ResolveOwner(
-            TInventoryHandle InSource,
-            const TEntry& InEntry) -> FCk_Handle_Inventory
-        {
-            FCk_Handle_Inventory Source = InSource;
-            using Request = typename TEntry::BaseRequestType;
-
-            if constexpr (std::is_same_v<Request, FCk_Request_Inventory_TransferItem_ToSpatial>
-                || std::is_same_v<Request, FCk_Request_Inventory_TransferItem_ToDataOnly>)
-            {
-                FCk_Handle_Inventory Target = InEntry.Common.Get_TargetInventory();
-                if (ck::IsValid(Target) && Target != Source)
-                { return Target; }
-            }
-
-            return Source;
-        }
-
-        template <typename TInventoryHandle, typename TVariant>
-        auto
-        Route(
-            TInventoryHandle InSource,
-            TVariant InRequest) -> void
-        {
-            FCk_Handle_Inventory Source = InSource;
-            auto Owner = std::visit([&](const auto& InEntry)
-            {
-                return ResolveOwner(InSource, InEntry);
-            }, InRequest);
-
-            Source.Add<FTag_Inventory_OperationRouted>();
-            auto& Queue = Owner.AddOrGet<FFragment_Inventory_OperationQueue>().Get_OperationsMutable();
-
-            if constexpr (std::is_same_v<TInventoryHandle, FCk_Handle_Inventory_DataOnly>)
-            { Queue.Emplace(FQueuedInventoryOperation_DataOnlySource{InSource, MoveTemp(InRequest)}); }
-            else
-            { Queue.Emplace(FQueuedInventoryOperation_SpatialSource{InSource, MoveTemp(InRequest)}); }
-        }
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKINVENTORY_API FProcessor_Inventory_FireSignals : public ck_exp::TProcessor<
             FProcessor_Inventory_FireSignals,
             FCk_Handle_Inventory,
@@ -211,43 +161,53 @@ namespace ck
         using ParentProcessor::ParentProcessor;
 
     public:
-        // Route one request at a time into the operation owner's FIFO. A transfer is owned by its
-        // target; every other request is owned by its source. The source stays blocked until the
-        // coordinator executes or cancels the routed request, preserving source order while all
-        // contenders for one destination share a fair serialization boundary.
+        // Established CK request drain: snapshot then reset the live fragment before doing work.
+        // Callback-created requests therefore remain in the live fragment for a later pump.
         auto
         ForEachEntity(
-            TimeType InDeltaT,
+            TimeType,
             HandleType InHandle,
-            const FFragment_Inventory_Params& InParams,
+            const FFragment_Inventory_Params&,
             TRequestsFragment& InRequestsComp) const -> void
         {
-            FCk_Handle Base  = InHandle;
-            auto&      Pacer = Base.AddOrGet<FFragment_PacedWork>(1, 8);
+            const auto RequestsCopy = InRequestsComp.Get_Requests();
+            InRequestsComp.Get_RequestsMutable().Reset();
 
-            // RunPacedSteps removes TRequestsFragment once the step reports Done, so InRequestsComp
-            // must not be read after this returns true — drive teardown off Done.
-            const auto Done = ck::RunPacedSteps<TRequestsFragment>(Base, Pacer, InDeltaT, [&]() -> ck::EPacedStepResult
+            for (const auto& Request : RequestsCopy)
             {
-                auto& Requests = InRequestsComp.Get_RequestsMutable();
-                if (Requests.IsEmpty())
-                { return ck::EPacedStepResult::Done; }
+                auto Submission = FInventoryOperation_Submission{};
+                Submission.Ordinal = std::visit([](const auto& InEntry)
+                { return InEntry.SubmissionOrdinal; }, Request);
+                Submission.Source = InHandle;
+                Submission.Participants.Add(InHandle);
 
-                FCk_Handle_Inventory Base = InHandle;
-                if (Base.Has<FTag_Inventory_OperationRouted>())
-                { return ck::EPacedStepResult::Continue; }
+                std::visit([&](const auto& InEntry)
+                {
+                    using EntryType = std::remove_cv_t<std::remove_reference_t<decltype(InEntry)>>;
+                    using RequestType = typename EntryType::BaseRequestType;
+                    if constexpr (std::is_same_v<RequestType, FCk_Request_Inventory_TransferItem_ToSpatial>
+                        || std::is_same_v<RequestType, FCk_Request_Inventory_TransferItem_ToDataOnly>)
+                    {
+                        FCk_Handle_Inventory Target = InEntry.Common.Get_TargetInventory();
+                        if (ck::IsValid(Target) && Target != Submission.Source)
+                        { Submission.Participants.Add(Target); }
+                    }
+                }, Request);
 
-                auto Entry = MoveTemp(Requests[0]);
-                Requests.RemoveAt(0);
+                if constexpr (std::is_same_v<TInventoryHandle, FCk_Handle_Inventory_DataOnly>)
+                { Submission.Operation = FInventoryOperation_DataOnlySource{InHandle, Request}; }
+                else
+                { Submission.Operation = FInventoryOperation_SpatialSource{InHandle, Request}; }
 
-                inventory_operation_queue::Route(InHandle, MoveTemp(Entry));
+                if (NOT inventory_operation_coordinator::Submit(InHandle, MoveTemp(Submission)))
+                {
+                    std::visit([&](const auto& InEntry)
+                    { inventory_handlers::DispatchCancel<Traits>(InHandle, InEntry); }, Request);
+                }
+            }
 
-                return Requests.IsEmpty() ? ck::EPacedStepResult::Done : ck::EPacedStepResult::Continue;
-            });
-
-            if (Done)
-            { Base.Try_Remove<FFragment_PacedWork>(); }
-
+            if (InRequestsComp.Get_Requests().IsEmpty())
+            { InHandle.template Remove<TRequestsFragment>(); }
         }
     };
 
@@ -368,137 +328,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Inventory_MassTransfer_InFlight& InFlight) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_Derived, typename TInventoryHandle, typename TInventoryTypeTag>
-    class TProcessor_Inventory_OperationQueue_Churn_Base : public ck_exp::TProcessor<
-            T_Derived,
-            TInventoryHandle,
-            TReadWrite<FFragment_Inventory_OperationQueue>,
-            TInventoryTypeTag,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using ParentProcessor = ck_exp::TProcessor<
-            T_Derived,
-            TInventoryHandle,
-            TReadWrite<FFragment_Inventory_OperationQueue>,
-            TInventoryTypeTag,
-            CK_IGNORE_PENDING_KILL>;
-        using HandleType = TInventoryHandle;
-        using TimeType   = typename ParentProcessor::TimeType;
-        using ParentProcessor::ParentProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Inventory_OperationQueue& InQueue) const -> void
-        {
-            FCk_Handle Base = InHandle;
-            ck::RunPacedSteps<FFragment_Inventory_OperationQueue>(
-                Base, InQueue.Get_PacerMutable(), InDeltaT, [&]() -> ck::EPacedStepResult
-                {
-                    auto& Operations = InQueue.Get_OperationsMutable();
-                    if (Operations.IsEmpty())
-                    { return ck::EPacedStepResult::Done; }
-
-                    auto Operation = MoveTemp(Operations[0]);
-                    Operations.RemoveAt(0);
-                    inventory_operation_queue::Execute(Operation);
-
-                    // A completion callback may mutate or destroy the queue owner. Do not read the
-                    // queue again after dispatch; remove an empty queue on its next processor pass.
-                    return ck::EPacedStepResult::Continue;
-                });
-        }
-    };
-
-    // One operation per typed owner per frame. Transfer requests use their target as the owner, so
-    // all source queues and MassTransfer operations share one fair serialization boundary.
-    class CKINVENTORY_API FProcessor_Inventory_DataOnly_OperationQueue_Churn
-        : public TProcessor_Inventory_OperationQueue_Churn_Base<
-            FProcessor_Inventory_DataOnly_OperationQueue_Churn,
-            FCk_Handle_Inventory_DataOnly,
-            FTag_Inventory_DataOnly>
-    {
-    public:
-        using Group         = FGroup_Gameplay;
-        using RunAfter      = TDepList<FProcessor_Inventory_MassTransfer_Churn>;
-        using MarkedDirtyBy = FFragment_Inventory_OperationQueue;
-        using TProcessor_Inventory_OperationQueue_Churn_Base::TProcessor_Inventory_OperationQueue_Churn_Base;
-    };
-
-    class CKINVENTORY_API FProcessor_Inventory_Spatial_OperationQueue_Churn
-        : public TProcessor_Inventory_OperationQueue_Churn_Base<
-            FProcessor_Inventory_Spatial_OperationQueue_Churn,
-            FCk_Handle_Inventory_Spatial,
-            FTag_Inventory_Spatial>
-    {
-    public:
-        using Group         = FGroup_Gameplay;
-        using RunAfter      = TDepList<FProcessor_Inventory_DataOnly_OperationQueue_Churn>;
-        using MarkedDirtyBy = FFragment_Inventory_OperationQueue;
-        using TProcessor_Inventory_OperationQueue_Churn_Base::TProcessor_Inventory_OperationQueue_Churn_Base;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_Derived, typename TInventoryHandle, typename TInventoryTypeTag>
-    class TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base : public ck_exp::TProcessor<
-            T_Derived,
-            TInventoryHandle,
-            TReadOnly<FFragment_Inventory_OperationQueue>,
-            TInventoryTypeTag,
-            CK_IF_END_PLAY>
-    {
-    public:
-        using ParentProcessor = ck_exp::TProcessor<
-            T_Derived,
-            TInventoryHandle,
-            TReadOnly<FFragment_Inventory_OperationQueue>,
-            TInventoryTypeTag,
-            CK_IF_END_PLAY>;
-        using HandleType = TInventoryHandle;
-        using TimeType   = typename ParentProcessor::TimeType;
-        using ParentProcessor::ParentProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType,
-            HandleType,
-            const FFragment_Inventory_OperationQueue& InQueue) const -> void
-        {
-            inventory_operation_queue::CancelAll(InQueue);
-        }
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKINVENTORY_API FProcessor_Inventory_DataOnly_OperationQueue_CancelOnEndPlay
-        : public TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base<
-            FProcessor_Inventory_DataOnly_OperationQueue_CancelOnEndPlay,
-            FCk_Handle_Inventory_DataOnly,
-            FTag_Inventory_DataOnly>
-    {
-    public:
-        using Group = FGroup_EndPlay;
-        using TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base::TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base;
-    };
-
-    class CKINVENTORY_API FProcessor_Inventory_Spatial_OperationQueue_CancelOnEndPlay
-        : public TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base<
-            FProcessor_Inventory_Spatial_OperationQueue_CancelOnEndPlay,
-            FCk_Handle_Inventory_Spatial,
-            FTag_Inventory_Spatial>
-    {
-    public:
-        using Group = FGroup_EndPlay;
-        using TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base::TProcessor_Inventory_OperationQueue_CancelOnEndPlay_Base;
     };
 
 }

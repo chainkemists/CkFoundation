@@ -1,6 +1,7 @@
 #include "CkInventory_Spatial_Utils.h"
 
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
+#include "CkInventory/Inventory/Coordinator/CkInventory_OperationCoordinator_Utils.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_RequestTraits.h"
 #include "CkInventory/Item/CkItem_Fragment.h"
@@ -108,7 +109,10 @@ auto
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
     InInventory.AddOrGet<ck::FFragment_Inventory_Spatial_Requests>()._Requests.Emplace(
-        ck::FFragment_Inventory_Spatial_Requests::AddItemEntry{InRequest, InPlacement});
+        ck::FFragment_Inventory_Spatial_Requests::AddItemEntry{
+            InRequest,
+            InPlacement,
+            ck::inventory_operation_coordinator::ReserveSubmissionOrdinal(InInventory)});
     return InInventory;
 }
 
@@ -139,7 +143,10 @@ auto
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
 
     InInventory.AddOrGet<ck::FFragment_Inventory_Spatial_Requests>()._Requests.Emplace(
-        ck::FFragment_Inventory_Spatial_Requests::SplitStackEntry{InRequest, InPlacement});
+        ck::FFragment_Inventory_Spatial_Requests::SplitStackEntry{
+            InRequest,
+            InPlacement,
+            ck::inventory_operation_coordinator::ReserveSubmissionOrdinal(InInventory)});
     return InInventory;
 }
 
@@ -171,7 +178,9 @@ auto
         Request.PopulateRequestHandle(InInventory), InDelegate);
 
     InInventory.AddOrGet<ck::FFragment_Inventory_Spatial_Requests>()._Requests.Emplace(
-        ck::FFragment_Inventory_Spatial_Requests::RelocateItemEntry{MoveTemp(Request)});
+        ck::FFragment_Inventory_Spatial_Requests::RelocateItemEntry{
+            MoveTemp(Request),
+            ck::inventory_operation_coordinator::ReserveSubmissionOrdinal(InInventory)});
     return InInventory;
 }
 

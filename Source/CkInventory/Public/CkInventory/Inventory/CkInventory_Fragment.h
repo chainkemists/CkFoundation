@@ -31,8 +31,6 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Inventory_Spatial);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayRequireReplication);
     CK_DEFINE_ECS_TAG(FTag_Inventory_MayHaveChanged);
-    CK_DEFINE_ECS_TAG(FTag_Inventory_OperationRouted);
-    CK_DEFINE_ECS_TAG(FTag_Inventory_MassTransferStepRouted);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,14 +48,15 @@ namespace ck
 
         TBaseRequest Common;
         TAddon Addon{};
+        uint64 SubmissionOrdinal = 0;
 
         TInventory_RequestEntry() = default;
 
-        explicit TInventory_RequestEntry(TBaseRequest InCommon)
-            : Common(MoveTemp(InCommon)) {}
+        explicit TInventory_RequestEntry(TBaseRequest InCommon, uint64 InSubmissionOrdinal = 0)
+            : Common(MoveTemp(InCommon)), SubmissionOrdinal(InSubmissionOrdinal) {}
 
-        TInventory_RequestEntry(TBaseRequest InCommon, TAddon InAddon)
-            : Common(MoveTemp(InCommon)), Addon(MoveTemp(InAddon)) {}
+        TInventory_RequestEntry(TBaseRequest InCommon, TAddon InAddon, uint64 InSubmissionOrdinal = 0)
+            : Common(MoveTemp(InCommon)), Addon(MoveTemp(InAddon)), SubmissionOrdinal(InSubmissionOrdinal) {}
     };
 
     // Explicit specializations live in each shape's *_Fragment.h; both are visible at every point
@@ -195,6 +194,8 @@ namespace ck
         int32 _ItemsFailed     = 0;
         // Distinguishes Failed_NoCandidateAccepts (nothing placed) from Success_Partial.
         bool  _AnyUnitMoved    = false;
+        bool  _StepSubmitted   = false;
+        uint64 _SubmissionOrdinal = 0;
 
         // The op outlives the request struct that carried it, so the generic completion delegate is
         // held here instead. Fragment removal on normal completion is what keeps it single-fire.
@@ -207,6 +208,11 @@ namespace ck
         CK_PROPERTY_GET(_ItemsFullyMoved);
         CK_PROPERTY_GET(_ItemsFailed);
         CK_PROPERTY_GET(_CompletionDelegate);
+        CK_PROPERTY_GET(_StepSubmitted);
+        auto
+        Set_StepSubmitted(
+            bool InStepSubmitted) -> void
+        { _StepSubmitted = InStepSubmitted; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------

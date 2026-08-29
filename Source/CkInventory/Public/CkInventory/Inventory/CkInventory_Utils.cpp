@@ -6,6 +6,7 @@
 
 #include "CkInventory/CkInventory_Log.h"
 #include "CkInventory/Inventory/CkInventory_Fragment.h"
+#include "CkInventory/Inventory/Coordinator/CkInventory_OperationCoordinator_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Utils.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_RequestTraits.h"
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Utils.h"
@@ -99,15 +100,17 @@ namespace ck_inventory_utils
         FCk_Handle_Inventory& InInventory,
         TEnqueueFn InEnqueueFn) -> FCk_Handle_Inventory
     {
+        const auto SubmissionOrdinal = ck::inventory_operation_coordinator::ReserveSubmissionOrdinal(InInventory);
+
         if (UCk_Utils_Inventory_Spatial_UE::Has(InInventory))
         {
             auto Typed = UCk_Utils_Inventory_Spatial_UE::CastChecked(InInventory);
-            InEnqueueFn(Typed);
+            InEnqueueFn(Typed, SubmissionOrdinal);
         }
         else if (UCk_Utils_Inventory_DataOnly_UE::Has(InInventory))
         {
             auto Typed = UCk_Utils_Inventory_DataOnly_UE::CastChecked(InInventory);
-            InEnqueueFn(Typed);
+            InEnqueueFn(Typed, SubmissionOrdinal);
         }
         return InInventory;
     }
@@ -210,12 +213,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::AddItemEntry{InRequest});
+                typename TFragment::AddItemEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -245,12 +248,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::RemoveItemEntry{InRequest});
+                typename TFragment::RemoveItemEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -280,12 +283,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::StackItemsEntry{InRequest});
+                typename TFragment::StackItemsEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -315,12 +318,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::SplitStackEntry{InRequest});
+                typename TFragment::SplitStackEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -350,12 +353,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::AddItemByDefinitionEntry{InRequest});
+                typename TFragment::AddItemByDefinitionEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -387,12 +390,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InInventory,
-        [&Request](auto& Typed)
+        [&Request](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::SortEntry{Request});
+                typename TFragment::SortEntry{Request, InSubmissionOrdinal});
         });
 }
 
@@ -423,12 +426,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InSourceInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::TransferItemToSpatialEntry{InRequest});
+                typename TFragment::TransferItemToSpatialEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -459,12 +462,12 @@ auto
 
     return ck_inventory_utils::DispatchEnqueue_Checked(
         InSourceInventory,
-        [&InRequest](auto& Typed)
+        [&InRequest](auto& Typed, uint64 InSubmissionOrdinal)
         {
             using TShape = std::remove_reference_t<decltype(Typed)>;
             using TFragment = ck::TFragment_Inventory_Requests<TShape>;
             Typed.template AddOrGet<TFragment>()._Requests.Emplace(
-                typename TFragment::TransferItemToDataOnlyEntry{InRequest});
+                typename TFragment::TransferItemToDataOnlyEntry{InRequest, InSubmissionOrdinal});
         });
 }
 
@@ -547,6 +550,7 @@ auto
     InFlight._TargetResolution = InRequest.Get_TargetResolution();
     InFlight._StepsPerPass     = FMath::Max(1, InRequest.Get_StepsPerPass());
     InFlight._MaxStepsPerFrame = FMath::Max(1, InRequest.Get_MaxStepsPerFrame());
+    InFlight._SubmissionOrdinal = ck::inventory_operation_coordinator::ReserveSubmissionOrdinal(InAnyHandle);
 
     // The request struct itself is not stored — the op entity outlives it, so the completion delegate
     // rides the in-flight fragment instead.
