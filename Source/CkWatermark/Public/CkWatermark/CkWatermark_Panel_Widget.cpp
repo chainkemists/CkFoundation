@@ -535,7 +535,9 @@ auto
         const TArray<FString>& EnabledBranches =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_EnabledBranches();
 
-        bool HeadMatchesAny = false;
+        // Entries sharing one hash collapse into a single row (e.g. "dev/HEAD: <hash>").
+        TArray<FString> RowHashes;
+        TArray<FString> RowKeys;
         for (int32 i = 0; i < CkCoreBuildId::BranchCount; ++i)
         {
             const FString BranchName(UTF8_TO_TCHAR(CkCoreBuildId::BranchNames[i]));
@@ -544,15 +546,39 @@ auto
                 continue;
             }
 
-            const bool IsActive =
-                BakedHead == FString(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]));
-            if (IsActive)
-            { HeadMatchesAny = true; }
+            const FString MergeHash(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]));
+            const int32 ExistingRow = RowHashes.Find(MergeHash);
+            if (ExistingRow != INDEX_NONE)
+            {
+                RowKeys[ExistingRow] += TEXT("/") + BranchName;
+            }
+            else
+            {
+                RowHashes.Add(MergeHash);
+                RowKeys.Add(BranchName);
+            }
+        }
+
+        // HEAD joins the row it matches; on a feature branch it is ahead of every
+        // reference merge-base, so it gets its own row.
+        const int32 HeadRow = RowHashes.Find(BakedHead);
+        if (HeadRow != INDEX_NONE)
+        {
+            RowKeys[HeadRow] += TEXT("/HEAD");
+        }
+        else
+        {
+            RowHashes.Add(BakedHead);
+            RowKeys.Add(TEXT("HEAD"));
+        }
+
+        for (int32 i = 0; i < RowHashes.Num(); ++i)
+        {
+            const bool IsActive = (RowHashes[i] == BakedHead);
 
             FCkWatermarkInfoBarEntry BranchEntry;
-            BranchEntry.Key        = FText::FromString(BranchName);
-            BranchEntry.Value      = TAttribute<FText>(FText::FromString(
-                                         FString(UTF8_TO_TCHAR(CkCoreBuildId::MergeBaseHashes[i]))));
+            BranchEntry.Key        = FText::FromString(RowKeys[i]);
+            BranchEntry.Value      = TAttribute<FText>(FText::FromString(RowHashes[i]));
             BranchEntry.Visibility = BuildIdVis;
             BranchEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([IsActive]() -> FSlateColor
             {
@@ -561,20 +587,6 @@ auto
                     : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Inactive_Color());
             });
             BuildInfoRow.Add(MoveTemp(BranchEntry));
-        }
-
-        // On a feature branch HEAD is ahead of every reference merge-base, so nothing else shows it.
-        if (!HeadMatchesAny)
-        {
-            FCkWatermarkInfoBarEntry HeadEntry;
-            HeadEntry.Key        = FText::FromString(TEXT("HEAD"));
-            HeadEntry.Value      = TAttribute<FText>(FText::FromString(BakedHead));
-            HeadEntry.Visibility = BuildIdVis;
-            HeadEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
-            {
-                return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color());
-            });
-            BuildInfoRow.Add(MoveTemp(HeadEntry));
         }
     }
 
