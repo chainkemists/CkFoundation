@@ -24,6 +24,10 @@ static const FCk_Nav_PathResult& Get_PathResult(const FCk_Handle& InHandle);
 static ECk_Nav_PathStatus       Get_PathStatus(const FCk_Handle& InHandle);
 static bool                     Has_Path(const FCk_Handle& InHandle);
 
+// Register or unregister an actor's actor-level navigation contribution. Separate component
+// registration remains owned by the component APIs.
+static void Request_SetActorNavigationRegistered(AActor* InActor, bool InRegistered);
+
 // Re-bindable signal API (for code that wants to react to every path request, not just the one it issued).
 static void BindTo_OnPathReady (UPARAM(ref) FCk_Handle& InHandle, const FCk_Delegate_Nav_OnPathReady&  InDelegate, ...);
 static void BindTo_OnPathFailed(UPARAM(ref) FCk_Handle& InHandle, const FCk_Delegate_Nav_OnPathFailed& InDelegate, ...);
