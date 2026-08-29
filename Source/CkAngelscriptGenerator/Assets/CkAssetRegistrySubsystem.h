@@ -134,9 +134,6 @@ private:
         const FString& FilePath,
         const TSet<FString>& InGeneratedFunctionNames) const -> TSet<FString>;
 
-    static auto
-    Get_ScriptDirectory() -> FString;
-
     auto
     SeedMapsFromGeneratedFiles() -> void;
 

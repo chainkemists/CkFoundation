@@ -4,6 +4,7 @@
 #include "CkAngelscriptGenerator/Assets/CkAssetRegistry_ClassResolver.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
@@ -527,8 +528,10 @@ auto
         return;
     }
 
+    // Per-config: `_DUP{N}` disambiguation only has to hold within the file being written.
+    // `AssetPathToFunctionName` is deliberately NOT cleared here — it spans every config, and
+    // ScanScriptFilesForUsage rebuilds it from the generated files rather than trusting this pass.
     UsedAssetNames.Reset();
-    AssetPathToFunctionName.Reset();
     ActiveNamespaces.Add(InConfig->Namespace);
 
     DiscoveredAssets.Sort([](const FAssetData &A, const FAssetData &B) {
@@ -1145,16 +1148,6 @@ auto
 
 auto
     UCkAssetRegistrySubsystem::
-    Get_ScriptDirectory()
-    -> FString
-{
-    return FPaths::ProjectDir() / TEXT("Script");
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCkAssetRegistrySubsystem::
     HandleAngelscriptPostCompile()
     -> void
 {
@@ -1172,6 +1165,12 @@ auto
     auto Configs = Request_DiscoverAllConfigs();
     if (Configs.IsEmpty())
     { return; }
+
+    // The generated files on disk are the ground truth for what an `assets::` call can reach, and
+    // this rebuilds from ALL of them — so it must start clean or a since-deleted asset's accessor
+    // lingers forever. Rebuilding is also why the map no longer needs the generation pass to
+    // accumulate correctly across configs.
+    AssetPathToFunctionName.Reset();
 
     for (const auto* Config : Configs)
     {
@@ -1257,19 +1256,23 @@ auto
 {
     FunctionUsageMap.Reset();
 
-    if (AssetPathToFunctionName.IsEmpty() || ActiveNamespaces.IsEmpty())
-    {
-        SeedMapsFromGeneratedFiles();
-    }
+    // Unconditional, NOT gated on the map being empty. The generation pass clears
+    // `AssetPathToFunctionName` per config while `GloballyGeneratedAssets` suppresses re-emitting an
+    // earlier config's assets, so with two or more configs the map is left holding only the last
+    // one's entries — and a non-empty-but-partial map would never have been repaired by an
+    // is-it-empty guard. Re-seeding from the generated files makes the map say what actually
+    // compiles, whatever state generation left it in.
+    SeedMapsFromGeneratedFiles();
 
     if (AssetPathToFunctionName.IsEmpty() || ActiveNamespaces.IsEmpty())
     { return; }
 
-    auto ScriptDir = Get_ScriptDirectory();
-    auto GeneratedDir = ScriptDir / TEXT("Generated");
-
-    auto AsFiles = TArray<FString>{};
-    IFileManager::Get().FindFilesRecursive(AsFiles, *ScriptDir, TEXT("*.as"), true, false);
+    // Project Script/ AND every enabled plugin's Script/. Scanning only the project's own tree left
+    // this blind to the plugins where almost all AngelScript lives, so every asset referenced solely
+    // from a plugin script read as unreferenced while Get_HasAnyProvider() still answered true —
+    // "nobody was there to ask" reported as "asked and got nothing".
+    const auto ScanRoots = ck::angelscriptgenerator::self_heal::FCkAsSourceScanner::Get_DefaultScanRoots();
+    const auto AsFiles   = ck::angelscriptgenerator::self_heal::FCkAsSourceScanner::Enumerate_AsSourceFiles(ScanRoots);
 
     // Built once per scan: the alternative is a linear FindKey per candidate per script file.
     auto GeneratedFunctionNames = TSet<FString>{};
@@ -1281,9 +1284,6 @@ auto
 
     for (const auto& FilePath : AsFiles)
     {
-        if (FilePath.StartsWith(GeneratedDir))
-        { continue; }
-
         auto UsedFunctions = ScanSingleScriptFile(FilePath, GeneratedFunctionNames);
         for (const auto& FunctionName : UsedFunctions)
         {
