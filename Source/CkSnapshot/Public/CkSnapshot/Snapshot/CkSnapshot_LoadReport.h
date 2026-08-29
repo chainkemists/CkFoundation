@@ -154,6 +154,33 @@ public:
     CK_PROPERTY(_Reason);
 };
 
+// One entity the load rebuilt from its class default because NOTHING could resolve the archetype its recipe named.
+// It is a husk - structurally an entity, semantically empty - so the load destroys it rather than hand the player a
+// slot that looks occupied and can never be used. Named here because "your tape is gone" and "your tape is gone AND
+// its shelf cell is dead" are different bugs, and only the first one is this.
+USTRUCT(BlueprintType)
+struct CKSNAPSHOT_API FCk_Snapshot_UnresolvedArchetypeRecord
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Snapshot_UnresolvedArchetypeRecord);
+
+private:
+    // The entity, formatted the way every other snapshot diagnostic names one.
+    UPROPERTY()
+    FString _Identity;
+
+    // The archetype path the save recorded. It is retained in the rebuilt recipe and re-captured on the next save,
+    // so a later build that CAN resolve it restores the entity in full rather than inheriting the loss.
+    UPROPERTY()
+    FString _ArchetypePath;
+
+public:
+    CK_PROPERTY(_Identity);
+    CK_PROPERTY(_ArchetypePath);
+};
+
 // One payload that did not apply, named. A count says the world came back incomplete; only a name says which
 // part of it did — and that is the difference between a bug report and a shrug.
 USTRUCT(BlueprintType)
@@ -321,6 +348,13 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_ConvergenceLossRecord> _ConvergenceUnmet;
 
+    // Entities rebuilt from a class default because their recipe's archetype resolved to nothing, and destroyed
+    // before the world was handed back. Outside the accounting closure for the same reason as the two above: those
+    // partition the SAVE's rows and this records what the LIVE side had to remove. It DOES move _Result - the
+    // player lost a real object - but the slot it held is free, which is the difference this reap exists to make.
+    UPROPERTY()
+    TArray<FCk_Snapshot_UnresolvedArchetypeRecord> _UnresolvedArchetypes;
+
 public:
     CK_PROPERTY(_Result);
     CK_PROPERTY(_EntitiesTotal);
@@ -345,6 +379,7 @@ public:
     CK_PROPERTY(_UnresolvedAfterEscalation);
     CK_PROPERTY(_QuarantineForced);
     CK_PROPERTY(_PayloadLosses);
+    CK_PROPERTY(_UnresolvedArchetypes);
     CK_PROPERTY(_ConvergenceUnmet);
 
 public:

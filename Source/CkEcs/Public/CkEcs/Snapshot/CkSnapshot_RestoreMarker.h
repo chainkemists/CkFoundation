@@ -23,6 +23,17 @@ namespace ck
     // and reconcile leaves the rebuilt child alone. Use this only where resetting is the declared load policy (for
     // example a per-viewer camera's non-replicated tuner attributes), never to silence an accidental data loss.
     CK_DEFINE_ECS_TAG(FTag_Snapshot_ReconstructOnly);
+
+    // Stamped by the load on an entity whose recipe named an archetype that NOTHING could resolve - neither the
+    // path itself nor any registered runtime-archetype provider. Construction fell back to the class default, so
+    // the entity is structurally an entity and semantically nothing: an item with no traits, a husk that still
+    // occupies its inventory slot and its grid cell. The load reaps every entity carrying this before it hands the
+    // world back, which is what keeps an unresolvable recipe a NAMED loss rather than a permanently dead slot.
+    //
+    // The husk is built at all - rather than the row being dropped - because the inventory hydration handlers are
+    // all-or-nothing: one invalid handle makes the whole container return NotReady until it times out, so dropping
+    // one broken item would cost the player the entire container it lived in.
+    CK_DEFINE_ECS_TAG(FTag_Snapshot_UnresolvedArchetype);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

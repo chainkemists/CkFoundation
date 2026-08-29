@@ -1,4 +1,5 @@
 #include "CkSnapshot_Utils.h"
+#include "CkEcs/Persistence/CkRuntimeArchetype_Registry.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -490,6 +491,44 @@ auto
     -> bool
 {
     return InReport.Get_DidLoadComplete();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_RegisterRuntimeArchetypeProvider(
+        FName InProviderId,
+        const FCk_Delegate_Snapshot_ResolveRuntimeArchetype& InResolver)
+    -> void
+{
+    const auto ResolverIsBound = InResolver.IsBound();
+    CK_ENSURE_IF_NOT(ResolverIsBound,
+        TEXT("Runtime-archetype provider [{}] was registered with an unbound delegate. Every recipe that needed ")
+        TEXT("it would still fail - just later, and with a provider registered to look innocent"), InProviderId)
+    { return; }
+
+    // Copied by value: a dynamic delegate is a WEAK object pointer plus a function name, so it cannot keep its
+    // owner alive and safely no-ops if that owner dies - which is the behaviour a process-lifetime registry wants.
+    ck::FCk_RuntimeArchetypeRegistry::Register(InProviderId,
+    [InResolver](const FSoftObjectPath& InPath) -> UCk_Entity_ConstructionScript_PDA*
+    {
+        if (NOT InResolver.IsBound())
+        { return nullptr; }
+
+        return InResolver.Execute(InPath.ToString());
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Request_UnregisterRuntimeArchetypeProvider(
+        FName InProviderId)
+    -> void
+{
+    ck::FCk_RuntimeArchetypeRegistry::Unregister(InProviderId);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

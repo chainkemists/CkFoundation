@@ -29,9 +29,18 @@ private:
         meta = (AllowPrivateAccess = true))
     TObjectPtr<const UCk_Entity_ConstructionScript_PDA> _ConstructionScriptArchetype;
 
+    // The archetype path a save recorded that NOTHING could resolve, carried so the recipe still names what it
+    // wanted even though the object is null. Without it a failed resolution silently ERASES durable identity:
+    // the loader rebuilds with a null archetype, the entity retains those infos as its recipe, and the next
+    // capture writes an empty path because it only records a valid archetype object - so one load on a build
+    // that could not resolve the path destroys the identity for every load afterwards.
+    UPROPERTY()
+    FString _UnresolvedArchetypePath;
+
 public:
     CK_PROPERTY_GET(_ConstructionScript);
     CK_PROPERTY(_ConstructionScriptArchetype);
+    CK_PROPERTY(_UnresolvedArchetypePath);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
 };

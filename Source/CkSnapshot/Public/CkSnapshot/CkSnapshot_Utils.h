@@ -25,6 +25,16 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Snapshot_OnThumbnailCaptured,
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_Entity_ConstructionScript_PDA;
+
+// Mints the construction archetype named by InArchetypePath, or returns null when this provider does not own that
+// path. Null is the NORMAL answer for a provider asked about someone else's path - every provider is asked - so a
+// resolver decides ownership from the path itself and must never treat a miss as an error.
+DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(UCk_Entity_ConstructionScript_PDA*,
+    FCk_Delegate_Snapshot_ResolveRuntimeArchetype, const FString&, InArchetypePath);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // What Promise_OnLoadComplete DID, returned synchronously, so a caller that cares can branch without a second
 // query. The delegate runs exactly once either way.
 UENUM(BlueprintType)
@@ -441,4 +451,38 @@ public:
     static bool
     Get_DidLoadComplete(
         const FCk_Snapshot_LoadReport& InReport);
+
+public:
+    /**
+     * Teaches the loader how to rebuild an archetype whose object path a fresh process cannot load.
+     *
+     * A build recipe records its archetype as an object PATH. That is durable identity for an on-disk asset and
+     * NOT durable identity for one minted at runtime (GetOrCreate_TransientItemDefinition and friends): the path
+     * resolves in the process that minted it and in no other, so the same save loads correctly in-session and
+     * comes back as an empty husk on a cold boot. A provider closes that gap by minting the archetype from the
+     * identity its path carries.
+     *
+     * REGISTER BEFORE A LOAD CAN START - a GameInstance subsystem's Initialize, not a feature's Setup processor,
+     * which only exists once something has already composed that feature. A provider registered after the rebuild
+     * has read the recipe is a provider that was not there.
+     *
+     * The resolver must be IDEMPOTENT: the same path may be asked for more than once in one load, and every ask
+     * has to yield the same object or the entities built from it stop being the same item.
+     *
+     * Registering the same id twice REPLACES, so a re-registration cannot accumulate duplicates.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Register Runtime Archetype Provider")
+    static void
+    Request_RegisterRuntimeArchetypeProvider(
+        FName InProviderId,
+        const FCk_Delegate_Snapshot_ResolveRuntimeArchetype& InResolver);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Unregister Runtime Archetype Provider")
+    static void
+    Request_UnregisterRuntimeArchetypeProvider(
+        FName InProviderId);
 };
