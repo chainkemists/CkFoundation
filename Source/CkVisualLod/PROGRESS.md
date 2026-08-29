@@ -1,18 +1,61 @@
 # CkVisualLod campaign — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-08-27 (CkFoundation @ feature/ckvisuallod, docs commit a9283eed9):**
-Design approved without line-review (maintainer: "proceed with implementation"). Gate 0 scaffold
-fully written (module + data surface + utils + processor skeletons + uplugin entry + tier row);
-compile gate in flight.
-**Baseline being diffed against:** build `Result: Succeeded` (754s, full rebuild of stale worktree
-binaries) at a9283eed9 / code tip 5d1ac9e83, 2026-08-27. **No test baseline** — maintainer
-directive (see decision log): the agent runs no test suites this campaign; compile gates +
-maintainer visual checks replace them.
-**Next action:** Gate 2 remainder — flip-lifecycle AS autotests (CkTests) — then Gate 4
-(BB adoption). The maintainer's one-stop visual pass: PIE `TestGyms_CkTests_Level`, Tab →
-"Visual Lod", walk the band; `ck.DebugOverlay 1` for the member/arbiter cards.
-**Blocked on:** nothing agent-side. Maintainer items in the 2026-08-27 entries below.
+**As of 2026-08-29 — dither round REPLACES the gym-verify round's dissolve half (all UNCOMMITTED,
+gate GREEN 00:05):** maintainer rejected the noise-erosion dissolve ("electric"; crowd never faded)
+and chose a dithered crossfade on the REAL materials. The CkUsf surface-replacing dissolve is
+DELETED (VisualLodDissolve .ush + AS look + `_ProxyDissolveLook` config + `_ProxyDissolveMid` +
+IskmProxy `Request_SetMaterialOverride_AllSlots`; CkIskmRenderer back to byte-HEAD). Replacement:
+one `_FadeAlpha`, two channels — crowd per-instance slot 13 (unchanged) + near-mesh custom
+primitive data at new `_FadeNearCustomPrimitiveDataSlot` (default 0) via the proxy's
+`Request_SetCustomDataFloat` lane (submesh-mirrored; **RendererData must declare
+`_NumCustomDataFloat > slot`** — loud ensure). Complementary masks share
+`CkUsf_VisualLod_FadeThreshold` (Common.ush); looks `VisualLodCrowdFade` (keeps threshold<α) /
+`VisualLodNearFade` (keeps threshold>=α, via the new CkUsf `_CustomPrimitiveData` look-param
+source); gym wires crowd slots on OnCrowdCreated and the near look per promote. Contract doc: this
+file's CLAUDE.md §Crossfade contract. **The old "run Ck_Usf_GenerateLooks VisualLodDissolve"
+instruction below is OBSOLETE — instead: `Ck_Usf_GenerateLooks VisualLodCrowdFade` +
+`Ck_Usf_GenerateLooks VisualLodNearFade`, commit both masters, delete the stale untracked
+`M_CkUsf_Look_VisualLodDissolve.uasset`.** Known gap: the Hat submesh receives the fade value but
+keeps its non-contract material (base-mesh-only override scope) → hat pops; fix options in the
+plan spine (`<superproject>/scratch/PLAN_ckvisuallod_debugger_20260828.md`).
+
+**As of 2026-08-28 — debugger round layered ON TOP of the still-pending gym-verify round (both
+UNCOMMITTED):** maintainer approved an HTML mockup and ordered the debugger built. Additive-only
+changes in THIS module: freeze tag/request (`FTag_VisualLodArbiter_Frozen` + `Request_SetFrozen`;
+frozen = no gather/rank/flips/far-anim, in-flight fades finish with reversal suppressed, recovery
+still runs), cached `_LastView`, per-tick `_{Promotes,Demotes,Preempts}ThisTick` ("flips STARTED"),
+retained member `_LastDistance`/`_LastInView`, and the C++-only debugger getter surface on both
+Utils (incl. the dissolve fault ladder: `Get_HasProxyDissolveConfigured` /
+`Get_IsProxyDissolveLookResolved` / member `Get_HasProxyDissolveMid`). New consumer module
+`CkGameplayDebugger/Source/CkVisualLodDebugger` (Systems/50, `ck.VisualLodDebugger`; its CLAUDE.md
++ `Mockups/mockup_visuallod_debugger.html` = approved visual spec). Compile gate GREEN 2026-08-28
+22:53 (`=== Build succeeded ===`, BuildTest.log). Plan/status spine:
+`<superproject>/scratch/PLAN_ckvisuallod_debugger_20260828.md`. Gym-verify round verified
+byte-preserved under it (baseline numstat diff). Both rounds ship together only after the
+maintainer's visual pass; the debugger's dissolve alert should itself flag the still-missing
+`M_CkUsf_Look_VisualLodDissolve` master until `Ck_Usf_GenerateLooks` is run.
+
+**As of 2026-08-27 — gym-verify round (CkFoundation/CkTests/CkGameplayDebugger @ feature/ckvisuallod, UNCOMMITTED on the base gates):**
+Base gates 0/1/3 done + Gate 2 partial (gym) as committed earlier (CkFoundation 5a04508c6 · CkTests
+98f670ef · CkGameplayDebugger 880c822). On top, an uncommitted round fixing two maintainer
+visual-check bugs: (1) **A-pose** — promoted proxies now WALK (arbiter drives the proxy as a single
+sequence mirroring the far-anim; the demo RendererData's ABP_Unarmed made Request_PlayAnimation a
+no-op). (2) **Pop→dissolve** — surface-replacing CkUsf crossfade: only the proxy dissolves, over the
+crowd member that stays solid as the base layer. New CkUsf `VisualLodDissolve` look (.ush + AS asset,
+uniform `Visibility`), new IskmProxy `Request_SetMaterialOverride_AllSlots`, arbiter config
+`_ProxyDissolveLook` (batch-resolved), per-proxy MID driven `Visibility = 1 - _FadeAlpha`.
+Adversarially reviewed (3-agent workflow); 6/6 findings fixed.
+**Compile gate: GREEN** — `Ck_Usf_GenerateLooks`-independent build `=== Build succeeded ===`, 0 errors,
+CkVisualLod + CkIskmRenderer TUs confirmed recompiled (Saved/Logs/BuildTest.log, 2026-08-27). C++ only;
+AS assets compile at editor boot, the .ush at master generation — both maintainer-side.
+**Next action (MAINTAINER, editor):** run `Ck_Usf_GenerateLooks VisualLodDissolve` and commit
+`Content/CkUsf/GeneratedLooks/M_CkUsf_Look_VisualLodDissolve.uasset` (else proxy pops + GeneratesUsableMasters
+red under --no-nullrhi); then the one-stop visual pass: PIE `TestGyms_CkTests_Level` → Tab → "Visual Lod",
+walk the band — near proxies WALK and dissolve in/out; `ck.DebugOverlay 1` for the cards.
+**Next action (AGENT):** commit this round across the 3 submodules once the maintainer confirms the
+visual; then Gate 2 remainder (flip-lifecycle AS autotests), then Gate 4 (BB adoption).
+**Blocked on:** maintainer editor-generate + visual confirm before commit/ship.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -31,6 +74,42 @@ maintainer visual checks replace them.
 | 2026-08-27 | Promote locks = immediate mutators (Timer's ChangeCountDirection shape), not deferred requests | Counter bump with no side effects; arbiter evaluates next tick either way | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-27 — Gym-verify round: A-pose fix + surface-replacing CkUsf dissolve
+Two bugs from the maintainer's PIE pass ("close ones are in A pose, not playing walk"; "dissolve is
+a pop, not a fade"). All uncommitted on top of the base gates.
+- **A-pose (CkVisualLod).** Root cause: the demo RendererData wires `ABP_Unarmed` → the promoted
+  proxy boots in AnimBP pose mode, where `Request_PlayAnimation` is IGNORED (CkIskmProxy_Processor.cpp:664),
+  and the ABP has no velocity to read. Fix (maintainer's steer: "the default can get a single anim
+  sequence — no heavy AnimBP"): `DoDrive_ProxyAnim` switches the proxy to sequence mode and plays the
+  same AnimCollection sequence the far-anim resolves to (Fixed idx / SpeedDriven idle-move), looping
+  at the far rate; re-issued on far-anim change; a game overriding in `OnPromoted` still wins by FIFO.
+  Added `_ProxySequenceIndex`/`_ProxyRate` cache + `_Collection` on the crowd runtime.
+- **Dissolve (CkUsf + CkIskmRenderer + CkVisualLod).** Maintainer picked "surface-replacing dissolve
+  via CkUsf". Recon (7-agent workflow) mapped the Look pipeline + both render seams. Key insight: the
+  crowd member already stays SOLID through the fade (nothing reads its fade slot), so dissolving ONLY
+  the proxy over it gives a clean two-way crossfade with NO whole-crowd-material tradeoff (crowd
+  override is per-crowd, not per-member). Built: `VisualLodDissolve.ush` (external `Visibility` scalar,
+  masked erosion + gated burn edge) + AS `UCkUsf_LookDefinition` (`_UsedWithSkeletalMesh`); IskmProxy
+  `Request_SetMaterialOverride_AllSlots` (live MID → every base-SKMC slot; slot count resolved
+  handler-side post-Setup); arbiter config `_ProxyDissolveLook` (soft ref, rooted-batch resolved on
+  Current); per-proxy dissolve MID (`TStrongObjectPtr` on member Current) applied on fade-start,
+  driven `Visibility = 1 - _FadeAlpha`, cleared to reveal the real material when solid.
+- **Adversarial review (3-agent workflow):** 6 findings, ALL fixed — stale-crowd block now clears the
+  dissolve; `LoadSynchronous`→rooted batch (`DoEnsure_DissolveLook`); file-local `static FName`→named
+  namespace; `.ush` burn-edge gated to active fade (no residual emissive on a solid proxy);
+  `CK_PROPERTY_GET` on the weak-ptr request field; tier-table/Depends doc drift. Review also verified
+  fade math end-to-end and all teardown paths.
+- **Compile gate GREEN** (build-only, `--generate`): `=== Build succeeded ===`, 0 errors; CkVisualLod +
+  CkIskmRenderer TUs recompiled (Saved/Logs/BuildTest.log). AS + shader + runtime remain maintainer-side.
+- **[EDITOR-VERIFY / REQUIRED]** run `Ck_Usf_GenerateLooks VisualLodDissolve` + commit
+  `Content/CkUsf/GeneratedLooks/M_CkUsf_Look_VisualLodDissolve.uasset` (else dissolve pops — graceful —
+  AND `CkTests.UnitTests.CkUsf.GeneratesUsableMasters` is red under --no-nullrhi). Then PIE the gym:
+  near proxies WALK and dissolve in (approach) / out (retreat) over the solid far member.
+- Files: CkFoundation — `CkUsf/Shaders/CkUsf/Looks/VisualLodDissolve.ush`, `Script/CkUsf/CkUsf_Looks_Assets.as`,
+  `CkIskmRenderer/Proxy/CkIskmProxy_{Fragment_Data,Fragment,Processor.h,Processor.cpp,Utils.h,Utils.cpp}`,
+  `CkVisualLod/*` (Build.cs +CkUsf, config field, fragment MID, arbiter processor helpers + hooks),
+  docs (module CLAUDE.md, Source/CLAUDE.md, CkIskmRenderer CLAUDE.md). CkTests — `CkVisualLod_GymAssets.as`.
 
 ### 2026-08-27 — Gym (Gate 2) + debugger providers (Gate 3)
 - Wrote: **"Visual Lod" gym** (CkTests feature/ckvisuallod @ 98f670ef) — one station, 40 orbiting
