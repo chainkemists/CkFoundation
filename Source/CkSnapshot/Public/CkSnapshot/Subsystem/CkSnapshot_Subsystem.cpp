@@ -30,6 +30,8 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // Get_SaveHandlerTypes/Resolve (reconcile payload probe)
 #include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration, FTag_Hydration_PendingApply (split Phase 5)
 #include "CkEcs/Persistence/CkLoadConvergence_Registry.h" // the convergence phase's predicates + advances
+#include "CkEcs/Persistence/CkRuntimeArchetype_Registry.h" // last resort for an archetype path a fresh process cannot load
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe (husk reap reads the path back)
 #include "CkEcs/Net/CkNet_Utils.h" // TryAddContainerFragment — the ready-to-resume fact's wire path
 #include "CkEcs/Tag/CkTag_HydrationQuarantine.h" // FTag_Hydration_Quarantine, FCtx_HydrationQuarantine
 
@@ -1269,6 +1271,7 @@ auto
                     }
 
                     auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_ConstructionInfo>{};
+                    auto AnyArchetypeUnresolved = false;
                     for (const auto& Step : Entry.Get_BuildRecipe())
                     {
                         auto* ScriptClass = FSoftClassPath{Step.Get_ScriptClassPath()}.TryLoadClass<UCk_Entity_ConstructionScript_PDA>();
@@ -1281,7 +1284,30 @@ auto
                         auto Info = FCk_EntityReplicationDriver_ConstructionInfo{ScriptClass};
                         if (const auto& ArchetypePath = Step.Get_ArchetypePath(); NOT ArchetypePath.IsEmpty())
                         {
-                            if (auto* Archetype = Cast<UCk_Entity_ConstructionScript_PDA>(FSoftObjectPath{ArchetypePath}.TryLoad()))
+                            const auto SoftArchetypePath = FSoftObjectPath{ArchetypePath};
+                            auto* Archetype = Cast<UCk_Entity_ConstructionScript_PDA>(SoftArchetypePath.TryLoad());
+
+                            // A runtime-MINTED archetype has no path a fresh process can load, so a feature that mints
+                            // them says here how one is rebuilt from the identity its path carries.
+                            if (ck::Is_NOT_Valid(Archetype))
+                            { Archetype = ck::FCk_RuntimeArchetypeRegistry::TryResolve(SoftArchetypePath); }
+
+                            const auto ArchetypeResolved = ck::IsValid(Archetype);
+                            CK_ENSURE_IF_NOT(ArchetypeResolved,
+                                TEXT("v3 load: DefinitionBuilt entity [{}] names archetype [{}], which neither loaded nor was ")
+                                TEXT("claimed by a runtime-archetype provider (any provider registered: [{}]). It is rebuilt from ")
+                                TEXT("its class default - structurally an entity, semantically empty - and reaped before the world ")
+                                TEXT("is handed back, so the slot it occupied is released instead of held forever. A runtime-minted ")
+                                TEXT("archetype needs its provider registered BEFORE a load starts"),
+                                SavedId, ArchetypePath, ck::FCk_RuntimeArchetypeRegistry::Get_HasAnyProvider())
+                            {
+                                // Carry the path forward so this failure cannot ERASE it: these infos become the rebuilt
+                                // entity's recipe, and the next capture writes whatever they hold.
+                                Info.Set_UnresolvedArchetypePath(ArchetypePath);
+                                AnyArchetypeUnresolved = true;
+                            }
+
+                            if (ArchetypeResolved)
                             { Info.Set_ConstructionScriptArchetype(Archetype); }
                         }
                         ConstructionInfos.Emplace(MoveTemp(Info));
@@ -1326,6 +1352,12 @@ auto
                     {
                         _SpawnedRuntimeIds.Add(SavedId);
                         Resolved = BuiltItem;
+
+                        // Marked, not dropped. The row is still mapped so its container hydrates INTACT - the inventory
+                        // handlers are all-or-nothing, so dropping one item costs the whole container - and the reap at
+                        // load finish then removes just this one, releasing its slot.
+                        if (AnyArchetypeUnresolved)
+                        { Resolved.AddOrGet<ck::FTag_Snapshot_UnresolvedArchetype>(); }
                     }
                     else
                     {
@@ -1434,6 +1466,51 @@ auto
     Record.Set_OwnerSavedId(InEntry.Get_LifetimeOwnerSavedId());
     Record.Set_Reason(InReason);
     _SkipRecords.Add(MoveTemp(Record));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoReap_UnresolvedArchetypeHusks(
+        FCk_Snapshot_LoadReport& InOutReport)
+    -> void
+{
+    // The tag IS the list, deliberately: a parallel array of husk handles would be a mirror of registry state that
+    // nothing reconciles, and it would go stale the moment one of them was destroyed by something else first.
+    auto Records = TArray<FCk_Snapshot_UnresolvedArchetypeRecord>{};
+
+    for (auto Restored : _MappedLiveEntities)
+    {
+        if (ck::Is_NOT_Valid(Restored) || NOT Restored.Has<ck::FTag_Snapshot_UnresolvedArchetype>())
+        { continue; }
+
+        auto Record = FCk_Snapshot_UnresolvedArchetypeRecord{};
+        Record.Set_Identity(ck::Format_UE(TEXT("{}"), Restored));
+
+        // Read the path back off the recipe the rebuild carried it into, so the report names WHAT was lost rather
+        // than only that something was.
+        if (Restored.Has<ck::FFragment_BuildRecipe>())
+        {
+            for (const auto& Info : Restored.Get<ck::FFragment_BuildRecipe>().Get_ConstructionInfos())
+            {
+                if (const auto& Path = Info.Get_UnresolvedArchetypePath(); NOT Path.IsEmpty())
+                {
+                    Record.Set_ArchetypePath(Path);
+                    break;
+                }
+            }
+        }
+
+        Records.Emplace(MoveTemp(Record));
+
+        // Through the ordinary destroy path, which is what releases its inventory record entry and grid cell. A husk
+        // removed any other way would free the entity and leave the container still counting it.
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Restored);
+    }
+
+    if (NOT Records.IsEmpty())
+    { InOutReport.Set_UnresolvedArchetypes(MoveTemp(Records)); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -2087,10 +2164,14 @@ auto
     // the hold exists to hide.
     const auto ConvergenceUnmet = InOutReport.Get_ConvergenceUnmet().Num();
 
+    // An entity the loader had to reap because nothing could resolve its archetype. The player lost a real object,
+    // so this is a loss and says so; what it is NOT is a dead slot, because the reap released it.
+    const auto UnresolvedArchetypes = InOutReport.Get_UnresolvedArchetypes().Num();
+
     // _EntitiesOrphaned and _UnresolvedAfterEscalation are deliberately NOT in this set. Orphans are a routine
     // outcome of the current loader — they have their own per-row Warning and records — so including them would
     // make virtually every load report a loss and drain the distinction of meaning.
-    if (LostPayloads == 0 && ForcedReleases == 0 && ConvergenceUnmet == 0)
+    if (LostPayloads == 0 && ForcedReleases == 0 && ConvergenceUnmet == 0 && UnresolvedArchetypes == 0)
     { return; }
 
     InOutReport.Set_Result(ECk_SnapshotResult::Succeeded_WithLoss);
@@ -2098,11 +2179,12 @@ auto
     ck::snapshot::Error(TEXT("Request_Load: the load COMPLETED WITH LOSS — [{}] payload entries did not apply "
         "(rejected [{}], no handler [{}], timed out [{}], destroyed with their entity [{}], still queued at finish "
         "[{}], failed to deserialize [{}]), [{}] entities were forced out of the hydration quarantine, and [{}] "
-        "convergence facts were never met. The world is playable; the state named below is not in it"),
+        "convergence facts were never met, and [{}] entities were reaped for an unresolvable archetype. The world "
+        "is playable; the state named below is not in it"),
         LostPayloads, InOutReport.Get_PayloadsRejected(), InOutReport.Get_PayloadsDroppedNoHandler(),
         InOutReport.Get_PayloadsDroppedTimeout(), InOutReport.Get_PayloadsDestroyedWithEntries(),
         InOutReport.Get_PayloadsUnappliedAtFinish(), InOutReport.Get_PayloadsDropped(), ForcedReleases,
-        ConvergenceUnmet);
+        ConvergenceUnmet, UnresolvedArchetypes);
 
     for (const auto& Loss : InOutReport.Get_PayloadLosses())
     {
@@ -2114,6 +2196,14 @@ auto
     {
         ck::snapshot::Error(TEXT("Request_Load: UNMET convergence [{}] — still pending after [{}] frames; the world "
             "resumed without it"), Unmet.Get_Name(), Unmet.Get_FramesWaited());
+    }
+
+    for (const auto& Husk : InOutReport.Get_UnresolvedArchetypes())
+    {
+        ck::snapshot::Error(TEXT("Request_Load: REAPED entity [{}] — its archetype [{}] resolved to nothing, so it "
+            "came back empty and was destroyed to release the slot it held. The path is retained in the recipe, so a "
+            "build that can resolve it restores this entity in full"),
+            Husk.Get_Identity(), Husk.Get_ArchetypePath());
     }
 }
 
@@ -3455,6 +3545,10 @@ auto
     // Read the apply tally ONCE, here, and sweep whatever is still queued. Anything the dispatcher does after
     // this point is logged rather than counted: the report describes the load, not the queue's whole life.
     DoFold_HydrationOutcomes(_LastLoadReport);
+
+    // After the fold (so the payload buckets describe the load, not the reap) and before the verdict (so the
+    // verdict can account for it).
+    DoReap_UnresolvedArchetypeHusks(_LastLoadReport);
 
     // LAST, and after the fold: the verdict is a statement about the buckets, so it cannot be computed before they
     // are filled. Computing it here rather than at each call site is also what keeps DoFinish_Load's signature.
