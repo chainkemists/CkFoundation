@@ -33,17 +33,32 @@ namespace
         return E;
     }
 
+    // FString::Find CLAMPS StartPosition to Len()-1 (Core/Private/Containers/String.cpp.inl:444), so a
+    // needle that matches at the very end of the string is returned again on every call. The cursor
+    // bound — not the INDEX_NONE result — is what terminates this loop.
     auto Count_Occurrences(
-        const FString& InHaystack,
-        const FString& InNeedle) -> int32
+        const FString&    InHaystack,
+        const FString&    InNeedle,
+        ESearchCase::Type InSearchCase = ESearchCase::CaseSensitive) -> int32
     {
-        auto Cursor = 0;
+        if (InNeedle.IsEmpty())
+        { return 0; }
+
+        const auto LastViableStart = InHaystack.Len() - InNeedle.Len();
+
         auto Hits   = 0;
-        while ((Cursor = InHaystack.Find(InNeedle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
+        auto Cursor = 0;
+
+        while (Cursor <= LastViableStart)
         {
+            const auto Found = InHaystack.Find(InNeedle, InSearchCase, ESearchDir::FromStart, Cursor);
+            if (Found == INDEX_NONE)
+            { break; }
+
             ++Hits;
-            Cursor += InNeedle.Len();
+            Cursor = Found + InNeedle.Len();
         }
+
         return Hits;
     }
 
@@ -620,15 +635,8 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     TestTrue(TEXT("header for both alpha"),  Stub.Contains(TEXT("namespace UBb_Alpha_EntityScript")));
     TestTrue(TEXT("header for both beta"),   Stub.Contains(TEXT("namespace UBb_Beta_EntityScript")));
 
-    auto Cursor   = 0;
-    auto HitCount = 0;
-    const auto Needle = FString{TEXT("AUTO-GENERATED RECOVERY STUBS")};
-    while ((Cursor = Stub.Find(Needle, ESearchCase::IgnoreCase, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
-    {
-        ++HitCount;
-        Cursor += Needle.Len();
-    }
-    TestEqual(TEXT("header banner appears exactly once"), HitCount, 1);
+    TestEqual(TEXT("header banner appears exactly once"),
+        Count_Occurrences(Stub, TEXT("AUTO-GENERATED RECOVERY STUBS"), ESearchCase::IgnoreCase), 1);
 
     auto CanonicalAfter = FString{};
     FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
@@ -667,25 +675,11 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    auto Cursor   = 0;
-    auto HitCount = 0;
-    const auto Needle = FString{TEXT("// End synthesized stub for UBb_Gamma_EntityScript::Params")};
-    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
-    {
-        ++HitCount;
-        Cursor += Needle.Len();
-    }
-    TestEqual(TEXT("end-marker for the accessor appears exactly once"), HitCount, 1);
+    TestEqual(TEXT("end-marker for the accessor appears exactly once"),
+        Count_Occurrences(Stub, TEXT("// End synthesized stub for UBb_Gamma_EntityScript::Params")), 1);
 
-    auto ParamsCursor = 0;
-    auto ParamsHits   = 0;
-    const auto ParamsNeedle = FString{TEXT(" Params(")};
-    while ((ParamsCursor = Stub.Find(ParamsNeedle, ESearchCase::CaseSensitive, ESearchDir::FromStart, ParamsCursor)) != INDEX_NONE)
-    {
-        ++ParamsHits;
-        ParamsCursor += ParamsNeedle.Len();
-    }
-    TestEqual(TEXT("Params(...) declaration appears exactly once"), ParamsHits, 1);
+    TestEqual(TEXT("Params(...) declaration appears exactly once"),
+        Count_Occurrences(Stub, TEXT(" Params(")), 1);
 
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
@@ -763,15 +757,8 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    auto Cursor   = 0;
-    auto HitCount = 0;
-    const auto Needle = FString{TEXT(" Params(")};
-    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
-    {
-        ++HitCount;
-        Cursor += Needle.Len();
-    }
-    TestEqual(TEXT("Params(...) declaration appears exactly once"), HitCount, 1);
+    TestEqual(TEXT("Params(...) declaration appears exactly once"),
+        Count_Occurrences(Stub, TEXT(" Params(")), 1);
 
     TestTrue(TEXT("emitted param list is value-typed (accepts literal and lvalue)"),
         Stub.Contains(TEXT("Params(FTransform Arg0, FCk_Handle_CheckoutCounter Arg1, EBb_Role Arg2, int Arg3, FVector Arg4)")));
@@ -1250,15 +1237,8 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    auto Cursor   = 0;
-    auto HitCount = 0;
-    const auto Needle = FString{TEXT(" Params(")};
-    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
-    {
-        ++HitCount;
-        Cursor += Needle.Len();
-    }
-    TestEqual(TEXT("exactly one Params(...) declaration"), HitCount, 1);
+    TestEqual(TEXT("exactly one Params(...) declaration"),
+        Count_Occurrences(Stub, TEXT(" Params(")), 1);
     TestTrue(TEXT("the typed stub is the one that landed"),
         Stub.Contains(TEXT("Params(FTransform Arg0, UBb_StoreCustomization_Config Arg1)")));
     TestFalse(TEXT("no UObject-fallback overload landed"),
@@ -1321,15 +1301,8 @@ bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExi
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    auto Cursor   = 0;
-    auto HitCount = 0;
-    const auto Needle = FString{TEXT(" Params(")};
-    while ((Cursor = Stub.Find(Needle, ESearchCase::CaseSensitive, ESearchDir::FromStart, Cursor)) != INDEX_NONE)
-    {
-        ++HitCount;
-        Cursor += Needle.Len();
-    }
-    TestEqual(TEXT("exactly one Params(...) declaration"), HitCount, 1);
+    TestEqual(TEXT("exactly one Params(...) declaration"),
+        Count_Occurrences(Stub, TEXT(" Params(")), 1);
     TestTrue(TEXT("the fallback stub is the one that landed"),
         Stub.Contains(TEXT("Params(FTransform Arg0, UObject Arg1)")));
     TestFalse(TEXT("no typed twin landed"),
