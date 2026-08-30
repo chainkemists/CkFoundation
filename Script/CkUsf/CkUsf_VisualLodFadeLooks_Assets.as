@@ -1,7 +1,7 @@
 // Language=angelscript
 
 //============================================================================
-// CKUSF — CkVisualLod crossfade looks
+// CKUSF - CkVisualLod crossfade looks
 //============================================================================
 //
 // The two halves of the CkVisualLod dithered crossfade. ONE fade alpha, two
@@ -12,7 +12,7 @@
 //
 // They differ ONLY in where the alpha comes from and which way the comparison
 // runs. Far members are batched instances, so the crowd reads per-instance
-// custom data ([0]/[1] are the batched frame bits — game data starts at [2],
+// custom data ([0]/[1] are the batched frame bits - game data starts at [2],
 // and 13 is what the arbiter's _FadeCustomDataSlot defaults to). A promoted
 // near mesh is one SKMC, not an instance, so it reads custom PRIMITIVE data
 // index 0 (the arbiter's _FadeNearCustomPrimitiveDataSlot).
@@ -32,7 +32,7 @@ namespace CkUsf
         _UshFunctionName = n"CkUsf_Look_VisualLodCrowdFade";
         _Domain          = ECk_Usf_Domain::SurfaceLit;
         // Masked so the dither can clip pixels through OpacityMask. Single-sided
-        // on purpose — the body stays single-sided, exactly as it renders unfaded.
+        // on purpose - the body stays single-sided, exactly as it renders unfaded.
         _BlendMode       = ECk_Usf_BlendMode::Masked;
         _LookName        = n"VisualLodCrowdFade";
 
@@ -45,7 +45,7 @@ namespace CkUsf
         BaseColor._DefaultVector = FLinearColor(0.30, 0.33, 0.38, 1.0);
         _Parameters.Add(BaseColor);
 
-        // MUST stay LAST — param order IS the positional HLSL signature contract.
+        // MUST stay LAST - param order IS the positional HLSL signature contract.
         FCk_Usf_ParamDesc FadeAlpha;
         FadeAlpha._Name            = n"FadeAlpha";
         FadeAlpha._Type            = ECk_Usf_ParamType::Scalar;
@@ -56,7 +56,7 @@ namespace CkUsf
     }
 
     // NEAR: the promoted SKMC proxy. Solid by default (alpha 0) so an unwritten
-    // custom-primitive-data slot — which reads 0 — renders the mesh whole.
+    // custom-primitive-data slot - which reads 0 - renders the mesh whole.
     asset VisualLodNearFade of UCkUsf_LookDefinition
     {
         _UshIncludePath  = "/CkUsf/Looks/VisualLodNearFade.ush";
@@ -74,7 +74,7 @@ namespace CkUsf
         BaseColor._DefaultVector = FLinearColor(0.30, 0.33, 0.38, 1.0);
         _Parameters.Add(BaseColor);
 
-        // MUST stay LAST — param order IS the positional HLSL signature contract.
+        // MUST stay LAST - param order IS the positional HLSL signature contract.
         FCk_Usf_ParamDesc FadeAlpha;
         FadeAlpha._Name = n"FadeAlpha";
         FadeAlpha._Type = ECk_Usf_ParamType::Scalar;
