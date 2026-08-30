@@ -355,11 +355,26 @@ private:
     UPROPERTY()
     TArray<FCk_Snapshot_UnresolvedArchetypeRecord> _UnresolvedArchetypes;
 
-    // When the loaded slot was WRITTEN - lets a consumer scope save-era assumptions (e.g. the pre-identity-fix
-    // husk carve-out). Copied verbatim from FCk_Snapshot_HeaderV3::_TimestampUTC on the load path; a report that
-    // never read a header (a failure report, or the immediate no-load-in-progress promise) leaves it at zero.
+    // When the loaded slot was WRITTEN. Copied verbatim from FCk_Snapshot_HeaderV3::_TimestampUTC on the load
+    // path; a report that never read a header (a failure report, or the immediate no-load-in-progress
+    // promise) leaves it at zero. It is a CLOCK READING taken at save time, so it says nothing about which
+    // BUILD wrote the slot - an old copy of the game writes a new timestamp whenever someone runs it. Use
+    // _ProjectVersion below for anything that must scope behaviour to a build.
     UPROPERTY()
     FDateTime _SaveTimestamp = FDateTime{0};
+
+    // The GAME version that wrote the slot (FCk_Snapshot_HeaderV3::_ProjectVersion - see there for the full
+    // contract). Empty means "older than anything stamped", which is the safe direction. Compare it with
+    // ck::snapshot::Compare_ProjectVersions, NEVER as a string: "1.0.10" sorts below "1.0.9" as text.
+    // Prefer structural evidence in the restored data where it exists - this says which build wrote the
+    // save, not what happened to it.
+    UPROPERTY()
+    FString _ProjectVersion;
+
+    // The short git hash of the build that wrote the slot (FCk_Snapshot_HeaderV3::_BuildId). Identifies a
+    // build but does not order; read its caveats there before treating it as exact.
+    UPROPERTY()
+    FString _BuildId;
 
 public:
     CK_PROPERTY(_Result);
@@ -388,6 +403,8 @@ public:
     CK_PROPERTY(_UnresolvedArchetypes);
     CK_PROPERTY(_ConvergenceUnmet);
     CK_PROPERTY(_SaveTimestamp);
+    CK_PROPERTY(_ProjectVersion);
+    CK_PROPERTY(_BuildId);
 
 public:
     /**
