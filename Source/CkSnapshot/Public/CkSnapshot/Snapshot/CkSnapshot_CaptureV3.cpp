@@ -5,6 +5,9 @@
 #include "CkSnapshot/Settings/CkSnapshot_Settings.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_RuntimeSpawnPolicy.h"
 
+#include "CkCore/IO/CkIO_Utils.h" // Get_ProjectVersion - the game version stamped into every save header
+#include "CkCore/BuildId/CkBuildId.h" // ck::Get_BuildId - the baked short git hash of the writing build
+
 #include "CkCore/Format/CkFormat.h" // ck::Format_UE — naming an entity the capture did not carry
 
 #include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
@@ -967,6 +970,29 @@ namespace ck::snapshot
 
         InOutHeader.Set_FormatVersion(FCk_Snapshot_HeaderV3::CurrentFormatVersion);
         InOutHeader.Set_EngineVersion(FEngineVersion::Current().ToString());
+
+        // Both are read HERE rather than supplied by a caller: a stamp only some save paths remember to set is a
+        // stamp that reads as unset exactly when an incident needs it. See FCk_Snapshot_HeaderV3 for what each
+        // field is for and which one can be trusted as an identity.
+        const auto ProjectVersion = UCk_Utils_IO_UE::Get_ProjectVersion();
+        InOutHeader.Set_ProjectVersion(ProjectVersion);
+        InOutHeader.Set_BuildId(ck::Get_BuildId());
+
+        if (ProjectVersion.IsEmpty())
+        {
+            // Once per process: an unstamped save is still a valid save, but it can never be attributed to a build
+            // later, and it is indistinguishable from one written before this field existed.
+            static auto HasWarnedAboutMissingProjectVersion = false;
+            if (NOT HasWarnedAboutMissingProjectVersion)
+            {
+                HasWarnedAboutMissingProjectVersion = true;
+                ck::snapshot::Warning(
+                    TEXT("Run_CaptureV3: this project sets no ProjectVersion, so saves are written with no build "
+                         "provenance and cannot be attributed to a build later. Set it in Project Settings > "
+                         "Description > Project Version (ProjectVersion in DefaultGame.ini)."));
+            }
+        }
+
         InOutHeader.Set_TimestampUTC(FDateTime::UtcNow());
         InOutHeader.Set_EntityCount(Entities.Num());
         InOutHeader.Set_EngineOwnedCount(EngineOwnedCount);

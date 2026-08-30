@@ -149,6 +149,17 @@ namespace ck::snapshot
     Serialize_Transform(
         FArchive& InAr,
         FTransform& InOutTransform) -> void;
+
+    /** Orders two FCk_Snapshot_HeaderV3::_ProjectVersion strings: <0 when A is older, 0 when equal, >0 when newer.
+     *  Exists so nobody compares them as STRINGS - "1.0.10" sorts BELOW "1.0.9" as text, which silently inverts
+     *  any gate scoping behaviour to the builds before a fix.
+     *
+     *  Only the leading dotted-numeric run orders: "1.0.3-hotfix1" compares EQUAL to "1.0.3", so distinguishing a
+     *  hotfix needs a numeric bump. See the .cpp for how unparseable and short versions fall out. */
+    CKSNAPSHOT_API auto
+    Compare_ProjectVersions(
+        const FString& InA,
+        const FString& InB) -> int32;
 }
 
 // Fields not relevant to the entry's provenance stay defaulted. Handle-bearing data (spawn params) is
@@ -339,6 +350,24 @@ private:
     UPROPERTY()
     FString _EngineVersion;
 
+    // The GAME's version (UGeneralProjectSettings::ProjectVersion) at capture time. Empty means the save
+    // predates this field or the project sets none; both read as older than anything stamped, which is the
+    // safe direction for a consumer scoping a fix to the builds before it.
+    UPROPERTY()
+    FString _ProjectVersion;
+
+    // The short git hash of the build that wrote the save (ck::Get_BuildId). Identifies a build but does not
+    // ORDER one, which is why it pairs with _ProjectVersion rather than replacing it.
+    //
+    // Not an exact identity on a local build: the hash is baked by CkCore.Build.cs's rules constructor, which
+    // UnrealBuildTool skips while its cached makefile is valid - and committing already-edited files invalidates
+    // nothing - so an INCREMENTAL build can stamp the previous HEAD. It is "unknown" when git was unavailable,
+    // and two dirty trees at one HEAD share a hash. Clean pipeline checkouts always regenerate it.
+    UPROPERTY()
+    FString _BuildId;
+
+    // Never written by any capture path - reads back as a zero GUID in every save ever produced. Kept
+    // because Get_SaveSlotHeader exposes it to Blueprint; the two fields above are the build provenance.
     UPROPERTY()
     FGuid _PluginBuildHash;
 
@@ -387,6 +416,8 @@ private:
 public:
     CK_PROPERTY(_FormatVersion);
     CK_PROPERTY(_EngineVersion);
+    CK_PROPERTY(_ProjectVersion);
+    CK_PROPERTY(_BuildId);
     CK_PROPERTY(_PluginBuildHash);
     CK_PROPERTY(_TimestampUTC);
     CK_PROPERTY(_WorldAssetPath);
