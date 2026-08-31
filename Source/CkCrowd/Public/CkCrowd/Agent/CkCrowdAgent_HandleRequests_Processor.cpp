@@ -10,8 +10,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkCrowd/Agent/CkCrowdAgent_NavQueryFilter.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -116,21 +116,19 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_HandleRequests::
-        GetPlanQueryFilterClass(
+        GetPlanQueryFilterTag(
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
-        -> TSubclassOf<UNavigationQueryFilter>
+        -> FGameplayTag
     {
         if (InPathFollow.Get_PlanUsesStrictStandingCrowdFilter())
         {
             if (InParams.Get_NavQueryFilterStrict().IsValid())
-            {
-                return UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
-                    InParams.Get_NavQueryFilterStrict());
-            }
-            return UCk_NavQueryFilter_AvoidStandingCrowds::StaticClass();
+            { return InParams.Get_NavQueryFilterStrict(); }
+
+            return TAG_Nav_Filter_Crowd_AvoidStandingCrowds;
         }
-        return UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InParams.Get_NavQueryFilter());
+        return InParams.Get_NavQueryFilter();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -397,7 +395,7 @@ namespace ck
             return;
         }
 
-        InOutRequest.Set_QueryFilterClassOverride(UCk_NavQueryFilter_AvoidStandingCrowds::StaticClass());
+        InOutRequest.Set_QueryFilterOverride(TAG_Nav_Filter_Crowd_AvoidStandingCrowds);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

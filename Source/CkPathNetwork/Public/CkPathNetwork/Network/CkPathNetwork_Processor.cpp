@@ -20,11 +20,11 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
-#include <NavFilters/NavigationQueryFilter.h>
 
 #include <array>
 #include <type_traits>
@@ -172,17 +172,15 @@ namespace ck_pathnetwork_processor
         const FVector& InTo,
         bool InFromIsRouteEndpoint,
         bool InToIsRouteEndpoint,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay) -> FOffPathLegResolution
     {
         auto Result = FOffPathLegResolution{};
         Result._Waypoints = {InFrom, InTo};
         Result._Length = static_cast<float>(FVector::Dist(InFrom, InTo));
 
-        auto* NavSys = IsValid(InWorld) ? UNavigationSystemV1::GetCurrent(InWorld) : nullptr;
-        auto* NavData = (NavSys != nullptr)
-            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
+        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         const auto HasValidNavmesh =
             NavData != nullptr
             && NavData->HasValidNavmesh();
@@ -203,8 +201,8 @@ namespace ck_pathnetwork_processor
             return Result;
         }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         {
             ck::pathnetwork::Verbose(
@@ -284,7 +282,7 @@ namespace ck_pathnetwork_processor
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             AgentRadiusForFirstSkip,
             NavResult,
-            InFilterClass,
+            InFilterTag,
             CornerOffsetDistance,
             InQueryFilterOverlay);
 
@@ -347,15 +345,6 @@ namespace ck_pathnetwork_processor
     }
 
     auto
-    Get_DefaultRecastNavmesh(UWorld* InWorld) -> ARecastNavMesh*
-    {
-        auto* NavSys = IsValid(InWorld) ? UNavigationSystemV1::GetCurrent(InWorld) : nullptr;
-        return NavSys != nullptr
-            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
-    }
-
-    auto
     Is_NavmeshSegmentDirectlyWalkable(
         const ARecastNavMesh& InNavData,
         const FSharedConstNavQueryFilter& InQueryFilter,
@@ -379,7 +368,7 @@ namespace ck_pathnetwork_processor
         UNavigationSystemV1& InNavSys,
         ARecastNavMesh& InNavData,
         const FSharedConstNavQueryFilter& InQueryFilter,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         const FVector& InFrom,
         const FVector& InTo,
@@ -428,7 +417,7 @@ namespace ck_pathnetwork_processor
             ClearanceProjectionVerticalExtentCm,
             AgentRadiusForFirstSkip,
             DetourResult,
-            InFilterClass,
+            InFilterTag,
             CornerOffsetDistance,
             InQueryFilterOverlay);
         if (NOT DetourFound || DetourResult.Get_Status() != ECk_Nav_PathStatus::Ready)
@@ -458,16 +447,16 @@ namespace ck_pathnetwork_processor
     Try_ProjectPathOntoNavmesh(
         UWorld* InWorld,
         TArray<FVector>& InOutWaypoints,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         float InPlanarExtentCm) -> bool
     {
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
         { return true; }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         { return false; }
         const auto ProjectionExtent = FVector{
@@ -517,18 +506,18 @@ namespace ck_pathnetwork_processor
     Try_ProjectRouteEndpointOntoNavmesh(
         UWorld* InWorld,
         const FVector& InEndpoint,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         FVector& OutProjectedEndpoint) -> bool
     {
         OutProjectedEndpoint = InEndpoint;
 
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
         { return true; }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         { return false; }
 
@@ -548,20 +537,20 @@ namespace ck_pathnetwork_processor
     Try_ResolvePathOntoNavmesh(
         UWorld* InWorld,
         TArray<FVector>& InOutWaypoints,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         float InMaxCornerOffsetCm) -> bool
     {
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
         { return true; }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         { return false; }
 
-        auto* NavSys = UNavigationSystemV1::GetCurrent(InWorld);
+        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
         if (NavSys == nullptr || InOutWaypoints.Num() < 2)
         { return NavSys != nullptr; }
 
@@ -576,7 +565,7 @@ namespace ck_pathnetwork_processor
                     *NavSys,
                     *NavData,
                     QueryFilter,
-                    InFilterClass,
+                    InFilterTag,
                     InQueryFilterOverlay,
                     InOutWaypoints[Index],
                     InOutWaypoints[Index + 1],
@@ -608,7 +597,7 @@ namespace ck_pathnetwork_processor
         const FBuiltNetwork& InNetwork,
         TConstArrayView<TArray<FRouteLegSpan>> InRibbonRuns,
         float InRibbonTolerance,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         FRibbonContainmentFailure& OutContainmentFailure,
         int32& OutOriginalSegmentIndex,
@@ -618,16 +607,16 @@ namespace ck_pathnetwork_processor
         OutOriginalSegmentIndex = INDEX_NONE;
         OutRibbonRunIndex = INDEX_NONE;
 
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
         { return EConstrainedPathResolution::Succeeded; }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         { return EConstrainedPathResolution::NavFailed; }
 
-        auto* NavSys = UNavigationSystemV1::GetCurrent(InWorld);
+        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
         if (NavSys == nullptr || InOutWaypoints.Num() < 2 ||
             InSegmentRibbonRunIndices.Num() != InOutWaypoints.Num() - 1 ||
             InSegmentNeedsValidation.Num() != InOutWaypoints.Num() - 1)
@@ -649,7 +638,7 @@ namespace ck_pathnetwork_processor
                         *NavSys,
                         *NavData,
                         QueryFilter,
-                        InFilterClass,
+                        InFilterTag,
                         InQueryFilterOverlay,
                         InOutWaypoints[Index],
                         InOutWaypoints[Index + 1],
@@ -704,7 +693,7 @@ namespace ck_pathnetwork_processor
         const FVector& InTo,
         bool InFromIsRouteEndpoint,
         bool InToIsRouteEndpoint,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         FOffPathLegResolution& InOutResolution) -> bool
     {
@@ -726,13 +715,13 @@ namespace ck_pathnetwork_processor
             && Try_ProjectPathOntoNavmesh(
                 InWorld,
                 ConnectedWaypoints,
-                InFilterClass,
+                InFilterTag,
                 InQueryFilterOverlay,
                 ClearanceProjectionPlanarExtentCm)
             && Try_ResolvePathOntoNavmesh(
                 InWorld,
                 ConnectedWaypoints,
-                InFilterClass,
+                InFilterTag,
                 InQueryFilterOverlay,
                 UnboundedCornerOffsetCm);
         if (NOT PathIsValid)
@@ -741,11 +730,11 @@ namespace ck_pathnetwork_processor
             return false;
         }
 
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData != nullptr && NavData->HasValidNavmesh())
         {
-            const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-                *NavData, InFilterClass, InQueryFilterOverlay);
+            const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+                *NavData, InFilterTag, InQueryFilterOverlay);
             if (NOT QueryFilter.IsValid())
             {
                 InOutResolution._Outcome = EOffPathResolve::PathFailed;
@@ -794,19 +783,19 @@ namespace ck_pathnetwork_processor
         const FBuiltNetwork& InNetwork,
         TConstArrayView<FRouteLegSpan> InSpans,
         float InDesiredClearance,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         TArray<FVector>& InOutWaypoints) -> void
     {
         if (InDesiredClearance <= UE_KINDA_SMALL_NUMBER || InOutWaypoints.Num() < 3)
         { return; }
 
-        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
         { return; }
 
-        const auto QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-            *NavData, InFilterClass, InQueryFilterOverlay);
+        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+            *NavData, InFilterTag, InQueryFilterOverlay);
         if (NOT QueryFilter.IsValid())
         { return; }
         const auto ProjectionExtent = FVector{
@@ -1104,8 +1093,7 @@ namespace ck
         { return; }
 
         const auto GoalLocation = InRequest.Get_GoalLocation();
-        const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
-            InRequest.Get_NavQueryFilter());
+        const auto FilterTag = InRequest.Get_NavQueryFilter();
         const auto& QueryFilterOverlay = InRequest.Get_QueryFilterOverlay();
         auto FailureStage = ERouteFailureStage::NotResolved;
 
@@ -1338,7 +1326,7 @@ namespace ck
                             Span._ToLocation,
                             FromIsRouteEndpoint,
                             ToIsRouteEndpoint,
-                            FilterClass,
+                            FilterTag,
                             QueryFilterOverlay);
                     Validate_ResolvedOffPathLeg(
                         World,
@@ -1346,7 +1334,7 @@ namespace ck
                         Span._ToLocation,
                         FromIsRouteEndpoint,
                         ToIsRouteEndpoint,
-                        FilterClass,
+                        FilterTag,
                         QueryFilterOverlay,
                         Resolution);
                 }
@@ -1724,7 +1712,7 @@ namespace ck
                             Projected = Try_ProjectPathOntoNavmesh(
                                 World,
                                 CandidateWaypoints,
-                                FilterClass,
+                                FilterTag,
                                 QueryFilterOverlay,
                                 RibbonProjectionPlanarExtentCm);
                         }
@@ -1770,7 +1758,7 @@ namespace ck
                                 BuiltNetwork,
                                 RunSpans,
                                 InParams.Get_DesiredNavmeshClearance(),
-                                FilterClass,
+                                FilterTag,
                                 QueryFilterOverlay,
                                 CandidateWaypoints);
                         }
@@ -1782,7 +1770,7 @@ namespace ck
                             Resolved = Try_ResolvePathOntoNavmesh(
                                 World,
                                 CandidateWaypoints,
-                                FilterClass,
+                                FilterTag,
                                 QueryFilterOverlay,
                                 InParams.Get_NavmeshResolvedRibbonTolerance());
                         }
@@ -1879,7 +1867,7 @@ namespace ck
                 if (NOT Try_ProjectRouteEndpointOntoNavmesh(
                     World,
                     StartLocation,
-                    FilterClass,
+                    FilterTag,
                     QueryFilterOverlay,
                     NormalizedStart))
                 {
@@ -1904,7 +1892,7 @@ namespace ck
                 if (NOT Try_ProjectRouteEndpointOntoNavmesh(
                     World,
                     GoalLocation,
-                    FilterClass,
+                    FilterTag,
                     QueryFilterOverlay,
                     NormalizedGoal))
                 {
@@ -1952,7 +1940,7 @@ namespace ck
                         RibbonRuns,
                         RibbonContainmentToleranceCm +
                         InParams.Get_NavmeshResolvedRibbonTolerance(),
-                        FilterClass,
+                        FilterTag,
                         QueryFilterOverlay,
                         FinalContainmentFailure,
                         FinalContainmentOriginalSegmentIndex,

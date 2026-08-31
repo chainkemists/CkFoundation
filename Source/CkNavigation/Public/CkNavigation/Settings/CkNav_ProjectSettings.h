@@ -5,11 +5,10 @@
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include <GameplayTagContainer.h>
-#include <Templates/SubclassOf.h>
 
 #include "CkNav_ProjectSettings.generated.h"
 
-class UNavigationQueryFilter;
+class UCk_NavFilterDefinition_DataAsset;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +39,7 @@ private:
     // Keyed by FCk_Request_Nav_FindPath::_QueryFilter; unmapped/empty -> NavData's default filter.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
         meta = (AllowPrivateAccess = true))
-    TMap<FGameplayTag, TSoftClassPtr<UNavigationQueryFilter>> _QueryFilters;
+    TMap<FGameplayTag, TSoftObjectPtr<UCk_NavFilterDefinition_DataAsset>> _QueryFilters;
 
 public:
     CK_PROPERTY_GET(_MaxPathQueriesPerFrame);
@@ -74,11 +73,6 @@ public:
     // FindPathSync's internal projection builds its box from THIS, never the raw scalar cube.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
     static FVector Get_NavQueryProjectionExtentVec();
-
-    // Empty tag or no mapping -> null class (callers fall back to NavData's default filter);
-    // a non-empty tag with no mapping additionally fires an ensure.
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
-    static TSubclassOf<UNavigationQueryFilter> Get_QueryFilterClass(const FGameplayTag& InFilterTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

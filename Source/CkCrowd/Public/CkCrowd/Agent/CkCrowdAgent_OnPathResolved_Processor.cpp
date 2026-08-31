@@ -14,11 +14,9 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "HAL/PlatformTime.h"
-
-#include "NavigationSystem.h"
-#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,23 +30,16 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::OnPathResolved"), STAT_CkCrowd_OnPathResolvedPro
 
 namespace ck_crowd_agent_on_path_resolved_processor
 {
-    // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
-    // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
-    // to its projection-only form.
-    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ARecastNavMesh*
+    // Same surface the navmesh clamp walks against, so the install-time skip and the clamp agree
+    // on what is walkable. Null means the gate switched off, and the skip reverts to its
+    // projection-only form.
+    auto Get_WorldForChordGate(const FCk_Handle& InAgent) -> UWorld*
     {
         if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
             ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
         { return nullptr; }
 
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
-        const auto NavSys = ck::IsValid(World)
-            ? UNavigationSystemV1::GetCurrent(World)
-            : static_cast<UNavigationSystemV1*>(nullptr);
-
-        return ck::IsValid(NavSys)
-            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : static_cast<ARecastNavMesh*>(nullptr);
+        return UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
     }
 }
 
@@ -270,28 +261,27 @@ namespace ck
                 // navigability gate: the projection test is laterally blind, so a corner beside the
                 // agent reads as passed while the chord onward from where it stands cuts the hole
                 // the planner routed around.
-                const auto NavDataForGate =
-                    ck_crowd_agent_on_path_resolved_processor::Get_NavDataForChordGate(InHandle);
-                const auto ChordQueryFilter = ck::IsValid(NavDataForGate)
-                    ? FCk_Nav_Algorithm::ResolveQueryFilter(
-                        *NavDataForGate,
-                        FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterClass(
-                            InParams, InPathFollow),
-                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                            InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
-                                ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
-                                : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive))
-                    : FSharedConstNavQueryFilter{};
+                auto* WorldForGate =
+                    ck_crowd_agent_on_path_resolved_processor::Get_WorldForChordGate(InHandle);
+                const auto ChordQueryFilterTag =
+                    FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(InParams, InPathFollow);
+                const auto ChordQueryFilterOverlay =
+                    UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                        InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                            ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                            : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
 
                 auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
                 {
-                    if (ck::Is_NOT_Valid(NavDataForGate))
+                    if (ck::Is_NOT_Valid(WorldForGate))
                     { return true; }
-                    if (NOT ChordQueryFilter.IsValid())
-                    { return false; }
 
-                    auto HitLocation = FVector::ZeroVector;
-                    return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, ChordQueryFilter);
+                    const auto ChordRaycast = FCk_NavSurface_RaycastQuery{InFrom, InTo}
+                        .Set_QueryFilter(ChordQueryFilterTag)
+                        .Set_QueryFilterOverlay(ChordQueryFilterOverlay);
+
+                    return UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(WorldForGate, ChordRaycast)
+                        .Get_Status() != ECk_NavSurface_QueryStatus::Blocked;
                 };
 
                 const auto SkippedWaypointCount =

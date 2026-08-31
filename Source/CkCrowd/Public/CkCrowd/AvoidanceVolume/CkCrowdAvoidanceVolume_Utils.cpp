@@ -2,6 +2,7 @@
 
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Fragment.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_NavArea.h"
+#include "CkCrowd/CkCrowd_NavGameplayTags.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
@@ -219,23 +220,23 @@ auto UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
     ECk_CrowdAvoidanceVolume_QueryPhase InPhase) -> FCk_Nav_QueryFilterOverlay
 {
     auto Result = FCk_Nav_QueryFilterOverlay{};
-    auto ExcludedAreas = TArray<TSubclassOf<UNavArea>>{};
+    auto ExcludedAreas = TArray<FGameplayTag>{};
     if (Get_IsTraversalPolicyExcluded(
         ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible, InPhase))
     {
-        ExcludedAreas.Add(UCk_NavArea_CrowdAvoidanceVolume::StaticClass());
+        ExcludedAreas.Add(TAG_Nav_Area_Crowd_AvoidanceVolume);
     }
     if (Get_IsTraversalPolicyExcluded(
         ECk_CrowdAvoidanceVolume_TraversalPolicy::HardExclude, InPhase))
     {
-        ExcludedAreas.Add(UCk_NavArea_CrowdAvoidanceVolume_HardExclude::StaticClass());
+        ExcludedAreas.Add(TAG_Nav_Area_Crowd_AvoidanceVolume_HardExclude);
     }
     if (Get_IsTraversalPolicyExcluded(
         ECk_CrowdAvoidanceVolume_TraversalPolicy::CostOnly, InPhase))
     {
-        ExcludedAreas.Add(UCk_NavArea_CrowdAvoidanceVolume_CostOnly::StaticClass());
+        ExcludedAreas.Add(TAG_Nav_Area_Crowd_AvoidanceVolume_CostOnly);
     }
-    Result.Set_ExcludedAreaClasses(MoveTemp(ExcludedAreas));
+    Result.Set_ExcludedAreaTags(MoveTemp(ExcludedAreas));
     return Result;
 }
 
