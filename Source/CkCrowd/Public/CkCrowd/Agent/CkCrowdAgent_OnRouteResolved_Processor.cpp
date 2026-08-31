@@ -14,12 +14,9 @@
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
-#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "HAL/PlatformTime.h"
-
-#include "NavigationSystem.h"
-#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,23 +30,16 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::OnRouteResolved"), STAT_CkCrowd_OnRouteResolvedP
 
 namespace ck_crowd_agent_on_route_resolved_processor
 {
-    // Same NavData the navmesh clamp walks against, so the install-time skip and the clamp agree
-    // on what is walkable. Null means no nav data or the gate switched off, and the skip reverts
-    // to its projection-only form.
-    auto Get_NavDataForChordGate(const FCk_Handle& InAgent) -> ARecastNavMesh*
+    // Same surface the navmesh clamp walks against, so the install-time skip and the clamp agree
+    // on what is walkable. Null means the gate switched off, and the skip reverts to its
+    // projection-only form.
+    auto Get_WorldForChordGate(const FCk_Handle& InAgent) -> UWorld*
     {
         if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
             ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
         { return nullptr; }
 
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
-        const auto NavSys = ck::IsValid(World)
-            ? UNavigationSystemV1::GetCurrent(World)
-            : static_cast<UNavigationSystemV1*>(nullptr);
-
-        return ck::IsValid(NavSys)
-            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : static_cast<ARecastNavMesh*>(nullptr);
+        return UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
     }
 }
 
@@ -255,25 +245,20 @@ namespace ck
                     // The projection test is laterally blind: a corner BESIDE the agent reads as
                     // passed while the chord onward from where it stands cuts the geometry the
                     // route was spliced around, which installs an aim the navmesh clamp then eats.
-                    const auto NavDataForGate =
-                        ck_crowd_agent_on_route_resolved_processor::Get_NavDataForChordGate(InHandle);
-                    const auto ChordQueryFilter = ck::IsValid(NavDataForGate)
-                        ? FCk_Nav_Algorithm::ResolveQueryFilter(
-                            *NavDataForGate,
-                            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
-                                InCorridor.Get_NavQueryFilter()),
-                            InCorridor.Get_QueryFilterOverlay())
-                        : FSharedConstNavQueryFilter{};
+                    auto* WorldForGate =
+                        ck_crowd_agent_on_route_resolved_processor::Get_WorldForChordGate(InHandle);
 
                     auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
                     {
-                        if (ck::Is_NOT_Valid(NavDataForGate))
+                        if (ck::Is_NOT_Valid(WorldForGate))
                         { return true; }
-                        if (NOT ChordQueryFilter.IsValid())
-                        { return false; }
 
-                        auto HitLocation = FVector::ZeroVector;
-                        return NOT NavDataForGate->Raycast(InFrom, InTo, HitLocation, ChordQueryFilter);
+                        const auto ChordRaycast = FCk_NavSurface_RaycastQuery{InFrom, InTo}
+                            .Set_QueryFilter(InCorridor.Get_NavQueryFilter())
+                            .Set_QueryFilterOverlay(InCorridor.Get_QueryFilterOverlay());
+
+                        return UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(WorldForGate, ChordRaycast)
+                            .Get_Status() != ECk_NavSurface_QueryStatus::Blocked;
                     };
 
                     const auto SkippedWaypointCount =
