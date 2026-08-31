@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
 #include "CkJolt/World/CkJoltWorld.h"
 
@@ -13,6 +14,11 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltStaticActor_EndPlay);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("JoltStaticActor_EndPlayWaitForAsync"), STAT_CkJolt_StaticActorEndPlayWaitForAsync,
+    STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,7 +58,10 @@ namespace ck
         // broadphase an in-flight Update is reading. Self-guarded on future validity, so free in sync mode.
         auto* JoltWorld = ck_jolt_static_actor_processor::TryResolve_JoltWorld(_TransientEntity);
         if (JoltWorld != nullptr && JoltWorld->Get_AsyncFuture().IsValid())
-        { JoltWorld->WaitForAsyncStep(); }
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticActorEndPlayWaitForAsync);
+            JoltWorld->WaitForAsyncStep();
+        }
 
         TProcessor::DoTick(InDeltaT);
     }

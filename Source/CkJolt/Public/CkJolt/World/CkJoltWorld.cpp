@@ -12,6 +12,7 @@
 #include "CkJolt/Character/CkJoltCharacter_Utils.h"
 #include "CkJolt/Character/CkJoltCharacterContactListener.h"
 #include "CkJolt/CkJolt_Log.h"
+#include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 #include "CkJolt/Subsystem/CkJolt_DebugDrawTarget.h"
@@ -101,6 +102,10 @@ namespace ck::jolt
         return Plan;
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(TEXT("JoltPhysics_OptimizeBroadPhase"), STAT_CkJolt_OptimizeBroadPhase, STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -396,6 +401,7 @@ namespace ck
         if (NOT PhysicsSystem.IsValid())
         { return; }
 
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_OptimizeBroadPhase);
         PhysicsSystem->OptimizeBroadPhase();
         _OptimizeBroadPhaseRequested = false;
     }
