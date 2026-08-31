@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform (cosmetic registration)
 
 #include "CkUsf/Stylize/CkUsf_CelShade_Params.h" // ECk_Usf_CelPattern (member-indexed cel patterns)
@@ -125,6 +127,37 @@ public:
     static void
     Finalize_Crowd(
         ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched", DisplayName = "[Ck][IskmBatched] Set Crowd Render Profiles")
+    static bool
+    Set_CrowdRenderProfiles(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const TArray<UCk_IskmRenderer_Data*>& InProfiles);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Runtime Profile Tuners")
+    static bool
+    Set_CrowdRuntimeProfileTuners(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched", DisplayName = "[Ck][IskmBatched] Set Crowd Member Render Profile")
+    static bool
+    Set_CrowdMemberRenderProfile(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        int32 InIndex,
+        int32 InProfileIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched", DisplayName = "[Ck][IskmBatched] Get Crowd Member Render Profile")
+    static int32
+    Get_CrowdMemberRenderProfile(
+        const ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched", DisplayName = "[Ck][IskmBatched] Get Crowd Profile Bucket Count")
+    static int32
+    Get_CrowdProfileBucketCount(
+        const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 
     // ---- LOD-facing: member queries + per-member visibility ----
 

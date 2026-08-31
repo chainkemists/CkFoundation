@@ -5,6 +5,68 @@
 namespace ck::visual_lod
 {
     auto
+        Get_AreRenderBandsValid(
+            const TArray<FVisualLod_RenderBandRange>& InBands)
+        -> bool
+    {
+        if (InBands.IsEmpty())
+        { return true; }
+
+        if (InBands[0]._DistanceThreshold != 0.0f)
+        { return false; }
+
+        for (auto Index = 0; Index < InBands.Num(); ++Index)
+        {
+            const auto& Band = InBands[Index];
+            if (NOT FMath::IsFinite(Band._DistanceThreshold) || NOT FMath::IsFinite(Band._ReturnHysteresis)
+                || Band._DistanceThreshold < 0.0f || Band._ReturnHysteresis < 0.0f)
+            { return false; }
+
+            if (Index == 0)
+            { continue; }
+
+            const auto& Previous = InBands[Index - 1];
+            if (Band._DistanceThreshold <= Previous._DistanceThreshold
+                || Band._ReturnHysteresis >= Band._DistanceThreshold - Previous._DistanceThreshold)
+            { return false; }
+        }
+
+        return true;
+    }
+
+    auto
+        Get_RenderBandIndex(
+            const TArray<FVisualLod_RenderBandRange>& InBands,
+            float InDistance,
+            int32 InCurrentBandIndex)
+        -> int32
+    {
+        if (InBands.IsEmpty())
+        { return INDEX_NONE; }
+
+        if (NOT Get_AreRenderBandsValid(InBands))
+        { return INDEX_NONE; }
+
+        const auto Distance = FMath::Max(InDistance, 0.0f);
+        if (NOT InBands.IsValidIndex(InCurrentBandIndex))
+        {
+            auto Result = 0;
+            while (Result + 1 < InBands.Num() && Distance >= InBands[Result + 1]._DistanceThreshold)
+            { ++Result; }
+            return Result;
+        }
+
+        auto Result = InCurrentBandIndex;
+        while (Result + 1 < InBands.Num() && Distance >= InBands[Result + 1]._DistanceThreshold)
+        { ++Result; }
+
+        while (Result > 0 && Distance < InBands[Result]._DistanceThreshold - InBands[Result]._ReturnHysteresis)
+        { --Result; }
+
+        return Result;
+    }
+
+    auto
         Get_IsInView(
             const FVector& InEntityLocation,
             const FVisualLod_LocalView& InView,
