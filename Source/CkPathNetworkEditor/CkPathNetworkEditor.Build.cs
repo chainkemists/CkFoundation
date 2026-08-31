@@ -14,7 +14,6 @@ public class CkPathNetworkEditor : CkModuleRules
 
             "InputCore",
             "LevelEditor",
-            "NavigationSystem",
             "PropertyEditor",
             "Slate",
             "SlateCore",
@@ -24,6 +23,7 @@ public class CkPathNetworkEditor : CkModuleRules
             "CkEditorTools",
             "CkEcs",
             "CkLog",
+            "CkNavigation",
             "CkPathNetwork",
         });
     }

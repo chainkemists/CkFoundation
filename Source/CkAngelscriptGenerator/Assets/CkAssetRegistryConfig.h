@@ -22,6 +22,15 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Asset Registry")
     FString Namespace = TEXT("assets");
 
+    /**
+     * Class names, UNPREFIXED (e.g. "RecastNavMesh"), whose assets must never reach the generated
+     * registry. Discovery is path-based, so a root inevitably sweeps up engine artifacts a level
+     * happens to contain - and an emitted accessor is a name script can reach for. Empty by
+     * default: a config only excludes a class it can say why it is excluding.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Asset Registry")
+    TArray<FName> ExcludedAssetClasses;
+
 public:
     auto
     GetDisplayName() const -> FString;
