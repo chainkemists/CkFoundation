@@ -3,6 +3,7 @@
 #include "CkIskm_BatchedClusterComponent.h"
 #include "CkIskmRendererVF/CkIskm_BatchedRenderResources.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -110,9 +111,10 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     { return; }
 
     bSupportsGPUScene = true;
-    bAlwaysHasVelocity = true;
+    bAlwaysHasVelocity = InComponent->Get_RenderProfile() == nullptr ||
+        InComponent->Get_RuntimeProfileTuners().Get_RenderingInfo().Get_bOutputVelocity();
     bHasDeformableMesh = true;
-    bHasWorldPositionOffsetVelocity = true;
+    bHasWorldPositionOffsetVelocity = bAlwaysHasVelocity;
     bVFRequiresPrimitiveUniformBuffer = false;
 
     Materials.Reset();
@@ -141,6 +143,8 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
         if (ck::IsValid(MeshData, ck::IsValid_Policy_NullptrOnly{}))
         { BaseLOD = MeshData->BaseLOD; }
     }
+    if (InComponent->Get_RenderProfile() != nullptr)
+    { BaseLOD = FMath::Max(BaseLOD, InComponent->Get_RuntimeProfileTuners().Get_MinLOD()); }
 
     GPULODRadius = ck::IsValid(Mesh) ? static_cast<float>(Mesh->GetBounds().SphereRadius) : 1.0f;
 
@@ -184,8 +188,9 @@ auto
     Result.bStaticRelevance = true;
     Result.bDynamicRelevance = false;
     Result.bRenderInMainPass = ShouldRenderInMainPass();
+    Result.bRenderInDepthPass = ShouldRenderInDepthPass();
     Result.bRenderCustomDepth = ShouldRenderCustomDepth();
-    Result.bVelocityRelevance = DrawsVelocity();
+    Result.bVelocityRelevance = bAlwaysHasVelocity && DrawsVelocity();
     MaterialRelevance.SetPrimitiveViewRelevance(Result);
     return Result;
 }

@@ -162,6 +162,21 @@ public:
     Get_IsFrozen(
         const FCk_Handle_VisualLodArbiter& InHandle) -> bool;
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName="[Ck][VisualLodArbiter] Get Runtime Tuners")
+    static FCk_VisualLodArbiter_RuntimeTuners
+    Get_RuntimeTuners(
+        const FCk_Handle_VisualLodArbiter& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName="[Ck][VisualLodArbiter] Are Runtime Tuners Valid")
+    static bool
+    Get_AreRuntimeTunersValid(
+        const FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners);
+
     // Deferred like every other arbiter request — the hold takes effect from the next update
     static auto
     Request_SetFrozen(
@@ -198,6 +213,26 @@ public:
     Request_ClearObserver(
         UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
         const FCk_Request_VisualLodArbiter_ClearObserver& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName="[Ck][VisualLodArbiter] Request Set Runtime Tuners",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VisualLodArbiter
+    Request_SetRuntimeTuners(
+        UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VisualLodArbiter",
+              DisplayName="[Ck][VisualLodArbiter] Request Reset Runtime Tuners",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VisualLodArbiter
+    Request_ResetRuntimeTuners(
+        UPARAM(ref) FCk_Handle_VisualLodArbiter& InHandle,
+        const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:

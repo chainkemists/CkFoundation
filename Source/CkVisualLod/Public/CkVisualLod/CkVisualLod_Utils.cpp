@@ -198,6 +198,15 @@ auto
     return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_CurrentRate();
 }
 
+auto
+    UCk_Utils_VisualLod_UE::
+    Get_RenderBandIndex(
+        const FCk_Handle_VisualLod& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_RenderBandIndex();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

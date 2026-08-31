@@ -7,6 +7,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+#include "CkIskmRenderer/Renderer/CkIskm_RenderProfile_Utils.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInterface.h"
@@ -34,6 +36,50 @@ auto
     _Mesh = InMesh;
     Recompute_LocalBounds();
     UpdateBounds();
+}
+
+auto
+    UCk_Iskm_BatchedClusterComponent::
+    Apply_RenderProfile(
+        UCk_IskmRenderer_Data* InProfile,
+        const FCk_IskmRenderer_RuntimeProfileTuners& InTuners)
+    -> void
+{
+    _RenderProfile = InProfile;
+    _RuntimeProfileTuners = InTuners;
+    if (InProfile == nullptr)
+    { return; }
+    const auto& Rendering = InTuners.Get_RenderingInfo();
+    SetCastShadow(Rendering.Get_bCastDynamicShadow() != 0);
+    bCastContactShadow = Rendering.Get_bCastContactShadow();
+    bRenderInMainPass = Rendering.Get_bRenderInMainPass();
+    SetRenderInDepthPass(Rendering.Get_bRenderInDepthPass() != 0);
+    bReceivesDecals = Rendering.Get_bReceivesDecals();
+    bUseAsOccluder = Rendering.Get_bUseAsOccluder();
+    SetRenderCustomDepth(Rendering.Get_bRenderCustomDepth() != 0);
+    bAffectDynamicIndirectLighting = Rendering.Get_bAffectDynamicIndirectLighting();
+    bAffectDistanceFieldLighting = Rendering.Get_bAffectDistanceFieldLighting();
+    bVisibleInRayTracing = Rendering.Get_bVisibleInRayTracing();
+    LightingChannels = InTuners.Get_LightingChannels();
+    BoundsScale = InTuners.Get_BoundsScale();
+    MinDrawDistance = InTuners.Get_MinDrawDistance();
+    SetCullDistance(InTuners.Get_MaxDrawDistance());
+    UpdateBounds();
+    MarkRenderStateDirty();
+}
+
+auto
+    UCk_Iskm_BatchedClusterComponent::
+    Apply_RenderProfile(
+        UCk_IskmRenderer_Data* InProfile) -> void
+{
+    if (InProfile == nullptr)
+    {
+        Apply_RenderProfile(nullptr, FCk_IskmRenderer_RuntimeProfileTuners{});
+        return;
+    }
+
+    Apply_RenderProfile(InProfile, ck::iskm::MakeRuntimeProfileTuners(*InProfile));
 }
 
 auto

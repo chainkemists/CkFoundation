@@ -179,6 +179,28 @@ recomputes bounds. Rendering is client-local: no replication, and all ticking is
 **Tuning knobs:** tile size (`Initialize(_, TileSize)`; ~2000-2500cm — smaller = better culling granularity, more
 draw batches), promote/demote distances + cap in the flip driver, `_SampleFrequency` on the AnimCollection.
 
+**Render profiles and stable buckets.** A crowd may receive an ordered `UCk_IskmRenderer_Data` set exactly once,
+before its first member, through `Set_CrowdRenderProfiles`. Every member starts in profile 0 and may move through
+`Set_CrowdMemberRenderProfile`; the return value is the acceptance boundary. The renderer keys components by
+`(tile X, tile Y, profile index)`, while `_Members` remains the only identity/state owner. Migration prepares the
+destination bucket before mutation, rebuilds old and new buckets, and preserves transform, animation phase,
+custom data, visibility, cosmetics, and highlight membership. Empty buckets are intentionally retained to avoid
+component churn when members cross a distance boundary repeatedly.
+
+Profiles overwrite component state rather than patching it. SKMC bases and children, plus batched cluster
+components/proxies, consume shadow/contact-shadow, main/depth, decals, occluder/custom-depth,
+dynamic-indirect/distance-field lighting, ray-tracing visibility, lighting channels, bounds, min/max draw distance,
+minimum LOD, material overrides, and velocity participation. `_FarAnimationUpdateInterval` throttles far pose
+evaluation/uploads without losing elapsed animation time; `_FreezeFarAnimation` intentionally holds the far pose.
+The batched proxy forwards both `ShouldRenderInMainPass()` and `ShouldRenderInDepthPass()` into
+`FPrimitiveViewRelevance`; setting a profile's depth-pass flag on the component alone is not enough.
+Profile animation collections must exactly match the crowd collection. Invalid profile sets or member/profile
+indices are diagnosed and rejected by ordinary fail-closed control flow even when ensures compile out.
+
+Material precedence is: whole-crowd override, profile base-slot overrides, crowd slot overrides, mesh defaults.
+Turning off dynamic-indirect/distance-field participation alone does not remove direct-light material work; use a
+skeletal-compatible cheap/unlit profile material when the goal is to remove that shader cost.
+
 **Outline (highlight cluster).** `Set_CrowdMemberOutline(i, preset)` stands up one custom-depth-only
 `UCk_Iskm_BatchedClusterComponent` ("highlight cluster") per (crowd, preset) — same flags as a tile, but it holds only
 the outlined members' mirrored `FInstance` data and is pushed every manager tick alongside the tile clusters, so the
