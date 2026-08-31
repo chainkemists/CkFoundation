@@ -36,6 +36,8 @@
 
 DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_LevelAdd"), STAT_CkJolt_StaticWorldLevelAdd, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_LevelRemove"), STAT_CkJolt_StaticWorldLevelRemove, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_RemoveBodies"), STAT_CkJolt_StaticWorldRemoveBodies, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_DestroyBodies"), STAT_CkJolt_StaticWorldDestroyBodies, STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -443,9 +445,15 @@ auto
     // Bodies the collision sync flipped OUT of the scene were already removed from the broadphase —
     // removing them again asserts in Jolt. They still need destroying, and the scene did not change.
     if (Fragment.Get_BodiesInScene())
-    { BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num()); }
+    {
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldRemoveBodies);
+        BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
+    }
 
-    BodyInterface->DestroyBodies(BodyIds.GetData(), BodyIds.Num());
+    {
+        SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldDestroyBodies);
+        BodyInterface->DestroyBodies(BodyIds.GetData(), BodyIds.Num());
+    }
 
     if (Fragment.Get_BodiesInScene())
     {
