@@ -23,11 +23,10 @@ namespace ck
     // the only writes are the agent's own DesiredVelocity and its own LocalBoundary cache. The
     // settled scan reads state written by BlockDetect and Steering, both of which this processor
     // already runs after within FGroup_Physics, and by tiers that live in FGroup_Gameplay — so no
-    // writer of it is ever concurrent with this scan. The navmesh query is worker-thread safe by
-    // construction:
-    // ARecastNavMesh reaches Detour through INITIALIZE_NAVQUERY, which uses a STACK-LOCAL
-    // dtNavMeshQuery off the game thread and the shared one only on it (RecastNavMesh.cpp:49-52),
-    // and the dtNavMesh itself is only read.
+    // writer of it is ever concurrent with this scan. The wall query goes through the navigation
+    // surface's C++-only off-thread entry (UCk_Utils_NavSurface_UE::Get_BoundarySegments), which
+    // carries that thread contract: a stack-local query, no shared mutable state, results written
+    // into caller-provided storage.
     //
     // A flying agent is excluded: the velocity-obstacle quadratic, its penalties and its side
     // preference are all FVector2D, so sampling would flatten a 3D route's desired velocity onto the

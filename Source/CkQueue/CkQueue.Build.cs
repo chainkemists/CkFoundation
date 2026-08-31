@@ -14,7 +14,6 @@ public class CkQueue : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
-            "NavigationSystem",
             "AIModule",
 
             "CkCore",

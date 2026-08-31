@@ -143,9 +143,6 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
 - **No typesafe handle by design.** Pathfinding is a service exposed to any entity with a Transform
   feature (CkEcsExt) plus the path-result fragment slot, which the Utils add lazily on first
   request — so there is nothing for an `FCk_Handle_Nav` to mean.
-- **`Try_ProjectOntoNavmesh` is a single-shot helper.** CkEqs' `_ProjectOntoNav` post-pass inlines
-  the same `UNavigationSystemV1::ProjectPointToNavigation` call directly rather than going through
-  this UFUNCTION, to avoid dispatch overhead per candidate. Keep the two in sync.
 
 ---
 
@@ -160,19 +157,22 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
 
 ## Limitations / known issues
 
-- ~~`_QueryFilter` field is reserved but unused~~ — **live since the tag→class table**
-  (`UCk_Nav_ProjectSettings_UE::_QueryFilters`): the tag resolves to a `UNavigationQueryFilter`
-  subclass at query time; empty/unmapped falls back to NavData's default. A request may also carry
-  `_QueryFilterClassOverride` (a `TSubclassOf` that outranks the tag for THAT query) — added for
-  CkCrowd's strict/permissive planning phases, where a per-dispatch filter swap is not a project
-  policy the table could express. Note the start/end projection is UNFILTERED, so a query whose
-  filter excludes the area under its own start still projects onto it — callers standing inside an
-  excluded band must move their start out first (CkCrowd's `Get_EscapedQueryStart`).
+- ~~`_QueryFilter` field is reserved but unused~~ — **live, provider-neutral**: the tag resolves
+  through `UCk_Nav_ProjectSettings_UE::_QueryFilters` (tag → `UCk_NavFilterDefinition_DataAsset`)
+  or the native filter-definition registry, and the Recast adapter
+  (`NavSurface/Recast/CkNavSurface_RecastAdapter`) compiles the definition into an engine filter at
+  query time; empty/unmapped falls back to NavData's default. A request may also carry
+  `_QueryFilterOverride` (a `FGameplayTag` that outranks the request's `_QueryFilter` for THAT
+  query) — used by CkCrowd's strict/permissive planning phases. Note the start/end projection is
+  UNFILTERED, so a query whose filter excludes the area under its own start still projects onto
+  it — callers standing inside an excluded band must move their start out first (CkCrowd's
+  `Get_EscapedQueryStart`).
 - No async path queries. `FindPathSync` is fast enough at 8/frame for any realistic scenario; if it ever isn't, a dedicated async processor lives at the next layer.
 - No off-mesh links / jumps. Recast supports them but we don't surface them.
-- **The deferred-FindPath queue is process-wide, not keyed on world** (`ck_nav_processor::GDeferredNavRequests`
-  in `CkNav_Processor.cpp`) — it is not multi-PIE-instance safe. Entries are dropped when their
-  handle goes invalid and force-failed with `NoNavData` past `ck.Nav.MaxDeferralSeconds` (5s).
+- **The deferred-FindPath queue is per-world** (`ck::FFragment_Nav_DeferredRequests` on the
+  world's transient entity; ring math and latest-wins coalescing live in `ck::nav::IsNewerRevision`
+  / `AddDeferredLatest`, `CkNav_Fragment.h`) — multi-PIE-instance safe. Entries are dropped when
+  their handle goes invalid and force-failed with `NoNavData` past `ck.Nav.MaxDeferralSeconds` (5s).
 
 ## Acquire / release — a path episode must be ENDED, not just abandoned
 

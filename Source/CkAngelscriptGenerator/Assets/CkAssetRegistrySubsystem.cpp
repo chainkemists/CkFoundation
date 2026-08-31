@@ -664,8 +664,16 @@ auto
             {
                 auto AssetFunction = FString{};
 
+                // The registry reports a native class without its U/A/F prefix while the resolved
+                // script type carries it, and which of the two a given asset arrives as is not
+                // something a config should have to know - so both are matched unprefixed.
+                const auto AssetClassIsExcluded =
+                    InConfig->ExcludedAssetClasses.Contains(AssetData.AssetClassPath.GetAssetName()) ||
+                    InConfig->ExcludedAssetClasses.Contains(FName{AssetType.RightChop(1)});
+
                 if (AssetData.AssetClassPath.GetAssetName() != OBJECT_REDIRECTOR_CLASS &&
-                    NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(AssetData.AssetName.ToString()))
+                    NOT UCk_Utils_IO_UE::Get_IsTemporaryAsset(AssetData.AssetName.ToString()) &&
+                    NOT AssetClassIsExcluded)
                 {
                     auto BaseAssetName = Get_CleanAssetName(AssetData.AssetName.ToString());
 

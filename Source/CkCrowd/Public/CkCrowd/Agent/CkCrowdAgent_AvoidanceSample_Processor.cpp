@@ -10,13 +10,11 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
-
-#include <NavigationSystem.h>
-#include <NavMesh/RecastNavMesh.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -168,25 +166,15 @@ namespace ck
         if (ck::Is_NOT_Valid(World))
         { return; }
 
-        const auto NavSys = UNavigationSystemV1::GetCurrent(World);
-        auto* NavMesh = ck::IsValid(NavSys)
-            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
+        // A world with no walkable surface has no walls to avoid - legitimate absence, exactly as
+        // FProcessor_CrowdAgent_ConstrainToNavmesh treats it, and so is a query centre that lands on
+        // no surface at all.
+        const auto BoundaryQuery = FCk_NavSurface_BoundaryQuery{InAgentLocation, InQueryRange}
+            .Set_SearchHalfExtents(InProjectionExtent);
 
-        // A world with no Recast nav data has no walls to avoid - legitimate absence, exactly as
-        // FProcessor_CrowdAgent_ConstrainToNavmesh treats it.
-        if (ck::Is_NOT_Valid(NavMesh))
-        { return; }
-
-        const auto AgentPoly = NavMesh->FindNearestPoly(InAgentLocation, InProjectionExtent);
-        if (AgentPoly == INVALID_NAVNODEREF)
-        { return; }
-
-        // findWallsInNeighbourhood is the local-neighbourhood flood of dtLocalBoundary::update fused
-        // with its per-poly getPolyWallSegments, already converted back to Unreal space. A null
-        // filter resolves to the navmesh's own default query filter.
-        auto Edges = TArray<FNavigationWallEdge>{};
-        if (NOT NavMesh->FindEdges(AgentPoly, InAgentLocation, InQueryRange, nullptr, Edges))
+        auto Edges = TArray<FCk_NavSurface_BoundarySegment>{};
+        if (UCk_Utils_NavSurface_UE::Get_BoundarySegments(World, BoundaryQuery, Edges) !=
+            ECk_NavSurface_QueryStatus::Success)
         { return; }
 
         InOutBoundary._Valid = true;
@@ -200,12 +188,13 @@ namespace ck
             const auto& Edge = Edges[EdgeIndex];
 
             auto ClosestSegmentTime = 0.0;
-            const auto DistanceSquared =
-                DistancePointSegmentSquared2D(InAgentLocation, Edge.Start, Edge.End, &ClosestSegmentTime);
+            const auto DistanceSquared = DistancePointSegmentSquared2D(
+                InAgentLocation, Edge.Get_Start(), Edge.Get_End(), &ClosestSegmentTime);
             if (DistanceSquared > RangeSquared)
             { continue; }
 
-            const auto ClosestHeight = Edge.Start.Z + ((Edge.End.Z - Edge.Start.Z) * ClosestSegmentTime);
+            const auto ClosestHeight =
+                Edge.Get_Start().Z + ((Edge.Get_End().Z - Edge.Get_Start().Z) * ClosestSegmentTime);
             if (FMath::Abs(ClosestHeight - InAgentLocation.Z) >
                 ck_crowd_agent_avoidance_sample::BOUNDARY_MAX_HEIGHT_DIFFERENCE)
             { continue; }
@@ -224,7 +213,7 @@ namespace ck
         {
             const auto& Edge = Edges[Ranked[RankIndex].Value];
             InOutBoundary._Segments.Emplace(
-                FFragment_CrowdAgent_LocalBoundary::FSegment{Edge.Start, Edge.End});
+                FFragment_CrowdAgent_LocalBoundary::FSegment{Edge.Get_Start(), Edge.Get_End()});
         }
     }
 

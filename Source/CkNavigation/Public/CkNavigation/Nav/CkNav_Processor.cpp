@@ -17,7 +17,6 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include <NavigationSystem.h>
-#include <NavFilters/NavigationQueryFilter.h>
 #include <NavMesh/RecastNavMesh.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,74 +31,6 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Deferred Reprojections"),  STAT_Nav_Deferre
 
 namespace ck_nav_processor
 {
-    // One process-wide queue, NOT keyed on world — not multi-PIE-instance safe.
-    struct FCk_Nav_DeferredRequest
-    {
-        FCk_Handle Handle;
-        FCk_Request_Nav_FindPath Request;
-        double DeferredAt = 0.0;   // FPlatformTime::Seconds() at first deferral — drives timeout
-    };
-
-    static TArray<FCk_Nav_DeferredRequest> GDeferredNavRequests;
-
-    // Nonzero request revisions opt a caller into latest-request-wins semantics.
-    // This is load-bearing for policy changes while nav is still baking: the
-    // deferred queue drains from the back, so merely rejecting a stale result at
-    // the consumer can otherwise let an older request overwrite the newer shared
-    // result slot in the same pump.
-    static auto
-        IsNewerRevision(
-            int32 InCandidate,
-            int32 InExisting)
-        -> bool
-    {
-        if (InCandidate == InExisting)
-        { return false; }
-
-        // Revisions cycle through [1, MAX_int32]. Treat the shorter forward
-        // distance around that ring as newer. There can never be remotely half
-        // the revision space worth of live requests for one entity, so the
-        // opposite half is unambiguously an older generation.
-        constexpr auto RevisionRange = static_cast<int64>(MAX_int32);
-        auto ForwardDistance = static_cast<int64>(InCandidate) - InExisting;
-        if (ForwardDistance <= 0)
-        { ForwardDistance += RevisionRange; }
-        return ForwardDistance < (RevisionRange / 2);
-    }
-
-    static auto
-        AddDeferredLatest(
-            const FCk_Handle& InHandle,
-            const FCk_Request_Nav_FindPath& InRequest,
-            double InDeferredAt)
-        -> void
-    {
-        const auto Revision = InRequest.Get_RequestRevision();
-        if (Revision != 0)
-        {
-            for (auto Index = GDeferredNavRequests.Num() - 1; Index >= 0; --Index)
-            {
-                auto& Existing = GDeferredNavRequests[Index];
-                if (Existing.Handle != InHandle
-                    || Existing.Request.Get_RequestRevision() == 0)
-                { continue; }
-
-                if (NOT IsNewerRevision(Revision, Existing.Request.Get_RequestRevision()))
-                {
-                    InRequest.TryFireCompletion(
-                        InHandle, ECk_Request_OperationResult::Failed_Cancelled);
-                    return;
-                }
-
-                Existing.Request.TryFireCompletion(
-                    Existing.Handle, ECk_Request_OperationResult::Failed_Cancelled);
-                GDeferredNavRequests.RemoveAt(Index, EAllowShrinking::No);
-            }
-        }
-
-        GDeferredNavRequests.Add({InHandle, InRequest, InDeferredAt});
-    }
-
     static auto
         IsSupersededByAuthoritativeRevision(
             int32 InRequestRevision,
@@ -109,7 +40,7 @@ namespace ck_nav_processor
         return InRequestRevision != 0
             && InAuthoritativeRevision != 0
             && InRequestRevision != InAuthoritativeRevision
-            && IsNewerRevision(InAuthoritativeRevision, InRequestRevision);
+            && ck::nav::IsNewerRevision(InAuthoritativeRevision, InRequestRevision);
     }
 
     static TAutoConsoleVariable<float> CVarMaxDeferralSeconds(
@@ -126,6 +57,60 @@ namespace ck_nav_processor
 namespace ck::nav
 {
     auto
+        IsNewerRevision(
+            int32 InCandidate,
+            int32 InExisting)
+        -> bool
+    {
+        if (InCandidate == InExisting)
+        { return false; }
+
+        constexpr auto RevisionRange = static_cast<int64>(MAX_int32);
+        auto ForwardDistance = static_cast<int64>(InCandidate) - InExisting;
+        if (ForwardDistance <= 0)
+        { ForwardDistance += RevisionRange; }
+        return ForwardDistance < (RevisionRange / 2);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        AddDeferredLatest(
+            TArray<FNav_DeferredRequest>& InOutQueue,
+            const FCk_Handle&             InHandle,
+            const FCk_Request_Nav_FindPath& InRequest,
+            double                        InDeferredAt)
+        -> void
+    {
+        const auto Revision = InRequest.Get_RequestRevision();
+        if (Revision != 0)
+        {
+            for (auto Index = InOutQueue.Num() - 1; Index >= 0; --Index)
+            {
+                auto& Existing = InOutQueue[Index];
+                if (Existing.Handle != InHandle
+                    || Existing.Request.Get_RequestRevision() == 0)
+                { continue; }
+
+                if (NOT IsNewerRevision(Revision, Existing.Request.Get_RequestRevision()))
+                {
+                    InRequest.TryFireCompletion(
+                        InHandle, ECk_Request_OperationResult::Failed_Cancelled);
+                    return;
+                }
+
+                Existing.Request.TryFireCompletion(
+                    Existing.Handle, ECk_Request_OperationResult::Failed_Cancelled);
+                InOutQueue.RemoveAt(Index, EAllowShrinking::No);
+            }
+        }
+
+        InOutQueue.Add({InHandle, InRequest, InDeferredAt});
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         PurgeDeferredRequestsFor(
             FCk_Handle& InHandle)
         -> void
@@ -133,19 +118,26 @@ namespace ck::nav
         if (ck::Is_NOT_Valid(InHandle))
         { return; }
 
+        auto WorldEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InHandle);
+        if (ck::Is_NOT_Valid(WorldEntity, ck::IsValid_Policy_IncludePendingKill{})
+            || NOT WorldEntity.Has<FFragment_Nav_DeferredRequests>())
+        { return; }
+
+        auto& Queue = WorldEntity.Get<FFragment_Nav_DeferredRequests>()._Requests;
+
         // Move this entity's entries OUT of the shared queue before completing ANY of them. A
         // completion delegate is caller code (AngelScript, in practice) and may re-enter the
         // abandon path, which would nest a second purge over the very array this one is still
         // erasing from.
         auto Cancelled = TArray<FCk_Request_Nav_FindPath>{};
-        for (auto Index = ck_nav_processor::GDeferredNavRequests.Num() - 1; Index >= 0; --Index)
+        for (auto Index = Queue.Num() - 1; Index >= 0; --Index)
         {
-            auto& Entry = ck_nav_processor::GDeferredNavRequests[Index];
+            auto& Entry = Queue[Index];
             if (Entry.Handle != InHandle)
             { continue; }
 
             Cancelled.Add(Entry.Request);
-            ck_nav_processor::GDeferredNavRequests.RemoveAt(Index, EAllowShrinking::No);
+            Queue.RemoveAt(Index, EAllowShrinking::No);
         }
 
         for (auto& CancelledRequest : Cancelled)
@@ -183,25 +175,29 @@ namespace ck
         _BudgetRemainingThisTick = UCk_Utils_Nav_Settings_UE::Get_MaxPathQueriesPerFrame();
 
         auto DrainActions = int32{0};
-        if (ck_nav_processor::GDeferredNavRequests.Num() > 0)
+        const auto WorldEntityIsUsable = ck::IsValid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{})
+            && this->_TransientEntity.Has<FFragment_Nav_DeferredRequests>();
+        if (WorldEntityIsUsable && this->_TransientEntity.Get<FFragment_Nav_DeferredRequests>().Get_Requests().Num() > 0)
         {
+            auto& DeferredRequests = this->_TransientEntity.Get<FFragment_Nav_DeferredRequests>()._Requests;
+
             SCOPE_CYCLE_COUNTER(STAT_Nav_DeferredDrain);
-            SET_DWORD_STAT(STAT_Nav_DeferredQueueDepth, ck_nav_processor::GDeferredNavRequests.Num());
+            SET_DWORD_STAT(STAT_Nav_DeferredQueueDepth, DeferredRequests.Num());
 
             const auto Now = FPlatformTime::Seconds();
             const auto MaxDeferralSec = static_cast<double>(ck_nav_processor::CVarMaxDeferralSeconds.GetValueOnGameThread());
 
-            for (auto i = ck_nav_processor::GDeferredNavRequests.Num() - 1; i >= 0; --i)
+            for (auto i = DeferredRequests.Num() - 1; i >= 0; --i)
             {
-                auto& Entry = ck_nav_processor::GDeferredNavRequests[i];
+                auto& Entry = DeferredRequests[i];
                 if (ck::Is_NOT_Valid(Entry.Handle))
                 {
-                    // The owner died while the request sat in this process-wide deferral queue — it
+                    // The owner died while the request sat in this world's deferral queue — it
                     // never reaches FProcessor_Nav_CancelPendingRequests (the request already left
                     // FFragment_Nav_Requests), so this is the only site that can honor the
                     // fire-exactly-once completion guarantee for it.
                     Entry.Request.TryFireCompletion(Entry.Handle, ECk_Request_OperationResult::Failed_Cancelled);
-                    ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                    DeferredRequests.RemoveAt(i, EAllowShrinking::No);
                     continue;
                 }
 
@@ -228,7 +224,7 @@ namespace ck
                     {
                         auto Handle = Entry.Handle;
                         auto Request = Entry.Request;
-                        ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                        DeferredRequests.RemoveAt(i, EAllowShrinking::No);
                         // Request already carries whatever completion delegate the original caller
                         // bound (mutable, copied along with the struct) — {} here does not drop it.
                         UCk_Utils_Nav_UE::Request_FindPath(Handle, Request, {});
@@ -252,7 +248,7 @@ namespace ck
                         {
                             Entry.Request.TryFireCompletion(
                                 Handle, ECk_Request_OperationResult::Failed_Cancelled);
-                            ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                            DeferredRequests.RemoveAt(i, EAllowShrinking::No);
                             ++DrainActions;
                             continue;
                         }
@@ -267,7 +263,7 @@ namespace ck
                             Handle, MaxDeferralSec);
                     }
                     Entry.Request.TryFireCompletion(Handle, ECk_Request_OperationResult::Failed);
-                    ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                    DeferredRequests.RemoveAt(i, EAllowShrinking::No);
                     ++DrainActions;
                 }
             }
@@ -304,7 +300,7 @@ namespace ck
                 const auto Revision = InFindPath.Get_RequestRevision();
                 if (Revision != 0
                     && (LatestRequestRevision == 0
-                    || ck_nav_processor::IsNewerRevision(Revision, LatestRequestRevision)))
+                    || nav::IsNewerRevision(Revision, LatestRequestRevision)))
                 { LatestRequestRevision = Revision; }
             }, Variant);
         }
@@ -383,18 +379,22 @@ namespace ck
             // change exists to remove. Every write of Pending carries its clock.
             InResult._Status = ECk_Nav_PathStatus::Pending;
             InResult._PendingSinceSeconds = NowSec;
+
+            auto WorldEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InHandle);
+            auto& DeferredRequests = WorldEntity.AddOrGet<FFragment_Nav_DeferredRequests>()._Requests;
+
             InHandle.CopyAndRemove(InRequests, [&](const FFragment_Nav_Requests& InSnapshot)
             {
                 for (const auto& Variant : InSnapshot._Requests)
                 {
                     std::visit([&](const auto& InFindPath)
                     {
-                        ck_nav_processor::AddDeferredLatest(InHandle, InFindPath, NowSec);
+                        nav::AddDeferredLatest(DeferredRequests, InHandle, InFindPath, NowSec);
                     }, Variant);
                 }
             });
             ck::nav::Verbose(TEXT("FindPath on [{}] deferred — start point not yet bakeable (queue depth now {})"),
-                InHandle, ck_nav_processor::GDeferredNavRequests.Num());
+                InHandle, DeferredRequests.Num());
             return;
         }
 
@@ -422,9 +422,9 @@ namespace ck
                         return;
                     }
 
-                    const auto FilterClass = InFindPath.Get_QueryFilterClassOverride().Get() != nullptr
-                        ? InFindPath.Get_QueryFilterClassOverride()
-                        : UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
+                    const auto FilterTag = InFindPath.Get_QueryFilterOverride().IsValid()
+                        ? InFindPath.Get_QueryFilterOverride()
+                        : InFindPath.Get_QueryFilter();
 
                     // The readiness gate above probed the ENTITY location; an override start sits
                     // within a band-width of it (same tiles), so that answer carries over.
@@ -442,14 +442,14 @@ namespace ck
                         ProjectionVerticalExtent,
                         /*InAgentRadiusForFirstSkip*/ 0.0f,
                         InResult,
-                        FilterClass,
+                        FilterTag,
                         /*InCornerOffsetDistance*/ 0.0f,
                         InFindPath.Get_QueryFilterOverlay());
                     InResult._RequestRevision = InFindPath.Get_RequestRevision();
 
                     const auto& Diagnostics = InResult.Get_Diagnostics();
-                    const auto FilterName = FilterClass.Get() != nullptr
-                        ? GetNameSafe(FilterClass.Get())
+                    const auto FilterName = FilterTag.IsValid()
+                        ? FilterTag.ToString()
                         : FString{TEXT("NavDataDefault")};
                     ck::nav::Verbose(
                         TEXT("[PNDiag] FindPathSync on [{}]: raw [{}] -> [{}], "

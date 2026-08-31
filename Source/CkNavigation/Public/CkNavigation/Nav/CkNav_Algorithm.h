@@ -4,12 +4,11 @@
 
 #include <AI/Navigation/NavQueryFilter.h>
 #include <CoreMinimal.h>
-#include <Templates/SubclassOf.h>
+#include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class ARecastNavMesh;
-class UNavigationQueryFilter;
 class UNavigationSystemV1;
 struct FPathFindingResult;
 
@@ -20,13 +19,6 @@ struct FPathFindingResult;
 
 struct CKNAVIGATION_API FCk_Nav_Algorithm
 {
-    // Resolves a host-selected base filter, then applies value-only exclusions to a private copy.
-    // A non-empty malformed overlay fails closed rather than silently weakening the caller's path policy.
-    static auto ResolveQueryFilter(
-        ARecastNavMesh& InNavData,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
-        const FCk_Nav_QueryFilterOverlay& InOverlay) -> FSharedConstNavQueryFilter;
-
     // True on Ready/Partial, false on Failed/Invalid. OutResult._Waypoints is preserved on
     // failure so consumers can keep walking the previous path.
     static auto FindPathSync(
@@ -39,7 +31,7 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         float                InProjectionVerticalHalfExtent, // cm; < 0 => use horizontal extent (uniform cube, today's behavior)
         float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass
         FCk_Nav_PathResult&  OutResult,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass = {}, // null -> NavData's default filter
+        FGameplayTag InFilterTag = {}, // empty -> NavData's default filter
         float InCornerOffsetDistance = 0.0f, // cm; 0 preserves the raw Recast corridor corners
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay = {}) -> bool;
 

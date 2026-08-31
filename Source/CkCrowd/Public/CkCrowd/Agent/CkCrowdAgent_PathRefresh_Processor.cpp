@@ -11,15 +11,16 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
-#include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
 #include "CkCrowd/CkCrowd_Log.h"
+#include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/CkCrowd_Stats.h"
-#include "CkCrowd/Agent/CkCrowdAgent_NavArea.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include <NavigationSystem.h>
@@ -62,15 +63,12 @@ namespace ck
             Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled)
         {
             auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(this->_TransientEntity);
-            auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-            auto* NavMesh = (NavSys != nullptr)
-                ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-                : nullptr;
-            const auto CrowdAreaID = (NavMesh != nullptr)
-                ? NavMesh->GetAreaID(UCk_NavArea_CrowdAgent::StaticClass())
-                : INDEX_NONE;
+            const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
+            const auto SurfaceHasData =
+                ProviderHealth != ECk_NavSurface_ProviderHealth::NoData &&
+                ProviderHealth != ECk_NavSurface_ProviderHealth::Error;
 
-            if (NavMesh != nullptr && CrowdAreaID != INDEX_NONE)
+            if (SurfaceHasData)
             {
                 const auto SettleSeconds = Settings->Get_PathRefreshMarkupSettleSeconds();
 
@@ -90,9 +88,8 @@ namespace ck
                         // Vertical extent is the painted box's — the disc centre rides at capsule
                         // height, and a shorter probe misses the floor polys the box marked.
                         const auto Extent = FVector{InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupVerticalHalfExtentUu()};
-                        const auto PolyRef = NavMesh->FindNearestPoly(InMarkup.Get_MarkupLocation(), Extent);
-                        if (PolyRef == INVALID_NAVNODEREF ||
-                            static_cast<int32>(NavMesh->GetPolyAreaID(PolyRef)) != CrowdAreaID)
+                        if (NOT ck::nav_surface_recast::Get_IsAreaLiveAt(
+                            World, TAG_Nav_Area_Crowd_Agent, InMarkup.Get_MarkupLocation(), Extent))
                         { return; }
 
                         InMarkup._ConfirmationSerial = IssueConfirmationSerial();
@@ -140,16 +137,14 @@ namespace ck
             Transient.Has<FFragment_CrowdAvoidanceVolume_Retirements>())
         {
             auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Transient);
-            auto* NavSystem = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-            auto* RevisionSubsystem = IsValid(World)
-                ? World->GetSubsystem<UCk_NavigationRevisionSubsystem_UE>()
-                : nullptr;
-            const auto CanObserveRevision = IsValid(RevisionSubsystem) &&
-                RevisionSubsystem->TryEnsureBound();
-            if (CanObserveRevision && NavSystem != nullptr &&
-                NOT NavSystem->IsNavigationBuildInProgress())
+
+            // Zero is the surface's "no observer bound" answer — the first successful bind is what
+            // advances the revision off zero, so a nonzero read IS the observability proof.
+            const auto NavigationRevision = UCk_Utils_NavSurface_UE::Get_SurfaceRevision(World);
+            const auto CanObserveRevision = NavigationRevision != 0;
+
+            if (CanObserveRevision && NOT UCk_Utils_NavSurface_UE::Get_IsBuildInProgress(World))
             {
-                const auto NavigationRevision = RevisionSubsystem->Get_Revision();
                 auto& Records = Transient.Get<FFragment_CrowdAvoidanceVolume_Retirements>()._Records;
                 for (auto RecordIndex = Records.Num() - 1; RecordIndex >= 0; --RecordIndex)
                 {
@@ -163,7 +158,7 @@ namespace ck
                         continue;
                     }
 
-                    if (NavigationRevision == Record._NavigationRevisionAtUnregister)
+                    if (NavigationRevision == static_cast<int64>(Record._NavigationRevisionAtUnregister))
                     { continue; }
 
                     const auto ConfirmationSerial = IssueConfirmationSerial();
@@ -465,9 +460,6 @@ namespace ck
         { return false; }
 
         auto EscapeResult = FCk_Nav_PathResult{};
-        const auto FilterClass =
-            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
-                InParams.Get_NavQueryFilter());
         const auto FoundEscape = FCk_Nav_Algorithm::FindPathSync(
             *NavSys,
             *NavData,
@@ -478,7 +470,7 @@ namespace ck
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             InParams.Get_Radius(),
             EscapeResult,
-            FilterClass,
+            InParams.Get_NavQueryFilter(),
             0.0f,
             UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
         if (NOT FoundEscape || EscapeResult.Get_Waypoints().IsEmpty())
@@ -803,9 +795,6 @@ namespace ck
         { return false; }
 
         auto DetourResult = FCk_Nav_PathResult{};
-        const auto FilterClass =
-            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
-                InParams.Get_NavQueryFilter());
         const auto FoundDetour = FCk_Nav_Algorithm::FindPathSync(
             *NavSys,
             *NavData,
@@ -816,7 +805,7 @@ namespace ck
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             InParams.Get_Radius(),
             DetourResult,
-            FilterClass,
+            InParams.Get_NavQueryFilter(),
             0.0f,
             UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
         if (NOT FoundDetour || DetourResult.Get_Waypoints().IsEmpty())
