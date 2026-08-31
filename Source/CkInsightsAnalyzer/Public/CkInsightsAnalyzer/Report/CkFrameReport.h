@@ -204,6 +204,53 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * One node of a hot-path tree merged across several analysed frames
+ * (FCk_MultiFrameReport::DoMerge_HotPathTrees).
+ *
+ * Identity is (RawName, Breadcrumbs) WITHIN a parent: the same timer legitimately appears under
+ * different collapsed wrapper chains, and merging those into one row attributes cost to a call path
+ * that never ran.
+ *
+ * Statistics contract:
+ * - AvgInclusiveMs / AvgExclusiveMs / AvgCount are means over ALL analysed frames — a frame the node
+ *   is absent from contributes zero, matching FCk_MultiFrameStats::TimerAverages, so the rows read as
+ *   "cost added to a typical frame" and sum toward the frame average.
+ * - FramesPresent counts the analysed frames whose OWN hot-path tree contained this node. A node
+ *   below that frame's thresholds is absent, so presence means "made that frame's tree", not
+ *   "the timer fired".
+ * - HitAvgInclusiveMs is the mean over FramesPresent alone — what the node costs on a frame it shows
+ *   up in, which for a spiky node is the number that explains the spike.
+ * - P95InclusiveMs / MaxInclusiveMs are over the PRESENT samples only.
+ * - PerFrameInclusiveMs is indexed by analysed-frame ORDINAL, parallel to
+ *   FCk_MultiFrameStats::AnalysedFrameIndices, and holds a negative value for a frame the node was
+ *   absent from — zero would be indistinguishable from a node that ran for no measurable time.
+ * - Children are sorted by AvgInclusiveMs descending.
+ */
+struct CKINSIGHTSANALYZER_API FCk_MergedHotPathNode
+{
+    FString RawName;
+    FString DisplayName;
+    TArray<FString> Breadcrumbs;
+
+    double AvgInclusiveMs = 0.0;
+    double AvgExclusiveMs = 0.0;
+    double AvgCount = 0.0;
+    uint64 FramesPresent = 0;
+    double HitAvgInclusiveMs = 0.0;
+    double P95InclusiveMs = 0.0;
+    double MaxInclusiveMs = 0.0;
+
+    /** True for the synthetic "(+N below threshold)" row — merged by the same identity as any other. */
+    bool bIsAggregate = false;
+
+    TArray<float> PerFrameInclusiveMs;
+
+    TArray<TSharedPtr<FCk_MergedHotPathNode>> Children;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Per-thread wait/stall summary for a single frame window — how much of the thread's
  * time went to task waits, idle time, and sync completions (FCk_TimerCategorizer::IsWaitTimer).
  */
@@ -330,6 +377,16 @@ public:
     /** Get timer name, with fallback. */
     static auto GetTimerName(const FTimerNameMap& Names, uint32 TimerIndex) -> FString;
 
+    /**
+     * ComputeWaitSummaries for callers that already hold the timer-name map — a per-frame loop that
+     * rebuilt it on every call would pay #timers work per analysed frame for nothing.
+     */
+    static auto ComputeWaitSummaries(const FCk_TraceSession& Session,
+                                     const FCk_FrameAnalysisResult& GameThreadResult,
+                                     double MinWaitMs,
+                                     const FTimerNameMap& TimerNames)
+        -> TArray<FCk_WaitThreadSummary>;
+
     // ---- Structured data (for Slate views) ----
     // NOTE: declared after FTimerNameMap — member alias must precede its use in
     // parameter types.
@@ -341,6 +398,16 @@ public:
      */
     auto BuildHotPathTree(const FCk_TraceSession& Session,
                           const FCk_FrameAnalysisResult& Result) const
+        -> TArray<TSharedPtr<FCk_HotPathNode>>;
+
+    /**
+     * BuildHotPathTree for callers that already hold a read scope and the timer-name map — a
+     * per-frame loop that rebuilt the map on every call would pay #timers work per analysed frame
+     * for nothing.
+     */
+    auto BuildHotPathTree(const FCk_TraceSession& Session,
+                          const FCk_FrameAnalysisResult& Result,
+                          const FTimerNameMap& TimerNames) const
         -> TArray<TSharedPtr<FCk_HotPathNode>>;
 
     /**
