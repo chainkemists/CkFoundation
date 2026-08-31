@@ -1,5 +1,29 @@
 # DESIGN — CkVisualLod: budgeted visual-representation LOD
 
+## 2026-08-30 approved extension — range render profiles
+
+The original near/far representation decision remains intact. Far members additionally select an
+ordered renderer-data profile from camera distance. Each profile boundary has an outward threshold
+and an inward return hysteresis; the current band is sticky inside that interval.
+
+- `UCk_IskmRenderer_Data` is the shared authored profile for pooled SKMCs and GPU cluster
+  primitives. Existing render/cull/light fields become active; material overrides, animation
+  update interval/freeze, velocity, ray tracing, and minimum LOD extend that same asset.
+- One `ACk_Iskm_BatchedCrowd_Actor` retains the authoritative member array. GPU render views are
+  buckets keyed by `(spatial tile, profile index)`; moving between buckets never changes the public
+  member index or reconstructs its animation/custom-data state.
+- Profile preparation is atomic. All profile assets load and validate against the crowd's exact
+  animation collection/default mesh before the crowd is published. A failed required profile
+  rejects the crowd rather than running a partial profile set.
+- Profile migration creates/configures the destination bucket before ownership moves, preserves
+  the entire instance payload, zeros velocity for the one primitive-change frame, then rebuilds
+  each affected bucket once. This follows `CkDebugScene`'s staged bucket-reconcile precedent.
+- Primitive-wide profile buckets are mandatory: a material custom-data bit may alter pixels, but
+  cannot remove an instance from the shadow, velocity, custom-depth, or other primitive passes.
+- A zero-pass/frozen terminal profile supplies distance culling without adding another VisualLod
+  representation state. True per-instance render-pass filtering and a separate low-poly
+  shadow-only skeletal representation are outside this gate.
+
 **Date:** 2026-08-27 · **Status:** presented for maintainer sign-off (all §Decisions confirmed in-session)
 **Spec-by-example:** BusterBlock `Script/ECS/NpcVisualLod/` + `Script/ECS/AmbientNpc/` (read in full,
 including the uncommitted, compile-UNVERIFIED view-ranked promotion change — treated as design intent,
@@ -46,8 +70,12 @@ Two features in one module, each a standard quartet surface:
     clamp). Crowd id = array index; the game assigns it per entity at spawn (generalizes
     male/female to N).
 - `ck::FFragment_VisualLodArbiter_Current`: per-crowd pools (weak crowd actor, free list, owner
-  handles), promoted set, the three budget counters, observer handle, resolved view for the tick.
-- Requests: `SetObserver`, `ClearObserver`.
+  handles), promoted set, the three budget counters, observer handle, resolved view for the tick,
+  and a runtime-tuner snapshot seeded from the authored asset at setup.
+- Requests: `SetObserver`, `ClearObserver`, `SetRuntimeTuners`, `ResetRuntimeTuners`. Runtime
+  tuner changes are deferred, all-or-nothing snapshots: malformed finite/range/budget/enum inputs
+  complete `Failed` without changing the live values; reset copies the authored decision knobs.
+  Lowering a budget does not force demotions or rewrite counters; ordinary arbitration converges.
 
 ### Member — any entity opting into LOD
 

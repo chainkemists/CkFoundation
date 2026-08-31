@@ -9,7 +9,9 @@
 CkFoundation gains a T4 module, **CkVisualLod**, that owns budgeted skeletal-mesh visual LOD:
 per-entity switching between a pooled SKMC `IskmProxy`, a GPU batched crowd member, hidden, and
 always-promoted — with ranked promotion, hysteresis, dither crossfades, promote locks, and
-per-domain budgets, all configured by a per-arbiter data asset. BusterBlock's two duplicate
+per-domain budgets, plus distance-banded render profiles controlling shadow, material, lighting,
+animation-update, velocity, geometry-LOD, pass, and culling cost. All policy is configured by a
+per-arbiter data asset. BusterBlock's two duplicate
 AngelScript systems (`NpcVisualLod`, `AmbientNpc` visual LOD) become thin adopters (arbiter spawn +
 signal bindings + game-specific AS helpers) and their duplicated flip logic is deleted.
 
@@ -24,6 +26,9 @@ signal bindings + game-specific AS helpers) and their duplicated flip logic is d
 4. BB roster + ambient run on CkVisualLod arbiters with their existing autotests green and every
    mechanic of the spec-by-example inventory preserved or consciously dropped with sign-off.
 5. The BB duplicated flip processors/helpers are deleted.
+6. Far GPU members move between hysteretic render-profile bands without changing their stable
+   member index, animation phase, custom data, visibility ownership, cosmetics, or highlight state;
+   pooled SKMCs and GPU buckets apply the same renderer-data contract.
 
 ## Constraints & locked decisions
 
@@ -32,8 +37,10 @@ single home (regenerate any review brief from it, never from memory).
 
 ## Non-goals
 
-Per DESIGN §Non-goals: no new render techniques yet, no cosmetic generalization (game-side behind
-signals), no replication, no CkVisibleRange coupling.
+Per DESIGN §Non-goals: no cosmetic generalization (game-side behind signals), no replication, no
+CkVisibleRange coupling, and no engine-level per-instance shadow-pass fork. “Cheap shadow” is
+expressed through a higher minimum mesh LOD and reduced shadow features in a separate primitive
+profile; true shadow-only replacement geometry remains a later measured extension.
 
 ## Reading list
 

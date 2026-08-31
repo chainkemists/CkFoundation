@@ -182,6 +182,13 @@ public:
     Get_FarRate(
         const FCk_Handle_VisualLod& InHandle) -> float;
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VisualLod",
+              DisplayName = "[Ck][VisualLod] Get Render Band Index")
+    static int32
+    Get_RenderBandIndex(
+        const FCk_Handle_VisualLod& InHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisualLod",

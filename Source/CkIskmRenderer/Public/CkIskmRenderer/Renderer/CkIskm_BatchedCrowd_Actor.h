@@ -3,6 +3,7 @@
 #include "GameFramework/Actor.h"
 
 #include "CkIskm_BatchedClusterComponent.h" // for UCk_Iskm_BatchedClusterComponent::FInstance
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform / FCk_Handle (member cosmetics + controller entity)
 
@@ -11,6 +12,7 @@
 #include "CkIskm_BatchedCrowd_Actor.generated.h"
 
 class UCk_IskmAnimCollection_Data;
+class UCk_IskmRenderer_Data;
 class USceneComponent;
 class UCkUsf_OutlinePreset;
 
@@ -41,8 +43,37 @@ public:
     // Flush all members into their tile clusters. Call once after all AddInstance().
     void Finalize();
 
-    int32 Get_TileCount() const { return _Tiles.Num(); }
+    int32 Get_TileCount() const;
     int32 Get_InstanceCount() const { return _Members.Num(); }
+    auto
+    Set_RenderProfiles(
+        const TArray<UCk_IskmRenderer_Data*>& InProfiles) -> bool;
+
+    // Replaces value-only performance tuners without changing the authored profile identities,
+    // bucket keys, or members. The input must exactly align with Set_RenderProfiles' array.
+    auto
+    Set_RuntimeProfileTuners(
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners) -> bool;
+
+    auto
+    Can_SetRuntimeProfileTuners(
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners) const -> bool;
+
+    auto
+    Get_RuntimeProfileTuners() const -> const TArray<FCk_IskmRenderer_RuntimeProfileTuners>&
+    { return _RuntimeProfileTuners; }
+
+    auto
+    Set_MemberRenderProfile(
+        int32 InIndex,
+        int32 InProfileIndex) -> bool;
+
+    auto
+    Get_MemberRenderProfile(
+        int32 InIndex) const -> int32;
+
+    auto
+    Get_ProfileBucketCount() const -> int32;
 
     // ---- Member API (game-facing: NPC/crowd systems drive these) ----
     int32      Get_MemberCount() const { return _Members.Num(); }
@@ -180,6 +211,8 @@ private:
         FIntPoint  Tile = FIntPoint(0, 0);
         UCk_Iskm_BatchedClusterComponent::FInstance Inst;
         bool       Visible = true;
+        int32      ProfileIndex = 0;
+        float      ProfileAnimationAccumulator = 0.0f;
     };
 
     struct FMemberCosmetic
@@ -193,12 +226,26 @@ private:
     void      DoDestroy_ControllerEntity();
 
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;
+    static auto
+    MakeBucketKey(
+        const FIntPoint& InTile,
+        int32 InProfileIndex) -> FIntVector
+    {
+        return { InTile.X, InTile.Y, InProfileIndex };
+    }
+
+    static auto
+    TileOfBucketKey(
+        const FIntVector& InKey) -> FIntPoint
+    {
+        return { InKey.X, InKey.Y };
+    }
     FVector   TileCentre(const FIntPoint& InTile) const;
-    UCk_Iskm_BatchedClusterComponent* GetOrCreate_Tile(const FIntPoint& InTile);
+    UCk_Iskm_BatchedClusterComponent* GetOrCreate_Tile(const FIntVector& InKey);
     // Full rebuild (Set_Instances — proxy recreate). Use for count changes: visibility flips + tile migration.
-    void      RebuildTile(const FIntPoint& InTile);
+    void      RebuildTile(const FIntVector& InKey);
     // Light push (same instance count — transforms/frames/custom data only). Rolls members' velocity history.
-    void      PushTile(const FIntPoint& InTile);
+    void      PushTile(const FIntVector& InKey);
     FBox      TileLocalBounds() const;
 
     UPROPERTY(Transient)
@@ -212,18 +259,24 @@ private:
     TArray<float> _DefaultTileCustomPrimitiveData;
 
     UPROPERTY(Transient)
+    TArray<TObjectPtr<UCk_IskmRenderer_Data>> _RenderProfiles;
+
+    UPROPERTY(Transient)
+    TArray<FCk_IskmRenderer_RuntimeProfileTuners> _RuntimeProfileTuners;
+
+    UPROPERTY(Transient)
     TObjectPtr<UMaterialInterface> _OverrideMaterial;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UMaterialInterface>> _SlotOverrideMaterials;
 
     UPROPERTY(Transient)
-    TMap<FIntPoint, TObjectPtr<UCk_Iskm_BatchedClusterComponent>> _Tiles;
+    TMap<FIntVector, TObjectPtr<UCk_Iskm_BatchedClusterComponent>> _Tiles;
 
     // Member indices per tile (includes hidden — filtered when building the render arrays).
-    TMap<FIntPoint, TArray<int32>> _TileMembers;
+    TMap<FIntVector, TArray<int32>> _TileMembers;
 
-    TSet<FIntPoint> _DirtyTiles;
+    TSet<FIntVector> _DirtyTiles;
 
     TArray<FMember> _Members;
 
