@@ -3,6 +3,7 @@
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/CkNavigation_Stats.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
+#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -13,7 +14,6 @@
 #include <NavMesh/NavMeshPath.h>
 #include <NavMesh/RecastNavMesh.h>
 #include <NavigationData.h>
-#include <NavFilters/NavigationQueryFilter.h>
 #include "HAL/PlatformTime.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,67 +29,6 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Nav Waypoints Extracted"), STAT_Nav_WaypointsEx
 
 auto
     FCk_Nav_Algorithm::
-    ResolveQueryFilter(
-        ARecastNavMesh& InNavData,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
-        const FCk_Nav_QueryFilterOverlay& InOverlay)
-    -> FSharedConstNavQueryFilter
-{
-    const auto FilterClassIsValid = InFilterClass.Get() == nullptr
-        || ck::IsValid(InFilterClass.Get());
-    CK_ENSURE_IF_NOT(FilterClassIsValid,
-        TEXT("Nav query filter resolution received an invalid filter class"))
-    { return {}; }
-
-    auto BaseFilter = InNavData.GetDefaultQueryFilter();
-    if (InFilterClass.Get() != nullptr)
-    { BaseFilter = UNavigationQueryFilter::GetQueryFilter(InNavData, InFilterClass); }
-
-    const auto BaseFilterIsValid = BaseFilter.IsValid();
-    CK_ENSURE_IF_NOT(BaseFilterIsValid,
-        TEXT("Nav query filter resolution failed: base filter [{}] is invalid"),
-        GetNameSafe(InFilterClass.Get()))
-    { return {}; }
-
-    if (InOverlay.Get_ExcludedAreaClasses().IsEmpty())
-    { return BaseFilter; }
-
-    auto OverlayFilter = BaseFilter->GetCopy();
-    const auto OverlayFilterIsValid = OverlayFilter.IsValid();
-    CK_ENSURE_IF_NOT(OverlayFilterIsValid,
-        TEXT("Nav query filter resolution failed: could not copy base filter [{}]"),
-        GetNameSafe(InFilterClass.Get()))
-    { return {}; }
-
-    auto SeenAreaClasses = TSet<UClass*>{};
-    for (const auto AreaClass : InOverlay.Get_ExcludedAreaClasses())
-    {
-        const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
-        CK_ENSURE_IF_NOT(AreaClassIsValid,
-            TEXT("Nav query filter overlay contains an invalid excluded area class"))
-        { return {}; }
-
-        if (SeenAreaClasses.Contains(AreaClass.Get()))
-        { continue; }
-        SeenAreaClasses.Add(AreaClass.Get());
-
-        const auto AreaId = InNavData.GetAreaID(AreaClass);
-        const auto AreaIsRegistered = AreaId != INDEX_NONE;
-        CK_ENSURE_IF_NOT(AreaIsRegistered,
-            TEXT("Nav query filter overlay area [{}] is not registered on NavData [{}]"),
-            GetNameSafe(AreaClass.Get()), InNavData.GetName())
-        { return {}; }
-
-        OverlayFilter->SetExcludedArea(static_cast<uint8>(AreaId));
-    }
-
-    return OverlayFilter;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    FCk_Nav_Algorithm::
     FindPathSync(
         UNavigationSystemV1& InNavSys,
         ARecastNavMesh&      InNavData,
@@ -100,7 +39,7 @@ auto
         float                InProjectionVerticalHalfExtent,
         float                InAgentRadiusForFirstSkip,
         FCk_Nav_PathResult&  OutResult,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        FGameplayTag         InFilterTag,
         float                InCornerOffsetDistance,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay)
         -> bool
@@ -120,7 +59,8 @@ auto
         ? InProjectionHalfExtent
         : InProjectionVerticalHalfExtent;
     const auto ProjectionExtent = FVector{InProjectionHalfExtent, InProjectionHalfExtent, VerticalHalfExtent};
-    const auto QueryFilter = ResolveQueryFilter(InNavData, InFilterClass, InQueryFilterOverlay);
+    const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
+        InNavData, InFilterTag, InQueryFilterOverlay);
     if (NOT QueryFilter.IsValid())
     {
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
@@ -154,33 +94,12 @@ auto
     {
         const auto NavBounds = InNavData.GetNavMeshBounds();
 
-        const auto BigHalfExtentUu = InProjectionHalfExtent * 8.0f;
-        const auto BigExtent = FVector{BigHalfExtentUu};
-        auto BigProj = FNavLocation{};
-        const auto bBigOk = InNavSys.ProjectPointToNavigation(InPoint, BigProj, BigExtent, &InNavData);
-
-        const auto BigOkStr = FString{bBigOk ? TEXT("OK") : TEXT("FAIL")};
-
-        const auto LegacyCubeApplies = VerticalHalfExtent < InProjectionHalfExtent;
-        auto LegacyProj = FNavLocation{};
-        const auto LegacyOk = LegacyCubeApplies
-            && InNavSys.ProjectPointToNavigation(InPoint, LegacyProj, FVector{InProjectionHalfExtent}, &InNavData);
-        const auto LegacyCubeStr = FString{NOT LegacyCubeApplies ? TEXT("n/a") : LegacyOk ? TEXT("OK") : TEXT("FAIL")};
-
         ck::nav::Warning(TEXT("FindPathSync: [{}] projection FAILED. "
             "Point=[{}] Extent=[{}]. NavBounds=[{} -> {}] (valid=[{}]). "
-            "Retry@[{}]uu=[{}] (snapped=[{}]). "
-            "LegacyCube@[{}]uu=[{}] (snapped=[{}]). "
             "DefaultFilterValid=[{}] AgentCfg=[r=[{}] h=[{}] step=[{}]]"),
             InWhich,
             InPoint, ProjectionExtent,
             NavBounds.Min, NavBounds.Max, static_cast<int32>(NavBounds.IsValid != 0),
-            BigHalfExtentUu,
-            BigOkStr,
-            bBigOk ? BigProj.Location : FVector::ZeroVector,
-            InProjectionHalfExtent,
-            LegacyCubeStr,
-            LegacyOk ? LegacyProj.Location : FVector::ZeroVector,
             static_cast<int32>(InNavData.GetDefaultQueryFilter().IsValid()),
             InNavData.GetConfig().AgentRadius, InNavData.GetConfig().AgentHeight, InNavData.GetConfig().AgentStepHeight);
     };

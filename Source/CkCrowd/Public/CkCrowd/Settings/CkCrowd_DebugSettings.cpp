@@ -16,7 +16,6 @@ namespace ck_crowd_debug_settings_cvars
     static int32 GDrawBreadcrumbs   = 0;
     static int32 GDrawPlannedPaths  = 0;
     static int32 GDrawPathTrouble   = 1;
-    static int32 GDrawNavProjection = 0;
     static int32 GDrawAgentRings    = 0;
     static int32 GDrawBlockStatus   = 1;
 
@@ -117,22 +116,6 @@ namespace ck_crowd_debug_settings_cvars
         }),
         ECVF_Cheat);
 
-    static FAutoConsoleVariableRef CVarDrawNavProjection(
-        TEXT("ck.Crowd.DrawNavProjection"),
-        GDrawNavProjection,
-        TEXT("Draw a navmesh-projection marker (green/red circle on the floor) under every crowd agent.\n")
-        TEXT("  0 = off (default — synchronous ProjectPointToNavigation per agent per tick is the\n")
-        TEXT("        single most expensive Crowd debug viz at scale)\n")
-        TEXT("  1 = on"),
-        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
-        {
-            WriteToSettings(
-                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawNavProjection(); },
-                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawNavProjection(InV); },
-                InCVar);
-        }),
-        ECVF_Cheat);
-
     static FAutoConsoleVariableRef CVarDrawAgentRings(
         TEXT("ck.Crowd.DrawAgentRings"),
         GDrawAgentRings,
@@ -194,8 +177,6 @@ auto
     { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPathTrouble")))
     { CVar->Set(_DrawPathTrouble ? 1 : 0, ECVF_SetByGameSetting); }
-    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
-    { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
     { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
     // Defaults ON, so it needs PathTrouble's explicit-priority Set rather than
@@ -246,11 +227,6 @@ auto
                 ECVF_SetByConsole,
                 ECVF_SetByScalability);
         }
-    }
-    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawNavProjection))
-    {
-        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
-        { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
     }
     else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawAgentRings))
     {
@@ -326,17 +302,6 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawPathTrouble();
-}
-
-auto
-    UCk_Utils_Crowd_DebugSettings_UE::
-    Get_DrawNavProjection()
-    -> bool
-{
-    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
-    if (ck::Is_NOT_Valid(Settings))
-    { return false; }
-    return Settings->Get_DrawNavProjection();
 }
 
 auto

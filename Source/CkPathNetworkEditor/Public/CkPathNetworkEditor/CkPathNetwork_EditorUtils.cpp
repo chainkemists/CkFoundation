@@ -6,8 +6,8 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 
-#include <NavigationSystem.h>
-#include <NavMesh/RecastNavMesh.h>
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+
 #include <ScopedTransaction.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,22 +24,24 @@ namespace ck_pathnetwork_editor
 
     auto
     Evaluate_NavmeshConformance(
-        UNavigationSystemV1& InNavSys,
-        const ARecastNavMesh& InNavData,
+        const UObject* InWorldContext,
         const FVector& InSourcePoint,
         const FVector& InProjectionExtent)
         -> FNavmeshConformance
     {
+        const auto Query = FCk_NavSurface_ProjectionQuery{InSourcePoint}
+            .Set_SearchHalfExtents(InProjectionExtent);
+
+        const auto Projected = UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorldContext, Query);
+
         auto Result = FNavmeshConformance{};
-        auto Projected = FNavLocation{};
-        Result._Projected = InNavSys.ProjectPointToNavigation(
-            InSourcePoint, Projected, InProjectionExtent, &InNavData);
+        Result._Projected = Projected.Get_Status() == ECk_NavSurface_QueryStatus::Success;
         if (NOT Result._Projected)
         { return Result; }
 
-        Result._ProjectedPoint = Projected.Location;
-        Result._PlanarDelta = FVector::Dist2D(InSourcePoint, Projected.Location);
-        Result._VerticalDelta = FMath::Abs(InSourcePoint.Z - Projected.Location.Z);
+        Result._ProjectedPoint = Projected.Get_Location();
+        Result._PlanarDelta = FVector::Dist2D(InSourcePoint, Projected.Get_Location());
+        Result._VerticalDelta = FMath::Abs(InSourcePoint.Z - Projected.Get_Location().Z);
         return Result;
     }
 
@@ -173,29 +175,21 @@ auto
         return Result;
     }
 
-    auto* NavSys = UNavigationSystemV1::GetCurrent(World);
-    const bool NavSysIsValid = ck::IsValid(NavSys);
-    CK_ENSURE_IF_NOT(NavSysIsValid,
-        TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found no navigation system"), InActor)
+    const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
+    const bool NavSurfaceIsAvailable = ProviderHealth != ECk_NavSurface_ProviderHealth::NoData
+        && ProviderHealth != ECk_NavSurface_ProviderHealth::Error;
+    CK_ENSURE_IF_NOT(NavSurfaceIsAvailable,
+        TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found no navigation surface, health [{}]"),
+        InActor, ProviderHealth)
     {
-        Result._FailureReason = TEXT("World has no navigation system");
-        return Result;
-    }
-
-    const auto* NavData = Cast<ARecastNavMesh>(
-        NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
-    const bool NavDataIsValid = ck::IsValid(NavData);
-    CK_ENSURE_IF_NOT(NavDataIsValid,
-        TEXT("Trim_UnprojectableGeneratedRibbonEndpoints on [{}] found no default Recast navigation data"), InActor)
-    {
-        Result._FailureReason = TEXT("World has no default Recast navigation data");
+        Result._FailureReason = TEXT("World has no navigation surface");
         return Result;
     }
 
     const auto EvaluateGeneratedPoint = [&](const FCk_PathNetwork_RibbonPoint& InPoint)
     {
         return ck_pathnetwork_editor::Evaluate_NavmeshConformance(
-            *NavSys, *NavData, InPoint.Get_Location(), InProjectionExtent);
+            World, InPoint.Get_Location(), InProjectionExtent);
     };
     const auto RecordNonconformantPoint = [&](const FCk_PathNetwork_RibbonPoint& InPoint,
                                                const ck_pathnetwork_editor::FNavmeshConformance& InConformance)
@@ -353,22 +347,14 @@ auto
         return Result;
     }
 
-    auto* NavSys = UNavigationSystemV1::GetCurrent(World);
-    const bool NavSysIsValid = ck::IsValid(NavSys);
-    CK_ENSURE_IF_NOT(NavSysIsValid,
-        TEXT("Validate_RibbonPointProjectability on [{}] found no navigation system"), InActor)
+    const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
+    const bool NavSurfaceIsAvailable = ProviderHealth != ECk_NavSurface_ProviderHealth::NoData
+        && ProviderHealth != ECk_NavSurface_ProviderHealth::Error;
+    CK_ENSURE_IF_NOT(NavSurfaceIsAvailable,
+        TEXT("Validate_RibbonPointProjectability on [{}] found no navigation surface, health [{}]"),
+        InActor, ProviderHealth)
     {
-        Result._FailureReason = TEXT("World has no navigation system");
-        return Result;
-    }
-
-    const auto* NavData = Cast<ARecastNavMesh>(
-        NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate));
-    const bool NavDataIsValid = ck::IsValid(NavData);
-    CK_ENSURE_IF_NOT(NavDataIsValid,
-        TEXT("Validate_RibbonPointProjectability on [{}] found no default Recast navigation data"), InActor)
-    {
-        Result._FailureReason = TEXT("World has no default Recast navigation data");
+        Result._FailureReason = TEXT("World has no navigation surface");
         return Result;
     }
 
@@ -381,7 +367,7 @@ auto
             ++Result._TotalPointCount;
 
             const auto Conformance = ck_pathnetwork_editor::Evaluate_NavmeshConformance(
-                *NavSys, *NavData, Point.Get_Location(), Result._ProjectionExtent);
+                World, Point.Get_Location(), Result._ProjectionExtent);
             if (NOT ck_pathnetwork_editor::Is_Conformant(
                     Conformance, InMaxPlanarProjectionDelta, InMaxVerticalProjectionDelta))
             {

@@ -23,12 +23,12 @@ public class CkEqs : CkModuleRules
             "CkEntityTag",
             "CkLabel",
             "CkLog",
+            "CkNavigation",
             "CkRecord",
             "CkSettings",
             "CkShapes",
             "CkSpatialQuery",
             "CkThirdParty",
-            "NavigationSystem",
         });
     }
 }

@@ -11,7 +11,6 @@
 
 struct FCk_Request_Nav_FindPath;
 struct FCk_Request_PathNetworkFollower_FindRoute;
-class UNavigationQueryFilter;
 
 namespace ck
 {
@@ -116,10 +115,10 @@ namespace ck
             FCk_Request_PathNetworkFollower_FindRoute& InOutRequest) -> void;
 
         static auto
-        GetPlanQueryFilterClass(
+        GetPlanQueryFilterTag(
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
-            -> TSubclassOf<UNavigationQueryFilter>;
+            -> FGameplayTag;
 
     private:
         static auto
