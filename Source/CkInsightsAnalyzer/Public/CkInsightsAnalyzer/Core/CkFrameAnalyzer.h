@@ -66,6 +66,17 @@ struct CKINSIGHTSANALYZER_API FCk_FrameAnalysisResult
     /** Timer index of the frame root (depth-0 event). */
     uint32 FrameRootTimerIndex = static_cast<uint32>(INDEX_NONE);
 
+    /**
+     * True for a result synthesized by averaging several real frames
+     * (FCk_MultiFrameStats::AveragedFrame), false for one extracted from the trace.
+     *
+     * Its per-timer maps are real means, but FrameStartTime/FrameEndTime/Events are placeholders,
+     * so anything that RE-READS the session over this result's time window would silently report
+     * whatever happened at the start of the trace. Those helpers reject a synthesized result
+     * instead; the multi-frame report aggregates their averaged equivalents itself.
+     */
+    bool IsSynthesizedAverage = false;
+
     /** Check if the result has data. */
     auto IsValid() const -> bool { return Events.Num() > 0; }
 
