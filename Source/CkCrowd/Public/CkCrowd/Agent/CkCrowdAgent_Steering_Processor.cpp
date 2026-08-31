@@ -9,14 +9,10 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNavigation/Nav/CkNav_Algorithm.h"
-#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
-
-#include "NavigationSystem.h"
-#include "NavMesh/RecastNavMesh.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -89,37 +85,30 @@ namespace ck
         //
         // Resolved on the first frame a retirement condition actually fires — at corners, not on
         // every frame of a straight run — so an agent between corners pays nothing for the gate.
-        auto NavDataIsResolved = false;
-        auto NavData = static_cast<ARecastNavMesh*>(nullptr);
+        auto GateWorldIsResolved = false;
+        auto GateWorld = static_cast<UWorld*>(nullptr);
         auto QueryFilterIsResolved = false;
-        auto QueryFilter = FSharedConstNavQueryFilter{};
+        auto QueryFilterTag = FGameplayTag{};
+        auto QueryFilterOverlay = FCk_Nav_QueryFilterOverlay{};
 
-        const auto Get_NavDataForGate = [&]() -> ARecastNavMesh*
+        const auto Get_WorldForGate = [&]() -> UWorld*
         {
-            if (NavDataIsResolved)
-            { return NavData; }
+            if (GateWorldIsResolved)
+            { return GateWorld; }
 
-            NavDataIsResolved = true;
+            GateWorldIsResolved = true;
 
             if (UCk_Utils_Crowd_Settings_UE::Get_WaypointRetirementLineOfSight() ==
                 ECk_CrowdWaypointRetirementLineOfSightMode::Disabled)
-            { return NavData; }
+            { return GateWorld; }
 
-            // A flying agent's corridor comes from a volumetric provider, so a Recast ray through
+            // A flying agent's corridor comes from a volumetric provider, so a surface ray through
             // free space says nothing about it and would strand it on a waypoint it can reach.
             if (InHandle.Has<FTag_CrowdAgent_Flying>())
-            { return NavData; }
+            { return GateWorld; }
 
-            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            const auto NavSys = ck::IsValid(World)
-                ? UNavigationSystemV1::GetCurrent(World)
-                : static_cast<UNavigationSystemV1*>(nullptr);
-
-            NavData = ck::IsValid(NavSys)
-                ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-                : static_cast<ARecastNavMesh*>(nullptr);
-
-            return NavData;
+            GateWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+            return GateWorld;
         };
 
         // The plane test does the real work: the minimum turning radius (MaxSpeed / MaxTurnRate,
@@ -155,38 +144,34 @@ namespace ck
                     ck_crowd_agent_steering_processor::WaypointRetirementNavQueryEpsilonUu)
                 { return true; }
 
-                const auto GateNavData = Get_NavDataForGate();
+                auto* GateWorldForChord = Get_WorldForGate();
 
-                // No nav data (or the gate switched off) is the pre-gate world, where the navmesh
+                // No world (or the gate switched off) is the pre-gate world, where the navmesh
                 // constraint is a pass-through too — nothing here to disagree with.
-                if (ck::Is_NOT_Valid(GateNavData))
+                if (ck::Is_NOT_Valid(GateWorldForChord))
                 { return true; }
 
                 if (NOT QueryFilterIsResolved)
                 {
                     QueryFilterIsResolved = true;
-                    const auto FilterClass =
+                    QueryFilterTag =
                         InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::PathNetwork
-                        ? UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InParams.Get_NavQueryFilter())
-                        : FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterClass(
+                        ? InParams.Get_NavQueryFilter()
+                        : FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(
                             InParams, InPathFollow);
-                    QueryFilter = FCk_Nav_Algorithm::ResolveQueryFilter(
-                        *GateNavData,
-                        FilterClass,
-                        UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                            InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
-                                ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
-                                : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
+                    QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                        InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
+                            ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                            : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
                 }
-                if (NOT QueryFilter.IsValid())
-                { return false; }
 
-                auto HitLocation = FVector::ZeroVector;
-                return NOT GateNavData->Raycast(
-                    CurrentLoc,
-                    Waypoints[InPathFollow._WaypointIndex + 1],
-                    HitLocation,
-                    QueryFilter);
+                const auto ChordRaycast = FCk_NavSurface_RaycastQuery{
+                        CurrentLoc, Waypoints[InPathFollow._WaypointIndex + 1]}
+                    .Set_QueryFilter(QueryFilterTag)
+                    .Set_QueryFilterOverlay(QueryFilterOverlay);
+
+                return UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(GateWorldForChord, ChordRaycast)
+                    .Get_Status() != ECk_NavSurface_QueryStatus::Blocked;
             }();
 
             if (NOT ChordIsNavigable)

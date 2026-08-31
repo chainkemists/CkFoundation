@@ -8,16 +8,12 @@
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
-#include <NavAreas/NavArea.h>
-#include <Templates/SubclassOf.h>
 
 #include "CkNav_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Nav_Algorithm;
-class UNavigationQueryFilter;
-class UNavArea;
 namespace ck
 {
     class FProcessor_Nav_HandleRequests;
@@ -180,10 +176,10 @@ struct CKNAVIGATION_API FCk_Nav_QueryFilterOverlay
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
-    TArray<TSubclassOf<UNavArea>> _ExcludedAreaClasses;
+    TArray<FGameplayTag> _ExcludedAreaTags;
 
 public:
-    CK_PROPERTY(_ExcludedAreaClasses);
+    CK_PROPERTY(_ExcludedAreaTags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -208,11 +204,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _QueryFilter;
 
-    // Explicit filter class for THIS query; outranks the tag mapping when set. Exists for
-    // per-dispatch filter swaps (CkCrowd's strict/permissive planning phases) — a phase is not a
-    // project policy, so it cannot live in the settings table.
+    // Explicit filter tag for THIS query; outranks _QueryFilter when set. Exists for per-dispatch
+    // filter swaps (CkCrowd's strict/permissive planning phases) — a phase is not a project
+    // policy, so it cannot live in the settings table.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
-    TSubclassOf<UNavigationQueryFilter> _QueryFilterClassOverride;
+    FGameplayTag _QueryFilterOverride;
 
     // Value-only additions applied to a private copy of the resolved base filter for this query.
     // This never mutates the NavData cache shared by other callers.
@@ -235,7 +231,7 @@ public:
     CK_PROPERTY_GET(_TargetLocation);
     CK_PROPERTY(_AllowPartialPath);
     CK_PROPERTY(_QueryFilter);
-    CK_PROPERTY(_QueryFilterClassOverride);
+    CK_PROPERTY(_QueryFilterOverride);
     CK_PROPERTY(_QueryFilterOverlay);
     CK_PROPERTY(_StartOverride);
     CK_PROPERTY(_StartOverrideLocation);

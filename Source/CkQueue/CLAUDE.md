@@ -76,8 +76,9 @@ semantic signals. It does not move entities and does not depend on `CkCrowd`.
 
 - A failed formation performs the configured bounded retry episodes, then enters
   `WaitingForNavigationChange` and emits `NavigationRetryExhausted`.
-- `UCk_Queue_NavigationRevisionSubsystem_UE` lazily binds to the NavSystem. First successful binding advances its
-  revision, so a NavSystem that appears after world-subsystem initialization cannot strand a waiting queue.
+- Navigation-rebuild observability comes from `UCk_Utils_NavSurface_UE::Get_SurfaceRevision`
+  (CkNavigation's consolidated revision observer, which lazily binds to the NavSystem on read), so
+  a NavSystem that appears after world-subsystem initialization cannot strand a waiting queue.
 - A navigation-generation change emits `NavigationChanged`, resets the retry episode, and retries the complete
   formation. Search-budget exhaustion also waits for an explicit topology/configuration change instead of
   spinning.

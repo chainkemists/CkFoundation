@@ -11,8 +11,7 @@
 #include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
-#include "NavigationSystem.h"
-#include "NavigationData.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -105,13 +104,11 @@ namespace ck
             return;
         }
 
-        const auto NavSys = UNavigationSystemV1::GetCurrent(World);
-        const auto NavData = ck::IsValid(NavSys)
-            ? NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
-            : static_cast<ANavigationData*>(nullptr);
+        const auto SurfaceHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
 
         // A world without nav data has nothing to constrain against — legitimate absence, not an error.
-        if (ck::Is_NOT_Valid(NavData))
+        if (SurfaceHealth == ECk_NavSurface_ProviderHealth::NoData ||
+            SurfaceHealth == ECk_NavSurface_ProviderHealth::Error)
         {
             EnqueueOffset(Displacement);
             return;
@@ -123,8 +120,10 @@ namespace ck
         const auto VerticalExtent = InParams.Get_Height();
         const auto ProjectionExtent = FVector{HorizontalExtent, HorizontalExtent, VerticalExtent};
 
-        auto StartOnMesh = FNavLocation{};
-        if (NOT NavSys->ProjectPointToNavigation(From, StartOnMesh, ProjectionExtent))
+        const auto StartProjection = UCk_Utils_NavSurface_UE::Try_ProjectPoint(
+            World, FCk_NavSurface_ProjectionQuery{From}.Set_SearchHalfExtents(ProjectionExtent));
+
+        if (StartProjection.Get_Status() != ECk_NavSurface_QueryStatus::Success)
         {
             using namespace ck_crowd_agent_constrain_to_navmesh;
 
@@ -139,10 +138,12 @@ namespace ck
             auto RecoveryRejectedForLift = false;
             auto RecoveryOffset = FVector::ZeroVector;
 
-            auto Recovered = FNavLocation{};
-            if (NavSys->ProjectPointToNavigation(From, Recovered, RecoveryExtent))
+            const auto RecoveryProjection = UCk_Utils_NavSurface_UE::Try_ProjectPoint(
+                World, FCk_NavSurface_ProjectionQuery{From}.Set_SearchHalfExtents(RecoveryExtent));
+
+            if (RecoveryProjection.Get_Status() == ECk_NavSurface_QueryStatus::Success)
             {
-                RecoveryOffset = ResolveSurfaceOffset(From, Recovered.Location);
+                RecoveryOffset = ResolveSurfaceOffset(From, RecoveryProjection.Get_Location());
                 RecoveryRejectedForLift = Get_RecoveryExceedsStepUp(
                     static_cast<float>(RecoveryOffset.Z),
                     UCk_Utils_Crowd_Settings_UE::Get_GroundingRecoveryMaxStepUpCm());
@@ -220,7 +221,7 @@ namespace ck
         if (NOT IsDisplacing)
         {
             const auto VerticalOffset = ResolveVerticalDriftOffset(
-                From, StartOnMesh.Location, UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm());
+                From, StartProjection.Get_Location(), UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm());
 
             if (FMath::Abs(VerticalOffset.Z) > InParams.Get_Radius())
             {
@@ -235,10 +236,12 @@ namespace ck
 
         // Walk the requested planar displacement from the projected feet location. The result's Z
         // is the authoritative surface height reached by that walk.
-        const auto DesiredTarget = StartOnMesh.Location + FVector{Displacement.X, Displacement.Y, 0.0f};
+        const auto DesiredTarget = StartProjection.Get_Location() + FVector{Displacement.X, Displacement.Y, 0.0f};
 
-        auto Constrained = FNavLocation{};
-        if (NOT NavData->FindMoveAlongSurface(StartOnMesh, DesiredTarget, Constrained))
+        const auto SurfaceWalk = UCk_Utils_NavSurface_UE::Try_MoveAlongSurface(
+            World, FCk_NavSurface_MoveAlongSurfaceQuery{StartProjection.Get_Location(), DesiredTarget});
+
+        if (SurfaceWalk.Get_Status() != ECk_NavSurface_QueryStatus::Success)
         {
             // Valid on-mesh start but the surface walk failed: hold position rather than risk
             // stepping off — dtCrowd's corridor simply doesn't advance in this case either.
@@ -249,7 +252,7 @@ namespace ck
         // drift and vertical drift both fold into this frame's surface correction. Using the
         // integrator's raw Z here lets downward momentum overshoot the surface and eventually
         // escape the projection extent.
-        const auto SurfaceOffset = ResolveSurfaceOffset(From, Constrained.Location);
+        const auto SurfaceOffset = ResolveSurfaceOffset(From, SurfaceWalk.Get_ReachedLocation());
 
         if (FMath::Abs(SurfaceOffset.Z) > InParams.Get_Radius())
         {

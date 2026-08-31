@@ -193,9 +193,10 @@ crowd-blocked. Strict is retried only on NEW evidence
 (fresh MoveTo, BlockedRecheck resume, PathRefresh trigger, caller ForceReplan); the stall ladder's
 re-paths carry none, and retrying strict there doubles every rung's Pending stop-start cycle into
 a measurable facing whip. The strict filter composes with a host's own filter through the params'
-`_NavQueryFilterStrict` tag (register a strict VARIANT of the permissive filter — classes cannot
-compose at query time); unset, the framework's `UCk_NavQueryFilter_AvoidStandingCrowds` rides the
-FindPath request's `_QueryFilterClassOverride`. `_StrictPlanFailed` on PathFollow records "no
+`_NavQueryFilterStrict` tag (register a strict VARIANT of the permissive filter — definitions do
+not compose at query time); unset, the framework's `Nav.Filter.Crowd.AvoidStandingCrowds`
+definition (excludes `Nav.Area.Crowd.Agent`; registered in `CkCrowd_NavGameplayTags.cpp`) rides
+the FindPath request's `_QueryFilterOverride` tag. `_StrictPlanFailed` on PathFollow records "no
 crowd-free route existed this episode" and surfaces in the OnGoalFailed payload. Coverage:
 `CkAutoTest_Crowd_NarrowGap_BlockedDetours`, `CkAutoTest_Crowd_QueueCross_RoutesAround`; gyms
 `Crowd NarrowGap`, `Crowd QueueCross`.
@@ -1189,41 +1190,6 @@ magnitude only and left direction free to snap.
 - **`ck.Crowd.RDPEpsilon` default 8cm** — chosen so a straight head-on test yields ~2-3 keypoints and a
   curving cluster path ~10-20: enough to read the path shape, light enough to grep without paging.
   Lower = more keypoints retained; higher = more aggressive collapse.
-
-### `ck.Crowd.DiagNavClip` — why an agent's movement is not landing
-
-`FProcessor_CrowdAgent_DiagNavClip` (default 0, `ECVF_Cheat`) answers "is the navmesh clamp eating
-this agent, and which wedge is it in" without touching the clamp. It sits in `FGroup_Physics`
-between PushApart and ConstrainToNavmesh — it MUST read `FFragment_CrowdAgent_PendingDisplacement`
-before the clamp zeroes it — and replicates the clamp's math read-only (same NavData, same
-projection extents including the 4x recovery widening, same `FindMoveAlongSurface` walk). Walking
-AND PathPending agents are sampled; Idle, Asleep and Flying are not. Its state fragment
-(`FFragment_CrowdAgent_DiagNavClip`) is added lazily on the first enabled frame, so an off CVar
-costs one CVar read and nothing else.
-
-A frame counts as clipped when `staged >= 0.5uu` and either the surface walk ate it
-(`clipFrac >= 0.75`, or the walk/projection failed) or the walk was demonstrably fine yet almost
-nothing landed (`applied < 0.15 * staged` with `clipFrac < 0.5`) — the latter is `ExternalHold`, and
-it accuses a second Transform writer rather than the clamp. `applied` is measured against the
-position held at the PREVIOUS sample, so it is one frame stale; irrelevant at the half-second
-granularity an episode needs. 0.5s of consecutive clipped frames opens an episode (`START`),
-which re-reports every 2s (`HOLD`) and closes on the first unclipped frame (`END`, carrying the
-duration and the per-agent episode count). One `Log`-verbosity line each, prefixed `[CrowdNavClip]`:
-
-```
-[CrowdNavClip] START agent=<handle> state=<Walking|PathPending> pos=X= Y= Z= staged=X= Y= (uu)
-  desired=X= Y= Z= (uu/s) projectOk=<0|1> recoveryOk=<0|1> moveOk=<0|1> clipUu= clipFrac= applied=
-  wp=<idx>/<num> curWp=X= Y= Z= segStart=X= Y= Z= goal=X= Y= Z= pathStatus=<Ready|Partial|Pending|Failed|None>
-  rayAgentToWp=<blocked|clear|na> raySegStartToWp=<...> rayAgentToGoal=<...>
-  class=<OffMesh|SurfaceWalkFailed|ExternalHold|PathCrossesBoundary|SteeringOffPath|Other>
-[CrowdNavClip] HOLD  <same fields> dur=<s>
-[CrowdNavClip] END agent= state= pos=X= Y= Z= staged= applied= dur=<s> episodes=<n>
-```
-
-The three rays are `ANavigationData::Raycast` on the same NavData (true == BLOCKED, `na` when the
-waypoint index is invalid or the agent has no path result); they are what separates "the planner's
-corridor crosses a navmesh boundary" (both agent→wp and segStart→wp blocked) from "steering has
-wandered off the corridor" (agent→wp blocked, segStart→wp clear).
 
 ## See also
 

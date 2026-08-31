@@ -3,6 +3,7 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_NavArea.h"
+#include "CkCrowd/CkCrowd_NavGameplayTags.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -10,12 +11,10 @@
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 #include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 #include "CkShapes/Box/CkShapeBox_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
-
-#include <NavigationSystem.h>
-#include <NavMesh/RecastNavMesh.h>
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAvoidanceVolume_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAvoidanceVolume_Monitor);
@@ -24,6 +23,25 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAvoidanceVolume_EndPlay);
 namespace ck_crowd_avoidance_volume
 {
     constexpr auto TransformDriftTolerance = 0.01f;
+
+    // The tag twin of ck::crowd_avoidance_volume::Get_NavAreaClass — the confirmation probe asks the
+    // surface which AREA it reports, and the surface speaks tags.
+    auto Get_NavAreaTag(
+        ECk_CrowdAvoidanceVolume_TraversalPolicy InTraversalPolicy)
+        -> FGameplayTag
+    {
+        switch (InTraversalPolicy)
+        {
+            case ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible:
+                return TAG_Nav_Area_Crowd_AvoidanceVolume.GetTag();
+            case ECk_CrowdAvoidanceVolume_TraversalPolicy::HardExclude:
+                return TAG_Nav_Area_Crowd_AvoidanceVolume_HardExclude.GetTag();
+            case ECk_CrowdAvoidanceVolume_TraversalPolicy::CostOnly:
+                return TAG_Nav_Area_Crowd_AvoidanceVolume_CostOnly.GetTag();
+            default:
+                return {};
+        }
+    }
 }
 
 namespace ck
@@ -183,24 +201,14 @@ namespace ck
         { return; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Volume);
-        auto* NavSystem = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-        auto* NavMesh = NavSystem != nullptr
-            ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
-        const auto NavAreaClass = crowd_avoidance_volume::Get_NavAreaClass(InRuntime.Get_TraversalPolicy());
-        const auto AreaId = NavMesh != nullptr && IsValid(NavAreaClass.Get())
-            ? NavMesh->GetAreaID(NavAreaClass)
-            : INDEX_NONE;
-        if (NavMesh == nullptr || AreaId == INDEX_NONE)
-        { return; }
+        const auto AreaTag = ck_crowd_avoidance_volume::Get_NavAreaTag(InRuntime.Get_TraversalPolicy());
 
         const auto Samples = crowd_avoidance_volume::GetConfirmationSamplePoints(InRuntime._PaintedObb);
         const auto ProbeExtent = FVector{10.0f, 10.0f, InRuntime._PaintedObb._WorldHalfExtents.Z};
         auto IsConfirmed = NOT Samples.IsEmpty();
         for (const auto& Sample : Samples)
         {
-            const auto Poly = NavMesh->FindNearestPoly(Sample, ProbeExtent);
-            if (Poly != INVALID_NAVNODEREF && static_cast<int32>(NavMesh->GetPolyAreaID(Poly)) == AreaId)
+            if (ck::nav_surface_recast::Get_IsAreaLiveAt(World, AreaTag, Sample, ProbeExtent))
             { continue; }
             IsConfirmed = false;
             break;
