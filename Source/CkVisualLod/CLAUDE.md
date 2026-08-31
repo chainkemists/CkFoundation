@@ -7,10 +7,8 @@ promote locks (ragdoll/montage holders), reserved lock budget, and per-domain cr
 **arbiter** entity per domain owns budgets/pools/view; **member** entities opt in and reference
 their domain by gameplay tag (explicit `Request_SetArbiter` overrides).
 
-**Status:** under construction — Gate 0 (scaffold + data surface) of the campaign in
+**Status:** active framework module. Campaign history and remaining manual evidence live in
 [PLAN.md](../CkVisualLod/PLAN.md). Design of record: [DESIGN_CkVisualLod.md](DESIGN_CkVisualLod.md).
-The mechanism (pools, flips, fades, ranking) lands in Gate 1; this doc grows per gate and is the
-campaign's permanent survivor.
 
 **Depends on:** `CkCamera` (view info), `CkCore`, `CkEcs`, `CkEcsExt`, `CkIskmRenderer` (the
 mechanism APIs this module orchestrates), `CkLog`, `CkPhysics` (planar speed for far-anim),
@@ -27,7 +25,11 @@ mechanism APIs this module orchestrates), `CkLog`, `CkPhysics` (planar speed for
   index, proxy renderer, promotion mode, initial far anim).
 - Member requests: `SetArbiter`, `SetVisibility`, `SetFarAnim`, `SetRenderer`, `Suspend`/`Resume`
   (external ownership handoff); immediate mutators `Request_Acquire/ReleasePromoteLock`.
-- Arbiter requests: `SetObserver`/`ClearObserver` (explicit observer wins over local-view discovery).
+- Arbiter requests: `SetObserver`/`ClearObserver` (explicit observer wins over local-view discovery),
+  `SetRuntimeTuners`/`ResetRuntimeTuners`. Runtime tuners are a complete deferred snapshot seeded
+  from the asset; invalid snapshots fail atomically and lowering a budget converges through normal
+  arbitration rather than forcibly changing existing promotions or counters. `Get_AreRuntimeTunersValid`
+  validates candidate nested edits against the live arbiter's authored shape before they are requested.
 - Signals (game/AS binds; the game seam): `OnMemberAcquired` (fires BEFORE the member's first
   visible frame — cosmetics window), `OnPromoted`, `OnDemoteFinishing`, `OnMemberReleased`.
   Member-event payloads carry `(handle, memberIndex)`; read the crowd via `Get_Crowd(handle)` at
@@ -41,6 +43,39 @@ mechanism APIs this module orchestrates), `CkLog`, `CkPhysics` (planar speed for
   by FIFO). No-op for `AlwaysPromoted`/exhaustion proxies (no crowd collection to mirror).
 - Pure ranking (`CkVisualLod_Ranking.h`, `ck::visual_lod`): `Select_Flips`, `Get_IsInView`,
   partial rank order — unit-testable without a world.
+
+## Far render bands
+
+Each `FCk_VisualLod_CrowdConfig` may author an ordered `_RenderBands` array. Band 0 normally starts
+at distance 0; every later band supplies an outward `_DistanceThreshold`, an inward
+`_ReturnHysteresis`, and a soft `UCk_IskmRenderer_Data` profile. Thresholds must be strictly
+increasing, hysteresis must be non-negative and smaller than the gap to the previous threshold,
+and every profile must use the crowd's exact AnimCollection/default mesh. Invalid arrays fail
+closed before a crowd or partial profile set is published.
+
+The arbiter uses its already-computed observer distance to select the greatest threshold not above
+the member. Moving outward changes at the threshold; returning inward changes only below
+`threshold - hysteresis`. Large teleports may cross several bands in one update. The selected
+index is retained on `FFragment_VisualLod_Current` and exposed by `Get_RenderBandIndex`.
+
+Far members migrate between stable `(spatial tile, profile index)` GPU buckets. Their member index,
+world transform, animation phase, custom data, visibility ownership, cosmetic registration, and
+highlight claims remain member-owned and do not change. A promoted member keeps its selected far
+band so it returns to the correct profile on demotion.
+
+Profiles are complete renderer-data states, not deltas. Typical authored bands are:
+
+- full: normal material, shadows, lighting, velocity, and animation cadence;
+- reduced: disable contact/dynamic shadows, decals, dynamic-indirect and distance-field lighting,
+  ray tracing, and velocity; optionally increase `_FarAnimationUpdateInterval` and force a higher
+  minimum mesh LOD;
+- terminal: freeze far animation, apply a cheap/unlit `_BaseOverrideMaterials` set, cull at a
+  maximum distance, or disable both main and depth passes.
+
+Disabling indirect/distance-field flags does not make a lit material unlit and does not remove its
+direct-light shader cost. Use a validated skeletal-compatible cheap/unlit material override for
+that optimization. Profile base overrides sit below a whole-crowd material override and above
+crowd slot overrides/mesh defaults.
 
 ## Crossfade contract (dithered, material-side)
 

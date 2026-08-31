@@ -11,6 +11,7 @@
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Utils.h"
+#include "CkIskmRenderer/Renderer/CkIskm_RenderProfile_Utils.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
@@ -193,6 +194,12 @@ namespace ck
         { return; }
 
         SKMC->SetSkeletalMesh(AnimCollection->Get_DefaultMesh());
+        ck::iskm::Apply_RenderProfile(*SKMC, *RendererData);
+        for (auto MatIdx = 0; MatIdx < RendererData->Get_BaseOverrideMaterials().Num(); ++MatIdx)
+        {
+            if (auto* Mat = RendererData->Get_BaseOverrideMaterials()[MatIdx].Get())
+            { SKMC->SetMaterial(MatIdx, Mat); }
+        }
 
         // Composed entity-space -> world via the spawn rotation; UpdateTransform re-applies it each frame.
         InCurrent._LocalLocationOffset = InParams.Get_LocalLocationOffset();
@@ -243,6 +250,7 @@ namespace ck
             Child->SetupAttachment(SKMC);
             Child->RegisterComponent();
             Child->SetSkeletalMesh(Def.Get_Mesh());
+            ck::iskm::Apply_RenderProfile(*Child, *RendererData);
             Child->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             Child->SetLeaderPoseComponent(SKMC);
 #if WITH_EDITOR
@@ -1063,6 +1071,7 @@ namespace ck
         Child->SetupAttachment(SKMC);
         Child->RegisterComponent();
         Child->SetSkeletalMesh(Def.Get_Mesh());
+        ck::iskm::Apply_RenderProfile(*Child, *RendererData);
         Child->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Child->SetLeaderPoseComponent(SKMC);
 #if WITH_EDITOR
