@@ -12,6 +12,8 @@
 
 #include "CkEntityTag/CkEntityTag_Utils.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+
 #include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
 #include "CkSpatialQuery/Probe/CkProbeTrace_Utils.h"
 
@@ -19,7 +21,6 @@
 #include <Algo/MinElement.h>
 #include <Async/ParallelFor.h>
 #include <Math/UnrealMathUtility.h>
-#include <NavigationSystem.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -262,11 +263,10 @@ auto
         && NOT OutCandidates.IsEmpty())
     {
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Querier);
-        auto* NavSys = ck::IsValid(World)
-            ? UNavigationSystemV1::GetCurrent(World)
-            : nullptr;
+        const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
 
-        if (NavSys != nullptr)
+        if (ProviderHealth != ECk_NavSurface_ProviderHealth::NoData
+            && ProviderHealth != ECk_NavSurface_ProviderHealth::Error)
         {
             const auto HalfExt = FMath::Max(GenParams.Get_NavProjectionSearchHalfExtentUu(), 1.0f);
             const auto ProjectionExtent = FVector{HalfExt, HalfExt, HalfExt};
@@ -276,10 +276,13 @@ auto
 
             for (auto& Candidate : OutCandidates)
             {
-                auto Projected = FNavLocation{};
-                if (NavSys->ProjectPointToNavigation(Candidate._Location, Projected, ProjectionExtent))
+                const auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{Candidate._Location}
+                    .Set_SearchHalfExtents(ProjectionExtent);
+
+                const auto Projected = UCk_Utils_NavSurface_UE::Try_ProjectPoint(World, ProjectionQuery);
+                if (Projected.Get_Status() == ECk_NavSurface_QueryStatus::Success)
                 {
-                    Candidate._Location = Projected.Location;
+                    Candidate._Location = Projected.Get_Location();
                     SnappedCandidates.Add(Candidate);
                 }
             }

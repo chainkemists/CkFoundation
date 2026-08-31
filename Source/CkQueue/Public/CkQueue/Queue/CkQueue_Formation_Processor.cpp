@@ -7,13 +7,12 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkQueue/Navigation/CkQueue_NavigationRevisionSubsystem.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+
 #include "CkQueue/Queue/CkQueue_Layout_Algorithm.h"
 
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
-#include "NavigationData.h"
-#include "NavigationSystem.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Queue_Formation);
 
@@ -36,15 +35,8 @@ namespace ck
             TEXT("Queue [{}] cannot resolve formation without a valid world"), InQueue)
         { return; }
 
-        auto RevisionSubsystem = World->GetSubsystem<UCk_Queue_NavigationRevisionSubsystem_UE>();
-        const auto RevisionSubsystemIsValid = ck::IsValid(RevisionSubsystem);
-        CK_ENSURE_IF_NOT(RevisionSubsystemIsValid,
-            TEXT("Queue [{}] cannot resolve formation without its navigation revision subsystem"), InQueue)
-        { return; }
-
-        RevisionSubsystem->TryEnsureBound();
-
-        const auto NavigationRevision = RevisionSubsystem->Get_Revision();
+        const auto NavigationRevision = static_cast<int32>(
+            UCk_Utils_NavSurface_UE::Get_SurfaceRevision(World));
         if (InCurrent._LastNavigationRevision == INDEX_NONE)
         { InCurrent._LastNavigationRevision = NavigationRevision; }
         const auto NavigationChanged = InCurrent._LastNavigationRevision != NavigationRevision;
@@ -152,12 +144,10 @@ namespace ck
                         InCurrent._RetryEpisode}));
         }
 
-        auto NavigationSystem = UNavigationSystemV1::GetCurrent(World);
-        auto NavigationData = ck::IsValid(NavigationSystem)
-            ? NavigationSystem->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
-            : nullptr;
+        const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
 
-        if (ck::Is_NOT_Valid(NavigationSystem) || ck::Is_NOT_Valid(NavigationData))
+        if (ProviderHealth == ECk_NavSurface_ProviderHealth::NoData
+            || ProviderHealth == ECk_NavSurface_ProviderHealth::Error)
         {
             RecordRetryableFailure(
                 InQueue,
@@ -179,19 +169,18 @@ namespace ck
         auto QueryParams = FCollisionQueryParams{SCENE_QUERY_STAT(CkQueueFormation), false};
         const auto Validator = [&](FTransform& InOutCandidate, const TOptional<FTransform>& InPrevious) -> bool
         {
-            auto Projected = FNavLocation{};
-            if (NOT NavigationSystem->ProjectPointToNavigation(
-                    InOutCandidate.GetLocation(),
-                    Projected,
-                    ProjectionExtent,
-                    NavigationData))
+            const auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{InOutCandidate.GetLocation()}
+                .Set_SearchHalfExtents(ProjectionExtent);
+
+            const auto Projected = UCk_Utils_NavSurface_UE::Try_ProjectPoint(World, ProjectionQuery);
+            if (Projected.Get_Status() != ECk_NavSurface_QueryStatus::Success)
             { return false; }
 
-            const auto ProjectionShift = FVector::Dist2D(InOutCandidate.GetLocation(), Projected.Location);
+            const auto ProjectionShift = FVector::Dist2D(InOutCandidate.GetLocation(), Projected.Get_Location());
             if (ProjectionShift > InParams.Get_ClearanceMarginUu())
             { return false; }
 
-            InOutCandidate.SetLocation(Projected.Location);
+            InOutCandidate.SetLocation(Projected.Get_Location());
 
             if (InPrevious.IsSet())
             {
@@ -201,12 +190,12 @@ namespace ck
                 if (NOT FMath::IsNearlyEqual(PlanarSpacing, InParams.Get_SlotSpacingUu(), 1.0f))
                 { return false; }
 
-                auto HitLocation = FVector::ZeroVector;
-                if (NavigationData->Raycast(
-                        InPrevious->GetLocation(),
-                        InOutCandidate.GetLocation(),
-                        HitLocation,
-                        FSharedConstNavQueryFilter{}))
+                const auto RaycastQuery = FCk_NavSurface_RaycastQuery{
+                    InPrevious->GetLocation(),
+                    InOutCandidate.GetLocation()};
+
+                if (UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(World, RaycastQuery).Get_Status()
+                    != ECk_NavSurface_QueryStatus::Success)
                 { return false; }
             }
 

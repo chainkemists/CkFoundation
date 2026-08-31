@@ -18,7 +18,10 @@ public class CkCrowd : CkModuleRules
 
             "GameplayTags",
 
-            "NavigationSystem",   // for ProjectPointToNavigation in DrawNavProjection processor
+            // One remaining direct consumer: PathRefresh's provider resolve for the escape and
+            // detour FindPathSync probes. Plus the UNavArea and UNavigationQueryFilter subclasses
+            // the area-tag table resolves to.
+            "NavigationSystem",
 
             "CkCore",
             "CkEcs",
