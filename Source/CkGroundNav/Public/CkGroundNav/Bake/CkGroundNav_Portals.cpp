@@ -58,10 +58,29 @@ namespace ck::groundnav
             FVector&                       OutMaxEnd) const
         -> void
     {
+        Get_Endpoints(InSpans._Origin, InSpans._CellSizeUu, OutMinEnd, OutMaxEnd);
+    }
+
+    auto
+        FCk_GroundNav_Portal::
+        Get_Endpoints(
+            const FVector& InOrigin,
+            float          InCellSizeUu,
+            FVector&       OutMinEnd,
+            FVector&       OutMaxEnd) const
+        -> void
+    {
+        const auto Get_Corner = [&](int32 InX, int32 InY) -> FVector2D
+        {
+            return FVector2D{
+                InOrigin.X + (static_cast<double>(InX) * InCellSizeUu),
+                InOrigin.Y + (static_cast<double>(InY) * InCellSizeUu)};
+        };
+
         // The segment lies on the cell edge the crossing steps over, which is the far side of the
         // _From cells — one cell size past their min corner along the direction.
-        const auto MinCorner = InSpans.Get_ColumnMinCorner(_FromMin.X, _FromMin.Y);
-        const auto MaxCorner = InSpans.Get_ColumnMinCorner(_FromMax.X + 1, _FromMax.Y + 1);
+        const auto MinCorner = Get_Corner(_FromMin.X, _FromMin.Y);
+        const auto MaxCorner = Get_Corner(_FromMax.X + 1, _FromMax.Y + 1);
 
         if (_Direction == 0)
         {
