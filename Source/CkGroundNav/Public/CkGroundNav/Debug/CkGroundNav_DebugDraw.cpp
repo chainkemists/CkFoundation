@@ -53,19 +53,15 @@ namespace ck::groundnav
 
     auto
         Make_DebugSnapshotFromWorld(
-            const UObject*                    InWorldContextObject,
-            const FVector&                    InCentre,
-            const FVector&                    InExtent,
-            float                             InCellSizeUu,
-            const FCk_GroundNav_AgentProfile& InProfile,
-            int32                             InMaxCells)
+            const UObject*                       InWorldContextObject,
+            const FCk_GroundNav_DebugBakeParams& InParams)
         -> FCk_GroundNav_DebugSnapshot
     {
         auto Snapshot = FCk_GroundNav_DebugSnapshot{};
 
-        const auto Region = FBox::BuildAABB(InCentre, InExtent);
+        const auto Region = FBox::BuildAABB(InParams._Centre, InParams._Extent);
         Snapshot._Region = Region;
-        Snapshot._CellSizeUu = InCellSizeUu;
+        Snapshot._CellSizeUu = InParams._Config.Get_CellSizeUu();
 
         const auto Backend = FCk_GroundNav_GeometryBackend_Jolt{InWorldContextObject};
 
@@ -78,31 +74,34 @@ namespace ck::groundnav
         const auto StartedAt = FPlatformTime::Seconds();
 
         auto Geometry = FCk_GroundNav_GeometryBatch{};
-        Snapshot._SourceTriangleCount = Backend.Get_TrianglesInBounds(Region, Geometry);
+        const auto SourceTriangles = Backend.Get_TrianglesInBounds(Region, Geometry);
 
         if (Geometry.Get_IsEmpty())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::NoGeometryInRegion;
             return Snapshot;
         }
 
-        const auto Config = FCk_GroundNav_BakeConfig{InCellSizeUu, InCellSizeUu * 0.4f};
-
         auto Spans = FCk_GroundNav_SpanField{};
-        const auto RasterResult = DoRasterizeSpans(Geometry, Region, Config, InProfile, Spans);
+        const auto RasterResult = DoRasterizeSpans(
+            Geometry, Region, InParams._Config, InParams._Profile, Spans);
 
         if (NOT RasterResult.Get_IsCompleted())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
             return Snapshot;
         }
 
-        Snapshot._DroppedTriangleCount = RasterResult.Get_DroppedInputCount();
+        // Kept so the filters can be judged by what they REMOVED, not only by what survived.
+        const auto SpansBeforeFiltering = Spans;
 
         auto Connections = FCk_GroundNav_ConnectionField{};
 
-        if (NOT DoFilter_Walkability(InProfile, Spans, Connections).Get_IsCompleted())
+        if (NOT DoFilter_Walkability(InParams._Profile, Spans, Connections).Get_IsCompleted())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
             return Snapshot;
         }
@@ -111,31 +110,36 @@ namespace ck::groundnav
 
         if (NOT DoExtract_Layers(Spans, Connections, Layers).Get_IsCompleted())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
             return Snapshot;
         }
 
         auto Clearance = FCk_GroundNav_ClearanceField{};
 
-        if (NOT DoCompute_Clearance(Layers, InCellSizeUu, Clearance).Get_IsCompleted())
+        if (NOT DoCompute_Clearance(Layers, InParams._Config.Get_CellSizeUu(), Clearance).Get_IsCompleted())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
             return Snapshot;
         }
 
         auto Plates = FCk_GroundNav_PlateField{};
 
-        if (NOT DoDecompose_Plates(Spans, Layers, FCk_GroundNav_MergeTunables{}, Plates).Get_IsCompleted())
+        if (NOT DoDecompose_Plates(Spans, Layers, InParams._MergeTunables, Plates).Get_IsCompleted())
         {
+            Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
             return Snapshot;
         }
 
         const auto ElapsedMilliseconds = (FPlatformTime::Seconds() - StartedAt) * 1000.0;
 
-        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Region, InMaxCells);
-        Built._SourceTriangleCount = Snapshot._SourceTriangleCount;
-        Built._DroppedTriangleCount = Snapshot._DroppedTriangleCount;
+        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Region, InParams._MaxCells);
+        Do_RecordRejectedCells(SpansBeforeFiltering, Spans, Built);
+
+        Built._SourceTriangleCount = SourceTriangles;
+        Built._DroppedTriangleCount = RasterResult.Get_DroppedInputCount();
         Built._BakeMilliseconds = ElapsedMilliseconds;
 
         return Built;
@@ -187,6 +191,25 @@ namespace ck::groundnav
 
         const auto PointSize = FMath::Max(4.0f, InSnapshot._CellSizeUu * 0.35f);
 
+        if (InMode == EDebugDrawMode::Rejected)
+        {
+            // What survived, dimmed, so the rejections are read against the ground they were cut from
+            // rather than against an empty screen.
+            for (const auto& Cell : InSnapshot._Cells)
+            {
+                DrawDebugPoint(InWorld, Cell._SurfaceCentre, PointSize * 0.6f, FColor{60, 70, 60},
+                    Persistent, LifetimeSeconds, DepthPriority);
+            }
+
+            for (const auto& Cell : InSnapshot._RejectedCells)
+            {
+                DrawDebugPoint(InWorld, Cell._SurfaceCentre, PointSize, FColor::Red, Persistent,
+                    LifetimeSeconds, DepthPriority);
+            }
+
+            return;
+        }
+
         for (const auto& Cell : InSnapshot._Cells)
         {
             const auto Color = InMode == EDebugDrawMode::Clearance
@@ -206,17 +229,26 @@ namespace ck::groundnav
         -> FString
     {
         return FString::Printf(
-            TEXT("[GroundNav] %s | tris %d (dropped %d) | spans %d | cells %d%s | layers %d | plates %d | max clearance %.1f uu | %.1f ms"),
+            TEXT("[GroundNav] %s | %.1f ms\n")
+            TEXT("  geometry : %d triangles in, %d dropped\n")
+            TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n")
+            TEXT("  layers   : %d\n")
+            TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
+            TEXT("  clearance: %.1f uu at the most open cell"),
             Get_StatusName(InSnapshot._Status),
+            InSnapshot._BakeMilliseconds,
             InSnapshot._SourceTriangleCount,
             InSnapshot._DroppedTriangleCount,
             InSnapshot._SpanCount,
             InSnapshot._WalkableCellCount,
             InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""),
+            InSnapshot._RejectedCellCount,
             InSnapshot._LayerCount,
             InSnapshot.Get_PlateCount(),
-            InSnapshot._MaxClearanceUu,
-            InSnapshot._BakeMilliseconds);
+            InSnapshot._CollapseRatio,
+            InSnapshot._MaxPlaneResidualUu,
+            InSnapshot._MaxPlateHeightRangeUu,
+            InSnapshot._MaxClearanceUu);
     }
 }
 
@@ -224,40 +256,97 @@ namespace ck::groundnav
 
 namespace ck_groundnav_debugconsole
 {
+    // ---- Region -----------------------------------------------------------------------------------
+
     static TAutoConsoleVariable<float> CVar_ExtentUu(
-        TEXT("ck.GroundNav.Debug.ExtentUu"),
-        1500.0f,
-        TEXT("Half-extent in XY of the region ck.GroundNav.Bake covers around the player."));
+        TEXT("ck.GroundNav.Debug.ExtentUu"), 1500.0f,
+        TEXT("Half-extent in XY of the region baked around the player. Bake cost grows with its SQUARE."));
 
     static TAutoConsoleVariable<float> CVar_HeightUu(
-        TEXT("ck.GroundNav.Debug.HeightUu"),
-        500.0f,
-        TEXT("Half-extent in Z of the region ck.GroundNav.Bake covers around the player."));
+        TEXT("ck.GroundNav.Debug.HeightUu"), 500.0f,
+        TEXT("Half-extent in Z. Must reach every floor you want to see; raise it for tall interiors."));
+
+    // ---- Bake config ------------------------------------------------------------------------------
 
     static TAutoConsoleVariable<float> CVar_CellSizeUu(
-        TEXT("ck.GroundNav.Debug.CellSizeUu"),
-        25.0f,
-        TEXT("Cell size the debug bake rasterizes at. Smaller is finer and slower."));
+        TEXT("ck.GroundNav.Debug.CellSizeUu"), 25.0f,
+        TEXT("Lattice resolution. Halving it QUADRUPLES cell count and bake cost. It also sets the ")
+        TEXT("smallest gap the field can resolve, so a doorway narrower than a couple of cells will ")
+        TEXT("not read as passable."));
+
+    static TAutoConsoleVariable<float> CVar_CellHeightUu(
+        TEXT("ck.GroundNav.Debug.CellHeightUu"), 10.0f,
+        TEXT("Vertical quantum of the bake. Mostly affects how finely stacked surfaces separate."));
+
+    // ---- Agent profile ----------------------------------------------------------------------------
 
     static TAutoConsoleVariable<float> CVar_AgentHeightUu(
-        TEXT("ck.GroundNav.Debug.AgentHeightUu"),
-        180.0f,
-        TEXT("Standing height of the agent profile the debug bake filters for."));
+        TEXT("ck.GroundNav.Debug.AgentHeightUu"), 180.0f,
+        TEXT("Standing height. Sets the headroom test: anything with less clearance above it is demoted."));
+
+    static TAutoConsoleVariable<float> CVar_AgentRadiusUu(
+        TEXT("ck.GroundNav.Debug.AgentRadiusUu"), 34.0f,
+        TEXT("Capsule radius of the profile shape. Does NOT filter the bake - radius is answered at ")
+        TEXT("query time against the clearance field, which is why one bake serves every agent size."));
+
+    static TAutoConsoleVariable<float> CVar_MaxSlopeDegrees(
+        TEXT("ck.GroundNav.Debug.MaxSlopeDegrees"), 45.0f,
+        TEXT("Steepest surface an agent can stand on. Too high and walls become floors; too low and ")
+        TEXT("ramps vanish."));
+
+    static TAutoConsoleVariable<float> CVar_MaxSlopeChangeDegrees(
+        TEXT("ck.GroundNav.Debug.MaxSlopeChangeDegrees"), 30.0f,
+        TEXT("How sharply the surface may turn between two connected cells. Too low and a curved ")
+        TEXT("floor fragments into disconnected pieces."));
+
+    static TAutoConsoleVariable<float> CVar_StepHeightUu(
+        TEXT("ck.GroundNav.Debug.StepHeightUu"), 40.0f,
+        TEXT("Tallest step an agent can climb. Also the distance within which stacked surfaces merge ")
+        TEXT("into one span, so raising it can swallow a low floor into the one above it."));
+
+    static TAutoConsoleVariable<float> CVar_LedgeSensitivity(
+        TEXT("ck.GroundNav.Debug.LedgeSensitivity"), 1.0f,
+        TEXT("Reciprocal of how many of the four sides of a cell must drop away before it stops being ")
+        TEXT("standable. 1.0 demotes on ONE dropping side (safest, but erases one-cell catwalks); ")
+        TEXT("0.5 demands two; 0.34 demands three; 0 disables the filter. Use draw mode 3 to see ")
+        TEXT("exactly what it is cutting."));
+
+    static TAutoConsoleVariable<float> CVar_RoughPerchToleranceUu(
+        TEXT("ck.GroundNav.Debug.RoughPerchToleranceUu"), 0.0f,
+        TEXT("Height difference under which two neighbours connect regardless of how sharply their ")
+        TEXT("normals disagree. Raise it if gently uneven ground fragments; 0 applies the slope-change ")
+        TEXT("test everywhere."));
+
+    // ---- Merge tunables ---------------------------------------------------------------------------
+
+    static TAutoConsoleVariable<float> CVar_PlaneFitToleranceUu(
+        TEXT("ck.GroundNav.Debug.PlaneFitToleranceUu"), 10.0f,
+        TEXT("How far a cell may sit from the plane of its plate and still join it. MUST STAY BELOW ")
+        TEXT("THE SHALLOWEST STEP YOU NEED PRESERVED - at or above a riser height, the treads either ")
+        TEXT("side merge and the step stops existing. Below about 1 uu a long ramp fragments on normal ")
+        TEXT("quantization alone. Watch the worst height spread in the summary."));
+
+    static TAutoConsoleVariable<float> CVar_NormalConeDegrees(
+        TEXT("ck.GroundNav.Debug.NormalConeDegrees"), 10.0f,
+        TEXT("How far the normal of a cell may turn from that of its plate. Rarely binds - differing ")
+        TEXT("normals usually diverge in height first and the plane-fit tolerance rejects them. Below ")
+        TEXT("about 3 degrees it starts fragmenting nominally-flat ground on its own."));
+
+    // ---- Presentation -----------------------------------------------------------------------------
 
     static TAutoConsoleVariable<int32> CVar_Mode(
-        TEXT("ck.GroundNav.Debug.Mode"),
-        0,
-        TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers."));
+        TEXT("ck.GroundNav.Debug.Mode"), 0,
+        TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected."));
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
-        TEXT("ck.GroundNav.Debug.LifetimeSeconds"),
-        60.0f,
+        TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
         TEXT("How long the drawn field persists."));
 
     static TAutoConsoleVariable<int32> CVar_MaxCells(
-        TEXT("ck.GroundNav.Debug.MaxCells"),
-        20000,
-        TEXT("Cap on drawn cells. Reported counts stay exact when the draw is capped."));
+        TEXT("ck.GroundNav.Debug.MaxCells"), 20000,
+        TEXT("Cap on DRAWN cells. Reported counts stay exact when the draw is capped."));
+
+    // ----------------------------------------------------------------------------------------------
 
     auto Get_ViewerLocation(UWorld* InWorld, FVector& OutLocation) -> bool
     {
@@ -287,8 +376,39 @@ namespace ck_groundnav_debugconsole
         {
             case 1:  return ck::groundnav::EDebugDrawMode::Clearance;
             case 2:  return ck::groundnav::EDebugDrawMode::Layers;
+            case 3:  return ck::groundnav::EDebugDrawMode::Rejected;
             default: return ck::groundnav::EDebugDrawMode::Plates;
         }
+    }
+
+    auto Make_BakeParams(const FVector& InCentre) -> ck::groundnav::FCk_GroundNav_DebugBakeParams
+    {
+        const auto AgentHeight = CVar_AgentHeightUu.GetValueOnGameThread();
+        const auto AgentRadius = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        auto Profile = FCk_GroundNav_AgentProfile{FCk_AnyShape{FCk_ShapeCapsule_Dimensions{
+            (AgentHeight * 0.5f) - AgentRadius, AgentRadius}}};
+
+        Profile.Set_MaxSlopeDegrees(CVar_MaxSlopeDegrees.GetValueOnGameThread());
+        Profile.Set_MaxSlopeChangeDegrees(CVar_MaxSlopeChangeDegrees.GetValueOnGameThread());
+        Profile.Set_StepHeightUu(CVar_StepHeightUu.GetValueOnGameThread());
+        Profile.Set_LedgeSensitivity(CVar_LedgeSensitivity.GetValueOnGameThread());
+        Profile.Set_RoughPerchToleranceUu(CVar_RoughPerchToleranceUu.GetValueOnGameThread());
+
+        const auto ExtentUu = CVar_ExtentUu.GetValueOnGameThread();
+
+        auto Params = ck::groundnav::FCk_GroundNav_DebugBakeParams{};
+        Params._Centre = InCentre;
+        Params._Extent = FVector{ExtentUu, ExtentUu, CVar_HeightUu.GetValueOnGameThread()};
+        Params._Config = FCk_GroundNav_BakeConfig{
+            CVar_CellSizeUu.GetValueOnGameThread(), CVar_CellHeightUu.GetValueOnGameThread()};
+        Params._Profile = Profile;
+        Params._MergeTunables = FCk_GroundNav_MergeTunables{
+            CVar_PlaneFitToleranceUu.GetValueOnGameThread(),
+            CVar_NormalConeDegrees.GetValueOnGameThread()};
+        Params._MaxCells = CVar_MaxCells.GetValueOnGameThread();
+
+        return Params;
     }
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
@@ -309,18 +429,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("ck.GroundNav.Bake found no player to bake around. Run it in PIE or in a game world."))
             { return; }
 
-            const auto ExtentUu = CVar_ExtentUu.GetValueOnGameThread();
-
-            auto Profile = FCk_GroundNav_AgentProfile{FCk_AnyShape{FCk_ShapeCapsule_Dimensions{
-                (CVar_AgentHeightUu.GetValueOnGameThread() * 0.5f) - 34.0f, 34.0f}}};
-
-            const auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(
-                InWorld,
-                Centre,
-                FVector{ExtentUu, ExtentUu, CVar_HeightUu.GetValueOnGameThread()},
-                CVar_CellSizeUu.GetValueOnGameThread(),
-                Profile,
-                CVar_MaxCells.GetValueOnGameThread());
+            const auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(Centre));
 
             ck::groundnav::DoDraw_DebugSnapshot(InWorld, Snapshot, Get_DrawMode(),
                 FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
@@ -337,6 +446,36 @@ namespace ck_groundnav_debugconsole
             { return; }
 
             FlushPersistentDebugLines(InWorld);
+        }));
+
+    static FAutoConsoleCommand ConsoleCommand_Print(
+        TEXT("ck.GroundNav.Print"),
+        TEXT("Print every GroundNav debug tunable and its current value."),
+        FConsoleCommandDelegate::CreateLambda([]() -> void
+        {
+            ck::groundnav::Display(TEXT("[GroundNav] current tunables")
+                TEXT("\n  region  : ExtentUu {} HeightUu {}")
+                TEXT("\n  bake    : CellSizeUu {} CellHeightUu {}")
+                TEXT("\n  agent   : HeightUu {} RadiusUu {} MaxSlopeDegrees {} MaxSlopeChangeDegrees {}")
+                TEXT("\n            StepHeightUu {} LedgeSensitivity {} RoughPerchToleranceUu {}")
+                TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
+                TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {}"),
+                CVar_ExtentUu.GetValueOnGameThread(),
+                CVar_HeightUu.GetValueOnGameThread(),
+                CVar_CellSizeUu.GetValueOnGameThread(),
+                CVar_CellHeightUu.GetValueOnGameThread(),
+                CVar_AgentHeightUu.GetValueOnGameThread(),
+                CVar_AgentRadiusUu.GetValueOnGameThread(),
+                CVar_MaxSlopeDegrees.GetValueOnGameThread(),
+                CVar_MaxSlopeChangeDegrees.GetValueOnGameThread(),
+                CVar_StepHeightUu.GetValueOnGameThread(),
+                CVar_LedgeSensitivity.GetValueOnGameThread(),
+                CVar_RoughPerchToleranceUu.GetValueOnGameThread(),
+                CVar_PlaneFitToleranceUu.GetValueOnGameThread(),
+                CVar_NormalConeDegrees.GetValueOnGameThread(),
+                CVar_Mode.GetValueOnGameThread(),
+                CVar_LifetimeSeconds.GetValueOnGameThread(),
+                CVar_MaxCells.GetValueOnGameThread());
         }));
 }
 

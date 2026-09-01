@@ -18,9 +18,8 @@
  * There are exactly two knobs because there are exactly three merge criteria, and the third —
  * policy equality — is not a tolerance: cells either carry the same traversal policy or they do not.
  *
- * The defaults merge nothing that is not already coplanar and identically oriented. That is the
- * conservative end of the range on purpose: an over-merged plate reports a floor where there is a
- * step, and the funnel that later walks it has no way to notice.
+ * An over-merged plate reports a floor where there is a step, and the funnel that later walks it has
+ * no way to notice. Both defaults are therefore chosen with margin toward splitting.
  */
 USTRUCT(BlueprintType)
 struct CKGROUNDNAV_API FCk_GroundNav_MergeTunables
@@ -31,12 +30,27 @@ struct CKGROUNDNAV_API FCk_GroundNav_MergeTunables
 
 private:
     // How far a cell's surface may sit from the plate's plane and still join it.
+    //
+    // THIS MUST STAY BELOW THE SHALLOWEST STEP THE CONTENT NEEDS PRESERVED. A tolerance at or above a
+    // riser height merges the treads either side of it into one plate, and the step stops existing as
+    // far as everything downstream is concerned. The default is one cell height, which preserves any
+    // riser taller than itself; content with shallower steps than that must lower it.
+    //
+    // The floor is not zero. Surface normals are stored quantized, so the plane fitted through a long
+    // ramp drifts about a unit from the ramp's true plane over a few dozen cells; a tolerance under
+    // roughly 1 uu fragments a ramp that is genuinely flat.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float _PlaneFitToleranceUu = 0.0f;
+    float _PlaneFitToleranceUu = 10.0f;
 
     // How far a cell's surface normal may turn from the plate's and still join it.
+    //
+    // In practice this rarely binds: normals that differ also make heights diverge, so the plane-fit
+    // tolerance usually rejects a merge first. What it does own is the narrow end — below about 3
+    // degrees it starts fragmenting nominally-flat ground on its own, because rasterized normals of a
+    // gently curved surface vary by that much between neighbouring cells. The default sits well clear
+    // of that floor.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float _NormalConeDegrees = 0.0f;
+    float _NormalConeDegrees = 10.0f;
 
 public:
     CK_PROPERTY_GET(_PlaneFitToleranceUu);
