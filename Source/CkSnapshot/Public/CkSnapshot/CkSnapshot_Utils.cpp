@@ -10,6 +10,7 @@
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include "CkSnapshot/SaveGame/CkSnapshot_Header.h" // ck::snapshot::Compare_ProjectVersions
 #include "CkSnapshot/SaveGame/CkSnapshot_SlotMeta.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Subsystem.h"
 
@@ -491,6 +492,18 @@ auto
     -> bool
 {
     return InReport.Get_DidLoadComplete();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Snapshot_UE::
+    Compare_ProjectVersions(
+        const FString& InA,
+        const FString& InB)
+    -> int32
+{
+    return ck::snapshot::Compare_ProjectVersions(InA, InB);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

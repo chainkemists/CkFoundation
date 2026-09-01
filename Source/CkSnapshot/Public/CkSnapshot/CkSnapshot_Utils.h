@@ -452,6 +452,26 @@ public:
     Get_DidLoadComplete(
         const FCk_Snapshot_LoadReport& InReport);
 
+    /**
+     * Orders two ProjectVersion strings: <0 when A is older than B, 0 when equal, >0 when newer.
+     *
+     * Script-facing twin of ck::snapshot::Compare_ProjectVersions, and it exists for the same reason
+     * that function does: the ONE thing a consumer must never do with these strings is compare them
+     * as text, because "1.0.10" sorts BELOW "1.0.9" that way — which silently inverts any gate that
+     * scopes behaviour to the builds before a fix. Without a reflected entry point, script had no
+     * ordered comparison available at all and the only reachable option was the wrong one.
+     *
+     * Only the leading dotted-numeric run orders, so "1.0.3-hotfix1" compares EQUAL to "1.0.3":
+     * distinguishing a hotfix needs a numeric bump, not a suffix.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Compare Project Versions")
+    static int32
+    Compare_ProjectVersions(
+        const FString& InA,
+        const FString& InB);
+
 public:
     /**
      * Teaches the loader how to rebuild an archetype whose object path a fresh process cannot load.
