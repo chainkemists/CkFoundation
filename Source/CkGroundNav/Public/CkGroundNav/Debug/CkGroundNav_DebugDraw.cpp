@@ -228,8 +228,13 @@ namespace ck::groundnav
             const FCk_GroundNav_DebugSnapshot& InSnapshot)
         -> FString
     {
+        const auto Centre = InSnapshot._Region.GetCenter();
+        const auto Extent = InSnapshot._Region.GetExtent();
+
         return FString::Printf(
             TEXT("[GroundNav] %s | %.1f ms\n")
+            TEXT("  region   : centre (%.0f, %.0f, %.0f)  half-extent (%.0f, %.0f, %.0f)\n")
+            TEXT("  lattice  : %d x %d columns at %.1f uu, %d layer(s) -> %d cell slots\n")
             TEXT("  geometry : %d triangles in, %d dropped\n")
             TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n")
             TEXT("  layers   : %d\n")
@@ -237,6 +242,13 @@ namespace ck::groundnav
             TEXT("  clearance: %.1f uu at the most open cell"),
             Get_StatusName(InSnapshot._Status),
             InSnapshot._BakeMilliseconds,
+            Centre.X, Centre.Y, Centre.Z,
+            Extent.X, Extent.Y, Extent.Z,
+            InSnapshot._LatticeSizeX,
+            InSnapshot._LatticeSizeY,
+            InSnapshot._CellSizeUu,
+            InSnapshot._LayerCount,
+            InSnapshot._LatticeSizeX * InSnapshot._LatticeSizeY * InSnapshot._LayerCount,
             InSnapshot._SourceTriangleCount,
             InSnapshot._DroppedTriangleCount,
             InSnapshot._SpanCount,
@@ -411,9 +423,21 @@ namespace ck_groundnav_debugconsole
         return Params;
     }
 
+    auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
+    {
+        const auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre));
+
+        ck::groundnav::DoDraw_DebugSnapshot(InWorld, Snapshot, Get_DrawMode(),
+            FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
+
+        ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(Snapshot));
+    }
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
         TEXT("ck.GroundNav.Bake"),
-        TEXT("Bake the ground field around the player from live physics geometry and draw it."),
+        TEXT("Bake the ground field around the player from live physics geometry and draw it. ")
+        TEXT("The region follows the pawn, so a flying viewer can leave the ground behind and below it — ")
+        TEXT("use ck.GroundNav.BakeAt to aim at a fixed point instead."),
         FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* InWorld) -> void
         {
             const auto WorldIsValid = ck::IsValid(InWorld);
@@ -429,12 +453,35 @@ namespace ck_groundnav_debugconsole
                 TEXT("ck.GroundNav.Bake found no player to bake around. Run it in PIE or in a game world."))
             { return; }
 
-            const auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(Centre));
+            DoBakeAndDraw(InWorld, Centre);
+        }));
 
-            ck::groundnav::DoDraw_DebugSnapshot(InWorld, Snapshot, Get_DrawMode(),
-                FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_BakeAt(
+        TEXT("ck.GroundNav.BakeAt"),
+        TEXT("Bake the ground field around an explicit world point: ck.GroundNav.BakeAt <X> <Y> <Z>. ")
+        TEXT("Unlike ck.GroundNav.Bake the region does not move with the viewer, so what it covers is ")
+        TEXT("the same on every run."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
 
-            ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(Snapshot));
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.BakeAt ran without a World"))
+            { return; }
+
+            // A mistyped console line is the user talking, not a broken invariant — say what was
+            // expected and stop, rather than tripping an ensure over it.
+            if (InArgs.Num() != 3)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.BakeAt needs three numbers: ck.GroundNav.BakeAt <X> <Y> <Z>"));
+                return;
+            }
+
+            const auto Centre = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoBakeAndDraw(InWorld, Centre);
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
