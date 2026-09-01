@@ -42,6 +42,40 @@ namespace ck::inventory_handlers
             };
         }
 
+        auto ReleaseItemLifetime_FromInventory(
+            FCk_Handle_Item& InItem,
+            FCk_Handle_Inventory& InInventory) -> void
+        {
+            if (ck::Is_NOT_Valid(InItem) || ck::Is_NOT_Valid(InInventory))
+            { return; }
+
+            // Undo OUR claim and nothing else. An item whose lifetime already sits elsewhere -- a
+            // transfer whose Add re-homed it first, or a caller that never routed through Add -- is
+            // not this inventory's to move.
+            const auto CurrentLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(
+                InItem, ECk_PendingKill_Policy::IncludePendingKill);
+
+            const FCk_Handle InventoryEntity = InInventory;
+            if (CurrentLifetimeOwner != InventoryEntity)
+            { return; }
+
+            // A container already tearing down must keep cascading into its items; re-homing here
+            // would rescue them from the destroy that is meant to take them.
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(
+                    InInventory, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+            { return; }
+
+            const auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InInventory);
+
+            // No context owner to fall back to (or it IS the item) leaves the existing claim in
+            // place -- wrong, but strictly better than orphaning the item onto nothing.
+            const FCk_Handle ItemEntity = InItem;
+            if (ck::Is_NOT_Valid(ContextOwner) || ContextOwner == ItemEntity)
+            { return; }
+
+            UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(InItem, ContextOwner);
+        }
+
         auto MapAddResultToTransfer(ECk_Inventory_OperationResult_Add InAddResult) -> ECk_Inventory_OperationResult_Transfer
         {
             switch (InAddResult)
@@ -124,6 +158,7 @@ namespace ck::inventory_handlers
 
         UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Disconnect(Base, ItemHandle);
         TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle_Inventory());
+        detail::ReleaseItemLifetime_FromInventory(ItemHandle, Base);
         R = Result::Success;
         return R;
     }
