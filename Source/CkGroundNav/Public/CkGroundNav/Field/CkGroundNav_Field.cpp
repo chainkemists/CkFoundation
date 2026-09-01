@@ -157,6 +157,178 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    namespace field_private
+    {
+        // Only the two positive directions are composed. Every seam is shared by exactly one +X or +Y
+        // step, so walking all four would emit each crossing twice under two names.
+        constexpr int32 kPositiveDirectionCount = 2;
+
+        /** One matched pair of stubs, before neighbouring pairs are run together. */
+        struct FSeamCrossing
+        {
+            int32 _TileIndexA = INDEX_NONE;
+            int32 _TileIndexB = INDEX_NONE;
+            int32 _PlateA = FCk_GroundNav_Plate::kNoPlate;
+            int32 _PlateB = FCk_GroundNav_Plate::kNoPlate;
+            int32 _Direction = 0;
+            int32 _Along = 0;
+
+            float _ClearanceUu = 0.0f;
+            float _MidZUu = 0.0f;
+        };
+
+        auto Get_IsSameRun(
+            const FSeamCrossing& InPrevious,
+            const FSeamCrossing& InCurrent) -> bool
+        {
+            return InCurrent._TileIndexA == InPrevious._TileIndexA &&
+                   InCurrent._TileIndexB == InPrevious._TileIndexB &&
+                   InCurrent._PlateA     == InPrevious._PlateA     &&
+                   InCurrent._PlateB     == InPrevious._PlateB     &&
+                   InCurrent._Direction  == InPrevious._Direction  &&
+                   InCurrent._Along      == InPrevious._Along + 1;
+        }
+
+        /**
+         * The neighbour's account of the same crossing, or nothing.
+         *
+         * Matching on BOTH surfaces is what makes this exact rather than plausible: this tile's far
+         * surface must be the one the neighbour stands on, and the neighbour's far surface must be the
+         * one this tile stands on. Two floors stacked over the same seam cell would otherwise be
+         * indistinguishable.
+         */
+        auto Get_MatchingStub(
+            const FCk_GroundNav_Tile&     InNeighbour,
+            const FCk_GroundNav_SeamStub& InStub,
+            int32                         InOppositeDirection) -> const FCk_GroundNav_SeamStub*
+        {
+            for (const auto& Candidate : InNeighbour._SeamStubs)
+            {
+                if (Candidate._Direction != InOppositeDirection ||
+                    Candidate._AlongIndex != InStub._AlongIndex)
+                { continue; }
+
+                if (Candidate._NearSurfaceZUu != InStub._FarSurfaceZUu ||
+                    Candidate._FarSurfaceZUu != InStub._NearSurfaceZUu)
+                { continue; }
+
+                return &Candidate;
+            }
+
+            return nullptr;
+        }
+    }
+
+    auto
+        DoDerive_SeamPortals(
+            FCk_GroundNav_Field& InOutField)
+        -> void
+    {
+        using namespace field_private;
+
+        InOutField._SeamPortals.Reset();
+
+        auto Crossings = TArray<FSeamCrossing>{};
+
+        for (auto TileIndexA = 0; TileIndexA < InOutField._Tiles.Num(); ++TileIndexA)
+        {
+            const auto& TileA = InOutField._Tiles[TileIndexA];
+
+            if (NOT TileA.Get_IsBuilt())
+            { continue; }
+
+            for (auto Direction = 0; Direction < kPositiveDirectionCount; ++Direction)
+            {
+                const auto Offset = Get_DirectionOffset(Direction);
+                const auto NeighbourCoord = FCk_GroundNav_TileCoord{
+                    TileA._Coord._X + Offset.X, TileA._Coord._Y + Offset.Y};
+
+                const auto TileIndexB = Get_TileIndex(InOutField._Params._Divisions, NeighbourCoord);
+
+                if (NOT InOutField._Tiles.IsValidIndex(TileIndexB))
+                { continue; }
+
+                const auto& TileB = InOutField._Tiles[TileIndexB];
+
+                // An unbuilt neighbour is a place nothing is known about, not a wall. No portal is
+                // emitted and the boundary reads as unbuilt to whatever tries to cross it.
+                if (NOT TileB.Get_IsBuilt())
+                { continue; }
+
+                const auto Opposite = Get_OppositeDirection(Direction);
+
+                for (const auto& Stub : TileA._SeamStubs)
+                {
+                    if (Stub._Direction != Direction)
+                    { continue; }
+
+                    const auto* Match = Get_MatchingStub(TileB, Stub, Opposite);
+
+                    if (Match == nullptr)
+                    { continue; }
+
+                    auto Crossing = FSeamCrossing{};
+
+                    Crossing._TileIndexA = TileIndexA;
+                    Crossing._TileIndexB = TileIndexB;
+                    Crossing._PlateA = Stub._PlateIndex;
+                    Crossing._PlateB = Match->_PlateIndex;
+                    Crossing._Direction = Direction;
+                    Crossing._Along = Stub._AlongIndex;
+                    Crossing._ClearanceUu = FMath::Min(Stub._ClearanceUu, Match->_ClearanceUu);
+                    Crossing._MidZUu = 0.5f * (Stub._NearSurfaceZUu + Stub._FarSurfaceZUu);
+
+                    Crossings.Emplace(Crossing);
+                }
+            }
+        }
+
+        Crossings.Sort([](const FSeamCrossing& InLeft, const FSeamCrossing& InRight) -> bool
+        {
+            if (InLeft._TileIndexA != InRight._TileIndexA) { return InLeft._TileIndexA < InRight._TileIndexA; }
+            if (InLeft._TileIndexB != InRight._TileIndexB) { return InLeft._TileIndexB < InRight._TileIndexB; }
+            if (InLeft._Direction  != InRight._Direction)  { return InLeft._Direction  < InRight._Direction; }
+            if (InLeft._PlateA     != InRight._PlateA)     { return InLeft._PlateA     < InRight._PlateA; }
+            if (InLeft._PlateB     != InRight._PlateB)     { return InLeft._PlateB     < InRight._PlateB; }
+
+            return InLeft._Along < InRight._Along;
+        });
+
+        for (auto Index = 0; Index < Crossings.Num(); ++Index)
+        {
+            const auto& Crossing = Crossings[Index];
+
+            if (Index > 0 && Get_IsSameRun(Crossings[Index - 1], Crossing))
+            {
+                auto& Portal = InOutField._SeamPortals.Last();
+
+                Portal._AlongMax = Crossing._Along;
+                Portal._MaxEndZUu = Crossing._MidZUu;
+                Portal._TraversalClearanceUu = FMath::Max(
+                    Portal._TraversalClearanceUu, Crossing._ClearanceUu);
+
+                continue;
+            }
+
+            auto Portal = FCk_GroundNav_SeamPortal{};
+
+            Portal._TileIndexA = Crossing._TileIndexA;
+            Portal._TileIndexB = Crossing._TileIndexB;
+            Portal._PlateA = Crossing._PlateA;
+            Portal._PlateB = Crossing._PlateB;
+            Portal._Direction = Crossing._Direction;
+            Portal._AlongMin = Crossing._Along;
+            Portal._AlongMax = Crossing._Along;
+            Portal._MinEndZUu = Crossing._MidZUu;
+            Portal._MaxEndZUu = Crossing._MidZUu;
+            Portal._TraversalClearanceUu = Crossing._ClearanceUu;
+
+            InOutField._SeamPortals.Emplace(Portal);
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         DoBake_Field(
             const ICk_GroundNav_GeometryBackend& InBackend,
@@ -205,6 +377,8 @@ namespace ck::groundnav
             ProbesSpent += TileResult.Get_ProbesSpent();
             DroppedInputCount += TileResult.Get_DroppedInputCount();
         }
+
+        DoDerive_SeamPortals(OutField);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
         Result.Set_ProbesSpent(ProbesSpent);
