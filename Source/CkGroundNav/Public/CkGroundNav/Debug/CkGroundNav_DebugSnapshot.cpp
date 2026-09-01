@@ -23,6 +23,25 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FCk_GroundNav_DebugSnapshot::
+        Get_NarrowestPortalUu() const
+        -> float
+    {
+        auto Narrowest = 0.0f;
+        auto Found = false;
+
+        for (const auto& Portal : _Portals)
+        {
+            Narrowest = Found ? FMath::Min(Narrowest, Portal._TraversalClearanceUu) : Portal._TraversalClearanceUu;
+            Found = true;
+        }
+
+        return Narrowest;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Do_RecordRejectedCells(
             const FCk_GroundNav_SpanField& InBeforeFilter,
             const FCk_GroundNav_SpanField& InAfterFilter,
@@ -73,6 +92,7 @@ namespace ck::groundnav
             const FCk_GroundNav_LayerField&     InLayers,
             const FCk_GroundNav_ClearanceField& InClearance,
             const FCk_GroundNav_PlateField&     InPlates,
+            const FCk_GroundNav_PortalField&    InPortals,
             const FBox&                         InRegion,
             int32                               InMaxCells)
         -> FCk_GroundNav_DebugSnapshot
@@ -161,6 +181,27 @@ namespace ck::groundnav
             DebugPlate._MaxPlaneResidualUu = Plate._MaxPlaneResidualUu;
 
             Snapshot._Plates.Emplace(DebugPlate);
+        }
+
+        Snapshot._Portals.Reserve(InPortals._Portals.Num());
+
+        for (const auto& Portal : InPortals._Portals)
+        {
+            const auto IsPlatePairValid =
+                InPlates._Plates.IsValidIndex(Portal._PlateA) && InPlates._Plates.IsValidIndex(Portal._PlateB);
+
+            if (NOT IsPlatePairValid)
+            { continue; }
+
+            auto DebugPortal = FCk_GroundNav_DebugPortal{};
+
+            Portal.Get_Endpoints(InSpans, DebugPortal._MinEnd, DebugPortal._MaxEnd);
+
+            DebugPortal._TraversalClearanceUu = Portal._TraversalClearanceUu;
+            DebugPortal._IsCrossLayer =
+                InPlates._Plates[Portal._PlateA]._LayerIndex != InPlates._Plates[Portal._PlateB]._LayerIndex;
+
+            Snapshot._Portals.Emplace(DebugPortal);
         }
 
         Snapshot._CollapseRatio = InPlates.Get_CollapseRatio();
