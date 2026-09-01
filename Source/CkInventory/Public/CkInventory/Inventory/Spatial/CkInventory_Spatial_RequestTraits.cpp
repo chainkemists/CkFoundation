@@ -121,7 +121,7 @@ namespace ck::inventory_handlers
         UCk_Utils_Inventory_Spatial_UE::Request_RemoveItemFromGrid(InHandle, ItemHandle);
         UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Disconnect(Base, ItemHandle);
         TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle_Inventory());
-        detail::ReleaseItemLifetime_FromInventory(ItemHandle, Base);
+        detail::FinalizeItemRemoval(ItemHandle, Base, InRequest.Get_PostRemovePolicy());
         R = Result::Success;
         return R;
     }
