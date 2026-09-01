@@ -71,6 +71,115 @@ namespace ck::groundnav
                 }
             }
         }
+
+        /** A stub plus where in the halo lattice it came from, so its plate can be filled in later. */
+        struct FStubSite
+        {
+            FCk_GroundNav_SeamStub _Stub;
+
+            int32 _HaloX = 0;
+            int32 _HaloY = 0;
+            int32 _Layer = 0;
+        };
+
+        auto Get_EdgeCell(
+            int32 InDirection,
+            int32 InAlong,
+            int32 InTileCells) -> FIntPoint
+        {
+            const auto Last = InTileCells - 1;
+
+            switch (InDirection)
+            {
+                case 0:  return FIntPoint{Last, InAlong};
+                case 1:  return FIntPoint{InAlong, Last};
+                case 2:  return FIntPoint{0, InAlong};
+                default: return FIntPoint{InAlong, 0};
+            }
+        }
+
+        /**
+         * Record what the halo knows about every crossing that leaves the tile.
+         *
+         * Runs BEFORE the halo is masked away, because that is the only moment the neighbouring ground
+         * and the connection field that reaches it both exist. What survives is a description of the
+         * crossing, not a reference into anything: two tiles are composed later by comparing
+         * descriptions, never by re-deriving adjacency.
+         */
+        auto Do_CollectSeamStubs(
+            const FCk_GroundNav_SpanField&       InSpans,
+            const FCk_GroundNav_LayerField&      InLayers,
+            const FCk_GroundNav_ConnectionField& InConnections,
+            const FCk_GroundNav_ClearanceField&  InClearance,
+            int32                                InHaloCells,
+            int32                                InTileCells,
+            float                                InMaxClearanceUu,
+            TArray<FStubSite>&                   OutSites) -> void
+        {
+            OutSites.Reset();
+
+            for (auto Direction = 0; Direction < kDirectionCount; ++Direction)
+            {
+                const auto Offset = Get_DirectionOffset(Direction);
+
+                for (auto Along = 0; Along < InTileCells; ++Along)
+                {
+                    const auto EdgeCell = Get_EdgeCell(Direction, Along, InTileCells);
+
+                    const auto HaloX = EdgeCell.X + InHaloCells;
+                    const auto HaloY = EdgeCell.Y + InHaloCells;
+
+                    const auto FarX = HaloX + Offset.X;
+                    const auto FarY = HaloY + Offset.Y;
+
+                    if (NOT InSpans.Get_IsValidColumn(FarX, FarY))
+                    { continue; }
+
+                    const auto& SpanColumn = InSpans.Get_Column(HaloX, HaloY);
+                    const auto& LayerColumn = InLayers.Get_Column(HaloX, HaloY);
+                    const auto& ConnectionColumn = InConnections.Get_Column(HaloX, HaloY);
+
+                    const auto& FarSpanColumn = InSpans.Get_Column(FarX, FarY);
+                    const auto& FarLayerColumn = InLayers.Get_Column(FarX, FarY);
+
+                    for (auto SpanIndex = 0; SpanIndex < SpanColumn.Num(); ++SpanIndex)
+                    {
+                        const auto Layer = LayerColumn[SpanIndex];
+
+                        if (Layer == FCk_GroundNav_LayerField::kNoLayer)
+                        { continue; }
+
+                        const auto FarSpanIndex = ConnectionColumn[SpanIndex]._Neighbours[Direction];
+
+                        if (FarSpanIndex == FCk_GroundNav_SpanConnections::kNoConnection)
+                        { continue; }
+
+                        const auto FarLayer = FarLayerColumn[FarSpanIndex];
+
+                        if (FarLayer == FCk_GroundNav_LayerField::kNoLayer)
+                        { continue; }
+
+                        auto Site = FStubSite{};
+
+                        Site._HaloX = HaloX;
+                        Site._HaloY = HaloY;
+                        Site._Layer = Layer;
+
+                        Site._Stub._Direction = Direction;
+                        Site._Stub._AlongIndex = Along;
+                        Site._Stub._NearSurfaceZUu = SpanColumn[SpanIndex]._MaxZ;
+                        Site._Stub._FarSurfaceZUu = FarSpanColumn[FarSpanIndex]._MaxZ;
+                        Site._Stub._ClearanceUu = FMath::Min(
+                            FMath::Min(
+                                InClearance.Get_ClearanceAt(HaloX, HaloY, Layer),
+                                InClearance.Get_ClearanceAt(FarX, FarY, FarLayer)),
+                            InMaxClearanceUu);
+
+                        OutSites.Emplace(Site);
+                    }
+                }
+            }
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -194,6 +303,11 @@ namespace ck::groundnav
 
         ProbesSpent += ClearanceResult.Get_ProbesSpent();
 
+        auto StubSites = TArray<FStubSite>{};
+        Do_CollectSeamStubs(
+            Spans, Layers, Connections, HaloClearance, HaloCells, TileCells,
+            InParams._MaxClearanceUu, StubSites);
+
         Do_MaskHalo(HaloCells, TileCells, Layers);
 
         auto Plates = FCk_GroundNav_PlateField{};
@@ -305,6 +419,20 @@ namespace ck::groundnav
             // to turn away walk through it.
             Portal._TraversalClearanceUu = FMath::Min(
                 Portal._TraversalClearanceUu, InParams._MaxClearanceUu);
+        }
+
+        OutTile._SeamStubs.Reserve(StubSites.Num());
+
+        for (auto& Site : StubSites)
+        {
+            const auto PlateIndex = Plates.Get_PlateIndexAt(Site._HaloX, Site._HaloY, Site._Layer);
+
+            if (PlateIndex == FCk_GroundNav_Plate::kNoPlate)
+            { continue; }
+
+            Site._Stub._PlateIndex = PlateIndex;
+
+            OutTile._SeamStubs.Emplace(Site._Stub);
         }
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
