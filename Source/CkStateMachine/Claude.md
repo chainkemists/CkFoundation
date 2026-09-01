@@ -251,9 +251,11 @@ Related: a snapshot-restored SM-graph entity keeps its EntityScript but not its 
 
 Both handlers emit a CANONICAL payload rather than the live one: WithHistory persists a single event `{null → CurrentStateClass, Seq 0, Fp 0}` (empty history when there is no current state); WithoutHistory persists the latest state with Seq 0 / Fp 0. Live server seqs restart in the rebuilt world, so persisting the live ring would diverge, and HydrationApply only reads the target state + status. Both are gated on the replication MODEL (not `_Replication`) so `DoesNotReplicate` SMs — default model WithHistory — persist too. Runtime state-overrides ride inside the RepData as save-only fields, never on the wire. Both NetApply shapes always return `Applied`: pre-Setup arrivals stash via `Sm_ShouldStash`, never via dispatcher NotReady retries, preserving the arrival-order contract `FlushPendingReplication_Drain` relies on.
 
-### Params save opt-in
+### Params and state save opt-in
 
 Every persisted field on `FCk_Fragment_StateMachine_ParamsData` carries the SaveGame **specifier** — the flag that sets `CPF_SaveGame`, which the `ArIsSaveGame` tagged-property gate checks. `meta=(SaveGame)` is inert metadata and round-trips NOTHING (empirically: every field restored to its default). Fields serialize through the reflected `SerializeItem` path; the proxy archive writes `_InitialStateClass` by path string.
+
+`_ShouldPersistCurrentState` defaults to true, preserving the existing save behavior. Set it false on the live reconstructed Params when an SM's current runtime state is derived from authored/rebuilt behavior: Produce emits no state-machine payload, and HydrationApply answers `Applied` without touching an older payload if one is present. This gates save transport only; `NetApply` and live replication retain their existing behavior.
 
 ### `FCk_Sm_SavedStateOverride` must be BlueprintType
 

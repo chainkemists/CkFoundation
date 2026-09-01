@@ -22,6 +22,12 @@
             if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
             { return ECk_Persistence_ApplyResult::NotReady; }
 
+            if (NOT Entity.Has<ck::FFragment_Inventory_Params>())
+            { return ECk_Persistence_ApplyResult::NotReady; }
+
+            if (Entity.Get<ck::FFragment_Inventory_Params>().Get_PersistContents() == ECk_EnableDisable::Disable)
+            { return ECk_Persistence_ApplyResult::Applied; }
+
             if (ck::algo::AnyOf(NewItems, [](const FCk_InventoryItem_DataOnly_ReplicatedEntry& InEntry)
                 { return ck::Is_NOT_Valid(InEntry.Get_ItemHandle()); }))
             { return ECk_Persistence_ApplyResult::NotReady; }
@@ -76,6 +82,12 @@
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_DataOnly_UE::Has(Entity))
+                    { return {}; }
+
+                    if (NOT Entity.Has<ck::FFragment_Inventory_Params>())
+                    { return {}; }
+
+                    if (Entity.Get<ck::FFragment_Inventory_Params>().Get_PersistContents() == ECk_EnableDisable::Disable)
                     { return {}; }
 
                     const auto& Items = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Get_ValidEntries(Entity);

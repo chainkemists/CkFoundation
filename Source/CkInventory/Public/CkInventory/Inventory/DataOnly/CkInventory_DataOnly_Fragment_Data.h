@@ -58,6 +58,10 @@ private:
                       EditCondition = "_StackingPolicy == ECk_Inventory_StackingPolicy::ClampMaxStackSize", SaveGame))
     int32 _MaxStackSizeClamp = 1;
 
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _PersistContents = ECk_EnableDisable::Enable;
+
     // Every field below is deliberately NOT SaveGame: runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
@@ -104,6 +108,7 @@ public:
     CK_PROPERTY_GET(_BoundLimit);
     CK_PROPERTY(_StackingPolicy);
     CK_PROPERTY(_MaxStackSizeClamp);
+    CK_PROPERTY(_PersistContents);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
     CK_PROPERTY(_CanAcceptItemRef);
