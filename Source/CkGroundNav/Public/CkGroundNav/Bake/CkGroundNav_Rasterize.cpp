@@ -55,6 +55,30 @@ namespace ck::groundnav
         }
 
         /**
+         * Twice the signed area the polygon projects onto XY.
+         *
+         * A vertical face lying on a cell boundary survives clipping into BOTH adjacent columns as a
+         * sliver with three or more vertices and zero footprint. Admitting it would plant a phantom
+         * surface in the column beyond the wall — and a cliff edge with a phantom floor beside it is
+         * no longer a cliff edge, so the ledge filter would never fire.
+         */
+        auto Get_TwiceProjectedArea(
+            const TArray<FVector>& InPolygon) -> double
+        {
+            auto Accumulated = 0.0;
+
+            for (auto Index = 0; Index < InPolygon.Num(); ++Index)
+            {
+                const auto& Current = InPolygon[Index];
+                const auto& Next = InPolygon[(Index + 1) % InPolygon.Num()];
+
+                Accumulated += (Current.X * Next.Y) - (Next.X * Current.Y);
+            }
+
+            return FMath::Abs(Accumulated);
+        }
+
+        /**
          * Insert one span into a column, keeping the column ordered by height, non-overlapping, and
          * merged across gaps no larger than InMergeThreshold.
          *
@@ -224,6 +248,15 @@ namespace ck::groundnav
                     DoClip_ToPlane(Clipped, 0, ColumnMax, false, Scratch);
 
                     if (Scratch.Num() < 3)
+                    { continue; }
+
+                    // Scaled to the cell so the same threshold holds at every cell size. A genuinely
+                    // thin triangle still clears it by orders of magnitude; only a zero-footprint
+                    // sliver does not.
+                    constexpr auto DegenerateAreaFraction = 1.0e-4;
+
+                    if (Get_TwiceProjectedArea(Scratch) <
+                        (static_cast<double>(CellSize) * CellSize * DegenerateAreaFraction))
                     { continue; }
 
                     auto SpanMinZ = TNumericLimits<double>::Max();
