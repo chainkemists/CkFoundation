@@ -112,6 +112,15 @@ namespace ck::groundnav
         // Derived at composition from the tiles' seam stubs, never carried across a rebuild.
         TArray<FCk_GroundNav_SeamPortal> _SeamPortals;
 
+        // Where each tile's plates begin in _ReachabilityLabels. Get_TileCount() + 1 entries, so the
+        // last one is the total and every tile's range is a subtraction away.
+        TArray<int32> _TilePlateOffsets;
+
+        // One component label per plate of the whole field. Valid only within this field: labels are
+        // re-derived on every composition and never carried across a rebuild, because a plate index
+        // that survived a rebuild by luck would carry a label that did not.
+        TArray<int32> _ReachabilityLabels;
+
         FCk_GroundNav_Epoch _Epoch;
 
     public:
@@ -124,6 +133,29 @@ namespace ck::groundnav
         auto Get_TileAt(const FVector& InWorldPosition) const -> const FCk_GroundNav_Tile*;
 
         auto Get_BuiltTileCount() const -> int32;
+
+        /**
+         * Which connected component a plate belongs to, or INDEX_NONE if it has no label.
+         *
+         * COMPONENTS IGNORE AGENT SIZE. They are computed over the crossings that exist at all, not
+         * over the crossings a given body fits through, which makes the guarantee one-directional: a
+         * DIFFERENT label proves two plates cannot reach each other, and the SAME label proves only
+         * that a body of zero width could. Anything that has to hold for a real agent must still check
+         * the clearance of the crossings on its route.
+         */
+        auto Get_ReachabilityLabel(int32 InTileIndex, int32 InPlateIndex) const -> int32;
+
+        /**
+         * Whether two plates are provably out of each other's reach.
+         *
+         * The name is the contract. This is the only direction the labels can answer on their own, so
+         * there is deliberately no Get_AreReachable beside it to be reached for by mistake.
+         */
+        auto Get_AreProvablyDisconnected(
+            int32 InTileIndexA, int32 InPlateIndexA,
+            int32 InTileIndexB, int32 InPlateIndexB) const -> bool;
+
+        auto Get_ReachabilityComponentCount() const -> int32;
 
         /**
          * One monotone number for the whole field: the sum of its tiles' epochs.
@@ -219,6 +251,18 @@ namespace ck::groundnav
      */
     CKGROUNDNAV_API auto
     DoDerive_SeamPortals(
+        FCk_GroundNav_Field& InOutField) -> void;
+
+    /**
+     * Label every plate of the field with the component it belongs to, over both within-tile and
+     * cross-tile crossings.
+     *
+     * Labels are assigned in tile-then-plate scan order after the merging is done, so the numbering
+     * depends only on what is connected to what and not on the order tiles happened to be built or
+     * merged in. Two identical worlds therefore label identically, whatever schedule produced them.
+     */
+    CKGROUNDNAV_API auto
+    DoLabel_Reachability(
         FCk_GroundNav_Field& InOutField) -> void;
 
     CKGROUNDNAV_API auto
