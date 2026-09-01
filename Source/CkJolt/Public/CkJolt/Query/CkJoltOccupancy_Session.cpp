@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid_Defaults.h"
 
 #include "CkJolt/CkJoltShapeFactory.h"
+#include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/CollisionLayers/CkJoltCollisionLayerTable.h"
 #include "CkJolt/Query/CkJoltOccupancy_Utils.h"
 #include "CkJolt/Query/CkJoltQuery_Data.h"
@@ -15,6 +16,10 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyLockInterface.h>
+#include <Jolt/Geometry/AABox.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -212,6 +217,90 @@ namespace ck::jolt
 
         for (const auto& BodyId : BodyIds)
         { OutBodyIds.Emplace(BodyId.GetIndexAndSequenceNumber()); }
+    }
+
+    auto
+        FCk_Jolt_QuerySession::
+        Get_StaticTrianglesInAABox(
+            const FBox& InWorldBounds,
+            FCk_Jolt_TriangleSoup& OutSoup) const
+        -> int32
+    {
+        if (ck::Is_NOT_Valid(_Impl, ck::IsValid_Policy_NullptrOnly{}))
+        { return 0; }
+
+        const auto PhysicsSystem = _Impl->_PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return 0; }
+
+        auto BodyIds = TArray<JPH::BodyID>{};
+        ck::jolt::Get_BodiesInAABox(*PhysicsSystem, InWorldBounds,
+            _Impl->_BroadPhaseFilter, _Impl->_ObjectFilter, BodyIds);
+
+        if (BodyIds.IsEmpty())
+        { return 0; }
+
+        const auto QueryBox = JPH::AABox{Conv(InWorldBounds.Min), Conv(InWorldBounds.Max)};
+        const auto& BodyLockInterface = PhysicsSystem->GetBodyLockInterface();
+
+        // Jolt requires at least cGetTrianglesMinTrianglesRequested per call and writes 3 vertices per
+        // triangle, so the scratch buffer is sized once for the whole sweep rather than per body.
+        constexpr auto BatchSize = 256;
+        static_assert(BatchSize >= JPH::Shape::cGetTrianglesMinTrianglesRequested);
+
+        auto TriangleVertices = TArray<JPH::Float3>{};
+        TriangleVertices.SetNumUninitialized(BatchSize * 3);
+
+        auto TrianglesAppended = 0;
+
+        for (const auto& BodyId : BodyIds)
+        {
+            const auto Lock = JPH::BodyLockRead{BodyLockInterface, BodyId};
+
+            if (NOT Lock.Succeeded())
+            { continue; }
+
+            const auto& Body = Lock.GetBody();
+
+            // Static-only is the contract, and it is enforced here rather than trusted from the caller's
+            // filters: a kinematic body that slipped through the object filter would bake a floor that
+            // then drives away, which is invisible until an agent walks through the hole it leaves.
+            if (NOT Body.IsStatic())
+            { continue; }
+
+            const auto* Shape = Body.GetShape();
+
+            if (ck::Is_NOT_Valid(Shape, ck::IsValid_Policy_NullptrOnly{}))
+            { continue; }
+
+            auto Context = JPH::Shape::GetTrianglesContext{};
+            Shape->GetTrianglesStart(Context, QueryBox,
+                Body.GetCenterOfMassPosition(), Body.GetRotation(), JPH::Vec3::sReplicate(1.0f));
+
+            for (;;)
+            {
+                const auto NumTriangles = Shape->GetTrianglesNext(Context, BatchSize, TriangleVertices.GetData());
+
+                if (NumTriangles == 0)
+                { break; }
+
+                const auto FirstVertex = OutSoup._Vertices.Num();
+
+                OutSoup._Vertices.Reserve(FirstVertex + (NumTriangles * 3));
+                OutSoup._Indices.Reserve(OutSoup._Indices.Num() + (NumTriangles * 3));
+
+                for (auto VertexIndex = 0; VertexIndex < NumTriangles * 3; ++VertexIndex)
+                {
+                    OutSoup._Vertices.Emplace(Conv(TriangleVertices[VertexIndex]));
+                    OutSoup._Indices.Emplace(FirstVertex + VertexIndex);
+                }
+
+                TrianglesAppended += NumTriangles;
+            }
+        }
+
+        return TrianglesAppended;
     }
 }
 
