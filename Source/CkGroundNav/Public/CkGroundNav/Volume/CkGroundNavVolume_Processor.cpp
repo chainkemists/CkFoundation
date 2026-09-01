@@ -18,6 +18,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartBuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Build);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -282,6 +283,29 @@ namespace ck
 
         InBuildState._PendingRequest.TryFireCompletion(
             InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_BuildState& InBuildState,
+            const FFragment_GroundNavVolume_Requests& InRequests)
+        -> void
+    {
+        // Two separate populations, and missing either one strands a caller. The QUEUE holds requests
+        // the drain never reached; _PendingRequest holds the delegate that has been riding the
+        // multi-tick build and is the one a caller is most likely actually waiting on.
+        request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
+
+        InBuildState._PendingRequest.TryFireCompletion(
+            InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+
+        // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
+        InBuildState._Backend.Reset();
     }
 }
 

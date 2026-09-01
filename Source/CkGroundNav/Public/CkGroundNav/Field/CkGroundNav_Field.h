@@ -133,6 +133,13 @@ namespace ck::groundnav
         // that survived a rebuild by luck would carry a label that did not.
         TArray<int32> _ReachabilityLabels;
 
+        // One flag per component, indexed by label: whether that component borders a tile that has
+        // not been baked. Such a component can never be PROVEN closed, because the crossing that
+        // would join it to another may simply live in ground nobody has looked at yet. Kept beside
+        // the labels rather than derived at query time, because the tile lattice walk it needs is
+        // not something a query should be paying for.
+        TArray<bool> _ComponentIsOpen;
+
         FCk_GroundNav_Epoch _Epoch;
 
     public:
@@ -156,6 +163,14 @@ namespace ck::groundnav
          * the clearance of the crossings on its route.
          */
         auto Get_ReachabilityLabel(int32 InTileIndex, int32 InPlateIndex) const -> int32;
+
+        /**
+         * Whether a component borders unbuilt ground, and therefore cannot be proven closed.
+         *
+         * An unknown label is reported OPEN: a caller that cannot name its component is in no
+         * position to be told a proof holds for it.
+         */
+        auto Get_IsComponentOpen(int32 InLabel) const -> bool;
 
         /**
          * Whether two plates are provably out of each other's reach.

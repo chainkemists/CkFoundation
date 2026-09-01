@@ -24,7 +24,12 @@ namespace ck::groundnav
         auto Get_AreParamsValid(const FCk_GroundNav_TileBakeParams& InParams) -> bool
         {
             return InParams._Config.Get_IsValid() &&
-                   InParams._MaxClearanceUu >= 0.0f &&
+                   // Strictly positive: a zero cap gives a zero-cell halo, which costs BOTH the
+                   // cross-tile connectivity (no stub's far column is in the lattice) and correct
+                   // ledge filtering at every tile border (an out-of-lattice neighbour reads as
+                   // support). Neither failure is visible in the output — the field just reads
+                   // blocked at every seam.
+                   InParams._MaxClearanceUu > 0.0f &&
                    InParams._MaxZUu > InParams._MinZUu &&
                    Get_TileCellCount(InParams) > 0;
         }

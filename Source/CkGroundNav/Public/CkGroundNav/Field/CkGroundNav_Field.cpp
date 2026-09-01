@@ -158,7 +158,9 @@ namespace ck::groundnav
             int32 InPlateIndex) const
         -> int32
     {
-        if (NOT _TilePlateOffsets.IsValidIndex(InTileIndex) || InPlateIndex < 0)
+        // _TilePlateOffsets holds TileCount + 1 entries, so IsValidIndex(InTileIndex) alone would
+        // admit InTileIndex == TileCount and the [InTileIndex + 1] read below would run off the end.
+        if (InPlateIndex < 0 || InTileIndex < 0 || NOT _TilePlateOffsets.IsValidIndex(InTileIndex + 1))
         { return INDEX_NONE; }
 
         const auto Flat = _TilePlateOffsets[InTileIndex] + InPlateIndex;
@@ -187,7 +189,23 @@ namespace ck::groundnav
         if (LabelA == INDEX_NONE || LabelB == INDEX_NONE)
         { return false; }
 
+        // Different labels prove nothing while either component still borders ground that has not
+        // been baked: the crossing that would join them may exist in a tile nobody has reached. This
+        // is the same refusal as the unknown-label one above, for the same reason — a hole in the
+        // data is not a fact about the world.
+        if (Get_IsComponentOpen(LabelA) || Get_IsComponentOpen(LabelB))
+        { return false; }
+
         return LabelA != LabelB;
+    }
+
+    auto
+        FCk_GroundNav_Field::
+        Get_IsComponentOpen(
+            int32 InLabel) const
+        -> bool
+    {
+        return _ComponentIsOpen.IsValidIndex(InLabel) ? _ComponentIsOpen[InLabel] : true;
     }
 
     auto
@@ -333,6 +351,42 @@ namespace ck::groundnav
             // connected, never on the order the merges arrived in.
             InOutParents[FMath::Max(RootLeft, RootRight)] = FMath::Min(RootLeft, RootRight);
         }
+
+        /**
+         * Whether any of a tile's four orthogonal neighbours exists in the lattice and is not built.
+         *
+         * A neighbour OUTSIDE the lattice is deliberately not counted: the field border is a real
+         * edge under [NN-D27], not an admission of ignorance, and counting it would make every
+         * component of a single-tile field permanently unprovable.
+         */
+        auto Get_HasUnbuiltNeighbour(
+            const FCk_GroundNav_Field& InField,
+            int32                      InTileIndex) -> bool
+        {
+            const auto Divisions = InField._Params._Divisions;
+            const auto Coord = Get_TileCoord(Divisions, InTileIndex);
+
+            constexpr int32 OffsetsX[] = {1, -1, 0, 0};
+            constexpr int32 OffsetsY[] = {0, 0, 1, -1};
+
+            for (auto Side = 0; Side < 4; ++Side)
+            {
+                const auto NeighbourCoord = FCk_GroundNav_TileCoord{
+                    Coord._X + OffsetsX[Side], Coord._Y + OffsetsY[Side]};
+
+                if (NeighbourCoord._X < 0 || NeighbourCoord._X >= Divisions.X ||
+                    NeighbourCoord._Y < 0 || NeighbourCoord._Y >= Divisions.Y)
+                { continue; }
+
+                const auto NeighbourIndex = Get_TileIndex(Divisions, NeighbourCoord);
+
+                if (InField._Tiles.IsValidIndex(NeighbourIndex) &&
+                    NOT InField._Tiles[NeighbourIndex].Get_IsBuilt())
+                { return true; }
+            }
+
+            return false;
+        }
     }
 
     auto
@@ -398,6 +452,27 @@ namespace ck::groundnav
             const auto Label = RootToLabel.Num();
             RootToLabel.Add(Root, Label);
             InOutField._ReachabilityLabels[Flat] = Label;
+        }
+
+        // A component holding a plate in a tile that borders unbuilt ground is unprovable, and says
+        // so rather than letting a caller read "disconnected" off a gap in the bake.
+        InOutField._ComponentIsOpen.Init(false, RootToLabel.Num());
+
+        for (auto TileIndex = 0; TileIndex < InOutField._Tiles.Num(); ++TileIndex)
+        {
+            if (NOT Get_HasUnbuiltNeighbour(InOutField, TileIndex))
+            { continue; }
+
+            const auto Begin = InOutField._TilePlateOffsets[TileIndex];
+            const auto End = InOutField._TilePlateOffsets[TileIndex + 1];
+
+            for (auto Flat = Begin; Flat < End; ++Flat)
+            {
+                const auto Label = InOutField._ReachabilityLabels[Flat];
+
+                if (InOutField._ComponentIsOpen.IsValidIndex(Label))
+                { InOutField._ComponentIsOpen[Label] = true; }
+            }
         }
     }
 
