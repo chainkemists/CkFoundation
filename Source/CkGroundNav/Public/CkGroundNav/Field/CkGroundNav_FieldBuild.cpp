@@ -117,6 +117,17 @@ namespace ck::groundnav
     {
         return InState.Get_IsComplete() ? &InState._Partial : nullptr;
     }
+
+    auto
+        Request_ReleaseCompletedField(
+            FCk_GroundNav_FieldBuildState& InOutState)
+        -> FCk_GroundNav_FieldPtr
+    {
+        if (NOT InOutState.Get_IsComplete())
+        { return {}; }
+
+        return MakeShared<const FCk_GroundNav_Field>(MoveTemp(InOutState._Partial));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
