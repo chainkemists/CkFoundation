@@ -145,6 +145,34 @@ namespace ck
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_BuiltField& InBuiltField) const -> void;
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // The three processors above exclude owners already tagged for destruction, so a destroyed volume's
+    // queued requests are never drained AND its in-flight build never reports. This fires both as
+    // Failed_Cancelled, so a caller awaiting completion terminates instead of hanging forever on a
+    // delegate that no longer has a processor to fire it.
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_CancelPendingRequests,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadWrite<FFragment_GroundNavVolume_BuildState>,
+        ck::TReadOnly<FFragment_GroundNavVolume_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_BuildState& InBuildState,
+            const FFragment_GroundNavVolume_Requests& InRequests) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
