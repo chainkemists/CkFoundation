@@ -178,6 +178,22 @@ namespace ck::inventory_handlers
     {
         template <typename, typename = void> struct HasRelocate : std::false_type {};
         template <typename T> struct HasRelocate<T, std::void_t<typename T::Relocate>> : std::true_type {};
+
+        /** Undoes the lifetime claim the matching Add took (Request_TransferLifetimeOwner onto the
+         *  inventory entity). Without it a Remove is only half a removal: the record entry and the
+         *  ParentInventory pointer clear, but the item entity stays a LIFETIME DEPENDENT of the
+         *  container it just left -- invisible to Get_Items/Get_NumItems, yet still alive, still
+         *  captured by every snapshot as that container's child, and still swept by that container's
+         *  destroy cascade. Every caller that removes without immediately re-adding accumulates one
+         *  such orphan per removal, for the lifetime of the container.
+         *
+         *  Releases to the inventory's CONTEXT OWNER -- the same entity UCk_Utils_Item_UE::Create
+         *  parents a fresh item to -- so a between-containers item sits exactly where a brand-new one
+         *  would. Deliberately conservative: it moves ONLY a claim this inventory still holds, and
+         *  never rescues an item from a container that is already tearing down. */
+        CKINVENTORY_API auto ReleaseItemLifetime_FromInventory(
+            FCk_Handle_Item& InItem,
+            FCk_Handle_Inventory& InInventory) -> void;
     }
 
     // The generic completion delegate reports the coarse view of the very same result the bespoke
