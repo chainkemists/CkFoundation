@@ -39,6 +39,22 @@ namespace ck::groundnav
         return Narrowest;
     }
 
+    auto
+        FCk_GroundNav_DebugSnapshot::
+        Get_BuiltTileCount() const
+        -> int32
+    {
+        auto Count = 0;
+
+        for (const auto& Tile : _Tiles)
+        {
+            if (Tile._IsBuilt)
+            { ++Count; }
+        }
+
+        return Count;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -209,6 +225,166 @@ namespace ck::groundnav
         Snapshot._MaxPlateHeightRangeUu = InPlates.Get_MaxHeightRangeUu();
 
         Snapshot._Status = EDebugSnapshotStatus::Current;
+
+        return Snapshot;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugSnapshotFromField(
+            const FCk_GroundNav_Field& InField,
+            int32                      InMaxCells)
+        -> FCk_GroundNav_DebugSnapshot
+    {
+        auto Snapshot = FCk_GroundNav_DebugSnapshot{};
+
+        Snapshot._Region = InField._Params.Get_Bounds();
+        Snapshot._CellSizeUu = InField._Params._Config.Get_CellSizeUu();
+        Snapshot._Status = EDebugSnapshotStatus::Current;
+
+        Snapshot._Tiles.Reserve(InField.Get_TileCount());
+
+        for (const auto& Tile : InField._Tiles)
+        {
+            auto DebugTile = FCk_GroundNav_DebugTile{};
+
+            const auto SpanUu = static_cast<double>(Tile._SizeX) * Tile._CellSizeUu;
+
+            DebugTile._Bounds = FBox{
+                FVector{Tile._Origin.X, Tile._Origin.Y, InField._Params._MinZUu},
+                FVector{Tile._Origin.X + SpanUu, Tile._Origin.Y + SpanUu, InField._Params._MaxZUu}};
+
+            DebugTile._IsBuilt = Tile.Get_IsBuilt();
+            DebugTile._PlateCount = Tile._Plates._Plates.Num();
+            DebugTile._WalkableCellCount = Tile.Get_WalkableCellCount();
+
+            Snapshot._Tiles.Emplace(DebugTile);
+
+            if (NOT Tile.Get_IsBuilt())
+            { continue; }
+
+            Snapshot._LayerCount = FMath::Max(Snapshot._LayerCount, Tile._LayerCount);
+            Snapshot._MaxClearanceUu = FMath::Max(
+                Snapshot._MaxClearanceUu, Tile._Clearance.Get_MaxClearance());
+
+            const auto HalfCell = static_cast<double>(Tile._CellSizeUu) * 0.5;
+
+            for (auto LayerIndex = 0; LayerIndex < Tile._LayerCount; ++LayerIndex)
+            {
+                for (auto Y = 0; Y < Tile._SizeY; ++Y)
+                {
+                    for (auto X = 0; X < Tile._SizeX; ++X)
+                    {
+                        if (NOT Tile.Get_HasSurfaceAt(X, Y, LayerIndex))
+                        { continue; }
+
+                        // Counted before the cap, so the reported total describes the field rather than
+                        // the draw budget.
+                        ++Snapshot._WalkableCellCount;
+
+                        if (Snapshot._Cells.Num() >= InMaxCells)
+                        {
+                            Snapshot._CellsWereTruncated = true;
+                            continue;
+                        }
+
+                        auto Cell = FCk_GroundNav_DebugCell{};
+
+                        Cell._SurfaceCentre = Tile.Get_CellCentre(X, Y, LayerIndex);
+                        Cell._ClearanceUu = Tile._Clearance.Get_ClearanceAt(X, Y, LayerIndex);
+                        Cell._LayerIndex = LayerIndex;
+                        Cell._PlateIndex = Tile._Plates.Get_PlateIndexAt(X, Y, LayerIndex);
+
+                        Snapshot._Cells.Emplace(Cell);
+                    }
+                }
+            }
+
+            for (const auto& Plate : Tile._Plates._Plates)
+            {
+                auto LowestZ = TNumericLimits<double>::Max();
+                auto HighestZ = TNumericLimits<double>::Lowest();
+
+                for (auto Y = Plate._MinY; Y <= Plate._MaxY; ++Y)
+                {
+                    for (auto X = Plate._MinX; X <= Plate._MaxX; ++X)
+                    {
+                        if (NOT Tile.Get_HasSurfaceAt(X, Y, Plate._LayerIndex))
+                        { continue; }
+
+                        const auto SurfaceZ = static_cast<double>(
+                            Tile.Get_SurfaceZAt(X, Y, Plate._LayerIndex));
+
+                        LowestZ = FMath::Min(LowestZ, SurfaceZ);
+                        HighestZ = FMath::Max(HighestZ, SurfaceZ);
+                    }
+                }
+
+                if (LowestZ > HighestZ)
+                { continue; }
+
+                const auto Cell = static_cast<double>(Tile._CellSizeUu);
+
+                auto DebugPlate = FCk_GroundNav_DebugPlate{};
+
+                DebugPlate._Bounds = FBox{
+                    FVector{
+                        Tile._Origin.X + (static_cast<double>(Plate._MinX) * Cell),
+                        Tile._Origin.Y + (static_cast<double>(Plate._MinY) * Cell),
+                        LowestZ},
+                    FVector{
+                        Tile._Origin.X + (static_cast<double>(Plate._MaxX + 1) * Cell),
+                        Tile._Origin.Y + (static_cast<double>(Plate._MaxY + 1) * Cell),
+                        HighestZ}};
+
+                DebugPlate._LayerIndex = Plate._LayerIndex;
+                DebugPlate._HeightRangeUu = Plate._HeightRangeUu;
+                DebugPlate._MaxPlaneResidualUu = Plate._MaxPlaneResidualUu;
+
+                Snapshot._Plates.Emplace(DebugPlate);
+
+                Snapshot._MaxPlaneResidualUu = FMath::Max(
+                    Snapshot._MaxPlaneResidualUu, Plate._MaxPlaneResidualUu);
+                Snapshot._MaxPlateHeightRangeUu = FMath::Max(
+                    Snapshot._MaxPlateHeightRangeUu, Plate._HeightRangeUu);
+            }
+
+            for (const auto& Portal : Tile._Portals._Portals)
+            {
+                auto DebugPortal = FCk_GroundNav_DebugPortal{};
+
+                Portal.Get_Endpoints(Tile._Origin, Tile._CellSizeUu, DebugPortal._MinEnd, DebugPortal._MaxEnd);
+
+                DebugPortal._TraversalClearanceUu = Portal._TraversalClearanceUu;
+                DebugPortal._IsCrossLayer =
+                    Tile._Plates._Plates.IsValidIndex(Portal._PlateA) &&
+                    Tile._Plates._Plates.IsValidIndex(Portal._PlateB) &&
+                    Tile._Plates._Plates[Portal._PlateA]._LayerIndex !=
+                        Tile._Plates._Plates[Portal._PlateB]._LayerIndex;
+
+                Snapshot._Portals.Emplace(DebugPortal);
+            }
+        }
+
+        Snapshot._Seams.Reserve(InField._SeamPortals.Num());
+
+        for (const auto& Seam : InField._SeamPortals)
+        {
+            if (NOT InField._Tiles.IsValidIndex(Seam._TileIndexA))
+            { continue; }
+
+            auto DebugSeam = FCk_GroundNav_DebugSeam{};
+
+            Seam.Get_Endpoints(InField._Tiles[Seam._TileIndexA], DebugSeam._MinEnd, DebugSeam._MaxEnd);
+            DebugSeam._TraversalClearanceUu = Seam._TraversalClearanceUu;
+
+            Snapshot._Seams.Emplace(DebugSeam);
+        }
+
+        Snapshot._CollapseRatio = Snapshot._Plates.IsEmpty()
+            ? 0.0f
+            : static_cast<float>(Snapshot._WalkableCellCount) / static_cast<float>(Snapshot._Plates.Num());
 
         return Snapshot;
     }

@@ -83,6 +83,36 @@ namespace ck::groundnav
             FMath::FloorToInt32((InWorldPosition.Y - _OriginXY.Y) / SpanUu)};
     }
 
+    auto
+        FCk_GroundNav_SeamPortal::
+        Get_Endpoints(
+            const FCk_GroundNav_Tile& InTileA,
+            FVector&                  OutMinEnd,
+            FVector&                  OutMaxEnd) const
+        -> void
+    {
+        const auto Cell = static_cast<double>(InTileA._CellSizeUu);
+
+        if (_Direction == 0)
+        {
+            const auto EdgeX = InTileA._Origin.X + (static_cast<double>(InTileA._SizeX) * Cell);
+
+            OutMinEnd = FVector{EdgeX, InTileA._Origin.Y + (static_cast<double>(_AlongMin) * Cell),
+                                static_cast<double>(_MinEndZUu)};
+            OutMaxEnd = FVector{EdgeX, InTileA._Origin.Y + (static_cast<double>(_AlongMax + 1) * Cell),
+                                static_cast<double>(_MaxEndZUu)};
+
+            return;
+        }
+
+        const auto EdgeY = InTileA._Origin.Y + (static_cast<double>(InTileA._SizeY) * Cell);
+
+        OutMinEnd = FVector{InTileA._Origin.X + (static_cast<double>(_AlongMin) * Cell), EdgeY,
+                            static_cast<double>(_MinEndZUu)};
+        OutMaxEnd = FVector{InTileA._Origin.X + (static_cast<double>(_AlongMax + 1) * Cell), EdgeY,
+                            static_cast<double>(_MaxEndZUu)};
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
