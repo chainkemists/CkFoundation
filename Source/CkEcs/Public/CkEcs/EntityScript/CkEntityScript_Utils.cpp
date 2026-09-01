@@ -32,9 +32,10 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 namespace ck_entity_script_utils
 {
-    // While a CkSnapshot load is DEMOLISHING or REBUILDING the world, the loader is the SOLE creator of
-    // world population: saved rows respawn through its own window (FCk_ScopedLoaderSpawnWindow) and replayed
-    // constructions re-create their ConstructSpawned children. Any other spawn is world POLICY reacting to
+    // While a CkSnapshot load is REBUILDING the world, the loader is the SOLE creator of world population: saved
+    // rows respawn through its own window (FCk_ScopedLoaderSpawnWindow) and replayed constructions re-create their
+    // ConstructSpawned children. During DEMOLITION, no new population is admitted at all. Any other spawn is world
+    // POLICY reacting to
     // the half-rebuilt world — a population census reading near-zero, an adopt-or-spawn task whose adopt scan
     // ran before the loader materialized the restored copy. Admitting those double-populates the world and
     // the next capture saves both copies (the save-inflation incident, 2026-07-29: +77 NPCs and a doubled
@@ -57,8 +58,14 @@ namespace ck_entity_script_utils
         { return false; }
 
         const auto Hold = EcsWorld->Get_LoadHold();
-        const auto LoaderOwnsPopulation = Hold == ECk_EcsWorld_LoadHold::Teardown
-            || Hold == ECk_EcsWorld_LoadHold::Rebuilding
+        if (Hold == ECk_EcsWorld_LoadHold::Teardown)
+        {
+            ck::ecs::Verbose(TEXT("Request_SpawnEntity of [{}] under [{}] suppressed because ECS world teardown has begun"),
+                InEntityScriptClassOrArchetype, InLifetimeOwner);
+            return true;
+        }
+
+        const auto LoaderOwnsPopulation = Hold == ECk_EcsWorld_LoadHold::Rebuilding
             || Hold == ECk_EcsWorld_LoadHold::Escalated;
 
         if (NOT LoaderOwnsPopulation)

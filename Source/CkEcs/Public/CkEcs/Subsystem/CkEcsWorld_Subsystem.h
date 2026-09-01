@@ -170,7 +170,14 @@ public:
     Deinitialize() -> void override;
 
     auto
+    PreDeinitialize() -> void override;
+
+    auto
     OnWorldBeginPlay(
+        UWorld& InWorld) -> void override;
+
+    auto
+    OnWorldEndPlay(
         UWorld& InWorld) -> void override;
 
     // Safe to call mid-tick — the rebuild is deferred to FCoreDelegates::OnEndFrame, and repeat calls
@@ -262,6 +269,11 @@ private:
 
     auto OnEndFrame_DoRebuild() -> void;
 
+    // Runs feature EndPlay while the registry, processor graph, and standalone components are still alive. UWorld
+    // validates component registration after subsystem deinitialization, so resetting the registry first strands
+    // actorless component owners (PMG, world-space widgets) past the only processors that can release them.
+    auto DoTeardown_WorldEntities() -> void;
+
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
@@ -270,6 +282,9 @@ private:
     TMap<TEnumAsByte<ETickingGroup>, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
 
     bool _PendingRebuildGraph = false;
+    bool _WorldTeardownRequested = false;
+    bool _WorldTeardownInProgress = false;
+    bool _WorldTeardownComplete = false;
     FDelegateHandle _OnEndFrameHandle;
 
     ECk_EcsWorld_LoadHold _LoadHold = ECk_EcsWorld_LoadHold::None;

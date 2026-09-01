@@ -284,6 +284,17 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    PreDeinitialize()
+    -> void
+{
+    // Fallback for worlds that skip normal EndPlay. This is still before UWorld's final registered-component
+    // validation; DoTeardown_WorldEntities is idempotent when OnWorldEndPlay already completed it.
+    DoTeardown_WorldEntities();
+    Super::PreDeinitialize();
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Deinitialize()
         -> void
 {
@@ -341,6 +352,80 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
+    OnWorldEndPlay(
+        UWorld& InWorld)
+    -> void
+{
+    Super::OnWorldEndPlay(InWorld);
+    DoTeardown_WorldEntities();
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    DoTeardown_WorldEntities()
+    -> void
+{
+    if (_WorldTeardownComplete || _WorldTeardownInProgress)
+    { return; }
+
+    _WorldTeardownRequested = true;
+
+    // A graph rebuild captured before EndPlay must not outlive the registry it would rebuild against.
+    if (_OnEndFrameHandle.IsValid())
+    {
+        FCoreDelegates::OnEndFrame.Remove(_OnEndFrameHandle);
+        _OnEndFrameHandle.Reset();
+        _PendingRebuildGraph = false;
+    }
+
+    const auto RegistryIsAlive = _OwnedRegistry != nullptr && ck::IsValid(_Registry);
+    if (NOT RegistryIsAlive)
+    {
+        _WorldTeardownComplete = true;
+        return;
+    }
+
+    _WorldTeardownInProgress = true;
+    Set_LoadHold(ECk_EcsWorld_LoadHold::Teardown);
+
+    // Snapshot before mutation: Request_DestroyEntity walks dependent trees and broadcasts callbacks. The Teardown
+    // hold makes the low-level Request_CreateEntity API fail closed before those callbacks run, so the snapshot stays
+    // complete. Mark every root as well as every dependent so entities created outside normal owner APIs are covered.
+    auto Entities = TArray<FCk_Handle>{};
+    const auto& EntityStorage = _OwnedRegistry->storage<FCk_Entity::IdType>();
+    Entities.Reserve(static_cast<int32>(EntityStorage.size()));
+
+    const auto RegistryHandle = _Registry.Get_RegistryHandle();
+    for (const auto EntityId : EntityStorage)
+    {
+        auto Entity = FCk_Handle{FCk_Entity{EntityId}, RegistryHandle};
+        if (Entity == _TransientEntity)
+        { continue; }
+
+        Entities.Emplace(MoveTemp(Entity));
+    }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntities(Entities);
+    Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::Full);
+
+    const auto PumpCompleted = Get_LastPumpSkippedGroupCount() == 0;
+    CK_ENSURE_IF_NOT(PumpCompleted,
+        TEXT("World teardown could not pump [{}] ECS scheduler group(s) because a Tick was still in progress"),
+        Get_LastPumpSkippedGroupCount())
+    { }
+
+    _WorldTeardownInProgress = false;
+
+    // Do not declare teardown complete after a re-entrant skip. PreDeinitialize gets one ordinary, non-reentrant
+    // retry before the registry is reset and before UWorld validates registered components.
+    if (NOT PumpCompleted)
+    { return; }
+
+    _WorldTeardownComplete = true;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
     Get_OnPreBuildProcessorGraph()
     -> FOnPreBuildProcessorGraph&
 {
@@ -353,7 +438,7 @@ auto
     Request_RebuildProcessorGraph()
     -> void
 {
-    if (_PendingRebuildGraph)
+    if (_WorldTeardownRequested || _PendingRebuildGraph)
     { return; }
 
     _PendingRebuildGraph = true;
