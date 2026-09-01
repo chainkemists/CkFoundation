@@ -23,6 +23,51 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Do_RecordRejectedCells(
+            const FCk_GroundNav_SpanField& InBeforeFilter,
+            const FCk_GroundNav_SpanField& InAfterFilter,
+            FCk_GroundNav_DebugSnapshot&   InOutSnapshot)
+        -> void
+    {
+        if (InBeforeFilter._Columns.Num() != InAfterFilter._Columns.Num())
+        { return; }
+
+        const auto HalfCell = static_cast<double>(InAfterFilter._CellSizeUu) * 0.5;
+
+        for (auto Y = 0; Y < InAfterFilter._SizeY; ++Y)
+        {
+            for (auto X = 0; X < InAfterFilter._SizeX; ++X)
+            {
+                const auto& Before = InBeforeFilter.Get_Column(X, Y);
+                const auto& After = InAfterFilter.Get_Column(X, Y);
+
+                if (Before.Num() != After.Num())
+                { continue; }
+
+                for (auto Index = 0; Index < After.Num(); ++Index)
+                {
+                    if (NOT Before[Index]._IsWalkable || After[Index]._IsWalkable)
+                    { continue; }
+
+                    ++InOutSnapshot._RejectedCellCount;
+
+                    const auto Corner = InAfterFilter.Get_ColumnMinCorner(X, Y);
+
+                    auto Cell = FCk_GroundNav_DebugCell{};
+                    Cell._SurfaceCentre = FVector{
+                        Corner.X + HalfCell, Corner.Y + HalfCell, static_cast<double>(After[Index]._MaxZ)};
+                    Cell._LayerIndex = 0;
+                    Cell._PlateIndex = FCk_GroundNav_Plate::kNoPlate;
+
+                    InOutSnapshot._RejectedCells.Emplace(Cell);
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Make_DebugSnapshot(
             const FCk_GroundNav_SpanField&      InSpans,
             const FCk_GroundNav_LayerField&     InLayers,
@@ -115,6 +160,10 @@ namespace ck::groundnav
 
             Snapshot._Plates.Emplace(DebugPlate);
         }
+
+        Snapshot._CollapseRatio = InPlates.Get_CollapseRatio();
+        Snapshot._MaxPlaneResidualUu = InPlates.Get_MaxPlaneResidualUu();
+        Snapshot._MaxPlateHeightRangeUu = InPlates.Get_MaxHeightRangeUu();
 
         Snapshot._Status = EDebugSnapshotStatus::Current;
 
