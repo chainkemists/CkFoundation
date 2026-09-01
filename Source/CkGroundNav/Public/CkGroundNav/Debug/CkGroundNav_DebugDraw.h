@@ -3,6 +3,8 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
+#include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
+#include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Debug/CkGroundNav_DebugSnapshot.h"
 
 #include <CoreMinimal.h>
@@ -22,7 +24,32 @@ namespace ck::groundnav
         Clearance,
 
         // One point per walkable cell, coloured by which floor it belongs to.
-        Layers
+        Layers,
+
+        // The cells the walkability filters threw away. Shown alongside what survived, because a
+        // filter tuned too tight and a world that genuinely has no floor look identical otherwise.
+        Rejected
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every input the debug bake takes.
+     *
+     * Grouped rather than passed loose so that adding a tunable later does not re-order an argument
+     * list that console commands and callers both depend on positionally.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugBakeParams
+    {
+    public:
+        FVector _Centre = FVector::ZeroVector;
+        FVector _Extent = FVector{1500.0, 1500.0, 500.0};
+
+        FCk_GroundNav_BakeConfig _Config;
+        FCk_GroundNav_AgentProfile _Profile;
+        FCk_GroundNav_MergeTunables _MergeTunables;
+
+        int32 _MaxCells = 20000;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -40,12 +67,8 @@ namespace ck::groundnav
      */
     CKGROUNDNAV_API auto
     Make_DebugSnapshotFromWorld(
-        const UObject*                    InWorldContextObject,
-        const FVector&                    InCentre,
-        const FVector&                    InExtent,
-        float                             InCellSizeUu,
-        const FCk_GroundNav_AgentProfile& InProfile,
-        int32                             InMaxCells) -> FCk_GroundNav_DebugSnapshot;
+        const UObject*                           InWorldContextObject,
+        const FCk_GroundNav_DebugBakeParams&     InParams) -> FCk_GroundNav_DebugSnapshot;
 
     /**
      * Draw a snapshot with the engine's persistent debug lines.
