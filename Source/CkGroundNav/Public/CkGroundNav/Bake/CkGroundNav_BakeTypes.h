@@ -112,7 +112,7 @@ private:
 public:
     CK_PROPERTY_GET(_CellSizeUu);
     CK_PROPERTY_GET(_CellHeightUu);
-    CK_PROPERTY_GET(_TileSizeUu);
+    CK_PROPERTY(_TileSizeUu);
     CK_PROPERTY_GET(_MaxColumnsPerTile);
 
 public:
