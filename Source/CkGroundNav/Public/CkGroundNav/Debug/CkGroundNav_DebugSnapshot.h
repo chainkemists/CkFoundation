@@ -3,6 +3,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
+#include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
 
 #include <CoreMinimal.h>
@@ -60,6 +61,22 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** One crossing between two plates, already in world space. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugPortal
+    {
+    public:
+        FVector _MinEnd = FVector::ZeroVector;
+        FVector _MaxEnd = FVector::ZeroVector;
+
+        float _TraversalClearanceUu = 0.0f;
+
+        // Whether the crossing changes floor. Worth its own flag rather than a plate lookup at draw
+        // time: a portal between layers is the case a viewer most needs to pick out of a flat field.
+        bool _IsCrossLayer = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * Everything a viewer needs to draw one bake, and nothing that could outlive it.
      *
@@ -102,6 +119,7 @@ namespace ck::groundnav
 
         TArray<FCk_GroundNav_DebugCell> _Cells;
         TArray<FCk_GroundNav_DebugPlate> _Plates;
+        TArray<FCk_GroundNav_DebugPortal> _Portals;
 
         // Cells the rasterizer accepted on slope but the walkability filters then demoted. Drawing
         // these is the only way to see what a filter is COSTING you: an over-tight ledge sensitivity
@@ -116,6 +134,12 @@ namespace ck::groundnav
         auto Get_IsDrawable() const -> bool { return _Status == EDebugSnapshotStatus::Current; }
 
         auto Get_PlateCount() const -> int32 { return _Plates.Num(); }
+
+        auto Get_PortalCount() const -> int32 { return _Portals.Num(); }
+
+        /** The tightest crossing in the field, and the first number to read when a body that ought to
+         *  fit somewhere cannot get there. Zero when there are no portals at all. */
+        auto Get_NarrowestPortalUu() const -> float;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -142,6 +166,7 @@ namespace ck::groundnav
         const FCk_GroundNav_LayerField&     InLayers,
         const FCk_GroundNav_ClearanceField& InClearance,
         const FCk_GroundNav_PlateField&     InPlates,
+        const FCk_GroundNav_PortalField&    InPortals,
         const FBox&                         InRegion,
         int32                               InMaxCells) -> FCk_GroundNav_DebugSnapshot;
 }
