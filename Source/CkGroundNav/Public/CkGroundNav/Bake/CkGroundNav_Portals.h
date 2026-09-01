@@ -61,7 +61,19 @@ namespace ck::groundnav
             return ((_FromMax.X - _FromMin.X) + 1) * ((_FromMax.Y - _FromMin.Y) + 1);
         }
 
-        /** The two ends of the boundary segment in world space, on the shared cell edge. */
+        /**
+         * The two ends of the boundary segment in world space, on the shared cell edge.
+         *
+         * Taking the lattice origin and cell size rather than the field they came from is what lets a
+         * published tile answer this: a tile keeps its portals and its own origin, and deliberately
+         * does not keep the span field they were derived from.
+         */
+        auto Get_Endpoints(
+            const FVector& InOrigin,
+            float          InCellSizeUu,
+            FVector&       OutMinEnd,
+            FVector&       OutMaxEnd) const -> void;
+
         auto Get_Endpoints(
             const FCk_GroundNav_SpanField& InSpans,
             FVector&                       OutMinEnd,
