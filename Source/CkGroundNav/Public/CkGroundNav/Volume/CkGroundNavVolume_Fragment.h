@@ -83,6 +83,7 @@ namespace ck
         friend class FProcessor_GroundNavVolume_HandleRequests;
         friend class FProcessor_GroundNavVolume_StartBuild;
         friend class FProcessor_GroundNavVolume_Build;
+        friend class FProcessor_GroundNavVolume_CancelPendingRequests;
         friend class ::UCk_Utils_GroundNavVolume_UE;
 
     private:
