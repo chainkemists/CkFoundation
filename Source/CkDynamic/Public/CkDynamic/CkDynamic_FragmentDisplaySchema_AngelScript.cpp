@@ -5,8 +5,13 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkDynamic/CkDynamic_Log.h"
+
 #include <AngelscriptCodeModule.h>
 #include <AngelscriptManager.h>
+#include <Containers/Ticker.h>
+#include <HAL/CriticalSection.h>
+#include <Misc/ScopeLock.h>
 #include <UObject/Class.h>
 #include <UObject/UnrealType.h>
 
@@ -16,6 +21,11 @@ namespace ck_dynamic_fragment_display_schema_as
 {
     const auto DisplayNameKey = FName{TEXT("DisplayName")};
     auto PostCompileHandle = FDelegateHandle{};
+
+    auto RefreshTickerLock = FCriticalSection{};
+    auto bRefreshTickerShuttingDown = false;
+    auto bRefreshTickerPending = false;
+    auto RefreshTickerHandle = FTSTicker::FDelegateHandle{};
 
     auto MakeFragmentFallback(const UScriptStruct& InFragmentType) -> FString
     {
@@ -175,6 +185,8 @@ auto
     const auto CanRefresh = IsInGameThread() && FAngelscriptManager::IsInitialized();
     CK_ENSURE_IF_NOT(CanRefresh,
         TEXT("AngelScript Dynamic Fragment display schemas must refresh on the game thread after initialization"))
+    { }
+    if (NOT CanRefresh)
     { return false; }
 
     const auto ObservedPaths = Get_ObservedFragmentDisplaySchemaPaths();
@@ -202,7 +214,63 @@ auto
         }
     }
 
-    return Replace_AngelscriptFragmentDisplaySchemas(MoveTemp(Schemas));
+    const auto SchemaCount = Schemas.Num();
+    const auto ObservedPathCount = ObservedPaths.Num();
+    if (NOT Replace_AngelscriptFragmentDisplaySchemas(MoveTemp(Schemas)))
+    { return false; }
+
+    ck::dynamic::Display(
+        TEXT("AngelScript Dynamic Fragment display schemas published: [{}] schema(s) from [{}] observed path(s)"),
+        SchemaCount, ObservedPathCount);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::dynamic::
+    Request_RefreshAngelscriptFragmentDisplaySchemas()
+    -> void
+{
+    if (IsInGameThread())
+    {
+        auto IsShuttingDown = false;
+        {
+            auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::RefreshTickerLock};
+            IsShuttingDown = ck_dynamic_fragment_display_schema_as::bRefreshTickerShuttingDown;
+        }
+        if (IsShuttingDown)
+        { return; }
+
+        Refresh_AngelscriptFragmentDisplaySchemas();
+        return;
+    }
+
+    auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::RefreshTickerLock};
+    if (ck_dynamic_fragment_display_schema_as::bRefreshTickerShuttingDown
+        || ck_dynamic_fragment_display_schema_as::bRefreshTickerPending)
+    { return; }
+
+    ck_dynamic_fragment_display_schema_as::bRefreshTickerPending = true;
+    ck_dynamic_fragment_display_schema_as::RefreshTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateLambda([](float) -> bool
+        {
+            auto ShouldRefresh = false;
+            {
+                auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::RefreshTickerLock};
+                if (ck_dynamic_fragment_display_schema_as::bRefreshTickerShuttingDown)
+                { return false; }
+
+                ck_dynamic_fragment_display_schema_as::bRefreshTickerPending = false;
+                ck_dynamic_fragment_display_schema_as::RefreshTickerHandle.Reset();
+                ShouldRefresh = true;
+            }
+
+            if (ShouldRefresh)
+            { Refresh_AngelscriptFragmentDisplaySchemas(); }
+            return false;
+        }),
+        0.0f);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -215,10 +283,17 @@ auto
     if (ck_dynamic_fragment_display_schema_as::PostCompileHandle.IsValid())
     { return; }
 
+    {
+        auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::RefreshTickerLock};
+        ck_dynamic_fragment_display_schema_as::bRefreshTickerShuttingDown = false;
+        ck_dynamic_fragment_display_schema_as::bRefreshTickerPending = false;
+        ck_dynamic_fragment_display_schema_as::RefreshTickerHandle.Reset();
+    }
+
     ck_dynamic_fragment_display_schema_as::PostCompileHandle =
         FAngelscriptCodeModule::GetPostCompile().AddLambda([]
         {
-            Refresh_AngelscriptFragmentDisplaySchemas();
+            Request_RefreshAngelscriptFragmentDisplaySchemas();
         });
 
     if (FAngelscriptManager::IsInitialized())
@@ -232,6 +307,16 @@ auto
     Shutdown_AngelscriptFragmentDisplaySchemas()
     -> void
 {
+    auto TickerToRemove = FTSTicker::FDelegateHandle{};
+    {
+        auto Lock = FScopeLock{&ck_dynamic_fragment_display_schema_as::RefreshTickerLock};
+        ck_dynamic_fragment_display_schema_as::bRefreshTickerShuttingDown = true;
+        ck_dynamic_fragment_display_schema_as::bRefreshTickerPending = false;
+        TickerToRemove = MoveTemp(ck_dynamic_fragment_display_schema_as::RefreshTickerHandle);
+    }
+    if (TickerToRemove.IsValid())
+    { FTSTicker::RemoveTicker(TickerToRemove); }
+
     if (NOT ck_dynamic_fragment_display_schema_as::PostCompileHandle.IsValid())
     { return; }
 
