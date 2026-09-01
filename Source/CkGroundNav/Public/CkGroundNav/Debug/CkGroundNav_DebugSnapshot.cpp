@@ -81,6 +81,8 @@ namespace ck::groundnav
 
         Snapshot._Region = InRegion;
         Snapshot._CellSizeUu = InSpans._CellSizeUu;
+        Snapshot._LatticeSizeX = InLayers._SizeX;
+        Snapshot._LatticeSizeY = InLayers._SizeY;
         Snapshot._LayerCount = InLayers._LayerCount;
         Snapshot._SpanCount = InSpans.Get_TotalSpanCount();
         Snapshot._MaxClearanceUu = InClearance.Get_MaxClearance();
