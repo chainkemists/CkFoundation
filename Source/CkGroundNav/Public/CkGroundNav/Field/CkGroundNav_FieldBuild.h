@@ -52,6 +52,17 @@ namespace ck::groundnav
     Get_CompletedField(
         const FCk_GroundNav_FieldBuildState& InState) -> const FCk_GroundNav_Field*;
 
+    /**
+     * Take the finished field out of the build state, leaving the build spent.
+     *
+     * Moves rather than copies: a field is the largest thing this module produces, and publishing it is
+     * the one moment a copy would be paid for on the game thread. Returns null if the build is not
+     * complete, on the same terms as Get_CompletedField.
+     */
+    CKGROUNDNAV_API auto
+    Request_ReleaseCompletedField(
+        FCk_GroundNav_FieldBuildState& InOutState) -> FCk_GroundNav_FieldPtr;
+
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
@@ -90,6 +101,9 @@ namespace ck::groundnav
 
         friend CKGROUNDNAV_API auto Get_CompletedField(
             const FCk_GroundNav_FieldBuildState&) -> const FCk_GroundNav_Field*;
+
+        friend CKGROUNDNAV_API auto Request_ReleaseCompletedField(
+            FCk_GroundNav_FieldBuildState&) -> FCk_GroundNav_FieldPtr;
 
         FCk_GroundNav_Field _Partial;
 
