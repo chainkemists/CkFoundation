@@ -574,6 +574,67 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+TArray<FCk_Inventory_OrphanedItem>
+    UCk_Utils_Inventory_UE::
+    Get_OrphanedItems(
+        const FCk_Handle& InAnyEntityInWorld)
+{
+    auto Orphans = TArray<FCk_Inventory_OrphanedItem>{};
+
+    if (ck::Is_NOT_Valid(InAnyEntityInWorld))
+    { return Orphans; }
+
+    auto Context = InAnyEntityInWorld;
+
+    // Read-only: nothing here mutates the registry, so appending to a local while the view iterates is
+    // safe. A caller that DESTROYS what this returns must do it after the call, never inside one.
+    Context.View<ck::FFragment_InventoryItem>().ForEach(
+        [&](FCk_Entity InEntity, ck::FFragment_InventoryItem&)
+    {
+        auto ItemHandle = ck::MakeHandle(InEntity, Context);
+
+        // Default IsValid excludes the Teardown/Destroyed phases but still passes an entity that has
+        // only been TAGGED for destruction, so both questions are asked -- an item on its way out is
+        // already somebody's responsibility and is not a leak.
+        if (ck::Is_NOT_Valid(ItemHandle))
+        { return; }
+
+        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(
+                ItemHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+        { return; }
+
+        auto TypedItem = UCk_Utils_Item_UE::CastChecked(ItemHandle);
+
+        // Shape 1: still a lifetime dependent of an inventory that does not list it.
+        if (ItemHandle.Has<ck::FFragment_LifetimeOwner>())
+        {
+            auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(ItemHandle);
+
+            if (ck::IsValid(LifetimeOwner) && UCk_Utils_Inventory_UE::Has(LifetimeOwner))
+            {
+                auto OwningInventory = UCk_Utils_Inventory_UE::CastChecked(LifetimeOwner);
+
+                if (NOT RecordOfInventoryItems_Utils::Get_ContainsEntry(OwningInventory, TypedItem))
+                {
+                    Orphans.Emplace(FCk_Inventory_OrphanedItem{TypedItem, OwningInventory});
+                    return;
+                }
+            }
+        }
+
+        // Shape 2: carries the holder Add installs, pointing at nothing.
+        if (ck::TUtils_Item_ParentInventory::Has(ItemHandle) &&
+            ck::Is_NOT_Valid(ck::TUtils_Item_ParentInventory::Get_StoredEntity(ItemHandle)))
+        {
+            Orphans.Emplace(FCk_Inventory_OrphanedItem{TypedItem, FCk_Handle_Inventory{}});
+        }
+    });
+
+    return Orphans;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Inventory_UE::
     TryGet_Inventory(

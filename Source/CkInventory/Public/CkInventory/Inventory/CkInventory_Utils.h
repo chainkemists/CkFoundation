@@ -109,6 +109,46 @@ public:
     Has_Any(
         const FCk_Handle& InOwnerEntity);
 
+public:
+    /** Every item entity in InAnyEntityInWorld's world that no inventory lists, but that something is
+     *  still holding onto. This is the leak detector for the removal contract: a Remove takes the item
+     *  out of the RECORD, and the record is what every query answers from -- so an item nobody destroyed
+     *  and nobody re-added stays a live entity that is invisible to Get_Items, Get_NumItems and
+     *  Get_CanAcceptItem, keeps being written into every snapshot, and dies with whatever still owns it.
+     *
+     *  Two shapes count, and they are not interchangeable:
+     *
+     *  1. STRANDED UNDER AN INVENTORY (_StrandedUnder valid) -- the item's LIFETIME OWNER is an
+     *     inventory whose record does not contain it. This is what a removal left behind before Remove
+     *     released the claim Add took, and it is the only shape that survives a save/load: it lives in
+     *     the lifetime graph, which the save records.
+     *  2. DETACHED IN THIS SESSION (_StrandedUnder invalid) -- the item carries a ParentInventory holder
+     *     that points at nothing. Only Add ever installs that holder, so this positively means "was in
+     *     an inventory, is in none now"; a world item that was never in one has no holder at all and is
+     *     correctly ignored. It does NOT survive a load (the holder is rebuilt from the record), so it
+     *     is the shape that catches a caller leaking TODAY rather than one that leaked historically.
+     *
+     *  Pending-kill items are skipped -- something already took responsibility for those.
+     *
+     *  Shape 2 is a HEURISTIC, and the one way it can cry wolf is a caller that deliberately removes
+     *  with KeepItem and holds the item alive outside any inventory for a while. No such caller exists
+     *  today (every consuming site declares DestroyItem, transfer re-adds within the same handler
+     *  call, and the item-EndPlay removal is already pending-destroy), but if one is ever written it
+     *  will be reported here for as long as it holds the item. That is why shape 2 names no container
+     *  and why the shape a save can carry is kept distinguishable from it: a destructive consumer must
+     *  be able to act on shape 1 alone.
+     *
+     *  Read-only and allocation-light, but it walks every item entity in the world: call it at a save,
+     *  at a load, or from a debug verb -- not per tick. AUTHORITY ONLY as a basis for acting: on a
+     *  client the ParentInventory holder is cleared by the replication sync ahead of the server's
+     *  destroy replicating, so shape 2 is a normal transient state there. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Inventory",
+              DisplayName = "[Ck][Inventory] Get Orphaned Items")
+    static TArray<FCk_Inventory_OrphanedItem>
+    Get_OrphanedItems(
+        const FCk_Handle& InAnyEntityInWorld);
+
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Inventory",
