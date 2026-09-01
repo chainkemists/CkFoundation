@@ -76,6 +76,12 @@ namespace ck::groundnav
 
         float _CellSizeUu = 0.0f;
 
+        // The lattice the counts below are quantities OF. Reported rather than left implicit
+        // because every per-cell number is bounded by _LayerCount * _LatticeSizeX * _LatticeSizeY,
+        // and a count that exceeds that bound is the only way to see it is being mis-attributed.
+        int32 _LatticeSizeX = 0;
+        int32 _LatticeSizeY = 0;
+
         int32 _LayerCount = 0;
         int32 _SpanCount = 0;
         int32 _WalkableCellCount = 0;
