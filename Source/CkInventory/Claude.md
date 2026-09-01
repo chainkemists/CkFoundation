@@ -214,6 +214,10 @@ Architectural reference: `TProcessor_AttributeModifier_Compute` + `TAttributeMin
 - **Registration**: each shape's `*_Fragment.cpp` registers on `FCk_PersistenceHandlerRegistry` via a named `Register_NetAndSave_*` shape (Spatial uses `Register_NetAndSave_SplitApply` — distinct net vs load appliers). If a `SyncReplication` processor never fires on clients, that registration is the first place to look.
 - **Containers** are added on the *outer* (lifetime-owner) entity by `CreateInventory`, not on the inventory entity itself. Items themselves replicate through standard entity replication.
 
+### DataOnly contents save opt-out
+
+`FCk_Fragment_Inventory_DataOnly_ParamsData::_PersistContents` defaults to `Enable`. Set it to `Disable` for a DataOnly inventory whose contents are reconstructed session state: snapshot Produce emits no item payload, and HydrationApply ignores an older item payload against the rebuilt opted-out inventory. This is save transport only; live replication still publishes the current item projection normally.
+
 ## Known invariant — typed ParamsData duplication
 
 USTRUCTs cannot inherit cleanly with UHT reflection. As a result, the shared field set (`_Name`, `_CustomCanAcceptItem*`, `_CustomCanStackItems*`, `_CanAcceptItemRef`, `_CanStackItemsRef`) is duplicated by hand across three structs:
