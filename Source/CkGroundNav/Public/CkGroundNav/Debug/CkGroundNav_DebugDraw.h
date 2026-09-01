@@ -28,7 +28,12 @@ namespace ck::groundnav
 
         // The cells the walkability filters threw away. Shown alongside what survived, because a
         // filter tuned too tight and a world that genuinely has no floor look identical otherwise.
-        Rejected
+        Rejected,
+
+        // The crossings between plates, drawn on the boundary they occupy and coloured by how much
+        // room they offer. This is the only view that shows why a body wide enough for both rooms
+        // still cannot get from one to the other.
+        Portals
     };
 
     // ----------------------------------------------------------------------------------------------------------------
