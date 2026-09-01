@@ -65,15 +65,53 @@ namespace ck::inventory_handlers
                     InInventory, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
             { return; }
 
+            // Asked BEFORE reading: Get_ContextOwner does a raw Get<>, so a missing fragment ensures
+            // (a Shipping crash by project policy) instead of falling into the intended leave-the-claim
+            // path below. The framework's own creation code treats absence as possible.
+            //
+            // Said out loud rather than returned silently: leaving the claim in place re-creates the
+            // exact orphan this function exists to prevent, and nothing else at this point would ever
+            // record that it happened -- only a later census would see the corpse, with no way back to
+            // the site that made it.
+            if (NOT UCk_Utils_ContextOwner_UE::Has(InInventory))
+            {
+                ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] has NO context owner fragment, so the lifetime claim on item [{}] cannot be handed back "
+                    "-- the item stays an invisible lifetime child of the container it just left"), InInventory, InItem);
+                return;
+            }
+
             const auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InInventory);
 
             // No context owner to fall back to (or it IS the item) leaves the existing claim in
-            // place -- wrong, but strictly better than orphaning the item onto nothing.
+            // place -- wrong, but strictly better than orphaning the item onto nothing. Warned for the
+            // same reason as the branch above: the outcome is a leaked orphan, and a silent one is
+            // untraceable to its cause.
             const FCk_Handle ItemEntity = InItem;
             if (ck::Is_NOT_Valid(ContextOwner) || ContextOwner == ItemEntity)
-            { return; }
+            {
+                ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] resolves to context owner [{}], which is invalid or is the item [{}] itself, so the lifetime "
+                    "claim cannot be handed back -- the item stays an invisible lifetime child of the container it just left"), InInventory, ContextOwner, InItem);
+                return;
+            }
 
             UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(InItem, ContextOwner);
+        }
+
+        auto FinalizeItemRemoval(
+            FCk_Handle_Item& InItem,
+            FCk_Handle_Inventory& InInventory,
+            ECk_Inventory_PostRemovePolicy InPostRemovePolicy) -> void
+        {
+            ReleaseItemLifetime_FromInventory(InItem, InInventory);
+
+            if (InPostRemovePolicy != ECk_Inventory_PostRemovePolicy::DestroyItem)
+            { return; }
+
+            // The caller declared a CONSUME, and this is the first instant at which that is
+            // expressible: the record entry is disconnected, ParentInventory is cleared and the
+            // lifetime claim is back -- so nothing observes a half-removed item, and no caller has
+            // to guess when the deferred removal landed.
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InItem);
         }
 
         auto MapAddResultToTransfer(ECk_Inventory_OperationResult_Add InAddResult) -> ECk_Inventory_OperationResult_Transfer
@@ -158,7 +196,7 @@ namespace ck::inventory_handlers
 
         UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Request_Disconnect(Base, ItemHandle);
         TUtils_Item_ParentInventory::AddOrReplace(ItemHandle, FCk_Handle_Inventory());
-        detail::ReleaseItemLifetime_FromInventory(ItemHandle, Base);
+        detail::FinalizeItemRemoval(ItemHandle, Base, InRequest.Get_PostRemovePolicy());
         R = Result::Success;
         return R;
     }

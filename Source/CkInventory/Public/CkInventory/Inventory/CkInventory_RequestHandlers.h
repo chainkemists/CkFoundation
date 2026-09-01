@@ -194,6 +194,18 @@ namespace ck::inventory_handlers
         CKINVENTORY_API auto ReleaseItemLifetime_FromInventory(
             FCk_Handle_Item& InItem,
             FCk_Handle_Inventory& InInventory) -> void;
+
+        /** The single tail every successful TRemoveItem runs: hand the lifetime claim back, then
+         *  honour the request's declared PostRemovePolicy. Shared by BOTH TRemoveItem shapes on
+         *  purpose -- a removal that means two different things in the DataOnly and Spatial paths is
+         *  exactly the divergence that produced this bug in the first place.
+         *
+         *  Only ever called on the Success path. A removal that failed did not take the item out of
+         *  anything, so it is not this inventory's to destroy. */
+        CKINVENTORY_API auto FinalizeItemRemoval(
+            FCk_Handle_Item& InItem,
+            FCk_Handle_Inventory& InInventory,
+            ECk_Inventory_PostRemovePolicy InPostRemovePolicy) -> void;
     }
 
     // The generic completion delegate reports the coarse view of the very same result the bespoke
