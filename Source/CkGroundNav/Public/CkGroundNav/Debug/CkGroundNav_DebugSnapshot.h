@@ -84,10 +84,23 @@ namespace ck::groundnav
 
         float _MaxClearanceUu = 0.0f;
 
+        // Plate diagnostics, surfaced so the merge tunables can be judged from a real level rather
+        // than from a fixture.
+        float _CollapseRatio = 0.0f;
+        float _MaxPlaneResidualUu = 0.0f;
+        float _MaxPlateHeightRangeUu = 0.0f;
+
+        int32 _RejectedCellCount = 0;
+
         double _BakeMilliseconds = 0.0;
 
         TArray<FCk_GroundNav_DebugCell> _Cells;
         TArray<FCk_GroundNav_DebugPlate> _Plates;
+
+        // Cells the rasterizer accepted on slope but the walkability filters then demoted. Drawing
+        // these is the only way to see what a filter is COSTING you: an over-tight ledge sensitivity
+        // and a genuinely unwalkable world produce the same walkable set, and differ only here.
+        TArray<FCk_GroundNav_DebugCell> _RejectedCells;
 
         // Set when the cell list was capped. The counts above stay TRUE totals, so a viewer reports
         // what the bake found rather than what it managed to draw.
@@ -100,6 +113,16 @@ namespace ck::groundnav
     };
 
     // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Record the cells the walkability filters demoted, by diffing the span field either side of
+     * them. Both fields must be the same lattice — the caller holds the copy it took before filtering.
+     */
+    CKGROUNDNAV_API auto
+    Do_RecordRejectedCells(
+        const FCk_GroundNav_SpanField& InBeforeFilter,
+        const FCk_GroundNav_SpanField& InAfterFilter,
+        FCk_GroundNav_DebugSnapshot&   InOutSnapshot) -> void;
 
     /**
      * Copy finished bake products into a standalone snapshot.
