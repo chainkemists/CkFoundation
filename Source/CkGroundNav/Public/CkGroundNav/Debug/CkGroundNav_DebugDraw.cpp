@@ -7,6 +7,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
+#include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -158,6 +159,74 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Make_FieldDebugSnapshotFromWorld(
+            const UObject*                       InWorldContextObject,
+            const FCk_GroundNav_DebugBakeParams& InParams)
+        -> FCk_GroundNav_DebugSnapshot
+    {
+        auto Snapshot = FCk_GroundNav_DebugSnapshot{};
+
+        const auto Region = FBox::BuildAABB(InParams._Centre, InParams._Extent);
+        Snapshot._Region = Region;
+        Snapshot._CellSizeUu = InParams._Config.Get_CellSizeUu();
+
+        const auto Backend = FCk_GroundNav_GeometryBackend_Jolt{InWorldContextObject};
+
+        if (NOT Backend.Get_IsValid())
+        {
+            Snapshot._Status = EDebugSnapshotStatus::BackendUnavailable;
+            return Snapshot;
+        }
+
+        auto FieldParams = FCk_GroundNav_FieldParams{};
+
+        FieldParams._OriginXY = FVector2D{Region.Min.X, Region.Min.Y};
+        FieldParams._MinZUu = static_cast<float>(Region.Min.Z);
+        FieldParams._MaxZUu = static_cast<float>(Region.Max.Z);
+        FieldParams._Config = InParams._Config;
+        FieldParams._Profile = InParams._Profile;
+        FieldParams._MergeTunables = InParams._MergeTunables;
+
+        // The ceiling is the tile size here rather than a separate knob. The debug bake exists to show
+        // what tiling does, and a ceiling wider than a tile would make every halo overlap its
+        // neighbour entirely - which is exactly the case where seams cannot be wrong.
+        FieldParams._MaxClearanceUu = InParams._Config.Get_TileSizeUu() * 0.25f;
+
+        const auto SpanUu = FieldParams.Get_TileSpanUu();
+
+        if (SpanUu > 0.0)
+        {
+            const auto Size = Region.GetSize();
+
+            FieldParams._Divisions = FIntPoint{
+                FMath::Max(1, FMath::CeilToInt32(Size.X / SpanUu)),
+                FMath::Max(1, FMath::CeilToInt32(Size.Y / SpanUu))};
+        }
+
+        const auto StartedAt = FPlatformTime::Seconds();
+
+        auto Field = FCk_GroundNav_Field{};
+        const auto Result = DoBake_Field(Backend, FieldParams, FCk_GroundNav_Epoch{1}, Field);
+
+        const auto ElapsedMilliseconds = (FPlatformTime::Seconds() - StartedAt) * 1000.0;
+
+        if (NOT Result.Get_IsCompleted())
+        {
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        auto Built = Make_DebugSnapshotFromField(Field, InParams._MaxCells);
+
+        Built._BakeMilliseconds = ElapsedMilliseconds;
+        Built._DroppedTriangleCount = Result.Get_DroppedInputCount();
+
+        return Built;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         DoDraw_DebugSnapshot(
             UWorld*                            InWorld,
             const FCk_GroundNav_DebugSnapshot& InSnapshot,
@@ -194,6 +263,36 @@ namespace ck::groundnav
 
                 DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Extent,
                     Get_LayerColor(Plate._LayerIndex), Persistent, LifetimeSeconds, DepthPriority, 1.5f);
+            }
+
+            return;
+        }
+
+        if (InMode == EDebugDrawMode::Tiles)
+        {
+            for (const auto& Tile : InSnapshot._Tiles)
+            {
+                // An unbuilt tile is drawn, in its own colour. Omitting it would make a place nothing
+                // is known about look identical to a place with no floor, which is the distinction the
+                // whole status vocabulary exists to preserve.
+                const auto Color = Tile._IsBuilt ? FColor{90, 150, 255} : FColor{200, 90, 60};
+
+                DrawDebugBox(InWorld, Tile._Bounds.GetCenter(), Tile._Bounds.GetExtent(), Color,
+                    Persistent, LifetimeSeconds, DepthPriority, Tile._IsBuilt ? 1.5f : 3.0f);
+            }
+
+            auto WidestSeamUu = 0.0f;
+
+            for (const auto& Seam : InSnapshot._Seams)
+            { WidestSeamUu = FMath::Max(WidestSeamUu, Seam._TraversalClearanceUu); }
+
+            const auto Lift = FVector{0.0, 0.0, static_cast<double>(InSnapshot._CellSizeUu) * 0.5};
+
+            for (const auto& Seam : InSnapshot._Seams)
+            {
+                DrawDebugLine(InWorld, Seam._MinEnd + Lift, Seam._MaxEnd + Lift,
+                    Get_ClearanceColor(Seam._TraversalClearanceUu, WidestSeamUu),
+                    Persistent, LifetimeSeconds, DepthPriority, 8.0f);
             }
 
             return;
@@ -301,6 +400,7 @@ namespace ck::groundnav
             TEXT("  layers   : %d\n")
             TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
             TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
+            TEXT("  tiles    : %d of %d built, %d seams between them\n")
             TEXT("  clearance: %.1f uu at the most open cell"),
             Get_StatusName(InSnapshot._Status),
             InSnapshot._BakeMilliseconds,
@@ -325,6 +425,9 @@ namespace ck::groundnav
             InSnapshot.Get_PortalCount(),
             CrossLayerPortalCount,
             InSnapshot.Get_NarrowestPortalUu(),
+            InSnapshot.Get_BuiltTileCount(),
+            InSnapshot.Get_TileCount(),
+            InSnapshot.Get_SeamCount(),
             InSnapshot._MaxClearanceUu);
     }
 }
@@ -394,6 +497,12 @@ namespace ck_groundnav_debugconsole
         TEXT("normals disagree. Raise it if gently uneven ground fragments; 0 applies the slope-change ")
         TEXT("test everywhere."));
 
+    static TAutoConsoleVariable<float> CVar_TileSizeUu(
+        TEXT("ck.GroundNav.Debug.TileSizeUu"), 800.0f,
+        TEXT("Edge length of one tile, used by ck.GroundNav.BakeFieldAt. Smaller tiles mean more seams ")
+        TEXT("and more halo re-rasterized per tile; larger ones mean fewer, coarser units of rebuild. ")
+        TEXT("Snapped up to a whole number of cells, so a size that does not divide evenly grows."));
+
     // ---- Merge tunables ---------------------------------------------------------------------------
 
     static TAutoConsoleVariable<float> CVar_PlaneFitToleranceUu(
@@ -414,7 +523,7 @@ namespace ck_groundnav_debugconsole
     static TAutoConsoleVariable<int32> CVar_Mode(
         TEXT("ck.GroundNav.Debug.Mode"), 0,
         TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected, ")
-        TEXT("4 = the crossings between plates."));
+        TEXT("4 = the crossings between plates, 5 = the tile lattice and the seams between tiles."));
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
         TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
@@ -456,6 +565,7 @@ namespace ck_groundnav_debugconsole
             case 2:  return ck::groundnav::EDebugDrawMode::Layers;
             case 3:  return ck::groundnav::EDebugDrawMode::Rejected;
             case 4:  return ck::groundnav::EDebugDrawMode::Portals;
+            case 5:  return ck::groundnav::EDebugDrawMode::Tiles;
             default: return ck::groundnav::EDebugDrawMode::Plates;
         }
     }
@@ -481,6 +591,7 @@ namespace ck_groundnav_debugconsole
         Params._Extent = FVector{ExtentUu, ExtentUu, CVar_HeightUu.GetValueOnGameThread()};
         Params._Config = FCk_GroundNav_BakeConfig{
             CVar_CellSizeUu.GetValueOnGameThread(), CVar_CellHeightUu.GetValueOnGameThread()};
+        Params._Config.Set_TileSizeUu(CVar_TileSizeUu.GetValueOnGameThread());
         Params._Profile = Profile;
         Params._MergeTunables = FCk_GroundNav_MergeTunables{
             CVar_PlaneFitToleranceUu.GetValueOnGameThread(),
@@ -490,14 +601,24 @@ namespace ck_groundnav_debugconsole
         return Params;
     }
 
-    auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
+    auto DoDrawAndReport(UWorld* InWorld, const ck::groundnav::FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
     {
-        const auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre));
-
-        ck::groundnav::DoDraw_DebugSnapshot(InWorld, Snapshot, Get_DrawMode(),
+        ck::groundnav::DoDraw_DebugSnapshot(InWorld, InSnapshot, Get_DrawMode(),
             FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
 
-        ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(Snapshot));
+        ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(InSnapshot));
+    }
+
+    auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
+    {
+        DoDrawAndReport(InWorld,
+            ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre)));
+    }
+
+    auto DoBakeFieldAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
+    {
+        DoDrawAndReport(InWorld,
+            ck::groundnav::Make_FieldDebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre)));
     }
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
@@ -549,6 +670,34 @@ namespace ck_groundnav_debugconsole
                 FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
 
             DoBakeAndDraw(InWorld, Centre);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_BakeFieldAt(
+        TEXT("ck.GroundNav.BakeFieldAt"),
+        TEXT("Bake a TILED field around an explicit world point: ck.GroundNav.BakeFieldAt <X> <Y> <Z>. ")
+        TEXT("Same pipeline as ck.GroundNav.BakeAt, but split into tiles that each bake with their own ")
+        TEXT("halo and are then joined by seam crossings - draw mode 5 shows the lattice and those ")
+        TEXT("seams. Tile size comes from ck.GroundNav.Debug.TileSizeUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.BakeFieldAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 3)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.BakeFieldAt needs three numbers: ")
+                    TEXT("ck.GroundNav.BakeFieldAt <X> <Y> <Z>"));
+                return;
+            }
+
+            const auto Centre = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoBakeFieldAndDraw(InWorld, Centre);
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(

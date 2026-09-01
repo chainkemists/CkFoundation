@@ -5,6 +5,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
+#include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
 
@@ -77,6 +78,35 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** One tile of a field, already in world space. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugTile
+    {
+    public:
+        FBox _Bounds = FBox{ForceInit};
+
+        int32 _PlateCount = 0;
+        int32 _WalkableCellCount = 0;
+
+        // Drawn differently rather than omitted. A tile nothing is known about and a tile with no floor
+        // in it look identical if only the built ones are shown, and they are the two things a viewer
+        // most needs to tell apart.
+        bool _IsBuilt = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** One crossing between two tiles, already in world space. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugSeam
+    {
+    public:
+        FVector _MinEnd = FVector::ZeroVector;
+        FVector _MaxEnd = FVector::ZeroVector;
+
+        float _TraversalClearanceUu = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * Everything a viewer needs to draw one bake, and nothing that could outlive it.
      *
@@ -121,6 +151,11 @@ namespace ck::groundnav
         TArray<FCk_GroundNav_DebugPlate> _Plates;
         TArray<FCk_GroundNav_DebugPortal> _Portals;
 
+        // Empty for a single-region bake, populated for a field bake. A viewer draws what is there
+        // rather than being told which kind of bake it is looking at.
+        TArray<FCk_GroundNav_DebugTile> _Tiles;
+        TArray<FCk_GroundNav_DebugSeam> _Seams;
+
         // Cells the rasterizer accepted on slope but the walkability filters then demoted. Drawing
         // these is the only way to see what a filter is COSTING you: an over-tight ledge sensitivity
         // and a genuinely unwalkable world produce the same walkable set, and differ only here.
@@ -136,6 +171,12 @@ namespace ck::groundnav
         auto Get_PlateCount() const -> int32 { return _Plates.Num(); }
 
         auto Get_PortalCount() const -> int32 { return _Portals.Num(); }
+
+        auto Get_TileCount() const -> int32 { return _Tiles.Num(); }
+
+        auto Get_SeamCount() const -> int32 { return _Seams.Num(); }
+
+        auto Get_BuiltTileCount() const -> int32;
 
         /** The tightest crossing in the field, and the first number to read when a body that ought to
          *  fit somewhere cannot get there. Zero when there are no portals at all. */
@@ -160,6 +201,21 @@ namespace ck::groundnav
      * Every value is read out here and nothing is retained, which is what makes the boundary a copy
      * rather than a view. InMaxCells caps the per-cell list only — the reported counts stay exact.
      */
+    /**
+     * Copy a whole published field into a standalone snapshot.
+     *
+     * Walks every built tile and flattens its cells, plates and crossings into the same shape a
+     * single-region bake produces, so every existing draw mode works over a tiled field unchanged —
+     * and adds the two things only a field has: its tiles, and the crossings between them.
+     *
+     * Everything is read out here and nothing is retained. The field may be rebuilt or dropped the
+     * moment this returns.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugSnapshotFromField(
+        const FCk_GroundNav_Field& InField,
+        int32                      InMaxCells) -> FCk_GroundNav_DebugSnapshot;
+
     CKGROUNDNAV_API auto
     Make_DebugSnapshot(
         const FCk_GroundNav_SpanField&      InSpans,

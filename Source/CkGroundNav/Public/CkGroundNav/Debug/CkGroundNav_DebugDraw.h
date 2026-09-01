@@ -33,7 +33,12 @@ namespace ck::groundnav
         // The crossings between plates, drawn on the boundary they occupy and coloured by how much
         // room they offer. This is the only view that shows why a body wide enough for both rooms
         // still cannot get from one to the other.
-        Portals
+        Portals,
+
+        // The tile lattice and the crossings between tiles. Empty for a single-region bake; for a
+        // field bake it is the view that shows whether the seams agree — which is the one thing a
+        // tiled bake gets wrong invisibly.
+        Tiles
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -74,6 +79,19 @@ namespace ck::groundnav
     Make_DebugSnapshotFromWorld(
         const UObject*                           InWorldContextObject,
         const FCk_GroundNav_DebugBakeParams&     InParams) -> FCk_GroundNav_DebugSnapshot;
+
+    /**
+     * Bake a whole tiled FIELD around a point out of the live physics world.
+     *
+     * Same pipeline as the single-region bake, run per tile with the halo each tile needs, so this is
+     * the only debug path that exercises tiling, seam portals and reachability against real geometry.
+     *
+     * Game thread only.
+     */
+    CKGROUNDNAV_API auto
+    Make_FieldDebugSnapshotFromWorld(
+        const UObject*                       InWorldContextObject,
+        const FCk_GroundNav_DebugBakeParams& InParams) -> FCk_GroundNav_DebugSnapshot;
 
     /**
      * Draw a snapshot with the engine's persistent debug lines.
