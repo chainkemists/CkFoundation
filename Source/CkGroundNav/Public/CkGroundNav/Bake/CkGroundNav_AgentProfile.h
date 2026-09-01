@@ -43,9 +43,22 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _StepHeightUu = 40.0f;
 
+    // How readily the ledge filter demotes a span, expressed as the reciprocal of how many of a
+    // span's four sides must drop away before it stops being standable ground.
+    //
+    // At the default 1.0 a SINGLE dropping side is enough — the most conservative setting, and the
+    // one the constrain processor's correctness rests on. Lowering it demands more dropping sides
+    // and is how narrow authored geometry survives: a one-cell catwalk drops away on both sides and
+    // would otherwise be demoted along its entire length. Zero disables the filter outright.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _LedgeSensitivity = 1.0f;
 
+    // Height delta, in unreal units, under which two neighbouring surfaces are treated as the same
+    // rough surface and connect regardless of how sharply their normals disagree.
+    //
+    // Rasterizing a gently uneven floor produces alternating facet normals whose slope-change
+    // exceeds any sane cone, which would shatter one walkable surface into disconnected fragments.
+    // Zero applies the slope-change test everywhere with no relief.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _RoughPerchToleranceUu = 0.0f;
 
