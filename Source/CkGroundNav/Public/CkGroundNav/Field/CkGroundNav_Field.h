@@ -87,6 +87,18 @@ namespace ck::groundnav
 
     public:
         auto Get_CellCount() const -> int32 { return (_AlongMax - _AlongMin) + 1; }
+
+        /**
+         * The two ends of the seam segment in world space, placed against the tile on the A side.
+         *
+         * The seam lies on that tile's far edge along the crossing direction, so the tile is what says
+         * where it is — the portal itself carries only cell indices, which is what keeps it free of
+         * anything a rebuild could invalidate.
+         */
+        auto Get_Endpoints(
+            const FCk_GroundNav_Tile& InTileA,
+            FVector&                  OutMinEnd,
+            FVector&                  OutMaxEnd) const -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
