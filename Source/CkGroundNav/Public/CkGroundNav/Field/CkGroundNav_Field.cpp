@@ -123,6 +123,58 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_Field::
+        Get_ReachabilityLabel(
+            int32 InTileIndex,
+            int32 InPlateIndex) const
+        -> int32
+    {
+        if (NOT _TilePlateOffsets.IsValidIndex(InTileIndex) || InPlateIndex < 0)
+        { return INDEX_NONE; }
+
+        const auto Flat = _TilePlateOffsets[InTileIndex] + InPlateIndex;
+
+        if (Flat >= _TilePlateOffsets[InTileIndex + 1])
+        { return INDEX_NONE; }
+
+        return _ReachabilityLabels.IsValidIndex(Flat) ? _ReachabilityLabels[Flat] : INDEX_NONE;
+    }
+
+    auto
+        FCk_GroundNav_Field::
+        Get_AreProvablyDisconnected(
+            int32 InTileIndexA,
+            int32 InPlateIndexA,
+            int32 InTileIndexB,
+            int32 InPlateIndexB) const
+        -> bool
+    {
+        const auto LabelA = Get_ReachabilityLabel(InTileIndexA, InPlateIndexA);
+        const auto LabelB = Get_ReachabilityLabel(InTileIndexB, InPlateIndexB);
+
+        // An unlabelled plate is not PROVEN unreachable, only unknown, and the difference matters:
+        // this answer is used to refuse work, and refusing on an unknown would refuse on a hole in the
+        // data rather than on a fact about the world.
+        if (LabelA == INDEX_NONE || LabelB == INDEX_NONE)
+        { return false; }
+
+        return LabelA != LabelB;
+    }
+
+    auto
+        FCk_GroundNav_Field::
+        Get_ReachabilityComponentCount() const
+        -> int32
+    {
+        auto Highest = int32{INDEX_NONE};
+
+        for (const auto Label : _ReachabilityLabels)
+        { Highest = FMath::Max(Highest, Label); }
+
+        return Highest + 1;
+    }
+
+    auto
+        FCk_GroundNav_Field::
         Get_AggregatedTileEpochSum() const
         -> int64
     {
@@ -218,6 +270,108 @@ namespace ck::groundnav
             return nullptr;
         }
     }
+
+    namespace reachability_private
+    {
+        /** Union-find with path compression. Small enough to keep local; the merge is not the subject. */
+        auto Get_Root(TArray<int32>& InOutParents, int32 InIndex) -> int32
+        {
+            auto Root = InIndex;
+
+            while (InOutParents[Root] != Root)
+            { Root = InOutParents[Root]; }
+
+            while (InOutParents[InIndex] != Root)
+            {
+                const auto Next = InOutParents[InIndex];
+                InOutParents[InIndex] = Root;
+                InIndex = Next;
+            }
+
+            return Root;
+        }
+
+        auto Do_Union(TArray<int32>& InOutParents, int32 InLeft, int32 InRight) -> void
+        {
+            const auto RootLeft = Get_Root(InOutParents, InLeft);
+            const auto RootRight = Get_Root(InOutParents, InRight);
+
+            if (RootLeft == RootRight)
+            { return; }
+
+            // Toward the lower index deliberately: it makes the forest depend only on which plates are
+            // connected, never on the order the merges arrived in.
+            InOutParents[FMath::Max(RootLeft, RootRight)] = FMath::Min(RootLeft, RootRight);
+        }
+    }
+
+    auto
+        DoLabel_Reachability(
+            FCk_GroundNav_Field& InOutField)
+        -> void
+    {
+        using namespace reachability_private;
+
+        InOutField._TilePlateOffsets.Reset();
+        InOutField._ReachabilityLabels.Reset();
+
+        InOutField._TilePlateOffsets.Reserve(InOutField._Tiles.Num() + 1);
+
+        auto Running = 0;
+
+        for (const auto& Tile : InOutField._Tiles)
+        {
+            InOutField._TilePlateOffsets.Emplace(Running);
+            Running += Tile._Plates._Plates.Num();
+        }
+
+        InOutField._TilePlateOffsets.Emplace(Running);
+
+        auto Parents = TArray<int32>{};
+        Parents.Reserve(Running);
+
+        for (auto Index = 0; Index < Running; ++Index)
+        { Parents.Emplace(Index); }
+
+        for (auto TileIndex = 0; TileIndex < InOutField._Tiles.Num(); ++TileIndex)
+        {
+            const auto Offset = InOutField._TilePlateOffsets[TileIndex];
+
+            for (const auto& Portal : InOutField._Tiles[TileIndex]._Portals._Portals)
+            { Do_Union(Parents, Offset + Portal._PlateA, Offset + Portal._PlateB); }
+        }
+
+        for (const auto& Portal : InOutField._SeamPortals)
+        {
+            const auto FlatA = InOutField._TilePlateOffsets[Portal._TileIndexA] + Portal._PlateA;
+            const auto FlatB = InOutField._TilePlateOffsets[Portal._TileIndexB] + Portal._PlateB;
+
+            Do_Union(Parents, FlatA, FlatB);
+        }
+
+        // Numbered in scan order AFTER the merging, so the labels say what is connected to what and
+        // nothing about the schedule that discovered it.
+        InOutField._ReachabilityLabels.Init(INDEX_NONE, Running);
+
+        auto RootToLabel = TMap<int32, int32>{};
+
+        for (auto Flat = 0; Flat < Running; ++Flat)
+        {
+            const auto Root = Get_Root(Parents, Flat);
+
+            if (const auto* Existing = RootToLabel.Find(Root))
+            {
+                InOutField._ReachabilityLabels[Flat] = *Existing;
+                continue;
+            }
+
+            const auto Label = RootToLabel.Num();
+            RootToLabel.Add(Root, Label);
+            InOutField._ReachabilityLabels[Flat] = Label;
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         DoDerive_SeamPortals(
@@ -379,6 +533,7 @@ namespace ck::groundnav
         }
 
         DoDerive_SeamPortals(OutField);
+        DoLabel_Reachability(OutField);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
         Result.Set_ProbesSpent(ProbesSpent);
