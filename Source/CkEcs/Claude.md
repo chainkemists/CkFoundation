@@ -444,6 +444,14 @@ FGroup_Overlap (TG_PostPhysics)
 - **Tick N+1:** `FGroup_DestructionPipeline`'s DestructionPhase_Await adds `FTag_DestroyEntity_Await`.
 - **Tick N+2:** `FGroup_DestructionPipeline`'s DestructionPhase_Finalize adds `FTag_DestroyEntity_Finalize` and DestroyEntity destroys the entity.
 
+At world shutdown, `UCk_EcsWorld_Subsystem_UE::OnWorldEndPlay` snapshots every live non-transient entity, requests
+destruction, and pumps the full graph at zero time before Unreal reaches `OnWorldCleanup`. `PreDeinitialize` repeats
+the same idempotent helper as a fallback for worlds that skipped normal EndPlay. This ordering is load-bearing:
+actorless PMG/world-space-widget components are released only by feature `FGroup_EndPlay` processors, and resetting
+the registry first strands those registered components until Unreal's final component-validation ensure. Once the
+world enters the `Teardown` hold, both low-level `Request_CreateEntity` overloads reject new population; destruction
+callbacks cannot create an entity after the teardown snapshot and strand a new component owner outside the pass.
+
 Attribute pipeline ordering (Recompute → Compute → Clamp → FireSignals → Refill) is NOT expressed by groups — the composite processor classes manage it internally in their `Tick()`.
 
 ---
