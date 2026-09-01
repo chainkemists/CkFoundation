@@ -30,6 +30,24 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Ecs Entities Spawned"),   STAT_CkEcs_EntitiesSp
 
 namespace ck_entity_lifetime_utils
 {
+    auto
+        Get_CanCreateEntityInWorld(
+            const FCk_Registry& InRegistry)
+        -> bool
+    {
+        const auto TransientEntity = FCk_Handle{InRegistry.Get_TransientEntity(), InRegistry.Get_RegistryHandle()};
+        if (NOT TransientEntity.IsValid(ck::IsValid_Policy_IncludePendingKill{})
+            || NOT TransientEntity.Has<TWeakObjectPtr<UWorld>>())
+        { return true; }
+
+        const auto* World = TransientEntity.Get<TWeakObjectPtr<UWorld>>().Get();
+        if (ck::Is_NOT_Valid(World))
+        { return true; }
+
+        const auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        return ck::Is_NOT_Valid(EcsWorld) || EcsWorld->Get_LoadHold() != ECk_EcsWorld_LoadHold::Teardown;
+    }
+
     // Entering destruction leaves the hydration quarantine, and that is what makes the 143 destruction-pipeline
     // processors need ZERO exemptions: a destroying entity is simply not quarantined, so every *_EndPlay body sees
     // it exactly as it does today. It also means an entity destroyed mid-load cannot hold the tag forever, since
@@ -390,6 +408,9 @@ auto
     const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
 
     auto NewEntityWithTransientOwner = Request_CreateEntity(TransientEntity, InFunc);
+    if (ck::Is_NOT_Valid(NewEntityWithTransientOwner))
+    { return {}; }
+
     UCk_Utils_Handle_UE::Set_DebugName(NewEntityWithTransientOwner, TEXT("NO NAME [Transient Owner]"));
 
     return NewEntityWithTransientOwner;
@@ -430,6 +451,13 @@ auto
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
+    const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
+    CK_ENSURE_IF_NOT(CanCreateEntity,
+        TEXT("Request_CreateEntity rejected new world population after ECS world teardown began"))
+    { }
+    if (NOT CanCreateEntity)
+    { return {}; }
+
     const auto& NewEntity = InRegistry.CreateEntity();
     INC_DWORD_STAT(STAT_CkEcs_EntitiesSpawned);
 
@@ -454,6 +482,13 @@ auto
     -> HandleType
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
+
+    const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
+    CK_ENSURE_IF_NOT(CanCreateEntity,
+        TEXT("Request_CreateEntity with ID hint rejected new world population after ECS world teardown began"))
+    { }
+    if (NOT CanCreateEntity)
+    { return {}; }
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
     INC_DWORD_STAT(STAT_CkEcs_EntitiesSpawned);
