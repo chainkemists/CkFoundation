@@ -38,12 +38,21 @@ namespace ck
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        // One projection: the registered Produce (keyed on this inventory entity) rebuilds the identical item
-        // array via the same record walk. Full-replace the owner (lifetime-owner) container with it, as today.
+        // Full-replace the owner (lifetime-owner) container with the live item projection, as today.
+        // This intentionally bypasses the save handler's Produce path: _PersistContents controls snapshot
+        // capture/hydration only and must not change normal replication.
         // KNOWN PRE-EXISTING GAP (unchanged here): two inventories sharing one owner clobber this container entry.
-        const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Inventory_DataOnly_Items>(InHandle);
-        if (Produced.IsSet())
-        { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Inventory_DataOnly_Items>(LifetimeOwner, *Produced); }
+        const auto& Items = UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::Get_ValidEntries(InHandle);
+
+        auto Data = FCk_RepData_Inventory_DataOnly_Items{};
+        Data.Items.Reserve(Items.Num());
+
+        ck::algo::ForEachIsValid(Items, [&](const FCk_Handle_Item& InItemHandle)
+        {
+            Data.Items.Emplace(FCk_InventoryItem_DataOnly_ReplicatedEntry(InItemHandle));
+        });
+
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Inventory_DataOnly_Items>(LifetimeOwner, Data);
 
         InHandle.Remove<MarkedDirtyBy>();
     }

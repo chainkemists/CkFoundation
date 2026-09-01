@@ -19,6 +19,7 @@ FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_F
     , _BoundLimit(InDataOnlyParams.Get_BoundLimit())
     , _StackingPolicy(InDataOnlyParams.Get_StackingPolicy())
     , _MaxStackSizeClamp(InDataOnlyParams.Get_MaxStackSizeClamp())
+    , _PersistContents(InDataOnlyParams.Get_PersistContents())
     , _CustomCanAcceptItem(InDataOnlyParams.Get_CustomCanAcceptItem())
     , _CustomCanAcceptItemDynamic(InDataOnlyParams.Get_CustomCanAcceptItemDynamic())
     , _CanAcceptItemRef(InDataOnlyParams.Get_CanAcceptItemRef())
