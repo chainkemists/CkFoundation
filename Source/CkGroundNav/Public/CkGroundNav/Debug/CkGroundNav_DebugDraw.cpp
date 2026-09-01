@@ -4,6 +4,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
+#include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
@@ -133,9 +134,18 @@ namespace ck::groundnav
             return Snapshot;
         }
 
+        auto Portals = FCk_GroundNav_PortalField{};
+
+        if (NOT DoExtract_Portals(Spans, Layers, Connections, Plates, Clearance, Portals).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
         const auto ElapsedMilliseconds = (FPlatformTime::Seconds() - StartedAt) * 1000.0;
 
-        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Region, InParams._MaxCells);
+        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Portals, Region, InParams._MaxCells);
         Do_RecordRejectedCells(SpansBeforeFiltering, Spans, Built);
 
         Built._SourceTriangleCount = SourceTriangles;
@@ -189,6 +199,49 @@ namespace ck::groundnav
             return;
         }
 
+        if (InMode == EDebugDrawMode::Portals)
+        {
+            // The plates, dimmed, so a crossing is read against the two things it joins rather than
+            // floating in space.
+            for (const auto& Plate : InSnapshot._Plates)
+            {
+                DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0},
+                    FColor{55, 60, 65}, Persistent, LifetimeSeconds, DepthPriority, 1.0f);
+            }
+
+            // The ramp runs against the WIDEST crossing in this bake, not against the most open cell:
+            // portals are compared with each other, and a field of doorways would otherwise all read
+            // as equally tight next to an open plaza.
+            auto WidestPortalUu = 0.0f;
+
+            for (const auto& Portal : InSnapshot._Portals)
+            { WidestPortalUu = FMath::Max(WidestPortalUu, Portal._TraversalClearanceUu); }
+
+            // Lifted clear of the floor. A crossing drawn exactly on the surface it belongs to
+            // disappears into it from every angle a player actually looks from.
+            const auto Lift = FVector{0.0, 0.0, static_cast<double>(InSnapshot._CellSizeUu) * 0.25};
+
+            for (const auto& Portal : InSnapshot._Portals)
+            {
+                const auto Color = Get_ClearanceColor(Portal._TraversalClearanceUu, WidestPortalUu);
+
+                DrawDebugLine(InWorld, Portal._MinEnd + Lift, Portal._MaxEnd + Lift, Color, Persistent,
+                    LifetimeSeconds, DepthPriority, 6.0f);
+
+                if (NOT Portal._IsCrossLayer)
+                { continue; }
+
+                // A crossing that changes floor gets a mast at its midpoint, because colour is
+                // already spoken for and the two ends can be a whole storey apart.
+                const auto Midpoint = (Portal._MinEnd + Portal._MaxEnd) * 0.5;
+
+                DrawDebugLine(InWorld, Midpoint + Lift, Midpoint + Lift + FVector{0.0, 0.0, 60.0},
+                    Color, Persistent, LifetimeSeconds, DepthPriority, 3.0f);
+            }
+
+            return;
+        }
+
         const auto PointSize = FMath::Max(4.0f, InSnapshot._CellSizeUu * 0.35f);
 
         if (InMode == EDebugDrawMode::Rejected)
@@ -231,6 +284,14 @@ namespace ck::groundnav
         const auto Centre = InSnapshot._Region.GetCenter();
         const auto Extent = InSnapshot._Region.GetExtent();
 
+        auto CrossLayerPortalCount = 0;
+
+        for (const auto& Portal : InSnapshot._Portals)
+        {
+            if (Portal._IsCrossLayer)
+            { ++CrossLayerPortalCount; }
+        }
+
         return FString::Printf(
             TEXT("[GroundNav] %s | %.1f ms\n")
             TEXT("  region   : centre (%.0f, %.0f, %.0f)  half-extent (%.0f, %.0f, %.0f)\n")
@@ -239,6 +300,7 @@ namespace ck::groundnav
             TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n")
             TEXT("  layers   : %d\n")
             TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
+            TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
             TEXT("  clearance: %.1f uu at the most open cell"),
             Get_StatusName(InSnapshot._Status),
             InSnapshot._BakeMilliseconds,
@@ -260,6 +322,9 @@ namespace ck::groundnav
             InSnapshot._CollapseRatio,
             InSnapshot._MaxPlaneResidualUu,
             InSnapshot._MaxPlateHeightRangeUu,
+            InSnapshot.Get_PortalCount(),
+            CrossLayerPortalCount,
+            InSnapshot.Get_NarrowestPortalUu(),
             InSnapshot._MaxClearanceUu);
     }
 }
@@ -348,7 +413,8 @@ namespace ck_groundnav_debugconsole
 
     static TAutoConsoleVariable<int32> CVar_Mode(
         TEXT("ck.GroundNav.Debug.Mode"), 0,
-        TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected."));
+        TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected, ")
+        TEXT("4 = the crossings between plates."));
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
         TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
@@ -389,6 +455,7 @@ namespace ck_groundnav_debugconsole
             case 1:  return ck::groundnav::EDebugDrawMode::Clearance;
             case 2:  return ck::groundnav::EDebugDrawMode::Layers;
             case 3:  return ck::groundnav::EDebugDrawMode::Rejected;
+            case 4:  return ck::groundnav::EDebugDrawMode::Portals;
             default: return ck::groundnav::EDebugDrawMode::Plates;
         }
     }
