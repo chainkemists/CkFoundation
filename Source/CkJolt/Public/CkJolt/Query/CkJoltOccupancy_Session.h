@@ -13,6 +13,32 @@ class UCk_Jolt_Subsystem;
 
 namespace ck::jolt
 {
+    /// A batch of world-space triangles read back out of the physics world, in unreal units.
+    ///
+    /// Indices are triples into _Vertices; _Indices.Num() is therefore always a multiple of three.
+    /// Vertices are NOT welded across bodies or across shapes — a consumer that needs a welded mesh
+    /// welds it itself, because the bake this exists for rasterizes triangles independently and
+    /// would pay for welding it never reads.
+    ///
+    /// Deliberately a plain value type and NOT reflected: it routinely holds hundreds of thousands
+    /// of vertices, and nothing about it belongs in a details panel or on the wire.
+    struct CKJOLT_API FCk_Jolt_TriangleSoup
+    {
+    public:
+        TArray<FVector> _Vertices;
+        TArray<int32>   _Indices;
+
+    public:
+        auto Get_TriangleCount() const -> int32 { return _Indices.Num() / 3; }
+        auto Get_IsEmpty() const -> bool { return _Indices.IsEmpty(); }
+
+        auto Reset() -> void
+        {
+            _Vertices.Reset();
+            _Indices.Reset();
+        }
+    };
+
     /// One box query volume of a fixed size, built ONCE and reused across many occupancy queries. Callers
     /// that probe a grid keep one probe per distinct cell size instead of rebuilding a shape per query.
     ///
@@ -125,6 +151,24 @@ namespace ck::jolt
         Get_BodiesInAABox(
             const FBox& InWorldBounds,
             TArray<uint64>& OutBodyIds) const -> void;
+
+        /// Every world-space TRIANGLE of the static bodies overlapping InWorldBounds, appended to OutSoup;
+        /// returns the number of triangles appended. The whole point of this call is that a consumer can
+        /// rasterize real surface geometry without ever naming a Jolt type.
+        ///
+        /// STATIC BODIES ONLY, matching the broadphase enumeration above: a bake is a statement about
+        /// immovable world geometry, and a moving obstacle is a steering problem, not a bake input.
+        ///
+        /// Triangles are clipped to nothing — a body that merely OVERLAPS the bounds contributes all of
+        /// its triangles that Jolt reports for that box, so the result is conservative at the edges and
+        /// the caller is responsible for discarding what falls outside its own region.
+        ///
+        /// OutSoup is APPENDED to, not reset, so a caller can accumulate several regions into one batch.
+        /// Game thread only (off-thread only under a future step-barrier contract - not yet provided).
+        auto
+        Get_StaticTrianglesInAABox(
+            const FBox& InWorldBounds,
+            FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
 
     private:
         struct FImpl;
