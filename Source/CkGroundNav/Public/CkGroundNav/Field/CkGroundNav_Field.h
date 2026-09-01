@@ -56,6 +56,42 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One crossing between two TILES.
+     *
+     * Lives on the field rather than on either tile because it depends on both, and either can be
+     * rebuilt on its own. Re-derived whenever the field is composed and never patched — a seam portal
+     * that outlived the tile it crossed into would be a route that no longer exists, which is the one
+     * error a path consumer cannot detect for itself.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_SeamPortal
+    {
+    public:
+        int32 _TileIndexA = INDEX_NONE;
+        int32 _TileIndexB = INDEX_NONE;
+
+        // Plate indices are TILE-LOCAL, so a plate is only addressable through the tile beside it here.
+        int32 _PlateA = FCk_GroundNav_Plate::kNoPlate;
+        int32 _PlateB = FCk_GroundNav_Plate::kNoPlate;
+
+        // From A to B: only 0 (+X) and 1 (+Y) occur, so a seam is never composed twice.
+        int32 _Direction = 0;
+
+        // The run along the shared edge, in A's cell coordinates, inclusive.
+        int32 _AlongMin = 0;
+        int32 _AlongMax = 0;
+
+        float _MinEndZUu = 0.0f;
+        float _MaxEndZUu = 0.0f;
+
+        float _TraversalClearanceUu = 0.0f;
+
+    public:
+        auto Get_CellCount() const -> int32 { return (_AlongMax - _AlongMin) + 1; }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * A whole ground field: its tiles and the settings they were baked under.
      *
      * TREAT AS IMMUTABLE ONCE PUBLISHED. Readers hold a shared reference to one of these and are
@@ -73,10 +109,15 @@ namespace ck::groundnav
         // says Unbuilt — a missing entry and an unbuilt one would answer the same query differently.
         TArray<FCk_GroundNav_Tile> _Tiles;
 
+        // Derived at composition from the tiles' seam stubs, never carried across a rebuild.
+        TArray<FCk_GroundNav_SeamPortal> _SeamPortals;
+
         FCk_GroundNav_Epoch _Epoch;
 
     public:
         auto Get_TileCount() const -> int32 { return _Tiles.Num(); }
+
+        auto Get_SeamPortalCount() const -> int32 { return _SeamPortals.Num(); }
 
         auto Get_Tile(const FCk_GroundNav_TileCoord& InCoord) const -> const FCk_GroundNav_Tile*;
 
@@ -164,6 +205,22 @@ namespace ck::groundnav
      *
      * Pure but for the backend: no world, no registry, no physics of its own.
      */
+    /**
+     * Derive every crossing between neighbouring tiles from the stubs those tiles recorded.
+     *
+     * Two stubs describe one crossing only when each side's account agrees with the other's — this
+     * tile's far surface is the neighbour's near surface, and the reverse — which mirrors the
+     * mutual-agreement rule the connection field already enforces within a tile and keeps a single
+     * definition of adjacency in the codebase.
+     *
+     * A neighbour that is not built yields NO seam portal. The boundary is then a hard edge and a path
+     * across it fails as unbuilt, never as blocked: the first is a place nothing is known about, and
+     * telling a caller it is impassable would be a lie it cannot check.
+     */
+    CKGROUNDNAV_API auto
+    DoDerive_SeamPortals(
+        FCk_GroundNav_Field& InOutField) -> void;
+
     CKGROUNDNAV_API auto
     DoBake_Field(
         const ICk_GroundNav_GeometryBackend& InBackend,
