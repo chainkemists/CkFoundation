@@ -126,6 +126,10 @@ comment-light; the *why* lives here.
   PostDefault AngelScript loader initializes its manager, so module startup subscribes without
   reading the manager. A late module reload may refresh immediately only when the manager already
   exists.
+- **PostCompile has no thread guarantee.** `Request_RefreshAngelscriptFragmentDisplaySchemas` refreshes inline on
+  the game thread and coalesces worker notifications onto one core-ticker callback. Shutdown marks the request state
+  unavailable before cancelling that callback, so an in-flight worker cannot publish after teardown; startup re-arms
+  it. The successful refresh logs the schema and observed-path counts for packaged-build evidence.
 - **Native producers own native custom labels.** They register an explicit schema during startup and
   unregister it during shutdown. Native entries take precedence and are not erased by an
   AngelScript refresh.

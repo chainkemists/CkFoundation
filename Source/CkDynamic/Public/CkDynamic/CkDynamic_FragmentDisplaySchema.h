@@ -94,6 +94,11 @@ namespace ck::dynamic
     CKDYNAMIC_API auto
     Refresh_AngelscriptFragmentDisplaySchemas() -> bool;
 
+    // Accepts an AngelScript compile notification from any thread. Game-thread callers refresh immediately; workers
+    // coalesce onto the next core-ticker pump so the registry is never read or published off-thread.
+    CKDYNAMIC_API auto
+    Request_RefreshAngelscriptFragmentDisplaySchemas() -> void;
+
     CKDYNAMIC_API auto
     Startup_AngelscriptFragmentDisplaySchemas() -> void;
 
