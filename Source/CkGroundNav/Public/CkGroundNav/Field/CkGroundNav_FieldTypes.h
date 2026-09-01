@@ -90,6 +90,38 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * What one tile knows about a single crossing that LEAVES it.
+     *
+     * Recorded from the tile's own halo, where the neighbouring ground was still present, and kept so
+     * that composing two tiles never has to ask a fresh question about whether their edge cells are
+     * adjacent. A published tile keeps no span field and no connection field, so the alternative would
+     * be a second definition of adjacency living beside the first — and two definitions drift.
+     *
+     * Both surfaces are recorded because that is what makes the match exact: this tile's FAR surface is
+     * the neighbour's NEAR surface, so two stubs describe the same crossing only when each side's
+     * account of it agrees with the other's.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_SeamStub
+    {
+    public:
+        // Outward from the tile, as a direction index (Get_DirectionOffset).
+        int32 _Direction = 0;
+
+        // Position along the shared edge, in this tile's own cell coordinates.
+        int32 _AlongIndex = 0;
+
+        int32 _PlateIndex = FCk_GroundNav_Plate::kNoPlate;
+
+        float _NearSurfaceZUu = 0.0f;
+        float _FarSurfaceZUu = 0.0f;
+
+        // Already under the tile's clearance ceiling, and already the tighter of the two sides.
+        float _ClearanceUu = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * One tile of the ground field: everything a query needs about its patch of world, and nothing a
      * rebuild of a neighbour could invalidate.
      *
@@ -133,6 +165,11 @@ namespace ck::groundnav
         FCk_GroundNav_ClearanceField _Clearance;
         FCk_GroundNav_PlateField _Plates;
         FCk_GroundNav_PortalField _Portals;
+
+        // Crossings that leave this tile, for whoever composes it with its neighbours. Held on the tile
+        // because only the tile's own bake could observe them; the portals they become are held on the
+        // field, because they depend on two tiles and must be re-derived whenever either one rebuilds.
+        TArray<FCk_GroundNav_SeamStub> _SeamStubs;
 
     public:
         auto Get_IsBuilt() const -> bool { return _Status == ECk_GroundNav_BuildStatus::Built; }
