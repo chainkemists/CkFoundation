@@ -126,7 +126,15 @@ namespace ck::groundnav
         if (NOT InOutState.Get_IsComplete())
         { return {}; }
 
-        return MakeShared<const FCk_GroundNav_Field>(MoveTemp(InOutState._Partial));
+        auto Released = MakeShared<const FCk_GroundNav_Field>(MoveTemp(InOutState._Partial));
+
+        // The build is SPENT. Without this the moved-from _Partial still reports complete, and a
+        // second release would hand back a non-null EMPTY field — which reads exactly like a world
+        // whose tiles have no floor, the failure Get_CompletedField's own contract warns about.
+        InOutState._Status = ECk_GroundNav_BuildStatus::Unbuilt;
+        InOutState._NextTileIndex = 0;
+
+        return Released;
     }
 }
 
