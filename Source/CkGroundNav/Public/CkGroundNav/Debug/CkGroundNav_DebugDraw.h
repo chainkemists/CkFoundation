@@ -6,6 +6,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Debug/CkGroundNav_DebugSnapshot.h"
+#include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
 
@@ -98,6 +99,23 @@ namespace ck::groundnav
     Make_FieldDebugSnapshotFromWorld(
         const UObject*                       InWorldContextObject,
         const FCk_GroundNav_DebugBakeParams& InParams) -> FCk_GroundNav_DebugSnapshot;
+
+    /**
+     * The same bake, also handing back the field it produced.
+     *
+     * A snapshot is a drawable copy and carries nothing a query can run against, so a caller that
+     * wants to PROBE the bake it just drew needs the field itself. The field is immutable and holds
+     * no world reference, so it outlives the world it was baked from.
+     *
+     * OutField is left invalid on every failing status.
+     *
+     * Game thread only.
+     */
+    CKGROUNDNAV_API auto
+    Make_FieldDebugSnapshotFromWorld(
+        const UObject*                       InWorldContextObject,
+        const FCk_GroundNav_DebugBakeParams& InParams,
+        FCk_GroundNav_FieldPtr&              OutField) -> FCk_GroundNav_DebugSnapshot;
 
     /**
      * Draw a snapshot with the engine's persistent debug lines.
