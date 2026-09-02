@@ -221,6 +221,115 @@ namespace ck::groundnav
     public:
         auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
     };
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Move a body along walkable ground from a start that is on the surface toward a target, going
+     * as far as the ground allows and never further.
+     *
+     * The start is resolved to a surface first: a layer whose surface lies within the start tolerance
+     * of the start height. The start cell is admitted whatever its clearance — the body is already
+     * standing there, and a walk may leave a tight spot but never enter one.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_SurfaceWalkQuery
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _Target = FVector::ZeroVector;
+
+        float _StartVerticalToleranceUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Where a walk ended. On Success the location is ON the walkable set by construction: its XY
+     * lies inside the answering cell's square and its height is that cell's surface. That is the
+     * containment guarantee grounded agents stand on, and it is asserted, never clamped into being.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_SurfaceWalkResult
+    {
+    public:
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        FVector _Location = FVector::ZeroVector;
+
+        FCk_GroundNav_SurfaceRef _Surface;
+
+        bool _ReachedTarget = false;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** The instrumented counters a walk reports, so a test asserts on what the walk DID, not on time. */
+    struct CKGROUNDNAV_API FCk_GroundNav_SurfaceWalkDiagnostics
+    {
+    public:
+        int32 _CellsStepped = 0;
+        int32 _BlockedSteps = 0;
+        int32 _SlideCount = 0;
+        int32 _PortalCrossings = 0;
+        int32 _SeamCrossings = 0;
+
+        bool _TookPlateEarlyOut = false;
+        bool _HitIterationBound = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Can a body walk the straight segment from start to end without leaving walkable ground.
+     *
+     * The optional cost cap accumulates each cell's traversal cost multiplier times the length walked
+     * inside it; zero means no cap. That is what lets a caller ask "walkable AND cheap enough" in one
+     * pass rather than two.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_RaycastQuery
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        float _StartVerticalToleranceUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+
+        float _MaxCost = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Success means the whole segment is walkable. Blocked means the ray stopped: at the first cell
+     * boundary the body could not cross, or where the accumulated cost passed the cap — the flag says
+     * which. The hit normal is the crossed edge's normal facing back along the ray, in XY.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_RaycastResult
+    {
+    public:
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        FVector _HitLocation = FVector::ZeroVector;
+        FVector _HitNormal = FVector::ZeroVector;
+
+        FCk_GroundNav_SurfaceRef _LastSurface;
+
+        float _AccumulatedCost = 0.0f;
+
+        bool _StoppedOnCost = false;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsClear() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
