@@ -7,8 +7,11 @@
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
+#include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Fragment.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Fragment_Data.h"
+
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
 #include "CkGroundNavVolume_Utils.generated.h"
 
@@ -124,6 +127,56 @@ public:
               DisplayName="[Ck][GroundNavVolume] Get Walkable Cell Count")
     static int32
     Get_WalkableCellCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+public:
+    /**
+     * Whether the ground under a point is built, seen through the VOLUME rather than through a field.
+     *
+     * A published field answers Built or Unbuilt and never Building — it is immutable, so its tiles
+     * are baked or they are not. Building is this layer's word, said while a build is in flight, and
+     * an invalid volume answers OutsideField: a caller that cannot name a volume is over no ground.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Region Status At")
+    static ECk_GroundNav_RegionStatus
+    Get_RegionStatusAt(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        const FVector& InLocation);
+
+    /** The same answer folded over every tile a box touches: Built when all are, Unbuilt when none
+     *  are, PartiallyBuilt otherwise — with either of the latter two promoted to Building while a
+     *  build is in flight. Only XY decides which tiles are touched. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Region Status Within")
+    static ECk_GroundNav_RegionStatus
+    Get_RegionStatusWithin(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        const FBox& InBounds);
+
+    /**
+     * The world box the published field's BUILT tiles cover, or an empty box while nothing is
+     * published.
+     *
+     * Empty rather than the authored volume bounds on purpose: a consumer fitting a view to this must
+     * be told there is nothing to fit rather than handed bounds that do not hold ground yet.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Surface Bounds")
+    static FBox
+    Get_SurfaceBounds(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /** Building while a build is in flight, Ready once a field is published, Error when nothing is
+     *  published and the last build failed, NoData when nothing has been tried. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Provider Health")
+    static ECk_NavSurface_ProviderHealth
+    Get_ProviderHealth(
         const FCk_Handle_GroundNavVolume& InVolume);
 
 public:
