@@ -95,11 +95,15 @@ namespace ck::groundnav
      *
      * Headroom is measured to the bottom of the next span up in the same column; a span with nothing
      * above it has unbounded headroom. Returns how many spans were demoted.
+     *
+     * InOutProbes is ACCUMULATED into, never reset — one probe per span visited, in the unit
+     * FCk_GroundNav_BakeStageResult defines — so one counter can be threaded through several stages.
      */
     CKGROUNDNAV_API auto
     DoFilter_LowClearance(
         const FCk_GroundNav_AgentProfile& InProfile,
-        FCk_GroundNav_SpanField&          InOutSpans) -> int32;
+        FCk_GroundNav_SpanField&          InOutSpans,
+        int32&                            InOutProbes) -> int32;
 
     /**
      * Demote every walkable span that drops away on enough sides to be the lip of a fall rather than
@@ -116,11 +120,16 @@ namespace ck::groundnav
      * depends on where in the scan its neighbour happened to be visited.
      *
      * Returns how many spans were demoted.
+     *
+     * InOutProbes is ACCUMULATED into, never reset — one probe per neighbouring span a side-support
+     * test reads, in the unit FCk_GroundNav_BakeStageResult defines — so one counter can be threaded
+     * through several stages.
      */
     CKGROUNDNAV_API auto
     DoFilter_Ledges(
         const FCk_GroundNav_AgentProfile& InProfile,
-        FCk_GroundNav_SpanField&          InOutSpans) -> int32;
+        FCk_GroundNav_SpanField&          InOutSpans,
+        int32&                            InOutProbes) -> int32;
 
     /**
      * Record adjacency between walkable spans that an agent can actually step between.
@@ -134,12 +143,17 @@ namespace ck::groundnav
      * mirror edge back. Downstream may therefore treat this as an undirected graph.
      *
      * Returns the number of directed entries recorded.
+     *
+     * InOutProbes is ACCUMULATED into, never reset — one probe per connection candidate visited and
+     * per far-column mirror read, in the unit FCk_GroundNav_BakeStageResult defines — so one counter
+     * can be threaded through several stages.
      */
     CKGROUNDNAV_API auto
     DoBuild_Connections(
         const FCk_GroundNav_AgentProfile& InProfile,
         const FCk_GroundNav_SpanField&    InSpans,
-        FCk_GroundNav_ConnectionField&    OutConnections) -> int32;
+        FCk_GroundNav_ConnectionField&    OutConnections,
+        int32&                            InOutProbes) -> int32;
 
     /**
      * The three filters in their fixed order — low clearance, then ledges, then connectivity —
