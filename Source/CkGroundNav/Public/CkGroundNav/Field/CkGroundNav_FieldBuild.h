@@ -95,15 +95,21 @@ namespace ck::groundnav
         // vanished portal is a permanently unwalkable doorway that every query afterwards answers
         // confidently.
         //
-        // FALSE POSITIVES ARE ACCEPTED. The token is world-wide, so a door opening on the far side of the
-        // level aborts a build it could not have affected. A rebuild costs one more pass over the tiles;
-        // the alternative costs a portal nobody can find again.
+        // FALSE POSITIVES ARE ACCEPTED. The token is world-wide, so a static body streaming in on the far
+        // side of the level aborts a build it could not have affected. A rebuild costs one more pass over
+        // the tiles; the alternative costs a portal nobody can find again. It is STATIC-ONLY, though: the
+        // bake reads static bodies and nothing else, and a token that moved for every despawned projectile
+        // would starve a multi-frame build in any live scene.
         uint64 _GeometryRevision = 0;
 
         // Whether _GeometryRevision has been captured yet. Explicit rather than inferred from
         // _NextTileIndex == 0, because Request_ReleaseCompletedField resets that index to spend the build
         // — a capture condition riding on it would silently re-arm on a spent state.
         bool _HasGeometryRevision = false;
+
+        // Bodies the closure check has already fetched and judged this build. A body straddles many
+        // tiles' halos; its whole mesh is read once, not once per tile.
+        TSet<uint64> _CheckedBodies;
 
     private:
         // The export macro has to be repeated here: these are REdeclarations of the exported functions
