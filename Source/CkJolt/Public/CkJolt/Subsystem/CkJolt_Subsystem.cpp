@@ -1125,13 +1125,15 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
-    Get_BodyRemovedRevision() const
-        -> uint64
+    Get_TransientEntity() const
+        -> FCk_Handle
 {
-    if (NOT _JoltWorld.IsValid())
-    { return 0; }
+    const auto* EcsWorldSubsystem = _EcsWorldSubsystem.Get();
 
-    return _JoltWorld->Get_BodyRemovedRevision();
+    if (ck::Is_NOT_Valid(EcsWorldSubsystem))
+    { return {}; }
+
+    return EcsWorldSubsystem->Get_TransientEntity();
 }
 
 auto

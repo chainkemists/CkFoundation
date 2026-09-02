@@ -224,6 +224,33 @@ namespace ck::groundnav
         Snapshot._MaxPlaneResidualUu = InPlates.Get_MaxPlaneResidualUu();
         Snapshot._MaxPlateHeightRangeUu = InPlates.Get_MaxHeightRangeUu();
 
+        // What the bake products themselves hold, not what the snapshot copied out of them: a region
+        // bake has no published field to report, and its cost is the intermediate fields it built.
+        auto AllocatedBytes = SIZE_T{0};
+
+        AllocatedBytes += InSpans._Columns.GetAllocatedSize();
+
+        for (const auto& Column : InSpans._Columns)
+        { AllocatedBytes += Column.GetAllocatedSize(); }
+
+        AllocatedBytes += InLayers._Columns.GetAllocatedSize();
+
+        for (const auto& Column : InLayers._Columns)
+        { AllocatedBytes += Column.GetAllocatedSize(); }
+
+        AllocatedBytes += InClearance._Cells.GetAllocatedSize();
+
+        AllocatedBytes += InPlates._Plates.GetAllocatedSize();
+        AllocatedBytes += InPlates._CellToPlate.GetAllocatedSize();
+
+        AllocatedBytes += InPortals._Portals.GetAllocatedSize();
+        AllocatedBytes += InPortals._PlateToPortals.GetAllocatedSize();
+
+        for (const auto& PlatePortals : InPortals._PlateToPortals)
+        { AllocatedBytes += PlatePortals.GetAllocatedSize(); }
+
+        Snapshot._AllocatedBytes = static_cast<int64>(AllocatedBytes);
+
         Snapshot._Status = EDebugSnapshotStatus::Current;
 
         return Snapshot;
@@ -274,6 +301,17 @@ namespace ck::groundnav
 
             if (NOT Tile.Get_IsBuilt())
             { continue; }
+
+            // Summed from what each tile recorded at bake time. A published tile keeps none of the
+            // rasterization that produced it, so these three would otherwise be unknowable for a
+            // field — and an unknown printed as 0 reads as a bake that found no geometry.
+            //
+            // These are per-tile totals over HALO lattices, which overlap: a triangle or a span near a
+            // seam is counted once for every tile whose halo reached it. That is the work the bake
+            // actually did, which is what these numbers are for; it is not a census of the world.
+            Snapshot._SourceTriangleCount += Tile._BakeStats._SourceTriangleCount;
+            Snapshot._SpanCount += Tile._BakeStats._RasterizedSpanCount;
+            Snapshot._RejectedCellCount += Tile._BakeStats._RejectedCellCount;
 
             Snapshot._LayerCount = FMath::Max(Snapshot._LayerCount, Tile._LayerCount);
             Snapshot._MaxClearanceUu = FMath::Max(
@@ -396,6 +434,25 @@ namespace ck::groundnav
         Snapshot._CollapseRatio = Snapshot._Plates.IsEmpty()
             ? 0.0f
             : static_cast<float>(Snapshot._WalkableCellCount) / static_cast<float>(Snapshot._Plates.Num());
+
+        Snapshot._AllocatedBytes = static_cast<int64>(InField.Get_AllocatedSize());
+
+        // Carried across from the field whatever its tiles' statuses are. A build that failed every
+        // tile can still have found the open body that is the reason it failed.
+        Snapshot._OpenBodies.Reserve(InField._OpenBodies.Num());
+
+        for (const auto& OpenBody : InField._OpenBodies)
+        {
+            auto DebugOpenBody = FCk_GroundNav_DebugOpenBody{};
+
+            DebugOpenBody._Description = OpenBody._Description;
+            DebugOpenBody._Bounds = OpenBody._Bounds;
+            DebugOpenBody._TriangleCount = OpenBody._TriangleCount;
+            DebugOpenBody._OpenEdgeCount = OpenBody._OpenEdgeCount;
+            DebugOpenBody._OpenEdgePoints = OpenBody._OpenEdgePoints;
+
+            Snapshot._OpenBodies.Emplace(MoveTemp(DebugOpenBody));
+        }
 
         return Snapshot;
     }

@@ -76,6 +76,7 @@ namespace ck::groundnav
         auto SpentThisSlice = 0;
         auto DroppedThisSlice = 0;
         auto Geometry = FCk_GroundNav_GeometryBatch{};
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
 
         while (InOutState._NextTileIndex < TileCount)
         {
@@ -99,8 +100,17 @@ namespace ck::groundnav
             const auto Coord = Get_TileCoord(InOutState._Params._Divisions, TileIndex);
             const auto TileParams = InOutState._Params.Get_TileBakeParams(Coord, InOutState._Epoch);
 
+            const auto HaloBounds = Get_TileHaloBounds(TileParams);
+
             Geometry.Reset();
-            InBackend.Get_TrianglesInBounds(Get_TileHaloBounds(TileParams), Geometry);
+            InBackend.Get_TrianglesInBounds(HaloBounds, Geometry);
+
+            // _CheckedBodies lives on the build state, so a body straddling tiles baked in different
+            // slices is still judged once — which is what keeps the whole build's probe total the same
+            // number the one-shot bake spends, whatever budget it ran under.
+            InBackend.Get_StaticBodiesInBounds(HaloBounds, Bodies);
+            DoCheck_GeometryClosure(InBackend, Bodies, InOutState._CheckedBodies,
+                InOutState._Partial._OpenBodies, SpentThisSlice);
 
             const auto TileResult = DoBake_Tile(
                 Geometry, TileParams, InOutState._Partial._Tiles[TileIndex]);
@@ -128,6 +138,8 @@ namespace ck::groundnav
         // whichever slice happened to bake the last tile.
         DoDerive_SeamPortals(InOutState._Partial);
         DoLabel_Reachability(InOutState._Partial);
+
+        DoReport_OpenBodies(InOutState._Partial._OpenBodies);
 
         InOutState._Status = ECk_GroundNav_BuildStatus::Built;
 
