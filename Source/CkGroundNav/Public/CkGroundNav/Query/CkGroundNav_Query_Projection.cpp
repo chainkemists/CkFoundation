@@ -272,63 +272,77 @@ namespace ck::groundnav
         }
 
         const auto QueryXY = FVector2D{InQuery._Location.X, InQuery._Location.Y};
-        const auto Address = Get_CellAddressAt(InField, QueryXY);
 
-        if (NOT Address.Get_IsValid())
+        auto Candidates = TArray<FCk_GroundNav_CellAddress, TInlineAllocator<4>>{};
+        Get_CellAddressesAt(InField, QueryXY, Candidates);
+
+        if (Candidates.IsEmpty())
         {
             Result._Status = ECk_NavSurface_QueryStatus::NoSurface;
 
             return Result;
         }
 
-        Result._Cost._TilesTouched = 1;
+        const auto ToleranceUu = static_cast<double>(InQuery._VerticalToleranceUu);
 
-        if (Get_TileStatus(InField, Address._TileIndex) != ECk_GroundNav_BuildStatus::Built)
+        auto TouchedTiles = TArray<int32, TInlineAllocator<4>>{};
+        auto Found = false;
+        auto BestVerticalUu = 0.0;
+
+        for (const auto& Address : Candidates)
         {
-            Result._Status = ECk_NavSurface_QueryStatus::Unbuilt;
-            Result._Cost._TouchedUnbuiltTile = true;
+            TouchedTiles.AddUnique(Address._TileIndex);
+
+            if (Get_TileStatus(InField, Address._TileIndex) != ECk_GroundNav_BuildStatus::Built)
+            {
+                Result._Cost._TouchedUnbuiltTile = true;
+                continue;
+            }
+
+            const auto& Tile = InField._Tiles[Address._TileIndex];
+
+            for (auto Layer = 0; Layer < Tile._LayerCount; ++Layer)
+            {
+                ++Result._Cost._CellsRead;
+
+                auto Surface = FCk_GroundNav_SurfaceRef{};
+                auto SurfaceZUu = 0.0f;
+                auto ClearanceUu = 0.0f;
+
+                if (NOT Get_SurfaceAt(InField, Address, Layer, Surface, SurfaceZUu, ClearanceUu))
+                { continue; }
+
+                if (NOT Get_IsAdmitted(ClearanceUu, InQuery._Agent))
+                { continue; }
+
+                const auto VerticalUu = FMath::Abs(static_cast<double>(SurfaceZUu) - InQuery._Location.Z);
+
+                if (VerticalUu > ToleranceUu)
+                { continue; }
+
+                if (Found && VerticalUu >= BestVerticalUu)
+                { continue; }
+
+                Found = true;
+                BestVerticalUu = VerticalUu;
+
+                Result._Surface = Surface;
+                Result._SurfaceZUu = SurfaceZUu;
+                Result._ClearanceUu = ClearanceUu;
+            }
+        }
+
+        Result._Cost._TilesTouched = TouchedTiles.Num();
+
+        if (Found)
+        {
+            Result._Status = ECk_NavSurface_QueryStatus::Success;
 
             return Result;
         }
 
-        const auto& Tile = InField._Tiles[Address._TileIndex];
-        const auto ToleranceUu = static_cast<double>(InQuery._VerticalToleranceUu);
-
-        auto Found = false;
-        auto BestVerticalUu = 0.0;
-
-        for (auto Layer = 0; Layer < Tile._LayerCount; ++Layer)
-        {
-            ++Result._Cost._CellsRead;
-
-            auto Surface = FCk_GroundNav_SurfaceRef{};
-            auto SurfaceZUu = 0.0f;
-            auto ClearanceUu = 0.0f;
-
-            if (NOT Get_SurfaceAt(InField, Address, Layer, Surface, SurfaceZUu, ClearanceUu))
-            { continue; }
-
-            if (NOT Get_IsAdmitted(ClearanceUu, InQuery._Agent))
-            { continue; }
-
-            const auto VerticalUu = FMath::Abs(static_cast<double>(SurfaceZUu) - InQuery._Location.Z);
-
-            if (VerticalUu > ToleranceUu)
-            { continue; }
-
-            if (Found && VerticalUu >= BestVerticalUu)
-            { continue; }
-
-            Found = true;
-            BestVerticalUu = VerticalUu;
-
-            Result._Surface = Surface;
-            Result._SurfaceZUu = SurfaceZUu;
-            Result._ClearanceUu = ClearanceUu;
-        }
-
-        Result._Status = Found
-            ? ECk_NavSurface_QueryStatus::Success
+        Result._Status = Result._Cost._TouchedUnbuiltTile
+            ? ECk_NavSurface_QueryStatus::Unbuilt
             : ECk_NavSurface_QueryStatus::NoSurface;
 
         return Result;
