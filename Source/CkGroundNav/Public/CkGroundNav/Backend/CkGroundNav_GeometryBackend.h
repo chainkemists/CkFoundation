@@ -26,8 +26,27 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * What a body's triangles are a description OF.
+     *
+     * The bake sees faces and never a body's interior, so a solid is known to be solid only through its
+     * faces — which is why a Solid body must be CLOSED (every edge shared by exactly two triangles). A
+     * wall with no underside presents no face in the column beneath it and bakes as open ground.
+     *
+     * A Surface (a heightfield, terrain) is open by construction and legitimately so: it has no interior
+     * to describe, its steep parts rasterize as unwalkable spans on slope alone, and a hole in it is a
+     * hole in the world. It is exempt from the closure contract.
+     */
+    enum class ECk_GroundNav_BodyKind : uint8
+    {
+        Solid,
+        Surface
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * The ONLY world-geometry surface the bake sees. Everything a bake learns about the world arrives
-     * through these three calls, which is what keeps the ground field free of any physics backend and
+     * through these calls, which is what keeps the ground field free of any physics backend and
      * lets a hand-authored box list stand in for a whole level in a test.
      *
      * STATIC GEOMETRY ONLY. A bake is a statement about immovable world obstacles; a moving obstacle is
@@ -91,6 +110,37 @@ namespace ck::groundnav
          */
         virtual auto
         Get_WorldRevision() const -> uint64 = 0;
+
+        /** Whether a body is a solid that must be closed, or a surface that is exempt. */
+        virtual auto
+        Get_BodyKind(
+            const FCk_GroundNav_BodyRef& InBody) const -> ECk_GroundNav_BodyKind = 0;
+
+        /** The body's world-space bounds. Invalid (ForceInit) for a body the backend no longer holds. */
+        virtual auto
+        Get_BodyBounds(
+            const FCk_GroundNav_BodyRef& InBody) const -> FBox = 0;
+
+        /**
+         * EVERY world-space triangle of ONE body, APPENDED to OutBatch; returns the number appended.
+         *
+         * Unclipped on purpose: the closure check needs the whole body, because a body clipped to a
+         * region has cut edges that look exactly like real holes. This is the one per-body fetch, and it
+         * runs once per body per build, never per tile.
+         */
+        virtual auto
+        Get_BodyTriangles(
+            const FCk_GroundNav_BodyRef& InBody,
+            FCk_GroundNav_GeometryBatch& OutBatch) const -> int32 = 0;
+
+        /**
+         * A human-readable name for one body, for a diagnostic a developer has to act on: the owning
+         * actor or entity where there is one, the shape and bounds where there is not. Never empty for a
+         * body the backend holds.
+         */
+        virtual auto
+        Get_BodyDescription(
+            const FCk_GroundNav_BodyRef& InBody) const -> FString = 0;
     };
 }
 

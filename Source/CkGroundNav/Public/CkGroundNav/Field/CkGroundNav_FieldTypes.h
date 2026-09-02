@@ -122,6 +122,26 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * What the rasterizer and the filters did to produce one tile, kept beside the tile so a viewer can
+     * report a FIELD the way it reports a single-region bake. Three integers; a tile that never baked
+     * carries zeros, and its status says why.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_TileBakeStats
+    {
+    public:
+        // Triangles handed to the rasterizer for this tile's halo bounds, before any drop.
+        int32 _SourceTriangleCount = 0;
+
+        // Spans in the halo-expanded column field after rasterization, before filtering.
+        int32 _RasterizedSpanCount = 0;
+
+        // Cells the rasterizer accepted on slope that the walkability filters then demoted.
+        int32 _RejectedCellCount = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * One tile of the ground field: everything a query needs about its patch of world, and nothing a
      * rebuild of a neighbour could invalidate.
      *
@@ -171,8 +191,13 @@ namespace ck::groundnav
         // field, because they depend on two tiles and must be re-derived whenever either one rebuilds.
         TArray<FCk_GroundNav_SeamStub> _SeamStubs;
 
+        FCk_GroundNav_TileBakeStats _BakeStats;
+
     public:
         auto Get_IsBuilt() const -> bool { return _Status == ECk_GroundNav_BuildStatus::Built; }
+
+        /** Bytes this tile holds on the heap, every array included. Exact, and therefore comparable. */
+        auto Get_AllocatedSize() const -> SIZE_T;
 
         auto Get_IsValidCell(int32 InX, int32 InY, int32 InLayer) const -> bool
         {
