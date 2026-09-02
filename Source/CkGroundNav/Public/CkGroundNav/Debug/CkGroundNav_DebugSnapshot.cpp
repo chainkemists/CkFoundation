@@ -243,6 +243,17 @@ namespace ck::groundnav
         Snapshot._CellSizeUu = InField._Params._Config.Get_CellSizeUu();
         Snapshot._Status = EDebugSnapshotStatus::Current;
 
+        // Every tile of a field covers the same whole number of cells, so the field's lattice is that
+        // count times its divisions. Derived from the params rather than from the tiles, because an
+        // unbuilt tile carries no size and would shrink the bound the per-cell counts are judged against.
+        const auto CellSizeUu = static_cast<double>(InField._Params._Config.Get_CellSizeUu());
+        const auto TileCellCount = CellSizeUu > 0.0
+            ? FMath::RoundToInt32(InField._Params.Get_TileSpanUu() / CellSizeUu)
+            : 0;
+
+        Snapshot._LatticeSizeX = TileCellCount * InField._Params._Divisions.X;
+        Snapshot._LatticeSizeY = TileCellCount * InField._Params._Divisions.Y;
+
         Snapshot._Tiles.Reserve(InField.Get_TileCount());
 
         for (const auto& Tile : InField._Tiles)

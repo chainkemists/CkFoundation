@@ -84,6 +84,50 @@ public:
 
 public:
     /**
+     * How many tiles the published field is divided into, or 0 while nothing is published.
+     *
+     * A NUMBER, not the structure. Get_Field below refuses to hand the field itself to Blueprint or
+     * AngelScript because a per-call copy would cost more than every query made through it; a count
+     * carries none of that cost, and it makes no self-consistency promise either — it is a snapshot
+     * of one integer taken at the moment of the call, and a rebuild between two of these calls is
+     * exactly what Get_BuildEpoch is there to expose.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Tile Count")
+    static int32
+    Get_TileCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /** How many of the published field's tiles actually baked, or 0 while nothing is published. A
+     *  snapshot number for the same reason Get_TileCount is one. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Built Tile Count")
+    static int32
+    Get_BuiltTileCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /** How many crossings join the published field's tiles across their seams, or 0 while nothing is
+     *  published. A snapshot number for the same reason Get_TileCount is one. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Seam Portal Count")
+    static int32
+    Get_SeamPortalCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /** How many cells of the published field have a walkable surface, summed over its tiles, or 0 while
+     *  nothing is published. A snapshot number for the same reason Get_TileCount is one. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Walkable Cell Count")
+    static int32
+    Get_WalkableCellCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+public:
+    /**
      * The published field, or an invalid pointer if nothing has been built yet.
      *
      * C++ only, and deliberately so: the caller takes a shared reference to an immutable structure and
