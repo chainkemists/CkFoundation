@@ -44,7 +44,8 @@ namespace ck::inventory_handlers
 
         auto ReleaseItemLifetime_FromInventory(
             FCk_Handle_Item& InItem,
-            FCk_Handle_Inventory& InInventory) -> void
+            FCk_Handle_Inventory& InInventory,
+            bool InItemIsAboutToBeDestroyed) -> void
         {
             if (ck::Is_NOT_Valid(InItem) || ck::Is_NOT_Valid(InInventory))
             { return; }
@@ -75,8 +76,11 @@ namespace ck::inventory_handlers
             // the site that made it.
             if (NOT UCk_Utils_ContextOwner_UE::Has(InInventory))
             {
-                ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] has NO context owner fragment, so the lifetime claim on item [{}] cannot be handed back "
-                    "-- the item stays an invisible lifetime child of the container it just left"), InInventory, InItem);
+                if (NOT InItemIsAboutToBeDestroyed)
+                {
+                    ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] has NO context owner fragment, so the lifetime claim on item [{}] cannot be handed back "
+                        "-- the item stays an invisible lifetime child of the container it just left"), InInventory, InItem);
+                }
                 return;
             }
 
@@ -89,8 +93,11 @@ namespace ck::inventory_handlers
             const FCk_Handle ItemEntity = InItem;
             if (ck::Is_NOT_Valid(ContextOwner) || ContextOwner == ItemEntity)
             {
-                ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] resolves to context owner [{}], which is invalid or is the item [{}] itself, so the lifetime "
-                    "claim cannot be handed back -- the item stays an invisible lifetime child of the container it just left"), InInventory, ContextOwner, InItem);
+                if (NOT InItemIsAboutToBeDestroyed)
+                {
+                    ck::inventory::Warning(TEXT("RemoveItem: inventory [{}] resolves to context owner [{}], which is invalid or is the item [{}] itself, so the lifetime "
+                        "claim cannot be handed back -- the item stays an invisible lifetime child of the container it just left"), InInventory, ContextOwner, InItem);
+                }
                 return;
             }
 
@@ -102,9 +109,12 @@ namespace ck::inventory_handlers
             FCk_Handle_Inventory& InInventory,
             ECk_Inventory_PostRemovePolicy InPostRemovePolicy) -> void
         {
-            ReleaseItemLifetime_FromInventory(InItem, InInventory);
+            // The policy is passed in so the release's diagnostics stay TRUE: its warnings describe a
+            // surviving orphan, and on the consume path the item dies one statement below.
+            const auto WillBeDestroyed = InPostRemovePolicy == ECk_Inventory_PostRemovePolicy::DestroyItem;
+            ReleaseItemLifetime_FromInventory(InItem, InInventory, WillBeDestroyed);
 
-            if (InPostRemovePolicy != ECk_Inventory_PostRemovePolicy::DestroyItem)
+            if (NOT WillBeDestroyed)
             { return; }
 
             // The caller declared a CONSUME, and this is the first instant at which that is
