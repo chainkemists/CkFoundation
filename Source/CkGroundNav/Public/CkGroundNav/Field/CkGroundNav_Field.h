@@ -142,6 +142,14 @@ namespace ck::groundnav
 
         FCk_GroundNav_Epoch _Epoch;
 
+        // Seam stubs whose neighbour had no matching account of the same crossing, counted over the last
+        // portal derivation. A DIAGNOSTIC, not a repairable state: the crossing is simply not emitted, and
+        // the boundary reads as impassable to everything afterwards.
+        //
+        // Nonzero means two adjacent tiles were baked against geometry that disagreed — the failure a
+        // sliced build's world-revision check exists to prevent, seen from the other end.
+        int32 _UnmatchedSeamStubCount = 0;
+
     public:
         auto Get_TileCount() const -> int32 { return _Tiles.Num(); }
 
@@ -191,6 +199,8 @@ namespace ck::groundnav
          * has the same epoch can still differ in every other tile, and a max would call them equal.
          */
         auto Get_AggregatedTileEpochSum() const -> int64;
+
+        auto Get_UnmatchedSeamStubCount() const -> int32 { return _UnmatchedSeamStubCount; }
     };
 
     using FCk_GroundNav_FieldPtr = TSharedPtr<const FCk_GroundNav_Field>;

@@ -225,6 +225,17 @@ public:
     auto
     Request_NoteBodyRemoved() -> void;
 
+    /// The Jolt world's static-scene change token. WORLD-WIDE, never region-scoped: it moves for any static
+    /// body anywhere, so a consumer comparing it across time learns only that SOMETHING changed. Zero when
+    /// there is no world.
+    auto
+    Get_StaticSceneRevision() const -> uint64;
+
+    /// The Jolt world's body-removed change token, on the same terms as Get_StaticSceneRevision. Zero when
+    /// there is no world.
+    auto
+    Get_BodyRemovedRevision() const -> uint64;
+
     CK_PROPERTY_GET(_ParallelPhysicsEnabled);
     CK_PROPERTY_GET(_PhysicsThreadCount);
     CK_PROPERTY_GET(_AsyncPhysicsUpdate);
