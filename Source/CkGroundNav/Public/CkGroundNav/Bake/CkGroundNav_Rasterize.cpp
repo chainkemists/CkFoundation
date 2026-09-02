@@ -1,5 +1,7 @@
 #include "CkGroundNav_Rasterize.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -79,6 +81,48 @@ namespace ck::groundnav
         }
 
         /**
+         * Which of two merging spans keeps its surface — its _MaxZ, _Normal and _IsWalkable.
+         *
+         * Height decides it whenever the two heights differ. On an EXACT tie the order is CONTENT
+         * ONLY: the NON-walkable face wins, then the greater quantized normal read lexicographically
+         * as (_Z, _Y, _X). No epsilon anywhere, because the inputs are either bit-equal or not and a
+         * tolerance would smuggle back the very ambiguity this resolves.
+         *
+         * Non-walkable wins because a face lying exactly flush on a floor is something SOLID standing
+         * on that floor: the bottom of a wall, a crate, a pillar. Faces are all the rasterizer sees of
+         * a body — its interior is never filled in — so that flush bottom face is the only evidence
+         * the column holds that the floor there is covered. Letting the floor win would open every
+         * wall footprint as standable ground with the wall's own top as its headroom.
+         *
+         * The rule exists because the alternative — keeping whichever span was submitted last — leaks
+         * the geometry batch's triangle order into the baked field. A body resting on a floor reaches
+         * this tie in every scene, so two batches holding the same triangles in a different order
+         * would disagree about whether the floor under it is walkable. Being a total order over
+         * content, this predicate cannot.
+         */
+        auto Get_ShouldAdoptExistingSurface(
+            const FCk_GroundNav_Span& InExisting,
+            const FCk_GroundNav_Span& InIncoming) -> bool
+        {
+            if (InExisting._MaxZ != InIncoming._MaxZ)
+            { return InExisting._MaxZ > InIncoming._MaxZ; }
+
+            if (InExisting._IsWalkable != InIncoming._IsWalkable)
+            { return NOT InExisting._IsWalkable; }
+
+            const auto& ExistingNormal = InExisting._Normal;
+            const auto& IncomingNormal = InIncoming._Normal;
+
+            if (ExistingNormal._Z != IncomingNormal._Z)
+            { return ExistingNormal._Z > IncomingNormal._Z; }
+
+            if (ExistingNormal._Y != IncomingNormal._Y)
+            { return ExistingNormal._Y > IncomingNormal._Y; }
+
+            return ExistingNormal._X > IncomingNormal._X;
+        }
+
+        /**
          * Insert one span into a column, keeping the column ordered by height, non-overlapping, and
          * merged across gaps no larger than InMergeThreshold.
          *
@@ -110,7 +154,7 @@ namespace ck::groundnav
                 // absorbing one span can bring the next one within reach.
                 InSpan._MinZ = FMath::Min(InSpan._MinZ, Existing._MinZ);
 
-                if (Existing._MaxZ > InSpan._MaxZ)
+                if (Get_ShouldAdoptExistingSurface(Existing, InSpan))
                 {
                     InSpan._MaxZ = Existing._MaxZ;
                     InSpan._Normal = Existing._Normal;
@@ -121,6 +165,20 @@ namespace ck::groundnav
             }
 
             InOutColumn.Insert(InSpan, InsertAt);
+
+            // The ascending, disjoint column order three later stages read without re-deriving it
+            // (see FCk_GroundNav_SpanField::_Columns). Only the two neighbours can have been
+            // disturbed — the rest of the column was already ordered — so the check stays O(1).
+            const auto BelowIsOrdered = NOT InOutColumn.IsValidIndex(InsertAt - 1) ||
+                InOutColumn[InsertAt - 1]._MaxZ < InSpan._MinZ;
+            const auto AboveIsOrdered = NOT InOutColumn.IsValidIndex(InsertAt + 1) ||
+                InSpan._MaxZ < InOutColumn[InsertAt + 1]._MinZ;
+            const auto ColumnStaysOrdered = BelowIsOrdered && AboveIsOrdered;
+
+            CK_ENSURE_IF_NOT(ColumnStaysOrdered,
+                TEXT("GroundNav column order broken inserting span [{}, {}] at index [{}] of [{}] spans"),
+                InSpan._MinZ, InSpan._MaxZ, InsertAt, InOutColumn.Num())
+            { return; }
         }
     }
 
@@ -177,6 +235,9 @@ namespace ck::groundnav
 
         auto DroppedCount = 0;
 
+        // One probe is one innermost read: one triangle fetched, plus one triangle-to-cell clip visit.
+        auto ProbesSpent = 0;
+
         auto Clipped = TArray<FVector>{};
         auto Scratch = TArray<FVector>{};
         auto RowPolygon = TArray<FVector>{};
@@ -189,6 +250,7 @@ namespace ck::groundnav
             auto B = FVector::ZeroVector;
             auto C = FVector::ZeroVector;
             InGeometry.Get_Triangle(TriangleIndex, A, B, C);
+            ++ProbesSpent;
 
             if (A.ContainsNaN() || B.ContainsNaN() || C.ContainsNaN())
             {
@@ -241,6 +303,8 @@ namespace ck::groundnav
 
                 for (auto X = MinX; X <= MaxX; ++X)
                 {
+                    ++ProbesSpent;
+
                     const auto ColumnMin = InRegion.Min.X + (static_cast<double>(X) * CellSize);
                     const auto ColumnMax = ColumnMin + CellSize;
 
@@ -280,7 +344,7 @@ namespace ck::groundnav
         }
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
-        Result.Set_ProbesSpent(TriangleCount);
+        Result.Set_ProbesSpent(ProbesSpent);
         Result.Set_DroppedInputCount(DroppedCount);
 
         return Result;
