@@ -42,6 +42,8 @@ namespace ck::groundnav
             const FBox& InBounds,
             FCk_GroundNav_GeometryBatch& OutBatch) const -> int32 override;
 
+        auto Get_WorldRevision() const -> uint64 override;
+
     private:
         ck::jolt::FCk_Jolt_QuerySession _Session;
     };

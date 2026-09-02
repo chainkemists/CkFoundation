@@ -55,6 +55,22 @@ namespace ck::groundnav
             return Result;
         }
 
+        // The build's claim to be a statement about ONE world: captured on the first slice, re-read on
+        // every later one AND before every tile's geometry fetch. See _GeometryRevision's contract — a
+        // mismatch fails the whole build rather than baking a tile the rest of the field disagrees with.
+        if (NOT InOutState._HasGeometryRevision)
+        {
+            InOutState._GeometryRevision = InBackend.Get_WorldRevision();
+            InOutState._HasGeometryRevision = true;
+        }
+        else if (InBackend.Get_WorldRevision() != InOutState._GeometryRevision)
+        {
+            InOutState._Status = ECk_GroundNav_BuildStatus::Failed;
+
+            Result.Set_Status(ECk_GroundNav_BakeStatus::StaleGeometry);
+            return Result;
+        }
+
         const auto TileCount = InOutState._Partial.Get_TileCount();
 
         auto SpentThisSlice = 0;
@@ -68,6 +84,16 @@ namespace ck::groundnav
             // can never get past.
             if (SpentThisSlice > 0 && SpentThisSlice >= InProbeBudget)
             { break; }
+
+            // Re-read per TILE and not just per slice: a backend whose world moves between two tiles of
+            // the SAME slice produces exactly the disagreeing seam this whole check exists to refuse.
+            if (InBackend.Get_WorldRevision() != InOutState._GeometryRevision)
+            {
+                InOutState._Status = ECk_GroundNav_BuildStatus::Failed;
+
+                Result.Set_Status(ECk_GroundNav_BakeStatus::StaleGeometry);
+                return Result;
+            }
 
             const auto TileIndex = InOutState._NextTileIndex;
             const auto Coord = Get_TileCoord(InOutState._Params._Divisions, TileIndex);

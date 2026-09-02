@@ -170,6 +170,21 @@ namespace ck::jolt
             const FBox& InWorldBounds,
             FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
 
+        /// A token that changes whenever the static geometry this session can return changes: static body
+        /// added, removed or re-typed, cooked static-world cell loaded or unloaded, probe churn.
+        ///
+        /// WORLD-WIDE, NOT REGION-SCOPED. It moves for a change anywhere in the world, including geometry
+        /// no query of this session would ever have returned. A consumer comparing it across time learns
+        /// only that SOMETHING changed — never what, and never where.
+        ///
+        /// The two underlying counters are both monotonically increasing, so their SUM changes whenever
+        /// either does and can never return to a value it has already reported. Zero on an INVALID session
+        /// (and, harmlessly, on a valid world nothing has changed in yet — validity is a separate question
+        /// callers already have to ask).
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_StaticWorldRevision() const -> uint64;
+
     private:
         struct FImpl;
         TPimplPtr<FImpl> _Impl;
