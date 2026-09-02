@@ -275,6 +275,11 @@ namespace ck::groundnav
 
         auto ProbesSpent = RasterResult.Get_ProbesSpent();
 
+        // Read before the filters run. They flip walkability rather than removing spans, so the count
+        // would survive them unchanged — but a filter that ever did remove one would make this the
+        // number of spans the rasterizer produced, which is what the stat claims to be.
+        const auto RasterizedSpanCount = Spans.Get_TotalSpanCount();
+
         auto Connections = FCk_GroundNav_ConnectionField{};
         const auto WalkabilityResult = DoFilter_Walkability(InParams._Profile, Spans, Connections);
 
@@ -353,6 +358,13 @@ namespace ck::groundnav
         OutTile._SizeX = TileCells;
         OutTile._SizeY = TileCells;
         OutTile._LayerCount = LayerCount;
+
+        // Over the HALO lattice, which is the lattice the rasterizer and the filters actually ran on.
+        // The demoted count is the walkability stage's own dropped-input tally; both filters skip
+        // spans that are already non-walkable, so no span is counted twice.
+        OutTile._BakeStats._SourceTriangleCount = InGeometry.Get_TriangleCount();
+        OutTile._BakeStats._RasterizedSpanCount = RasterizedSpanCount;
+        OutTile._BakeStats._RejectedCellCount = WalkabilityResult.Get_DroppedInputCount();
 
         OutTile._SurfaceZ.Init(FCk_GroundNav_Tile::kNoSurfaceZ, TileCellCount * LayerCount);
 
