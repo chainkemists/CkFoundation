@@ -88,8 +88,10 @@ namespace ck::jolt
     {
         FImpl(
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem,
+            UCk_Jolt_Subsystem* InJoltSubsystem,
             const FCk_Jolt_CollisionLayerTable& InLayerTable)
             : _PhysicsSystem(InPhysicsSystem)
+            , _JoltSubsystem(InJoltSubsystem)
             , _ObjectFilter(InLayerTable)
         { }
 
@@ -97,6 +99,11 @@ namespace ck::jolt
         // filters reference is destroyed AFTER the PhysicsSystem in UCk_Jolt_Subsystem::Deinitialize, so a
         // successful Pin() is also proof that the filters' table reference is still live.
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+
+        // Weak for the same reason, and only ever read for the world's change tokens — every query goes
+        // through the pinned PhysicsSystem above and never re-enters the subsystem.
+        TWeakObjectPtr<UCk_Jolt_Subsystem> _JoltSubsystem;
+
         FCk_Jolt_StaticBroadPhaseQueryFilter _BroadPhaseFilter;
         FCk_Jolt_StaticOccupancyFilter _ObjectFilter;
     };
@@ -124,7 +131,8 @@ namespace ck::jolt
         if (ck::Is_NOT_Valid(PhysicsSystem))
         { return; }
 
-        _Impl = MakePimpl<FImpl>(TWeakPtr<JPH::PhysicsSystem>{PhysicsSystem}, InJoltSubsystem->Get_LayerTable());
+        _Impl = MakePimpl<FImpl>(TWeakPtr<JPH::PhysicsSystem>{PhysicsSystem}, InJoltSubsystem,
+            InJoltSubsystem->Get_LayerTable());
     }
 
     auto
@@ -301,6 +309,25 @@ namespace ck::jolt
         }
 
         return TrianglesAppended;
+    }
+
+    auto
+        FCk_Jolt_QuerySession::
+        Get_StaticWorldRevision() const
+        -> uint64
+    {
+        if (ck::Is_NOT_Valid(_Impl, ck::IsValid_Policy_NullptrOnly{}))
+        { return 0; }
+
+        const auto* JoltSubsystem = _Impl->_JoltSubsystem.Get();
+
+        if (ck::Is_NOT_Valid(JoltSubsystem))
+        { return 0; }
+
+        // SUM rather than a hash: both counters only ever increase, so the sum increases whenever either
+        // one does and no pair of distinct states can mix down to the same number. A hash could collide;
+        // a shift-and-xor is not monotone at all.
+        return JoltSubsystem->Get_StaticSceneRevision() + JoltSubsystem->Get_BodyRemovedRevision();
     }
 }
 
