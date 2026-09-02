@@ -166,12 +166,16 @@ namespace ck::groundnav
         const auto MinNormalDot =
             FMath::Cos(FMath::DegreesToRadians(InTunables.Get_NormalConeDegrees())) - UE_KINDA_SMALL_NUMBER;
 
+        auto ProbesSpent = 0;
+
         for (auto LayerIndex = 0; LayerIndex < InLayers._LayerCount; ++LayerIndex)
         {
             const auto PlaneOffset = LayerIndex * CellCount;
 
             const auto Get_IsMergeable = [&](int32 InX, int32 InY, const FSeedPlane& InSeed) -> bool
             {
+                ++ProbesSpent;
+
                 if (OutPlates._CellToPlate[PlaneOffset + (InY * SizeX) + InX] != FCk_GroundNav_Plate::kNoPlate)
                 { return false; }
 
@@ -195,6 +199,8 @@ namespace ck::groundnav
             {
                 for (auto X = 0; X < SizeX; ++X)
                 {
+                    ++ProbesSpent;
+
                     if (OutPlates._CellToPlate[PlaneOffset + (Y * SizeX) + X] != FCk_GroundNav_Plate::kNoPlate)
                     { continue; }
 
@@ -248,6 +254,8 @@ namespace ck::groundnav
                     {
                         for (auto MemberX = X; MemberX <= MaxX; ++MemberX)
                         {
+                            ++ProbesSpent;
+
                             OutPlates._CellToPlate[PlaneOffset + (MemberY * SizeX) + MemberX] = PlateIndex;
 
                             auto TopZ = 0.0f;
@@ -275,6 +283,8 @@ namespace ck::groundnav
                     {
                         for (auto MemberX = X; MemberX <= MaxX; ++MemberX)
                         {
+                            ++ProbesSpent;
+
                             auto TopZ = 0.0f;
                             auto Normal = FVector::UpVector;
                             Get_CellSurface(InSpans, InLayers, MemberX, MemberY, LayerIndex, TopZ, Normal);
@@ -297,7 +307,11 @@ namespace ck::groundnav
         }
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
-        Result.Set_ProbesSpent(OutPlates._Plates.Num());
+
+        // A probe here is one cell surface read: a seed candidacy test, a mergeability test while the
+        // rectangle grows (the row that fails to join included), a member assignment, or a member's
+        // re-measure against the re-centred plane.
+        Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;
     }
