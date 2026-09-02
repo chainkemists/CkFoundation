@@ -233,13 +233,22 @@ namespace ck_angelscript_precompiled_report
                 "warning above for the engine's own verdict. Every script function is on the VM."),
                 CompiledInfo->PrecompiledDataGuid.ToString());
 
+            // Two distinct causes produce this identical state, and the reporter cannot tell them apart:
+            // a guid mismatch (engine logs its own warning above), or a PARTIAL dead-strip where the
+            // FStaticJITCompiledInfo static survived but the per-function registration statics did not.
+            // The presence or absence of the engine's warning is the discriminator, so name it rather
+            // than assert one cause - the dead-strip case first becomes reachable exactly when the JIT
+            // module is linked in, which is when a confident wrong answer would cost the most.
+            //
             // Fires in EVERY configuration, Shipping included: CK_ENSURE is defined unconditionally and
             // every reachable CkBuildConfig branch sets CK_DISABLE_ENSURE_CHECKS=0. That is deliberate -
             // a mispackaged build delivering none of the feature should be loud where it ships, not only
             // where a developer would have noticed anyway.
             CK_TRIGGER_ENSURE(TEXT("[AsPrecompile] Transpiled C++ (guid {}) is compiled into this binary but "
-                     "NONE of it is active, against a cache that WAS consumed. The package shipped a cache "
-                     "and a binary from different generation runs."),
+                     "NONE of it is active, against a cache that WAS consumed. Most likely the package paired "
+                     "a cache and a binary from different generation runs - but if the Angelscript "
+                     "mismatch warning is ABSENT above, the guids agreed and the registration was "
+                     "dead-stripped instead (AS_FORCE_LINK is empty on MSVC)."),
                 CompiledInfo->PrecompiledDataGuid.ToString());
         }
     }
