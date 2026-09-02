@@ -391,12 +391,33 @@ namespace ck::groundnav
             { ++CrossLayerPortalCount; }
         }
 
+        // A published tile keeps its cells, plates and crossings and nothing of the rasterization that
+        // produced them, so for a field these are absent rather than zero - and a printed 0 reads as a
+        // bake that found no geometry.
+        const auto IsTiledField = InSnapshot.Get_TileCount() > 0;
+
+        const auto RasterizationBlock = IsTiledField
+            ? FString::Printf(
+                TEXT("  geometry : %d dropped (triangles in: not tracked for a tiled field)\n")
+                TEXT("  spans    : %d walkable cells%s (rasterized and rejected: not tracked for a tiled field)\n"),
+                InSnapshot._DroppedTriangleCount,
+                InSnapshot._WalkableCellCount,
+                InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""))
+            : FString::Printf(
+                TEXT("  geometry : %d triangles in, %d dropped\n")
+                TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n"),
+                InSnapshot._SourceTriangleCount,
+                InSnapshot._DroppedTriangleCount,
+                InSnapshot._SpanCount,
+                InSnapshot._WalkableCellCount,
+                InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""),
+                InSnapshot._RejectedCellCount);
+
         return FString::Printf(
             TEXT("[GroundNav] %s | %.1f ms\n")
             TEXT("  region   : centre (%.0f, %.0f, %.0f)  half-extent (%.0f, %.0f, %.0f)\n")
             TEXT("  lattice  : %d x %d columns at %.1f uu, %d layer(s) -> %d cell slots\n")
-            TEXT("  geometry : %d triangles in, %d dropped\n")
-            TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n")
+            TEXT("%s")
             TEXT("  layers   : %d\n")
             TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
             TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
@@ -411,12 +432,7 @@ namespace ck::groundnav
             InSnapshot._CellSizeUu,
             InSnapshot._LayerCount,
             InSnapshot._LatticeSizeX * InSnapshot._LatticeSizeY * InSnapshot._LayerCount,
-            InSnapshot._SourceTriangleCount,
-            InSnapshot._DroppedTriangleCount,
-            InSnapshot._SpanCount,
-            InSnapshot._WalkableCellCount,
-            InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""),
-            InSnapshot._RejectedCellCount,
+            *RasterizationBlock,
             InSnapshot._LayerCount,
             InSnapshot.Get_PlateCount(),
             InSnapshot._CollapseRatio,
