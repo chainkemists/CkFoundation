@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 
 #include <CoreMinimal.h>
 
@@ -63,24 +64,38 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Distance from every walkable cell to the nearest cell an agent cannot stand on, per layer.
+     * Distance from every walkable cell to the nearest place an agent standing there cannot step to,
+     * per layer.
      *
-     * A two-pass chamfer sweep (Borgefors 1986), which for this metric is exact: the result equals
-     * the minimum chamfer distance to any blocked cell, so a brute-force reference over the same
-     * metric must agree cell for cell rather than approximately.
+     * A two-pass chamfer sweep (Borgefors 1986). A neighbour counts as ground only where the
+     * connection field links the two cells; a neighbour that is walkable but NOT linked — the top
+     * of a wall or a crate, the far side of a ledge, another storey's floor that layer extraction
+     * packed into this layer — is an obstacle exactly as a hole is, because the body cannot step
+     * onto it and its side is a wall. Occupancy alone would read the floor beside every solid as
+     * open right up to it, and admit a body flush against a wall it cannot pass.
+     *
+     * For this metric the sweep is exact: every cell's nearest obstacle — a hole or an unlinked
+     * edge — is reached along a monotone path of linked steps, because any path that crosses an
+     * unlinked edge has that edge nearer than whatever lies beyond it. A brute-force reference over
+     * holes therefore agrees cell for cell wherever every walkable neighbour is linked, and a
+     * solid's neighbouring cells read exactly one cell size.
      *
      * THE FIELD BORDER COUNTS AS BLOCKED. Without that a fully walkable field would have unbounded
      * interior clearance and the number would mean nothing. The consequence is that clearance near
      * the border reads short, which is correct for a standalone field and is why a tiled bake must
      * rasterize a halo beyond each tile rather than computing this per tile in isolation.
      *
+     * A crossing that changes layer leaves this layer at the crossing, so the cells before it read
+     * a false pinch on this layer; that is a known limit of per-layer sweeping, not of the gating.
+     *
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto
     DoCompute_Clearance(
-        const FCk_GroundNav_LayerField& InLayers,
-        float                           InCellSizeUu,
-        FCk_GroundNav_ClearanceField&   OutClearance) -> FCk_GroundNav_BakeStageResult;
+        const FCk_GroundNav_LayerField&      InLayers,
+        const FCk_GroundNav_ConnectionField& InConnections,
+        float                                InCellSizeUu,
+        FCk_GroundNav_ClearanceField&        OutClearance) -> FCk_GroundNav_BakeStageResult;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

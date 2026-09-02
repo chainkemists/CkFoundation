@@ -92,6 +92,12 @@ namespace ck::groundnav
         // spanning two stair treads has a range of one riser however well a plane fits it.
         float _HeightRangeUu = 0.0f;
 
+        // The least room any cell of the plate offers, under the field's clearance ceiling. A body no
+        // wider than this fits anywhere on the plate, so a move that stays inside the rectangle needs
+        // no cell stepped to be admitted. Filled when a tile is published; a plate straight out of
+        // decomposition carries zero.
+        float _MinClearanceUu = 0.0f;
+
     public:
         auto Get_Width() const -> int32 { return (_MaxX - _MinX) + 1; }
         auto Get_Depth() const -> int32 { return (_MaxY - _MinY) + 1; }
