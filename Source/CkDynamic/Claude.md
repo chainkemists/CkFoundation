@@ -126,6 +126,14 @@ comment-light; the *why* lives here.
   PostDefault AngelScript loader initializes its manager, so module startup subscribes without
   reading the manager. A late module reload may refresh immediately only when the manager already
   exists.
+- **That PostCompile does not promise a thread, so the hook goes through
+  `Request_RefreshAngelscriptFragmentDisplaySchemas`.** Editor hot reload broadcasts on the game
+  thread and still refreshes inline; a cooked boot initializes AngelScript on a worker and broadcasts
+  there, so the request defers to a one-shot core ticker instead. Before the marshal, every packaged
+  boot spent the refresh on the game-thread ensure and published nothing — the `schemas published:
+  [N] schema(s) from [M] observed path(s)` Display line exists so a packaged log can say which
+  happened. The ticker handle is removed at module shutdown, and the refresh is deliberately
+  uncoalesced: one broadcast per compile, and a repeat republishes the same generation.
 - **Native producers own native custom labels.** They register an explicit schema during startup and
   unregister it during shutdown. Native entries take precedence and are not erased by an
   AngelScript refresh.

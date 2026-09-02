@@ -108,6 +108,25 @@ game-thread widget there is no seam for a handshake to cover, and manual-stop on
 is the one failure mode that can wedge a boot. Falls back to the Slate screen if its widget fails to
 build.
 
+**Mode A now requires the widget class to declare `ICk_LoadingScreen_MoviePlayerSafe`**
+(`TransitionScreen/CkLoadingScreen_MoviePlayerSafe_Interface.h`). The interface is an empty marker —
+implementing it is the author asserting that nothing this class does on Tick or Paint needs the game
+thread. `DoBuildModeAWidget` fires `CK_ENSURE_IF_NOT` and returns `nullptr` for any class without it,
+which lands on the existing Slate fallback. The class of hazard is "UMG widget ticked on the loading
+thread", so a Blueprint Tick graph is refused for exactly the same reason an AngelScript one is.
+
+What made the marker necessary: BusterBlock turned Mode A on (2026-08) and pointed it at an
+AngelScript loading widget. The MoviePlayer ticked that widget on the Slate loading thread, so the
+AngelScript VM ran there while the game thread was blocked inside `WaitForMovieToFinish`. A
+**Development** build fail-closes on the engine's own guard (`ASClass.cpp` skips the script body and
+ensures), which is why it read as an every-boot ensure rather than a fault — but that guard is
+**compiled out in Test and Shipping**, where the script body executes unprotected against a blocked
+game thread. The symptom is therefore invisible in exactly the configuration where it is dangerous.
+
+The settings pair is also not symmetric, and the module now says so in the log: when
+`_TransitionModeA_UMGHandOff` wins the branch, `_TransitionWaitForGameThreadScreen` is dead for that
+travel — the handshake is reached only if Mode A refuses or fails to build.
+
 ## CVars
 
 - `ck.LoadingScreen.HoldAdditionalSecs` — post-loading hold window (default 2s; skipped in editor

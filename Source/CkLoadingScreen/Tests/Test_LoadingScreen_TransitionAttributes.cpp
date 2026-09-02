@@ -4,10 +4,13 @@
 // be tested headless at all. What CAN be tested is the attribute block the module hands it - and
 // one combination in that block is a hard deadlock, so it gets an invariant of its own.
 
+#include "CkLoadingScreen/Tests/Test_LoadingScreen_Fixtures.h"
+#include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_MoviePlayerSafe_Interface.h"
 #include "CkLoadingScreen/TransitionScreen/CkLoadingScreen_TransitionAttributes.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "Blueprint/UserWidget.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -32,6 +35,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_LoadingScreen_TransitionAttributes_HandshakeArming,
     "Ck.LoadingScreen.TransitionAttributes.HandshakeArming",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_LoadingScreen_TransitionAttributes_ModeARefusesUnmarkedWidget,
+    "Ck.LoadingScreen.TransitionAttributes.ModeARefusesUnmarkedWidget",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -138,6 +146,34 @@ bool FCkTest_LoadingScreen_TransitionAttributes_HandshakeArming::RunTest(const F
 
     if (WasArmed)
     { ck::loading_screen::transition::Request_ArmHandshake(); }
+
+    return true;
+}
+
+bool FCkTest_LoadingScreen_TransitionAttributes_ModeARefusesUnmarkedWidget::RunTest(const FString&)
+{
+    // DoBuildModeAWidget itself needs a GameInstance and a live MoviePlayer, so what is asserted headless is the
+    // admission decision it makes plus the attribute block the refusal lands on.
+    TestFalse(TEXT("a null widget class is never MoviePlayer-safe"),
+        ICk_LoadingScreen_MoviePlayerSafe::Get_IsMoviePlayerSafe(nullptr));
+    TestFalse(TEXT("a plain UMG widget class does not declare the marker"),
+        ICk_LoadingScreen_MoviePlayerSafe::Get_IsMoviePlayerSafe(UUserWidget::StaticClass()));
+    TestTrue(TEXT("a class that declares the marker is accepted"),
+        ICk_LoadingScreen_MoviePlayerSafe::Get_IsMoviePlayerSafe(
+            UCkTest_LoadingScreen_MoviePlayerSafeDeclaration::StaticClass()));
+
+    // A refused Mode A returns nullptr, and the module then rebuilds the Slate screen under whichever mode
+    // _TransitionWaitForGameThreadScreen names. Both fallbacks must still be presentable and non-skippable.
+    const auto Handshake = FCk_LoadingScreen_TransitionAttributesBuilder::Build(
+        ECk_LoadingScreen_TransitionMode::Handshake, nullptr);
+    const auto Parity = FCk_LoadingScreen_TransitionAttributesBuilder::Build(
+        ECk_LoadingScreen_TransitionMode::ParityAutoComplete, nullptr);
+
+    TestTrue(TEXT("the handshake fallback still ticks the engine, so the manual stop can be reached"),
+        Handshake.bAllowEngineTick);
+    TestFalse(TEXT("the handshake fallback is not click-skippable"), Handshake.bMoviesAreSkippable);
+    TestTrue(TEXT("the parity fallback auto-completes"), Parity.bAutoCompleteWhenLoadingCompletes);
+    TestFalse(TEXT("the parity fallback is not click-skippable"), Parity.bMoviesAreSkippable);
 
     return true;
 }

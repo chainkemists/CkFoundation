@@ -94,6 +94,10 @@ namespace ck::dynamic
     CKDYNAMIC_API auto
     Refresh_AngelscriptFragmentDisplaySchemas() -> bool;
 
+    /** Marshals to the game thread when needed - cooked AngelScript broadcasts PostCompile from a worker. */
+    CKDYNAMIC_API auto
+    Request_RefreshAngelscriptFragmentDisplaySchemas() -> void;
+
     CKDYNAMIC_API auto
     Startup_AngelscriptFragmentDisplaySchemas() -> void;
 
