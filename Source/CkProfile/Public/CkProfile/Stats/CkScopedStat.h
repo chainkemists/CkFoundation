@@ -29,10 +29,17 @@ namespace ck
     CKPROFILE_API auto
     Get_ScopedStat_StatId_ForActiveScope() -> TStatId;
 
-    // Drops the per-function scope cache. MUST run before an AngelScript recompile: script function
+    // "<Class>::<Method>" of the active script function, cached per function pointer. The pointer
+    // is the cached string's buffer and is valid until this thread's next cache miss - hand it
+    // straight to whatever consumes it.
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeName_Cached() -> const TCHAR*;
+
+    // Drops the per-function scope caches. MUST run before an AngelScript recompile: script function
     // pointers do not survive a reload and the allocator recycles the addresses, so a surviving
     // entry would attribute one function's time to a different function's name. Wired to
-    // FAngelscriptCodeModule::GetPreCompile() in editor builds; a packaged game never reloads.
+    // FAngelscriptCodeModule::GetPreCompile() wherever AngelScript is present - NOT editor-only,
+    // because hot reload also runs in non-editor builds launched with -as-development-mode.
     CKPROFILE_API auto
     Invalidate_ScopedStat_ScopeCache() -> void;
 }

@@ -76,7 +76,7 @@ namespace ck
         // Bumped on every AngelScript recompile. The cache below is thread_local, so a direct clear
         // would only ever reach the calling thread; a generation counter lets each thread drop its
         // own copy lazily on next use, which is correct no matter which thread recompiled.
-        static std::atomic<uint32> Generation{0};
+        std::atomic<uint32> Generation{0};
     }
 
     auto
@@ -84,6 +84,39 @@ namespace ck
         -> void
     {
         scoped_stat_cache::Generation.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    auto
+        Get_ActiveScriptScopeName_Cached()
+        -> const TCHAR*
+    {
+        // Same keying rationale as Get_ScopedStat_StatId_ForActiveScope below, for the non-STATS
+        // path: BeginNamedEvent wants a name, and deriving it per call is the cost this whole file
+        // exists to remove. The returned pointer is the cached FString's buffer - valid until this
+        // thread's next cache miss, which is long enough because every caller hands it straight to
+        // BeginNamedEvent.
+        const void* ScopeKey = nullptr;
+
+#if WITH_ANGELSCRIPT_CK
+        if (auto* const Context = FAngelscriptManager::GetCurrentScriptContext();
+            Context != nullptr)
+        { ScopeKey = Context->GetFunction(0); }
+#endif
+
+        static thread_local TMap<const void*, FString> ScopeNameCache;
+        static thread_local uint32                     CachedNameGeneration = 0;
+
+        if (const auto CurrentGeneration = scoped_stat_cache::Generation.load(std::memory_order_relaxed);
+            CurrentGeneration != CachedNameGeneration)
+        {
+            ScopeNameCache.Reset();
+            CachedNameGeneration = CurrentGeneration;
+        }
+
+        if (const auto* const Found = ScopeNameCache.Find(ScopeKey))
+        { return **Found; }
+
+        return *ScopeNameCache.Add(ScopeKey, Get_ActiveScriptScopeName());
     }
 
     auto
@@ -152,14 +185,13 @@ FCk_ScopedStat::
 FCk_ScopedStat::
     FCk_ScopedStat()
 {
-    // Deriving the scope name costs three FString allocations, and with no profiler attached the
-    // result is handed to a no-op and discarded - which is every session a player ever runs. Pay it
-    // only when something is listening. Begin/End stay unconditionally paired, so the guard cannot
-    // unbalance the event stack.
-    if (GCycleStatsShouldEmitNamedEvents > 0)
-    { FPlatformMisc::BeginNamedEvent(FColor::Red, *ck::Get_ActiveScriptScopeName()); }
-    else
-    { FPlatformMisc::BeginNamedEvent(FColor::Red, TEXT("Script")); }
+    // Deriving the scope name costs three FString allocations. Cache it per script function
+    // rather than gating it away: ENABLE_NAMED_EVENTS is live in Test by default
+    // (ALLOW_NAMED_EVENTS_IN_TEST), and the external-profiler paths behind BeginNamedEvent do NOT
+    // consult GCycleStatsShouldEmitNamedEvents - so skipping the name would collapse every script
+    // scope into one blob for Superluminal/VTune/FramePro. In Shipping BeginNamedEvent is an empty
+    // inline and the cache is never populated past the first entry per function.
+    FPlatformMisc::BeginNamedEvent(FColor::Red, ck::Get_ActiveScriptScopeName_Cached());
 }
 
 FCk_ScopedStat::

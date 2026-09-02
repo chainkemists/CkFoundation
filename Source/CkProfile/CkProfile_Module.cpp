@@ -5,7 +5,7 @@
 
 #include <Stats/Stats.h>
 
-#if WITH_EDITOR && WITH_ANGELSCRIPT_CK
+#if WITH_ANGELSCRIPT_CK
 #include <AngelscriptCodeModule.h>
 #endif
 
@@ -13,8 +13,8 @@ DECLARE_CYCLE_STAT(TEXT("Script scopes"), STAT_CkScriptScopes, STATGROUP_CkScrip
 
 #define LOCTEXT_NAMESPACE "FCkProfileModule"
 
-#if WITH_EDITOR && WITH_ANGELSCRIPT_CK
-namespace
+#if WITH_ANGELSCRIPT_CK
+namespace ck_profile_module
 {
     FDelegateHandle GScopeCacheInvalidationHandle;
 }
@@ -26,12 +26,19 @@ void FCkProfileModule::StartupModule()
     (void)GET_STATID(STAT_CkScriptScopes);
 #endif
 
-#if WITH_EDITOR && WITH_ANGELSCRIPT_CK
+#if WITH_ANGELSCRIPT_CK
     // The per-function scope cache in CkScopedStat is keyed by asIScriptFunction*, and those
     // pointers neither survive a recompile nor stay unique across one - the allocator recycles the
-    // addresses. Without this, a hot reload would leave entries attributing one function's time to
-    // another function's name. Editor-only because a packaged game never reloads its scripts.
-    GScopeCacheInvalidationHandle = FAngelscriptCodeModule::GetPreCompile().AddLambda([]
+    // addresses. Without this, a reload would leave entries attributing one function's time to
+    // another function's name.
+    //
+    // NOT editor-gated, deliberately. Script hot reload runs in NON-editor builds too:
+    // AngelscriptManager sets bUseHotReloadCheckerThread = bScriptDevelopmentMode && !GIsEditor,
+    // so a -game or packaged build launched with -as-development-mode reloads on a dedicated
+    // thread - and that is precisely the configuration an editor-only subscription would leave
+    // uninvalidated. The PreCompile broadcast itself is unconditional in every configuration.
+    // In a build that genuinely never reloads this costs one delegate registration that never fires.
+    ck_profile_module::GScopeCacheInvalidationHandle = FAngelscriptCodeModule::GetPreCompile().AddLambda([]
     {
         ck::Invalidate_ScopedStat_ScopeCache();
     });
@@ -40,11 +47,11 @@ void FCkProfileModule::StartupModule()
 
 void FCkProfileModule::ShutdownModule()
 {
-#if WITH_EDITOR && WITH_ANGELSCRIPT_CK
-    if (GScopeCacheInvalidationHandle.IsValid())
-    { FAngelscriptCodeModule::GetPreCompile().Remove(GScopeCacheInvalidationHandle); }
+#if WITH_ANGELSCRIPT_CK
+    if (ck_profile_module::GScopeCacheInvalidationHandle.IsValid())
+    { FAngelscriptCodeModule::GetPreCompile().Remove(ck_profile_module::GScopeCacheInvalidationHandle); }
 
-    GScopeCacheInvalidationHandle.Reset();
+    ck_profile_module::GScopeCacheInvalidationHandle.Reset();
 #endif
 }
 
