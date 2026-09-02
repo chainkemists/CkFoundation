@@ -231,10 +231,12 @@ public:
     auto
     Get_StaticSceneRevision() const -> uint64;
 
-    /// The Jolt world's body-removed change token, on the same terms as Get_StaticSceneRevision. Zero when
-    /// there is no world.
+    /// This world's ECS transient entity — the registry root a Jolt body's user data is resolved against,
+    /// and therefore the only way a Jolt-side consumer can name the entity a body was registered for.
+    /// INVALID outside a live ECS world, which every consumer must read as "no attribution available"
+    /// rather than as a failure: a preview or transient world legitimately has none.
     auto
-    Get_BodyRemovedRevision() const -> uint64;
+    Get_TransientEntity() const -> FCk_Handle;
 
     CK_PROPERTY_GET(_ParallelPhysicsEnabled);
     CK_PROPERTY_GET(_PhysicsThreadCount);
