@@ -88,12 +88,17 @@ namespace ck::groundnav
      *
      * Seeded in column-major scan order so component indices are reproducible from the same input.
      * Returns the number of components found.
+     *
+     * InOutProbes is ACCUMULATED into, never reset — one probe per seed candidacy test and per
+     * neighbour the flood fill visits, in the unit FCk_GroundNav_BakeStageResult defines — so one
+     * counter can be threaded through several stages.
      */
     CKGROUNDNAV_API auto
     DoFind_ConnectedComponents(
         const FCk_GroundNav_SpanField&       InSpans,
         const FCk_GroundNav_ConnectionField& InConnections,
-        TArray<FCk_GroundNav_Component>&     OutComponents) -> int32;
+        TArray<FCk_GroundNav_Component>&     OutComponents,
+        int32&                               InOutProbes) -> int32;
 
     /**
      * Assign every walkable span to a layer such that no column carries two spans of one layer.
