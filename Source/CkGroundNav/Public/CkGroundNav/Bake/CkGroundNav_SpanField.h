@@ -82,6 +82,11 @@ namespace ck::groundnav
         float _CellSizeUu = 0.0f;
 
         // _SizeX * _SizeY entries, row-major in X.
+        //
+        // Every column is sorted ascending by _MinZ, spans are disjoint, and _MaxZ < next._MinZ.
+        // Rasterization establishes it in DoInsert_Span and no later stage reorders. It is load-bearing:
+        // the clearance filter reads a span's headroom as Column[Index + 1]._MinZ - Span._MaxZ, which is
+        // the right number only under this invariant and silently the wrong one under any other.
         TArray<TArray<FCk_GroundNav_Span>> _Columns;
 
     public:
