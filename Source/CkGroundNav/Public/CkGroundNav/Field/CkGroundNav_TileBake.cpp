@@ -303,7 +303,7 @@ namespace ck::groundnav
         ProbesSpent += LayerResult.Get_ProbesSpent();
 
         auto HaloClearance = FCk_GroundNav_ClearanceField{};
-        const auto ClearanceResult = DoCompute_Clearance(Layers, CellSize, HaloClearance);
+        const auto ClearanceResult = DoCompute_Clearance(Layers, Connections, CellSize, HaloClearance);
 
         if (NOT ClearanceResult.Get_IsCompleted())
         {
@@ -422,6 +422,23 @@ namespace ck::groundnav
                         Plates.Get_PlateIndexAt(X + HaloCells, Y + HaloCells, LayerIndex);
                 }
             }
+        }
+
+        // Every plate starts at the ceiling and is pulled down by each of its published cells, so a
+        // plate with no cells left after the crop keeps the ceiling and never admits a move on it.
+        for (auto& Plate : OutTile._Plates._Plates)
+        { Plate._MinClearanceUu = InParams._MaxClearanceUu; }
+
+        for (auto CellIndex = 0; CellIndex < TileCellCount * LayerCount; ++CellIndex)
+        {
+            const auto PlateIndex = OutTile._Plates._CellToPlate[CellIndex];
+
+            if (PlateIndex == FCk_GroundNav_Plate::kNoPlate)
+            { continue; }
+
+            auto& Plate = OutTile._Plates._Plates[PlateIndex];
+
+            Plate._MinClearanceUu = FMath::Min(Plate._MinClearanceUu, OutTile._Clearance._Cells[CellIndex]);
         }
 
         OutTile._Portals = Portals;
