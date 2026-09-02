@@ -14,6 +14,7 @@ public class CkGroundNav : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
@@ -21,6 +22,7 @@ public class CkGroundNav : CkModuleRules
             "CkJolt",
             "CkLabel",
             "CkLog",
+            "CkNavigation",
             "CkRecord",
             "CkSettings",
             "CkShapes",

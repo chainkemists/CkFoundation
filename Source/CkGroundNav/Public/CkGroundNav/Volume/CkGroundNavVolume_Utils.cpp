@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkGroundNav/CkGroundNav_Log.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_BuildStatus.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -171,6 +172,73 @@ auto
 
     return Count;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_RegionStatusAt(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        const FVector& InLocation)
+    -> ECk_GroundNav_RegionStatus
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_Params>())
+    { return ECk_GroundNav_RegionStatus::OutsideField; }
+
+    return ck::groundnav::Get_RegionStatusAt_ForVolume(
+        Get_Field(InVolume),
+        InVolume.Get<ck::FFragment_GroundNavVolume_Params>().Get_VolumeBounds(),
+        Get_IsBuilding(InVolume),
+        InLocation);
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_RegionStatusWithin(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        const FBox& InBounds)
+    -> ECk_GroundNav_RegionStatus
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_Params>())
+    { return ECk_GroundNav_RegionStatus::OutsideField; }
+
+    return ck::groundnav::Get_RegionStatusWithin_ForVolume(
+        Get_Field(InVolume),
+        InVolume.Get<ck::FFragment_GroundNavVolume_Params>().Get_VolumeBounds(),
+        Get_IsBuilding(InVolume),
+        InBounds);
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_SurfaceBounds(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> FBox
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return FBox{ForceInit}; }
+
+    return ck::groundnav::Get_SurfaceBounds(*Field);
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_ProviderHealth(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> ECk_NavSurface_ProviderHealth
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_BuildState>())
+    { return ECk_NavSurface_ProviderHealth::NoData; }
+
+    return ck::groundnav::Get_ProviderHealth(
+        Get_Field(InVolume),
+        InVolume.Get<ck::FFragment_GroundNavVolume_BuildState>().Get_Build()._Status,
+        Get_IsBuilding(InVolume));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_GroundNavVolume_UE::
