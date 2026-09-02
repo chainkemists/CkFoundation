@@ -65,10 +65,15 @@ private:
 
     /** Probes one tick of building may spend. The budget gates whether the next TILE starts, so a slice
      *  can overshoot it by one tile — a tile is never split, which is what keeps the total the same
-     *  however the build was sliced. */
+     *  however the build was sliced.
+     *
+     *  A probe is one innermost cell or span read (see FCk_GroundNav_BakeStageResult). Measured on the
+     *  reference scene — 800uu tiles at 25uu cells, so a 48x48 halo lattice per tile, two layers under
+     *  the deck — one tile costs about 92,000 probes, so this default admits roughly sixteen such tiles
+     *  per tick. Bigger tiles, finer cells or deeper columns cost more per tile and get fewer of them. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1"))
-    int32 _ProbeBudgetPerTick = 200000;
+    int32 _ProbeBudgetPerTick = 1500000;
 
 public:
     CK_PROPERTY_GET(_VolumeBounds);
