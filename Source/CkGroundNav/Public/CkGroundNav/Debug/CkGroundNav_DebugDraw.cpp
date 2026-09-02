@@ -8,6 +8,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -175,7 +176,7 @@ namespace ck::groundnav
 
         auto Clearance = FCk_GroundNav_ClearanceField{};
 
-        if (NOT DoCompute_Clearance(Layers, InParams._Config.Get_CellSizeUu(), Clearance).Get_IsCompleted())
+        if (NOT DoCompute_Clearance(Layers, Connections, InParams._Config.Get_CellSizeUu(), Clearance).Get_IsCompleted())
         {
             Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;
@@ -235,6 +236,22 @@ namespace ck::groundnav
             const FCk_GroundNav_DebugBakeParams& InParams)
         -> FCk_GroundNav_DebugSnapshot
     {
+        auto DiscardedField = FCk_GroundNav_FieldPtr{};
+
+        return Make_FieldDebugSnapshotFromWorld(InWorldContextObject, InParams, DiscardedField);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_FieldDebugSnapshotFromWorld(
+            const UObject*                       InWorldContextObject,
+            const FCk_GroundNav_DebugBakeParams& InParams,
+            FCk_GroundNav_FieldPtr&              OutField)
+        -> FCk_GroundNav_DebugSnapshot
+    {
+        OutField = {};
+
         auto Snapshot = FCk_GroundNav_DebugSnapshot{};
 
         const auto Region = FBox::BuildAABB(InParams._Centre, InParams._Extent);
@@ -291,6 +308,8 @@ namespace ck::groundnav
 
         Built._BakeMilliseconds = ElapsedMilliseconds;
         Built._DroppedTriangleCount = Result.Get_DroppedInputCount();
+
+        OutField = MakeShared<const FCk_GroundNav_Field>(MoveTemp(Field));
 
         return Built;
     }
@@ -649,6 +668,32 @@ namespace ck_groundnav_debugconsole
         TEXT("ck.GroundNav.Debug.MaxCells"), 20000,
         TEXT("Cap on DRAWN cells. Reported counts stay exact when the draw is capped."));
 
+    // ---- Projection probe -------------------------------------------------------------------------
+
+    static TAutoConsoleVariable<float> CVar_ProbeExtentUu(
+        TEXT("ck.GroundNav.Debug.ProbeExtentUu"), 100.0f,
+        TEXT("Horizontal half-extent of the projection search box."));
+
+    static TAutoConsoleVariable<float> CVar_ProbeUpUu(
+        TEXT("ck.GroundNav.Debug.ProbeUpUu"), 100.0f,
+        TEXT("How far ABOVE the query point a projection may find a surface."));
+
+    static TAutoConsoleVariable<float> CVar_ProbeDownUu(
+        TEXT("ck.GroundNav.Debug.ProbeDownUu"), 200.0f,
+        TEXT("How far BELOW the query point a projection may find a surface."));
+
+    static TAutoConsoleVariable<int32> CVar_ProbeMode(
+        TEXT("ck.GroundNav.Debug.ProbeMode"), 0,
+        TEXT("0 = closest, 1 = down only, 2 = up only. The probe's agent radius is ")
+        TEXT("ck.GroundNav.Debug.AgentRadiusUu, the same one the bake profile uses."));
+
+    // ----------------------------------------------------------------------------------------------
+
+    // A query runs against a FIELD, and only the field bake produces one - a region bake has no
+    // tiles to address. Held for the whole process because a field is immutable and reaches back to
+    // nothing: no world, no actor, no registry.
+    static ck::groundnav::FCk_GroundNav_FieldPtr LastDebugField;
+
     // ----------------------------------------------------------------------------------------------
 
     auto Get_ViewerLocation(UWorld* InWorld, FVector& OutLocation) -> bool
@@ -748,8 +793,116 @@ namespace ck_groundnav_debugconsole
 
     auto DoBakeFieldAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
     {
-        DoDrawAndReport(InWorld,
-            ck::groundnav::Make_FieldDebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre)));
+        DoDrawAndReport(InWorld, ck::groundnav::Make_FieldDebugSnapshotFromWorld(
+            InWorld, Make_BakeParams(InCentre), LastDebugField));
+    }
+
+    auto Get_ProbeMode() -> ECk_NavSurface_ProjectionMode
+    {
+        switch (CVar_ProbeMode.GetValueOnGameThread())
+        {
+            case 1:  return ECk_NavSurface_ProjectionMode::Down;
+            case 2:  return ECk_NavSurface_ProjectionMode::Up;
+            default: return ECk_NavSurface_ProjectionMode::Closest;
+        }
+    }
+
+    auto DoProbeAndDraw(UWorld* InWorld, const FVector& InPoint) -> void
+    {
+        if (ck::Is_NOT_Valid(LastDebugField))
+        {
+            ck::groundnav::Warning(TEXT("ck.GroundNav.Probe needs a FIELD bake first: run ")
+                TEXT("ck.GroundNav.BakeFieldAt <X> <Y> <Z> or press Y in the tuning range"));
+            return;
+        }
+
+        const auto& Field = *LastDebugField;
+
+        const auto ExtentUu = CVar_ProbeExtentUu.GetValueOnGameThread();
+        const auto UpUu = CVar_ProbeUpUu.GetValueOnGameThread();
+        const auto DownUu = CVar_ProbeDownUu.GetValueOnGameThread();
+        const auto RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+        const auto ProbeMode = Get_ProbeMode();
+
+        auto ProjectionQuery = ck::groundnav::FCk_GroundNav_ProjectionQuery{};
+
+        ProjectionQuery._Location = InPoint;
+        ProjectionQuery._HorizontalExtentUu = ExtentUu;
+        ProjectionQuery._UpExtentUu = UpUu;
+        ProjectionQuery._DownExtentUu = DownUu;
+        ProjectionQuery._Mode = ProbeMode;
+        ProjectionQuery._Agent._RadiusUu = RadiusUu;
+
+        const auto Projection = ck::groundnav::Get_ProjectPoint(Field, ProjectionQuery);
+
+        auto NavigableQuery = ck::groundnav::FCk_GroundNav_IsNavigableQuery{};
+
+        // Two vertical quanta: tight enough that the answer is about THIS height rather than the
+        // column, wide enough to survive the bake's own quantization of the surface.
+        NavigableQuery._Location = InPoint;
+        NavigableQuery._VerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        NavigableQuery._Agent._RadiusUu = RadiusUu;
+
+        const auto Navigable = ck::groundnav::Get_IsNavigable(Field, NavigableQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InPoint, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        // The box is exactly the volume the query searches: the two reaches are independent, and a
+        // one-sided mode has only the reach on its own side. A box showing reach the query does not
+        // have is worse than no box at all.
+        const auto ReachUp = ProbeMode == ECk_NavSurface_ProjectionMode::Down ? 0.0 : static_cast<double>(UpUu);
+        const auto ReachDown = ProbeMode == ECk_NavSurface_ProjectionMode::Up ? 0.0 : static_cast<double>(DownUu);
+        const auto BoxHalfHeight = (ReachUp + ReachDown) * 0.5;
+        const auto BoxCentreZOffset = (ReachUp - ReachDown) * 0.5;
+
+        DrawDebugBox(InWorld, InPoint + FVector{0.0, 0.0, BoxCentreZOffset},
+            FVector{static_cast<double>(ExtentUu), static_cast<double>(ExtentUu), BoxHalfHeight},
+            FColor{130, 130, 130}, Persistent, LifetimeSeconds, DepthPriority, 1.5f);
+
+        if (Projection.Get_IsSuccess())
+        {
+            constexpr auto ArrowSize = 12.0f;
+
+            DrawDebugSphere(InWorld, Projection._Location, 10.0f, SphereSegments, FColor::Green,
+                Persistent, LifetimeSeconds, DepthPriority);
+
+            DrawDebugLine(InWorld, InPoint, Projection._Location, FColor::Green, Persistent,
+                LifetimeSeconds, DepthPriority, 2.0f);
+
+            DrawDebugDirectionalArrow(InWorld, Projection._Location,
+                Projection._Location + (Projection._SurfaceNormal * 60.0), ArrowSize, FColor::Cyan,
+                Persistent, LifetimeSeconds, DepthPriority, 2.0f);
+        }
+        else
+        {
+            DrawDebugSphere(InWorld, InPoint, 12.0f, SphereSegments, FColor::Red, Persistent,
+                LifetimeSeconds, DepthPriority);
+        }
+
+        const auto Summary = FString::Printf(
+            TEXT("probe %s | tile %d layer %d plate %d | clearance %.1f uu | %d cells read\n")
+            TEXT("navigable: %s"),
+            *ck::Format_UE(TEXT("{}"), Projection._Status),
+            Projection._Surface._TileIndex,
+            Projection._Surface._LayerIndex,
+            Projection._Surface._PlateIndex,
+            Projection._ClearanceUu,
+            Projection._Cost._CellsRead,
+            *ck::Format_UE(TEXT("{}"), Navigable._Status));
+
+        DrawDebugString(InWorld, InPoint + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Projection.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
+            InPoint.X, InPoint.Y, InPoint.Z, Summary);
     }
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
@@ -831,11 +984,62 @@ namespace ck_groundnav_debugconsole
             DoBakeFieldAndDraw(InWorld, Centre);
         }));
 
-    static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
-        TEXT("ck.GroundNav.Clear"),
-        TEXT("Clear everything ck.GroundNav.Bake drew."),
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_ProbeAt(
+        TEXT("ck.GroundNav.ProbeAt"),
+        TEXT("Project a point onto the last field bake and draw the answer: ")
+        TEXT("ck.GroundNav.ProbeAt <X> <Y> <Z>. Needs ck.GroundNav.BakeFieldAt to have run - a ")
+        TEXT("region bake produces no field to query. The search box comes from ")
+        TEXT("ck.GroundNav.Debug.Probe*, the body radius from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.ProbeAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 3)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.ProbeAt needs three numbers: ck.GroundNav.ProbeAt <X> <Y> <Z>"));
+                return;
+            }
+
+            const auto Point = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoProbeAndDraw(InWorld, Point);
+        }));
+
+    static FAutoConsoleCommandWithWorld ConsoleCommand_Probe(
+        TEXT("ck.GroundNav.Probe"),
+        TEXT("Project the player's own position onto the last field bake and draw the answer. ")
+        TEXT("Use ck.GroundNav.ProbeAt to aim at a fixed point instead."),
         FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* InWorld) -> void
         {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.Probe ran without a World"))
+            { return; }
+
+            auto Point = FVector::ZeroVector;
+
+            const auto FoundViewer = Get_ViewerLocation(InWorld, Point);
+
+            CK_ENSURE_IF_NOT(FoundViewer,
+                TEXT("ck.GroundNav.Probe found no player to probe from. Run it in PIE or in a game world."))
+            { return; }
+
+            DoProbeAndDraw(InWorld, Point);
+        }));
+
+    static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
+        TEXT("ck.GroundNav.Clear"),
+        TEXT("Clear everything ck.GroundNav.Bake drew, and drop the field the probe commands query."),
+        FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* InWorld) -> void
+        {
+            LastDebugField = {};
+
             if (ck::Is_NOT_Valid(InWorld))
             { return; }
 
@@ -853,6 +1057,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  agent   : HeightUu {} RadiusUu {} MaxSlopeDegrees {} MaxSlopeChangeDegrees {}")
                 TEXT("\n            StepHeightUu {} LedgeSensitivity {} RoughPerchToleranceUu {}")
                 TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
+                TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
@@ -867,6 +1072,10 @@ namespace ck_groundnav_debugconsole
                 CVar_RoughPerchToleranceUu.GetValueOnGameThread(),
                 CVar_PlaneFitToleranceUu.GetValueOnGameThread(),
                 CVar_NormalConeDegrees.GetValueOnGameThread(),
+                CVar_ProbeExtentUu.GetValueOnGameThread(),
+                CVar_ProbeUpUu.GetValueOnGameThread(),
+                CVar_ProbeDownUu.GetValueOnGameThread(),
+                CVar_ProbeMode.GetValueOnGameThread(),
                 CVar_Mode.GetValueOnGameThread(),
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
                 CVar_MaxCells.GetValueOnGameThread());
