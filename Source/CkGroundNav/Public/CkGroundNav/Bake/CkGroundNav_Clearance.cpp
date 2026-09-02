@@ -93,6 +93,7 @@ namespace ck::groundnav
         const auto WorldPerUnit = InCellSizeUu / static_cast<float>(kChamferOrthogonalCost);
 
         auto Distances = TArray<int32>{};
+        auto ProbesSpent = 0;
 
         for (auto LayerIndex = 0; LayerIndex < InLayers._LayerCount; ++LayerIndex)
         {
@@ -103,6 +104,8 @@ namespace ck::groundnav
             {
                 for (auto X = 0; X < SizeX; ++X)
                 {
+                    ++ProbesSpent;
+
                     const auto IsWalkable = InLayers.Get_OccupancyAt(X, Y, LayerIndex) > 0;
 
                     Distances[(Y * SizeX) + X] = IsWalkable ? kUnreached : 0;
@@ -111,6 +114,8 @@ namespace ck::groundnav
 
             const auto Do_Relax = [&](int32 InX, int32 InY, int32 InFromX, int32 InFromY, int32 InCost) -> void
             {
+                ++ProbesSpent;
+
                 auto& Current = Distances[(InY * SizeX) + InX];
                 const auto Candidate = Get_Distance(Distances, SizeX, SizeY, InFromX, InFromY) + InCost;
 
@@ -143,13 +148,18 @@ namespace ck::groundnav
 
             for (auto CellIndex = 0; CellIndex < CellCount; ++CellIndex)
             {
+                ++ProbesSpent;
+
                 OutClearance._Cells[PlaneOffset + CellIndex] =
                     static_cast<float>(Distances[CellIndex]) * WorldPerUnit;
             }
         }
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
-        Result.Set_ProbesSpent(CellCount * InLayers._LayerCount);
+
+        // A probe here is one cell read: the occupancy that seeds a cell, each of the four neighbours
+        // a chamfer pass relaxes it against, and the distance read back out as world clearance.
+        Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;
     }
