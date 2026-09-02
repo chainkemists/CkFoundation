@@ -193,7 +193,8 @@ namespace ck::inventory_handlers
          *  never rescues an item from a container that is already tearing down. */
         CKINVENTORY_API auto ReleaseItemLifetime_FromInventory(
             FCk_Handle_Item& InItem,
-            FCk_Handle_Inventory& InInventory) -> void;
+            FCk_Handle_Inventory& InInventory,
+            bool InItemIsAboutToBeDestroyed = false) -> void;
 
         /** The single tail every successful TRemoveItem runs: hand the lifetime claim back, then
          *  honour the request's declared PostRemovePolicy. Shared by BOTH TRemoveItem shapes on
