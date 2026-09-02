@@ -4,7 +4,10 @@
 #include "CkProfile/Stats/CkStats.h" // CK_CREATE_DYNAMIC_STAT_ID
 
 #include <Containers/Map.h>
+#include <CoreGlobals.h> // GCycleStatsShouldEmitNamedEvents
 #include <HAL/PlatformMisc.h>
+
+#include <atomic>
 
 #if WITH_ANGELSCRIPT_CK
 #include "AngelscriptBinds.h"
@@ -67,6 +70,61 @@ namespace ck
         return FString{TEXT("Script::Unknown")};
 #endif
     }
+
+    namespace scoped_stat_cache
+    {
+        // Bumped on every AngelScript recompile. The cache below is thread_local, so a direct clear
+        // would only ever reach the calling thread; a generation counter lets each thread drop its
+        // own copy lazily on next use, which is correct no matter which thread recompiled.
+        static std::atomic<uint32> Generation{0};
+    }
+
+    auto
+        Invalidate_ScopedStat_ScopeCache()
+        -> void
+    {
+        scoped_stat_cache::Generation.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    auto
+        Get_ScopedStat_StatId_ForActiveScope()
+        -> TStatId
+    {
+#if STATS
+        // nullptr is a real key, not a miss: it covers both "no script context" (a C++ caller, or
+        // a natively-bound function that pushes no script frame) and "context with no frame 0".
+        // Both name the scope "Script::Unknown", so both correctly share one entry.
+        const void* ScopeKey = nullptr;
+
+#if WITH_ANGELSCRIPT_CK
+        if (auto* const Context = FAngelscriptManager::GetCurrentScriptContext();
+            Context != nullptr)
+        { ScopeKey = Context->GetFunction(0); }
+#endif
+
+        // thread_local for the same reason Get_ScopedStat_StatId is: lock-free if scripts ever leave
+        // the game thread, at the cost of a few duplicated entries per worker.
+        static thread_local TMap<const void*, TStatId> ScopeIdCache;
+        static thread_local uint32                    CachedGeneration = 0;
+
+        if (const auto CurrentGeneration = scoped_stat_cache::Generation.load(std::memory_order_relaxed);
+            CurrentGeneration != CachedGeneration)
+        {
+            ScopeIdCache.Reset();
+            CachedGeneration = CurrentGeneration;
+        }
+
+        if (const auto* const Found = ScopeIdCache.Find(ScopeKey))
+        { return *Found; }
+
+        // Miss: pay for the name exactly once per script function.
+        const auto StatId = Get_ScopedStat_StatId(Get_ActiveScriptScopeName());
+        ScopeIdCache.Add(ScopeKey, StatId);
+        return StatId;
+#else
+        return TStatId{};
+#endif
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -75,7 +133,7 @@ namespace ck
 
 FCk_ScopedStat::
     FCk_ScopedStat()
-    : _Cycle(ck::Get_ScopedStat_StatId(ck::Get_ActiveScriptScopeName()))
+    : _Cycle(ck::Get_ScopedStat_StatId_ForActiveScope())
 {
 }
 
@@ -94,7 +152,14 @@ FCk_ScopedStat::
 FCk_ScopedStat::
     FCk_ScopedStat()
 {
-    FPlatformMisc::BeginNamedEvent(FColor::Red, *ck::Get_ActiveScriptScopeName());
+    // Deriving the scope name costs three FString allocations, and with no profiler attached the
+    // result is handed to a no-op and discarded - which is every session a player ever runs. Pay it
+    // only when something is listening. Begin/End stay unconditionally paired, so the guard cannot
+    // unbalance the event stack.
+    if (GCycleStatsShouldEmitNamedEvents > 0)
+    { FPlatformMisc::BeginNamedEvent(FColor::Red, *ck::Get_ActiveScriptScopeName()); }
+    else
+    { FPlatformMisc::BeginNamedEvent(FColor::Red, TEXT("Script")); }
 }
 
 FCk_ScopedStat::

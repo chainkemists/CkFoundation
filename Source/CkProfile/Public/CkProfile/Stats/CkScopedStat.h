@@ -16,8 +16,25 @@ namespace ck
 
     // "<Class>::<Method>" of the currently executing AngelScript function, or "Script::Unknown"
     // when there is no active script context (called from C++, or built without AngelScript).
+    // Costs three FString allocations per call - prefer the cached accessor below on hot paths.
     CKPROFILE_API auto
     Get_ActiveScriptScopeName() -> FString;
+
+    // The TStatId for the currently executing script scope, keyed by the script FUNCTION rather
+    // than by its name. Reaching the function is the same work either way, but the key skips the
+    // three FString allocations + FName construction that naming costs, so the name is built ONCE
+    // PER FUNCTION instead of once per CALL. This is the hot path - a populated store opens well
+    // over a thousand script scopes per frame, and that cost lands inside whatever scope encloses
+    // it, which silently taxes every script measurement taken with this system.
+    CKPROFILE_API auto
+    Get_ScopedStat_StatId_ForActiveScope() -> TStatId;
+
+    // Drops the per-function scope cache. MUST run before an AngelScript recompile: script function
+    // pointers do not survive a reload and the allocator recycles the addresses, so a surviving
+    // entry would attribute one function's time to a different function's name. Wired to
+    // FAngelscriptCodeModule::GetPreCompile() in editor builds; a packaged game never reloads.
+    CKPROFILE_API auto
+    Invalidate_ScopedStat_ScopeCache() -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
