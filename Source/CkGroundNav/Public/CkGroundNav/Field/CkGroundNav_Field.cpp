@@ -1,5 +1,7 @@
 #include "CkGroundNav_Field.h"
 
+#include "CkGroundNav/CkGroundNav_Log.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -356,7 +358,7 @@ namespace ck::groundnav
          * Whether any of a tile's four orthogonal neighbours exists in the lattice and is not built.
          *
          * A neighbour OUTSIDE the lattice is deliberately not counted: the field border is a real
-         * edge under [NN-D27], not an admission of ignorance, and counting it would make every
+         * edge by design, not an admission of ignorance, and counting it would make every
          * component of a single-tile field permanently unprovable.
          */
         auto Get_HasUnbuiltNeighbour(
@@ -486,6 +488,7 @@ namespace ck::groundnav
         using namespace field_private;
 
         InOutField._SeamPortals.Reset();
+        InOutField._UnmatchedSeamStubCount = 0;
 
         auto Crossings = TArray<FSeamCrossing>{};
 
@@ -524,7 +527,13 @@ namespace ck::groundnav
                     const auto* Match = Get_MatchingStub(TileB, Stub, Opposite);
 
                     if (Match == nullptr)
-                    { continue; }
+                    {
+                        // Two BUILT tiles that disagree about a crossing they share. Counted rather than
+                        // repaired: there is no third account to arbitrate between them, and the crossing
+                        // simply does not exist for anything that comes after.
+                        ++InOutField._UnmatchedSeamStubCount;
+                        continue;
+                    }
 
                     auto Crossing = FSeamCrossing{};
 
@@ -583,6 +592,18 @@ namespace ck::groundnav
             Portal._TraversalClearanceUu = Crossing._ClearanceUu;
 
             InOutField._SeamPortals.Emplace(Portal);
+        }
+
+        // ONE line for the whole derivation, not one per stub: a field baked against a world that moved
+        // mid-build produces these by the hundred, and the number is the signal.
+        if (InOutField._UnmatchedSeamStubCount > 0)
+        {
+            ck::groundnav::Warning(
+                TEXT("GroundNav field derived seam portals with [{}] unmatched seam stub(s). Two adjacent ")
+                TEXT("BUILT tiles disagree about a crossing they share, which means they were baked against ")
+                TEXT("different geometry. Every such crossing is absent from the field and reads as ")
+                TEXT("impassable to every query afterwards."),
+                InOutField._UnmatchedSeamStubCount);
         }
     }
 

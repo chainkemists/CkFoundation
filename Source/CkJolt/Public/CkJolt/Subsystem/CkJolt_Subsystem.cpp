@@ -1114,6 +1114,28 @@ auto
 
 auto
     UCk_Jolt_Subsystem::
+    Get_StaticSceneRevision() const
+        -> uint64
+{
+    if (NOT _JoltWorld.IsValid())
+    { return 0; }
+
+    return _JoltWorld->Get_StaticSceneRevision();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    Get_BodyRemovedRevision() const
+        -> uint64
+{
+    if (NOT _JoltWorld.IsValid())
+    { return 0; }
+
+    return _JoltWorld->Get_BodyRemovedRevision();
+}
+
+auto
+    UCk_Jolt_Subsystem::
     Request_OptimizeBroadPhaseBeforeNextUpdate()
         -> void
 {
