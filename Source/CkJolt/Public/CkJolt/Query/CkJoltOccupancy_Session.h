@@ -80,6 +80,23 @@ namespace ck::jolt
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /// What ONE static body's collision geometry is a description OF, for a consumer that must treat a
+    /// closed solid and an open surface differently. A consumer reading only faces knows a solid is solid
+    /// through a CLOSED set of them, while a heightfield has no interior to describe and is legitimately
+    /// open — so the two owe different guarantees and cannot share one answer.
+    ///
+    /// NotHeld is the honest answer for a body this session cannot read at all: not held by the physics
+    /// world, not lockable, or not static. It is deliberately distinct from a body that reads fine and
+    /// happens to contribute no geometry.
+    enum class ECk_Jolt_StaticBodyKind : uint8
+    {
+        NotHeld,
+        Solid,
+        Surface
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /// The Jolt world's occupancy surface WITHOUT any Jolt type in sight: resolve once, query thousands of
     /// times. Construction pins nothing permanently — it resolves the Jolt subsystem, keeps a weak
     /// reference to its physics world, and builds the static-domain query filters up front, so a query
@@ -170,6 +187,47 @@ namespace ck::jolt
             const FBox& InWorldBounds,
             FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
 
+        /// Whether one static body is a closed solid or an open surface, decided by its LEAF shape: a
+        /// decorator (rotate-translate, scale, offset-centre-of-mass) says where and how big a shape is
+        /// and never what KIND it is, and a compound is a solid whatever it was compounded from.
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_StaticBodyKind(
+            uint64 InBodyId) const -> ECk_Jolt_StaticBodyKind;
+
+        /// One static body's world-space bounds, so a consumer holding an id can scope work to that body
+        /// without re-entering the broadphase to find it again. Invalid (ForceInit) when the kind above
+        /// reads NotHeld.
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_StaticBodyBounds(
+            uint64 InBodyId) const -> FBox;
+
+        /// EVERY world-space triangle of ONE static body, APPENDED to OutSoup; returns the number appended.
+        ///
+        /// UNCLIPPED, unlike the region form above, and that is the whole reason this call exists: a mesh
+        /// clipped to a query box acquires cut edges that are indistinguishable from real holes, so anything
+        /// asking whether a body is CLOSED has to see the body whole. The query volume is the body's own
+        /// bounds with a small margin, so no float-edge comparison can drop a boundary triangle either.
+        ///
+        /// Correspondingly expensive — it walks one body's entire mesh — so it belongs on a per-build path
+        /// and never inside a per-tile or per-frame loop. 0 when the kind above reads NotHeld.
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_StaticBodyTriangles(
+            uint64 InBodyId,
+            FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
+
+        /// A name for one static body that a developer can act on: the attribution entity and the source
+        /// actor where the body carries them, and always the leaf shape's type plus the body's centre and
+        /// extent, which is all a body with no ECS attribution can offer. Never empty.
+        ///
+        /// DIAGNOSTIC ONLY — the text is not stable across runs and nothing may key off it.
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_StaticBodyDescription(
+            uint64 InBodyId) const -> FString;
+
         /// A token that changes whenever the static geometry this session can return changes: static body
         /// added, removed or re-typed, cooked static-world cell loaded or unloaded, probe churn.
         ///
@@ -177,8 +235,10 @@ namespace ck::jolt
         /// no query of this session would ever have returned. A consumer comparing it across time learns
         /// only that SOMETHING changed — never what, and never where.
         ///
-        /// The two underlying counters are both monotonically increasing, so their SUM changes whenever
-        /// either does and can never return to a value it has already reported. Zero on an INVALID session
+        /// STATIC ONLY. Dynamic and kinematic bodies coming and going do not move it — they are never
+        /// returned by Get_StaticTrianglesInAABox, and a token that moved for every despawn would never hold
+        /// still long enough for a consumer to build over several frames. The counter is monotonically
+        /// increasing, so it can never return to a value it has already reported. Zero on an INVALID session
         /// (and, harmlessly, on a valid world nothing has changed in yet — validity is a separate question
         /// callers already have to ask).
         /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).

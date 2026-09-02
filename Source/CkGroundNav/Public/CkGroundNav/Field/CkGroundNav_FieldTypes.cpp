@@ -32,6 +32,31 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_Tile::
+        Get_AllocatedSize() const
+        -> SIZE_T
+    {
+        auto Bytes = SIZE_T{0};
+
+        Bytes += _SurfaceZ.GetAllocatedSize();
+
+        Bytes += _Clearance._Cells.GetAllocatedSize();
+
+        Bytes += _Plates._Plates.GetAllocatedSize();
+        Bytes += _Plates._CellToPlate.GetAllocatedSize();
+
+        Bytes += _Portals._Portals.GetAllocatedSize();
+        Bytes += _Portals._PlateToPortals.GetAllocatedSize();
+
+        for (const auto& PlatePortals : _Portals._PlateToPortals)
+        { Bytes += PlatePortals.GetAllocatedSize(); }
+
+        Bytes += _SeamStubs.GetAllocatedSize();
+
+        return Bytes;
+    }
+
+    auto
+        FCk_GroundNav_Tile::
         Get_CellCentre(
             int32 InX,
             int32 InY,

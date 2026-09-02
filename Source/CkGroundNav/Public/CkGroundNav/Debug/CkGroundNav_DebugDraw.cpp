@@ -13,6 +13,7 @@
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
 
 #include <DrawDebugHelpers.h>
+#include <Engine/Engine.h>
 #include <Engine/World.h>
 #include <GameFramework/Pawn.h>
 #include <GameFramework/PlayerController.h>
@@ -49,6 +50,48 @@ namespace ck::groundnav
             return FLinearColor::LerpUsingHSV(
                 FLinearColor{0.1f, 0.3f, 1.0f}, FLinearColor{1.0f, 0.2f, 0.1f}, Alpha).ToFColor(false);
         }
+
+        /**
+         * The open Solid bodies, in red, before anything else and in every mode.
+         *
+         * Unconditional on the draw mode and on whether the snapshot is drawable at all: an open body
+         * invalidates the ground the rest of the view is showing, and a bake that failed can still have
+         * found the body that is the reason it failed. A developer who never switches mode must still
+         * be unable to miss this.
+         */
+        auto Do_DrawOpenBodies(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot,
+            float                              InLifetimeSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto DrawShadow = true;
+
+            // Clear of the surface the edge lies on, so an underside hole still reads as a line rather
+            // than z-fighting the floor it is flush with.
+            const auto Lift = FVector{0.0, 0.0, 2.0};
+
+            for (const auto& OpenBody : InSnapshot._OpenBodies)
+            {
+                DrawDebugBox(InWorld, OpenBody._Bounds.GetCenter(), OpenBody._Bounds.GetExtent(),
+                    FColor::Red, Persistent, InLifetimeSeconds, DepthPriority, 4.0f);
+
+                for (auto Index = 0; Index + 1 < OpenBody._OpenEdgePoints.Num(); Index += 2)
+                {
+                    DrawDebugLine(InWorld, OpenBody._OpenEdgePoints[Index] + Lift,
+                        OpenBody._OpenEdgePoints[Index + 1] + Lift, FColor::Red, Persistent,
+                        InLifetimeSeconds, DepthPriority, 6.0f);
+                }
+
+                const auto Centre = OpenBody._Bounds.GetCenter();
+
+                DrawDebugString(InWorld, FVector{Centre.X, Centre.Y, OpenBody._Bounds.Max.Z},
+                    FString::Printf(TEXT("OPEN COLLISION — %s (%d open edges)"),
+                        *OpenBody._Description, OpenBody._OpenEdgeCount),
+                    nullptr, FColor::Red, InLifetimeSeconds, DrawShadow);
+            }
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -84,6 +127,19 @@ namespace ck::groundnav
             Snapshot._Status = EDebugSnapshotStatus::NoGeometryInRegion;
             return Snapshot;
         }
+
+        // The same check a field bake runs, over the bodies of this one region. It reads each body's
+        // WHOLE mesh, so it is deliberately not part of the triangle fetch above: a mesh clipped to the
+        // region has cut edges that look exactly like the holes this is looking for.
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
+        Backend.Get_StaticBodiesInBounds(Region, Bodies);
+
+        auto CheckedBodies = TSet<uint64>{};
+        auto OpenBodies = TArray<FCk_GroundNav_OpenBody>{};
+        auto ProbesForClosure = 0;
+
+        DoCheck_GeometryClosure(Backend, Bodies, CheckedBodies, OpenBodies, ProbesForClosure);
+        DoReport_OpenBodies(OpenBodies);
 
         auto Spans = FCk_GroundNav_SpanField{};
         const auto RasterResult = DoRasterizeSpans(
@@ -152,6 +208,21 @@ namespace ck::groundnav
         Built._SourceTriangleCount = SourceTriangles;
         Built._DroppedTriangleCount = RasterResult.Get_DroppedInputCount();
         Built._BakeMilliseconds = ElapsedMilliseconds;
+
+        Built._OpenBodies.Reserve(OpenBodies.Num());
+
+        for (const auto& OpenBody : OpenBodies)
+        {
+            auto DebugOpenBody = FCk_GroundNav_DebugOpenBody{};
+
+            DebugOpenBody._Description = OpenBody._Description;
+            DebugOpenBody._Bounds = OpenBody._Bounds;
+            DebugOpenBody._TriangleCount = OpenBody._TriangleCount;
+            DebugOpenBody._OpenEdgeCount = OpenBody._OpenEdgeCount;
+            DebugOpenBody._OpenEdgePoints = OpenBody._OpenEdgePoints;
+
+            Built._OpenBodies.Emplace(MoveTemp(DebugOpenBody));
+        }
 
         return Built;
     }
@@ -248,6 +319,8 @@ namespace ck::groundnav
         // bake would be indistinguishable from one pointed at empty space.
         DrawDebugBox(InWorld, InSnapshot._Region.GetCenter(), InSnapshot._Region.GetExtent(),
             FColor::White, Persistent, LifetimeSeconds, DepthPriority, 2.0f);
+
+        debugdraw_private::Do_DrawOpenBodies(InWorld, InSnapshot, LifetimeSeconds);
 
         if (NOT InSnapshot.Get_IsDrawable())
         { return; }
@@ -391,30 +464,53 @@ namespace ck::groundnav
             { ++CrossLayerPortalCount; }
         }
 
-        // A published tile keeps its cells, plates and crossings and nothing of the rasterization that
-        // produced them, so for a field these are absent rather than zero - and a printed 0 reads as a
-        // bake that found no geometry.
         const auto IsTiledField = InSnapshot.Get_TileCount() > 0;
 
-        const auto RasterizationBlock = IsTiledField
-            ? FString::Printf(
-                TEXT("  geometry : %d dropped (triangles in: not tracked for a tiled field)\n")
-                TEXT("  spans    : %d walkable cells%s (rasterized and rejected: not tracked for a tiled field)\n"),
-                InSnapshot._DroppedTriangleCount,
-                InSnapshot._WalkableCellCount,
-                InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""))
-            : FString::Printf(
-                TEXT("  geometry : %d triangles in, %d dropped\n")
-                TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n"),
-                InSnapshot._SourceTriangleCount,
-                InSnapshot._DroppedTriangleCount,
-                InSnapshot._SpanCount,
-                InSnapshot._WalkableCellCount,
-                InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""),
-                InSnapshot._RejectedCellCount);
+        // A field's tiles carry these forward from their own bake, so the tiled and single-region
+        // paths report the same three numbers rather than one of them reporting "not tracked". For a
+        // field they are summed over tile HALO lattices, which overlap at every seam — the work the
+        // bake did, not a census of the world — and the line says so, or a reader comparing the two
+        // bake kinds would see a field "find" more geometry than the region it covers.
+        const auto RasterizationBlock = FString::Printf(
+            TEXT("  geometry : %d triangles in, %d dropped%s\n")
+            TEXT("  spans    : %d rasterized -> %d walkable cells%s, %d REJECTED by the filters\n"),
+            InSnapshot._SourceTriangleCount,
+            InSnapshot._DroppedTriangleCount,
+            IsTiledField ? TEXT(" (summed over tile halos, which overlap)") : TEXT(""),
+            InSnapshot._SpanCount,
+            InSnapshot._WalkableCellCount,
+            InSnapshot._CellsWereTruncated ? TEXT(" (draw capped)") : TEXT(""),
+            InSnapshot._RejectedCellCount);
+
+        // Immediately under the status line and ahead of everything a developer reads to judge a bake,
+        // because none of those numbers mean anything while a body under them is open.
+        auto OpenCollisionBlock = FString{};
+
+        if (NOT InSnapshot._OpenBodies.IsEmpty())
+        {
+            OpenCollisionBlock = FString::Printf(
+                TEXT("  !!! OPEN COLLISION: %d static bod%s not closed — the bake sees faces only, so a ")
+                TEXT("wall with no underside is INVISIBLE to it and agents will path through. ")
+                TEXT("Fix the collision (closed mesh, or simple/convex collision). ")
+                TEXT("Drawn in RED in every mode.\n"),
+                InSnapshot.Get_OpenBodyCount(),
+                InSnapshot.Get_OpenBodyCount() == 1 ? TEXT("y") : TEXT("ies"));
+
+            for (const auto& OpenBody : InSnapshot._OpenBodies)
+            {
+                OpenCollisionBlock += FString::Printf(
+                    TEXT("      - %s: %d open edge%s of %d triangle%s\n"),
+                    *OpenBody._Description,
+                    OpenBody._OpenEdgeCount,
+                    OpenBody._OpenEdgeCount == 1 ? TEXT("") : TEXT("s"),
+                    OpenBody._TriangleCount,
+                    OpenBody._TriangleCount == 1 ? TEXT("") : TEXT("s"));
+            }
+        }
 
         return FString::Printf(
             TEXT("[GroundNav] %s | %.1f ms\n")
+            TEXT("%s")
             TEXT("  region   : centre (%.0f, %.0f, %.0f)  half-extent (%.0f, %.0f, %.0f)\n")
             TEXT("  lattice  : %d x %d columns at %.1f uu, %d layer(s) -> %d cell slots\n")
             TEXT("%s")
@@ -422,9 +518,11 @@ namespace ck::groundnav
             TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
             TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
             TEXT("  tiles    : %d of %d built, %d seams between them\n")
-            TEXT("  clearance: %.1f uu at the most open cell"),
+            TEXT("  clearance: %.1f uu at the most open cell\n")
+            TEXT("  memory   : %.1f KB held by %s"),
             Get_StatusName(InSnapshot._Status),
             InSnapshot._BakeMilliseconds,
+            *OpenCollisionBlock,
             Centre.X, Centre.Y, Centre.Z,
             Extent.X, Extent.Y, Extent.Z,
             InSnapshot._LatticeSizeX,
@@ -444,7 +542,9 @@ namespace ck::groundnav
             InSnapshot.Get_BuiltTileCount(),
             InSnapshot.Get_TileCount(),
             InSnapshot.Get_SeamCount(),
-            InSnapshot._MaxClearanceUu);
+            InSnapshot._MaxClearanceUu,
+            static_cast<double>(InSnapshot._AllocatedBytes) / 1024.0,
+            IsTiledField ? TEXT("the published field") : TEXT("the bake products"));
     }
 }
 
@@ -623,6 +723,21 @@ namespace ck_groundnav_debugconsole
             FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
 
         ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(InSnapshot));
+
+        // The log scrolls and the red boxes may be behind the viewer. A developer who ran a bake for
+        // an unrelated reason still has to be told the ground under an open body cannot be trusted.
+        if (InSnapshot.Get_OpenBodyCount() > 0 && ck::IsValid(GEngine))
+        {
+            // Stable, so a repeated bake replaces its own line instead of stacking one per run.
+            constexpr auto MessageKey = uint64{0x436B474E4F50454Eull};
+            constexpr auto MessageSeconds = 30.0f;
+
+            GEngine->AddOnScreenDebugMessage(MessageKey, MessageSeconds, FColor::Red,
+                FString::Printf(
+                    TEXT("GroundNav: %d static bodies have OPEN collision — agents can path through ")
+                    TEXT("them. See the log / red boxes."),
+                    InSnapshot.Get_OpenBodyCount()));
+        }
     }
 
     auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void

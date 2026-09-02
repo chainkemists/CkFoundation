@@ -18,6 +18,11 @@ namespace ck::groundnav
      * A session that cannot resolve its physics world is a legitimate state, so callers MUST gate on
      * Get_IsValid() and bake the tile as Unbuilt rather than as empty.
      *
+     * Region fetches and the WHOLE-BODY fetch are two different costs against the same world: the region
+     * form is what every tile bakes from, while Get_BodyTriangles walks one body's entire mesh unclipped
+     * so the closure check sees edges no query box has cut. Only the closure check pays for the latter,
+     * once per body per build.
+     *
      * Game thread only, whole type.
      */
     class CKGROUNDNAV_API FCk_GroundNav_GeometryBackend_Jolt final : public ICk_GroundNav_GeometryBackend
@@ -43,6 +48,19 @@ namespace ck::groundnav
             FCk_GroundNav_GeometryBatch& OutBatch) const -> int32 override;
 
         auto Get_WorldRevision() const -> uint64 override;
+
+        auto Get_BodyKind(
+            const FCk_GroundNav_BodyRef& InBody) const -> ECk_GroundNav_BodyKind override;
+
+        auto Get_BodyBounds(
+            const FCk_GroundNav_BodyRef& InBody) const -> FBox override;
+
+        auto Get_BodyTriangles(
+            const FCk_GroundNav_BodyRef& InBody,
+            FCk_GroundNav_GeometryBatch& OutBatch) const -> int32 override;
+
+        auto Get_BodyDescription(
+            const FCk_GroundNav_BodyRef& InBody) const -> FString override;
 
     private:
         ck::jolt::FCk_Jolt_QuerySession _Session;

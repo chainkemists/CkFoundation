@@ -13,7 +13,13 @@
 
 namespace ck::groundnav
 {
-    /** What a drawn snapshot is coloured by. */
+    /**
+     * What a drawn snapshot is coloured by.
+     *
+     * Open Solid bodies are outside this choice entirely: they draw in RED in EVERY mode, and even for
+     * a snapshot that is not drawable at all. The ground under an open body is not trustworthy, so
+     * whether a developer sees it must not depend on which view they happen to have selected.
+     */
     enum class EDebugDrawMode : uint8
     {
         // Merged plates as wireframe boxes, coloured per layer. The cheapest view and the one that
@@ -98,6 +104,8 @@ namespace ck::groundnav
      *
      * Takes the snapshot BY VALUE-SEMANTIC REFERENCE and reads nothing else — it never reaches back
      * to whatever produced it, so a snapshot outliving its bake draws exactly as it was captured.
+     *
+     * Open Solid bodies draw first, in red, in every mode and whatever the snapshot's status.
      */
     CKGROUNDNAV_API auto
     DoDraw_DebugSnapshot(
@@ -106,7 +114,13 @@ namespace ck::groundnav
         EDebugDrawMode                     InMode,
         FCk_Time                           InLifetime) -> void;
 
-    /** One-line human summary of what a snapshot contains. Safe on every status. */
+    /**
+     * Human summary of what a snapshot contains. Safe on every status.
+     *
+     * Open Solid bodies are named in a block directly under the status line, ahead of every number a
+     * developer reads to judge a bake — because none of those numbers mean anything while a body
+     * over them is open.
+     */
     CKGROUNDNAV_API auto
     Get_DebugSnapshotSummary(
         const FCk_GroundNav_DebugSnapshot& InSnapshot) -> FString;

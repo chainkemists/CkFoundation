@@ -1,5 +1,6 @@
 #include "CkGroundNav_Field.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_MeshClosure.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -610,6 +611,90 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        DoCheck_GeometryClosure(
+            const ICk_GroundNav_GeometryBackend&  InBackend,
+            const TArray<FCk_GroundNav_BodyRef>&  InBodies,
+            TSet<uint64>&                         InOutCheckedBodies,
+            TArray<FCk_GroundNav_OpenBody>&       InOutOpenBodies,
+            int32&                                InOutProbes)
+        -> void
+    {
+        auto Geometry = FCk_GroundNav_GeometryBatch{};
+
+        for (const auto& Body : InBodies)
+        {
+            if (InOutCheckedBodies.Contains(Body._Value))
+            { continue; }
+
+            InOutCheckedBodies.Add(Body._Value);
+
+            // A heightfield is open by construction and legitimately so: it has no interior to describe,
+            // and holding it to the closure contract would report every terrain in the level.
+            if (InBackend.Get_BodyKind(Body) == ECk_GroundNav_BodyKind::Surface)
+            { continue; }
+
+            Geometry.Reset();
+
+            const auto TriangleCount = InBackend.Get_BodyTriangles(Body, Geometry);
+
+            // A body the backend no longer holds yields nothing, and a mesh with no triangles is not an
+            // open one — it is a body with nothing to say about any column at all.
+            if (TriangleCount <= 0)
+            { continue; }
+
+            const auto Closure = Get_MeshClosure(
+                Geometry, 0, TriangleCount, FCk_GroundNav_OpenBody::kMaxRecordedEdges, InOutProbes);
+
+            if (Closure.Get_IsClosed())
+            { continue; }
+
+            auto OpenBody = FCk_GroundNav_OpenBody{};
+
+            OpenBody._Body = Body;
+            OpenBody._Description = InBackend.Get_BodyDescription(Body);
+            OpenBody._Bounds = InBackend.Get_BodyBounds(Body);
+            OpenBody._TriangleCount = Closure._TriangleCount;
+            OpenBody._OpenEdgeCount = Closure._OpenEdgeCount;
+            OpenBody._OpenEdgePoints = Closure._OpenEdgePoints;
+
+            InOutOpenBodies.Emplace(MoveTemp(OpenBody));
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoReport_OpenBodies(
+            const TArray<FCk_GroundNav_OpenBody>& InOpenBodies)
+        -> void
+    {
+        if (InOpenBodies.IsEmpty())
+        { return; }
+
+        auto Bodies = FString{};
+
+        for (const auto& OpenBody : InOpenBodies)
+        {
+            Bodies += FString::Printf(
+                TEXT("\n  - %s: %d open edge(s) of %d triangle(s)"),
+                *OpenBody._Description, OpenBody._OpenEdgeCount, OpenBody._TriangleCount);
+        }
+
+        const auto Plural = InOpenBodies.Num() == 1 ? FString{TEXT("y")} : FString{TEXT("ies")};
+
+        ck::groundnav::Warning(
+            TEXT("GroundNav bake found [{}] static bod{} with OPEN collision. The bake sees faces only ")
+            TEXT("— a solid with no underside, a fence plane, a wall whose bottom was never modelled — ")
+            TEXT("presents nothing in the columns beneath it and BAKES AS OPEN GROUND: agents will path ")
+            TEXT("straight through it. Every Solid body must be a closed mesh (simple/convex collision, ")
+            TEXT("or a closed collision mesh); a heightfield is exempt. The ground under these bodies is ")
+            TEXT("not trustworthy until they are fixed:{}"),
+            InOpenBodies.Num(), Plural, Bodies);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         DoBake_Field(
             const ICk_GroundNav_GeometryBackend& InBackend,
             const FCk_GroundNav_FieldParams&     InParams,
@@ -641,6 +726,11 @@ namespace ck::groundnav
         auto DroppedInputCount = 0;
 
         auto Geometry = FCk_GroundNav_GeometryBatch{};
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
+
+        // Spans the whole bake, not one tile: a body straddling four tiles' halos is fetched and judged
+        // once, so the closure cost is a property of the world rather than of how it was divided.
+        auto CheckedBodies = TSet<uint64>{};
 
         for (auto TileIndex = 0; TileIndex < OutField._Tiles.Num(); ++TileIndex)
         {
@@ -649,8 +739,13 @@ namespace ck::groundnav
 
             // The HALO bounds, not the tile's own. A tile handed only its own geometry reads short at
             // every edge, and the assembled field claims a pinch at every seam.
+            const auto HaloBounds = Get_TileHaloBounds(TileParams);
+
             Geometry.Reset();
-            InBackend.Get_TrianglesInBounds(Get_TileHaloBounds(TileParams), Geometry);
+            InBackend.Get_TrianglesInBounds(HaloBounds, Geometry);
+
+            InBackend.Get_StaticBodiesInBounds(HaloBounds, Bodies);
+            DoCheck_GeometryClosure(InBackend, Bodies, CheckedBodies, OutField._OpenBodies, ProbesSpent);
 
             const auto TileResult = DoBake_Tile(Geometry, TileParams, OutField._Tiles[TileIndex]);
 
@@ -660,6 +755,8 @@ namespace ck::groundnav
 
         DoDerive_SeamPortals(OutField);
         DoLabel_Reachability(OutField);
+
+        DoReport_OpenBodies(OutField._OpenBodies);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
         Result.Set_ProbesSpent(ProbesSpent);

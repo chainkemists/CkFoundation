@@ -108,6 +108,26 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One Solid body whose mesh is not closed, already in world space. The viewer's loudest element:
+     * the ground under such a body is not trustworthy and a developer has to go and fix the asset.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugOpenBody
+    {
+    public:
+        FString _Description;
+
+        FBox _Bounds = FBox{ForceInit};
+
+        int32 _TriangleCount = 0;
+        int32 _OpenEdgeCount = 0;
+
+        // Two per recorded edge; capped at bake time, so Num()/2 may be below _OpenEdgeCount.
+        TArray<FVector> _OpenEdgePoints;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * Everything a viewer needs to draw one bake, and nothing that could outlive it.
      *
      * VALUE-ONLY BY CONSTRUCTION: no world, no actor, no ECS handle, no registry, no span field, no
@@ -147,6 +167,14 @@ namespace ck::groundnav
 
         double _BakeMilliseconds = 0.0;
 
+        // Heap bytes of the published product (a field's tiles and arrays; a region bake's equivalent),
+        // so the summary reports a cost and not just a count.
+        int64 _AllocatedBytes = 0;
+
+        // Open Solid bodies the closure check found. Drawn in EVERY mode and printed at the top of the
+        // summary: this is the one thing a viewer must never let a developer miss.
+        TArray<FCk_GroundNav_DebugOpenBody> _OpenBodies;
+
         TArray<FCk_GroundNav_DebugCell> _Cells;
         TArray<FCk_GroundNav_DebugPlate> _Plates;
         TArray<FCk_GroundNav_DebugPortal> _Portals;
@@ -177,6 +205,8 @@ namespace ck::groundnav
         auto Get_SeamCount() const -> int32 { return _Seams.Num(); }
 
         auto Get_BuiltTileCount() const -> int32;
+
+        auto Get_OpenBodyCount() const -> int32 { return _OpenBodies.Num(); }
 
         /** The tightest crossing in the field, and the first number to read when a body that ought to
          *  fit somewhere cannot get there. Zero when there are no portals at all. */

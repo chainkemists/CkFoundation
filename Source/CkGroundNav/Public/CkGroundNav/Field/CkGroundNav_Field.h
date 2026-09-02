@@ -104,6 +104,38 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * The one per-body diagnostic a bake produces: a Solid body whose mesh is not closed.
+     *
+     * Value-only, like everything on the field. The description and bounds are captured at bake time
+     * so the report can be drawn after the body — or the whole world — is gone. The edge points are
+     * pairs (2 * _RecordedEdgeCount entries) and are CAPPED at kMaxRecordedEdges; _OpenEdgeCount is the
+     * true total regardless.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_OpenBody
+    {
+    public:
+        static constexpr int32 kMaxRecordedEdges = 256;
+
+    public:
+        FCk_GroundNav_BodyRef _Body;
+
+        FString _Description;
+
+        FBox _Bounds = FBox{ForceInit};
+
+        int32 _TriangleCount = 0;
+        int32 _OpenEdgeCount = 0;
+
+        // World-space endpoints, two per recorded edge.
+        TArray<FVector> _OpenEdgePoints;
+
+    public:
+        auto Get_RecordedEdgeCount() const -> int32 { return _OpenEdgePoints.Num() / 2; }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * A whole ground field: its tiles and the settings they were baked under.
      *
      * TREAT AS IMMUTABLE ONCE PUBLISHED. Readers hold a shared reference to one of these and are
@@ -150,8 +182,37 @@ namespace ck::groundnav
         // sliced build's world-revision check exists to prevent, seen from the other end.
         int32 _UnmatchedSeamStubCount = 0;
 
+        // Every Solid body whose mesh the closure check found open, once per body however many tiles it
+        // touched. A DIAGNOSTIC the field carries so the viewer can show it: the bake ran and published
+        // regardless, because one bad asset must not take the whole field down — but the ground under
+        // such a body is NOT trustworthy, and this list is how anybody finds out.
+        TArray<FCk_GroundNav_OpenBody> _OpenBodies;
+
     public:
         auto Get_TileCount() const -> int32 { return _Tiles.Num(); }
+
+        auto Get_OpenBodyCount() const -> int32 { return _OpenBodies.Num(); }
+
+        /** Bytes the whole field holds on the heap: every tile plus the field's own arrays. Exact. */
+        auto Get_AllocatedSize() const -> SIZE_T
+        {
+            auto Bytes = SIZE_T{0};
+
+            for (const auto& Tile : _Tiles)
+            { Bytes += Tile.Get_AllocatedSize(); }
+
+            Bytes += _Tiles.GetAllocatedSize();
+            Bytes += _SeamPortals.GetAllocatedSize();
+            Bytes += _TilePlateOffsets.GetAllocatedSize();
+            Bytes += _ReachabilityLabels.GetAllocatedSize();
+            Bytes += _ComponentIsOpen.GetAllocatedSize();
+            Bytes += _OpenBodies.GetAllocatedSize();
+
+            for (const auto& OpenBody : _OpenBodies)
+            { Bytes += OpenBody._OpenEdgePoints.GetAllocatedSize() + OpenBody._Description.GetAllocatedSize(); }
+
+            return Bytes;
+        }
 
         auto Get_SeamPortalCount() const -> int32 { return _SeamPortals.Num(); }
 
@@ -204,6 +265,7 @@ namespace ck::groundnav
     };
 
     using FCk_GroundNav_FieldPtr = TSharedPtr<const FCk_GroundNav_Field>;
+
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -301,6 +363,29 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     DoLabel_Reachability(
         FCk_GroundNav_Field& InOutField) -> void;
+
+    /**
+     * Check every Solid body in InBodies that InOutCheckedBodies has not seen yet, fetching each body's
+     * WHOLE mesh from the backend and appending the open ones to InOutOpenBodies. Surface bodies are
+     * exempt. Bills one probe per triangle read. Called once per tile with that tile's halo bodies, so
+     * a body straddling many tiles is fetched and checked exactly once per build. Takes the list rather
+     * than the field so the single-region debug bake, which has no field, runs the same check.
+     */
+    CKGROUNDNAV_API auto
+    DoCheck_GeometryClosure(
+        const ICk_GroundNav_GeometryBackend&  InBackend,
+        const TArray<FCk_GroundNav_BodyRef>&  InBodies,
+        TSet<uint64>&                         InOutCheckedBodies,
+        TArray<FCk_GroundNav_OpenBody>&       InOutOpenBodies,
+        int32&                                InOutProbes) -> void;
+
+    /**
+     * ONE warning for the whole build naming every open body, or nothing at all. The warning is the
+     * signal an autotest fails on; the list is what the viewer draws.
+     */
+    CKGROUNDNAV_API auto
+    DoReport_OpenBodies(
+        const TArray<FCk_GroundNav_OpenBody>& InOpenBodies) -> void;
 
     CKGROUNDNAV_API auto
     DoBake_Field(
