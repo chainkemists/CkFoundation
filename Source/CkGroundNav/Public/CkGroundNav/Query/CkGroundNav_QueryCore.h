@@ -63,6 +63,21 @@ namespace ck::groundnav
         const FCk_GroundNav_Field& InField,
         const FVector2D&           InWorldXY) -> FCk_GroundNav_CellAddress;
 
+    /**
+     * Every cell whose CLOSED square holds the XY, the floor cell first.
+     *
+     * A point exactly on a cell line belongs to the cells on both sides of it. A projection answers
+     * with the nearest point of a closed square, which can be its edge; a lookup that floored that
+     * point into the neighbour would hand a walk a start it was never given: the wall top above the
+     * floor it was projected onto, or the tight cell beside the one that admitted the body. Exact
+     * equality, deliberately: the edge coordinate and the cell line come from the same arithmetic.
+     */
+    CKGROUNDNAV_API auto
+    Get_CellAddressesAt(
+        const FCk_GroundNav_Field&                              InField,
+        const FVector2D&                                        InWorldXY,
+        TArray<FCk_GroundNav_CellAddress, TInlineAllocator<4>>& OutCells) -> void;
+
     /** World XY of a field-wide cell's min corner. */
     CKGROUNDNAV_API auto
     Get_CellMinXY(

@@ -128,6 +128,41 @@ namespace ck::groundnav
     }
 
     auto
+        Get_CellAddressesAt(
+            const FCk_GroundNav_Field&                              InField,
+            const FVector2D&                                        InWorldXY,
+            TArray<FCk_GroundNav_CellAddress, TInlineAllocator<4>>& OutCells)
+        -> void
+    {
+        OutCells.Reset();
+
+        const auto FloorCell = Get_FieldCellAt(InField._Params, InWorldXY);
+        const auto Min = Get_CellMinXY(InField._Params, FloorCell);
+
+        const auto OnLineX = InWorldXY.X == Min.X;
+        const auto OnLineY = InWorldXY.Y == Min.Y;
+
+        const auto Do_Add = [&](const FIntPoint& InCell) -> void
+        {
+            const auto Address = Get_CellAddress(InField, InCell);
+
+            if (Address.Get_IsValid())
+            { OutCells.Add(Address); }
+        };
+
+        Do_Add(FloorCell);
+
+        if (OnLineX)
+        { Do_Add(FIntPoint{FloorCell.X - 1, FloorCell.Y}); }
+
+        if (OnLineY)
+        { Do_Add(FIntPoint{FloorCell.X, FloorCell.Y - 1}); }
+
+        if (OnLineX && OnLineY)
+        { Do_Add(FIntPoint{FloorCell.X - 1, FloorCell.Y - 1}); }
+    }
+
+    auto
         Get_CellMinXY(
             const FCk_GroundNav_FieldParams& InParams,
             const FIntPoint&                 InFieldCell)
