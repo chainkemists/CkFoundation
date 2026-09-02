@@ -88,6 +88,23 @@ namespace ck::groundnav
 
         ECk_GroundNav_BuildStatus _Status = ECk_GroundNav_BuildStatus::Unbuilt;
 
+        // The backend's world revision as it stood when the FIRST slice ran, and the whole build's claim
+        // to be a statement about ONE world. Every later slice re-reads it and the build FAILS CLOSED on a
+        // mismatch: tiles baked either side of a world change disagree at their shared seam, and the seam
+        // portals derived from them are the one structure with no local evidence that they are wrong — a
+        // vanished portal is a permanently unwalkable doorway that every query afterwards answers
+        // confidently.
+        //
+        // FALSE POSITIVES ARE ACCEPTED. The token is world-wide, so a door opening on the far side of the
+        // level aborts a build it could not have affected. A rebuild costs one more pass over the tiles;
+        // the alternative costs a portal nobody can find again.
+        uint64 _GeometryRevision = 0;
+
+        // Whether _GeometryRevision has been captured yet. Explicit rather than inferred from
+        // _NextTileIndex == 0, because Request_ReleaseCompletedField resets that index to spend the build
+        // — a capture condition riding on it would silently re-arm on a spent state.
+        bool _HasGeometryRevision = false;
+
     private:
         // The export macro has to be repeated here: these are REdeclarations of the exported functions
         // above, and a friend declaration that drops it disagrees with them about dll linkage.

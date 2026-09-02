@@ -79,6 +79,18 @@ namespace ck::groundnav
         Get_TrianglesInBounds(
             const FBox& InBounds,
             FCk_GroundNav_GeometryBatch& OutBatch) const -> int32 = 0;
+
+        /**
+         * A token that changes whenever any static geometry the backend could return changes. It MAY
+         * change for geometry outside any bounds ever queried — it is a statement about the backend's
+         * whole world, not about a region.
+         *
+         * A sliced build compares it across slices and FAILS CLOSED on a mismatch, because tiles baked
+         * against two different worlds agree on nothing at their shared seam: the portals derived from
+         * their stubs are the one structure with no local evidence that it is wrong.
+         */
+        virtual auto
+        Get_WorldRevision() const -> uint64 = 0;
     };
 }
 
