@@ -113,6 +113,67 @@ auto
 
 auto
     UCk_Utils_GroundNavVolume_UE::
+    Get_TileCount(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int32
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return 0; }
+
+    return Field->Get_TileCount();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_BuiltTileCount(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int32
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return 0; }
+
+    return Field->Get_BuiltTileCount();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_SeamPortalCount(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int32
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return 0; }
+
+    return Field->Get_SeamPortalCount();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_WalkableCellCount(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int32
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return 0; }
+
+    auto Count = 0;
+
+    for (const auto& Tile : Field->_Tiles)
+    { Count += Tile.Get_WalkableCellCount(); }
+
+    return Count;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
     Get_Field(
         const FCk_Handle_GroundNavVolume& InVolume)
     -> ck::groundnav::FCk_GroundNav_FieldPtr

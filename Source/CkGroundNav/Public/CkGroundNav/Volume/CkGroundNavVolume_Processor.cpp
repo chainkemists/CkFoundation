@@ -84,17 +84,14 @@ namespace ck
 
         const auto ParamsAreBakeable = Get_ParamsAreBakeable(InParams);
 
+        // The volume stays inert rather than arming a build that would bake nonsense. A later
+        // Request_Build on it fails loudly through the same validation.
         CK_ENSURE_IF_NOT(ParamsAreBakeable,
             TEXT("GroundNav Volume [{}] cannot be baked. Bounds [{}], cell size [{}]uu, tile size [{}]uu, "
                  "clearance ceiling [{}]uu, probe budget [{}]"),
             InVolumeEntity, InParams.Get_VolumeBounds(), InParams.Get_Config().Get_CellSizeUu(),
             InParams.Get_Config().Get_TileSizeUu(), InParams.Get_MaxClearanceUu(),
             InParams.Get_ProbeBudgetPerTick())
-        {}
-
-        // The volume stays inert rather than arming a build that would bake nonsense. A later
-        // Request_Build on it fails loudly through the same validation.
-        if (NOT ParamsAreBakeable)
         { return; }
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
