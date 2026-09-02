@@ -82,11 +82,27 @@ namespace ck::groundnav
             return OutBatch.Get_TriangleCount() - TrianglesBefore;
         }
 
+        auto
+        Get_WorldRevision() const -> uint64 override
+        {
+            return _WorldRevision;
+        }
+
     public:
         auto Get_Boxes() const -> const TArray<FBox>& { return _Boxes; }
 
+        /**
+         * Fake a world mutation WITHOUT touching the box list, so a test can pin what a build does about a
+         * changed world separately from what it would bake out of the new one.
+         */
+        auto Request_BumpWorldRevision() -> void { ++_WorldRevision; }
+
     private:
         TArray<FBox> _Boxes;
+
+        // Starts at 1, not 0: a stub that read as 0 would be indistinguishable from a backend that cannot
+        // answer at all, and the fail-closed comparison this feeds must never rest on that ambiguity.
+        uint64 _WorldRevision = 1;
     };
 }
 

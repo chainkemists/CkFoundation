@@ -87,6 +87,14 @@ namespace ck::groundnav
 
         return TriangleCount;
     }
+
+    auto
+        FCk_GroundNav_GeometryBackend_Jolt::
+        Get_WorldRevision() const
+        -> uint64
+    {
+        return _Session.Get_StaticWorldRevision();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
