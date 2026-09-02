@@ -9,6 +9,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -905,6 +906,185 @@ namespace ck_groundnav_debugconsole
             InPoint.X, InPoint.Y, InPoint.Z, Summary);
     }
 
+    auto Get_FivePointArgs(const TArray<FString>& InArgs, FVector& OutStart, FVector2D& OutTargetXY) -> bool
+    {
+        if (InArgs.Num() != 5)
+        { return false; }
+
+        OutStart = FVector{
+            FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+        OutTargetXY = FVector2D{FCString::Atod(*InArgs[3]), FCString::Atod(*InArgs[4])};
+
+        return true;
+    }
+
+    auto Get_HasDebugField(const FString& InCommandName) -> bool
+    {
+        if (ck::IsValid(LastDebugField))
+        { return true; }
+
+        ck::groundnav::Warning(TEXT("{} needs a FIELD bake first: run ")
+            TEXT("ck.GroundNav.BakeFieldAt <X> <Y> <Z> or press Y in the tuning range"), InCommandName);
+
+        return false;
+    }
+
+    auto DoWalkAndDraw(UWorld* InWorld, const FVector& InStart, const FVector2D& InTargetXY) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.WalkAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        // The target keeps the start's height. A walk resolves its own surface from the start and
+        // reads the target in XY alone, so a third number there would be a value nothing consumes.
+        const auto Target = FVector{InTargetXY.X, InTargetXY.Y, InStart.Z};
+
+        auto WalkQuery = ck::groundnav::FCk_GroundNav_SurfaceWalkQuery{};
+
+        WalkQuery._Start = InStart;
+        WalkQuery._Target = Target;
+        WalkQuery._StartVerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        WalkQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        auto Diagnostics = ck::groundnav::FCk_GroundNav_SurfaceWalkDiagnostics{};
+
+        const auto Walk = ck::groundnav::Get_MoveAlongSurface(Field, WalkQuery, Diagnostics);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InStart, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DrawDebugSphere(InWorld, Target, 8.0f, SphereSegments, FColor{130, 130, 130}, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        if (Walk.Get_IsSuccess())
+        {
+            DrawDebugSphere(InWorld, Walk._Location, 10.0f, SphereSegments, FColor::Green, Persistent,
+                LifetimeSeconds, DepthPriority);
+
+            DrawDebugLine(InWorld, InStart, Walk._Location, FColor::Green, Persistent, LifetimeSeconds,
+                DepthPriority, 2.0f);
+
+            // The ground the walk could NOT cover, drawn thin so it reads as what was asked for rather
+            // than as part of the answer: a walk that stops short is a Success, so colour cannot say it.
+            if (NOT Walk._ReachedTarget)
+            {
+                DrawDebugLine(InWorld, Walk._Location, Target, FColor{130, 130, 130}, Persistent,
+                    LifetimeSeconds, DepthPriority, 1.0f);
+            }
+        }
+        else
+        {
+            DrawDebugSphere(InWorld, InStart, 12.0f, SphereSegments, FColor::Red, Persistent,
+                LifetimeSeconds, DepthPriority);
+        }
+
+        const auto Summary = FString::Printf(
+            TEXT("walk %s | reached target %s | %d cells stepped, %d slides, %d portal + %d seam crossings\n")
+            TEXT("early-out %s | bound hit %s | %d cells read"),
+            *ck::Format_UE(TEXT("{}"), Walk._Status),
+            Walk._ReachedTarget ? TEXT("yes") : TEXT("no"),
+            Diagnostics._CellsStepped,
+            Diagnostics._SlideCount,
+            Diagnostics._PortalCrossings,
+            Diagnostics._SeamCrossings,
+            Diagnostics._TookPlateEarlyOut ? TEXT("yes") : TEXT("no"),
+            Diagnostics._HitIterationBound ? TEXT("yes") : TEXT("no"),
+            Walk._Cost._CellsRead);
+
+        DrawDebugString(InWorld, InStart + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Walk.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) toward ({}, {}) {}"),
+            InStart.X, InStart.Y, InStart.Z, Target.X, Target.Y, Summary);
+    }
+
+    auto DoRaycastAndDraw(UWorld* InWorld, const FVector& InStart, const FVector2D& InTargetXY) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.RayAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        const auto End = FVector{InTargetXY.X, InTargetXY.Y, InStart.Z};
+
+        auto RaycastQuery = ck::groundnav::FCk_GroundNav_RaycastQuery{};
+
+        RaycastQuery._Start = InStart;
+        RaycastQuery._End = End;
+        RaycastQuery._StartVerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        RaycastQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+        RaycastQuery._MaxCost = 0.0f;
+
+        const auto Raycast = ck::groundnav::Get_SurfaceRaycast(Field, RaycastQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+        constexpr auto ArrowSize = 12.0f;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+        const auto WasBlocked = Raycast._Status == ECk_NavSurface_QueryStatus::Blocked;
+
+        if (Raycast.Get_IsClear())
+        {
+            DrawDebugLine(InWorld, InStart, End, FColor::Green, Persistent, LifetimeSeconds,
+                DepthPriority, 2.0f);
+
+            DrawDebugSphere(InWorld, End, 8.0f, SphereSegments, FColor::Green, Persistent,
+                LifetimeSeconds, DepthPriority);
+        }
+        else if (WasBlocked)
+        {
+            DrawDebugLine(InWorld, InStart, Raycast._HitLocation, FColor::Red, Persistent,
+                LifetimeSeconds, DepthPriority, 2.0f);
+
+            DrawDebugSphere(InWorld, Raycast._HitLocation, 10.0f, SphereSegments, FColor::Red,
+                Persistent, LifetimeSeconds, DepthPriority);
+
+            // A cost stop has no edge to face away from, so the arrow is what separates the two
+            // reasons a ray reports Blocked without reading the flag off the log line.
+            if (NOT Raycast._HitNormal.IsNearlyZero())
+            {
+                DrawDebugDirectionalArrow(InWorld, Raycast._HitLocation,
+                    Raycast._HitLocation + (Raycast._HitNormal * 50.0), ArrowSize, FColor::Yellow,
+                    Persistent, LifetimeSeconds, DepthPriority, 2.0f);
+            }
+        }
+        else
+        {
+            DrawDebugSphere(InWorld, InStart, 12.0f, SphereSegments, FColor::Red, Persistent,
+                LifetimeSeconds, DepthPriority);
+        }
+
+        const auto HitText = WasBlocked
+            ? FString::Printf(TEXT("(%.0f, %.0f, %.0f)"),
+                Raycast._HitLocation.X, Raycast._HitLocation.Y, Raycast._HitLocation.Z)
+            : FString{TEXT("none")};
+
+        const auto Summary = FString::Printf(
+            TEXT("ray %s | hit %s | cost %.2f | stopped on cost %s"),
+            *ck::Format_UE(TEXT("{}"), Raycast._Status),
+            *HitText,
+            Raycast._AccumulatedCost,
+            Raycast._StoppedOnCost ? TEXT("yes") : TEXT("no"));
+
+        DrawDebugString(InWorld, InStart + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Raycast.Get_IsClear() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) to ({}, {}) {}"),
+            InStart.X, InStart.Y, InStart.Z, End.X, End.Y, Summary);
+    }
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
         TEXT("ck.GroundNav.Bake"),
         TEXT("Bake the ground field around the player from live physics geometry and draw it. ")
@@ -1031,6 +1211,63 @@ namespace ck_groundnav_debugconsole
             { return; }
 
             DoProbeAndDraw(InWorld, Point);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_WalkAt(
+        TEXT("ck.GroundNav.WalkAt"),
+        TEXT("Walk a body along the last field bake and draw where it ended: ")
+        TEXT("ck.GroundNav.WalkAt <X> <Y> <Z> <TX> <TY>. The target takes the start's height, ")
+        TEXT("because a walk reads it in XY only. Needs ck.GroundNav.BakeFieldAt to have run - a ")
+        TEXT("region bake produces no field to query. The body radius comes from ")
+        TEXT("ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.WalkAt ran without a World"))
+            { return; }
+
+            auto Start = FVector::ZeroVector;
+            auto TargetXY = FVector2D::ZeroVector;
+
+            if (NOT Get_FivePointArgs(InArgs, Start, TargetXY))
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.WalkAt needs five numbers: ")
+                    TEXT("ck.GroundNav.WalkAt <X> <Y> <Z> <TX> <TY>"));
+                return;
+            }
+
+            DoWalkAndDraw(InWorld, Start, TargetXY);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_RayAt(
+        TEXT("ck.GroundNav.RayAt"),
+        TEXT("Test whether a body can walk a straight segment on the last field bake and draw the ")
+        TEXT("answer: ck.GroundNav.RayAt <X> <Y> <Z> <TX> <TY>. The end takes the start's height. ")
+        TEXT("Unlike ck.GroundNav.WalkAt the ray does not slide - the first refused step is the hit, ")
+        TEXT("drawn with the crossed edge's normal facing back along the ray."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.RayAt ran without a World"))
+            { return; }
+
+            auto Start = FVector::ZeroVector;
+            auto TargetXY = FVector2D::ZeroVector;
+
+            if (NOT Get_FivePointArgs(InArgs, Start, TargetXY))
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.RayAt needs five numbers: ")
+                    TEXT("ck.GroundNav.RayAt <X> <Y> <Z> <TX> <TY>"));
+                return;
+            }
+
+            DoRaycastAndDraw(InWorld, Start, TargetXY);
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
