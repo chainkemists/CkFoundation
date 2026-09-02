@@ -61,7 +61,8 @@ namespace ck::groundnav
         DoFind_ConnectedComponents(
             const FCk_GroundNav_SpanField&       InSpans,
             const FCk_GroundNav_ConnectionField& InConnections,
-            TArray<FCk_GroundNav_Component>&     OutComponents)
+            TArray<FCk_GroundNav_Component>&     OutComponents,
+            int32&                               InOutProbes)
         -> int32
     {
         using namespace layers_private;
@@ -93,6 +94,8 @@ namespace ck::groundnav
 
                 for (auto SeedIndex = 0; SeedIndex < SeedColumn.Num(); ++SeedIndex)
                 {
+                    ++InOutProbes;
+
                     if (NOT SeedColumn[SeedIndex]._IsWalkable)
                     { continue; }
 
@@ -132,6 +135,8 @@ namespace ck::groundnav
                                 Current._X + Offset.X,
                                 Current._Y + Offset.Y,
                                 Connections._Neighbours[Direction]};
+
+                            ++InOutProbes;
 
                             const auto NeighbourFlat = Get_FlatSpanIndex(InSpans, ColumnOffsets, Neighbour);
 
@@ -194,8 +199,10 @@ namespace ck::groundnav
                 FCk_GroundNav_LayerField::kNoLayer, InSpans._Columns[ColumnIndex].Num());
         }
 
+        auto ProbesSpent = 0;
+
         auto Components = TArray<FCk_GroundNav_Component>{};
-        DoFind_ConnectedComponents(InSpans, InConnections, Components);
+        DoFind_ConnectedComponents(InSpans, InConnections, Components, ProbesSpent);
 
         auto LayerFootprints = TArray<TBitArray<>>{};
 
@@ -221,6 +228,9 @@ namespace ck::groundnav
 
                 for (auto LayerIndex = 0; LayerIndex < LayerFootprints.Num(); ++LayerIndex)
                 {
+                    // The test reads the whole layer footprint, so it costs one probe per column.
+                    ProbesSpent += ColumnCount;
+
                     auto Intersection = TBitArray<>{LayerFootprints[LayerIndex]};
                     Intersection.CombineWithBitwiseAND(Component._Footprint, EBitwiseOperatorFlags::MaintainSize);
 
@@ -249,6 +259,8 @@ namespace ck::groundnav
 
                 for (auto LayerIndex = 0; LayerIndex < LayerFootprints.Num(); ++LayerIndex)
                 {
+                    ++ProbesSpent;
+
                     if (LayerFootprints[LayerIndex][ColumnIndex])
                     { continue; }
 
@@ -266,7 +278,10 @@ namespace ck::groundnav
         OutLayers._LayerCount = LayerFootprints.Num();
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
-        Result.Set_ProbesSpent(OutLayers.Get_AssignedSpanCount());
+
+        // A probe here is one span read in the flood fill — a seed candidacy test or a neighbour visit
+        // — or one column of a layer footprint read while placing a component.
+        Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;
     }

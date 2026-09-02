@@ -257,6 +257,8 @@ namespace ck::groundnav
 
         for (auto Index = 0; Index < Crossings.Num(); ++Index)
         {
+            ++ProbesSpent;
+
             const auto& Crossing = Crossings[Index];
 
             const auto IsContinuation = Index > 0 && Get_IsSameRun(Crossings[Index - 1], Crossing);
@@ -299,6 +301,9 @@ namespace ck::groundnav
         }
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
+
+        // A probe here is one span read: every span of every column the crossing enumeration walks,
+        // plus every crossing read back while runs are assembled into portals.
         Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;

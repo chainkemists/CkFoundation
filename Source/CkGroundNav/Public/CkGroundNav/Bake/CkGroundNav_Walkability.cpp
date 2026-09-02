@@ -36,10 +36,13 @@ namespace ck::groundnav
             const TArray<FCk_GroundNav_Span>& InColumn,
             float                             InTopZ,
             float                             InStepHeight,
-            float                             InStandingHeight) -> bool
+            float                             InStandingHeight,
+            int32&                            InOutProbes) -> bool
         {
             for (const auto& Span : InColumn)
             {
+                ++InOutProbes;
+
                 if (Span._MaxZ >= InTopZ - InStepHeight && Span._MinZ <= InTopZ + InStandingHeight)
                 { return true; }
             }
@@ -58,13 +61,16 @@ namespace ck::groundnav
             const FCk_GroundNav_Span&         InSpan,
             float                             InStepHeight,
             double                            InMinSlopeChangeDot,
-            float                             InRoughPerchToleranceUu) -> int32
+            float                             InRoughPerchToleranceUu,
+            int32&                            InOutProbes) -> int32
         {
             auto BestIndex = FCk_GroundNav_SpanConnections::kNoConnection;
             auto BestDelta = TNumericLimits<float>::Max();
 
             for (auto Index = 0; Index < InColumn.Num(); ++Index)
             {
+                ++InOutProbes;
+
                 const auto& Candidate = InColumn[Index];
 
                 if (NOT Candidate._IsWalkable)
@@ -72,6 +78,9 @@ namespace ck::groundnav
 
                 const auto Delta = FMath::Abs(Candidate._MaxZ - InSpan._MaxZ);
 
+                // The tie is REJECTED, not taken: a candidate matching BestDelta exactly leaves the
+                // incumbent standing. Spans are ordered bottom-up, so the incumbent is the lower one
+                // — on an exact tie you step DOWN.
                 if (Delta > InStepHeight || Delta >= BestDelta)
                 { continue; }
 
@@ -160,7 +169,8 @@ namespace ck::groundnav
     auto
         DoFilter_LowClearance(
             const FCk_GroundNav_AgentProfile& InProfile,
-            FCk_GroundNav_SpanField&          InOutSpans)
+            FCk_GroundNav_SpanField&          InOutSpans,
+            int32&                            InOutProbes)
         -> int32
     {
         const auto StandingHeight = InProfile.Get_StandingHeightUu();
@@ -170,6 +180,8 @@ namespace ck::groundnav
         {
             for (auto Index = 0; Index < Column.Num(); ++Index)
             {
+                ++InOutProbes;
+
                 auto& Span = Column[Index];
 
                 if (NOT Span._IsWalkable)
@@ -195,12 +207,20 @@ namespace ck::groundnav
     auto
         DoFilter_Ledges(
             const FCk_GroundNav_AgentProfile& InProfile,
-            FCk_GroundNav_SpanField&          InOutSpans)
+            FCk_GroundNav_SpanField&          InOutSpans,
+            int32&                            InOutProbes)
         -> int32
     {
         using namespace walkability_private;
 
         const auto RequiredDroppingSides = Get_RequiredDroppingSides(InProfile);
+
+        // A span has kDirectionCount sides, so the disabled threshold is unreachable and the scan
+        // below could only ever decide against demoting. Returning here is that same answer for no
+        // probes, instead of a full pass over every neighbouring column.
+        if (RequiredDroppingSides == kLedgeFilterDisabled)
+        { return 0; }
+
         const auto StepHeight = InProfile.Get_StepHeightUu();
         const auto StandingHeight = InProfile.Get_StandingHeightUu();
 
@@ -234,7 +254,7 @@ namespace ck::groundnav
 
                         if (Get_HasSideSupport(
                             InOutSpans.Get_Column(NeighbourX, NeighbourY), Span._MaxZ, StepHeight,
-                            StandingHeight))
+                            StandingHeight, InOutProbes))
                         { continue; }
 
                         ++DroppingSides;
@@ -262,7 +282,8 @@ namespace ck::groundnav
         DoBuild_Connections(
             const FCk_GroundNav_AgentProfile& InProfile,
             const FCk_GroundNav_SpanField&    InSpans,
-            FCk_GroundNav_ConnectionField&    OutConnections)
+            FCk_GroundNav_ConnectionField&    OutConnections,
+            int32&                            InOutProbes)
         -> int32
     {
         using namespace walkability_private;
@@ -307,7 +328,7 @@ namespace ck::groundnav
 
                         ConnectionColumn[Index]._Neighbours[Direction] = Get_ConnectableSpanIndex(
                             InSpans.Get_Column(NeighbourX, NeighbourY), Span, StepHeight,
-                            MinSlopeChangeDot, RoughPerch);
+                            MinSlopeChangeDot, RoughPerch, InOutProbes);
                     }
                 }
             }
@@ -332,6 +353,8 @@ namespace ck::groundnav
 
                         if (Neighbour == FCk_GroundNav_SpanConnections::kNoConnection)
                         { continue; }
+
+                        ++InOutProbes;
 
                         const auto Offset = Get_DirectionOffset(Direction);
                         const auto& FarColumn = OutConnections.Get_Column(X + Offset.X, Y + Offset.Y);
@@ -369,13 +392,18 @@ namespace ck::groundnav
             return Result;
         }
 
-        const auto DemotedByClearance = DoFilter_LowClearance(InProfile, InOutSpans);
-        const auto DemotedByLedge = DoFilter_Ledges(InProfile, InOutSpans);
+        auto ProbesSpent = 0;
 
-        DoBuild_Connections(InProfile, InOutSpans, OutConnections);
+        const auto DemotedByClearance = DoFilter_LowClearance(InProfile, InOutSpans, ProbesSpent);
+        const auto DemotedByLedge = DoFilter_Ledges(InProfile, InOutSpans, ProbesSpent);
+
+        DoBuild_Connections(InProfile, InOutSpans, OutConnections, ProbesSpent);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
-        Result.Set_ProbesSpent(InOutSpans.Get_TotalSpanCount());
+
+        // A probe here is one span read: a headroom neighbour, a side-support candidate, a connection
+        // candidate, or a mirror read of the far column in the mutual-agreement pass.
+        Result.Set_ProbesSpent(ProbesSpent);
         Result.Set_DroppedInputCount(DemotedByClearance + DemotedByLedge);
 
         return Result;
