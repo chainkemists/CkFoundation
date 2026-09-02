@@ -32,7 +32,14 @@ enum class ECk_GroundNav_BakeStatus : uint8
     InvalidInput,
 
     // The stage exceeded a hard structural limit (column count over the tile budget).
-    LimitExceeded
+    LimitExceeded,
+
+    // The geometry backend's world changed while a sliced build was in flight. Tiles baked on
+    // different frames against different worlds would disagree about their shared seam columns and
+    // the seam portal between them would silently vanish - the field would then read BLOCKED where
+    // the truth is "not built against this world". The build fails closed instead; nothing is
+    // published, and the caller rebuilds. Appended last so the earlier values keep their indices.
+    StaleGeometry
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_BakeStatus);
@@ -43,6 +50,14 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_BakeStatus);
  * The outcome of one bake stage: a status plus the counters the tests assert on. Probe count is the
  * PRIMARY budget and the primary assertion — it is deterministic for a given fixture and config,
  * where wall time is not.
+ *
+ * ONE PROBE IS ONE INNERMOST CELL OR SPAN READ. Every stage bills its dominant loop in that unit and
+ * nothing else: a triangle-to-cell clip, a neighbour-span visit, a chamfer relax read, a plate
+ * surface scan, a portal candidate read. The unit is the same in every stage so the per-tile sum is
+ * a cost a budget can be denominated in, and every loop that is billed iterates in index order over
+ * value arrays, so the count is exactly reproducible. A stage that bills something cheaper than
+ * its dominant loop (a triangle count, a plate count) under-reports by a factor that grows with
+ * column depth or layer count, which is precisely the property a budget cannot tolerate.
  */
 USTRUCT(BlueprintType)
 struct CKGROUNDNAV_API FCk_GroundNav_BakeStageResult
@@ -55,7 +70,8 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     ECk_GroundNav_BakeStatus _Status = ECk_GroundNav_BakeStatus::Completed;
 
-    // Probes actually spent. The budgeting contract is asserted against this, never against time.
+    // Probes actually spent, in the unit defined above. The budgeting contract is asserted against
+    // this, never against time.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     int32 _ProbesSpent = 0;
 
