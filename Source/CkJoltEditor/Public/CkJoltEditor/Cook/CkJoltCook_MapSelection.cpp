@@ -102,6 +102,8 @@ namespace ck::jolt::cook
         }
 
         auto SelectedMaps = TArray<FString>{};
+        auto NumAuthoredMaps = 0;
+        auto NumAlwaysCookMaps = 0;
 
         for (const auto& AuthoredMap : InInput._AuthoredMapsToCook)
         {
@@ -117,28 +119,39 @@ namespace ck::jolt::cook
             if (NOT Get_ExcludedPath(AuthoredMap, InInput).IsEmpty())
             { continue; }
 
+            const auto NumBeforeAdd = SelectedMaps.Num();
             SelectedMaps.AddUnique(AuthoredMap);
+            if (SelectedMaps.Num() > NumBeforeAdd)
+            { ++NumAuthoredMaps; }
         }
 
-        auto SortedCandidates = InInput._DiscoveredAlwaysCookMapCandidates;
-        SortedCandidates.Sort();
-
-        for (const auto& CandidateMap : SortedCandidates)
+        if (InInput._bIncludeAlwaysCookDirectories)
         {
-            constexpr auto IncludeReadOnlyRoots = true;
-            if (NOT FPackageName::IsValidLongPackageName(CandidateMap, IncludeReadOnlyRoots))
-            { continue; }
+            auto SortedCandidates = InInput._DiscoveredAlwaysCookMapCandidates;
+            SortedCandidates.Sort();
 
-            if (NOT IsUnderAlwaysCookDirectory(CandidateMap, InInput))
-            { continue; }
+            for (const auto& CandidateMap : SortedCandidates)
+            {
+                constexpr auto IncludeReadOnlyRoots = true;
+                if (NOT FPackageName::IsValidLongPackageName(CandidateMap, IncludeReadOnlyRoots))
+                { continue; }
 
-            if (NOT Get_ExcludedPath(CandidateMap, InInput).IsEmpty())
-            { continue; }
+                if (NOT IsUnderAlwaysCookDirectory(CandidateMap, InInput))
+                { continue; }
 
-            SelectedMaps.AddUnique(CandidateMap);
+                if (NOT Get_ExcludedPath(CandidateMap, InInput).IsEmpty())
+                { continue; }
+
+                const auto NumBeforeAdd = SelectedMaps.Num();
+                SelectedMaps.AddUnique(CandidateMap);
+                if (SelectedMaps.Num() > NumBeforeAdd)
+                { ++NumAlwaysCookMaps; }
+            }
         }
 
         Result._MapPackageNames = MoveTemp(SelectedMaps);
+        Result._NumAuthoredMaps = NumAuthoredMaps;
+        Result._NumAlwaysCookMaps = NumAlwaysCookMaps;
         Result._Success = true;
         return Result;
     }

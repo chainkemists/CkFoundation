@@ -23,12 +23,16 @@ namespace ck::jolt::cook
         bool _bMap = false;
         bool _bAllMaps = false;
         bool _bCookAll = false;
+        /// False selects only authored MapsToCook entries; true also includes discovered AlwaysCook worlds.
+        bool _bIncludeAlwaysCookDirectories = true;
     };
 
     struct CKJOLTEDITOR_API FCk_Jolt_PackagingMapSelectionResult
     {
         TArray<FString> _MapPackageNames;
         FString _Failure;
+        int32 _NumAuthoredMaps = 0;
+        int32 _NumAlwaysCookMaps = 0;
         bool _Success = false;
     };
 
@@ -39,8 +43,9 @@ namespace ck::jolt::cook
             const FString& InPackageName,
             const TArray<FString>& InExcludedPackagePaths) -> bool;
 
-    /// Resolves authored MapsToCook first, then lexically ordered UWorld candidates found under the configured
-    /// DirectoriesToAlwaysCook. Exclusions skip either source; rejected command-line/settings input yields no plan.
+    /// Resolves authored MapsToCook first, then optionally lexically ordered UWorld candidates found under the
+    /// configured DirectoriesToAlwaysCook. Exclusions skip either source; rejected command-line/settings input
+    /// yields no plan.
     CKJOLTEDITOR_API auto
         Select_PackagingMaps(
             const FCk_Jolt_PackagingMapSelectionInput& InInput)

@@ -62,6 +62,43 @@ namespace ck_jolt_cook_mesh_shape_cooker
 
         return OutBlob.Num() > 0;
     }
+
+    static auto DoEnsure_CurrentShapeBlobIsSafe(
+        const UCk_Jolt_CookedMeshShape_UE& InShapeAsset,
+        const FString& InMeshPackagePath) -> bool
+    {
+        const auto RestoredShape = mesh_shape_utils::TryRestore_ShapeBlob(
+            InShapeAsset.Get_ShapeBlob(), InMeshPackagePath);
+        const auto ShapeRestored = ck::IsValid(RestoredShape);
+
+        CK_ENSURE_IF_NOT(ShapeRestored,
+            TEXT("JoltMeshCook: current cooked shape blob for mesh [{}] could not be restored for the freshness audit"),
+            InMeshPackagePath)
+        { }
+
+        if (NOT ShapeRestored)
+        { return false; }
+
+        // Convex and other non-tri-mesh shapes deliberately have no winding verdict.
+        if (RestoredShape->GetSubType() != JPH::EShapeSubType::Mesh)
+        { return true; }
+
+        constexpr auto InsideOutWindingRatioThreshold = -0.05;
+        const auto WindingRatio = ComputeShapeWindingRatio(*RestoredShape);
+        const auto WindingIsValid = WindingRatio >= InsideOutWindingRatioThreshold;
+
+        CK_ENSURE_IF_NOT(WindingIsValid,
+            TEXT("JoltMeshCook: current cooked tri-mesh blob for mesh [{}] is INSIDE-OUT "
+                 "(signed-volume/bounds ratio [{}]); refusing freshness success. Correct the source triangle "
+                 "winding, then run a forced Jolt mesh rebake."),
+            InMeshPackagePath, WindingRatio)
+        { }
+
+        if (NOT WindingIsValid)
+        { return false; }
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -137,8 +174,16 @@ auto
             && Existing->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && Existing->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
 
-        if (NOT InForceRebuild && SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
-        { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
+        if (SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
+        {
+            const auto CurrentShapeBlobIsSafe = DoEnsure_CurrentShapeBlobIsSafe(*Existing, MeshPackagePath);
+
+            if (NOT CurrentShapeBlobIsSafe)
+            { return ECk_Jolt_MeshShapeCookResult::Failed; }
+
+            if (NOT InForceRebuild)
+            { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
+        }
 
         // A pre-winding-fix (v2) blob shares the current encoding, and only its TRI-MESH content is
         // wrong (inverted by the bake's pre-fix b/c swap). Peek the blob: a convex v2 blob is
