@@ -5,6 +5,7 @@
 #include "CkEcs/Net/CkNet_Utils.h"          // TryAddContainerFragment, Get_LifetimeOwner; transitively ECk_Persistence_ApplyResult
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // ck::FTag_Snapshot_ReconstructOnly (instance save opt-out)
 #include "CkAttribute/CkAttribute_Log.h"    // ck::attribute::Verbose (component-drift skip)
 #include "CkLabel/CkLabel_Utils.h"          // UCk_Utils_GameplayLabel_UE::Get_Label (value-emitting Produce)
 
@@ -67,6 +68,12 @@ namespace ck::attribute_restore
 
         if (NOT InEntity.Has<Current>())
         { return ECk_Persistence_ApplyResult::NotReady; }
+
+        // The load half of FTag_Snapshot_ReconstructOnly, for a save written BEFORE the opt-out was declared.
+        // Applied, not Rejected: the entry is deliberately consumed. NOT gated in Produce -- that projection is
+        // also the wire's (UCk_Utils_Net_UE::TryProduce), so gating it there stops replicating the attribute.
+        if (InEntity.Has<FTag_Snapshot_ReconstructOnly>())
+        { return ECk_Persistence_ApplyResult::Applied; }
 
         auto AttributeEntity = T_UtilsType::Cast(InEntity);
 
