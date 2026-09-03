@@ -33,6 +33,21 @@ namespace ck
                 default:                          return 4;
             }
         }
+
+        // Exact center match: a SHARED axis (the xor is symmetric, so both agents pick the same
+        // line) with OPPOSITE signs, otherwise coincident agents translate together forever
+        // instead of separating.
+        auto Get_CoincidentSeparationAxis(uint32 InSelfHash, uint32 InNeighborHash) -> FVector
+        {
+            constexpr auto AngleBucketCount = 3600;
+            constexpr auto RadiansPerAngleBucket = PI / 1800.0f;
+
+            const auto PairAngle = static_cast<float>((InSelfHash ^ InNeighborHash) % AngleBucketCount) * RadiansPerAngleBucket;
+            const auto Axis      = FVector{FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f};
+            const auto Sign      = InSelfHash > InNeighborHash ? 1.0f : -1.0f;
+
+            return Axis * Sign;
+        }
     }
 
     auto
@@ -63,6 +78,27 @@ namespace ck
         { return; }
 
         const auto SelfRadius = InParams.Get_Radius();
+        const auto NeighborRadius = SelfRadius;  // approximation -- neighbors share radius
+        const auto CombinedRadius = SelfRadius + NeighborRadius;
+
+        // The resting contact distance, not the geometric one: an overlap the solver has already
+        // brought inside the slop is DONE, and re-correcting it is what denies the pile a fixed
+        // point.
+        const auto ContactDistance = CombinedRadius - SlopCm;
+
+        // Idle is part of the predicate, not decoration: markup confirmation measures PHYSICAL
+        // stillness, so a walker pressing against a body it cannot pass confirms too after a few
+        // seconds. Without the Idle term that presser reads as a second hard body, the pair falls
+        // back to the damped model, and the presser -- which still drives forward every frame --
+        // shoves the parked body it was supposed to be stopped by.
+        const auto HardBodiesEnabled = UCk_Utils_Crowd_Settings_UE::Get_StationaryHardBodyMode()
+            == ECk_CrowdStationaryHardBodyMode::Enabled;
+        // GoalBlocked is excluded for the same reason: that agent is stationary by frustration,
+        // still wants the goal, and keeps the soft model.
+        const auto IsSelfConfirmedStationary = HardBodiesEnabled
+            && InHandle.Has<FTag_CrowdAgent_StationaryMarkupConfirmed>()
+            && InHandle.Has<FTag_CrowdAgent_Idle>()
+            && NOT InHandle.Has<FTag_CrowdAgent_GoalBlocked>();
 
         // A terminal failed-goal hold is a physical anchor until an explicit wake. Ordinary Idle
         // and GoalBlocked agents retain their existing reduced-yield behavior.
@@ -92,6 +128,41 @@ namespace ck
                         ? 1.0f
                         : 0.5f;
 
+                    const auto IsNeighborConfirmedStationary = HardBodiesEnabled
+                        && ck::IsValid(NeighborHandle)
+                        && NeighborHandle.Has<FTag_CrowdAgent_StationaryMarkupConfirmed>()
+                        && NeighborHandle.Has<FTag_CrowdAgent_Idle>()
+                        && NOT NeighborHandle.Has<FTag_CrowdAgent_GoalBlocked>();
+
+                    // EXACTLY one confirmed side makes the pair hard. Two confirmed bodies resting
+                    // in contact must keep the damped model below: a symmetric zero yield leaves
+                    // any overlap between them permanently unresolvable.
+                    if (IsSelfConfirmedStationary != IsNeighborConfirmedStationary)
+                    {
+                        if (IsSelfConfirmedStationary)
+                        { continue; }
+
+                        // Predictive on purpose: folding in the displacement ApplyOffset already
+                        // staged this frame cancels the inbound component BEFORE it lands, so the
+                        // mover stops AT contact instead of penetrating and being ejected back
+                        // out. A post-hoc ejection whose outbound half the navmesh walk eats is
+                        // what accumulates penetration frame over frame.
+                        auto ToSelf = -Nbr.Get_RelativeOffset() + InPending.Get_Displacement() + Displacement;
+                        ToSelf.Z = 0.0f;
+
+                        const auto HardDist = static_cast<float>(ToSelf.Size());
+                        if (HardDist >= ContactDistance)
+                        { continue; }
+
+                        const auto HardAxis = HardDist < KINDA_SMALL_NUMBER
+                            ? ck_crowd_agent_push_apart_processor::Get_CoincidentSeparationAxis(GetTypeHash(InHandle), GetTypeHash(NeighborHandle))
+                            : ToSelf / HardDist;
+
+                        // Share 1, factor 1, yield 1: the constraint is exact, so one pass converges.
+                        Displacement += HardAxis * (ContactDistance - HardDist);
+                        continue;
+                    }
+
                     // Points FROM the neighbor TO already-displaced self, which is the push direction.
                     auto PushFromNeighbor = -Nbr.Get_RelativeOffset() + Displacement;
 
@@ -99,35 +170,20 @@ namespace ck
                     // through the floor. Z is owned by path-follow and the integrator.
                     PushFromNeighbor.Z = 0.0f;
                     const auto Dist = static_cast<float>(PushFromNeighbor.Size());
-                    const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
-                    const auto CombinedRadius = SelfRadius + NeighborRadius;
 
-                    // The resting contact distance, not the geometric one: an overlap the solver
-                    // has already brought inside the slop is DONE, and re-correcting it is what
-                    // denies the pile a fixed point.
-                    if (Dist >= CombinedRadius - SlopCm)
+                    if (Dist >= ContactDistance)
                     { continue; }
 
                     if (Dist < KINDA_SMALL_NUMBER)
                     {
-                        // Exact center match: a SHARED axis (the xor is symmetric, so both agents
-                        // pick the same line) with OPPOSITE signs, otherwise coincident agents
-                        // translate together forever instead of separating.
-                        constexpr auto AngleBucketCount = 3600;
-                        constexpr auto RadiansPerAngleBucket = PI / 1800.0f;
-
-                        const auto SelfHash  = GetTypeHash(InHandle);
-                        const auto NbrHash   = GetTypeHash(Nbr.Get_Handle());
-                        const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % AngleBucketCount) * RadiansPerAngleBucket;
-                        const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);
-                        const auto Sign      = SelfHash > NbrHash ? 1.0f : -1.0f;
-                        Displacement += Axis * (Sign * PairShare * CombinedRadius * SelfYield);
+                        const auto Axis = ck_crowd_agent_push_apart_processor::Get_CoincidentSeparationAxis(GetTypeHash(InHandle), GetTypeHash(NeighborHandle));
+                        Displacement += Axis * (PairShare * CombinedRadius * SelfYield);
                         continue;
                     }
 
                     // Resolve only the part of the overlap that exceeds the slop, so an agent
                     // arriving at the resting distance is not then pushed past it.
-                    const auto Penetration = (CombinedRadius - SlopCm) - Dist;
+                    const auto Penetration = ContactDistance - Dist;
                     const auto PenetrationScale = (Penetration * PairShare) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
                     Displacement += PushFromNeighbor * PenetrationScale;
                 }
