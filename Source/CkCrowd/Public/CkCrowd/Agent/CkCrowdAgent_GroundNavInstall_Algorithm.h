@@ -31,7 +31,7 @@ namespace ck::ck_crowd_agent_ground_nav_install_algorithm
      *
      * _Status is carried in the row rather than implied by its index so the table can prove it is
      * still in enum order after somebody inserts a status — see the identity check below.
-     * _InstallAs is meaningful for Install and Defer; _Reason for Fail.
+     * _InstallAs is meaningful for Install; _Reason for Fail.
      */
     struct FCk_CrowdAgent_GroundNavVerdict
     {

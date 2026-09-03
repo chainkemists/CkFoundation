@@ -7,6 +7,11 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnGroundNavPathResolved_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnPathResolved_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnRouteResolved_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnVoxelPathResolved_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Processor.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
@@ -56,7 +61,12 @@ namespace ck
         using Group = FGroup_Gameplay;
         using RunAfter = TDepList<
             FProcessor_CrowdAgent_StationaryMarkup,
-            FProcessor_CrowdAvoidanceVolume_Monitor>;
+            FProcessor_CrowdAvoidanceVolume_Monitor,
+            FProcessor_CrowdAgent_HandleRequests,
+            FProcessor_CrowdAgent_OnPathResolved,
+            FProcessor_CrowdAgent_OnGroundNavPathResolved,
+            FProcessor_CrowdAgent_OnRouteResolved,
+            FProcessor_CrowdAgent_OnVoxelPathResolved>;
 
     public:
         using TProcessor::TProcessor;
