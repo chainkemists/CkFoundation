@@ -32,6 +32,11 @@ namespace ck::ensure
     CKCORE_API auto Do_Pop_EnsureIsFromScript() -> void;
 
 #if WITH_DEV_AUTOMATION_TESTS
+    // Which script frames the ensure site-identity walk steps past. Exposed only so the wrapper list is
+    // pinned by a test: broadening it to a prefix match would swallow a gameplay helper's attribution.
+    CKCORE_API auto Get_IsEnsurePlumbingFunction_ForTesting(
+        const FString& InFunctionName) -> bool;
+
     CKCORE_API auto Ensure_Impl_ForTesting(
         const FString& InMessage,
         const FString& InExpressionText,
