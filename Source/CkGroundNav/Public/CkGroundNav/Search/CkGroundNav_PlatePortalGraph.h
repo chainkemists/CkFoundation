@@ -58,6 +58,18 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * The key a crossing is canonicalised under, in the one place that decides it.
+     *
+     * The node pool keys with this, and a caller that kept a corridor across a rebuild re-resolves it
+     * with the same builder, so a stored door and a live one can never be keyed two ways.
+     */
+    CKGROUNDNAV_API auto
+    Make_CrossingKey(
+        const FCk_GroundNav_Crossing& InCrossing) -> FCk_GroundNav_CrossingKey;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * The per-query seed: everything a search needs that does not vary with the node being expanded.
      *
      * Immutable once built, so every copy of the graph shares it rather than duplicating it. The
@@ -90,6 +102,10 @@ namespace ck::groundnav
         // Bias away from tight crossings, in cell widths of clearance. Zero for the same reason.
         float _ClearanceBiasK = 0.0f;
 
+        // Flat plate id to the multiplier its ground is priced at. A plate the table does not name
+        // is priced at one.
+        TMap<int32, float> _PlateCostMultipliers;
+
         // What one cell of the field is worth, which is what turns a clearance into cell widths.
         float _CellSizeUu = 0.0f;
     };
@@ -113,9 +129,9 @@ namespace ck::groundnav
 
         FCk_GroundNav_QueryCost _Cost;
 
-        // The lowest heuristic any node was measured at, and the node that was measured at it. Kept
-        // here because CkAStar tracks no such node and recovering it afterwards would mean
-        // re-deriving the heuristic over the whole closed set.
+        // The lowest heuristic any EXPANDED node stood at, and that node. Kept here because CkAStar
+        // tracks no such node and recovering it afterwards would mean re-deriving the heuristic over
+        // the whole closed set.
         float _BestHeuristic = TNumericLimits<float>::Max();
         FCk_GroundNav_PathNodeId _BestNode = kPathSourceNode;
     };
@@ -134,6 +150,34 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     Get_CrossingTransitionPoint(
         const FCk_GroundNav_Crossing& InCrossing) -> FVector;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** What a plate's ground is priced at. A plate the table does not name is priced at one. */
+    CKGROUNDNAV_API auto
+    Get_AreaMultiplier(
+        const FCk_GroundNav_PathSharedData& InShared,
+        int32                               InFlatPlate) -> float;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What one straight leg between two points costs.
+     *
+     * Lifted out of the graph because the search does not price every leg of the route it answers
+     * with: the step onto the goal point crosses no door, and the segments of a funnelled polyline
+     * are not edges at all. One arithmetic, so none of them can drift from the one that chose the
+     * route. The two factors are arguments rather than lookups because their sources differ per
+     * caller — a leg through a door carries that door's clearance factor and a leg through none
+     * carries one.
+     */
+    CKGROUNDNAV_API auto
+    Get_LegCost(
+        const FCk_GroundNav_PathSharedData& InShared,
+        const FVector&                      InFrom,
+        const FVector&                      InTo,
+        float                               InAreaMultiplier,
+        float                               InClearanceFactor) -> float;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -163,18 +207,36 @@ namespace ck::groundnav
          * InGoal is not read. This search's goal is a plate and a point, not a node anybody could
          * name in advance: which crossing enters the goal plate is unknown until the search finds
          * one, which is the question IsGoal answers instead.
-         *
-         * Records the lowest estimate seen and the node that had it, so a search that ends without
-         * reaching the goal can still answer with the corridor that came closest.
          */
         auto Heuristic(
             FCk_GroundNav_PathNodeId InNode,
             FCk_GroundNav_PathNodeId InGoal) const -> float;
 
+        /**
+         * Whether the node arrives on the goal plate, asked exactly once per expansion.
+         *
+         * Which is why the closest-node memo is kept here and not in Heuristic: the node a partial
+         * answer walks back from is one the search EXPANDED, not one it merely pushed and might
+         * never have looked at again.
+         */
         auto IsGoal(
             FCk_GroundNav_PathNodeId InNode) const -> bool;
 
     public:
+        /**
+         * The node a stored crossing resolves to on THIS graph, or INDEX_NONE when the crossing no
+         * longer leaves the plate InFromNode arrives on.
+         *
+         * Node ids are pool ids minted per search, so a corridor that outlives its search is kept as
+         * keys and walked back onto a live graph one door at a time. It cannot mint a node for a door
+         * that is gone: the only candidates it compares against are the ones Neighbors returns, and
+         * Neighbors mints from the field's own enumeration under the same admission rule the search
+         * expanded by.
+         */
+        auto TryGet_NodeForKey(
+            FCk_GroundNav_PathNodeId         InFromNode,
+            const FCk_GroundNav_CrossingKey& InKey) const -> FCk_GroundNav_PathNodeId;
+
         /** The crossing a node arrives through. The source node arrives through none. */
         auto Get_Crossing(
             FCk_GroundNav_PathNodeId InNode) const -> const FCk_GroundNav_Crossing&;
@@ -203,9 +265,6 @@ namespace ck::groundnav
 
         auto DoGet_HeuristicTo_Goal(
             FCk_GroundNav_PathNodeId InNode) const -> float;
-
-        auto DoGet_AreaMultiplier(
-            int32 InFlatPlate) const -> float;
 
         auto DoGet_ClearanceFactor(
             FCk_GroundNav_PathNodeId InNode) const -> double;

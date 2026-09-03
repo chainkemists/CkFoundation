@@ -1,0 +1,151 @@
+#pragma once
+
+#include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
+#include "CkEcsExt/CkEcsExt_Utils.h"
+
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
+
+#include "CkGroundNavPath_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_GroundNavPath"))
+class CKGROUNDNAV_API UCk_Utils_GroundNavPath_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_GroundNavPath_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_GroundNavPath);
+
+public:
+    /** Give an entity the ability to plan ground paths. The fragments are stamped directly on InHandle
+     *  rather than on a child entity: a path belongs to the agent that walks it, and every consumer
+     *  that reads waypoints already holds the agent's handle.
+     *
+     *  Which field is planned over is NOT bound here. GroundNav is a world surface, not an agent-scoped
+     *  volume, so the field is resolved per request from the world and the start point. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Add Feature")
+    static FCk_Handle_GroundNavPath
+    Add(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_GroundNavPath_ParamsData& InParams);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Has Feature")
+    static bool
+    Has(
+        const FCk_Handle& InHandle);
+
+public:
+    /** Plan a route over whichever published field covers the start. The search is SLICED across
+     *  frames, so the completion delegate fires when the search ends, not when the request is
+     *  accepted - Succeeded only when waypoints are readable.
+     *
+     *  A start over ground nobody has baked is neither an answer nor a failure: the episode parks and
+     *  re-probes every tick, and only after ck.GroundNav.MaxDeferralSeconds does it complete as Failed
+     *  with the Unbuilt status. Every other terminal status completes as Failed immediately and fires
+     *  OnPathFailed carrying which one it was.
+     *
+     *  A second FindPath supersedes the first: the one it replaces completes as Failed_Cancelled. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Request Find Path",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavPath
+    Request_FindPath(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Request_GroundNavPath_FindPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    /** The release half of Request_FindPath: drops the search in flight and returns the slot to
+     *  nothing-planned, so nothing is left computing an answer for an episode the caller has ended.
+     *
+     *  ENQUEUED rather than applied here, unlike CkVoxelNav's: an abandon that jumped the queue would
+     *  release an episode the drain has not started yet, and the order of the two is the whole meaning
+     *  of an episode. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Request Abandon Path",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavPath
+    Request_AbandonPath(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Request_GroundNavPath_AbandonPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+public:
+    // Everything the last FINISHED episode answered. Meaningful only while Get Has Fresh Result is true.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Get Result")
+    static FCk_GroundNavPath_Result
+    Get_Result(
+        const FCk_Handle_GroundNavPath& InPath);
+
+    /** InProgress until an episode has finished, and the terminal status afterwards. A slot with no
+     *  fresh result reads as InProgress rather than as its last verdict, because a stale Ready is what
+     *  a caller would act on hardest and there is no None in this enum to say "nothing planned". */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Get Status")
+    static ECk_GroundNav_PathStatus
+    Get_Status(
+        const FCk_Handle_GroundNavPath& InPath);
+
+    // Whether the stored result belongs to a finished episode rather than one still being searched.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Get Has Fresh Result")
+    static bool
+    Get_HasFreshResult(
+        const FCk_Handle_GroundNavPath& InPath);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Bind To OnPathReady")
+    static FCk_Handle_GroundNavPath
+    BindTo_OnPathReady(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Delegate_GroundNavPath_OnPathReady& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Unbind From OnPathReady")
+    static FCk_Handle_GroundNavPath
+    UnbindFrom_OnPathReady(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Delegate_GroundNavPath_OnPathReady& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Bind To OnPathFailed")
+    static FCk_Handle_GroundNavPath
+    BindTo_OnPathFailed(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Delegate_GroundNavPath_OnPathFailed& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Unbind From OnPathFailed")
+    static FCk_Handle_GroundNavPath
+    UnbindFrom_OnPathFailed(
+        UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
+        const FCk_Delegate_GroundNavPath_OnPathFailed& InDelegate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
