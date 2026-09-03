@@ -177,6 +177,7 @@ auto
     const auto CookAllMaps = Switches.Contains(TEXT("AllMaps"));
 
     auto PackagingMaps = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionResult{};
+    auto PackagingExcludedLevelPackagePaths = TArray<FString>{};
 
     if (CookPackagingMaps)
     {
@@ -203,9 +204,15 @@ auto
         for (const auto& Directory : PackagingSettings->DirectoriesToAlwaysCook)
         { SelectionInput._DirectoriesToAlwaysCook.Add(Directory.Path); }
         for (const auto& Directory : PackagingSettings->DirectoriesToNeverCook)
-        { SelectionInput._DirectoriesToNeverCook.Add(Directory.Path); }
+        {
+            SelectionInput._DirectoriesToNeverCook.Add(Directory.Path);
+            PackagingExcludedLevelPackagePaths.AddUnique(Directory.Path);
+        }
 
         SelectionInput._JoltExcludedMapPathPrefixes = UCk_Utils_Jolt_ProjectSettings::Get_CookExcludedMapPathPrefixes();
+        for (const auto& ExcludedPrefix : SelectionInput._JoltExcludedMapPathPrefixes)
+        { PackagingExcludedLevelPackagePaths.AddUnique(ExcludedPrefix); }
+        PackagingExcludedLevelPackagePaths.AddUnique(SelectionInput._CookedDataRootPath);
         SelectionInput._DiscoveredAlwaysCookMapCandidates =
             ck_jolt_cook_commandlet::Discover_AlwaysCookMapCandidates(SelectionInput._DirectoriesToAlwaysCook);
         PackagingMaps = ck::jolt::cook::Select_PackagingMaps(SelectionInput);
@@ -300,7 +307,7 @@ auto
 
     for (const auto& MapPackageName : MapsToCook)
     {
-        if (NOT DoCook_Map(MapPackageName, CookMode))
+        if (NOT DoCook_Map(MapPackageName, CookMode, PackagingExcludedLevelPackagePaths))
         { ++FailureCount; }
     }
 
@@ -313,7 +320,8 @@ auto
 auto
     UCk_JoltCook_Commandlet::
     DoEnsure_StreamingLevelsInWorld(
-        UWorld& InWorld)
+        UWorld& InWorld,
+        const TArray<FString>& InExcludedLevelPackagePaths)
     -> bool
 {
     auto NumAdded = 0;
@@ -323,22 +331,33 @@ auto
         if (ck::Is_NOT_Valid(StreamingLevel))
         { continue; }
 
-        auto* LoadedLevel = ck_jolt_cook_commandlet::Get_ResolvedLevel(*StreamingLevel);
+        const auto StreamingLevelPackageName = StreamingLevel->GetWorldAssetPackageName();
+        if (ck::jolt::cook::Get_IsPackageExcluded(StreamingLevelPackageName, InExcludedLevelPackagePaths))
+        {
+            ck::jolt::Log(TEXT("CkJoltCook: skipping excluded streaming level [{}] of map [{}]"),
+                StreamingLevelPackageName, InWorld.GetOutermost()->GetName());
+            continue;
+        }
 
-        // Component registration runs against OwningWorld, which for a level resolved from its own
-        // package is still that sublevel's standalone world. Repoint before adding, exactly as
-        // UWorld::LoadSecondaryLevels does, or components register into the wrong world.
-        if (ck::IsValid(LoadedLevel))
-        { LoadedLevel->OwningWorld = &InWorld; }
+        auto* LoadedLevel = ck_jolt_cook_commandlet::Get_ResolvedLevel(*StreamingLevel);
 
         // Fail CLOSED. Cooking on a partially-loaded world writes a bake that is missing the
         // unloaded sublevels' actors, and a missing actor reads as "no collision here" at runtime —
         // silently, and indistinguishably from a correct bake. Better no new bake than a short one.
-        CK_ENSURE_IF_NOT(ck::IsValid(LoadedLevel),
+        const auto LevelIsResolved = ck::IsValid(LoadedLevel);
+        CK_ENSURE_IF_NOT(LevelIsResolved,
             TEXT("CkJoltCook: streaming level [{}] of map [{}] did not load — REFUSING to cook, because a "
                  "partial world would write a bake that silently omits that sublevel's collision"),
-            StreamingLevel->GetWorldAssetPackageName(), InWorld.GetOutermost()->GetName())
+            StreamingLevelPackageName, InWorld.GetOutermost()->GetName())
+        {}
+
+        if (NOT LevelIsResolved)
         { return false; }
+
+        // Component registration runs against OwningWorld, which for a level resolved from its own
+        // package is still that sublevel's standalone world. Repoint before adding, exactly as
+        // UWorld::LoadSecondaryLevels does, or components register into the wrong world.
+        LoadedLevel->OwningWorld = &InWorld;
 
         ck::jolt::Log(TEXT("CkJoltCook: streaming level [{}] -> [{}] actor(s)"),
             StreamingLevel->GetWorldAssetPackageName(), LoadedLevel->Actors.Num());
@@ -364,12 +383,20 @@ auto
         if (ck::Is_NOT_Valid(StreamingLevel))
         { continue; }
 
+        const auto StreamingLevelPackageName = StreamingLevel->GetWorldAssetPackageName();
+        if (ck::jolt::cook::Get_IsPackageExcluded(StreamingLevelPackageName, InExcludedLevelPackagePaths))
+        { continue; }
+
         const auto* LoadedLevel = ck_jolt_cook_commandlet::Get_ResolvedLevel(*StreamingLevel);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(LoadedLevel) && InWorld.GetLevels().Contains(LoadedLevel),
+        const auto LevelIsInWorld = ck::IsValid(LoadedLevel) && InWorld.GetLevels().Contains(LoadedLevel);
+        CK_ENSURE_IF_NOT(LevelIsInWorld,
             TEXT("CkJoltCook: streaming level [{}] did not end up in the world after AddToWorld — REFUSING "
                  "to cook rather than write a bake missing its collision"),
-            StreamingLevel->GetWorldAssetPackageName())
+            StreamingLevelPackageName)
+        {}
+
+        if (NOT LevelIsInWorld)
         { return false; }
     }
 
@@ -380,7 +407,8 @@ auto
     UCk_JoltCook_Commandlet::
     DoCook_Map(
         const FString& InMapPackageName,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths)
     -> bool
 {
     ck::jolt::Log(TEXT("CkJoltCook: loading map [{}]"), InMapPackageName);
@@ -401,10 +429,10 @@ auto
 
     // Validation, not loading: LoadMap should have brought every sublevel in. Anything still missing
     // means a partial world, and cooking that writes a bake that silently omits its collision.
-    if (NOT DoEnsure_StreamingLevelsInWorld(*World))
+    if (NOT DoEnsure_StreamingLevelsInWorld(*World, InExcludedLevelPackagePaths))
     { return false; }
 
-    return FCk_Jolt_WorldCooker::Cook_World(*World, InMode)._Success;
+    return FCk_Jolt_WorldCooker::Cook_World(*World, InMode, InExcludedLevelPackagePaths)._Success;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -32,19 +32,13 @@ namespace ck::jolt::cook
             const FString& InMapPackageName,
             const FCk_Jolt_PackagingMapSelectionInput& InInput) -> FString
         {
-            for (const auto& NeverCookDirectory : InInput._DirectoriesToNeverCook)
-            {
-                if (IsEqualToOrUnderPath(InMapPackageName, NeverCookDirectory))
-                { return NeverCookDirectory; }
-            }
+            if (Get_IsPackageExcluded(InMapPackageName, InInput._DirectoriesToNeverCook))
+            { return TEXT("DirectoriesToNeverCook"); }
 
-            for (const auto& JoltExcludedPrefix : InInput._JoltExcludedMapPathPrefixes)
-            {
-                if (IsEqualToOrUnderPath(InMapPackageName, JoltExcludedPrefix))
-                { return JoltExcludedPrefix; }
-            }
+            if (Get_IsPackageExcluded(InMapPackageName, InInput._JoltExcludedMapPathPrefixes))
+            { return TEXT("CkJolt CookExcludedMapPathPrefixes"); }
 
-            if (IsEqualToOrUnderPath(InMapPackageName, InInput._CookedDataRootPath))
+            if (Get_IsPackageExcluded(InMapPackageName, TArray<FString>{InInput._CookedDataRootPath}))
             { return InInput._CookedDataRootPath; }
 
             return {};
@@ -60,6 +54,22 @@ namespace ck::jolt::cook
                     return IsEqualToOrUnderPath(InMapPackageName, InDirectory);
                 });
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_IsPackageExcluded(
+            const FString& InPackageName,
+            const TArray<FString>& InExcludedPackagePaths) -> bool
+    {
+        using namespace ck_jolt_cook_map_selection;
+
+        return InExcludedPackagePaths.ContainsByPredicate(
+            [&](const FString& InExcludedPath)
+            {
+                return IsEqualToOrUnderPath(InPackageName, InExcludedPath);
+            });
     }
 
     // ----------------------------------------------------------------------------------------------------------------
