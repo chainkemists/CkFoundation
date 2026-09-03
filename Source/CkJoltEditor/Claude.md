@@ -33,10 +33,13 @@ miss, a *present but wrong* one is always a defect.
 
 - `FCk_Jolt_WorldCooker::Cook_World(World, Mode)` — rebuilds every cell + the index from scratch.
 - `FCk_Jolt_WorldCooker::Cook_World_Incremental(World, Mode)` — rewrites ONLY the bake-grid cells
-  whose actors changed. Reports why it fell back through `FCookStats::_Outcome`.
+  whose actors changed. Both full and incremental calls accept optional excluded level paths;
+  incremental planning removes excluded cooked groups even from unloaded levels, while preserving
+  other unloaded groups. Reports why it fell back through `FCookStats::_Outcome`.
 - `FCk_Jolt_MeshShapeCooker` — `Cook_MeshShapes(Mode)` (blocking sweep) decomposed into
   `Collect_Candidates()` / `Cook_SingleMeshShape(Mesh, Mode, OutPath)` / `Report_Orphans(InUse)` so
-  a caller can drive it across frames.
+  a caller can drive it across frames. The optional final `ForceRebuild` argument bypasses mesh
+  freshness shortcuts for explicit full rebakes; existing editor callers remain incremental.
 - `ck::jolt::cook::ComputeIncrementalPlan` / `ComputeIndexRemap` — the PURE halves of the
   incremental cook (which cells are dirty; how the index renumbers around them). Unit-tested by
   `Ck.Jolt.Cook.IncrementalPlan` / `Ck.Jolt.Cook.IndexRemap` in CkTests.
@@ -62,6 +65,13 @@ miss, a *present but wrong* one is always a defect.
   the project's own `<Target>-Cmd.exe`, not the engine's `UnrealEditor-Cmd.exe`), CK_ENSUREs the
   DirectoriesToAlwaysCook ini entry. Boots worlds itself; if that
   proves flaky on WP/landscape maps, the documented pivot is a UWorldPartitionBuilder subclass.
+
+The commandlet's `-Incremental` switch checks existing actor hashes and writes only dirty cells;
+unchanged maps write neither cells nor their index. `-ForceRebuild` forces full map and mesh-shape
+rebakes. The switches are mutually exclusive. Full fallback remains necessary for missing indexes,
+contract drift, and World Partition maps, and keeps the same packaging exclusions. Per-map Display
+logs report progress, cells written, current actors, and full fallback. These checks still load maps
+and existing cells; incremental mode does not imply a metadata-only scan.
 
 ## Auto-cook on save
 

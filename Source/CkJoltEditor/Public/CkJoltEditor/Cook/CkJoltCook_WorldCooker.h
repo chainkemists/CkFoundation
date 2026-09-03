@@ -58,11 +58,13 @@ public:
     /// every other cell asset and every cooked actor in an UNLOADED level untouched. Falls back to a
     /// full Cook_World — and says so in _Outcome — when there is no existing index, when the index
     /// was cooked under a different cook/Jolt version or bake filter, or on a World Partition world
-    /// (whose actors cannot be revisited after the streaming walk releases them).
+    /// (whose actors cannot be revisited after the streaming walk releases them). Excluded levels
+    /// are removed even when unloaded; nonexcluded unloaded levels remain eligible for carry-over.
     static auto
     Cook_World_Incremental(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook) -> FCookStats;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook,
+        const TArray<FString>& InExcludedLevelPackagePaths = {}) -> FCookStats;
 
     /// Reports stale/missing/up-to-date counts against the existing cooked index; writes nothing.
     static auto
@@ -86,7 +88,8 @@ public:
 
     FCk_Jolt_IncrementalCookDriver(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode);
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths = {});
 
     ~FCk_Jolt_IncrementalCookDriver();
 
