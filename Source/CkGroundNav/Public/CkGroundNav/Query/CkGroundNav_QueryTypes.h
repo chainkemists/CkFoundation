@@ -433,8 +433,8 @@ namespace ck::groundnav
         FCk_GroundNav_SurfaceRef _StartSurface;
         FCk_GroundNav_SurfaceRef _EndSurface;
 
-        // Crossings expanded to reach the verdict. A label comparison expands NOTHING, and a test
-        // asserts that: this is the number that makes the near-O(1) claim checkable.
+        // Crossings expanded to reach the verdict. A label comparison expands none: the field is
+        // what makes that constant-time claim observable rather than asserted.
         int32 _ExpansionCount = 0;
 
         FCk_GroundNav_QueryCost _Cost;
@@ -519,7 +519,9 @@ namespace ck::groundnav
         TArray<FCk_GroundNav_FloodCrossing> _Crossings;
 
         // Per flat plate: every settled crossing that enters it, in settle order. Empty for a plate
-        // the flood never reached; the source plate has none and is reached at distance zero.
+        // the flood never reached. The source plate is reached at distance zero whether or not a
+        // cycle later settles a crossing back into it, which is why Get_IsPlateReached tests it by
+        // index.
         TArray<TArray<int32>> _PlateEntries;
 
         // Crossings popped from the frontier, including the one a distance limit or a stop predicate
