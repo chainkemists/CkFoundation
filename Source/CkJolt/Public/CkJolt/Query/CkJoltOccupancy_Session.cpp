@@ -122,7 +122,7 @@ namespace ck_jolt_occupancy_session
         if (SourceActorName.IsNone())
         { return DebugName; }
 
-        if (DebugName.IsEmpty())
+        if (DebugName.IsEmpty() || DebugName == SourceActorName.ToString())
         { return SourceActorName.ToString(); }
 
         return FString::Printf(TEXT("%s (%s)"), *DebugName, *SourceActorName.ToString());
@@ -571,7 +571,7 @@ namespace ck::jolt
         const auto Centre = Bounds.GetCenter();
         const auto Extent = Bounds.GetExtent();
 
-        return FString::Printf(TEXT("%s [%s] centre (%d, %d, %d) extent (%d, %d, %d)"),
+        return FString::Printf(TEXT("%s [%s] @ (%d, %d, %d) +/- (%d, %d, %d)"),
             *Name, *ShapeName,
             static_cast<int32>(FMath::RoundToInt(Centre.X)),
             static_cast<int32>(FMath::RoundToInt(Centre.Y)),
