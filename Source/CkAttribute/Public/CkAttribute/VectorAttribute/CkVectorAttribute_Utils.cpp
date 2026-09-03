@@ -9,6 +9,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -68,6 +69,10 @@ auto
 
     if (InReplicates == ECk_Replication::Replicates)
     { NewAttributeEntity.Add<ck::FTag_ReplicatedAttribute>(); }
+
+    // Instance save opt-out; stamped before the label so later readers see a fully declared attribute.
+    if (InParams.Get_PersistValue() == ECk_EnableDisable::Disable)
+    { NewAttributeEntity.Add<ck::FTag_Snapshot_ReconstructOnly>(); }
 
     UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
     RecordOfVectorAttributes_Utils::Request_Connect(InAttributeOwnerEntity, NewAttributeEntity);

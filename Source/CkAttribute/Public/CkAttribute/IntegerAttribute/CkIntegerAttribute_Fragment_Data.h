@@ -126,6 +126,12 @@ private:
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax", SaveGame))
     int32 _MaxValue = 0;
 
+    // Save transport only, never replication. Disable makes Add stamp FTag_Snapshot_ReconstructOnly, so the
+    // value is neither captured nor hydrated. Rationale and caveats: CkAttribute/Claude.md.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, SaveGame))
+    ECk_EnableDisable _PersistValue = ECk_EnableDisable::Enable;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle, SaveGame))
     bool _EnableRefill = false;
@@ -148,6 +154,8 @@ public:
     CK_PROPERTY(_MinMax);
     CK_PROPERTY_SET(_MinValue);
     CK_PROPERTY_SET(_MaxValue);
+
+    CK_PROPERTY(_PersistValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttribute_ParamsData, _Name, _BaseValue);

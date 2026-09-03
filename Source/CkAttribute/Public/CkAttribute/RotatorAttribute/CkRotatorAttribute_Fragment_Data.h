@@ -62,6 +62,12 @@ private:
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax", SaveGame))
     FRotator _MaxValue = FRotator::ZeroRotator;
 
+    // Save transport only, never replication. Disable makes Add stamp FTag_Snapshot_ReconstructOnly, so the
+    // value is neither captured nor hydrated. Rationale and caveats: CkAttribute/Claude.md.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, SaveGame))
+    ECk_EnableDisable _PersistValue = ECk_EnableDisable::Enable;
+
 public:
     auto Get_MinValue() const -> FRotator;
     auto Get_MaxValue() const -> FRotator;
@@ -73,6 +79,8 @@ public:
     CK_PROPERTY(_MinMax);
     CK_PROPERTY_SET(_MinValue);
     CK_PROPERTY_SET(_MaxValue);
+
+    CK_PROPERTY(_PersistValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RotatorAttribute_ParamsData, _Name, _BaseValue);
