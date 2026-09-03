@@ -193,10 +193,13 @@ namespace ck
 
             if (NOT ProviderWasAlreadyAdded)
             {
-                Provider._Provider = nav_surface::Get_DefaultProvider();
+                const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(this->_TransientEntity);
 
-                nav_surface::Set_ProviderForWorld(
-                    UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(this->_TransientEntity), Provider._Provider);
+                Provider._Provider = nav_surface::Get_DefaultProvider();
+                Provider._ShadowMode = nav_surface::Get_DefaultShadowMode();
+
+                nav_surface::Set_ProviderForWorld(World, Provider._Provider);
+                nav_surface::Set_ShadowModeForWorld(World, Provider._ShadowMode);
             }
 
             this->_TransientEntity.AddOrGet<FFragment_NavSurface_RevisionWatch>();

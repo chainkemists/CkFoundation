@@ -96,10 +96,10 @@ namespace ck::groundnav
         // w >= 1. One is admissible; above one the answered length is within (w - 1) of optimal.
         float _GreedyWeightW = 1.0f;
 
-        // Penalty per unit of rise over run. Zero until it is measured against real content.
+        // Penalty per unit of rise over run. Zero is parity with what a navmesh prices, which is nothing.
         float _SlopePenaltyK = 0.0f;
 
-        // Bias away from tight crossings, in cell widths of clearance. Zero for the same reason.
+        // Bias away from tight crossings, in cell widths of clearance. Zero is navmesh parity.
         float _ClearanceBiasK = 0.0f;
 
         // Flat plate id to the multiplier its ground is priced at. A plate the table does not name

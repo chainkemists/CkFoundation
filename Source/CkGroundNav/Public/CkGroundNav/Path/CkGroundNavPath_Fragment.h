@@ -77,6 +77,10 @@ namespace ck
         // FPlatformTime::Seconds() when this episode was parked. See the replication note above.
         FCk_Time _PendingSince;
 
+        // What this episode's slices have spent searching. Held apart from _PendingSince because the
+        // wait and the work answer different questions: one dates the episode, the other prices it.
+        FCk_Time _SearchTimeSpent;
+
         /** The corridor of the last plan, keyed by the ONE durable identity a crossing has. Node ids
          *  are per-search pool ids and mean nothing to a second search, so a stored corridor is stored
          *  as keys or it is not stored at all. Kept for a later repair to re-canonicalise against. */

@@ -18,6 +18,14 @@ namespace ck
     // too. GoalFailedHold is the sole exception: it yields zero while a non-held pair member
     // absorbs the full correction, preserving a physically stable terminal hold.
     //
+    // Hardness is a property of the PAIR, not of the agent. When EXACTLY one side is a confirmed
+    // stationary body -- FTag_CrowdAgent_StationaryMarkupConfirmed, idle, and not GoalBlocked (an
+    // agent stopped by frustration is not furniture) -- that side never
+    // yields to the mover and the mover never penetrates it: the pair resolves exactly, against the
+    // displacement already staged this frame. Two such bodies, and two movers, keep the damped
+    // dtCrowd model -- a symmetric zero yield would leave two settled agents resting in contact
+    // permanently overlapped.
+    //
     // A flying agent is excluded: the shove is zeroed in Z by construction, so two agents stacked
     // vertically would be de-overlapped sideways.
     class CKCROWD_API FProcessor_CrowdAgent_PushApart : public ck_exp::TProcessor<

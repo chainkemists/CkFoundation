@@ -16,6 +16,7 @@ namespace ck_crowd_debug_settings_cvars
     static int32 GDrawBreadcrumbs   = 0;
     static int32 GDrawPlannedPaths  = 0;
     static int32 GDrawPathTrouble   = 1;
+    static int32 GDrawShadowRoutes  = 0;
     static int32 GDrawAgentRings    = 0;
     static int32 GDrawBlockStatus   = 1;
 
@@ -116,6 +117,25 @@ namespace ck_crowd_debug_settings_cvars
         }),
         ECVF_Cheat);
 
+    static FAutoConsoleVariableRef CVarDrawShadowRoutes(
+        TEXT("ck.Crowd.DrawShadowRoutes"),
+        GDrawShadowRoutes,
+        TEXT("Draw the shadow-mode A/B route overlay for crowd agents.\n")
+        TEXT("  0 = off (default)\n")
+        TEXT("  1 = on - the installed Recast polyline, the shadow GroundNav polyline in a\n")
+        TEXT("        contrasting color, a dashed connector between the two endpoints, and a\n")
+        TEXT("        length/waypoint/status delta label at the agent.\n")
+        TEXT("        Free unless the world is running GroundNav-shadows-Recast: an agent whose\n")
+        TEXT("        ground-path slot holds no shadow result at the installed revision draws nothing."),
+        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
+        {
+            WriteToSettings(
+                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawShadowRoutes(); },
+                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawShadowRoutes(InV); },
+                InCVar);
+        }),
+        ECVF_Cheat);
+
     static FAutoConsoleVariableRef CVarDrawAgentRings(
         TEXT("ck.Crowd.DrawAgentRings"),
         GDrawAgentRings,
@@ -177,6 +197,8 @@ auto
     { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPathTrouble")))
     { CVar->Set(_DrawPathTrouble ? 1 : 0, ECVF_SetByGameSetting); }
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawShadowRoutes")))
+    { CVar->SetWithCurrentPriority(_DrawShadowRoutes ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
     { CVar->SetWithCurrentPriority(_DrawAgentRings ? 1 : 0); }
     // Defaults ON, so it needs PathTrouble's explicit-priority Set rather than
@@ -227,6 +249,11 @@ auto
                 ECVF_SetByConsole,
                 ECVF_SetByScalability);
         }
+    }
+    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawShadowRoutes))
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawShadowRoutes")))
+        { CVar->SetWithCurrentPriority(_DrawShadowRoutes ? 1 : 0); }
     }
     else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawAgentRings))
     {
@@ -302,6 +329,17 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawPathTrouble();
+}
+
+auto
+    UCk_Utils_Crowd_DebugSettings_UE::
+    Get_DrawShadowRoutes()
+    -> bool
+{
+    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+    return Settings->Get_DrawShadowRoutes();
 }
 
 auto
