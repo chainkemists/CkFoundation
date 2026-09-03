@@ -19,8 +19,12 @@
  * project's own <Target>-Cmd.exe, not the engine's UnrealEditor-Cmd.exe):
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -Map=/Game/Maps/MyMap
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -AllMaps [-Root=/Game] [-DryRun]
+ *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -PackagingMaps [-DryRun]
+ *     Unions ProjectPackagingSettings MapsToCook with UWorld metadata under DirectoriesToAlwaysCook;
+ *     exclusions skip either source. It rejects bCookAll and -Map/-AllMaps combinations before any cook begins.
  *
- * Exit codes: 0 = success, 1 = any map failed to cook.
+ * Exit codes: 0 = success; 1 = rejected selection, missing entry map, a mesh-shape failure, or any
+ * map-load/cook failure. Each failure is logged before the commandlet exits.
  *
  * NOTE: the editor-subsystem path (UCk_JoltCook_EditorSubsystem_UE — world already booted by
  * the editor) is the PRIMARY cook vehicle. This commandlet boots worlds itself; if a map's
