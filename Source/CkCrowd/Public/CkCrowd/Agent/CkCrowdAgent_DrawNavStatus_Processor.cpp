@@ -217,6 +217,11 @@ namespace ck
                     Label = TEXT("VOXEL NAV: Pending");
                     break;
                 }
+                case ECk_CrowdAgent_PathProvider::GroundNav:
+                {
+                    Label = TEXT("GROUND NAV: Pending");
+                    break;
+                }
                 case ECk_CrowdAgent_PathProvider::Navigation:
                 case ECk_CrowdAgent_PathProvider::None:
                 default:
