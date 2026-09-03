@@ -1,12 +1,18 @@
 #pragma once
 
+#include <Containers/Map.h>
 #include <Containers/Set.h>
 
 #include <Delegates/IDelegateInstance.h>
 
+#include <HAL/UnrealMemory.h>
+
 #include <Templates/Function.h>
 
 #include <CkCore/AngelScript/CkAngelScript_TypeValidation.h>
+
+// Get_InternedBindName takes the std::string ck::Format_ANSI produces.
+#include <string>
 
 #if WITH_ANGELSCRIPT_CK
 
@@ -243,6 +249,36 @@ public:
     RegisterPropertyFunction(
         const FPropertyFunction& InPropertyFunc) -> void;
 
+    // BindNativeMethod stores this pointer RAW (FScriptNativeMethod::Name) and only dereferences it
+    // much later - when the StaticJIT transpiler emits C++, in a separate pass. A local std::string
+    // from ck::Format_ANSI is long dead by then, so the transpiler reads freed memory and emits
+    // either an invalid identifier or, where the allocation has been reused by the NEXT property's
+    // name, a real-but-wrong method that can compile and call the wrong thing.
+    //
+    // The engine guards the FBindString path with ToCString_EnsureConstant(); the raw
+    // BindNativeMethod overload has no such guard, so the lifetime is the caller's to get right.
+    // Interning is the fix: the pointer must outlive the process, because generation happens at an
+    // arbitrary later point. Bind registration is game-thread-only at startup, so no
+    // synchronisation is needed, and the pool is bounded by the number of DISTINCT property names.
+    static auto
+    Get_InternedBindName(
+        const std::string& InName) -> const ANSICHAR*
+    {
+        static TMap<FString, const ANSICHAR*> Pool;
+
+        const auto Key = FString{InName.c_str()};
+
+        if (const auto* const Found = Pool.Find(Key))
+        { return *Found; }
+
+        const auto LengthWithNull = InName.size() + 1;
+        auto* const Copy = new ANSICHAR[LengthWithNull];
+        FMemory::Memcpy(Copy, InName.c_str(), LengthWithNull);
+
+        Pool.Add(Key, Copy);
+        return Copy;
+    }
+
     static auto
     TryRegisterProperty(
         const FString& InPropertyKey) -> bool
@@ -328,7 +364,7 @@ private:
             {\
                 return Self->CK_CONCAT(Get, _InVar_)();\
             });\
-            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
+            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, FCkAngelScriptPropertyFunctionRegistration::Get_InternedBindName(GetterMethodName), true);\
         }\
         \
         /* Register setter only if it doesn't exist */\
@@ -337,7 +373,7 @@ private:
             auto SetterSignature = ck::Format_ANSI(TEXT("{}& Set_{}(const {}& InValue)"), ClassTypeStr, CleanPropertyName, PropertyTypeStr);\
             ExistingClass.Method(SetterSignature.c_str(),\
                 METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
-            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+            FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, FCkAngelScriptPropertyFunctionRegistration::Get_InternedBindName(SetterMethodName), true);\
         }\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
@@ -395,7 +431,7 @@ private:
         });\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(true);\
-        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, GetterMethodName.c_str(), true);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, FCkAngelScriptPropertyFunctionRegistration::Get_InternedBindName(GetterMethodName), true);\
     }\
     \
     static inline bool CK_CONCAT(AngelScriptPropertyGetterConstRefRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
@@ -448,7 +484,7 @@ private:
             METHODPR_TRIVIAL(ClassType&, ClassType, CK_CONCAT(Set, _InVar_), (const decltype(_InVar_)&)));\
         \
         FAngelscriptBinds::SetPreviousBindNoDiscard(false);\
-        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, SetterMethodName.c_str(), true);\
+        FScriptFunctionNativeForm::BindNativeMethod(ExistingClass, FCkAngelScriptPropertyFunctionRegistration::Get_InternedBindName(SetterMethodName), true);\
     }\
     \
     static inline bool CK_CONCAT(AngelScriptPropertySetterOnlyRegistered_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_))) = []() -> bool\
