@@ -99,7 +99,10 @@ auto
            static_cast<bool>(_ProviderHealth) &&
            static_cast<bool>(_IsBuildInProgress) &&
            static_cast<bool>(_SurfaceRevision) &&
-           static_cast<bool>(_RequestSurfaceRebuild);
+           static_cast<bool>(_RequestSurfaceRebuild) &&
+           static_cast<bool>(_ApplyAreaMarkup) &&
+           static_cast<bool>(_IsMarkupLive) &&
+           static_cast<bool>(_ReleaseAreaMarkup);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

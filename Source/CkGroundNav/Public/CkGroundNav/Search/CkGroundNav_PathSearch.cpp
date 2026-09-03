@@ -317,7 +317,7 @@ namespace ck::groundnav
                 *Shared,
                 _Result._StartPoint,
                 _Result._GoalPoint,
-                Get_AreaMultiplier(*Shared, StartFlatPlate),
+                Get_AreaMultiplier(Field, *Shared, StartFlatPlate),
                 NoClearanceFactor);
 
             return Stop(ECk_GroundNav_PathStatus::Ready);
@@ -578,7 +578,7 @@ namespace ck::groundnav
             *_Shared,
             _Graph.Get_TransitionPoint(InLastNode),
             _Result._GoalPoint,
-            Get_AreaMultiplier(*_Shared, _Shared->_GoalFlatPlate),
+            Get_AreaMultiplier(*_Shared->_Field, *_Shared, _Shared->_GoalFlatPlate),
             NoClearanceFactor);
     }
 

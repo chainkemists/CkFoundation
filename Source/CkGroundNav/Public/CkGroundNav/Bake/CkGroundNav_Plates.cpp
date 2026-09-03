@@ -1,5 +1,7 @@
 #include "CkGroundNav_Plates.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -46,6 +48,17 @@ namespace ck::groundnav
         return IsValidCell
             ? _CellToPlate[(InLayer * _SizeX * _SizeY) + (InY * _SizeX) + InX]
             : FCk_GroundNav_Plate::kNoPlate;
+    }
+
+    auto
+        FCk_GroundNav_PlateField::
+        Get_AreaPolicy(
+            int32 InIndex) const
+        -> const FGameplayTagContainer&
+    {
+        static const auto NoPolicy = FGameplayTagContainer{};
+
+        return _AreaPolicies.IsValidIndex(InIndex) ? _AreaPolicies[InIndex] : NoPolicy;
     }
 
     auto
@@ -130,7 +143,8 @@ namespace ck::groundnav
             const FCk_GroundNav_SpanField&     InSpans,
             const FCk_GroundNav_LayerField&    InLayers,
             const FCk_GroundNav_MergeTunables& InTunables,
-            FCk_GroundNav_PlateField&          OutPlates)
+            FCk_GroundNav_PlateField&          OutPlates,
+            TConstArrayView<int32>             InCellPolicy)
         -> FCk_GroundNav_BakeStageResult
     {
         using namespace plates_private;
@@ -142,7 +156,11 @@ namespace ck::groundnav
             InTunables.Get_NormalConeDegrees() >= 0.0f &&
             InTunables.Get_NormalConeDegrees() <= 90.0f;
 
-        if (NOT TunablesAreValid || InLayers._SizeX <= 0 || InLayers._SizeY <= 0)
+        const auto CellPolicyIsWellFormed = InCellPolicy.IsEmpty() ||
+            InCellPolicy.Num() == (InLayers._SizeX * InLayers._SizeY * InLayers._LayerCount);
+
+        if (NOT TunablesAreValid || NOT CellPolicyIsWellFormed ||
+            InLayers._SizeX <= 0 || InLayers._SizeY <= 0)
         {
             Result.Set_Status(ECk_GroundNav_BakeStatus::InvalidInput);
             return Result;
@@ -172,11 +190,21 @@ namespace ck::groundnav
         {
             const auto PlaneOffset = LayerIndex * CellCount;
 
-            const auto Get_IsMergeable = [&](int32 InX, int32 InY, const FSeedPlane& InSeed) -> bool
+            const auto Get_CellPolicy = [&](int32 InX, int32 InY) -> int32
+            {
+                return InCellPolicy.IsEmpty()
+                    ? INDEX_NONE
+                    : InCellPolicy[PlaneOffset + (InY * SizeX) + InX];
+            };
+
+            const auto Get_IsMergeable = [&](int32 InX, int32 InY, const FSeedPlane& InSeed, int32 InSeedPolicy) -> bool
             {
                 ++ProbesSpent;
 
                 if (OutPlates._CellToPlate[PlaneOffset + (InY * SizeX) + InX] != FCk_GroundNav_Plate::kNoPlate)
+                { return false; }
+
+                if (Get_CellPolicy(InX, InY) != InSeedPolicy)
                 { return false; }
 
                 auto TopZ = 0.0f;
@@ -210,6 +238,8 @@ namespace ck::groundnav
                     if (NOT Get_CellSurface(InSpans, InLayers, X, Y, LayerIndex, SeedZ, SeedNormal))
                     { continue; }
 
+                    const auto SeedPolicy = Get_CellPolicy(X, Y);
+
                     auto Seed = FSeedPlane{};
                     Seed._Normal = SeedNormal;
                     Seed._OriginX = (static_cast<double>(X) + 0.5) * CellSize;
@@ -218,7 +248,7 @@ namespace ck::groundnav
 
                     auto MaxX = X;
 
-                    while (MaxX + 1 < SizeX && Get_IsMergeable(MaxX + 1, Y, Seed))
+                    while (MaxX + 1 < SizeX && Get_IsMergeable(MaxX + 1, Y, Seed, SeedPolicy))
                     { ++MaxX; }
 
                     auto MaxY = Y;
@@ -228,7 +258,7 @@ namespace ck::groundnav
                         auto WholeRowJoins = true;
 
                         for (auto CandidateX = X; CandidateX <= MaxX && WholeRowJoins; ++CandidateX)
-                        { WholeRowJoins = Get_IsMergeable(CandidateX, CandidateY, Seed); }
+                        { WholeRowJoins = Get_IsMergeable(CandidateX, CandidateY, Seed, SeedPolicy); }
 
                         if (NOT WholeRowJoins)
                         { break; }
@@ -314,6 +344,93 @@ namespace ck::groundnav
         Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Stamp_PlateCostPolicies(
+            const FCk_GroundNav_PlateLattice&           InLattice,
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+            FCk_GroundNav_PlateField&                   InOutPlates)
+        -> void
+    {
+        InOutPlates._AreaPolicies.Reset();
+
+        for (auto& Plate : InOutPlates._Plates)
+        {
+            Plate._AreaPolicyIndex = INDEX_NONE;
+            Plate._CostMultiplier = 1.0f;
+        }
+
+        if (NOT InLattice.Get_IsValid())
+        { return; }
+
+        for (auto PlateIndex = 0; PlateIndex < InOutPlates._Plates.Num(); ++PlateIndex)
+        {
+            auto& Plate = InOutPlates._Plates[PlateIndex];
+
+            auto Policy = FGameplayTagContainer{};
+            auto Multiplier = TOptional<float>{};
+
+            for (const auto& Markup : InMarkups)
+            {
+                const auto MarkupApplies = Markup.Get_Enable() == ECk_EnableDisable::Enable &&
+                                           Markup.Get_Kind() == ECk_GroundNav_MarkupKind::Cost;
+
+                if (NOT MarkupApplies)
+                { continue; }
+
+                const auto CellRect = Get_MarkupCellRect(
+                    Markup, InLattice._OriginXY, InLattice._CellSizeUu, InLattice._SizeX, InLattice._SizeY);
+
+                if (NOT CellRect.IsSet())
+                { continue; }
+
+                const auto MinX = FMath::Max(CellRect->_MinX, Plate._MinX);
+                const auto MinY = FMath::Max(CellRect->_MinY, Plate._MinY);
+                const auto MaxX = FMath::Min(CellRect->_MaxX, Plate._MaxX);
+                const auto MaxY = FMath::Min(CellRect->_MaxY, Plate._MaxY);
+
+                auto CoversAnyCell = false;
+
+                for (auto Y = MinY; Y <= MaxY && NOT CoversAnyCell; ++Y)
+                {
+                    for (auto X = MinX; X <= MaxX && NOT CoversAnyCell; ++X)
+                    {
+                        if (InOutPlates.Get_PlateIndexAt(X, Y, Plate._LayerIndex) != PlateIndex)
+                        { continue; }
+
+                        CoversAnyCell = Get_IsMarkupCoveringCell(
+                            Markup,
+                            InLattice.Get_CellMinXY(X, Y),
+                            InLattice._CellSizeUu,
+                            InLattice.Get_SurfaceZ(X, Y, Plate._LayerIndex));
+                    }
+                }
+
+                if (NOT CoversAnyCell)
+                { continue; }
+
+                Policy.AddTag(Markup.Get_AreaTag());
+
+                Multiplier = Multiplier.IsSet()
+                    ? FMath::Max(*Multiplier, Markup.Get_CostMultiplier())
+                    : Markup.Get_CostMultiplier();
+            }
+
+            Plate._CostMultiplier = Multiplier.Get(1.0f);
+
+            if (Policy.IsEmpty())
+            { continue; }
+
+            const auto Interned = InOutPlates._AreaPolicies.IndexOfByPredicate(
+                [&](const FGameplayTagContainer& InCandidate) -> bool { return InCandidate == Policy; });
+
+            Plate._AreaPolicyIndex = Interned != INDEX_NONE
+                ? Interned
+                : InOutPlates._AreaPolicies.Emplace(Policy);
+        }
     }
 }
 

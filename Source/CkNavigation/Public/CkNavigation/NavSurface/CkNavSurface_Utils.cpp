@@ -3,7 +3,6 @@
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/NavSurface/CkNavSurface_GameplayTags.h"
 #include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
-#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -329,13 +328,13 @@ auto
     if (ck::Is_NOT_Valid(InMarkup))
     { return false; }
 
-    const auto& Current = InMarkup.Get<ck::FFragment_NavSurfaceMarkup_Current>();
-    if (NOT Current.Get_Markup().IsValid())
+    auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InMarkup);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
     { return false; }
 
-    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InMarkup);
-    return ck::nav_surface_recast::Get_IsAreaLiveAt(
-        World, Current.Get_AreaTag(), Current.Get_Location(), Current.Get_HalfExtents());
+    return Table->_IsMarkupLive(World, InMarkup);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
