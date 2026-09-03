@@ -67,6 +67,12 @@ namespace ck
         static auto
         DoClear(
             FFragment_GroundNavPath_Current& InCurrent) -> void;
+
+        // The one line that proves the provider answered, on every publish path.
+        static auto
+        DoLog_Published(
+            FCk_Handle_GroundNavPath InPathEntity,
+            const FCk_GroundNavPath_Result& InPublished) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
