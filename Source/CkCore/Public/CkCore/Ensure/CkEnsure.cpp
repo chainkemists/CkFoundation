@@ -40,26 +40,40 @@ namespace ck::ensure
     }
 
     auto Get_IsEnsurePlumbingFunction(
+        const FString& InNamespace,
         const FString& InFunctionName)
         -> bool
     {
-        // The ck::Ensure family in CkUtils_Common.as calls EnsureMsgf on the caller's behalf, so the
-        // innermost script frame is the wrapper rather than the site that raised the ensure. Listed
-        // rather than prefix-matched, so a gameplay helper named EnsureStoreIsOpen keeps its own
-        // attribution. A wrapper missing from this list is named itself - the behaviour that predates
-        // the list - never no attribution at all.
-        return InFunctionName == TEXT("Ensure")
-            || InFunctionName == TEXT("EnsureIfNot")
-            || InFunctionName == TEXT("EnsureIfNot_PrematureAssetLoad")
-            || InFunctionName == TEXT("TriggerEnsure");
+        // The ck::Ensure family in CkUtils_Common.as raises the ensure on its caller's behalf, so the
+        // innermost script frame is the wrapper rather than the site that raised it. Listed rather than
+        // prefix-matched, so a gameplay helper named EnsureStoreIsOpen keeps its own attribution.
+        //
+        // Both comparisons are CASE-SENSITIVE, and the namespace is checked, because the two failure
+        // directions are not symmetric. Missing a wrapper degrades to naming it - the behaviour that
+        // predates this list. Matching something that is NOT a wrapper skips a real frame and reports
+        // the one above it, which is worse than the bug this fixes. FString's operator== is
+        // case-INsensitive while AngelScript identifiers are case-sensitive, so a global named `ensure`
+        // would otherwise be silently swallowed.
+        constexpr auto CaseSensitive = ESearchCase::CaseSensitive;
+
+        if (NOT InNamespace.Equals(TEXT("ck"), CaseSensitive))
+        { return false; }
+
+        return InFunctionName.Equals(TEXT("Ensure"), CaseSensitive)
+            || InFunctionName.Equals(TEXT("EnsureIfNot"), CaseSensitive)
+            // Reaches EnsureMsgf only through ck::Ensure above, so it cannot currently appear as a
+            // frame here. Listed so a future direct call does not silently regress attribution.
+            || InFunctionName.Equals(TEXT("EnsureIfNot_PrematureAssetLoad"), CaseSensitive)
+            || InFunctionName.Equals(TEXT("TriggerEnsure"), CaseSensitive);
     }
 
 #if WITH_DEV_AUTOMATION_TESTS
     auto Get_IsEnsurePlumbingFunction_ForTesting(
+        const FString& InNamespace,
         const FString& InFunctionName)
         -> bool
     {
-        return Get_IsEnsurePlumbingFunction(InFunctionName);
+        return Get_IsEnsurePlumbingFunction(InNamespace, InFunctionName);
     }
 #endif
 
@@ -82,8 +96,13 @@ namespace ck::ensure
                     if (Frame == nullptr)
                     { continue; }
 
+                    const auto FrameNamespace = Frame->GetNamespace() != nullptr
+                        ? FString{StringCast<TCHAR>(Frame->GetNamespace()).Get()}
+                        : FString{};
+
                     const auto FrameIsPlumbing = Frame->GetObjectType() == nullptr
-                        && Get_IsEnsurePlumbingFunction(FString{StringCast<TCHAR>(Frame->GetName()).Get()});
+                        && Get_IsEnsurePlumbingFunction(FrameNamespace,
+                            FString{StringCast<TCHAR>(Frame->GetName()).Get()});
 
                     if (FrameIsPlumbing)
                     { continue; }
