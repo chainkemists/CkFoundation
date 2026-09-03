@@ -61,6 +61,21 @@ namespace ck::groundnav
         return HashCombine(Hash, Get_PointHash(InKey._Right));
     }
 
+    auto
+        Make_CrossingKey(
+            const FCk_GroundNav_Crossing& InCrossing)
+        -> FCk_GroundNav_CrossingKey
+    {
+        auto Key = FCk_GroundNav_CrossingKey{};
+        Key._FromFlatPlate = InCrossing._FromFlatPlate;
+        Key._ToFlatPlate = InCrossing._ToFlatPlate;
+        Key._Direction = InCrossing._Direction;
+        Key._Left = InCrossing._Left;
+        Key._Right = InCrossing._Right;
+
+        return Key;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -69,6 +84,56 @@ namespace ck::groundnav
         -> FVector
     {
         return (InCrossing._Left + InCrossing._Right) * 0.5;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_AreaMultiplier(
+            const FCk_GroundNav_PathSharedData& InShared,
+            int32                               InFlatPlate)
+        -> float
+    {
+        using namespace ck_groundnav_plateportalgraph;
+
+        if (const auto* Multiplier = InShared._PlateCostMultipliers.Find(InFlatPlate))
+        { return *Multiplier; }
+
+        return static_cast<float>(NoMultiplier);
+    }
+
+    auto
+        Get_LegCost(
+            const FCk_GroundNav_PathSharedData& InShared,
+            const FVector&                      InFrom,
+            const FVector&                      InTo,
+            float                               InAreaMultiplier,
+            float                               InClearanceFactor)
+        -> float
+    {
+        using namespace ck_groundnav_plateportalgraph;
+
+        const auto Delta = InTo - InFrom;
+
+        // The leg is ONE segment across the plate its two ends share, and is integrated as such:
+        // there is no per-cell walk to take a maximum over, and a plate is planar within the merge
+        // tolerance by construction.
+        const auto BaseUu = Delta.Size();
+
+        const auto RiseUu = FMath::Abs(Delta.Z);
+        const auto RunUu = Delta.Size2D();
+
+        const auto SlopeFactor = RunUu > 0.0
+            ? NoMultiplier + (static_cast<double>(InShared._SlopePenaltyK) * (RiseUu / RunUu))
+            : NoMultiplier;
+
+        // A distance times three factors that are each at least one, so the edge is never negative,
+        // which is the whole of what A* asks of it.
+        return static_cast<float>(
+            BaseUu *
+            static_cast<double>(InAreaMultiplier) *
+            SlopeFactor *
+            static_cast<double>(InClearanceFactor));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -145,32 +210,15 @@ namespace ck::groundnav
             FCk_GroundNav_PathNodeId InTo) const
         -> float
     {
-        using namespace ck_groundnav_plateportalgraph;
-
         if (NOT Get_IsValid())
         { return 0.0f; }
 
-        const auto Delta = DoGet_Point(InTo) - DoGet_Point(InFrom);
-
-        // The leg is ONE segment across the plate the two doors share, and is integrated as such:
-        // there is no per-cell walk to take a maximum over, and a plate is planar within the merge
-        // tolerance by construction.
-        const auto BaseUu = Delta.Size();
-
-        const auto AreaMultiplier = static_cast<double>(DoGet_AreaMultiplier(DoGet_ArrivalPlate(InFrom)));
-
-        const auto RiseUu = FMath::Abs(Delta.Z);
-        const auto RunUu = Delta.Size2D();
-
-        const auto SlopeFactor = RunUu > 0.0
-            ? NoMultiplier + (static_cast<double>(_Shared->_SlopePenaltyK) * (RiseUu / RunUu))
-            : NoMultiplier;
-
-        const auto ClearanceFactor = DoGet_ClearanceFactor(InTo);
-
-        // A distance times three factors that are each at least one, so the edge is never negative,
-        // which is the whole of what A* asks of it.
-        return static_cast<float>(BaseUu * AreaMultiplier * SlopeFactor * ClearanceFactor);
+        return Get_LegCost(
+            *_Shared,
+            DoGet_Point(InFrom),
+            DoGet_Point(InTo),
+            Get_AreaMultiplier(*_Shared, DoGet_ArrivalPlate(InFrom)),
+            static_cast<float>(DoGet_ClearanceFactor(InTo)));
     }
 
     auto
@@ -180,15 +228,7 @@ namespace ck::groundnav
             FCk_GroundNav_PathNodeId InGoal) const
         -> float
     {
-        const auto Estimate = DoGet_HeuristicTo_Goal(InNode);
-
-        if (_Pool.IsValid() && Estimate < _Pool->_BestHeuristic)
-        {
-            _Pool->_BestHeuristic = Estimate;
-            _Pool->_BestNode = InNode;
-        }
-
-        return Estimate;
+        return DoGet_HeuristicTo_Goal(InNode);
     }
 
     auto
@@ -199,6 +239,14 @@ namespace ck::groundnav
     {
         if (NOT Get_IsValid())
         { return false; }
+
+        const auto Estimate = DoGet_HeuristicTo_Goal(InNode);
+
+        if (Estimate < _Pool->_BestHeuristic)
+        {
+            _Pool->_BestHeuristic = Estimate;
+            _Pool->_BestNode = InNode;
+        }
 
         // The source node is never the goal, even standing on the goal plate: a query whose two ends
         // share a plate is answered before a search is built at all.
@@ -229,6 +277,22 @@ namespace ck::groundnav
         { return NoCrossing; }
 
         return _Pool->_Crossings[InNode - 1];
+    }
+
+    auto
+        FCk_GroundNav_PlatePortalGraph::
+        TryGet_NodeForKey(
+            FCk_GroundNav_PathNodeId         InFromNode,
+            const FCk_GroundNav_CrossingKey& InKey) const
+        -> FCk_GroundNav_PathNodeId
+    {
+        for (const auto Candidate : Neighbors(InFromNode))
+        {
+            if (Make_CrossingKey(Get_Crossing(Candidate)) == InKey)
+            { return Candidate; }
+        }
+
+        return INDEX_NONE;
     }
 
     auto
@@ -331,18 +395,6 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_PlatePortalGraph::
-        DoGet_AreaMultiplier(
-            int32 InFlatPlate) const
-        -> float
-    {
-        // Every plate answers one. Nothing in the bake carries a traversal policy yet: a plate holds
-        // no area tag key, and FCk_GroundNav_SurfaceAttributes::_CostMultiplier is a hardcoded one.
-        // The factor is priced here so the formula does not change shape when the markup arrives.
-        return 1.0f;
-    }
-
-    auto
-        FCk_GroundNav_PlatePortalGraph::
         DoGet_ClearanceFactor(
             FCk_GroundNav_PathNodeId InNode) const
         -> double
@@ -376,12 +428,7 @@ namespace ck::groundnav
             const FCk_GroundNav_Crossing& InCrossing) const
         -> FCk_GroundNav_PathNodeId
     {
-        auto Key = FCk_GroundNav_CrossingKey{};
-        Key._FromFlatPlate = InCrossing._FromFlatPlate;
-        Key._ToFlatPlate = InCrossing._ToFlatPlate;
-        Key._Direction = InCrossing._Direction;
-        Key._Left = InCrossing._Left;
-        Key._Right = InCrossing._Right;
+        const auto Key = Make_CrossingKey(InCrossing);
 
         if (const auto* Existing = _Pool->_NodeIds.Find(Key))
         { return *Existing; }
