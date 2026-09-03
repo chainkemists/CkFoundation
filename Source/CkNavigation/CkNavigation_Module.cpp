@@ -43,6 +43,15 @@ namespace ck_navigation_module
         Table._RequestSurfaceRebuild = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Request_SurfaceRebuild(InWorld); };
 
+        Table._ApplyAreaMarkup = [](UWorld* InWorld, FCk_Handle& InMarkupEntity, const FCk_Request_NavSurface_AreaMarkup& InRequest)
+        { return ck::nav_surface_recast::Apply_AreaMarkup(InWorld, InMarkupEntity, InRequest); };
+
+        Table._IsMarkupLive = [](UWorld* InWorld, const FCk_Handle& InMarkupEntity)
+        { return ck::nav_surface_recast::Get_IsMarkupLive(InWorld, InMarkupEntity); };
+
+        Table._ReleaseAreaMarkup = [](UWorld* InWorld, FCk_Handle& InMarkupEntity)
+        { return ck::nav_surface_recast::Release_AreaMarkup(InWorld, InMarkupEntity); };
+
         return Table;
     }
 }

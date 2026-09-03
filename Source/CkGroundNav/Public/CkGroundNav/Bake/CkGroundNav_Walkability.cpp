@@ -1,5 +1,7 @@
 #include "CkGroundNav_Walkability.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -378,10 +380,67 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        DoFilter_Markup(
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+            FCk_GroundNav_SpanField&                    InOutSpans,
+            int32&                                      InOutProbes)
+        -> int32
+    {
+        auto DemotedCount = 0;
+
+        const auto LatticeOriginXY = FVector2D{InOutSpans._Origin.X, InOutSpans._Origin.Y};
+
+        for (const auto& Markup : InMarkups)
+        {
+            const auto MarkupApplies = Markup.Get_Enable() == ECk_EnableDisable::Enable &&
+                                       Markup.Get_Kind() == ECk_GroundNav_MarkupKind::Walkability;
+
+            if (NOT MarkupApplies)
+            { continue; }
+
+            const auto CellRect = Get_MarkupCellRect(
+                Markup, LatticeOriginXY, InOutSpans._CellSizeUu, InOutSpans._SizeX, InOutSpans._SizeY);
+
+            if (NOT CellRect.IsSet())
+            { continue; }
+
+            for (auto Y = CellRect->_MinY; Y <= CellRect->_MaxY; ++Y)
+            {
+                for (auto X = CellRect->_MinX; X <= CellRect->_MaxX; ++X)
+                {
+                    const auto CellMinXY = InOutSpans.Get_ColumnMinCorner(X, Y);
+
+                    for (auto& Span : InOutSpans.Get_MutableColumn(X, Y))
+                    {
+                        ++InOutProbes;
+
+                        if (NOT Span._IsWalkable)
+                        { continue; }
+
+                        const auto IsCovered = Get_IsMarkupCoveringCell(
+                            Markup, CellMinXY, InOutSpans._CellSizeUu, Span._MaxZ);
+
+                        if (NOT IsCovered)
+                        { continue; }
+
+                        Span._IsWalkable = false;
+                        ++DemotedCount;
+                    }
+                }
+            }
+        }
+
+        return DemotedCount;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         DoFilter_Walkability(
-            const FCk_GroundNav_AgentProfile& InProfile,
-            FCk_GroundNav_SpanField&          InOutSpans,
-            FCk_GroundNav_ConnectionField&    OutConnections)
+            const FCk_GroundNav_AgentProfile&           InProfile,
+            FCk_GroundNav_SpanField&                    InOutSpans,
+            FCk_GroundNav_ConnectionField&              OutConnections,
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups)
         -> FCk_GroundNav_BakeStageResult
     {
         auto Result = FCk_GroundNav_BakeStageResult{};
@@ -396,15 +455,17 @@ namespace ck::groundnav
 
         const auto DemotedByClearance = DoFilter_LowClearance(InProfile, InOutSpans, ProbesSpent);
         const auto DemotedByLedge = DoFilter_Ledges(InProfile, InOutSpans, ProbesSpent);
+        const auto DemotedByMarkup = DoFilter_Markup(InMarkups, InOutSpans, ProbesSpent);
 
         DoBuild_Connections(InProfile, InOutSpans, OutConnections, ProbesSpent);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
 
-        // A probe here is one span read: a headroom neighbour, a side-support candidate, a connection
-        // candidate, or a mirror read of the far column in the mutual-agreement pass.
+        // A probe here is one span read: a headroom neighbour, a side-support candidate, a span under a
+        // markup's cell rectangle, a connection candidate, or a mirror read of the far column in the
+        // mutual-agreement pass.
         Result.Set_ProbesSpent(ProbesSpent);
-        Result.Set_DroppedInputCount(DemotedByClearance + DemotedByLedge);
+        Result.Set_DroppedInputCount(DemotedByClearance + DemotedByLedge + DemotedByMarkup);
 
         return Result;
     }

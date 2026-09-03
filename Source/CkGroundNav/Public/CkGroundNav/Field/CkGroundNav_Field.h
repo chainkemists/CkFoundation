@@ -31,6 +31,11 @@ namespace ck::groundnav
         FCk_GroundNav_AgentProfile _Profile;
         FCk_GroundNav_MergeTunables _MergeTunables;
 
+        // The authored markup volumes every tile of this field bakes under. Held BY VALUE, unlike the
+        // view a tile's params carry: the field keeps its params for as long as it is published, and a
+        // view into whatever the submitter assembled would outlive its owner.
+        TArray<FCk_GroundNav_MarkupRecord> _MarkupRecords;
+
         float _MaxClearanceUu = 200.0f;
 
     public:

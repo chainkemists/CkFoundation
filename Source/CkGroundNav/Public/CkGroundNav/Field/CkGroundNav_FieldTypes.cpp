@@ -43,6 +43,7 @@ namespace ck::groundnav
 
         Bytes += _Plates._Plates.GetAllocatedSize();
         Bytes += _Plates._CellToPlate.GetAllocatedSize();
+        Bytes += _Plates._AreaPolicies.GetAllocatedSize();
 
         Bytes += _Portals._Portals.GetAllocatedSize();
         Bytes += _Portals._PlateToPortals.GetAllocatedSize();
