@@ -8,6 +8,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
@@ -434,6 +435,35 @@ namespace ck::groundnav
             return;
         }
 
+        if (InMode == EDebugDrawMode::Boundary)
+        {
+            // Lifted for the same reason a crossing is: a run drawn exactly on the surface it bounds
+            // disappears into that surface from every angle a player actually looks from.
+            const auto Lift = FVector{0.0, 0.0, static_cast<double>(InSnapshot._CellSizeUu) * 0.5};
+
+            // Outside the layer palette on purpose. A rim run is a wall only until the neighbouring
+            // tile is baked, and it must never read as one the bake is sure of.
+            const auto TileRimColor = FColor{255, 140, 0};
+
+            for (const auto& Run : InSnapshot._Boundary)
+            {
+                const auto Color = Run._IsTileRim ? TileRimColor : Get_LayerColor(Run._LayerIndex);
+
+                DrawDebugLine(InWorld, Run._Start + Lift, Run._End + Lift, Color, Persistent,
+                    LifetimeSeconds, DepthPriority, 3.0f);
+
+                // Which side of the run the floor is on. Two runs a cell apart facing each other and
+                // two facing away are a corridor and a pillar, and the lines alone cannot say which.
+                const auto Midpoint = ((Run._Start + Run._End) * 0.5) + Lift;
+                const auto Inward = FVector{Run._InwardNormalXY.X, Run._InwardNormalXY.Y, 0.0};
+
+                DrawDebugLine(InWorld, Midpoint, Midpoint + (Inward * 20.0), Color, Persistent,
+                    LifetimeSeconds, DepthPriority, 1.5f);
+            }
+
+            return;
+        }
+
         const auto PointSize = FMath::Max(4.0f, InSnapshot._CellSizeUu * 0.35f);
 
         if (InMode == EDebugDrawMode::Rejected)
@@ -482,6 +512,14 @@ namespace ck::groundnav
         {
             if (Portal._IsCrossLayer)
             { ++CrossLayerPortalCount; }
+        }
+
+        auto TileRimBoundaryCount = 0;
+
+        for (const auto& Run : InSnapshot._Boundary)
+        {
+            if (Run._IsTileRim)
+            { ++TileRimBoundaryCount; }
         }
 
         const auto IsTiledField = InSnapshot.Get_TileCount() > 0;
@@ -537,6 +575,7 @@ namespace ck::groundnav
             TEXT("  layers   : %d\n")
             TEXT("  plates   : %d (collapse %.1f cells/plate, worst residual %.2f uu, worst height spread %.2f uu)\n")
             TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
+            TEXT("  boundary : %d runs (%d on tile rims)%s\n")
             TEXT("  tiles    : %d of %d built, %d seams between them\n")
             TEXT("  clearance: %.1f uu at the most open cell\n")
             TEXT("  memory   : %.1f KB held by %s"),
@@ -559,6 +598,9 @@ namespace ck::groundnav
             InSnapshot.Get_PortalCount(),
             CrossLayerPortalCount,
             InSnapshot.Get_NarrowestPortalUu(),
+            InSnapshot.Get_BoundaryCount(),
+            TileRimBoundaryCount,
+            IsTiledField ? TEXT("") : TEXT(" (field bakes only)"),
             InSnapshot.Get_BuiltTileCount(),
             InSnapshot.Get_TileCount(),
             InSnapshot.Get_SeamCount(),
@@ -659,7 +701,8 @@ namespace ck_groundnav_debugconsole
     static TAutoConsoleVariable<int32> CVar_Mode(
         TEXT("ck.GroundNav.Debug.Mode"), 0,
         TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected, ")
-        TEXT("4 = the crossings between plates, 5 = the tile lattice and the seams between tiles."));
+        TEXT("4 = the crossings between plates, 5 = the tile lattice and the seams between tiles, ")
+        TEXT("6 = the plate edges nothing crosses, with the runs on a tile rim in orange."));
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
         TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
@@ -728,6 +771,7 @@ namespace ck_groundnav_debugconsole
             case 3:  return ck::groundnav::EDebugDrawMode::Rejected;
             case 4:  return ck::groundnav::EDebugDrawMode::Portals;
             case 5:  return ck::groundnav::EDebugDrawMode::Tiles;
+            case 6:  return ck::groundnav::EDebugDrawMode::Boundary;
             default: return ck::groundnav::EDebugDrawMode::Plates;
         }
     }
@@ -1085,6 +1129,93 @@ namespace ck_groundnav_debugconsole
             InStart.X, InStart.Y, InStart.Z, End.X, End.Y, Summary);
     }
 
+    auto DoEdgesAndDraw(UWorld* InWorld, const FVector& InPoint, float InRadiusUu) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.EdgesAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        const auto AgentRadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        // Two vertical quanta, the same window the probe uses: tight enough that the answer is about
+        // THIS height rather than the whole column, wide enough to survive the bake's quantization.
+        const auto VerticalWindowUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+
+        auto BoundaryQuery = ck::groundnav::FCk_GroundNav_BoundaryQuery{};
+
+        BoundaryQuery._Location = InPoint;
+        BoundaryQuery._RadiusUu = InRadiusUu;
+        BoundaryQuery._VerticalWindowUu = VerticalWindowUu;
+        BoundaryQuery._Agent._RadiusUu = AgentRadiusUu;
+        BoundaryQuery._MaxSegments = 0;
+
+        auto Segments = TArray<ck::groundnav::FCk_GroundNav_BoundarySegment>{};
+
+        const auto Status = ck::groundnav::Get_BoundarySegments(Field, BoundaryQuery, Segments);
+
+        auto ClosestQuery = ck::groundnav::FCk_GroundNav_ClosestBoundaryQuery{};
+
+        ClosestQuery._Location = InPoint;
+        ClosestQuery._MaxRadiusUu = InRadiusUu;
+        ClosestQuery._VerticalWindowUu = VerticalWindowUu;
+        ClosestQuery._Agent._RadiusUu = AgentRadiusUu;
+
+        const auto Closest = ck::groundnav::Get_ClosestBoundary(Field, ClosestQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        // Clear of the floor the runs bound, or every one of them z-fights the surface it belongs to.
+        const auto Lift = FVector{
+            0.0, 0.0, static_cast<double>(Field._Params._Config.Get_CellSizeUu()) * 0.5};
+
+        DrawDebugSphere(InWorld, InPoint, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        for (const auto& Segment : Segments)
+        {
+            DrawDebugLine(InWorld, Segment._Start + Lift, Segment._End + Lift, FColor::Yellow,
+                Persistent, LifetimeSeconds, DepthPriority, 3.0f);
+
+            // Which side of the run the floor is on - the whole reason a consumer asks for edges
+            // rather than for geometry.
+            const auto Midpoint = ((Segment._Start + Segment._End) * 0.5) + Lift;
+            const auto Inward = FVector{Segment._InwardNormalXY.X, Segment._InwardNormalXY.Y, 0.0};
+
+            DrawDebugLine(InWorld, Midpoint, Midpoint + (Inward * 20.0), FColor::Yellow, Persistent,
+                LifetimeSeconds, DepthPriority, 1.5f);
+        }
+
+        if (Closest.Get_IsSuccess())
+        {
+            DrawDebugLine(InWorld, InPoint, Closest._ClosestPoint, FColor::Magenta, Persistent,
+                LifetimeSeconds, DepthPriority, 2.0f);
+
+            DrawDebugSphere(InWorld, Closest._ClosestPoint, 6.0f, SphereSegments, FColor::Magenta,
+                Persistent, LifetimeSeconds, DepthPriority);
+        }
+
+        const auto Summary = FString::Printf(
+            TEXT("edges %s | %d run(s) within %.0f uu | closest %s at %.1f uu"),
+            *ck::Format_UE(TEXT("{}"), Status),
+            Segments.Num(),
+            InRadiusUu,
+            *ck::Format_UE(TEXT("{}"), Closest._Status),
+            Closest._DistanceUu);
+
+        DrawDebugString(InWorld, InPoint + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Status == ECk_NavSurface_QueryStatus::Success ? FColor::White : FColor::Red,
+            LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
+            InPoint.X, InPoint.Y, InPoint.Z, Summary);
+    }
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
         TEXT("ck.GroundNav.Bake"),
         TEXT("Bake the ground field around the player from live physics geometry and draw it. ")
@@ -1268,6 +1399,35 @@ namespace ck_groundnav_debugconsole
             }
 
             DoRaycastAndDraw(InWorld, Start, TargetXY);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_EdgesAt(
+        TEXT("ck.GroundNav.EdgesAt"),
+        TEXT("Ask the last field bake which walls are near a point and draw them: ")
+        TEXT("ck.GroundNav.EdgesAt <X> <Y> <Z> <R>. Every run within R draws in yellow with a tick ")
+        TEXT("showing which side of it is walkable; the nearest run's closest point draws in magenta. ")
+        TEXT("Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. ")
+        TEXT("The body radius comes from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.EdgesAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 4)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.EdgesAt needs four numbers: ")
+                    TEXT("ck.GroundNav.EdgesAt <X> <Y> <Z> <R>"));
+                return;
+            }
+
+            const auto Point = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoEdgesAndDraw(InWorld, Point, FCString::Atof(*InArgs[3]));
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
