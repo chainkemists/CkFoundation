@@ -57,9 +57,10 @@ miss, a *present but wrong* one is always a defect.
   -> Jolt Cook).
 - `UCk_JoltCook_Commandlet` — headless cross-map + mesh-shape cook
   (`-run=Ck_JoltCook_Commandlet -Map=… | -AllMaps | -PackagingMaps | -MeshShapes [-DryRun]` —
-  `-PackagingMaps` unions the project's ordered `MapsToCook` persistent entry roots with UWorld
-  metadata under `DirectoriesToAlwaysCook`, skips packaging/Jolt/cooked-output exclusions from
-  either source, and rejects `bCookAll` and `-Map`/`-AllMaps` combinations before any cook;
+  `-PackagingMaps -Incremental` selects only the project's ordered `MapsToCook` persistent entry
+  roots; `-ForceRebuild` and the legacy no-mode invocation union those roots with UWorld metadata
+  under `DirectoriesToAlwaysCook`. All forms skip packaging/Jolt/cooked-output exclusions and reject
+  `bCookAll` and `-Map`/`-AllMaps` combinations before any cook;
   the FULL class token
   is required, `-run=CkJoltCook` resolves to no class; on unique-build-environment projects invoke
   the project's own `<Target>-Cmd.exe`, not the engine's `UnrealEditor-Cmd.exe`), CK_ENSUREs the

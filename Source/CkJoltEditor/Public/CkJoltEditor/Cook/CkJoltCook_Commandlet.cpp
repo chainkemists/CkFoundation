@@ -131,7 +131,7 @@ namespace ck_jolt_cook_commandlet
     }
 
     /// Map selection is intentionally world-free, but packaging entry roots must still resolve to
-    /// real .umap files before an optional mesh-shape sweep writes any assets.
+    /// real .umap files before any selected world is loaded.
     static auto DoEnsure_PackagingMapsExist(
         const TArray<FString>& InMapPackageNames) -> bool
     {
@@ -178,12 +178,38 @@ auto
     const auto Incremental = Switches.Contains(TEXT("Incremental"));
     const auto ForceRebuild = Switches.Contains(TEXT("ForceRebuild"));
     const auto RebuildModeIsValid = NOT (Incremental && ForceRebuild);
+    // Routine freshness checks answer only the authored package entry worlds. A full rebake expands
+    // into every AlwaysCook UWorld so new/forgotten maps are discovered by the explicit maintenance gate.
+    const auto IncludeAlwaysCookDirectories = NOT Incremental;
 
     CK_ENSURE_IF_NOT(RebuildModeIsValid,
         TEXT("CkJoltCook: -Incremental and -ForceRebuild cannot be combined"))
     {}
 
     if (NOT RebuildModeIsValid)
+    { return 1; }
+
+    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map,
+    // -AllMaps, or -PackagingMaps, or run alone.
+    const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
+    auto MeshShapesFailed = false;
+
+    if (CookMeshShapes)
+    {
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes (%s)"),
+            ForceRebuild ? TEXT("full rebuild") : TEXT("freshness check"));
+        const auto MeshStats = FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode, ForceRebuild);
+        MeshShapesFailed = NOT MeshStats._Success;
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes complete: %d rebuilt, %d current, %d failed"),
+            MeshStats._NumShapesCooked, MeshStats._NumUpToDate, MeshStats._NumFailed);
+    }
+
+    CK_ENSURE_IF_NOT(NOT MeshShapesFailed,
+        TEXT("CkJoltCook: mesh-shape sweep failed — refusing map selection or world loading"))
+    { }
+
+    if (MeshShapesFailed)
     { return 1; }
 
     auto PackagingMaps = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionResult{};
@@ -207,6 +233,7 @@ auto
         SelectionInput._bMap = HasExplicitMap;
         SelectionInput._bAllMaps = CookAllMaps;
         SelectionInput._bCookAll = PackagingSettings->bCookAll;
+        SelectionInput._bIncludeAlwaysCookDirectories = IncludeAlwaysCookDirectories;
         SelectionInput._CookedDataRootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
 
         for (const auto& Map : PackagingSettings->MapsToCook)
@@ -223,8 +250,11 @@ auto
         for (const auto& ExcludedPrefix : SelectionInput._JoltExcludedMapPathPrefixes)
         { PackagingExcludedLevelPackagePaths.AddUnique(ExcludedPrefix); }
         PackagingExcludedLevelPackagePaths.AddUnique(SelectionInput._CookedDataRootPath);
-        SelectionInput._DiscoveredAlwaysCookMapCandidates =
-            ck_jolt_cook_commandlet::Discover_AlwaysCookMapCandidates(SelectionInput._DirectoriesToAlwaysCook);
+        if (SelectionInput._bIncludeAlwaysCookDirectories)
+        {
+            SelectionInput._DiscoveredAlwaysCookMapCandidates =
+                ck_jolt_cook_commandlet::Discover_AlwaysCookMapCandidates(SelectionInput._DirectoriesToAlwaysCook);
+        }
         PackagingMaps = ck::jolt::cook::Select_PackagingMaps(SelectionInput);
 
         const auto HasValidPackagingMaps = PackagingMaps._Success;
@@ -235,6 +265,10 @@ auto
 
         if (NOT HasValidPackagingMaps)
         { return 1; }
+
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: packaging map policy [%s]: %d authored + %d AlwaysCook = %d selected"),
+            SelectionInput._bIncludeAlwaysCookDirectories ? TEXT("full union") : TEXT("incremental entry worlds"),
+            PackagingMaps._NumAuthoredMaps, PackagingMaps._NumAlwaysCookMaps, PackagingMaps._MapPackageNames.Num());
 
         const auto HasSelectedPackagingMaps = NOT PackagingMaps._MapPackageNames.IsEmpty();
 
@@ -253,22 +287,6 @@ auto
     }
 
     ck_jolt_cook_commandlet::DoEnsure_AlwaysCookEntry();
-
-    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map,
-    // -AllMaps, or -PackagingMaps, or run alone.
-    const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
-    auto MeshShapesFailed = false;
-
-    if (CookMeshShapes)
-    {
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
-        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes (%s)"),
-            ForceRebuild ? TEXT("full rebuild") : TEXT("freshness check"));
-        const auto MeshStats = FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode, ForceRebuild);
-        MeshShapesFailed = NOT MeshStats._Success;
-        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes complete: %d rebuilt, %d current, %d failed"),
-            MeshStats._NumShapesCooked, MeshStats._NumUpToDate, MeshStats._NumFailed);
-    }
 
     auto MapsToCook = TArray<FString>{};
 
