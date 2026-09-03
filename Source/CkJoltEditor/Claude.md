@@ -53,7 +53,11 @@ miss, a *present but wrong* one is always a defect.
 - `UCk_JoltCook_UserSettings_UE` — per-user auto-cook toggles (Editor Preferences -> CkFoundation
   -> Jolt Cook).
 - `UCk_JoltCook_Commandlet` — headless cross-map + mesh-shape cook
-  (`-run=Ck_JoltCook_Commandlet -Map=… | -AllMaps | -MeshShapes [-DryRun]` — the FULL class token
+  (`-run=Ck_JoltCook_Commandlet -Map=… | -AllMaps | -PackagingMaps | -MeshShapes [-DryRun]` —
+  `-PackagingMaps` unions the project's ordered `MapsToCook` persistent entry roots with UWorld
+  metadata under `DirectoriesToAlwaysCook`, skips packaging/Jolt/cooked-output exclusions from
+  either source, and rejects `bCookAll` and `-Map`/`-AllMaps` combinations before any cook;
+  the FULL class token
   is required, `-run=CkJoltCook` resolves to no class; on unique-build-environment projects invoke
   the project's own `<Target>-Cmd.exe`, not the engine's `UnrealEditor-Cmd.exe`), CK_ENSUREs the
   DirectoriesToAlwaysCook ini entry. Boots worlds itself; if that
