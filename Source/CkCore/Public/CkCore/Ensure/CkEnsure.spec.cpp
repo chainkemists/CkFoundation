@@ -108,6 +108,37 @@ bool FCkTest_Ensure_OccurrenceTracker_Concurrent::RunTest(const FString&)
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Ensure_ScriptPlumbingFrames,
+    "Ck.CkCore.Ensure.ScriptPlumbingFrames",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Ensure_ScriptPlumbingFrames::RunTest(const FString&)
+{
+    // The ck::Ensure family raises the ensure on its caller's behalf, so the site-identity walk steps
+    // past these frames. Naming them instead attributes every script ensure to CkUtils_Common.as.
+    TestTrue(TEXT("ck::Ensure is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("Ensure")));
+    TestTrue(TEXT("ck::EnsureIfNot is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("EnsureIfNot")));
+    TestTrue(TEXT("ck::EnsureIfNot_PrematureAssetLoad is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("EnsureIfNot_PrematureAssetLoad")));
+    TestTrue(TEXT("ck::TriggerEnsure is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("TriggerEnsure")));
+
+    // The reason the list is exact rather than a prefix match: these must keep their own attribution.
+    TestFalse(TEXT("A gameplay helper whose name begins with Ensure is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("EnsureStoreIsOpen")));
+    TestFalse(TEXT("A gameplay helper whose name contains Ensure is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("Reconcile_EnsureSlotFree")));
+    TestFalse(TEXT("An unrelated function is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ForEachBatch")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_Ensure_ScriptProvenanceDepth,
     "Ck.CkCore.Ensure.ScriptProvenanceDepth",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
