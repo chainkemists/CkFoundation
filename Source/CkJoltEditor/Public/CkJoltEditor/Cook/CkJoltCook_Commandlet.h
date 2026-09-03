@@ -21,14 +21,16 @@
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -Map=/Game/Maps/MyMap
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -AllMaps [-Root=/Game] [-DryRun]
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -PackagingMaps [-DryRun]
- *     Unions ProjectPackagingSettings MapsToCook with UWorld metadata under DirectoriesToAlwaysCook;
- *     exclusions skip either source. It rejects bCookAll and -Map/-AllMaps combinations before any cook begins.
- *   Add -Incremental for actor-hash freshness checks and dirty-cell rebuilding. Missing/incompatible
- *   indexes and World Partition maps fall back to full rebuilding. Add -ForceRebuild to rebuild maps
- *   and mesh shapes unconditionally. These two switches are mutually exclusive.
+ *     Uses ProjectPackagingSettings MapsToCook, with exclusions applied to every selection source.
+ *     It rejects bCookAll and -Map/-AllMaps combinations before any cook begins.
+ *     Add -Incremental to select MapsToCook entry worlds only and use actor-hash freshness checks
+ *     with dirty-cell rebuilding. Missing/incompatible indexes and World Partition maps fall back
+ *     to full rebuilding. -ForceRebuild (and legacy no mode) retains the full AlwaysCook union and
+ *     rebuilds maps and mesh shapes unconditionally. These two switches are mutually exclusive.
  *
- * Exit codes: 0 = success; 1 = rejected selection, missing entry map, a mesh-shape failure, or any
- * map-load/cook failure. Each failure is logged before the commandlet exits.
+ * Exit codes: 0 = success; 1 = rejected selection, missing entry map, a mesh-shape freshness-audit
+ * or cook failure, or any map-load/cook failure. A failed mesh sweep exits before map selection or
+ * world loading. Each failure is logged before the commandlet exits.
  *
  * NOTE: the editor-subsystem path (UCk_JoltCook_EditorSubsystem_UE — world already booted by
  * the editor) is the PRIMARY cook vehicle. This commandlet boots worlds itself; if a map's
