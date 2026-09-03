@@ -134,6 +134,35 @@ The non-obvious constraints the code cannot state for itself (recorded 2026-07-2
   `ApplyReplicated*Entry`'s `Add_Revocable` creates a NEW modifier per call, so a mutate-then-NotReady retry
   would stack a second replication modifier. A saved component the re-Constructed attribute no longer composes
   is skipped with a Verbose log (content drift since the save).
+- **Per-INSTANCE save opt-out: `FCk_Fragment_*Attribute_ParamsData::_PersistValue`** (`ECk_EnableDisable`, default
+  `Enable`). The family registers ONE posture for its whole payload type, and `Durable` is right for what an
+  attribute usually is — a stat — and wrong for the instances that hold a single frame of volatile state.
+  `Disable` makes `Add` stamp `ck::FTag_Snapshot_ReconstructOnly`, so capture omits the attribute entity's row
+  and payload, reconcile does not subtract it, and the shared `HydrationApply` answers `Applied` without mutating
+  when an OLDER save still carries one — which is what lets already-shipped saves go inert with no migration.
+  **Save transport only**; an opted-out attribute replicates normally. Canonical adopter: player input intents
+  (a byte meaning "the key is down this frame"). Persisting one restores "held" with no key down and no release
+  edge to come — BusterBlock QA 2026-09-01, where a saved `Intent.Interact.Primary` of `1` re-stocked a shelf at
+  10 Hz and autofired the held weapon on every load of that slot, forever. Instance-level siblings elsewhere:
+  `FCk_Fragment_Inventory_DataOnly_ParamsData::_PersistContents`,
+  `FCk_Fragment_StateMachine_ParamsData::_ShouldPersistCurrentState`.
+- **KNOWN LIMIT of the opt-out: the refill RUN-STATE is not covered.** `CkAttribute_RefillPersistence.h`
+  registers its own `Save-Only` handler keyed on the refill entity, and it does not read the marker. New
+  saves are already safe (capture's ancestry walk omits the whole subtree), but an OLD save's refill
+  Running/Paused row would still apply to an attribute that has since opted out. Unreachable today —
+  only Float and Integer register refill handlers, and nothing opts either of them out — so it is
+  recorded rather than guarded: the guard would need its own ancestry walk, which is a second definition
+  of "excluded" and exactly what tenet 6 warns about. The real fix is ONE gate in the hydration
+  dispatcher ("target carries the marker → consume as Applied"), which would close this AND make the
+  marker's contract — never captured, never hydrated — true for every payload type rather than this
+  family alone.
+- **The gate is in `HydrationApply`, NEVER in `Produce` — and that is load-bearing.** `Produce` is the ONE
+  projection consumed by both transports: `TProcessor_Attribute_Replicate::ForEachEntity` publishes the wire
+  container through `UCk_Utils_Net_UE::TryProduce`, which resolves the same registered handler. Gating `Produce`
+  on the opt-out therefore stops REPLICATING every opted-out attribute — silently, since nothing asserts on a
+  container that simply stops updating. Capture-side omission comes from the snapshot marker instead, which the
+  wire does not read. (CkInventory hit the same trap and solved it the other way, by inlining the wire projection
+  in its SyncReplication processor.)
 - **Byte diverges from Float/Integer/Vector/Rotator:** its Override delta is unsigned and the Final modifier's
   operation tag is frozen at creation, so a sign-flipped re-apply must RECREATE the modifier rather than
   `Override` it in place.
