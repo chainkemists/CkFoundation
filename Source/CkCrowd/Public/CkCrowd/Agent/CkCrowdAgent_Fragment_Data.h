@@ -30,6 +30,7 @@ namespace ck
     class FProcessor_CrowdAgent_OnPathResolved;
     class FProcessor_CrowdAgent_OnRouteResolved;
     class FProcessor_CrowdAgent_OnVoxelPathResolved;
+    class FProcessor_CrowdAgent_OnGroundNavPathResolved;
     class FProcessor_CrowdAgent_NeighborSync;
     class FProcessor_CrowdAgent_Separation;
     class FProcessor_CrowdAgent_AccelClamp;
@@ -131,7 +132,8 @@ enum class ECk_CrowdAgent_PathProvider : uint8
     None,           // No episode in flight
     Navigation,     // CkNavigation (Recast)
     PathNetwork,    // CkPathNetwork sidewalk follower
-    VoxelNav        // CkVoxelNav volumetric
+    VoxelNav,       // CkVoxelNav volumetric
+    GroundNav       // CkGroundNav grounded surface
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_PathProvider);
 
@@ -335,6 +337,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
     friend class ck::FProcessor_CrowdAgent_OnVoxelPathResolved;
+    friend class ck::FProcessor_CrowdAgent_OnGroundNavPathResolved;
     friend class ck::FProcessor_CrowdAgent_BlockDetect;
     friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
     friend class ck::FProcessor_CrowdAgent_PathRefresh;

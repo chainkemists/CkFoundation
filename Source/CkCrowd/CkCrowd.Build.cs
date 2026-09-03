@@ -41,6 +41,7 @@ public class CkCrowd : CkModuleRules
             "CkQueue",
             "CkPathNetwork",   // follower agents route MoveTo through the path network (corridor → nav-path install seam)
             "CkVoxelNav",      // volumetric agents route MoveTo through a baked volume (voxel path → nav-path install seam)
+            "CkGroundNav",     // grounded agents route MoveTo through the world's published ground field (ground path → nav-path install seam)
         });
     }
 }
