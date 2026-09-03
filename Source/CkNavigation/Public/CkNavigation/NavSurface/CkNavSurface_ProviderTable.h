@@ -104,8 +104,31 @@ namespace ck::nav_surface
         UWorld*                 InWorld,
         ECk_NavSurface_Provider InProvider) -> void;
 
+    /**
+     * The world's own shadow mode, or the project default when it has not made one.
+     *
+     * Read from a per-world mirror under a read lock, never from the world's registry: a boundary
+     * query is callable off the game thread, and the registry is not. The lock guards the handoff
+     * of one enum and nothing else — the query that follows runs without it.
+     */
+    CKNAVIGATION_API auto
+    Get_ShadowModeForWorld(
+        UWorld* InWorld) -> ECk_NavSurface_ShadowMode;
+
+    /**
+     * Records a world's shadow mode in the mirror. GAME THREAD ONLY, and called by whoever writes
+     * the world entity's provider fragment, so the two never disagree.
+     */
+    CKNAVIGATION_API auto
+    Set_ShadowModeForWorld(
+        UWorld*                   InWorld,
+        ECk_NavSurface_ShadowMode InMode) -> void;
+
     CKNAVIGATION_API auto
     Get_DefaultProvider() -> ECk_NavSurface_Provider;
+
+    CKNAVIGATION_API auto
+    Get_DefaultShadowMode() -> ECk_NavSurface_ShadowMode;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

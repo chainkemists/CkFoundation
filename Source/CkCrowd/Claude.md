@@ -265,6 +265,7 @@ FTag_CrowdAgent_DebugOverride     # Debugger "took control" — gameplay must no
 FTag_CrowdAgent_GoalBlocked       # Goal is unreachable; agent is Idle but still WANTS it (resumable)
 FTag_CrowdAgent_Asleep            # DEFINED AND EXCLUDED, BUT NOTHING EVER STAMPS IT (see below)
 FTag_CrowdAgent_Flying            # Free-space agent; opts out of every surface-bound / planar stage
+FTag_CrowdAgent_StationaryMarkupConfirmed  # Markup disc is confirmed on the mesh; with Idle, makes this agent the hard side of a pair
 ```
 
 **`FTag_CrowdAgent_Flying`** is stamped by `Add` from `_AgentMode` and never changes afterwards. It
@@ -277,6 +278,15 @@ the integrator and ApplyOffset are already dimension-agnostic and run unchanged.
 **no avoidance and no de-overlap at all** — the sampler and both forces are planar by construction and
 a volumetric replacement is not built — and its path must come from a volumetric provider
 (`CkVoxelNav`); a Recast polyline is a floor-hugging route no flyer wants.
+
+**`FTag_CrowdAgent_StationaryMarkupConfirmed`** mirrors `FFragment_CrowdAgent_NavMarkup::_ConfirmedOnMesh` as a tag,
+so PushApart can test a NEIGHBOUR's hardness with one view lookup instead of a cross-entity fragment fetch in its
+hot loop. It is stamped in the same instruction that sets `_ConfirmedOnMesh` (PathRefresh's confirm pre-pass, once
+the rebuilt mesh reports the cost area) and cleared in the same instruction that clears it (`Remove_Markup` — every
+unpaint, drift-repaint and teardown), so the two can never disagree. Carrying it AND being Idle means: this body never yields to a
+mover. It is deliberately narrower than `Is_NeighbourSettled` (which also counts reached-Idle, `GoalBlocked`,
+`GoalFailedHold` and merely-painted agents) — confirmation is the only one of those with rebuild-latency hysteresis
+behind it, and hardening on paint alone would turn any agent that paused for 1.5s into furniture.
 
 **`FTag_CrowdAgent_Asleep` is dead weight.** Every steering-side processor carries
 `TExclude<FTag_CrowdAgent_Asleep>`, but no code path anywhere adds the tag — the SleepEvaluator that
@@ -333,6 +343,12 @@ live in `UCk_Crowd_ProjectSettings_UE`
 defaults to 84 cm/s, the former half-radius-per-0.25-second rule for the standard 42 cm agent;
 the classifier uses XY displacement over the actual sample window rather than instantaneous
 velocity.
+
+`_StationaryHardBodyMode` (default `Enabled`) is the master switch for hard de-penetration against
+confirmed-stationary bodies: a mover's overlap against one is resolved exactly, in one pass, including
+the displacement already staged that frame, so the mover stops at contact and the body absorbs none of
+the shove. It engages only where EXACTLY ONE side of the pair is confirmed AND Idle — two such bodies, or
+two movers, keep the damped model. `Disabled` returns every pair to the damped model, for A/B only.
 
 ---
 
@@ -957,7 +973,7 @@ Steering or the sampler from here. Coverage:
 - **No queue ownership logic.** `CkQueue` owns admission, tickets, origins, slots, limits, slot claim/settle/reacquire radii, request acceptance, and planner-facing events. `CkCrowd/Public/CkCrowd/Queue` is only the optional framework adapter that translates a revisioned Queue assignment into a correlated `MoveTo` and reports its outcome. It reports `Reached` at the Queue claim radius, continues the owned move to the tighter settle radius, and reacquires a claimed slot only after displacement crosses the Queue reacquire radius; the assignment revision is still reported at most once. Before any outcome report it checks Queue's public request-acceptance query; invalidation or authority loss clears the stale routing state without calling a request that must reject. Ordinary queue retargets issue a replacement `MoveTo` without `Stop`, preserving Crowd velocity across a still-owned route change. A displaced claimed member is the deliberate hard takeover: `Stop` clears external/outward momentum before station keeping returns it. While an agent is queued, the adapter reacquires the assignment if another movement consumer replaces or stops its episode; use Queue suppression or leave before deliberately handing that agent to another locomotion owner. Counter clumping without `CkQueue` remains the expected behavior of separation-force-only avoidance.
 - **NPCs are non-blocking to the player.** They have no `UPrimitiveComponent`, so the player's `UCharacterMovementComponent` has nothing to collide with. The player can walk through any NPC that soft-push didn't displace in time. This is the design — the only mitigation in scope is the soft-push amplification when the player is a separation-neighbor. Hard pushback (an NPC-side collider that physically blocks the player) is a future-work item, not a bug.
 - ~~No stuck / block detection~~ — **BUILT (2026-07-14).** See "Blocked goals" below. Older copies of this doc claimed a `ProgressEval`/`TriggerReplan` tier existed when nothing did; a real one now does, under different names.
-- **PushApart does NOT guarantee zero interpenetration.** It is a faithful dtCrowd port: resolve factor 0.7, 4 iterations — deliberately under-relaxed, so it does not fully resolve overlap in a single frame. Under sustained inward pressure (e.g. N agents driving at one shared point) a small residual overlap is expected and is not a bug. Stock UE ships dtCrowd's version *disabled* entirely and relies on physics capsules instead.
+- **PushApart does NOT guarantee zero interpenetration.** It is a faithful dtCrowd port: resolve factor 0.7, 4 iterations — deliberately under-relaxed, so it does not fully resolve overlap in a single frame. Under sustained inward pressure (e.g. N agents driving at one shared point) a small residual overlap is expected and is not a bug. Stock UE ships dtCrowd's version *disabled* entirely and relies on physics capsules instead. **One exception, while `_StationaryHardBodyMode` is Enabled:** between a mover and a confirmed, idle body the mover is held at the resting contact distance in ONE pass rather than converging toward it — that pair is resolved as an exact constraint rather than a damped impulse, and the inbound component is cancelled before it lands, so the mover stops at contact instead of penetrating and being ejected. Two confirmed bodies, and two movers, keep the damped model and the residual above.
 - **~~No ORCA~~ — the avoidance IS a velocity-obstacle sampler** (dtCrowd's, RVO-reciprocal). This line used to say "separation-force avoidance is good enough; ORCA is a planned upgrade", which misled readers into believing the crude repulsion force was the whole avoidance system. See the Avoidance section above.
 - **No flow-field follower.** Waypoint-only at 150 agents is fine; flow-field is overkill for our scale.
 - **No off-mesh links / jumps.** Rental store has no jumps.
@@ -1061,6 +1077,16 @@ magnitude only and left direction free to snap.
   avoidance velocity, push-apart shove) moved the transform straight through a navmesh boundary,
   wall-eroded band included. `RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0` self-healing exists so a
   one-frame corner leak cannot disable the clamp forever.
+- **The body is authoritative for PENETRATION, the wall for POSITION.** The two authorities never
+  negotiate and never need to. PushApart decides how much of a frame's motion is inadmissible because a
+  body occupies the ground — against a confirmed-stationary body it removes the inbound component
+  outright — and ConstrainToNavmesh then walks whatever survives along the surface, sliding along a wall,
+  clamping at it, and holding position when the walk fails. A mover pinned between a confirmed body and an
+  impassable slab therefore **stops**: it never gains ground through the body, and it never leaves the
+  mesh. The ordering is what makes that hold — cancelling the inbound component BEFORE the walk is not an
+  optimisation but the correctness condition, because a post-hoc ejection whose outbound component the
+  wall eats would accumulate penetration frame over frame. No wall-side code implements this rule; it
+  falls out of the two stages already in that order.
 - **Grounding runs on a LEASE (`FFragment_CrowdAgent_Grounding`), never only on displacement.**
   The constraint used to early-out whenever the frame staged zero displacement, which coupled a
   stationary agent's grounding to the avoidance solver happening to emit something. For years that

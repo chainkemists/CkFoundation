@@ -358,6 +358,29 @@ namespace ck
         InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::Navigation;
 
         UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
+
+        // The shadowing provider answers the SAME request so the two results can be compared; it is
+        // never installed, so nothing the Recast dispatch above decided moves — the episode still
+        // belongs to Navigation. Placed after the dispatch rather than at the provider fork so every
+        // framework-internal re-dispatch site shadows without knowing this exists.
+        if (NOT WorldPlansOnGroundNav
+            && ck::nav_surface::Get_ShadowModeForWorld(World) == ECk_NavSurface_ShadowMode::GroundNavShadowsRecast)
+        {
+            if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
+            {
+                UCk_Utils_GroundNavPath_UE::Add(
+                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InParams.Get_Radius()});
+            }
+
+            auto ShadowPath = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);
+            const auto ShadowFrom = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+                UCk_Utils_Transform_UE::CastChecked(InHandle));
+
+            auto ShadowRequest = FCk_Request_GroundNavPath_FindPath{ShadowFrom, InGoal};
+            ShadowRequest.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
+            ShadowRequest.Set_IsShadow(ECk_EnableDisable::Enable);
+            UCk_Utils_GroundNavPath_UE::Request_FindPath(ShadowPath, ShadowRequest, {});
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -535,6 +558,20 @@ namespace ck
                 break;
             }
             case ECk_CrowdAgent_PathProvider::Navigation:
+            {
+                // A shadow episode rides a Navigation-provider query without owning the record, so
+                // releasing the episode has to release the shadow too — otherwise a superseded one
+                // keeps searching against a revision nobody will ever match, on the same per-frame
+                // search budget real GroundNav worlds are measured against.
+                if (UCk_Utils_GroundNavPath_UE::Has(NonConstHandle))
+                {
+                    auto Path = UCk_Utils_GroundNavPath_UE::CastChecked(NonConstHandle);
+                    auto Request = FCk_Request_GroundNavPath_AbandonPath{};
+                    Request.Set_RequestRevision(InRevision);
+                    UCk_Utils_GroundNavPath_UE::Request_AbandonPath(Path, Request, {});
+                }
+                break;
+            }
             case ECk_CrowdAgent_PathProvider::None:
             default:
             {

@@ -132,10 +132,17 @@ private:
               meta = (AllowPrivateAccess = true))
     int32 _RequestRevision = 0;
 
+    /** A shadow route is searched and published exactly like any other and is never installed by the
+     *  consumer that asked for it. The flag rides the answer so that consumer can tell which it got. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _IsShadow = ECk_EnableDisable::Disable;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
     CK_PROPERTY(_RequestRevision);
+    CK_PROPERTY(_IsShadow);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);
@@ -197,6 +204,11 @@ private:
               meta = (AllowPrivateAccess = true))
     int32 _RequestRevision = 0;
 
+    // Copied verbatim from the request this answers, for the same reason the revision is.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _IsShadow = ECk_EnableDisable::Disable;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     double _LengthUu = 0.0;
@@ -204,6 +216,13 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     int32 _ExpansionCount = 0;
+
+    /** What the search itself spent, summed over the slices it ran. The ticks it waited behind the
+     *  per-frame cap and the ticks it sat parked on unbuilt ground are excluded, so this is comparable
+     *  against a provider that answers the same route in one call. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    float _SearchDurationMs = 0.0f;
 
     /** The field epoch this plan was made against, as its bare counter: FCk_GroundNav_Epoch is a plain
      *  struct and is not reflected. Staleness is DERIVED by comparing this against the field's current
@@ -216,8 +235,10 @@ public:
     CK_PROPERTY(_Status);
     CK_PROPERTY(_Waypoints);
     CK_PROPERTY(_RequestRevision);
+    CK_PROPERTY(_IsShadow);
     CK_PROPERTY(_LengthUu);
     CK_PROPERTY(_ExpansionCount);
+    CK_PROPERTY(_SearchDurationMs);
     CK_PROPERTY(_PlannedAgainstEpoch);
 };
 
