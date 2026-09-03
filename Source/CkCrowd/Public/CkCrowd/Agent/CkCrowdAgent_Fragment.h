@@ -313,6 +313,9 @@ namespace ck
     // Always co-resident with Idle; never co-resident with Walking or PathPending.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalFailedHold);
 
+    // Mirrors FFragment_CrowdAgent_NavMarkup::_ConfirmedOnMesh, so a pair test costs no cross-entity fetch.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_StationaryMarkupConfirmed);
+
     // Progress-along-path stall detection plus the escalation ladder that answers it.
     // UPathFollowingComponent's feet-sample centroid ring (PathFollowingComponent.cpp:1556-1608)
     // used to live here; it was blind to an agent sliding laterally along a wall, which is exactly

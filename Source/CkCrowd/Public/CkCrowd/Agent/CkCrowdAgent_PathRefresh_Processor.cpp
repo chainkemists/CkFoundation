@@ -41,6 +41,16 @@ namespace ck_crowd_agent_path_refresh
     // Process-wide (not per-world): only monotonicity matters. A path and a disc are compared only
     // within one world, while sharing the counter prevents serial reuse across world transitions.
     static auto GConfirmationSerial = uint64{0};
+
+    // A body held at contact by push-apart rests at the disc edge minus the push-apart slop, so a
+    // boundary-exact test reads it as standing in the band. Touching a band from outside is being
+    // blocked by it, not standing in it.
+    constexpr auto kBandContactToleranceUu = 1.0f;
+
+    auto Is_InsidePaintedBand(float InDistance2D, float InRadius) -> bool
+    {
+        return InDistance2D < InRadius - kBandContactToleranceUu;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -94,6 +104,9 @@ namespace ck
 
                         InMarkup._ConfirmationSerial = IssueConfirmationSerial();
                         InMarkup._ConfirmedOnMesh = true;
+
+                        auto ConfirmedAgent = ck::MakeHandle(InEntity, _TransientEntity);
+                        ConfirmedAgent.AddOrGet<FTag_CrowdAgent_StationaryMarkupConfirmed>();
                     }
 
                     _SettledDiscs.Add(FSettledDisc{
@@ -256,7 +269,8 @@ namespace ck
         {
             for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
             {
-                if (FVector::Dist2D(InPoint, Centers[Idx]) <= Radii[Idx])
+                if (ck_crowd_agent_path_refresh::Is_InsidePaintedBand(
+                        static_cast<float>(FVector::Dist2D(InPoint, Centers[Idx])), Radii[Idx]))
                 { return true; }
             }
             for (const auto& Volume : Volumes)
@@ -965,7 +979,8 @@ namespace ck
             {
                 const auto SegEnd = FVector2D{Waypoints[Idx]};
                 const auto Closest = FMath::ClosestPointOnSegment2D(DiscCenter2D, SegStart, SegEnd);
-                if (FVector2D::Distance(Closest, DiscCenter2D) <= Disc._Radius)
+                if (ck_crowd_agent_path_refresh::Is_InsidePaintedBand(
+                        static_cast<float>(FVector2D::Distance(Closest, DiscCenter2D)), Disc._Radius))
                 {
                     CrossesFreshMarkup = true;
                     break;

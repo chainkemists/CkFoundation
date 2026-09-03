@@ -26,10 +26,12 @@ namespace ck
 
     private:
         ECk_NavSurface_Provider _Provider = ECk_NavSurface_Provider::Recast;
+        ECk_NavSurface_ShadowMode _ShadowMode = ECk_NavSurface_ShadowMode::Off;
         ECk_NavSurface_ProviderHealth _Health = ECk_NavSurface_ProviderHealth::NoData;
 
     public:
         CK_PROPERTY_GET(_Provider);
+        CK_PROPERTY_GET(_ShadowMode);
         CK_PROPERTY_GET(_Health);
     };
 

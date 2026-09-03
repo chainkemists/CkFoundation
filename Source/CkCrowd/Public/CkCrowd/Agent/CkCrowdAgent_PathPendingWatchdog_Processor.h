@@ -5,6 +5,7 @@
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnPathResolved_Processor.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
@@ -35,6 +36,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
+        // OnPathResolved writes the same slot and owns the tag transition, so reconciling ahead of it
+        // would judge a result that has not landed yet.
+        using RunAfter = TDepList<FProcessor_CrowdAgent_OnPathResolved>;
 
     public:
         using TProcessor::TProcessor;

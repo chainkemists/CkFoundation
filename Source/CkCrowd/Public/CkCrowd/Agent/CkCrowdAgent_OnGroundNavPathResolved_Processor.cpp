@@ -34,6 +34,12 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnGroundNavPathResolvedProc);
 
+        // A shadow result is compared elsewhere and must never reach the install seam. FIRST, ahead
+        // of the movement-tag gate: the agent is legitimately Idle for a shadow answer, and the
+        // dropped-fresh-result Log below would read it as an episode that ended without releasing.
+        if (InPathResult.Get_Result().Get_IsShadow() == ECk_EnableDisable::Enable)
+        { return; }
+
         // The path result fragment persists after arrival/stop, so only an agent with an active goal
         // may consume it.
         const auto IsPathPending = InHandle.Has<FTag_CrowdAgent_PathPending>();
