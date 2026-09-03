@@ -92,7 +92,7 @@ namespace ck::groundnav
                 const auto Centre = OpenBody._Bounds.GetCenter();
 
                 DrawDebugString(InWorld, FVector{Centre.X, Centre.Y, OpenBody._Bounds.Max.Z},
-                    FString::Printf(TEXT("OPEN COLLISION — %s (%d open edges)"),
+                    FString::Printf(TEXT("OPEN COLLISION - %s - %d open edges"),
                         *OpenBody._Description, OpenBody._OpenEdgeCount),
                     nullptr, FColor::Red, InLifetimeSeconds, DrawShadow);
             }
