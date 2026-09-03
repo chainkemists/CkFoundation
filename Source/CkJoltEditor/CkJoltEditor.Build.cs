@@ -24,6 +24,8 @@ public class CkJoltEditor : CkModuleRules
             "ContentBrowser",
             // The per-user auto-cook toggles are a UDeveloperSettings subclass (CkSettings' user-settings base).
             "DeveloperSettings",
+            // UProjectPackagingSettings owns MapsToCook, DirectoriesToNeverCook, and bCookAll.
+            "DeveloperToolSettings",
             "Landscape",
             // The mesh-shape cook reads UBodySetupCore trace flags directly.
             "PhysicsCore",

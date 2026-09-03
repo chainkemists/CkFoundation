@@ -5,6 +5,7 @@
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJoltEditor/Cook/CkJoltCook_MeshShapeCooker.h"
+#include "CkJoltEditor/Cook/CkJoltCook_MapSelection.h"
 #include "CkJoltEditor/Cook/CkJoltCook_WorldCooker.h"
 
 #include <AssetRegistry/AssetRegistryModule.h>
@@ -13,14 +14,78 @@
 #include <Engine/LevelStreaming.h>
 #include <Engine/World.h>
 #include <FileHelpers.h>
+#include <HAL/FileManager.h>
 #include <Misc/PackageName.h>
+#include <Settings/ProjectPackagingSettings.h>
 #include <UObject/Package.h>
+#include <UObject/WeakObjectPtr.h>
 #include <WorldPartition/WorldPartition.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_jolt_cook_commandlet
 {
+    static auto NormalizePackageDirectory(
+        const FString& InPath) -> FString
+    {
+        if (InPath.IsEmpty())
+        { return {}; }
+
+        auto NormalizedPath = InPath;
+
+        while (NormalizedPath.Len() > 1 && NormalizedPath.EndsWith(TEXT("/")))
+        { NormalizedPath.LeftChopInline(1); }
+
+        return NormalizedPath.StartsWith(TEXT("/"))
+            ? NormalizedPath
+            : TEXT("/Game/") + NormalizedPath;
+    }
+
+    /// Scans only configured, mounted AlwaysCook directories and reads UWorld asset metadata only.
+    /// An unmounted non-content directory is not an error and never broadens the scan scope.
+    static auto Discover_AlwaysCookMapCandidates(
+        const TArray<FString>& InAlwaysCookDirectories) -> TArray<FString>
+    {
+        auto MountedDirectories = TArray<FString>{};
+
+        for (const auto& Directory : InAlwaysCookDirectories)
+        {
+            const auto PackageDirectory = NormalizePackageDirectory(Directory);
+            auto LocalDirectory = FString{};
+
+            if (PackageDirectory.IsEmpty()
+                || NOT FPackageName::TryConvertLongPackageNameToFilename(PackageDirectory, LocalDirectory))
+            { continue; }
+
+            MountedDirectories.AddUnique(PackageDirectory);
+        }
+
+        if (MountedDirectories.IsEmpty())
+        { return {}; }
+
+        auto& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+        AssetRegistry.ScanPathsSynchronous(MountedDirectories);
+
+        auto Filter = FARFilter{};
+        Filter.ClassPaths.Add(UWorld::StaticClass()->GetClassPathName());
+        Filter.bRecursivePaths = true;
+        Filter.bIncludeOnlyOnDiskAssets = true;
+
+        for (const auto& Directory : MountedDirectories)
+        { Filter.PackagePaths.Add(*Directory); }
+
+        auto Assets = TArray<FAssetData>{};
+        AssetRegistry.GetAssets(Filter, Assets);
+
+        auto Candidates = TArray<FString>{};
+        Candidates.Reserve(Assets.Num());
+
+        for (const auto& Asset : Assets)
+        { Candidates.Add(Asset.PackageName.ToString()); }
+
+        return Candidates;
+    }
+
     // The cooked-data root must be force-cooked into packaged builds — nothing hard-references
     // the assets (index is found by path convention), so a missing entry ships builds with NO
     // Jolt static world. Loud, with the exact line to add.
@@ -64,6 +129,30 @@ namespace ck_jolt_cook_commandlet
                  "+DirectoriesToAlwaysCook=(Path=\"{}\")"), RootPath, RootPath)
         { return; }
     }
+
+    /// Map selection is intentionally world-free, but packaging entry roots must still resolve to
+    /// real .umap files before an optional mesh-shape sweep writes any assets.
+    static auto DoEnsure_PackagingMapsExist(
+        const TArray<FString>& InMapPackageNames) -> bool
+    {
+        for (const auto& MapPackageName : InMapPackageNames)
+        {
+            auto MapFilename = FString{};
+            const auto HasMappedFilename = FPackageName::TryConvertLongPackageNameToFilename(
+                MapPackageName, MapFilename, FPackageName::GetMapPackageExtension());
+            const auto HasMapFile = HasMappedFilename && IFileManager::Get().FileExists(*MapFilename);
+
+            CK_ENSURE_IF_NOT(HasMapFile,
+                TEXT("CkJoltCook: -PackagingMaps entry [{}] does not resolve to a .umap file [{}]"),
+                MapPackageName, MapFilename)
+            { }
+
+            if (NOT HasMapFile)
+            { return false; }
+        }
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,10 +172,73 @@ auto
         ? ck::jolt::cook::ECk_Jolt_CookMode::DryRun
         : ck::jolt::cook::ECk_Jolt_CookMode::Cook;
 
+    const auto CookPackagingMaps = Switches.Contains(TEXT("PackagingMaps"));
+    const auto HasExplicitMap = ParamsMap.Contains(TEXT("Map"));
+    const auto CookAllMaps = Switches.Contains(TEXT("AllMaps"));
+
+    auto PackagingMaps = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionResult{};
+
+    if (CookPackagingMaps)
+    {
+        const auto PackagingSettings = TWeakObjectPtr<const UProjectPackagingSettings>{
+            GetDefault<UProjectPackagingSettings>()};
+        const auto HasPackagingSettings = PackagingSettings.IsValid();
+
+        CK_ENSURE_IF_NOT(HasPackagingSettings,
+            TEXT("CkJoltCook: UProjectPackagingSettings is unavailable — refusing -PackagingMaps"))
+        { }
+
+        if (NOT HasPackagingSettings)
+        { return 1; }
+
+        auto SelectionInput = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionInput{};
+        SelectionInput._bPackagingMaps = true;
+        SelectionInput._bMap = HasExplicitMap;
+        SelectionInput._bAllMaps = CookAllMaps;
+        SelectionInput._bCookAll = PackagingSettings->bCookAll;
+        SelectionInput._CookedDataRootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
+
+        for (const auto& Map : PackagingSettings->MapsToCook)
+        { SelectionInput._AuthoredMapsToCook.Add(Map.FilePath); }
+        for (const auto& Directory : PackagingSettings->DirectoriesToAlwaysCook)
+        { SelectionInput._DirectoriesToAlwaysCook.Add(Directory.Path); }
+        for (const auto& Directory : PackagingSettings->DirectoriesToNeverCook)
+        { SelectionInput._DirectoriesToNeverCook.Add(Directory.Path); }
+
+        SelectionInput._JoltExcludedMapPathPrefixes = UCk_Utils_Jolt_ProjectSettings::Get_CookExcludedMapPathPrefixes();
+        SelectionInput._DiscoveredAlwaysCookMapCandidates =
+            ck_jolt_cook_commandlet::Discover_AlwaysCookMapCandidates(SelectionInput._DirectoriesToAlwaysCook);
+        PackagingMaps = ck::jolt::cook::Select_PackagingMaps(SelectionInput);
+
+        const auto HasValidPackagingMaps = PackagingMaps._Success;
+
+        CK_ENSURE_IF_NOT(HasValidPackagingMaps,
+            TEXT("CkJoltCook: -PackagingMaps selection rejected: [{}]"), PackagingMaps._Failure)
+        { }
+
+        if (NOT HasValidPackagingMaps)
+        { return 1; }
+
+        const auto HasSelectedPackagingMaps = NOT PackagingMaps._MapPackageNames.IsEmpty();
+
+        CK_ENSURE_IF_NOT(HasSelectedPackagingMaps,
+            TEXT("CkJoltCook: -PackagingMaps found no eligible UWorld entry maps in MapsToCook or DirectoriesToAlwaysCook"))
+        { }
+
+        if (NOT HasSelectedPackagingMaps)
+        { return 1; }
+
+        const auto PackagingMapsExist = ck_jolt_cook_commandlet::DoEnsure_PackagingMapsExist(
+            PackagingMaps._MapPackageNames);
+
+        if (NOT PackagingMapsExist)
+        { return 1; }
+    }
+
     ck_jolt_cook_commandlet::DoEnsure_AlwaysCookEntry();
 
-    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map/-AllMaps
-    // or run alone.
+    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map,
+    // -AllMaps, or -PackagingMaps, or run alone.
     const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
     auto MeshShapesFailed = false;
 
@@ -98,9 +250,11 @@ auto
 
     auto MapsToCook = TArray<FString>{};
 
-    if (const auto* SingleMap = ParamsMap.Find(TEXT("Map")))
+    if (CookPackagingMaps)
+    { MapsToCook = MoveTemp(PackagingMaps._MapPackageNames); }
+    else if (const auto* SingleMap = ParamsMap.Find(TEXT("Map")))
     { MapsToCook.Add(*SingleMap); }
-    else if (Switches.Contains(TEXT("AllMaps")))
+    else if (CookAllMaps)
     {
         const auto Root = ParamsMap.Contains(TEXT("Root")) ? ParamsMap[TEXT("Root")] : FString{TEXT("/Game")};
         const auto ExcludedPrefixes = UCk_Utils_Jolt_ProjectSettings::Get_CookExcludedMapPathPrefixes();
