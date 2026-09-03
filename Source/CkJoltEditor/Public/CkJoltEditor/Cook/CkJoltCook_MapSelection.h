@@ -32,6 +32,13 @@ namespace ck::jolt::cook
         bool _Success = false;
     };
 
+    /// Tests a map or level package against configured package-directory exclusions. Relative paths
+    /// are rooted at /Game; trailing slashes are ignored; matching respects path components.
+    CKJOLTEDITOR_API auto
+        Get_IsPackageExcluded(
+            const FString& InPackageName,
+            const TArray<FString>& InExcludedPackagePaths) -> bool;
+
     /// Resolves authored MapsToCook first, then lexically ordered UWorld candidates found under the configured
     /// DirectoriesToAlwaysCook. Exclusions skip either source; rejected command-line/settings input yields no plan.
     CKJOLTEDITOR_API auto
