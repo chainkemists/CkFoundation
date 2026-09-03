@@ -57,8 +57,11 @@ namespace ck
             FFragment_CrowdAgent_NavMarkup& InMarkup) -> void;
 
         // Shared with the EndPlay processor — lives here because this class is the fragment's friend.
+        // Takes the handle so hard-body confirmation is dropped in the same instruction as the
+        // mesh confirmation it mirrors.
         static auto
         Remove_Markup(
+            FCk_Handle_CrowdAgent& InHandle,
             FFragment_CrowdAgent_NavMarkup& InMarkup) -> void;
     };
 

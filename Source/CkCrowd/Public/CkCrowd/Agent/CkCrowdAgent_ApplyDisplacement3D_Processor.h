@@ -4,6 +4,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PushApart_Processor.h"
 
@@ -34,6 +35,9 @@ namespace ck
     public:
         using Group = FGroup_Physics;
         using RunAfter = TDepList<FProcessor_CrowdAgent_PushApart>;
+        // Both drain FFragment_CrowdAgent_PendingDisplacement. The views partition on Flying so the
+        // choice is free, but it has to be declared rather than fall out of registration order.
+        using RunBefore = TDepList<FProcessor_CrowdAgent_ConstrainToNavmesh>;
 
     public:
         using TProcessor::TProcessor;

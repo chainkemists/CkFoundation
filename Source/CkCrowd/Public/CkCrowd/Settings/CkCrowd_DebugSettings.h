@@ -60,6 +60,11 @@ private:
 
     UPROPERTY(Config, EditAnywhere, Category = "Visualization",
               meta = (AllowPrivateAccess = true,
+                      ToolTip = "Draw the shadow-mode A/B overlay for every agent whose ground-path slot holds a shadow result matching the installed nav revision: the installed Recast polyline, the shadow GroundNav polyline in a contrasting color, a dashed connector between the two endpoints, and a length/waypoint/status delta label. Nothing draws unless the world is running GroundNav-shadows-Recast."))
+    bool _DrawShadowRoutes = false;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Visualization",
+              meta = (AllowPrivateAccess = true,
                       ToolTip = "Draw the orbit-diagnosis rings for every crowd agent: arrival ring (green) + predicted-orbit ring (red, = MaxSpeed/MaxTurnRate) at the goal, the turn-radius circle (blue, = speed/MaxTurnRate) tangent to the agent, and the velocity vector (yellow). The selected agent is always drawn regardless of this toggle."))
     bool _DrawAgentRings = false;
 
@@ -74,6 +79,7 @@ public:
     CK_PROPERTY(_DrawBreadcrumbs);
     CK_PROPERTY(_DrawPlannedPaths);
     CK_PROPERTY(_DrawPathTrouble);
+    CK_PROPERTY(_DrawShadowRoutes);
     CK_PROPERTY(_DrawAgentRings);
     CK_PROPERTY(_DrawBlockStatus);
 };
@@ -109,6 +115,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool
     Get_DrawPathTrouble();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
+    static bool
+    Get_DrawShadowRoutes();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool

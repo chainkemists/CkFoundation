@@ -82,7 +82,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_CrowdAgent_Steering, FProcessor_CrowdAgent_NeighborSync>;
+        using RunAfter = TDepList<FProcessor_CrowdAgent_Steering, FProcessor_CrowdAgent_NeighborSync, FProcessor_CrowdAgent_DiagSteeringTap>;
         using RunBefore = TDepList<FProcessor_CrowdAgent_AvoidanceSample>;
         using TParallelProcessor::TParallelProcessor;
         auto ForEachEntity(
@@ -131,7 +131,7 @@ namespace ck
     public:
         using Group = FGroup_Physics;
         using RunAfter = TDepList<FProcessor_CrowdAgent_VelocityBridge>;
-        using RunBefore = TDepList<FProcessor_Velocity_Clamp>;
+        using RunBefore = TDepList<FProcessor_Velocity_Clamp, FProcessor_CrowdAgent_DiagApplyOffsetTap>;
         using TProcessor::TProcessor;
         static auto ForEachEntity(TimeType, HandleType, const FFragment_Velocity_Current&, FFragment_CrowdAgent_DiagRecorder&) -> void;
     };

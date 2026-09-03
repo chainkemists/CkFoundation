@@ -62,6 +62,11 @@ auto UCk_Utils_Crowd_Settings_UE::Get_PushApartSlopCm() -> float
     return Get()->Get_PushApartSlopCm();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_StationaryHardBodyMode() -> ECk_CrowdStationaryHardBodyMode
+{
+    return Get()->Get_StationaryHardBodyMode();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_NavmeshConstraintMode() -> ECk_CrowdNavmeshConstraintMode
 {
     return Get()->Get_NavmeshConstraintMode();

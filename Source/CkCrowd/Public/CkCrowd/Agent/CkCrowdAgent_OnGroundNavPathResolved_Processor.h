@@ -12,6 +12,7 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnPathResolved_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -57,7 +58,10 @@ namespace ck
         static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
         // HandleRequests stamps PathPending + _ActiveGoal + parks the nav-path slot this processor
         // keys off, so a MoveTo issued this frame is observed with consistent state.
-        using RunAfter = TDepList<FProcessor_CrowdAgent_HandleRequests>;
+        // Every resolve processor installs into FFragment_CrowdAgent_PathFollow; the chain fixes which install wins.
+        using RunAfter = TDepList<
+            FProcessor_CrowdAgent_HandleRequests,
+            FProcessor_CrowdAgent_OnPathResolved>;
 
     public:
         using TProcessor::TProcessor;

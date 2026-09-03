@@ -39,6 +39,7 @@ namespace ck
     auto
         FProcessor_CrowdAgent_StationaryMarkup::
         Remove_Markup(
+            FCk_Handle_CrowdAgent& InHandle,
             FFragment_CrowdAgent_NavMarkup& InMarkup)
         -> void
     {
@@ -51,6 +52,7 @@ namespace ck
         InMarkup._SecondsSincePaint = 0.0f;
         InMarkup._ConfirmationSerial = 0;
         InMarkup._ConfirmedOnMesh = false;
+        InHandle.Try_Remove<FTag_CrowdAgent_StationaryMarkupConfirmed>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,7 +80,7 @@ namespace ck
             UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Disabled ||
             NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {
-            Remove_Markup(InMarkup);
+            Remove_Markup(InHandle, InMarkup);
             return;
         }
 
@@ -93,7 +95,7 @@ namespace ck
             TEXT("Invalid stationary-markup speed threshold [{}]"),
             StationarySpeedThreshold)
         {
-            Remove_Markup(InMarkup);
+            Remove_Markup(InHandle, InMarkup);
             return;
         }
 
@@ -113,7 +115,7 @@ namespace ck
                     SampleSeconds,
                     StationarySpeedThreshold))
             {
-                Remove_Markup(InMarkup);
+                Remove_Markup(InHandle, InMarkup);
                 return;
             }
         }
@@ -130,7 +132,7 @@ namespace ck
             if (Drift <= InParams.Get_Radius() * REPAINT_DRIFT_FRACTION)
             { return; }
 
-            Remove_Markup(InMarkup);
+            Remove_Markup(InHandle, InMarkup);
             InMarkup._StationarySeconds = Settings.Get_StationaryMarkupDelaySeconds();
         }
 
@@ -151,6 +153,7 @@ namespace ck
         InMarkup._SecondsSincePaint = 0.0f;
         InMarkup._ConfirmationSerial = 0;
         InMarkup._ConfirmedOnMesh = false;
+        InHandle.Try_Remove<FTag_CrowdAgent_StationaryMarkupConfirmed>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -163,7 +166,7 @@ namespace ck
             FFragment_CrowdAgent_NavMarkup& InMarkup)
         -> void
     {
-        FProcessor_CrowdAgent_StationaryMarkup::Remove_Markup(InMarkup);
+        FProcessor_CrowdAgent_StationaryMarkup::Remove_Markup(InHandle, InMarkup);
     }
 }
 

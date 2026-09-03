@@ -126,6 +126,46 @@ auto
 
 auto
     UCk_Utils_NavSurface_UE::
+    Request_SetShadowMode(
+        const UObject* InWorldContext,
+        ECk_NavSurface_ShadowMode InMode)
+    -> void
+{
+    auto WorldEntity = ck_nav_surface_utils::Get_WorldEntity(InWorldContext);
+
+    const auto WorldEntityIsValid = ck::IsValid(WorldEntity);
+    CK_ENSURE_IF_NOT(WorldEntityIsValid,
+        TEXT("Request_SetShadowMode could not resolve an ECS world from context object [{}]"),
+        ck::IsValid(InWorldContext) ? InWorldContext->GetName() : FString{TEXT("NULL")})
+    { return; }
+
+    auto& Provider = WorldEntity.AddOrGet<ck::FFragment_NavSurface_Provider>();
+    Provider._ShadowMode = InMode;
+
+    ck::nav_surface::Set_ShadowModeForWorld(ck_nav_surface_utils::Get_World(InWorldContext), InMode);
+
+    ck::nav::Display
+    (
+        TEXT("NavSurface shadow mode for world entity [{}] set to [{}]"),
+        WorldEntity, InMode
+    );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
+    Get_ShadowMode(
+        const UObject* InWorldContext)
+    -> ECk_NavSurface_ShadowMode
+{
+    return ck::nav_surface::Get_ShadowModeForWorld(ck_nav_surface_utils::Get_World(InWorldContext));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
     Try_ProjectPoint(
         const UObject* InWorldContext,
         const FCk_NavSurface_ProjectionQuery& InQuery)

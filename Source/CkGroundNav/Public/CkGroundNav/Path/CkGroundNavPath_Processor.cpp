@@ -165,6 +165,7 @@ namespace ck
         InCurrent._PendingRequest = FCk_Request_GroundNavPath_FindPath{};
         InCurrent._HasBegun = false;
         InCurrent._PendingSince = FCk_Time{};
+        InCurrent._SearchTimeSpent = FCk_Time{};
     }
 
     // The one line that proves this provider is alive: every published verdict, terminal or timed out.
@@ -176,9 +177,11 @@ namespace ck
         -> void
     {
         groundnav::Display(
-            TEXT("GroundNav Path [{}] published [{}] rev [{}] waypoints [{}] expansions [{}]"),
+            TEXT("GroundNav Path [{}] published [{}] rev [{}] waypoints [{}] expansions [{}] ")
+            TEXT("shadow [{}] search [{}]ms"),
             InPathEntity, InPublished.Get_Status(), InPublished.Get_RequestRevision(),
-            InPublished.Get_Waypoints().Num(), InPublished.Get_ExpansionCount());
+            InPublished.Get_Waypoints().Num(), InPublished.Get_ExpansionCount(),
+            InPublished.Get_IsShadow(), InPublished.Get_SearchDurationMs());
     }
 
     auto
@@ -194,6 +197,9 @@ namespace ck
     {
         const auto Request = InCurrent._PendingRequest;
 
+        const auto SearchDurationMs =
+            static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
+
         // Waypoints are cleared here and NOT at the install boundary: this module answers what its own
         // search found, and a failed search found nothing. What a consumer does with the route it was
         // already walking is the consumer's decision, made where the plan is installed.
@@ -201,8 +207,10 @@ namespace ck
             .Set_Status(InStatus)
             .Set_Waypoints({})
             .Set_RequestRevision(Request.Get_RequestRevision())
+            .Set_IsShadow(Request.Get_IsShadow())
             .Set_LengthUu(0.0)
             .Set_ExpansionCount(InExpansionCount)
+            .Set_SearchDurationMs(SearchDurationMs)
             .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch);
 
         InResult._HasFreshResult = true;
@@ -232,6 +240,9 @@ namespace ck
         const auto& SearchResult = InCurrent._Search.Get_Result();
         const auto Request = InCurrent._PendingRequest;
 
+        const auto SearchDurationMs =
+            static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
+
         const auto Plan = groundnav::Get_PathPlan(
             SearchResult,
             *InCurrent._Field,
@@ -247,8 +258,10 @@ namespace ck
             .Set_Status(Plan._Status)
             .Set_Waypoints(Locations)
             .Set_RequestRevision(Request.Get_RequestRevision())
+            .Set_IsShadow(Request.Get_IsShadow())
             .Set_LengthUu(Plan._LengthUu)
             .Set_ExpansionCount(SearchResult._ExpansionCount)
+            .Set_SearchDurationMs(SearchDurationMs)
             .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value);
 
         InResult._HasFreshResult = true;
@@ -519,6 +532,8 @@ namespace ck
         InCurrent._Search.ContinueSearch(Slice);
 
         const auto SpentSeconds = FPlatformTime::Seconds() - SliceBeganAt;
+
+        InCurrent._SearchTimeSpent = InCurrent._SearchTimeSpent + FCk_Time{SpentSeconds};
 
         _SliceRemainingThisTick = FCk_Time{
             FMath::Max(0.0, _SliceRemainingThisTick.Get_Seconds() - SpentSeconds)};
