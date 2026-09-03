@@ -384,6 +384,159 @@ namespace ck::groundnav
     public:
         auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What a label comparison can say. It reads connectivity off the bake and nothing else, so it
+     * can prove two points apart but never prove them joined for a particular body: clearance is
+     * not in the label, and a doorway the two share may be too narrow for the body asking.
+     */
+    enum class ECk_GroundNav_Reachability : uint8
+    {
+        // Same component. A path may still fail on clearance; only the flood fill knows.
+        PossiblyReachable,
+
+        // Different components, both closed: no crossing joins them and none can appear without a
+        // rebuild.
+        Unreachable,
+
+        // Different components, but one of them borders ground nobody has baked yet, so the
+        // crossing that would join them may simply not have been looked at.
+        Unknown_OpenComponent
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_ReachabilityQuery
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        float _VerticalToleranceUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_ReachabilityResult
+    {
+    public:
+        // Success when both ends resolved to a surface; otherwise the status of the end that failed
+        // (the start first), and _Reachability is meaningless.
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        ECk_GroundNav_Reachability _Reachability = ECk_GroundNav_Reachability::Unreachable;
+
+        FCk_GroundNav_SurfaceRef _StartSurface;
+        FCk_GroundNav_SurfaceRef _EndSurface;
+
+        // Crossings expanded to reach the verdict. A label comparison expands NOTHING, and a test
+        // asserts that: this is the number that makes the near-O(1) claim checkable.
+        int32 _ExpansionCount = 0;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * One crossing between two plates of the whole field, oriented away from the plate it was
+     * enumerated from. Plates are addressed FLAT (tile offset + tile-local index), which is the
+     * index space the reachability labels already use.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_Crossing
+    {
+    public:
+        int32 _FromFlatPlate = INDEX_NONE;
+        int32 _ToFlatPlate = INDEX_NONE;
+
+        // Outward from the plate being left, as a direction index (Get_DirectionOffset).
+        int32 _Direction = 0;
+
+        // The interval on the shared cell line in world space, left and right as seen by a body
+        // walking through it in _Direction.
+        FVector _Left = FVector::ZeroVector;
+        FVector _Right = FVector::ZeroVector;
+
+        float _ClearanceUu = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_FloodQuery
+    {
+    public:
+        FVector _Source = FVector::ZeroVector;
+
+        float _VerticalToleranceUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+
+        // A crossing whose string-pulled distance exceeds this is never settled. Zero means no limit.
+        float _MaxDistanceUu = 0.0f;
+
+        // Zero means no limit.
+        int32 _MaxExpansions = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** A crossing the flood fill settled: where it was entered and how far that point is from the source. */
+    struct CKGROUNDNAV_API FCk_GroundNav_FloodCrossing
+    {
+    public:
+        FCk_GroundNav_Crossing _Crossing;
+
+        // The point on the (inset) interval the shortest path passes through.
+        FVector _EntryPoint = FVector::ZeroVector;
+
+        // String-pulled from the source through every predecessor: the true walked distance, not a
+        // sum of portal centres.
+        double _DistanceUu = 0.0;
+
+        // Index into the flood's settled crossings, INDEX_NONE for a crossing left from the source plate.
+        int32 _Predecessor = INDEX_NONE;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_FloodResult
+    {
+    public:
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        FCk_GroundNav_SurfaceRef _SourceSurface;
+        int32 _SourceFlatPlate = INDEX_NONE;
+        FVector _SourcePoint = FVector::ZeroVector;
+
+        // In settle order, so a predecessor index always points earlier.
+        TArray<FCk_GroundNav_FloodCrossing> _Crossings;
+
+        // Per flat plate: every settled crossing that enters it, in settle order. Empty for a plate
+        // the flood never reached; the source plate has none and is reached at distance zero.
+        TArray<TArray<int32>> _PlateEntries;
+
+        // Crossings popped from the frontier, including the one a distance limit or a stop predicate
+        // then refused. Never more than _MaxExpansions when that is set.
+        int32 _ExpansionCount = 0;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+
+        auto Get_IsPlateReached(int32 InFlatPlate) const -> bool
+        {
+            return InFlatPlate == _SourceFlatPlate ||
+                   (_PlateEntries.IsValidIndex(InFlatPlate) && _PlateEntries[InFlatPlate].Num() > 0);
+        }
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
