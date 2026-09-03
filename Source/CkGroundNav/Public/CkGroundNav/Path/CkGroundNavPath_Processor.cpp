@@ -167,6 +167,20 @@ namespace ck
         InCurrent._PendingSince = FCk_Time{};
     }
 
+    // The one line that proves this provider is alive: every published verdict, terminal or timed out.
+    auto
+        FGroundNavPath_Episode::
+        DoLog_Published(
+            FCk_Handle_GroundNavPath              InPathEntity,
+            const FCk_GroundNavPath_Result&       InPublished)
+        -> void
+    {
+        groundnav::Display(
+            TEXT("GroundNav Path [{}] published [{}] rev [{}] waypoints [{}] expansions [{}]"),
+            InPathEntity, InPublished.Get_Status(), InPublished.Get_RequestRevision(),
+            InPublished.Get_Waypoints().Num(), InPublished.Get_ExpansionCount());
+    }
+
     auto
         FGroundNavPath_Episode::
         DoPublish_Failure(
@@ -192,6 +206,8 @@ namespace ck
             .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch);
 
         InResult._HasFreshResult = true;
+
+        DoLog_Published(InPathEntity, InResult._Result);
 
         DoClear(InCurrent);
         InPathEntity.Try_Remove<FTag_GroundNavPath_SearchInFlight>();
@@ -236,6 +252,8 @@ namespace ck
             .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value);
 
         InResult._HasFreshResult = true;
+
+        DoLog_Published(InPathEntity, InResult._Result);
 
         InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
         InCurrent._LastSourceFlatPlate = SearchResult._PlateCorridor.IsEmpty()
@@ -330,11 +348,25 @@ namespace ck
             FFragment_GroundNavPath_Requests& InRequests) const
         -> void
     {
-        ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+        // Copied and reset BEFORE the drain, not reset after it: publishing a terminal verdict
+        // broadcasts from inside this call, and a FindPath enqueued by a signal handler must not be
+        // wiped by a reset that happens afterwards.
+        const auto RequestsCopy = InRequests._Requests;
+        InRequests._Requests.Reset();
+
+        ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
                 DoHandleRequest(InPathEntity, InParams, InCurrent, InResult, InRequest);
-            }));
+            }), policy::DontResetContainer{});
+
+        // LOAD-BEARING, not bookkeeping. CkCrowd's OnGroundNavPathResolved reads a surviving queue as
+        // proof that whatever the slot holds predates the request in flight, so a fragment left on the
+        // entity makes every published result look stale forever and the agent never leaves Pending.
+        if (InRequests._Requests.IsEmpty())
+        {
+            InPathEntity.Remove<MarkedDirtyBy>();
+        }
     }
 
     auto
@@ -454,9 +486,11 @@ namespace ck
 
                 if (DeferredForSeconds >= MaxDeferralSeconds)
                 {
-                    groundnav::Verbose(
-                        TEXT("GroundNav Path [{}] gave up after [{}]s waiting for ground under [{}]"),
-                        InPathEntity, DeferredForSeconds, InCurrent._PendingRequest.Get_From());
+                    groundnav::Display(
+                        TEXT("GroundNav Path [{}] deferral timed out after [{}]s with no field to plan ")
+                        TEXT("over at [{}] - failing rev [{}] as Unbuilt"),
+                        InPathEntity, DeferredForSeconds, InCurrent._PendingRequest.Get_From(),
+                        InCurrent._PendingRequest.Get_RequestRevision());
 
                     constexpr auto NoExpansions = 0;
                     constexpr auto NoEpoch = int64{0};
