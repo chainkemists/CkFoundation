@@ -18,7 +18,8 @@ namespace ck::groundnav
      * disc touches, uniformly by AREA: a plate is chosen with probability proportional to the number
      * of its cells inside the disc that admit the body, a cell uniformly among those, and a point
      * uniformly inside the cell. Connectivity is not consulted — that is the path-distance generator.
-     * NoSurface when no cell in the disc admits the body.
+     * Nothing drawable is NoSurface, or Unbuilt when the disc reached a tile that may still hold
+     * the answer.
      */
     CKGROUNDNAV_API auto
     Get_RandomPointsInRadius(
