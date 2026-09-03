@@ -74,6 +74,7 @@ namespace ck::jolt::cook
         TArray<FCk_Jolt_IncrementalCookedActor> _Cooked;
         TArray<FCk_Jolt_IncrementalPresentActor> _Present;
         TSet<FName> _LoadedLevelPackages;
+        TArray<FString> _ExcludedLevelPackagePaths;
     };
 
     struct CKJOLTEDITOR_API FCk_Jolt_IncrementalPlan
@@ -91,7 +92,9 @@ namespace ck::jolt::cook
     /// Which bake-grid cells must be rewritten. Two rules a caller cannot infer from the signature:
     /// an actor that crossed a cell boundary dirties BOTH cells, and a cooked actor missing from
     /// _Present is deleted only when _LoadedLevelPackages holds its level — otherwise its level is
-    /// merely unloaded, and dropping it would leave those actors with no collision at all.
+    /// merely unloaded, and dropping it would leave those actors with no collision at all. Excluded
+    /// levels are the exception: their cooked groups are removed and their cells dirtied even when
+    /// those levels are currently unloaded.
     CKJOLTEDITOR_API auto
         ComputeIncrementalPlan(
             const FCk_Jolt_IncrementalPlanInput& InInput)

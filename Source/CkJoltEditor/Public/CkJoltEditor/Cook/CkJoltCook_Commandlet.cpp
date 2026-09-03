@@ -175,6 +175,16 @@ auto
     const auto CookPackagingMaps = Switches.Contains(TEXT("PackagingMaps"));
     const auto HasExplicitMap = ParamsMap.Contains(TEXT("Map"));
     const auto CookAllMaps = Switches.Contains(TEXT("AllMaps"));
+    const auto Incremental = Switches.Contains(TEXT("Incremental"));
+    const auto ForceRebuild = Switches.Contains(TEXT("ForceRebuild"));
+    const auto RebuildModeIsValid = NOT (Incremental && ForceRebuild);
+
+    CK_ENSURE_IF_NOT(RebuildModeIsValid,
+        TEXT("CkJoltCook: -Incremental and -ForceRebuild cannot be combined"))
+    {}
+
+    if (NOT RebuildModeIsValid)
+    { return 1; }
 
     auto PackagingMaps = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionResult{};
     auto PackagingExcludedLevelPackagePaths = TArray<FString>{};
@@ -252,7 +262,12 @@ auto
     if (CookMeshShapes)
     {
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
-        MeshShapesFailed = NOT FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode)._Success;
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes (%s)"),
+            ForceRebuild ? TEXT("full rebuild") : TEXT("freshness check"));
+        const auto MeshStats = FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode, ForceRebuild);
+        MeshShapesFailed = NOT MeshStats._Success;
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes complete: %d rebuilt, %d current, %d failed"),
+            MeshStats._NumShapesCooked, MeshStats._NumUpToDate, MeshStats._NumFailed);
     }
 
     auto MapsToCook = TArray<FString>{};
@@ -304,15 +319,19 @@ auto
     { return 1; }
 
     auto FailureCount = 0;
+    auto MapIndex = 0;
 
     for (const auto& MapPackageName : MapsToCook)
     {
-        if (NOT DoCook_Map(MapPackageName, CookMode, PackagingExcludedLevelPackagePaths))
+        ++MapIndex;
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: map %d/%d (%s): %s"),
+            MapIndex, MapsToCook.Num(), Incremental ? TEXT("incremental") : TEXT("full rebuild"), *MapPackageName);
+        if (NOT DoCook_Map(MapPackageName, CookMode, PackagingExcludedLevelPackagePaths, Incremental))
         { ++FailureCount; }
     }
 
     if (MapsToCook.Num() > 0)
-    { ck::jolt::Log(TEXT("CkJoltCook: [{}] maps processed, [{}] failed"), MapsToCook.Num(), FailureCount); }
+    { UE_LOG(CkJolt, Display, TEXT("CkJoltCook: %d maps processed, %d failed"), MapsToCook.Num(), FailureCount); }
 
     return (FailureCount == 0 && NOT MeshShapesFailed) ? 0 : 1;
 }
@@ -408,7 +427,8 @@ auto
     DoCook_Map(
         const FString& InMapPackageName,
         ck::jolt::cook::ECk_Jolt_CookMode InMode,
-        const TArray<FString>& InExcludedLevelPackagePaths)
+        const TArray<FString>& InExcludedLevelPackagePaths,
+        bool InIncremental)
     -> bool
 {
     ck::jolt::Log(TEXT("CkJoltCook: loading map [{}]"), InMapPackageName);
@@ -432,7 +452,17 @@ auto
     if (NOT DoEnsure_StreamingLevelsInWorld(*World, InExcludedLevelPackagePaths))
     { return false; }
 
-    return FCk_Jolt_WorldCooker::Cook_World(*World, InMode, InExcludedLevelPackagePaths)._Success;
+    const auto Stats = InIncremental
+        ? FCk_Jolt_WorldCooker::Cook_World_Incremental(*World, InMode, InExcludedLevelPackagePaths)
+        : FCk_Jolt_WorldCooker::Cook_World(*World, InMode, InExcludedLevelPackagePaths);
+
+    const auto FellBackToFullCook = InIncremental
+        && Stats._Outcome != ck::jolt::cook::ECk_Jolt_IncrementalOutcome::Incremental;
+    UE_LOG(CkJolt, Display, TEXT("CkJoltCook: completed %s: %s, %d cells written, %d actors current%s"),
+        *InMapPackageName, Stats._Success ? TEXT("success") : TEXT("failed"),
+        Stats._NumCellsWritten, Stats._NumActorsUpToDate,
+        FellBackToFullCook ? TEXT(" (full rebuild fallback)") : TEXT(""));
+    return Stats._Success;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

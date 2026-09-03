@@ -23,6 +23,9 @@
  *   <Target>-Cmd.exe <Project>.uproject -run=Ck_JoltCook_Commandlet -PackagingMaps [-DryRun]
  *     Unions ProjectPackagingSettings MapsToCook with UWorld metadata under DirectoriesToAlwaysCook;
  *     exclusions skip either source. It rejects bCookAll and -Map/-AllMaps combinations before any cook begins.
+ *   Add -Incremental for actor-hash freshness checks and dirty-cell rebuilding. Missing/incompatible
+ *   indexes and World Partition maps fall back to full rebuilding. Add -ForceRebuild to rebuild maps
+ *   and mesh shapes unconditionally. These two switches are mutually exclusive.
  *
  * Exit codes: 0 = success; 1 = rejected selection, missing entry map, a mesh-shape failure, or any
  * map-load/cook failure. Each failure is logged before the commandlet exits.
@@ -60,7 +63,8 @@ private:
     DoCook_Map(
         const FString& InMapPackageName,
         ck::jolt::cook::ECk_Jolt_CookMode InMode,
-        const TArray<FString>& InExcludedLevelPackagePaths) -> bool;
+        const TArray<FString>& InExcludedLevelPackagePaths,
+        bool InIncremental) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

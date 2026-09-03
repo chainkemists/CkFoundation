@@ -441,13 +441,16 @@ namespace ck_jolt_cook_world_cooker
         const TArray<FCk_Jolt_CookedActorGroup>& InCookedGroups,
         const TSet<FCk_Jolt_CookedActorKey>& InPresentActorKeys,
         const TSet<FName>& InLoadedLevelPackages,
+        const TArray<FString>& InExcludedLevelPackagePaths,
         TArray<FActorCookData>& OutActors)
         -> TOptional<int32>
     {
         const auto Get_NeedsCarryOver = [&](const FCk_Jolt_CookedActorGroup& InGroup)
         {
-            return NOT InPresentActorKeys.Contains(Get_CookedActorKey(InGroup))
-                && NOT InLoadedLevelPackages.Contains(Get_LevelPackageOfCookedActor(InGroup));
+            const auto LevelPackage = Get_LevelPackageOfCookedActor(InGroup);
+            return NOT Get_IsPackageExcluded(LevelPackage.ToString(), InExcludedLevelPackagePaths)
+                && NOT InPresentActorKeys.Contains(Get_CookedActorKey(InGroup))
+                && NOT InLoadedLevelPackages.Contains(LevelPackage);
         };
 
         const auto Stranded = ck::algo::Filter(InCookedGroups, Get_NeedsCarryOver);
@@ -701,6 +704,7 @@ struct FCk_Jolt_IncrementalCookDriver::FImpl
 
     TWeakObjectPtr<UWorld> _World;
     ck::jolt::cook::ECk_Jolt_CookMode _Mode = ck::jolt::cook::ECk_Jolt_CookMode::Cook;
+    TArray<FString> _ExcludedLevelPackagePaths;
     EPhase _Phase = EPhase::Prepare;
 
     FString _RootPath;
@@ -826,10 +830,14 @@ auto
     { _CookedCellIdToIndex.Add(_CookedCellIds[CellIndex], CellIndex); }
 
     _PlanInput._LoadedLevelPackages = Get_LoadedLevelPackages(*World);
+    _PlanInput._ExcludedLevelPackagePaths = _ExcludedLevelPackagePaths;
 
     for (const auto& Level : World->GetLevels())
     {
         if (ck::Is_NOT_Valid(Level))
+        { continue; }
+
+        if (Get_IsPackageExcluded(ck::jolt::Get_LevelLookupKey(*Level).ToString(), _ExcludedLevelPackagePaths))
         { continue; }
 
         for (const auto& Actor : Level->Actors)
@@ -931,6 +939,9 @@ auto
         { continue; }
 
         const auto ActorKey = Get_ActorKey(*Actor);
+        if (Get_IsPackageExcluded(ActorKey._LevelPackage.ToString(), _ExcludedLevelPackagePaths))
+        { continue; }
+
         const auto SourceHash = ComputeSourceHash(*Actor, _BakeFilter);
 
         auto Present = FCk_Jolt_IncrementalPresentActor{};
@@ -1078,7 +1089,7 @@ auto
         {
             const auto CarriedOver = DoCarryOver_ActorsInUnloadedLevels(
                 _ExistingCellRefs[*CookedCellIndex], _CookedActorGroupsByCell[*CookedCellIndex],
-                _PresentActorKeys, _PlanInput._LoadedLevelPackages, Cell._Actors);
+                _PresentActorKeys, _PlanInput._LoadedLevelPackages, _ExcludedLevelPackagePaths, Cell._Actors);
 
             if (NOT CarriedOver.IsSet())
             {
@@ -1182,13 +1193,15 @@ auto
 FCk_Jolt_IncrementalCookDriver::
     FCk_Jolt_IncrementalCookDriver(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths)
     : _Impl{MakeUnique<FImpl>()}
 {
     ck::jolt::Request_GlobalJoltInit();
 
     _Impl->_World = &InWorld;
     _Impl->_Mode = InMode;
+    _Impl->_ExcludedLevelPackagePaths = InExcludedLevelPackagePaths;
 }
 
 FCk_Jolt_IncrementalCookDriver::
@@ -1255,12 +1268,13 @@ auto
     FCk_Jolt_WorldCooker::
     Cook_World_Incremental(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths)
     -> FCookStats
 {
     using namespace ck::jolt::cook;
 
-    auto Driver = FCk_Jolt_IncrementalCookDriver{InWorld, InMode};
+    auto Driver = FCk_Jolt_IncrementalCookDriver{InWorld, InMode, InExcludedLevelPackagePaths};
 
     // Synchronous callers (commandlet, editor-utility Blueprints) want it finished on return.
     constexpr auto NoBudget = FCk_Time{TNumericLimits<double>::Max()};
@@ -1271,7 +1285,7 @@ auto
 
     if (Result == ECk_Jolt_CookStepResult::FullCookRequired)
     {
-        auto FullStats = Cook_World(InWorld, InMode);
+        auto FullStats = Cook_World(InWorld, InMode, InExcludedLevelPackagePaths);
         FullStats._Outcome = Driver.Get_Stats()._Outcome;
         return FullStats;
     }

@@ -98,7 +98,8 @@ auto
     Cook_SingleMeshShape(
         const UStaticMesh& InMesh,
         ck::jolt::cook::ECk_Jolt_CookMode InMode,
-        FString* OutCookedAssetPath)
+        FString* OutCookedAssetPath,
+        bool InForceRebuild)
     -> ck::jolt::cook::ECk_Jolt_MeshShapeCookResult
 {
     using namespace ck_jolt_cook_mesh_shape_cooker;
@@ -136,7 +137,7 @@ auto
             && Existing->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && Existing->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
 
-        if (SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
+        if (NOT InForceRebuild && SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
         { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
 
         // A pre-winding-fix (v2) blob shares the current encoding, and only its TRI-MESH content is
@@ -144,7 +145,8 @@ auto
         // declared up to date rather than rewritten, keeping the fix's re-cook — and its Git LFS
         // lock footprint — to the blobs that are actually defective. Mirrors the runtime rule in
         // TryGet_ScaleOneShape.
-        if (SourceMatches && Existing->Get_CookVersion() == mesh_shape_utils::PreWindingFixMeshShapeCookVersion)
+        if (NOT InForceRebuild && SourceMatches
+            && Existing->Get_CookVersion() == mesh_shape_utils::PreWindingFixMeshShapeCookVersion)
         {
             const auto Restored = mesh_shape_utils::TryRestore_ShapeBlob(
                 Existing->Get_ShapeBlob(), MeshPackagePath);
@@ -273,7 +275,8 @@ auto
 auto
     FCk_Jolt_MeshShapeCooker::
     Cook_MeshShapes(
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        bool InForceRebuild)
     -> FCookStats
 {
     using namespace ck_jolt_cook_mesh_shape_cooker;
@@ -309,7 +312,7 @@ auto
         }
 
         auto CookedAssetPath = FString{};
-        const auto Result = Cook_SingleMeshShape(*Mesh, InMode, &CookedAssetPath);
+        const auto Result = Cook_SingleMeshShape(*Mesh, InMode, &CookedAssetPath, InForceRebuild);
 
         if (NOT CookedAssetPath.IsEmpty())
         { CookedAssetPathsInUse.Add(CookedAssetPath); }

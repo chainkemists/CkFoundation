@@ -45,7 +45,8 @@ public:
     /// drive the decomposed API below instead when the editor must stay responsive.
     static auto
     Cook_MeshShapes(
-        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook) -> FCookStats;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook,
+        bool InForceRebuild = false) -> FCookStats;
 
     /// Every static mesh under the configured _BakedMeshShapeRoots. Asset-registry only — no mesh is
     /// loaded, so this is safe to call before deciding whether the sweep is worth running.
@@ -55,12 +56,13 @@ public:
     /// Cooks ONE mesh's pre-baked shape — the unit both the sliced sweep and the on-save hook drive.
     /// OutCookedAssetPath receives the cooked asset's object path whenever one is in play (cooked,
     /// up to date, or a failed write) so a sliced caller can accumulate the in-use set for
-    /// Report_Orphans.
+    /// Report_Orphans. InForceRebuild bypasses the freshness shortcut for explicitly requested full rebakes.
     static auto
     Cook_SingleMeshShape(
         const UStaticMesh& InMesh,
         ck::jolt::cook::ECk_Jolt_CookMode InMode,
-        FString* OutCookedAssetPath = nullptr) -> ck::jolt::cook::ECk_Jolt_MeshShapeCookResult;
+        FString* OutCookedAssetPath = nullptr,
+        bool InForceRebuild = false) -> ck::jolt::cook::ECk_Jolt_MeshShapeCookResult;
 
     static auto
     Accumulate_SingleResult(

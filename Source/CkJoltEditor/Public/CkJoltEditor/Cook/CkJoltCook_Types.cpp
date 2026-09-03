@@ -1,5 +1,7 @@
 #include "CkJoltCook_Types.h"
 
+#include "CkJoltCook_MapSelection.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Macros/CkMacros.h"
 
@@ -22,6 +24,9 @@ namespace ck::jolt::cook
         const auto Get_PresentKey = [](const FCk_Jolt_IncrementalPresentActor& InPresent)
         { return FCk_Jolt_CookedActorKey{InPresent._OwningLevelPackage, InPresent._ActorName}; };
 
+        const auto IsExcluded = [&](const FName& InLevelPackage)
+        { return Get_IsPackageExcluded(InLevelPackage.ToString(), InInput._ExcludedLevelPackagePaths); };
+
         auto CookedByKey = TMap<FCk_Jolt_CookedActorKey, const FCk_Jolt_IncrementalCookedActor*>{};
         CookedByKey.Reserve(InInput._Cooked.Num());
         ck::algo::ForEach(InInput._Cooked, [&](const FCk_Jolt_IncrementalCookedActor& InCooked)
@@ -29,11 +34,18 @@ namespace ck::jolt::cook
             CookedByKey.Add(Get_CookedKey(InCooked), &InCooked);
         });
 
-        const auto PresentKeys = ck::algo::Transform<TSet<FCk_Jolt_CookedActorKey>>(InInput._Present,
-            Get_PresentKey);
+        auto PresentKeys = TSet<FCk_Jolt_CookedActorKey>{};
+        for (const auto& PresentActor : InInput._Present)
+        {
+            if (NOT IsExcluded(PresentActor._OwningLevelPackage))
+            { PresentKeys.Add(Get_PresentKey(PresentActor)); }
+        }
 
         for (const auto& PresentActor : InInput._Present)
         {
+            if (IsExcluded(PresentActor._OwningLevelPackage))
+            { continue; }
+
             const auto* const* CookedEntry = CookedByKey.Find(Get_PresentKey(PresentActor));
 
             if (CookedEntry == nullptr)
@@ -65,6 +77,13 @@ namespace ck::jolt::cook
 
         for (const auto& CookedActor : InInput._Cooked)
         {
+            if (IsExcluded(CookedActor._OwningLevelPackage))
+            {
+                Plan._RemovedActorKeys.Add(Get_CookedKey(CookedActor));
+                Plan._DirtyCellIds.Add(CookedActor._CellId);
+                continue;
+            }
+
             if (PresentKeys.Contains(Get_CookedKey(CookedActor)))
             { continue; }
 
