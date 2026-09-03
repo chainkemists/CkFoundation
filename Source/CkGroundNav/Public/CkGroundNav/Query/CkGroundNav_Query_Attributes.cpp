@@ -39,11 +39,23 @@ namespace ck::groundnav
         if (ResolvedSurface._PlateIndex != InSurface._PlateIndex)
         { return Attributes; }
 
+        const auto& PlateField = InField._Tiles[InSurface._TileIndex]._Plates;
+
+        if (NOT PlateField._Plates.IsValidIndex(ResolvedSurface._PlateIndex))
+        { return Attributes; }
+
+        const auto& Plate = PlateField._Plates[ResolvedSurface._PlateIndex];
+
         Attributes._Status = ECk_NavSurface_QueryStatus::Success;
         Attributes._Surface = ResolvedSurface;
         Attributes._SurfaceNormal = Get_SurfaceNormal(InField, ResolvedSurface);
         Attributes._ClearanceUu = ClearanceUu;
-        Attributes._CostMultiplier = 1.0f;
+
+// Policy is a PLATE label, so the answer is the plate's own and never a per-cell lookup. An
+
+// unpriced plate carries INDEX_NONE and the identity multiplier.
+        Attributes._CostMultiplier = Plate._CostMultiplier;
+        Attributes._AreaTags = PlateField.Get_AreaPolicy(Plate._AreaPolicyIndex);
 
         return Attributes;
     }

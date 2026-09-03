@@ -1,6 +1,8 @@
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkNavigation/CkNavigation_Log.h"
+#include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment.h"
 #include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
@@ -60,6 +62,35 @@ namespace ck_nav_surface_recast_adapter
         return InRequested.IsNearlyZero()
             ? UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec()
             : InRequested;
+    }
+
+    auto Get_HalfExtents(const FCk_AnyShape& InShape) -> FVector
+    {
+        switch (InShape.Get_ShapeType())
+        {
+            case ECk_Shape_Type::Box:
+            {
+                return InShape.Get_Box().Get_HalfExtents();
+            }
+            case ECk_Shape_Type::Capsule:
+            {
+                const auto Radius = static_cast<double>(InShape.Get_Capsule().Get_Radius());
+                return FVector{Radius, Radius, static_cast<double>(InShape.Get_Capsule().Get_HalfHeight())};
+            }
+            case ECk_Shape_Type::Cylinder:
+            {
+                const auto Radius = static_cast<double>(InShape.Get_Cylinder().Get_Radius());
+                return FVector{Radius, Radius, static_cast<double>(InShape.Get_Cylinder().Get_HalfHeight())};
+            }
+            case ECk_Shape_Type::Sphere:
+            {
+                return FVector{static_cast<double>(InShape.Get_Sphere().Get_Radius())};
+            }
+            default:
+            {
+                return FVector::ZeroVector;
+            }
+        }
     }
 
     // Down/Up narrow the symmetric search box to the half that lies on the requested side, so a
@@ -694,6 +725,96 @@ namespace ck::nav_surface_recast
         { return false; }
 
         return static_cast<int32>(NavData->GetPolyAreaID(PolyRef)) == AreaId;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Apply_AreaMarkup(
+            UWorld*                                  InWorld,
+            FCk_Handle&                              InMarkupEntity,
+            const FCk_Request_NavSurface_AreaMarkup& InRequest)
+        -> bool
+    {
+        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+
+        if (Current.Get_Markup().IsValid())
+        { UCk_Utils_NavAreaMarkup_UE::Request_Destroy(Current.Get_Markup().Get()); }
+
+        Current._Markup = nullptr;
+
+        if (InRequest.Get_Enable() == ECk_EnableDisable::Disable)
+        {
+            Current._AreaTag = {};
+            Current._Location = FVector::ZeroVector;
+            Current._HalfExtents = FVector::ZeroVector;
+            return true;
+        }
+
+        const auto AreaClass = Get_AreaClass(InRequest.Get_AreaTag());
+        const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
+        CK_ENSURE_IF_NOT(AreaClassIsValid,
+            TEXT("NavSurface markup on [{}] asked for area tag [{}], which no provider area is registered for"),
+            InMarkupEntity, InRequest.Get_AreaTag())
+        { return false; }
+
+        const auto HalfExtents = ck_nav_surface_recast_adapter::Get_HalfExtents(InRequest.Get_Shape());
+        const auto ShapeIsPaintable = NOT HalfExtents.IsNearlyZero();
+        CK_ENSURE_IF_NOT(ShapeIsPaintable,
+            TEXT("NavSurface markup on [{}] was given a shape [{}] with no extent"),
+            InMarkupEntity, InRequest.Get_Shape().Get_ShapeType())
+        { return false; }
+
+        auto* Markup = UCk_Utils_NavAreaMarkup_UE::Request_Create(
+            InMarkupEntity,
+            InRequest.Get_WorldTransform(),
+            HalfExtents,
+            AreaClass);
+
+        const auto MarkupIsValid = ck::IsValid(Markup);
+        CK_ENSURE_IF_NOT(MarkupIsValid,
+            TEXT("NavSurface markup on [{}] failed to register its nav-area painter"), InMarkupEntity)
+        { return false; }
+
+        Current._Markup = Markup;
+        Current._AreaTag = InRequest.Get_AreaTag();
+        Current._Location = InRequest.Get_WorldTransform().GetLocation();
+        Current._HalfExtents = HalfExtents;
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_IsMarkupLive(
+            UWorld*           InWorld,
+            const FCk_Handle& InMarkupEntity)
+        -> bool
+    {
+        const auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+
+        if (NOT Current.Get_Markup().IsValid())
+        { return false; }
+
+        return Get_IsAreaLiveAt(
+            InWorld, Current.Get_AreaTag(), Current.Get_Location(), Current.Get_HalfExtents());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Release_AreaMarkup(
+            UWorld*     InWorld,
+            FCk_Handle& InMarkupEntity)
+        -> void
+    {
+        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+
+        if (Current.Get_Markup().IsValid())
+        { UCk_Utils_NavAreaMarkup_UE::Request_Destroy(Current.Get_Markup().Get()); }
+
+        Current._Markup = nullptr;
     }
 }
 

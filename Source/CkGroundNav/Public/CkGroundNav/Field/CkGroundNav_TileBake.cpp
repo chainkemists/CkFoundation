@@ -281,7 +281,8 @@ namespace ck::groundnav
         const auto RasterizedSpanCount = Spans.Get_TotalSpanCount();
 
         auto Connections = FCk_GroundNav_ConnectionField{};
-        const auto WalkabilityResult = DoFilter_Walkability(InParams._Profile, Spans, Connections);
+        const auto WalkabilityResult = DoFilter_Walkability(
+            InParams._Profile, Spans, Connections, InParams._MarkupRecords);
 
         if (NOT WalkabilityResult.Get_IsCompleted())
         {
@@ -439,6 +440,22 @@ namespace ck::groundnav
             auto& Plate = OutTile._Plates._Plates[PlateIndex];
 
             Plate._MinClearanceUu = FMath::Min(Plate._MinClearanceUu, OutTile._Clearance._Cells[CellIndex]);
+        }
+
+        // Against the PUBLISHED lattice rather than the halo one the decomposition ran on. The two
+        // describe the same ground at the same world positions, so the answer is identical either way
+        // — but the published lattice is the only one a later cost-only derive can reconstruct, and a
+        // derive that disagreed with the bake it derived from would be worse than no derive at all.
+        {
+            auto Lattice = FCk_GroundNav_PlateLattice{};
+            Lattice._OriginXY = FVector2D{OutTile._Origin.X, OutTile._Origin.Y};
+            Lattice._CellSizeUu = CellSize;
+            Lattice._SizeX = TileCells;
+            Lattice._SizeY = TileCells;
+            Lattice._LayerCount = LayerCount;
+            Lattice._SurfaceZ = OutTile._SurfaceZ;
+
+            Stamp_PlateCostPolicies(Lattice, InParams._MarkupRecords, OutTile._Plates);
         }
 
         OutTile._Portals = Portals;

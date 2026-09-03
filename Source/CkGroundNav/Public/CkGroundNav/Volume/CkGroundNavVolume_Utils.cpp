@@ -1,5 +1,6 @@
 #include "CkGroundNavVolume_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -70,6 +71,62 @@ auto
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Requests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_AreaMarkup(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_AreaMarkup& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_MarkupRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_AreaMarkup"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Markup>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_MarkupRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_ReleaseAreaMarkup(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseAreaMarkup& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_MarkupRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_ReleaseAreaMarkup"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Markup>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_MarkupRequests>()._Requests.Emplace(InRequest);
 
     return InVolume;
 }
@@ -250,6 +307,39 @@ auto
     { return {}; }
 
     return InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>().Get_Field();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_MarkupRecords(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> TConstArrayView<ck::FCk_GroundNav_MarkupEntry>
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_Markup>())
+    { return {}; }
+
+    return InVolume.Get<ck::FFragment_GroundNavVolume_Markup>().Get_Entries();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    TryGet_MarkupRecord(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InRecordId)
+    -> TOptional<FCk_GroundNav_MarkupRecord>
+{
+    const auto Entries = Get_MarkupRecords(InVolume);
+
+    const auto Index = ck::algo::FindIndex(Entries,
+        [&](const ck::FCk_GroundNav_MarkupEntry& InEntry) -> bool
+        {
+            return InEntry.Get_Record().Get_Id() == InRecordId;
+        });
+
+    if (NOT Entries.IsValidIndex(Index))
+    { return {}; }
+
+    return Entries[Index].Get_Record();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

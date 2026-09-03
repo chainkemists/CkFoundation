@@ -34,7 +34,6 @@ namespace ck
     private:
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurfaceMarkup_Current& InCurrent,
             const FCk_Request_NavSurface_AreaMarkup& InRequest) -> ECk_Request_OperationResult;
     };
 

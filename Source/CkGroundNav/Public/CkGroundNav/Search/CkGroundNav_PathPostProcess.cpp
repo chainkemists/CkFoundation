@@ -50,7 +50,8 @@ namespace ck::groundnav
         /**
          * The shared data leg pricing reads, assembled from a field the caller owns. Leg pricing
          * reads the constants and the multiplier table only, so the field pointer is left unset
-         * rather than borrowed from a reference this value could outlive.
+         * rather than borrowed from a reference this value could outlive — the field a plate's own
+         * price is read from is passed to Get_AreaMultiplier beside this, for the same reason.
          */
         auto Make_SharedData(
             const FCk_GroundNav_Field&          InField,
@@ -258,8 +259,8 @@ namespace ck::groundnav
             const auto To = Filled[Index]._Location;
 
             const auto AreaMultiplier = FMath::Max(
-                Get_AreaMultiplier(Shared, FlatPlates[Index - 1]),
-                Get_AreaMultiplier(Shared, FlatPlates[Index]));
+                Get_AreaMultiplier(InField, Shared, FlatPlates[Index - 1]),
+                Get_AreaMultiplier(InField, Shared, FlatPlates[Index]));
 
             const auto LegCostUu = Get_LegCost(Shared, From, To, AreaMultiplier, kNoClearanceFactor);
 

@@ -102,8 +102,8 @@ namespace ck::groundnav
         // Bias away from tight crossings, in cell widths of clearance. Zero is navmesh parity.
         float _ClearanceBiasK = 0.0f;
 
-        // Flat plate id to the multiplier its ground is priced at. A plate the table does not name
-        // is priced at one.
+        // Flat plate id to a multiplier this ONE query asks for, merged upward with what the field's
+        // plate already carries. A plate the table does not name is priced at whatever the field says.
         TMap<int32, float> _PlateCostMultipliers;
 
         // What one cell of the field is worth, which is what turns a clearance into cell widths.
@@ -153,9 +153,22 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /** What a plate's ground is priced at. A plate the table does not name is priced at one. */
+    /**
+     * What a plate's ground is priced at: the GREATER of the multiplier the field's own plate carries
+     * — what the area markup baked onto it stamped — and the one the per-query table names.
+     *
+     * Upward only, so a query's table overrides the field's price where it asks for something dearer
+     * and can never talk a marked plate back down to bare ground. That is the same "greater wins" rule
+     * overlapping markup already merges under, so a plate priced by two sources has one answer whether
+     * they met in the bake or at the query.
+     *
+     * The field is a parameter rather than the one the shared data already carries because the
+     * post-process prices its legs from a field it holds by REFERENCE and never owns — and a second
+     * pricing rule for that caller is exactly the drift this one function exists to prevent.
+     */
     CKGROUNDNAV_API auto
     Get_AreaMultiplier(
+        const FCk_GroundNav_Field&          InField,
         const FCk_GroundNav_PathSharedData& InShared,
         int32                               InFlatPlate) -> float;
 

@@ -1,13 +1,18 @@
 #include "CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
+#include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
 #include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_BuildStatus.h"
@@ -312,8 +317,12 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Revision = int64{0};
 
+        // The SUM of every field's per-tile epoch sum, not a maximum of anything. Tiles rebuild
+        // independently and so do volumes, so two worlds whose newest tile shares an epoch can still
+        // differ in every other tile — and a consumer watching this number for "the surface moved"
+        // would sit through exactly that change without noticing it.
         for (const auto& Field : world_fields::Get_Fields(InWorld))
-        { Revision = FMath::Max(Revision, Field->_Epoch._Value); }
+        { Revision += Field->Get_AggregatedTileEpochSum(); }
 
         return Revision;
     }
@@ -345,6 +354,211 @@ namespace ck::groundnav::nav_surface_adapter_private
 
         return AnyRequestWasIssued;
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // The world bounds a paint would cover, taken through the one reduction the bake itself uses. The
+    // kind is irrelevant to bounds and is only here because a record cannot be built without one.
+    auto Get_RequestWorldBounds(
+        const FCk_Request_NavSurface_AreaMarkup& InRequest) -> FBox
+    {
+        const auto Probe = FCk_GroundNav_MarkupRecord{
+            INDEX_NONE,
+            InRequest.Get_Shape(),
+            InRequest.Get_WorldTransform(),
+            ECk_GroundNav_MarkupKind::Cost};
+
+        return Get_MarkupWorldBounds(Probe);
+    }
+
+    auto Get_VolumesInWorld(
+        UWorld* InWorld) -> TArray<FCk_Handle_GroundNavVolume>
+    {
+        auto Volumes = TArray<FCk_Handle_GroundNavVolume>{};
+
+        auto VolumeEntities = world_fields::Get_VolumeEntities(InWorld);
+
+        Volumes.Reserve(VolumeEntities.Num());
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            Volumes.Emplace(Volume);
+        }
+
+        return Volumes;
+    }
+
+    auto Do_ApplyAreaMarkup(
+        UWorld*                                  InWorld,
+        FCk_Handle&                              InMarkupEntity,
+        const FCk_Request_NavSurface_AreaMarkup& InRequest) -> bool
+    {
+        const auto MarkupBounds = Get_RequestWorldBounds(InRequest);
+
+        const auto ShapeBoundsSomething = MarkupBounds.IsValid != 0;
+
+        CK_ENSURE_IF_NOT(ShapeBoundsSomething,
+            TEXT("GroundNav cannot apply the area markup on [{}] - its shape [{}] and transform bound "
+                 "nothing. A degenerate volume and a volume that covers no ground are different answers, "
+                 "and only the second is admissible."),
+            InMarkupEntity, InRequest.Get_Shape().Get_ShapeType())
+        { return false; }
+
+        auto AnyVolumeTookIt = false;
+
+        for (auto& Volume : Get_VolumesInWorld(InWorld))
+        {
+            const auto VolumeBounds =
+                Volume.Get<ck::FFragment_GroundNavVolume_Params>().Get_VolumeBounds();
+
+            if (NOT VolumeBounds.Intersect(MarkupBounds))
+            { continue; }
+
+            // The SAME markup entity on every volume it reaches, because that entity is the identity a
+            // record is keyed on: a paint straddling two volumes is one markup held twice, not two
+            // markups, and releasing it later has to be able to find both from the one handle.
+            UCk_Utils_GroundNavVolume_UE::Request_AreaMarkup(Volume,
+                FCk_Request_GroundNavVolume_AreaMarkup{
+                    InMarkupEntity,
+                    InRequest.Get_Shape(),
+                    InRequest.Get_WorldTransform(),
+                    InRequest.Get_AreaTag()}
+                .Set_Enable(InRequest.Get_Enable()),
+                {});
+
+            AnyVolumeTookIt = true;
+        }
+
+        // A volume is what HOLDS a record, so a paint that reaches none has nowhere to be recorded and
+        // nothing to become live on. That is a caller error rather than a deferred paint: this provider
+        // answers for the ground its volumes cover, and there is no volume here to cover this one.
+        CK_ENSURE_IF_NOT(AnyVolumeTookIt,
+            TEXT("GroundNav cannot apply the area markup on [{}] - its bounds [{}] meet no ground-nav "
+                 "volume in world [{}], and a volume is the only thing that holds a record"),
+            InMarkupEntity, MarkupBounds, GetNameSafe(InWorld))
+        { return false; }
+
+        return true;
+    }
+
+    auto Do_IsMarkupLive(
+        UWorld*           InWorld,
+        const FCk_Handle& InMarkupEntity) -> bool
+    {
+        // The world is deliberately unread: a markup entity names the volume holding its record, and
+        // that volume names the field the record was admitted onto. Resolving a field from the world
+        // instead would answer about ground the paint was never recorded on.
+        return nav_surface_adapter::Get_IsMarkupLive(InMarkupEntity);
+    }
+
+    auto Do_ReleaseAreaMarkup(
+        UWorld*     InWorld,
+        FCk_Handle& InMarkupEntity) -> void
+    {
+        // Every volume that HOLDS an entry for the entity, not just the one its back-pointer names: a
+        // paint that straddled two volumes left a record on each, and the entity carries only the last
+        // one to admit it. Releasing on a volume that holds none is an idempotent no-op anyway, so the
+        // filter is about not queueing work rather than about correctness.
+        for (auto& Volume : Get_VolumesInWorld(InWorld))
+        {
+            const auto VolumeHoldsThisMarkup = ck::algo::AnyOf(
+                UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(Volume),
+                [&](const ck::FCk_GroundNav_MarkupEntry& InEntry) -> bool
+                {
+                    return InEntry.Get_MarkupEntity() == InMarkupEntity;
+                });
+
+            if (NOT VolumeHoldsThisMarkup)
+            { continue; }
+
+            UCk_Utils_GroundNavVolume_UE::Request_ReleaseAreaMarkup(Volume,
+                FCk_Request_GroundNavVolume_ReleaseAreaMarkup{InMarkupEntity}, {});
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::nav_surface_adapter::
+    Get_IsMarkupLive(
+        const FCk_GroundNav_Field&        InField,
+        const FCk_GroundNav_MarkupRecord& InRecord)
+    -> bool
+{
+    const auto RecordBounds = Get_MarkupWorldBounds(InRecord);
+
+    if (NOT RecordBounds.IsValid)
+    { return false; }
+
+    auto ReachedAnyTile = false;
+
+    for (const auto& Tile : InField._Tiles)
+    {
+        if (NOT Get_TileWorldBounds(InField._Params, Tile).Intersect(RecordBounds))
+        { continue; }
+
+        ReachedAnyTile = true;
+
+        const auto TileCarriesTheRecord = Tile.Get_IsBuilt() &&
+                                          Tile._Epoch._Value > InRecord.Get_RequestedAtEpoch();
+
+        if (NOT TileCarriesTheRecord)
+        { return false; }
+    }
+
+    return ReachedAnyTile;
+}
+
+auto
+    ck::groundnav::nav_surface_adapter::
+    Get_IsMarkupLive(
+        const FCk_Handle& InMarkupEntity)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InMarkupEntity) || NOT InMarkupEntity.Has<ck::FFragment_GroundNav_MarkupRef>())
+    { return false; }
+
+    // Debug-only and off unless a run asked for it. Forcing this true makes a fixture that settles
+    // on liveness wait for nothing. It sits after the guards above so it can never report a markup
+    // that was never recorded on a volume as live.
+    if (debug::Get_IsMarkupLiveGateBypassed())
+    { return true; }
+
+    const auto& MarkupRef = InMarkupEntity.Get<ck::FFragment_GroundNav_MarkupRef>();
+
+    auto VolumeEntity = MarkupRef.Get_VolumeEntity();
+
+    auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+    if (ck::Is_NOT_Valid(Volume))
+    { return false; }
+
+    const auto Record = UCk_Utils_GroundNavVolume_UE::TryGet_MarkupRecord(
+        Volume, MarkupRef.Get_RecordId());
+
+    if (NOT Record.IsSet())
+    { return false; }
+
+    // A disabled markup has no paint to be live, which is also the answer the Recast provider gives
+    // once it has torn its painter down; the two providers must agree on what the flag means.
+    if (Record->Get_Enable() == ECk_EnableDisable::Disable)
+    { return false; }
+
+    const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
+
+    if (NOT Field.IsValid())
+    { return false; }
+
+    return Get_IsMarkupLive(*Field, *Record);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -366,6 +580,9 @@ auto
     Table._IsBuildInProgress = &nav_surface_adapter_private::Do_IsBuildInProgress;
     Table._SurfaceRevision = &nav_surface_adapter_private::Do_SurfaceRevision;
     Table._RequestSurfaceRebuild = &nav_surface_adapter_private::Do_RequestSurfaceRebuild;
+    Table._ApplyAreaMarkup = &nav_surface_adapter_private::Do_ApplyAreaMarkup;
+    Table._IsMarkupLive = &nav_surface_adapter_private::Do_IsMarkupLive;
+    Table._ReleaseAreaMarkup = &nav_surface_adapter_private::Do_ReleaseAreaMarkup;
 
     ck::nav_surface::Register_Provider(ECk_NavSurface_Provider::GroundNav, MoveTemp(Table));
 }

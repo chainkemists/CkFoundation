@@ -11,6 +11,10 @@
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
+#include "CkShapes/CkShapes_Common.h"
+
+#include <GameplayTagContainer.h>
+
 #include "CkGroundNavVolume_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -108,6 +112,89 @@ private:
 
 public:
     CK_PROPERTY(_ForceRestart);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Paints an authored area tag onto the ground a shape covers.
+ *
+ * The MARKUP ENTITY is the identity, not the shape and not the tag: a second request naming the same
+ * entity updates the volume's record in place rather than adding a second one, which is what lets a
+ * caller move, retag or disable a volume it already placed. Disabling is a state the record keeps
+ * carrying — a disabled markup is not a released one, and only the release request removes anything.
+ *
+ * What the tag MEANS is not carried here. The volume resolves it through the neutral area-policy
+ * registry, so an unregistered tag is rejected at admission rather than baked as a record nothing
+ * downstream knows how to apply.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_AreaMarkup : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_AreaMarkup);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_AreaMarkup);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _MarkupEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AnyShape _Shape;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FTransform _WorldTransform = FTransform::Identity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _AreaTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _Enable = ECk_EnableDisable::Enable;
+
+public:
+    CK_PROPERTY_GET(_MarkupEntity);
+    CK_PROPERTY_GET(_Shape);
+    CK_PROPERTY_GET(_WorldTransform);
+    CK_PROPERTY_GET(_AreaTag);
+
+    CK_PROPERTY(_Enable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_AreaMarkup,
+        _MarkupEntity, _Shape, _WorldTransform, _AreaTag);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Drops the record the markup entity owns. Releasing a markup the volume does not hold is an
+ *  idempotent no-op: the caller's intent — this volume holds no record for that entity — already
+ *  holds afterwards. */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_ReleaseAreaMarkup : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_ReleaseAreaMarkup);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_ReleaseAreaMarkup);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _MarkupEntity;
+
+public:
+    CK_PROPERTY_GET(_MarkupEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_ReleaseAreaMarkup, _MarkupEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

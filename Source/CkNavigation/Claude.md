@@ -219,5 +219,21 @@ choice lives on its transient entity (`FFragment_NavSurface_Provider`), seeded f
 `UCk_Nav_ProjectSettings_UE::_DefaultNavSurfaceProvider` (Recast) the first time the revision watch
 runs, and changed per world with `Request_SetProvider`. The choice is mirrored per world so that
 `Get_BoundarySegments`, which is callable off the game thread, never reads the registry to find its
-provider. Area-markup requests are still Recast-only. An unregistered provider answers `NoProvider`
-(or `Unknown_ProviderNotReady`, `NoData`, an empty box) everywhere.
+provider. Area markup dispatches the same way: `Request_AreaMarkup` drains into the world
+provider's `_ApplyAreaMarkup`, `Get_IsMarkupLive` asks that provider whether the paint landed, and
+the markup entity's teardown drains into `_ReleaseAreaMarkup`. An unregistered provider answers
+`NoProvider` (or `Unknown_ProviderNotReady`, `NoData`, an empty box) everywhere.
+
+## Area tags mean something without a UNavArea
+
+An area tag has two registrations, contributed side by side by whichever module owns the area.
+`ck::nav_surface_recast::Register_AreaTag` gives Recast the `UNavArea` subclass that carries the
+tag; `ck::nav_surface::Register_AreaPolicy` (`NavSurface/CkNavSurface_AreaPolicy.h`) gives every
+other provider the tag's MEANING as an `FCk_NavSurface_AreaPolicy` — `Walkability` (the area is
+removed outright, which today only `Nav.Area.Impassable` is) or `Cost` plus the multiplier crossing
+it costs. Both registries park their seeding in an `FRegistrar` static and run it on first read,
+because the gameplay-tag manager does not exist when a translation unit's statics do; the two flush
+independently, so a provider that never touches a `UNavArea` still gets its policies. Registering a
+tag twice with disagreeing policies ensures and the first one stands. The crowd areas read their
+multiplier off the `UNavArea` CDO's `DefaultCost` rather than restating it, so the Recast cost and
+the neutral cost cannot drift.

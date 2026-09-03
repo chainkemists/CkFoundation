@@ -46,6 +46,76 @@ namespace ck::groundnav
             return Hash;
         }
 
+
+        auto DoHash_String(
+            const FString& InValue,
+            uint64         InSeed) -> uint64
+        {
+            auto Hash = DoHash_Scalar(static_cast<double>(InValue.Len()), InSeed);
+
+            for (const auto Character : InValue)
+            { Hash = DoHash_Scalar(static_cast<double>(Character), Hash); }
+
+            return Hash;
+        }
+
+        auto DoHash_Transform(
+            const FTransform& InTransform,
+            uint64            InSeed) -> uint64
+        {
+            const auto Rotation = InTransform.GetRotation();
+
+            auto Hash = DoHash_Vector(InTransform.GetLocation(), InSeed);
+
+            Hash = DoHash_Scalar(Rotation.X, Hash);
+            Hash = DoHash_Scalar(Rotation.Y, Hash);
+            Hash = DoHash_Scalar(Rotation.Z, Hash);
+            Hash = DoHash_Scalar(Rotation.W, Hash);
+
+            return DoHash_Vector(InTransform.GetScale3D(), Hash);
+        }
+
+        // The type and the dimensions its type gives meaning to. Only the authored branch is read: a
+        // box's unread capsule members are whatever the struct was default-constructed with, and
+        // folding those in would fingerprint a difference the bake cannot see.
+        auto DoHash_Shape(
+            const FCk_AnyShape& InShape,
+            uint64              InSeed) -> uint64
+        {
+            auto Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(InShape.Get_ShapeType())), InSeed);
+
+            switch (InShape.Get_ShapeType())
+            {
+                case ECk_Shape_Type::Box:
+                {
+                    return DoHash_Vector(InShape.Get_Box().Get_HalfExtents(), Hash);
+                }
+
+                case ECk_Shape_Type::Capsule:
+                {
+                    Hash = DoHash_Scalar(InShape.Get_Capsule().Get_HalfHeight(), Hash);
+                    return DoHash_Scalar(InShape.Get_Capsule().Get_Radius(), Hash);
+                }
+
+                case ECk_Shape_Type::Cylinder:
+                {
+                    Hash = DoHash_Scalar(InShape.Get_Cylinder().Get_HalfHeight(), Hash);
+                    return DoHash_Scalar(InShape.Get_Cylinder().Get_Radius(), Hash);
+                }
+
+                case ECk_Shape_Type::Sphere:
+                {
+                    return DoHash_Scalar(InShape.Get_Sphere().Get_Radius(), Hash);
+                }
+
+                case ECk_Shape_Type::None:
+                default:
+                {
+                    return Hash;
+                }
+            }
+        }
+
         /**
          * One triangle's hash, independent of which of its three corners is listed first but NOT of its
          * winding: rotating (A,B,C) to (B,C,A) is the same surface, while reversing it to (C,B,A) flips
@@ -85,10 +155,11 @@ namespace ck::groundnav
 
     auto
         Get_ContentFingerprint(
-            const FCk_GroundNav_GeometryBatch& InGeometry,
-            const FBox&                        InRegion,
-            const FCk_GroundNav_BakeConfig&    InConfig,
-            const FCk_GroundNav_AgentProfile&  InProfile)
+            const FCk_GroundNav_GeometryBatch&          InGeometry,
+            const FBox&                                 InRegion,
+            const FCk_GroundNav_BakeConfig&             InConfig,
+            const FCk_GroundNav_AgentProfile&           InProfile,
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups)
         -> FCk_GroundNav_ContentFingerprint
     {
         using namespace fingerprint_private;
@@ -129,6 +200,37 @@ namespace ck::groundnav
         Hash = DoHash_Scalar(InProfile.Get_StepHeightUu(), Hash);
         Hash = DoHash_Scalar(InProfile.Get_LedgeSensitivity(), Hash);
         Hash = DoHash_Scalar(InProfile.Get_RoughPerchToleranceUu(), Hash);
+
+        // ---- 5. Markup, in canonical id order ----------------------------------------------------------
+        auto EnabledOrder = TArray<int32>{};
+        EnabledOrder.Reserve(InMarkups.Num());
+
+        for (auto Index = 0; Index < InMarkups.Num(); ++Index)
+        {
+            if (InMarkups[Index].Get_Enable() == ECk_EnableDisable::Disable)
+            { continue; }
+
+            EnabledOrder.Emplace(Index);
+        }
+
+        EnabledOrder.Sort([&](int32 InLhs, int32 InRhs) -> bool
+        {
+            return InMarkups[InLhs].Get_Id() < InMarkups[InRhs].Get_Id();
+        });
+
+        Hash = DoHash_Scalar(static_cast<double>(EnabledOrder.Num()), Hash);
+
+        for (const auto Index : EnabledOrder)
+        {
+            const auto& Markup = InMarkups[Index];
+
+            Hash = DoHash_Scalar(static_cast<double>(Markup.Get_Id()), Hash);
+            Hash = DoHash_Shape(Markup.Get_Shape(), Hash);
+            Hash = DoHash_Transform(Markup.Get_WorldTransform(), Hash);
+            Hash = DoHash_String(Markup.Get_AreaTag().ToString(), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Markup.Get_Kind())), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Markup.Get_CostMultiplier()), Hash);
+        }
 
         return FCk_GroundNav_ContentFingerprint{Hash};
     }

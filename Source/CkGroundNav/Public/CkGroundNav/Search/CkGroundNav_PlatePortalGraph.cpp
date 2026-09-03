@@ -90,16 +90,31 @@ namespace ck::groundnav
 
     auto
         Get_AreaMultiplier(
+            const FCk_GroundNav_Field&          InField,
             const FCk_GroundNav_PathSharedData& InShared,
             int32                               InFlatPlate)
         -> float
     {
         using namespace ck_groundnav_plateportalgraph;
 
-        if (const auto* Multiplier = InShared._PlateCostMultipliers.Find(InFlatPlate))
-        { return *Multiplier; }
+        auto Multiplier = static_cast<float>(NoMultiplier);
 
-        return static_cast<float>(NoMultiplier);
+        auto TileIndex = int32{INDEX_NONE};
+        auto PlateIndex = int32{INDEX_NONE};
+
+        if (Get_TileAndPlate(InField, InFlatPlate, TileIndex, PlateIndex) &&
+            InField._Tiles.IsValidIndex(TileIndex))
+        {
+            const auto& PlateField = InField._Tiles[TileIndex]._Plates;
+
+            if (PlateField._Plates.IsValidIndex(PlateIndex))
+            { Multiplier = PlateField._Plates[PlateIndex]._CostMultiplier; }
+        }
+
+        if (const auto* TableMultiplier = InShared._PlateCostMultipliers.Find(InFlatPlate))
+        { Multiplier = FMath::Max(Multiplier, *TableMultiplier); }
+
+        return Multiplier;
     }
 
     auto
@@ -217,7 +232,7 @@ namespace ck::groundnav
             *_Shared,
             DoGet_Point(InFrom),
             DoGet_Point(InTo),
-            Get_AreaMultiplier(*_Shared, DoGet_ArrivalPlate(InFrom)),
+            Get_AreaMultiplier(*_Shared->_Field, *_Shared, DoGet_ArrivalPlate(InFrom)),
             static_cast<float>(DoGet_ClearanceFactor(InTo)));
     }
 

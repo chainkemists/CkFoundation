@@ -3,10 +3,13 @@
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
+#include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
+#include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Query/CkGroundNav_Funnel.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
@@ -17,7 +20,10 @@
 #include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_PlatePortalGraph.h"
+#include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
+
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
 
@@ -99,6 +105,124 @@ namespace ck::groundnav
                     FString::Printf(TEXT("OPEN COLLISION - %s - %d open edges"),
                         *OpenBody._Description, OpenBody._OpenEdgeCount),
                     nullptr, FColor::Red, InLifetimeSeconds, DrawShadow);
+            }
+        }
+
+        auto Do_DrawDashedBox(
+            UWorld*     InWorld,
+            const FBox& InBounds,
+            FColor      InColor,
+            float       InLifetimeSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto Thickness = 2.0f;
+            constexpr auto DashUu = 20.0;
+            constexpr auto CornerCount = 8;
+            constexpr auto EdgeCount = 12;
+
+            const auto Min = InBounds.Min;
+            const auto Max = InBounds.Max;
+
+            const FVector Corners[CornerCount] = {
+                FVector{Min.X, Min.Y, Min.Z},
+                FVector{Max.X, Min.Y, Min.Z},
+                FVector{Max.X, Max.Y, Min.Z},
+                FVector{Min.X, Max.Y, Min.Z},
+                FVector{Min.X, Min.Y, Max.Z},
+                FVector{Max.X, Min.Y, Max.Z},
+                FVector{Max.X, Max.Y, Max.Z},
+                FVector{Min.X, Max.Y, Max.Z}};
+
+            const int32 Edges[EdgeCount][2] = {
+                {0, 1}, {1, 2}, {2, 3}, {3, 0},
+                {4, 5}, {5, 6}, {6, 7}, {7, 4},
+                {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+
+            for (auto EdgeIndex = 0; EdgeIndex < EdgeCount; ++EdgeIndex)
+            {
+                const auto Start = Corners[Edges[EdgeIndex][0]];
+                const auto End = Corners[Edges[EdgeIndex][1]];
+                const auto EdgeLengthUu = (End - Start).Length();
+
+                if (EdgeLengthUu <= 0.0)
+                { continue; }
+
+                const auto Direction = (End - Start) / EdgeLengthUu;
+                const auto DashLengthUu = FMath::Min(DashUu, EdgeLengthUu);
+                const auto StrideUu = DashUu * 2.0;
+                const auto DashCount = FMath::Max(1, FMath::CeilToInt32(EdgeLengthUu / StrideUu));
+
+                for (auto DashIndex = 0; DashIndex < DashCount; ++DashIndex)
+                {
+                    const auto AlongUu = static_cast<double>(DashIndex) * StrideUu;
+
+                    if (AlongUu >= EdgeLengthUu)
+                    { break; }
+
+                    const auto DashStart = Start + (Direction * AlongUu);
+                    const auto DashEnd =
+                        Start + (Direction * FMath::Min(AlongUu + DashLengthUu, EdgeLengthUu));
+
+                    DrawDebugLine(InWorld, DashStart, DashEnd, InColor, Persistent,
+                        InLifetimeSeconds, DepthPriority, Thickness);
+                }
+            }
+        }
+
+        auto Do_DrawMarkups(
+            UWorld*                                    InWorld,
+            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
+            float                                      InLifetimeSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto DrawShadow = true;
+            constexpr auto SolidThickness = 3.0f;
+
+            const auto ImpassableColor = FColor{220, 60, 60};
+            const auto CostColor = FColor{255, 180, 60};
+            const auto DisabledColor = FColor{130, 130, 130};
+
+            for (const auto& Markup : InMarkups)
+            {
+                // A degenerate or unauthored shape has no box, and Get_MarkupWorldBounds says so
+                // rather than answering a point. There is nothing to outline.
+                if (NOT Markup._Bounds.IsValid)
+                { continue; }
+
+                const auto KindColor = Markup._Kind == ECk_GroundNav_MarkupKind::Walkability
+                    ? ImpassableColor
+                    : CostColor;
+
+                const auto Color = Markup._IsEnabled ? KindColor : DisabledColor;
+
+                if (Markup._IsEnabled)
+                {
+                    DrawDebugBox(InWorld, Markup._Bounds.GetCenter(), Markup._Bounds.GetExtent(),
+                        Color, Persistent, InLifetimeSeconds, DepthPriority, SolidThickness);
+                }
+                else
+                {
+                    Do_DrawDashedBox(InWorld, Markup._Bounds, Color, InLifetimeSeconds);
+                }
+
+                const auto MultiplierLabel = Markup._Kind == ECk_GroundNav_MarkupKind::Cost
+                    ? FString::Printf(TEXT(" x%.2f"), Markup._CostMultiplier)
+                    : FString{};
+
+                const auto Label = FString::Printf(TEXT("markup #%d %s | %s%s | %s | %s"),
+                    Markup._RecordId,
+                    *ck::Format_UE(TEXT("{}"), Markup._Kind),
+                    *Markup._AreaTagName.ToString(),
+                    *MultiplierLabel,
+                    Markup._IsEnabled ? TEXT("enabled") : TEXT("DISABLED"),
+                    Markup._IsLive ? TEXT("live") : TEXT("NOT live"));
+
+                DrawDebugString(InWorld,
+                    FVector{Markup._Bounds.GetCenter().X, Markup._Bounds.GetCenter().Y,
+                        Markup._Bounds.Max.Z},
+                    Label, nullptr, Color, InLifetimeSeconds, DrawShadow);
             }
         }
     }
@@ -365,6 +489,8 @@ namespace ck::groundnav
                     Get_LayerColor(Plate._LayerIndex), Persistent, LifetimeSeconds, DepthPriority, 1.5f);
             }
 
+            Do_DrawMarkups(InWorld, InSnapshot._Markups, LifetimeSeconds);
+
             return;
         }
 
@@ -500,6 +626,76 @@ namespace ck::groundnav
             DrawDebugPoint(InWorld, Cell._SurfaceCentre, PointSize, Color, Persistent, LifetimeSeconds,
                 DepthPriority);
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugMarkupsFromWorld(
+            UWorld* InWorld)
+        -> TArray<FCk_GroundNav_DebugMarkup>
+    {
+        auto Markups = TArray<FCk_GroundNav_DebugMarkup>{};
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return Markups; }
+
+        auto VolumeEntities = world_fields::Get_VolumeEntities(InWorld);
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            const auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            for (const auto& Entry : UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(Volume))
+            {
+                const auto& Record = Entry.Get_Record();
+
+                auto MarkupEntity = Entry.Get_MarkupEntity();
+
+                // The NEUTRAL probe, never this module's own answer: a viewer that asked GroundNav
+                // directly would report a paint as live on a world some other provider is serving.
+                const auto Markup = UCk_Utils_NavSurface_UE::Cast(MarkupEntity);
+
+                auto Drawn = FCk_GroundNav_DebugMarkup{};
+
+                Drawn._Bounds = Get_MarkupWorldBounds(Record);
+                Drawn._AreaTagName = Record.Get_AreaTag().GetTagName();
+                Drawn._RecordId = Record.Get_Id();
+                Drawn._CostMultiplier = Record.Get_CostMultiplier();
+                Drawn._RequestedAtEpoch = Record.Get_RequestedAtEpoch();
+                Drawn._Kind = Record.Get_Kind();
+                Drawn._IsEnabled = Record.Get_Enable() == ECk_EnableDisable::Enable;
+                Drawn._IsLive = UCk_Utils_NavSurface_UE::Get_IsMarkupLive(Markup);
+
+                Markups.Emplace(MoveTemp(Drawn));
+            }
+        }
+
+        return Markups;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDraw_DebugMarkups(
+            UWorld*                                    InWorld,
+            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
+            FCk_Time                                   InLifetime)
+        -> void
+    {
+        const auto WorldIsValid = ck::IsValid(InWorld);
+
+        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav markup outlines without a World"))
+        { return; }
+
+        debugdraw_private::Do_DrawMarkups(
+            InWorld, InMarkups, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -856,16 +1052,42 @@ namespace ck_groundnav_debugconsole
         }
     }
 
+    // Collected here rather than inside the bake: the bake produces a value that outlives its world,
+    // and the markup a world's volumes hold is only readable while that world is still there.
+    auto DoStamp_Markups(UWorld* InWorld, ck::groundnav::FCk_GroundNav_DebugSnapshot& InOutSnapshot) -> void
+    {
+        if (NOT ck::groundnav::debug::Get_IsMarkupDrawEnabled())
+        { return; }
+
+        InOutSnapshot._Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
+    }
+
+    auto DoDraw_MarkupsIfEnabled(UWorld* InWorld, float InLifetimeSeconds) -> void
+    {
+        if (NOT ck::groundnav::debug::Get_IsMarkupDrawEnabled())
+        { return; }
+
+        const auto Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
+
+        ck::groundnav::DoDraw_DebugMarkups(
+            InWorld, Markups, FCk_Time{static_cast<double>(InLifetimeSeconds)});
+    }
+
     auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
     {
-        DoDrawAndReport(InWorld,
-            ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre)));
+        auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre));
+
+        DoStamp_Markups(InWorld, Snapshot);
+        DoDrawAndReport(InWorld, Snapshot);
     }
 
     auto DoBakeFieldAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
     {
-        DoDrawAndReport(InWorld, ck::groundnav::Make_FieldDebugSnapshotFromWorld(
-            InWorld, Make_BakeParams(InCentre), LastDebugField));
+        auto Snapshot = ck::groundnav::Make_FieldDebugSnapshotFromWorld(
+            InWorld, Make_BakeParams(InCentre), LastDebugField);
+
+        DoStamp_Markups(InWorld, Snapshot);
+        DoDrawAndReport(InWorld, Snapshot);
     }
 
     auto Get_ProbeMode() -> ECk_NavSurface_ProjectionMode
@@ -974,6 +1196,144 @@ namespace ck_groundnav_debugconsole
 
         ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
             InPoint.X, InPoint.Y, InPoint.Z, Summary);
+    }
+
+    // One log call per line rather than one per report: the log truncates a long message, and every
+    // consumer of this output reads it a line at a time anyway.
+    auto DoLog_Report(const FString& InReport) -> void
+    {
+        constexpr auto CullEmptyLines = false;
+
+        auto Lines = TArray<FString>{};
+        InReport.ParseIntoArrayLines(Lines, CullEmptyLines);
+
+        for (const auto& Line : Lines)
+        { ck::groundnav::Display(TEXT("{}"), Line); }
+    }
+
+    auto Get_PlateReportAt(
+        const ck::groundnav::FCk_GroundNav_Field& InField,
+        const FVector&                            InPoint) -> FString
+    {
+        auto ProjectionQuery = ck::groundnav::FCk_GroundNav_ProjectionQuery{};
+
+        ProjectionQuery._Location = InPoint;
+        ProjectionQuery._HorizontalExtentUu = CVar_ProbeExtentUu.GetValueOnGameThread();
+        ProjectionQuery._UpExtentUu = CVar_ProbeUpUu.GetValueOnGameThread();
+        ProjectionQuery._DownExtentUu = CVar_ProbeDownUu.GetValueOnGameThread();
+        ProjectionQuery._Mode = Get_ProbeMode();
+        ProjectionQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        const auto Projection = ck::groundnav::Get_ProjectPoint(InField, ProjectionQuery);
+        const auto& Surface = Projection._Surface;
+
+        if (NOT Projection.Get_IsSuccess() || NOT InField._Tiles.IsValidIndex(Surface._TileIndex))
+        {
+            return FString::Printf(TEXT("    plate under the point : none (%s)\n"),
+                *ck::Format_UE(TEXT("{}"), Projection._Status));
+        }
+
+        const auto& Plates = InField._Tiles[Surface._TileIndex]._Plates;
+
+        if (NOT Plates._Plates.IsValidIndex(Surface._PlateIndex))
+        {
+            return FString::Printf(
+                TEXT("    plate under the point : tile %d layer %d, no plate\n"),
+                Surface._TileIndex, Surface._LayerIndex);
+        }
+
+        const auto& Plate = Plates._Plates[Surface._PlateIndex];
+        const auto& Policy = Plates.Get_AreaPolicy(Plate._AreaPolicyIndex);
+
+        return FString::Printf(
+            TEXT("    plate under the point : tile %d layer %d plate %d | policy %d [%s] | cost x%.2f\n"),
+            Surface._TileIndex,
+            Surface._LayerIndex,
+            Surface._PlateIndex,
+            Plate._AreaPolicyIndex,
+            Policy.IsEmpty() ? TEXT("none") : *Policy.ToStringSimple(),
+            Plate._CostMultiplier);
+    }
+
+    auto DoMarkupAndReport(UWorld* InWorld, const FVector& InPoint) -> void
+    {
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        const auto Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
+
+        ck::groundnav::DoDraw_DebugMarkups(
+            InWorld, Markups, FCk_Time{static_cast<double>(LifetimeSeconds)});
+
+        auto VolumeEntities = ck::groundnav::world_fields::Get_VolumeEntities(InWorld);
+
+        auto Report = FString::Printf(TEXT("[GroundNav] markup at (%.0f, %.0f, %.0f)\n"),
+            InPoint.X, InPoint.Y, InPoint.Z);
+
+        auto VolumeCount = 0;
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            const auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            ++VolumeCount;
+
+            const auto Records = UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(Volume);
+
+            // Every volume is listed, with where the point falls on it, rather than only the one
+            // covering the point: a record painted before anything baked lives on a volume that
+            // covers nothing yet, and that is exactly the case worth looking at.
+            Report += FString::Printf(
+                TEXT("  volume %s : %d record(s), build epoch %lld, %s at the point\n"),
+                *ck::Format_UE(TEXT("{}"), Volume),
+                Records.Num(),
+                static_cast<long long>(UCk_Utils_GroundNavVolume_UE::Get_BuildEpoch(Volume)),
+                *ck::Format_UE(TEXT("{}"),
+                    UCk_Utils_GroundNavVolume_UE::Get_RegionStatusAt(Volume, InPoint)));
+
+            for (const auto& Entry : Records)
+            {
+                const auto& Record = Entry.Get_Record();
+
+                auto MarkupEntity = Entry.Get_MarkupEntity();
+
+                // The NEUTRAL probe, never this module's own answer: a record reads as live only if
+                // the provider actually serving this world says the paint reached its surface.
+                const auto Markup = UCk_Utils_NavSurface_UE::Cast(MarkupEntity);
+
+                const auto Bounds = ck::groundnav::Get_MarkupWorldBounds(Record);
+
+                Report += FString::Printf(
+                    TEXT("    #%d %s [%s] x%.2f | %s | live=%s | requested at epoch %lld | bounds %s\n"),
+                    Record.Get_Id(),
+                    *ck::Format_UE(TEXT("{}"), Record.Get_Kind()),
+                    *Record.Get_AreaTag().ToString(),
+                    Record.Get_CostMultiplier(),
+                    Record.Get_Enable() == ECk_EnableDisable::Enable ? TEXT("enabled") : TEXT("DISABLED"),
+                    UCk_Utils_NavSurface_UE::Get_IsMarkupLive(Markup) ? TEXT("yes") : TEXT("no"),
+                    static_cast<long long>(Record.Get_RequestedAtEpoch()),
+                    Bounds.IsValid ? *Bounds.ToString() : TEXT("degenerate - not a box"));
+            }
+
+            const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
+
+            Report += ck::IsValid(Field)
+                ? Get_PlateReportAt(*Field, InPoint)
+                : FString{TEXT("    plate under the point : nothing published\n")};
+        }
+
+        if (VolumeCount == 0)
+        {
+            Report += TEXT("  no ground-nav volume has published a field in this world, so there is ")
+                      TEXT("no markup to report and no plate to look under\n");
+        }
+
+        DoLog_Report(Report);
     }
 
     auto Get_FivePointArgs(const TArray<FString>& InArgs, FVector& OutStart, FVector2D& OutTargetXY) -> bool
@@ -1488,6 +1848,8 @@ namespace ck_groundnav_debugconsole
         DrawDebugString(InWorld, InSource + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
             Flood.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
 
+        DoDraw_MarkupsIfEnabled(InWorld, LifetimeSeconds);
+
         ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) within {} uu {}"),
             InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
     }
@@ -1719,6 +2081,10 @@ namespace ck_groundnav_debugconsole
 
         DrawDebugString(InWorld, StartMarker + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
             MarkerColor, LifetimeSeconds, DrawShadow);
+
+        // A route that ignores a painted area and a route planned before the paint landed are the
+        // same picture without the outline that says where the area is.
+        DoDraw_MarkupsIfEnabled(InWorld, LifetimeSeconds);
 
         ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) to ({}, {}, {}) {}"),
             InStart.X, InStart.Y, InStart.Z, InGoal.X, InGoal.Y, InGoal.Z, Summary);
@@ -2010,6 +2376,41 @@ namespace ck_groundnav_debugconsole
                 FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
 
             DoProbeAndDraw(InWorld, Point);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_MarkupAt(
+        TEXT("ck.GroundNav.MarkupAt"),
+        TEXT("Report the area markup this world's ground-nav volumes hold, and the plate under a ")
+        TEXT("point: ck.GroundNav.MarkupAt <X> <Y> <Z>. Every volume is listed with where the point ")
+        TEXT("falls on it, because a record painted before anything baked lives on a volume that ")
+        TEXT("covers nothing yet. Each record prints its id, kind, area tag, cost multiplier, ")
+        TEXT("enabled state, world bounds, the epoch it was submitted against, and whether the ")
+        TEXT("NEUTRAL facade reports it live - a record the volume holds is not the same thing as a ")
+        TEXT("paint the surface has applied, and the gap between the two is what a repath that ")
+        TEXT("crosses a fresh paint is made of. The plate line names the policy index the plate ")
+        TEXT("carries, the tags that index names and what crossing it costs. Every record also ")
+        TEXT("outlines in the world: impassable red, cost amber, disabled dashed grey. Unlike the ")
+        TEXT("query commands this reads the volumes' PUBLISHED fields, so ck.GroundNav.BakeFieldAt ")
+        TEXT("is not needed."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.MarkupAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 3)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.MarkupAt needs three numbers: ck.GroundNav.MarkupAt <X> <Y> <Z>"));
+                return;
+            }
+
+            const auto Point = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoMarkupAndReport(InWorld, Point);
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Probe(
@@ -2351,7 +2752,8 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
-                TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {}"),
+                TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {}")
+                TEXT("\n  gates   : MarkupLiveGate bypassed {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
                 CVar_CellSizeUu.GetValueOnGameThread(),
@@ -2374,7 +2776,9 @@ namespace ck_groundnav_debugconsole
                 CVar_CornerOffsetK.GetValueOnGameThread(),
                 CVar_Mode.GetValueOnGameThread(),
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
-                CVar_MaxCells.GetValueOnGameThread());
+                CVar_MaxCells.GetValueOnGameThread(),
+                ck::groundnav::debug::Get_IsMarkupDrawEnabled(),
+                ck::groundnav::debug::Get_IsMarkupLiveGateBypassed());
         }));
 }
 

@@ -3,6 +3,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_GeometryBatch.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 
 #include <CoreMinimal.h>
 
@@ -38,19 +39,32 @@ namespace ck::groundnav
      *   3. Bake config   - cell size, cell height, tile size, max columns per tile.
      *   4. Agent profile - max slope, max slope change, step height, ledge sensitivity, rough perch
      *                      tolerance.
+     *   5. Markup       - every ENABLED record's id, shape type and dimensions, world transform, area
+     *                      tag, kind and cost multiplier. A disabled record decides nothing about the
+     *                      field, so it must not force a rebuild by being present.
      *
      * ORDER INDEPENDENCE is a contract, not an accident. Triangles are combined with a commutative
      * operation, so the same world submitted in a different order fingerprints identically - otherwise
      * every unrelated change to collection order would force a full rebake of an unchanged world.
      * Addition rather than XOR, deliberately: under XOR a pair of identical triangles would cancel to
      * zero, and a doubled surface is not the same world as no surface at all.
+     *
+     * Markup reaches the same property by a different route: the records are hashed SEQUENTIALLY in
+     * ascending _Id, which is a canonical order the submitter cannot perturb. Sequential and not
+     * commutative because two records differing only in which volume carries which tag are two
+     * different worlds, and a commutative combine would call them one.
+     *
+     * The area tag is hashed through its NAME, never through GetTypeHash: an FName's hash is an index
+     * into a per-process table and is not the same number in the next run, which is precisely the
+     * property a fingerprint compared across sessions cannot have.
      */
     CKGROUNDNAV_API auto
     Get_ContentFingerprint(
-        const FCk_GroundNav_GeometryBatch& InGeometry,
-        const FBox&                        InRegion,
-        const FCk_GroundNav_BakeConfig&    InConfig,
-        const FCk_GroundNav_AgentProfile&  InProfile) -> FCk_GroundNav_ContentFingerprint;
+        const FCk_GroundNav_GeometryBatch&          InGeometry,
+        const FBox&                                 InRegion,
+        const FCk_GroundNav_BakeConfig&             InConfig,
+        const FCk_GroundNav_AgentProfile&           InProfile,
+        TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups = {}) -> FCk_GroundNav_ContentFingerprint;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
