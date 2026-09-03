@@ -9,6 +9,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Points.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
@@ -1467,6 +1468,188 @@ namespace ck_groundnav_debugconsole
             InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
     }
 
+    auto DoDrawGeneratedPoints(
+        UWorld*                                                    InWorld,
+        const TArray<ck::groundnav::FCk_GroundNav_GeneratedPoint>& InPoints,
+        float                                                      InLifetimeSeconds) -> void
+    {
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto SphereSegments = 8;
+
+        for (const auto& Point : InPoints)
+        {
+            DrawDebugSphere(InWorld, Point._Location, 4.0f, SphereSegments,
+                ck::groundnav::debugdraw_private::Get_LayerColor(Point._Surface._LayerIndex),
+                Persistent, InLifetimeSeconds, DepthPriority);
+        }
+    }
+
+    auto DoRandomPointsAndDraw(
+        UWorld*        InWorld,
+        const FVector& InOrigin,
+        float          InRadiusUu,
+        int32          InCount) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.PointsAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        auto PointsQuery = ck::groundnav::FCk_GroundNav_RandomPointsQuery{};
+
+        PointsQuery._Origin = InOrigin;
+        PointsQuery._RadiusUu = InRadiusUu;
+        PointsQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+        PointsQuery._Count = InCount;
+        PointsQuery._Seed = 0;
+
+        const auto Points = ck::groundnav::Get_RandomPointsInRadius(Field, PointsQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InOrigin, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DoDrawGeneratedPoints(InWorld, Points._Points, LifetimeSeconds);
+
+        const auto Summary = FString::Printf(
+            TEXT("points %s | %d of %d asked within %.0f uu | %d draw(s) spent | %d cells read"),
+            *ck::Format_UE(TEXT("{}"), Points._Status),
+            Points._Points.Num(),
+            InCount,
+            InRadiusUu,
+            Points._Attempts,
+            Points._Cost._CellsRead);
+
+        DrawDebugString(InWorld, InOrigin + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Points.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
+            InOrigin.X, InOrigin.Y, InOrigin.Z, Summary);
+    }
+
+    auto DoPathDistancePointsAndDraw(
+        UWorld*        InWorld,
+        const FVector& InOrigin,
+        float          InMinDistanceUu,
+        float          InMaxDistanceUu,
+        int32          InCount) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.FarPointsAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        auto PointsQuery = ck::groundnav::FCk_GroundNav_PathDistancePointsQuery{};
+
+        // The same two vertical quanta the flood fill is given, because this generator IS a flood
+        // fill: a wider window would resolve the origin onto a storey ck.GroundNav.FloodAt at the
+        // same point would not, and the two commands would disagree about what is near.
+        PointsQuery._Origin = InOrigin;
+        PointsQuery._MinDistanceUu = InMinDistanceUu;
+        PointsQuery._MaxDistanceUu = InMaxDistanceUu;
+        PointsQuery._VerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        PointsQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+        PointsQuery._Count = InCount;
+        PointsQuery._Seed = 0;
+
+        const auto Points = ck::groundnav::Get_RandomPointsByPathDistance(Field, PointsQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InOrigin, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DoDrawGeneratedPoints(InWorld, Points._Points, LifetimeSeconds);
+
+        const auto Summary = FString::Printf(
+            TEXT("far points %s | %d of %d asked walked [%.0f, %.0f] uu | %d draw(s) spent | %d cells read"),
+            *ck::Format_UE(TEXT("{}"), Points._Status),
+            Points._Points.Num(),
+            InCount,
+            InMinDistanceUu,
+            InMaxDistanceUu,
+            Points._Attempts,
+            Points._Cost._CellsRead);
+
+        DrawDebugString(InWorld, InOrigin + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Points.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
+            InOrigin.X, InOrigin.Y, InOrigin.Z, Summary);
+    }
+
+    auto DoGridPointsAndDraw(
+        UWorld*        InWorld,
+        const FVector& InCentre,
+        float          InHalfExtentUu,
+        float          InSpacingUu) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.GridAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        // Vertically the box reaches as far as the projection probe searches, and no further: a
+        // lattice position and a probe at that position must agree on which storeys exist there.
+        const auto HalfUu = static_cast<double>(InHalfExtentUu);
+        const auto UpUu = static_cast<double>(CVar_ProbeUpUu.GetValueOnGameThread());
+        const auto DownUu = static_cast<double>(CVar_ProbeDownUu.GetValueOnGameThread());
+
+        const auto Bounds = FBox{
+            FVector{InCentre.X - HalfUu, InCentre.Y - HalfUu, InCentre.Z - DownUu},
+            FVector{InCentre.X + HalfUu, InCentre.Y + HalfUu, InCentre.Z + UpUu}};
+
+        auto GridQuery = ck::groundnav::FCk_GroundNav_GridPointsQuery{};
+
+        GridQuery._Bounds = Bounds;
+        GridQuery._SpacingUu = InSpacingUu;
+        GridQuery._AlignToLattice = ECk_EnableDisable::Enable;
+        GridQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        const auto Points = ck::groundnav::Get_GridPoints(Field, GridQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InCentre, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DrawDebugBox(InWorld, Bounds.GetCenter(), Bounds.GetExtent(), FColor{130, 130, 130},
+            Persistent, LifetimeSeconds, DepthPriority, 1.5f);
+
+        DoDrawGeneratedPoints(InWorld, Points._Points, LifetimeSeconds);
+
+        const auto Summary = FString::Printf(
+            TEXT("grid %s | %d point(s) at %.0f uu spacing | attempts %d | %d cells read"),
+            *ck::Format_UE(TEXT("{}"), Points._Status),
+            Points._Points.Num(),
+            InSpacingUu,
+            Points._Attempts,
+            Points._Cost._CellsRead);
+
+        DrawDebugString(InWorld, InCentre + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Points.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) {}"),
+            InCentre.X, InCentre.Y, InCentre.Z, Summary);
+    }
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
         TEXT("ck.GroundNav.Bake"),
         TEXT("Bake the ground field around the player from live physics geometry and draw it. ")
@@ -1747,6 +1930,106 @@ namespace ck_groundnav_debugconsole
                 FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
 
             DoFloodAndDraw(InWorld, Source, FCString::Atof(*InArgs[3]));
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_PointsAt(
+        TEXT("ck.GroundNav.PointsAt"),
+        TEXT("Draw N random points on the last field bake within a horizontal radius of a point: ")
+        TEXT("ck.GroundNav.PointsAt <X> <Y> <Z> <R> <N>. The disc is horizontal, so every storey it ")
+        TEXT("touches is drawn from - a balcony over the same ground is as eligible as the ground. ")
+        TEXT("Points are uniform by AREA and take no notice of whether they can be walked to: a ")
+        TEXT("point across a wall is inside the radius, and ck.GroundNav.FarPointsAt is the command ")
+        TEXT("that asks the other question. Each point draws as a sphere coloured by its layer. ")
+        TEXT("Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. ")
+        TEXT("The body radius comes from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.PointsAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 5)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.PointsAt needs five numbers: ")
+                    TEXT("ck.GroundNav.PointsAt <X> <Y> <Z> <R> <N>"));
+                return;
+            }
+
+            const auto Origin = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoRandomPointsAndDraw(
+                InWorld, Origin, FCString::Atof(*InArgs[3]), FCString::Atoi(*InArgs[4]));
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_FarPointsAt(
+        TEXT("ck.GroundNav.FarPointsAt"),
+        TEXT("Draw N random points whose WALKED distance from a point falls in a band: ")
+        TEXT("ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>. The band is measured the way ")
+        TEXT("ck.GroundNav.FloodAt measures - around corners and through the doorways the body fits ")
+        TEXT("through - so a point a stride away across a wall is far, not near. The draw count is ")
+        TEXT("bounded, so fewer than N points is a legitimate answer and the label says how many ")
+        TEXT("draws it spent. Each point draws as a sphere coloured by its layer. Needs ")
+        TEXT("ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. The ")
+        TEXT("body radius comes from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.FarPointsAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 6)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.FarPointsAt needs six numbers: ")
+                    TEXT("ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>"));
+                return;
+            }
+
+            const auto Origin = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoPathDistancePointsAndDraw(InWorld, Origin, FCString::Atof(*InArgs[3]),
+                FCString::Atof(*InArgs[4]), FCString::Atoi(*InArgs[5]));
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_GridAt(
+        TEXT("ck.GroundNav.GridAt"),
+        TEXT("Draw a regular lattice of points over the walkable ground of the last field bake ")
+        TEXT("inside a box: ck.GroundNav.GridAt <X> <Y> <Z> <HALF> <SPACING>. HALF is the box's ")
+        TEXT("horizontal half-extent; vertically the box reaches as far as the projection probe ")
+        TEXT("searches (ck.GroundNav.Debug.ProbeUpUu / ProbeDownUu), and every storey with an ")
+        TEXT("admitted cell at a lattice position contributes a point there. The lattice is phased ")
+        TEXT("to the FIELD origin rather than to the box, so two overlapping runs agree on every ")
+        TEXT("shared position. Each point draws as a sphere coloured by its layer. Needs ")
+        TEXT("ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. The ")
+        TEXT("body radius comes from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.GridAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 5)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.GridAt needs five numbers: ")
+                    TEXT("ck.GroundNav.GridAt <X> <Y> <Z> <HALF> <SPACING>"));
+                return;
+            }
+
+            const auto Centre = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoGridPointsAndDraw(
+                InWorld, Centre, FCString::Atof(*InArgs[3]), FCString::Atof(*InArgs[4]));
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(
