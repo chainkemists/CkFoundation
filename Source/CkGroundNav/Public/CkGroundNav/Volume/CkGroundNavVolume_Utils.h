@@ -61,6 +61,35 @@ public:
         const FCk_Request_GroundNavVolume_Build& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** Paints an authored area tag onto the ground a shape covers, keyed on the markup ENTITY: a
+     *  second request naming the same entity updates that record in place instead of adding another,
+     *  so moving, retagging or disabling a placed volume is one call rather than a release and an add.
+     *
+     *  Completes Failed when the entity is invalid, when nothing published what the area tag MEANS, or
+     *  when the shape and transform bound nothing. A record whose footprint misses every tile or lands
+     *  where nothing has baked is NOT rejected — what a markup reaches is the bake's answer. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Area Markup",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_AreaMarkup(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_AreaMarkup& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    /** Drops the record a markup entity owns, and the back-pointer that entity carries. Releasing a
+     *  markup the volume does not hold completes Succeeded: the caller's intent already holds. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Release Area Markup",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_ReleaseAreaMarkup(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseAreaMarkup& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GroundNavVolume",
@@ -191,6 +220,24 @@ public:
     static auto
     Get_Field(
         const FCk_Handle_GroundNavVolume& InVolume) -> ck::groundnav::FCk_GroundNav_FieldPtr;
+
+    /**
+     * Every area markup the volume holds, in admission order, or an empty view when it holds none.
+     *
+     * C++ only, and a VIEW rather than a copy: the consumers are the bake stages, which are C++ by
+     * construction, and a per-call copy of every record would cost more than the reduction it feeds.
+     * The view is valid until the next markup request drains.
+     */
+    static auto
+    Get_MarkupRecords(
+        const FCk_Handle_GroundNavVolume& InVolume) -> TConstArrayView<ck::FCk_GroundNav_MarkupEntry>;
+
+    /** The record carrying this id, or unset when the volume holds none. Ids are never reused, so an
+     *  unset answer means released and never means renumbered. */
+    static auto
+    TryGet_MarkupRecord(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InRecordId) -> TOptional<FCk_GroundNav_MarkupRecord>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
