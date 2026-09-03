@@ -16,7 +16,7 @@ class UWorld;
 // The bake and every query below it are free of world and entity concepts on purpose, and the volume
 // that owns a field is reachable only through the ECS. Between the two sits this: a published field
 // registered against its world, so the provider adapter — which is handed a UWorld* and nothing else,
-// sometimes off the game thread — can resolve one without touching the registry.
+// sometimes off the game thread — can resolve one without touching the ECS registry.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav::world_fields
