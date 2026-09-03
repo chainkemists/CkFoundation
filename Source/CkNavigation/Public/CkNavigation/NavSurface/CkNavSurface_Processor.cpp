@@ -2,6 +2,7 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -184,7 +185,20 @@ namespace ck
     {
         if (ck::IsValid(this->_TransientEntity, ck::IsValid_Policy_IncludePendingKill{}))
         {
-            this->_TransientEntity.AddOrGet<FFragment_NavSurface_Provider>();
+            // Seeded on the tick that ADDS the fragment and never again: after that the value is the
+            // world's own choice, and re-seeding it every tick would silently undo Request_SetProvider.
+            const auto ProviderWasAlreadyAdded = this->_TransientEntity.Has<FFragment_NavSurface_Provider>();
+
+            auto& Provider = this->_TransientEntity.AddOrGet<FFragment_NavSurface_Provider>();
+
+            if (NOT ProviderWasAlreadyAdded)
+            {
+                Provider._Provider = nav_surface::Get_DefaultProvider();
+
+                nav_surface::Set_ProviderForWorld(
+                    UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(this->_TransientEntity), Provider._Provider);
+            }
+
             this->_TransientEntity.AddOrGet<FFragment_NavSurface_RevisionWatch>();
         }
 
@@ -204,9 +218,19 @@ namespace ck
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
-        InProvider._Health = ck::nav_surface_recast::Get_ProviderHealth(World);
+        const auto* Table = nav_surface::TryGet_ProviderTable(InProvider.Get_Provider());
 
-        const auto Revision = ck::nav_surface_recast::Get_SurfaceRevision(World);
+        if (Table == nullptr)
+        {
+            // A provider nobody registered has no health to report and no revision to compare against,
+            // so the watch stays where it is rather than broadcasting a rebuild that never happened.
+            InProvider._Health = ECk_NavSurface_ProviderHealth::NoData;
+            return;
+        }
+
+        InProvider._Health = Table->_ProviderHealth(World);
+
+        const auto Revision = Table->_SurfaceRevision(World);
         if (Revision == InWatch.Get_LastBroadcastRevision())
         { return; }
 
