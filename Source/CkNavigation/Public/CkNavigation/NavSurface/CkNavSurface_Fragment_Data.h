@@ -36,6 +36,18 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_Provider);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Whether a second provider answers alongside the one that installs. The shadowing provider's
+// result is compared and discarded; the named provider is still the one whose result installs.
+UENUM(BlueprintType)
+enum class ECk_NavSurface_ShadowMode : uint8
+{
+    Off,
+    GroundNavShadowsRecast
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_ShadowMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_NavSurface_QueryStatus : uint8
 {

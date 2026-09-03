@@ -47,6 +47,18 @@ namespace ck_nav_surface_provider_table
         return WorldProvidersLock;
     }
 
+    auto Get_WorldShadowModes() -> TMap<TWeakObjectPtr<UWorld>, ECk_NavSurface_ShadowMode>&
+    {
+        static auto WorldShadowModes = TMap<TWeakObjectPtr<UWorld>, ECk_NavSurface_ShadowMode>{};
+        return WorldShadowModes;
+    }
+
+    auto Get_WorldShadowModesLock() -> FRWLock&
+    {
+        static auto WorldShadowModesLock = FRWLock{};
+        return WorldShadowModesLock;
+    }
+
     auto DoBind_WorldCleanupOnce() -> void
     {
         static auto IsBound = false;
@@ -58,8 +70,15 @@ namespace ck_nav_surface_provider_table
 
         FWorldDelegates::OnWorldCleanup.AddLambda([](UWorld* InWorld, bool, bool) -> void
         {
-            auto Lock = FRWScopeLock{Get_WorldProvidersLock(), SLT_Write};
-            Get_WorldProviders().Remove(TWeakObjectPtr<UWorld>{InWorld});
+            {
+                auto Lock = FRWScopeLock{Get_WorldProvidersLock(), SLT_Write};
+                Get_WorldProviders().Remove(TWeakObjectPtr<UWorld>{InWorld});
+            }
+
+            {
+                auto Lock = FRWScopeLock{Get_WorldShadowModesLock(), SLT_Write};
+                Get_WorldShadowModes().Remove(TWeakObjectPtr<UWorld>{InWorld});
+            }
         });
     }
 }
@@ -167,10 +186,57 @@ auto
 
 auto
     ck::nav_surface::
+    Get_ShadowModeForWorld(
+        UWorld* InWorld)
+    -> ECk_NavSurface_ShadowMode
+{
+    if (InWorld == nullptr)
+    { return Get_DefaultShadowMode(); }
+
+    auto Lock = FRWScopeLock{ck_nav_surface_provider_table::Get_WorldShadowModesLock(), SLT_ReadOnly};
+
+    const auto* Chosen = ck_nav_surface_provider_table::Get_WorldShadowModes().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    return Chosen != nullptr ? *Chosen : Get_DefaultShadowMode();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::nav_surface::
+    Set_ShadowModeForWorld(
+        UWorld*                   InWorld,
+        ECk_NavSurface_ShadowMode InMode)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return; }
+
+    ck_nav_surface_provider_table::DoBind_WorldCleanupOnce();
+
+    auto Lock = FRWScopeLock{ck_nav_surface_provider_table::Get_WorldShadowModesLock(), SLT_Write};
+
+    ck_nav_surface_provider_table::Get_WorldShadowModes().Add(TWeakObjectPtr<UWorld>{InWorld}, InMode);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::nav_surface::
     Get_DefaultProvider()
     -> ECk_NavSurface_Provider
 {
     return UCk_Utils_Nav_Settings_UE::Get_DefaultNavSurfaceProvider();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::nav_surface::
+    Get_DefaultShadowMode()
+    -> ECk_NavSurface_ShadowMode
+{
+    return UCk_Utils_Nav_Settings_UE::Get_DefaultNavSurfaceShadowMode();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -12,6 +12,8 @@
 #include "CkCrowd/Agent/CkCrowdAgent_HandleRequests_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_OnPathResolved_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -100,7 +102,10 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay;
-        using RunAfter = TDepList<FProcessor_CrowdAgent_HandleRequests>;
+        using RunAfter = TDepList<
+            FProcessor_CrowdAgent_HandleRequests,
+            FProcessor_CrowdAgent_OnPathResolved,
+            FProcessor_CrowdAgent_PathRefresh>;
 
     public:
         using TProcessor::TProcessor;

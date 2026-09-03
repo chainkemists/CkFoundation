@@ -3,6 +3,8 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_DebugSettings.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
+
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
@@ -222,6 +224,22 @@ namespace ck
             Label = InPathTrouble.Get_NavigationFailReason() == ECk_Nav_PathFailReason::None
                 ? FString::Printf(TEXT("UNREAL NAV: %s"), *NavigationStatusName)
                 : FString::Printf(TEXT("UNREAL NAV: %s (%s)"), *NavigationStatusName, *NavigationReason);
+        }
+
+        // Read off the handle rather than the view: a fourth TReadOnly<FFragment_GroundNavPath_Result>
+        // would narrow this processor to agents carrying the GroundNav feature and silently stop
+        // drawing path trouble for every other agent. The routes themselves are
+        // FProcessor_CrowdAgent_DrawShadowRoutes' business; this is only the token that says one exists.
+        if (InHandle.Has<FFragment_GroundNavPath_Result>())
+        {
+            const auto& ShadowSlot = InHandle.Get<FFragment_GroundNavPath_Result>().Get_Result();
+            if (ShadowSlot.Get_IsShadow() == ECk_EnableDisable::Enable
+                && ShadowSlot.Get_RequestRevision() == InPathResult.Get_RequestRevision())
+            {
+                Label += FString::Printf(
+                    TEXT(" | +SHADOW Δwp=%+d"),
+                    ShadowSlot.Get_Waypoints().Num() - InPathResult.Get_Waypoints().Num());
+            }
         }
 
         DrawDebugString(

@@ -68,3 +68,16 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_Settings_UE::
+    Get_DefaultNavSurfaceShadowMode()
+    -> ECk_NavSurface_ShadowMode
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Nav_ProjectSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_NavSurface_ShadowMode::Off; }
+    return Settings->Get_DefaultNavSurfaceShadowMode();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
@@ -50,6 +51,14 @@ enum class ECk_PushApartMode : uint8
     Single,      // 1 iteration — cheapest, ~80% as effective as Standard
     Standard,    // 4 iterations (dtCrowd default; resolves cascaded interactions in one frame)
 };
+
+UENUM(BlueprintType)
+enum class ECk_CrowdStationaryHardBodyMode : uint8
+{
+    Enabled,     // a confirmed AND idle body never yields to a mover; applies only when exactly one side of the pair qualifies
+    Disabled,    // every pair keeps the damped dtCrowd resolution
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdStationaryHardBodyMode);
 
 UENUM(BlueprintType)
 enum class ECk_CrowdBlockDetectionMode : uint8
@@ -399,6 +408,11 @@ private:
             ToolTip = "Penetration below this (cm) is not corrected. Gives the push-apart solver a resting point instead of an asymptote it chases forever. 0 = correct any overlap, however small."))
     float _PushApartSlopCm = 0.05f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|PushApart",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Hard de-penetration against agents whose stationary markup is CONFIRMED on the navmesh. Enabled: such a body absorbs none of a mover's shove, and the mover's overlap against it is resolved EXACTLY in one pass - including the displacement already staged this frame - so the mover stops at contact instead of penetrating and being ejected back out. It applies only where EXACTLY ONE side of the pair is confirmed: two confirmed bodies resting in contact, and two movers, keep the damped dtCrowd model, without which any overlap between two settled agents would be permanently unresolvable. The navmesh stays authoritative for position - the constraint still walks whatever survives along the surface - so a mover pinned between a confirmed body and a wall stops rather than gaining ground through either. Disabled restores the damped model for every pair, for A/B comparison only."))
+    ECk_CrowdStationaryHardBodyMode _StationaryHardBodyMode = ECk_CrowdStationaryHardBodyMode::Enabled;
+
 public:
     CK_PROPERTY_GET(_AccelClampMode);
     CK_PROPERTY_GET(_AvoidanceSampleTrigger);
@@ -421,6 +435,7 @@ public:
     CK_PROPERTY_GET(_CorridorStandDownSlackCm);
     CK_PROPERTY_GET(_PushApartMode);
     CK_PROPERTY_GET(_PushApartSlopCm);
+    CK_PROPERTY_GET(_StationaryHardBodyMode);
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_GroundingVerifyIntervalSeconds);
     CK_PROPERTY_GET(_GroundingVerifyMinCorrectionCm);
@@ -490,6 +505,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static float Get_PushApartSlopCm();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static ECk_CrowdStationaryHardBodyMode Get_StationaryHardBodyMode();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_CrowdNavmeshConstraintMode Get_NavmeshConstraintMode();
