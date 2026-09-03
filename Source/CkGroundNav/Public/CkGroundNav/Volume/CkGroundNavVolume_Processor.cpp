@@ -9,6 +9,7 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkGroundNav/CkGroundNav_Log.h"
+#include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 
 #include <Engine/World.h>
 
@@ -275,6 +276,13 @@ namespace ck
         // whole, for as long as they hold it.
         InBuiltField._Epoch = Completed->_Epoch;
         InBuiltField._Field = MoveTemp(Completed);
+
+        // A published field nobody can find from a world answers nothing: this is what the NavSurface
+        // provider adapter resolves against, and it is the only place a field enters that registry.
+        groundnav::world_fields::Publish(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
+            InVolumeEntity,
+            InBuiltField._Field);
 
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
 

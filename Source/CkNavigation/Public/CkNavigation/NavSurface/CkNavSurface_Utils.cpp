@@ -2,6 +2,7 @@
 
 #include "CkNavigation/CkNavigation_Log.h"
 #include "CkNavigation/NavSurface/CkNavSurface_GameplayTags.h"
+#include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
@@ -30,6 +31,44 @@ namespace ck_nav_surface_utils
 
         return UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
     }
+
+    // Which table answers this context object, or nullptr when the resolved provider has registered
+    // none. A null world is NOT special-cased: the project default still resolves, and every provider
+    // is required to answer a world-less call with its own no-provider shape.
+    auto TryGet_ProviderTable(UWorld* InWorld) -> const FCk_NavSurface_ProviderTable*
+    {
+        return ck::nav_surface::TryGet_ProviderTable(ck::nav_surface::Get_ProviderForWorld(InWorld));
+    }
+
+    // One helper per return shape rather than a bare `return {}` at each call site: the no-provider
+    // answer is part of the contract, and naming it keeps every capability agreeing on what it is.
+    auto Get_NoProvider_Projection() -> FCk_NavSurface_ProjectionResult
+    {
+        auto Result = FCk_NavSurface_ProjectionResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
+
+    auto Get_NoProvider_MoveAlongSurface() -> FCk_NavSurface_MoveAlongSurfaceResult
+    {
+        auto Result = FCk_NavSurface_MoveAlongSurfaceResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
+
+    auto Get_NoProvider_Raycast() -> FCk_NavSurface_RaycastResult
+    {
+        auto Result = FCk_NavSurface_RaycastResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
+
+    auto Get_NoProvider_Boundary() -> FCk_NavSurface_BoundaryResult
+    {
+        auto Result = FCk_NavSurface_BoundaryResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,13 +86,58 @@ auto
 
 auto
     UCk_Utils_NavSurface_UE::
+    Request_SetProvider(
+        const UObject* InWorldContext,
+        ECk_NavSurface_Provider InProvider)
+    -> void
+{
+    auto WorldEntity = ck_nav_surface_utils::Get_WorldEntity(InWorldContext);
+
+    const auto WorldEntityIsValid = ck::IsValid(WorldEntity);
+    CK_ENSURE_IF_NOT(WorldEntityIsValid,
+        TEXT("Request_SetProvider could not resolve an ECS world from context object [{}]"),
+        ck::IsValid(InWorldContext) ? InWorldContext->GetName() : FString{TEXT("NULL")})
+    { return; }
+
+    auto& Provider = WorldEntity.AddOrGet<ck::FFragment_NavSurface_Provider>();
+    Provider._Provider = InProvider;
+
+    ck::nav_surface::Set_ProviderForWorld(ck_nav_surface_utils::Get_World(InWorldContext), InProvider);
+
+    ck::nav::Display
+    (
+        TEXT("NavSurface provider for world entity [{}] set to [{}]"),
+        WorldEntity, InProvider
+    );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
+    Get_Provider(
+        const UObject* InWorldContext)
+    -> ECk_NavSurface_Provider
+{
+    return ck::nav_surface::Get_ProviderForWorld(ck_nav_surface_utils::Get_World(InWorldContext));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
     Try_ProjectPoint(
         const UObject* InWorldContext,
         const FCk_NavSurface_ProjectionQuery& InQuery)
     -> FCk_NavSurface_ProjectionResult
 {
-    return ck::nav_surface_recast::Try_ProjectPoint(
-        ck_nav_surface_utils::Get_World(InWorldContext), InQuery);
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ck_nav_surface_utils::Get_NoProvider_Projection(); }
+
+    return Table->_ProjectPoint(World, InQuery);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,8 +149,13 @@ auto
         const FCk_NavSurface_MoveAlongSurfaceQuery& InQuery)
     -> FCk_NavSurface_MoveAlongSurfaceResult
 {
-    return ck::nav_surface_recast::Try_MoveAlongSurface(
-        ck_nav_surface_utils::Get_World(InWorldContext), InQuery);
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ck_nav_surface_utils::Get_NoProvider_MoveAlongSurface(); }
+
+    return Table->_MoveAlongSurface(World, InQuery);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -78,8 +167,13 @@ auto
         const FCk_NavSurface_RaycastQuery& InQuery)
     -> FCk_NavSurface_RaycastResult
 {
-    return ck::nav_surface_recast::Try_SurfaceRaycast(
-        ck_nav_surface_utils::Get_World(InWorldContext), InQuery);
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ck_nav_surface_utils::Get_NoProvider_Raycast(); }
+
+    return Table->_SurfaceRaycast(World, InQuery);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,8 +186,13 @@ auto
         TArray<FCk_NavSurface_BoundarySegment>& OutSegments)
     -> ECk_NavSurface_QueryStatus
 {
-    const auto Result = ck::nav_surface_recast::Get_BoundarySegments(
-        ck_nav_surface_utils::Get_World(InWorldContext), InQuery);
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+
+    const auto Result = Table == nullptr
+        ? ck_nav_surface_utils::Get_NoProvider_Boundary()
+        : Table->_BoundarySegments(World, InQuery);
 
     OutSegments = Result.Get_Segments();
     return Result.Get_Status();
@@ -108,8 +207,13 @@ auto
         const FCk_NavSurface_ReachabilityQuery& InQuery)
     -> ECk_NavSurface_Reachability
 {
-    return ck::nav_surface_recast::Get_IsReachable(
-        ck_nav_surface_utils::Get_World(InWorldContext), InQuery).Get_Reachability();
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ECk_NavSurface_Reachability::Unknown_ProviderNotReady; }
+
+    return Table->_IsReachable(World, InQuery).Get_Reachability();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -202,7 +306,13 @@ auto
         const UObject* InWorldContext)
     -> int64
 {
-    return ck::nav_surface_recast::Get_SurfaceRevision(ck_nav_surface_utils::Get_World(InWorldContext));
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return 0; }
+
+    return Table->_SurfaceRevision(World);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -213,7 +323,13 @@ auto
         const UObject* InWorldContext)
     -> FBox
 {
-    return ck::nav_surface_recast::Get_SurfaceBounds(ck_nav_surface_utils::Get_World(InWorldContext));
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return FBox{ForceInit}; }
+
+    return Table->_SurfaceBounds(World);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -224,7 +340,13 @@ auto
         const UObject* InWorldContext)
     -> ECk_NavSurface_ProviderHealth
 {
-    return ck::nav_surface_recast::Get_ProviderHealth(ck_nav_surface_utils::Get_World(InWorldContext));
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ECk_NavSurface_ProviderHealth::NoData; }
+
+    return Table->_ProviderHealth(World);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -235,7 +357,13 @@ auto
         const UObject* InWorldContext)
     -> bool
 {
-    return ck::nav_surface_recast::Get_IsBuildInProgress(ck_nav_surface_utils::Get_World(InWorldContext));
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return false; }
+
+    return Table->_IsBuildInProgress(World);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -249,7 +377,11 @@ auto
 {
     auto WorldEntity = ck_nav_surface_utils::Get_WorldEntity(InWorldContext);
 
-    if (NOT ck::nav_surface_recast::Request_SurfaceRebuild(ck_nav_surface_utils::Get_World(InWorldContext)))
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+
+    if (Table == nullptr || NOT Table->_RequestSurfaceRebuild(World))
     {
         InDelegate.ExecuteIfBound(WorldEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
