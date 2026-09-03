@@ -260,7 +260,8 @@ auto
         FCk_Handle&     InHandle,
         TArray<FVector> InWaypoints,
         const FVector&  InDestination,
-        int32           InRequestRevision)
+        int32           InRequestRevision,
+        ECk_Nav_PathStatus InInstallAs)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
@@ -272,11 +273,19 @@ auto
              "(an empty Ready path would stall every consumer that walks it)"), InHandle)
     { return; }
 
+    const auto InstallAsIsTerminalSuccess =
+        InInstallAs == ECk_Nav_PathStatus::Ready || InInstallAs == ECk_Nav_PathStatus::Partial;
+
+    CK_ENSURE_IF_NOT(InstallAsIsTerminalSuccess,
+        TEXT("InstallExternalPath on [{}] called with status [{}] — only Ready and Partial name an "
+             "installable result"), InHandle, InInstallAs)
+    { return; }
+
     auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
 
     Result._Waypoints           = MoveTemp(InWaypoints);
     Result._DestinationLocation = InDestination;
-    Result._Status              = ECk_Nav_PathStatus::Ready;
+    Result._Status              = InInstallAs;
     // External providers share this result slot with CkNavigation. Retaining
     // the caller's revision makes this install the writer authority: an older
     // deferred Recast request cannot subsequently replace this route.

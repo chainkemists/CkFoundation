@@ -5,6 +5,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -15,7 +16,11 @@
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
+#include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
+
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 
@@ -256,6 +261,52 @@ namespace ck
             bool InForcePermissivePlan)
         -> void
     {
+        // This function IS the CkNavigation branch, and it is the entry point seven framework-internal
+        // re-dispatches use directly rather than going through the provider fork — the
+        // strict->permissive retry among them. GroundNav replaces Recast for grounded agents, so the
+        // choice belongs at the top of the branch it replaces: anything that reached the Recast body
+        // below would query a navmesh a GroundNav world has no reason to carry.
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        const auto WorldPlansOnGroundNav = ck::IsValid(World)
+            && ck::nav_surface::Get_ProviderForWorld(World) == ECk_NavSurface_Provider::GroundNav;
+        if (WorldPlansOnGroundNav)
+        {
+            FCk_Nav_Algorithm::MarkPathPending(
+                InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+
+            // The same phase decision ApplyPlanPhase makes, minus the query filter and overlay it
+            // stamps onto a Recast request: a ground path is planned over clearance and cost, and
+            // there is nothing on the request for a filter tag to reach.
+            InPathFollow._PlanPhase = InForcePermissivePlan || NOT Get_ShouldPlanStrict(InHandle, InPathFollow)
+                ? ECk_CrowdAgent_PlanPhase::Permissive
+                : ECk_CrowdAgent_PlanPhase::Strict;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
+
+            // Cleared, but never rebuilt: the escape prefix escapes painted stationary-crowd markup,
+            // which is Recast nav-area markup. GroundNav does not read it, so its plan was never
+            // pushed through a band and there is no detour to prepend — while a prefix left over
+            // from an earlier Recast dispatch would be prepended onto a route that never took it.
+            InPathFollow._PendingEscapePrefix.Reset();
+            InPathFollow._ProtectedLeadingWaypointCount = 0;
+
+            InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::GroundNav;
+
+            if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
+            {
+                UCk_Utils_GroundNavPath_UE::Add(
+                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InParams.Get_Radius()});
+            }
+
+            auto Path = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);
+            const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+                UCk_Utils_Transform_UE::CastChecked(InHandle));
+
+            auto Request = FCk_Request_GroundNavPath_FindPath{From, InGoal};
+            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
+            UCk_Utils_GroundNavPath_UE::Request_FindPath(Path, Request, {});
+            return;
+        }
+
         // Park the slot at Pending BEFORE enqueueing: OnPathResolved runs after this processor
         // in the same frame and would otherwise consume a previous move's Ready result as if
         // it answered THIS MoveTo, walking the agent down the stale corridor.
@@ -469,6 +520,17 @@ namespace ck
                     auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(NonConstHandle);
                     UCk_Utils_VoxelNavPath_UE::Request_AbandonPath(
                         Path, FCk_Request_VoxelNavPath_AbandonPath{}, {});
+                }
+                break;
+            }
+            case ECk_CrowdAgent_PathProvider::GroundNav:
+            {
+                if (UCk_Utils_GroundNavPath_UE::Has(NonConstHandle))
+                {
+                    auto Path = UCk_Utils_GroundNavPath_UE::CastChecked(NonConstHandle);
+                    auto Request = FCk_Request_GroundNavPath_AbandonPath{};
+                    Request.Set_RequestRevision(InRevision);
+                    UCk_Utils_GroundNavPath_UE::Request_AbandonPath(Path, Request, {});
                 }
                 break;
             }

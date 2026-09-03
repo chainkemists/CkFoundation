@@ -286,9 +286,17 @@ namespace ck::groundnav
             const FCk_GroundNav_CrossingKey& InKey) const
         -> FCk_GroundNav_PathNodeId
     {
+        // A rebuild renumbers plates, so the door is recognised by where it stands, not by which
+        // plates it joined last time; the plate it leaves is the one the walk arrived on.
         for (const auto Candidate : Neighbors(InFromNode))
         {
-            if (Make_CrossingKey(Get_Crossing(Candidate)) == InKey)
+            const auto& Crossing = Get_Crossing(Candidate);
+
+            const auto IsSameDoor = Crossing._Direction == InKey._Direction &&
+                Crossing._Left == InKey._Left &&
+                Crossing._Right == InKey._Right;
+
+            if (IsSameDoor)
             { return Candidate; }
         }
 

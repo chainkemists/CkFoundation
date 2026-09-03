@@ -44,12 +44,15 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         FCk_Nav_PathResult&       OutResult) -> void;
 
     // The external path-provider seam: installs an externally-computed polyline (e.g. a
-    // CkPathNetwork corridor) exactly as if FindPathSync had produced it.
+    // CkPathNetwork corridor) exactly as if FindPathSync had produced it. A provider that only
+    // reached the closest reachable point installs as Partial, so the consumer's existing partial
+    // handling applies instead of a truncated route being walked as a complete one.
     static auto InstallExternalPath(
         FCk_Handle&     InHandle,
         TArray<FVector> InWaypoints,
         const FVector&  InDestination,
-        int32           InRequestRevision = 0) -> void;
+        int32           InRequestRevision = 0,
+        ECk_Nav_PathStatus InInstallAs = ECk_Nav_PathStatus::Ready) -> void;
 
     // Prepends a caller-owned physical approach/escape prefix without changing the provider's
     // status, destination, diagnostics, or revision. Returns the retained prefix count.
