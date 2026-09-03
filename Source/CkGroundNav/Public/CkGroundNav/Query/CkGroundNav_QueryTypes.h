@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_Boundary.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
@@ -329,6 +330,59 @@ namespace ck::groundnav
 
     public:
         auto Get_IsClear() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+    };
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * The walls around a point: every boundary run within a radius on the surface the point stands
+     * on, within a vertical window of its height so another storey's rim does not count as a wall.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_BoundaryQuery
+    {
+    public:
+        FVector _Location = FVector::ZeroVector;
+
+        float _RadiusUu = 0.0f;
+
+        float _VerticalWindowUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+
+        // Zero means every run in range. Otherwise the nearest this many, nearest first.
+        int32 _MaxSegments = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_ClosestBoundaryQuery
+    {
+    public:
+        FVector _Location = FVector::ZeroVector;
+
+        float _MaxRadiusUu = 0.0f;
+
+        float _VerticalWindowUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_ClosestBoundaryResult
+    {
+    public:
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        FCk_GroundNav_BoundarySegment _Segment;
+
+        FVector _ClosestPoint = FVector::ZeroVector;
+
+        float _DistanceUu = 0.0f;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
     };
 }
 

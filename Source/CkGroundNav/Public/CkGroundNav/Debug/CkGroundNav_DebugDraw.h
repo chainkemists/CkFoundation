@@ -45,7 +45,13 @@ namespace ck::groundnav
         // The tile lattice and the crossings between tiles. Empty for a single-region bake; for a
         // field bake it is the view that shows whether the seams agree — which is the one thing a
         // tiled bake gets wrong invisibly.
-        Tiles
+        Tiles,
+
+        // The plate edges nothing crosses — every wall, drop and hole rim the field knows about,
+        // each with a tick showing which side of it is walkable. Runs on a TILE rim draw apart from
+        // the rest, because those are walls only until the neighbour is baked and a viewer that read
+        // them as permanent would call unbaked ground a wall.
+        Boundary
     };
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_Boundary.h"
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
@@ -185,6 +186,11 @@ namespace ck::groundnav
         FCk_GroundNav_ClearanceField _Clearance;
         FCk_GroundNav_PlateField _Plates;
         FCk_GroundNav_PortalField _Portals;
+
+        // Every plate edge no crossing covers, with its winding fixed and a coarse index over it, so a
+        // boundary query is a bounded scan and never re-derives an edge. Runs on the tile rim wait on
+        // the field, which knows the neighbours.
+        FCk_GroundNav_BoundaryField _Boundary;
 
         // Crossings that leave this tile, for whoever composes it with its neighbours. Held on the tile
         // because only the tile's own bake could observe them; the portals they become are held on the
