@@ -65,6 +65,7 @@ namespace ck::groundnav
         Params._Config = _Config;
         Params._Profile = _Profile;
         Params._MergeTunables = _MergeTunables;
+        Params._MarkupRecords = _MarkupRecords;
         Params._MaxClearanceUu = _MaxClearanceUu;
 
         return Params;

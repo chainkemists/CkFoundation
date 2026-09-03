@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
@@ -148,6 +149,44 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One area markup a volume holds, reduced to what a viewer draws and what a reader needs to judge
+     * it, already in world space.
+     *
+     * The markup ENTITY is deliberately absent, and the liveness answer is a captured value rather
+     * than something re-asked at draw time: this honours the same copy boundary every other member of
+     * a snapshot does, so a view drawn a frame later reports what was true when it was captured
+     * instead of touching a registry that may have moved on.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugMarkup
+    {
+    public:
+        FBox _Bounds = FBox{ForceInit};
+
+        // The tag's name rather than the FGameplayTag, for the same reason the entity is absent: a
+        // snapshot holds values, and a name is what the viewer prints.
+        FName _AreaTagName;
+
+        int32 _RecordId = INDEX_NONE;
+
+        float _CostMultiplier = 1.0f;
+
+        // The epoch the record was submitted against. A record stamped behind the field's current
+        // epoch is the shape of a paint the bake has not caught up with.
+        int64 _RequestedAtEpoch = 0;
+
+        ECk_GroundNav_MarkupKind _Kind = ECk_GroundNav_MarkupKind::Walkability;
+
+        bool _IsEnabled = true;
+
+        // Whether the neutral facade reported the paint as reaching the surface. Drawn apart from
+        // enabled: a record the volume holds and the bake has not applied yet is not a record the
+        // author disabled, and treating the two alike hides the whole window this exists to show.
+        bool _IsLive = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * Everything a viewer needs to draw one bake, and nothing that could outlive it.
      *
      * VALUE-ONLY BY CONSTRUCTION: no world, no actor, no ECS handle, no registry, no span field, no
@@ -213,6 +252,10 @@ namespace ck::groundnav
         // these is the only way to see what a filter is COSTING you: an over-tight ledge sensitivity
         // and a genuinely unwalkable world produce the same walkable set, and differ only here.
         TArray<FCk_GroundNav_DebugCell> _RejectedCells;
+
+        // The area markup the world's volumes hold, when a caller collected it. Empty otherwise, and
+        // a viewer draws what is there rather than being told whether collection was asked for.
+        TArray<FCk_GroundNav_DebugMarkup> _Markups;
 
         // Set when the cell list was capped. The counts above stay TRUE totals, so a viewer reports
         // what the bake found rather than what it managed to draw.
