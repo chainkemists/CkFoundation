@@ -125,8 +125,7 @@ namespace ck::groundnav::nav_surface_adapter_private
         Result.Set_Location(GroundResult._Location);
         Result.Set_SurfaceNormal(GroundResult._SurfaceNormal);
 
-        // Area tags stay EMPTY: a projection result carries none, and the per-plate attributes that
-        // will carry them answer no tags until runtime markup exists.
+        // Area tags stay EMPTY: a GroundNav projection result carries none.
 
         return Result;
     }
@@ -193,8 +192,6 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_BoundaryResult{};
 
-        // Off-thread safe by construction: the registry hands over a reference to an immutable field
-        // under its read lock, and everything below this line reads that snapshot and stack locals.
         const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Center());
 
         if (NOT Field.IsValid())

@@ -29,8 +29,9 @@ public:
     TFunction<FCk_NavSurface_RaycastResult(UWorld*, const FCk_NavSurface_RaycastQuery&)>
         _SurfaceRaycast;
 
-    // THREAD CONTRACT: every provider's entry here must be callable off the game thread against an
-    // immutable snapshot, because the crowd's parallel avoidance sampler calls it from a worker.
+    // THREAD CONTRACT: every provider's _BoundarySegments must be callable off the game thread
+    // against an immutable snapshot, because the crowd's parallel avoidance sampler calls it
+    // from a worker.
     TFunction<FCk_NavSurface_BoundaryResult(UWorld*, const FCk_NavSurface_BoundaryQuery&)>
         _BoundarySegments;
 
@@ -76,8 +77,8 @@ namespace ck::nav_surface
      *
      * A POINTER INTO THE REGISTRY, deliberately: registration runs from module startup, before any
      * world exists and therefore before any query can reach here, so the map is never mutated while
-     * anybody holds one of these. A provider registered at runtime would break that assumption — and
-     * with it every pointer already handed out — which is why registration has no runtime entry point.
+     * anybody holds one of these. Nothing may register after startup: a later Emplace rehashes the
+     * map and dangles every pointer already handed out.
      */
     CKNAVIGATION_API auto
     TryGet_ProviderTable(
