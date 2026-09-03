@@ -102,6 +102,91 @@ simple/convex collision or a closed collision mesh.
 
 ---
 
+## Area markup records
+
+The VOLUME owns the area markup painted on it. `FFragment_GroundNavVolume_Markup` holds one
+`FCk_GroundNav_MarkupRecord` per markup, and the identity a record is keyed on is the **markup
+entity** — the same handle the neutral `FCk_Request_NavSurface_AreaMarkup` names on the other side of
+the seam. A second request naming an entity the volume already holds updates that record in place and
+re-stamps the epoch it was submitted against; disabling is one of those updates, never a delete. The
+markup entity carries `FFragment_GroundNav_MarkupRef` — the volume and the record id, nothing else —
+so a live probe reads the one array rather than a second copy that could drift from it.
+
+Admission decides three things and nothing else: the entity is valid, the area tag has a policy
+registered with `ck::nav_surface::TryGet_AreaPolicy` (that policy is where the record's kind and cost
+multiplier come from — this module never decides what a tag means), and the record's world bounds are
+a box. A record whose footprint misses every tile, or lands where nothing has baked, is still
+admitted: the volume holds what was AUTHORED, and what a markup reaches is the bake's separate answer.
+
+Admission then raises `FTag_GroundNavVolume_MarkupWalkabilityDirty` or
+`FTag_GroundNavVolume_MarkupCostDirty` by the record's kind, and those two tags are the whole hand-off
+to the stages that answer them. They are separate because those stages are: a walkability change owes
+a re-bake, where a cost change only re-derives what a leg is priced at and republishes. Releasing a
+record raises the tag its kind owes for the same reason painting it did.
+
+**Cost — `FProcessor_GroundNavVolume_MarkupCostDerive`.** Copies the published field,
+restamps EVERY built tile's plates from the whole record list (`Get_FieldWithMarkupCost`), and swaps
+the pointer through the same publish the build uses, in the same tick window. It reads no cell, no
+span and no geometry, so it spends exactly zero probes. Every tile is restamped rather than only the
+ones a listed record touches, because a record DELETED from the list names no tile and a touched-set
+pass could never find the ground it used to price; stamping is per-plate work over rectangles the tile
+already carries, so restamping a tile nothing reaches costs nothing. A tile's epoch — and the field's
+— moves where the plates' policy fields actually changed, compared exactly, and also where an enabled
+record the tile has not yet been published past reaches it, so a paint that changes nothing still
+reads live; disabling a record and deleting it converge on the same field. A volume with
+nothing published clears the tag and waits: the records are on the volume, and the next build prices
+them through `FCk_GroundNav_FieldParams::_MarkupRecords`.
+
+**Walkability — `FProcessor_GroundNavVolume_MarkupWalkabilityRebuild`.** Asks for a rebuild through
+the ordinary `FCk_Request_GroundNavVolume_Build`, forcing a restart because a build already in flight
+read its markup at StartBuild. **The rebuild is WHOLE-VOLUME.** Neither the build request nor
+`Request_BeginBuild` takes bounds — the builder sizes the whole lattice and the slice walks every tile
+— so there is no scoped rebuild to ask for. A local repair that re-bakes only the tiles a record
+intersects is a capability this module does not have yet; do not fake it by baking a subset and
+publishing it as a field.
+
+Every build reads the volume's current records into `FCk_GroundNav_FieldParams::_MarkupRecords`, so a
+plain `Request_Build` that nothing painted still bakes against what the volume holds — a rebuild that
+took no records would silently unpaint the world.
+
+## When a markup is LIVE
+
+`ck::groundnav::nav_surface_adapter::Get_IsMarkupLive` is the whole rule and it is DERIVED at the
+read; nothing anywhere stores it. From the markup entity: no `FFragment_GroundNav_MarkupRef` (the
+paint has not drained onto a volume yet) is false, a record the named volume no longer holds is false,
+a volume with nothing published is false. Otherwise, over the published field, **every** tile whose
+world bounds meet the record's world bounds must be `Built` and must carry an epoch STRICTLY PAST the
+record's `_RequestedAtEpoch` — the stamp is the epoch the field was already published at, so an equal
+epoch is the very publish that knew nothing of the record — every one, because a record reaching two
+tiles is only as live as its
+laggard. A record whose bounds meet no tile at all is NOT live: there is no ground for it to be live
+on, and true would mean only that nothing contradicted it.
+
+The provider-neutral entries this backs (`_ApplyAreaMarkup`, `_IsMarkupLive`, `_ReleaseAreaMarkup` on
+`FCk_NavSurface_ProviderTable`) live in `Facade/CkGroundNav_NavSurfaceAdapter.cpp`. A paint is
+enqueued on every volume whose bounds meet it, carrying the SAME markup entity — a paint straddling
+two volumes is one markup held twice — and a paint meeting no volume is refused with an ensure, since
+a volume is the only thing that holds a record. A release is enqueued on every volume holding an entry
+for the entity, not only the one the back-pointer names, for the same straddling reason. Volumes enter
+the world-field registry at Setup with no field yet, so a paint can find one before its first build.
+
+`ck.GroundNav.Debug.MarkupLiveGate 0` (`Debug/CkGroundNav_DebugGates.h`) forces the entity-shaped
+answer TRUE straight after its back-pointer guard, so a fixture that settles on liveness waits for
+nothing. It is a fixture-proving tool, not a fallback: a paint-then-repath race pin that passes
+under it has pinned nothing, and the default of 1 is the field's own answer.
+
+## What a plate's price reaches
+
+`Get_SurfaceAttributes` answers `_CostMultiplier` and `_AreaTags` from the resolved PLATE's own label
+— policy is stored per plate precisely so a query never pays per cell for what does not vary per cell.
+`Get_AreaMultiplier` prices a leg at the GREATER of that plate multiplier and whatever the per-query
+cost table names for the same flat plate: a query's table overrides upward only and can never talk a
+marked plate back down to bare ground. That is the same "greater wins" rule overlapping markup already
+merges under, so a plate priced by two sources has one answer whether they met in the bake or at the
+query. `Get_MaxMerged` stays the pure table helper it always was.
+
+---
+
 ## Failure is a status, never an empty field
 
 `ECk_GroundNav_BakeStatus` and `ECk_GroundNav_BuildStatus` exist because a region with no floor and a
@@ -133,6 +218,8 @@ is ever published as a built field with no cells.
 | `ck.GroundNav.PointsAt <X> <Y> <Z> <R> <N>` | N random points on walkable ground within a horizontal radius R, uniform by area over every storey the disc touches, spheres coloured per layer |
 | `ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>` | N random points whose WALKED distance from the point lies in [MIN, MAX], drawn from the plates a flood fill reaches; the label reports how many draws it spent |
 | `ck.GroundNav.GridAt <X> <Y> <Z> <HALF> <SPACING>` | a lattice of points at SPACING over walkable ground inside the box of half-extent HALF, one per storey per position, phased to the field origin |
+| `ck.GroundNav.MarkupAt <X> <Y> <Z>` | every area markup the world's volumes hold — id, kind, tag, multiplier, enabled, world bounds, requested-at epoch, and live yes/no through the neutral facade — plus the plate under the point with its policy index, tags and multiplier. Every volume is listed with where the point falls on it, because a record painted before anything baked lives on a volume that covers nothing yet. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
+| `ck.GroundNav.Debug.DrawMarkup` / `.MarkupLiveGate` | `DrawMarkup` (default 1) outlines markup in the plate view and in `PathAt`/`FloodAt`: impassable red, cost amber with its multiplier, disabled dashed grey. `MarkupLiveGate` (default 1) at 0 forces GroundNav's `Get_IsMarkupLive` true — the bypass a paint-then-repath race pin must FAIL under to be evidence |
 
 The query commands read the field the last `BakeFieldAt` kept; `Bake`/`BakeAt` produce a region snapshot
 with no field to query. The body radius every query uses is `ck.GroundNav.Debug.AgentRadiusUu`.

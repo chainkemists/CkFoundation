@@ -139,6 +139,31 @@ namespace ck::groundnav
         FCk_Time                           InLifetime) -> void;
 
     /**
+     * Every area markup the world's ground-nav volumes hold, as values.
+     *
+     * GAME THREAD ONLY: resolving a volume handle and asking the neutral facade whether one paint is
+     * live both read the ECS registry. Both answers are captured HERE so the snapshot that carries
+     * them stays drawable after the world is gone.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugMarkupsFromWorld(
+        UWorld* InWorld) -> TArray<FCk_GroundNav_DebugMarkup>;
+
+    /**
+     * Outline area markup: impassable in red, cost in amber labelled with its multiplier, and a
+     * record the volume still holds but has disabled in dashed grey.
+     *
+     * A disabled record is drawn rather than omitted for the same reason an unbuilt tile is: nothing
+     * drawn is indistinguishable from released, and those are the two a markup investigation is
+     * trying to tell apart.
+     */
+    CKGROUNDNAV_API auto
+    DoDraw_DebugMarkups(
+        UWorld*                                    InWorld,
+        TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
+        FCk_Time                                   InLifetime) -> void;
+
+    /**
      * Human summary of what a snapshot contains. Safe on every status.
      *
      * Open Solid bodies are named in a block directly under the status line, ahead of every number a

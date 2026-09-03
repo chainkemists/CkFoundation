@@ -8,8 +8,13 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
+#include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
+
+#include "CkNavigation/NavSurface/CkNavSurface_AreaPolicy.h"
 
 #include <Engine/World.h>
 
@@ -17,9 +22,13 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleMarkupRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartBuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Build);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupCostDerive);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupWalkabilityRebuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingMarkupRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,8 +36,23 @@ namespace ck
 {
     namespace ck_groundnav_volume_processor
     {
+        // The records the volume currently holds, enabled and disabled alike: the bake decides per
+        // record which of them reach a tile and whether a disabled one applies, and a caller filtering
+        // either question here would be a second answer to it.
+        auto Get_MarkupRecordsOf(
+            TConstArrayView<FCk_GroundNav_MarkupEntry> InEntries) -> TArray<FCk_GroundNav_MarkupRecord>
+        {
+            return algo::Transform<TArray<FCk_GroundNav_MarkupRecord>>(InEntries,
+                [](const FCk_GroundNav_MarkupEntry& InEntry) -> FCk_GroundNav_MarkupRecord
+                {
+                    return InEntry.Get_Record();
+                });
+        }
+
         auto Get_FieldParams(
-            const FFragment_GroundNavVolume_Params& InParams) -> groundnav::FCk_GroundNav_FieldParams
+            const FFragment_GroundNavVolume_Params&   InParams,
+            const TArray<FCk_GroundNav_MarkupRecord>& InMarkupRecords)
+            -> groundnav::FCk_GroundNav_FieldParams
         {
             auto FieldParams = groundnav::FCk_GroundNav_FieldParams{};
 
@@ -40,6 +64,7 @@ namespace ck
             FieldParams._Config = InParams.Get_Config();
             FieldParams._Profile = InParams.Get_Profile();
             FieldParams._MergeTunables = InParams.Get_MergeTunables();
+            FieldParams._MarkupRecords = InMarkupRecords;
             FieldParams._MaxClearanceUu = InParams.Get_MaxClearanceUu();
 
             // Derived rather than authored beside the bounds: an origin and a division count that
@@ -58,14 +83,45 @@ namespace ck
             return FieldParams;
         }
 
+        // Markup is deliberately absent: what a volume is PAINTED with cannot make its bake settings
+        // valid or invalid, and feeding the records in here would suggest it could.
         auto Get_ParamsAreBakeable(const FFragment_GroundNavVolume_Params& InParams) -> bool
         {
             const auto Bounds = InParams.Get_VolumeBounds();
 
             return Bounds.IsValid != 0 &&
                    Bounds.GetSize().X > 0.0 && Bounds.GetSize().Y > 0.0 && Bounds.GetSize().Z > 0.0 &&
-                   Get_FieldParams(InParams).Get_IsValid() &&
+                   Get_FieldParams(InParams, {}).Get_IsValid() &&
                    InParams.Get_ProbeBudgetPerTick() > 0;
+        }
+
+        auto Get_MarkupKind(
+            ECk_NavSurface_AreaPolicyKind InPolicyKind) -> ECk_GroundNav_MarkupKind
+        {
+            return InPolicyKind == ECk_NavSurface_AreaPolicyKind::Walkability
+                ? ECk_GroundNav_MarkupKind::Walkability
+                : ECk_GroundNav_MarkupKind::Cost;
+        }
+
+        auto DoMark_MarkupDirty(
+            FCk_Handle_GroundNavVolume InVolumeEntity,
+            ECk_GroundNav_MarkupKind   InKind) -> void
+        {
+            if (InKind == ECk_GroundNav_MarkupKind::Walkability)
+            { InVolumeEntity.AddOrGet<FTag_GroundNavVolume_MarkupWalkabilityDirty>(); }
+            else
+            { InVolumeEntity.AddOrGet<FTag_GroundNavVolume_MarkupCostDirty>(); }
+        }
+
+        auto Get_MarkupEntryIndex(
+            const FFragment_GroundNavVolume_Markup& InMarkup,
+            const FCk_Handle&                       InMarkupEntity) -> int32
+        {
+            return algo::FindIndex(InMarkup.Get_Entries(),
+                [&](const FCk_GroundNav_MarkupEntry& InEntry) -> bool
+                {
+                    return InEntry.Get_MarkupEntity() == InMarkupEntity;
+                });
         }
     }
 
@@ -94,6 +150,15 @@ namespace ck
             InParams.Get_Config().Get_TileSizeUu(), InParams.Get_MaxClearanceUu(),
             InParams.Get_ProbeBudgetPerTick())
         { return; }
+
+        // Registered before anything is baked, with no field yet, so a caller that can only name a
+        // WORLD — the NavSurface provider adapter — can find the volume to paint on it. A volume that
+        // only entered the registry at its first publish could not be painted until then, and the
+        // paint would be refused rather than deferred.
+        groundnav::world_fields::Publish(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
+            InVolumeEntity,
+            {});
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
         { return; }
@@ -166,6 +231,179 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_GroundNavVolume_HandleMarkupRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Markup& InMarkup,
+            FFragment_GroundNavVolume_MarkupRequests& InRequests) const
+        -> void
+    {
+        ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequest) -> void
+            {
+                DoHandleRequest(InVolumeEntity, InBuiltField, InMarkup, InRequest);
+            }));
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleMarkupRequests::
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Markup& InMarkup,
+            const FCk_Request_GroundNavVolume_AreaMarkup& InRequest)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        auto MarkupEntity = InRequest.Get_MarkupEntity();
+
+        const auto MarkupEntityIsValid = ck::IsValid(MarkupEntity);
+
+        CK_ENSURE_IF_NOT(MarkupEntityIsValid,
+            TEXT("Cannot mark up GroundNav Volume [{}] - the request names an invalid markup Entity [{}], "
+                 "which is the identity its record would be keyed on"),
+            InVolumeEntity, MarkupEntity)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto Policy = nav_surface::TryGet_AreaPolicy(InRequest.Get_AreaTag());
+
+        const auto AreaTagIsRegistered = Policy.IsSet();
+
+        CK_ENSURE_IF_NOT(AreaTagIsRegistered,
+            TEXT("Cannot mark up GroundNav Volume [{}] with area tag [{}] - nothing published what that "
+                 "tag MEANS, and a record carrying it would bake into ground nothing knows how to apply"),
+            InVolumeEntity, InRequest.Get_AreaTag())
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto ExistingIndex = Get_MarkupEntryIndex(InMarkup, MarkupEntity);
+        const auto EntryExists = InMarkup._Entries.IsValidIndex(ExistingIndex);
+
+        const auto PreviousKind = EntryExists
+            ? TOptional<ECk_GroundNav_MarkupKind>{InMarkup._Entries[ExistingIndex].Get_Record().Get_Kind()}
+            : TOptional<ECk_GroundNav_MarkupKind>{};
+
+        const auto RecordId = EntryExists
+            ? InMarkup._Entries[ExistingIndex].Get_Record().Get_Id()
+            : InMarkup._NextId;
+
+        const auto Kind = Get_MarkupKind(Policy->Get_Kind());
+
+        // A Walkability record carries the identity multiplier by its own contract, so both kinds
+        // multiply through one cost path downstream without a branch.
+        const auto CostMultiplier = Kind == ECk_GroundNav_MarkupKind::Cost
+            ? Policy->Get_CostMultiplier()
+            : 1.0f;
+
+        auto Record = FCk_GroundNav_MarkupRecord{
+            RecordId, InRequest.Get_Shape(), InRequest.Get_WorldTransform(), Kind};
+
+        Record.Set_AreaTag(InRequest.Get_AreaTag())
+              .Set_Enable(InRequest.Get_Enable())
+              .Set_CostMultiplier(CostMultiplier)
+              .Set_RequestedAtEpoch(InBuiltField.Get_Epoch()._Value);
+
+        const auto BoundsAreValid = groundnav::Get_MarkupWorldBounds(Record).IsValid != 0;
+
+        CK_ENSURE_IF_NOT(BoundsAreValid,
+            TEXT("Cannot mark up GroundNav Volume [{}] from markup Entity [{}] - its shape and transform "
+                 "bound nothing. A degenerate volume and a volume that covers no ground are different "
+                 "answers, and only the second is admissible."),
+            InVolumeEntity, MarkupEntity)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // A record whose bounds miss every tile, or land where nothing has baked, is still admitted: the
+        // volume owns what was AUTHORED, and what that reaches is the bake's separate answer.
+        if (EntryExists)
+        {
+            InMarkup._Entries[ExistingIndex]._Record = Record;
+        }
+        else
+        {
+            auto& NewEntry = InMarkup._Entries.AddDefaulted_GetRef();
+
+            NewEntry._MarkupEntity = MarkupEntity;
+            NewEntry._Record = Record;
+
+            ++InMarkup._NextId;
+        }
+
+        auto& MarkupRef = MarkupEntity.AddOrGet<FFragment_GroundNav_MarkupRef>();
+
+        MarkupRef._VolumeEntity = InVolumeEntity.ConvertToHandle();
+        MarkupRef._RecordId = RecordId;
+
+        // A record that changed KIND changed both: the ground its old kind was deciding is decided by
+        // nothing now, and the ground its new kind decides was not decided before.
+        if (PreviousKind.IsSet() && *PreviousKind != Kind)
+        { DoMark_MarkupDirty(InVolumeEntity, *PreviousKind); }
+
+        DoMark_MarkupDirty(InVolumeEntity, Kind);
+
+        InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleMarkupRequests::
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Markup& InMarkup,
+            const FCk_Request_GroundNavVolume_ReleaseAreaMarkup& InRequest)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        auto MarkupEntity = InRequest.Get_MarkupEntity();
+
+        const auto MarkupEntityIsValid = ck::IsValid(MarkupEntity);
+
+        CK_ENSURE_IF_NOT(MarkupEntityIsValid,
+            TEXT("Cannot release markup on GroundNav Volume [{}] - the request names an invalid markup "
+                 "Entity [{}], and there is nothing else a record is keyed on"),
+            InVolumeEntity, MarkupEntity)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto ExistingIndex = Get_MarkupEntryIndex(InMarkup, MarkupEntity);
+
+        // Releasing a record the volume does not hold leaves the caller's intent holding afterwards,
+        // which is what Succeeded means.
+        if (NOT InMarkup._Entries.IsValidIndex(ExistingIndex))
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+            return;
+        }
+
+        const auto ReleasedKind = InMarkup._Entries[ExistingIndex].Get_Record().Get_Kind();
+
+        InMarkup._Entries.RemoveAt(ExistingIndex);
+
+        MarkupEntity.Try_Remove<FFragment_GroundNav_MarkupRef>();
+
+        // Ground a released record was deciding is decided by nothing now, which is as much a change of
+        // that record's kind as painting it was.
+        DoMark_MarkupDirty(InVolumeEntity, ReleasedKind);
+
+        InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_GroundNavVolume_StartBuild::
         ForEachEntity(
             TimeType InDeltaT,
@@ -202,8 +440,13 @@ namespace ck
         // The epoch comes from what is PUBLISHED, not from the build state: beginning a build resets
         // that state, so reading the counter from it would restart at one on every rebuild and every
         // reader comparing epochs would conclude it was up to date.
+        //
+        // The markup goes in HERE and not at the request, so every build — a plain Request_Build as
+        // much as one a markup change asked for — bakes against what the volume currently holds. A
+        // rebuild that took no records would silently unpaint the world.
         const auto BeginResult = groundnav::Request_BeginBuild(
-            Get_FieldParams(InParams),
+            Get_FieldParams(InParams,
+                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity))),
             InBuiltField.Get_Epoch().Get_Next(),
             InBuildState._Build);
 
@@ -278,7 +521,7 @@ namespace ck
         InBuiltField._Field = MoveTemp(Completed);
 
         // A published field nobody can find from a world answers nothing: this is what the NavSurface
-        // provider adapter resolves against, and it is the only place a field enters that registry.
+        // provider adapter resolves against.
         groundnav::world_fields::Publish(
             UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
             InVolumeEntity,
@@ -288,6 +531,72 @@ namespace ck
 
         InBuildState._PendingRequest.TryFireCompletion(
             InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_MarkupCostDerive::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Markup& InMarkup,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField) const
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        const auto Published = InBuiltField.Get_Field();
+
+        // Nothing published is nothing to derive from, and nothing to repair either: the records live
+        // on the volume, so the first build prices them through its own params.
+        if (NOT Published.IsValid())
+        { return; }
+
+        const auto Records = Get_MarkupRecordsOf(InMarkup.Get_Entries());
+
+        const auto Derived = groundnav::Get_FieldWithMarkupCost(
+            *Published, Records, InBuiltField.Get_Epoch().Get_Next());
+
+        const auto DeriveProducedAField = Derived.Value.Get_IsCompleted() && Derived.Key.IsValid();
+
+        CK_ENSURE_IF_NOT(DeriveProducedAField,
+            TEXT("GroundNav Volume [{}] could not derive a cost-only field from what it has published: [{}]"),
+            InVolumeEntity, Derived.Value.Get_Status())
+        { return; }
+
+        // A restamp that lands on the labels already published moves no epoch, so there is nothing for
+        // a reader to notice and nothing worth swapping a pointer for.
+        if (NOT Derived.Key->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
+        { return; }
+
+        // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
+        InBuiltField._Epoch = Derived.Key->_Epoch;
+        InBuiltField._Field = Derived.Key;
+
+        groundnav::world_fields::Publish(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
+            InVolumeEntity,
+            InBuiltField._Field);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_MarkupWalkabilityRebuild::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity)
+        -> void
+    {
+        InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        auto Volume = InVolumeEntity;
+
+        UCk_Utils_GroundNavVolume_UE::Request_Build(Volume,
+            FCk_Request_GroundNavVolume_Build{}.Set_ForceRestart(ECk_EnableDisable::Enable), {});
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -311,6 +620,19 @@ namespace ck
 
         // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
         InBuildState._Backend.Reset();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_CancelPendingMarkupRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_MarkupRequests& InRequests)
+        -> void
+    {
+        request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
     }
 }
 

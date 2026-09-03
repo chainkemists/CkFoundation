@@ -110,8 +110,8 @@ namespace ck::groundnav
         // Inside-corner offset, as a multiple of the agent radius.
         float _CornerOffsetK = 1.0f;
 
-        // Flat plate id to the multiplier its ground is priced at. A plate the table does not name
-        // is priced at one, so an empty table is the unmarked field.
+        // Flat plate id to a multiplier this ONE query asks for, merged upward with what the field's
+        // plate already carries. An empty table is therefore the field's own price and nothing else.
         TMap<int32, float> _PlateCostMultipliers;
     };
 
