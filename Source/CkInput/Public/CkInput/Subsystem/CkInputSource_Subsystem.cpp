@@ -5,6 +5,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkInput/CkInput_Log.h"
 #include "CkInput/CkInputButtonMap_Utils.h"
@@ -14,6 +15,7 @@
 #include <Engine/LocalPlayer.h>
 #include <Engine/World.h>
 #include <GameFramework/PlayerController.h>
+#include <UObject/WeakObjectPtrTemplates.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -102,11 +104,25 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
+    if (World->bIsTearingDown)
+    { return; }
+
+    const TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> EcsWorld =
+        World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    if (EcsWorld.IsValid() && EcsWorld->Get_LoadHold() == ECk_EcsWorld_LoadHold::Teardown)
+    { return; }
+
     if (const auto* PlayerController = LocalPlayer->GetPlayerController(World);
         ck::Is_NOT_Valid(PlayerController))
     { return; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(World);
+    const auto IsValidNewEntity = ck::IsValid(NewEntity);
+    CK_ENSURE_IF_NOT(IsValidNewEntity,
+        TEXT("InputSource creation returned an invalid entity outside world teardown"))
+    {}
+    if (NOT IsValidNewEntity)
+    { return; }
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, TEXT("InputSource"));
