@@ -9,6 +9,8 @@
 
 #include "CkJoltEditor/Cook/CkJoltCook_Types.h"
 
+#include <Containers/Array.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UWorld;
@@ -49,7 +51,8 @@ public:
     static auto
     Cook_World(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook) -> FCookStats;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode = ck::jolt::cook::ECk_Jolt_CookMode::Cook,
+        const TArray<FString>& InExcludedLevelPackagePaths = {}) -> FCookStats;
 
     /// Rewrites only the bake-grid cells whose actors actually changed since the last cook, leaving
     /// every other cell asset and every cooked actor in an UNLOADED level untouched. Falls back to a

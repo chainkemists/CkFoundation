@@ -5,6 +5,7 @@
 #include "CkJoltEditor/Cook/CkJoltCook_Types.h"
 
 #include <Commandlets/Commandlet.h>
+#include <Containers/Array.h>
 
 #include "CkJoltCook_Commandlet.generated.h"
 
@@ -47,15 +48,19 @@ public:
 
 private:
     /// Brings the map's streaming sublevels into the world so the sweep can see their actors.
-    /// False = at least one sublevel did not load and the map MUST NOT be cooked.
+    /// Excluded packaging-only sublevels may have been loaded by the editor loader, but they are
+    /// never required, attached, or allowed to contribute collision output. False = an eligible
+    /// sublevel did not load and the map MUST NOT be cooked.
     auto
     DoEnsure_StreamingLevelsInWorld(
-        UWorld& InWorld) -> bool;
+        UWorld& InWorld,
+        const TArray<FString>& InExcludedLevelPackagePaths) -> bool;
 
     auto
     DoCook_Map(
         const FString& InMapPackageName,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode) -> bool;
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

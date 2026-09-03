@@ -1,6 +1,7 @@
 #include "CkJoltCook_WorldCooker.h"
 
 #include "CkJoltCook_AssetSave.h"
+#include "CkJoltCook_MapSelection.h"
 
 #include <AssetCompilingManager.h>
 
@@ -116,13 +117,18 @@ namespace ck_jolt_cook_world_cooker
     /// A FULL cook rebuilds every cell from the world alone — it has no carry-over, so any sublevel
     /// that is not currently in the world is simply DELETED from the bake. Unset = refuse to cook.
     /// (The incremental path is unaffected: it preserves unloaded levels via DoCarryOver_*.)
-    static auto Get_WorldIsCompleteEnoughForFullCook(const UWorld& InWorld) -> bool
+    static auto
+        Get_WorldIsCompleteEnoughForFullCook(
+            const UWorld& InWorld,
+            const TArray<FString>& InExcludedLevelPackagePaths) -> bool
     {
-        auto IsComplete = true;
-
         for (const auto* StreamingLevel : InWorld.GetStreamingLevels())
         {
             if (ck::Is_NOT_Valid(StreamingLevel))
+            { continue; }
+
+            const auto StreamingLevelPackageName = StreamingLevel->GetWorldAssetPackageName();
+            if (Get_IsPackageExcluded(StreamingLevelPackageName, InExcludedLevelPackagePaths))
             { continue; }
 
             const auto* LoadedLevel = StreamingLevel->GetLoadedLevel();
@@ -133,11 +139,14 @@ namespace ck_jolt_cook_world_cooker
                      "world. A full cook rebuilds every cell from the world alone, so that sublevel's "
                      "collision would be DELETED from the bake and silently absent in game. Load all "
                      "sublevels (or let the incremental cook run, which preserves unloaded ones)."),
-                InWorld.GetOutermost()->GetName(), StreamingLevel->GetWorldAssetPackageName())
-            { IsComplete = false; }
+                InWorld.GetOutermost()->GetName(), StreamingLevelPackageName)
+            {}
+
+            if (NOT LevelIsInWorld)
+            { return false; }
         }
 
-        return IsComplete;
+        return true;
     }
 
     static auto Get_MapSubPath(const FString& InMapPackageName) -> FString
@@ -483,7 +492,8 @@ auto
     FCk_Jolt_WorldCooker::
     Cook_World(
         UWorld& InWorld,
-        ck::jolt::cook::ECk_Jolt_CookMode InMode)
+        ck::jolt::cook::ECk_Jolt_CookMode InMode,
+        const TArray<FString>& InExcludedLevelPackagePaths)
     -> FCookStats
 {
     using namespace ck_jolt_cook_world_cooker;
@@ -498,7 +508,7 @@ auto
     Request_GlobalJoltInit();
     ON_SCOPE_EXIT { Request_GlobalJoltShutdown(); };
 
-    if (NOT Get_WorldIsCompleteEnoughForFullCook(InWorld))
+    if (NOT Get_WorldIsCompleteEnoughForFullCook(InWorld, InExcludedLevelPackagePaths))
     { return Stats; }
 
     // Settle the world BEFORE extracting, or the bake is not reproducible. A mesh whose collision is
@@ -531,6 +541,10 @@ auto
         if (ck::Is_NOT_Valid(Level))
         { continue; }
 
+        const auto LevelPackageName = ck::jolt::Get_LevelLookupKey(*Level).ToString();
+        if (Get_IsPackageExcluded(LevelPackageName, InExcludedLevelPackagePaths))
+        { continue; }
+
         for (const auto& Actor : Level->Actors)
         {
             if (ck::Is_NOT_Valid(Actor))
@@ -552,6 +566,10 @@ auto
             {
                 const auto* Actor = InActorDescInstance->GetActor();
                 if (ck::Is_NOT_Valid(Actor))
+                { return true; }
+
+                const auto ActorLevelPackageName = Get_LevelPackageOfActor(*Actor).ToString();
+                if (Get_IsPackageExcluded(ActorLevelPackageName, InExcludedLevelPackagePaths))
                 { return true; }
 
                 if (AlreadyCooked.Contains(Get_ActorKey(*Actor)))
