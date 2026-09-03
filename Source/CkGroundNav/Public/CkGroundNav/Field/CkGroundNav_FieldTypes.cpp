@@ -52,6 +52,8 @@ namespace ck::groundnav
 
         Bytes += _SeamStubs.GetAllocatedSize();
 
+        Bytes += _Boundary.Get_AllocatedSize();
+
         return Bytes;
     }
 

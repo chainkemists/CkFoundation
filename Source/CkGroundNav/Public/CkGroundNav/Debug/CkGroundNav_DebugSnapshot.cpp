@@ -416,6 +416,39 @@ namespace ck::groundnav
             }
         }
 
+        // Indexed rather than ranged, because a tile's own runs live on the tile and the runs on its
+        // RIM live on the field, keyed by that index - the two halves of one boundary.
+        const auto AppendBoundaryRun =
+            [&Snapshot](const FCk_GroundNav_BoundarySegment& InSegment, bool InIsTileRim) -> void
+        {
+            auto DebugBoundary = FCk_GroundNav_DebugBoundary{};
+
+            DebugBoundary._Start = InSegment._Start;
+            DebugBoundary._End = InSegment._End;
+            DebugBoundary._InwardNormalXY = InSegment._InwardNormalXY;
+            DebugBoundary._LayerIndex = InSegment._LayerIndex;
+            DebugBoundary._IsTileRim = InIsTileRim;
+
+            Snapshot._Boundary.Emplace(DebugBoundary);
+        };
+
+        for (auto TileIndex = 0; TileIndex < InField._Tiles.Num(); ++TileIndex)
+        {
+            const auto& Tile = InField._Tiles[TileIndex];
+
+            if (NOT Tile.Get_IsBuilt())
+            { continue; }
+
+            constexpr auto InsideTile = false;
+            constexpr auto OnTileRim = true;
+
+            for (const auto& Segment : Tile._Boundary._Segments)
+            { AppendBoundaryRun(Segment, InsideTile); }
+
+            for (const auto& Segment : InField.Get_TileEdgeBoundary(TileIndex))
+            { AppendBoundaryRun(Segment, OnTileRim); }
+        }
+
         Snapshot._Seams.Reserve(InField._SeamPortals.Num());
 
         for (const auto& Seam : InField._SeamPortals)

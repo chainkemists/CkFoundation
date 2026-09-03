@@ -481,6 +481,123 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    namespace field_boundary_private
+    {
+        // Which seam portals cross a plate on one rim side of one tile: the tile is the A side of a
+        // seam leaving through its east or north face, and the B side of one arriving through its
+        // west or south face.
+        auto Get_IsCoveredBySeam(
+            const FCk_GroundNav_SeamPortal& InSeam,
+            int32                           InTileIndex,
+            int32                           InPlateIndex,
+            int32                           InSide,
+            int32                           InAlong) -> bool
+        {
+            const auto Axis = InSide % 2;
+
+            if (InSeam._Direction != Axis || InAlong < InSeam._AlongMin || InAlong > InSeam._AlongMax)
+            { return false; }
+
+            const auto IsPositiveSide = InSide == 0 || InSide == 1;
+
+            return IsPositiveSide
+                ? InSeam._TileIndexA == InTileIndex && InSeam._PlateA == InPlateIndex
+                : InSeam._TileIndexB == InTileIndex && InSeam._PlateB == InPlateIndex;
+        }
+
+        auto Get_Along(
+            int32            InSide,
+            const FIntPoint& InCell) -> int32
+        {
+            return (InSide == 0 || InSide == 2) ? InCell.Y : InCell.X;
+        }
+
+        /**
+         * Split every rim candidate of every built tile by the seam portals that cross it, and keep
+         * what nothing crosses. A rim beside an unbuilt neighbour has no seam portals at all and is
+         * therefore wholly a boundary: nothing is known past it, and a body kept off it is kept safe.
+         */
+        auto DoDerive_TileEdgeBoundary(
+            FCk_GroundNav_Field& InOutField) -> void
+        {
+            InOutField._TileEdgeBoundary.Reset();
+            InOutField._TileEdgeBoundary.SetNum(InOutField._Tiles.Num());
+
+            for (auto TileIndex = 0; TileIndex < InOutField._Tiles.Num(); ++TileIndex)
+            {
+                const auto& Tile = InOutField._Tiles[TileIndex];
+
+                if (NOT Tile.Get_IsBuilt())
+                { continue; }
+
+                auto Lattice = FCk_GroundNav_BoundaryLattice{};
+                Lattice._Origin = Tile._Origin;
+                Lattice._CellSizeUu = Tile._CellSizeUu;
+                Lattice._SizeX = Tile._SizeX;
+                Lattice._SizeY = Tile._SizeY;
+                Lattice._LayerCount = Tile._LayerCount;
+                Lattice._SurfaceZ = &Tile._SurfaceZ;
+
+                auto& EdgeBoundary = InOutField._TileEdgeBoundary[TileIndex];
+
+                for (const auto& Candidate : Tile._Boundary._EdgeCandidates)
+                {
+                    const auto StepX = FMath::Sign(Candidate._ToCell.X - Candidate._FromCell.X);
+                    const auto StepY = FMath::Sign(Candidate._ToCell.Y - Candidate._FromCell.Y);
+                    const auto Count = Candidate.Get_CellCount();
+
+                    int32 RunStart = INDEX_NONE;
+
+                    const auto Do_CloseRun = [&](int32 InEndExclusive) -> void
+                    {
+                        if (RunStart == INDEX_NONE)
+                        { return; }
+
+                        const auto From = FIntPoint{
+                            Candidate._FromCell.X + (StepX * RunStart), Candidate._FromCell.Y + (StepY * RunStart)};
+                        const auto To = FIntPoint{
+                            Candidate._FromCell.X + (StepX * (InEndExclusive - 1)),
+                            Candidate._FromCell.Y + (StepY * (InEndExclusive - 1))};
+
+                        EdgeBoundary.Add(Make_BoundarySegment(
+                            Lattice, Candidate._PlateIndex, Candidate._LayerIndex, Candidate._Side, From, To));
+
+                        RunStart = INDEX_NONE;
+                    };
+
+                    for (auto Step = 0; Step < Count; ++Step)
+                    {
+                        const auto Cell = FIntPoint{
+                            Candidate._FromCell.X + (StepX * Step), Candidate._FromCell.Y + (StepY * Step)};
+                        const auto Along = Get_Along(Candidate._Side, Cell);
+
+                        auto Covered = false;
+
+                        for (const auto& Seam : InOutField._SeamPortals)
+                        {
+                            if (Get_IsCoveredBySeam(Seam, TileIndex, Candidate._PlateIndex, Candidate._Side, Along))
+                            {
+                                Covered = true;
+                                break;
+                            }
+                        }
+
+                        if (Covered)
+                        {
+                            Do_CloseRun(Step);
+                            continue;
+                        }
+
+                        if (RunStart == INDEX_NONE)
+                        { RunStart = Step; }
+                    }
+
+                    Do_CloseRun(Count);
+                }
+            }
+        }
+    }
+
     auto
         DoDerive_SeamPortals(
             FCk_GroundNav_Field& InOutField)
@@ -594,6 +711,8 @@ namespace ck::groundnav
 
             InOutField._SeamPortals.Emplace(Portal);
         }
+
+        field_boundary_private::DoDerive_TileEdgeBoundary(InOutField);
 
         // ONE line for the whole derivation, not one per stub: a field baked against a world that moved
         // mid-build produces these by the hundred, and the number is the signal.
