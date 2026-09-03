@@ -42,7 +42,8 @@ enum class ECk_GroundNav_PathStatus : uint8
     Ready,
 
     // The search stopped short of the goal and answered with the corridor to the node that came
-    // closest to it. Only ever produced for a query that asked for it.
+    // closest to it, priced only as far as that node — there is no leg onto the goal to add. Only
+    // ever produced for a query that asked for it.
     Partial,
 
     // An end of the query, or the ground between them, lies over tiles nobody has baked. The answer
@@ -90,6 +91,33 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * The cost model one query asks for, over the same graph every other query reads.
+     *
+     * Zero slope and zero clearance bias are parity with what a navmesh prices, which is neither, so
+     * a default overlay answers exactly as the unpriced search did. The corner constant is not the
+     * search's at all — nothing in a plate corridor is a corner — and is consumed by the pass that
+     * turns a funnelled polyline into waypoints.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_PathCostParams
+    {
+    public:
+        // Penalty per unit of rise over run.
+        float _SlopePenaltyK = 0.0f;
+
+        // Bias away from tight crossings, in cell widths of clearance.
+        float _ClearanceBiasK = 0.0f;
+
+        // Inside-corner offset, as a multiple of the agent radius.
+        float _CornerOffsetK = 1.0f;
+
+        // Flat plate id to the multiplier its ground is priced at. A plate the table does not name
+        // is priced at one, so an empty table is the unmarked field.
+        TMap<int32, float> _PlateCostMultipliers;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * One path plan.
      *
      * The two budgets are separate ceilings because they fail differently: expansions bound the
@@ -106,6 +134,8 @@ namespace ck::groundnav
         float _VerticalToleranceUu = 0.0f;
 
         FCk_GroundNav_QueryAgent _Agent;
+
+        FCk_GroundNav_PathCostParams _Cost;
 
         // Greedy weight. One is admissible; above one trades optimality for expansions, bounded by
         // (w - 1) on the answered length.
