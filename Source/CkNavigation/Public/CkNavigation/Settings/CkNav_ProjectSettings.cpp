@@ -55,3 +55,16 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Nav_Settings_UE::
+    Get_DefaultNavSurfaceProvider()
+    -> ECk_NavSurface_Provider
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Nav_ProjectSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_NavSurface_Provider::Recast; }
+    return Settings->Get_DefaultNavSurfaceProvider();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

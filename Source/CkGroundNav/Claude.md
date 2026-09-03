@@ -120,11 +120,22 @@ is ever published as a built field with no cells.
 |---|---|
 | `ck.GroundNav.Bake` | bake around the player pawn |
 | `ck.GroundNav.BakeAt <X> <Y> <Z>` | bake around an explicit point — use this with a flying pawn |
-| `ck.GroundNav.Clear` | flush the drawn field |
+| `ck.GroundNav.BakeFieldAt <X> <Y> <Z>` | bake a TILED field around a point and keep it for the query commands below |
+| `ck.GroundNav.Clear` | flush the drawn field and drop the kept one |
 | `ck.GroundNav.Print` | dump every tunable |
+| `ck.GroundNav.Probe` / `ProbeAt <X> <Y> <Z>` | project the pawn (or a point) onto the kept field and show the surface, its plate and clearance (`ck.GroundNav.Debug.Probe*` cvars shape the search box) |
+| `ck.GroundNav.WalkAt <X> <Y> <Z> <TX> <TY>` | constrained surface walk from a point toward a target, drawn with every slide |
+| `ck.GroundNav.RayAt <X> <Y> <Z> <TX> <TY>` | walkability raycast, drawn to its hit |
+| `ck.GroundNav.EdgesAt <X> <Y> <Z> <R>` | the boundary runs within R of a point, and the nearest one in magenta |
+| `ck.GroundNav.ReachAt <X> <Y> <Z> <TX> <TY> <TZ>` | reachability by component label between two points, coloured by verdict, with the expansion count |
+| `ck.GroundNav.FloodAt <X> <Y> <Z> <R>` | flood fill from a point out to a walked distance R: reached plates coloured by entry distance, settled crossings traced back to the source |
+
+The query commands read the field the last `BakeFieldAt` kept; `Bake`/`BakeAt` produce a region snapshot
+with no field to query. The body radius every query uses is `ck.GroundNav.Debug.AgentRadiusUu`.
 
 Draw modes (`ck.GroundNav.Debug.Mode`): 0 plates, 1 clearance ramp, 2 layers, 3 the cells the filters
-rejected, 4 the crossings between plates. Mode 3 is the only view that shows what a filter *costs* — a
+rejected, 4 the crossings between plates, 5 the tile lattice and the seams between tiles, 6 the plate
+edges nothing crosses (rim runs in orange). Mode 3 is the only view that shows what a filter *costs* — a
 ledge sensitivity tuned too tight and a world that genuinely has no floor produce an identical walkable
 set and differ only in what was thrown away.
 

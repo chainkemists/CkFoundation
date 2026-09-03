@@ -10,6 +10,7 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
@@ -963,6 +964,20 @@ namespace ck_groundnav_debugconsole
         return true;
     }
 
+    auto Get_SixPointArgs(const TArray<FString>& InArgs, FVector& OutStart, FVector& OutEnd) -> bool
+    {
+        if (InArgs.Num() != 6)
+        { return false; }
+
+        OutStart = FVector{
+            FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+        OutEnd = FVector{
+            FCString::Atod(*InArgs[3]), FCString::Atod(*InArgs[4]), FCString::Atod(*InArgs[5])};
+
+        return true;
+    }
+
     auto Get_HasDebugField(const FString& InCommandName) -> bool
     {
         if (ck::IsValid(LastDebugField))
@@ -1216,6 +1231,242 @@ namespace ck_groundnav_debugconsole
             InPoint.X, InPoint.Y, InPoint.Z, Summary);
     }
 
+    auto Get_ReachabilityName(ck::groundnav::ECk_GroundNav_Reachability InReachability) -> const TCHAR*
+    {
+        switch (InReachability)
+        {
+            case ck::groundnav::ECk_GroundNav_Reachability::Unreachable:
+                return TEXT("unreachable");
+            case ck::groundnav::ECk_GroundNav_Reachability::Unknown_OpenComponent:
+                return TEXT("unknown - open component");
+            default:
+                return TEXT("possibly reachable");
+        }
+    }
+
+    auto Get_ReachabilityColor(
+        ECk_NavSurface_QueryStatus                InStatus,
+        ck::groundnav::ECk_GroundNav_Reachability InReachability) -> FColor
+    {
+        // A verdict is only a verdict when both ends resolved to a surface. Grey rather than a
+        // colour on the reachability scale, or a query that never ran would read as an answer.
+        if (InStatus != ECk_NavSurface_QueryStatus::Success)
+        { return FColor{130, 130, 130}; }
+
+        switch (InReachability)
+        {
+            case ck::groundnav::ECk_GroundNav_Reachability::Unreachable:
+                return FColor::Red;
+            case ck::groundnav::ECk_GroundNav_Reachability::Unknown_OpenComponent:
+                return FColor{255, 140, 0};
+            default:
+                return FColor::Green;
+        }
+    }
+
+    auto DoReachAndDraw(UWorld* InWorld, const FVector& InStart, const FVector& InEnd) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.ReachAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        auto ReachabilityQuery = ck::groundnav::FCk_GroundNav_ReachabilityQuery{};
+
+        // Two vertical quanta at each end, the same window the probe and the walk use: tight enough
+        // that the answer is about THIS height rather than the whole column, wide enough to survive
+        // the bake's quantization.
+        ReachabilityQuery._Start = InStart;
+        ReachabilityQuery._End = InEnd;
+        ReachabilityQuery._VerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        ReachabilityQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        const auto Reach = ck::groundnav::Get_IsReachable(Field, ReachabilityQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InStart, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DrawDebugSphere(InWorld, InEnd, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DrawDebugLine(InWorld, InStart, InEnd,
+            Get_ReachabilityColor(Reach._Status, Reach._Reachability), Persistent, LifetimeSeconds,
+            DepthPriority, 2.0f);
+
+        const auto Summary = FString::Printf(
+            TEXT("reach %s | %s | expansions %d"),
+            *ck::Format_UE(TEXT("{}"), Reach._Status),
+            Get_ReachabilityName(Reach._Reachability),
+            Reach._ExpansionCount);
+
+        const auto Midpoint = (InStart + InEnd) * 0.5;
+
+        DrawDebugString(InWorld, Midpoint + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Reach.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) to ({}, {}, {}) {}"),
+            InStart.X, InStart.Y, InStart.Z, InEnd.X, InEnd.Y, InEnd.Z, Summary);
+    }
+
+    auto DoFloodAndDraw(UWorld* InWorld, const FVector& InSource, float InRadiusUu) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.FloodAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        auto FloodQuery = ck::groundnav::FCk_GroundNav_FloodQuery{};
+
+        FloodQuery._Source = InSource;
+        FloodQuery._VerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        FloodQuery._Agent._RadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+        FloodQuery._MaxDistanceUu = InRadiusUu;
+
+        const auto Flood = ck::groundnav::Get_FloodFill(Field, FloodQuery);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+        constexpr auto CornerCount = 4;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        DrawDebugSphere(InWorld, InSource, 8.0f, SphereSegments, FColor::White, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        const auto FlatPlateCount = ck::groundnav::Get_FlatPlateCount(Field);
+
+        auto PlatesReached = 0;
+
+        for (auto FlatPlate = 0; FlatPlate < FlatPlateCount; ++FlatPlate)
+        {
+            if (NOT Flood.Get_IsPlateReached(FlatPlate))
+            { continue; }
+
+            ++PlatesReached;
+
+            // The source plate is entered by no crossing and is reached at distance zero, so it
+            // anchors the ramp rather than reading as the farthest thing on screen.
+            auto LeastDistanceUu = FlatPlate == Flood._SourceFlatPlate
+                ? 0.0
+                : TNumericLimits<double>::Max();
+
+            if (Flood._PlateEntries.IsValidIndex(FlatPlate))
+            {
+                for (const auto EntryIndex : Flood._PlateEntries[FlatPlate])
+                {
+                    if (NOT Flood._Crossings.IsValidIndex(EntryIndex))
+                    { continue; }
+
+                    LeastDistanceUu = FMath::Min(
+                        LeastDistanceUu, Flood._Crossings[EntryIndex]._DistanceUu);
+                }
+            }
+
+            int32 TileIndex = INDEX_NONE;
+            int32 PlateIndex = INDEX_NONE;
+
+            if (NOT ck::groundnav::Get_TileAndPlate(Field, FlatPlate, TileIndex, PlateIndex))
+            { continue; }
+
+            if (NOT Field._Tiles.IsValidIndex(TileIndex))
+            { continue; }
+
+            const auto& Tile = Field._Tiles[TileIndex];
+
+            if (NOT Tile._Plates._Plates.IsValidIndex(PlateIndex))
+            { continue; }
+
+            const auto& Plate = Tile._Plates._Plates[PlateIndex];
+
+            // One height for the whole loop, taken from the plate's highest cell: a plate that spans
+            // a ramp would otherwise sink through the ground it is supposed to outline.
+            auto HighestZ = TNumericLimits<double>::Lowest();
+
+            for (auto Y = Plate._MinY; Y <= Plate._MaxY; ++Y)
+            {
+                for (auto X = Plate._MinX; X <= Plate._MaxX; ++X)
+                {
+                    if (NOT Tile.Get_HasSurfaceAt(X, Y, Plate._LayerIndex))
+                    { continue; }
+
+                    HighestZ = FMath::Max(HighestZ,
+                        static_cast<double>(Tile.Get_SurfaceZAt(X, Y, Plate._LayerIndex)));
+                }
+            }
+
+            const auto PlateHasSurface = HighestZ > TNumericLimits<double>::Lowest();
+
+            if (NOT PlateHasSurface)
+            { continue; }
+
+            const auto CellUu = static_cast<double>(Tile._CellSizeUu);
+
+            // Plate bounds are INCLUSIVE cell indices, so the far edge is one whole cell past MaxX/Y.
+            const auto MinX = Tile._Origin.X + (static_cast<double>(Plate._MinX) * CellUu);
+            const auto MinY = Tile._Origin.Y + (static_cast<double>(Plate._MinY) * CellUu);
+            const auto MaxX = Tile._Origin.X + (static_cast<double>(Plate._MaxX + 1) * CellUu);
+            const auto MaxY = Tile._Origin.Y + (static_cast<double>(Plate._MaxY + 1) * CellUu);
+            const auto LoopZ = HighestZ + (CellUu * 0.5);
+
+            const FVector Corners[CornerCount] = {
+                FVector{MinX, MinY, LoopZ},
+                FVector{MaxX, MinY, LoopZ},
+                FVector{MaxX, MaxY, LoopZ},
+                FVector{MinX, MaxY, LoopZ}};
+
+            const auto Color = ck::groundnav::debugdraw_private::Get_ClearanceColor(
+                static_cast<float>(LeastDistanceUu), InRadiusUu);
+
+            for (auto CornerIndex = 0; CornerIndex < CornerCount; ++CornerIndex)
+            {
+                DrawDebugLine(InWorld, Corners[CornerIndex], Corners[(CornerIndex + 1) % CornerCount],
+                    Color, Persistent, LifetimeSeconds, DepthPriority, 2.0f);
+            }
+        }
+
+        auto FarthestUu = 0.0;
+
+        for (const auto& Crossing : Flood._Crossings)
+        {
+            FarthestUu = FMath::Max(FarthestUu, Crossing._DistanceUu);
+
+            DrawDebugSphere(InWorld, Crossing._EntryPoint, 4.0f, SphereSegments, FColor::Yellow,
+                Persistent, LifetimeSeconds, DepthPriority);
+
+            // A crossing left from the source plate has no predecessor, and the source point is what
+            // its distance was string-pulled from - so the chain reads back to where it started.
+            const auto PreviousPoint = Flood._Crossings.IsValidIndex(Crossing._Predecessor)
+                ? Flood._Crossings[Crossing._Predecessor]._EntryPoint
+                : Flood._SourcePoint;
+
+            DrawDebugLine(InWorld, PreviousPoint, Crossing._EntryPoint, FColor::Yellow, Persistent,
+                LifetimeSeconds, DepthPriority, 1.0f);
+        }
+
+        const auto Summary = FString::Printf(
+            TEXT("flood %s | %d plates | %d crossings | expansions %d | farthest %.1f uu"),
+            *ck::Format_UE(TEXT("{}"), Flood._Status),
+            PlatesReached,
+            Flood._Crossings.Num(),
+            Flood._ExpansionCount,
+            FarthestUu);
+
+        DrawDebugString(InWorld, InSource + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            Flood.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) within {} uu {}"),
+            InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
+    }
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Bake(
         TEXT("ck.GroundNav.Bake"),
         TEXT("Bake the ground field around the player from live physics geometry and draw it. ")
@@ -1428,6 +1679,74 @@ namespace ck_groundnav_debugconsole
                 FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
 
             DoEdgesAndDraw(InWorld, Point, FCString::Atof(*InArgs[3]));
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_ReachAt(
+        TEXT("ck.GroundNav.ReachAt"),
+        TEXT("Ask the last field bake whether two points can possibly be joined, and draw the ")
+        TEXT("verdict: ck.GroundNav.ReachAt <X> <Y> <Z> <TX> <TY> <TZ>. The answer is read off the ")
+        TEXT("bake's component labels and expands nothing, so it can prove two points APART but ")
+        TEXT("never prove them joined for a particular body - a doorway they share may be too ")
+        TEXT("narrow for it. Green is possibly reachable, red unreachable, orange means one ")
+        TEXT("component borders unbaked ground so the crossing that would join them may simply not ")
+        TEXT("have been looked at, and grey means an end resolved to no surface. Needs ")
+        TEXT("ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. The ")
+        TEXT("body radius comes from ck.GroundNav.Debug.AgentRadiusUu."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.ReachAt ran without a World"))
+            { return; }
+
+            auto Start = FVector::ZeroVector;
+            auto End = FVector::ZeroVector;
+
+            if (NOT Get_SixPointArgs(InArgs, Start, End))
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.ReachAt needs six numbers: ")
+                    TEXT("ck.GroundNav.ReachAt <X> <Y> <Z> <TX> <TY> <TZ>"));
+                return;
+            }
+
+            DoReachAndDraw(InWorld, Start, End);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_FloodAt(
+        TEXT("ck.GroundNav.FloodAt"),
+        TEXT("Flood the last field bake outward from a point and draw how far it got: ")
+        TEXT("ck.GroundNav.FloodAt <X> <Y> <Z> <R>. R is a WALKED-distance limit, not a radius on ")
+        TEXT("screen - a plate a few metres away around a corner can be far past R, and a crossing ")
+        TEXT("whose walked distance exceeds R is never settled. Every plate the flood reached draws ")
+        TEXT("as a rectangle coloured by the SHORTEST walked distance to enter it, on the same ramp ")
+        TEXT("the clearance view uses: the source plate sits at one end of it and a plate entered ")
+        TEXT("at R at the other. Each settled crossing draws in yellow at the point the shortest ")
+        TEXT("path passes through it, joined back to the crossing it came from. Needs ")
+        TEXT("ck.GroundNav.BakeFieldAt to have run - a region bake produces no field to query. The ")
+        TEXT("body radius comes from ck.GroundNav.Debug.AgentRadiusUu, and a crossing narrower than ")
+        TEXT("it is never admitted."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.FloodAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 4)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.FloodAt needs four numbers: ")
+                    TEXT("ck.GroundNav.FloodAt <X> <Y> <Z> <R>"));
+                return;
+            }
+
+            const auto Source = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoFloodAndDraw(InWorld, Source, FCString::Atof(*InArgs[3]));
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Clear(

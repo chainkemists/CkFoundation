@@ -208,3 +208,16 @@ VoxelNav branches never enqueue one.
 - [CkCrowd/Claude.md](../../CkCrowd/Claude.md) — the primary consumer
 - [CkCrowdDebugger/Claude.md](../../../../CkGameplayDebugger/Source/CkCrowdDebugger/Claude.md) — diagnostic UI
 - [PLAN.md](PLAN.md) (delete this link post-ship)
+
+## NavSurface provider dispatch
+
+`UCk_Utils_NavSurface_UE` is provider-neutral: every query capability resolves the world's provider
+and calls that provider's capability table (`NavSurface/CkNavSurface_ProviderTable.h`). A provider
+registers a complete `FCk_NavSurface_ProviderTable` at its module startup — CkNavigation registers
+Recast's own, CkGroundNav registers its adapter — and an incomplete table is refused. A world's
+choice lives on its transient entity (`FFragment_NavSurface_Provider`), seeded from
+`UCk_Nav_ProjectSettings_UE::_DefaultNavSurfaceProvider` (Recast) the first time the revision watch
+runs, and changed per world with `Request_SetProvider`. The choice is mirrored per world so that
+`Get_BoundarySegments`, which is callable off the game thread, never reads the registry to find its
+provider. Area-markup requests are still Recast-only. An unregistered provider answers `NoProvider`
+(or `Unknown_ProviderNotReady`, `NoData`, an empty box) everywhere.
