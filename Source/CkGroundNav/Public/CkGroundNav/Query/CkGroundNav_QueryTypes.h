@@ -537,6 +537,87 @@ namespace ck::groundnav
                    (_PlateEntries.IsValidIndex(InFlatPlate) && _PlateEntries[InFlatPlate].Num() > 0);
         }
     };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** A generated point and where it stands, so attributes can be read without re-resolving it. */
+    struct CKGROUNDNAV_API FCk_GroundNav_GeneratedPoint
+    {
+    public:
+        FVector _Location = FVector::ZeroVector;
+
+        FCk_GroundNav_SurfaceRef _Surface;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_PointsResult
+    {
+    public:
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoSurface;
+
+        TArray<FCk_GroundNav_GeneratedPoint> _Points;
+
+        // Random draws spent, accepted or not. A generator that had to reject is honest about it here.
+        int32 _Attempts = 0;
+
+        FCk_GroundNav_QueryCost _Cost;
+
+    public:
+        auto Get_IsSuccess() const -> bool { return _Status == ECk_NavSurface_QueryStatus::Success; }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_RandomPointsQuery
+    {
+    public:
+        FVector _Origin = FVector::ZeroVector;
+
+        float _RadiusUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+
+        int32 _Count = 0;
+
+        // The same seed on the same field epoch reproduces the same points.
+        int32 _Seed = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_PathDistancePointsQuery
+    {
+    public:
+        FVector _Origin = FVector::ZeroVector;
+
+        float _MinDistanceUu = 0.0f;
+        float _MaxDistanceUu = 0.0f;
+
+        float _VerticalToleranceUu = 0.0f;
+
+        FCk_GroundNav_QueryAgent _Agent;
+
+        int32 _Count = 0;
+
+        int32 _Seed = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FCk_GroundNav_GridPointsQuery
+    {
+    public:
+        FBox _Bounds = FBox{ForceInit};
+
+        float _SpacingUu = 0.0f;
+
+        // Enabled: the lattice is phased to the field origin, so overlapping queries share positions.
+        // Disabled: phased to the box's own minimum corner.
+        ECk_EnableDisable _AlignToLattice = ECk_EnableDisable::Enable;
+
+        FCk_GroundNav_QueryAgent _Agent;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
