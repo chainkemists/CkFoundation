@@ -156,6 +156,10 @@ namespace ck::groundnav
         // Derived at composition from the tiles' seam stubs, never carried across a rebuild.
         TArray<FCk_GroundNav_SeamPortal> _SeamPortals;
 
+        // Per tile: the runs on that tile's rim that no seam portal crosses — a wall, a drop, or the
+        // edge of ground nobody has baked yet. Re-derived with the seam portals, for the same reason.
+        TArray<TArray<FCk_GroundNav_BoundarySegment>> _TileEdgeBoundary;
+
         // Where each tile's plates begin in _ReachabilityLabels. Get_TileCount() + 1 entries, so the
         // last one is the total and every tile's range is a subtraction away.
         TArray<int32> _TilePlateOffsets;
@@ -203,6 +207,11 @@ namespace ck::groundnav
 
             Bytes += _Tiles.GetAllocatedSize();
             Bytes += _SeamPortals.GetAllocatedSize();
+            Bytes += _TileEdgeBoundary.GetAllocatedSize();
+
+            for (const auto& EdgeBoundary : _TileEdgeBoundary)
+            { Bytes += EdgeBoundary.GetAllocatedSize(); }
+
             Bytes += _TilePlateOffsets.GetAllocatedSize();
             Bytes += _ReachabilityLabels.GetAllocatedSize();
             Bytes += _ComponentIsOpen.GetAllocatedSize();
@@ -215,6 +224,14 @@ namespace ck::groundnav
         }
 
         auto Get_SeamPortalCount() const -> int32 { return _SeamPortals.Num(); }
+
+        /** The rim boundary of one tile, or nothing for an index the field does not have. */
+        auto Get_TileEdgeBoundary(int32 InTileIndex) const -> TConstArrayView<FCk_GroundNav_BoundarySegment>
+        {
+            return _TileEdgeBoundary.IsValidIndex(InTileIndex)
+                ? TConstArrayView<FCk_GroundNav_BoundarySegment>{_TileEdgeBoundary[InTileIndex]}
+                : TConstArrayView<FCk_GroundNav_BoundarySegment>{};
+        }
 
         auto Get_Tile(const FCk_GroundNav_TileCoord& InCoord) const -> const FCk_GroundNav_Tile*;
 

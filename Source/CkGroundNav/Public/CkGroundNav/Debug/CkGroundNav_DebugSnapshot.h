@@ -107,6 +107,26 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** One run of plate edge that nothing crosses, already in world space. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugBoundary
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        // The left perpendicular of (End - Start): into the plate the run bounds.
+        FVector2D _InwardNormalXY = FVector2D::ZeroVector;
+
+        int32 _LayerIndex = 0;
+
+        // Whether the run lies on a TILE rim rather than inside one. Worth its own flag rather than a
+        // lookup at draw time: a rim run is a wall only until the neighbouring tile is baked, and a
+        // viewer that drew the two alike would report unbaked ground as a wall.
+        bool _IsTileRim = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * One Solid body whose mesh is not closed, already in world space. The viewer's loudest element:
      * the ground under such a body is not trustworthy and a developer has to go and fix the asset.
@@ -184,6 +204,11 @@ namespace ck::groundnav
         TArray<FCk_GroundNav_DebugTile> _Tiles;
         TArray<FCk_GroundNav_DebugSeam> _Seams;
 
+        // Every plate edge run no crossing covers, plus the rim runs the field resolved against each
+        // tile's neighbours. Empty for a single-region bake: the boundary is derived per TILE, so a
+        // bake that produced no tiles has none to report.
+        TArray<FCk_GroundNav_DebugBoundary> _Boundary;
+
         // Cells the rasterizer accepted on slope but the walkability filters then demoted. Drawing
         // these is the only way to see what a filter is COSTING you: an over-tight ledge sensitivity
         // and a genuinely unwalkable world produce the same walkable set, and differ only here.
@@ -203,6 +228,8 @@ namespace ck::groundnav
         auto Get_TileCount() const -> int32 { return _Tiles.Num(); }
 
         auto Get_SeamCount() const -> int32 { return _Seams.Num(); }
+
+        auto Get_BoundaryCount() const -> int32 { return _Boundary.Num(); }
 
         auto Get_BuiltTileCount() const -> int32;
 

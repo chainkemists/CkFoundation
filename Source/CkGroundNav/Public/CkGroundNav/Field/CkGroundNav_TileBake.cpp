@@ -455,6 +455,20 @@ namespace ck::groundnav
                 Portal._TraversalClearanceUu, InParams._MaxClearanceUu);
         }
 
+        // After the portals, not before: a boundary is every plate edge no crossing covers, and a
+        // derivation that ran on an empty portal table walled every doorway in the tile.
+        {
+            auto Lattice = FCk_GroundNav_BoundaryLattice{};
+            Lattice._Origin = OutTile._Origin;
+            Lattice._CellSizeUu = CellSize;
+            Lattice._SizeX = TileCells;
+            Lattice._SizeY = TileCells;
+            Lattice._LayerCount = LayerCount;
+            Lattice._SurfaceZ = &OutTile._SurfaceZ;
+
+            DoDerive_Boundary(Lattice, OutTile._Plates, OutTile._Portals, OutTile._Boundary, ProbesSpent);
+        }
+
         OutTile._SeamStubs.Reserve(StubSites.Num());
 
         for (auto& Site : StubSites)
