@@ -14,6 +14,7 @@
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
+#include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_PlatePortalGraph.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
@@ -735,6 +736,26 @@ namespace ck_groundnav_debugconsole
         TEXT("ck.GroundNav.Debug.ProbeMode"), 0,
         TEXT("0 = closest, 1 = down only, 2 = up only. The probe's agent radius is ")
         TEXT("ck.GroundNav.Debug.AgentRadiusUu, the same one the bake profile uses."));
+
+    // ---- Path cost --------------------------------------------------------------------------------
+
+    static TAutoConsoleVariable<float> CVar_SlopePenaltyK(
+        TEXT("ck.GroundNav.Debug.SlopePenaltyK"), 0.0f,
+        TEXT("What a leg pays per unit of rise over run, on top of its ground distance. 0 prices a ")
+        TEXT("ramp exactly as flat ground; raising it buys a level detour around a slope the agent ")
+        TEXT("can still climb."));
+
+    static TAutoConsoleVariable<float> CVar_ClearanceBiasK(
+        TEXT("ck.GroundNav.Debug.ClearanceBiasK"), 0.0f,
+        TEXT("What a leg pays for crossing a tight door, in cell widths of clearance at the crossing. ")
+        TEXT("It chooses a different DOOR - it never moves the string inside a plate, because the ")
+        TEXT("funnel does not read it."));
+
+    static TAutoConsoleVariable<float> CVar_CornerOffsetK(
+        TEXT("ck.GroundNav.Debug.CornerOffsetK"), 1.0f,
+        TEXT("How far an inside corner is pushed off the wall it hugs, as a multiple of the body ")
+        TEXT("radius. 0 draws the raw funnel; the offset never lands a waypoint off walkable ground ")
+        TEXT("or inside the radius, so a corner that cannot take the whole offset takes less of it."));
 
     // ----------------------------------------------------------------------------------------------
 
@@ -1564,17 +1585,34 @@ namespace ck_groundnav_debugconsole
         // Admissible, so a route that looks wrong is the field's fault and never the weight's.
         PathQuery._GreedyWeightW = 1.0f;
 
+        PathQuery._Cost._SlopePenaltyK = CVar_SlopePenaltyK.GetValueOnGameThread();
+        PathQuery._Cost._ClearanceBiasK = CVar_ClearanceBiasK.GetValueOnGameThread();
+        PathQuery._Cost._CornerOffsetK = CVar_CornerOffsetK.GetValueOnGameThread();
+
         const auto Path = ck::groundnav::Get_Path(LastDebugField, PathQuery);
 
-        const auto PathIsReady = Path._Status == ECk_GroundNav_PathStatus::Ready;
+        const auto PathIsPartial = Path._Status == ECk_GroundNav_PathStatus::Partial;
 
-        auto Waypoints = TArray<FVector>{};
+        // A Partial answers the prefix it actually reached, so it draws like a route and not like a
+        // failure - the two are told apart by where the string ends, not by whether one is drawn.
+        const auto PathIsWalkable =
+            Path._Status == ECk_GroundNav_PathStatus::Ready || PathIsPartial;
+
+        auto PreOffsetWaypoints = TArray<FVector>{};
         auto LengthUu = 0.0;
+        auto Plan = ck::groundnav::FCk_GroundNav_PathPlan{};
 
-        if (PathIsReady)
+        if (PathIsWalkable)
         {
-            LengthUu = ck::groundnav::Get_StringPull(
-                Path._StartPoint, Path._GoalPoint, Path._FunnelPortals, AgentRadiusUu, Waypoints);
+            LengthUu = ck::groundnav::Get_Funnelled(Path, AgentRadiusUu, PreOffsetWaypoints);
+
+            auto PostParams = ck::groundnav::FCk_GroundNav_PathPostParams{};
+            PostParams._Agent = PathQuery._Agent;
+            PostParams._VerticalToleranceUu = PathQuery._VerticalToleranceUu;
+            PostParams._AgentLocation = Path._StartPoint;
+            PostParams._Cost = PathQuery._Cost;
+
+            Plan = ck::groundnav::Get_PathPlan(Path, Field, PostParams);
         }
 
         constexpr auto Persistent = true;
@@ -1587,9 +1625,9 @@ namespace ck_groundnav_debugconsole
 
         // The ends the search planned between, when it has them: the route is string-pulled from
         // those and not from the two points that were typed.
-        const auto StartMarker = PathIsReady ? Path._StartPoint : InStart;
-        const auto GoalMarker = PathIsReady ? Path._GoalPoint : InGoal;
-        const auto MarkerColor = PathIsReady ? FColor::White : FColor::Red;
+        const auto StartMarker = PathIsWalkable ? Path._StartPoint : InStart;
+        const auto GoalMarker = PathIsWalkable ? Path._GoalPoint : InGoal;
+        const auto MarkerColor = PathIsWalkable ? FColor::White : FColor::Red;
 
         DrawDebugSphere(InWorld, StartMarker, 8.0f, SphereSegments, MarkerColor, Persistent,
             LifetimeSeconds, DepthPriority);
@@ -1617,21 +1655,67 @@ namespace ck_groundnav_debugconsole
         // Clear of the floors the route runs over, or the string z-fights every one of them.
         const auto Lift = FVector{0.0, 0.0, 4.0};
 
-        for (auto WaypointIndex = 1; WaypointIndex < Waypoints.Num(); ++WaypointIndex)
+        // The funnel before the corner pass, thin and dim under the route that is actually walked,
+        // so what the offset moved is the only thing that reads as two lines.
+        constexpr auto PreOffsetThickness = 1.5f;
+        const auto PreOffsetColor = FColor{110, 50, 110};
+
+        for (auto WaypointIndex = 1; WaypointIndex < PreOffsetWaypoints.Num(); ++WaypointIndex)
         {
-            DrawDebugLine(InWorld, Waypoints[WaypointIndex - 1] + Lift,
-                Waypoints[WaypointIndex] + Lift, FColor::Magenta, Persistent, LifetimeSeconds,
-                DepthPriority, 4.0f);
+            DrawDebugLine(InWorld, PreOffsetWaypoints[WaypointIndex - 1] + Lift,
+                PreOffsetWaypoints[WaypointIndex] + Lift, PreOffsetColor, Persistent,
+                LifetimeSeconds, DepthPriority, PreOffsetThickness);
         }
 
+        for (auto WaypointIndex = 1; WaypointIndex < Plan._Waypoints.Num(); ++WaypointIndex)
+        {
+            DrawDebugLine(InWorld, Plan._Waypoints[WaypointIndex - 1]._Location + Lift,
+                Plan._Waypoints[WaypointIndex]._Location + Lift, FColor::Magenta, Persistent,
+                LifetimeSeconds, DepthPriority, 4.0f);
+        }
+
+        constexpr auto ArrowSize = 10.0f;
+        constexpr auto ArrowReachUu = 30.0;
+        constexpr auto ArrowThickness = 2.0f;
+
+        for (const auto& Waypoint : Plan._Waypoints)
+        {
+            if (Waypoint._DirectionToNext.IsNearlyZero())
+            { continue; }
+
+            const auto ArrowStart = Waypoint._Location + Lift;
+
+            DrawDebugDirectionalArrow(InWorld, ArrowStart,
+                ArrowStart + (Waypoint._DirectionToNext * ArrowReachUu), ArrowSize,
+                FColor::Magenta, Persistent, LifetimeSeconds, DepthPriority, ArrowThickness);
+        }
+
+        // Where the search gave up, which is the one thing a Partial has to say and the goal marker
+        // cannot: the white sphere still sits on ground the route never reached.
+        if (PathIsPartial && NOT Plan._Waypoints.IsEmpty())
+        {
+            const auto TerminalColor = FColor{255, 140, 0};
+
+            DrawDebugSphere(InWorld, Plan._Waypoints.Last()._Location, 12.0f, SphereSegments,
+                TerminalColor, Persistent, LifetimeSeconds, DepthPriority);
+        }
+
+        const auto PlanCost = Plan._Waypoints.IsEmpty()
+            ? 0.0
+            : Plan._Waypoints.Last()._CostFromStart;
+
         const auto Summary = FString::Printf(
-            TEXT("path %s | plates %d | crossings %d | expansions %d | len %.1f uu | cells %d"),
+            TEXT("path %s | plates %d | crossings %d | expansions %d | len %.1f uu | cells %d")
+            TEXT(" | wp %d | dist %.1f uu | cost %.1f"),
             *ck::Format_UE(TEXT("{}"), Path._Status),
             Path._PlateCorridor.Num(),
             Path._Crossings.Num(),
             Path._ExpansionCount,
             LengthUu,
-            Path._Cost._CellsRead);
+            Path._Cost._CellsRead,
+            Plan._Waypoints.Num(),
+            Plan._LengthUu,
+            PlanCost);
 
         DrawDebugString(InWorld, StartMarker + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
             MarkerColor, LifetimeSeconds, DrawShadow);
@@ -2075,12 +2159,15 @@ namespace ck_groundnav_debugconsole
         TEXT("ck.GroundNav.PathAt <X> <Y> <Z> <TX> <TY> <TZ>. Unlike ck.GroundNav.ReachAt this ")
         TEXT("expands the plate graph, so it answers for a body of a particular size: the corridor's ")
         TEXT("plates outline in blue, every crossing draws as its interval in yellow with a sphere ")
-        TEXT("at the point a leg is priced through, and the string-pulled route draws in magenta ")
-        TEXT("between the ends the search resolved. A status other than Ready draws the two ends in ")
-        TEXT("red and nothing between them - a corridor that ran out of budget is not a shorter ")
-        TEXT("corridor. Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces no field ")
-        TEXT("to query. The body radius comes from ck.GroundNav.Debug.AgentRadiusUu, and is the ")
-        TEXT("inset the funnel walks the route through."),
+        TEXT("at the point a leg is priced through, the raw funnel draws as a thin dim line, and the ")
+        TEXT("route walked over it draws in bright magenta with an arrow at each waypoint, between ")
+        TEXT("the ends the search resolved. Partial draws the prefix the search actually reached, ")
+        TEXT("ending in an orange sphere where it gave up. Any other status short of Ready draws the ")
+        TEXT("two ends in red and nothing between them - a corridor that ran out of budget is not a ")
+        TEXT("shorter corridor. Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces ")
+        TEXT("no field to query. The body radius comes from ck.GroundNav.Debug.AgentRadiusUu, and is ")
+        TEXT("the inset the funnel walks the route through; the cost model comes from ")
+        TEXT("ck.GroundNav.Debug.SlopePenaltyK, .ClearanceBiasK and .CornerOffsetK."),
         FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
             [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
         {
@@ -2263,6 +2350,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n            StepHeightUu {} LedgeSensitivity {} RoughPerchToleranceUu {}")
                 TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
+                TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
@@ -2281,6 +2369,9 @@ namespace ck_groundnav_debugconsole
                 CVar_ProbeUpUu.GetValueOnGameThread(),
                 CVar_ProbeDownUu.GetValueOnGameThread(),
                 CVar_ProbeMode.GetValueOnGameThread(),
+                CVar_SlopePenaltyK.GetValueOnGameThread(),
+                CVar_ClearanceBiasK.GetValueOnGameThread(),
+                CVar_CornerOffsetK.GetValueOnGameThread(),
                 CVar_Mode.GetValueOnGameThread(),
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
                 CVar_MaxCells.GetValueOnGameThread());
