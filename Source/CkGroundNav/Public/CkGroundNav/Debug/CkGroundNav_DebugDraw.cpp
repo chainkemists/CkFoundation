@@ -8,11 +8,14 @@
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Query/CkGroundNav_Funnel.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Points.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
+#include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
+#include "CkGroundNav/Search/CkGroundNav_PlatePortalGraph.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -1468,6 +1471,175 @@ namespace ck_groundnav_debugconsole
             InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
     }
 
+    auto DoDrawPlateOutline(
+        UWorld*                                   InWorld,
+        const ck::groundnav::FCk_GroundNav_Field& InField,
+        int32                                     InFlatPlate,
+        FColor                                    InColor,
+        float                                     InLifetimeSeconds,
+        float                                     InThickness) -> void
+    {
+        int32 TileIndex = INDEX_NONE;
+        int32 PlateIndex = INDEX_NONE;
+
+        if (NOT ck::groundnav::Get_TileAndPlate(InField, InFlatPlate, TileIndex, PlateIndex))
+        { return; }
+
+        if (NOT InField._Tiles.IsValidIndex(TileIndex))
+        { return; }
+
+        const auto& Tile = InField._Tiles[TileIndex];
+
+        if (NOT Tile._Plates._Plates.IsValidIndex(PlateIndex))
+        { return; }
+
+        const auto& Plate = Tile._Plates._Plates[PlateIndex];
+
+        // One height for the whole loop, taken from the plate's highest cell: a plate that spans a
+        // ramp would otherwise sink through the ground it is supposed to outline.
+        auto HighestZ = TNumericLimits<double>::Lowest();
+
+        for (auto Y = Plate._MinY; Y <= Plate._MaxY; ++Y)
+        {
+            for (auto X = Plate._MinX; X <= Plate._MaxX; ++X)
+            {
+                if (NOT Tile.Get_HasSurfaceAt(X, Y, Plate._LayerIndex))
+                { continue; }
+
+                HighestZ = FMath::Max(HighestZ,
+                    static_cast<double>(Tile.Get_SurfaceZAt(X, Y, Plate._LayerIndex)));
+            }
+        }
+
+        const auto PlateHasSurface = HighestZ > TNumericLimits<double>::Lowest();
+
+        if (NOT PlateHasSurface)
+        { return; }
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto CornerCount = 4;
+
+        const auto CellUu = static_cast<double>(Tile._CellSizeUu);
+
+        // Plate bounds are INCLUSIVE cell indices, so the far edge is one whole cell past MaxX/Y.
+        const auto MinX = Tile._Origin.X + (static_cast<double>(Plate._MinX) * CellUu);
+        const auto MinY = Tile._Origin.Y + (static_cast<double>(Plate._MinY) * CellUu);
+        const auto MaxX = Tile._Origin.X + (static_cast<double>(Plate._MaxX + 1) * CellUu);
+        const auto MaxY = Tile._Origin.Y + (static_cast<double>(Plate._MaxY + 1) * CellUu);
+        const auto LoopZ = HighestZ + (CellUu * 0.5);
+
+        const FVector Corners[CornerCount] = {
+            FVector{MinX, MinY, LoopZ},
+            FVector{MaxX, MinY, LoopZ},
+            FVector{MaxX, MaxY, LoopZ},
+            FVector{MinX, MaxY, LoopZ}};
+
+        for (auto CornerIndex = 0; CornerIndex < CornerCount; ++CornerIndex)
+        {
+            DrawDebugLine(InWorld, Corners[CornerIndex], Corners[(CornerIndex + 1) % CornerCount],
+                InColor, Persistent, InLifetimeSeconds, DepthPriority, InThickness);
+        }
+    }
+
+    auto DoPathAndDraw(UWorld* InWorld, const FVector& InStart, const FVector& InGoal) -> void
+    {
+        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.PathAt")))
+        { return; }
+
+        const auto& Field = *LastDebugField;
+
+        const auto AgentRadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
+
+        auto PathQuery = ck::groundnav::FCk_GroundNav_PathQuery{};
+
+        // Two vertical quanta at each end, the same window the probe, the walk and the reachability
+        // check are given, so the commands resolve one point onto one storey rather than disagreeing
+        // about which floor it stands on.
+        PathQuery._Start = InStart;
+        PathQuery._Goal = InGoal;
+        PathQuery._VerticalToleranceUu = Field._Params._Config.Get_CellHeightUu() * 2.0f;
+        PathQuery._Agent._RadiusUu = AgentRadiusUu;
+
+        // Admissible, so a route that looks wrong is the field's fault and never the weight's.
+        PathQuery._GreedyWeightW = 1.0f;
+
+        const auto Path = ck::groundnav::Get_Path(LastDebugField, PathQuery);
+
+        const auto PathIsReady = Path._Status == ECk_GroundNav_PathStatus::Ready;
+
+        auto Waypoints = TArray<FVector>{};
+        auto LengthUu = 0.0;
+
+        if (PathIsReady)
+        {
+            LengthUu = ck::groundnav::Get_StringPull(
+                Path._StartPoint, Path._GoalPoint, Path._FunnelPortals, AgentRadiusUu, Waypoints);
+        }
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+        constexpr auto DrawShadow = true;
+        constexpr auto SphereSegments = 12;
+        constexpr auto CorridorThickness = 1.5f;
+
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        // The ends the search planned between, when it has them: the route is string-pulled from
+        // those and not from the two points that were typed.
+        const auto StartMarker = PathIsReady ? Path._StartPoint : InStart;
+        const auto GoalMarker = PathIsReady ? Path._GoalPoint : InGoal;
+        const auto MarkerColor = PathIsReady ? FColor::White : FColor::Red;
+
+        DrawDebugSphere(InWorld, StartMarker, 8.0f, SphereSegments, MarkerColor, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        DrawDebugSphere(InWorld, GoalMarker, 8.0f, SphereSegments, MarkerColor, Persistent,
+            LifetimeSeconds, DepthPriority);
+
+        const auto CorridorColor = FColor{90, 150, 255};
+
+        for (const auto FlatPlate : Path._PlateCorridor)
+        {
+            DoDrawPlateOutline(
+                InWorld, Field, FlatPlate, CorridorColor, LifetimeSeconds, CorridorThickness);
+        }
+
+        for (const auto& Crossing : Path._Crossings)
+        {
+            DrawDebugLine(InWorld, Crossing._Left, Crossing._Right, FColor::Yellow, Persistent,
+                LifetimeSeconds, DepthPriority, 2.0f);
+
+            DrawDebugSphere(InWorld, ck::groundnav::Get_CrossingTransitionPoint(Crossing), 4.0f,
+                SphereSegments, FColor::Yellow, Persistent, LifetimeSeconds, DepthPriority);
+        }
+
+        // Clear of the floors the route runs over, or the string z-fights every one of them.
+        const auto Lift = FVector{0.0, 0.0, 4.0};
+
+        for (auto WaypointIndex = 1; WaypointIndex < Waypoints.Num(); ++WaypointIndex)
+        {
+            DrawDebugLine(InWorld, Waypoints[WaypointIndex - 1] + Lift,
+                Waypoints[WaypointIndex] + Lift, FColor::Magenta, Persistent, LifetimeSeconds,
+                DepthPriority, 4.0f);
+        }
+
+        const auto Summary = FString::Printf(
+            TEXT("path %s | plates %d | crossings %d | expansions %d | len %.1f uu | cells %d"),
+            *ck::Format_UE(TEXT("{}"), Path._Status),
+            Path._PlateCorridor.Num(),
+            Path._Crossings.Num(),
+            Path._ExpansionCount,
+            LengthUu,
+            Path._Cost._CellsRead);
+
+        DrawDebugString(InWorld, StartMarker + FVector{0.0, 0.0, 20.0}, Summary, nullptr,
+            MarkerColor, LifetimeSeconds, DrawShadow);
+
+        ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) to ({}, {}, {}) {}"),
+            InStart.X, InStart.Y, InStart.Z, InGoal.X, InGoal.Y, InGoal.Z, Summary);
+    }
+
     auto DoDrawGeneratedPoints(
         UWorld*                                                    InWorld,
         const TArray<ck::groundnav::FCk_GroundNav_GeneratedPoint>& InPoints,
@@ -1895,6 +2067,40 @@ namespace ck_groundnav_debugconsole
             }
 
             DoReachAndDraw(InWorld, Start, End);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_PathAt(
+        TEXT("ck.GroundNav.PathAt"),
+        TEXT("Ask the last field bake for a path between two points and draw it: ")
+        TEXT("ck.GroundNav.PathAt <X> <Y> <Z> <TX> <TY> <TZ>. Unlike ck.GroundNav.ReachAt this ")
+        TEXT("expands the plate graph, so it answers for a body of a particular size: the corridor's ")
+        TEXT("plates outline in blue, every crossing draws as its interval in yellow with a sphere ")
+        TEXT("at the point a leg is priced through, and the string-pulled route draws in magenta ")
+        TEXT("between the ends the search resolved. A status other than Ready draws the two ends in ")
+        TEXT("red and nothing between them - a corridor that ran out of budget is not a shorter ")
+        TEXT("corridor. Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces no field ")
+        TEXT("to query. The body radius comes from ck.GroundNav.Debug.AgentRadiusUu, and is the ")
+        TEXT("inset the funnel walks the route through."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.PathAt ran without a World"))
+            { return; }
+
+            auto Start = FVector::ZeroVector;
+            auto Goal = FVector::ZeroVector;
+
+            if (NOT Get_SixPointArgs(InArgs, Start, Goal))
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.PathAt needs six numbers: ")
+                    TEXT("ck.GroundNav.PathAt <X> <Y> <Z> <TX> <TY> <TZ>"));
+                return;
+            }
+
+            DoPathAndDraw(InWorld, Start, Goal);
         }));
 
     static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_FloodAt(
