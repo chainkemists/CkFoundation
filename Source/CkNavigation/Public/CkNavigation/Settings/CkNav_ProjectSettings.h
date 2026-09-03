@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
+
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include <GameplayTagContainer.h>
@@ -41,11 +43,17 @@ private:
         meta = (AllowPrivateAccess = true))
     TMap<FGameplayTag, TSoftObjectPtr<UCk_NavFilterDefinition_DataAsset>> _QueryFilters;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "NavSurface",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Which provider answers navigation-surface queries in a world that has not chosen one"))
+    ECk_NavSurface_Provider _DefaultNavSurfaceProvider = ECk_NavSurface_Provider::Recast;
+
 public:
     CK_PROPERTY_GET(_MaxPathQueriesPerFrame);
     CK_PROPERTY_GET(_NavQuerySearchHalfExtent);
     CK_PROPERTY_GET(_NavQueryVerticalHalfExtent);
     CK_PROPERTY_GET(_QueryFilters);
+    CK_PROPERTY_GET(_DefaultNavSurfaceProvider);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -73,6 +81,10 @@ public:
     // FindPathSync's internal projection builds its box from THIS, never the raw scalar cube.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
     static FVector Get_NavQueryProjectionExtentVec();
+
+    // The provider a world falls back to when nothing has told it which one answers.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Nav|Settings")
+    static ECk_NavSurface_Provider Get_DefaultNavSurfaceProvider();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

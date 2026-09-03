@@ -29,7 +29,8 @@ namespace ck
 UENUM(BlueprintType)
 enum class ECk_NavSurface_Provider : uint8
 {
-    Recast
+    Recast,
+    GroundNav
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_Provider);
 
