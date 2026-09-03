@@ -1354,8 +1354,8 @@ namespace ck_groundnav_debugconsole
 
             ++PlatesReached;
 
-            // The source plate is entered by no crossing and is reached at distance zero, so it
-            // anchors the ramp rather than reading as the farthest thing on screen.
+            // The source plate is reached at distance zero, so it anchors the ramp rather than
+            // reading as the farthest thing on screen.
             auto LeastDistanceUu = FlatPlate == Flood._SourceFlatPlate
                 ? 0.0
                 : TNumericLimits<double>::Max();
