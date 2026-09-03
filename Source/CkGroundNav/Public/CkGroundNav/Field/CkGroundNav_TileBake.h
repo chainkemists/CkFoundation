@@ -3,6 +3,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_GeometryBatch.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldTypes.h"
 
@@ -39,6 +40,14 @@ namespace ck::groundnav
         FCk_GroundNav_BakeConfig _Config;
         FCk_GroundNav_AgentProfile _Profile;
         FCk_GroundNav_MergeTunables _MergeTunables;
+
+        // Every authored markup volume the field submitted, unfiltered: the bake decides per record
+        // which of them reach this tile, by the same cell reduction it decides coverage with. A caller
+        // pre-culling them by tile bounds would be a second footprint definition beside the reducer's.
+        //
+        // A VIEW, because these params are assembled per tile and consumed inside the call they are
+        // handed to; the records belong to whoever submitted them and outlive it.
+        TConstArrayView<FCk_GroundNav_MarkupRecord> _MarkupRecords;
 
         // The clearance ceiling, and therefore the halo width. Below it the field is exact; at or above
         // it every cell reads this number, which is what makes a tiled bake agree with a one-shot bake

@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
 
 #include <CoreMinimal.h>
@@ -132,6 +133,35 @@ namespace ck::groundnav
         int32&                            InOutProbes) -> int32;
 
     /**
+     * Demote every walkable span an enabled Walkability-kind markup volume covers.
+     *
+     * The third rejection reason, beside too little headroom and too little support, and demoted the
+     * same way: the span keeps its place in the column so the span above it still reads correct
+     * headroom, and only its walkability is taken away. Everything downstream then treats the cell as
+     * ground nobody may stand on — no layer, no plate, no portal, no boundary run — so nothing is
+     * patched out after the fact and no later stage has to know a volume was ever involved.
+     *
+     * PER SPAN, at that span's own surface height, so a volume painted on an upper storey does not
+     * block the floor sharing its column. Cost-kind records are ignored entirely: what ground costs to
+     * cross is a plate's business and says nothing about whether it may be crossed at all.
+     *
+     * Demotions apply as they are found rather than being deferred like the ledge filter's, because no
+     * markup verdict reads any span's walkability — the decision is the volume's geometry against the
+     * span's height, and neither of those moves.
+     *
+     * Returns how many spans were demoted.
+     *
+     * InOutProbes is ACCUMULATED into, never reset — one probe per span offered to the test by a
+     * column under a markup's cell rectangle, in the unit FCk_GroundNav_BakeStageResult defines — so
+     * one counter can be threaded through several stages.
+     */
+    CKGROUNDNAV_API auto
+    DoFilter_Markup(
+        TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+        FCk_GroundNav_SpanField&                    InOutSpans,
+        int32&                                      InOutProbes) -> int32;
+
+    /**
      * Record adjacency between walkable spans that an agent can actually step between.
      *
      * Two spans connect when the height delta is within the step height AND their surface normals
@@ -156,19 +186,22 @@ namespace ck::groundnav
         int32&                            InOutProbes) -> int32;
 
     /**
-     * The three filters in their fixed order — low clearance, then ledges, then connectivity —
-     * followed by the connection mask they produce.
+     * Every demotion in its fixed order — low clearance, then ledges, then markup — followed by the
+     * connection mask the spans that survived them produce.
      *
-     * The order is load-bearing: clearance and ledge demotions must both be settled before adjacency
-     * is recorded, or the mask would carry edges into spans a later pass removes.
+     * The order is load-bearing: every demotion must be settled before adjacency is recorded, or the
+     * mask would carry edges into spans a later pass removes.
+     *
+     * An empty InMarkups demotes nothing: the filter runs over no records.
      *
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto
     DoFilter_Walkability(
-        const FCk_GroundNav_AgentProfile& InProfile,
-        FCk_GroundNav_SpanField&          InOutSpans,
-        FCk_GroundNav_ConnectionField&    OutConnections) -> FCk_GroundNav_BakeStageResult;
+        const FCk_GroundNav_AgentProfile&           InProfile,
+        FCk_GroundNav_SpanField&                    InOutSpans,
+        FCk_GroundNav_ConnectionField&              OutConnections,
+        TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups = {}) -> FCk_GroundNav_BakeStageResult;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -199,10 +199,8 @@ namespace ck::groundnav
      * recovered from the plate's own heights, and policy is stored at plate level so a query never
      * pays per cell for what does not vary per cell.
      *
-     * Area tags and the cost multiplier are the shape of the answer, not yet its content: nothing in
-     * the bake carries a traversal policy until runtime markup exists, so every plate answers no tags
-     * and a multiplier of one. The fields are here so the consumer contract does not change when the
-     * markup that gives them meaning arrives.
+     * Area tags and the cost multiplier come from the plate's own label, which is what the area markup
+     * over it stamped. A plate no record covers carries INDEX_NONE and the identity multiplier.
      */
     struct CKGROUNDNAV_API FCk_GroundNav_SurfaceAttributes
     {

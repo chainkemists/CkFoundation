@@ -4,6 +4,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
 
 #include <CoreMinimal.h>
@@ -98,6 +99,15 @@ namespace ck::groundnav
         // decomposition carries zero.
         float _MinClearanceUu = 0.0f;
 
+        // Which entry of the plate field's _AreaPolicies this plate's traversal policy is, or
+        // INDEX_NONE for none. An INDEX and not a container: the plate stays a plain value addressable
+        // by integer id, which is the property that lets a tile be copied, compared and serialized.
+        int32 _AreaPolicyIndex = INDEX_NONE;
+
+        // What crossing this plate costs relative to plain ground. The identity where no cost markup
+        // covers it, so a consumer multiplies through it without a branch.
+        float _CostMultiplier = 1.0f;
+
     public:
         auto Get_Width() const -> int32 { return (_MaxX - _MinX) + 1; }
         auto Get_Depth() const -> int32 { return (_MaxY - _MinY) + 1; }
@@ -119,14 +129,65 @@ namespace ck::groundnav
         // _LayerCount planes of _SizeX * _SizeY, layer-major; kNoPlate where nothing is walkable.
         TArray<int32> _CellToPlate;
 
+        // Every distinct traversal-policy container the plates name, deduplicated by equality. Interned
+        // here rather than carried per plate because a policy is authored once and covers many plates,
+        // and because a plate that held a container would stop being a value an integer id addresses.
+        TArray<FGameplayTagContainer> _AreaPolicies;
+
     public:
         auto Get_PlateIndexAt(int32 InX, int32 InY, int32 InLayer) const -> int32;
+
+        /** The container an index names, or an empty one for INDEX_NONE and for anything out of range. */
+        auto Get_AreaPolicy(int32 InIndex) const -> const FGameplayTagContainer&;
 
         auto Get_MaxPlaneResidualUu() const -> float;
         auto Get_MaxHeightRangeUu() const -> float;
 
         /** Cells covered divided by plates emitted — how much the decomposition actually bought. */
         auto Get_CollapseRatio() const -> float;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * The published lattice a plate's cells are read against: where cell (0,0) starts, how big a cell
+     * is, and the surface height of every cell.
+     *
+     * A VIEW over the heights rather than a copy — the caller already holds them, and a stage that
+     * copied a whole tile's surfaces to read a handful of plates would cost more than the work it does.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_PlateLattice
+    {
+    public:
+        FVector2D _OriginXY = FVector2D::ZeroVector;
+
+        float _CellSizeUu = 0.0f;
+
+        int32 _SizeX = 0;
+        int32 _SizeY = 0;
+        int32 _LayerCount = 0;
+
+        // Layer-major, as a tile stores it.
+        TConstArrayView<float> _SurfaceZ;
+
+    public:
+        auto Get_IsValid() const -> bool
+        {
+            return _CellSizeUu > 0.0f && _SizeX > 0 && _SizeY > 0 && _LayerCount > 0 &&
+                   _SurfaceZ.Num() == (_SizeX * _SizeY * _LayerCount);
+        }
+
+        auto Get_CellMinXY(int32 InX, int32 InY) const -> FVector2D
+        {
+            return FVector2D{
+                _OriginXY.X + (static_cast<double>(InX) * _CellSizeUu),
+                _OriginXY.Y + (static_cast<double>(InY) * _CellSizeUu)};
+        }
+
+        auto Get_SurfaceZ(int32 InX, int32 InY, int32 InLayer) const -> float
+        {
+            return _SurfaceZ[(InLayer * _SizeX * _SizeY) + (InY * _SizeX) + InX];
+        }
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -153,6 +214,17 @@ namespace ck::groundnav
      * refusing to merge costs memory, while merging cells that should not be merged reports a floor
      * where there is a step.
      *
+     * InCellPolicy is the THIRD merge criterion, and the only one that is not a tolerance: two cells
+     * join only where their entries are EQUAL. It is layer-major over the layer field's cells, exactly
+     * as _CellToPlate is, and an empty view means no cell carries a policy — under which the criterion
+     * admits every merge the first two do and the decomposition is unchanged. A view of any other size
+     * is InvalidInput rather than a silent partial application.
+     *
+     * The entries are compared and never interpreted: they are the caller's key and index nothing here.
+     * What a plate carries in _AreaPolicyIndex is Stamp_PlateCostPolicies' answer, not this one — a
+     * criterion that also wrote the plate's policy would make the split and the label two accounts of
+     * the same thing, and two accounts drift.
+     *
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto
@@ -160,7 +232,36 @@ namespace ck::groundnav
         const FCk_GroundNav_SpanField&     InSpans,
         const FCk_GroundNav_LayerField&    InLayers,
         const FCk_GroundNav_MergeTunables& InTunables,
-        FCk_GroundNav_PlateField&          OutPlates) -> FCk_GroundNav_BakeStageResult;
+        FCk_GroundNav_PlateField&          OutPlates,
+        TConstArrayView<int32>             InCellPolicy = {}) -> FCk_GroundNav_BakeStageResult;
+
+    /**
+     * Give every plate the traversal policy and cost multiplier the Cost-kind markup over it implies.
+     *
+     * ANY OVERLAP WINS AND THE PLATE DOES NOT SPLIT. A markup covering one cell of a plate prices the
+     * whole rectangle, because splitting would renumber plates a tile has already published — seam
+     * stubs, portals and reachability labels all hold a _PlateIndex, and none of them could be told. A
+     * region that genuinely needs sub-plate resolution is priced by the per-query cost table instead.
+     *
+     * Coverage is decided per CELL at that cell's own surface height, so a volume painted on an upper
+     * storey does not price the floor sharing its column. Overlapping records union their tags and the
+     * LARGEST multiplier wins; a plate no record covers keeps INDEX_NONE and the identity multiplier.
+     *
+     * The SOLE writer of _AreaPolicyIndex, _CostMultiplier and _AreaPolicies, and it recomputes all
+     * three from the records it is given rather than adding to what is already there. That is what lets
+     * the same call restamp an already-stamped field: switching a record off removes exactly its
+     * contribution, where a pass that accumulated would leave it behind forever.
+     *
+     * Bills NO probes. It reads no span, no geometry, and no cell the plate rectangles do not already
+     * name, which is the property that lets a cost-only derive answer on an empty budget.
+     *
+     * Pure: no world, no registry, no physics.
+     */
+    CKGROUNDNAV_API auto
+    Stamp_PlateCostPolicies(
+        const FCk_GroundNav_PlateLattice&           InLattice,
+        TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+        FCk_GroundNav_PlateField&                   InOutPlates) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
