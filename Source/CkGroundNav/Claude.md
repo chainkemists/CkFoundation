@@ -128,6 +128,7 @@ is ever published as a built field with no cells.
 | `ck.GroundNav.RayAt <X> <Y> <Z> <TX> <TY>` | walkability raycast, drawn to its hit |
 | `ck.GroundNav.EdgesAt <X> <Y> <Z> <R>` | the boundary runs within R of a point, and the nearest one in magenta |
 | `ck.GroundNav.ReachAt <X> <Y> <Z> <TX> <TY> <TZ>` | reachability by component label between two points, coloured by verdict, with the expansion count |
+| `ck.GroundNav.PathAt <X> <Y> <Z> <TX> <TY> <TZ>` | a path for the debug body between two points: the plate corridor outlined, every crossing with the point its leg is priced through, and the string-pulled route in magenta with its length |
 | `ck.GroundNav.FloodAt <X> <Y> <Z> <R>` | flood fill from a point out to a walked distance R: reached plates coloured by entry distance, settled crossings traced back to the source |
 | `ck.GroundNav.PointsAt <X> <Y> <Z> <R> <N>` | N random points on walkable ground within a horizontal radius R, uniform by area over every storey the disc touches, spheres coloured per layer |
 | `ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>` | N random points whose WALKED distance from the point lies in [MIN, MAX], drawn from the plates a flood fill reaches; the label reports how many draws it spent |
