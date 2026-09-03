@@ -62,6 +62,30 @@ public:
     Get_Provider(
         const UObject* InWorldContext);
 
+    /**
+     * Names whether a second provider answers this world's queries alongside the installing one
+     * from here on. The shadowing provider's result is compared and discarded.
+     *
+     * Written onto the world's transient entity AND into the per-world mirror the boundary query
+     * reads; the entity copy is the record, the mirror is what a query off the game thread can reach.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Request Set Shadow Mode",
+              meta = (WorldContext = "InWorldContext"))
+    static void
+    Request_SetShadowMode(
+        const UObject* InWorldContext,
+        ECk_NavSurface_ShadowMode InMode);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Shadow Mode",
+              meta = (WorldContext = "InWorldContext"))
+    static ECk_NavSurface_ShadowMode
+    Get_ShadowMode(
+        const UObject* InWorldContext);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NavSurface",

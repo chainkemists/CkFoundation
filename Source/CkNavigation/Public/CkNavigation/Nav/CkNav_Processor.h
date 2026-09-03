@@ -38,6 +38,7 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_Gameplay;
         using MarkedDirtyBy = FFragment_Nav_Requests;
 
     public:
