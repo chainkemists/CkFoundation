@@ -93,6 +93,22 @@ namespace ck::nav_surface_recast
         const FGameplayTag& InAreaTag,
         const FVector& InLocation,
         const FVector& InSearchHalfExtents) -> bool;
+
+    // Paints, repaints, or unpaints the markup entity's area. Recast's per-markup state is the
+    // nav-octree painter, which it keeps on the markup entity itself.
+    CKNAVIGATION_API auto Apply_AreaMarkup(
+        UWorld*                                  InWorld,
+        FCk_Handle&                              InMarkupEntity,
+        const FCk_Request_NavSurface_AreaMarkup& InRequest) -> bool;
+
+    CKNAVIGATION_API auto Get_IsMarkupLive(
+        UWorld*           InWorld,
+        const FCk_Handle& InMarkupEntity) -> bool;
+
+    // Retires the markup entity's painter and the state that named it.
+    CKNAVIGATION_API auto Release_AreaMarkup(
+        UWorld*     InWorld,
+        FCk_Handle& InMarkupEntity) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

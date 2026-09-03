@@ -53,6 +53,21 @@ public:
     TFunction<bool(UWorld*)>
         _RequestSurfaceRebuild;
 
+    // Area markup is keyed by the markup ENTITY, not by a provider-side painter identity: the
+    // neutral layer owns what a paint IS, and each provider keeps whatever state that paint costs
+    // it on that same entity.
+    TFunction<bool(UWorld*, FCk_Handle& InMarkupEntity, const FCk_Request_NavSurface_AreaMarkup& InRequest)>
+        _ApplyAreaMarkup;
+
+    TFunction<bool(UWorld*, const FCk_Handle& InMarkupEntity)>
+        _IsMarkupLive;
+
+    // The other half of the markup lifetime. The provider releases whatever the paint cost it and
+    // clears the state it parked on the entity, so a torn-down markup leaves nothing behind on the
+    // surface and nothing stale on the fragment.
+    TFunction<void(UWorld*, FCk_Handle& InMarkupEntity)>
+        _ReleaseAreaMarkup;
+
 public:
     auto Get_IsComplete() const -> bool;
 };

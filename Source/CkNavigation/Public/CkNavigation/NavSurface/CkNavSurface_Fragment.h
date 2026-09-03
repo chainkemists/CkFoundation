@@ -10,6 +10,19 @@
 
 class UCk_NavAreaMarkup_UE;
 class UCk_Utils_NavSurface_UE;
+class UWorld;
+
+namespace ck::nav_surface_recast
+{
+    CKNAVIGATION_API auto Apply_AreaMarkup(
+        UWorld*                                  InWorld,
+        FCk_Handle&                              InMarkupEntity,
+        const FCk_Request_NavSurface_AreaMarkup& InRequest) -> bool;
+
+    CKNAVIGATION_API auto Release_AreaMarkup(
+        UWorld*     InWorld,
+        FCk_Handle& InMarkupEntity) -> void;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,6 +73,13 @@ namespace ck
         friend class FProcessor_NavSurfaceMarkup_HandleRequests;
         friend class FProcessor_NavSurfaceMarkup_EndPlay;
         friend class ::UCk_Utils_NavSurface_UE;
+        friend auto nav_surface_recast::Apply_AreaMarkup(
+            UWorld*                                  InWorld,
+            FCk_Handle&                              InMarkupEntity,
+            const FCk_Request_NavSurface_AreaMarkup& InRequest) -> bool;
+        friend auto nav_surface_recast::Release_AreaMarkup(
+            UWorld*     InWorld,
+            FCk_Handle& InMarkupEntity) -> void;
 
     private:
         // WEAK — lifetime owned by the CkCore ObjectPooling subsystem through UCk_Utils_NavAreaMarkup_UE.
