@@ -15,7 +15,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 // The provider-neutral navigation-surface surface. Every capability an entity or a debugger needs
 // from the world's walkable geometry, with no engine type in the signature. One provider answers
-// per world; the Recast adapter is the only one today.
+// per world, resolved per query through its registered capability table.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_NavSurfaceMarkup"))
@@ -37,6 +37,30 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+public:
+    /**
+     * Names the provider that answers this world's navigation-surface queries from here on.
+     *
+     * Written onto the world's transient entity, so it outlives nothing and is asked for on every
+     * query rather than cached anywhere.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Request Set Provider",
+              meta = (WorldContext = "InWorldContext"))
+    static void
+    Request_SetProvider(
+        const UObject* InWorldContext,
+        ECk_NavSurface_Provider InProvider);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Provider",
+              meta = (WorldContext = "InWorldContext"))
+    static ECk_NavSurface_Provider
+    Get_Provider(
+        const UObject* InWorldContext);
 
 public:
     UFUNCTION(BlueprintCallable,
