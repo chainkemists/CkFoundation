@@ -16,6 +16,7 @@ public class CkGroundNav : CkModuleRules
             "Engine",
             "GameplayTags",
 
+            "CkAStar",
             "CkCore",
             "CkEcs",
             "CkEcsExt",
