@@ -362,6 +362,45 @@ auto
 
 auto
     UCk_Utils_GroundNavVolume_UE::
+    Get_ProfileVariantTags(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> TArray<FGameplayTag>
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_Params>())
+    { return {}; }
+
+    return ck::algo::Transform<TArray<FGameplayTag>>(
+        InVolume.Get<ck::FFragment_GroundNavVolume_Params>().Get_ProfileVariants(),
+        [](const FCk_GroundNav_ProfileVariant& InVariant) -> FGameplayTag
+        {
+            return InVariant.Get_ProfileTag();
+        });
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsBuilt_ForProfile(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        FGameplayTag InProfileTag)
+    -> bool
+{
+    if (NOT Get_IsBuilt(InVolume))
+    { return false; }
+
+    if (NOT InProfileTag.IsValid())
+    { return true; }
+
+    if (NOT InVolume.Has<ck::FFragment_GroundNavVolume_BuiltField>())
+    { return false; }
+
+    const auto* VariantField =
+        InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>().Get_VariantFields().Find(InProfileTag);
+
+    return VariantField != nullptr && VariantField->IsValid();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
     Get_BuildEpoch(
         const FCk_Handle_GroundNavVolume& InVolume)
     -> int64

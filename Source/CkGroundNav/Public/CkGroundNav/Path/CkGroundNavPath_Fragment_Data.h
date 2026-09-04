@@ -193,6 +193,15 @@ private:
               meta = (AllowPrivateAccess = true))
     TMap<int32, float> _LinkCostMultipliers;
 
+    /** Which class of walker is planning. Empty - the default - plans over the volume's untagged
+     *  field; a tag plans over the field baked for that profile, and a world holding none for it
+     *  leaves the episode parked exactly as an unbuilt start does. Stamped once when the episode
+     *  opens: a search is a statement about ONE surface, and a route half planned on two of them
+     *  would be a corridor no agent can walk. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
@@ -202,6 +211,7 @@ public:
     CK_PROPERTY(_DeniedLinkIds);
     CK_PROPERTY(_DeniedLinkUserTypeTags);
     CK_PROPERTY(_LinkCostMultipliers);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);

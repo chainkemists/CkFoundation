@@ -5,6 +5,7 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
+#include <GameplayTagContainer.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,25 +57,37 @@ namespace ck::groundnav::world_fields
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Records (or replaces) the field one volume publishes. GAME THREAD: called from the volume's
-     * build processor at the moment it swaps its published pointer.
+     * Records (or replaces) everything one volume publishes: its untagged DEFAULT field, and the field
+     * it baked for each authored profile variant, keyed by that variant's tag. GAME THREAD: called from
+     * the volume's build processor at the moment it swaps its published pointers.
      *
-     * Saying NOTHING is a geometry publish - a build, a repair, the empty registration a volume enters
-     * the world on - and restarts the note's run: the ids accumulated so far go, because no list of
-     * them describes ground that moved. Naming ids is the link derive's claim that its publish moved
-     * nothing else, and they are merged into the run rather than replacing it. The two states are an
-     * unset and a set optional rather than a flag beside a list, so "link-only, and this is what moved"
-     * is the only shape a claim to narrowing can be made in.
+     * One call under ONE write lock, which is the whole of the atomicity a cross-thread reader gets: a
+     * default and the variants baked beside it describe one world, and a second entry point for the
+     * variants would let a reader see one of them without the other.
      *
-     * The epochs the note carries are the PUBLISHED FIELD'S own, never a caller's: a note stamped with
-     * an epoch the field beside it does not carry is a note no reader could account for.
+     * The variant map REPLACES what was published rather than merging into it, so a volume that dropped
+     * a variant - or never had one - leaves nothing behind under a tag nobody authors any more. A tag
+     * that goes, and a tag whose field is swapped, retire their tile-epoch sums the way an unpublished
+     * volume's do, so the surface revision never falls across the change.
+     *
+     * Saying NOTHING for the changed ids is a geometry publish - a build, a repair, the empty
+     * registration a volume enters the world on - and restarts the note's run: the ids accumulated so
+     * far go, because no list of them describes ground that moved. Naming ids is the link derive's claim
+     * that its publish moved nothing else, and they are merged into the run rather than replacing it.
+     * The two states are an unset and a set optional rather than a flag beside a list, so "link-only,
+     * and this is what moved" is the only shape a claim to narrowing can be made in.
+     *
+     * The epochs the note carries are the PUBLISHED DEFAULT FIELD'S own, never a caller's and never a
+     * variant's: a note stamped with an epoch the field beside it does not carry is a note no reader
+     * could account for.
      */
     CKGROUNDNAV_API auto
     Publish(
-        UWorld*                         InWorld,
-        const FCk_Handle&               InVolumeEntity,
-        FCk_GroundNav_FieldPtr          InField,
-        const TOptional<TArray<int32>>& InLinkOnlyChangedLinkIds = {}) -> void;
+        UWorld*                                           InWorld,
+        const FCk_Handle&                                 InVolumeEntity,
+        FCk_GroundNav_FieldPtr                            InField,
+        const TMap<FGameplayTag, FCk_GroundNav_FieldPtr>& InVariantFields,
+        const TOptional<TArray<int32>>&                   InLinkOnlyChangedLinkIds = {}) -> void;
 
     /**
      * The note left by the last publish on whichever entry TryGet_Field would answer from for the same
@@ -112,6 +125,19 @@ namespace ck::groundnav::world_fields
         UWorld* InWorld) -> int64;
 
     /**
+     * The tile-epoch sums of every PROFILE VARIANT field the world currently holds, added up.
+     *
+     * Separate from Get_Fields rather than folded into it, because that view answers "the fields a
+     * location could be projected onto" - a count, a bounds union - and a variant field covers the very
+     * same ground its default does. It is only the surface REVISION that has to see them: a change that
+     * moved a variant and left the default alone is still a change, and a revision blind to it would
+     * tell a watcher the surface stood still.
+     */
+    CKGROUNDNAV_API auto
+    Get_VariantRevision(
+        UWorld* InWorld) -> int64;
+
+    /**
      * The field whose bounds contain the location, or the first registered one when none does, or a
      * null pointer when the world has no field at all.
      *
@@ -122,7 +148,29 @@ namespace ck::groundnav::world_fields
         UWorld*        InWorld,
         const FVector& InLocation) -> FCk_GroundNav_FieldPtr;
 
-    /** Every non-null field registered for the world, copied out. */
+    /**
+     * The same field for an EMPTY profile tag, and the entry's variant field for a tag it holds one for.
+     *
+     * NEVER falls back. A tag the containing volume authored no variant for answers null, so a query
+     * naming a profile is answered by that profile's ground or by nothing - silently handing back the
+     * default would let an agent that cannot climb a step walk one, which is the whole failure a
+     * variant exists to prevent.
+     *
+     * The ENTRY is chosen by the same rule the two-argument read uses - the volume whose default field
+     * contains the location, or the first there is - so a location resolves to one volume and the tag
+     * then selects within it. A variant field's own bounds are the default's by construction.
+     *
+     * Callable from any thread, on the same terms.
+     */
+    CKGROUNDNAV_API auto
+    TryGet_Field(
+        UWorld*             InWorld,
+        const FVector&      InLocation,
+        const FGameplayTag& InProfileTag) -> FCk_GroundNav_FieldPtr;
+
+    /** Every non-null DEFAULT field registered for the world, copied out. Profile-variant fields are
+     *  not in here: they cover the ground their default does, and this view answers where ground is.
+     *  Their epochs reach a watcher through Get_VariantRevision. */
     CKGROUNDNAV_API auto
     Get_Fields(
         UWorld* InWorld) -> TArray<FCk_GroundNav_FieldPtr>;
