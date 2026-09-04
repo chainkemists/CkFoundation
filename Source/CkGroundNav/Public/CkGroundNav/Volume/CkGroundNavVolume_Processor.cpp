@@ -11,6 +11,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 
@@ -25,14 +26,17 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleMarkupRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleLinkRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartBuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Build);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartRepair);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Repair);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupCostDerive);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_LinkDerive);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingMarkupRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingLinkRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Unpublish);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -54,9 +58,23 @@ namespace ck
                 });
         }
 
+        // The links the volume currently holds, enabled and disabled alike, for the same reason the
+        // markup records go out unfiltered: which of them resolve, and whether a disabled one joins
+        // anything, is the composition's answer and a caller pre-filtering here would be a second one.
+        auto Get_LinkRecordsOf(
+            TConstArrayView<FCk_GroundNav_LinkEntry> InEntries) -> TArray<FCk_GroundNav_LinkRecord>
+        {
+            return algo::Transform<TArray<FCk_GroundNav_LinkRecord>>(InEntries,
+                [](const FCk_GroundNav_LinkEntry& InEntry) -> FCk_GroundNav_LinkRecord
+                {
+                    return InEntry.Get_Record();
+                });
+        }
+
         auto Get_FieldParams(
             const FFragment_GroundNavVolume_Params&   InParams,
-            const TArray<FCk_GroundNav_MarkupRecord>& InMarkupRecords)
+            const TArray<FCk_GroundNav_MarkupRecord>& InMarkupRecords,
+            const TArray<FCk_GroundNav_LinkRecord>&   InLinkRecords)
             -> groundnav::FCk_GroundNav_FieldParams
         {
             auto FieldParams = groundnav::FCk_GroundNav_FieldParams{};
@@ -70,6 +88,7 @@ namespace ck
             FieldParams._Profile = InParams.Get_Profile();
             FieldParams._MergeTunables = InParams.Get_MergeTunables();
             FieldParams._MarkupRecords = InMarkupRecords;
+            FieldParams._Links = InLinkRecords;
             FieldParams._MaxClearanceUu = InParams.Get_MaxClearanceUu();
 
             // Derived rather than authored beside the bounds: an origin and a division count that
@@ -96,7 +115,7 @@ namespace ck
 
             return Bounds.IsValid != 0 &&
                    Bounds.GetSize().X > 0.0 && Bounds.GetSize().Y > 0.0 && Bounds.GetSize().Z > 0.0 &&
-                   Get_FieldParams(InParams, {}).Get_IsValid() &&
+                   Get_FieldParams(InParams, {}, {}).Get_IsValid() &&
                    InParams.Get_ProbeBudgetPerTick() > 0;
         }
 
@@ -129,6 +148,22 @@ namespace ck
                 {
                     return InEntry.Get_MarkupEntity() == InMarkupEntity;
                 });
+        }
+
+        auto Get_LinkEntryIndex(
+            const FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Handle&                      InLinkEntity) -> int32
+        {
+            return algo::FindIndex(InLinks.Get_Entries(),
+                [&](const FCk_GroundNav_LinkEntry& InEntry) -> bool
+                {
+                    return InEntry.Get_LinkEntity() == InLinkEntity;
+                });
+        }
+
+        auto Get_IsFinite(const FVector& InPoint) -> bool
+        {
+            return FMath::IsFinite(InPoint.X) && FMath::IsFinite(InPoint.Y) && FMath::IsFinite(InPoint.Z);
         }
     }
 
@@ -550,6 +585,236 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_GroundNavVolume_HandleLinkRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            FFragment_GroundNavVolume_LinkRequests& InRequests) const
+        -> void
+    {
+        ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequest) -> void
+            {
+                DoHandleRequest(InVolumeEntity, InParams, InBuiltField, InLinks, InRequest);
+            }));
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleLinkRequests::
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_Link& InRequest)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        auto LinkEntity = InRequest.Get_LinkEntity();
+
+        const auto LinkEntityIsValid = ck::IsValid(LinkEntity);
+
+        CK_ENSURE_IF_NOT(LinkEntityIsValid,
+            TEXT("Cannot link GroundNav Volume [{}] - the request names an invalid link Entity [{}], "
+                 "which is the identity its record would be keyed on"),
+            InVolumeEntity, LinkEntity)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto& Requested = InRequest.Get_Record();
+
+        const auto Start = Requested.Get_Start();
+        const auto End = Requested.Get_End();
+
+        // Two points that are not two points describe no traversal. A zero span would price at zero
+        // however high the multiplier, and a non-finite one would project onto whatever cell the
+        // arithmetic happened to land in.
+        const auto EndpointsAreTwoFinitePoints =
+            Get_IsFinite(Start) && Get_IsFinite(End) && NOT Start.Equals(End);
+
+        CK_ENSURE_IF_NOT(EndpointsAreTwoFinitePoints,
+            TEXT("Cannot link GroundNav Volume [{}] from link Entity [{}] - its endpoints [{}] and [{}] "
+                 "are not two distinct finite points"),
+            InVolumeEntity, LinkEntity, Start, End)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // A link is VOLUME-SCOPED: the field it resolves against covers this volume's ground and no
+        // other, so an endpoint outside those bounds names ground this volume can never answer for.
+        // Joining two volumes needs something that composes two fields, and nothing does yet.
+        const auto VolumeBounds = InParams.Get_VolumeBounds();
+
+        const auto BothEndpointsAreInTheVolume =
+            VolumeBounds.IsInsideOrOn(Start) && VolumeBounds.IsInsideOrOn(End);
+
+        CK_ENSURE_IF_NOT(BothEndpointsAreInTheVolume,
+            TEXT("Cannot link GroundNav Volume [{}] from link Entity [{}] - its endpoints [{}] and [{}] "
+                 "are not both inside the volume's bounds [{}]. A link is volume-scoped"),
+            InVolumeEntity, LinkEntity, Start, End, VolumeBounds)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // At or above one, both ways. The multipliers price the link's own straight-line span, so a
+        // factor below one would make an edge cost less than its Euclidean length and the search's
+        // Euclidean heuristic would stop being admissible - it would return cheap paths that are not
+        // the cheapest, and no consumer could tell.
+        const auto MultipliersPriceAtLeastTheSpan =
+            Requested.Get_CostMultiplierForward() >= 1.0f &&
+            Requested.Get_CostMultiplierBackward() >= 1.0f;
+
+        CK_ENSURE_IF_NOT(MultipliersPriceAtLeastTheSpan,
+            TEXT("Cannot link GroundNav Volume [{}] from link Entity [{}] - its cost multipliers "
+                 "[{}] forward and [{}] backward must both be at least 1.0, or an edge would cost less "
+                 "than its own length and the search heuristic would stop being admissible"),
+            InVolumeEntity, LinkEntity,
+            Requested.Get_CostMultiplierForward(), Requested.Get_CostMultiplierBackward())
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // A link that admits nothing is a link nothing may use, which is a disabled link written in a
+        // way no reader can see. Narrowing it for a ladder or a crawl is what the number is for.
+        const auto ClearanceAdmitsSomething = Requested.Get_ClearanceUu() > 0.0f;
+
+        CK_ENSURE_IF_NOT(ClearanceAdmitsSomething,
+            TEXT("Cannot link GroundNav Volume [{}] from link Entity [{}] - its clearance [{}]uu admits "
+                 "no agent at all, which is a disabled link nothing downstream can read as one"),
+            InVolumeEntity, LinkEntity, Requested.Get_ClearanceUu())
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // UNSET is admitted, unlike a markup's: a markup exists to say what ground MEANS and one with
+        // no tag decides nothing, where a link's traversal stands on its own and a tag on it is extra.
+        // A tag that IS carried goes through the same registry, because this module never decides what
+        // a tag means.
+        const auto AreaTagIsUsable = NOT Requested.Get_AreaTag().IsValid() ||
+                                     nav_surface::TryGet_AreaPolicy(Requested.Get_AreaTag()).IsSet();
+
+        CK_ENSURE_IF_NOT(AreaTagIsUsable,
+            TEXT("Cannot link GroundNav Volume [{}] from link Entity [{}] with area tag [{}] - nothing "
+                 "published what that tag MEANS, and a record carrying it would resolve into a link "
+                 "nothing knows how to apply"),
+            InVolumeEntity, LinkEntity, Requested.Get_AreaTag())
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto ExistingIndex = Get_LinkEntryIndex(InLinks, LinkEntity);
+        const auto EntryExists = InLinks._Entries.IsValidIndex(ExistingIndex);
+
+        // An update keeps the id the entity was first admitted under: the id is what every later
+        // request and every consumer keys on, and renumbering it on a move would retire connectivity
+        // nothing asked to retire.
+        const auto RecordId = EntryExists
+            ? InLinks._Entries[ExistingIndex].Get_Record().Get_Id()
+            : InLinks._NextId;
+
+        // Rebuilt rather than copied because the id and the two points are the record's identity and
+        // carry no setters - which is what stops a caller renumbering one after the fact.
+        auto Record = FCk_GroundNav_LinkRecord{RecordId, Start, End};
+
+        Record.Set_Direction(Requested.Get_Direction())
+              .Set_CostMultiplierForward(Requested.Get_CostMultiplierForward())
+              .Set_CostMultiplierBackward(Requested.Get_CostMultiplierBackward())
+              .Set_ClearanceUu(Requested.Get_ClearanceUu())
+              .Set_AreaTag(Requested.Get_AreaTag())
+              .Set_UserTypeTag(Requested.Get_UserTypeTag())
+              .Set_Enable(Requested.Get_Enable())
+              .Set_ProjectionMode(Requested.Get_ProjectionMode())
+              .Set_ProjectionHorizontalExtentUu(Requested.Get_ProjectionHorizontalExtentUu())
+              .Set_ProjectionVerticalExtentUu(Requested.Get_ProjectionVerticalExtentUu())
+              .Set_RequestedAtEpoch(InBuiltField.Get_Epoch()._Value);
+
+        // Re-stamped on every update, including one that only disabled the link: liveness asks whether
+        // the field has been published PAST the change, and a stamp left at the first admission would
+        // read a link as live on a publish that knew nothing of what it now says.
+        if (EntryExists)
+        {
+            InLinks._Entries[ExistingIndex]._Record = Record;
+        }
+        else
+        {
+            auto& NewEntry = InLinks._Entries.AddDefaulted_GetRef();
+
+            NewEntry._LinkEntity = LinkEntity;
+            NewEntry._Record = Record;
+
+            ++InLinks._NextId;
+        }
+
+        auto& LinkRef = LinkEntity.AddOrGet<FFragment_GroundNav_LinkRef>();
+
+        LinkRef._VolumeEntity = InVolumeEntity.ConvertToHandle();
+        LinkRef._RecordId = RecordId;
+
+        // A link whose ends reach no baked ground is still admitted: the volume owns what was AUTHORED,
+        // and where its two points stand is the composition's separate answer.
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_LinksDirty>();
+
+        InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleLinkRequests::
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_ReleaseLink& InRequest)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        auto LinkEntity = InRequest.Get_LinkEntity();
+
+        // Not guarded on the entity being alive, for the same reason the markup release is not: the
+        // ordinary release IS that entity's own teardown, and the entry is keyed on the entity's
+        // IDENTITY - which FCk_Handle equality answers from the entity id and registry alone, never
+        // from validity - so a dead handle still finds the entry stored beside its twin.
+        const auto ExistingIndex = Get_LinkEntryIndex(InLinks, LinkEntity);
+
+        // Releasing a record the volume does not hold leaves the caller's intent holding afterwards,
+        // which is what Succeeded means.
+        if (NOT InLinks._Entries.IsValidIndex(ExistingIndex))
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+            return;
+        }
+
+        // The id goes with the entry and is never handed out again, so a field resolved against an
+        // older link set can be diffed against a newer one without an id meaning two different links.
+        InLinks._Entries.RemoveAt(ExistingIndex);
+
+        // Only where there is still an entity to drop it from: a dead one carries no fragments, and the
+        // record just removed above was the only state that outlived it.
+        if (ck::IsValid(LinkEntity))
+        { LinkEntity.Try_Remove<FFragment_GroundNav_LinkRef>(); }
+
+        // The connectivity a released link contributed is retired by the same derive that granted it:
+        // every record is re-resolved from the whole list, so a list one shorter is the whole change.
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_LinksDirty>();
+
+        InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_GroundNavVolume_StartBuild::
         ForEachEntity(
             TimeType InDeltaT,
@@ -603,9 +868,14 @@ namespace ck
         // The markup goes in HERE and not at the request, so every build — a plain Request_Build as
         // much as one a markup change asked for — bakes against what the volume currently holds. A
         // rebuild that took no records would silently unpaint the world.
+        //
+        // The links ride in the same way and for the same reason: a rebuild that took no links would
+        // silently un-link the world, and it is what makes a link authored before the first bake - or
+        // while one is running - resolved by the publish that follows rather than lost with it.
         const auto BeginResult = groundnav::Request_BeginBuild(
             Get_FieldParams(InParams,
-                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity))),
+                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity)),
+                Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity))),
             InBuiltField.Get_Epoch().Get_Next(),
             InBuildState._Build);
 
@@ -1029,6 +1299,79 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_GroundNavVolume_LinkDerive::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Links& InLinks,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField) const
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        // A build or a repair that is RUNNING, or a repair that is armed, publishes a field that does not
+        // know the entries that landed after it snapshotted them - a build snapshots at start and a
+        // repair inherits its links from the source field's params - so the tag is KEPT and this runs
+        // again in the tick that publish lands, after it, against the field it produced.
+        const auto APublishInFlightWouldMissTheEntries =
+            InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>() ||
+            InVolumeEntity.Has<FTag_GroundNavVolume_NeedsRepair>() ||
+            InVolumeEntity.Has<FTag_GroundNavVolume_RepairInProgress>();
+
+        if (APublishInFlightWouldMissTheEntries)
+        { return; }
+
+        InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        const auto Published = InBuiltField.Get_Field();
+
+        // Nothing published is nothing to derive from: the records live on the volume, so the build
+        // that publishes first resolves them through its own FCk_GroundNav_FieldParams::_Links. That is
+        // the same wait the cost derive makes, and the reason a link authored before the first bake is
+        // never lost.
+        if (NOT Published.IsValid())
+        { return; }
+
+        // A build that is armed but not started snapshots the volume's entries when it starts, so it
+        // resolves these itself between the seam portals and the reachability labels; deriving over the
+        // field it is about to replace would spend the work twice and publish the older answer second.
+        if (InVolumeEntity.Has<FTag_GroundNavVolume_NeedsBuild>())
+        { return; }
+
+        const auto Records = Get_LinkRecordsOf(InLinks.Get_Entries());
+
+        const auto Derived = groundnav::Get_FieldWithLinks(
+            *Published, Records, InBuiltField.Get_Epoch().Get_Next());
+
+        const auto DeriveProducedAField = Derived.Value.Get_IsCompleted() && Derived.Key.IsValid();
+
+        CK_ENSURE_IF_NOT(DeriveProducedAField,
+            TEXT("GroundNav Volume [{}] could not derive a link-only field from what it has published: [{}]"),
+            InVolumeEntity, Derived.Value.Get_Status())
+        { return; }
+
+        // A re-resolution that lands on what is already published moves no epoch, so there is nothing
+        // for a reader to notice and nothing worth swapping a pointer for.
+        if (NOT Derived.Key->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
+        { return; }
+
+        // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
+        InBuiltField._Epoch = Derived.Key->_Epoch;
+        InBuiltField._Field = Derived.Key;
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+        groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+
+        // Past the no-change early-out above, so this notify is only ever raised for a publish that
+        // moved something. An invalid box is reported as-is for the same reason the build reports one.
+        nav_surface::Request_NotifySurfaceRebuilt(World,
+            groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_GroundNavVolume_CancelPendingRequests::
         ForEachEntity(
             TimeType InDeltaT,
@@ -1100,6 +1443,19 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_MarkupRequests& InRequests)
+        -> void
+    {
+        request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_CancelPendingLinkRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_LinkRequests& InRequests)
         -> void
     {
         request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());

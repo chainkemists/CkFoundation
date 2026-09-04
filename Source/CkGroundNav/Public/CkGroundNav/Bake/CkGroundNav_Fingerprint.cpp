@@ -159,7 +159,8 @@ namespace ck::groundnav
             const FBox&                                 InRegion,
             const FCk_GroundNav_BakeConfig&             InConfig,
             const FCk_GroundNav_AgentProfile&           InProfile,
-            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups)
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+            TConstArrayView<FCk_GroundNav_LinkRecord>   InLinks)
         -> FCk_GroundNav_ContentFingerprint
     {
         using namespace fingerprint_private;
@@ -230,6 +231,38 @@ namespace ck::groundnav
             Hash = DoHash_String(Markup.Get_AreaTag().ToString(), Hash);
             Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Markup.Get_Kind())), Hash);
             Hash = DoHash_Scalar(static_cast<double>(Markup.Get_CostMultiplier()), Hash);
+        }
+
+        // ---- 6. Links, in the order the list carries them ----------------------------------------------
+        auto EnabledLinkCount = 0;
+
+        for (const auto& Link : InLinks)
+        {
+            if (Link.Get_Enable() == ECk_EnableDisable::Disable)
+            { continue; }
+
+            ++EnabledLinkCount;
+        }
+
+        Hash = DoHash_Scalar(static_cast<double>(EnabledLinkCount), Hash);
+
+        for (const auto& Link : InLinks)
+        {
+            if (Link.Get_Enable() == ECk_EnableDisable::Disable)
+            { continue; }
+
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_Id()), Hash);
+            Hash = DoHash_Vector(Link.Get_Start(), Hash);
+            Hash = DoHash_Vector(Link.Get_End(), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_Direction())), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierForward()), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierBackward()), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ClearanceUu()), Hash);
+            Hash = DoHash_String(Link.Get_AreaTag().ToString(), Hash);
+            Hash = DoHash_String(Link.Get_UserTypeTag().ToString(), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_ProjectionMode())), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionHorizontalExtentUu()), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionVerticalExtentUu()), Hash);
         }
 
         return FCk_GroundNav_ContentFingerprint{Hash};

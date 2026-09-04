@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
@@ -193,6 +194,58 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One navigation link a published field resolved, reduced to what a viewer draws and what a reader
+     * needs to judge it, already in world space.
+     *
+     * The link ENTITY is deliberately absent and the liveness answer is a captured value, exactly as
+     * for a markup: a view drawn a frame later reports what was true when it was captured instead of
+     * touching a registry that may have moved on. No handle, no world, no field pointer.
+     *
+     * The endpoints are the AUTHORED points rather than what they resolved to, so a link whose end
+     * found no ground still draws where its author put it - which is the whole of what an unresolved
+     * end is a report about.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugLink
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        // The tags' names rather than the FGameplayTags, for the same reason the markup value carries a
+        // name: a snapshot holds values, and a name is what the viewer prints.
+        FName _AreaTagName;
+        FName _UserTypeTagName;
+
+        int32 _Id = INDEX_NONE;
+
+        // Flat plate indices, INDEX_NONE for an end that resolved to nothing. Valid only against the
+        // field they were derived on, which is why they are read beside the status and never alone.
+        int32 _StartFlatPlate = INDEX_NONE;
+        int32 _EndFlatPlate = INDEX_NONE;
+
+        float _CostMultiplierForward = 1.0f;
+        float _CostMultiplierBackward = 1.0f;
+
+        float _ClearanceUu = FCk_GroundNav_LinkRecord::kAdmitsAnyAgentClearanceUu;
+
+        ECk_GroundNav_LinkDirection _Direction = ECk_GroundNav_LinkDirection::Bidirectional;
+
+        // Per end, because the two ends fail independently and a link with one end over unbaked ground
+        // is a different report from one with both ends over a hole.
+        ECk_NavSurface_QueryStatus _StartStatus = ECk_NavSurface_QueryStatus::NoSurface;
+        ECk_NavSurface_QueryStatus _EndStatus = ECk_NavSurface_QueryStatus::NoSurface;
+
+        bool _Enabled = true;
+
+        // Whether the volume reported the link as reaching the published ground. Drawn apart from
+        // enabled for the same reason a markup's liveness is: a record the bake has not caught up with
+        // is not a record the author switched off.
+        bool _Live = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * One agent's cached path corridor and the two epochs an invalidation decision is made on,
      * already in world space.
      *
@@ -295,6 +348,11 @@ namespace ck::groundnav
         // The area markup the world's volumes hold, when a caller collected it. Empty otherwise, and
         // a viewer draws what is there rather than being told whether collection was asked for.
         TArray<FCk_GroundNav_DebugMarkup> _Markups;
+
+        // The links the world's published fields resolved, when a caller collected them. Empty
+        // otherwise, and a viewer draws what is there rather than being told whether collection was
+        // asked for.
+        TArray<FCk_GroundNav_DebugLink> _Links;
 
         // The path corridors the world's agents hold, when a caller collected them. Empty otherwise.
         TArray<FCk_GroundNav_DebugCorridor> _Corridors;

@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_MeshClosure.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -394,15 +395,11 @@ namespace ck::groundnav
     }
 
     auto
-        DoLabel_Reachability(
+        DoDerive_PlateOffsets(
             FCk_GroundNav_Field& InOutField)
         -> void
     {
-        using namespace reachability_private;
-
         InOutField._TilePlateOffsets.Reset();
-        InOutField._ReachabilityLabels.Reset();
-
         InOutField._TilePlateOffsets.Reserve(InOutField._Tiles.Num() + 1);
 
         auto Running = 0;
@@ -414,6 +411,21 @@ namespace ck::groundnav
         }
 
         InOutField._TilePlateOffsets.Emplace(Running);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoLabel_Reachability(
+            FCk_GroundNav_Field& InOutField)
+        -> void
+    {
+        using namespace reachability_private;
+
+        DoDerive_PlateOffsets(InOutField);
+        InOutField._ReachabilityLabels.Reset();
+
+        const auto Running = InOutField._TilePlateOffsets.Last();
 
         auto Parents = TArray<int32>{};
         Parents.Reserve(Running);
@@ -435,6 +447,20 @@ namespace ck::groundnav
             const auto FlatB = InOutField._TilePlateOffsets[Portal._TileIndexB] + Portal._PlateB;
 
             Do_Union(Parents, FlatA, FlatB);
+        }
+
+        for (const auto& Link : InOutField._ResolvedLinks)
+        {
+            if (NOT Link.Get_IsTraversable())
+            { continue; }
+
+            if (NOT Parents.IsValidIndex(Link._StartFlatPlate) || NOT Parents.IsValidIndex(Link._EndFlatPlate))
+            { continue; }
+
+            // A one-directional link unions exactly as a bidirectional one does: a label only ever
+            // promises that a DIFFERENT label is provably unreachable, and a one-way route leaves that
+            // proof unavailable in both directions.
+            Do_Union(Parents, Link._StartFlatPlate, Link._EndFlatPlate);
         }
 
         // Numbered in scan order AFTER the merging, so the labels say what is connected to what and
@@ -874,6 +900,7 @@ namespace ck::groundnav
         }
 
         DoDerive_SeamPortals(OutField);
+        DoResolve_Links(OutField);
         DoLabel_Reachability(OutField);
 
         DoReport_OpenBodies(OutField._OpenBodies);

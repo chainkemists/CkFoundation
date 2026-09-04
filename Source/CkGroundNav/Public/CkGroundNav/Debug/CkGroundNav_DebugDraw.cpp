@@ -234,6 +234,99 @@ namespace ck::groundnav
             }
         }
 
+        // An end that found NO ground outranks an end merely waiting on a bake, and both outrank a
+        // disable: an author can switch a disabled link back on and cannot switch on ground that is
+        // not there, so the louder colour is the one they can do least about.
+        auto Get_LinkColor(const FCk_GroundNav_DebugLink& InLink) -> FColor
+        {
+            const auto Get_IsMissing = [](ECk_NavSurface_QueryStatus InStatus) -> bool
+            {
+                return InStatus == ECk_NavSurface_QueryStatus::NoSurface ||
+                       InStatus == ECk_NavSurface_QueryStatus::Blocked;
+            };
+
+            if (Get_IsMissing(InLink._StartStatus) || Get_IsMissing(InLink._EndStatus))
+            { return FColor{220, 60, 60}; }
+
+            if (InLink._StartStatus == ECk_NavSurface_QueryStatus::Unbuilt ||
+                InLink._EndStatus == ECk_NavSurface_QueryStatus::Unbuilt)
+            { return FColor{255, 150, 40}; }
+
+            return InLink._Enabled ? FColor{80, 220, 120} : FColor{130, 130, 130};
+        }
+
+        auto Do_DrawLinks(
+            UWorld*                                  InWorld,
+            TConstArrayView<FCk_GroundNav_DebugLink> InLinks,
+            float                                    InLifetimeSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto DrawShadow = true;
+            constexpr auto SpanThickness = 4.0f;
+            constexpr auto TickThickness = 3.0f;
+            constexpr auto ArrowSizeUu = 12.0f;
+            constexpr auto ArrowStubUu = 40.0;
+            constexpr auto TickUu = 30.0;
+
+            // Clear of the surface the ends stand on, so a link lying along a floor reads as a line
+            // rather than z-fighting the ground it joins.
+            const auto Lift = FVector{0.0, 0.0, 4.0};
+
+            for (const auto& Link : InLinks)
+            {
+                const auto Color = Get_LinkColor(Link);
+
+                const auto Start = Link._Start + Lift;
+                const auto End = Link._End + Lift;
+
+                DrawDebugLine(InWorld, Start, End, Color, Persistent, InLifetimeSeconds,
+                    DepthPriority, SpanThickness);
+
+                const auto SpanUu = (End - Start).Length();
+
+                if (SpanUu > 0.0)
+                {
+                    const auto Direction = (End - Start) / SpanUu;
+                    const auto StubUu = FMath::Min(ArrowStubUu, SpanUu);
+
+                    // One head per direction the link may be walked, both of them for a bidirectional
+                    // one: which way a link runs is the half of it no geometry can be read to infer.
+                    if (Link._Direction != ECk_GroundNav_LinkDirection::Backward)
+                    {
+                        DrawDebugDirectionalArrow(InWorld, End - (Direction * StubUu), End,
+                            ArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
+                            SpanThickness);
+                    }
+
+                    if (Link._Direction != ECk_GroundNav_LinkDirection::Forward)
+                    {
+                        DrawDebugDirectionalArrow(InWorld, Start + (Direction * StubUu), Start,
+                            ArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
+                            SpanThickness);
+                    }
+                }
+
+                // A tick only where an end actually landed on a surface. An end with nothing under it
+                // has no surface point to stand one on, and drawing it anyway would claim ground.
+                if (Link._StartStatus == ECk_NavSurface_QueryStatus::Success)
+                {
+                    DrawDebugLine(InWorld, Start, Start + FVector{0.0, 0.0, TickUu}, Color,
+                        Persistent, InLifetimeSeconds, DepthPriority, TickThickness);
+                }
+
+                if (Link._EndStatus == ECk_NavSurface_QueryStatus::Success)
+                {
+                    DrawDebugLine(InWorld, End, End + FVector{0.0, 0.0, TickUu}, Color,
+                        Persistent, InLifetimeSeconds, DepthPriority, TickThickness);
+                }
+
+                DrawDebugString(InWorld, (Start + End) * 0.5,
+                    FString::Printf(TEXT("link #%d"), Link._Id), nullptr, Color, InLifetimeSeconds,
+                    DrawShadow);
+            }
+        }
+
         // One publish is news only until the next one arrives, where a corridor stands until its
         // agent replans. Drawing the two at one lifetime would leave a stale orange box per
         // republish over a plate view that persists for a minute.
@@ -616,6 +709,12 @@ namespace ck::groundnav
 
         using namespace debugdraw_private;
 
+        // Every mode, for a related reason to the open bodies above: an authored link is the one
+        // crossing in the field that no geometry accounts for, and a developer who never switches
+        // mode must still see one. Collection is what the cvar gates, so a snapshot nobody collected
+        // links into draws none.
+        Do_DrawLinks(InWorld, InSnapshot._Links, LifetimeSeconds);
+
         if (InMode == EDebugDrawMode::Plates)
         {
             for (const auto& Plate : InSnapshot._Plates)
@@ -738,6 +837,19 @@ namespace ck::groundnav
 
                 DrawDebugLine(InWorld, Midpoint + Lift, Midpoint + Lift + FVector{0.0, 0.0, 60.0},
                     Color, Persistent, LifetimeSeconds, DepthPriority, 3.0f);
+            }
+
+            return;
+        }
+
+        if (InMode == EDebugDrawMode::Links)
+        {
+            // The plates, dimmed, so a link is read against the two pieces of ground it joins rather
+            // than floating in space. The links themselves are drawn above, in every mode.
+            for (const auto& Plate : InSnapshot._Plates)
+            {
+                DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0},
+                    FColor{55, 60, 65}, Persistent, LifetimeSeconds, DepthPriority, 1.0f);
             }
 
             return;
@@ -872,6 +984,94 @@ namespace ck::groundnav
 
         debugdraw_private::Do_DrawMarkups(
             InWorld, InMarkups, static_cast<float>(InLifetime.Get_Seconds()));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugLinksFromWorld(
+            UWorld* InWorld)
+        -> TArray<FCk_GroundNav_DebugLink>
+    {
+        auto Links = TArray<FCk_GroundNav_DebugLink>{};
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return Links; }
+
+        auto VolumeEntities = world_fields::Get_VolumeEntities(InWorld);
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            const auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            // The RESOLVED entries are what a viewer draws, and only a published field carries any: a
+            // record a volume holds before its first bake has no resolution to report, and the
+            // console report is where that state is read.
+            const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
+
+            if (ck::Is_NOT_Valid(Field))
+            { continue; }
+
+            const auto Entries = UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(Volume);
+
+            for (const auto& Resolved : Field->_ResolvedLinks)
+            {
+                auto Drawn = FCk_GroundNav_DebugLink{};
+
+                Drawn._Start = Resolved._Start;
+                Drawn._End = Resolved._End;
+                Drawn._AreaTagName = Resolved._AreaTag.GetTagName();
+                Drawn._UserTypeTagName = Resolved._UserTypeTag.GetTagName();
+                Drawn._Id = Resolved._Id;
+                Drawn._StartFlatPlate = Resolved._StartFlatPlate;
+                Drawn._EndFlatPlate = Resolved._EndFlatPlate;
+                Drawn._CostMultiplierForward = Resolved._CostMultiplierForward;
+                Drawn._CostMultiplierBackward = Resolved._CostMultiplierBackward;
+                Drawn._ClearanceUu = Resolved._ClearanceUu;
+                Drawn._Direction = Resolved._Direction;
+                Drawn._StartStatus = Resolved._StartStatus;
+                Drawn._EndStatus = Resolved._EndStatus;
+                Drawn._Enabled = Resolved._Enable == ECk_EnableDisable::Enable;
+
+                // Liveness is asked of the link ENTITY, the identity every request keys on; a resolved
+                // entry carries the record's id and nothing that could name one. An entry whose record
+                // has been released since the publish has no entity left to ask, and reads NOT live.
+                const auto* Entry = Entries.FindByPredicate(
+                    [&Resolved](const ck::FCk_GroundNav_LinkEntry& InEntry) -> bool
+                    { return InEntry.Get_Record().Get_Id() == Resolved._Id; });
+
+                Drawn._Live = Entry != nullptr &&
+                    UCk_Utils_GroundNavVolume_UE::Get_IsLinkLive(Entry->Get_LinkEntity());
+
+                Links.Emplace(MoveTemp(Drawn));
+            }
+        }
+
+        return Links;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDraw_DebugLinks(
+            UWorld*                                  InWorld,
+            TConstArrayView<FCk_GroundNav_DebugLink> InLinks,
+            FCk_Time                                 InLifetime)
+        -> void
+    {
+        const auto WorldIsValid = ck::IsValid(InWorld);
+
+        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav links without a World"))
+        { return; }
+
+        debugdraw_private::Do_DrawLinks(
+            InWorld, InLinks, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1078,6 +1278,15 @@ namespace ck::groundnav
             { ++TileRimBoundaryCount; }
         }
 
+        auto UnresolvedLinkCount = 0;
+
+        for (const auto& Link : InSnapshot._Links)
+        {
+            if (Link._StartStatus != ECk_NavSurface_QueryStatus::Success ||
+                Link._EndStatus != ECk_NavSurface_QueryStatus::Success)
+            { ++UnresolvedLinkCount; }
+        }
+
         const auto IsTiledField = InSnapshot.Get_TileCount() > 0;
 
         // A field's tiles carry these forward from their own bake, so the tiled and single-region
@@ -1133,6 +1342,7 @@ namespace ck::groundnav
             TEXT("  portals  : %d crossings (%d change floor, tightest lets %.1f uu through)\n")
             TEXT("  boundary : %d runs (%d on tile rims)%s\n")
             TEXT("  tiles    : %d of %d built, %d seams between them\n")
+            TEXT("  links    : %d (unresolved %d)\n")
             TEXT("  clearance: %.1f uu at the most open cell\n")
             TEXT("  memory   : %.1f KB held by %s"),
             Get_StatusName(InSnapshot._Status),
@@ -1160,6 +1370,8 @@ namespace ck::groundnav
             InSnapshot.Get_BuiltTileCount(),
             InSnapshot.Get_TileCount(),
             InSnapshot.Get_SeamCount(),
+            InSnapshot._Links.Num(),
+            UnresolvedLinkCount,
             InSnapshot._MaxClearanceUu,
             static_cast<double>(InSnapshot._AllocatedBytes) / 1024.0,
             IsTiledField ? TEXT("the published field") : TEXT("the bake products"));
@@ -1290,7 +1502,18 @@ namespace ck_groundnav_debugconsole
         TEXT("ck.GroundNav.Debug.Mode"), 0,
         TEXT("0 = merged plates, 1 = clearance ramp, 2 = layers, 3 = cells the filters rejected, ")
         TEXT("4 = the crossings between plates, 5 = the tile lattice and the seams between tiles, ")
-        TEXT("6 = the plate edges nothing crosses, with the runs on a tile rim in orange."));
+        TEXT("6 = the plate edges nothing crosses, with the runs on a tile rim in orange, ")
+        TEXT("7 = the links the published fields resolved, over dimmed plates."));
+
+    // Presentation, like the mode above, rather than one of the gates in DebugGates: it changes what
+    // is DRAWN and never what GroundNav answers.
+    static TAutoConsoleVariable<int32> CVar_DrawLinks(
+        TEXT("ck.GroundNav.Debug.DrawLinks"), 1,
+        TEXT("Draw the navigation links the world's published fields resolved, in EVERY draw mode and ")
+        TEXT("in ck.GroundNav.PathAt / FloodAt: green traversable, grey a record the author disabled, ")
+        TEXT("orange an end over ground nobody has baked yet, red an end that found no ground at all. ")
+        TEXT("An arrowhead per direction the link may be walked, a tick at each resolved end, and the ")
+        TEXT("id at the midpoint."));
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
         TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
@@ -1434,6 +1657,7 @@ namespace ck_groundnav_debugconsole
             case 4:  return ck::groundnav::EDebugDrawMode::Portals;
             case 5:  return ck::groundnav::EDebugDrawMode::Tiles;
             case 6:  return ck::groundnav::EDebugDrawMode::Boundary;
+            case 7:  return ck::groundnav::EDebugDrawMode::Links;
             default: return ck::groundnav::EDebugDrawMode::Plates;
         }
     }
@@ -1502,6 +1726,16 @@ namespace ck_groundnav_debugconsole
         InOutSnapshot._Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
     }
 
+    // Collected here for the same reason the markup is: the bake produces a value that outlives its
+    // world, and the links a world's fields resolved are only readable while those fields are.
+    auto DoStamp_Links(UWorld* InWorld, ck::groundnav::FCk_GroundNav_DebugSnapshot& InOutSnapshot) -> void
+    {
+        if (CVar_DrawLinks.GetValueOnGameThread() == 0)
+        { return; }
+
+        InOutSnapshot._Links = ck::groundnav::Make_DebugLinksFromWorld(InWorld);
+    }
+
     // Collected here for the same reason the markup is: the bake produces a value that outlives
     // its world, and a corridor is only readable while the registry holding it is still there.
     auto DoStamp_Invalidation(UWorld* InWorld, ck::groundnav::FCk_GroundNav_DebugSnapshot& InOutSnapshot) -> void
@@ -1541,11 +1775,23 @@ namespace ck_groundnav_debugconsole
             InWorld, Markups, FCk_Time{static_cast<double>(InLifetimeSeconds)});
     }
 
+    auto DoDraw_LinksIfEnabled(UWorld* InWorld, float InLifetimeSeconds) -> void
+    {
+        if (CVar_DrawLinks.GetValueOnGameThread() == 0)
+        { return; }
+
+        const auto Links = ck::groundnav::Make_DebugLinksFromWorld(InWorld);
+
+        ck::groundnav::DoDraw_DebugLinks(
+            InWorld, Links, FCk_Time{static_cast<double>(InLifetimeSeconds)});
+    }
+
     auto DoBakeAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
     {
         auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre));
 
         DoStamp_Markups(InWorld, Snapshot);
+        DoStamp_Links(InWorld, Snapshot);
         DoStamp_Invalidation(InWorld, Snapshot);
         DoDrawAndReport(InWorld, Snapshot);
     }
@@ -1560,6 +1806,7 @@ namespace ck_groundnav_debugconsole
         Set_DebugFieldFor(InWorld, BakedField);
 
         DoStamp_Markups(InWorld, Snapshot);
+        DoStamp_Links(InWorld, Snapshot);
         DoStamp_Invalidation(InWorld, Snapshot);
         DoDrawAndReport(InWorld, Snapshot);
     }
@@ -1807,6 +2054,121 @@ namespace ck_groundnav_debugconsole
         {
             Report += TEXT("  no ground-nav volume has published a field in this world, so there is ")
                       TEXT("no markup to report and no plate to look under\n");
+        }
+
+        DoLog_Report(Report);
+    }
+
+    auto Get_LinkEndReport(
+        const TCHAR*                                   InEndName,
+        ECk_NavSurface_QueryStatus                     InStatus,
+        const ck::groundnav::FCk_GroundNav_SurfaceRef& InSurface,
+        int32                                          InFlatPlate) -> FString
+    {
+        return FString::Printf(
+            TEXT("      %s : %s | tile %d layer %d plate %d | flat plate %d\n"),
+            InEndName,
+            *ck::Format_UE(TEXT("{}"), InStatus),
+            InSurface._TileIndex,
+            InSurface._LayerIndex,
+            InSurface._PlateIndex,
+            InFlatPlate);
+    }
+
+    auto DoLinksAndReport(UWorld* InWorld, const FVector& InPoint) -> void
+    {
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        const auto Links = ck::groundnav::Make_DebugLinksFromWorld(InWorld);
+
+        ck::groundnav::DoDraw_DebugLinks(
+            InWorld, Links, FCk_Time{static_cast<double>(LifetimeSeconds)});
+
+        auto VolumeEntities = ck::groundnav::world_fields::Get_VolumeEntities(InWorld);
+
+        auto Report = FString::Printf(TEXT("[GroundNav] links at (%.0f, %.0f, %.0f)\n"),
+            InPoint.X, InPoint.Y, InPoint.Z);
+
+        auto VolumeCount = 0;
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            const auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            ++VolumeCount;
+
+            const auto Entries = UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(Volume);
+            const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
+
+            // Every volume is listed, with where the point falls on it, for the same reason the markup
+            // report lists them all: a link authored before anything baked lives on a volume that
+            // covers nothing yet, and that is exactly the case worth looking at.
+            Report += FString::Printf(
+                TEXT("  volume %s : %d link(s), build epoch %lld, %s at the point\n"),
+                *ck::Format_UE(TEXT("{}"), Volume),
+                Entries.Num(),
+                static_cast<long long>(UCk_Utils_GroundNavVolume_UE::Get_BuildEpoch(Volume)),
+                *ck::Format_UE(TEXT("{}"),
+                    UCk_Utils_GroundNavVolume_UE::Get_RegionStatusAt(Volume, InPoint)));
+
+            for (const auto& Entry : Entries)
+            {
+                const auto& Record = Entry.Get_Record();
+
+                Report += FString::Printf(
+                    TEXT("    #%d %s | %s -> %s | x%.2f forward, x%.2f backward | clearance %.1f uu\n")
+                    TEXT("      [%s] [%s] | %s | live=%s | requested at epoch %lld\n"),
+                    Record.Get_Id(),
+                    *ck::Format_UE(TEXT("{}"), Record.Get_Direction()),
+                    *Record.Get_Start().ToString(),
+                    *Record.Get_End().ToString(),
+                    Record.Get_CostMultiplierForward(),
+                    Record.Get_CostMultiplierBackward(),
+                    Record.Get_ClearanceUu(),
+                    *Record.Get_AreaTag().ToString(),
+                    *Record.Get_UserTypeTag().ToString(),
+                    Record.Get_Enable() == ECk_EnableDisable::Enable ? TEXT("enabled") : TEXT("DISABLED"),
+                    UCk_Utils_GroundNavVolume_UE::Get_IsLinkLive(Entry.Get_LinkEntity())
+                        ? TEXT("yes") : TEXT("no"),
+                    static_cast<long long>(Record.Get_RequestedAtEpoch()));
+
+                const ck::groundnav::FCk_GroundNav_ResolvedLink* Resolved = nullptr;
+
+                if (ck::IsValid(Field))
+                {
+                    Resolved = Field->_ResolvedLinks.FindByPredicate(
+                        [&Record](const ck::groundnav::FCk_GroundNav_ResolvedLink& InResolved) -> bool
+                        { return InResolved._Id == Record.Get_Id(); });
+                }
+
+                if (Resolved == nullptr)
+                {
+                    Report += TEXT("      ends : nothing published has resolved this record yet\n");
+                    continue;
+                }
+
+                Report += Get_LinkEndReport(TEXT("start"), Resolved->_StartStatus,
+                    Resolved->_StartSurface, Resolved->_StartFlatPlate);
+                Report += Get_LinkEndReport(TEXT("end  "), Resolved->_EndStatus,
+                    Resolved->_EndSurface, Resolved->_EndFlatPlate);
+            }
+
+            Report += ck::IsValid(Field)
+                ? FString::Printf(TEXT("    %d of %d resolved link(s) have an end that found no ground\n"),
+                    Field->Get_UnresolvedLinkCount(), Field->Get_ResolvedLinkCount())
+                : FString{TEXT("    nothing published, so no record has been resolved\n")};
+        }
+
+        if (VolumeCount == 0)
+        {
+            Report += TEXT("  no ground-nav volume has published a field in this world, so there is ")
+                      TEXT("no link to report\n");
         }
 
         DoLog_Report(Report);
@@ -2498,6 +2860,7 @@ namespace ck_groundnav_debugconsole
             Flood.Get_IsSuccess() ? FColor::White : FColor::Red, LifetimeSeconds, DrawShadow);
 
         DoDraw_MarkupsIfEnabled(InWorld, LifetimeSeconds);
+        DoDraw_LinksIfEnabled(InWorld, LifetimeSeconds);
 
         ck::groundnav::Display(TEXT("[GroundNav] at ({}, {}, {}) within {} uu {}"),
             InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
@@ -2735,6 +3098,7 @@ namespace ck_groundnav_debugconsole
         // A route that ignores a painted area and a route planned before the paint landed are the
         // same picture without the outline that says where the area is.
         DoDraw_MarkupsIfEnabled(InWorld, LifetimeSeconds);
+        DoDraw_LinksIfEnabled(InWorld, LifetimeSeconds);
 
         ck::groundnav::Display(TEXT("[GroundNav] from ({}, {}, {}) to ({}, {}, {}) {}"),
             InStart.X, InStart.Y, InStart.Z, InGoal.X, InGoal.Y, InGoal.Z, Summary);
@@ -3064,6 +3428,41 @@ namespace ck_groundnav_debugconsole
                 FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
 
             DoMarkupAndReport(InWorld, Point);
+        }));
+
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_LinksAt(
+        TEXT("ck.GroundNav.LinksAt"),
+        TEXT("Report the navigation links this world's ground-nav volumes hold and what each end ")
+        TEXT("resolved to: ck.GroundNav.LinksAt <X> <Y> <Z>. Every volume is listed with where the ")
+        TEXT("point falls on it, because a link authored before anything baked lives on a volume that ")
+        TEXT("covers nothing yet. Each record prints its id, endpoints, direction, both cost ")
+        TEXT("multipliers, clearance, tags, enabled state, the epoch it was submitted against and ")
+        TEXT("whether it is live - then, per end, the status the last resolution gave it with the ")
+        TEXT("tile, layer and plate it landed on, and last the count of links with an end that found ")
+        TEXT("no ground. An end over ground nobody has baked reads Unbuilt and is HELD: the next ")
+        TEXT("publish over that tile resolves it, and the record is never lost. Every resolved link ")
+        TEXT("also draws in the world: green traversable, grey disabled, orange an end unbuilt, red ")
+        TEXT("an end with no ground. Reads the volumes' PUBLISHED fields, so ck.GroundNav.BakeFieldAt ")
+        TEXT("is not needed."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.LinksAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 3)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.LinksAt needs three numbers: ck.GroundNav.LinksAt <X> <Y> <Z>"));
+                return;
+            }
+
+            const auto Point = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            DoLinksAndReport(InWorld, Point);
         }));
 
     static FAutoConsoleCommandWithWorld ConsoleCommand_Invalidation(
@@ -3466,7 +3865,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
-                TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {}")
+                TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {} DrawLinks {}")
                 TEXT("\n            DrawInvalidation {} RepairHighlightSeconds {}")
                 TEXT("\n  gates   : MarkupLiveGate bypassed {} RepathOnRebuild bypassed {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
@@ -3493,6 +3892,7 @@ namespace ck_groundnav_debugconsole
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
                 CVar_MaxCells.GetValueOnGameThread(),
                 ck::groundnav::debug::Get_IsMarkupDrawEnabled(),
+                CVar_DrawLinks.GetValueOnGameThread(),
                 CVar_DrawInvalidation.GetValueOnGameThread(),
                 ck::groundnav::debugdraw_private::CVar_RepairHighlightSeconds.GetValueOnGameThread(),
                 ck::groundnav::debug::Get_IsMarkupLiveGateBypassed(),

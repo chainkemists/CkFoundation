@@ -203,6 +203,58 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Admits authored links onto the volume and raises the one stage a link change owes. It never bakes
+    // and never resolves an endpoint: admission is a decision about a RECORD, and where its two points
+    // stand is the composition's separate answer.
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_HandleLinkRequests : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_HandleLinkRequests,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_Params>,
+        ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
+        ck::TReadWrite<FFragment_GroundNavVolume_Links>,
+        ck::TReadWrite<FFragment_GroundNavVolume_LinkRequests>,
+        TExclude<FTag_GroundNavVolume_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_GroundNavVolume_Setup>;
+        using MarkedDirtyBy = FFragment_GroundNavVolume_LinkRequests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            FFragment_GroundNavVolume_LinkRequests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_Link& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_ReleaseLink& InRequest) -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // Opens a build: resolves the geometry backend and sizes the field. Split from the slice below so the
     // backend is created exactly once per build rather than tested for on every tick of one.
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_StartBuild : public ck_exp::TProcessor<
@@ -401,6 +453,54 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Answers a LINK change by deriving a new field from the published one and swapping the pointer,
+    // through the same publish the build and the cost derive use. It re-bakes nothing: a link is two
+    // world points, and finding what they stand on reads cells that are already published, so no span,
+    // no clearance and no plate of any tile can move under it. It is not the cost derive's pinned
+    // ZERO-READ claim - it does read cells - but it spends no probe and never reaches the backend.
+    //
+    // Runs AFTER the cost derive by an explicit edge rather than by declaration order, because both are
+    // owed in the same tick whenever one request changed a price and another changed a link: the cost
+    // derive restamps every tile from the published field, and a link derive that ran first would hand
+    // it a field whose links the restamp then re-resolved from the stale record list.
+    //
+    // A build or a repair that is RUNNING, and a repair that is armed, KEEP the tag: this runs again
+    // in the tick their publish lands, after it. A volume with nothing published, or one a build is
+    // armed for, clears the tag instead - that publish resolves the records from
+    // FCk_GroundNav_FieldParams itself, which is the same wait the cost derive makes and the reason a
+    // link authored before the first bake is never lost.
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_LinkDerive : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_LinkDerive,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_Links>,
+        ck::TReadWrite<FFragment_GroundNavVolume_BuiltField>,
+        FTag_GroundNavVolume_LinksDirty,
+        TExclude<FTag_GroundNavVolume_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<
+            FProcessor_GroundNavVolume_Build,
+            FProcessor_GroundNavVolume_Repair,
+            FProcessor_GroundNavVolume_MarkupCostDerive>;
+        using MarkedDirtyBy = FTag_GroundNavVolume_LinksDirty;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Links& InLinks,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField) const -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // The build processors above exclude owners already tagged for destruction, so a destroyed volume's
     // queued requests are never drained AND its in-flight build never reports. This fires both as
     // Failed_Cancelled, so a caller awaiting completion terminates instead of hanging forever on a
@@ -478,6 +578,31 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_MarkupRequests& InRequests) -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // The link drain excludes owners already tagged for destruction, so a destroyed volume's queued link
+    // requests are never reached. This completes them Failed_Cancelled instead of leaving a caller
+    // waiting on a delegate no processor will fire.
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_CancelPendingLinkRequests : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_CancelPendingLinkRequests,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_LinkRequests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_LinkRequests& InRequests) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

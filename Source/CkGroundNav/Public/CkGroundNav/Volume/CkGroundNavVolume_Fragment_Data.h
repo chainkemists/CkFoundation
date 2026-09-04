@@ -9,6 +9,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
+#include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
 #include "CkShapes/CkShapes_Common.h"
@@ -222,6 +223,73 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_ReleaseAreaMarkup, _MarkupEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Authors a navigation link between two world points on the volume.
+ *
+ * The LINK ENTITY is the identity, not the two points it names: a second request naming the same
+ * entity updates the volume's record in place rather than adding a second one, which is what lets a
+ * caller move, re-price or disable a link it already placed. Disabling is a state the record keeps
+ * carrying - a disabled link is not a released one, and only the release request removes anything.
+ *
+ * The record's id and the epoch it was submitted against are the volume's to assign and not the
+ * caller's: an id is handed out monotonically and never reused, and the epoch is the one the field was
+ * already published at when the request was admitted.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_Link : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_Link);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_Link);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _LinkEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_GroundNav_LinkRecord _Record;
+
+public:
+    CK_PROPERTY_GET(_LinkEntity);
+
+    CK_PROPERTY(_Record);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_Link, _LinkEntity, _Record);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Drops the record the link entity owns. Releasing a link the volume does not hold is an idempotent
+ *  no-op: the caller's intent - this volume holds no record for that entity - already holds
+ *  afterwards. */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_ReleaseLink : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_ReleaseLink);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_ReleaseLink);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _LinkEntity;
+
+public:
+    CK_PROPERTY_GET(_LinkEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_ReleaseLink, _LinkEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
