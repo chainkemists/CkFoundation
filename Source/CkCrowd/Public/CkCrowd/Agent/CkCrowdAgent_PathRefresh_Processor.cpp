@@ -957,7 +957,11 @@ namespace ck
                 // No tag transition and no cursor reset: the installed polyline is stale, not gone,
                 // so the agent keeps walking it and the install swaps it when the repair resolves.
                 // MarkPathPending parks the status without touching the corridor, and the watchdog
-                // reads Walking-without-PathPending as live rather than as a wedged episode.
+                // reads Walking-without-PathPending as live rather than as a wedged episode. The
+                // revision advances as it does for every other re-plan of a live episode, so the
+                // answer to the plan being replaced can no longer install over this one.
+                FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+
                 constexpr auto ForcePermissivePlan = false;
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     RepathHandle,

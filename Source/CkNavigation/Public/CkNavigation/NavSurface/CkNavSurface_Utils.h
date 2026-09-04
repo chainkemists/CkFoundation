@@ -196,6 +196,26 @@ public:
     Get_IsBuildInProgress(
         const UObject* InWorldContext);
 
+    /**
+     * Whether this world's navigation surface is the one every query will answer from: the neutral
+     * markup pipeline holds nothing in flight AND the provider reports nothing pending. Wait on THIS
+     * after a paint, a release, or a rebuild kick -- a fixed number of ticks only happens to be enough
+     * for whichever provider it was measured against.
+     *
+     * The neutral half is not the provider's to answer: a paint still queued on a markup entity, and a
+     * markup entity whose teardown has not yet reached the processor that releases it, both leave the
+     * provider genuinely idle while the ground it answers for is not what the caller asked for.
+     *
+     * A world whose provider registered no table is not settled.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Is Surface Settled",
+              meta = (WorldContext = "InWorldContext"))
+    static bool
+    Get_IsSurfaceSettled(
+        const UObject* InWorldContext);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NavSurface",
               DisplayName = "[Ck][NavSurface] Request Surface Rebuild For Testing",
@@ -246,6 +266,21 @@ namespace ck::nav_surface
     Request_NotifySurfaceRebuilt(
         UWorld*     InWorld,
         const FBox& InChangedBounds) -> void;
+
+    /**
+     * Whether the NEUTRAL markup pipeline still holds work for this world: a paint whose request has
+     * not drained yet, or a markup entity that has entered teardown but has not yet reached the
+     * FGroup_EndPlay processor that releases it to the provider.
+     *
+     * Both are states in which no provider has anything pending, because nothing has reached one yet.
+     * Get_IsSurfaceSettled folds this in so a caller never has to know that; it is exposed on its own
+     * because a diagnostic that reports WHICH half is unsettled has to be able to ask each of them.
+     *
+     * C++ only, and deliberately not a UFUNCTION: it reads the world's registry directly.
+     */
+    CKNAVIGATION_API auto
+    Get_HasPendingMarkupWork(
+        UWorld* InWorld) -> bool;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
