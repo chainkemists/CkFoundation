@@ -147,7 +147,7 @@ namespace ck::jolt::cook
     };
 
     /// Reads one selected mesh and its convention-derived cooked asset, then returns diagnostics only.
-    /// Requires Jolt globals to be available because the cooked blob is restored for classification.
+    /// Owns a ref-counted Jolt-global lease for the full call, including source extraction and preview copies.
     CKJOLTEDITOR_API auto Analyze_MeshShape(
         const UStaticMesh& InMesh,
         int32 InMaxPreviewTriangles = 4096) -> FCk_Jolt_MeshShapeAuditResult;
