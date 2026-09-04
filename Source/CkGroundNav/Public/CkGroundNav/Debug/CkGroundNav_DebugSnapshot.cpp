@@ -1,5 +1,8 @@
 #include "CkGroundNav_DebugSnapshot.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
+#include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
+
 #include <Misc/ScopeLock.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -573,6 +576,136 @@ namespace ck::groundnav
         }
 
         return Snapshot;
+    }
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugSnapshotFromBackend(
+            const ICk_GroundNav_GeometryBackend& InBackend,
+            const FCk_GroundNav_DebugBakeParams& InParams)
+        -> FCk_GroundNav_DebugSnapshot
+    {
+        auto Snapshot = FCk_GroundNav_DebugSnapshot{};
+
+        const auto Region = FBox::BuildAABB(InParams._Centre, InParams._Extent);
+        Snapshot._Region = Region;
+        Snapshot._CellSizeUu = InParams._Config.Get_CellSizeUu();
+
+        if (NOT InBackend.Get_IsValid())
+        {
+            Snapshot._Status = EDebugSnapshotStatus::BackendUnavailable;
+            return Snapshot;
+        }
+
+        const auto StartedAt = FPlatformTime::Seconds();
+
+        auto Geometry = FCk_GroundNav_GeometryBatch{};
+        const auto SourceTriangles = InBackend.Get_TrianglesInBounds(Region, Geometry);
+
+        if (Geometry.Get_IsEmpty())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::NoGeometryInRegion;
+            return Snapshot;
+        }
+
+        // The same check a field bake runs, over the bodies of this one region. It reads each body's
+        // WHOLE mesh, so it is deliberately not part of the triangle fetch above: a mesh clipped to the
+        // region has cut edges that look exactly like the holes this is looking for.
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
+        InBackend.Get_StaticBodiesInBounds(Region, Bodies);
+
+        auto CheckedBodies = TSet<uint64>{};
+        auto OpenBodies = TArray<FCk_GroundNav_OpenBody>{};
+        auto ProbesForClosure = 0;
+
+        DoCheck_GeometryClosure(InBackend, Bodies, CheckedBodies, OpenBodies, ProbesForClosure);
+        DoReport_OpenBodies(OpenBodies);
+
+        auto Spans = FCk_GroundNav_SpanField{};
+        const auto RasterResult = DoRasterizeSpans(
+            Geometry, Region, InParams._Config, InParams._Profile, Spans);
+
+        if (NOT RasterResult.Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        // Kept so the filters can be judged by what they REMOVED, not only by what survived.
+        const auto SpansBeforeFiltering = Spans;
+
+        auto Connections = FCk_GroundNav_ConnectionField{};
+
+        if (NOT DoFilter_Walkability(InParams._Profile, Spans, Connections).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        auto Layers = FCk_GroundNav_LayerField{};
+
+        if (NOT DoExtract_Layers(Spans, Connections, Layers).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        auto Clearance = FCk_GroundNav_ClearanceField{};
+
+        if (NOT DoCompute_Clearance(Layers, Connections, InParams._Config.Get_CellSizeUu(), Clearance).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        auto Plates = FCk_GroundNav_PlateField{};
+
+        if (NOT DoDecompose_Plates(Spans, Layers, InParams._MergeTunables, Plates).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        auto Portals = FCk_GroundNav_PortalField{};
+
+        if (NOT DoExtract_Portals(Spans, Layers, Connections, Plates, Clearance, Portals).Get_IsCompleted())
+        {
+            Snapshot._SourceTriangleCount = SourceTriangles;
+            Snapshot._Status = EDebugSnapshotStatus::Failed;
+            return Snapshot;
+        }
+
+        const auto ElapsedMilliseconds = (FPlatformTime::Seconds() - StartedAt) * 1000.0;
+
+        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Portals, Region, InParams._MaxCells);
+        Do_RecordRejectedCells(SpansBeforeFiltering, Spans, Built);
+
+        Built._SourceTriangleCount = SourceTriangles;
+        Built._DroppedTriangleCount = RasterResult.Get_DroppedInputCount();
+        Built._BakeMilliseconds = ElapsedMilliseconds;
+
+        Built._OpenBodies.Reserve(OpenBodies.Num());
+
+        for (const auto& OpenBody : OpenBodies)
+        {
+            auto DebugOpenBody = FCk_GroundNav_DebugOpenBody{};
+
+            DebugOpenBody._Description = OpenBody._Description;
+            DebugOpenBody._Bounds = OpenBody._Bounds;
+            DebugOpenBody._TriangleCount = OpenBody._TriangleCount;
+            DebugOpenBody._OpenEdgeCount = OpenBody._OpenEdgeCount;
+            DebugOpenBody._OpenEdgePoints = OpenBody._OpenEdgePoints;
+
+            Built._OpenBodies.Emplace(MoveTemp(DebugOpenBody));
+        }
+
+        return Built;
     }
 }
 

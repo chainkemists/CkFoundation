@@ -9,6 +9,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkGroundNav/Debug/CkGroundNav_DebugSnapshotTraits.h"
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
@@ -517,6 +518,17 @@ public:
     CK_PROPERTY_GET(_RepathRequired);
     CK_PROPERTY_GET(_LastPlanWorldTime);
     CK_PROPERTY_GET(_LastPlanSequence);
+
+    /** The value-only contract in the comment above, checked. Inside the type rather than beside it
+     *  because the members are private and an assertion at namespace scope cannot name them; the
+     *  language cannot enumerate a struct's members either way, so a member added later belongs on
+     *  this list. One TObjectPtr added in good faith turns a viewer's copy into a dangling read that
+     *  surfaces only after the agent it came from is gone. */
+    static_assert(ck::groundnav::kDebugSnapshotMembersAreValues<
+            decltype(_HasBeenStamped), decltype(_Provider), decltype(_ProfileTag), decltype(_PathStatus),
+            decltype(_PublishedWaypointCount), decltype(_CorridorLinkIds), decltype(_CorridorEpoch),
+            decltype(_RepathRequired), decltype(_LastPlanWorldTime), decltype(_LastPlanSequence)>,
+        "FFragment_GroundNavPath_Diagnostics must stay value-only - nothing a viewer copies may point back at the agent that produced it");
 };
 
 // --------------------------------------------------------------------------------------------------------------------
