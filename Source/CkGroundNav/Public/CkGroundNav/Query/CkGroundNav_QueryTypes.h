@@ -5,6 +5,8 @@
 #include "CkGroundNav/Bake/CkGroundNav_Boundary.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
+#include "CkGroundNav/Field/CkGroundNav_FieldTypes.h"
+
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
 #include <CoreMinimal.h>
@@ -54,33 +56,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_RegionStatus);
 
 namespace ck::groundnav
 {
-    /**
-     * Where on the field a surface answer lives. Integer identity only, so a result can be held,
-     * compared and drawn after the field it came from has been rebuilt; it is valid only against
-     * the field epoch it was answered from.
-     */
-    struct CKGROUNDNAV_API FCk_GroundNav_SurfaceRef
-    {
-    public:
-        int32 _TileIndex = INDEX_NONE;
-        int32 _LayerIndex = INDEX_NONE;
-
-        // Tile-local, like every index a tile carries.
-        int32 _CellX = INDEX_NONE;
-        int32 _CellY = INDEX_NONE;
-        int32 _PlateIndex = FCk_GroundNav_Plate::kNoPlate;
-
-    public:
-        auto Get_IsValid() const -> bool
-        {
-            return _TileIndex != INDEX_NONE && _PlateIndex != FCk_GroundNav_Plate::kNoPlate;
-        }
-
-        auto operator==(const FCk_GroundNav_SurfaceRef&) const -> bool = default;
-    };
-
-    // ----------------------------------------------------------------------------------------------------------------
-
     /**
      * What a query knows about the body asking.
      *
@@ -454,15 +429,22 @@ namespace ck::groundnav
         int32 _FromFlatPlate = INDEX_NONE;
         int32 _ToFlatPlate = INDEX_NONE;
 
-        // Outward from the plate being left, as a direction index (Get_DirectionOffset).
+        // Outward from the plate being left, as a direction index (Get_DirectionOffset). A link
+        // crossing carries INDEX_NONE: it leaves no lattice boundary, and Get_DirectionOffset
+        // answers a zero step for it rather than a fifth direction the lattice would have to know.
         int32 _Direction = 0;
 
         // The interval on the shared cell line in world space, left and right as seen by a body
-        // walking through it in _Direction.
+        // walking through it in _Direction. A link crossing collapses both onto its ENTRY endpoint:
+        // an authored link joins two points, and there is no interval to slide along.
         FVector _Left = FVector::ZeroVector;
         FVector _Right = FVector::ZeroVector;
 
         float _ClearanceUu = 0.0f;
+
+        // Into FCk_GroundNav_Field::_ResolvedLinks, INDEX_NONE for a lattice crossing. Valid only
+        // against the field it was enumerated from, exactly like the two flat plate ids above it.
+        int32 _LinkIndex = INDEX_NONE;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

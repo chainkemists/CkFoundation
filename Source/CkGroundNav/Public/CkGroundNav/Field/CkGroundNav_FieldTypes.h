@@ -4,6 +4,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_Boundary.h"
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
+#include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 
@@ -87,6 +88,33 @@ namespace ck::groundnav
     Get_TileCoord(
         const FIntPoint& InDivisions,
         int32            InTileIndex) -> FCk_GroundNav_TileCoord;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Where on the field a surface answer lives. Integer identity only, so a result can be held,
+     * compared and drawn after the field it came from has been rebuilt; it is valid only against
+     * the field epoch it was answered from.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_SurfaceRef
+    {
+    public:
+        int32 _TileIndex = INDEX_NONE;
+        int32 _LayerIndex = INDEX_NONE;
+
+        // Tile-local, like every index a tile carries.
+        int32 _CellX = INDEX_NONE;
+        int32 _CellY = INDEX_NONE;
+        int32 _PlateIndex = FCk_GroundNav_Plate::kNoPlate;
+
+    public:
+        auto Get_IsValid() const -> bool
+        {
+            return _TileIndex != INDEX_NONE && _PlateIndex != FCk_GroundNav_Plate::kNoPlate;
+        }
+
+        auto operator==(const FCk_GroundNav_SurfaceRef&) const -> bool = default;
+    };
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -227,6 +255,70 @@ namespace ck::groundnav
         auto Get_CellCentre(int32 InX, int32 InY, int32 InLayer) const -> FVector;
 
         auto Get_WalkableCellCount() const -> int32;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What one authored link RESOLVED to against the field that carries it.
+     *
+     * Kept apart from the authored record for the same reason a markup's footprint is: the record holds
+     * two world points and nothing a rebuild could invalidate, while every index here — tile, cell,
+     * plate — is valid only against the field it was derived on, exactly like a reachability label. The
+     * whole array is re-derived on every publish rather than patched, so a resolution can never outlive
+     * the plate numbering it was answered under.
+     *
+     * An end that projected onto nothing is HELD, not dropped: its status says whether the ground under
+     * it is missing or merely unbaked, and the record stays on its volume either way, so the next
+     * publish over that tile resolves it without the author doing anything.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_ResolvedLink
+    {
+    public:
+        int32 _Id = INDEX_NONE;
+
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        FCk_GroundNav_SurfaceRef _StartSurface;
+        FCk_GroundNav_SurfaceRef _EndSurface;
+
+        // Flat plate indices, the index space the reachability labels and the crossings speak.
+        int32 _StartFlatPlate = INDEX_NONE;
+        int32 _EndFlatPlate = INDEX_NONE;
+
+        ECk_NavSurface_QueryStatus _StartStatus = ECk_NavSurface_QueryStatus::NoSurface;
+        ECk_NavSurface_QueryStatus _EndStatus = ECk_NavSurface_QueryStatus::NoSurface;
+
+        // Copied from the record so a consumer reading a resolved link never has to go back to the
+        // volume that authored it, and so the field stays a self-contained answer.
+        ECk_GroundNav_LinkDirection _Direction = ECk_GroundNav_LinkDirection::Bidirectional;
+
+        float _CostMultiplierForward = 1.0f;
+        float _CostMultiplierBackward = 1.0f;
+
+        float _ClearanceUu = FCk_GroundNav_LinkRecord::kAdmitsAnyAgentClearanceUu;
+
+        FGameplayTag _AreaTag;
+        FGameplayTag _UserTypeTag;
+
+        ECk_EnableDisable _Enable = ECk_EnableDisable::Enable;
+
+    public:
+        auto operator==(const FCk_GroundNav_ResolvedLink&) const -> bool = default;
+
+        /** Both ends found ground. Says nothing about whether the link may be used. */
+        auto Get_IsResolved() const -> bool
+        {
+            return _StartStatus == ECk_NavSurface_QueryStatus::Success &&
+                   _EndStatus == ECk_NavSurface_QueryStatus::Success;
+        }
+
+        /** Resolved AND switched on: the two conditions under which the link joins anything. */
+        auto Get_IsTraversable() const -> bool
+        {
+            return Get_IsResolved() && _Enable == ECk_EnableDisable::Enable;
+        }
     };
 }
 
