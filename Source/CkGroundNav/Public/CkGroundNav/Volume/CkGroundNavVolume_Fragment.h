@@ -65,9 +65,9 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * The published field.
+     * The published fields: the untagged default, and one per authored profile variant.
      *
-     * Held as a shared pointer to a CONST field and swapped whole at the end of a build. A rebuild
+     * Each is held as a shared pointer to a CONST field and swapped whole at the end of a build. A rebuild
      * assembles its own field in the build state and never touches this one, so a query holding a copy
      * of the pointer keeps reading a complete, self-consistent structure for as long as it needs it —
      * which is what makes reads safe without a lock discipline.
@@ -92,10 +92,21 @@ namespace ck
         // every agent standing on it.
         groundnav::FCk_GroundNav_FieldPtr _Field;
 
+        // One field per authored profile variant, keyed by its tag, published in the same call as the
+        // default above so no publish ever leaves the two describing different worlds. Empty on a
+        // volume that authored no variant, which is every volume until one does.
+        //
+        // Each entry keeps its OWN epoch, and _Epoch below is the NEWEST across the default and all of
+        // them: a change that moves only one variant still has to be visible to a reader watching the
+        // volume, and a per-field epoch is what stops the fields that did not move from claiming they
+        // did. _Epoch is therefore at or past _Field->_Epoch rather than equal to it.
+        TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr> _VariantFields;
+
         groundnav::FCk_GroundNav_Epoch _Epoch;
 
     public:
         CK_PROPERTY_GET(_Field);
+        CK_PROPERTY_GET(_VariantFields);
         CK_PROPERTY_GET(_Epoch);
     };
 
@@ -127,6 +138,12 @@ namespace ck
         groundnav::FCk_GroundNav_FieldBuildState _Build;
         TUniquePtr<groundnav::FCk_GroundNav_GeometryBackend_Jolt> _Backend;
         FCk_Request_GroundNavVolume_Build _PendingRequest;
+
+        // The profile tags this build began for, in the order their params went in. Completion keys the
+        // fields it releases by this list and not by the params it can still read: _ProfileVariants is
+        // writable, and a list edited mid-build would key a finished field under a tag it was never
+        // baked for.
+        TArray<FGameplayTag> _ProfileVariantTags;
 
     public:
         CK_PROPERTY_GET(_Build);
