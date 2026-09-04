@@ -120,10 +120,16 @@ namespace ck::groundnav
      * keeps the un-offset point — which the funnel already proved legal, so the pass always answers
      * and never answers with something worse than what it was given. A degenerate bisector, which a
      * funnel cannot emit, leaves the waypoint alone.
+     *
+     * A waypoint EXACTLY equal to one of the pinned points is emitted where it is. Those are the
+     * endpoints an authored link put on the route, and a link endpoint is not a corner the string
+     * bent around: pushing it along a bisector would walk it off the link. Compared exactly rather
+     * than within an epsilon because both points are copies of the one resolved endpoint.
      */
     CKGROUNDNAV_API auto
     Get_CornerOffset(
         TConstArrayView<FVector>        InWaypoints,
+        TConstArrayView<FVector>        InPinnedWaypoints,
         const FCk_GroundNav_Field&      InField,
         float                           InOffsetUu,
         const FCk_GroundNav_QueryAgent& InAgent,

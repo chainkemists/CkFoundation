@@ -20,6 +20,11 @@ namespace ck::groundnav
     public:
         FVector _Left = FVector::ZeroVector;
         FVector _Right = FVector::ZeroVector;
+
+        // The resolved link this portal is an endpoint of, and INDEX_NONE for a lattice interval.
+        // The funnel never reads it: it rides along so the pass that pushes waypoints off their
+        // corners can tell which of them an authored link placed and must leave exactly where it is.
+        int32 _LinkIndex = INDEX_NONE;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

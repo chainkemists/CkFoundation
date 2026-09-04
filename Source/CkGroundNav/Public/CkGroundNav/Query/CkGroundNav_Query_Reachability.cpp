@@ -107,6 +107,46 @@ namespace ck::groundnav
             return Crossing;
         }
 
+        /**
+         * One crossing for an authored link, built WITHOUT Make_Crossing's left/right derivation.
+         *
+         * That derivation orients an interval against the lattice direction it is crossed in, and a
+         * link has neither: both sides stand on the entry endpoint the record authored, so there is
+         * nothing to orient and no lattice direction to orient it by.
+         */
+        auto Make_LinkCrossing(
+            int32                             InFromFlatPlate,
+            int32                             InToFlatPlate,
+            const FCk_GroundNav_ResolvedLink& InLink,
+            const FVector&                    InEntryPoint,
+            int32                             InLinkIndex) -> FCk_GroundNav_Crossing
+        {
+            auto Crossing = FCk_GroundNav_Crossing{};
+            Crossing._FromFlatPlate = InFromFlatPlate;
+            Crossing._ToFlatPlate = InToFlatPlate;
+            Crossing._Direction = INDEX_NONE;
+            Crossing._Left = InEntryPoint;
+            Crossing._Right = InEntryPoint;
+            Crossing._ClearanceUu = InLink._ClearanceUu;
+            Crossing._LinkIndex = InLinkIndex;
+
+            return Crossing;
+        }
+
+        auto Get_IsTraversedForward(
+            const FCk_GroundNav_ResolvedLink& InLink) -> bool
+        {
+            return InLink._Direction == ECk_GroundNav_LinkDirection::Bidirectional ||
+                   InLink._Direction == ECk_GroundNav_LinkDirection::Forward;
+        }
+
+        auto Get_IsTraversedBackward(
+            const FCk_GroundNav_ResolvedLink& InLink) -> bool
+        {
+            return InLink._Direction == ECk_GroundNav_LinkDirection::Bidirectional ||
+                   InLink._Direction == ECk_GroundNav_LinkDirection::Backward;
+        }
+
         auto Make_FunnelPortal(
             const FCk_GroundNav_Crossing& InCrossing) -> FCk_GroundNav_FunnelPortal
         {
@@ -162,6 +202,7 @@ namespace ck::groundnav
 
                 if (Settled._FromFlatPlate == InCrossing._FromFlatPlate &&
                     Settled._Direction == InCrossing._Direction &&
+                    Settled._LinkIndex == InCrossing._LinkIndex &&
                     Settled._Left == InCrossing._Left &&
                     Settled._Right == InCrossing._Right)
                 { return true; }
@@ -334,6 +375,40 @@ namespace ck::groundnav
                 MinEnd,
                 MaxEnd,
                 Seam._TraversalClearanceUu));
+        }
+
+        for (auto LinkIndex = 0; LinkIndex < InField._ResolvedLinks.Num(); ++LinkIndex)
+        {
+            ++InOutCost._CellsRead;
+
+            const auto& Link = InField._ResolvedLinks[LinkIndex];
+
+            // An end that resolved onto nothing, and a link switched off, join nothing at all: the
+            // record stays on its volume either way and only the field's graph drops it.
+            if (NOT Link.Get_IsTraversable())
+            { continue; }
+
+            // Both ends on one plate is a legal shortcut across it — a ladder up and back down the
+            // same floor — so it is emitted like any other, not skipped as degenerate.
+            if (Link._StartFlatPlate == InFlatPlate && Get_IsTraversedForward(Link))
+            {
+                OutCrossings.Add(Make_LinkCrossing(
+                    InFlatPlate,
+                    Link._EndFlatPlate,
+                    Link,
+                    Link._Start,
+                    LinkIndex));
+            }
+
+            if (Link._EndFlatPlate == InFlatPlate && Get_IsTraversedBackward(Link))
+            {
+                OutCrossings.Add(Make_LinkCrossing(
+                    InFlatPlate,
+                    Link._StartFlatPlate,
+                    Link,
+                    Link._End,
+                    LinkIndex));
+            }
         }
     }
 

@@ -1,5 +1,7 @@
 #include "CkGroundNav_FieldBuild.h"
 
+#include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -134,9 +136,10 @@ namespace ck::groundnav
             return Result;
         }
 
-        // Both are derived from the finished tiles, so they belong to the end of the build and not to
-        // whichever slice happened to bake the last tile.
+        // All three are derived from the finished tiles, so they belong to the end of the build and
+        // not to whichever slice happened to bake the last tile.
         DoDerive_SeamPortals(InOutState._Partial);
+        DoResolve_Links(InOutState._Partial);
         DoLabel_Reachability(InOutState._Partial);
 
         DoReport_OpenBodies(InOutState._Partial._OpenBodies);
