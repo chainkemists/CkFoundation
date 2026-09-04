@@ -11,6 +11,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_groundnav_volume_utils
+{
+    // EMPTINESS, never presence. The request utils compose a queue fragment lazily and the drains
+    // reset the array in place without removing the fragment, so a volume that was ever asked for
+    // anything carries the fragment for the rest of its life - and a presence test would read every
+    // such volume as permanently unsettled.
+    template <typename T_RequestsFragment>
+    auto Get_HasPendingRequests(
+        const FCk_Handle_GroundNavVolume& InVolume) -> bool
+    {
+        return InVolume.Has<T_RequestsFragment>() &&
+               NOT InVolume.Get<T_RequestsFragment>().Get_Requests().IsEmpty();
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_GroundNavVolume_UE::
     Add(
@@ -386,6 +403,37 @@ auto
     -> bool
 {
     return ck::IsValid(InVolume) && InVolume.Has<ck::FTag_GroundNavVolume_RepairInProgress>();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsSettled(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> bool
+{
+    using namespace ck_groundnav_volume_utils;
+
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return false; }
+
+    // Get_IsBuilding is the NeedsBuild/BuildInProgress pair; the other two markers are the repair and
+    // the cost derive - the remaining stages that still owe this volume a publish.
+    const auto AStageStillOwesAPublish =
+        Get_IsBuilding(InVolume) ||
+        Get_IsRepairInProgress(InVolume) ||
+        InVolume.Has<ck::FTag_GroundNavVolume_NeedsRepair>() ||
+        InVolume.Has<ck::FTag_GroundNavVolume_MarkupCostDirty>();
+
+    if (AStageStillOwesAPublish)
+    { return false; }
+
+    // A queued request has not reached a stage yet, so no marker names it. Settling on the markers
+    // alone would report the tick between an enqueue and its drain as settled.
+    return NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_Requests>(InVolume) &&
+           NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_RepairRequests>(InVolume) &&
+           NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_MarkupRequests>(InVolume);
 }
 
 auto

@@ -312,22 +312,52 @@ namespace ck::groundnav::nav_surface_adapter_private
         return false;
     }
 
+    auto Do_IsSurfaceSettled(
+        UWorld* InWorld) -> bool
+    {
+        // GAME THREAD, for the same reason Do_IsBuildInProgress is: settledness is the VOLUME's word,
+        // and resolving a volume handle reads the ECS registry.
+        auto AnyVolumeAnswered = false;
+
+        auto VolumeEntities = world_fields::Get_VolumeEntities(InWorld);
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            if (NOT UCk_Utils_GroundNavVolume_UE::Get_IsSettled(Volume))
+            { return false; }
+
+            AnyVolumeAnswered = true;
+        }
+
+        // A world with no volume has nothing that could settle. True there would tell a fixture the
+        // surface it is waiting on is ready when there is no surface at all.
+        return AnyVolumeAnswered;
+    }
+
     /**
      * MONOTONE for the life of a world, and it is the REGISTRY that makes it so.
      *
-     * The sum runs over whatever fields world_fields currently holds, and that map has no per-volume
-     * unpublish: an entry is dropped only when the OnWorldCleanup hook drops the whole world's list
-     * (CkGroundNav_WorldFieldRegistry.cpp). A volume torn down mid-session therefore keeps its last
-     * published field — and every tile epoch in it — contributing here until the world ends.
+     * The sum runs over the fields world_fields currently holds PLUS the epoch sums it kept when a
+     * volume unpublished at end-play (CkGroundNav_WorldFieldRegistry.cpp). Ground that went away with
+     * its volume keeps counting even though nothing answers a query from it any more.
      *
-     * That retention is what keeps this number from FALLING, which is the property consumers read it
+     * That retained sum is what keeps this number from FALLING, which is the property consumers read it
      * for: a watcher treats any move as "the surface changed", so a drop would announce a rebuild that
      * never happened and, worse, could land back on a value it had already caught up to.
      */
     auto Do_SurfaceRevision(
         UWorld* InWorld) -> int64
     {
-        auto Revision = int64{0};
+        // Ground that was unpublished with its volume keeps counting, so the number never falls.
+        auto Revision = world_fields::Get_RetiredRevision(InWorld);
 
         // The SUM of every field's per-tile epoch sum, not a maximum of anything. Tiles rebuild
         // independently and so do volumes, so two worlds whose newest tile shares an epoch can still
@@ -590,6 +620,7 @@ auto
     Table._SurfaceBounds = &nav_surface_adapter_private::Do_SurfaceBounds;
     Table._ProviderHealth = &nav_surface_adapter_private::Do_ProviderHealth;
     Table._IsBuildInProgress = &nav_surface_adapter_private::Do_IsBuildInProgress;
+    Table._IsSurfaceSettled = &nav_surface_adapter_private::Do_IsSurfaceSettled;
     Table._SurfaceRevision = &nav_surface_adapter_private::Do_SurfaceRevision;
     Table._RequestSurfaceRebuild = &nav_surface_adapter_private::Do_RequestSurfaceRebuild;
     Table._ApplyAreaMarkup = &nav_surface_adapter_private::Do_ApplyAreaMarkup;

@@ -663,6 +663,27 @@ namespace ck::nav_surface_recast
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_IsSurfaceSettled(
+            UWorld* InWorld)
+        -> bool
+    {
+        if (Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        { return false; }
+
+        auto* NavSys = TryGet_NavSystem(InWorld);
+        if (NavSys == nullptr)
+        { return false; }
+
+        // Deliberately NOT IsNavigationDirty(): that reports a navmesh with zero tiles as permanently
+        // needing a rebuild (ARecastNavMesh::NeedsRebuild, bHasNoTileData), so a world with nothing
+        // walkable in it would never settle and every caller waiting on this would wait forever. The
+        // dirty-areas queue drains, which is what "nothing pending" has to mean for a waiter.
+        return NOT NavSys->HasDirtyAreasQueued();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Get_SurfaceRevision(
             UWorld* InWorld)
         -> int64

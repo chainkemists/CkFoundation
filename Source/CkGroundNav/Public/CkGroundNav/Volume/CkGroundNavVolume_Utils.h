@@ -72,7 +72,9 @@ public:
      *  non-finite corner - because a repair over nothing publishes an epoch nothing changed.
      *
      *  The completion delegate fires when the REPAIR ends, not when the box is accepted; a build that
-     *  supersedes the pending repair completes it instead, having rebaked the same ground. */
+     *  STARTS after the box was accepted takes it over and completes it at its publish, having rebaked
+     *  the same ground. A box raised while a build is already running waits for that publish and is
+     *  repaired against the field it produces. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GroundNavVolume",
               DisplayName="[Ck][GroundNavVolume] Request Repair",
@@ -276,6 +278,22 @@ public:
      *  ground pending but no repair opened yet reads false - that is what the pending bounds say. */
     static auto
     Get_IsRepairInProgress(
+        const FCk_Handle_GroundNavVolume& InVolume) -> bool;
+
+    /**
+     * Nothing is in flight on this volume and nothing is pending: a field is published, no build and
+     * no repair is running or armed, no cost re-derive is owed, and none of the three request queues
+     * holds anything. The published field is therefore the one every query will answer from until
+     * something new is asked of the volume.
+     *
+     * This is the named condition a test settles on after a paint, a release, or a rebuild kick,
+     * rather than a hop count that has to be re-guessed whenever a stage's internal staging changes.
+     *
+     * C++ only, for the same reason Get_PendingDirtyBounds is: the consumers are the provider adapter
+     * and the fixtures that wait on it, both C++ by construction.
+     */
+    static auto
+    Get_IsSettled(
         const FCk_Handle_GroundNavVolume& InVolume) -> bool;
 };
 
