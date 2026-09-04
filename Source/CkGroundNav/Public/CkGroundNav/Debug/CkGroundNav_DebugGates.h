@@ -3,11 +3,12 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Debug-only gates that make a GroundNav answer WRONG on purpose.
+// The console-driven gates GroundNav reads.
 //
-// Every one of these exists so a fixture can prove that the condition it settles on is load-bearing:
-// a test that waits for something and passes either way has not pinned anything, and the only way to
-// tell the two apart is to run it once with the condition removed and watch it fail.
+// Most of them make a GroundNav answer WRONG on purpose, so a fixture can prove that the condition it
+// settles on is load-bearing: a test that waits for something and passes either way has not pinned
+// anything, and the only way to tell the two apart is to run it once with the condition removed and
+// watch it fail. The rest switch off work that only a viewer consumes.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav::debug
@@ -36,6 +37,16 @@ namespace ck::groundnav::debug
      *  markup the world's volumes hold. */
     CKGROUNDNAV_API auto
     Get_IsMarkupDrawEnabled() -> bool;
+
+    /**
+     * Whether ck.GroundNav.PathDiagnostics is on, so the per-agent diagnostics pass runs.
+     *
+     * Nothing planning, walking or replanning reads what that pass writes - only a viewer does - so a
+     * world that has no viewer open can stop paying for it. Turning it off leaves whatever was already
+     * stamped exactly where it stands: the pass composes and writes, and never removes.
+     */
+    CKGROUNDNAV_API auto
+    Get_IsPathDiagnosticsEnabled() -> bool;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

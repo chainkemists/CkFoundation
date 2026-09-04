@@ -238,6 +238,21 @@ auto
 
 auto
     UCk_Utils_GroundNavPath_UE::
+    Get_Diagnostics(
+        const FCk_Handle_GroundNavPath& InPath)
+    -> FFragment_GroundNavPath_Diagnostics
+{
+    if (ck::Is_NOT_Valid(InPath))
+    { return {}; }
+
+    if (NOT InPath.Has<FFragment_GroundNavPath_Diagnostics>())
+    { return {}; }
+
+    return InPath.Get<FFragment_GroundNavPath_Diagnostics>();
+}
+
+auto
+    UCk_Utils_GroundNavPath_UE::
     Get_LastCorridorBounds(
         const FCk_Handle_GroundNavPath& InPath)
     -> FBox
