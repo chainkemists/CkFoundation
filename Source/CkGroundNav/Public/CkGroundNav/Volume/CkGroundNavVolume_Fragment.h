@@ -437,7 +437,10 @@ namespace ck
     public:
         using RequestType = std::variant<
             FCk_Request_GroundNavVolume_Link,
-            FCk_Request_GroundNavVolume_ReleaseLink>;
+            FCk_Request_GroundNavVolume_LinkBatch,
+            FCk_Request_GroundNavVolume_ReleaseLink,
+            FCk_Request_GroundNavVolume_ReleaseLink_ById,
+            FCk_Request_GroundNavVolume_ReleaseAllLinks>;
         using RequestList = TArray<RequestType>;
 
     private:

@@ -8,6 +8,71 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::groundnav
+{
+    auto
+        Get_LinksOnPath(
+            const FCk_GroundNavPath_Result& InResult)
+        -> TArray<FCk_GroundNavPath_LinkSpan>
+    {
+        auto Spans = TArray<FCk_GroundNavPath_LinkSpan>{};
+
+        for (const auto& LinkWaypoint : InResult.Get_LinkWaypoints())
+        {
+            if (LinkWaypoint.Get_Role() == ECk_GroundNavPath_LinkWaypointRole::Entry)
+            {
+                Spans.Emplace(FCk_GroundNavPath_LinkSpan{
+                    LinkWaypoint.Get_LinkId(),
+                    LinkWaypoint.Get_WaypointIndex(),
+                    LinkWaypoint.Get_DistanceFromStartUu(),
+                    LinkWaypoint.Get_EntryDirection()});
+
+                continue;
+            }
+
+            if (LinkWaypoint.Get_Role() != ECk_GroundNavPath_LinkWaypointRole::Exit)
+            { continue; }
+
+            // Newest open span of that id first: a route walks a link's two ends one after the other,
+            // so an exit closes the last entry of its link that nothing has closed. An exit with no
+            // open entry - which the stamp cannot produce, only a hand-written result can - names no
+            // span and is left where it is rather than inventing one.
+            for (auto Index = Spans.Num() - 1; Index >= 0; --Index)
+            {
+                auto& Span = Spans[Index];
+
+                if (Span.Get_LinkId() != LinkWaypoint.Get_LinkId() ||
+                    Span.Get_ExitWaypointIndex() != INDEX_NONE)
+                { continue; }
+
+                Span.Set_ExitWaypointIndex(LinkWaypoint.Get_WaypointIndex());
+                Span.Set_ExitDistanceUu(LinkWaypoint.Get_DistanceFromStartUu());
+
+                break;
+            }
+        }
+
+        return Spans;
+    }
+
+    auto
+        TryGet_NextLinkBeyond(
+            const FCk_GroundNavPath_Result& InResult,
+            float                           InDistanceUu)
+        -> FCk_GroundNavPath_LinkSpan
+    {
+        for (const auto& Span : Get_LinksOnPath(InResult))
+        {
+            if (Span.Get_EntryDistanceUu() > InDistanceUu)
+            { return Span; }
+        }
+
+        return {};
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_GroundNavPath_UE::
     Add(
@@ -64,6 +129,29 @@ auto
 
     CK_ENSURE_IF_NOT(PathIsValid,
         TEXT("Invalid GroundNav Path Handle [{}] supplied to Request_FindPath"), InPath)
+    {
+        InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InPath;
+    }
+
+    // Refused here, at the same bound an AUTHORED multiplier is refused at, and for the same reason: a
+    // link edge priced under its own span makes an edge cheaper than the distance it covers, which is
+    // the one property the search's Euclidean heuristic is admissible under at w = 1. Hoisted out of
+    // the ensure expression because a profile build compiles that expression out.
+    auto EveryRewriteIsAdmissible = true;
+
+    for (const auto& Rewrite : InRequest.Get_LinkCostMultipliers())
+    {
+        if (Rewrite.Value < 1.0f)
+        {
+            EveryRewriteIsAdmissible = false;
+            break;
+        }
+    }
+
+    CK_ENSURE_IF_NOT(EveryRewriteIsAdmissible,
+        TEXT("GroundNav Path [{}] was asked to plan with a per-query link cost multiplier below 1.0. ")
+        TEXT("Every multiplier in _LinkCostMultipliers must be at least 1.0"), InPath)
     {
         InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InPath;
@@ -158,6 +246,25 @@ auto
     { return FBox{ForceInit}; }
 
     return InPath.Get<ck::FFragment_GroundNavPath_Current>().Get_LastCorridorBounds();
+}
+
+auto
+    UCk_Utils_GroundNavPath_UE::
+    Get_LinksOnPath(
+        const FCk_Handle_GroundNavPath& InPath)
+    -> TArray<FCk_GroundNavPath_LinkSpan>
+{
+    return ck::groundnav::Get_LinksOnPath(Get_Result(InPath));
+}
+
+auto
+    UCk_Utils_GroundNavPath_UE::
+    TryGet_NextLinkBeyond(
+        const FCk_Handle_GroundNavPath& InPath,
+        float                           InDistanceUu)
+    -> FCk_GroundNavPath_LinkSpan
+{
+    return ck::groundnav::TryGet_NextLinkBeyond(Get_Result(InPath), InDistanceUu);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

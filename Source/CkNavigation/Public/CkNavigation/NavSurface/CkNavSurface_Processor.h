@@ -82,6 +82,93 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     /**
+     * The neutral link-traversal handshake, drained on the game thread.
+     *
+     * No provider is consulted: crossing a link changes no cell, no plate and no clearance, so the
+     * whole feature is consumer-observable state on the entity doing the crossing.
+     *
+     * One link at a time. A Begin naming the correlator already running is the caller's intent
+     * already holding, so it Succeeds silently; a Begin naming a different one while a crossing is
+     * live is refused rather than silently replacing it, because the crossing that was dropped would
+     * never report an end.
+     */
+    class CKNAVIGATION_API FProcessor_NavSurface_LinkTraversal_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_NavSurface_LinkTraversal_HandleRequests,
+        FCk_Handle,
+        ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Requests>,
+        ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Current>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_NavSurface_LinkTraversal_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Requests& InRequests,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent) const -> void;
+
+        // Clears the crossing and reports it ended with InResult. Public because teardown ends a live
+        // crossing the same way a cancel does, and two copies of "what ending means" would drift.
+        static auto DoEnd_Traversal(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            ECk_Request_OperationResult InResult) -> void;
+
+    private:
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_BeginLinkTraversal& InRequest) -> ECk_Request_OperationResult;
+
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest) -> ECk_Request_OperationResult;
+
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_CancelLinkTraversal& InRequest) -> ECk_Request_OperationResult;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Teardown for both halves of the handshake at once. The queue is cancelled where it stands, and a
+     * crossing that was still live reports its end as Failed_Cancelled - a listener waiting for the
+     * body to come off the ladder is owed an answer even when the answer is that it never did.
+     *
+     * The view keys on _Current rather than on the queue: the drain takes the requests fragment OFF
+     * the entity (CopyAndRemove), so a mid-crossing traverser normally carries no queue at all.
+     */
+    class CKNAVIGATION_API FProcessor_NavSurface_LinkTraversal_EndPlay : public ck_exp::TProcessor<
+        FProcessor_NavSurface_LinkTraversal_EndPlay,
+        FCk_Handle,
+        ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Current>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /**
      * Delivers the neutral OnSurfaceRebuilt signal, and keeps the world's provider fragment's
      * health reading current.
      *

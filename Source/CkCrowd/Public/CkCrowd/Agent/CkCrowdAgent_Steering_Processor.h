@@ -51,6 +51,43 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce,
             FFragment_CrowdAgent_DesiredVelocity& InDesired) -> void;
+
+    public:
+        // The link half of the waypoint cursor. Public because the GroundNav install seam drives the
+        // same two pieces the cursor does — a fresh route stamps the spans and abandons the crossing
+        // the replaced route was on — and two copies of what a crossing means would drift.
+
+        // What the ground route about to be walked crosses, in walk order. A route no link put a
+        // waypoint on stamps an empty array, which is also what clears the previous route's spans.
+        static auto
+        DoStampLinkSpans(
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            const FCk_GroundNavPath_Result&  InResult) -> void;
+
+        // The crossing's identity on the neutral handshake, derived from the route and the link rather
+        // than minted, so the Complete that ends one names what the Begin that started it named
+        // without either side storing it anywhere but the agent.
+        static auto
+        Get_LinkTraversalCorrelator(
+            const FFragment_CrowdAgent_PathFollow& InPathFollow,
+            int32                                  InLinkId) -> int32;
+
+        // Ends the recorded crossing as Failed_Cancelled and forgets it. Every route drop calls this:
+        // the body is no longer on the waypoints that bounded the crossing.
+        static auto
+        DoCancelActiveLinkTraversal(
+            FCk_Handle&                      InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+
+        // Reconciles the recorded crossing against where the cursor now stands: Begin on the span the
+        // cursor has reached and not passed, Complete once it is past that span's exit, Cancel when
+        // the route ran out under a crossing that never finished.
+        static auto
+        DoDriveLinkTraversalCursor(
+            FCk_Handle&                      InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            int32                            InCursor,
+            int32                            InWaypointCount) -> void;
     };
 }
 

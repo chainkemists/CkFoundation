@@ -307,6 +307,19 @@ namespace ck
     // detector (walls and fixtures still stop agents, and something must still notice).
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Permeable);
 
+    // The agent is part-way across an authored navigation link, between the waypoint it stepped onto
+    // the link at and the one it steps off at.
+    //
+    // NON-exclusive, and it composes with Walking rather than replacing it: an agent on a ladder is
+    // still walking the polyline it was handed, and the movement triple stays Idle/PathPending/Walking.
+    // Dropping out of Walking to cross would make every link a visible stall by the same measure the
+    // rebuild pin uses (nonWalkingFrames must stay 0 across a mid-walk route swap).
+    //
+    // It mirrors the neutral FFragment_NavSurface_LinkTraversal_Current the handshake keeps on the
+    // traverser, so a crowd-side view costs no cross-module fragment fetch; CkNavigation owns the
+    // authoritative state and this tag is stamped and cleared beside every request that changes it.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_TraversingLink);
+
     // A movement episode ended because no usable path exists or a bounded NoProgress retry
     // budget was exhausted. The active goal remains in PathFollow for diagnostics and an
     // explicit ForceRepath/new-goal wake, but identical ordinary MoveTo requests are inert.

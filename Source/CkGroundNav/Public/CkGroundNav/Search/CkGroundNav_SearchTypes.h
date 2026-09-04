@@ -8,6 +8,7 @@
 #include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
 
 #include <CoreMinimal.h>
+#include <GameplayTagContainer.h>
 
 #include "CkGroundNav_SearchTypes.generated.h"
 
@@ -113,6 +114,22 @@ namespace ck::groundnav
         // Flat plate id to a multiplier this ONE query asks for, merged upward with what the field's
         // plate already carries. An empty table is therefore the field's own price and nothing else.
         TMap<int32, float> _PlateCostMultipliers;
+
+        // Stable link ids this ONE query may not traverse. A denied link is skipped where crossings
+        // are admitted, so no node is minted for it and no corridor can hold it - a connectivity
+        // decision a reader of the answer can see, rather than a magnitude inside a float compare.
+        TSet<int32> _DeniedLinkIds;
+
+        // The same denial by CLASS rather than by instance: a link whose authored _UserTypeTag matches
+        // this container is refused at the same point, so "this body cannot use ladders" needs no id.
+        FGameplayTagContainer _DeniedLinkUserTypeTags;
+
+        // Stable link id to the multiplier this ONE query prices the traverse at, REPLACING the
+        // authored one rather than merging upward with it: the plate table merges upward because two
+        // sources price the same ground, while here one body is answering for itself what the author
+        // answered for every body. Never below one - what the w = 1 heuristic's admissibility rests
+        // on - which is refused where the query is asked for rather than clamped silently here.
+        TMap<int32, float> _LinkCostMultipliers;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

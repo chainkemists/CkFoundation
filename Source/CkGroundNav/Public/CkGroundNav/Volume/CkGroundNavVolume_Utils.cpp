@@ -224,6 +224,34 @@ auto
 
 auto
     UCk_Utils_GroundNavVolume_UE::
+    Request_LinkBatch(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_LinkBatch& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_LinkRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_LinkBatch"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Links>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_LinkRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
     Request_ReleaseLink(
         FCk_Handle_GroundNavVolume& InVolume,
         const FCk_Request_GroundNavVolume_ReleaseLink& InRequest,
@@ -236,6 +264,62 @@ auto
 
     CK_ENSURE_IF_NOT(VolumeIsValid,
         TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_ReleaseLink"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Links>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_LinkRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_ReleaseLink_ById(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseLink_ById& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_LinkRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_ReleaseLink_ById"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Links>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_LinkRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_ReleaseAllLinks(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseAllLinks& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_LinkRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_ReleaseAllLinks"), InVolume)
     {
         InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InVolume;
@@ -614,6 +698,52 @@ auto
     return StartTile->Get_IsBuilt() && EndTile->Get_IsBuilt() &&
            StartTile->_Epoch._Value > InRecord.Get_RequestedAtEpoch() &&
            EndTile->_Epoch._Value > InRecord.Get_RequestedAtEpoch();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_LinkResolution(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InLinkId)
+    -> FCk_GroundNav_LinkResolution
+{
+    auto Resolution = FCk_GroundNav_LinkResolution{};
+
+    const auto Field = Get_Field(InVolume);
+
+    // A resolution is a property of a PUBLISH, so a volume with nothing published has none to give -
+    // not even for a record it already holds, which is what TryGet_LinkRecord is there to read.
+    if (NOT Field.IsValid())
+    { return Resolution; }
+
+    const auto ResolvedIndex = ck::algo::FindIndex(Field->_ResolvedLinks,
+        [&](const ck::groundnav::FCk_GroundNav_ResolvedLink& InResolved) -> bool
+        {
+            return InResolved._Id == InLinkId;
+        });
+
+    // An id the published field carries no entry for - authored after that publish, or released
+    // before it - has nothing resolved to report.
+    if (NOT Field->_ResolvedLinks.IsValidIndex(ResolvedIndex))
+    { return Resolution; }
+
+    const auto& Resolved = Field->_ResolvedLinks[ResolvedIndex];
+
+    Resolution.Set_LinkId(InLinkId)
+              .Set_StartStatus(Resolved._StartStatus)
+              .Set_EndStatus(Resolved._EndStatus)
+              .Set_StartFlatPlate(Resolved._StartFlatPlate)
+              .Set_EndFlatPlate(Resolved._EndFlatPlate)
+              .Set_Resolved(Resolved.Get_IsResolved());
+
+    const auto Record = TryGet_LinkRecord(InVolume, InLinkId);
+
+    // Liveness is asked of the AUTHORED record, not of the entry: the entry says what the publish
+    // found, where the record says what is in effect now - and the two disagree for exactly as long
+    // as it takes the derive that a change raised to republish.
+    Resolution.Set_Live(Record.IsSet() && Get_IsLinkLiveOnField(*Field, *Record));
+
+    return Resolution;
 }
 
 bool

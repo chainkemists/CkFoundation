@@ -135,6 +135,24 @@ public:
         const FCk_Request_GroundNavVolume_Link& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** Authors many links under one admission and one completion. ATOMIC: every entry is judged
+     *  before any is applied, so a batch carrying one refusal leaves the volume exactly as it found
+     *  it and completes Failed, naming the entry that decided it. Each entry is judged by the same
+     *  six questions Request_Link asks.
+     *
+     *  The completion is the only thing this adds over the same entries issued singly: the drain
+     *  takes the whole queue in one pass and the derive is raised through an idempotent tag, so N
+     *  single requests landing in one tick already cost exactly one derive. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Link Batch",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_LinkBatch(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_LinkBatch& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     /** Drops the record a link entity owns, and the back-pointer that entity carries. Releasing a link
      *  the volume does not hold completes Succeeded: the caller's intent already holds. */
     UFUNCTION(BlueprintCallable,
@@ -145,6 +163,35 @@ public:
     Request_ReleaseLink(
         UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
         const FCk_Request_GroundNavVolume_ReleaseLink& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    /** The same release reached by RECORD ID, which is what a caller that has outlived the link
+     *  entity still holds. Releasing an id the volume does not hold completes Succeeded: ids are
+     *  never reused, so an id that names nothing means retired, and the caller's intent already
+     *  holds. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Release Link By Id",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_ReleaseLink_ById(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseLink_ById& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    /** Drops every record the volume holds, and the back-pointer each link entity carries, under one
+     *  derive and one completion. A volume that holds none completes Succeeded.
+     *
+     *  The id counter is not rewound: every id this volume handed out stays retired, so the emptied
+     *  list can still be diffed against a field resolved before it. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Release All Links",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_ReleaseAllLinks(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseAllLinks& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
@@ -238,6 +285,25 @@ public:
     static TArray<FCk_GroundNav_LinkRecord>
     Get_LinkRecords(
         const FCk_Handle_GroundNavVolume& InVolume);
+
+    /**
+     * What one authored link RESOLVED to on the field this volume currently has published: both end
+     * statuses, both flat plates, and whether it is resolved and live.
+     *
+     * The read TryGet_LinkRecord cannot answer, and deliberately a separate one: the record is what
+     * survives a rebuild, where a resolution is valid only against the publish that produced it. An
+     * id the published field carries no entry for, and every id while nothing is published, reads as
+     * the default - no id, no plates, NoSurface at both ends, neither resolved nor live.
+     *
+     * A snapshot of one call, for the same reason Get_TileCount is one.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Link Resolution")
+    static FCk_GroundNav_LinkResolution
+    Get_LinkResolution(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InLinkId);
 
 public:
     /**

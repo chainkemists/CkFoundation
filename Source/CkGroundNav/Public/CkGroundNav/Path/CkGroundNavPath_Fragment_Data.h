@@ -11,6 +11,8 @@
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
+#include <GameplayTagContainer.h>
+
 #include "CkGroundNavPath_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -168,12 +170,38 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_GroundNav_PlanMode _PlanMode = ECk_GroundNav_PlanMode::Cold;
 
+    /** Stable link ids THIS query may not traverse. A denied link is skipped where the search admits
+     *  crossings, so the answer routes around it or does not exist - it is never merely dearer, and a
+     *  corridor that came back can never be holding one. The veto is the query's, not the field's:
+     *  what a link joins, and every reachability label that follows from it, is unchanged. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSet<int32> _DeniedLinkIds;
+
+    /** The same denial by CLASS: a link whose authored _UserTypeTag matches this container is denied,
+     *  so a body that cannot use ladders needs no id for any of them. The RECORD'S tag is matched
+     *  against the container, so naming a parent denies every link tagged under it. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _DeniedLinkUserTypeTags;
+
+    /** Stable link id to the multiplier THIS query prices its traverse at, REPLACING the authored one.
+     *  Never below 1.0: every edge must cost at least the distance it covers or the search's Euclidean
+     *  heuristic stops being admissible, so a multiplier below that bound is refused where the
+     *  request is made rather than clamped somewhere the caller cannot see. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TMap<int32, float> _LinkCostMultipliers;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
     CK_PROPERTY(_RequestRevision);
     CK_PROPERTY(_IsShadow);
     CK_PROPERTY(_PlanMode);
+    CK_PROPERTY(_DeniedLinkIds);
+    CK_PROPERTY(_DeniedLinkUserTypeTags);
+    CK_PROPERTY(_LinkCostMultipliers);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);
@@ -200,6 +228,88 @@ private:
 
 public:
     CK_PROPERTY(_RequestRevision);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Which end of an authored link a published waypoint stands on.
+ *
+ * The reflected twin of ck::groundnav::ECk_GroundNav_LinkWaypointRole. The plan's own role rides an
+ * unreflected value in Search/, which no reflected header may include from here downwards, and the two
+ * are converted where the plan is flattened onto the result.
+ */
+UENUM(BlueprintType)
+enum class ECk_GroundNavPath_LinkWaypointRole : uint8
+{
+    // No link put this waypoint on the route.
+    None,
+
+    // Where the body steps ONTO the link.
+    Entry,
+
+    // Where it steps off the far end.
+    Exit
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNavPath_LinkWaypointRole);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * One published waypoint that an authored link put on the route.
+ *
+ * A PARALLEL array keyed by index into _Waypoints rather than a richer element type for _Waypoints
+ * itself: a consumer that reads only the locations reads exactly the array it read before links
+ * existed, and a route that crosses none carries no second array at all.
+ *
+ * The id is the STABLE authored one and never the field-local link index, because an installed path
+ * outlives the field it was planned against and _ResolvedLinks is re-derived wholesale on every
+ * publish, so an index would quietly name a different link after the next add or remove.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_GroundNavPath_LinkWaypoint
+{
+    GENERATED_BODY()
+
+    CK_GENERATED_BODY(FCk_GroundNavPath_LinkWaypoint);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _WaypointIndex = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _LinkId = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNavPath_LinkWaypointRole _Role = ECk_GroundNavPath_LinkWaypointRole::None;
+
+    /** Carried on both ends of one traversal, so an exit answers what its entry did rather than making
+     *  a consumer look back up the array for it. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNav_LinkDirection _EntryDirection = ECk_GroundNav_LinkDirection::Bidirectional;
+
+    /** The plan's own integrated distance to this waypoint. Carried rather than left to be recomputed:
+     *  the polyline length is a number the post-process already answered, and a query that integrated
+     *  _Waypoints a second time would be a second definition of it. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    float _DistanceFromStartUu = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_WaypointIndex);
+    CK_PROPERTY_GET(_LinkId);
+    CK_PROPERTY_GET(_Role);
+    CK_PROPERTY_GET(_EntryDirection);
+    CK_PROPERTY_GET(_DistanceFromStartUu);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_GroundNavPath_LinkWaypoint,
+        _WaypointIndex, _LinkId, _Role, _EntryDirection, _DistanceFromStartUu);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -268,6 +378,12 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_GroundNav_RepairVerdict _RepairVerdict = ECk_GroundNav_RepairVerdict::None;
 
+    /** Where this route steps onto and off the authored links it crosses, keyed by index into
+     *  _Waypoints. Empty on every route that crosses none. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_GroundNavPath_LinkWaypoint> _LinkWaypoints;
+
 public:
     CK_PROPERTY(_Status);
     CK_PROPERTY(_Waypoints);
@@ -278,6 +394,7 @@ public:
     CK_PROPERTY(_SearchDurationMs);
     CK_PROPERTY(_PlannedAgainstEpoch);
     CK_PROPERTY(_RepairVerdict);
+    CK_PROPERTY(_LinkWaypoints);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

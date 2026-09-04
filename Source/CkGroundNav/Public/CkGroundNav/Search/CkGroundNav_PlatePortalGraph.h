@@ -111,6 +111,14 @@ namespace ck::groundnav
         // plate already carries. A plate the table does not name is priced at whatever the field says.
         TMap<int32, float> _PlateCostMultipliers;
 
+        // The query's own link veto, mirrored off the cost params exactly as the plate table above is.
+        // The two deny sets are read where a crossing is admitted, so a refused link mints no node;
+        // the rewrite is read where a link's own traverse is priced, and names the multiplier that
+        // stands in place of the authored one.
+        TSet<int32> _DeniedLinkIds;
+        FGameplayTagContainer _DeniedLinkUserTypeTags;
+        TMap<int32, float> _LinkCostMultipliers;
+
         // What one cell of the field is worth, which is what turns a clearance into cell widths.
         float _CellSizeUu = 0.0f;
     };
@@ -185,6 +193,18 @@ namespace ck::groundnav
     Get_LinkTraversalCost(
         const FCk_GroundNav_Field&    InField,
         const FCk_GroundNav_Crossing& InCrossing) -> float;
+
+    /**
+     * The straight-line span of the link a crossing enters, and zero for a lattice crossing.
+     *
+ * The one measurement of that length: Get_LinkTraversalCost reads it, and so does a query pricing
+ * the traverse at its own multiplier instead of the authored one, so both prices are built from
+ * the same number. A second measurement is the one way the two could drift.
+     */
+    CKGROUNDNAV_API auto
+    Get_LinkSpanUu(
+        const FCk_GroundNav_Field&    InField,
+        const FCk_GroundNav_Crossing& InCrossing) -> double;
 
     // ----------------------------------------------------------------------------------------------------------------
 

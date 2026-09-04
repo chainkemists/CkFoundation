@@ -302,6 +302,9 @@ namespace ck::groundnav
         Shared->_SlopePenaltyK = InQuery._Cost._SlopePenaltyK;
         Shared->_ClearanceBiasK = InQuery._Cost._ClearanceBiasK;
         Shared->_PlateCostMultipliers = InQuery._Cost._PlateCostMultipliers;
+        Shared->_DeniedLinkIds = InQuery._Cost._DeniedLinkIds;
+        Shared->_DeniedLinkUserTypeTags = InQuery._Cost._DeniedLinkUserTypeTags;
+        Shared->_LinkCostMultipliers = InQuery._Cost._LinkCostMultipliers;
         Shared->_CellSizeUu = Field._Params._Config.Get_CellSizeUu();
 
         _Shared = Shared;

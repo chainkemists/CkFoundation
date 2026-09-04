@@ -259,6 +259,54 @@ The watch is pinned to `FGroup_Gameplay_TimeDelta`. Publishes land in `FGroup_Tr
 `FGroup_Gameplay`, where CkCrowd's path refresh consumes the signal — one deterministic frame,
 every time.
 
+## Link traversal handshake
+
+A body crossing an authored navigation link — a ladder, a jump, a door — announces that it has started and
+announces when it is done, and both announcements live HERE rather than in the provider that owns the
+link. Completing a crossing changes no geometry, so no provider is consulted and the provider table stays
+where it was: this is state on the TRAVERSER and nothing else. Neutral for the same reason the rest of
+this module is — a ground link and a future provider's link are the same act to the game code that plays
+the ladder animation.
+
+`UCk_Utils_NavSurface_LinkTraversal_UE` is a `FCk_Handle` mixin, and the fragments compose on the first
+request, so any entity may traverse and no feature has to be added first.
+`Request_BeginLinkTraversal(handle, {link id, correlator, entry direction}, delegate)` starts one crossing;
+`Request_CompleteLinkTraversal(handle, {correlator}, delegate)` ends it normally;
+`Request_CancelLinkTraversal(handle, {correlator}, delegate)` abandons it. The requests are drained on the
+game thread by `FProcessor_NavSurface_LinkTraversal_HandleRequests` under `MakeCompletionGuard`, which is
+where exactly-once comes from. `Get_LinkTraversal` reads back `{link id, correlator, entry direction,
+state}` and `Get_IsTraversingLink` folds it to a bool; an entity that has never begun a crossing and one
+whose last crossing ended give the same `None` answer carrying no ids, so a caller never has to ask
+whether the feature is composed.
+
+**The correlator names the CROSSING, not the link.** The same body crosses the same ladder many times, and
+only the correlator lets a later Complete say WHICH crossing it is ending. The caller owns its uniqueness —
+nothing here mints one.
+
+The state machine is four rules and one at a time:
+
+- A Begin naming the correlator ALREADY active completes `Succeeded` and changes nothing — no second
+  broadcast. This is what lets a reconciled driver ask "which crossing should be running" every pass
+  instead of edge-detecting an advance.
+- A Begin naming a DIFFERENT correlator while one is live completes `Failed`. A body is on one link or on
+  none; admitting the second would leave the first with nothing to end it.
+- A Complete for a correlator that is not the active one completes `Failed` — the caller is driving a
+  crossing that is not the one running.
+- A Cancel for a correlator that is not the active one completes `Succeeded` and does nothing: there is
+  nothing left to abandon, so the caller's intent already holds.
+
+`OnLinkTraversalBegun` (traverser, link id, correlator) fires once per ADMITTED Begin.
+`OnLinkTraversalCompleted` (traverser, link id, correlator, result) separates the two ways a crossing ends:
+`Succeeded` for a Complete, `Failed_Cancelled` for a Cancel or for a teardown that took the crossing with
+it. A listener that only stops an animation may ignore the result; one that has to decide whether the body
+ARRIVED cannot, which is why it is on the payload rather than left to be inferred.
+
+**EndPlay cancels.** An entity torn down mid-crossing reports `Failed_Cancelled` for whatever was pending,
+so a listener holding a gate open is never left holding it by a destruction it did not watch for.
+
+CkCrowd is the first consumer and drives all of this off the waypoint cursor it already advances — see
+that module's *Link traversal* notes for how a route's link metadata becomes Begin and Complete calls.
+
 ## Area tags mean something without a UNavArea
 
 An area tag has two registrations, contributed side by side by whichever module owns the area.

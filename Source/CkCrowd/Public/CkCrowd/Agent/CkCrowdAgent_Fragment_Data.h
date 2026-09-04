@@ -11,6 +11,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
+
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 
 #include <CoreMinimal.h>
@@ -259,6 +261,23 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     int32 _IgnoreFlags = 0;
 
+    // Navigation links this agent may never take, by the link's stable id on its volume. Per agent
+    // because a veto is a fact about the body, not about the ground: the link stays on the field and
+    // every other agent still crosses it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    TSet<int32> _DeniedLinkIds;
+
+    // Navigation links this agent may never take, by the user-type tag the link was authored with -
+    // a parent tag denies every child, so one tag says "no ladders" without naming any link.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FGameplayTagContainer _DeniedLinkUserTypeTags;
+
+    // Per-link cost multipliers that REPLACE the authored one for this agent's own plans. Never below
+    // 1.0: the ground search refuses that at its request boundary, because an edge priced under its
+    // own length would make its heuristic optimistic.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    TMap<int32, float> _LinkCostMultipliers;
+
 public:
     CK_PROPERTY(_Radius);
     CK_PROPERTY(_Height);
@@ -282,6 +301,9 @@ public:
     CK_PROPERTY(_AgentMode);
     CK_PROPERTY(_CollisionFlags);
     CK_PROPERTY(_IgnoreFlags);
+    CK_PROPERTY(_DeniedLinkIds);
+    CK_PROPERTY(_DeniedLinkUserTypeTags);
+    CK_PROPERTY(_LinkCostMultipliers);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CrowdAgent_ParamsData, _Radius, _Height);
@@ -432,6 +454,23 @@ private:
     UPROPERTY()
     bool _StrictStandingCrowdPlanFailed = false;
 
+    // Where the installed ground route steps onto and off the authored links it crosses, in walk
+    // order, stamped at install from the GroundNav result's own metadata.
+    //
+    // Only the ground install stamps it, so a Recast, PathNetwork or Voxel corridor leaves whatever
+    // the agent's last ground route left here. That is why the cursor reads it only while
+    // _ActiveProvider is GroundNav rather than trusting the array alone.
+    UPROPERTY()
+    TArray<FCk_GroundNavPath_LinkSpan> _LinkSpans;
+
+    // The crossing the waypoint cursor is driving on the neutral handshake, and the correlator that
+    // names it. Both INDEX_NONE while the agent is on no link — a traverser crosses one at a time.
+    UPROPERTY()
+    int32 _ActiveLinkId = INDEX_NONE;
+
+    UPROPERTY()
+    int32 _ActiveLinkCorrelator = INDEX_NONE;
+
 public:
     CK_PROPERTY_GET(_WaypointIndex);
     CK_PROPERTY_GET(_ActiveArrivalRadius);
@@ -449,6 +488,9 @@ public:
     CK_PROPERTY_GET(_PlanUsesStrictStandingCrowdFilter);
     CK_PROPERTY_GET(_StrictPlanFailed);
     CK_PROPERTY_GET(_StrictStandingCrowdPlanFailed);
+    CK_PROPERTY_GET(_LinkSpans);
+    CK_PROPERTY_GET(_ActiveLinkId);
+    CK_PROPERTY_GET(_ActiveLinkCorrelator);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
