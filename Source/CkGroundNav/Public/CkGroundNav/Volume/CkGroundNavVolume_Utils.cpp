@@ -29,6 +29,7 @@ auto
 
     NewVolumeEntity.Add<ck::FFragment_GroundNavVolume_Params>(InParams);
     NewVolumeEntity.Add<ck::FFragment_GroundNavVolume_BuildState>();
+    NewVolumeEntity.Add<ck::FFragment_GroundNavVolume_RepairState>();
     NewVolumeEntity.Add<ck::FFragment_GroundNavVolume_BuiltField>();
     NewVolumeEntity.Add<ck::FTag_GroundNavVolume_NeedsSetup>();
 
@@ -71,6 +72,51 @@ auto
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Requests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_Repair(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_Repair& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_RepairRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_Repair"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    const auto& DirtyBounds = InRequest.Get_DirtyBounds();
+
+    const auto DirtyBoundsIsABox =
+        DirtyBounds.IsValid != 0 &&
+        NOT DirtyBounds.Min.ContainsNaN() &&
+        NOT DirtyBounds.Max.ContainsNaN() &&
+        DirtyBounds.Min.X < DirtyBounds.Max.X &&
+        DirtyBounds.Min.Y < DirtyBounds.Max.Y &&
+        DirtyBounds.Min.Z < DirtyBounds.Max.Z;
+
+    CK_ENSURE_IF_NOT(DirtyBoundsIsABox,
+        TEXT("Degenerate dirty bounds [{}] supplied to Request_Repair on GroundNav Volume [{}]"),
+        DirtyBounds, InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_RepairRequests>()._Requests.Emplace(InRequest);
 
     return InVolume;
 }
@@ -319,6 +365,27 @@ auto
     { return {}; }
 
     return InVolume.Get<ck::FFragment_GroundNavVolume_Markup>().Get_Entries();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_PendingDirtyBounds(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> FBox
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_RepairState>())
+    { return FBox{ForceInit}; }
+
+    return InVolume.Get<ck::FFragment_GroundNavVolume_RepairState>().Get_PendingDirtyBounds();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsRepairInProgress(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> bool
+{
+    return ck::IsValid(InVolume) && InVolume.Has<ck::FTag_GroundNavVolume_RepairInProgress>();
 }
 
 auto

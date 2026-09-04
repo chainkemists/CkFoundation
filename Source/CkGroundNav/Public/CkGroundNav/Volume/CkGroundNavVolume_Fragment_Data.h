@@ -116,6 +116,33 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_Repair : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_Repair);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_Repair);
+
+private:
+    /** World-space box whose ground is no longer trustworthy. For a MOVED body this is the UNION of
+     *  where it was and where it is: the NEW half closes the ground it arrived on, and the OLD half
+     *  reopens the ground it left. A request carrying only the new half leaves the body's old
+     *  footprint blocked for as long as the field lives, because nothing else will ever revisit it. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FBox _DirtyBounds = FBox{ForceInit};
+
+public:
+    CK_PROPERTY_GET(_DirtyBounds);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_Repair, _DirtyBounds);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Paints an authored area tag onto the ground a shape covers.
  *
