@@ -23,12 +23,15 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleMarkupRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartBuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Build);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_StartRepair);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Repair);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupCostDerive);
-CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupWalkabilityRebuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingMarkupRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,14 +107,16 @@ namespace ck
                 : ECk_GroundNav_MarkupKind::Cost;
         }
 
-        auto DoMark_MarkupDirty(
-            FCk_Handle_GroundNavVolume InVolumeEntity,
-            ECk_GroundNav_MarkupKind   InKind) -> void
+        // A box that bounds nothing must not be unioned in: FBox::operator+ takes the union with a box
+        // at the origin, which would drag every dirty region back to the world centre.
+        auto Get_UnionedBounds(
+            const FBox& InAccumulated,
+            const FBox& InAdded) -> FBox
         {
-            if (InKind == ECk_GroundNav_MarkupKind::Walkability)
-            { InVolumeEntity.AddOrGet<FTag_GroundNavVolume_MarkupWalkabilityDirty>(); }
-            else
-            { InVolumeEntity.AddOrGet<FTag_GroundNavVolume_MarkupCostDirty>(); }
+            if (InAdded.IsValid == 0)
+            { return InAccumulated; }
+
+            return InAccumulated.IsValid != 0 ? InAccumulated + InAdded : InAdded;
         }
 
         auto Get_MarkupEntryIndex(
@@ -176,13 +181,14 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
             FFragment_GroundNavVolume_BuildState& InBuildState,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Requests& InRequests) const
         -> void
     {
         ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InVolumeEntity, InParams, InBuildState, InRequest);
+                DoHandleRequest(InVolumeEntity, InParams, InBuildState, InRepairState, InRequest);
             }));
     }
 
@@ -192,6 +198,7 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
             FFragment_GroundNavVolume_BuildState& InBuildState,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             const FCk_Request_GroundNavVolume_Build& InRequest)
         -> void
     {
@@ -222,11 +229,98 @@ namespace ck
         InBuildState._PendingRequest.TryFireCompletion(
             InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
 
+        DoCancel_RepairInFlight(InVolumeEntity, InRepairState);
+
         InBuildState._Backend.Reset();
         InBuildState._PendingRequest = InRequest;
 
         InVolumeEntity.Try_Remove<FTag_GroundNavVolume_BuildInProgress>();
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsBuild>();
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleRequests::
+        DoCancel_RepairInFlight(
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_RepairState& InRepairState)
+        -> void
+    {
+        if (NOT InVolumeEntity.Has<FTag_GroundNavVolume_RepairInProgress>())
+        { return; }
+
+        for (const auto& InFlightRequest : InRepairState._InFlightRequests)
+        {
+            InFlightRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+        }
+
+        InRepairState._InFlightRequests.Reset();
+        InRepairState._Repair = {};
+        InRepairState._Backend.Reset();
+
+        // A build taking a repair off the volume is no evidence its region was failing, so the retry
+        // budget is not spent by one.
+        InRepairState._StaleRetryCount = 0;
+
+        InVolumeEntity.Remove<FTag_GroundNavVolume_RepairInProgress>();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_HandleRepairRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            FFragment_GroundNavVolume_RepairRequests& InRequests) const
+        -> void
+    {
+        ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequest) -> void
+            {
+                DoHandleRequest(InVolumeEntity, InBuiltField, InRepairState, InRequest);
+            }));
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleRepairRequests::
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            const FCk_Request_GroundNavVolume_Repair& InRequest)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        const auto BuildWillAnswerIt = InVolumeEntity.Has<FTag_GroundNavVolume_NeedsBuild>() ||
+                                       InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>();
+
+        // A repair carries every tile OUTSIDE its dirty box over from a previous bake, so a volume with
+        // nothing published has nothing to carry and no repair to make. A retry does not change that -
+        // a build is what bakes that ground - which is what Failed means. Unless a build is already
+        // coming: then the region rides it and completes when it publishes.
+        if (NOT InBuiltField.Get_Field().IsValid() && NOT BuildWillAnswerIt)
+        {
+            groundnav::Verbose(
+                TEXT("GroundNav Volume [{}] was handed a dirty region [{}] before it published a field - "
+                     "dropping the region; a build is what bakes that ground"),
+                InVolumeEntity, InRequest.Get_DirtyBounds());
+
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        // Several bodies may dirty one volume in a frame, and one repair over their union costs less
+        // than one repair each.
+        InRepairState._PendingDirtyBounds =
+            Get_UnionedBounds(InRepairState._PendingDirtyBounds, InRequest.Get_DirtyBounds());
+
+        InRepairState._PendingRequests.Emplace(InRequest);
+
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsRepair>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -237,6 +331,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Markup& InMarkup,
             FFragment_GroundNavVolume_MarkupRequests& InRequests) const
         -> void
@@ -244,7 +339,7 @@ namespace ck
         ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InVolumeEntity, InBuiltField, InMarkup, InRequest);
+                DoHandleRequest(InVolumeEntity, InBuiltField, InRepairState, InMarkup, InRequest);
             }));
     }
 
@@ -253,6 +348,7 @@ namespace ck
         DoHandleRequest(
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Markup& InMarkup,
             const FCk_Request_GroundNavVolume_AreaMarkup& InRequest)
         -> void
@@ -288,12 +384,14 @@ namespace ck
         const auto ExistingIndex = Get_MarkupEntryIndex(InMarkup, MarkupEntity);
         const auto EntryExists = InMarkup._Entries.IsValidIndex(ExistingIndex);
 
-        const auto PreviousKind = EntryExists
-            ? TOptional<ECk_GroundNav_MarkupKind>{InMarkup._Entries[ExistingIndex].Get_Record().Get_Kind()}
-            : TOptional<ECk_GroundNav_MarkupKind>{};
+        // The WHOLE previous record, because an update that MOVED one leaves the ground it used to
+        // cover decided by nothing, and a copy is needed anyway: the entry is overwritten below.
+        const auto PreviousRecord = EntryExists
+            ? TOptional<FCk_GroundNav_MarkupRecord>{InMarkup._Entries[ExistingIndex].Get_Record()}
+            : TOptional<FCk_GroundNav_MarkupRecord>{};
 
-        const auto RecordId = EntryExists
-            ? InMarkup._Entries[ExistingIndex].Get_Record().Get_Id()
+        const auto RecordId = PreviousRecord.IsSet()
+            ? PreviousRecord->Get_Id()
             : InMarkup._NextId;
 
         const auto Kind = Get_MarkupKind(Policy->Get_Kind());
@@ -345,12 +443,17 @@ namespace ck
         MarkupRef._VolumeEntity = InVolumeEntity.ConvertToHandle();
         MarkupRef._RecordId = RecordId;
 
-        // A record that changed KIND changed both: the ground its old kind was deciding is decided by
-        // nothing now, and the ground its new kind decides was not decided before.
-        if (PreviousKind.IsSet() && *PreviousKind != Kind)
-        { DoMark_MarkupDirty(InVolumeEntity, *PreviousKind); }
+        // The record's OLD footprint owes its old kind an answer whether the update moved it, retagged
+        // it or changed nothing: ground the previous record was deciding is decided by the new one only
+        // where the two overlap, and a footprint left behind is ground nothing else will ever revisit.
+        if (PreviousRecord.IsSet())
+        {
+            DoMark_MarkupDirty(InVolumeEntity, InBuiltField, InRepairState, PreviousRecord->Get_Kind(),
+                groundnav::Get_MarkupWorldBounds(*PreviousRecord));
+        }
 
-        DoMark_MarkupDirty(InVolumeEntity, Kind);
+        DoMark_MarkupDirty(InVolumeEntity, InBuiltField, InRepairState, Kind,
+            groundnav::Get_MarkupWorldBounds(Record));
 
         InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
     }
@@ -360,6 +463,7 @@ namespace ck
         DoHandleRequest(
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Markup& InMarkup,
             const FCk_Request_GroundNavVolume_ReleaseAreaMarkup& InRequest)
         -> void
@@ -368,17 +472,13 @@ namespace ck
 
         auto MarkupEntity = InRequest.Get_MarkupEntity();
 
-        const auto MarkupEntityIsValid = ck::IsValid(MarkupEntity);
-
-        CK_ENSURE_IF_NOT(MarkupEntityIsValid,
-            TEXT("Cannot release markup on GroundNav Volume [{}] - the request names an invalid markup "
-                 "Entity [{}], and there is nothing else a record is keyed on"),
-            InVolumeEntity, MarkupEntity)
-        {
-            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
-            return;
-        }
-
+        // A release is not guarded on the entity being alive, because the ordinary release IS that
+        // entity's own teardown: the neutral NavSurface EndPlay asks the provider to release, and the
+        // volume drains that request a frame later, with the entity already dead. The entry is keyed on
+        // the entity's IDENTITY - which FCk_Handle equality answers from the entity id and registry
+        // alone, never from validity - so a dead handle still finds the entry stored beside its twin.
+        // Refusing one here refuses the single moment a record must still be findable, and the ground
+        // it covers is then decided by a record nothing will ever release.
         const auto ExistingIndex = Get_MarkupEntryIndex(InMarkup, MarkupEntity);
 
         // Releasing a record the volume does not hold leaves the caller's intent holding afterwards,
@@ -389,17 +489,54 @@ namespace ck
             return;
         }
 
-        const auto ReleasedKind = InMarkup._Entries[ExistingIndex].Get_Record().Get_Kind();
+        // Copied before the entry goes: the ground the release changed is the ground the record covered,
+        // and after RemoveAt there is nothing left to ask.
+        const auto ReleasedRecord = InMarkup._Entries[ExistingIndex].Get_Record();
 
         InMarkup._Entries.RemoveAt(ExistingIndex);
 
-        MarkupEntity.Try_Remove<FFragment_GroundNav_MarkupRef>();
+        // Only where there is still an entity to drop it from: a dead one carries no fragments, and the
+        // record just removed above was the only state that outlived it.
+        if (ck::IsValid(MarkupEntity))
+        { MarkupEntity.Try_Remove<FFragment_GroundNav_MarkupRef>(); }
 
         // Ground a released record was deciding is decided by nothing now, which is as much a change of
         // that record's kind as painting it was.
-        DoMark_MarkupDirty(InVolumeEntity, ReleasedKind);
+        DoMark_MarkupDirty(InVolumeEntity, InBuiltField, InRepairState, ReleasedRecord.Get_Kind(),
+            groundnav::Get_MarkupWorldBounds(ReleasedRecord));
 
         InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    auto
+        FProcessor_GroundNavVolume_HandleMarkupRequests::
+        DoMark_MarkupDirty(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            ECk_GroundNav_MarkupKind InKind,
+            const FBox& InMarkupWorldBounds)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        if (InKind == ECk_GroundNav_MarkupKind::Cost)
+        {
+            InVolumeEntity.AddOrGet<FTag_GroundNavVolume_MarkupCostDirty>();
+            return;
+        }
+
+        // A volume with nothing published has no field for a repair to carry its untouched tiles over
+        // from. The record is already on the volume, so the first build bakes it in through
+        // FCk_GroundNav_FieldParams::_MarkupRecords - the same wait the cost derive makes, and the
+        // reason a paint before the first bake is never lost.
+        if (NOT InBuiltField.Get_Field().IsValid())
+        { return; }
+
+        InRepairState._PendingDirtyBounds =
+            Get_UnionedBounds(InRepairState._PendingDirtyBounds, InMarkupWorldBounds);
+
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsRepair>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -475,6 +612,7 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
             FFragment_GroundNavVolume_BuildState& InBuildState,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_BuiltField& InBuiltField) const
         -> void
     {
@@ -534,8 +672,278 @@ namespace ck
 
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
 
+        // A completed build re-baked every tile from live geometry, so every dirty region waiting on a
+        // repair has already been answered - and answered better. Opening a repair for them now would
+        // spend probes re-deriving ground this build just published, so their callers' intent holds and
+        // they complete. _InFlightRequests is empty here by the drain's own rule - arming a build cancels
+        // an open repair - and is drained anyway so a broken invariant strands nobody.
+        for (const auto& ParkedRepairRequest : InRepairState._PendingRequests)
+        { ParkedRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded); }
+
+        for (const auto& InFlightRepairRequest : InRepairState._InFlightRequests)
+        { InFlightRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded); }
+
+        InRepairState._PendingRequests.Reset();
+        InRepairState._InFlightRequests.Reset();
+        InRepairState._PendingDirtyBounds = FBox{ForceInit};
+        InRepairState._StaleRetryCount = 0;
+
+        InVolumeEntity.Try_Remove<FTag_GroundNavVolume_NeedsRepair>();
+
         InBuildState._PendingRequest.TryFireCompletion(
             InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_StartRepair::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_RepairState& InRepairState) const
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        // Snapshotted and cleared in ONE step. The tile set a repair fixes at Begin is the set this box
+        // selects and no other, so a box arriving from here on belongs to the next repair - which is
+        // also why the requests that named this box move with it.
+        const auto DirtyBounds = InRepairState._PendingDirtyBounds;
+
+        InRepairState._PendingDirtyBounds = FBox{ForceInit};
+
+        auto Parked = MoveTemp(InRepairState._PendingRequests);
+        InRepairState._PendingRequests.Reset();
+
+        const auto DoFailParked = [&]() -> void
+        {
+            for (const auto& ParkedRequest : Parked)
+            { ParkedRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+
+            InRepairState._Repair = {};
+            InRepairState._Backend.Reset();
+            InRepairState._StaleRetryCount = 0;
+        };
+
+        const auto Published = InBuiltField.Get_Field();
+
+        // Reachable without a defect: the drain parks a region behind a build when nothing is published
+        // yet, and that build can fail. There is still no field to carry the untouched tiles over from,
+        // and the next build - not a repair - is what bakes this ground.
+        if (NOT Published.IsValid())
+        {
+            groundnav::Verbose(
+                TEXT("GroundNav Volume [{}] holds a dirty region [{}] but has published no field to "
+                     "repair - dropping the region; a build is what bakes that ground"),
+                InVolumeEntity, DirtyBounds);
+
+            DoFailParked();
+            return;
+        }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+        InRepairState._Backend = MakeUnique<groundnav::FCk_GroundNav_GeometryBackend_Jolt>(World);
+
+        const auto BackendIsUsable = InRepairState._Backend->Get_IsValid();
+
+        // Same reasoning as the build's, and worse here: a backend that cannot answer reports no
+        // geometry, so a repair accepting one would re-bake the dirty tiles as open ground exactly where
+        // something was reported to have changed.
+        CK_ENSURE_IF_NOT(BackendIsUsable,
+            TEXT("GroundNav Volume [{}] cannot start a repair: no physics world to read geometry from"),
+            InVolumeEntity)
+        {
+            DoFailParked();
+            return;
+        }
+
+        // The markup goes in HERE and not at the request, exactly as StartBuild does it, so a repair
+        // bakes its tiles against what the volume currently holds. The records the SOURCE field's params
+        // carry are the ones the last publish baked with - re-baking a dirty tile under those would
+        // answer the very markup change that raised the region with the records it replaced. Only the
+        // records are replaced: every other field of the source params places the lattice the untouched
+        // tiles were produced on.
+        const auto MarkupRecords =
+            Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
+
+        const auto BeginResult = groundnav::Request_BeginRepair(
+            InRepairState._Repair, Published, DirtyBounds, InBuiltField.Get_Epoch().Get_Next(),
+            MarkupRecords);
+
+        CK_ENSURE_IF_NOT(BeginResult.Get_IsCompleted(),
+            TEXT("GroundNav Volume [{}] could not begin a repair of [{}]: [{}]"),
+            InVolumeEntity, DirtyBounds, BeginResult.Get_Status())
+        {
+            DoFailParked();
+            return;
+        }
+
+        InRepairState._InFlightRequests = MoveTemp(Parked);
+
+        // A box that reached no tile leaves the repair already whole. It is still handed to the slice
+        // below rather than published from here, so there is exactly ONE place a repair publishes from.
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_RepairInProgress>();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_Repair::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField) const
+        -> void
+    {
+        const auto BackendIsHeld = InRepairState._Backend.IsValid();
+
+        CK_ENSURE_IF_NOT(BackendIsHeld,
+            TEXT("GroundNav Volume [{}] is marked as repairing but holds no geometry backend"),
+            InVolumeEntity)
+        {
+            DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto SliceResult = groundnav::Request_AdvanceRepair(
+            *InRepairState._Backend, InParams.Get_ProbeBudgetPerTick(), InRepairState._Repair);
+
+        if (SliceResult.Get_Status() == ECk_GroundNav_BakeStatus::BudgetExhausted)
+        { return; }
+
+        // Read before anything spends the state that holds it.
+        const auto SnapshotBounds = InRepairState._Repair.Get_DirtyBounds();
+
+        if (NOT SliceResult.Get_IsCompleted())
+        {
+            groundnav::Display(TEXT("GroundNav Volume [{}] failed a local repair of [{}]: [{}]"),
+                InVolumeEntity, SnapshotBounds, SliceResult.Get_Status());
+
+            DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Failed);
+            DoRetain_FailedRegion(InVolumeEntity, InRepairState, SnapshotBounds);
+
+            return;
+        }
+
+        // A repair carried every tile outside its box across from the ONE field it opened against.
+        // Publishing it over a field somebody swapped in meanwhile would silently undo that publish
+        // everywhere the repair did not look, which is the one corruption this representation is
+        // otherwise unable to express.
+        const auto SourceIsStillPublished = InRepairState._Repair.Get_Source() == InBuiltField.Get_Field();
+
+        if (NOT SourceIsStillPublished)
+        {
+            groundnav::Display(
+                TEXT("GroundNav Volume [{}] lost a race on its local repair of [{}]: the field it opened "
+                     "against was replaced while it was slicing, so the repaired field is dropped and the "
+                     "region raised again"),
+                InVolumeEntity, SnapshotBounds);
+
+            DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Failed);
+            DoRetain_FailedRegion(InVolumeEntity, InRepairState, SnapshotBounds);
+
+            return;
+        }
+
+        auto Repaired = groundnav::Request_ReleaseRepairedField(InRepairState._Repair);
+
+        const auto RepairProducedAField = Repaired.IsValid();
+
+        CK_ENSURE_IF_NOT(RepairProducedAField,
+            TEXT("GroundNav Volume [{}] completed a local repair of [{}] that yielded no field"),
+            InVolumeEntity, SnapshotBounds)
+        {
+            DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Failed);
+            DoRetain_FailedRegion(InVolumeEntity, InRepairState, SnapshotBounds);
+
+            return;
+        }
+
+        InRepairState._StaleRetryCount = 0;
+
+        // A box that reached no tile re-bakes nothing and moves no epoch. Swapping a byte-identical
+        // field in would announce a rebuild that changed no ground, so the honest answer is the one the
+        // cost derive gives when nothing it restamped moved: succeed, and publish nothing.
+        if (Repaired->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
+        {
+            // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
+            InBuiltField._Epoch = Repaired->_Epoch;
+            InBuiltField._Field = MoveTemp(Repaired);
+
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+            groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+
+            // Only the re-baked tiles carry the new epoch, so this names exactly the ground the repair
+            // touched and nothing besides.
+            nav_surface::Request_NotifySurfaceRebuilt(World,
+                groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+        }
+
+        DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Succeeded);
+
+        // Arrived while this repair was slicing, so it names ground this repair never re-read.
+        if (InRepairState._PendingDirtyBounds.IsValid != 0)
+        { InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsRepair>(); }
+    }
+
+    auto
+        FProcessor_GroundNavVolume_Repair::
+        DoEnd(
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            ECk_Request_OperationResult InResult)
+        -> void
+    {
+        InVolumeEntity.Remove<FTag_GroundNavVolume_RepairInProgress>();
+
+        InRepairState._Backend.Reset();
+        InRepairState._Repair = {};
+
+        for (const auto& InFlightRequest : InRepairState._InFlightRequests)
+        { InFlightRequest.TryFireCompletion(InVolumeEntity, InResult); }
+
+        InRepairState._InFlightRequests.Reset();
+    }
+
+    auto
+        FProcessor_GroundNavVolume_Repair::
+        DoRetain_FailedRegion(
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            const FBox& InFailedBounds)
+        -> void
+    {
+        using namespace ck_groundnav_volume_processor;
+
+        const auto RegionMayBeRetried = InRepairState._StaleRetryCount == 0;
+
+        // Fail-closed with a BOUNDED escape. A region that fails twice running is failing for a reason
+        // another attempt does not address, and one re-raised forever would open the same doomed repair
+        // every tick for the life of the volume.
+        CK_ENSURE_IF_NOT(RegionMayBeRetried,
+            TEXT("GroundNav Volume [{}] failed a local repair of [{}] twice in a row - dropping the "
+                 "region. The ground it covers keeps whatever the last successful bake published, which "
+                 "is no longer trustworthy; a full build is what recovers it"),
+            InVolumeEntity, InFailedBounds)
+        {
+            InRepairState._StaleRetryCount = 0;
+            return;
+        }
+
+        ++InRepairState._StaleRetryCount;
+
+        InRepairState._PendingDirtyBounds =
+            Get_UnionedBounds(InRepairState._PendingDirtyBounds, InFailedBounds);
+
+        InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsRepair>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -594,23 +1002,6 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_GroundNavVolume_MarkupWalkabilityRebuild::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InVolumeEntity)
-        -> void
-    {
-        InVolumeEntity.Remove<MarkedDirtyBy>();
-
-        auto Volume = InVolumeEntity;
-
-        UCk_Utils_GroundNavVolume_UE::Request_Build(Volume,
-            FCk_Request_GroundNavVolume_Build{}.Set_ForceRestart(ECk_EnableDisable::Enable), {});
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    auto
         FProcessor_GroundNavVolume_CancelPendingRequests::
         ForEachEntity(
             TimeType InDeltaT,
@@ -629,6 +1020,41 @@ namespace ck
 
         // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
         InBuildState._Backend.Reset();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_CancelPendingRepairRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            const FFragment_GroundNavVolume_RepairRequests& InRequests)
+        -> void
+    {
+        // Three separate populations, and missing any one strands a caller. The QUEUE holds requests the
+        // drain never reached, _PendingRequests those it parked against a repair that will now never
+        // open, and _InFlightRequests the delegates that have been riding one mid-slice.
+        request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
+
+        for (const auto& ParkedRequest : InRepairState._PendingRequests)
+        {
+            ParkedRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+        }
+
+        for (const auto& InFlightRequest : InRepairState._InFlightRequests)
+        {
+            InFlightRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+        }
+
+        InRepairState._PendingRequests.Reset();
+        InRepairState._InFlightRequests.Reset();
+
+        // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
+        InRepairState._Backend.Reset();
     }
 
     // ----------------------------------------------------------------------------------------------------------------

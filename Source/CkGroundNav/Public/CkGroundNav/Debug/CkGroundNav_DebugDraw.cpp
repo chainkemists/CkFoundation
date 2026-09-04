@@ -14,6 +14,7 @@
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldRepair.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 #include "CkGroundNav/Query/CkGroundNav_Funnel.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
@@ -37,6 +38,7 @@
 #include <Engine/World.h>
 #include <GameFramework/Pawn.h>
 #include <GameFramework/PlayerController.h>
+#include <UObject/Package.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -236,6 +238,14 @@ namespace ck::groundnav
         // republish over a plate view that persists for a minute.
         constexpr auto kChangedBoundsLifetimeSeconds = 2.0f;
 
+        static TAutoConsoleVariable<float> CVar_RepairHighlightSeconds(
+            TEXT("ck.GroundNav.Debug.RepairHighlightSeconds"), 2.0f,
+            TEXT("How long the tiles an open local repair is re-baking stay highlighted, in seconds. ")
+            TEXT("A repair's tile set describes ONE publish and stops being true the moment the next ")
+            TEXT("slice lands, so it carries a short lifetime of its own rather than the view's - but ")
+            TEXT("a repair can finish inside a frame, and a highlight that expired with it could not ")
+            TEXT("be caught."));
+
         auto Do_DrawInvalidation(
             UWorld*                                      InWorld,
             TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
@@ -291,6 +301,65 @@ namespace ck::groundnav
                     FVector{Changed.GetCenter().X, Changed.GetCenter().Y, Changed.Max.Z},
                     TEXT("last published changed bounds"), nullptr, ChangedColor,
                     kChangedBoundsLifetimeSeconds, DrawShadow);
+            }
+        }
+
+        // The epoch the latest publish stamped reads GREEN wherever it landed, apart from the blue
+        // every other built tile draws in. After a local repair those green tiles are the whole of
+        // what was re-baked, and the blue ones are the ground carried across untouched.
+        const auto RepairColor = FColor{120, 235, 140};
+
+        auto Do_DrawRepair(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot,
+            float                              InHighlightSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto DrawShadow = true;
+            constexpr auto RepairThickness = 4.0f;
+            constexpr auto HighlightThickness = 5.0f;
+
+            const auto PendingColor = FColor{255, 140, 40};
+
+            if (InSnapshot._PendingDirtyBounds.IsValid != 0)
+            {
+                Do_DrawDashedBox(InWorld, InSnapshot._PendingDirtyBounds, PendingColor,
+                    kChangedBoundsLifetimeSeconds);
+
+                DrawDebugString(InWorld,
+                    FVector{InSnapshot._PendingDirtyBounds.GetCenter().X,
+                        InSnapshot._PendingDirtyBounds.GetCenter().Y,
+                        InSnapshot._PendingDirtyBounds.Max.Z},
+                    TEXT("dirty ground pending a repair"), nullptr, PendingColor,
+                    kChangedBoundsLifetimeSeconds, DrawShadow);
+            }
+
+            if (NOT InSnapshot._RepairInProgress)
+            { return; }
+
+            if (InSnapshot._RepairDirtyBounds.IsValid != 0)
+            {
+                DrawDebugBox(InWorld, InSnapshot._RepairDirtyBounds.GetCenter(),
+                    InSnapshot._RepairDirtyBounds.GetExtent(), RepairColor, Persistent,
+                    kChangedBoundsLifetimeSeconds, DepthPriority, RepairThickness);
+
+                DrawDebugString(InWorld,
+                    FVector{InSnapshot._RepairDirtyBounds.GetCenter().X,
+                        InSnapshot._RepairDirtyBounds.GetCenter().Y,
+                        InSnapshot._RepairDirtyBounds.Max.Z},
+                    FString::Printf(TEXT("repair in flight | %d tile(s)"),
+                        InSnapshot.Get_RepairTileCount()),
+                    nullptr, RepairColor, kChangedBoundsLifetimeSeconds, DrawShadow);
+            }
+
+            for (const auto& TileBounds : InSnapshot._RepairTileBounds)
+            {
+                if (TileBounds.IsValid == 0)
+                { continue; }
+
+                DrawDebugBox(InWorld, TileBounds.GetCenter(), TileBounds.GetExtent(), RepairColor,
+                    Persistent, InHighlightSeconds, DepthPriority, HighlightThickness);
             }
         }
     }
@@ -560,22 +629,58 @@ namespace ck::groundnav
             Do_DrawMarkups(InWorld, InSnapshot._Markups, LifetimeSeconds);
             Do_DrawInvalidation(InWorld, InSnapshot._Corridors, InSnapshot._ChangedBounds,
                 LifetimeSeconds);
+            Do_DrawRepair(InWorld, InSnapshot,
+                CVar_RepairHighlightSeconds.GetValueOnGameThread());
 
             return;
         }
 
         if (InMode == EDebugDrawMode::Tiles)
         {
+            constexpr auto DrawShadow = true;
+
+            const auto NewestEpoch = InSnapshot.Get_NewestTileEpoch();
+
+            // Nothing to pick out where every built tile carries the same epoch: a whole-field bake
+            // IS all of its own news, and tinting the lot would retire the ordinary built colour
+            // without telling a reader anything.
+            auto EpochsDiffer = false;
+
             for (const auto& Tile : InSnapshot._Tiles)
             {
+                if (Tile._IsBuilt && Tile._Epoch != NewestEpoch)
+                {
+                    EpochsDiffer = true;
+                    break;
+                }
+            }
+
+            for (const auto& Tile : InSnapshot._Tiles)
+            {
+                const auto IsFromLatestPublish = EpochsDiffer && Tile._IsBuilt && Tile._Epoch == NewestEpoch;
+
                 // An unbuilt tile is drawn, in its own colour. Omitting it would make a place nothing
                 // is known about look identical to a place with no floor, which is the distinction the
                 // whole status vocabulary exists to preserve.
-                const auto Color = Tile._IsBuilt ? FColor{90, 150, 255} : FColor{200, 90, 60};
+                const auto Color = Tile._IsBuilt
+                    ? (IsFromLatestPublish ? RepairColor : FColor{90, 150, 255})
+                    : FColor{200, 90, 60};
 
                 DrawDebugBox(InWorld, Tile._Bounds.GetCenter(), Tile._Bounds.GetExtent(), Color,
                     Persistent, LifetimeSeconds, DepthPriority, Tile._IsBuilt ? 1.5f : 3.0f);
+
+                if (NOT IsFromLatestPublish)
+                { continue; }
+
+                DrawDebugString(InWorld,
+                    FVector{Tile._Bounds.GetCenter().X, Tile._Bounds.GetCenter().Y,
+                        Tile._Bounds.Max.Z},
+                    FString::Printf(TEXT("epoch %lld"), static_cast<long long>(Tile._Epoch)),
+                    nullptr, Color, LifetimeSeconds, DrawShadow);
             }
+
+            Do_DrawRepair(InWorld, InSnapshot,
+                CVar_RepairHighlightSeconds.GetValueOnGameThread());
 
             auto WidestSeamUu = 0.0f;
 
@@ -872,6 +977,83 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Do_StampRepairFromWorld(
+            UWorld*                      InWorld,
+            FCk_GroundNav_DebugSnapshot& InOutSnapshot)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        auto VolumeEntities = world_fields::Get_VolumeEntities(InWorld);
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            const auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            if (NOT Volume.Has<ck::FFragment_GroundNavVolume_RepairState>())
+            { continue; }
+
+            const auto& RepairState = Volume.Get<ck::FFragment_GroundNavVolume_RepairState>();
+
+            if (InOutSnapshot._PendingDirtyBounds.IsValid == 0)
+            { InOutSnapshot._PendingDirtyBounds = RepairState.Get_PendingDirtyBounds(); }
+
+            const auto& Repair = RepairState.Get_Repair();
+
+            if (InOutSnapshot._RepairInProgress || NOT Repair.Get_IsRepairing())
+            { continue; }
+
+            InOutSnapshot._RepairInProgress = true;
+            InOutSnapshot._RepairDirtyBounds = Repair.Get_DirtyBounds();
+            InOutSnapshot._RepairTileIndices = Repair.Get_RepairTileIndices();
+
+            const auto Source = Repair.Get_Source();
+
+            if (NOT Source.IsValid())
+            { continue; }
+
+            InOutSnapshot._RepairTileBounds.Reserve(InOutSnapshot._RepairTileIndices.Num());
+
+            for (const auto TileIndex : InOutSnapshot._RepairTileIndices)
+            {
+                // Placed from the FIELD PARAMS, exactly as the repair selects tiles: a tile that never
+                // built carries no origin and no cell count, and those are among the tiles a repair is
+                // re-attempting.
+                const auto Coord = Get_TileCoord(Source->_Params._Divisions, TileIndex);
+
+                InOutSnapshot._RepairTileBounds.Emplace(
+                    Get_TileBounds(Source->_Params.Get_TileBakeParams(Coord, FCk_GroundNav_Epoch{})));
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDraw_DebugRepair(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot)
+        -> void
+    {
+        const auto WorldIsValid = ck::IsValid(InWorld);
+
+        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav repair outlines without a World"))
+        { return; }
+
+        debugdraw_private::Do_DrawRepair(InWorld, InSnapshot,
+            debugdraw_private::CVar_RepairHighlightSeconds.GetValueOnGameThread());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Get_DebugSnapshotSummary(
             const FCk_GroundNav_DebugSnapshot& InSnapshot)
         -> FString
@@ -981,6 +1163,38 @@ namespace ck::groundnav
             static_cast<double>(InSnapshot._AllocatedBytes) / 1024.0,
             IsTiledField ? TEXT("the published field") : TEXT("the bake products"));
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_GroundNav_DebugRepairReporter_UE::
+    Make_CompletionDelegate()
+    -> FCk_Delegate_Request_OnCompleted
+{
+    auto Reporter = NewObject<UCk_GroundNav_DebugRepairReporter_UE>(GetTransientPackage());
+
+    // The repair outlives this call by many ticks and nothing else refers to the reporter, so it is
+    // its own root until the handler below releases it.
+    Reporter->AddToRoot();
+
+    auto Delegate = FCk_Delegate_Request_OnCompleted{};
+    Delegate.BindDynamic(Reporter, &UCk_GroundNav_DebugRepairReporter_UE::DoOn_RepairCompleted);
+
+    return Delegate;
+}
+
+auto
+    UCk_GroundNav_DebugRepairReporter_UE::
+    DoOn_RepairCompleted(
+        FCk_Handle InVolume,
+        ECk_Request_OperationResult InResult)
+    -> void
+{
+    ck::groundnav::Display(TEXT("[GroundNav] repair on volume [{}] finished: {}"),
+        InVolume, InResult);
+
+    RemoveFromRoot();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1250,6 +1464,8 @@ namespace ck_groundnav_debugconsole
 
         InOutSnapshot._Corridors = ck::groundnav::Make_DebugCorridorsFromWorld(InWorld);
         InOutSnapshot._ChangedBounds = ck::groundnav::Make_DebugChangedBoundsFromWorld(InWorld);
+
+        ck::groundnav::Do_StampRepairFromWorld(InWorld, InOutSnapshot);
     }
 
     // What a provider has pushed and the revision watch has not broadcast yet. Reported apart
@@ -1553,6 +1769,13 @@ namespace ck_groundnav_debugconsole
         ck::groundnav::DoDraw_DebugInvalidation(InWorld, Corridors, ChangedBounds,
             FCk_Time{static_cast<double>(LifetimeSeconds)});
 
+        // A repair is the other thing a republish comes out of, so it is read beside the corridors
+        // rather than through a second command. Only the repair fields are stamped here - the rest of
+        // the snapshot has no bake behind it and nothing reads it.
+        auto RepairSnapshot = ck::groundnav::FCk_GroundNav_DebugSnapshot{};
+        ck::groundnav::Do_StampRepairFromWorld(InWorld, RepairSnapshot);
+        ck::groundnav::DoDraw_DebugRepair(InWorld, RepairSnapshot);
+
         auto Report = FString::Printf(
             TEXT("[GroundNav] invalidation: %d cached corridor(s)\n"), Corridors.Num());
 
@@ -1587,6 +1810,16 @@ namespace ck_groundnav_debugconsole
                 TEXT("  last published changed bounds : %s\n"), *Changed.ToString());
         }
 
+        const auto PendingDirtyText = RepairSnapshot._PendingDirtyBounds.IsValid
+            ? RepairSnapshot._PendingDirtyBounds.ToString()
+            : FString{TEXT("none")};
+
+        Report += FString::Printf(
+            TEXT("  repair : %s | %d tile(s) | dirty ground pending a repair %s\n"),
+            RepairSnapshot._RepairInProgress ? TEXT("IN FLIGHT") : TEXT("none open"),
+            RepairSnapshot.Get_RepairTileCount(),
+            *PendingDirtyText);
+
         Report += FString::Printf(
             TEXT("  pending rebuilds : %d box(es) pushed and not broadcast yet\n"),
             Get_PendingRebuildCount(InWorld));
@@ -1597,6 +1830,99 @@ namespace ck_groundnav_debugconsole
             ck::groundnav::debug::Get_IsRepathOnRebuildBypassed() ? TEXT("YES") : TEXT("no"),
             ck::groundnav::debug::Get_IsMarkupLiveGateBypassed() ? TEXT("YES") : TEXT("no"),
             CVar_DrawInvalidation.GetValueOnGameThread());
+
+        DoLog_Report(Report);
+    }
+
+    auto Get_TileIndexList(const TArray<int32>& InTileIndices) -> FString
+    {
+        auto List = FString{};
+
+        for (const auto TileIndex : InTileIndices)
+        {
+            if (NOT List.IsEmpty())
+            { List += TEXT(", "); }
+
+            List += FString::FromInt(TileIndex);
+        }
+
+        return List;
+    }
+
+    auto DoRepairAndReport(UWorld* InWorld, const FVector& InPoint, double InHalfExtentUu) -> void
+    {
+        const auto DirtyBounds = FBox::BuildAABB(InPoint, FVector{InHalfExtentUu});
+
+        auto VolumeEntities = ck::groundnav::world_fields::Get_VolumeEntities(InWorld);
+
+        auto Report = FString::Printf(
+            TEXT("[GroundNav] repair at (%.0f, %.0f, %.0f) half %.0f uu\n"),
+            InPoint.X, InPoint.Y, InPoint.Z, InHalfExtentUu);
+
+        auto ReachedVolumeCount = 0;
+
+        for (auto& VolumeEntity : VolumeEntities)
+        {
+            if (ck::Is_NOT_Valid(VolumeEntity))
+            { continue; }
+
+            auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+            if (ck::Is_NOT_Valid(Volume))
+            { continue; }
+
+            const auto VolumeLabel = ck::Format_UE(TEXT("{}"), Volume);
+            const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
+
+            if (ck::Is_NOT_Valid(Field))
+            {
+                Report += FString::Printf(
+                    TEXT("  volume %s : nothing published, so there is no field to repair\n"),
+                    *VolumeLabel);
+                continue;
+            }
+
+            if (NOT Field->_Params.Get_Bounds().Intersect(DirtyBounds))
+            {
+                Report += FString::Printf(
+                    TEXT("  volume %s : its published field does not reach the box\n"), *VolumeLabel);
+                continue;
+            }
+
+            ++ReachedVolumeCount;
+
+            // The same pure selection the repair itself will make, reported BEFORE the request so a
+            // reader can see what the box was going to touch even if the repair is refused.
+            const auto TileIndices = ck::groundnav::Get_RepairTileIndices(*Field, DirtyBounds);
+            const auto TileIndexList = Get_TileIndexList(TileIndices);
+            const auto PendingBounds = UCk_Utils_GroundNavVolume_UE::Get_PendingDirtyBounds(Volume);
+
+            // Hoisted rather than spelled inline: a TCHAR* taken off a temporary FString inside the
+            // Printf argument list dangles before the format runs.
+            const auto PendingText = PendingBounds.IsValid
+                ? PendingBounds.ToString()
+                : FString{TEXT("none")};
+
+            Report += FString::Printf(
+                TEXT("  volume %s : %d tile(s) selected [%s] | pending %s | repair %s\n"),
+                *VolumeLabel,
+                TileIndices.Num(),
+                *TileIndexList,
+                *PendingText,
+                UCk_Utils_GroundNavVolume_UE::Get_IsRepairInProgress(Volume)
+                    ? TEXT("ALREADY IN FLIGHT")
+                    : TEXT("not in flight"));
+
+            UCk_Utils_GroundNavVolume_UE::Request_Repair(Volume,
+                FCk_Request_GroundNavVolume_Repair{DirtyBounds},
+                UCk_GroundNav_DebugRepairReporter_UE::Make_CompletionDelegate());
+        }
+
+        if (ReachedVolumeCount == 0)
+        {
+            Report += TEXT("  no published ground-nav field in this world reaches the box, so there ")
+                      TEXT("is nothing to repair\n");
+        }
 
         DoLog_Report(Report);
     }
@@ -2700,6 +3026,45 @@ namespace ck_groundnav_debugconsole
             DoInvalidationAndReport(InWorld);
         }));
 
+    static FAutoConsoleCommandWithWorldAndArgs ConsoleCommand_RepairAt(
+        TEXT("ck.GroundNav.RepairAt"),
+        TEXT("Declare a box of ground no longer trustworthy and ask every volume it reaches for a ")
+        TEXT("LOCAL repair of exactly that ground: ck.GroundNav.RepairAt <X> <Y> <Z> <HALF>. Each ")
+        TEXT("volume reports the tiles the box would select, the dirty ground already pending on it, ")
+        TEXT("and whether a repair is already in flight - and logs its own outcome when the repair ")
+        TEXT("ends, which is ticks away and never at the moment the box is accepted. A volume whose ")
+        TEXT("published field does not reach the box is listed and left alone. Reads the volumes' ")
+        TEXT("PUBLISHED fields, so ck.GroundNav.BakeFieldAt is not needed."),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+            [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.RepairAt ran without a World"))
+            { return; }
+
+            if (InArgs.Num() != 4)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.RepairAt needs four numbers: ck.GroundNav.RepairAt <X> <Y> <Z> <HALF>"));
+                return;
+            }
+
+            const auto Point = FVector{
+                FCString::Atod(*InArgs[0]), FCString::Atod(*InArgs[1]), FCString::Atod(*InArgs[2])};
+
+            const auto HalfExtentUu = FCString::Atod(*InArgs[3]);
+
+            if (HalfExtentUu <= 0.0)
+            {
+                ck::groundnav::Warning(
+                    TEXT("ck.GroundNav.RepairAt needs a positive HALF - a degenerate box names no ground"));
+                return;
+            }
+
+            DoRepairAndReport(InWorld, Point, HalfExtentUu);
+        }));
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Probe(
         TEXT("ck.GroundNav.Probe"),
         TEXT("Project the player's own position onto the last field bake and draw the answer. ")
@@ -3040,7 +3405,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {}")
-                TEXT("\n            DrawInvalidation {}")
+                TEXT("\n            DrawInvalidation {} RepairHighlightSeconds {}")
                 TEXT("\n  gates   : MarkupLiveGate bypassed {} RepathOnRebuild bypassed {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
@@ -3067,6 +3432,7 @@ namespace ck_groundnav_debugconsole
                 CVar_MaxCells.GetValueOnGameThread(),
                 ck::groundnav::debug::Get_IsMarkupDrawEnabled(),
                 CVar_DrawInvalidation.GetValueOnGameThread(),
+                ck::groundnav::debugdraw_private::CVar_RepairHighlightSeconds.GetValueOnGameThread(),
                 ck::groundnav::debug::Get_IsMarkupLiveGateBypassed(),
                 ck::groundnav::debug::Get_IsRepathOnRebuildBypassed());
         }));

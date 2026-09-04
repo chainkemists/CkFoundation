@@ -118,11 +118,20 @@ multiplier come from — this module never decides what a tag means), and the re
 a box. A record whose footprint misses every tile, or lands where nothing has baked, is still
 admitted: the volume holds what was AUTHORED, and what a markup reaches is the bake's separate answer.
 
-Admission then raises `FTag_GroundNavVolume_MarkupWalkabilityDirty` or
-`FTag_GroundNavVolume_MarkupCostDirty` by the record's kind, and those two tags are the whole hand-off
-to the stages that answer them. They are separate because those stages are: a walkability change owes
-a re-bake, where a cost change only re-derives what a leg is priced at and republishes. Releasing a
-record raises the tag its kind owes for the same reason painting it did.
+Admission then hands the change to the stage the record's kind owes, and the two hand-offs are
+different SHAPES because the two stages are. A COST change raises
+`FTag_GroundNavVolume_MarkupCostDirty` — a tag, because the derive restamps every tile from the whole
+record list and has no use for a region. A WALKABILITY change owes an actual re-bake of the ground the
+record covers, so it unions `Get_MarkupWorldBounds(record)` into the volume's `_PendingDirtyBounds` and
+raises `FTag_GroundNavVolume_NeedsRepair` — a REGION, which is what the local repair takes.
+
+An UPDATE marks the OLD record's bounds as well as the new one's, before the entry is overwritten:
+ground a record moved off is decided by the new record only where the two overlap, and a footprint left
+behind is ground nothing else will ever revisit. A RELEASE marks the released record's bounds for the
+same reason painting them marked them. A walkability change on a volume with **nothing published** marks
+no region and waits — there is no field for a repair to carry its untouched tiles over from, and the
+record is already on the volume, so the first build bakes it in. That is the same wait the cost derive
+makes, and it is why a paint before the first bake is never lost.
 
 **Cost — `FProcessor_GroundNavVolume_MarkupCostDerive`.** Copies the published field,
 restamps EVERY built tile's plates from the whole record list (`Get_FieldWithMarkupCost`), and swaps
@@ -137,17 +146,72 @@ reads live; disabling a record and deleting it converge on the same field. A vol
 nothing published clears the tag and waits: the records are on the volume, and the next build prices
 them through `FCk_GroundNav_FieldParams::_MarkupRecords`.
 
-**Walkability — `FProcessor_GroundNavVolume_MarkupWalkabilityRebuild`.** Asks for a rebuild through
-the ordinary `FCk_Request_GroundNavVolume_Build`, forcing a restart because a build already in flight
-read its markup at StartBuild. **The rebuild is WHOLE-VOLUME.** Neither the build request nor
-`Request_BeginBuild` takes bounds — the builder sizes the whole lattice and the slice walks every tile
-— so there is no scoped rebuild to ask for. A local repair that re-bakes only the tiles a record
-intersects is a capability this module does not have yet; do not fake it by baking a subset and
-publishing it as a field.
+**Walkability — the local repair.** The dirty region a walkability change accumulates is answered by
+`FProcessor_GroundNavVolume_StartRepair` / `_Repair` below, which re-bakes only the tiles the record's
+halo-inflated footprint reaches. The markup path has no whole-volume rebuild and no walkability dirty tag: a walkability
+change is a region, and the repair is what answers it.
+
+What makes the scoped re-bake correct is that the repair is handed the volume's **current** records.
+`StartRepair` passes `Get_MarkupRecordsOf(Get_MarkupRecords(volume))` to `Request_BeginRepair`, which
+writes them into the repaired copy's `_Params._MarkupRecords` — the same records, obtained the same
+way, that `StartBuild` hands to `Get_FieldParams`. Only the RECORDS are replaced: every other field of
+the source params places the lattice the untouched tiles were produced on, and a repair handed fresh
+params wholesale would publish two lattices in one field. Without that, a repair would bake its tiles
+from the source field's records — whatever the last publish baked with — and answer the very markup
+change that raised the region with the records that change replaced.
+
+The tiles OUTSIDE the repaired set keep the stamps the last bake gave them, which is correct precisely
+because the dirty box is the record's own footprint (old ∪ new): every tile the record reaches is in
+the repaired set, and no tile outside it was ever decided by that record.
 
 Every build reads the volume's current records into `FCk_GroundNav_FieldParams::_MarkupRecords`, so a
 plain `Request_Build` that nothing painted still bakes against what the volume holds — a rebuild that
 took no records would silently unpaint the world.
+
+## Local repair
+
+A **repair** re-bakes only the tiles a dirty world box reaches and republishes the whole field, where a
+build re-bakes every tile. Two things raise one: a `Request_Repair` naming a `_DirtyBounds` box, and a
+WALKABILITY markup change marking its record's footprint (above). For a body that MOVED the box is the
+union of where it was and where it is: the new half closes the ground it arrived on, the old half
+reopens the ground it left, and a request carrying only the new half leaves the old footprint blocked
+for the life of the field.
+
+**The tile set is halo-inflated and fixed at Begin.** `Get_RepairTileIndices` selects every tile the box
+reaches after inflating it in XY by the field's own halo width, because a tile bakes against ground that
+far outside itself — geometry that moved just past a tile's edge still moved that tile's clearance. The
+set is then frozen, which is what makes a sliced repair produce the field a one-shot repair would. Tiles
+outside it are carried across byte for byte with their epochs untouched, so `Get_ChangedTileBounds`
+names exactly the ground the repair touched. The seam portals, the tile edge boundary, the reachability
+labels and the open-body report are re-derived over the WHOLE tile set regardless, never patched.
+
+**The published field is never touched** (Anti-patterns, below). The repair assembles a new field value
+and the processor swaps the pointer, exactly as a build does.
+
+**What the volume does with a request.** `FProcessor_GroundNavVolume_HandleRepairRequests` unions the
+box into `_PendingDirtyBounds`, parks the request's completion, and raises
+`FTag_GroundNavVolume_NeedsRepair` — several bodies dirtying one volume in a frame cost one repair, not
+one each, and a markup change unions into the same box. A volume with nothing published and no build
+coming is told `Failed`: a repair carries the untouched tiles over from a previous bake and there is
+none, and a build is the repair for that. `FProcessor_GroundNavVolume_StartRepair` SNAPSHOTS the
+accumulated box and the parked requests together and resets both, so a box arriving mid-repair opens the
+next one instead of corrupting this one. A region raised by markup carries no request: nothing is
+waiting on it, and its outcome is read the way every markup outcome is — through
+`Get_IsMarkupLive`.
+
+**Supersede and cancel.**
+
+| Event | What happens to the repair |
+|---|---|
+| A build COMPLETES | every parked and in-flight repair request completes `Succeeded`, the pending box is cleared and `NeedsRepair` removed — the build re-baked that ground and answered it better |
+| A build is ARMED (the drain, restart or not) while a repair is slicing | the open repair is cancelled and its in-flight requests complete `Failed_Cancelled`; parked requests stay parked and ride the build |
+| A repair completes but the field it opened against is no longer the published one | the repaired field is DISCARDED — publishing it would silently undo the other publish everywhere the repair did not look — the in-flight requests complete `Failed`, and the region is raised again |
+| The slice fails (`StaleGeometry`, backend gone) | in-flight requests complete `Failed` and the region is raised again, ONCE. A second failure running drops the region with an ensure: fail-closed with a bounded escape, because a region re-raised forever opens the same doomed repair every tick |
+| The volume ends play | the queue, the parked list and the in-flight list all complete `Failed_Cancelled` |
+
+A repair never OPENS while `NeedsBuild` or `BuildInProgress` is set, so the two never race for the
+publish. A repair whose box reached no tile is not an error: it completes, moves no epoch, and publishes
+nothing — the same answer the cost derive gives when nothing it restamped moved.
 
 ## When a markup is LIVE
 
@@ -219,9 +283,11 @@ is ever published as a built field with no cells.
 | `ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>` | N random points whose WALKED distance from the point lies in [MIN, MAX], drawn from the plates a flood fill reaches; the label reports how many draws it spent |
 | `ck.GroundNav.GridAt <X> <Y> <Z> <HALF> <SPACING>` | a lattice of points at SPACING over walkable ground inside the box of half-extent HALF, one per storey per position, phased to the field origin |
 | `ck.GroundNav.MarkupAt <X> <Y> <Z>` | every area markup the world's volumes hold — id, kind, tag, multiplier, enabled, world bounds, requested-at epoch, and live yes/no through the neutral facade — plus the plate under the point with its policy index, tags and multiplier. Every volume is listed with where the point falls on it, because a record painted before anything baked lives on a volume that covers nothing yet. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
-| `ck.GroundNav.Invalidation` | every cached path corridor in the world and what a republish is measured against: the corridor box the invalidator intersects, what it was inflated by, the epoch the plan was made on against the epoch the field covering it has published, and whether the agent is already flagged for a repath. A corridor whose own epoch is not behind the field's is one no queued rebuild can be news to, which is the first thing the invalidator decides. Also reports the ground each field last published changed, how many rebuild boxes are pushed but not broadcast yet, and whether either gate below is bypassing the answer. Outlines every corridor in cyan and every changed-bounds box in orange. Reads the PUBLISHED fields, so `BakeFieldAt` is not needed |
+| `ck.GroundNav.Invalidation` | every cached path corridor in the world and what a republish is measured against: the corridor box the invalidator intersects, what it was inflated by, the epoch the plan was made on against the epoch the field covering it has published, and whether the agent is already flagged for a repath. A corridor whose own epoch is not behind the field's is one no queued rebuild can be news to, which is the first thing the invalidator decides. Also reports the ground each field last published changed, the local repair a volume has open with its tile count, any dirty ground still waiting for one, how many rebuild boxes are pushed but not broadcast yet, and whether either gate below is bypassing the answer — a repair being the other thing a republish comes out of. Outlines every corridor in cyan, every changed-bounds box in orange, and the repair's ground in green. Reads the PUBLISHED fields, so `BakeFieldAt` is not needed |
+| `ck.GroundNav.RepairAt <X> <Y> <Z> <HALF>` | declare a box of ground no longer trustworthy and ask every volume it reaches for a LOCAL repair of exactly that ground. Per volume it reports the tiles the box would select (through the same pure `Get_RepairTileIndices` the repair itself uses), the dirty ground already pending on it, and whether a repair is already in flight — then logs that volume's own outcome when the repair ENDS, which is ticks away and never the moment the box is accepted. A volume whose published field does not reach the box is listed and left alone. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
 | `ck.GroundNav.Debug.DrawMarkup` / `.MarkupLiveGate` | `DrawMarkup` (default 1) outlines markup in the plate view and in `PathAt`/`FloodAt`: impassable red, cost amber with its multiplier, disabled dashed grey. `MarkupLiveGate` (default 1) at 0 forces GroundNav's `Get_IsMarkupLive` true — the bypass a paint-then-repath race pin must FAIL under to be evidence |
 | `ck.GroundNav.Debug.DrawInvalidation` | (default 0) draws the invalidation state in the plate view: every cached corridor box in cyan, thicker where it is flagged for a repath and labelled with its two epochs and its inflation, and the ground each published field last reported changed in orange. The orange box carries a short lifetime of its own because it describes ONE publish. Off by default — a corridor is per AGENT, so a crowd draws one box each |
+| `ck.GroundNav.Debug.RepairHighlightSeconds` | (default 2.0) how long the tiles an open local repair is re-baking stay highlighted in green, alongside that repair's dirty box and the dashed box of ground still waiting for one — all drawn under `DrawInvalidation`. A short lifetime of its own for the same reason the changed-bounds box has one: a repair's tile set describes ONE publish and stops being true the moment the next slice lands, and a repair that finishes inside a frame would otherwise leave nothing to catch |
 | `ck.GroundNav.Debug.RepathOnRebuild` | (default 1) flags an agent for a repath when a published rebuild meets its cached corridor, which is the shipping behaviour. At 0 the invalidator flags nobody however much ground moved — the bypass a rebuild-then-repath pin must FAIL under to be evidence |
 
 The query commands read the field the last `BakeFieldAt` kept; `Bake`/`BakeAt` produce a region snapshot
@@ -229,9 +295,11 @@ with no field to query. The body radius every query uses is `ck.GroundNav.Debug.
 
 Draw modes (`ck.GroundNav.Debug.Mode`): 0 plates, 1 clearance ramp, 2 layers, 3 the cells the filters
 rejected, 4 the crossings between plates, 5 the tile lattice and the seams between tiles, 6 the plate
-edges nothing crosses (rim runs in orange). Mode 3 is the only view that shows what a filter *costs* — a
-ledge sensitivity tuned too tight and a world that genuinely has no floor produce an identical walkable
-set and differ only in what was thrown away.
+edges nothing crosses (rim runs in orange). In mode 5 the tiles carrying the field's newest epoch tint
+green and label it, which is exactly the set the last publish re-baked — a field whose built tiles all
+share one epoch is all of its own news and tints none of them. Mode 3 is the only view that shows what
+a filter *costs* — a ledge sensitivity tuned too tight and a world that genuinely has no floor produce
+an identical walkable set and differ only in what was thrown away.
 
 **Read the `region` and `lattice` lines of the summary before forming any hypothesis about a bake.**
 Every per-cell count is bounded by the lattice the summary prints, and halving the cell size quadruples
