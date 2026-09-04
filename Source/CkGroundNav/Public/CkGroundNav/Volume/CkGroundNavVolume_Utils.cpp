@@ -194,6 +194,62 @@ auto
     return InVolume;
 }
 
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_Link(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_Link& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_LinkRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_Link"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Links>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_LinkRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Request_ReleaseLink(
+        FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseLink& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_GroundNavVolume
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_GroundNavVolume_LinkRequests, InVolume);
+
+    const auto VolumeIsValid = ck::IsValid(InVolume);
+
+    CK_ENSURE_IF_NOT(VolumeIsValid,
+        TEXT("Invalid GroundNav Volume Handle [{}] supplied to Request_ReleaseLink"), InVolume)
+    {
+        InDelegate.ExecuteIfBound(InVolume, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InVolume;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_Links>();
+    InVolume.AddOrGet<ck::FFragment_GroundNavVolume_LinkRequests>()._Requests.Emplace(InRequest);
+
+    return InVolume;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -293,6 +349,33 @@ auto
     return Count;
 }
 
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_UnresolvedLinkCount(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int32
+{
+    const auto Field = Get_Field(InVolume);
+
+    if (ck::Is_NOT_Valid(Field))
+    { return 0; }
+
+    return Field->Get_UnresolvedLinkCount();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_LinkRecords(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> TArray<FCk_GroundNav_LinkRecord>
+{
+    return ck::algo::Transform<TArray<FCk_GroundNav_LinkRecord>>(Get_LinkEntries(InVolume),
+        [](const ck::FCk_GroundNav_LinkEntry& InEntry) -> FCk_GroundNav_LinkRecord
+        {
+            return InEntry.Get_Record();
+        });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -386,6 +469,18 @@ auto
 
 auto
     UCk_Utils_GroundNavVolume_UE::
+    Get_LinkEntries(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> TConstArrayView<ck::FCk_GroundNav_LinkEntry>
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_Links>())
+    { return {}; }
+
+    return InVolume.Get<ck::FFragment_GroundNavVolume_Links>().Get_Entries();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
     Get_PendingDirtyBounds(
         const FCk_Handle_GroundNavVolume& InVolume)
     -> FBox
@@ -418,13 +513,14 @@ auto
     if (ck::Is_NOT_Valid(Field))
     { return false; }
 
-    // Get_IsBuilding is the NeedsBuild/BuildInProgress pair; the other two markers are the repair and
-    // the cost derive - the remaining stages that still owe this volume a publish.
+    // Get_IsBuilding is the NeedsBuild/BuildInProgress pair; the other three markers are the repair,
+    // the cost derive and the link derive - the remaining stages that still owe this volume a publish.
     const auto AStageStillOwesAPublish =
         Get_IsBuilding(InVolume) ||
         Get_IsRepairInProgress(InVolume) ||
         InVolume.Has<ck::FTag_GroundNavVolume_NeedsRepair>() ||
-        InVolume.Has<ck::FTag_GroundNavVolume_MarkupCostDirty>();
+        InVolume.Has<ck::FTag_GroundNavVolume_MarkupCostDirty>() ||
+        InVolume.Has<ck::FTag_GroundNavVolume_LinksDirty>();
 
     if (AStageStillOwesAPublish)
     { return false; }
@@ -433,7 +529,8 @@ auto
     // alone would report the tick between an enqueue and its drain as settled.
     return NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_Requests>(InVolume) &&
            NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_RepairRequests>(InVolume) &&
-           NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_MarkupRequests>(InVolume);
+           NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_MarkupRequests>(InVolume) &&
+           NOT Get_HasPendingRequests<ck::FFragment_GroundNavVolume_LinkRequests>(InVolume);
 }
 
 auto
@@ -455,6 +552,98 @@ auto
     { return {}; }
 
     return Entries[Index].Get_Record();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    TryGet_LinkRecord(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InRecordId)
+    -> TOptional<FCk_GroundNav_LinkRecord>
+{
+    const auto Entries = Get_LinkEntries(InVolume);
+
+    const auto Index = ck::algo::FindIndex(Entries,
+        [&](const ck::FCk_GroundNav_LinkEntry& InEntry) -> bool
+        {
+            return InEntry.Get_Record().Get_Id() == InRecordId;
+        });
+
+    if (NOT Entries.IsValidIndex(Index))
+    { return {}; }
+
+    return Entries[Index].Get_Record();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsLinkLiveOnField(
+        const ck::groundnav::FCk_GroundNav_Field& InField,
+        const FCk_GroundNav_LinkRecord&           InRecord)
+    -> bool
+{
+    const auto ResolvedIndex = ck::algo::FindIndex(InField._ResolvedLinks,
+        [&](const ck::groundnav::FCk_GroundNav_ResolvedLink& InResolved) -> bool
+        {
+            return InResolved._Id == InRecord.Get_Id();
+        });
+
+    // A record the published field never resolved - because it was authored after that publish, or
+    // released before it - has no entry to be live through.
+    if (NOT InField._ResolvedLinks.IsValidIndex(ResolvedIndex))
+    { return false; }
+
+    // The clause with no markup analogue, and the whole point: a markup that reaches nothing is
+    // admitted and simply decides nothing, where a link that did not resolve is not there at all.
+    if (NOT InField._ResolvedLinks[ResolvedIndex].Get_IsResolved())
+    { return false; }
+
+    // Live means in effect, as for a markup: a disabled record the field has processed is a record
+    // that decides nothing, and a fixture that switched one off waits on the volume being settled.
+    if (InRecord.Get_Enable() == ECk_EnableDisable::Disable)
+    { return false; }
+
+    const auto* StartTile = InField.Get_TileAt(InRecord.Get_Start());
+    const auto* EndTile = InField.Get_TileAt(InRecord.Get_End());
+
+    if (StartTile == nullptr || EndTile == nullptr)
+    { return false; }
+
+    // BOTH ends, because a link is only as live as its laggard, and an agent handed one whose far end
+    // has not republished would be routed onto ground that does not carry it yet.
+    return StartTile->Get_IsBuilt() && EndTile->Get_IsBuilt() &&
+           StartTile->_Epoch._Value > InRecord.Get_RequestedAtEpoch() &&
+           EndTile->_Epoch._Value > InRecord.Get_RequestedAtEpoch();
+}
+
+bool
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsLinkLive(
+        const FCk_Handle& InLinkEntity)
+{
+    if (ck::Is_NOT_Valid(InLinkEntity) || NOT InLinkEntity.Has<ck::FFragment_GroundNav_LinkRef>())
+    { return false; }
+
+    const auto& LinkRef = InLinkEntity.Get<ck::FFragment_GroundNav_LinkRef>();
+
+    auto VolumeEntity = LinkRef.Get_VolumeEntity();
+
+    auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
+
+    if (ck::Is_NOT_Valid(Volume))
+    { return false; }
+
+    const auto Record = TryGet_LinkRecord(Volume, LinkRef.Get_RecordId());
+
+    if (NOT Record.IsSet())
+    { return false; }
+
+    const auto Field = Get_Field(Volume);
+
+    if (NOT Field.IsValid())
+    { return false; }
+
+    return Get_IsLinkLiveOnField(*Field, *Record);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
