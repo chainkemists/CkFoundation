@@ -39,6 +39,7 @@
 #include <GameFramework/Pawn.h>
 #include <GameFramework/PlayerController.h>
 #include <UObject/Package.h>
+#include <UObject/WeakObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1349,9 +1350,55 @@ namespace ck_groundnav_debugconsole
     // ----------------------------------------------------------------------------------------------
 
     // A query runs against a FIELD, and only the field bake produces one - a region bake has no
-    // tiles to address. Held for the whole process because a field is immutable and reaches back to
-    // nothing: no world, no actor, no registry.
-    static ck::groundnav::FCk_GroundNav_FieldPtr LastDebugField;
+    // tiles to address. Keyed by WORLD because a debug field is a per-world artifact and the
+    // field cannot say which world it came from: it reaches back to nothing, no world, no actor,
+    // no registry.
+    using FDebugFields = TMap<TWeakObjectPtr<UWorld>, ck::groundnav::FCk_GroundNav_FieldPtr>;
+
+    auto Get_DebugFields() -> FDebugFields&
+    {
+        static auto DebugFields = FDebugFields{};
+        return DebugFields;
+    }
+
+    auto DoBind_CleanupHookOnce() -> void
+    {
+        static auto CleanupHookIsBound = false;
+
+        if (CleanupHookIsBound)
+        { return; }
+
+        CleanupHookIsBound = true;
+
+        FWorldDelegates::OnWorldCleanup.AddLambda(
+            [](UWorld* InWorld, bool /*InSessionEnded*/, bool /*InCleanupResources*/) -> void
+            {
+                Get_DebugFields().Remove(TWeakObjectPtr<UWorld>{InWorld});
+            });
+    }
+
+    auto Get_DebugFieldFor(UWorld* InWorld) -> ck::groundnav::FCk_GroundNav_FieldPtr
+    {
+        if (ck::Is_NOT_Valid(InWorld))
+        { return {}; }
+
+        const auto* DebugField = Get_DebugFields().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+        if (DebugField == nullptr)
+        { return {}; }
+
+        return *DebugField;
+    }
+
+    auto Set_DebugFieldFor(UWorld* InWorld, ck::groundnav::FCk_GroundNav_FieldPtr InField) -> void
+    {
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        DoBind_CleanupHookOnce();
+
+        Get_DebugFields().Emplace(TWeakObjectPtr<UWorld>{InWorld}, MoveTemp(InField));
+    }
 
     // ----------------------------------------------------------------------------------------------
 
@@ -1505,8 +1552,12 @@ namespace ck_groundnav_debugconsole
 
     auto DoBakeFieldAndDraw(UWorld* InWorld, const FVector& InCentre) -> void
     {
+        auto BakedField = ck::groundnav::FCk_GroundNav_FieldPtr{};
+
         auto Snapshot = ck::groundnav::Make_FieldDebugSnapshotFromWorld(
-            InWorld, Make_BakeParams(InCentre), LastDebugField);
+            InWorld, Make_BakeParams(InCentre), BakedField);
+
+        Set_DebugFieldFor(InWorld, BakedField);
 
         DoStamp_Markups(InWorld, Snapshot);
         DoStamp_Invalidation(InWorld, Snapshot);
@@ -1525,14 +1576,16 @@ namespace ck_groundnav_debugconsole
 
     auto DoProbeAndDraw(UWorld* InWorld, const FVector& InPoint) -> void
     {
-        if (ck::Is_NOT_Valid(LastDebugField))
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+
+        if (ck::Is_NOT_Valid(DebugField))
         {
             ck::groundnav::Warning(TEXT("ck.GroundNav.Probe needs a FIELD bake first: run ")
                 TEXT("ck.GroundNav.BakeFieldAt <X> <Y> <Z> or press Y in the tuning range"));
             return;
         }
 
-        const auto& Field = *LastDebugField;
+        const auto& Field = *DebugField;
 
         const auto ExtentUu = CVar_ProbeExtentUu.GetValueOnGameThread();
         const auto UpUu = CVar_ProbeUpUu.GetValueOnGameThread();
@@ -1954,9 +2007,9 @@ namespace ck_groundnav_debugconsole
         return true;
     }
 
-    auto Get_HasDebugField(const FString& InCommandName) -> bool
+    auto Get_HasDebugField(UWorld* InWorld, const FString& InCommandName) -> bool
     {
-        if (ck::IsValid(LastDebugField))
+        if (ck::IsValid(Get_DebugFieldFor(InWorld)))
         { return true; }
 
         ck::groundnav::Warning(TEXT("{} needs a FIELD bake first: run ")
@@ -1967,10 +2020,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoWalkAndDraw(UWorld* InWorld, const FVector& InStart, const FVector2D& InTargetXY) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.WalkAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.WalkAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         // The target keeps the start's height. A walk resolves its own surface from the start and
         // reads the target in XY alone, so a third number there would be a value nothing consumes.
@@ -2044,10 +2098,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoRaycastAndDraw(UWorld* InWorld, const FVector& InStart, const FVector2D& InTargetXY) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.RayAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.RayAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         const auto End = FVector{InTargetXY.X, InTargetXY.Y, InStart.Z};
 
@@ -2122,10 +2177,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoEdgesAndDraw(UWorld* InWorld, const FVector& InPoint, float InRadiusUu) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.EdgesAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.EdgesAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         const auto AgentRadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
 
@@ -2242,10 +2298,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoReachAndDraw(UWorld* InWorld, const FVector& InStart, const FVector& InEnd) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.ReachAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.ReachAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         auto ReachabilityQuery = ck::groundnav::FCk_GroundNav_ReachabilityQuery{};
 
@@ -2293,10 +2350,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoFloodAndDraw(UWorld* InWorld, const FVector& InSource, float InRadiusUu) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.FloodAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.FloodAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         auto FloodQuery = ck::groundnav::FCk_GroundNav_FloodQuery{};
 
@@ -2518,10 +2576,11 @@ namespace ck_groundnav_debugconsole
 
     auto DoPathAndDraw(UWorld* InWorld, const FVector& InStart, const FVector& InGoal) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.PathAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.PathAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         const auto AgentRadiusUu = CVar_AgentRadiusUu.GetValueOnGameThread();
 
@@ -2542,7 +2601,7 @@ namespace ck_groundnav_debugconsole
         PathQuery._Cost._ClearanceBiasK = CVar_ClearanceBiasK.GetValueOnGameThread();
         PathQuery._Cost._CornerOffsetK = CVar_CornerOffsetK.GetValueOnGameThread();
 
-        const auto Path = ck::groundnav::Get_Path(LastDebugField, PathQuery);
+        const auto Path = ck::groundnav::Get_Path(DebugField, PathQuery);
 
         const auto PathIsPartial = Path._Status == ECk_GroundNav_PathStatus::Partial;
 
@@ -2704,10 +2763,11 @@ namespace ck_groundnav_debugconsole
         float          InRadiusUu,
         int32          InCount) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.PointsAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.PointsAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         auto PointsQuery = ck::groundnav::FCk_GroundNav_RandomPointsQuery{};
 
@@ -2754,10 +2814,11 @@ namespace ck_groundnav_debugconsole
         float          InMaxDistanceUu,
         int32          InCount) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.FarPointsAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.FarPointsAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         auto PointsQuery = ck::groundnav::FCk_GroundNav_PathDistancePointsQuery{};
 
@@ -2809,10 +2870,11 @@ namespace ck_groundnav_debugconsole
         float          InHalfExtentUu,
         float          InSpacingUu) -> void
     {
-        if (NOT Get_HasDebugField(TEXT("ck.GroundNav.GridAt")))
+        if (NOT Get_HasDebugField(InWorld, TEXT("ck.GroundNav.GridAt")))
         { return; }
 
-        const auto& Field = *LastDebugField;
+        const auto DebugField = Get_DebugFieldFor(InWorld);
+        const auto& Field = *DebugField;
 
         // Vertically the box reaches as far as the projection probe searches, and no further: a
         // lattice position and a probe at that position must agree on which storeys exist there.
@@ -3383,7 +3445,7 @@ namespace ck_groundnav_debugconsole
         TEXT("Clear everything ck.GroundNav.Bake drew, and drop the field the probe commands query."),
         FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* InWorld) -> void
         {
-            LastDebugField = {};
+            Set_DebugFieldFor(InWorld, {});
 
             if (ck::Is_NOT_Valid(InWorld))
             { return; }

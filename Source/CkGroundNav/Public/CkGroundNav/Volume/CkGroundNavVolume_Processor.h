@@ -211,6 +211,7 @@ namespace ck
         ck::TReadOnly<FFragment_GroundNavVolume_Params>,
         ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
         ck::TReadWrite<FFragment_GroundNavVolume_BuildState>,
+        ck::TReadWrite<FFragment_GroundNavVolume_RepairState>,
         FTag_GroundNavVolume_NeedsBuild,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -231,7 +232,8 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
-            FFragment_GroundNavVolume_BuildState& InBuildState) const -> void;
+            FFragment_GroundNavVolume_BuildState& InBuildState,
+            FFragment_GroundNavVolume_RepairState& InRepairState) const -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -274,8 +276,9 @@ namespace ck
     // field are the steps that can fail, and they must fail before any repair state exists to half-fill.
     //
     // A repair NEVER opens while a full build is armed or running. A build re-bakes every tile from live
-    // geometry, so it already answers everything the pending region was going to ask, and a repair opened
-    // against a field the build is about to replace would publish over it.
+    // geometry, so it answers every region pending when it STARTED - those ride it to its publish - and a
+    // repair opened against a field the build is about to replace would publish over it. A region raised
+    // after that snapshot opens its repair against the field the build publishes.
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_StartRepair : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_StartRepair,
         FCk_Handle_GroundNavVolume,
@@ -367,7 +370,8 @@ namespace ck
     // restamping one spends no probes.
     //
     // A volume with nothing published yet has nothing to derive from and clears the tag regardless —
-    // the records are already on the volume, so the next build bakes the price in through its params.
+    // the records are already on the volume, so a build that STARTS after them bakes the price in
+    // through its params. A build already in flight snapshotted its records before these arrived.
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_MarkupCostDerive : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_MarkupCostDerive,
         FCk_Handle_GroundNavVolume,
@@ -427,7 +431,7 @@ namespace ck
 
     // The repair processors above exclude owners already tagged for destruction, so a destroyed volume's
     // queued repair requests are never drained AND its in-flight repair never reports. This fires all
-    // three populations as Failed_Cancelled, so a caller awaiting completion terminates instead of
+    // four populations as Failed_Cancelled, so a caller awaiting completion terminates instead of
     // hanging forever on a delegate that no longer has a processor to fire it.
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_CancelPendingRepairRequests : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_CancelPendingRepairRequests,
@@ -474,6 +478,31 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_MarkupRequests& InRequests) -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // A volume enters the world-field registry at setup and is replaced there on every publish, so a
+    // destroyed volume would keep answering the world's queries through its last field until the world
+    // itself went away. This takes it out at end-play, the moment its field stops being anyone's ground.
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_Unpublish : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_Unpublish,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField) -> void;
     };
 }
 

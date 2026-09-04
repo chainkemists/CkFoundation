@@ -47,6 +47,13 @@ public:
     TFunction<bool(UWorld*)>
         _IsBuildInProgress;
 
+    // True when the provider has nothing in flight and nothing pending for this world: no build, no
+    // repair, no deferred re-derivation, and its published surface is the one every query will answer
+    // from. This is the named condition a test settles on after a paint, a release, or a rebuild kick,
+    // instead of a hop count that has to be re-guessed whenever a provider's internal staging changes.
+    TFunction<bool(UWorld*)>
+        _IsSurfaceSettled;
+
     TFunction<int64(UWorld*)>
         _SurfaceRevision;
 

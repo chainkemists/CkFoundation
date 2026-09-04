@@ -224,6 +224,24 @@ provider's `_ApplyAreaMarkup`, `Get_IsMarkupLive` asks that provider whether the
 the markup entity's teardown drains into `_ReleaseAreaMarkup`. An unregistered provider answers
 `NoProvider` (or `Unknown_ProviderNotReady`, `NoData`, an empty box) everywhere.
 
+## Settled is the condition to wait on, not a hop count
+
+The table's `_IsSurfaceSettled` capability is the provider's own answer to "have you
+finished": nothing in flight and nothing pending for this world -- no build, no repair, no deferred
+re-derivation -- so the surface it has published is the one every query will answer from.
+`UCk_Utils_NavSurface_UE::Get_IsSurfaceSettled` answers false while the NEUTRAL markup pipeline still
+holds work of its own -- a paint queued on a markup entity, or a markup entity between
+`Request_DestroyEntity` and the `FGroup_EndPlay` release that hands it to the provider, both asked
+through `ck::nav_surface::Get_HasPendingMarkupWork` -- and only then dispatches to the provider, so a
+world whose provider registered no table is not settled. This is what a caller waits on after a paint, a
+release, or a `Request_SurfaceRebuild_ForTesting` kick -- the kick still completes `Succeeded` the
+moment it is issued, because issuing is all it does. A fixed number of ticks encodes how long one
+provider happens to take, and stops being enough the moment that provider's internal staging
+changes or the world switches to the other one. Recast reports settled
+when its health is `Ready` (nav data present, no build in progress) and `UNavigationSystemV1`'s
+dirty-areas queue has drained; it deliberately does not consult `IsNavigationDirty()`, which reports
+a navmesh with zero tiles as permanently needing a rebuild and would never settle.
+
 ## The rebuilt signal is pushed with bounds, polled without
 
 `OnSurfaceRebuilt` carries the world entity and an `FBox` of the region that changed. A provider
