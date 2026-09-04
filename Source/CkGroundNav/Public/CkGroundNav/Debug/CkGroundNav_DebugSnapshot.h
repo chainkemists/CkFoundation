@@ -10,6 +10,9 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
+#include <HAL/CriticalSection.h>
+
+#include <type_traits>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -412,6 +415,327 @@ namespace ck::groundnav
         /** The tightest crossing in the field, and the first number to read when a body that ought to
          *  fit somewhere cannot get there. Zero when there are no portals at all. */
         auto Get_NarrowestPortalUu() const -> float;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What a member of a captured value is allowed to BE.
+     *
+     * The value-only contract above is a comment until something checks it: every member is a copy
+     * today because every member was written as one, and one TObjectPtr added in good faith turns a
+     * drawable value into a dangling read that surfaces only after the world it came from is gone.
+     *
+     * True for the types a capture is actually made of - numbers, enums, the engine's own value
+     * structs, and arrays of those - and false for everything else BY DEFAULT, which is what makes
+     * this a fence rather than a blacklist: a raw pointer, a TObjectPtr, a TWeakObjectPtr, a
+     * TSharedPtr, an FCk_Handle and any type nobody has judged yet all fail the same way.
+     */
+    template <typename T>
+    struct TIsDebugSnapshotValue
+    {
+        static constexpr bool Value = std::is_arithmetic_v<T> || std::is_enum_v<T>;
+    };
+
+    template <>
+    struct TIsDebugSnapshotValue<FVector>
+    {
+        static constexpr bool Value = true;
+    };
+
+    template <>
+    struct TIsDebugSnapshotValue<FVector2D>
+    {
+        static constexpr bool Value = true;
+    };
+
+    template <>
+    struct TIsDebugSnapshotValue<FBox>
+    {
+        static constexpr bool Value = true;
+    };
+
+    template <>
+    struct TIsDebugSnapshotValue<FName>
+    {
+        static constexpr bool Value = true;
+    };
+
+    template <>
+    struct TIsDebugSnapshotValue<FString>
+    {
+        static constexpr bool Value = true;
+    };
+
+    template <typename T, typename T_Allocator>
+    struct TIsDebugSnapshotValue<TArray<T, T_Allocator>>
+    {
+        static constexpr bool Value = TIsDebugSnapshotValue<T>::Value;
+    };
+
+    /** Every member listed must pass. The language cannot enumerate a struct's members, so a type is
+     *  judged by NAMING them - which is why the list lives beside the type it describes, and why a
+     *  member added later belongs on it. */
+    template <typename... T_Members>
+    inline constexpr bool kDebugSnapshotMembersAreValues = (TIsDebugSnapshotValue<T_Members>::Value && ...);
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugCell::_SurfaceCentre), decltype(FCk_GroundNav_DebugCell::_ClearanceUu),
+            decltype(FCk_GroundNav_DebugCell::_LayerIndex), decltype(FCk_GroundNav_DebugCell::_PlateIndex)>,
+        "FCk_GroundNav_DebugCell must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugCell>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugPlate::_Bounds), decltype(FCk_GroundNav_DebugPlate::_LayerIndex),
+            decltype(FCk_GroundNav_DebugPlate::_HeightRangeUu),
+            decltype(FCk_GroundNav_DebugPlate::_MaxPlaneResidualUu)>,
+        "FCk_GroundNav_DebugPlate must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugPlate>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugPortal::_MinEnd), decltype(FCk_GroundNav_DebugPortal::_MaxEnd),
+            decltype(FCk_GroundNav_DebugPortal::_TraversalClearanceUu),
+            decltype(FCk_GroundNav_DebugPortal::_IsCrossLayer)>,
+        "FCk_GroundNav_DebugPortal must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugPortal>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugTile::_Bounds), decltype(FCk_GroundNav_DebugTile::_PlateCount),
+            decltype(FCk_GroundNav_DebugTile::_WalkableCellCount), decltype(FCk_GroundNav_DebugTile::_Epoch),
+            decltype(FCk_GroundNav_DebugTile::_IsBuilt)>,
+        "FCk_GroundNav_DebugTile must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugTile>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugSeam::_MinEnd), decltype(FCk_GroundNav_DebugSeam::_MaxEnd),
+            decltype(FCk_GroundNav_DebugSeam::_TraversalClearanceUu)>,
+        "FCk_GroundNav_DebugSeam must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugSeam>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugBoundary::_Start), decltype(FCk_GroundNav_DebugBoundary::_End),
+            decltype(FCk_GroundNav_DebugBoundary::_InwardNormalXY),
+            decltype(FCk_GroundNav_DebugBoundary::_LayerIndex), decltype(FCk_GroundNav_DebugBoundary::_IsTileRim)>,
+        "FCk_GroundNav_DebugBoundary must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugBoundary>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugOpenBody::_Description), decltype(FCk_GroundNav_DebugOpenBody::_Bounds),
+            decltype(FCk_GroundNav_DebugOpenBody::_TriangleCount),
+            decltype(FCk_GroundNav_DebugOpenBody::_OpenEdgeCount),
+            decltype(FCk_GroundNav_DebugOpenBody::_OpenEdgePoints)>,
+        "FCk_GroundNav_DebugOpenBody must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugOpenBody>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugMarkup::_Bounds), decltype(FCk_GroundNav_DebugMarkup::_AreaTagName),
+            decltype(FCk_GroundNav_DebugMarkup::_RecordId), decltype(FCk_GroundNav_DebugMarkup::_CostMultiplier),
+            decltype(FCk_GroundNav_DebugMarkup::_RequestedAtEpoch), decltype(FCk_GroundNav_DebugMarkup::_Kind),
+            decltype(FCk_GroundNav_DebugMarkup::_IsEnabled), decltype(FCk_GroundNav_DebugMarkup::_IsLive)>,
+        "FCk_GroundNav_DebugMarkup must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugMarkup>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugLink::_Start), decltype(FCk_GroundNav_DebugLink::_End),
+            decltype(FCk_GroundNav_DebugLink::_AreaTagName), decltype(FCk_GroundNav_DebugLink::_UserTypeTagName),
+            decltype(FCk_GroundNav_DebugLink::_Id), decltype(FCk_GroundNav_DebugLink::_StartFlatPlate),
+            decltype(FCk_GroundNav_DebugLink::_EndFlatPlate),
+            decltype(FCk_GroundNav_DebugLink::_CostMultiplierForward),
+            decltype(FCk_GroundNav_DebugLink::_CostMultiplierBackward),
+            decltype(FCk_GroundNav_DebugLink::_ClearanceUu), decltype(FCk_GroundNav_DebugLink::_Direction),
+            decltype(FCk_GroundNav_DebugLink::_StartStatus), decltype(FCk_GroundNav_DebugLink::_EndStatus),
+            decltype(FCk_GroundNav_DebugLink::_Enabled), decltype(FCk_GroundNav_DebugLink::_Live)>,
+        "FCk_GroundNav_DebugLink must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugLink>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugCorridor::_Bounds), decltype(FCk_GroundNav_DebugCorridor::_PathName),
+            decltype(FCk_GroundNav_DebugCorridor::_InflationUu),
+            decltype(FCk_GroundNav_DebugCorridor::_CorridorEpoch),
+            decltype(FCk_GroundNav_DebugCorridor::_FieldEpoch), decltype(FCk_GroundNav_DebugCorridor::_HasField),
+            decltype(FCk_GroundNav_DebugCorridor::_RepathRequired)>,
+        "FCk_GroundNav_DebugCorridor must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    template <>
+    struct TIsDebugSnapshotValue<FCk_GroundNav_DebugCorridor>
+    {
+        static constexpr bool Value = true;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugSnapshot::_Status), decltype(FCk_GroundNav_DebugSnapshot::_Region),
+            decltype(FCk_GroundNav_DebugSnapshot::_CellSizeUu),
+            decltype(FCk_GroundNav_DebugSnapshot::_LatticeSizeX),
+            decltype(FCk_GroundNav_DebugSnapshot::_LatticeSizeY),
+            decltype(FCk_GroundNav_DebugSnapshot::_LayerCount), decltype(FCk_GroundNav_DebugSnapshot::_SpanCount),
+            decltype(FCk_GroundNav_DebugSnapshot::_WalkableCellCount),
+            decltype(FCk_GroundNav_DebugSnapshot::_DroppedTriangleCount),
+            decltype(FCk_GroundNav_DebugSnapshot::_SourceTriangleCount),
+            decltype(FCk_GroundNav_DebugSnapshot::_MaxClearanceUu),
+            decltype(FCk_GroundNav_DebugSnapshot::_CollapseRatio),
+            decltype(FCk_GroundNav_DebugSnapshot::_MaxPlaneResidualUu),
+            decltype(FCk_GroundNav_DebugSnapshot::_MaxPlateHeightRangeUu),
+            decltype(FCk_GroundNav_DebugSnapshot::_RejectedCellCount),
+            decltype(FCk_GroundNav_DebugSnapshot::_BakeMilliseconds),
+            decltype(FCk_GroundNav_DebugSnapshot::_AllocatedBytes),
+            decltype(FCk_GroundNav_DebugSnapshot::_OpenBodies), decltype(FCk_GroundNav_DebugSnapshot::_Cells),
+            decltype(FCk_GroundNav_DebugSnapshot::_Plates), decltype(FCk_GroundNav_DebugSnapshot::_Portals),
+            decltype(FCk_GroundNav_DebugSnapshot::_Tiles), decltype(FCk_GroundNav_DebugSnapshot::_Seams),
+            decltype(FCk_GroundNav_DebugSnapshot::_Boundary),
+            decltype(FCk_GroundNav_DebugSnapshot::_RejectedCells), decltype(FCk_GroundNav_DebugSnapshot::_Markups),
+            decltype(FCk_GroundNav_DebugSnapshot::_Links), decltype(FCk_GroundNav_DebugSnapshot::_Corridors),
+            decltype(FCk_GroundNav_DebugSnapshot::_ChangedBounds),
+            decltype(FCk_GroundNav_DebugSnapshot::_PendingDirtyBounds),
+            decltype(FCk_GroundNav_DebugSnapshot::_RepairDirtyBounds),
+            decltype(FCk_GroundNav_DebugSnapshot::_RepairTileIndices),
+            decltype(FCk_GroundNav_DebugSnapshot::_RepairTileBounds),
+            decltype(FCk_GroundNav_DebugSnapshot::_RepairInProgress),
+            decltype(FCk_GroundNav_DebugSnapshot::_CellsWereTruncated)>,
+        "FCk_GroundNav_DebugSnapshot must stay value-only - nothing a snapshot carries may point back at what produced it");
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * What a cached snapshot was captured FROM, as values.
+     *
+     * No handle, no world and no field pointer: a key outlives everything it names, so a reader can
+     * compare the key it is holding against the world's current one after the volume behind it has
+     * gone. The volume is named by the WHOLE of its entity id - the number AND the version it was
+     * handed out under - beside the name of the world that id belongs to, for the same reason a
+     * markup value carries a tag NAME: a key is a value or it is not a key.
+     *
+     * The version rides along because a number on its own is a slot rather than an entity. Destroy a
+     * volume and the next one created inherits its number, so a key naming only the number would call
+     * the newcomer's field the old one's and hand a viewer a capture of ground that is gone.
+     *
+     * The world name rides along because entity numbers are per-registry: two PIE worlds can hold the
+     * same entity number at the same epoch, and a key without the world would let one world's capture
+     * answer for the other's.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugSnapshotCacheKey
+    {
+    public:
+        // The world the named volume lives in, by the name its UWorld answers to.
+        FName _WorldName;
+
+        // INDEX_NONE for a key naming no volume, which is what a single-region bake produces.
+        int32 _VolumeEntityNumber = INDEX_NONE;
+
+        // The version that number was handed out under. Without it the two members above name a slot
+        // the next volume inherits rather than the volume this capture was taken from.
+        int32 _VolumeEntityVersion = 0;
+
+        // The epoch the newest tile carried. Any tile that moved moves this, which is the whole of
+        // what makes a rebuilt field a different key.
+        int64 _NewestTileEpoch = 0;
+
+        // The world's surface revision at capture, so a publish on ANOTHER of the world's volumes is
+        // a key change too: a viewer drawing one volume is still reading a world that moved.
+        int64 _SurfaceRevision = 0;
+
+    public:
+        auto
+        Get_IsEqual(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InOther) const -> bool;
+    };
+
+    static_assert(kDebugSnapshotMembersAreValues<
+            decltype(FCk_GroundNav_DebugSnapshotCacheKey::_WorldName),
+            decltype(FCk_GroundNav_DebugSnapshotCacheKey::_VolumeEntityNumber),
+            decltype(FCk_GroundNav_DebugSnapshotCacheKey::_VolumeEntityVersion),
+            decltype(FCk_GroundNav_DebugSnapshotCacheKey::_NewestTileEpoch),
+            decltype(FCk_GroundNav_DebugSnapshotCacheKey::_SurfaceRevision)>,
+        "FCk_GroundNav_DebugSnapshotCacheKey must stay value-only - a key that could dangle cannot outlive what it names");
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Holds the last complete snapshot beside the key it was captured under.
+     *
+     * Publication is a WHOLE-VALUE replacement: a snapshot is built off-scene and swapped in as one
+     * pointer, so a reader never enumerates one bake's geometry beside another's counts. There is
+     * deliberately no way to reach a held snapshot and change it - a partial update is the
+     * corruption this shape exists to make unrepresentable, exactly as it is for a published field.
+     *
+     * A reader checks the key FIRST and enumerates only what TryGet_Current hands back for it, which
+     * is what keeps a stale draw from happening rather than merely making it detectable.
+     *
+     * The held snapshot is a TSharedPtr<const> rather than a value, which is the published-pointer
+     * idiom FCk_GroundNav_FieldPtr already uses (Field/CkGroundNav_Field.h): a reader leaves with its
+     * own reference to something immutable, so a replace landing mid-draw cannot tear it. That
+     * pointer is the one thing here that is not itself a value, and it points AT one - the key
+     * carries no handle, no world and no field, which is what lets it be compared after all three
+     * are gone.
+     */
+    class CKGROUNDNAV_API FCk_GroundNav_DebugSnapshotCache
+    {
+    public:
+        /** The key the held snapshot was captured under, default when nothing is held. */
+        auto
+        Get_Key() const -> FCk_GroundNav_DebugSnapshotCacheKey;
+
+        /** The held snapshot when it was captured under exactly this key, and null otherwise. */
+        auto
+        TryGet_Current(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InKey) const -> TSharedPtr<const FCk_GroundNav_DebugSnapshot>;
+
+        /** Swap in a whole new snapshot and the key it was captured under, together, as one value. */
+        auto
+        Replace(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InKey,
+            FCk_GroundNav_DebugSnapshot                InSnapshot) -> void;
+
+    private:
+        mutable FCriticalSection _Lock;
+
+        FCk_GroundNav_DebugSnapshotCacheKey _Key;
+
+        TSharedPtr<const FCk_GroundNav_DebugSnapshot> _Snapshot;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
