@@ -8,6 +8,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
 #include "CkGroundNavPath_Fragment_Data.generated.h"
@@ -104,6 +105,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Whether a plan starts from nothing or from the corridor the agent is already walking.
+ *
+ * Cold is the default because a caller that has never planned has nothing to repair. Repair names an
+ * INTENT and never a guarantee: what a corridor survives is the search's decision, reported as the
+ * result's repair verdict, and an agent holding no corridor plans cold.
+ */
+UENUM(BlueprintType)
+enum class ECk_GroundNav_PlanMode : uint8
+{
+    // Open the search at the start plate and nowhere else.
+    Cold,
+
+    /** Re-walk the corridor of this agent's last published plan first, and search only from wherever
+     *  that walk stops holding. */
+    Repair
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_PlanMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Plan a route over whichever published field covers the start.
  *
  * The revision is opaque here: CkGroundNav never interprets it and only copies it onto the result, so
@@ -138,11 +161,19 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _IsShadow = ECk_EnableDisable::Disable;
 
+    /** Which start the search is given. Repair is honoured only where the agent still holds a corridor
+     *  from an earlier plan; with none held it plans Cold, because a repair of nothing IS a cold plan.
+     *  What was actually paid for is on the result's repair verdict, never inferred from this. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNav_PlanMode _PlanMode = ECk_GroundNav_PlanMode::Cold;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
     CK_PROPERTY(_RequestRevision);
     CK_PROPERTY(_IsShadow);
+    CK_PROPERTY(_PlanMode);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);
@@ -231,6 +262,12 @@ private:
               meta = (AllowPrivateAccess = true))
     int64 _PlannedAgainstEpoch = 0;
 
+    /** What a repair did with the corridor it was handed. None on every cold plan, and on every plan
+     *  that asked to repair with nothing cached to repair. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNav_RepairVerdict _RepairVerdict = ECk_GroundNav_RepairVerdict::None;
+
 public:
     CK_PROPERTY(_Status);
     CK_PROPERTY(_Waypoints);
@@ -240,6 +277,7 @@ public:
     CK_PROPERTY(_ExpansionCount);
     CK_PROPERTY(_SearchDurationMs);
     CK_PROPERTY(_PlannedAgainstEpoch);
+    CK_PROPERTY(_RepairVerdict);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

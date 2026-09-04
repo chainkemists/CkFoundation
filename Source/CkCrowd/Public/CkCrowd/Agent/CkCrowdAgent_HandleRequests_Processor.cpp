@@ -258,7 +258,8 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FVector& InGoal,
-            bool InForcePermissivePlan)
+            bool InForcePermissivePlan,
+            ECk_GroundNav_PlanMode InPlanMode)
         -> void
     {
         // This function IS the CkNavigation branch, and it is the entry point seven framework-internal
@@ -303,6 +304,7 @@ namespace ck
 
             auto Request = FCk_Request_GroundNavPath_FindPath{From, InGoal};
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
+            Request.Set_PlanMode(InPlanMode);
             UCk_Utils_GroundNavPath_UE::Request_FindPath(Path, Request, {});
             return;
         }
