@@ -173,7 +173,8 @@ namespace ck::groundnav
         // The doors, in walk order. One fewer entry than the corridor has plates.
         TArray<FCk_GroundNav_Crossing> _Crossings;
 
-        // Make_FunnelPortal of each crossing, in the same order.
+        // The portal of each crossing, in the same order. A link crossing contributes TWO - its
+        // entry and its exit - so this is longer than _Crossings wherever the route took one.
         TArray<FCk_GroundNav_FunnelPortal> _FunnelPortals;
 
         // The ends resolved onto the surfaces they stand on, which is what the funnel is run between.

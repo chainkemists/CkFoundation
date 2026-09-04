@@ -170,6 +170,82 @@ Every build reads the volume's current records into `FCk_GroundNav_FieldParams::
 plain `Request_Build` that nothing painted still bakes against what the volume holds — a rebuild that
 took no records would silently unpaint the world.
 
+## Nav links
+
+The VOLUME owns the links authored on it, exactly as it owns the markup. `FFragment_GroundNavVolume_Links`
+holds one `FCk_GroundNav_LinkEntry` per link — the link entity every request keys on, beside the
+`FCk_GroundNav_LinkRecord` that is the pure value — and the record is two WORLD POINTS with no index in
+it at all: a plate id is valid only against the field it was derived on, so a record carrying one would go
+quietly wrong on the first rebuild that renumbered it. Ids are handed out monotonically per volume and
+never reused, so a retired id never comes back meaning a different link and a field resolved against an
+older link set can be diffed against a newer one. Every build, repair and derive copies the volume's
+current records into `FCk_GroundNav_FieldParams::_Links`, for the same reason every build copies the
+markup records: a plain `Request_Build` that nothing authored must not un-link the world any more than it
+unpaints it.
+
+What a record RESOLVES to is the field's separate answer. `FCk_GroundNav_Field::_ResolvedLinks` holds one
+`FCk_GroundNav_ResolvedLink` per authored record, in authored-id order, carrying each end's surface, its
+flat plate and its own `ECk_NavSurface_QueryStatus` beside the direction, the two multipliers, the
+clearance and the tags the record named. The whole array is re-derived on every publish rather than
+patched, exactly like the seam portals and the reachability labels, so a resolution can never outlive the
+plate numbering it was answered under.
+
+**A link change is a DERIVE.** Admission raises `FTag_GroundNavVolume_LinksDirty`;
+`FProcessor_GroundNavVolume_LinkDerive` copies the published field, re-resolves every record in
+`_Params._Links` through `Get_FieldWithLinks`, re-runs the reachability labelling and swaps the pointer
+through the same publish the build uses. It re-bakes nothing and spends ZERO geometry probes — a link is
+two world points, and finding what they stand on is a projection over cells that are already published, so
+no span, no clearance and no plate of any tile can move under it. It is not the cost derive's pinned
+zero-CELL-READ claim; it does read cells, a bounded number per end, and never reaches the backend. It runs
+AFTER the cost derive by an explicit dependency edge and nothing runs after it: both are owed in the same
+tick whenever one request changed a price and another changed a link, and a link derive that went first
+would hand the restamp a field whose links it then re-resolved from the record list that change replaced.
+A build or a repair that is RUNNING, and a repair that is armed, KEEP the tag: the derive runs again
+in the tick their publish lands, after it. A volume with nothing published, or one a build is armed
+for, clears the tag instead — that publish resolves the records itself, which is the same wait the cost
+derive makes and the reason a link authored before the first bake is never lost.
+
+**An end over unbaked ground is HELD, never dropped.** Its status reads `Unbuilt`, the link contributes no
+crossing and no label, its record stays on the volume, and the next publish over that tile resolves it
+with the author doing nothing. Only `NoSurface` and `Blocked` leave a link genuinely unresolved, and even
+then the record stays: it is the field's graph that drops it, never the volume. A dropped link NEVER
+warns. It is a status — `Get_UnresolvedLinkCount` on the field and on the volume, the per-end status in
+the resolved entry, the snapshot's `_Links`, a red draw, `ck.GroundNav.LinksAt`, and `Get_IsLinkLive`
+false — with one `Display` line per publish when the count is non-zero, because an end waiting on
+geometry is the expected state of a link authored ahead of it and a warning there would be reporting the
+schedule rather than a defect.
+
+**Cost is a MULTIPLIER on the link's own span, and never below one.** `_CostMultiplierForward` and
+`_CostMultiplierBackward` price the Euclidean distance between the two endpoints, and admission refuses
+anything under 1.0. That is what keeps every edge in the graph costing at least its own length, which is
+the property the search's Euclidean heuristic is admissible under at w = 1: a link cheaper than its own
+straight line would make the heuristic optimistic and the answers stop being shortest. Admission is by the
+record's authored `_ClearanceUu` through `Get_IsAdmitted`, defaulting to
+`kAdmitsAnyAgentClearanceUu` so a link that names no width admits every body the plates at its ends
+already admit — narrow it for a ladder or a crawl.
+
+**In the search a link is an ordinary crossing with an index.** `FCk_GroundNav_Crossing` carries an
+`int32 _LinkIndex` into `_ResolvedLinks`, `INDEX_NONE` for a lattice crossing, and `Make_CrossingKey`
+hashes it — so a ladder beside a ramp between the same two plates is two nodes and not one, and the
+cheaper of them is still expanded. A link crossing collapses `_Left` and `_Right` onto its ENTRY endpoint,
+because an authored link joins two points and there is no interval to slide along, and its traverse is
+charged on the INCOMING edge, so a link node's cost-so-far already holds it and the heuristic reads its
+departure point. `DoBuild_Corridor` pushes TWO consecutive degenerate funnel portals, the entry and the
+exit, so the ONE string-pull bends at both endpoints without a second implementation; `Get_CornerOffset`
+leaves a waypoint exactly equal to one of those pinned points where it is, because an authored endpoint is
+a place a body must actually pass through rather than a corner to be pushed off the wall it hugs.
+
+**When a link is LIVE.** `UCk_Utils_GroundNavVolume_UE::Get_IsLinkLive` is derived at the read and nothing
+stores it — the shape `Get_IsMarkupLive` has, narrower in exactly one way. The link must have RESOLVED,
+because a markup that reaches nothing is admitted and simply decides nothing where a link that did not
+resolve is a link that is not there. A record the author DISABLED reads false, as a markup's does: live
+means in effect.
+Otherwise both endpoint tiles must be `Built` and must carry an epoch STRICTLY past the record's
+`_RequestedAtEpoch`, which is stamped with the epoch the field was already published at. A fixture that
+disabled a link therefore waits on `Get_IsSettled`, never on liveness — and `Get_IsSettled` answers false
+while `FTag_GroundNavVolume_LinksDirty` is up or the link request queue holds anything, so the provider
+table's `_IsSurfaceSettled` fold inherits both.
+
 ## Local repair
 
 A **repair** re-bakes only the tiles a dirty world box reaches and republishes the whole field, where a
@@ -324,9 +400,11 @@ not seen yet, so the world is not settled the frame it is requested. Tests kick 
 | `ck.GroundNav.FarPointsAt <X> <Y> <Z> <MIN> <MAX> <N>` | N random points whose WALKED distance from the point lies in [MIN, MAX], drawn from the plates a flood fill reaches; the label reports how many draws it spent |
 | `ck.GroundNav.GridAt <X> <Y> <Z> <HALF> <SPACING>` | a lattice of points at SPACING over walkable ground inside the box of half-extent HALF, one per storey per position, phased to the field origin |
 | `ck.GroundNav.MarkupAt <X> <Y> <Z>` | every area markup the world's volumes hold — id, kind, tag, multiplier, enabled, world bounds, requested-at epoch, and live yes/no through the neutral facade — plus the plate under the point with its policy index, tags and multiplier. Every volume is listed with where the point falls on it, because a record painted before anything baked lives on a volume that covers nothing yet. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
+| `ck.GroundNav.LinksAt <X> <Y> <Z>` | every navigation link the world's volumes hold — id, endpoints, direction, both cost multipliers, clearance, tags, enabled, requested-at epoch, and live yes/no — then, per end, the status the last resolution gave it with the tile, layer and plate it landed on, and the count of links with an end that found no ground. Every volume is listed with where the point falls on it, because a link authored before anything baked lives on a volume that covers nothing yet. An end reading `Unbuilt` is HELD, not dropped: the next publish over that tile resolves it. Every resolved link also outlines in the world — green traversable, grey disabled, orange an end over unbaked ground, red an end with no ground at all. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
 | `ck.GroundNav.Invalidation` | every cached path corridor in the world and what a republish is measured against: the corridor box the invalidator intersects, what it was inflated by, the epoch the plan was made on against the epoch the field covering it has published, and whether the agent is already flagged for a repath. A corridor whose own epoch is not behind the field's is one no queued rebuild can be news to, which is the first thing the invalidator decides. Also reports the ground each field last published changed, the local repair a volume has open with its tile count, any dirty ground still waiting for one, how many rebuild boxes are pushed but not broadcast yet, and whether either gate below is bypassing the answer — a repair being the other thing a republish comes out of. Outlines every corridor in cyan, every changed-bounds box in orange, and the repair's ground in green. Reads the PUBLISHED fields, so `BakeFieldAt` is not needed |
 | `ck.GroundNav.RepairAt <X> <Y> <Z> <HALF>` | declare a box of ground no longer trustworthy and ask every volume it reaches for a LOCAL repair of exactly that ground. Per volume it reports the tiles the box would select (through the same pure `Get_RepairTileIndices` the repair itself uses), the dirty ground already pending on it, and whether a repair is already in flight — then logs that volume's own outcome when the repair ENDS, which is ticks away and never the moment the box is accepted. A volume whose published field does not reach the box is listed and left alone. Reads the volumes' PUBLISHED fields, so `BakeFieldAt` is not needed |
 | `ck.GroundNav.Debug.DrawMarkup` / `.MarkupLiveGate` | `DrawMarkup` (default 1) outlines markup in the plate view and in `PathAt`/`FloodAt`: impassable red, cost amber with its multiplier, disabled dashed grey. `MarkupLiveGate` (default 1) at 0 forces GroundNav's `Get_IsMarkupLive` true — the bypass a paint-then-repath race pin must FAIL under to be evidence |
+| `ck.GroundNav.Debug.DrawLinks` | (default 1) draws the links the world's published fields resolved, in EVERY draw mode and in `PathAt`/`FloodAt`: green traversable, grey a record the author disabled, orange an end over ground nobody has baked yet, red an end that found no ground at all — an arrowhead per direction the link may be walked, a tick at each resolved end, and the id at the midpoint. It gates COLLECTION, so a view drawn with it off carries no links rather than hiding ones it holds |
 | `ck.GroundNav.Debug.DrawInvalidation` | (default 0) draws the invalidation state in the plate view: every cached corridor box in cyan, thicker where it is flagged for a repath and labelled with its two epochs and its inflation, and the ground each published field last reported changed in orange. The orange box carries a short lifetime of its own because it describes ONE publish. Off by default — a corridor is per AGENT, so a crowd draws one box each |
 | `ck.GroundNav.Debug.RepairHighlightSeconds` | (default 2.0) how long the tiles an open local repair is re-baking stay highlighted in green, alongside that repair's dirty box and the dashed box of ground still waiting for one — all drawn under `DrawInvalidation`. A short lifetime of its own for the same reason the changed-bounds box has one: a repair's tile set describes ONE publish and stops being true the moment the next slice lands, and a repair that finishes inside a frame would otherwise leave nothing to catch |
 | `ck.GroundNav.Debug.RepathOnRebuild` | (default 1) flags an agent for a repath when a published rebuild meets its cached corridor, which is the shipping behaviour. At 0 the invalidator flags nobody however much ground moved — the bypass a rebuild-then-repath pin must FAIL under to be evidence |
@@ -336,8 +414,11 @@ with no field to query. The body radius every query uses is `ck.GroundNav.Debug.
 
 Draw modes (`ck.GroundNav.Debug.Mode`): 0 plates, 1 clearance ramp, 2 layers, 3 the cells the filters
 rejected, 4 the crossings between plates, 5 the tile lattice and the seams between tiles, 6 the plate
-edges nothing crosses (rim runs in orange). In mode 5 the tiles carrying the field's newest epoch tint
-green and label it, which is exactly the set the last publish re-baked — a field whose built tiles all
+edges nothing crosses (rim runs in orange), 7 the links the published fields resolved over dimmed plates.
+Mode 7 draws no link the other modes do not already carry — links are overlaid in every mode while
+`ck.GroundNav.Debug.DrawLinks` is on — what it adds is the absence of everything else, which is the only
+way to read an authored crossing against the two pieces of ground it joins. In mode 5 the tiles
+carrying the field's newest epoch tint green and label it, which is exactly the set the last publish re-baked — a field whose built tiles all
 share one epoch is all of its own news and tints none of them. Mode 3 is the only view that shows what
 a filter *costs* — a ledge sensitivity tuned too tight and a world that genuinely has no floor produce
 an identical walkable set and differ only in what was thrown away.
@@ -354,7 +435,10 @@ no handle and no span field, so a viewer can draw it a frame later or after its 
 ## Anti-patterns
 
 - **Do not include a Jolt header here.** Geometry comes from CkJolt's JPH-free surface. The bake math
-  is free of engine types entirely — no `UWorld`, no `FCk_Handle`, no `UObject` under `Bake/`.
+  is free of engine types entirely — no `UWorld`, no `FCk_Handle`, no `UObject` under `Bake/`. Includes
+  run one way for the same reason: no `Field/` HEADER includes `Query/`, and
+  `Field/CkGroundNav_FieldLinks.cpp` is the one implementation file under `Field/` that does, because
+  resolving an authored link endpoint IS a projection query over the field being composed.
 - **Do not store a pointer or an engine-object reference inside a field value type.** Stable integer
   ids only: tile coord, layer index, plate index, portal index. This is also what makes serialization
   possible at all.
@@ -366,6 +450,10 @@ no handle and no span field, so a viewer can draw it a frame later or after its 
   for everything downstream; watch the worst height spread, not the residual, because a plane fits two
   treads perfectly well by tilting through them.
 - **Do not derive adjacency from plate rectangles.** See idea 3.
+- **Do not resolve a link against a field other than the one it is published in.** A `_ResolvedLinks`
+  entry, and the `_LinkIndex` a crossing carries, address the plate numbering of exactly one field;
+  carried across a publish they name a different link or none. The array is re-derived wholesale on every
+  publish, for the same reason the reachability labels are.
 - **Do not compare a bake against a tolerance where it should be exact.** The distance transform, the
   decomposition and the portal extraction are all deterministic; a test that accepts "close enough"
   is a test that will pass through a propagation bug.

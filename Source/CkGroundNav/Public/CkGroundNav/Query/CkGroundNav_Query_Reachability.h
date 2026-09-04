@@ -36,9 +36,15 @@ namespace ck::groundnav
         const FCk_GroundNav_Field& InField) -> int32;
 
     /**
-     * Every crossing that leaves a plate: its tile's own portals on either side of the plate, and the
-     * seam portals of the field that have it on either side. Each is oriented AWAY from the plate.
-     * Appends to the caller's array; bills one read per portal examined.
+     * Every crossing that leaves a plate: its tile's own portals on either side of the plate, then
+     * the seam portals of the field that have it on either side, then the field's resolved links
+     * that leave it — in that order, by index within each block, and forward before backward for one
+     * bidirectional link. Each is oriented AWAY from the plate.
+     *
+     * The ORDER is part of the contract: a sliced search expands node for node like a one-shot one
+     * only because the push sequence, and so the heap layout that breaks equal scores, is identical.
+     *
+     * Appends to the caller's array; bills one read per portal and per link examined.
      */
     CKGROUNDNAV_API auto
     Get_CrossingsFrom(

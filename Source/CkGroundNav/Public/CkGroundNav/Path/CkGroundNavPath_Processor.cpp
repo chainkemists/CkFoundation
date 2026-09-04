@@ -151,17 +151,7 @@ namespace ck_groundnav_path_processor
         Keys.Reserve(InResult._Crossings.Num());
 
         for (const auto& Crossing : InResult._Crossings)
-        {
-            auto Key = FCk_GroundNav_CrossingKey{};
-
-            Key._FromFlatPlate = Crossing._FromFlatPlate;
-            Key._ToFlatPlate = Crossing._ToFlatPlate;
-            Key._Direction = Crossing._Direction;
-            Key._Left = Crossing._Left;
-            Key._Right = Crossing._Right;
-
-            Keys.Emplace(Key);
-        }
+        { Keys.Emplace(Make_CrossingKey(Crossing)); }
 
         return Keys;
     }
