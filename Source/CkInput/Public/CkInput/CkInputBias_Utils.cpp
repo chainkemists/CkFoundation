@@ -202,8 +202,6 @@ auto
         TEXT("InputBias declaration on [{}] gives axis [{}] a deadzone of [{}] — it must be in [0, 1), since a "
              "deadzone of 1 kills the axis outright and leaves the rescale undefined"),
         InContext, InAxisBias.Get_AxisKey(), Deadzone)
-    {}
-    if (NOT DeadzoneIsInRange)
     { return false; }
 
     const auto Exponent = InAxisBias.Get_Exponent();

@@ -651,8 +651,6 @@ auto
 	const auto IsValidPlanner = ck::IsValid(InPlanner);
 	CK_ENSURE_IF_NOT(IsValidPlanner,
 		TEXT("Invalid Planner handle in TryGet_LastSearchDebug"))
-	{}
-	if (NOT IsValidPlanner)
 	{ return false; }
 
 	if (NOT InPlanner.Has<ck::FFragment_Goap_Planner_PlanContext>())
@@ -666,8 +664,6 @@ auto
 	const auto HasActivation = InPlanner.Has<ck::FFragment_Goap_Planner_Activation>();
 	CK_ENSURE_IF_NOT(HasActivation,
 		TEXT("Planner [{}] has search state but no Activation fragment"), InPlanner)
-	{}
-	if (NOT HasActivation)
 	{ return false; }
 
 	const auto IsPromotedPlanner = InPlanner.Has<ck::FFragment_Goap_Action_Definition>();
@@ -678,8 +674,6 @@ auto
 	const auto HasWorldStateSource = InPlanner.Has<ck::FFragment_Goap_Planner_WorldStateSource>();
 	CK_ENSURE_IF_NOT(HasWorldStateSource,
 		TEXT("Planner [{}] has search state but no WorldStateSource fragment"), InPlanner)
-	{}
-	if (NOT HasWorldStateSource)
 	{ return false; }
 
 	const auto WSSource = InPlanner.Get<ck::FFragment_Goap_Planner_WorldStateSource>().Get_Resolved();
@@ -687,8 +681,6 @@ auto
 		&& WSSource.Has<ck::FFragment_Goap_WorldState_KeyRegistry>();
 	CK_ENSURE_IF_NOT(HasResolvedWorldState,
 		TEXT("Planner [{}] has search state but no resolved WorldState source"), InPlanner)
-	{}
-	if (NOT HasResolvedWorldState)
 	{ return false; }
 
 	const auto& Registry = WSSource.Get<ck::FFragment_Goap_WorldState_KeyRegistry>().Get_Registry();

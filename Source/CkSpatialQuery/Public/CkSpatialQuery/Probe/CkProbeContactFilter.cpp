@@ -43,8 +43,6 @@ namespace ck::spatialquery
         CK_ENSURE_IF_NOT(HasSignatureCapacity,
             TEXT("Probe contact-filter signature capacity [{}] exhausted; probe body creation will be rejected."),
             _MaxSignatures)
-        { }
-        if (NOT HasSignatureCapacity)
         { return JPH::CollisionGroup::cInvalidSubGroup; }
 
         const auto SignatureId = static_cast<uint32>(_Signatures.Num());

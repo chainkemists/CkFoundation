@@ -67,8 +67,6 @@ void
     const auto NavigationDataIsValid = ck::IsValid(InNavigationData);
     CK_ENSURE_IF_NOT(NavigationDataIsValid,
         TEXT("Queue navigation generation observer received invalid NavigationData"))
-    {}
-    if (NOT NavigationDataIsValid)
     { return; }
 
     _Revision = _Revision == MAX_int32 ? 1 : _Revision + 1;

@@ -74,9 +74,6 @@ auto
     CK_ENSURE_IF_NOT(NOT InSoftPaths.IsEmpty() && AllPathsAreValid,
         TEXT("RequestLoad_RootedBatch for Consumer [{}] rejected - the soft path list is empty or contains a null path"),
         InConsumerId)
-    {}
-
-    if (InSoftPaths.IsEmpty() || NOT AllPathsAreValid)
     { return Batch; }
 
     const auto LoadingPolicy = UCk_Utils_ResourceLoader_Settings_UE::Get_LoadingPolicyForConsumer(InConsumerId);

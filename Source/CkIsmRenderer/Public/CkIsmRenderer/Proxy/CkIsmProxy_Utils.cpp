@@ -76,8 +76,7 @@ auto
     const auto IsHandleValid = ck::IsValid(InHandle);
     CK_ENSURE_IF_NOT(IsHandleValid,
         TEXT("Request_SetCustomInstanceDataValue_Late received an invalid IsmProxy handle [{}]"),
-        InHandle) {}
-    if (NOT IsHandleValid)
+        InHandle)
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;

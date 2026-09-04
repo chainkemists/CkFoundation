@@ -253,8 +253,6 @@ auto
     const auto ActorIsValid = ck::IsValid(InActor);
     CK_ENSURE_IF_NOT(ActorIsValid,
         TEXT("Invalid actor passed to Request_SetActorNavigationRegistered"))
-    {}
-    if (NOT ActorIsValid)
     { return; }
 
     if (InRegistered)

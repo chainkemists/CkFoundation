@@ -174,16 +174,12 @@ ck::FProcessorScheduler::
         CK_ENSURE_IF_NOT(HasAnchor,
             TEXT("Local-settle participants name group [{}], but that group has no boundary in this scheduler partition."),
             Plan._AfterGroupName)
-        { }
-        if (NOT HasAnchor)
         { Plan._IsValid = false; }
 
         const auto HasTrigger = NOT Plan._TriggerNodeIndices.IsEmpty();
         CK_ENSURE_IF_NOT(HasTrigger,
             TEXT("Local-settle plan after [{}] has no explicit consumed-marker trigger."),
             Plan._AfterGroupName)
-        { }
-        if (NOT HasTrigger)
         { Plan._IsValid = false; }
 
         Plan._RunsDuringLoad = NOT Plan._ParticipantNodeIndices.IsEmpty();
@@ -198,8 +194,6 @@ ck::FProcessorScheduler::
             CK_ENSURE_IF_NOT(ParticipantPrecedesBarrier,
                 TEXT("Local-settle participant [{}] must run before its [{}] barrier in the main graph."),
                 ParticipantNode._ProcessorName, Plan._AfterGroupName)
-            { }
-            if (NOT ParticipantPrecedesBarrier)
             { Plan._IsValid = false; }
 
             if (Plan._RunsDuringLoad)
@@ -210,8 +204,6 @@ ck::FProcessorScheduler::
                 CK_ENSURE_IF_NOT(ParticipantPrecedesLoadBarrier,
                     TEXT("Load-capable local-settle participant [{}] must run before its [{}] barrier in the load graph."),
                     ParticipantNode._ProcessorName, Plan._AfterGroupName)
-                { }
-                if (NOT ParticipantPrecedesLoadBarrier)
                 { Plan._IsValid = false; }
             }
         }

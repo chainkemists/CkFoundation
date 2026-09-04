@@ -64,24 +64,18 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Cannot add QueueCoordinator: owner handle is invalid"))
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InOwner);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Cannot add QueueCoordinator to non-authoritative owner [{}]"),
         InOwner)
-    {}
-    if (NOT HasAuthority)
     { return {}; }
 
     const auto CoordinatorIsAbsent = NOT Has(InOwner);
     CK_ENSURE_IF_NOT(CoordinatorIsAbsent,
         TEXT("Cannot add QueueCoordinator to [{}]: feature is already present"),
         InOwner)
-    {}
-    if (NOT CoordinatorIsAbsent)
     { return {}; }
 
     const auto PolicyIsValid = ck_queue_coordinator_utils::IsSelectionPolicyValid(
@@ -92,8 +86,6 @@ auto
     CK_ENSURE_IF_NOT(ParamsAreValid,
         TEXT("Cannot add QueueCoordinator to [{}]: selection policy or required Queue category is invalid"),
         InOwner)
-    {}
-    if (NOT ParamsAreValid)
     { return {}; }
 
     InOwner.Add<ck::FFragment_QueueCoordinator_Params>(InParams);
@@ -133,8 +125,6 @@ auto
     CK_ENSURE_IF_NOT(CoordinatorIsValid,
         TEXT("Get_Services called with invalid QueueCoordinator [{}]"),
         InCoordinator)
-    {}
-    if (NOT CoordinatorIsValid)
     { return {}; }
 
     return InCoordinator.Get<ck::FFragment_QueueCoordinator_Current>().Get_Services();
@@ -150,8 +140,6 @@ auto
     CK_ENSURE_IF_NOT(CoordinatorIsValid,
         TEXT("Get_Revision called with invalid QueueCoordinator [{}]"),
         InCoordinator)
-    {}
-    if (NOT CoordinatorIsValid)
     { return 0; }
 
     return InCoordinator.Get<ck::FFragment_QueueCoordinator_Current>().Get_Revision();
@@ -189,8 +177,6 @@ auto
     CK_ENSURE_IF_NOT(RequestIsValid,
         TEXT("Cannot enqueue QueueCoordinator RegisterQueue on [{}]: coordinator, Queue, authority, registry, or category is invalid"),
         InCoordinator)
-    {}
-    if (NOT RequestIsValid)
     {
         InCompletionDelegate.ExecuteIfBound(
             InCoordinator,
@@ -224,8 +210,6 @@ auto
     CK_ENSURE_IF_NOT(RequestIsValid,
         TEXT("Cannot enqueue QueueCoordinator UnregisterQueue on [{}]: coordinator, authority, or Queue registry is invalid"),
         InCoordinator)
-    {}
-    if (NOT RequestIsValid)
     {
         InCompletionDelegate.ExecuteIfBound(
             InCoordinator,
@@ -274,8 +258,6 @@ auto
     CK_ENSURE_IF_NOT(RequestIsValid,
         TEXT("Cannot enqueue QueueCoordinator SelectQueue on [{}]: coordinator, authority, member, location, delegate, or exclusions are invalid"),
         InCoordinator)
-    {}
-    if (NOT RequestIsValid)
     {
         InCompletionDelegate.ExecuteIfBound(
             InCoordinator,

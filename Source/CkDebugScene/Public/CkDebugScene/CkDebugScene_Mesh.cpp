@@ -91,9 +91,6 @@ auto
     const auto HasTriangles = NOT InTriangles.IsEmpty();
     CK_ENSURE_IF_NOT(HasTriangles, TEXT("CkDebugScene rejected a mesh with no triangles"))
     {
-    }
-    if (NOT HasTriangles)
-    {
         return {};
     }
 
@@ -109,9 +106,6 @@ auto
     }
 
     CK_ENSURE_IF_NOT(InputIsValid, TEXT("CkDebugScene rejected invalid mesh triangle input"))
-    {
-    }
-    if (NOT InputIsValid)
     {
         return {};
     }
@@ -175,9 +169,6 @@ auto
     const auto MeshWasCreated = ck::IsValid(Mesh);
     CK_ENSURE_IF_NOT(MeshWasCreated, TEXT("CkDebugScene failed to create its transient static mesh"))
     {
-    }
-    if (NOT MeshWasCreated)
-    {
         return {};
     }
 
@@ -191,9 +182,6 @@ auto
 
     const auto MeshBuilt = Mesh->BuildFromMeshDescriptions({&Description}, Params);
     CK_ENSURE_IF_NOT(MeshBuilt, TEXT("CkDebugScene failed to build a transient static mesh from triangles"))
-    {
-    }
-    if (NOT MeshBuilt)
     {
         return {};
     }

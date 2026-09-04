@@ -207,8 +207,6 @@ namespace ck
         CK_ENSURE_IF_NOT(MemberIsValid && TicketIsValid,
             TEXT("Queue [{}] cannot restore join member [{}] with ticket [{}]"),
             InQueue, InRequest.Get_Member(), InRequest.Get_RestoredTicket())
-        {}
-        if (NOT MemberIsValid || NOT TicketIsValid)
         { return false; }
 
         const auto ExistingIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
@@ -220,8 +218,6 @@ namespace ck
         CK_ENSURE_IF_NOT(NOT TicketBelongsToAnotherMember,
             TEXT("Queue [{}] restore ticket [{}] is already owned by another member"),
             InQueue, InRequest.Get_RestoredTicket())
-        {}
-        if (TicketBelongsToAnotherMember)
         { return false; }
 
         if (ExistingIndex != INDEX_NONE)
@@ -231,8 +227,6 @@ namespace ck
             CK_ENSURE_IF_NOT(TicketMatches,
                 TEXT("Queue [{}] restore member [{}] conflicts with existing ticket [{}]"),
                 InQueue, InRequest.Get_Member(), Existing.Get_Ticket())
-            {}
-            if (NOT TicketMatches)
             { return false; }
 
             const auto Mover = ck::IsValid(InRequest.Get_Mover())
@@ -296,8 +290,6 @@ namespace ck
             TEXT("Queue [{}] cannot join invalid member [{}]"),
             InQueue,
             InRequest.Get_Member())
-        {}
-        if (NOT MemberIsValid)
         { return false; }
 
         const auto ExistingIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
@@ -366,8 +358,6 @@ namespace ck
         CK_ENSURE_IF_NOT(TicketIsAvailable,
             TEXT("Queue [{}] cannot join member [{}]: admission ticket space is exhausted"),
             InQueue, InRequest.Get_Member())
-        {}
-        if (NOT TicketIsAvailable)
         { return false; }
 
         const auto Ticket = InCurrent._NextTicket;

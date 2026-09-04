@@ -104,29 +104,21 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwner);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("Cannot add Queue: owner handle is invalid"))
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InOwner);
     CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Cannot add Queue to non-authoritative owner [{}]"), InOwner)
-    {}
-    if (NOT HasAuthority)
     { return {}; }
 
     const auto QueueIsAbsent = NOT Has(InOwner);
     CK_ENSURE_IF_NOT(QueueIsAbsent,
         TEXT("Cannot add Queue to [{}]: Queue is already present"), InOwner)
-    {}
-    if (NOT QueueIsAbsent)
     { return {}; }
 
     const auto OwnerHasTransform = UCk_Utils_Transform_UE::Has(InOwner);
     CK_ENSURE_IF_NOT(OwnerHasTransform,
         TEXT("Cannot add Queue to [{}]: a spatial queue owner requires Ck Transform"), InOwner)
-    {}
-    if (NOT OwnerHasTransform)
     { return {}; }
 
     const auto SlotSpacingIsValid = InParams.Get_SlotSpacingUu() > 0.0f;
@@ -167,8 +159,6 @@ auto
         && OtherParamsAreValid;
     CK_ENSURE_IF_NOT(ParamsAreValid,
         TEXT("Cannot add Queue to [{}]: parameters are invalid"), InOwner)
-    {}
-    if (NOT ParamsAreValid)
     { return {}; }
 
     InOwner.Add<ck::FFragment_Queue_Params>(InParams);
@@ -210,8 +200,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Members called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return {}; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Members();
 }
@@ -224,8 +212,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_MemberCount called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Members().Num();
 }
@@ -238,8 +224,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Pressure called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return {}; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Pressure();
 }
@@ -252,8 +236,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_State called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return ECk_Queue_State::Invalidated; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_State();
 }
@@ -276,8 +258,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Revision called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_Revision();
 }
@@ -290,8 +270,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Category called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return FGameplayTag::EmptyTag; }
 
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_Category();
@@ -395,8 +373,6 @@ auto
     auto* DebugDraw = IConsoleManager::Get().FindConsoleVariable(QueueDebugDrawCVarName);
     const auto DebugDrawIsRegistered = DebugDraw != nullptr;
     CK_ENSURE_IF_NOT(DebugDrawIsRegistered, TEXT("Queue debug draw CVar is not registered"))
-    {}
-    if (NOT DebugDrawIsRegistered)
     { return; }
 
     DebugDraw->Set(InEnabled ? 1 : 0, ECVF_SetByConsole);
@@ -412,8 +388,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_LayoutAlgorithm called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return ECk_Queue_LayoutAlgorithm::OrthogonalSnake; }
     return InQueue.Get<ck::FFragment_Queue_Current>().Get_LayoutAlgorithm();
 }
@@ -428,8 +402,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotClaimPolicy called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return ECk_Queue_SlotClaimPolicy::ReserveOnFormation; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotClaimPolicy();
 }
@@ -444,8 +416,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotSpacingUu called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0.0f; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotSpacingUu();
 }
@@ -460,8 +430,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotClaimRadiusUu called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0.0f; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotClaimRadiusUu();
 }
@@ -476,8 +444,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotSettleRadiusUu called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0.0f; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotSettleRadiusUu();
 }
@@ -492,8 +458,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_SlotReacquireRadiusUu called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return 0.0f; }
     return InQueue.Get<ck::FFragment_Queue_Params>().Get_SlotReacquireRadiusUu();
 }
@@ -509,8 +473,6 @@ auto
 {
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_IsMember called with invalid Queue [{}]"), InQueue)
-    {}
-    if (NOT QueueIsValid)
     { return false; }
 
     auto Snapshot = FCk_Queue_MemberSnapshot{};
@@ -556,8 +518,6 @@ auto
     const auto RequestIsValid = ck::IsValid(InRequest.Get_Member());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue Join on [{}]: queue, authority, or member is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -584,8 +544,6 @@ auto
     const auto RequestIsValid = ck::IsValid(InRequest.Get_Member()) && TicketIsValid;
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue Restore Join on [{}]: queue, authority, member, or ticket is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -610,8 +568,6 @@ auto
     const auto RequestIsValid = ck::IsValid(InRequest.Get_Member());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue Leave on [{}]: queue, authority, or member is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -635,8 +591,6 @@ auto
     const auto HasAuthority = QueueIsValid && UCk_Utils_Net_UE::Get_HasAuthority(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority,
         TEXT("Cannot enqueue Queue Advance on [{}]: queue or authority is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -661,8 +615,6 @@ auto
     const auto RequestIsValid = ck_queue_utils::IsValidLayoutAlgorithm(InRequest.Get_LayoutAlgorithm());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue SetLayout on [{}]: queue, authority, or layout is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -688,8 +640,6 @@ auto
         && ck_queue_utils::IsValidEnableDisable(InRequest.Get_MovementSuppressed());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue SetMovementSuppressed on [{}]: queue, authority, or request is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;
@@ -716,8 +666,6 @@ auto
         && ck_queue_utils::IsValidMovementOutcome(InRequest.Get_Outcome());
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority && RequestIsValid,
         TEXT("Cannot enqueue Queue ReportMovementOutcome on [{}]: queue, authority, or request is invalid"), InQueue)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority || NOT RequestIsValid)
     {
         InDelegate.ExecuteIfBound(InQueue, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InQueue;

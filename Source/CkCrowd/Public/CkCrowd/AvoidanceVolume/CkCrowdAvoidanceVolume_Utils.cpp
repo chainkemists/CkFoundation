@@ -67,8 +67,6 @@ auto UCk_Utils_CrowdAvoidanceVolume_UE::Add(
         ck_crowd_avoidance_volume::Get_IsValidTraversalPolicy(TraversalPolicy);
     CK_ENSURE_IF_NOT(IsValidInput,
         TEXT("CrowdAvoidanceVolume Add requires a valid Transform owner, unique feature, positive half extents, non-negative influence and path clearances, and a valid traversal policy."))
-    { }
-    if (NOT IsValidInput)
     { return {}; }
 
     InOwner.Add<ck::FFragment_CrowdAvoidanceVolume_Params>(InParams);

@@ -42,9 +42,6 @@ auto
 
     CK_ENSURE_IF_NOT(TransientEntityIsValid,
         TEXT("VoxelNav volume actor [{}] could not resolve the TransientEntity for the current world"), this)
-    { }
-
-    if (NOT TransientEntityIsValid)
     { return; }
 
     _VolumeHandle = UCk_Utils_VoxelNavVolume_UE::Add(TransientEntity, Build_ParamsData());

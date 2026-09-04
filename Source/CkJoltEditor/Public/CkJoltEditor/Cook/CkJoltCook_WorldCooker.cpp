@@ -140,9 +140,6 @@ namespace ck_jolt_cook_world_cooker
                      "collision would be DELETED from the bake and silently absent in game. Load all "
                      "sublevels (or let the incremental cook run, which preserves unloaded ones)."),
                 InWorld.GetOutermost()->GetName(), StreamingLevelPackageName)
-            {}
-
-            if (NOT LevelIsInWorld)
             { return false; }
         }
 

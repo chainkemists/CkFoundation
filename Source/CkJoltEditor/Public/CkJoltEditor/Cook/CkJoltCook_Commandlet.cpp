@@ -155,9 +155,6 @@ namespace ck_jolt_cook_commandlet
             CK_ENSURE_IF_NOT(HasMapFile,
                 TEXT("CkJoltCook: -PackagingMaps entry [{}] does not resolve to a .umap file [{}]"),
                 MapPackageName, MapFilename)
-            { }
-
-            if (NOT HasMapFile)
             { return false; }
         }
 
@@ -194,9 +191,6 @@ auto
 
     CK_ENSURE_IF_NOT(RebuildModeIsValid,
         TEXT("CkJoltCook: -Incremental and -ForceRebuild cannot be combined"))
-    {}
-
-    if (NOT RebuildModeIsValid)
     { return 1; }
 
     const auto PackagingSettings = TWeakObjectPtr<const UProjectPackagingSettings>{
@@ -205,9 +199,6 @@ auto
 
     CK_ENSURE_IF_NOT(HasPackagingSettings,
         TEXT("CkJoltCook: UProjectPackagingSettings is unavailable — refusing to validate or write cooked data"))
-    { }
-
-    if (NOT HasPackagingSettings)
     { return 1; }
 
     const auto CookedDataRootIsPackageable =
@@ -253,9 +244,6 @@ auto
 
         CK_ENSURE_IF_NOT(HasValidPackagingMaps,
             TEXT("CkJoltCook: -PackagingMaps selection rejected: [{}]"), PackagingMaps._Failure)
-        { }
-
-        if (NOT HasValidPackagingMaps)
         { return 1; }
 
         UE_LOG(CkJolt, Display, TEXT("CkJoltCook: packaging map policy [%s]: %d authored + %d AlwaysCook = %d selected"),
@@ -266,9 +254,6 @@ auto
 
         CK_ENSURE_IF_NOT(HasSelectedPackagingMaps,
             TEXT("CkJoltCook: -PackagingMaps found no eligible UWorld entry maps in MapsToCook or DirectoriesToAlwaysCook"))
-        { }
-
-        if (NOT HasSelectedPackagingMaps)
         { return 1; }
 
         const auto PackagingMapsExist = ck_jolt_cook_commandlet::DoEnsure_PackagingMapsExist(
@@ -297,9 +282,6 @@ auto
 
     CK_ENSURE_IF_NOT(NOT MeshShapesFailed,
         TEXT("CkJoltCook: mesh-shape sweep failed — refusing world loading"))
-    { }
-
-    if (MeshShapesFailed)
     { return 1; }
 
     auto MapsToCook = TArray<FString>{};
@@ -348,9 +330,6 @@ auto
     const auto NothingRequested = MapsToCook.IsEmpty() && NOT CookMeshShapes;
     CK_ENSURE_IF_NOT(NOT NothingRequested,
         TEXT("CkJoltCook: nothing to cook — pass -Map=/Game/Path/ToMap, -AllMaps, and/or -MeshShapes"))
-    { }
-
-    if (NothingRequested)
     { return 1; }
 
     auto FailureCount = 0;
@@ -403,9 +382,6 @@ auto
             TEXT("CkJoltCook: streaming level [{}] of map [{}] did not load — REFUSING to cook, because a "
                  "partial world would write a bake that silently omits that sublevel's collision"),
             StreamingLevelPackageName, InWorld.GetOutermost()->GetName())
-        {}
-
-        if (NOT LevelIsResolved)
         { return false; }
 
         // Component registration runs against OwningWorld, which for a level resolved from its own
@@ -448,9 +424,6 @@ auto
             TEXT("CkJoltCook: streaming level [{}] did not end up in the world after AddToWorld — REFUSING "
                  "to cook rather than write a bake missing its collision"),
             StreamingLevelPackageName)
-        {}
-
-        if (NOT LevelIsInWorld)
         { return false; }
     }
 

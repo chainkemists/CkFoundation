@@ -54,8 +54,6 @@ void UCk_NavigationRevisionSubsystem_UE::OnNavigationGenerationFinished(
     const auto NavigationDataIsValid = ck::IsValid(InNavigationData);
     CK_ENSURE_IF_NOT(NavigationDataIsValid,
         TEXT("Navigation generation observer received invalid NavigationData"))
-    { }
-    if (NOT NavigationDataIsValid)
     { return; }
 
     auto* NavigationSystem = UNavigationSystemV1::GetCurrent(GetWorld());

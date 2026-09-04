@@ -454,8 +454,6 @@ auto
     const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
     CK_ENSURE_IF_NOT(CanCreateEntity,
         TEXT("Request_CreateEntity rejected new world population after ECS world teardown began"))
-    { }
-    if (NOT CanCreateEntity)
     { return {}; }
 
     const auto& NewEntity = InRegistry.CreateEntity();
@@ -486,8 +484,6 @@ auto
     const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
     CK_ENSURE_IF_NOT(CanCreateEntity,
         TEXT("Request_CreateEntity with ID hint rejected new world population after ECS world teardown began"))
-    { }
-    if (NOT CanCreateEntity)
     { return {}; }
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());

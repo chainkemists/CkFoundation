@@ -39,8 +39,6 @@ auto
     const auto AlreadyHasEmitter = Has(InHandle);
     CK_ENSURE_IF_NOT(NOT AlreadyHasEmitter,
         TEXT("Entity [{}] already has a DialogEmitter — one emitter per entity. Returning the existing one."), InHandle)
-    {}
-    if (AlreadyHasEmitter)
     { return UCk_Utils_DialogEmitter_UE::CastChecked(InHandle); }
 
     InHandle.Add<ck::FFragment_DialogEmitter_Params>(InParams);

@@ -23,8 +23,6 @@ auto
         const auto HasScriptStruct = ScriptStruct != nullptr;
         CK_ENSURE_IF_NOT(HasScriptStruct,
             TEXT("Message [{}] rejected an InstancedStruct payload without a reflected struct type"), InMessageName)
-        { }
-        if (NOT HasScriptStruct)
         { return; }
 
         const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
@@ -35,9 +33,6 @@ auto
             ScriptStruct->GetName(),
             Safety.FailurePath,
             Safety.FailureReason)
-        { }
-
-        if (NOT IsPayloadSafe)
         { return; }
     }
 

@@ -756,18 +756,12 @@ auto
 {
     const auto IsGridValid = ck::IsValid(InGrid);
     CK_ENSURE_IF_NOT(IsGridValid, TEXT("ForEach_Cell: grid handle is invalid"))
-    { }
-
-    if (NOT IsGridValid)
     { return; }
 
     auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
 
     const auto IsCellRegistryValid = ck::IsValid(CellRegistry);
     CK_ENSURE_IF_NOT(IsCellRegistryValid, TEXT("ForEach_Cell: grid cell registry is invalid"))
-    { }
-
-    if (NOT IsCellRegistryValid)
     { return; }
 
     switch (InCellFilter)

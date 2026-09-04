@@ -102,8 +102,6 @@ namespace ck_cue_subsystem_base
         const auto HasScriptStruct = ScriptStruct != nullptr;
         CK_ENSURE_IF_NOT(HasScriptStruct,
             TEXT("Cue [{}] rejected spawn params without a reflected struct type"), InCueName)
-        { }
-        if (NOT HasScriptStruct)
         { return false; }
 
         const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
@@ -114,9 +112,6 @@ namespace ck_cue_subsystem_base
             ScriptStruct->GetName(),
             Safety.FailurePath,
             Safety.FailureReason)
-        { }
-
-        if (NOT IsSpawnParamsSafe)
         { return false; }
 
         return true;

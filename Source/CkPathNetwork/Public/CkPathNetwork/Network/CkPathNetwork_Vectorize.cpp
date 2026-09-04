@@ -683,8 +683,6 @@ namespace ck::pathnetwork
         CK_ENSURE_IF_NOT(MaskIsValid,
             TEXT("Vectorize_MaskToRibbons: invalid mask (SizeX [{}], SizeY [{}], Occupancy [{}], Heights [{}])"),
             InMask.Get_SizeX(), InMask.Get_SizeY(), InMask.Get_Occupancy().Num(), InMask.Get_Heights().Num())
-        { }
-        if (NOT MaskIsValid)
         {
             Result._Succeeded = false;
             Result._FailureReason = TEXT("Cannot vectorize an invalid detection mask");

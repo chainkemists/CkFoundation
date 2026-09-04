@@ -197,9 +197,6 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "so the mesh cook SKIPS it and will never refresh this blob. DELETE the cooked asset; "
                  "re-running the cook does NOT help. The shape is built at runtime meanwhile."),
             AssetPath, MeshPackagePath)
-        { }
-
-        if (NOT IsNotOrphaned)
         { return Memoize({}); }
 
         CK_ENSURE_IF_NOT(BlobIsUsable,
@@ -208,9 +205,6 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "runtime. Re-run the Jolt mesh cook."),
             MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current,
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
-        { }
-
-        if (NOT BlobIsUsable)
         { return Memoize({}); }
 
         const auto RestoreResult = Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob());
@@ -219,9 +213,6 @@ namespace ck::jolt::bake::mesh_shape_utils
         CK_ENSURE_IF_NOT(BlobRestored,
             TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
             MeshPackagePath, RestoreResult._Failure)
-        { }
-
-        if (NOT BlobRestored)
         { return Memoize({}); }
 
         auto RestoredShape = RestoreResult._Shape;
@@ -262,9 +253,6 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "(or author simple collision on the asset), then re-save so the mesh cook refreshes "
                  "this blob. The runtime falls back to the source shape meanwhile."),
                 MeshPackagePath, WindingRatio)
-            {}
-
-            if (NOT WindingIsSafe)
             { return Memoize({}); }
         }
 
@@ -333,9 +321,6 @@ namespace ck::jolt::bake::mesh_shape_utils
         CK_ENSURE_IF_NOT(RestoreResult._Success,
             TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
             InDebugName, RestoreResult._Failure)
-        { }
-
-        if (NOT RestoreResult._Success)
         { return {}; }
 
         return RestoreResult._Shape;

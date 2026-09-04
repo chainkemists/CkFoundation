@@ -126,8 +126,6 @@ auto
     const auto AttachTargetIsValid = ck::IsValid(InAttachTo);
     CK_ENSURE_IF_NOT(AttachTargetIsValid,
         TEXT("Unable to create an ISM visualizer for INVALID Transform [{}]"), InAttachTo)
-    { }
-    if (NOT AttachTargetIsValid)
     { return {}; }
 
     auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAttachTo);
@@ -135,16 +133,12 @@ auto
     const auto BaseResourcesAreValid = ck::IsValid(World) && ck::IsValid(Mesh);
     CK_ENSURE_IF_NOT(BaseResourcesAreValid,
         TEXT("Unable to resolve ISM visualizer World or Mesh for Transform [{}]"), InAttachTo)
-    { }
-    if (NOT BaseResourcesAreValid)
     { return {}; }
 
     auto* Material = ck_entity_visualizer_utils::Get_IsmVisualizerMaterial();
     const auto MaterialIsValid = ck::IsValid(Material);
     CK_ENSURE_IF_NOT(MaterialIsValid,
         TEXT("Unable to create ISM visualizer material for Transform [{}]"), InAttachTo)
-    { }
-    if (NOT MaterialIsValid)
     { return {}; }
 
     const auto Overrides = TArray<FCk_MeshMaterialOverride>{FCk_MeshMaterialOverride{0, Material}};
@@ -153,8 +147,6 @@ auto
     const auto RendererDataIsValid = ck::IsValid(RendererData);
     CK_ENSURE_IF_NOT(RendererDataIsValid,
         TEXT("Unable to create transient ISM renderer data for Transform [{}]"), InAttachTo)
-    { }
-    if (NOT RendererDataIsValid)
     { return {}; }
 
     auto ProxyParams = FCk_Fragment_IsmProxy_ParamsData{RendererData};
@@ -195,8 +187,6 @@ auto
     const auto ParamsAreValid = ck_entity_visualizer_utils::AreGizmoParamsValid(InParams);
     CK_ENSURE_IF_NOT(ParamsAreValid,
         TEXT("Unable to create an ISM transform gizmo with invalid dimensions"))
-    { }
-    if (NOT ParamsAreValid)
     { return {}; }
 
     auto Result = TArray<FCk_Handle_IsmProxy>{};
@@ -264,8 +254,6 @@ auto
     const auto ParamsAreValid = ck_entity_visualizer_utils::AreGizmoParamsValid(InParams);
     CK_ENSURE_IF_NOT(ParamsAreValid,
         TEXT("Unable to create a PMG transform gizmo with invalid dimensions"))
-    { }
-    if (NOT ParamsAreValid)
     { return {}; }
 
     auto Result = TArray<FCk_Handle_Pmg_DebugShape>{};

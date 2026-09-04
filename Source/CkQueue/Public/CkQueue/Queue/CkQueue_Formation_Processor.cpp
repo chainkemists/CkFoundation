@@ -34,16 +34,12 @@ namespace ck
         const auto WorldIsValid = ck::IsValid(World);
         CK_ENSURE_IF_NOT(WorldIsValid,
             TEXT("Queue [{}] cannot resolve formation without a valid world"), InQueue)
-        {}
-        if (NOT WorldIsValid)
         { return; }
 
         auto RevisionSubsystem = World->GetSubsystem<UCk_Queue_NavigationRevisionSubsystem_UE>();
         const auto RevisionSubsystemIsValid = ck::IsValid(RevisionSubsystem);
         CK_ENSURE_IF_NOT(RevisionSubsystemIsValid,
             TEXT("Queue [{}] cannot resolve formation without its navigation revision subsystem"), InQueue)
-        {}
-        if (NOT RevisionSubsystemIsValid)
         { return; }
 
         RevisionSubsystem->TryEnsureBound();
@@ -303,8 +299,6 @@ namespace ck
             InQueue,
             LayoutResult.Placements.Num(),
             ActiveMemberIndices.Num())
-        {}
-        if (NOT PlacementCountMatches)
         { return; }
 
         const auto PreviousMembers = InCurrent._Members;

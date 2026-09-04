@@ -53,15 +53,11 @@ auto
     const auto OwnerIsValid = ck::IsValid(InOwnerEntity);
     CK_ENSURE_IF_NOT(OwnerIsValid,
         TEXT("NavAreaMarkup Request_Create requires a valid owner entity"))
-    {}
-    if (NOT OwnerIsValid)
     { return {}; }
 
     const auto TransformIsFinite = NOT InWorldTransform.ContainsNaN();
     CK_ENSURE_IF_NOT(TransformIsFinite,
         TEXT("NavAreaMarkup Request_Create on [{}] requires a finite transform"), InOwnerEntity)
-    {}
-    if (NOT TransformIsFinite)
     { return {}; }
 
     const auto HalfExtentsAreValid = FMath::IsFinite(InHalfExtents.X)
@@ -73,23 +69,17 @@ auto
     CK_ENSURE_IF_NOT(HalfExtentsAreValid,
         TEXT("NavAreaMarkup Request_Create on [{}] requires finite positive half extents [{}]"),
         InOwnerEntity, InHalfExtents)
-    {}
-    if (NOT HalfExtentsAreValid)
     { return {}; }
 
     const auto AreaClassIsValid = ck::IsValid(InAreaClass.Get());
     CK_ENSURE_IF_NOT(AreaClassIsValid,
         TEXT("NavAreaMarkup Request_Create on [{}] requires a valid AreaClass"), InOwnerEntity)
-    {}
-    if (NOT AreaClassIsValid)
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InOwnerEntity);
     const auto WorldIsValid = ck::IsValid(World);
     CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("NavAreaMarkup Request_Create: no World for entity [{}]"), InOwnerEntity)
-    {}
-    if (NOT WorldIsValid)
     { return {}; }
 
     const auto PoolParams = FCk_ObjectPooling_PoolParams{}
@@ -109,8 +99,6 @@ auto
     const auto MarkupIsValid = ck::IsValid(Markup);
     CK_ENSURE_IF_NOT(MarkupIsValid,
         TEXT("NavAreaMarkup Request_Create on [{}] could not acquire a rooted markup object"), InOwnerEntity)
-    {}
-    if (NOT MarkupIsValid)
     { return {}; }
 
     UNavigationSystemV1::OnNavRelevantObjectRegistered(*Markup);

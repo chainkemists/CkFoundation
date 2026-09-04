@@ -44,8 +44,6 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                     CK_ENSURE_IF_NOT(Schema.IsSafe,
                         TEXT("Refusing to save unsafe legacy Dynamic Fragment schema [{}] at [{}]: {}"),
                         Entry.GetScriptStruct(), Schema.FailurePath, Schema.FailureReason)
-                    {}
-                    if (NOT Schema.IsSafe)
                     { return {}; }
                 }
 
@@ -83,8 +81,6 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                     CK_ENSURE_IF_NOT(Schema.IsSafe,
                         TEXT("Refusing to hydrate unsafe Dynamic Fragment schema [{}] at [{}]: {}"),
                         Type, Schema.FailurePath, Schema.FailureReason)
-                    {}
-                    if (NOT Schema.IsSafe)
                     { return ECk_Persistence_ApplyResult::Rejected; }
                 }
 

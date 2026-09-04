@@ -28,8 +28,6 @@ namespace ck_signal_utils
             TEXT("Signal [{}] operation [{}] rejected invalid/tombstone handle"),
             ck::Get_RuntimeTypeToString<T_SignalType>(),
             InOperation)
-        { }
-        if (NOT IsHandleValid)
         { return false; }
 
         return true;
@@ -49,8 +47,6 @@ namespace ck_signal_utils
         CK_ENSURE_IF_NOT(HasPayloadStruct,
             TEXT("Signal [{}] rejected an InstancedStruct payload without a reflected struct type"),
             InSignalType)
-        { }
-        if (NOT HasPayloadStruct)
         { return false; }
 
         const auto Safety = ck::Analyze_UntracedStructSafety(PayloadStruct);
@@ -61,8 +57,6 @@ namespace ck_signal_utils
             PayloadStruct->GetName(),
             Safety.FailurePath,
             Safety.FailureReason)
-        { }
-        if (NOT IsPayloadSafe)
         { return false; }
 
         return true;
@@ -380,8 +374,6 @@ namespace ck
         CK_ENSURE_IF_NOT(HasSignalState,
             TEXT("Signal [{}] Unbind rejected a handle without signal state"),
             ck::Get_RuntimeTypeToString<SignalType>())
-        { }
-        if (NOT HasSignalState)
         { return; }
 
         auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();
@@ -404,8 +396,6 @@ namespace ck
         CK_ENSURE_IF_NOT(HasSignalState,
             TEXT("Signal [{}] Unbind rejected a handle without signal state"),
             ck::Get_RuntimeTypeToString<SignalType>())
-        { }
-        if (NOT HasSignalState)
         { return; }
 
         auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill>();

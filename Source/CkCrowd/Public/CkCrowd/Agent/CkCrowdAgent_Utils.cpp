@@ -32,8 +32,6 @@ auto
     CK_ENSURE_IF_NOT(HasValidCloseGoalStrafe,
         TEXT("Invalid CrowdAgent close-goal strafe params (mode [{}], distance [{}])"),
         InParams.Get_CloseGoalStrafe(), InParams.Get_CloseGoalStrafeDistanceUu())
-    {}
-    if (NOT HasValidCloseGoalStrafe)
     { return {}; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),

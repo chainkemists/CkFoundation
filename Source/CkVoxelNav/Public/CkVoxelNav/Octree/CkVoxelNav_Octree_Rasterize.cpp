@@ -439,12 +439,11 @@ namespace ck::voxelnav
             CK_ENSURE_IF_NOT(ParentIndex != INDEX_NONE,
                 TEXT("Leaf [{}] names parent Morton code [{}], which no layer-1 node carries"),
                 LeafIdx, LeafToParentMorton.Value)
-            {}
-
-            // The leaf keeps an invalid parent link rather than a wrong one; queries that need the parent
-            // reject it loudly instead of resolving against an unrelated node.
-            if (ParentIndex == INDEX_NONE)
-            { continue; }
+            {
+                // The leaf keeps an invalid parent link rather than a wrong one; queries that need the parent
+                // reject it loudly instead of resolving against an unrelated node.
+                continue;
+            }
 
             InOutOctree.Get_LeafNodes()
                 .Get_LeafNode(LeafIdx)
@@ -524,9 +523,6 @@ namespace ck::voxelnav
                         TEXT("Node [{}] on VoxelNav layer [{}] has no parent link and no layer-[{}] node "
                              "carries its parent Morton code - the neighbour climb cannot continue"),
                         NodeIdx, static_cast<int32>(InLayerIndex), CurrentLayerIndex)
-                    {}
-
-                    if (ParentIndexFromMorton == INDEX_NONE)
                     { break; }
 
                     CurrentNodeIndex = ParentIndexFromMorton;

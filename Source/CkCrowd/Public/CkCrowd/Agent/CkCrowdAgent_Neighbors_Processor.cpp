@@ -109,8 +109,6 @@ namespace ck
                     CK_ENSURE_IF_NOT(RuntimeIsValid,
                         TEXT("CrowdAvoidanceVolume [{}] has runtime state but no valid canonical OBB/markup"),
                         OtherAgent)
-                    {}
-                    if (NOT RuntimeIsValid)
                     { continue; }
 
                     const auto ExpandedObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
@@ -119,8 +117,6 @@ namespace ck
                     CK_ENSURE_IF_NOT(ExpandedObbIsValid,
                         TEXT("CrowdAvoidanceVolume [{}] produced an invalid agent-expanded OBB"),
                         OtherAgent)
-                    {}
-                    if (NOT ExpandedObbIsValid)
                     { continue; }
 
                     const auto IsHardExclude = VolumeParams.Get_TraversalPolicy() ==

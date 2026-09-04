@@ -120,8 +120,6 @@ auto
     const auto CanReplaceProfiles = _Members.IsEmpty();
     CK_ENSURE_IF_NOT(CanReplaceProfiles,
         TEXT("[CkIskm] Set_RenderProfiles must run before AddInstance"))
-    {}
-    if (NOT CanReplaceProfiles)
     { return false; }
 
     auto PreparedProfiles = TArray<TObjectPtr<UCk_IskmRenderer_Data>>{};
@@ -141,8 +139,6 @@ auto
 
         CK_ENSURE_IF_NOT(HasMatchingCollection,
             TEXT("[CkIskm] Render profile must share the crowd AnimCollection"))
-        {}
-        if (NOT HasMatchingCollection)
         { return false; }
 
         PreparedProfiles.Add(RenderProfile);
@@ -156,8 +152,6 @@ auto
         const auto AreTunersValid = ck::iskm::Get_AreRuntimeProfileTunersValid(Tuners);
         CK_ENSURE_IF_NOT(AreTunersValid,
             TEXT("[CkIskm] authored render profile has invalid runtime-tunable values"))
-        {}
-        if (NOT AreTunersValid)
         { return false; }
         PreparedTuners.Add(Tuners);
     }
@@ -177,8 +171,6 @@ auto
 
     CK_ENSURE_IF_NOT(AreAllTunersValid,
         TEXT("[CkIskm] runtime render-profile tuners must be valid and profile-index aligned"))
-    {}
-    if (NOT AreAllTunersValid)
     { return false; }
 
     auto PreparedTuners = InTuners;
@@ -228,8 +220,6 @@ auto
 
     CK_ENSURE_IF_NOT(HasValidIndices,
         TEXT("[CkIskm] invalid member/profile index"))
-    {}
-    if (NOT HasValidIndices)
     { return false; }
 
     auto& Member = _Members[InIndex];
@@ -248,16 +238,12 @@ auto
 
     CK_ENSURE_IF_NOT(HasOldMembership && HasOldTile && NOT HasDuplicateDestination,
         TEXT("[CkIskm] member/profile bucket bookkeeping is inconsistent"))
-    {}
-    if (NOT HasOldMembership || NOT HasOldTile || HasDuplicateDestination)
     { return false; }
 
     const auto* NewTile = GetOrCreate_Tile(NewKey);
     const auto HasDestinationTile = ck::IsValid(NewTile);
     CK_ENSURE_IF_NOT(HasDestinationTile,
         TEXT("[CkIskm] failed to prepare the destination render-profile bucket"))
-    {}
-    if (NOT HasDestinationTile)
     { return false; }
 
     OldMembers->RemoveSingleSwap(InIndex);

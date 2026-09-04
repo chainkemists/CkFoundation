@@ -196,8 +196,6 @@ auto
     const auto DuplicateLineID = _LineIDs.Contains(LineID);
     CK_ENSURE_IF_NOT(NOT DuplicateLineID,
         TEXT("Duplicate Dialog LineID [{}] — skipping the duplicate"), LineID)
-    {}
-    if (DuplicateLineID)
     { return {}; }
 
     const auto WeakThis = TWeakObjectPtr<UCk_DialogRegistry_Subsystem_UE>{this};

@@ -649,8 +649,7 @@ namespace ck
             NewCustomDataValue,
             NewCustomDataIndex,
             InHandle,
-            CurrentCustomInstanceData.Num()) {}
-        if (NOT IsIndexValid)
+            CurrentCustomInstanceData.Num())
         { return false; }
 
         const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
@@ -671,15 +670,13 @@ namespace ck
 
                 CK_ENSURE_IF_NOT(HasIsmComponent,
                     TEXT("Failed to find ISM Renderer Component for ready ISM Proxy [{}] during late custom-data write"),
-                    InHandle) {}
-                if (NOT HasIsmComponent)
+                    InHandle)
                 { return false; }
 
                 const auto HasLiveInstance = IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex());
                 CK_ENSURE_IF_NOT(HasLiveInstance,
                     TEXT("Ready ISM Proxy [{}] has no live instance during late custom-data write"),
-                    InHandle) {}
-                if (NOT HasLiveInstance)
+                    InHandle)
                 { return false; }
 
                 IsmCompToUpdate = IsmComp;

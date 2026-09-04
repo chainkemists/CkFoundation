@@ -1171,8 +1171,6 @@ namespace ck
         CK_ENSURE_IF_NOT(StartLocationIsValid,
             TEXT("PathNetworkFollower [{}] received an invalid route start override [{}]"),
             InHandle, StartLocation)
-        { }
-        if (NOT StartLocationIsValid)
         {
             FailureStage = ERouteFailureStage::MissingTransform;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
