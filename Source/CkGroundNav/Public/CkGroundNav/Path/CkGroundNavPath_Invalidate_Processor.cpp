@@ -92,6 +92,28 @@ namespace ck
         if (CorridorIsCurrent)
         { return; }
 
+        const auto PublishNote = groundnav::world_fields::TryGet_PublishNote(World, Corridor.GetCenter());
+
+        // Narrowing needs the note to account for every publish THIS corridor has missed, not merely
+        // for the newest one. What it accounts for is the run of link-only publishes since the last
+        // geometry publish, so a plan made at or after that epoch has missed nothing a link id cannot
+        // describe and the accumulated ids are the whole of what moved under it. A plan older than it
+        // has missed ground moving - the repair half of a repair and a derive landing in one tick -
+        // and takes the floor. The epochs are also compared because the note and the field are read
+        // under two separate locks, and a note describing a publish this field is not the product of
+        // accounts for nothing here. A world with no field has no epoch to agree with, and the boxes
+        // are then the whole answer.
+        const auto NoteAccountsForEverythingSinceThePlan =
+            PublishNote.IsSet() && Field.IsValid() &&
+            PublishNote->_Epoch == Field->_Epoch &&
+            NOT PublishNote->_LastGeometryEpoch.Get_IsNewerThan(InCurrent.Get_LastCorridorEpoch());
+
+        if (NoteAccountsForEverythingSinceThePlan)
+        {
+            DoTry_FlagOnChangedLink(InPathEntity, InCurrent, *PublishNote);
+            return;
+        }
+
         for (const auto& RebuiltBounds : *_PublishedRebuilds)
         {
             // An invalid box is a publisher that did not know WHERE it rebuilt. Nothing can be ruled out
@@ -110,6 +132,43 @@ namespace ck
 
             return;
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavPath_InvalidateOnRebuilt::
+        DoTry_FlagOnChangedLink(
+            HandleType                                                InPathEntity,
+            const FFragment_GroundNavPath_Current&                    InCurrent,
+            const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const
+        -> void
+    {
+        const auto& CorridorLinkIds = InCurrent.Get_LastCorridorLinkIds();
+
+        for (const auto ChangedLinkId : InNote._ChangedLinkIdsSinceGeometry)
+        {
+            // Both lists are AUTHORED ids, so this comparison survives the renumbering of _ResolvedLinks
+            // that the very publish being answered performed.
+            if (NOT CorridorLinkIds.Contains(ChangedLinkId))
+            { continue; }
+
+            InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
+
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] flagged for repath: a link-only publish since this plan moved ")
+                TEXT("link [{}], which this corridor crosses"),
+                InPathEntity, ChangedLinkId);
+
+            return;
+        }
+
+        // A route that crosses none of the links these publishes moved is a route over ground that did
+        // not move: a derive re-resolves links and re-labels and touches no geometry.
+        groundnav::Verbose(
+            TEXT("GroundNav Path [{}] left alone: the link-only publishes since this plan moved [{}] ")
+            TEXT("link(s), none of the [{}] this corridor crosses"),
+            InPathEntity, InNote._ChangedLinkIdsSinceGeometry.Num(), CorridorLinkIds.Num());
     }
 }
 

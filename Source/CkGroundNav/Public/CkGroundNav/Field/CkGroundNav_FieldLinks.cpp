@@ -72,10 +72,15 @@ namespace ck::groundnav
          * list and one removal moves every record after it. Compared as a WHOLE entry rather than by
          * the fields a caller happens to care about, so a multiplier that repriced a link moves the
          * ground that link is on exactly as a link that moved plates does.
+         *
+         * OutChangedIds collects the ids of exactly those entries, on the same walk, so the two halves
+         * of one answer cannot drift apart. An entry whose ends resolved to nothing stamps no tile and
+         * still names its id: what changed is the LINK, and a reader keyed on links has to hear it.
          */
         auto Get_ChangedLinkEndTiles(
             const TArray<FCk_GroundNav_ResolvedLink>& InBefore,
-            const TArray<FCk_GroundNav_ResolvedLink>& InAfter) -> TSet<int32>
+            const TArray<FCk_GroundNav_ResolvedLink>& InAfter,
+            TSet<int32>&                             OutChangedIds) -> TSet<int32>
         {
             auto BeforeIndexById = TMap<int32, int32>{};
             BeforeIndexById.Reserve(InBefore.Num());
@@ -93,6 +98,7 @@ namespace ck::groundnav
                 if (BeforeIndex == nullptr)
                 {
                     Do_AddEndTiles(After, TileIndices);
+                    OutChangedIds.Add(After._Id);
                     continue;
                 }
 
@@ -105,6 +111,10 @@ namespace ck::groundnav
 
                 Do_AddEndTiles(Before, TileIndices);
                 Do_AddEndTiles(After, TileIndices);
+
+                // The id rather than the two entries: an id is the same on both sides of a change by
+                // construction, and it is the only half of this answer that survives a renumbering.
+                OutChangedIds.Add(After._Id);
             }
 
             for (auto Index = 0; Index < InBefore.Num(); ++Index)
@@ -113,6 +123,7 @@ namespace ck::groundnav
                 { continue; }
 
                 Do_AddEndTiles(InBefore[Index], TileIndices);
+                OutChangedIds.Add(InBefore[Index]._Id);
             }
 
             return TileIndices;
@@ -189,11 +200,11 @@ namespace ck::groundnav
             const FCk_GroundNav_Field&              InField,
             const TArray<FCk_GroundNav_LinkRecord>& InLinks,
             const FCk_GroundNav_Epoch&              InEpoch)
-        -> TPair<FCk_GroundNav_FieldPtr, FCk_GroundNav_BakeStageResult>
+        -> FCk_GroundNav_LinkDeriveResult
     {
         using namespace fieldlinks_private;
 
-        auto Result = FCk_GroundNav_BakeStageResult{};
+        auto StageResult = FCk_GroundNav_BakeStageResult{};
         auto Derived = MakeShared<FCk_GroundNav_Field>(InField);
 
         Derived->_Params._Links = InLinks;
@@ -201,7 +212,10 @@ namespace ck::groundnav
         DoResolve_Links(*Derived);
         DoLabel_Reachability(*Derived);
 
-        const auto ChangedTiles = Get_ChangedLinkEndTiles(InField._ResolvedLinks, Derived->_ResolvedLinks);
+        auto ChangedIds = TSet<int32>{};
+
+        const auto ChangedTiles =
+            Get_ChangedLinkEndTiles(InField._ResolvedLinks, Derived->_ResolvedLinks, ChangedIds);
 
         auto ChangedAnyTile = false;
 
@@ -217,9 +231,16 @@ namespace ck::groundnav
         if (ChangedAnyTile)
         { Derived->_Epoch = InEpoch; }
 
-        Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
+        StageResult.Set_Status(ECk_GroundNav_BakeStatus::Completed);
 
-        return TPair<FCk_GroundNav_FieldPtr, FCk_GroundNav_BakeStageResult>{Derived, Result};
+        auto Result = FCk_GroundNav_LinkDeriveResult{};
+
+        Result._Field = Derived;
+        Result._Result = StageResult;
+        Result._ChangedLinkIds = ChangedIds.Array();
+        Result._ChangedLinkIds.Sort();
+
+        return Result;
     }
 }
 

@@ -92,6 +92,14 @@ namespace ck
          *  as keys or it is not stored at all. Kept for a later repair to re-canonicalise against. */
         TArray<groundnav::FCk_GroundNav_CrossingKey> _LastCorridorKeys;
 
+        /** The AUTHORED ids of the links the corridor above crosses, in walk order and without
+         *  repeats, resolved against the field the plan was made on. The key's own _LinkIndex cannot
+         *  serve: _ResolvedLinks is rebuilt wholesale per publish, so one removal renumbers every entry
+         *  after it and an index cached here would name a different link on the next field. An id is
+         *  volume-scoped, monotone and never reused, which is what lets an invalidator ask a LATER
+         *  publish whether it moved anything this route depends on. Empty for a route that crosses none. */
+        TArray<int32> _LastCorridorLinkIds;
+
         // The flat plate the last plan started from. A repair may only warm-start from a corridor whose
         // source the body still stands on.
         int32 _LastSourceFlatPlate = INDEX_NONE;
@@ -117,6 +125,7 @@ namespace ck
         CK_PROPERTY_GET(_HasBegun);
         CK_PROPERTY_GET(_PendingSince);
         CK_PROPERTY_GET(_LastCorridorKeys);
+        CK_PROPERTY_GET(_LastCorridorLinkIds);
         CK_PROPERTY_GET(_LastSourceFlatPlate);
         CK_PROPERTY_GET(_LastCorridorEpoch);
         CK_PROPERTY_GET(_LastCorridorBounds);

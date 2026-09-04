@@ -4,6 +4,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
@@ -20,6 +21,7 @@
 namespace ck
 {
     class FProcessor_NavSurfaceMarkup_HandleRequests;
+    class FProcessor_NavSurface_LinkTraversal_HandleRequests;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -436,5 +438,170 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_NavSurface_OnSurfaceRebuilt,
     FCk_Handle, InWorldEntity,
     FBox,       InChangedBounds);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Which end of a link a body entered from. Neutral on purpose: a provider names its own ends, and a
+// consumer driving the crossing only needs to know which way along the link it is going.
+UENUM(BlueprintType)
+enum class ECk_NavSurface_LinkEntryDirection : uint8
+{
+    Forward,
+    Backward
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_LinkEntryDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One link at a time: a traverser is either crossing exactly one link or crossing none.
+UENUM(BlueprintType)
+enum class ECk_NavSurface_LinkTraversalState : uint8
+{
+    None,
+    Traversing
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_LinkTraversalState);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Begins one crossing of one link, on the entity doing the crossing. Completing a crossing changes no
+ * geometry, so no provider is consulted: this is consumer-observable state and nothing else.
+ *
+ * _CorrelatorId names THIS crossing rather than the link. The same body crosses the same link many
+ * times, and only the correlator lets a later Complete say WHICH crossing it is completing. The caller
+ * owns its uniqueness - nothing here mints one.
+ */
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Request_NavSurface_BeginLinkTraversal : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_NavSurface_BeginLinkTraversal);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_NavSurface_BeginLinkTraversal);
+
+    friend class ck::FProcessor_NavSurface_LinkTraversal_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _LinkId = INDEX_NONE;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _CorrelatorId = INDEX_NONE;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_LinkEntryDirection _EntryDirection = ECk_NavSurface_LinkEntryDirection::Forward;
+
+public:
+    CK_PROPERTY_GET(_LinkId);
+    CK_PROPERTY_GET(_CorrelatorId);
+    CK_PROPERTY(_EntryDirection);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_NavSurface_BeginLinkTraversal, _LinkId, _CorrelatorId);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Ends the crossing the correlator names, normally. A correlator that is not the active one is not
+// this traverser's crossing to end.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Request_NavSurface_CompleteLinkTraversal : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_NavSurface_CompleteLinkTraversal);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_NavSurface_CompleteLinkTraversal);
+
+    friend class ck::FProcessor_NavSurface_LinkTraversal_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _CorrelatorId = INDEX_NONE;
+
+public:
+    CK_PROPERTY_GET(_CorrelatorId);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_NavSurface_CompleteLinkTraversal, _CorrelatorId);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Abandons the crossing the correlator names. A correlator that is not the active one has nothing left
+// to abandon, which is the caller's intent holding afterwards rather than a rejection.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_Request_NavSurface_CancelLinkTraversal : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_NavSurface_CancelLinkTraversal);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_NavSurface_CancelLinkTraversal);
+
+    friend class ck::FProcessor_NavSurface_LinkTraversal_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _CorrelatorId = INDEX_NONE;
+
+public:
+    CK_PROPERTY_GET(_CorrelatorId);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_NavSurface_CancelLinkTraversal, _CorrelatorId);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// What a traverser reads back about itself. A State of None carries no ids: an entity that has never
+// begun a crossing and one that has finished its last are the same answer.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_NavSurface_LinkTraversal
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_NavSurface_LinkTraversal);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _LinkId = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _CorrelatorId = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_LinkEntryDirection _EntryDirection = ECk_NavSurface_LinkEntryDirection::Forward;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_LinkTraversalState _State = ECk_NavSurface_LinkTraversalState::None;
+
+public:
+    CK_PROPERTY(_LinkId);
+    CK_PROPERTY(_CorrelatorId);
+    CK_PROPERTY(_EntryDirection);
+    CK_PROPERTY(_State);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// A crossing started. Fired once per admitted Begin, and never for a Begin that named the correlator
+// already running.
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_NavSurface_OnLinkTraversalBegun,
+    FCk_Handle, InTraverser,
+    int32,      InLinkId,
+    int32,      InCorrelatorId);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * A crossing ended. InResult separates the two ways that happens: Succeeded for a Complete, and
+ * Failed_Cancelled for a Cancel or a teardown that took the crossing with it. A listener that only
+ * stops a ladder animation may ignore it; one that has to decide whether the body ARRIVED cannot.
+ */
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_NavSurface_OnLinkTraversalCompleted,
+    FCk_Handle,                  InTraverser,
+    int32,                       InLinkId,
+    int32,                       InCorrelatorId,
+    ECk_Request_OperationResult, InResult);
 
 // --------------------------------------------------------------------------------------------------------------------

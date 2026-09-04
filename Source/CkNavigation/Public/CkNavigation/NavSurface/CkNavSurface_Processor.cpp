@@ -116,6 +116,156 @@ namespace ck
 namespace ck
 {
     auto
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Requests& InRequests,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequests, [&](const FFragment_NavSurface_LinkTraversal_Requests& InSnapshot)
+        {
+            ck::algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
+                [&](const auto& InRequest) -> void
+                {
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                    Result = DoHandleRequest(InHandle, InCurrent, InRequest);
+                }), ck::policy::DontResetContainer{});
+        });
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_BeginLinkTraversal& InRequest)
+        -> ECk_Request_OperationResult
+    {
+        if (InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing)
+        {
+            // The crossing the caller asked for is the one already running, so its intent holds and
+            // there is nothing to report: a second Begun would break the one-per-crossing count.
+            return InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId()
+                ? ECk_Request_OperationResult::Succeeded
+                : ECk_Request_OperationResult::Failed;
+        }
+
+        InCurrent._ActiveLinkId = InRequest.Get_LinkId();
+        InCurrent._ActiveCorrelatorId = InRequest.Get_CorrelatorId();
+        InCurrent._EntryDirection = InRequest.Get_EntryDirection();
+        InCurrent._State = ECk_NavSurface_LinkTraversalState::Traversing;
+
+        InHandle.AddOrGet<FTag_NavSurface_LinkTraversal_Active>();
+
+        UUtils_Signal_NavSurface_OnLinkTraversalBegun::Broadcast(
+            InHandle, ck::MakePayload(InHandle, InCurrent._ActiveLinkId, InCurrent._ActiveCorrelatorId));
+
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    auto
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest)
+        -> ECk_Request_OperationResult
+    {
+        const auto CorrelatorIsActive = InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing &&
+            InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
+
+        // Not a no-op the caller can ignore: completing a crossing nobody is on means the caller's
+        // model of which crossing it is driving is wrong, and retrying will not fix that.
+        if (NOT CorrelatorIsActive)
+        { return ECk_Request_OperationResult::Failed; }
+
+        DoEnd_Traversal(InHandle, InCurrent, ECk_Request_OperationResult::Succeeded);
+
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    auto
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            const FCk_Request_NavSurface_CancelLinkTraversal& InRequest)
+        -> ECk_Request_OperationResult
+    {
+        const auto CorrelatorIsActive = InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing &&
+            InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
+
+        // Cancelling a crossing that is already over leaves the caller's intent holding afterwards,
+        // which is what Succeeded means.
+        if (NOT CorrelatorIsActive)
+        { return ECk_Request_OperationResult::Succeeded; }
+
+        DoEnd_Traversal(InHandle, InCurrent, ECk_Request_OperationResult::Failed_Cancelled);
+
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    auto
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::
+        DoEnd_Traversal(
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            ECk_Request_OperationResult InResult)
+        -> void
+    {
+        const auto LinkId = InCurrent._ActiveLinkId;
+        const auto CorrelatorId = InCurrent._ActiveCorrelatorId;
+
+        InCurrent._ActiveLinkId = INDEX_NONE;
+        InCurrent._ActiveCorrelatorId = INDEX_NONE;
+        InCurrent._State = ECk_NavSurface_LinkTraversalState::None;
+
+        InHandle.Try_Remove<FTag_NavSurface_LinkTraversal_Active>();
+
+        // Broadcast LAST, with the state already cleared: a listener that begins the next crossing from
+        // inside this one's end must find the traverser free.
+        UUtils_Signal_NavSurface_OnLinkTraversalCompleted::Broadcast(
+            InHandle, ck::MakePayload(InHandle, LinkId, CorrelatorId, InResult));
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    auto
+        FProcessor_NavSurface_LinkTraversal_EndPlay::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_NavSurface_LinkTraversal_Current& InCurrent)
+        -> void
+    {
+        if (InHandle.Has<FFragment_NavSurface_LinkTraversal_Requests>())
+        {
+            request::FireCancelledForPending(InHandle,
+                InHandle.Get<FFragment_NavSurface_LinkTraversal_Requests>().Get_Requests());
+        }
+
+        if (InCurrent._State != ECk_NavSurface_LinkTraversalState::Traversing)
+        { return; }
+
+        FProcessor_NavSurface_LinkTraversal_HandleRequests::DoEnd_Traversal(
+            InHandle, InCurrent, ECk_Request_OperationResult::Failed_Cancelled);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    auto
         FProcessor_NavSurface_RevisionWatch::
         DoTick(
             FCk_Time InDeltaT)
@@ -252,6 +402,8 @@ namespace ck
 CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurfaceMarkup_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurfaceMarkup_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurfaceMarkup_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurface_LinkTraversal_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurface_LinkTraversal_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_NavSurface_RevisionWatch);
 
 // --------------------------------------------------------------------------------------------------------------------

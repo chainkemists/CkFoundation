@@ -12,6 +12,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 #include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -305,6 +306,9 @@ namespace ck
             auto Request = FCk_Request_GroundNavPath_FindPath{From, InGoal};
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             Request.Set_PlanMode(InPlanMode);
+            Request.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
+            Request.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
+            Request.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
             UCk_Utils_GroundNavPath_UE::Request_FindPath(Path, Request, {});
             return;
         }
@@ -381,6 +385,10 @@ namespace ck
             auto ShadowRequest = FCk_Request_GroundNavPath_FindPath{ShadowFrom, InGoal};
             ShadowRequest.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             ShadowRequest.Set_IsShadow(ECk_EnableDisable::Enable);
+            // The shadow plans under the agent's own veto so the comparison stays like for like.
+            ShadowRequest.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
+            ShadowRequest.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
+            ShadowRequest.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
             UCk_Utils_GroundNavPath_UE::Request_FindPath(ShadowPath, ShadowRequest, {});
         }
     }
@@ -502,6 +510,10 @@ namespace ck
         InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::None;
 
         auto NonConstHandle = InHandle;
+
+        // A body taken off its route mid-crossing is no longer on the waypoints that bounded the
+        // crossing, so the crossing ends with the episode rather than outliving it.
+        FProcessor_CrowdAgent_Steering::DoCancelActiveLinkTraversal(NonConstHandle, InPathFollow);
 
         // The shared nav slot is parked by EVERY provider, so it is released for every provider —
         // not only when CkNavigation owned the query. Releasing it is what stops a stopped agent
