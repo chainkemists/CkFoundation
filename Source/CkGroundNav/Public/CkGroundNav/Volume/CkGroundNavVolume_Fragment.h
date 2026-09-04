@@ -136,7 +136,7 @@ namespace ck
      * the build state carries one: the drain that accepted them cannot report an outcome that is ticks
      * away. Lists rather than one request because dirty boxes coalesce, and their completion rides
      * whichever finishes the ground they named - the repair they opened, the next one, or a build that
-     * supersedes them by rebaking everything.
+     * took them over when it STARTED and published their ground (_RidingBuildRequests below).
      *
      * The two lists are SEPARATE so that a request arriving mid-repair parks against the NEXT repair
      * rather than riding one that will never look at its ground. StartRepair moves one list into the
@@ -151,6 +151,7 @@ namespace ck
         friend class FProcessor_GroundNavVolume_HandleRequests;
         friend class FProcessor_GroundNavVolume_HandleRepairRequests;
         friend class FProcessor_GroundNavVolume_HandleMarkupRequests;
+        friend class FProcessor_GroundNavVolume_StartBuild;
         friend class FProcessor_GroundNavVolume_StartRepair;
         friend class FProcessor_GroundNavVolume_Repair;
         friend class FProcessor_GroundNavVolume_Build;
@@ -163,6 +164,12 @@ namespace ck
         FBox _PendingDirtyBounds = FBox{ForceInit};
         TArray<FCk_Request_GroundNavVolume_Repair> _PendingRequests;
         TArray<FCk_Request_GroundNavVolume_Repair> _InFlightRequests;
+
+        // Repair requests a build took over when it started: their regions are inside the ground that
+        // build re-bakes from scratch, so they complete when it publishes. Kept apart from
+        // _PendingRequests because a region raised AFTER the build snapshotted its records is not
+        // answered by it and has to stay pending across the publish.
+        TArray<FCk_Request_GroundNavVolume_Repair> _RidingBuildRequests;
 
         // Terminal repair failures in a row whose region was put back. The escape is BOUNDED at one
         // retry: a region that fails twice running is failing for a reason the retry does not address,

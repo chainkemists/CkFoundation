@@ -84,6 +84,9 @@ namespace ck::nav_surface_recast
     CKNAVIGATION_API auto Get_SurfaceBounds(UWorld* InWorld) -> FBox;
     CKNAVIGATION_API auto Get_ProviderHealth(UWorld* InWorld) -> ECk_NavSurface_ProviderHealth;
     CKNAVIGATION_API auto Get_IsBuildInProgress(UWorld* InWorld) -> bool;
+
+    // Recast is settled when its health is Ready and its dirty-areas queue has drained.
+    CKNAVIGATION_API auto Get_IsSurfaceSettled(UWorld* InWorld) -> bool;
     CKNAVIGATION_API auto Get_SurfaceRevision(UWorld* InWorld) -> int64;
     CKNAVIGATION_API auto Request_SurfaceRebuild(UWorld* InWorld) -> bool;
 

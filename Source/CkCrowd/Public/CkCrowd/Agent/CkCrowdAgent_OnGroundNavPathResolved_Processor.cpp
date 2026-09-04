@@ -90,7 +90,12 @@ namespace ck
         {
             case ck_crowd_agent_ground_nav_install_algorithm::ECk_CrowdAgent_GroundNavInstallAction::Install:
             {
-                if (InHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
+                // The fresh result stays fresh on every later tick, so an answer already installed is
+                // recognised by its epoch and goal and not installed again. Only while nothing is
+                // WAITING: a pending episode asked for this plan - a block-detect resume or a permissive
+                // retry re-plans the same goal on the same field - and dropping its answer here would
+                // park the episode until the watchdog fails it.
+                if (NOT IsPathPending && InHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
                 {
                     const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledGroundNavPath>();
 

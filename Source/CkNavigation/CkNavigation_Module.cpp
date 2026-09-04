@@ -37,6 +37,9 @@ namespace ck_navigation_module
         Table._IsBuildInProgress = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Get_IsBuildInProgress(InWorld); };
 
+        Table._IsSurfaceSettled = [](UWorld* InWorld)
+        { return ck::nav_surface_recast::Get_IsSurfaceSettled(InWorld); };
+
         Table._SurfaceRevision = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Get_SurfaceRevision(InWorld); };
 

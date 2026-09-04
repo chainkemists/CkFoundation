@@ -32,6 +32,27 @@ namespace ck::groundnav::world_fields
         FCk_GroundNav_FieldPtr InField) -> void;
 
     /**
+     * Forgets the volume's entry. GAME THREAD: called from the volume's end-play processor, so a
+     * field never outlives the volume that published it - a query on a world answers only from
+     * fields a live volume still stands behind. The field's tile-epoch sum is kept as RETIRED
+     * revision (below), so the world's surface revision never falls when a volume goes away.
+     */
+    CKGROUNDNAV_API auto
+    Unpublish(
+        UWorld*           InWorld,
+        const FCk_Handle& InVolumeEntity) -> void;
+
+    /**
+     * The tile-epoch sums of every field the world has unpublished, added up. A surface revision is
+     * the sum over live fields PLUS this, which is what keeps it monotone across a volume's teardown:
+     * ground that went away still counts as having moved, and a consumer holding the old number sees
+     * a change rather than a fall.
+     */
+    CKGROUNDNAV_API auto
+    Get_RetiredRevision(
+        UWorld* InWorld) -> int64;
+
+    /**
      * The field whose bounds contain the location, or the first registered one when none does, or a
      * null pointer when the world has no field at all.
      *

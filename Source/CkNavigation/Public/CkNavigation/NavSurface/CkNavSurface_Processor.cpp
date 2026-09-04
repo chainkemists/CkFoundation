@@ -174,6 +174,22 @@ namespace ck
             ? Table->_SurfaceRevision(World)
             : InWatch.Get_LastBroadcastRevision();
 
+        // Two providers' counters are unrelated numbers, so the one just switched to is ADOPTED rather
+        // than compared against what the previous one had reached. Without this the poll below reads the
+        // gap between them as a move and broadcasts bounds-unknown, which every consumer takes to mean
+        // the whole surface changed. What a switch changes is which surface answers, not the surface.
+        const auto CurrentProvider = InProvider.Get_Provider();
+        const auto ProviderChanged = NOT InWatch._LastProvider.IsSet() ||
+            InWatch._LastProvider.GetValue() != CurrentProvider;
+
+        if (ProviderChanged)
+        {
+            InWatch._LastBroadcastRevision = Revision;
+            InWatch._LastProvider = CurrentProvider;
+        }
+
+        // Still drained on the tick of a switch: the queue holds regions a provider OBSERVED it rebuilt,
+        // and those happened whether or not the world has since changed who it asks.
         if (DoBroadcast_PendingRebuilds(InHandle, InWatch, InPending, Revision))
         { return; }
 

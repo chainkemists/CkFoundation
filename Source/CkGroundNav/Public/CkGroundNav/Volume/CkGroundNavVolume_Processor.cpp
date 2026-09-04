@@ -33,6 +33,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_MarkupCostDerive);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_CancelPendingMarkupRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Unpublish);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -295,13 +296,16 @@ namespace ck
     {
         using namespace ck_groundnav_volume_processor;
 
+        // Only a build that has not STARTED answers a region arriving now: it snapshots the volume when
+        // it starts, so a region raised after that is outside what it bakes and waits for the publish.
         const auto BuildWillAnswerIt = InVolumeEntity.Has<FTag_GroundNavVolume_NeedsBuild>() ||
                                        InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>();
 
         // A repair carries every tile OUTSIDE its dirty box over from a previous bake, so a volume with
         // nothing published has nothing to carry and no repair to make. A retry does not change that -
-        // a build is what bakes that ground - which is what Failed means. Unless a build is already
-        // coming: then the region rides it and completes when it publishes.
+        // a build is what bakes that ground - which is what Failed means. Unless a build is coming or
+        // running: then the region waits for its publish, rides it if the build has not started, and
+        // repairs what it published otherwise.
         if (NOT InBuiltField.Get_Field().IsValid() && NOT BuildWillAnswerIt)
         {
             groundnav::Verbose(
@@ -529,8 +533,12 @@ namespace ck
         // A volume with nothing published has no field for a repair to carry its untouched tiles over
         // from. The record is already on the volume, so the first build bakes it in through
         // FCk_GroundNav_FieldParams::_MarkupRecords - the same wait the cost derive makes, and the
-        // reason a paint before the first bake is never lost.
-        if (NOT InBuiltField.Get_Field().IsValid())
+        // reason a paint before the first bake is never lost. A build already RUNNING is the exception:
+        // it snapshotted its records when it started, so this record is outside what it bakes and its
+        // ground is owed a repair the moment that build publishes.
+        const auto ABuildIsRunning = InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>();
+
+        if (NOT InBuiltField.Get_Field().IsValid() && NOT ABuildIsRunning)
         { return; }
 
         InRepairState._PendingDirtyBounds =
@@ -548,12 +556,25 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
-            FFragment_GroundNavVolume_BuildState& InBuildState) const
+            FFragment_GroundNavVolume_BuildState& InBuildState,
+            FFragment_GroundNavVolume_RepairState& InRepairState) const
         -> void
     {
         using namespace ck_groundnav_volume_processor;
 
         InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        // Every dirty region waiting on a repair is inside the ground this build re-bakes from live
+        // geometry under the records it snapshots below, so those regions are answered by it - and
+        // answered better. They are taken over HERE, at the snapshot, and not at the publish: a region
+        // raised while the build runs is outside what it baked and has to survive the publish as a
+        // repair of the field it produces.
+        InRepairState._RidingBuildRequests.Append(MoveTemp(InRepairState._PendingRequests));
+        InRepairState._PendingRequests.Reset();
+        InRepairState._PendingDirtyBounds = FBox{ForceInit};
+        InRepairState._StaleRetryCount = 0;
+
+        InVolumeEntity.Try_Remove<FTag_GroundNavVolume_NeedsRepair>();
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
@@ -651,6 +672,14 @@ namespace ck
             InBuildState._PendingRequest.TryFireCompletion(
                 InVolumeEntity, ECk_Request_OperationResult::Failed);
 
+            // The regions that rode this build were never baked by it. They fail with it rather than
+            // being put back: a build is what bakes that ground, and their callers are told so now
+            // rather than left waiting on a publish that is not coming.
+            for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+            { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+
+            InRepairState._RidingBuildRequests.Reset();
+
             return;
         }
 
@@ -672,23 +701,20 @@ namespace ck
 
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
 
-        // A completed build re-baked every tile from live geometry, so every dirty region waiting on a
-        // repair has already been answered - and answered better. Opening a repair for them now would
-        // spend probes re-deriving ground this build just published, so their callers' intent holds and
-        // they complete. _InFlightRequests is empty here by the drain's own rule - arming a build cancels
-        // an open repair - and is drained anyway so a broken invariant strands nobody.
-        for (const auto& ParkedRepairRequest : InRepairState._PendingRequests)
-        { ParkedRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded); }
+        // The regions this build took over when it started are published now, so their callers' intent
+        // holds and they complete. Anything in _PendingRequests or _PendingDirtyBounds arrived AFTER the
+        // snapshot and is left exactly as it is: it names ground this build did not bake, and the repair
+        // it is waiting on opens against the field just published. _InFlightRequests is empty here by
+        // the drain's own rule - arming a build cancels an open repair - and is drained anyway so a
+        // broken invariant strands nobody.
+        for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+        { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded); }
 
         for (const auto& InFlightRepairRequest : InRepairState._InFlightRequests)
         { InFlightRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded); }
 
-        InRepairState._PendingRequests.Reset();
+        InRepairState._RidingBuildRequests.Reset();
         InRepairState._InFlightRequests.Reset();
-        InRepairState._PendingDirtyBounds = FBox{ForceInit};
-        InRepairState._StaleRetryCount = 0;
-
-        InVolumeEntity.Try_Remove<FTag_GroundNavVolume_NeedsRepair>();
 
         InBuildState._PendingRequest.TryFireCompletion(
             InVolumeEntity, ECk_Request_OperationResult::Succeeded);
@@ -964,7 +990,8 @@ namespace ck
         const auto Published = InBuiltField.Get_Field();
 
         // Nothing published is nothing to derive from, and nothing to repair either: the records live
-        // on the volume, so the first build prices them through its own params.
+        // on the volume, so a build that STARTS after them prices them through its own params. A build
+        // already in flight snapshotted its records before these arrived.
         if (NOT Published.IsValid())
         { return; }
 
@@ -1033,9 +1060,10 @@ namespace ck
             const FFragment_GroundNavVolume_RepairRequests& InRequests)
         -> void
     {
-        // Three separate populations, and missing any one strands a caller. The QUEUE holds requests the
+        // Four separate populations, and missing any one strands a caller. The QUEUE holds requests the
         // drain never reached, _PendingRequests those it parked against a repair that will now never
-        // open, and _InFlightRequests the delegates that have been riding one mid-slice.
+        // open, _InFlightRequests the delegates riding one mid-slice, and _RidingBuildRequests those a
+        // build took over at its start and will now never publish for.
         request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
 
         for (const auto& ParkedRequest : InRepairState._PendingRequests)
@@ -1050,8 +1078,15 @@ namespace ck
                 InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
         }
 
+        for (const auto& RidingRequest : InRepairState._RidingBuildRequests)
+        {
+            RidingRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+        }
+
         InRepairState._PendingRequests.Reset();
         InRepairState._InFlightRequests.Reset();
+        InRepairState._RidingBuildRequests.Reset();
 
         // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
         InRepairState._Backend.Reset();
@@ -1068,6 +1103,21 @@ namespace ck
         -> void
     {
         request::FireCancelledForPending(InVolumeEntity, InRequests.Get_Requests());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavVolume_Unpublish::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField)
+        -> void
+    {
+        // Whoever holds the field keeps it, whole; what ends here is only the world's way of finding it.
+        groundnav::world_fields::Unpublish(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity), InVolumeEntity);
     }
 }
 

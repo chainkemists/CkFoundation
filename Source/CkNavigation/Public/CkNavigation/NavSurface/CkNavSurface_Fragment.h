@@ -57,7 +57,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Last revision the rebuild signal was broadcast for. Lives on the world's transient entity.
+    // Last revision the rebuild signal was broadcast for, and the provider that produced it. Lives on
+    // the world's transient entity.
     struct CKNAVIGATION_API FFragment_NavSurface_RevisionWatch
     {
         CK_GENERATED_BODY(FFragment_NavSurface_RevisionWatch);
@@ -67,8 +68,14 @@ namespace ck
     private:
         int64 _LastBroadcastRevision = 0;
 
+        /** Whose counter the revision above is. Providers count their own rebuilds, so a switch moves
+         *  the number without anything having been rebuilt: what changed is which surface answers, not
+         *  the surface. Unset until the watch has observed a provider at all. */
+        TOptional<ECk_NavSurface_Provider> _LastProvider;
+
     public:
         CK_PROPERTY_GET(_LastBroadcastRevision);
+        CK_PROPERTY_GET(_LastProvider);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
