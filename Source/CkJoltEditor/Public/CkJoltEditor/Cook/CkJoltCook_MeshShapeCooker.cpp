@@ -96,8 +96,8 @@ namespace ck_jolt_cook_mesh_shape_cooker
         if (WindingRatio < InsideOutWindingRatioThreshold)
         {
             ck::jolt::Warning(TEXT("JoltMeshCook: current cooked tri-mesh blob for mesh [{}] is INSIDE-OUT "
-                "(signed-volume/bounds ratio [{}]); rebuilding from its source so closed components can be "
-                "normalized."), InMeshPackagePath, WindingRatio);
+                "(signed-volume/bounds ratio [{}]); rebuilding from its source so its winding can be normalized."),
+                InMeshPackagePath, WindingRatio);
             return ECurrentShapeBlobFreshness::RequiresRebuild;
         }
 
