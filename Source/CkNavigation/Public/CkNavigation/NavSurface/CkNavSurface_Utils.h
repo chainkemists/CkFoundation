@@ -228,3 +228,24 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::nav_surface
+{
+    /**
+     * How a provider says WHERE it just rebuilt. Called ONCE per publish, with the world-space bounds
+     * that publish covered; the region is queued on the world and delivered as its own
+     * OnSurfaceRebuilt broadcast on the next FGroup_Gameplay_TimeDelta tick.
+     *
+     * C++ only, and deliberately not a UFUNCTION: the callers are providers, which are C++.
+     *
+     * A provider that does not call this is still observed — its revision counter is polled and
+     * reported with bounds unknown — so this is how a provider trades an anonymous whole-surface
+     * invalidation for a region its listeners can test against.
+     */
+    CKNAVIGATION_API auto
+    Request_NotifySurfaceRebuilt(
+        UWorld*     InWorld,
+        const FBox& InChangedBounds) -> void;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

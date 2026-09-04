@@ -10,6 +10,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
+
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
@@ -936,6 +938,40 @@ namespace ck
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PathRefreshProc);
+
+        // A published surface rebuild that reached this agent's cached corridor arrives as a flag on
+        // its ground path, and this is that flag's only consumer — GroundNav raises it and never
+        // clears it. Cleared for whichever provider carries it (a shadow-planned Recast agent holds a
+        // corridor too) and acted on only for the one whose route was actually planned over the
+        // rebuilt field; every other agent falls through to the markup pass below unchanged.
+        if (InHandle.Has<FTag_GroundNavPath_RepathRequired>())
+        {
+            auto RepathHandle = InHandle;
+            RepathHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
+
+            if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav &&
+                RepathHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
+            {
+                const auto RepathGoal = InPathFollow.Get_ActiveGoal();
+
+                // No tag transition and no cursor reset: the installed polyline is stale, not gone,
+                // so the agent keeps walking it and the install swaps it when the repair resolves.
+                // MarkPathPending parks the status without touching the corridor, and the watchdog
+                // reads Walking-without-PathPending as live rather than as a wedged episode.
+                constexpr auto ForcePermissivePlan = false;
+                FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                    RepathHandle,
+                    InParams,
+                    InPathFollow,
+                    RepathGoal,
+                    ForcePermissivePlan,
+                    ECk_GroundNav_PlanMode::Repair);
+
+                ck::crowd::Display(TEXT("[REBUILD-REPLAN] agent=[{}] goal=[{}] mode=Repair"),
+                    InHandle, RepathGoal);
+                return;
+            }
+        }
 
         // The common frame: this path already covers every settled disc (or there are none).
         if (InPathFollow.Get_PathSerial() >= _MaxConfirmationSerial)

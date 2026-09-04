@@ -11,6 +11,7 @@
 
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
 
 #include <Engine/World.h>
@@ -62,6 +63,24 @@ namespace ck_groundnav_path_processor
         TEXT("field to plan over, the request is force-failed with Unbuilt so the caller transitions\n")
         TEXT("out of Pending. Default 5s."),
         ECVF_Default);
+
+    /**
+     * What the corridor box is grown by beyond the body's own radius: ONE CELL of the field's default
+     * lattice (FCk_GroundNav_BakeConfig::_CellSizeUu, 25uu).
+     *
+     * The box covers plate RECTANGLES, and a plate rectangle is where the ground is, not where the
+     * body may be while walking it: a string-pulled route hugs a plate edge, and a body of radius r
+     * standing on that edge occupies r past it. The radius answers that. The cell on top answers the
+     * lattice itself - a rebuild that changed only the cells either side of a door moves ground the
+     * corridor was priced through while leaving every plate rectangle it named intact, and a box cut
+     * exactly to those rectangles would read such a rebuild as untouching the route.
+     *
+     * One cell rather than the field's own cell size because a compile-time constant cannot ask a
+     * field that does not exist yet, and because the margin exists to absorb the lattice's grain
+     * rather than to measure it: a field baked finer than the default is covered by more than a cell
+     * of margin, which errs toward invalidating.
+     */
+    constexpr auto kCorridorInflationMarginUu = 25.0f;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -146,6 +165,74 @@ namespace ck_groundnav_path_processor
 
         return Keys;
     }
+
+    /**
+     * The world box one flat plate covers: its cell rectangle over its own tile's lattice, spanning the
+     * field's vertical slab.
+     *
+     * A plate is a rectangle in XY and carries no absolute Z of its own - the heights are per cell -
+     * so the slab is what Get_TileWorldBounds already uses for the same reason, and it is the shape an
+     * invalidator compares a republished TILE against. Bounds are inclusive in cells, so the far corner
+     * is one cell past the last one.
+     */
+    auto
+        Get_FlatPlateWorldBounds(
+            const FCk_GroundNav_Field& InField,
+            int32                      InFlatPlate)
+        -> FBox
+    {
+        int32 TileIndex = INDEX_NONE;
+        int32 PlateIndex = INDEX_NONE;
+
+        if (NOT Get_TileAndPlate(InField, InFlatPlate, TileIndex, PlateIndex))
+        { return FBox{ForceInit}; }
+
+        if (NOT InField._Tiles.IsValidIndex(TileIndex))
+        { return FBox{ForceInit}; }
+
+        const auto& Tile = InField._Tiles[TileIndex];
+
+        if (NOT Tile._Plates._Plates.IsValidIndex(PlateIndex))
+        { return FBox{ForceInit}; }
+
+        const auto& Plate = Tile._Plates._Plates[PlateIndex];
+
+        const auto CellSize = static_cast<double>(Tile._CellSizeUu);
+
+        return FBox{
+            FVector{Tile._Origin.X + (Plate._MinX * CellSize),
+                    Tile._Origin.Y + (Plate._MinY * CellSize),
+                    static_cast<double>(InField._Params._MinZUu)},
+            FVector{Tile._Origin.X + ((Plate._MaxX + 1) * CellSize),
+                    Tile._Origin.Y + ((Plate._MaxY + 1) * CellSize),
+                    static_cast<double>(InField._Params._MaxZUu)}};
+    }
+
+    /** The corridor's plates unioned in world space, inflated ONCE by what the caller stores beside it. */
+    auto
+        Get_CorridorBounds(
+            const FCk_GroundNav_Field&      InField,
+            const FCk_GroundNav_PathResult& InResult,
+            float                           InInflationUu)
+        -> FBox
+    {
+        auto Bounds = FBox{ForceInit};
+
+        for (const auto FlatPlate : InResult._PlateCorridor)
+        {
+            const auto PlateBounds = Get_FlatPlateWorldBounds(InField, FlatPlate);
+
+            if (PlateBounds.IsValid == 0)
+            { continue; }
+
+            Bounds += PlateBounds;
+        }
+
+        if (Bounds.IsValid == 0)
+        { return Bounds; }
+
+        return Bounds.ExpandBy(static_cast<double>(InInflationUu));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,10 +264,11 @@ namespace ck
         -> void
     {
         groundnav::Display(
-            TEXT("GroundNav Path [{}] published [{}] rev [{}] waypoints [{}] expansions [{}] ")
-            TEXT("shadow [{}] search [{}]ms"),
+            TEXT("GroundNav Path [{}] published [{}] rev [{}] epoch [{}] waypoints [{}] expansions [{}] ")
+            TEXT("repair [{}] shadow [{}] search [{}]ms"),
             InPathEntity, InPublished.Get_Status(), InPublished.Get_RequestRevision(),
-            InPublished.Get_Waypoints().Num(), InPublished.Get_ExpansionCount(),
+            InPublished.Get_PlannedAgainstEpoch(), InPublished.Get_Waypoints().Num(),
+            InPublished.Get_ExpansionCount(), InPublished.Get_RepairVerdict(),
             InPublished.Get_IsShadow(), InPublished.Get_SearchDurationMs());
     }
 
@@ -211,7 +299,8 @@ namespace ck
             .Set_LengthUu(0.0)
             .Set_ExpansionCount(InExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
-            .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch);
+            .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch)
+            .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
 
@@ -262,13 +351,22 @@ namespace ck
             .Set_LengthUu(Plan._LengthUu)
             .Set_ExpansionCount(SearchResult._ExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
-            .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value);
+            .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value)
+            .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
 
         DoLog_Published(InPathEntity, InResult._Result);
 
+        const auto CorridorInflationUu = InParams.Get_AgentRadiusUu() + kCorridorInflationMarginUu;
+
+        const auto CorridorBounds =
+            Get_CorridorBounds(*InCurrent._Field, SearchResult, CorridorInflationUu);
+
         InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
+        InCurrent._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
+        InCurrent._LastCorridorBounds = CorridorBounds;
+        InCurrent._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;
         InCurrent._LastSourceFlatPlate = SearchResult._PlateCorridor.IsEmpty()
             ? INDEX_NONE
             : SearchResult._PlateCorridor[0];
@@ -335,8 +433,29 @@ namespace ck
 
         auto Search = groundnav::FCk_GroundNav_PathSearch{};
 
-        const auto Status = Search.Request_Begin(
-            Field, Get_Query(InParams, InCurrent._PendingRequest));
+        const auto Query = Get_Query(InParams, InCurrent._PendingRequest);
+
+        const auto RepairWasAsked =
+            InCurrent._PendingRequest.Get_PlanMode() == ECk_GroundNav_PlanMode::Repair;
+
+        // A repair of NOTHING is a cold plan, not a fallback: a warm start seeds the search from the
+        // prefix of a corridor that still resolves, and the prefix of no corridor is the source node
+        // alone - which is exactly what Request_Begin opens with. Said out loud rather than quietly
+        // substituted, because the result's verdict reads None either way and this line is the only
+        // thing that separates "asked for cold" from "asked for repair and had nothing to repair".
+        const auto CanRepair = RepairWasAsked && NOT InCurrent._LastCorridorKeys.IsEmpty();
+
+        if (RepairWasAsked && NOT CanRepair)
+        {
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] asked to repair rev [{}] with no corridor cached - planning cold"),
+                InPathEntity, InCurrent._PendingRequest.Get_RequestRevision());
+        }
+
+        const auto Status = CanRepair
+            ? Search.Request_BeginRepair(
+                Field, Query, InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch)
+            : Search.Request_Begin(Field, Query);
 
         // Ground the field itself has not baked. The episode stays parked and re-probes next tick,
         // because the volume covering it may still publish.
