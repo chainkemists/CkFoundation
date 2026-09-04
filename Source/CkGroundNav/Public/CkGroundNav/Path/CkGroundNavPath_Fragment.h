@@ -110,6 +110,13 @@ namespace ck
          *  the last corridor. */
         groundnav::FCk_GroundNav_Epoch _LastCorridorEpoch;
 
+        /** The profile the corridor above was planned for, taken from the request the episode opened
+         *  on. Held WITH the corridor for the same reason its epoch is: a corridor is a statement about
+         *  ONE field, and resolving the volume's untagged default for a route planned over a variant
+         *  would compare that plan's epoch against a field it never moved with. Empty is the untagged
+         *  default, which is what an untagged request plans over. */
+        FGameplayTag _ProfileTag;
+
         /** The world box the corridor's plates cover, stored ALREADY inflated by _CorridorInflationUu.
          *  An invalidator asks it on every republish to decide whether a rebuilt tile could have moved
          *  this route, so it must not have to re-walk the corridor or re-derive a margin of its own.
@@ -128,6 +135,7 @@ namespace ck
         CK_PROPERTY_GET(_LastCorridorLinkIds);
         CK_PROPERTY_GET(_LastSourceFlatPlate);
         CK_PROPERTY_GET(_LastCorridorEpoch);
+        CK_PROPERTY_GET(_ProfileTag);
         CK_PROPERTY_GET(_LastCorridorBounds);
         CK_PROPERTY_GET(_CorridorInflationUu);
     };

@@ -383,6 +383,11 @@ namespace ck::nav_surface_recast
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // _ProfileTag IS IGNORED HERE, and by every other query in this file. Recast bakes one navmesh per
+    // agent-radius entry and has no surface keyed on a profile tag, so there is nothing for a tag to
+    // select between: a tagged query is answered from the same navmesh an untagged one is. Said once
+    // rather than at each site because it is one gap and not five. A caller that needs a profile's own
+    // walkable set has to be on the GroundNav provider, which does key its fields on the tag.
     auto
         Try_ProjectPoint(
             UWorld* InWorld,

@@ -107,7 +107,11 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_ProjectionResult{};
 
-        const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Location());
+        // The profile tag rides every one of these reads. An empty one is the volume's untagged
+        // default, and a tag the volume authored no variant for is answered by no field at all - the
+        // status below - rather than by the default's ground, which the named profile cannot walk.
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Location(), InQuery.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         {
@@ -141,7 +145,8 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_MoveAlongSurfaceResult{};
 
-        const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Start());
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Start(), InQuery.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         {
@@ -170,7 +175,8 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_RaycastResult{};
 
-        const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Start());
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Start(), InQuery.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         {
@@ -197,7 +203,8 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_BoundaryResult{};
 
-        const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Center());
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Center(), InQuery.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         {
@@ -241,7 +248,8 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         auto Result = FCk_NavSurface_ReachabilityResult{};
 
-        const auto Field = world_fields::TryGet_Field(InWorld, InQuery.Get_Start());
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Start(), InQuery.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         {
@@ -358,6 +366,10 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         // Ground that was unpublished with its volume keeps counting, so the number never falls.
         auto Revision = world_fields::Get_RetiredRevision(InWorld);
+
+        // Profile-variant fields count too. A publish that moved only a variant moved ground somebody
+        // walks on, and a revision that could not see it would tell a watcher the surface stood still.
+        Revision += world_fields::Get_VariantRevision(InWorld);
 
         // The SUM of every field's per-tile epoch sum, not a maximum of anything. Tiles rebuild
         // independently and so do volumes, so two worlds whose newest tile shares an epoch can still

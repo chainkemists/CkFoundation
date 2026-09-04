@@ -29,6 +29,46 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_GroundNavVolum
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * A SECOND class of walker the volume bakes a field for, named by a tag.
+ *
+ * A variant is a WALKABLE-SET change and never a size change: radius is answered at query time against
+ * the clearance field, so an agent that is merely wider shares the untagged default's field. What earns
+ * a variant is a profile that makes different ground standable at all - a shorter step, a steeper slope
+ * limit, a lower standing volume - because no query-time predicate can recover that from a field baked
+ * under another profile.
+ *
+ * The tag is the only identity. It is what a neutral query carries, what the world-field registry keys
+ * the field on, and what a caller reads back - so an empty one, or one a second variant already uses,
+ * is refused where the volume's params are judged rather than resolved to some other profile's field.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_GroundNav_ProfileVariant
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_GroundNav_ProfileVariant);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_GroundNav_AgentProfile _Profile;
+
+public:
+    CK_PROPERTY_GET(_ProfileTag);
+    CK_PROPERTY(_Profile);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_GroundNav_ProfileVariant, _ProfileTag, _Profile);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * What one ground-nav volume bakes, and how.
  *
  * The authored shape is a world-space box; the tile lattice is derived from it rather than authored
@@ -55,6 +95,14 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_GroundNav_AgentProfile _Profile;
+
+    /** Alternative profiles this volume bakes a second field for, each named by a tag. _Profile above
+     *  stays the UNTAGGED default: it is what a query carrying no profile tag is answered from, and it
+     *  is never one of these. Every variant shares this volume's bounds, config, markup and links -
+     *  only the profile differs - which is what lets one pass over the geometry feed all of them. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_GroundNav_ProfileVariant> _ProfileVariants;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -86,6 +134,7 @@ public:
     CK_PROPERTY_GET(_VolumeBounds);
     CK_PROPERTY_GET(_Config);
     CK_PROPERTY_GET(_Profile);
+    CK_PROPERTY(_ProfileVariants);
     CK_PROPERTY(_MergeTunables);
     CK_PROPERTY(_MaxClearanceUu);
     CK_PROPERTY(_AutoBuildOnSetup);
