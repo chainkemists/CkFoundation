@@ -22,6 +22,16 @@ namespace ck::groundnav::debug
     CKGROUNDNAV_API auto
     Get_IsMarkupLiveGateBypassed() -> bool;
 
+    /**
+     * Whether ck.GroundNav.Debug.RepathOnRebuild has been turned off, in which case the path
+     * invalidator must raise FTag_GroundNavPath_RepathRequired for nobody, however much ground moved.
+     *
+     * Consulted by FProcessor_GroundNavPath_InvalidateOnRebuilt; the debug reports read it only to say whether an answer is being bypassed. Default 1, so the
+     * shipping answer is the corridor's own and no run behaves differently unless it was asked to.
+     */
+    CKGROUNDNAV_API auto
+    Get_IsRepathOnRebuildBypassed() -> bool;
+
     /** Whether ck.GroundNav.Debug.DrawMarkup is on, so the debug views collect and outline the area
      *  markup the world's volumes hold. */
     CKGROUNDNAV_API auto

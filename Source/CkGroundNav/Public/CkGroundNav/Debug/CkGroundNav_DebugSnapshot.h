@@ -187,6 +187,39 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * One agent's cached path corridor and the two epochs an invalidation decision is made on,
+     * already in world space.
+     *
+     * The path ENTITY is absent for the same reason a markup's is, and both epochs are captured
+     * values rather than something re-asked at draw time: a view drawn a frame later reports what
+     * was true when it was captured instead of touching a registry that may have moved on.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugCorridor
+    {
+    public:
+        // ALREADY inflated by _InflationUu - the very box the invalidator intersects a rebuild against,
+        // so a viewer is looking at the test rather than at an approximation of it.
+        FBox _Bounds = FBox{ForceInit};
+
+        // How the agent printed at capture. A name is a value; the handle it came from is not.
+        FString _PathName;
+
+        float _InflationUu = 0.0f;
+
+        int64 _CorridorEpoch = 0;
+
+        // The epoch of the published field covering the corridor's centre. Zero and _HasField false
+        // where the world has none: a corridor that outlived its field is not a corridor at epoch 0.
+        int64 _FieldEpoch = 0;
+
+        bool _HasField = false;
+
+        bool _RepathRequired = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * Everything a viewer needs to draw one bake, and nothing that could outlive it.
      *
      * VALUE-ONLY BY CONSTRUCTION: no world, no actor, no ECS handle, no registry, no span field, no
@@ -256,6 +289,14 @@ namespace ck::groundnav
         // The area markup the world's volumes hold, when a caller collected it. Empty otherwise, and
         // a viewer draws what is there rather than being told whether collection was asked for.
         TArray<FCk_GroundNav_DebugMarkup> _Markups;
+
+        // The path corridors the world's agents hold, when a caller collected them. Empty otherwise.
+        TArray<FCk_GroundNav_DebugCorridor> _Corridors;
+
+        // The ground each of the world's fields last published its news ABOUT. One box per field
+        // rather than their union: two volumes republishing in the same window changed two places,
+        // never the span between them.
+        TArray<FBox> _ChangedBounds;
 
         // Set when the cell list was capped. The counts above stay TRUE totals, so a viewer reports
         // what the bake found rather than what it managed to draw.

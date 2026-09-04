@@ -110,6 +110,15 @@ public:
     Get_HasFreshResult(
         const FCk_Handle_GroundNavPath& InPath);
 
+    /** The world box the agent's last published corridor covers, ALREADY inflated by the body's radius
+     *  plus the corridor margin. Invalid where nothing is cached.
+     *
+     *  C++ ONLY, and deliberately not a UFUNCTION: a corridor box is a native reader's question (a debug report, a test) asked once per publish and never by a graph. The fragment's WRITES
+     *  stay friend-scoped to the processors - this is a read and nothing else. */
+    static auto
+    Get_LastCorridorBounds(
+        const FCk_Handle_GroundNavPath& InPath) -> FBox;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GroundNavPath",

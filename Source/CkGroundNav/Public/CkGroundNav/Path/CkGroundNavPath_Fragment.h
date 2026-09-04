@@ -27,6 +27,12 @@ namespace ck
     /** A search this agent has begun or is waiting on ground for. Drives the slice processor's view. */
     CK_DEFINE_ECS_TAG(FTag_GroundNavPath_SearchInFlight);
 
+    /** Raised where a published surface rebuild's bounds meet this agent's cached corridor: the route
+     *  it is walking crosses ground that moved. RAISED HERE AND NEVER REMOVED HERE - the path's consumer
+     *  (the crowd's path refresh) is what clears it by acting on it, so a consumer that has not run yet
+     *  finds the news still standing rather than losing it to whoever raised it. */
+    CK_DEFINE_ECS_TAG(FTag_GroundNavPath_RepathRequired);
+
     // ----------------------------------------------------------------------------------------------------------------
 
     using FFragment_GroundNavPath_Params = FCk_Fragment_GroundNavPath_ParamsData;
@@ -90,12 +96,31 @@ namespace ck
         // source the body still stands on.
         int32 _LastSourceFlatPlate = INDEX_NONE;
 
+        /** The field epoch the keys above were found on. Held WITH them because a key means nothing
+         *  apart from its epoch: a repair compares the two before it trusts a door it did not re-walk,
+         *  and an epoch read off the published result instead would date the last PUBLISH rather than
+         *  the last corridor. */
+        groundnav::FCk_GroundNav_Epoch _LastCorridorEpoch;
+
+        /** The world box the corridor's plates cover, stored ALREADY inflated by _CorridorInflationUu.
+         *  An invalidator asks it on every republish to decide whether a rebuilt tile could have moved
+         *  this route, so it must not have to re-walk the corridor or re-derive a margin of its own.
+         *  Invalid where nothing is cached. */
+        FBox _LastCorridorBounds = FBox{ForceInit};
+
+        // What the box above was inflated by - the body's radius plus the corridor margin. Beside the
+        // box rather than derivable from it, so a reader recovers the plates' own union exactly.
+        float _CorridorInflationUu = 0.0f;
+
     public:
         CK_PROPERTY_GET(_Field);
         CK_PROPERTY_GET(_HasBegun);
         CK_PROPERTY_GET(_PendingSince);
         CK_PROPERTY_GET(_LastCorridorKeys);
         CK_PROPERTY_GET(_LastSourceFlatPlate);
+        CK_PROPERTY_GET(_LastCorridorEpoch);
+        CK_PROPERTY_GET(_LastCorridorBounds);
+        CK_PROPERTY_GET(_CorridorInflationUu);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
