@@ -100,6 +100,29 @@ namespace ck_groundnav_path_processor
         return Cost;
     }
 
+    /**
+     * The same cost model with THIS request's link veto laid over it.
+     *
+     * Kept apart from the params-only form rather than folded into it because the two callers differ:
+     * a search prices link traverses and admits link crossings, and the post-process prices neither -
+     * it walks a corridor the search already chose. A veto handed to the post-process would be a value
+     * nothing reads, which is the sort of thing that later reads as a bug.
+     */
+    auto
+        Get_CostParams(
+            const ck::FFragment_GroundNavPath_Params& InParams,
+            const FCk_Request_GroundNavPath_FindPath& InRequest)
+        -> FCk_GroundNav_PathCostParams
+    {
+        auto Cost = Get_CostParams(InParams);
+
+        Cost._DeniedLinkIds = InRequest.Get_DeniedLinkIds();
+        Cost._DeniedLinkUserTypeTags = InRequest.Get_DeniedLinkUserTypeTags();
+        Cost._LinkCostMultipliers = InRequest.Get_LinkCostMultipliers();
+
+        return Cost;
+    }
+
     auto
         Get_Query(
             const ck::FFragment_GroundNavPath_Params& InParams,
@@ -112,7 +135,7 @@ namespace ck_groundnav_path_processor
         Query._Goal = InRequest.Get_Goal();
         Query._VerticalToleranceUu = InParams.Get_VerticalToleranceUu();
         Query._Agent._RadiusUu = InParams.Get_AgentRadiusUu();
-        Query._Cost = Get_CostParams(InParams);
+        Query._Cost = Get_CostParams(InParams, InRequest);
         Query._GreedyWeightW = InParams.Get_GreedyWeightW();
         Query._MaxExpansions = InParams.Get_MaxExpansions();
         Query._MaxCorridorLength = InParams.Get_MaxCorridorLength();
@@ -140,6 +163,25 @@ namespace ck_groundnav_path_processor
         return PostParams;
     }
 
+    /** The plan's unreflected role as the published one. Two enums rather than one because the plan is
+     *  a Search/ value and carries no reflection, and this is the single point they meet at. */
+    auto
+        Get_PublishedRole(
+            ECk_GroundNav_LinkWaypointRole InRole)
+        -> ECk_GroundNavPath_LinkWaypointRole
+    {
+        switch (InRole)
+        {
+            case ECk_GroundNav_LinkWaypointRole::Entry:
+            { return ECk_GroundNavPath_LinkWaypointRole::Entry; }
+            case ECk_GroundNav_LinkWaypointRole::Exit:
+            { return ECk_GroundNavPath_LinkWaypointRole::Exit; }
+            case ECk_GroundNav_LinkWaypointRole::None:
+            default:
+            { return ECk_GroundNavPath_LinkWaypointRole::None; }
+        }
+    }
+
     /** The corridor keyed by the ONE durable identity a crossing has. Node ids are per-search pool ids
      *  and mean nothing to a second search, so a corridor is stored as keys or it is not stored. */
     auto
@@ -154,6 +196,33 @@ namespace ck_groundnav_path_processor
         { Keys.Emplace(Make_CrossingKey(Crossing)); }
 
         return Keys;
+    }
+
+    /**
+     * The same corridor said in link identities: the authored id behind every link crossing on it.
+     *
+     * Resolved HERE, against the field the plan was made on, because that is the only place the index
+     * a crossing carries still means anything - _ResolvedLinks is rebuilt wholesale per publish and a
+     * removal shifts every entry after it. Walk order and no repeats, so a route that crosses one link
+     * twice names it once.
+     */
+    auto
+        Get_CorridorLinkIds(
+            const FCk_GroundNav_Field&      InField,
+            const FCk_GroundNav_PathResult& InResult)
+        -> TArray<int32>
+    {
+        auto LinkIds = TArray<int32>{};
+
+        for (const auto& Crossing : InResult._Crossings)
+        {
+            if (NOT InField._ResolvedLinks.IsValidIndex(Crossing._LinkIndex))
+            { continue; }
+
+            LinkIds.AddUnique(InField._ResolvedLinks[Crossing._LinkIndex]._Id);
+        }
+
+        return LinkIds;
     }
 
     /**
@@ -330,12 +399,31 @@ namespace ck
         auto Locations = TArray<FVector>{};
         Locations.Reserve(Plan._Waypoints.Num());
 
-        for (const auto& Waypoint : Plan._Waypoints)
-        { Locations.Emplace(Waypoint._Location); }
+        // Collapsed out of the waypoints rather than carried as a richer element type, so what an
+        // existing consumer reads is the same flat array of locations it has always read.
+        auto LinkWaypoints = TArray<FCk_GroundNavPath_LinkWaypoint>{};
+
+        for (auto Index = 0; Index < Plan._Waypoints.Num(); ++Index)
+        {
+            const auto& Waypoint = Plan._Waypoints[Index];
+
+            Locations.Emplace(Waypoint._Location);
+
+            if (Waypoint._LinkRole == groundnav::ECk_GroundNav_LinkWaypointRole::None)
+            { continue; }
+
+            LinkWaypoints.Emplace(FCk_GroundNavPath_LinkWaypoint{
+                Index,
+                Waypoint._LinkId,
+                Get_PublishedRole(Waypoint._LinkRole),
+                Waypoint._LinkEntryDirection,
+                static_cast<float>(Waypoint._DistanceFromStart)});
+        }
 
         InResult._Result
             .Set_Status(Plan._Status)
             .Set_Waypoints(Locations)
+            .Set_LinkWaypoints(LinkWaypoints)
             .Set_RequestRevision(Request.Get_RequestRevision())
             .Set_IsShadow(Request.Get_IsShadow())
             .Set_LengthUu(Plan._LengthUu)
@@ -354,6 +442,7 @@ namespace ck
             Get_CorridorBounds(*InCurrent._Field, SearchResult, CorridorInflationUu);
 
         InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
+        InCurrent._LastCorridorLinkIds = Get_CorridorLinkIds(*InCurrent._Field, SearchResult);
         InCurrent._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
         InCurrent._LastCorridorBounds = CorridorBounds;
         InCurrent._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;

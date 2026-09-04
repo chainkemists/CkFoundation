@@ -65,6 +65,45 @@ namespace ck_groundnav_plateportalgraph
     {
         return InCrossing._Left == InLink._Start;
     }
+
+    /**
+     * Whether THIS query refuses the link a crossing enters. False for a lattice crossing, which
+     * indexes no link and therefore pays no lookup.
+     *
+     * The tag half asks the RECORD'S tag whether it matches any denied tag, because the parent chain
+     * that matters is the record's: a link tagged Ladder.Rope is denied by a veto naming Ladder, so
+     * denying a ladder denies every kind of ladder under it without the author enumerating them. The
+     * container's own HasTag reads the chain from the other side and would let the rope through.
+     */
+    auto Get_IsLinkDenied(
+        const ck::groundnav::FCk_GroundNav_Field&          InField,
+        const ck::groundnav::FCk_GroundNav_PathSharedData& InShared,
+        const ck::groundnav::FCk_GroundNav_Crossing&       InCrossing) -> bool
+    {
+        const auto* Link = TryGet_ResolvedLink(InField, InCrossing);
+
+        if (Link == nullptr)
+        { return false; }
+
+        if (InShared._DeniedLinkIds.Contains(Link->_Id))
+        { return true; }
+
+        return Link->_UserTypeTag.IsValid() && Link->_UserTypeTag.MatchesAny(InShared._DeniedLinkUserTypeTags);
+    }
+
+    /** The multiplier THIS query prices the crossing's link at, and nullptr where it names none. */
+    auto TryGet_LinkCostRewrite(
+        const ck::groundnav::FCk_GroundNav_Field&          InField,
+        const ck::groundnav::FCk_GroundNav_PathSharedData& InShared,
+        const ck::groundnav::FCk_GroundNav_Crossing&       InCrossing) -> const float*
+    {
+        if (InShared._LinkCostMultipliers.IsEmpty())
+        { return nullptr; }
+
+        const auto* Link = TryGet_ResolvedLink(InField, InCrossing);
+
+        return Link != nullptr ? InShared._LinkCostMultipliers.Find(Link->_Id) : nullptr;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,6 +169,22 @@ namespace ck::groundnav
     }
 
     auto
+        Get_LinkSpanUu(
+            const FCk_GroundNav_Field&    InField,
+            const FCk_GroundNav_Crossing& InCrossing)
+        -> double
+    {
+        using namespace ck_groundnav_plateportalgraph;
+
+        const auto* Link = TryGet_ResolvedLink(InField, InCrossing);
+
+        if (Link == nullptr)
+        { return 0.0; }
+
+        return FVector::Dist(Link->_Start, Link->_End);
+    }
+
+    auto
         Get_LinkTraversalCost(
             const FCk_GroundNav_Field&    InField,
             const FCk_GroundNav_Crossing& InCrossing)
@@ -142,7 +197,7 @@ namespace ck::groundnav
         if (Link == nullptr)
         { return 0.0f; }
 
-        const auto SpanUu = FVector::Dist(Link->_Start, Link->_End);
+        const auto SpanUu = Get_LinkSpanUu(InField, InCrossing);
 
         const auto Multiplier = Get_IsEnteredAtLinkStart(*Link, InCrossing)
             ? Link->_CostMultiplierForward
@@ -277,6 +332,12 @@ namespace ck::groundnav
             if (NOT Get_IsAdmitted(Crossing._ClearanceUu, _Shared->_Agent))
             { continue; }
 
+            // The query's own veto, read beside the field's admission rule and refusing on the same
+            // terms: a link this body may not use is not a dearer edge, it is no edge, so no node is
+            // minted and no corridor it could be read back out of exists.
+            if (Get_IsLinkDenied(*_Shared->_Field, *_Shared, Crossing))
+            { continue; }
+
             // Links are exempt: the skip exists so a leg is never walked straight back through the
             // door it came from, and a ladder beside the ramp that was just descended is a
             // genuinely different route between those same two plates rather than that door again.
@@ -296,6 +357,8 @@ namespace ck::groundnav
             FCk_GroundNav_PathNodeId InTo) const
         -> float
     {
+        using namespace ck_groundnav_plateportalgraph;
+
         if (NOT Get_IsValid())
         { return 0.0f; }
 
@@ -304,9 +367,27 @@ namespace ck::groundnav
         // link is priced for the link. The source node is entered through no crossing.
         const auto ToIsEnteredThroughACrossing = _Pool->_Crossings.IsValidIndex(InTo - 1);
 
-        const auto TraversalCost = ToIsEnteredThroughACrossing
-            ? Get_LinkTraversalCost(*_Shared->_Field, _Pool->_Crossings[InTo - 1])
-            : 0.0f;
+        // Where this query named a multiplier for the link being entered, that number stands in place
+        // of the authored one - it does not merge with it. A plate's two prices merge upward because
+        // two sources are pricing one piece of ground; a link's per-query price is one body answering
+        // for itself what the author answered for every body, and merging would make a body that
+        // finds a ladder EASIER than authored unable to say so. Never below one, which the request
+        // boundary refuses, so every edge still costs at least the distance it covers.
+        const auto TraversalCost = [&]() -> float
+        {
+            if (NOT ToIsEnteredThroughACrossing)
+            { return 0.0f; }
+
+            const auto& ToCrossing = _Pool->_Crossings[InTo - 1];
+
+            const auto* Rewrite = TryGet_LinkCostRewrite(*_Shared->_Field, *_Shared, ToCrossing);
+
+            if (Rewrite == nullptr)
+            { return Get_LinkTraversalCost(*_Shared->_Field, ToCrossing); }
+
+            return static_cast<float>(
+                Get_LinkSpanUu(*_Shared->_Field, ToCrossing) * static_cast<double>(*Rewrite));
+        }();
 
         return TraversalCost + Get_LegCost(
             *_Shared,

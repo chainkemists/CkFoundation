@@ -250,7 +250,50 @@ namespace ck
             const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_LinkBatch& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
             const FCk_Request_GroundNavVolume_ReleaseLink& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_ReleaseLink_ById& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_ReleaseAllLinks& InRequest) -> void;
+
+        // The RECORD half of an admission, with no completion of its own and no derive tag: a single
+        // request fires and raises for the one record it carries, a batch for the whole set at once.
+        // Whether the record may be admitted at all is asked separately, before anything is applied,
+        // which is what lets the batch be all-or-nothing without a second copy of the six questions.
+        static auto
+        DoApply_Link(
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_Links& InLinks,
+            const FCk_Request_GroundNavVolume_Link& InRequest) -> void;
+
+        // Drops one entry and the back-pointer its entity carries. The id goes with it and is never
+        // handed out again, so _NextId is deliberately left where it is: a field resolved against an
+        // older link set can be diffed against a newer one without an id meaning two different links.
+        static auto
+        DoRetire_LinkEntry(
+            FFragment_GroundNavVolume_Links& InLinks,
+            int32 InEntryIndex) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
