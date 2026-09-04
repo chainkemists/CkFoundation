@@ -98,6 +98,7 @@ auto
            static_cast<bool>(_SurfaceBounds) &&
            static_cast<bool>(_ProviderHealth) &&
            static_cast<bool>(_IsBuildInProgress) &&
+           static_cast<bool>(_IsSurfaceSettled) &&
            static_cast<bool>(_SurfaceRevision) &&
            static_cast<bool>(_RequestSurfaceRebuild) &&
            static_cast<bool>(_ApplyAreaMarkup) &&
