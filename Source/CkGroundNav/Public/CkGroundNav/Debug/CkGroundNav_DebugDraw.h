@@ -164,6 +164,44 @@ namespace ck::groundnav
         FCk_Time                                   InLifetime) -> void;
 
     /**
+     * Every ground-path corridor the world's agents hold, as values.
+     *
+     * GAME THREAD ONLY: it walks the ECS registry for the cached corridors and asks the world's
+     * field registry which epoch each one is measured against. Both answers are captured HERE so
+     * the snapshot that carries them stays drawable after the world is gone.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugCorridorsFromWorld(
+        UWorld* InWorld) -> TArray<FCk_GroundNav_DebugCorridor>;
+
+    /**
+     * The ground each of the world's published fields last reported its news about, reconstructed
+     * from the tiles carrying the field's own epoch - which is exactly the box that publish handed
+     * to the neutral rebuilt signal, derived rather than remembered.
+     *
+     * A field whose epoch no BUILT tile carries contributes nothing: bounds-unknown is what that
+     * publish said, and a degenerate box would name ground it never produced.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugChangedBoundsFromWorld(
+        UWorld* InWorld) -> TArray<FBox>;
+
+    /**
+     * Outline cached corridors in cyan and last-published changed bounds in orange, each labelled
+     * with the numbers the invalidation decision is made on.
+     *
+     * The changed-bounds boxes take a SHORT fixed lifetime of their own: one describes a single
+     * publish, where a corridor stands until its agent replans, so drawing them alike would leave
+     * a stale box per republish over a plate view that persists for a minute.
+     */
+    CKGROUNDNAV_API auto
+    DoDraw_DebugInvalidation(
+        UWorld*                                      InWorld,
+        TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
+        TConstArrayView<FBox>                        InChangedBounds,
+        FCk_Time                                     InLifetime) -> void;
+
+    /**
      * Human summary of what a snapshot contains. Safe on every status.
      *
      * Open Solid bodies are named in a block directly under the status line, ahead of every number a

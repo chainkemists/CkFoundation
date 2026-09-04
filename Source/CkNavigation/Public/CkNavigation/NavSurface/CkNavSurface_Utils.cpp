@@ -473,3 +473,25 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::nav_surface
+{
+    auto
+        Request_NotifySurfaceRebuilt(
+            UWorld*     InWorld,
+            const FBox& InChangedBounds)
+        -> void
+    {
+        auto WorldEntity = ck_nav_surface_utils::Get_WorldEntity(InWorld);
+
+        const auto WorldEntityIsValid = ck::IsValid(WorldEntity);
+        CK_ENSURE_IF_NOT(WorldEntityIsValid,
+            TEXT("Request_NotifySurfaceRebuilt could not resolve an ECS world from world [{}]"),
+            GetNameSafe(InWorld))
+        { return; }
+
+        WorldEntity.AddOrGet<FFragment_NavSurface_PendingRebuilds>()._Bounds.Emplace(InChangedBounds);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

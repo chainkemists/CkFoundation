@@ -2,6 +2,7 @@
 
 #include "CkAStar/Algorithm/CkAStar_Search.h"
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
@@ -10,6 +11,8 @@
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
 #include <CoreMinimal.h>
+
+#include "CkGroundNav_PathSearch.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // One path plan, from the checks that answer it without searching to the slices that answer it by
@@ -24,6 +27,27 @@
 // order as a one-shot run and answers with the same corridor, cost and expansion count; the two caps
 // this driver owns are tested after every slice returns, including the one slice a one-shot run
 // takes, so no verdict can depend on where a boundary fell.
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * What a repair did with the corridor it was handed.
+ *
+ * It is a verdict on the PLAN, not on the search: a caller reads it to know whether an agent's
+ * route survived a rebuild and how much of it did, and so whether a repair earned its name or a
+ * full replan was paid for under it. None is the answer wherever no corridor was offered at all,
+ * which every cold begin is.
+ */
+UENUM(BlueprintType)
+enum class ECk_GroundNav_RepairVerdict : uint8
+{
+    None,
+    StillValid,
+    Repaired,
+    FullReplan
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_RepairVerdict);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -43,24 +67,6 @@ namespace ck::groundnav
 
         // Wall-clock this slice may spend. Zero means as long as it takes.
         FCk_Time _Budget;
-    };
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    /**
-     * What a repair did with the corridor it was handed.
-     *
-     * It is a verdict on the PLAN, not on the search: a caller reads it to know whether an agent's
-     * route survived a rebuild and how much of it did, and so whether a repair earned its name or a
-     * full replan was paid for under it. None is the answer wherever no corridor was offered at all,
-     * which every cold begin is.
-     */
-    enum class ECk_GroundNav_RepairVerdict : uint8
-    {
-        None,
-        StillValid,
-        Repaired,
-        FullReplan
     };
 
     // ----------------------------------------------------------------------------------------------------------------
