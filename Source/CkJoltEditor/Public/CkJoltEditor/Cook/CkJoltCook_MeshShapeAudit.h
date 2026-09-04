@@ -38,6 +38,25 @@ namespace ck::jolt::cook
         Orphan,
     };
 
+    /// Why the UI can or cannot render the decoded Jolt mesh itself. This is independent from
+    /// CookedState: a stale source header may still have a safely decodable blob for inspection.
+    enum class ECk_Jolt_MeshShapeAuditCookedPreviewAvailability : uint8
+    {
+        MissingCookedAsset,
+        IncompatibleStale,
+        CorruptBlob,
+        NonTriMesh,
+        Available,
+    };
+
+    /// Value-only decoder gate. Only known same-encoding versions are ever passed to Jolt restore.
+    enum class ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility : uint8
+    {
+        Restorable,
+        IncompatibleCookVersion,
+        IncompatibleJoltVersion,
+    };
+
     enum class ECk_Jolt_MeshShapeAuditWindingVerdict : uint8
     {
         NotTriMesh,
@@ -94,6 +113,12 @@ namespace ck::jolt::cook
     CKJOLTEDITOR_API auto Get_MeshShapeAuditWindingVerdict(
         double InWindingRatio) -> ECk_Jolt_MeshShapeAuditWindingVerdict;
 
+    /// v3 is current; v2 predates only the winding correction and retains the same blob encoding.
+    /// Every other cook version and every Jolt-version mismatch is fail-closed for preview restore.
+    CKJOLTEDITOR_API auto Get_MeshShapeAuditCookedPreviewCompatibility(
+        uint32 InCookVersion,
+        uint32 InJoltVersionId) -> ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility;
+
     /// Pure policy for a source-matching current blob. A corrupt blob and a strongly inside-out
     /// tri-mesh both rebuild from the available source; convex/no-verdict blobs remain current.
     CKJOLTEDITOR_API auto Get_MeshShapeCurrentBlobFreshness(
@@ -121,6 +146,8 @@ namespace ck::jolt::cook
 
         ECk_Jolt_MeshShapeAuditSourceState _SourceState = ECk_Jolt_MeshShapeAuditSourceState::MissingBodySetup;
         ECk_Jolt_MeshShapeAuditCookedState _CookedState = ECk_Jolt_MeshShapeAuditCookedState::Missing;
+        ECk_Jolt_MeshShapeAuditCookedPreviewAvailability _CookedPreviewAvailability =
+            ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::MissingCookedAsset;
         ECk_Jolt_MeshShapeAuditWindingVerdict _SourceWinding = ECk_Jolt_MeshShapeAuditWindingVerdict::NotTriMesh;
         ECk_Jolt_MeshShapeAuditWindingVerdict _NormalizedSourceWinding = ECk_Jolt_MeshShapeAuditWindingVerdict::NotTriMesh;
         ECk_Jolt_MeshShapeAuditWindingVerdict _CookedWinding = ECk_Jolt_MeshShapeAuditWindingVerdict::NotTriMesh;
