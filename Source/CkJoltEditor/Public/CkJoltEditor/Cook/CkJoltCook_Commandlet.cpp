@@ -233,7 +233,7 @@ auto
         SelectionInput._bMap = HasExplicitMap;
         SelectionInput._bAllMaps = CookAllMaps;
         SelectionInput._bCookAll = PackagingSettings->bCookAll;
-        SelectionInput._bIncludeAlwaysCookDirectories = IncludeAlwaysCookDirectories;
+        SelectionInput._IncludeAlwaysCookDirectories = IncludeAlwaysCookDirectories;
         SelectionInput._CookedDataRootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
 
         for (const auto& Map : PackagingSettings->MapsToCook)
@@ -250,7 +250,7 @@ auto
         for (const auto& ExcludedPrefix : SelectionInput._JoltExcludedMapPathPrefixes)
         { PackagingExcludedLevelPackagePaths.AddUnique(ExcludedPrefix); }
         PackagingExcludedLevelPackagePaths.AddUnique(SelectionInput._CookedDataRootPath);
-        if (SelectionInput._bIncludeAlwaysCookDirectories)
+        if (SelectionInput._IncludeAlwaysCookDirectories)
         {
             SelectionInput._DiscoveredAlwaysCookMapCandidates =
                 ck_jolt_cook_commandlet::Discover_AlwaysCookMapCandidates(SelectionInput._DirectoriesToAlwaysCook);
@@ -267,7 +267,7 @@ auto
         { return 1; }
 
         UE_LOG(CkJolt, Display, TEXT("CkJoltCook: packaging map policy [%s]: %d authored + %d AlwaysCook = %d selected"),
-            SelectionInput._bIncludeAlwaysCookDirectories ? TEXT("full union") : TEXT("incremental entry worlds"),
+            SelectionInput._IncludeAlwaysCookDirectories ? TEXT("full union") : TEXT("incremental entry worlds"),
             PackagingMaps._NumAuthoredMaps, PackagingMaps._NumAlwaysCookMaps, PackagingMaps._MapPackageNames.Num());
 
         const auto HasSelectedPackagingMaps = NOT PackagingMaps._MapPackageNames.IsEmpty();

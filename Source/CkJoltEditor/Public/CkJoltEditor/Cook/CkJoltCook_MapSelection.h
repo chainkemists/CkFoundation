@@ -24,7 +24,7 @@ namespace ck::jolt::cook
         bool _bAllMaps = false;
         bool _bCookAll = false;
         /// False selects only authored MapsToCook entries; true also includes discovered AlwaysCook worlds.
-        bool _bIncludeAlwaysCookDirectories = true;
+        bool _IncludeAlwaysCookDirectories = true;
     };
 
     struct CKJOLTEDITOR_API FCk_Jolt_PackagingMapSelectionResult

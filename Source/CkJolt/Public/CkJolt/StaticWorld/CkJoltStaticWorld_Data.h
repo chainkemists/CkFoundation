@@ -37,7 +37,9 @@ namespace ck::jolt
     ///     hash check, and had its bodies SKIPPED. v2 data cannot be disambiguated after the fact.
     /// v4: same tri-mesh winding correction as mesh-shape v3 — cell blobs embed the baked shapes, so
     ///     every v3 cell containing a tri-mesh body is inside-out.
-    constexpr uint32 WorldCookVersion_Current = 4;
+    /// v5: tri-mesh extraction now safely normalizes closed, consistently oriented inside-out
+    ///     components. Existing v4 cells can retain source-matching inverted blobs, so they must rebake.
+    constexpr uint32 WorldCookVersion_Current = 5;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -63,41 +63,45 @@ namespace ck_jolt_cook_mesh_shape_cooker
         return OutBlob.Num() > 0;
     }
 
-    static auto DoEnsure_CurrentShapeBlobIsSafe(
+    enum class ECurrentShapeBlobFreshness : uint8
+    {
+        UpToDate,
+        RequiresRebuild,
+        Failed,
+    };
+
+    static auto Audit_CurrentShapeBlobFreshness(
         const UCk_Jolt_CookedMeshShape_UE& InShapeAsset,
-        const FString& InMeshPackagePath) -> bool
+        const FString& InMeshPackagePath) -> ECurrentShapeBlobFreshness
     {
         const auto RestoredShape = mesh_shape_utils::TryRestore_ShapeBlob(
             InShapeAsset.Get_ShapeBlob(), InMeshPackagePath);
         const auto ShapeRestored = ck::IsValid(RestoredShape);
 
         CK_ENSURE_IF_NOT(ShapeRestored,
-            TEXT("JoltMeshCook: current cooked shape blob for mesh [{}] could not be restored for the freshness audit"),
+            TEXT("JoltMeshCook: current cooked shape blob for mesh [{}] could not be restored "
+                 "for the freshness audit"),
             InMeshPackagePath)
         { }
 
         if (NOT ShapeRestored)
-        { return false; }
+        { return ECurrentShapeBlobFreshness::Failed; }
 
         // Convex and other non-tri-mesh shapes deliberately have no winding verdict.
         if (RestoredShape->GetSubType() != JPH::EShapeSubType::Mesh)
-        { return true; }
+        { return ECurrentShapeBlobFreshness::UpToDate; }
 
         constexpr auto InsideOutWindingRatioThreshold = -0.05;
         const auto WindingRatio = ComputeShapeWindingRatio(*RestoredShape);
-        const auto WindingIsValid = WindingRatio >= InsideOutWindingRatioThreshold;
+        if (WindingRatio < InsideOutWindingRatioThreshold)
+        {
+            ck::jolt::Warning(TEXT("JoltMeshCook: current cooked tri-mesh blob for mesh [{}] is INSIDE-OUT "
+                "(signed-volume/bounds ratio [{}]); rebuilding from its source so closed components can be "
+                "normalized."), InMeshPackagePath, WindingRatio);
+            return ECurrentShapeBlobFreshness::RequiresRebuild;
+        }
 
-        CK_ENSURE_IF_NOT(WindingIsValid,
-            TEXT("JoltMeshCook: current cooked tri-mesh blob for mesh [{}] is INSIDE-OUT "
-                 "(signed-volume/bounds ratio [{}]); refusing freshness success. Correct the source triangle "
-                 "winding, then run a forced Jolt mesh rebake."),
-            InMeshPackagePath, WindingRatio)
-        { }
-
-        if (NOT WindingIsValid)
-        { return false; }
-
-        return true;
+        return ECurrentShapeBlobFreshness::UpToDate;
     }
 }
 
@@ -176,12 +180,12 @@ auto
 
         if (SourceMatches && Existing->Get_CookVersion() == MeshShapeCookVersion_Current)
         {
-            const auto CurrentShapeBlobIsSafe = DoEnsure_CurrentShapeBlobIsSafe(*Existing, MeshPackagePath);
+            const auto CurrentShapeBlobFreshness = Audit_CurrentShapeBlobFreshness(*Existing, MeshPackagePath);
 
-            if (NOT CurrentShapeBlobIsSafe)
+            if (CurrentShapeBlobFreshness == ECurrentShapeBlobFreshness::Failed)
             { return ECk_Jolt_MeshShapeCookResult::Failed; }
 
-            if (NOT InForceRebuild)
+            if (NOT InForceRebuild && CurrentShapeBlobFreshness == ECurrentShapeBlobFreshness::UpToDate)
             { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
         }
 
