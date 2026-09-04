@@ -8,6 +8,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -492,6 +493,202 @@ auto
     { return; }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_NavSurface_OnSurfaceRebuilt, WorldEntity, InDelegate);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    Request_BeginLinkTraversal(
+        FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_BeginLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Request_BeginLinkTraversal was given an invalid Entity"))
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    const auto LinkIdIsValid = InRequest.Get_LinkId() != INDEX_NONE;
+    CK_ENSURE_IF_NOT(LinkIdIsValid,
+        TEXT("Request_BeginLinkTraversal on [{}] names no link"),
+        InHandle)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_NavSurface_LinkTraversal_Requests, InHandle,
+        TEXT("BeginLinkTraversal: Link [{}] Correlator [{}]"),
+        InRequest.Get_LinkId(), InRequest.Get_CorrelatorId());
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    Request_CompleteLinkTraversal(
+        FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Request_CompleteLinkTraversal was given an invalid Entity"))
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_NavSurface_LinkTraversal_Requests, InHandle,
+        TEXT("CompleteLinkTraversal: Correlator [{}]"), InRequest.Get_CorrelatorId());
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    Request_CancelLinkTraversal(
+        FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_CancelLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Request_CancelLinkTraversal was given an invalid Entity"))
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    CK_CALLSTACK_RECORD_MSG(ck::FFragment_NavSurface_LinkTraversal_Requests, InHandle,
+        TEXT("CancelLinkTraversal: Correlator [{}]"), InRequest.Get_CorrelatorId());
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    Get_LinkTraversal(
+        const FCk_Handle& InHandle)
+    -> FCk_NavSurface_LinkTraversal
+{
+    auto Traversal = FCk_NavSurface_LinkTraversal{};
+
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_NavSurface_LinkTraversal_Current>())
+    { return Traversal; }
+
+    const auto& Current = InHandle.Get<ck::FFragment_NavSurface_LinkTraversal_Current>();
+
+    Traversal.Set_LinkId(Current.Get_ActiveLinkId());
+    Traversal.Set_CorrelatorId(Current.Get_ActiveCorrelatorId());
+    Traversal.Set_EntryDirection(Current.Get_EntryDirection());
+    Traversal.Set_State(Current.Get_State());
+
+    return Traversal;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    Get_IsTraversingLink(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return Get_LinkTraversal(InHandle).Get_State() == ECk_NavSurface_LinkTraversalState::Traversing;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    BindTo_OnLinkTraversalBegun(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalBegun& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_NavSurface_OnLinkTraversalBegun,
+        InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    UnbindFrom_OnLinkTraversalBegun(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalBegun& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_NavSurface_OnLinkTraversalBegun, InHandle, InDelegate);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    BindTo_OnLinkTraversalCompleted(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalCompleted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_NavSurface_OnLinkTraversalCompleted,
+        InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_LinkTraversal_UE::
+    UnbindFrom_OnLinkTraversalCompleted(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalCompleted& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_NavSurface_OnLinkTraversalCompleted, InHandle, InDelegate);
+
+    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

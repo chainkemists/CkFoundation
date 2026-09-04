@@ -279,6 +279,7 @@ FTag_CrowdAgent_DebugOverride     # Debugger "took control" — gameplay must no
 FTag_CrowdAgent_GoalBlocked       # Goal is unreachable; agent is Idle but still WANTS it (resumable)
 FTag_CrowdAgent_Asleep            # DEFINED AND EXCLUDED, BUT NOTHING EVER STAMPS IT (see below)
 FTag_CrowdAgent_Flying            # Free-space agent; opts out of every surface-bound / planar stage
+FTag_CrowdAgent_TraversingLink    # Part-way across an authored nav link; composes WITH Walking, never replaces it
 FTag_CrowdAgent_StationaryMarkupConfirmed  # Markup disc is confirmed on the mesh; with Idle, makes this agent the hard side of a pair
 ```
 
@@ -1081,6 +1082,64 @@ magnitude only and left direction free to snap.
   Master switch `_WaypointRetirementLineOfSight` (default `Enabled`; `Disabled` restores the
   laterally-blind behaviour, for A/B only). Worlds with no nav data are unaffected either way.
   Coverage: `CkAutoTest_Crowd_Steering_CornerRetirementKeepsAgentOnMesh`.
+
+### Link traversal — the cursor drives the neutral handshake
+
+A GroundNav route may walk an authored navigation link (a ladder, a jump, a door), and the answer
+carries where it steps on and off as parallel metadata beside `_Waypoints`. `OnGroundNavPathResolved`
+stamps that onto the agent as `FFragment_CrowdAgent_PathFollow::_LinkSpans`
+(`FProcessor_CrowdAgent_Steering::DoStampLinkSpans`, from `ck::groundnav::Get_LinksOnPath`), in the
+same block that resets the cursor — so a route across no link stamps an EMPTY array, which is also
+what clears the previous route's spans.
+
+Steering then drives CkNavigation's neutral handshake off the same cursor it already advances:
+`Request_BeginLinkTraversal` when the cursor stands on a span's entry, `Request_CompleteLinkTraversal`
+once it is past that span's exit, and `Request_CancelLinkTraversal` (reported to listeners as
+`Failed_Cancelled`) when a route drop or a route that stopped ON a link leaves a crossing unfinished.
+The crowd owns no traversal state of its own beyond `_ActiveLinkId` / `_ActiveLinkCorrelator` and the
+`FTag_CrowdAgent_TraversingLink` mirror; `FFragment_NavSurface_LinkTraversal_Current` on the agent is
+authoritative, and `OnLinkTraversalBegun` / `OnLinkTraversalCompleted` are the consumer surface (ladder
+animation, gating). **The agent stays `Walking` throughout** — the crossing tag is additive, like
+`Flying` and `Permeable`, because an agent on a ladder is still walking the polyline it was handed.
+
+Three details are load-bearing:
+
+- **Reconciled, not edge-detected.** The cursor is reset to 0 and skipped forward by more than one
+  waypoint in several places (install normalisation, `BlockDetect`, `PathRefresh`), so the driver asks
+  "which span does the cursor stand within" each pass rather than watching for an advance. A crossing
+  already running is not re-announced — a `Begin` naming the ACTIVE correlator completes `Succeeded`
+  and broadcasts nothing.
+- **The correlator is derived, not minted:** `_PathSerial` combined with `_ActiveNavigationRequestRevision`
+  and the link id. `_PathSerial` alone would not do — the ground install stamps it from
+  `FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial()`, which is the *process-wide*
+  stationary-markup confirmation counter, so two back-to-back routes with no disc confirmed between
+  them carry the same value. The episode's navigation-request revision is the per-agent monotonic that
+  separates them.
+- **The spans are only read while `_ActiveProvider` is `GroundNav`.** Nothing but the ground install
+  stamps them, so a PathNetwork or Voxel corridor installed over a ground one would otherwise be walked
+  against the previous route's link indices.
+
+**Which links an agent may take is on its own params.** `FCk_Fragment_CrowdAgent_ParamsData` carries
+`_DeniedLinkIds` (stable link ids this body may never traverse), `_DeniedLinkUserTypeTags` (the same denial
+by CLASS — matched against the link's authored `_UserTypeTag`, and a parent tag denies every link under it,
+so one tag says "cannot use ladders" without naming any id) and `_LinkCostMultipliers` (per-link
+multipliers that REPLACE the authored price for this agent's plans, refused below 1.0 at the ground
+search's request boundary). Per agent because a veto is a fact about the BODY, not about the ground: the
+link stays on the field, every reachability label it produced is unchanged, and every other agent still
+crosses it.
+
+`FProcessor_CrowdAgent_HandleRequests` copies all three onto the `FCk_Request_GroundNavPath_FindPath` it
+dispatches, at BOTH ground sites — the real query and the Recast-shadow comparison — so the shadow stays
+like-for-like rather than quietly comparing a vetoed route against an unvetoed one. **The Recast branch
+ignores them**: Recast has no authored links to deny, and its filter overlay is tag-keyed with no place for
+an `int32` id, so an agent on Recast plans as though the fields were empty. That is a live seam, not a
+setting — a host that moves an agent between providers moves it between two different answers to "may I
+take this link".
+
+Every drop of a route ends an active crossing: `Request_MoveTo`, `Request_Stop` and `DoForceReplan` end a
+movement episode through `FProcessor_CrowdAgent_HandleRequests::DoAbandonActiveProviderQuery`, which cancels
+the crossing before it releases the episode, and the mid-walk route swap, a failed ground episode, arrival
+and teardown cancel or complete it on their own paths.
 
 ### Navmesh constraint, escape, and stationary markup
 

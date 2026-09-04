@@ -22,14 +22,73 @@ class UWorld;
 namespace ck::groundnav::world_fields
 {
     /**
+     * What one entry has published since the last publish that could have moved GROUND, for a reader
+     * that has to narrow past the bounds the neutral rebuild queue carries.
+     *
+     * A GroundNav-side sidecar rather than a widening of that queue: a changed-link-id channel is a
+     * concept exactly one provider has, and every other provider would have to carry it to nowhere.
+     * It rides the world-keyed entry, so it is dropped with the entry and nothing here is
+     * process-wide.
+     *
+     * It describes a RUN rather than one publish, because two publishes can land between a reader's
+     * snapshot and its read: a repair and a link derive in the same tick leave the queue holding the
+     * repair's box under the note the derive wrote, and two toggles leave the second one's ids naming
+     * half of what moved. Carrying the epoch the last geometry publish went out under, and
+     * accumulating every link-only publish since it, lets a reader decide from its OWN epoch whether
+     * this note accounts for everything it has missed.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_PublishNote
+    {
+    public:
+        // The epoch the field carried at the newest publish, so a reader can tell whether the note
+        // still describes the field it is holding.
+        FCk_GroundNav_Epoch _Epoch;
+
+        // The epoch of the last publish that was not link-only. A reader whose own snapshot is older
+        // than this has missed ground moving, which no list of link ids describes.
+        FCk_GroundNav_Epoch _LastGeometryEpoch;
+
+        // Authored, volume-scoped link ids, accumulated over every link-only publish since that
+        // geometry publish and sorted. Emptied by the next one.
+        TArray<int32> _ChangedLinkIdsSinceGeometry;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * Records (or replaces) the field one volume publishes. GAME THREAD: called from the volume's
      * build processor at the moment it swaps its published pointer.
+     *
+     * Saying NOTHING is a geometry publish - a build, a repair, the empty registration a volume enters
+     * the world on - and restarts the note's run: the ids accumulated so far go, because no list of
+     * them describes ground that moved. Naming ids is the link derive's claim that its publish moved
+     * nothing else, and they are merged into the run rather than replacing it. The two states are an
+     * unset and a set optional rather than a flag beside a list, so "link-only, and this is what moved"
+     * is the only shape a claim to narrowing can be made in.
+     *
+     * The epochs the note carries are the PUBLISHED FIELD'S own, never a caller's: a note stamped with
+     * an epoch the field beside it does not carry is a note no reader could account for.
      */
     CKGROUNDNAV_API auto
     Publish(
-        UWorld*                InWorld,
-        const FCk_Handle&      InVolumeEntity,
-        FCk_GroundNav_FieldPtr InField) -> void;
+        UWorld*                         InWorld,
+        const FCk_Handle&               InVolumeEntity,
+        FCk_GroundNav_FieldPtr          InField,
+        const TOptional<TArray<int32>>& InLinkOnlyChangedLinkIds = {}) -> void;
+
+    /**
+     * The note left by the last publish on whichever entry TryGet_Field would answer from for the same
+     * location, or unset when the world has no field there.
+     *
+ * Two separate read locks rather than one call answering both, because the pointer handoff is all
+ * this lock is entitled to cover, and a combined accessor would tempt a caller into holding it
+ * across a query. A publish landing between the two reads leaves the caller with a note that
+ * postdates its field, which is why a reader compares the two epochs before trusting one.
+     */
+    CKGROUNDNAV_API auto
+    TryGet_PublishNote(
+        UWorld*        InWorld,
+        const FVector& InLocation) -> TOptional<FCk_GroundNav_PublishNote>;
 
     /**
      * Forgets the volume's entry. GAME THREAD: called from the volume's end-play processor, so a

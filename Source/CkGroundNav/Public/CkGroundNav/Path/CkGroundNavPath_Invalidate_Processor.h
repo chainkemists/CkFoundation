@@ -4,6 +4,7 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_Processor.h"
@@ -34,6 +35,15 @@ namespace ck
      * Two things stop a burst from being answered twice. The tag is idempotent, so a publish carrying
      * a dozen overlapping boxes still leaves one flag; and a corridor found on the epoch the world is
      * publishing NOW already postdates every rebuild the queue can describe, so it is skipped whole.
+     *
+     * BOUNDS ARE THE FLOOR, LINK IDENTITY NARROWS ONE CASE. The registry entry carries a note naming
+     * the epoch of the last publish that could have moved ground and the authored link ids every
+     * link-only publish since it moved; a corridor caches the ids it crosses. A corridor planned at or
+     * after that geometry publish has missed nothing but link-only publishes, so the two lists are
+     * intersected and the box test is skipped: a link toggle moves connectivity and not ground, and
+     * every route through the endpoint tile that did not use the link is unaffected. A corridor older
+     * than it has missed ground moving - a repair and a derive landing in one tick is exactly that -
+     * and falls to bounds, as does a world with no field to read a note from.
      */
     class CKGROUNDNAV_API FProcessor_GroundNavPath_InvalidateOnRebuilt : public ck_exp::TProcessor<
         FProcessor_GroundNavPath_InvalidateOnRebuilt,
@@ -59,6 +69,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Current& InCurrent) const -> void;
+
+    private:
+        // The exact half of the decision: flags only when the corridor crosses one of the links the
+        // note has accumulated, and never touches the queue's boxes.
+        auto
+        DoTry_FlagOnChangedLink(
+            HandleType                                                InPathEntity,
+            const FFragment_GroundNavPath_Current&                    InCurrent,
+            const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const -> void;
 
     private:
         // The world entity's queue, BORROWED for the length of one pass and never copied - a copy would

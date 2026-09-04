@@ -15,6 +15,10 @@ namespace ck_groundnav_world_fields
     {
         FCk_Handle _VolumeEntity;
         ck::groundnav::FCk_GroundNav_FieldPtr _Field;
+
+        // Beside the pointer it accounts for and updated with it, so the two can never describe
+        // different publishes for as long as a reader holds the lock.
+        ck::groundnav::world_fields::FCk_GroundNav_PublishNote _PublishNote;
     };
 
     using FWorldEntries = TMap<TWeakObjectPtr<UWorld>, TArray<FEntry>>;
@@ -42,6 +46,61 @@ namespace ck_groundnav_world_fields
         return Lock;
     }
 
+    /**
+     * The entry a location answers from: the one whose field contains it, or the first field there is.
+     *
+     * Said ONCE, so the field and the note beside it are never selected by two rules that could
+     * disagree. Callers hold the lock; nothing here takes one.
+     */
+    auto TryGet_EntryFor(
+        const TArray<FEntry>& InEntries,
+        const FVector&        InLocation) -> const FEntry*
+    {
+        const FEntry* FirstWithField = nullptr;
+
+        for (const auto& Entry : InEntries)
+        {
+            if (NOT Entry._Field.IsValid())
+            { continue; }
+
+            if (FirstWithField == nullptr)
+            { FirstWithField = &Entry; }
+
+            if (Entry._Field->_Params.Get_Bounds().IsInsideOrOn(InLocation))
+            { return &Entry; }
+        }
+
+        return FirstWithField;
+    }
+
+    /**
+     * Folds one publish into an entry's note.
+     *
+     * A GEOMETRY publish restarts the run: ground moved, and the ids accumulated so far describe none
+     * of it. A link-only publish extends it, which is what lets a reader whose snapshot predates
+     * several of them still answer by identity rather than falling back to bounds.
+     */
+    auto DoApply_Publish(
+        ck::groundnav::world_fields::FCk_GroundNav_PublishNote& InOutNote,
+        const ck::groundnav::FCk_GroundNav_Epoch&               InPublishedEpoch,
+        const TOptional<TArray<int32>>&                         InLinkOnlyChangedLinkIds) -> void
+    {
+        InOutNote._Epoch = InPublishedEpoch;
+
+        if (NOT InLinkOnlyChangedLinkIds.IsSet())
+        {
+            InOutNote._LastGeometryEpoch = InPublishedEpoch;
+            InOutNote._ChangedLinkIdsSinceGeometry.Reset();
+
+            return;
+        }
+
+        for (const auto ChangedLinkId : *InLinkOnlyChangedLinkIds)
+        { InOutNote._ChangedLinkIdsSinceGeometry.AddUnique(ChangedLinkId); }
+
+        InOutNote._ChangedLinkIdsSinceGeometry.Sort();
+    }
+
     auto DoBind_CleanupHookOnce() -> void
     {
         static auto CleanupHookIsBound = false;
@@ -66,15 +125,21 @@ namespace ck_groundnav_world_fields
 auto
     ck::groundnav::world_fields::
     Publish(
-        UWorld*                InWorld,
-        const FCk_Handle&      InVolumeEntity,
-        FCk_GroundNav_FieldPtr InField)
+        UWorld*                         InWorld,
+        const FCk_Handle&               InVolumeEntity,
+        FCk_GroundNav_FieldPtr          InField,
+        const TOptional<TArray<int32>>& InLinkOnlyChangedLinkIds)
     -> void
 {
     if (ck::Is_NOT_Valid(InWorld))
     { return; }
 
     ck_groundnav_world_fields::DoBind_CleanupHookOnce();
+
+    // Read before the pointer is moved out, and taken from the FIELD rather than from the caller: the
+    // note's epochs are what a reader compares its own snapshot against, so they can only be the ones
+    // the thing being published actually carries. A volume registering with no field yet has none.
+    const auto PublishedEpoch = InField.IsValid() ? InField->_Epoch : FCk_GroundNav_Epoch{};
 
     auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_Write};
 
@@ -86,10 +151,19 @@ auto
         { continue; }
 
         Entry._Field = MoveTemp(InField);
+
+        ck_groundnav_world_fields::DoApply_Publish(
+            Entry._PublishNote, PublishedEpoch, InLinkOnlyChangedLinkIds);
+
         return;
     }
 
-    Entries.Emplace(ck_groundnav_world_fields::FEntry{InVolumeEntity, MoveTemp(InField)});
+    auto NewEntry = ck_groundnav_world_fields::FEntry{InVolumeEntity, MoveTemp(InField), {}};
+
+    ck_groundnav_world_fields::DoApply_Publish(
+        NewEntry._PublishNote, PublishedEpoch, InLinkOnlyChangedLinkIds);
+
+    Entries.Emplace(MoveTemp(NewEntry));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,21 +236,38 @@ auto
     if (Entries == nullptr)
     { return {}; }
 
-    auto FirstField = FCk_GroundNav_FieldPtr{};
+    const auto* Entry = ck_groundnav_world_fields::TryGet_EntryFor(*Entries, InLocation);
 
-    for (const auto& Entry : *Entries)
-    {
-        if (NOT Entry._Field.IsValid())
-        { continue; }
+    return Entry == nullptr ? FCk_GroundNav_FieldPtr{} : Entry->_Field;
+}
 
-        if (NOT FirstField.IsValid())
-        { FirstField = Entry._Field; }
+// --------------------------------------------------------------------------------------------------------------------
 
-        if (Entry._Field->_Params.Get_Bounds().IsInsideOrOn(InLocation))
-        { return Entry._Field; }
-    }
+auto
+    ck::groundnav::world_fields::
+    TryGet_PublishNote(
+        UWorld*        InWorld,
+        const FVector& InLocation)
+    -> TOptional<FCk_GroundNav_PublishNote>
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return {}; }
 
-    return FirstField;
+    auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_ReadOnly};
+
+    const auto* Entries = ck_groundnav_world_fields::Get_Entries().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    if (Entries == nullptr)
+    { return {}; }
+
+    const auto* Entry = ck_groundnav_world_fields::TryGet_EntryFor(*Entries, InLocation);
+
+    if (Entry == nullptr)
+    { return {}; }
+
+    // Copied out under the lock, exactly as the pointer beside it is, so what the caller reads is a
+    // value nothing can change under it.
+    return Entry->_PublishNote;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
