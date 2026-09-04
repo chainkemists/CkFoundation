@@ -36,6 +36,11 @@ namespace ck::groundnav
         // view into whatever the submitter assembled would outlive its owner.
         TArray<FCk_GroundNav_MarkupRecord> _MarkupRecords;
 
+        // The authored links every publish of this field resolves. Held BY VALUE for the same reason the
+        // markup records are: the field keeps its params for as long as it is published, and a view into
+        // whatever the submitter assembled would outlive its owner.
+        TArray<FCk_GroundNav_LinkRecord> _Links;
+
         float _MaxClearanceUu = 200.0f;
 
     public:
@@ -161,12 +166,18 @@ namespace ck::groundnav
         // Derived at composition from the tiles' seam stubs, never carried across a rebuild.
         TArray<FCk_GroundNav_SeamPortal> _SeamPortals;
 
+        // One entry per authored record in _Params._Links, in that array's order, re-derived wholesale at
+        // every composition exactly like the seam portals. Kept in authored order rather than sorted by
+        // what resolved, so an index into it means the same link across two publishes of the same records.
+        TArray<FCk_GroundNav_ResolvedLink> _ResolvedLinks;
+
         // Per tile: the runs on that tile's rim that no seam portal crosses — a wall, a drop, or the
         // edge of ground nobody has baked yet. Re-derived with the seam portals, for the same reason.
         TArray<TArray<FCk_GroundNav_BoundarySegment>> _TileEdgeBoundary;
 
-        // Where each tile's plates begin in _ReachabilityLabels. Get_TileCount() + 1 entries, so the
-        // last one is the total and every tile's range is a subtraction away.
+        // Where each tile's plates begin in _ReachabilityLabels and in the flat plate index every
+        // resolved link speaks. Get_TileCount() + 1 entries, so the last one is the total and every
+        // tile's range is a subtraction away.
         TArray<int32> _TilePlateOffsets;
 
         // One component label per plate of the whole field. Valid only within this field: labels are
@@ -191,6 +202,13 @@ namespace ck::groundnav
         // sliced build's world-revision check exists to prevent, seen from the other end.
         int32 _UnmatchedSeamStubCount = 0;
 
+        // Resolved entries with at least one end that did not land on ground, counted over the last
+        // resolution. A DIAGNOSTIC, not a repairable state: the link simply contributes no crossing and
+        // no label, and its record stays on the volume that authored it either way. An end over ground
+        // nobody has baked is counted here too, because it is equally invisible to a path today - what
+        // its per-end status says is whether the next publish over that tile can change the answer.
+        int32 _UnresolvedLinkCount = 0;
+
         // Every Solid body whose mesh the closure check found open, once per body however many tiles it
         // touched. A DIAGNOSTIC the field carries so the viewer can show it: the bake ran and published
         // regardless, because one bad asset must not take the whole field down — but the ground under
@@ -212,6 +230,7 @@ namespace ck::groundnav
 
             Bytes += _Tiles.GetAllocatedSize();
             Bytes += _SeamPortals.GetAllocatedSize();
+            Bytes += _ResolvedLinks.GetAllocatedSize();
             Bytes += _TileEdgeBoundary.GetAllocatedSize();
 
             for (const auto& EdgeBoundary : _TileEdgeBoundary)
@@ -229,6 +248,8 @@ namespace ck::groundnav
         }
 
         auto Get_SeamPortalCount() const -> int32 { return _SeamPortals.Num(); }
+
+        auto Get_ResolvedLinkCount() const -> int32 { return _ResolvedLinks.Num(); }
 
         /** The rim boundary of one tile, or nothing for an index the field does not have. */
         auto Get_TileEdgeBoundary(int32 InTileIndex) const -> TConstArrayView<FCk_GroundNav_BoundarySegment>
@@ -284,6 +305,8 @@ namespace ck::groundnav
         auto Get_AggregatedTileEpochSum() const -> int64;
 
         auto Get_UnmatchedSeamStubCount() const -> int32 { return _UnmatchedSeamStubCount; }
+
+        auto Get_UnresolvedLinkCount() const -> int32 { return _UnresolvedLinkCount; }
     };
 
     using FCk_GroundNav_FieldPtr = TSharedPtr<const FCk_GroundNav_Field>;
@@ -372,6 +395,17 @@ namespace ck::groundnav
      */
     CKGROUNDNAV_API auto
     DoDerive_SeamPortals(
+        FCk_GroundNav_Field& InOutField) -> void;
+
+    /**
+     * The flat plate numbering: _TilePlateOffsets[t] is the first flat plate index of tile t, with one
+     * trailing entry holding the total, so a (tile, plate) pair maps to a flat index by one addition.
+     * Deterministic in the tile order alone, and re-derived by every pass that needs the numbering
+     * before it runs - the reachability labels and the link resolution both do - so neither depends
+     * on which of them ran first.
+     */
+    CKGROUNDNAV_API auto
+    DoDerive_PlateOffsets(
         FCk_GroundNav_Field& InOutField) -> void;
 
     /**

@@ -3,6 +3,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -251,6 +253,7 @@ namespace ck::groundnav
         }
 
         DoDerive_SeamPortals(Repaired);
+        DoResolve_Links(Repaired);
         DoLabel_Reachability(Repaired);
 
         DoReport_OpenBodies(Repaired._OpenBodies);

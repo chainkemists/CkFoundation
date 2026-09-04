@@ -84,7 +84,12 @@ namespace ck::groundnav
         // each with a tick showing which side of it is walkable. Runs on a TILE rim draw apart from
         // the rest, because those are walls only until the neighbour is baked and a viewer that read
         // them as permanent would call unbaked ground a wall.
-        Boundary
+        Boundary,
+
+        // The links a published field resolved, over the plates they join. An authored link is the
+        // one crossing in the field that no geometry accounts for, so it is the one thing no other
+        // view can be read to infer.
+        Links
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -195,6 +200,33 @@ namespace ck::groundnav
         UWorld*                                    InWorld,
         TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
         FCk_Time                                   InLifetime) -> void;
+
+    /**
+     * Every navigation link the world's published fields resolved, as values.
+     *
+     * GAME THREAD ONLY: resolving a volume handle and asking whether one link is live both read the
+     * ECS registry. Both answers are captured HERE so the snapshot that carries them stays drawable
+     * after the world is gone.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugLinksFromWorld(
+        UWorld* InWorld) -> TArray<FCk_GroundNav_DebugLink>;
+
+    /**
+     * Draw resolved links: green where the link is traversable, grey where the author disabled it,
+     * orange where an end stands over ground nobody has baked yet, red where an end found no ground
+     * at all. Every allowed direction carries its own arrowhead, every resolved end a tick on the
+     * surface it landed on, and the midpoint carries the link's id.
+     *
+     * A link that resolved to nothing is drawn rather than omitted, for the same reason a disabled
+     * markup is: nothing drawn is indistinguishable from nothing authored, and those are the two an
+     * investigation is trying to tell apart.
+     */
+    CKGROUNDNAV_API auto
+    DoDraw_DebugLinks(
+        UWorld*                                  InWorld,
+        TConstArrayView<FCk_GroundNav_DebugLink> InLinks,
+        FCk_Time                                 InLifetime) -> void;
 
     /**
      * Every ground-path corridor the world's agents hold, as values.

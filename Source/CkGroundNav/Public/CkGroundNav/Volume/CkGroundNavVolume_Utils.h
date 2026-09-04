@@ -114,6 +114,39 @@ public:
         const FCk_Request_GroundNavVolume_ReleaseAreaMarkup& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** Authors a navigation link between two world points, keyed on the link ENTITY: a second request
+     *  naming the same entity updates that record in place instead of adding another, so moving,
+     *  re-pricing or disabling a placed link is one call rather than a release and an add.
+     *
+     *  Completes Failed when the entity is invalid, when the two endpoints are not two distinct finite
+     *  points, when either lies outside the volume's bounds, when either cost multiplier is below 1.0,
+     *  when the clearance admits no agent, or when a carried area tag has no registered policy. An
+     *  UNSET area tag is admitted - a link's traversal stands on its own.
+     *
+     *  A link whose endpoints reach ground nobody has baked yet is NOT rejected: what a link resolves
+     *  to is the composition's answer, and the next publish re-resolves it. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Link",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_Link(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_Link& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    /** Drops the record a link entity owns, and the back-pointer that entity carries. Releasing a link
+     *  the volume does not hold completes Succeeded: the caller's intent already holds. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Release Link",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_ReleaseLink(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_ReleaseLink& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GroundNavVolume",
@@ -180,6 +213,30 @@ public:
               DisplayName="[Ck][GroundNavVolume] Get Walkable Cell Count")
     static int32
     Get_WalkableCellCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /** How many of the published field's links have an end that found no ground, or 0 while nothing is
+     *  published. A dropped link is a STATUS and never a warning: this is the number that says so. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Unresolved Link Count")
+    static int32
+    Get_UnresolvedLinkCount(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /**
+     * Every navigation link the volume holds, in admission order, or an empty array when it holds none.
+     *
+     * A COPY, unlike the view Get_LinkEntries hands the composition stages, and reflected rather than
+     * C++-only: the same link has to be authored and read back from C++, from Blueprint and from
+     * AngelScript, and neither of the latter two has a shape for a view. The list is short by
+     * construction - one entry per authored link - so the copy costs what the read is worth.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Link Records")
+    static TArray<FCk_GroundNav_LinkRecord>
+    Get_LinkRecords(
         const FCk_Handle_GroundNavVolume& InVolume);
 
 public:
@@ -274,6 +331,58 @@ public:
     Get_PendingDirtyBounds(
         const FCk_Handle_GroundNavVolume& InVolume) -> FBox;
 
+    /**
+     * Every navigation link the volume holds, in admission order, or an empty view when it holds none.
+     *
+     * C++ only, and a VIEW rather than a copy, for the same reason Get_MarkupRecords is one: the
+     * consumers are the composition stages, which are C++ by construction. The view is valid until the
+     * next link request drains. Get_LinkRecords above is the reflected read-back.
+     */
+    static auto
+    Get_LinkEntries(
+        const FCk_Handle_GroundNavVolume& InVolume) -> TConstArrayView<ck::FCk_GroundNav_LinkEntry>;
+
+    /** The link record carrying this id, or unset when the volume holds none. Ids are never reused, so
+     *  an unset answer means released and never means renumbered. */
+    static auto
+    TryGet_LinkRecord(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        int32 InRecordId) -> TOptional<FCk_GroundNav_LinkRecord>;
+
+    /**
+     * Whether an authored link is LIVE on the published ground.
+     *
+     * DERIVED AT THE READ, and nothing anywhere stores it - the same shape Get_IsMarkupLive has, and
+     * narrower in exactly one way that has no markup analogue: the link must have RESOLVED. A markup
+     * that reaches nothing is admitted and simply decides nothing, where a link that did not resolve
+     * is a link that is not there.
+     *
+     * Both of its endpoint tiles must be Built and must carry an epoch STRICTLY PAST the one the
+     * record was submitted against. Strictly past, not at or past, because _RequestedAtEpoch is
+     * stamped at admission with the epoch the field was ALREADY published at: an equal epoch is the
+     * very publish the record was submitted against, which by construction knew nothing about it.
+     *
+     * Stated over a field and a record, which is all it needs - and what lets it be verified without a
+     * world.
+     */
+    static auto
+    Get_IsLinkLiveOnField(
+        const ck::groundnav::FCk_GroundNav_Field& InField,
+        const FCk_GroundNav_LinkRecord&           InRecord) -> bool;
+
+    /**
+     * The same rule reached through the link ENTITY, which is the identity every request keys on.
+     *
+     * False for an entity carrying no back-pointer - the request has not drained onto a volume yet -
+     * for a record the named volume no longer holds, and for a volume with nothing published.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Is Link Live")
+    static bool
+    Get_IsLinkLive(
+        const FCk_Handle& InLinkEntity);
+
     /** Whether a repair state currently holds a source field and is being sliced. A volume with dirty
      *  ground pending but no repair opened yet reads false - that is what the pending bounds say. */
     static auto
@@ -282,9 +391,9 @@ public:
 
     /**
      * Nothing is in flight on this volume and nothing is pending: a field is published, no build and
-     * no repair is running or armed, no cost re-derive is owed, and none of the three request queues
-     * holds anything. The published field is therefore the one every query will answer from until
-     * something new is asked of the volume.
+     * no repair is running or armed, no cost re-derive and no link re-derive is owed, and none of the
+     * four request queues holds anything. The published field is therefore the one every query will
+     * answer from until something new is asked of the volume.
      *
      * This is the named condition a test settles on after a paint, a release, or a rebuild kick,
      * rather than a hop count that has to be re-guessed whenever a stage's internal staging changes.

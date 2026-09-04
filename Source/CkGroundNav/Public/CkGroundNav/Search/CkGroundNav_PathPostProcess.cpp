@@ -34,6 +34,30 @@ namespace ck::groundnav
 
         // ------------------------------------------------------------------------------------------------------------
 
+        /**
+         * The points an authored link put on the route, which the corner offset must leave alone.
+         *
+         * A link contributes one degenerate portal per endpoint, so either end of one names the
+         * point, and the two portals of one link together name its entry and its exit.
+         */
+        auto Get_LinkWaypoints(
+            const FCk_GroundNav_PathResult& InResult) -> TArray<FVector>
+        {
+            auto Pinned = TArray<FVector>{};
+
+            for (const auto& Portal : InResult._FunnelPortals)
+            {
+                if (Portal._LinkIndex == INDEX_NONE)
+                { continue; }
+
+                Pinned.Emplace(Portal._Left);
+            }
+
+            return Pinned;
+        }
+
+        // ------------------------------------------------------------------------------------------------------------
+
         auto Make_IsNavigableQuery(
             const FVector&                  InLocation,
             const FCk_GroundNav_QueryAgent& InAgent,
@@ -132,6 +156,7 @@ namespace ck::groundnav
     auto
         Get_CornerOffset(
             TConstArrayView<FVector>        InWaypoints,
+            TConstArrayView<FVector>        InPinnedWaypoints,
             const FCk_GroundNav_Field&      InField,
             float                           InOffsetUu,
             const FCk_GroundNav_QueryAgent& InAgent,
@@ -151,6 +176,12 @@ namespace ck::groundnav
         for (auto Index = 1; Index <= LastInteriorIndex; ++Index)
         {
             const auto Corner = InWaypoints[Index];
+
+            // Where a record put it rather than where a string bent, so it stays: both this point
+            // and the pinned one were copied from the same resolved endpoint, which is what makes
+            // an exact comparison the right one and an epsilon a way to move the wrong waypoint.
+            if (InPinnedWaypoints.Contains(Corner))
+            { continue; }
 
             const auto ToPrevious = (InWaypoints[Index - 1] - Corner).GetSafeNormal();
             const auto ToNext = (InWaypoints[Index + 1] - Corner).GetSafeNormal();
@@ -311,6 +342,8 @@ namespace ck::groundnav
             const FCk_GroundNav_PathPostParams& InParams)
         -> FCk_GroundNav_PathPlan
     {
+        using namespace pathpostprocess_private;
+
         auto Plan = FCk_GroundNav_PathPlan{};
         Plan._Status = InResult._Status;
         Plan._PlannedAgainstEpoch = InResult._PlannedAgainstEpoch;
@@ -329,8 +362,11 @@ namespace ck::groundnav
         auto Funnelled = TArray<FVector>{};
         Get_Funnelled(InResult, RadiusUu, Funnelled);
 
+        const auto Pinned = Get_LinkWaypoints(InResult);
+
         const auto Offset = Get_CornerOffset(
             Funnelled,
+            Pinned,
             InField,
             InParams._Cost._CornerOffsetK * RadiusUu,
             InParams._Agent,
