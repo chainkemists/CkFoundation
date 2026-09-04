@@ -87,6 +87,9 @@ namespace ck::groundnav
      * neither moves a label nor answers a pending record still moves nothing, so a reader diffing
      * epochs still learns exactly which ground has news.
      *
+     * THE DERIVED FIELD'S PARAMS CARRY THE RECORDS ITS PLATES WERE PRICED WITH, so a published field
+     * always accounts for its own cost labelling rather than for whatever the last BUILD baked with.
+     *
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto

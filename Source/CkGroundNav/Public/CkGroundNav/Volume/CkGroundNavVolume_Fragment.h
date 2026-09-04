@@ -8,6 +8,7 @@
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldBuild.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldRepair.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Fragment_Data.h"
 
 #include <variant>
@@ -25,22 +26,20 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_BuildInProgress);
     CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_Built);
 
-    /**
-     * The volume's WALKABILITY markup changed: a record was admitted, updated, enabled, disabled or
-     * released, and the ground it covers may now be standable where it was not or the reverse.
-     *
-     * Raised by the markup drain and CONSUMED by FProcessor_GroundNavVolume_MarkupWalkabilityRebuild,
-     * which asks for a whole-volume rebuild through the ordinary build request. Whole-volume because
-     * nothing in the build request or the field builder takes bounds; a scoped repair is a separate
-     * capability neither of them has yet.
-     */
-    CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_MarkupWalkabilityDirty);
+    /** A dirty region is pending on the volume and no repair has opened for it yet. */
+    CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_NeedsRepair);
+
+    /** A repair state holds a source field and is being sliced. */
+    CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_RepairInProgress);
 
     /**
-     * The volume's COST markup changed. Separate from the walkability tag because the two are
-     * answered by different stages: a cost change only re-derives what a leg is priced at and
-     * republishes, where a walkability change owes a re-bake. Folding them into one tag would make
-     * every retint of a cost volume pay for a bake.
+     * The volume's COST markup changed.
+     *
+     * A tag rather than a box, unlike the WALKABILITY side, because the two are answered by different
+     * stages: a cost change re-derives what a leg is priced at over every tile and republishes, where
+     * a walkability change owes an actual re-bake of the ground the record covers - and that ground is
+     * a REGION, so it accumulates onto _PendingDirtyBounds and raises FTag_GroundNavVolume_NeedsRepair
+     * instead. Folding the two together would make every retint of a cost volume pay for a bake.
      *
      * Raised by the markup drain and CONSUMED by FProcessor_GroundNavVolume_MarkupCostDerive.
      */
@@ -69,6 +68,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_GroundNavVolume_BuiltField);
 
         friend class FProcessor_GroundNavVolume_Build;
+        friend class FProcessor_GroundNavVolume_Repair;
         friend class FProcessor_GroundNavVolume_MarkupCostDerive;
         friend class ::UCk_Utils_GroundNavVolume_UE;
 
@@ -120,6 +120,63 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * A local repair in flight, plus the dirty ground waiting for one.
+     *
+     * _PendingDirtyBounds ACCUMULATES: several bodies may dirty the same volume in one frame, and one
+     * repair over their union costs less than one repair each. It is consumed - and reset - when a
+     * repair opens, so a box arriving mid-repair opens the NEXT one rather than corrupting this one.
+     *
+     * The backend is the concrete Jolt one for the same reason the build state's is: only it can say
+     * whether a physics world was reached at all, and a repair that skipped that check would read a
+     * world it never touched as a world with nothing in it.
+     *
+     * _PendingRequests carries the callers' completion delegates until a repair opens for them, and
+     * _InFlightRequests carries them across the whole multi-tick repair that did - for the same reason
+     * the build state carries one: the drain that accepted them cannot report an outcome that is ticks
+     * away. Lists rather than one request because dirty boxes coalesce, and their completion rides
+     * whichever finishes the ground they named - the repair they opened, the next one, or a build that
+     * supersedes them by rebaking everything.
+     *
+     * The two lists are SEPARATE so that a request arriving mid-repair parks against the NEXT repair
+     * rather than riding one that will never look at its ground. StartRepair moves one list into the
+     * other and resets the bounds in the same step, so a parked request and the box it named are never
+     * separated.
+     */
+    struct CKGROUNDNAV_API FFragment_GroundNavVolume_RepairState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNavVolume_RepairState);
+
+        friend class FProcessor_GroundNavVolume_HandleRequests;
+        friend class FProcessor_GroundNavVolume_HandleRepairRequests;
+        friend class FProcessor_GroundNavVolume_HandleMarkupRequests;
+        friend class FProcessor_GroundNavVolume_StartRepair;
+        friend class FProcessor_GroundNavVolume_Repair;
+        friend class FProcessor_GroundNavVolume_Build;
+        friend class FProcessor_GroundNavVolume_CancelPendingRepairRequests;
+        friend class ::UCk_Utils_GroundNavVolume_UE;
+
+    private:
+        groundnav::FCk_GroundNav_FieldRepairState _Repair;
+        TUniquePtr<groundnav::FCk_GroundNav_GeometryBackend_Jolt> _Backend;
+        FBox _PendingDirtyBounds = FBox{ForceInit};
+        TArray<FCk_Request_GroundNavVolume_Repair> _PendingRequests;
+        TArray<FCk_Request_GroundNavVolume_Repair> _InFlightRequests;
+
+        // Terminal repair failures in a row whose region was put back. The escape is BOUNDED at one
+        // retry: a region that fails twice running is failing for a reason the retry does not address,
+        // and re-raising it forever would open the same doomed repair every tick for the life of the
+        // volume. Cleared by any repair that publishes and by any build that supersedes.
+        int32 _StaleRetryCount = 0;
+
+    public:
+        CK_PROPERTY_GET(_Repair);
+        CK_PROPERTY_GET(_PendingDirtyBounds);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     struct CKGROUNDNAV_API FFragment_GroundNavVolume_Requests
     {
     public:
@@ -130,6 +187,27 @@ namespace ck
 
     public:
         using RequestType = std::variant<FCk_Request_GroundNavVolume_Build>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FFragment_GroundNavVolume_RepairRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNavVolume_RepairRequests);
+
+        friend class FProcessor_GroundNavVolume_HandleRepairRequests;
+        friend class ::UCk_Utils_GroundNavVolume_UE;
+
+    public:
+        using RequestType = std::variant<FCk_Request_GroundNavVolume_Repair>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -247,6 +325,7 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_Requests);
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_RepairRequests);
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_MarkupRequests);
 }
 
