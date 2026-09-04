@@ -37,6 +37,10 @@ namespace ck::groundnav
      * the same interval leaving the same plate is a duplicate. The endpoints compare EXACTLY because
      * both sides come from the same arithmetic over the same portal — a tolerance here would merge
      * two doors that a body can tell apart.
+     *
+     * The link index is part of the identity for the same reason: a link standing on a lattice
+     * portal's own interval is a different route between the same two plates, and without it the two
+     * would key as one node and the cheaper of them would never be expanded.
      */
     struct CKGROUNDNAV_API FCk_GroundNav_CrossingKey
     {
@@ -44,6 +48,7 @@ namespace ck::groundnav
         int32 _FromFlatPlate = INDEX_NONE;
         int32 _ToFlatPlate = INDEX_NONE;
         int32 _Direction = 0;
+        int32 _LinkIndex = INDEX_NONE;
 
         FVector _Left = FVector::ZeroVector;
         FVector _Right = FVector::ZeroVector;
@@ -116,14 +121,19 @@ namespace ck::groundnav
      * Everything one search discovers as it runs, held apart from the graph because the graph is
      * copied and this must not be.
      *
-     * Node ids index the two arrays from ONE: zero is the source node, which arrives through no
-     * crossing and stands on no interval, so it is in neither.
+     * Node ids index the three arrays from ONE: zero is the source node, which arrives through no
+     * crossing and stands on no interval, so it is in none of them.
      */
     struct CKGROUNDNAV_API FCk_GroundNav_PathNodePool
     {
     public:
         TArray<FCk_GroundNav_Crossing> _Crossings;
-        TArray<FVector> _TransitionPoints;
+
+        // Where a node's route enters it, and where it leaves. The two are the same point for every
+        // lattice crossing — a door is stood in, not walked along — and the link's two endpoints for
+        // a link crossing, which is the whole of what makes a link's own span priceable.
+        TArray<FVector> _ArrivalPoints;
+        TArray<FVector> _DeparturePoints;
 
         TMap<FCk_GroundNav_CrossingKey, FCk_GroundNav_PathNodeId> _NodeIds;
 
@@ -139,7 +149,7 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * The point on a crossing a leg is priced through: the midpoint of the interval the funnel is
+     * The point on a crossing a leg ARRIVES at and is priced through: the midpoint of the interval the funnel is
      * allowed to pass through.
      *
      * The agent radius does not appear: a symmetric inset moves the midpoint nowhere, and an
@@ -150,6 +160,31 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     Get_CrossingTransitionPoint(
         const FCk_GroundNav_Crossing& InCrossing) -> FVector;
+
+    /**
+     * Where the route LEAVES the crossing: the transition point again for a lattice crossing, and
+     * the link's far endpoint for a link crossing.
+     *
+     * The field is a parameter because only it holds the resolved link the crossing indexes — the
+     * crossing itself carries the end it was entered at and nothing about the end it comes out of.
+     */
+    CKGROUNDNAV_API auto
+    Get_CrossingDeparturePoint(
+        const FCk_GroundNav_Field&    InField,
+        const FCk_GroundNav_Crossing& InCrossing) -> FVector;
+
+    /**
+     * What traversing the link a crossing enters costs, and zero for a lattice crossing.
+     *
+     * The link's own straight-line span times the multiplier the direction it is entered from
+     * carries. That multiplier is never below one, so a link edge — like every leg Get_LegCost
+     * prices — still costs at least the Euclidean distance it covers, which is the property the
+     * Euclidean heuristic is admissible under at w = 1.
+     */
+    CKGROUNDNAV_API auto
+    Get_LinkTraversalCost(
+        const FCk_GroundNav_Field&    InField,
+        const FCk_GroundNav_Crossing& InCrossing) -> float;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -254,8 +289,12 @@ namespace ck::groundnav
         auto Get_Crossing(
             FCk_GroundNav_PathNodeId InNode) const -> const FCk_GroundNav_Crossing&;
 
-        /** Where a node is entered: the source point for the source node, the transition point else. */
-        auto Get_TransitionPoint(
+        /**
+         * Where a node is LEFT: the source point for the source node, the crossing's departure
+         * point else — which is where a route standing on this node continues from, and therefore
+         * what the leg onto the goal is measured and priced from.
+         */
+        auto Get_DeparturePoint(
             FCk_GroundNav_PathNodeId InNode) const -> FVector;
 
         /** What the search has read off the field so far, in the bake's own probe unit. */
@@ -273,7 +312,10 @@ namespace ck::groundnav
         auto DoGet_ArrivalPlate(
             FCk_GroundNav_PathNodeId InNode) const -> int32;
 
-        auto DoGet_Point(
+        auto DoGet_ArrivalPoint(
+            FCk_GroundNav_PathNodeId InNode) const -> FVector;
+
+        auto DoGet_DeparturePoint(
             FCk_GroundNav_PathNodeId InNode) const -> FVector;
 
         auto DoGet_HeuristicTo_Goal(

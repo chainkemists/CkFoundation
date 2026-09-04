@@ -537,7 +537,7 @@ namespace ck::groundnav
         // what the search had already paid to stand where it stopped, and the point it hands on is
         // where it stopped rather than the goal it could not reach.
         _Result._SearchCost = _Search.GetGScores().FindRef(InBestNode);
-        _Result._GoalPoint = _Graph.Get_TransitionPoint(InBestNode);
+        _Result._GoalPoint = _Graph.Get_DeparturePoint(InBestNode);
     }
 
     auto
@@ -559,9 +559,25 @@ namespace ck::groundnav
             auto Portal = FCk_GroundNav_FunnelPortal{};
             Portal._Left = Crossing._Left;
             Portal._Right = Crossing._Right;
+            Portal._LinkIndex = Crossing._LinkIndex;
 
             _Result._Crossings.Add(Crossing);
             _Result._FunnelPortals.Add(Portal);
+
+            // A link is entered at one point and left at another, so it takes TWO degenerate portals
+            // where a door takes one interval: the string then bends at both ends by construction and
+            // cannot cut across the span. The corridor still records ONE crossing for it - which door
+            // the route went through is not the same list as what the funnel has to bend around.
+            if (Crossing._LinkIndex != INDEX_NONE)
+            {
+                auto Exit = FCk_GroundNav_FunnelPortal{};
+                Exit._Left = _Graph.Get_DeparturePoint(InNodes[NodeIndex]);
+                Exit._Right = Exit._Left;
+                Exit._LinkIndex = Crossing._LinkIndex;
+
+                _Result._FunnelPortals.Add(Exit);
+            }
+
             _Result._PlateCorridor.Add(Crossing._ToFlatPlate);
         }
     }
@@ -576,7 +592,7 @@ namespace ck::groundnav
 
         return Get_LegCost(
             *_Shared,
-            _Graph.Get_TransitionPoint(InLastNode),
+            _Graph.Get_DeparturePoint(InLastNode),
             _Result._GoalPoint,
             Get_AreaMultiplier(*_Shared->_Field, *_Shared, _Shared->_GoalFlatPlate),
             NoClearanceFactor);
