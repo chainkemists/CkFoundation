@@ -28,8 +28,9 @@ private:
             ToolTip = "Hard cap on candidates evaluated by Request_RunQuery_Immediate. Larger generators are truncated with a Warning. Bound on synchronous main-thread work."))
     int32 _MaxCandidates_ImmediatePathHardCap = 1024;
 
-    // Only consulted when the querier has no FCk_Fragment_CrowdAgent_ParamsData (the agent's own
-    // radius wins). Feeds InAgentRadiusForFirstSkip in FCk_Nav_Algorithm::FindPathSync.
+    // EQS's only navigation integration is candidate-point projection, through the provider-neutral
+    // facade (UCk_Utils_NavSurface_UE::Try_ProjectPoint, see CkEqs_Algorithm.cpp). There is no
+    // path-cost test, so this radius currently has no consumer.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Eqs|PathCost",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0,
             ToolTip = "Fallback agent radius (cm) for PathCost queries on entities without a crowd agent component. 0 disables the first-waypoint skip."))
