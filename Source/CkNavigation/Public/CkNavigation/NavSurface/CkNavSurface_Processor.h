@@ -81,15 +81,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Turns the provider's revision counter into the neutral OnSurfaceRebuilt signal, and keeps the
-    // world's provider fragment's health reading current.
+    /**
+     * Delivers the neutral OnSurfaceRebuilt signal, and keeps the world's provider fragment's
+     * health reading current.
+     *
+     * Two sources feed it. A provider that knows WHERE it rebuilt pushes each region through
+     * Request_NotifySurfaceRebuilt and this drains the queue one broadcast per push, in order. A
+     * provider that only advances a revision counter — Recast — is polled, and gets one broadcast
+     * carrying an invalid box. The poll runs only on a tick that drained nothing, so a push is
+     * never re-reported as an anonymous revision move.
+     *
+     * The group is pinned because the delay between a publish and the reaction to it is a
+     * contract, not an accident: publishes land in FGroup_Transform (CkGroundNav's volume build
+     * and republish), and FGroup_Gameplay_TimeDelta opens the next frame ahead of FGroup_Gameplay,
+     * where CkCrowd's path refresh consumes the signal. One frame, every time, in that order.
+     */
     class CKNAVIGATION_API FProcessor_NavSurface_RevisionWatch : public ck_exp::TProcessor<
         FProcessor_NavSurface_RevisionWatch,
         FCk_Handle,
         ck::TReadWrite<FFragment_NavSurface_Provider>,
         ck::TReadWrite<FFragment_NavSurface_RevisionWatch>,
+        ck::TReadWrite<FFragment_NavSurface_PendingRebuilds>,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+
     public:
         using TProcessor::TProcessor;
 
@@ -100,7 +117,23 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurface_Provider& InProvider,
-            FFragment_NavSurface_RevisionWatch& InWatch) -> void;
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            FFragment_NavSurface_PendingRebuilds& InPending) -> void;
+
+        // Empties the pushed queue, one broadcast per region in publish order. True when it
+        // broadcast anything, which is what tells the caller to skip the revision poll.
+        static auto DoBroadcast_PendingRebuilds(
+            HandleType InHandle,
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            FFragment_NavSurface_PendingRebuilds& InPending,
+            int64 InRevision) -> bool;
+
+        // One broadcast with an invalid box when the provider's counter moved past the last one
+        // reported, and nothing otherwise.
+        static auto DoBroadcast_RevisionPoll(
+            HandleType InHandle,
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            int64 InRevision) -> void;
     };
 }
 

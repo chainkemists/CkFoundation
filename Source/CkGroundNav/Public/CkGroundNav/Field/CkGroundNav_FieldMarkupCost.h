@@ -28,6 +28,30 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * The union of the world bounds of every BUILT tile the given epoch stamped, and an invalid box
+     * when no tile carries it.
+     *
+     * This is what a publish reports as the ground its news is about. On a cost derive it is exactly
+     * the republished tiles — the ones whose plate labels moved, or that answered a record they had
+     * not yet observed — and on a full build it is every tile that built, because a bake stamps them
+     * all at once. A reader that kept an epoch therefore learns WHERE to look again without holding
+     * the previous field to diff against.
+     *
+     * A tile that did not build is excluded however it is stamped. A FAILED tile carries the epoch of
+     * the bake that could not produce it but no origin and no cell count, so the bounds reconstructed
+     * from it are a degenerate box at the world origin, and unioning one in would report changed
+     * ground the field never published.
+     *
+     * Pure: no world, no registry, no physics.
+     */
+    CKGROUNDNAV_API auto
+    Get_ChangedTileBounds(
+        const FCk_GroundNav_Field& InField,
+        const FCk_GroundNav_Epoch& InEpoch) -> FBox;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * A new field that differs from the one given only in what its plates COST.
      *
      * The published field is never touched. Its value is copied, the copy's plates are restamped, and
