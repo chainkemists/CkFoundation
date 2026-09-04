@@ -9,6 +9,10 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
+#include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
+
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "CkCrowd/CkCrowd_Stats.h"
@@ -32,6 +36,17 @@ namespace ck_crowd_agent_steering_processor
     // under the lateral offsets that produce the defect this gate exists for: a measured 4.6uu
     // offset beside a corner had a blocked chord, and waving that through is the bug.
     constexpr auto WaypointRetirementNavQueryEpsilonUu = 3.0;
+
+    // The plan decides a crossing's way in at the entry waypoint and carries it onto the exit, so it
+    // is only ever Forward or Backward; Bidirectional is the unstamped default and reads as Forward
+    // rather than inventing a third neutral value nothing downstream could act on.
+    auto Get_NeutralEntryDirection(
+        ECk_GroundNav_LinkDirection InDirection) -> ECk_NavSurface_LinkEntryDirection
+    {
+        return InDirection == ECk_GroundNav_LinkDirection::Backward
+            ? ECk_NavSurface_LinkEntryDirection::Backward
+            : ECk_NavSurface_LinkEntryDirection::Forward;
+    }
 }
 
 namespace ck
@@ -188,6 +203,22 @@ namespace ck
             InPathFollow._ProtectedLeadingWaypointCount = 0;
         }
 
+        // The spans describe the GROUND route that stamped them, and no other provider's install
+        // clears them, so they are read only while the episode in flight is the ground one. A crossing
+        // still recorded from an earlier ground route is ended rather than carried into a corridor
+        // that does not contain it.
+        const auto DoDriveLinks = [&](int32 InCursor) -> void
+        {
+            auto LinkHandle = InHandle.ConvertToHandle();
+
+            if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav)
+            { DoDriveLinkTraversalCursor(LinkHandle, InPathFollow, InCursor, Waypoints.Num()); }
+            else
+            { DoCancelActiveLinkTraversal(LinkHandle, InPathFollow); }
+        };
+
+        DoDriveLinks(InPathFollow.Get_WaypointIndex());
+
         // Defensive: a single frame's offset can cross the whole path tail. The arrival side
         // effects stay owned by the final-stop branch below.
         if (InPathFollow._WaypointIndex >= Waypoints.Num())
@@ -221,6 +252,10 @@ namespace ck
         {
             InPathFollow._WaypointIndex = Waypoints.Num();
             DoZeroDesiredVelocity();
+
+            // The cursor has just walked off the end of the route, which is what closes a crossing
+            // whose exit was the final waypoint — and what abandons one the route stopped on.
+            DoDriveLinks(InPathFollow.Get_WaypointIndex());
 
             auto NonConstHandle = InHandle;
             NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
@@ -312,6 +347,158 @@ namespace ck
         const auto Combined = Direction * NewSpeed + SeparationVec;
         InDesired._Velocity = Combined.GetClampedToMaxSize(MaxSpeed);
         InDesired._CloseGoalStrafeActive = IsCloseGoalStrafe;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_Steering::
+        DoStampLinkSpans(
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            const FCk_GroundNavPath_Result&  InResult)
+        -> void
+    {
+        InPathFollow._LinkSpans = ck::groundnav::Get_LinksOnPath(InResult);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_Steering::
+        Get_LinkTraversalCorrelator(
+            const FFragment_CrowdAgent_PathFollow& InPathFollow,
+            int32                                  InLinkId)
+        -> int32
+    {
+        // _PathSerial alone does not separate two routes: the ground install stamps it from
+        // FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial, which is the PROCESS-WIDE
+        // stationary-markup confirmation counter, so back-to-back routes with no disc confirmed
+        // between them carry the same value. The episode's navigation-request revision is the
+        // per-agent monotonic that does separate them, so both are combined and a crossing on the
+        // re-planned route can never be ended by the replaced route's Complete.
+        const auto Hash = HashCombine(
+            HashCombine(
+                GetTypeHash(InPathFollow.Get_PathSerial()),
+                GetTypeHash(InPathFollow.Get_ActiveNavigationRequestRevision())),
+            GetTypeHash(InLinkId));
+
+        // The sign bit is dropped rather than the value truncated: INDEX_NONE is the handshake's "no
+        // crossing", and a correlator that landed on it would read as none.
+        return static_cast<int32>(Hash & 0x7FFFFFFFu);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_Steering::
+        DoCancelActiveLinkTraversal(
+            FCk_Handle&                      InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> void
+    {
+        if (InPathFollow.Get_ActiveLinkCorrelator() == INDEX_NONE)
+        { return; }
+
+        UCk_Utils_NavSurface_LinkTraversal_UE::Request_CancelLinkTraversal(InHandle,
+            FCk_Request_NavSurface_CancelLinkTraversal{InPathFollow.Get_ActiveLinkCorrelator()}, {});
+
+        InPathFollow._ActiveLinkId = INDEX_NONE;
+        InPathFollow._ActiveLinkCorrelator = INDEX_NONE;
+
+        InHandle.Try_Remove<FTag_CrowdAgent_TraversingLink>();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_Steering::
+        DoDriveLinkTraversalCursor(
+            FCk_Handle&                      InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            int32                            InCursor,
+            int32                            InWaypointCount)
+        -> void
+    {
+        // Reconciled against where the cursor stands rather than edge-detected on the advance. The
+        // cursor is reset to 0 and skipped forward by more than one waypoint in several places
+        // (install normalisation, block detection, path refresh), so an edge test would miss an entry
+        // a jump stepped straight over and would never see one the route already stood on at install.
+        const FCk_GroundNavPath_LinkSpan* DesiredSpan = nullptr;
+
+        for (const auto& Span : InPathFollow.Get_LinkSpans())
+        {
+            if (Span.Get_EntryWaypointIndex() == INDEX_NONE ||
+                InCursor < Span.Get_EntryWaypointIndex())
+            { continue; }
+
+            // An OPEN span is a route that stopped ON the link: it is being crossed until the
+            // waypoints run out, and it never gets an exit to be past.
+            const auto CursorIsWithinTheSpan = Span.Get_ExitWaypointIndex() == INDEX_NONE
+                ? InCursor < InWaypointCount
+                : InCursor <= Span.Get_ExitWaypointIndex();
+
+            if (NOT CursorIsWithinTheSpan)
+            { continue; }
+
+            DesiredSpan = &Span;
+            break;
+        }
+
+        // Written out rather than left to the ternary: INDEX_NONE is an unnamed enumerator, and the
+        // deduced common type of the two arms would not be int32.
+        const auto DesiredCorrelator = DesiredSpan != nullptr
+            ? Get_LinkTraversalCorrelator(InPathFollow, DesiredSpan->Get_LinkId())
+            : static_cast<int32>(INDEX_NONE);
+
+        if (DesiredCorrelator == InPathFollow.Get_ActiveLinkCorrelator())
+        { return; }
+
+        if (InPathFollow.Get_ActiveLinkCorrelator() != INDEX_NONE)
+        {
+            const auto* ActiveSpan = InPathFollow.Get_LinkSpans().FindByPredicate(
+                [&](const FCk_GroundNavPath_LinkSpan& InSpan) -> bool
+                {
+                    return InSpan.Get_LinkId() == InPathFollow.Get_ActiveLinkId();
+                });
+
+            // Completed only where the cursor actually walked off the far end. Everything else — the
+            // route ran out on an unfinished span, the cursor rewound onto ground before the entry,
+            // the spans no longer name this link — is an ABANDONED crossing, and a listener deciding
+            // whether the body arrived is owed that difference.
+            const auto CrossingWasWalkedOff = ActiveSpan != nullptr &&
+                ActiveSpan->Get_ExitWaypointIndex() != INDEX_NONE &&
+                InCursor > ActiveSpan->Get_ExitWaypointIndex();
+
+            if (CrossingWasWalkedOff)
+            {
+                UCk_Utils_NavSurface_LinkTraversal_UE::Request_CompleteLinkTraversal(InHandle,
+                    FCk_Request_NavSurface_CompleteLinkTraversal{
+                        InPathFollow.Get_ActiveLinkCorrelator()}, {});
+
+                InPathFollow._ActiveLinkId = INDEX_NONE;
+                InPathFollow._ActiveLinkCorrelator = INDEX_NONE;
+
+                InHandle.Try_Remove<FTag_CrowdAgent_TraversingLink>();
+            }
+            else
+            {
+                DoCancelActiveLinkTraversal(InHandle, InPathFollow);
+            }
+        }
+
+        if (DesiredSpan == nullptr)
+        { return; }
+
+        UCk_Utils_NavSurface_LinkTraversal_UE::Request_BeginLinkTraversal(InHandle,
+            FCk_Request_NavSurface_BeginLinkTraversal{DesiredSpan->Get_LinkId(), DesiredCorrelator}
+                .Set_EntryDirection(ck_crowd_agent_steering_processor::Get_NeutralEntryDirection(
+                    DesiredSpan->Get_EntryDirection())),
+            {});
+
+        InPathFollow._ActiveLinkId = DesiredSpan->Get_LinkId();
+        InPathFollow._ActiveLinkCorrelator = DesiredCorrelator;
+
+        InHandle.AddOrGet<FTag_CrowdAgent_TraversingLink>();
     }
 }
 

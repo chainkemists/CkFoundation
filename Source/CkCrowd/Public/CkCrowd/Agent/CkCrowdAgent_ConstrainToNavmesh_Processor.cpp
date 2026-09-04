@@ -97,6 +97,18 @@ namespace ck
             return;
         }
 
+        // A body crossing an authored link is between the two points the link joins and on no walkable
+        // cell in between - a ladder, a drop, a jump - so the surface walk, whose contract is to stay ON
+        // the walkable set, would pin it to the entry. The steering aims it at the exit waypoint; the
+        // displacement is applied as steered, and the constraint resumes the frame the cursor walks off
+        // the exit and the crossing completes.
+        if (InHandle.Has<FTag_CrowdAgent_TraversingLink>())
+        {
+            EnqueueOffset(Displacement);
+            MarkOnMesh();
+            return;
+        }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
         {

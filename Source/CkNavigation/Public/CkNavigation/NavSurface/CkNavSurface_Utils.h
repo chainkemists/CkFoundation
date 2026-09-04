@@ -248,6 +248,115 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// The neutral link-traversal handshake: a body announces that it is crossing a link and announces when
+// it is done. Handle-scoped rather than world-scoped like the facade above, because the state belongs
+// to the TRAVERSER - crossing a link changes no geometry, so no provider is consulted and any entity
+// may traverse. The fragments compose on the first request.
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle"))
+class CKNAVIGATION_API UCk_Utils_NavSurface_LinkTraversal_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_NavSurface_LinkTraversal_UE);
+
+public:
+    /**
+     * Begins one crossing of the link the request names. One at a time: a Begin naming the correlator
+     * already running completes Succeeded and changes nothing, and a Begin naming a different one
+     * while a crossing is live completes Failed.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Request Begin Link Traversal",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle
+    Request_BeginLinkTraversal(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_BeginLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Ends the crossing the correlator names. A correlator that is not the active one completes Failed:
+    // the caller is driving a crossing that is not the one running.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Request Complete Link Traversal",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle
+    Request_CompleteLinkTraversal(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Abandons the crossing the correlator names, reporting OnLinkTraversalCompleted with
+    // Failed_Cancelled. A correlator that is not the active one is an idempotent no-op and Succeeds.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Request Cancel Link Traversal",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle
+    Request_CancelLinkTraversal(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_NavSurface_CancelLinkTraversal& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // An entity that has never crossed anything reads the same None state as one whose last crossing
+    // ended, so a caller never has to ask whether the feature is composed.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Link Traversal")
+    static FCk_NavSurface_LinkTraversal
+    Get_LinkTraversal(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Is Traversing Link")
+    static bool
+    Get_IsTraversingLink(
+        const FCk_Handle& InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Bind To OnLinkTraversalBegun")
+    static FCk_Handle
+    BindTo_OnLinkTraversalBegun(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalBegun& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Unbind From OnLinkTraversalBegun")
+    static FCk_Handle
+    UnbindFrom_OnLinkTraversalBegun(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalBegun& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Bind To OnLinkTraversalCompleted")
+    static FCk_Handle
+    BindTo_OnLinkTraversalCompleted(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalCompleted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Unbind From OnLinkTraversalCompleted")
+    static FCk_Handle
+    UnbindFrom_OnLinkTraversalCompleted(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_NavSurface_OnLinkTraversalCompleted& InDelegate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::nav_surface
 {
