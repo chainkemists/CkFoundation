@@ -129,7 +129,7 @@ public:
     CK_PROPERTY_GET(_CellSizeUu);
     CK_PROPERTY_GET(_CellHeightUu);
     CK_PROPERTY(_TileSizeUu);
-    CK_PROPERTY_GET(_MaxColumnsPerTile);
+    CK_PROPERTY(_MaxColumnsPerTile);
 
 public:
     auto Get_IsValid() const -> bool;

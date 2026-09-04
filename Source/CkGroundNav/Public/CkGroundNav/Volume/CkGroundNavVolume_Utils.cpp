@@ -6,6 +6,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_BuildStatus.h"
 
@@ -23,6 +24,29 @@ namespace ck_groundnav_volume_utils
     {
         return InVolume.Has<T_RequestsFragment>() &&
                NOT InVolume.Get<T_RequestsFragment>().Get_Requests().IsEmpty();
+    }
+
+    // The records a bake would take, enabled and disabled alike, exactly as the build's own snapshot
+    // takes them: which of them reach a tile is the bake's answer, and a caller filtering either list
+    // here would fingerprint a set no bake would ever run on.
+    auto Get_MarkupRecordsOf(
+        TConstArrayView<ck::FCk_GroundNav_MarkupEntry> InEntries) -> TArray<FCk_GroundNav_MarkupRecord>
+    {
+        return ck::algo::Transform<TArray<FCk_GroundNav_MarkupRecord>>(InEntries,
+            [](const ck::FCk_GroundNav_MarkupEntry& InEntry) -> FCk_GroundNav_MarkupRecord
+            {
+                return InEntry.Get_Record();
+            });
+    }
+
+    auto Get_LinkRecordsOf(
+        TConstArrayView<ck::FCk_GroundNav_LinkEntry> InEntries) -> TArray<FCk_GroundNav_LinkRecord>
+    {
+        return ck::algo::Transform<TArray<FCk_GroundNav_LinkRecord>>(InEntries,
+            [](const ck::FCk_GroundNav_LinkEntry& InEntry) -> FCk_GroundNav_LinkRecord
+            {
+                return InEntry.Get_Record();
+            });
     }
 }
 
@@ -409,6 +433,77 @@ auto
     { return 0; }
 
     return InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>().Get_Epoch()._Value;
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_BuildFingerprint(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> int64
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_BuiltField>())
+    { return 0; }
+
+    // Reinterpreted rather than converted: the whole 64 bits are the identity, and a saturating
+    // conversion would collapse two different bakes onto one number.
+    return static_cast<int64>(
+        InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>().Get_BakedInputFingerprint()._Value);
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
+    Get_IsBuildCurrent(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> bool
+{
+    if (NOT Get_IsBuilt(InVolume))
+    { return false; }
+
+    if (NOT InVolume.Has<ck::FFragment_GroundNavVolume_BuiltField>() ||
+        NOT InVolume.Has<ck::FFragment_GroundNavVolume_Params>())
+    { return false; }
+
+    const auto& BuiltField = InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>();
+    const auto& Params = InVolume.Get<ck::FFragment_GroundNavVolume_Params>();
+
+    // Reached the way a build reaches it, because a second route to the world is a second answer about
+    // it. No physics world means no revision to compare, and a question about ground nothing can re-read
+    // has no honest answer but false.
+    const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolume);
+    const auto Backend = ck::groundnav::FCk_GroundNav_GeometryBackend_Jolt{World};
+
+    if (NOT Backend.Get_IsValid())
+    { return false; }
+
+    // The revision is MONOTONIC, so a world that moved and moved back reads not-current. Conservative
+    // by choice: a rebuild that was not needed costs a bake, where a field trusted past a change it
+    // never saw answers queries about ground that is no longer there.
+    if (BuiltField.Get_BakedGeometryRevision() != Backend.Get_WorldRevision())
+    { return false; }
+
+    // The bake layer holds no volume concepts, so the variants cross that boundary as tag names beside
+    // their profiles rather than as the authored type they live in.
+    const auto Variants = ck::algo::Transform<TArray<TPair<FName, FCk_GroundNav_AgentProfile>>>(
+        Params.Get_ProfileVariants(),
+        [](const FCk_GroundNav_ProfileVariant& InVariant) -> TPair<FName, FCk_GroundNav_AgentProfile>
+        {
+            return TPair<FName, FCk_GroundNav_AgentProfile>{
+                InVariant.Get_ProfileTag().GetTagName(), InVariant.Get_Profile()};
+        });
+
+    // Every argument read exactly where a publish reads it: a second way of assembling them is a second
+    // answer to what the standing field was produced from.
+    const auto CurrentFingerprint = ck::groundnav::Get_InputFingerprint(
+        Params.Get_VolumeBounds(),
+        Params.Get_Config(),
+        Params.Get_Profile(),
+        ck_groundnav_volume_utils::Get_MarkupRecordsOf(Get_MarkupRecords(InVolume)),
+        ck_groundnav_volume_utils::Get_LinkRecordsOf(Get_LinkEntries(InVolume)),
+        Params.Get_MergeTunables(),
+        Params.Get_MaxClearanceUu(),
+        Variants);
+
+    return CurrentFingerprint == BuiltField.Get_BakedInputFingerprint();
 }
 
 auto

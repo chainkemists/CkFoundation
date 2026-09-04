@@ -130,6 +130,18 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = "1"))
     int32 _ProbeBudgetPerTick = 1500000;
 
+    /** The name a cooked field for this volume is written and looked up under, keyed with the level
+     *  package it was cooked from.
+     *
+     *  NONE MEANS RUNTIME-ONLY, and that is the default: no cooked field is ever written for such a
+     *  volume and none is ever looked up for it, which is the honest answer for every gym, test and
+     *  prototype volume rather than a key invented on their behalf. A volume that is meant to ship
+     *  cooked ground is given a name here, and two volumes in one level sharing one is refused where
+     *  the params are judged - a duplicate would have the two of them reading each other's tiles. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _CookKey;
+
 public:
     CK_PROPERTY_GET(_VolumeBounds);
     CK_PROPERTY_GET(_Config);
@@ -139,6 +151,7 @@ public:
     CK_PROPERTY(_MaxClearanceUu);
     CK_PROPERTY(_AutoBuildOnSetup);
     CK_PROPERTY(_ProbeBudgetPerTick);
+    CK_PROPERTY(_CookKey);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_GroundNavVolume_ParamsData, _VolumeBounds, _Config, _Profile);

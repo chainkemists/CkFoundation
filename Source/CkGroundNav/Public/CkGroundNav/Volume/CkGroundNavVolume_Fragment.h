@@ -6,6 +6,7 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
+#include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldBuild.h"
@@ -104,10 +105,31 @@ namespace ck
 
         groundnav::FCk_GroundNav_Epoch _Epoch;
 
+        // What the field standing here right now was PUBLISHED from: the fingerprint of the authored
+        // inputs it went out with, and the world revision the geometry was at when it did. Both zero
+        // until something publishes.
+        //
+        // EVERY PUBLISHER REFRESHES THEM - the build, the local repair and the cost and link derives -
+        // because each of them puts a field out and this has to name the field that is out. A derive
+        // that republished without restamping would leave the volume claiming a record list it had
+        // already re-labelled itself past, which is the drift these two exist to make impossible.
+        //
+        // The revision is carried FORWARD by the publishers that have no backend to read one from: a
+        // derive re-labels published ground and reads no geometry, so the revision its field was baked
+        // against is still the right answer for it.
+        //
+        // The UNTAGGED DEFAULT's, on a volume that holds variants: every variant shares every one of
+        // these inputs with it but the profile, and the variants themselves are one of the inputs, so
+        // one identity per volume is one identity per set.
+        groundnav::FCk_GroundNav_ContentFingerprint _BakedInputFingerprint;
+        uint64 _BakedGeometryRevision = 0;
+
     public:
         CK_PROPERTY_GET(_Field);
         CK_PROPERTY_GET(_VariantFields);
         CK_PROPERTY_GET(_Epoch);
+        CK_PROPERTY_GET(_BakedInputFingerprint);
+        CK_PROPERTY_GET(_BakedGeometryRevision);
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -144,6 +166,18 @@ namespace ck
         // writable, and a list edited mid-build would key a finished field under a tag it was never
         // baked for.
         TArray<FGameplayTag> _ProfileVariantTags;
+
+        // The bake identity this build opened under, carried until it publishes and hands both to the
+        // built field. Taken at the BEGIN, because that is what the finished field is a statement about:
+        // a record admitted while the build ran is not in what it baked. Held here rather than written
+        // straight onto the published field so a build that fails leaves the standing field still naming
+        // the inputs it was actually produced from.
+        //
+        // The geometry half is the backend's WORLD REVISION. A tiled build never holds the region's
+        // triangles at once - it collects one tile's halo per slice - so there is no batch to reduce, and
+        // the revision is already the token that means "the static world the bake reads changed".
+        groundnav::FCk_GroundNav_ContentFingerprint _BakedInputFingerprint;
+        uint64 _BakedGeometryRevision = 0;
 
     public:
         CK_PROPERTY_GET(_Build);
