@@ -37,6 +37,28 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
+     * What one link derive produced: the field, how the stage went, and WHICH links it moved.
+     *
+     * The ids are the AUTHORED ones - volume-scoped, monotone, never reused - and not indices into
+     * _ResolvedLinks, because an index is only good against the field it was taken from: one removal
+     * shifts every entry after it. An id survives that, which is what lets a reader holding one from an
+     * older field ask whether this publish moved the link it names.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_LinkDeriveResult
+    {
+    public:
+        FCk_GroundNav_FieldPtr _Field;
+
+        FCk_GroundNav_BakeStageResult _Result;
+
+        // Ascending, so two derives that moved the same links answer with the same array rather than
+        // with whatever order a set happened to hash them into.
+        TArray<int32> _ChangedLinkIds;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
      * A new field that differs from the one given only in what its links resolve to, and in whatever
      * its reachability labels say as a result.
      *
@@ -64,6 +86,11 @@ namespace ck::groundnav
      * THE DERIVED FIELD'S PARAMS CARRY THE RECORDS ITS ENTRIES WERE RESOLVED FROM, so a published
      * field always accounts for its own links rather than for whatever the last build baked with.
      *
+     * THE CHANGED IDS NAME EXACTLY THE SAME SET THE TILE STAMPS ABOVE ARE DERIVED FROM, so the two
+     * halves of one answer cannot drift apart. An id is reported even where its ends resolved to
+     * nothing and stamped no tile: a reader asking what this derive moved is asking about LINKS, and a
+     * link that changed over unbaked ground changed all the same.
+     *
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto
@@ -71,7 +98,7 @@ namespace ck::groundnav
         const FCk_GroundNav_Field&              InField,
         const TArray<FCk_GroundNav_LinkRecord>& InLinks,
         const FCk_GroundNav_Epoch&              InEpoch)
-        -> TPair<FCk_GroundNav_FieldPtr, FCk_GroundNav_BakeStageResult>;
+        -> FCk_GroundNav_LinkDeriveResult;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

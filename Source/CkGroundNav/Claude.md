@@ -246,6 +246,97 @@ disabled a link therefore waits on `Get_IsSettled`, never on liveness — and `G
 while `FTag_GroundNavVolume_LinksDirty` is up or the link request queue holds anything, so the provider
 table's `_IsSurfaceSettled` fold inherits both.
 
+**Runtime state is the DERIVE, and there is no second copy of it.** Switching a link on or off is a
+`Request_Link` naming the same link entity with `_Enable` flipped: it updates the record in place, raises
+`FTag_GroundNavVolume_LinksDirty`, and the derive republishes with the endpoint tiles' epoch bumped. There
+is deliberately no per-world overlay saying which links are on — two sources of truth for "is this link in
+effect" is the split-brain the module refuses for crossing keys and plate prices, and the labels the derive
+recomputes would go stale against it the moment they disagreed. The epoch bump the toggle causes is not
+incidental either: it is the channel every downstream reader — liveness, the path invalidator, a fixture
+waiting on `Get_IsSettled` — actually hears the toggle through.
+
+What runtime state adds around that mechanism is the API it was missing, and nothing else.
+`Request_ReleaseLink_ById` drops the record carrying an id wherever the entity that authored it has got
+to; `Request_ReleaseAllLinks` empties the volume without rewinding the id counter, so a field resolved
+against the emptied list can still be diffed against an older one. `Request_LinkBatch` authors many links
+under ONE admission and ONE completion, and it is ATOMIC: every entry is judged before any is applied, so
+a batch carrying one refusal leaves the volume exactly as it found it and completes `Failed` with no ids
+spent. The completion is the only thing the batch buys — the request drain takes the whole queue in a
+single pass and the derive tag is idempotent, so N single requests landing in one tick already cost
+exactly one derive. What the batch gives a caller is a moment at which "all of this holds", which two
+completions cannot say.
+
+**`Get_LinkResolution(volume, id)` is what one link RESOLVED to on the field currently published**, flat
+and reflected: both end statuses, both flat plates, resolved yes/no and live yes/no in one read.
+Every index in it — the plates above all — is valid only against that one publish, exactly like a
+reachability label, so it is a snapshot of one call and never something to hold. An id the published field
+carries no entry for reads as the default (no plates, `NoSurface` at both ends, neither resolved nor live),
+and so does every id while nothing is published at all: a resolution is a property of a publish, and there
+is no publish to have one against. The authored record is what survives a rebuild, and `TryGet_LinkRecord`
+is where that is read.
+
+**A route carries WHERE it crossed, as a parallel array.** `FCk_GroundNavPath_Result` gains
+`TArray<FCk_GroundNavPath_LinkWaypoint> _LinkWaypoints`, keyed by index into `_Waypoints` — `{waypoint
+index, link id, Entry|Exit, entry direction, distance from start}`. Parallel rather than a richer element
+type for `_Waypoints` itself, so a consumer that reads only the locations reads exactly the array it read
+before links existed and a route that crosses none carries no second array at all. The id is the STABLE
+authored one and never the field-local index into `_ResolvedLinks`, because an installed path outlives the
+field it was planned against and that array is re-derived wholesale on every publish. The two fields are
+stamped on the internal `FCk_GroundNav_PathWaypoint` where the pinned point is recognised — the same
+exact-equality rule `Get_CornerOffset` already uses — so they survive skip-first and the corner offset by
+riding per waypoint, and they are collapsed into the array at the flatten in `DoPublish_Success`.
+`_Waypoints` is byte-identical to what it was before any of this.
+
+Two free functions in `Path/CkGroundNavPath_Utils.h` read it, with `BlueprintPure` wrappers taking the
+path handle: `Get_LinksOnPath` answers the entry/exit pairs in walk order, and `TryGet_NextLinkBeyond`
+answers the first link stepped onto strictly BEYOND a distance already walked (an invalid id means none) —
+strictly, so a body standing exactly on an entry is told about the link AFTER the one it is already on.
+Both are pure over the result's own metadata: no field, no world, no registry, so a test asks them of a
+value it wrote by hand. An entry with no exit after it answers as an OPEN span rather than being dropped,
+which is what a partial route that stopped on a link produces. The distance both report is the carried
+`_DistanceFromStartUu` and never a second integration of the polyline — the post-process already answered
+that number, and integrating it again would be a second definition of it.
+
+**The veto rides the QUERY, never the field.** `FCk_Request_GroundNavPath_FindPath` carries
+`TSet<int32> _DeniedLinkIds`, `FGameplayTagContainer _DeniedLinkUserTypeTags` (matched with `HasTag`
+against the link's authored `_UserTypeTag`, so a parent tag denies every link under it and one tag says
+"this body cannot use ladders" without naming any id) and `TMap<int32, float> _LinkCostMultipliers`, which
+REPLACES the authored multiplier for that id on this query alone. A denied link is SKIPPED in `Neighbors`,
+where the crossing would have been admitted — no node is minted — so the answer routes around it or does
+not exist, and it is never merely dearer; a corridor that came back can never be holding one. The rewrite
+is applied at `Cost`'s single call site of `Get_LinkTraversalCost`. A multiplier below 1.0 is REFUSED at
+the request boundary with `Failed_NotEnqueued` rather than clamped: every edge must cost at least the
+distance it covers or the search's Euclidean heuristic stops being admissible, and clamping it somewhere
+the caller cannot see would hide that. None of this touches the field — what a link joins, and every
+reachability label that follows from it, is the same for every agent, which is exactly why the veto can be
+per-body at all. The neutral `FCk_Nav_QueryFilterOverlay` is deliberately NOT extended: it is tag-keyed,
+and an `int32` id has no place in it.
+
+**Invalidation is exact for a link-only publish and bounds everywhere else.** A published plan caches
+`_LastCorridorLinkIds` — the stable ids of the crossings it actually took, resolved against its own field —
+beside `_LastCorridorKeys`. The link derive publishes a GroundNav-side note on the world-field registry
+entry describing the RUN of link-only publishes since the last geometry publish:
+`{_Epoch, _LastGeometryEpoch, _ChangedLinkIdsSinceGeometry}`. A build or a repair resets the accumulation
+and stamps `_LastGeometryEpoch` with its own epoch; a link derive appends its changed ids to it.
+`FProcessor_GroundNavPath_InvalidateOnRebuilt` narrows ONLY when the note accounts for everything the
+corridor has missed — the note's epoch is the field's, and `_LastGeometryEpoch` is not newer than the
+corridor's own epoch — and then flags iff the corridor's cached ids intersect the accumulated ones.
+Anything else falls to the bounds floor the pass answered with before there were links at all. The run,
+rather than "the newest publish was link-only", is what makes it sound: a repair and a derive publishing
+in one tick leaves the repair's ground unaccounted for and correctly takes the floor, while two toggles
+landing before an agent replans stay exact. The consequence worth stating plainly is the one the pin
+rests on — an agent whose route crosses a link that was just disabled replans exactly once, and an agent
+whose route crosses nothing does not replan at all even when it is walking inside the very tile the link's
+end resolved into.
+
+Both directions of that follow from the ids, not from geometry, and the second one bites: an agent whose
+current route crosses NO link hears nothing when a link is re-enabled either. Its corridor names no id to
+intersect, so a shortcut appearing under it is not news the invalidator delivers. A consumer that wants an
+agent to reconsider when new ground opens up asks for the replan itself.
+
+Nothing here added a console command; `ck.GroundNav.LinksAt` and draw mode 7 already read the published
+field and answer every one of these states.
+
 ## Local repair
 
 A **repair** re-bakes only the tiles a dirty world box reaches and republishes the whole field, where a

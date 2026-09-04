@@ -4,6 +4,7 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_GroundNavInstall_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -120,6 +121,15 @@ namespace ck
                 // the new waypoint array.
                 InPathFollow._WaypointIndex = 0;
 
+                // Same reason, one layer up: a crossing in flight belonged to the polyline being
+                // replaced, and nothing on the new one bounds it. A swap mid-ladder abandons it.
+                auto LinkHandle = NonConstHandle.ConvertToHandle();
+                FProcessor_CrowdAgent_Steering::DoCancelActiveLinkTraversal(LinkHandle, InPathFollow);
+
+                // Stamped from the answer's own metadata, so a route no link put a waypoint on stamps
+                // an empty array — which is also what clears the previous route's spans.
+                FProcessor_CrowdAgent_Steering::DoStampLinkSpans(InPathFollow, Result);
+
                 // The route's leading waypoint has no predecessor, so the incoming direction for
                 // Steering's plane-crossing retirement comes from where the agent IS at install time.
                 InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
@@ -173,6 +183,10 @@ namespace ck
                 // that skipped this would leave a GroundNav failure silent to every consumer bound to
                 // the shared slot while a Recast failure is not.
                 auto BaseHandle = NonConstHandle.ConvertToHandle();
+
+                // The episode is over, so a crossing the dropped route was driving is over with it.
+                FProcessor_CrowdAgent_Steering::DoCancelActiveLinkTraversal(BaseHandle, InPathFollow);
+
                 UUtils_Signal_Nav_OnPathFailed::Broadcast(BaseHandle, MakePayload(BaseHandle));
 
                 ck::crowd::Display(
