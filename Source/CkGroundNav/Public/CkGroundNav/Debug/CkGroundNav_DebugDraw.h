@@ -95,22 +95,151 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Every input the debug bake takes.
+     * Everything that decides what a view SHOWS, apart from the capture it is showing.
      *
-     * Grouped rather than passed loose so that adding a tunable later does not re-order an argument
-     * list that console commands and callers both depend on positionally.
+     * Held together because it is what a retained draw is rebuilt on: a capture that did not move
+     * still has to be re-emitted when the mode changes, and a viewer comparing only the capture's key
+     * would miss that. The overlay flags are here for a second reason - they are what a capture is
+     * COLLECTED under, so flipping one has to force a fresh capture; the build itself reads only what
+     * the capture already carries and never the flags.
      */
-    struct CKGROUNDNAV_API FCk_GroundNav_DebugBakeParams
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugDrawSelection
+    {
+    public:
+        EDebugDrawMode _Mode = EDebugDrawMode::Plates;
+
+        bool _DrawMarkup = false;
+        bool _DrawLinks = false;
+        bool _DrawInvalidation = false;
+
+    public:
+        auto
+        Get_IsEqual(
+            const FCk_GroundNav_DebugDrawSelection& InOther) const -> bool;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Per-kind counts of what one build emitted.
+     *
+     * Counted rather than inferred because the whole claim a view makes is that it drew the capture:
+     * a plate the decomposition found and the outline standing for it are two numbers, and a viewer
+     * is only trustworthy while they are the same number.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugDrawTally
+    {
+    public:
+        // Always one, on EVERY status: a view that showed nothing for a failed bake would be
+        // indistinguishable from one pointed at empty space.
+        int32 _RegionBoxes = 0;
+
+        int32 _OpenBodyBoxes = 0;
+        int32 _OpenBodyEdgeSegments = 0;
+
+        int32 _PlateBoxes = 0;
+
+        int32 _PortalSegments = 0;
+        int32 _PortalMastSegments = 0;
+
+        int32 _TileBoxes = 0;
+        int32 _SeamSegments = 0;
+
+        int32 _BoundarySegments = 0;
+        int32 _BoundaryTickSegments = 0;
+
+        int32 _LinkSegments = 0;
+        int32 _LinkTickSegments = 0;
+
+        int32 _MarkupBoxes = 0;
+        int32 _MarkupDashSegments = 0;
+
+        int32 _CorridorBoxes = 0;
+        int32 _ChangedBoundsBoxes = 0;
+        int32 _RepairBoxes = 0;
+        int32 _RepairDashSegments = 0;
+
+        // What a query command's own overlay contributed: a corridor outline, a crossing, a leg of a
+        // route. Kept apart from the field's counts because the two are replaced on different news.
+        int32 _QuerySegments = 0;
+
+    public:
+        auto Get_Total() const -> int32;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** One world-space segment of a build, with the colour and weight it is drawn at. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugDrawLine
+    {
+    public:
+        FVector _Start = FVector::ZeroVector;
+        FVector _End = FVector::ZeroVector;
+
+        FColor _Color = FColor::White;
+
+        float _Thickness = 1.0f;
+    };
+
+    /** One axis-aligned world-space box of a build. Wireframe: PMG draws the edges, never a fill. */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugDrawBox
     {
     public:
         FVector _Centre = FVector::ZeroVector;
-        FVector _Extent = FVector{1500.0, 1500.0, 500.0};
+        FVector _Extent = FVector::ZeroVector;
 
-        FCk_GroundNav_BakeConfig _Config;
-        FCk_GroundNav_AgentProfile _Profile;
-        FCk_GroundNav_MergeTunables _MergeTunables;
+        FColor _Color = FColor::White;
 
-        int32 _MaxCells = 20000;
+        float _Thickness = 1.0f;
+    };
+
+    /**
+     * The line geometry of one view, built as a VALUE before anything is emitted.
+     *
+     * Building and publishing are separate so that what a mode draws can be asserted without a world,
+     * a physics backend or a renderer: a build is a pure function of the capture and the selection,
+     * and the tally beside it is what a test compares against the capture's own counts.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugDrawBuild
+    {
+    public:
+        TArray<FCk_GroundNav_DebugDrawLine> _Lines;
+        TArray<FCk_GroundNav_DebugDrawBox> _Boxes;
+
+        FCk_GroundNav_DebugDrawTally _Tally;
+
+    public:
+        auto
+        Add_Line(
+            const FVector& InStart,
+            const FVector& InEnd,
+            FColor         InColor,
+            float          InThickness) -> void;
+
+        auto
+        Add_Box(
+            const FVector& InCentre,
+            const FVector& InExtent,
+            FColor         InColor,
+            float          InThickness) -> void;
+
+        auto Get_ElementCount() const -> int32;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Which retained set a build replaces.
+     *
+     * Two, because the two are news about different things: the FIELD group stands until the capture
+     * or the selection moves, where a QUERY group is one command's answer and is replaced by the next
+     * command. Publishing them into one set would make each command erase the field it was asked
+     * about.
+     */
+    enum class EDebugDrawGroup : uint8
+    {
+        Field,
+        Query
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -118,11 +247,10 @@ namespace ck::groundnav
     /**
      * Bake the region around a point out of the LIVE physics world and return a standalone snapshot.
      *
-     * Every stage of the bake runs exactly as it does headless — this only supplies the geometry from
-     * Jolt instead of from a hand-authored box list, which is the whole point of the backend seam.
-     *
-     * A world with no physics backend yields BackendUnavailable and an empty region yields
-     * NoGeometryInRegion. Neither is silently an empty scene.
+     * A thin caller: it resolves the Jolt geometry backend for the world and hands it to
+     * Make_DebugSnapshotFromBackend, which is where every status is decided. A world with no physics
+     * backend answers BackendUnavailable through that same derivation rather than through a check of
+     * its own, so the live path and the stub-driven pins take one route and not two.
      *
      * Game thread only.
      */
@@ -162,19 +290,41 @@ namespace ck::groundnav
         FCk_GroundNav_FieldPtr&              OutField) -> FCk_GroundNav_DebugSnapshot;
 
     /**
-     * Draw a snapshot with the engine's persistent debug lines.
+     * The line geometry one selection draws out of one capture.
      *
-     * Takes the snapshot BY VALUE-SEMANTIC REFERENCE and reads nothing else — it never reaches back
-     * to whatever produced it, so a snapshot outliving its bake draws exactly as it was captured.
+     * Takes the snapshot BY VALUE-SEMANTIC REFERENCE and reads nothing else — no world, no registry,
+     * no backend — so a capture outliving its bake builds exactly as it was captured, and so what a
+     * mode emits can be counted without a renderer.
      *
-     * Open Solid bodies draw first, in red, in every mode and whatever the snapshot's status.
+     * The region box is emitted on EVERY status, and open Solid bodies in every mode and whatever the
+     * status: a view that showed nothing for a failed bake would read as one pointed at empty space,
+     * and the ground under an open body is untrustworthy however the developer is colouring it.
+     * A capture that is not drawable emits those two and nothing else.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugSnapshotDrawBuild(
+        const FCk_GroundNav_DebugSnapshot&      InSnapshot,
+        const FCk_GroundNav_DebugDrawSelection& InSelection) -> FCk_GroundNav_DebugDrawBuild;
+
+    /**
+     * Draw a snapshot: its line geometry into the world's retained FIELD set, and the handful of
+     * elements PMG's retained tier has no equivalent for immediately.
+     *
+     * The retained set is what makes a Test build draw at all — the engine's immediate helpers compile
+     * out where ENABLE_DRAW_DEBUG is off, and a debug view that silently drew nothing in the very
+     * configuration a packaged check runs would report a level as unbaked. The immediate remainder
+     * (the per-cell points, every text label, the spheres and arrowheads) is what a viewer LOSES in
+     * such a build, and it is deliberately the labelling rather than the geometry.
+     *
+     * An explicit console bake is a new capture by definition, so this rebuilds unconditionally;
+     * Do_UpdateRetainedDebugDraw is the gated form a per-frame caller uses.
      */
     CKGROUNDNAV_API auto
     DoDraw_DebugSnapshot(
-        UWorld*                            InWorld,
-        const FCk_GroundNav_DebugSnapshot& InSnapshot,
-        EDebugDrawMode                     InMode,
-        FCk_Time                           InLifetime) -> void;
+        UWorld*                                 InWorld,
+        const FCk_GroundNav_DebugSnapshot&      InSnapshot,
+        const FCk_GroundNav_DebugDrawSelection& InSelection,
+        FCk_Time                                InLifetime) -> void;
 
     /**
      * Every area markup the world's ground-nav volumes hold, as values.
@@ -305,6 +455,92 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     Get_DebugSnapshotSummary(
         const FCk_GroundNav_DebugSnapshot& InSnapshot) -> FString;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Replace one of the world's retained groups with a build, as one value.
+     *
+     * The previous sets are destroyed and new ones created, chunked, in the same idiom the crowd's
+     * retained breadcrumb uses: a set is a child entity of the world's transient entity, so it dies
+     * with the world whether or not anybody released it. Nothing is emitted while
+     * ck.GroundNav.Debug.RetainedDraw is 0 — that is the switch that puts the geometry away.
+     *
+     * Game thread only: it creates and destroys entities.
+     */
+    CKGROUNDNAV_API auto
+    Do_PublishRetainedDebugDraw(
+        UWorld*                             InWorld,
+        EDebugDrawGroup                     InGroup,
+        const FCk_GroundNav_DebugDrawBuild& InBuild) -> void;
+
+    /**
+     * Add a build to a group without disturbing what it already holds.
+     *
+     * A query command's answer is assembled from several sources - the route it found, the markup it
+     * was planned around, the links it could have used - and each is drawn by the same function that
+     * draws it for a field view. Appending is what lets those share one group instead of each erasing
+     * the last. The rebuild count is not moved: one command is one rebuild, however many pieces it
+     * publishes.
+     */
+    CKGROUNDNAV_API auto
+    Do_AppendRetainedDebugDraw(
+        UWorld*                             InWorld,
+        EDebugDrawGroup                     InGroup,
+        const FCk_GroundNav_DebugDrawBuild& InBuild) -> void;
+
+    /**
+     * Emit a capture into the world's retained FIELD set, and do NOTHING when neither the capture nor
+     * the selection has moved.
+     *
+     * This is the per-frame form. The gate is the capture's own cache key beside the selection, which
+     * is exactly what a rebuild would be a function of: a caller handing the same field the same way
+     * every frame pays for one rebuild and then nothing, and a caller whose field republished or whose
+     * mode changed pays for exactly one more.
+     */
+    CKGROUNDNAV_API auto
+    Do_UpdateRetainedDebugDraw(
+        UWorld*                                    InWorld,
+        const FCk_GroundNav_DebugSnapshot&         InSnapshot,
+        const FCk_GroundNav_DebugSnapshotCacheKey& InKey,
+        const FCk_GroundNav_DebugDrawSelection&    InSelection) -> void;
+
+    /** Destroy every retained set the world holds, in both groups, and forget the key they were built
+     *  under. What ck.GroundNav.Clear does, and what the world's own teardown does for itself. */
+    CKGROUNDNAV_API auto
+    Do_ReleaseRetainedDebugDraw(
+        UWorld* InWorld) -> void;
+
+    /**
+     * The same release, for every world at once.
+     *
+     * What ck.GroundNav.Debug.RetainedDraw does on the way to 0. A retained set stands until
+     * something takes it down, so the switch that says the views are off has to be the thing that
+     * puts them away - stopping at the next build would leave the last one standing.
+     *
+     * Game thread only: it destroys entities.
+     */
+    CKGROUNDNAV_API auto
+    Do_ReleaseAllRetainedDebugDraw() -> void;
+
+    /** How many times a group has been rebuilt for this world. The number a caller asserts against
+     *  when the claim is that a static field costs one rebuild and not one per frame. */
+    CKGROUNDNAV_API auto
+    Get_RetainedDebugDrawRebuildCount(
+        UWorld*         InWorld,
+        EDebugDrawGroup InGroup) -> int32;
+
+    /** What the group's last rebuild emitted, per kind. */
+    CKGROUNDNAV_API auto
+    Get_RetainedDebugDrawTally(
+        UWorld*         InWorld,
+        EDebugDrawGroup InGroup) -> FCk_GroundNav_DebugDrawTally;
+
+    /** How many PMG line sets the group is currently holding. Zero once released. */
+    CKGROUNDNAV_API auto
+    Get_RetainedDebugDrawSetCount(
+        UWorld*         InWorld,
+        EDebugDrawGroup InGroup) -> int32;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
