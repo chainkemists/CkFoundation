@@ -189,12 +189,12 @@ namespace ck::jolt::bake
         NoVerdict,
         Unchanged,
         Normalized,
-        AmbiguousNegative,
+        Malformed,
     };
 
-    /// Detailed outcome of NormalizeInsideOutClosedMeshComponents. Components whose topology cannot
-    /// prove a safe reversal remain unchanged; a strongly negative ratio on one of those components
-    /// is ambiguous and must reject the tri-mesh bake rather than silently shipping wrong-sided collision.
+    /// Detailed outcome of NormalizeInsideOutMeshComponents. A strongly negative connected
+    /// component is reversed even when open or non-manifold; malformed indices are never repaired and
+    /// reject the tri-mesh bake before any component is mutated.
     struct FCk_Jolt_WindingNormalizationResult
     {
         ECk_Jolt_WindingNormalizationStatus _Status = ECk_Jolt_WindingNormalizationStatus::NoVerdict;
@@ -205,18 +205,18 @@ namespace ck::jolt::bake
         int32 _NumNonManifoldComponents = 0;
         int32 _NumInconsistentComponents = 0;
         int32 _NumMalformedComponents = 0;
+        int32 _NumMalformedIndexComponents = 0;
         int32 _NumNoVerdictComponents = 0;
-        int32 _NumAmbiguousNegativeComponents = 0;
 
-        auto Get_HasAmbiguousNegative() const -> bool
-        { return _NumAmbiguousNegativeComponents > 0; }
+        auto Get_HasMalformedIndices() const -> bool
+        { return _NumMalformedIndexComponents > 0; }
     };
 
-    /// Reverses only closed, manifold, consistently oriented connected components with a strongly
-    /// negative signed-volume/AABB ratio. This is pure: it performs no asset or Jolt-shape work.
-    /// Open, non-manifold, inconsistent, malformed, and no-verdict components are intentionally left
-    /// unchanged and reported in the result.
-    CKJOLT_API auto NormalizeInsideOutClosedMeshComponents(
+    /// Reverses every geometrically valid connected component with a strongly negative
+    /// signed-volume/AABB ratio. This is pure: it performs no asset or Jolt-shape work. Open,
+    /// non-manifold, and inconsistent components are reported but may be repaired; malformed indices
+    /// are left unchanged and make the result fail closed.
+    CKJOLT_API auto NormalizeInsideOutMeshComponents(
         const JPH::VertexList& InVertices,
         JPH::IndexedTriangleList& InOutTriangles) -> FCk_Jolt_WindingNormalizationResult;
 
