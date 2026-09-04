@@ -58,6 +58,21 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FCk_GroundNav_DebugSnapshot::
+        Get_NewestTileEpoch() const
+        -> int64
+    {
+        auto Newest = int64{0};
+
+        for (const auto& Tile : _Tiles)
+        { Newest = FMath::Max(Newest, Tile._Epoch); }
+
+        return Newest;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Do_RecordRejectedCells(
             const FCk_GroundNav_SpanField& InBeforeFilter,
             const FCk_GroundNav_SpanField& InAfterFilter,
@@ -293,6 +308,7 @@ namespace ck::groundnav
                 FVector{Tile._Origin.X, Tile._Origin.Y, InField._Params._MinZUu},
                 FVector{Tile._Origin.X + SpanUu, Tile._Origin.Y + SpanUu, InField._Params._MaxZUu}};
 
+            DebugTile._Epoch = Tile._Epoch._Value;
             DebugTile._IsBuilt = Tile.Get_IsBuilt();
             DebugTile._PlateCount = Tile._Plates._Plates.Num();
             DebugTile._WalkableCellCount = Tile.Get_WalkableCellCount();

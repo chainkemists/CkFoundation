@@ -2,6 +2,8 @@
 
 #include "CkCore/Time/CkTime.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
@@ -9,6 +11,37 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
+
+#include "CkGroundNav_DebugDraw.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Logs the outcome of a repair the debug console asked for.
+ *
+ * It exists only because FCk_Delegate_Request_OnCompleted is a DYNAMIC delegate: it binds to a
+ * UFUNCTION on a UObject and to nothing else, and a console command has no object of its own. The
+ * reporter roots itself when it takes the binding and unroots inside the handler, which the
+ * request-completion contract guarantees runs exactly once — so it is alive for precisely as long as
+ * the repair it is reporting on, and no static outlives the UObject system holding it.
+ */
+UCLASS()
+class CKGROUNDNAV_API UCk_GroundNav_DebugRepairReporter_UE : public UObject
+{
+    GENERATED_BODY()
+
+public:
+    /** A completion delegate bound to a freshly rooted reporter. */
+    static auto
+    Make_CompletionDelegate() -> FCk_Delegate_Request_OnCompleted;
+
+private:
+    UFUNCTION()
+    void
+    DoOn_RepairCompleted(
+        FCk_Handle InVolume,
+        ECk_Request_OperationResult InResult);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -200,6 +233,35 @@ namespace ck::groundnav
         TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
         TConstArrayView<FBox>                        InChangedBounds,
         FCk_Time                                     InLifetime) -> void;
+
+    /**
+     * The local-repair state of the world's ground-nav volumes, written onto the snapshot as values.
+     *
+     * GAME THREAD ONLY: it resolves volume handles out of the world field registry. The repair's
+     * tiles are placed here too, because the indices a repair carries address the volume's own
+     * lattice and a snapshot's tiles come from a separate debug bake.
+     *
+     * ONE volume's open repair is reported, and the first pending dirty box found — which need not be
+     * the same volume. Two volumes repairing at once are two separate pieces of news, and a union of
+     * their boxes would name ground neither of them touched.
+     */
+    CKGROUNDNAV_API auto
+    Do_StampRepairFromWorld(
+        UWorld*                      InWorld,
+        FCk_GroundNav_DebugSnapshot& InOutSnapshot) -> void;
+
+    /**
+     * Outline the dirty ground waiting on a repair (dashed) and the box an open repair is fixing,
+     * and highlight the tiles that repair is re-baking.
+     *
+     * Both boxes take the short changed-bounds lifetime, and the tile highlight takes
+     * ck.GroundNav.Debug.RepairHighlightSeconds, for the same reason a changed-bounds box does: a
+     * repair is news about one publish and stops being true the moment the next slice lands.
+     */
+    CKGROUNDNAV_API auto
+    DoDraw_DebugRepair(
+        UWorld*                            InWorld,
+        const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void;
 
     /**
      * Human summary of what a snapshot contains. Safe on every status.

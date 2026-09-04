@@ -111,6 +111,8 @@ namespace ck::groundnav
         auto Result = FCk_GroundNav_BakeStageResult{};
         auto Derived = MakeShared<FCk_GroundNav_Field>(InField);
 
+        Derived->_Params._MarkupRecords = InMarkups;
+
         auto ChangedAnyTile = false;
 
         for (auto TileIndex = 0; TileIndex < Derived->_Tiles.Num(); ++TileIndex)
