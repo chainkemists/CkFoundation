@@ -130,8 +130,10 @@ ground a record moved off is decided by the new record only where the two overla
 behind is ground nothing else will ever revisit. A RELEASE marks the released record's bounds for the
 same reason painting them marked them. A walkability change on a volume with **nothing published** marks
 no region and waits — there is no field for a repair to carry its untouched tiles over from, and the
-record is already on the volume, so the first build bakes it in. That is the same wait the cost derive
-makes, and it is why a paint before the first bake is never lost.
+record is already on the volume, so a build that STARTS after it bakes it in. That is the same wait the
+cost derive makes, and it is why a paint before the first bake is never lost. A build already RUNNING is
+the exception: it snapshotted its records when it started, so a record landing mid-build marks its
+region and is repaired the moment that build publishes.
 
 **Cost — `FProcessor_GroundNavVolume_MarkupCostDerive`.** Copies the published field,
 restamps EVERY built tile's plates from the whole record list (`Get_FieldWithMarkupCost`), and swaps
@@ -203,8 +205,9 @@ waiting on it, and its outcome is read the way every markup outcome is — throu
 
 | Event | What happens to the repair |
 |---|---|
-| A build COMPLETES | every parked and in-flight repair request completes `Succeeded`, the pending box is cleared and `NeedsRepair` removed — the build re-baked that ground and answered it better |
-| A build is ARMED (the drain, restart or not) while a repair is slicing | the open repair is cancelled and its in-flight requests complete `Failed_Cancelled`; parked requests stay parked and ride the build |
+| A build STARTS | every parked repair request and the pending box are taken over by it — the build re-bakes that ground from live geometry under the records it snapshots, so they complete `Succeeded` when it publishes. A region or request raised AFTER the start is outside that snapshot: it stays pending across the publish and opens its repair against the field the build produced |
+| A build is ARMED (the drain, restart or not) while a repair is slicing | the open repair is cancelled and its in-flight requests complete `Failed_Cancelled`; parked requests stay parked until the build starts and takes them over |
+| A build FAILS | the requests that rode it complete `Failed` — a build is what bakes that ground, and their callers are told rather than left waiting on a publish that is not coming |
 | A repair completes but the field it opened against is no longer the published one | the repaired field is DISCARDED — publishing it would silently undo the other publish everywhere the repair did not look — the in-flight requests complete `Failed`, and the region is raised again |
 | The slice fails (`StaleGeometry`, backend gone) | in-flight requests complete `Failed` and the region is raised again, ONCE. A second failure running drops the region with an ensure: fail-closed with a bounded escape, because a region re-raised forever opens the same doomed repair every tick |
 | The volume ends play | the queue, the parked list and the in-flight list all complete `Failed_Cancelled` |
