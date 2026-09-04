@@ -448,7 +448,7 @@ namespace ck_jolt_bake_extraction
         return (SignedVolumeSum / 6.0) / BoundsVolume;
     }
 
-    static auto Get_IsTriangleValid(
+    static auto Get_AreTriangleIndicesValid(
         const JPH::VertexList& InVertices,
         const JPH::IndexedTriangle& InTriangle) -> bool
     {
@@ -458,6 +458,15 @@ namespace ck_jolt_bake_extraction
         if (Indices[0] >= NumVertices || Indices[1] >= NumVertices || Indices[2] >= NumVertices
             || Indices[0] == Indices[1] || Indices[1] == Indices[2] || Indices[2] == Indices[0])
         { return false; }
+
+        return true;
+    }
+
+    static auto Get_IsTriangleGeometricallyValid(
+        const JPH::VertexList& InVertices,
+        const JPH::IndexedTriangle& InTriangle) -> bool
+    {
+        const auto& Indices = InTriangle.mIdx;
 
         const auto ToVector = [&](uint32 InVertexIndex) -> FVector
         {
@@ -526,6 +535,7 @@ namespace ck_jolt_bake_extraction
         // final orientation outward. The pre-baked ScaledShape path never needs this (Jolt's
         // ScaleHelpers handles inside-out scale internally).
         const bool ScaleIsInsideOut = (InScale.X * InScale.Y * InScale.Z) < 0.0;
+        auto HasInvalidTriangleIndices = false;
         const auto PushTriangle = [&](uint32 InA, uint32 InB, uint32 InC) -> void
         {
             if (InA < static_cast<uint32>(NumVerts) && InB < static_cast<uint32>(NumVerts) && InC < static_cast<uint32>(NumVerts))
@@ -535,6 +545,8 @@ namespace ck_jolt_bake_extraction
                 else
                 { Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
             }
+            else
+            { HasInvalidTriangleIndices = true; }
         };
 
         if (Elements.RequiresLargeIndices())
@@ -548,13 +560,21 @@ namespace ck_jolt_bake_extraction
             { PushTriangle(Triangle[0], Triangle[1], Triangle[2]); }
         }
 
-        // Repair only closed, manifold, consistently oriented components whose signed volume proves they
-        // are wholly inside-out. Open and ambiguous topology remains untouched: reversing it would invent
-        // collision semantics, so the final validation below refuses to bake a strongly negative verdict.
-        const auto Normalization = NormalizeInsideOutClosedMeshComponents(Vertices, Triangles);
+        CK_ENSURE_IF_NOT(NOT HasInvalidTriangleIndices,
+            TEXT("Cooked tri-mesh for [{}] contains an out-of-range vertex index — refusing to bake collision."),
+            InDebugName)
+        { }
+
+        if (HasInvalidTriangleIndices)
+        { return {}; }
+
+        // A strongly negative volume verdict is sufficient to reverse a geometrically valid connected
+        // component, including open or non-manifold topology. Bad indices remain fail-closed because a
+        // component walk or index swap cannot safely proceed from them.
+        const auto Normalization = NormalizeInsideOutMeshComponents(Vertices, Triangles);
         if (Normalization._NumRepairedComponents > 0)
         {
-            ck::jolt::Warning(TEXT("Tri-mesh source [{}] had {} closed inside-out component(s) normalized "
+            ck::jolt::Warning(TEXT("Tri-mesh source [{}] had {} inside-out component(s) normalized "
                 "during the Jolt bake ({} healthy, {} no-verdict, {} open, {} non-manifold, {} inconsistent, "
                 "{} malformed)."),
                 InDebugName, Normalization._NumRepairedComponents, Normalization._NumHealthyComponents,
@@ -566,14 +586,14 @@ namespace ck_jolt_bake_extraction
         constexpr auto InsideOutWindingRatioThreshold = -0.05;
         const auto WindingRatio = ComputeMeshWindingRatio(Vertices, Triangles);
         const auto IsStillInsideOut = WindingRatio < InsideOutWindingRatioThreshold;
-        const auto HasAmbiguousNegative = Normalization.Get_HasAmbiguousNegative();
-        const auto WindingIsSafe = NOT IsStillInsideOut && NOT HasAmbiguousNegative;
+        const auto HasMalformedIndices = Normalization.Get_HasMalformedIndices();
+        const auto WindingIsSafe = NOT IsStillInsideOut && NOT HasMalformedIndices;
 
         CK_ENSURE_IF_NOT(WindingIsSafe,
             TEXT("Tri-mesh for [{}] cannot safely normalize its winding (signed-volume/bounds ratio [{}], "
-                 "{} ambiguous negative component(s)): refusing to bake single-sided collision. Correct the "
-                 "source topology or triangle winding."),
-            InDebugName, WindingRatio, Normalization._NumAmbiguousNegativeComponents)
+                 "{} malformed-index component(s)): refusing to bake single-sided collision. Correct the "
+                 "source indices or triangle winding."),
+            InDebugName, WindingRatio, Normalization._NumMalformedIndexComponents)
         { }
 
         if (NOT WindingIsSafe)
@@ -777,7 +797,7 @@ namespace ck::jolt::bake
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        NormalizeInsideOutClosedMeshComponents(
+        NormalizeInsideOutMeshComponents(
             const JPH::VertexList& InVertices,
             JPH::IndexedTriangleList& InOutTriangles)
         -> FCk_Jolt_WindingNormalizationResult
@@ -789,6 +809,27 @@ namespace ck::jolt::bake
         if (InVertices.empty() || InOutTriangles.empty())
         { return Result; }
 
+        // Index validity is the one precondition that cannot be recovered locally: any attempt to
+        // discover components or swap indices after it fails could address arbitrary memory. Reject
+        // the whole normalization atomically before touching a triangle.
+        auto HasMalformedIndices = false;
+        for (const auto& Triangle : InOutTriangles)
+        {
+            if (NOT Get_AreTriangleIndicesValid(InVertices, Triangle))
+            {
+                HasMalformedIndices = true;
+                ++Result._NumComponents;
+                ++Result._NumMalformedComponents;
+                ++Result._NumMalformedIndexComponents;
+            }
+        }
+
+        if (HasMalformedIndices)
+        {
+            Result._Status = ECk_Jolt_WindingNormalizationStatus::Malformed;
+            return Result;
+        }
+
         auto EdgeUsesByKey = TMap<uint64, TArray<FTriangleEdgeUse>>{};
         auto ValidTriangles = TArray<bool>{};
         ValidTriangles.Init(false, static_cast<int32>(InOutTriangles.size()));
@@ -796,7 +837,7 @@ namespace ck::jolt::bake
         for (auto TriangleIndex = 0; TriangleIndex < static_cast<int32>(InOutTriangles.size()); ++TriangleIndex)
         {
             const auto& Triangle = InOutTriangles[TriangleIndex];
-            if (NOT Get_IsTriangleValid(InVertices, Triangle))
+            if (NOT Get_IsTriangleGeometricallyValid(InVertices, Triangle))
             {
                 ++Result._NumComponents;
                 ++Result._NumMalformedComponents;
@@ -893,17 +934,7 @@ namespace ck::jolt::bake
 
             const auto WindingRatio = Get_ComponentWindingRatio(
                 InVertices, InOutTriangles, ComponentTriangleIndices);
-            const auto IsStronglyNegative = WindingRatio < InsideOutWindingRatioThreshold;
-            const auto IsSafelyReversible = IsClosed && IsManifold && IsConsistentlyOriented;
-
-            if (NOT IsSafelyReversible)
-            {
-                if (IsStronglyNegative)
-                { ++Result._NumAmbiguousNegativeComponents; }
-                continue;
-            }
-
-            if (IsStronglyNegative)
+            if (WindingRatio < InsideOutWindingRatioThreshold)
             {
                 for (const auto TriangleIndex : ComponentTriangleIndices)
                 { Swap(InOutTriangles[TriangleIndex].mIdx[1], InOutTriangles[TriangleIndex].mIdx[2]); }
@@ -915,9 +946,7 @@ namespace ck::jolt::bake
             { ++Result._NumNoVerdictComponents; }
         }
 
-        if (Result.Get_HasAmbiguousNegative())
-        { Result._Status = ECk_Jolt_WindingNormalizationStatus::AmbiguousNegative; }
-        else if (Result._NumRepairedComponents > 0)
+        if (Result._NumRepairedComponents > 0)
         { Result._Status = ECk_Jolt_WindingNormalizationStatus::Normalized; }
         else if (Result._NumHealthyComponents > 0)
         { Result._Status = ECk_Jolt_WindingNormalizationStatus::Unchanged; }
