@@ -39,6 +39,44 @@ namespace ck::ensure
             Get_OutsidePieDialogSuppressionFile(), MAX_int32);
     }
 
+    auto Get_IsEnsurePlumbingFunction(
+        const FString& InNamespace,
+        const FString& InFunctionName)
+        -> bool
+    {
+        // The ck::Ensure family in CkUtils_Common.as raises the ensure on its caller's behalf, so the
+        // innermost script frame is the wrapper rather than the site that raised it. Listed rather than
+        // prefix-matched, so a gameplay helper named EnsureStoreIsOpen keeps its own attribution.
+        //
+        // Both comparisons are CASE-SENSITIVE, and the namespace is checked, because the two failure
+        // directions are not symmetric. Missing a wrapper degrades to naming it - the behaviour that
+        // predates this list. Matching something that is NOT a wrapper skips a real frame and reports
+        // the one above it, which is worse than the bug this fixes. FString's operator== is
+        // case-INsensitive while AngelScript identifiers are case-sensitive, so a global named `ensure`
+        // would otherwise be silently swallowed.
+        constexpr auto CaseSensitive = ESearchCase::CaseSensitive;
+
+        if (NOT InNamespace.Equals(TEXT("ck"), CaseSensitive))
+        { return false; }
+
+        return InFunctionName.Equals(TEXT("Ensure"), CaseSensitive)
+            || InFunctionName.Equals(TEXT("EnsureIfNot"), CaseSensitive)
+            // Reaches EnsureMsgf only through ck::Ensure above, so it cannot currently appear as a
+            // frame here. Listed so a future direct call does not silently regress attribution.
+            || InFunctionName.Equals(TEXT("EnsureIfNot_PrematureAssetLoad"), CaseSensitive)
+            || InFunctionName.Equals(TEXT("TriggerEnsure"), CaseSensitive);
+    }
+
+#if WITH_DEV_AUTOMATION_TESTS
+    auto Get_IsEnsurePlumbingFunction_ForTesting(
+        const FString& InNamespace,
+        const FString& InFunctionName)
+        -> bool
+    {
+        return Get_IsEnsurePlumbingFunction(InNamespace, InFunctionName);
+    }
+#endif
+
     auto Request_GetCurrentScriptSiteIdentity() -> FString
     {
     #if WITH_ANGELSCRIPT_CK
@@ -46,7 +84,34 @@ namespace ck::ensure
         {
             if (auto* Context = FAngelscriptManager::GetCurrentScriptContext(); Context != nullptr)
             {
-                if (auto* Function = Context->GetFunction(0); Function != nullptr)
+                // Attributing frame 0 unconditionally named CkUtils_Common.as for every script ensure in
+                // the project. Worse than useless: the signature is deduped on this string, so unrelated
+                // failures collapsed into one entry and hid each other.
+                const auto CallstackSize = static_cast<int32>(Context->GetCallstackSize());
+                auto ReportedFrame = 0;
+
+                for (auto FrameIndex = 0; FrameIndex < CallstackSize; ++FrameIndex)
+                {
+                    auto* Frame = Context->GetFunction(FrameIndex);
+                    if (Frame == nullptr)
+                    { continue; }
+
+                    const auto FrameNamespace = Frame->GetNamespace() != nullptr
+                        ? FString{StringCast<TCHAR>(Frame->GetNamespace()).Get()}
+                        : FString{};
+
+                    const auto FrameIsPlumbing = Frame->GetObjectType() == nullptr
+                        && Get_IsEnsurePlumbingFunction(FrameNamespace,
+                            FString{StringCast<TCHAR>(Frame->GetName()).Get()});
+
+                    if (FrameIsPlumbing)
+                    { continue; }
+
+                    ReportedFrame = FrameIndex;
+                    break;
+                }
+
+                if (auto* Function = Context->GetFunction(ReportedFrame); Function != nullptr)
                 {
                     const auto FunctionName = FString{StringCast<TCHAR>(Function->GetName()).Get()};
                     const auto ObjectTypeName = Function->GetObjectType() != nullptr
@@ -55,7 +120,7 @@ namespace ck::ensure
 
                     auto Column = 0;
                     const char* Section = nullptr;
-                    const auto Line = Context->GetLineNumber(0, &Column, &Section);
+                    const auto Line = Context->GetLineNumber(ReportedFrame, &Column, &Section);
                     const auto SectionName = Section != nullptr
                         ? FString{StringCast<TCHAR>(Section).Get()}
                         : FString{TEXT("UnknownSection")};
@@ -68,6 +133,21 @@ namespace ck::ensure
                         Line,
                         Column);
                 }
+            }
+
+            // A StaticJIT-compiled function is entered as native C++ and pushes no AngelScript context,
+            // so the walk above finds nothing and every script-raised ensure reported Script::Unknown --
+            // on the one configuration whose functional parity is least proven. The transpiler does keep
+            // a frame stack (AS_JIT_DEBUG_CALLSTACKS, live in every non-Shipping config) and this
+            // exported accessor reads it, falling back to the context itself.
+            //
+            // It reports the INNERMOST frame, which under the JIT is the ck::Ensure wrapper rather than
+            // its caller, so this recovers a real file and line but not the frame-skipping above. The
+            // engine exposes no skip-count form; doing better needs an engine-side accessor.
+            if (const auto& ExecutionPosition = FAngelscriptManager::GetAngelscriptExecutionPosition();
+                NOT ExecutionPosition.IsEmpty())
+            {
+                return ck::Format_UE(TEXT("AS:{}"), ExecutionPosition);
             }
         }
     #endif
