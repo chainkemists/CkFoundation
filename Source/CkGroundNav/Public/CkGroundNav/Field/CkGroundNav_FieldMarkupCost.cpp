@@ -79,6 +79,27 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_ChangedTileBounds(
+            const FCk_GroundNav_Field& InField,
+            const FCk_GroundNav_Epoch& InEpoch)
+        -> FBox
+    {
+        auto Bounds = FBox{ForceInit};
+
+        for (const auto& Tile : InField._Tiles)
+        {
+            if (NOT Tile.Get_IsBuilt() || Tile._Epoch != InEpoch)
+            { continue; }
+
+            Bounds += Get_TileWorldBounds(InField._Params, Tile);
+        }
+
+        return Bounds;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Get_FieldWithMarkupCost(
             const FCk_GroundNav_Field&                  InField,
             TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,

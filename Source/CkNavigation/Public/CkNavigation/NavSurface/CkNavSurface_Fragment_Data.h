@@ -424,8 +424,17 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+/**
+ * The world's navigation surface changed. InChangedBounds is the world-space region the change
+ * covers, so a listener can test its own interest instead of invalidating everything.
+ *
+ * An INVALID box (FBox{ForceInit}) means the bounds are unknown and the whole surface must be
+ * treated as changed. That is what a provider which reports a revision but never says WHERE it
+ * moved delivers, and it is a contract rather than a gap: a listener must handle it.
+ */
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_NavSurface_OnSurfaceRebuilt,
-    FCk_Handle, InHandle);
+    FCk_Handle, InWorldEntity,
+    FBox,       InChangedBounds);
 
 // --------------------------------------------------------------------------------------------------------------------

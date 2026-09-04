@@ -5,6 +5,8 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,7 +55,8 @@ namespace ck
 			const FFragment_CrowdAgent_Params& InParams,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			const FVector& InGoal,
-			bool InForcePermissivePlan = false) -> void;
+			bool InForcePermissivePlan = false,
+			ECk_GroundNav_PlanMode InPlanMode = ECk_GroundNav_PlanMode::Cold) -> void;
 
 		// Invalidates CkNavigation results issued before this route dispatch. This advances for
 		// every provider so a late CkNavigation result cannot replace a newer non-navigation route.

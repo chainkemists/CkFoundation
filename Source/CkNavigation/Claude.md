@@ -224,6 +224,23 @@ provider's `_ApplyAreaMarkup`, `Get_IsMarkupLive` asks that provider whether the
 the markup entity's teardown drains into `_ReleaseAreaMarkup`. An unregistered provider answers
 `NoProvider` (or `Unknown_ProviderNotReady`, `NoData`, an empty box) everywhere.
 
+## The rebuilt signal is pushed with bounds, polled without
+
+`OnSurfaceRebuilt` carries the world entity and an `FBox` of the region that changed. A provider
+that knows where it rebuilt calls `ck::nav_surface::Request_NotifySurfaceRebuilt(World, Bounds)`
+once per publish (C++ only; providers are C++), and `FProcessor_NavSurface_RevisionWatch` drains
+that queue one broadcast per region, in publish order — two publishes in a frame are two signals,
+not one. A provider that only advances a counter — Recast — is still observed: on a tick that
+drained nothing, the watch polls `_SurfaceRevision` and broadcasts once with an INVALID box, which
+is the contract's way of saying the bounds are unknown and the whole surface must be treated as
+changed. A listener must handle that box. The drain stamps the revision it caught up to on every
+path, so a push is never re-reported by the poll behind it.
+
+The watch is pinned to `FGroup_Gameplay_TimeDelta`. Publishes land in `FGroup_Transform`
+(CkGroundNav's volume build and republish) and that group opens the next frame ahead of
+`FGroup_Gameplay`, where CkCrowd's path refresh consumes the signal — one deterministic frame,
+every time.
+
 ## Area tags mean something without a UNavArea
 
 An area tag has two registrations, contributed side by side by whichever module owns the area.

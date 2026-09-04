@@ -141,6 +141,7 @@ namespace ck
             }
 
             this->_TransientEntity.AddOrGet<FFragment_NavSurface_RevisionWatch>();
+            this->_TransientEntity.AddOrGet<FFragment_NavSurface_PendingRebuilds>();
         }
 
         TProcessor::DoTick(InDeltaT);
@@ -154,29 +155,79 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurface_Provider& InProvider,
-            FFragment_NavSurface_RevisionWatch& InWatch)
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            FFragment_NavSurface_PendingRebuilds& InPending)
         -> void
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
         const auto* Table = nav_surface::TryGet_ProviderTable(InProvider.Get_Provider());
 
-        if (Table == nullptr)
-        {
-            // A provider nobody registered has no health to report and no revision to compare against,
-            // so the watch stays where it is rather than broadcasting a rebuild that never happened.
-            InProvider._Health = ECk_NavSurface_ProviderHealth::NoData;
-            return;
-        }
+        // A provider nobody registered has no health to report and no revision to compare against, so
+        // it reads back its own last broadcast and the poll below finds nothing moved. What a provider
+        // already PUSHED still drains: that is a rebuild it observed, not a query put to it now.
+        InProvider._Health = Table != nullptr
+            ? Table->_ProviderHealth(World)
+            : ECk_NavSurface_ProviderHealth::NoData;
 
-        InProvider._Health = Table->_ProviderHealth(World);
+        const auto Revision = Table != nullptr
+            ? Table->_SurfaceRevision(World)
+            : InWatch.Get_LastBroadcastRevision();
 
-        const auto Revision = Table->_SurfaceRevision(World);
-        if (Revision == InWatch.Get_LastBroadcastRevision())
+        if (DoBroadcast_PendingRebuilds(InHandle, InWatch, InPending, Revision))
         { return; }
 
-        InWatch._LastBroadcastRevision = Revision;
-        UUtils_Signal_NavSurface_OnSurfaceRebuilt::Broadcast(InHandle, ck::MakePayload(InHandle));
+        DoBroadcast_RevisionPoll(InHandle, InWatch, Revision);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_NavSurface_RevisionWatch::
+        DoBroadcast_PendingRebuilds(
+            HandleType InHandle,
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            FFragment_NavSurface_PendingRebuilds& InPending,
+            int64 InRevision)
+        -> bool
+    {
+        if (InPending._Bounds.IsEmpty())
+        { return false; }
+
+        // Taken off the fragment before the first broadcast: a listener that publishes from inside one
+        // appends to the emptied list and is drained next tick, rather than being consumed mid-loop.
+        const auto DrainedBounds = MoveTemp(InPending._Bounds);
+
+        // The revision the queue is now caught up to. Without this, the poll below would read the same
+        // provider move a second time and report it again as bounds-unknown.
+        InWatch._LastBroadcastRevision = InRevision;
+
+        for (const auto& ChangedBounds : DrainedBounds)
+        {
+            UUtils_Signal_NavSurface_OnSurfaceRebuilt::Broadcast(
+                InHandle, ck::MakePayload(InHandle, ChangedBounds));
+        }
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_NavSurface_RevisionWatch::
+        DoBroadcast_RevisionPoll(
+            HandleType InHandle,
+            FFragment_NavSurface_RevisionWatch& InWatch,
+            int64 InRevision)
+        -> void
+    {
+        if (InRevision == InWatch.Get_LastBroadcastRevision())
+        { return; }
+
+        InWatch._LastBroadcastRevision = InRevision;
+
+        UUtils_Signal_NavSurface_OnSurfaceRebuilt::Broadcast(
+            InHandle, ck::MakePayload(InHandle, FBox{ForceInit}));
     }
 }
 
