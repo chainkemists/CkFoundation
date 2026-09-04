@@ -97,21 +97,15 @@ auto
     const auto IsValidAgent = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(IsValidAgent, TEXT("Invalid CrowdAgent handle [{}] passed to Request_SetTransientPersonalSpaceScale"), InAgent)
     { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
-    if (NOT IsValidAgent)
-    { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
 
     const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAgent);
     CK_ENSURE_IF_NOT(HasAuthority, TEXT("Request_SetTransientPersonalSpaceScale on CrowdAgent [{}] dropped — caller does not have authority."), InAgent)
-    { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
-    if (NOT HasAuthority)
     { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
 
     const auto InputsAreValid = FMath::IsFinite(InScale) && FMath::IsFinite(InDurationSeconds)
         && InScale >= MinScale && InScale <= MaxScale
         && InDurationSeconds > 0.0f && InDurationSeconds <= MaxDurationSeconds;
     CK_ENSURE_IF_NOT(InputsAreValid, TEXT("Request_SetTransientPersonalSpaceScale dropped for [{}]: scale [{}] must be [{}, {}], duration [{}] must be (0, {}]"), InAgent, InScale, MinScale, MaxScale, InDurationSeconds, MaxDurationSeconds)
-    { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
-    if (NOT InputsAreValid)
     { InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued); return InAgent; }
 
     auto Request = FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale{InScale, InDurationSeconds};
@@ -162,8 +156,6 @@ auto
     CK_ENSURE_IF_NOT(IsValidAgent,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_TransientPersonalSpaceScale"), InAgent)
     { return 1.0f; }
-    if (NOT IsValidAgent)
-    { return 1.0f; }
 
     return InAgent.Has<ck::FFragment_CrowdAgent_TransientPersonalSpace>()
         ? InAgent.Get<ck::FFragment_CrowdAgent_TransientPersonalSpace>().Get_Scale()
@@ -181,8 +173,6 @@ auto
     const auto IsValidAgent = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(IsValidAgent,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_TransientPersonalSpaceRemainingSeconds"), InAgent)
-    { return 0.0f; }
-    if (NOT IsValidAgent)
     { return 0.0f; }
 
     return InAgent.Has<ck::FFragment_CrowdAgent_TransientPersonalSpace>()
@@ -558,8 +548,6 @@ auto
     const auto IsValidAgent = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(IsValidAgent,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_IsGoalFailedHold"), InAgent)
-    { return false; }
-    if (NOT IsValidAgent)
     { return false; }
 
     return InAgent.Has<ck::FTag_CrowdAgent_GoalFailedHold>();

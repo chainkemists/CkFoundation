@@ -419,12 +419,11 @@ namespace ck::voxelnav
         CK_ENSURE_IF_NOT(SubNodeIndexIsInRange,
             TEXT("Sub-node index [{}] is outside a leaf node's 4x4x4 occupancy"),
             static_cast<int32>(InSubNodeIndex))
-        {}
-
-        // An unaddressable sub-node reports as occluded: the conservative answer keeps a malformed query
-        // from opening a path through space nothing ever rasterized.
-        if (NOT SubNodeIndexIsInRange)
-        { return true; }
+        {
+            // An unaddressable sub-node reports as occluded: the conservative answer keeps a malformed query
+            // from opening a path through space nothing ever rasterized.
+            return true;
+        }
 
         return (_SubNodes & (1ULL << InSubNodeIndex)) != 0;
     }

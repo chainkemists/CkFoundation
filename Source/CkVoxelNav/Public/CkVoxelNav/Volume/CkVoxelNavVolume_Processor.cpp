@@ -202,12 +202,11 @@ namespace ck
                  "clearance [{}]uu"),
             InVolumeEntity, InParams.Get_VolumeBounds(), InParams.Get_FinestCellSizeUu(),
             MinFinestCellSizeUu, InParams.Get_ClearanceUu())
-        {}
-
-        // The volume stays inert rather than arming a build that would bake garbage. A later
-        // Request_Build on it fails loudly through the same validation.
-        if (NOT ParamsAreBakeable)
-        { return; }
+        {
+            // The volume stays inert rather than arming a build that would bake garbage. A later
+            // Request_Build on it fails loudly through the same validation.
+            return;
+        }
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
         { return; }
