@@ -1,5 +1,6 @@
 #include "CkGroundNav_DebugGates.h"
 
+#include "CkGroundNav/Debug/CkGroundNav_DebugDraw.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
 #include <HAL/IConsoleManager.h>
@@ -37,6 +38,43 @@ namespace ck_groundnav_debuggates
         TEXT("once a tick, which is what the per-agent debug views read. 0 runs the pass over nobody; ")
         TEXT("fragments already stamped stay as they were, so a viewer reading one is told the last ")
         TEXT("state the pass saw rather than a blank."));
+
+    static TAutoConsoleVariable<int32> CVar_RetainedDraw(
+        TEXT("ck.GroundNav.Debug.RetainedDraw"), 1,
+        TEXT("1 holds the line geometry of every GroundNav debug view as PMG retained line sets, ")
+        TEXT("which is what makes the views draw in a configuration where the engine's immediate ")
+        TEXT("debug helpers are compiled out. 0 releases every set the world is holding and emits ")
+        TEXT("nothing further - a retained view stands until it is released, so switching it off is ")
+        TEXT("how it is put away. The text labels, the per-cell points and the arrowheads are drawn ")
+        TEXT("immediately either way and are unaffected."));
+
+    auto DoBind_RetainedDrawSinkOnce() -> void
+    {
+        static auto SinkIsBound = false;
+
+        if (SinkIsBound)
+        { return; }
+
+        SinkIsBound = true;
+
+        // Every other gate here is POLLED, which is enough for a gate that only decides whether the
+        // next piece of work runs. This one decides whether geometry that is already standing may
+        // stand: polling would stop the next build and leave the last one in the world forever, so
+        // the switch itself has to take it down.
+        //
+        // Bound on the first read rather than at static init, which is early enough by construction:
+        // nothing is retained until a publish asks this gate, so the sink is in place before there is
+        // anything for it to release.
+        CVar_RetainedDraw.AsVariable()->SetOnChangedCallback(
+            FConsoleVariableDelegate::CreateLambda(
+                [](IConsoleVariable* InVariable) -> void
+                {
+                    if (InVariable->GetInt() != 0)
+                    { return; }
+
+                    ck::groundnav::Do_ReleaseAllRetainedDebugDraw();
+                }));
+    }
 
     static TAutoConsoleVariable<int32> CVar_DrawMarkup(
         TEXT("ck.GroundNav.Debug.DrawMarkup"), 1,
@@ -103,6 +141,17 @@ namespace ck::groundnav::debug
         -> bool
     {
         return ck_groundnav_debuggates::CVar_DrawMarkup.GetValueOnGameThread() != 0;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_IsRetainedDrawEnabled()
+        -> bool
+    {
+        ck_groundnav_debuggates::DoBind_RetainedDrawSinkOnce();
+
+        return ck_groundnav_debuggates::CVar_RetainedDraw.GetValueOnGameThread() != 0;
     }
 }
 
