@@ -572,15 +572,16 @@ namespace ck_jolt_bake_extraction
         // component, including open or non-manifold topology. Bad indices remain fail-closed because a
         // component walk or index swap cannot safely proceed from them.
         const auto Normalization = NormalizeInsideOutMeshComponents(Vertices, Triangles);
-        if (Normalization._NumRepairedComponents > 0)
+        if (Normalization._NumRepairedComponents > 0 || Normalization._NumAggregateNoVerdictComponentsRepaired > 0)
         {
-            ck::jolt::Warning(TEXT("Tri-mesh source [{}] had {} inside-out component(s) normalized "
-                "during the Jolt bake ({} healthy, {} no-verdict, {} open, {} non-manifold, {} inconsistent, "
-                "{} malformed)."),
-                InDebugName, Normalization._NumRepairedComponents, Normalization._NumHealthyComponents,
-                Normalization._NumNoVerdictComponents, Normalization._NumOpenComponents,
-                Normalization._NumNonManifoldComponents, Normalization._NumInconsistentComponents,
-                Normalization._NumMalformedComponents);
+            ck::jolt::Warning(TEXT("Tri-mesh source [{}] had {} individually inside-out component(s) and {} "
+                "aggregate no-verdict component(s) normalized during the Jolt bake ({} healthy, {} no-verdict, "
+                "{} open, {} non-manifold, {} inconsistent, {} malformed)."),
+                InDebugName, Normalization._NumRepairedComponents,
+                Normalization._NumAggregateNoVerdictComponentsRepaired, Normalization._NumHealthyComponents,
+                Normalization._NumNoVerdictComponents,
+                Normalization._NumOpenComponents, Normalization._NumNonManifoldComponents,
+                Normalization._NumInconsistentComponents, Normalization._NumMalformedComponents);
         }
 
         constexpr auto InsideOutWindingRatioThreshold = -0.05;
@@ -859,6 +860,7 @@ namespace ck::jolt::bake
 
         auto VisitedTriangles = TArray<bool>{};
         VisitedTriangles.Init(false, static_cast<int32>(InOutTriangles.size()));
+        auto NoVerdictComponents = TArray<TArray<int32>>{};
 
         const auto NumTriangles = static_cast<int32>(InOutTriangles.size());
         for (auto StartTriangleIndex = 0; StartTriangleIndex < NumTriangles; ++StartTriangleIndex)
@@ -943,10 +945,52 @@ namespace ck::jolt::bake
             else if (WindingRatio > OutwardWindingRatioThreshold)
             { ++Result._NumHealthyComponents; }
             else
-            { ++Result._NumNoVerdictComponents; }
+            {
+                ++Result._NumNoVerdictComponents;
+                NoVerdictComponents.Add(MoveTemp(ComponentTriangleIndices));
+            }
         }
 
-        if (Result._NumRepairedComponents > 0)
+        // Thin or small components have no stable per-component AABB verdict, yet their volumes can
+        // add up across a large asset. If the first pass still leaves the mesh inside-out, measure that
+        // no-verdict subset against the full mesh bounds. A strong aggregate verdict makes the shared
+        // frame usable; reverse only components whose contribution in that frame is negative so mixed
+        // outward fragments and known-healthy components remain untouched.
+        const auto MeshIsStillInsideOut =
+            ComputeMeshWindingRatio(InVertices, InOutTriangles) < InsideOutWindingRatioThreshold;
+        if (MeshIsStillInsideOut && NOT NoVerdictComponents.IsEmpty())
+        {
+            auto NoVerdictTriangles = JPH::IndexedTriangleList{};
+            for (const auto& ComponentTriangleIndices : NoVerdictComponents)
+            {
+                for (const auto TriangleIndex : ComponentTriangleIndices)
+                { NoVerdictTriangles.push_back(InOutTriangles[TriangleIndex]); }
+            }
+
+            const auto NoVerdictAggregateIsInsideOut =
+                ComputeMeshWindingRatio(InVertices, NoVerdictTriangles) < InsideOutWindingRatioThreshold;
+            if (NoVerdictAggregateIsInsideOut)
+            {
+                for (const auto& ComponentTriangleIndices : NoVerdictComponents)
+                {
+                    auto ComponentTriangles = JPH::IndexedTriangleList{};
+                    ComponentTriangles.reserve(ComponentTriangleIndices.Num());
+                    for (const auto TriangleIndex : ComponentTriangleIndices)
+                    { ComponentTriangles.push_back(InOutTriangles[TriangleIndex]); }
+
+                    const auto ComponentContributionIsNegative =
+                        ComputeMeshWindingRatio(InVertices, ComponentTriangles) < 0.0;
+                    if (ComponentContributionIsNegative)
+                    {
+                        for (const auto TriangleIndex : ComponentTriangleIndices)
+                        { Swap(InOutTriangles[TriangleIndex].mIdx[1], InOutTriangles[TriangleIndex].mIdx[2]); }
+                        ++Result._NumAggregateNoVerdictComponentsRepaired;
+                    }
+                }
+            }
+        }
+
+        if (Result._NumRepairedComponents > 0 || Result._NumAggregateNoVerdictComponentsRepaired > 0)
         { Result._Status = ECk_Jolt_WindingNormalizationStatus::Normalized; }
         else if (Result._NumHealthyComponents > 0)
         { Result._Status = ECk_Jolt_WindingNormalizationStatus::Unchanged; }

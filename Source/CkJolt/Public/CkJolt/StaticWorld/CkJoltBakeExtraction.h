@@ -194,7 +194,9 @@ namespace ck::jolt::bake
 
     /// Detailed outcome of NormalizeInsideOutMeshComponents. A strongly negative connected
     /// component is reversed even when open or non-manifold; malformed indices are never repaired and
-    /// reject the tri-mesh bake before any component is mutated.
+    /// reject the tri-mesh bake before any component is mutated. If individual no-verdict components
+    /// still leave the whole mesh strongly negative, only their negative contributions in the shared
+    /// full-mesh frame are reversed.
     struct FCk_Jolt_WindingNormalizationResult
     {
         ECk_Jolt_WindingNormalizationStatus _Status = ECk_Jolt_WindingNormalizationStatus::NoVerdict;
@@ -207,6 +209,7 @@ namespace ck::jolt::bake
         int32 _NumMalformedComponents = 0;
         int32 _NumMalformedIndexComponents = 0;
         int32 _NumNoVerdictComponents = 0;
+        int32 _NumAggregateNoVerdictComponentsRepaired = 0;
 
         auto Get_HasMalformedIndices() const -> bool
         { return _NumMalformedIndexComponents > 0; }
@@ -215,7 +218,8 @@ namespace ck::jolt::bake
     /// Reverses every geometrically valid connected component with a strongly negative
     /// signed-volume/AABB ratio. This is pure: it performs no asset or Jolt-shape work. Open,
     /// non-manifold, and inconsistent components are reported but may be repaired; malformed indices
-    /// are left unchanged and make the result fail closed.
+    /// are left unchanged and make the result fail closed. A strongly negative no-verdict aggregate
+    /// enables contribution-level repair without reversing outward or known-healthy components.
     CKJOLT_API auto NormalizeInsideOutMeshComponents(
         const JPH::VertexList& InVertices,
         JPH::IndexedTriangleList& InOutTriangles) -> FCk_Jolt_WindingNormalizationResult;
