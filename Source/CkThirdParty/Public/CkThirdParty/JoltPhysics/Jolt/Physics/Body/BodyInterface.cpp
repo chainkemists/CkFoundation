@@ -409,6 +409,35 @@ void BodyInterface::SetPositionAndRotation(const BodyID &inBodyID, RVec3Arg inPo
 	}
 }
 
+void BodyInterface::SetPositionsAndRotations(BodyID *ioBodyIDs, const RVec3 *inPositions, const Quat *inRotations, int inNumber, EActivation inActivationMode)
+{
+	if (inNumber <= 0)
+		return;
+
+	BodyLockMultiWrite lock(*mBodyLockInterface, ioBodyIDs, inNumber);
+
+	int num_bodies_in_broadphase = 0;
+	for (int body_index = 0; body_index < inNumber; ++body_index)
+	{
+		Body *body = lock.GetBody(body_index);
+		if (body == nullptr)
+			continue;
+
+		body->SetPositionAndRotationInternal(inPositions[body_index], inRotations[body_index]);
+
+		if (body->IsInBroadPhase())
+			ioBodyIDs[num_bodies_in_broadphase++] = body->GetID();
+	}
+
+	if (num_bodies_in_broadphase > 0)
+	{
+		mBroadPhase->NotifyBodiesAABBChanged(ioBodyIDs, num_bodies_in_broadphase);
+
+		if (inActivationMode == EActivation::Activate)
+			mBodyManager->ActivateBodies(ioBodyIDs, num_bodies_in_broadphase);
+	}
+}
+
 void BodyInterface::SetPositionAndRotationWhenChanged(const BodyID &inBodyID, RVec3Arg inPosition, QuatArg inRotation, EActivation inActivationMode)
 {
 	BodyLockWrite lock(*mBodyLockInterface, inBodyID);

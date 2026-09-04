@@ -183,6 +183,9 @@ public:
 	///@name Position and rotation of a body
 	///@{
 	void						SetPositionAndRotation(const BodyID &inBodyID, RVec3Arg inPosition, QuatArg inRotation, EActivation inActivationMode);
+	/// Sets aligned body poses under one multi-body lock and one broadphase notification. ioBodyIDs is compacted
+	/// in place to the valid broadphase-added bodies and must not be reused by the caller.
+	void						SetPositionsAndRotations(BodyID *ioBodyIDs, const RVec3 *inPositions, const Quat *inRotations, int inNumber, EActivation inActivationMode);
 	void						SetPositionAndRotationWhenChanged(const BodyID &inBodyID, RVec3Arg inPosition, QuatArg inRotation, EActivation inActivationMode); ///< Will only update the position/rotation and activate the body when the difference is larger than a very small number. This avoids updating the broadphase/waking up a body when the resulting position/orientation doesn't really change.
 	void						GetPositionAndRotation(const BodyID &inBodyID, RVec3 &outPosition, Quat &outRotation) const;
 	void						SetPosition(const BodyID &inBodyID, RVec3Arg inPosition, EActivation inActivationMode);

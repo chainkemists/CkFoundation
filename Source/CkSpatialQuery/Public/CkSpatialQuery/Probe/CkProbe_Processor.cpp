@@ -20,6 +20,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Stats.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
+#include "CkSpatialQuery/Probe/CkProbeContactFilter.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 
@@ -444,11 +445,23 @@ namespace ck::details
 
         auto Shape = ShapeResult.Get();
 
-        InHandle.template Add<Ref<JPH::Shape>>(Shape);
-
         // Every probe lives on CkJolt's dedicated probe layer: pairs with other probes, never with
         // the static world.
         const auto& LayerContext = InHandle.Get_RegistryView().template GetContext<ck::jolt::FCk_Jolt_LayerContext>();
+        const auto* ContactFilterContext = InHandle.Get_RegistryView().
+            template TryGetContext<ck::spatialquery::FCk_ProbeContactFilter_Context>();
+        const auto HasContactFilter = ContactFilterContext != nullptr && ContactFilterContext->Filter != nullptr;
+        CK_ENSURE_IF_NOT(HasContactFilter,
+            TEXT("Probe setup requires the SpatialQuery contact-filter registry context"))
+        { }
+        if (NOT HasContactFilter)
+        { return; }
+
+        const auto ContactSignature = ContactFilterContext->Get_OrRegisterSignature(InParams);
+        if (ContactSignature == JPH::CollisionGroup::cInvalidSubGroup)
+        { return; }
+
+        InHandle.template Add<Ref<JPH::Shape>>(Shape);
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
@@ -460,6 +473,8 @@ namespace ck::details
         ShapeSettings.mIsSensor = true;
         ShapeSettings.mCollideKinematicVsNonDynamic = true;
         ShapeSettings.mGravityFactor = 0.0f;
+        ShapeSettings.mCollisionGroup = JPH::CollisionGroup{
+            ContactFilterContext->Filter.GetPtr(), 0, ContactSignature};
 
         switch (InParams.Get_MotionType())
         {
@@ -705,12 +720,42 @@ namespace ck
 
     auto
         FProcessor_Probe_UpdateTransform::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _PendingBodyIds.Reset();
+        _PendingPositions.Reset();
+        _PendingRotations.Reset();
+
+        TProcessor::DoTick(InDeltaT);
+
+        if (_PendingBodyIds.IsEmpty())
+        { return; }
+
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
+            TEXT("PhysicsSystem is no longer valid during Probe UpdateTransform"))
+        { }
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return; }
+
+        PhysicsSystem->GetBodyInterface().SetPositionsAndRotations(
+            _PendingBodyIds.GetData(),
+            _PendingPositions.GetData(),
+            _PendingRotations.GetData(),
+            _PendingBodyIds.Num(),
+            JPH::EActivation::Activate);
+    }
+
+    auto
+        FProcessor_Probe_UpdateTransform::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) const
+            const FFragment_Transform& InTransform)
         -> void
     {
         const auto IsStatic = InHandle.Has<FTag_Probe_MotionType_Static>();
@@ -718,18 +763,10 @@ namespace ck
         if (IsStatic && NOT IsRestoreRebase)
         { return; }
 
-        const auto EntityPosition = InTransform.Get_Transform().GetLocation();
-        const auto EntityRotation = InTransform.Get_Transform().GetRotation();
-
-        const auto Rot = jolt::Conv(EntityRotation);
-
-        const auto PhysicsSystem = _PhysicsSystem.Pin();
-        CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
-            TEXT("PhysicsSystem is no longer valid during Probe UpdateTransform"))
-        { return; }
-        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-
-        BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, JPH::EActivation::Activate);
+        const auto& EntityTransform = InTransform.Get_Transform();
+        _PendingBodyIds.Add(InCurrent.Get_BodyId());
+        _PendingPositions.Add(jolt::Conv(EntityTransform.GetLocation()));
+        _PendingRotations.Add(jolt::Conv(EntityTransform.GetRotation()));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
