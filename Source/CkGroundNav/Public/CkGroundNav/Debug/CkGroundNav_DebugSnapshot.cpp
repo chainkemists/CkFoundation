@@ -1,5 +1,7 @@
 #include "CkGroundNav_DebugSnapshot.h"
 
+#include <Misc/ScopeLock.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::groundnav
@@ -68,6 +70,73 @@ namespace ck::groundnav
         { Newest = FMath::Max(Newest, Tile._Epoch); }
 
         return Newest;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_GroundNav_DebugSnapshotCacheKey::
+        Get_IsEqual(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InOther) const
+        -> bool
+    {
+        return _WorldName == InOther._WorldName &&
+               _VolumeEntityNumber == InOther._VolumeEntityNumber &&
+               _VolumeEntityVersion == InOther._VolumeEntityVersion &&
+               _NewestTileEpoch == InOther._NewestTileEpoch &&
+               _SurfaceRevision == InOther._SurfaceRevision;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_GroundNav_DebugSnapshotCache::
+        Get_Key() const
+        -> FCk_GroundNav_DebugSnapshotCacheKey
+    {
+        FScopeLock Lock{&_Lock};
+
+        return _Key;
+    }
+
+    auto
+        FCk_GroundNav_DebugSnapshotCache::
+        TryGet_Current(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InKey) const
+        -> TSharedPtr<const FCk_GroundNav_DebugSnapshot>
+    {
+        FScopeLock Lock{&_Lock};
+
+        if (NOT _Key.Get_IsEqual(InKey))
+        { return {}; }
+
+        return _Snapshot;
+    }
+
+    auto
+        FCk_GroundNav_DebugSnapshotCache::
+        Replace(
+            const FCk_GroundNav_DebugSnapshotCacheKey& InKey,
+            FCk_GroundNav_DebugSnapshot                InSnapshot)
+        -> void
+    {
+        // Built outside the lock, so what is held under it is only ever swapped whole.
+        auto Replacement = TSharedPtr<const FCk_GroundNav_DebugSnapshot>{
+            MakeShared<FCk_GroundNav_DebugSnapshot>(MoveTemp(InSnapshot))};
+
+        // The capture this displaces is moved OUT under the lock and released after it. A whole bake's
+        // geometry freeing inside the critical section would hold every reader off for as long as the
+        // deallocation takes, and the swap itself is the only thing the lock is here to make atomic.
+        auto Superseded = TSharedPtr<const FCk_GroundNav_DebugSnapshot>{};
+
+        {
+            FScopeLock Lock{&_Lock};
+
+            Superseded = MoveTemp(_Snapshot);
+
+            _Key = InKey;
+            _Snapshot = MoveTemp(Replacement);
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
