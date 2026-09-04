@@ -6,6 +6,7 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
+#include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldBuild.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldRepair.h"
@@ -45,6 +46,18 @@ namespace ck
      */
     CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_MarkupCostDirty);
 
+    /**
+     * The volume's authored LINKS changed.
+     *
+     * A tag rather than a box, and for a sharper reason than the cost side: a link changes neither
+     * cells nor plates. Nothing about which ground is walkable, how much room it has, or where a
+     * lattice crossing lies depends on an authored link, so there is no ground to re-bake and no
+     * REGION for a repair to take - only the field's own resolution of two world points to redo.
+     *
+     * Raised by the link drain and CONSUMED by FProcessor_GroundNavVolume_LinkDerive.
+     */
+    CK_DEFINE_ECS_TAG(FTag_GroundNavVolume_LinksDirty);
+
     // ----------------------------------------------------------------------------------------------------------------
 
     using FFragment_GroundNavVolume_Params = FCk_Fragment_GroundNavVolume_ParamsData;
@@ -70,6 +83,7 @@ namespace ck
         friend class FProcessor_GroundNavVolume_Build;
         friend class FProcessor_GroundNavVolume_Repair;
         friend class FProcessor_GroundNavVolume_MarkupCostDerive;
+        friend class FProcessor_GroundNavVolume_LinkDerive;
         friend class ::UCk_Utils_GroundNavVolume_UE;
 
     private:
@@ -331,9 +345,114 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * One link the volume holds: the entity whose identity the record is keyed on, and the record.
+     *
+     * Side by side rather than the handle inside the record, for the same reason the markup entry keeps
+     * them apart: the handle is what crosses a request, while the record is the pure value a
+     * composition resolves, and a record carrying a handle is a value that can dangle.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_LinkEntry
+    {
+    public:
+        CK_GENERATED_BODY(FCk_GroundNav_LinkEntry);
+
+        friend class FProcessor_GroundNavVolume_HandleLinkRequests;
+        friend class ::UCk_Utils_GroundNavVolume_UE;
+
+    private:
+        FCk_Handle _LinkEntity;
+        FCk_GroundNav_LinkRecord _Record;
+
+    public:
+        CK_PROPERTY_GET(_LinkEntity);
+        CK_PROPERTY_GET(_Record);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every navigation link authored onto this volume.
+     *
+     * The volume owns the records, not the entities that requested them: an entity carries a
+     * back-pointer and nothing else, so the set a composition resolves is one array in one place and
+     * cannot be assembled differently by two readers.
+     *
+     * Ids are handed out monotonically and never reused. A released record's id is retired with it, so
+     * a field resolved against an older link set can be diffed against a newer one without an id
+     * meaning two different links at two different epochs.
+     */
+    struct CKGROUNDNAV_API FFragment_GroundNavVolume_Links
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNavVolume_Links);
+
+        friend class FProcessor_GroundNavVolume_HandleLinkRequests;
+        friend class ::UCk_Utils_GroundNavVolume_UE;
+
+    private:
+        TArray<FCk_GroundNav_LinkEntry> _Entries;
+        int32 _NextId = 0;
+
+    public:
+        CK_PROPERTY_GET(_Entries);
+        CK_PROPERTY_GET(_NextId);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * The link entity's back-pointer to the volume holding its record.
+     *
+     * Composed on the LINK entity rather than on the volume, and carrying an id rather than a copy of
+     * the record: a live probe asking what one link currently does reads the volume's array through
+     * this, so there is never a second copy of a record to drift from the first.
+     */
+    struct CKGROUNDNAV_API FFragment_GroundNav_LinkRef
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNav_LinkRef);
+
+        friend class FProcessor_GroundNavVolume_HandleLinkRequests;
+
+    private:
+        FCk_Handle _VolumeEntity;
+        int32 _RecordId = INDEX_NONE;
+
+    public:
+        CK_PROPERTY_GET(_VolumeEntity);
+        CK_PROPERTY_GET(_RecordId);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct CKGROUNDNAV_API FFragment_GroundNavVolume_LinkRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNavVolume_LinkRequests);
+
+        friend class FProcessor_GroundNavVolume_HandleLinkRequests;
+        friend class ::UCk_Utils_GroundNavVolume_UE;
+
+    public:
+        using RequestType = std::variant<
+            FCk_Request_GroundNavVolume_Link,
+            FCk_Request_GroundNavVolume_ReleaseLink>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_Requests);
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_RepairRequests);
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_MarkupRequests);
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_GroundNavVolume_LinkRequests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

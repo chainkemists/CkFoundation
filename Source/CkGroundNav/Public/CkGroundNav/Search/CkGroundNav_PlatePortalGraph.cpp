@@ -40,6 +40,31 @@ namespace ck_groundnav_plateportalgraph
 
         return HashCombine(Hash, Get_ScalarHash(InPoint.Z));
     }
+
+    /** The resolved link a crossing was enumerated from, and nullptr for a lattice crossing. */
+    auto TryGet_ResolvedLink(
+        const ck::groundnav::FCk_GroundNav_Field&    InField,
+        const ck::groundnav::FCk_GroundNav_Crossing& InCrossing)
+        -> const ck::groundnav::FCk_GroundNav_ResolvedLink*
+    {
+        return InField._ResolvedLinks.IsValidIndex(InCrossing._LinkIndex)
+            ? &InField._ResolvedLinks[InCrossing._LinkIndex]
+            : nullptr;
+    }
+
+    /**
+     * Whether the crossing enters its link at the record's START.
+     *
+     * Compared against the endpoint EXACTLY, because the crossing's own point was copied verbatim
+     * from that record — the same exactness the crossing key already identifies a door by. A link
+     * whose two ends are one point answers either way and is the same point regardless.
+     */
+    auto Get_IsEnteredAtLinkStart(
+        const ck::groundnav::FCk_GroundNav_ResolvedLink& InLink,
+        const ck::groundnav::FCk_GroundNav_Crossing&     InCrossing) -> bool
+    {
+        return InCrossing._Left == InLink._Start;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -56,6 +81,7 @@ namespace ck::groundnav
         auto Hash = ::GetTypeHash(InKey._FromFlatPlate);
         Hash = HashCombine(Hash, ::GetTypeHash(InKey._ToFlatPlate));
         Hash = HashCombine(Hash, ::GetTypeHash(InKey._Direction));
+        Hash = HashCombine(Hash, ::GetTypeHash(InKey._LinkIndex));
         Hash = HashCombine(Hash, Get_PointHash(InKey._Left));
 
         return HashCombine(Hash, Get_PointHash(InKey._Right));
@@ -70,6 +96,7 @@ namespace ck::groundnav
         Key._FromFlatPlate = InCrossing._FromFlatPlate;
         Key._ToFlatPlate = InCrossing._ToFlatPlate;
         Key._Direction = InCrossing._Direction;
+        Key._LinkIndex = InCrossing._LinkIndex;
         Key._Left = InCrossing._Left;
         Key._Right = InCrossing._Right;
 
@@ -84,6 +111,44 @@ namespace ck::groundnav
         -> FVector
     {
         return (InCrossing._Left + InCrossing._Right) * 0.5;
+    }
+
+    auto
+        Get_CrossingDeparturePoint(
+            const FCk_GroundNav_Field&    InField,
+            const FCk_GroundNav_Crossing& InCrossing)
+        -> FVector
+    {
+        using namespace ck_groundnav_plateportalgraph;
+
+        const auto* Link = TryGet_ResolvedLink(InField, InCrossing);
+
+        if (Link == nullptr)
+        { return Get_CrossingTransitionPoint(InCrossing); }
+
+        return Get_IsEnteredAtLinkStart(*Link, InCrossing) ? Link->_End : Link->_Start;
+    }
+
+    auto
+        Get_LinkTraversalCost(
+            const FCk_GroundNav_Field&    InField,
+            const FCk_GroundNav_Crossing& InCrossing)
+        -> float
+    {
+        using namespace ck_groundnav_plateportalgraph;
+
+        const auto* Link = TryGet_ResolvedLink(InField, InCrossing);
+
+        if (Link == nullptr)
+        { return 0.0f; }
+
+        const auto SpanUu = FVector::Dist(Link->_Start, Link->_End);
+
+        const auto Multiplier = Get_IsEnteredAtLinkStart(*Link, InCrossing)
+            ? Link->_CostMultiplierForward
+            : Link->_CostMultiplierBackward;
+
+        return static_cast<float>(SpanUu * static_cast<double>(Multiplier));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -142,8 +207,10 @@ namespace ck::groundnav
             ? NoMultiplier + (static_cast<double>(InShared._SlopePenaltyK) * (RiseUu / RunUu))
             : NoMultiplier;
 
-        // A distance times three factors that are each at least one, so the edge is never negative,
-        // which is the whole of what A* asks of it.
+        // A distance times three factors that are each at least one, so a leg never costs less than
+        // its own Euclidean length. A link edge adds its span times a multiplier admission refuses
+        // below one, so that holds for every edge of the graph and not only for the on-plate legs —
+        // which is what the w = 1 Euclidean heuristic's admissibility rests on.
         return static_cast<float>(
             BaseUu *
             static_cast<double>(InAreaMultiplier) *
@@ -202,14 +269,18 @@ namespace ck::groundnav
         Neighbors.Reserve(Crossings.Num());
 
         // Returned in the enumeration's own order — this tile's portal table, then the field's seam
-        // array by index — which is what lets a sliced search expand node for node like a one-shot
-        // one: the push sequence, and so the heap layout that breaks equal scores, is identical.
+        // array by index, then its resolved links by index — which is what lets a sliced search
+        // expand node for node like a one-shot one: the push sequence, and so the heap layout that
+        // breaks equal scores, is identical.
         for (const auto& Crossing : Crossings)
         {
             if (NOT Get_IsAdmitted(Crossing._ClearanceUu, _Shared->_Agent))
             { continue; }
 
-            if (Crossing._ToFlatPlate == BackPlate)
+            // Links are exempt: the skip exists so a leg is never walked straight back through the
+            // door it came from, and a ladder beside the ramp that was just descended is a
+            // genuinely different route between those same two plates rather than that door again.
+            if (Crossing._LinkIndex == INDEX_NONE && Crossing._ToFlatPlate == BackPlate)
             { continue; }
 
             Neighbors.Add(DoGet_OrAdd_Node(Crossing));
@@ -228,10 +299,19 @@ namespace ck::groundnav
         if (NOT Get_IsValid())
         { return 0.0f; }
 
-        return Get_LegCost(
+        // The ground up to where To is entered, then the link To is entered THROUGH: one edge, so a
+        // node's own score already holds the span it was reached across and a route that ends on a
+        // link is priced for the link. The source node is entered through no crossing.
+        const auto ToIsEnteredThroughACrossing = _Pool->_Crossings.IsValidIndex(InTo - 1);
+
+        const auto TraversalCost = ToIsEnteredThroughACrossing
+            ? Get_LinkTraversalCost(*_Shared->_Field, _Pool->_Crossings[InTo - 1])
+            : 0.0f;
+
+        return TraversalCost + Get_LegCost(
             *_Shared,
-            DoGet_Point(InFrom),
-            DoGet_Point(InTo),
+            DoGet_DeparturePoint(InFrom),
+            DoGet_ArrivalPoint(InTo),
             Get_AreaMultiplier(*_Shared->_Field, *_Shared, DoGet_ArrivalPlate(InFrom)),
             static_cast<float>(DoGet_ClearanceFactor(InTo)));
     }
@@ -308,6 +388,7 @@ namespace ck::groundnav
             const auto& Crossing = Get_Crossing(Candidate);
 
             const auto IsSameDoor = Crossing._Direction == InKey._Direction &&
+                Crossing._LinkIndex == InKey._LinkIndex &&
                 Crossing._Left == InKey._Left &&
                 Crossing._Right == InKey._Right;
 
@@ -320,19 +401,19 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_PlatePortalGraph::
-        Get_TransitionPoint(
+        Get_DeparturePoint(
             FCk_GroundNav_PathNodeId InNode) const
         -> FVector
     {
         const auto NodeIsKnown = InNode == kPathSourceNode ||
-            (_Pool.IsValid() && _Pool->_TransitionPoints.IsValidIndex(InNode - 1));
+            (_Pool.IsValid() && _Pool->_DeparturePoints.IsValidIndex(InNode - 1));
 
         CK_ENSURE_IF_NOT(NodeIsKnown,
             TEXT("Path node [{}] is no node of this search"),
             InNode)
         { return FVector::ZeroVector; }
 
-        return DoGet_Point(InNode);
+        return DoGet_DeparturePoint(InNode);
     }
 
     auto
@@ -386,7 +467,27 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_PlatePortalGraph::
-        DoGet_Point(
+        DoGet_ArrivalPoint(
+            FCk_GroundNav_PathNodeId InNode) const
+        -> FVector
+    {
+        if (NOT Get_IsValid())
+        { return FVector::ZeroVector; }
+
+        // The source node stands where the query started rather than on any interval, and is
+        // entered and left at that one point.
+        if (InNode == kPathSourceNode)
+        { return _Shared->_SourcePoint; }
+
+        if (NOT _Pool->_ArrivalPoints.IsValidIndex(InNode - 1))
+        { return FVector::ZeroVector; }
+
+        return _Pool->_ArrivalPoints[InNode - 1];
+    }
+
+    auto
+        FCk_GroundNav_PlatePortalGraph::
+        DoGet_DeparturePoint(
             FCk_GroundNav_PathNodeId InNode) const
         -> FVector
     {
@@ -396,10 +497,10 @@ namespace ck::groundnav
         if (InNode == kPathSourceNode)
         { return _Shared->_SourcePoint; }
 
-        if (NOT _Pool->_TransitionPoints.IsValidIndex(InNode - 1))
+        if (NOT _Pool->_DeparturePoints.IsValidIndex(InNode - 1))
         { return FVector::ZeroVector; }
 
-        return _Pool->_TransitionPoints[InNode - 1];
+        return _Pool->_DeparturePoints[InNode - 1];
     }
 
     auto
@@ -411,7 +512,9 @@ namespace ck::groundnav
         if (NOT Get_IsValid())
         { return 0.0f; }
 
-        const auto DistanceUu = FVector::Dist(DoGet_Point(InNode), _Shared->_GoalPoint);
+        // From where the route LEAVES the node: the remaining walk starts at the far end of a link,
+        // and estimating from the near end would over-count the span the edge already paid for.
+        const auto DistanceUu = FVector::Dist(DoGet_DeparturePoint(InNode), _Shared->_GoalPoint);
 
         return static_cast<float>(DistanceUu * static_cast<double>(_Shared->_GreedyWeightW));
     }
@@ -458,8 +561,11 @@ namespace ck::groundnav
 
         const auto PoolIndex = _Pool->_Crossings.Add(InCrossing);
 
-        _Pool->_TransitionPoints.Add(
+        _Pool->_ArrivalPoints.Add(
             Get_CrossingTransitionPoint(InCrossing));
+
+        _Pool->_DeparturePoints.Add(
+            Get_CrossingDeparturePoint(*_Shared->_Field, InCrossing));
 
         // Ids run from one: zero is the source node, which arrives through no crossing.
         const auto NodeId = PoolIndex + 1;
