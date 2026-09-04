@@ -8,6 +8,7 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
@@ -69,6 +70,55 @@ namespace ck
                 {
                     return InEntry.Get_Record();
                 });
+        }
+
+        /**
+         * The identity a publish stamps onto the field it puts out: what the volume's authored inputs
+         * fingerprint to, and the world revision that field was produced against.
+         */
+        struct FPublishedIdentity
+        {
+        public:
+            groundnav::FCk_GroundNav_ContentFingerprint _InputFingerprint;
+            uint64 _GeometryRevision = 0;
+        };
+
+        /**
+         * ONE assembly of that identity, reached by all FOUR publishers - the build, the local repair
+         * and the cost and link derives.
+         *
+         * A second way of gathering the inputs is a second answer to what the published ground was
+         * produced from, and the two would part company the first time an input was added to one of
+         * them. The geometry revision is a PARAMETER because only some of the four hold a backend to
+         * read one from: the ones that do not re-label ground somebody else baked, and carry forward
+         * the revision it was baked against.
+         */
+        auto Get_PublishedIdentity(
+            const FCk_Handle_GroundNavVolume&       InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            uint64                                  InGeometryRevision) -> FPublishedIdentity
+        {
+            // The bake layer holds no volume concepts, so the variants cross that boundary as tag names
+            // beside their profiles rather than as the authored type they live in.
+            const auto Variants = algo::Transform<TArray<TPair<FName, FCk_GroundNav_AgentProfile>>>(
+                InParams.Get_ProfileVariants(),
+                [](const FCk_GroundNav_ProfileVariant& InVariant) -> TPair<FName, FCk_GroundNav_AgentProfile>
+                {
+                    return TPair<FName, FCk_GroundNav_AgentProfile>{
+                        InVariant.Get_ProfileTag().GetTagName(), InVariant.Get_Profile()};
+                });
+
+            const auto InputFingerprint = groundnav::Get_InputFingerprint(
+                InParams.Get_VolumeBounds(),
+                InParams.Get_Config(),
+                InParams.Get_Profile(),
+                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity)),
+                Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity)),
+                InParams.Get_MergeTunables(),
+                InParams.Get_MaxClearanceUu(),
+                Variants);
+
+            return FPublishedIdentity{InputFingerprint, InGeometryRevision};
         }
 
         auto Get_FieldParams(
@@ -198,6 +248,41 @@ namespace ck
                    Get_ProfileVariantTagsAreUsable(InParams) &&
                    Get_ProfileVariantProfilesAreBakeable(InParams) &&
                    InParams.Get_ProbeBudgetPerTick() > 0;
+        }
+
+        /**
+         * Whether this volume's cook key is free in the world it lives in.
+         *
+         * A cooked field is keyed on {the level package it was cooked from, this key}, so two volumes
+         * in one level sharing one would write over each other's tiles and read back whichever landed
+         * last. NAME_None is not a key at all - it means runtime-only - so any number of volumes may
+         * carry it, and every gym and test volume does.
+         */
+        auto Get_CookKeyIsUnique(
+            const FCk_Handle_GroundNavVolume&       InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams) -> bool
+        {
+            const auto CookKey = InParams.Get_CookKey();
+
+            if (CookKey.IsNone())
+            { return true; }
+
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+            const auto Self = InVolumeEntity.ConvertToHandle();
+
+            for (auto OtherEntity : groundnav::world_fields::Get_VolumeEntities(World))
+            {
+                if (OtherEntity == Self)
+                { continue; }
+
+                if (NOT OtherEntity.Has<FFragment_GroundNavVolume_Params>())
+                { continue; }
+
+                if (OtherEntity.Get<FFragment_GroundNavVolume_Params>().Get_CookKey() == CookKey)
+                { return false; }
+            }
+
+            return true;
         }
 
         auto Get_MarkupKind(
@@ -390,6 +475,17 @@ namespace ck
             InParams.Get_ProbeBudgetPerTick())
         { return; }
 
+        const auto CookKeyIsUnique = Get_CookKeyIsUnique(InVolumeEntity, InParams);
+
+        // Judged BEFORE the registry insert below: a volume admitted under a key another volume in
+        // this world already answers to would leave the two of them writing and reading one cooked
+        // field, and nothing downstream could tell which of them the tiles came from.
+        CK_ENSURE_IF_NOT(CookKeyIsUnique,
+            TEXT("GroundNav Volume [{}] cannot be admitted: another volume in this world already "
+                 "carries the cook key [{}]"),
+            InVolumeEntity, InParams.Get_CookKey())
+        { return; }
+
         // Registered before anything is baked, with no field yet, so a caller that can only name a
         // WORLD — the NavSurface provider adapter — can find the volume to paint on it. A volume that
         // only entered the registry at its first publish could not be painted until then, and the
@@ -442,6 +538,19 @@ namespace ck
 
         CK_ENSURE_IF_NOT(ParamsAreBakeable,
             TEXT("Cannot build GroundNav Volume [{}] - its params are not bakeable"), InVolumeEntity)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto CookKeyIsUnique = Get_CookKeyIsUnique(InVolumeEntity, InParams);
+
+        // Judged again here rather than trusted from admission: a volume whose key was free when it
+        // was set up can be joined later by one that took the same name.
+        CK_ENSURE_IF_NOT(CookKeyIsUnique,
+            TEXT("Cannot build GroundNav Volume [{}] - another volume in this world already carries "
+                 "its cook key [{}]"),
+            InVolumeEntity, InParams.Get_CookKey())
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -1165,10 +1274,17 @@ namespace ck
         // once and baked under each profile before the resume point moves, which is what stops two
         // profiles ever being baked against two different worlds. A volume with no variant is the
         // one-element case of the same call rather than a second path through this processor.
+
+        // Hoisted out of the call because the field params and the bake both read them. The identity
+        // stamped below is taken from the same fragments in the same tick, so a record admitted after
+        // this point is outside everything this build is a statement about.
+        const auto MarkupRecords =
+            Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
+        const auto LinkRecords =
+            Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
+
         const auto BeginResult = groundnav::Request_BeginBuild_MultiProfile(
-            Get_MultiProfileFieldParams(InParams,
-                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity)),
-                Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity))),
+            Get_MultiProfileFieldParams(InParams, MarkupRecords, LinkRecords),
             InBuiltField.Get_Epoch().Get_Next(),
             InBuildState._Build);
 
@@ -1190,6 +1306,17 @@ namespace ck
 
             return;
         }
+
+        // What this build is a statement about, recorded where it BEGINS: a record admitted while it
+        // runs is not in the ground it bakes. The tiled build never holds the region's triangles at
+        // once - it collects one tile's halo per slice - so the backend's WORLD REVISION is the
+        // geometry half, and it is the same token a later slice fails closed on when the world moves
+        // underneath it.
+        const auto Identity = Get_PublishedIdentity(
+            InVolumeEntity, InParams, InBuildState._Backend->Get_WorldRevision());
+
+        InBuildState._BakedInputFingerprint = Identity._InputFingerprint;
+        InBuildState._BakedGeometryRevision = Identity._GeometryRevision;
 
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_BuildInProgress>();
     }
@@ -1290,6 +1417,12 @@ namespace ck
         // whole, for as long as they hold it.
         InBuiltField._Epoch = Completed->_Epoch;
         InBuiltField._Field = MoveTemp(Completed);
+
+        // The identity moves with the field it belongs to. Taken from the build state rather than
+        // recomputed here, because what this field is a statement about is what the build OPENED
+        // under - a record admitted while it ran is not in the ground it baked.
+        InBuiltField._BakedInputFingerprint = InBuildState._BakedInputFingerprint;
+        InBuiltField._BakedGeometryRevision = InBuildState._BakedGeometryRevision;
 
         // The variants are keyed on their tags HERE, where the fields and the order they came back in
         // are both in hand, against the tag list this build BEGAN with. Rebuilt from scratch rather
@@ -1461,6 +1594,8 @@ namespace ck
             FFragment_GroundNavVolume_BuiltField& InBuiltField) const
         -> void
     {
+        using namespace ck_groundnav_volume_processor;
+
         const auto BackendIsHeld = InRepairState._Backend.IsValid();
 
         CK_ENSURE_IF_NOT(BackendIsHeld,
@@ -1535,6 +1670,14 @@ namespace ck
             // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
             InBuiltField._Epoch = Repaired->_Epoch;
             InBuiltField._Field = MoveTemp(Repaired);
+
+            // A repair re-bakes ground against the backend it has been slicing with, so it can answer
+            // both halves: the records it published with, and the revision that backend is at.
+            const auto Identity = Get_PublishedIdentity(
+                InVolumeEntity, InParams, InRepairState._Backend->Get_WorldRevision());
+
+            InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+            InBuiltField._BakedGeometryRevision = Identity._GeometryRevision;
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
@@ -1709,6 +1852,15 @@ namespace ck
         // NextEpoch is past every epoch the unmoved fields still carry, so it is that maximum.
         InBuiltField._Epoch = NextEpoch;
 
+        // A derive re-labels ground that is already published and reads no geometry, so the revision
+        // that ground was baked against is carried FORWARD unchanged. What did move is the record list
+        // this pass published with, which is the half refreshed here.
+        const auto Identity = Get_PublishedIdentity(
+            InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
+            InBuiltField._BakedGeometryRevision);
+
+        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
         groundnav::world_fields::Publish(
@@ -1843,6 +1995,14 @@ namespace ck
         // The NEWEST epoch across every field the volume holds, for the same reason the cost derive
         // takes it.
         InBuiltField._Epoch = NextEpoch;
+
+        // Carried forward and refreshed on the same terms the cost derive publishes under: no geometry
+        // was read, so the revision stands, and the record list that moved is the half restamped.
+        const auto Identity = Get_PublishedIdentity(
+            InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
+            InBuiltField._BakedGeometryRevision);
+
+        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 

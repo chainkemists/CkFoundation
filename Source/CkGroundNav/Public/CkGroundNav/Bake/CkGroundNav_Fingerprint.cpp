@@ -116,6 +116,23 @@ namespace ck::groundnav
             }
         }
 
+        // The members of item 4, in declaration order. One place, because item 9 hashes a profile too
+        // and a variant judged by a different set of members from the default would be a variant that
+        // could change without the fingerprint noticing.
+        auto DoHash_Profile(
+            const FCk_GroundNav_AgentProfile& InProfile,
+            uint64                            InSeed) -> uint64
+        {
+            auto Hash = DoHash_Scalar(InProfile.Get_MaxSlopeDegrees(), InSeed);
+
+            Hash = DoHash_Scalar(InProfile.Get_MaxSlopeChangeDegrees(), Hash);
+            Hash = DoHash_Scalar(InProfile.Get_StepHeightUu(), Hash);
+            Hash = DoHash_Scalar(InProfile.Get_LedgeSensitivity(), Hash);
+            Hash = DoHash_Scalar(InProfile.Get_RoughPerchToleranceUu(), Hash);
+
+            return Hash;
+        }
+
         /**
          * One triangle's hash, independent of which of its three corners is listed first but NOT of its
          * winding: rotating (A,B,C) to (B,C,A) is the same surface, while reversing it to (C,B,A) flips
@@ -149,24 +166,138 @@ namespace ck::groundnav
 
             return Hash;
         }
+
+        /**
+         * Items 2 through 9 of the frozen enumeration, chained onto a seed.
+         *
+         * The seed IS item 1: Get_ContentFingerprint hands over the geometry hash and
+         * Get_InputFingerprint hands over nothing, so there is one implementation of the enumeration
+         * and the two answers cannot drift apart as items are added to it.
+         */
+        auto DoHash_Inputs(
+            uint64                                                    InSeed,
+            const FBox&                                               InRegion,
+            const FCk_GroundNav_BakeConfig&                           InConfig,
+            const FCk_GroundNav_AgentProfile&                         InProfile,
+            TConstArrayView<FCk_GroundNav_MarkupRecord>               InMarkups,
+            TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
+            const FCk_GroundNav_MergeTunables&                        InMergeTunables,
+            float                                                     InMaxClearanceUu,
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants) -> uint64
+        {
+            auto Hash = InSeed;
+
+            // ---- 2. Region -----------------------------------------------------------------------------
+            Hash = DoHash_Vector(InRegion.Min, Hash);
+            Hash = DoHash_Vector(InRegion.Max, Hash);
+
+            // ---- 3. Bake config ------------------------------------------------------------------------
+            Hash = DoHash_Scalar(InConfig.Get_CellSizeUu(), Hash);
+            Hash = DoHash_Scalar(InConfig.Get_CellHeightUu(), Hash);
+            Hash = DoHash_Scalar(InConfig.Get_TileSizeUu(), Hash);
+            Hash = DoHash_Scalar(static_cast<double>(InConfig.Get_MaxColumnsPerTile()), Hash);
+
+            // ---- 4. Agent profile ----------------------------------------------------------------------
+            Hash = DoHash_Profile(InProfile, Hash);
+
+            // ---- 5. Markup, in canonical id order ------------------------------------------------------
+            auto EnabledOrder = TArray<int32>{};
+            EnabledOrder.Reserve(InMarkups.Num());
+
+            for (auto Index = 0; Index < InMarkups.Num(); ++Index)
+            {
+                if (InMarkups[Index].Get_Enable() == ECk_EnableDisable::Disable)
+                { continue; }
+
+                EnabledOrder.Emplace(Index);
+            }
+
+            EnabledOrder.Sort([&](int32 InLhs, int32 InRhs) -> bool
+            {
+                return InMarkups[InLhs].Get_Id() < InMarkups[InRhs].Get_Id();
+            });
+
+            Hash = DoHash_Scalar(static_cast<double>(EnabledOrder.Num()), Hash);
+
+            for (const auto Index : EnabledOrder)
+            {
+                const auto& Markup = InMarkups[Index];
+
+                Hash = DoHash_Scalar(static_cast<double>(Markup.Get_Id()), Hash);
+                Hash = DoHash_Shape(Markup.Get_Shape(), Hash);
+                Hash = DoHash_Transform(Markup.Get_WorldTransform(), Hash);
+                Hash = DoHash_String(Markup.Get_AreaTag().ToString(), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Markup.Get_Kind())), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Markup.Get_CostMultiplier()), Hash);
+            }
+
+            // ---- 6. Links, in the order the list carries them -------------------------------------------
+            auto EnabledLinkCount = 0;
+
+            for (const auto& Link : InLinks)
+            {
+                if (Link.Get_Enable() == ECk_EnableDisable::Disable)
+                { continue; }
+
+                ++EnabledLinkCount;
+            }
+
+            Hash = DoHash_Scalar(static_cast<double>(EnabledLinkCount), Hash);
+
+            for (const auto& Link : InLinks)
+            {
+                if (Link.Get_Enable() == ECk_EnableDisable::Disable)
+                { continue; }
+
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_Id()), Hash);
+                Hash = DoHash_Vector(Link.Get_Start(), Hash);
+                Hash = DoHash_Vector(Link.Get_End(), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_Direction())), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierForward()), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierBackward()), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_ClearanceUu()), Hash);
+                Hash = DoHash_String(Link.Get_AreaTag().ToString(), Hash);
+                Hash = DoHash_String(Link.Get_UserTypeTag().ToString(), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_ProjectionMode())), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionHorizontalExtentUu()), Hash);
+                Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionVerticalExtentUu()), Hash);
+            }
+
+            // ---- 7. Merge tunables ---------------------------------------------------------------------
+            // Every member, in DECLARATION order, the way the profile above is hashed: the struct is two
+            // tolerances today and a member added to it without a line here is the latent staleness bug
+            // the enumeration exists to refuse.
+            Hash = DoHash_Scalar(InMergeTunables.Get_PlaneFitToleranceUu(), Hash);
+            Hash = DoHash_Scalar(InMergeTunables.Get_NormalConeDegrees(), Hash);
+
+            // ---- 8. Clearance cap ----------------------------------------------------------------------
+            Hash = DoHash_Scalar(InMaxClearanceUu, Hash);
+
+            // ---- 9. Profile variants, in authored order -------------------------------------------------
+            // Sequential in the order the volume lists them, because that is the order it bakes them in;
+            // the tag through its NAME for the reason every other tag here is hashed through its name.
+            Hash = DoHash_Scalar(static_cast<double>(InVariants.Num()), Hash);
+
+            for (const auto& Variant : InVariants)
+            {
+                Hash = DoHash_String(Variant.Key.ToString(), Hash);
+                Hash = DoHash_Profile(Variant.Value, Hash);
+            }
+
+            return Hash;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        Get_ContentFingerprint(
-            const FCk_GroundNav_GeometryBatch&          InGeometry,
-            const FBox&                                 InRegion,
-            const FCk_GroundNav_BakeConfig&             InConfig,
-            const FCk_GroundNav_AgentProfile&           InProfile,
-            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
-            TConstArrayView<FCk_GroundNav_LinkRecord>   InLinks)
-        -> FCk_GroundNav_ContentFingerprint
+        Get_GeometryHash(
+            const FCk_GroundNav_GeometryBatch& InGeometry)
+        -> uint64
     {
         using namespace fingerprint_private;
 
-        // ---- 1. Geometry, order-independently ----------------------------------------------------------
-        auto GeometryHash = uint64{0};
+        auto TriangleHash = uint64{0};
         const auto TriangleCount = InGeometry.Get_TriangleCount();
 
         for (auto TriangleIndex = 0; TriangleIndex < TriangleCount; ++TriangleIndex)
@@ -177,95 +308,80 @@ namespace ck::groundnav
             InGeometry.Get_Triangle(TriangleIndex, A, B, C);
 
             // Commutative accumulation: submission order cannot matter, duplicates cannot cancel.
-            GeometryHash += DoHash_Triangle(A, B, C);
+            TriangleHash += DoHash_Triangle(A, B, C);
         }
 
         // The count is folded in separately so a set of triangles that happened to sum to the same value
         // as a different-sized set still separates.
-        auto Hash = DoHash_Scalar(static_cast<double>(TriangleCount), 0x243F6A8885A308D3ULL);
-        Hash ^= GeometryHash;
+        return DoHash_Scalar(static_cast<double>(TriangleCount), 0x243F6A8885A308D3ULL) ^ TriangleHash;
+    }
 
-        // ---- 2. Region ---------------------------------------------------------------------------------
-        Hash = DoHash_Vector(InRegion.Min, Hash);
-        Hash = DoHash_Vector(InRegion.Max, Hash);
+    // ----------------------------------------------------------------------------------------------------------------
 
-        // ---- 3. Bake config ----------------------------------------------------------------------------
-        Hash = DoHash_Scalar(InConfig.Get_CellSizeUu(), Hash);
-        Hash = DoHash_Scalar(InConfig.Get_CellHeightUu(), Hash);
-        Hash = DoHash_Scalar(InConfig.Get_TileSizeUu(), Hash);
-        Hash = DoHash_Scalar(static_cast<double>(InConfig.Get_MaxColumnsPerTile()), Hash);
+    auto
+        Get_ContentFingerprint(
+            const FCk_GroundNav_GeometryBatch&                        InGeometry,
+            const FBox&                                               InRegion,
+            const FCk_GroundNav_BakeConfig&                           InConfig,
+            const FCk_GroundNav_AgentProfile&                         InProfile,
+            TConstArrayView<FCk_GroundNav_MarkupRecord>               InMarkups,
+            TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
+            const FCk_GroundNav_MergeTunables&                        InMergeTunables,
+            float                                                     InMaxClearanceUu,
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+        -> FCk_GroundNav_ContentFingerprint
+    {
+        // Item 1 reduced here and the rest decided below: one implementation of the enumeration, and a
+        // batch is simply the caller that still has its triangles in hand.
+        return Get_ContentFingerprint(Get_GeometryHash(InGeometry), InRegion, InConfig, InProfile,
+            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants);
+    }
 
-        // ---- 4. Agent profile --------------------------------------------------------------------------
-        Hash = DoHash_Scalar(InProfile.Get_MaxSlopeDegrees(), Hash);
-        Hash = DoHash_Scalar(InProfile.Get_MaxSlopeChangeDegrees(), Hash);
-        Hash = DoHash_Scalar(InProfile.Get_StepHeightUu(), Hash);
-        Hash = DoHash_Scalar(InProfile.Get_LedgeSensitivity(), Hash);
-        Hash = DoHash_Scalar(InProfile.Get_RoughPerchToleranceUu(), Hash);
+    // ----------------------------------------------------------------------------------------------------------------
 
-        // ---- 5. Markup, in canonical id order ----------------------------------------------------------
-        auto EnabledOrder = TArray<int32>{};
-        EnabledOrder.Reserve(InMarkups.Num());
+    auto
+        Get_InputFingerprint(
+            const FBox&                                               InRegion,
+            const FCk_GroundNav_BakeConfig&                           InConfig,
+            const FCk_GroundNav_AgentProfile&                         InProfile,
+            TConstArrayView<FCk_GroundNav_MarkupRecord>               InMarkups,
+            TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
+            const FCk_GroundNav_MergeTunables&                        InMergeTunables,
+            float                                                     InMaxClearanceUu,
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+        -> FCk_GroundNav_ContentFingerprint
+    {
+        using namespace fingerprint_private;
 
-        for (auto Index = 0; Index < InMarkups.Num(); ++Index)
-        {
-            if (InMarkups[Index].Get_Enable() == ECk_EnableDisable::Disable)
-            { continue; }
+        // No item 1: an unseeded chain over items 2 through 9, which is exactly the full form with the
+        // geometry left out.
+        constexpr auto NoGeometry = uint64{0};
 
-            EnabledOrder.Emplace(Index);
-        }
+        return FCk_GroundNav_ContentFingerprint{DoHash_Inputs(NoGeometry, InRegion, InConfig, InProfile,
+            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants)};
+    }
 
-        EnabledOrder.Sort([&](int32 InLhs, int32 InRhs) -> bool
-        {
-            return InMarkups[InLhs].Get_Id() < InMarkups[InRhs].Get_Id();
-        });
+    // ----------------------------------------------------------------------------------------------------------------
 
-        Hash = DoHash_Scalar(static_cast<double>(EnabledOrder.Num()), Hash);
+    auto
+        Get_ContentFingerprint(
+            uint64                                                    InGeometryHash,
+            const FBox&                                               InRegion,
+            const FCk_GroundNav_BakeConfig&                           InConfig,
+            const FCk_GroundNav_AgentProfile&                         InProfile,
+            TConstArrayView<FCk_GroundNav_MarkupRecord>               InMarkups,
+            TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
+            const FCk_GroundNav_MergeTunables&                        InMergeTunables,
+            float                                                     InMaxClearanceUu,
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+        -> FCk_GroundNav_ContentFingerprint
+    {
+        using namespace fingerprint_private;
 
-        for (const auto Index : EnabledOrder)
-        {
-            const auto& Markup = InMarkups[Index];
-
-            Hash = DoHash_Scalar(static_cast<double>(Markup.Get_Id()), Hash);
-            Hash = DoHash_Shape(Markup.Get_Shape(), Hash);
-            Hash = DoHash_Transform(Markup.Get_WorldTransform(), Hash);
-            Hash = DoHash_String(Markup.Get_AreaTag().ToString(), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Markup.Get_Kind())), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Markup.Get_CostMultiplier()), Hash);
-        }
-
-        // ---- 6. Links, in the order the list carries them ----------------------------------------------
-        auto EnabledLinkCount = 0;
-
-        for (const auto& Link : InLinks)
-        {
-            if (Link.Get_Enable() == ECk_EnableDisable::Disable)
-            { continue; }
-
-            ++EnabledLinkCount;
-        }
-
-        Hash = DoHash_Scalar(static_cast<double>(EnabledLinkCount), Hash);
-
-        for (const auto& Link : InLinks)
-        {
-            if (Link.Get_Enable() == ECk_EnableDisable::Disable)
-            { continue; }
-
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_Id()), Hash);
-            Hash = DoHash_Vector(Link.Get_Start(), Hash);
-            Hash = DoHash_Vector(Link.Get_End(), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_Direction())), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierForward()), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_CostMultiplierBackward()), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ClearanceUu()), Hash);
-            Hash = DoHash_String(Link.Get_AreaTag().ToString(), Hash);
-            Hash = DoHash_String(Link.Get_UserTypeTag().ToString(), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(static_cast<uint8>(Link.Get_ProjectionMode())), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionHorizontalExtentUu()), Hash);
-            Hash = DoHash_Scalar(static_cast<double>(Link.Get_ProjectionVerticalExtentUu()), Hash);
-        }
-
-        return FCk_GroundNav_ContentFingerprint{Hash};
+        // Item 1 is the SEED the authored items chain onto, which is what makes this the input
+        // fingerprint with the geometry folded in rather than a second enumeration beside it.
+        return FCk_GroundNav_ContentFingerprint{DoHash_Inputs(InGeometryHash, InRegion, InConfig,
+            InProfile, InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants)};
     }
 }
 
