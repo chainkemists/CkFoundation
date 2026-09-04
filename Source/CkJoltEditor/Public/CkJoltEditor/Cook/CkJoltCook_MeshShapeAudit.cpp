@@ -8,7 +8,6 @@
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Data.h"
 
 #include <Engine/StaticMesh.h>
-#include <Misc/ScopeExit.h>
 #include <PhysicsEngine/BodySetup.h>
 
 #include <Jolt/Jolt.h>
@@ -172,6 +171,10 @@ namespace ck::jolt::cook
         using namespace ck::jolt;
         using namespace ck::jolt::bake;
 
+        // Extraction and preview allocation use Jolt-owned STL containers even when no cooked blob
+        // exists. The public audit owns one ref-counted lease for its full call so a single-row
+        // inspector request cannot rely on a batch caller having initialized Jolt already.
+        const FCk_Jolt_ScopedGlobalInit ScopedJolt{};
         auto Result = FCk_Jolt_MeshShapeAuditResult{};
         Result._PreviewTriangleLimit = FMath::Max(0, InMaxPreviewTriangles);
         Result._SourceMeshPackagePath = InMesh.GetOutermost()->GetName();
@@ -236,9 +239,6 @@ namespace ck::jolt::cook
             { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::StaleTraceFlag; }
             else
             {
-                Request_GlobalJoltInit();
-                ON_SCOPE_EXIT { Request_GlobalJoltShutdown(); };
-
                 const auto Restore = mesh_shape_utils::Restore_ShapeBlobForAnalysis(CookedAsset->Get_ShapeBlob());
                 if (NOT Restore._Success)
                 {
