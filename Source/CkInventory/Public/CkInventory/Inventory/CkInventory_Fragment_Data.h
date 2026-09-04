@@ -635,25 +635,12 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// What becomes of the item ENTITY once it has left the inventory. Removal is only half an
-// operation without this: the record entry and the ParentInventory pointer clear either way, but
-// the entity is a separate lifetime that somebody still has to own.
+// What becomes of the item ENTITY once it has left the inventory. KeepItem re-homes it onto the
+// inventory's context owner (a relocation); DestroyItem spends it.
 //
-// KeepItem is the RELOCATION meaning -- the item survives and something else is expected to hold
-// it, so it is re-homed onto the inventory's context owner (exactly where UCk_Utils_Item_UE::Create
-// puts a brand-new one). It is the default because it is what transfer, the item-EndPlay processor
-// and every pre-existing caller mean.
-//
-// DestroyItem is the CONSUME meaning: the item was spent, sold, trashed, smashed or converted, and
-// nothing will ever hold it again.
-//
-// Declaring that HERE rather than at the call site is the whole point. Request_RemoveItem is
-// DEFERRED, so a caller cannot destroy the entity itself without racing its own removal -- the
-// queued handler then bails on an invalid handle and the record entry never disconnects. The
-// handler is the one place that knows the removal has landed, so it is the only place the destroy
-// can be atomic with it. A consume expressed as a bare KeepItem removal leaves the item alive and
-// invisible: absent from Get_Items / Get_NumItems (both record-based) yet still a real entity, still
-// captured by every snapshot, and still swept by its owner's destroy cascade.
+// It lives on the REQUEST because Request_RemoveItem is deferred: a caller that destroys the entity
+// itself races its own removal, and the queued handler then bails on an invalid handle, leaving the
+// record entry connected. The handler is the only place the destroy can be atomic with the removal.
 //
 // NOTE for DestroyItem callers: the entity is tagged pending-kill BEFORE the removal signal fires,
 // so a bound OnOperationResult_Remove delegate sees an item that fails a default ck::IsValid.
@@ -710,11 +697,9 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_Handle_Item _Item;
 
-    // The inventory still holding this item's LIFETIME while not listing it. Valid only for the
-    // stranded-under-an-inventory shape -- the one that survives a save/load round trip, because it
-    // is expressed purely in the lifetime graph the save records. Invalid for an item that left an
-    // inventory in this session and was released to a context owner: that shape is real, but it is
-    // indistinguishable from a legitimately parentless item once it has been through a save.
+    // The inventory still holding this item's LIFETIME while not listing it. Set only for the
+    // stranded-under-an-inventory shape -- the one a save round-trips, because it lives in the
+    // lifetime graph. Invalid for an item released to a context owner this session.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_Handle_Inventory _StrandedUnder;
 
