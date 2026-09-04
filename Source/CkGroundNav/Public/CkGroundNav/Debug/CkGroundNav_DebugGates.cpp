@@ -22,6 +22,22 @@ namespace ck_groundnav_debuggates
         TEXT("route waits forever - which is the run a rebuild-then-repath pin must FAIL under to be ")
         TEXT("worth anything."));
 
+    // Shipping ships with the pass off because nothing in a shipped build reads what it writes. It is a
+    // DEFAULT and not a compile-out: the console variable exists in every configuration, so a shipped
+    // build that has to answer "what is this agent's planner doing" can still be told to answer it.
+#if UE_BUILD_SHIPPING
+    constexpr auto kPathDiagnosticsDefault = 0;
+#else
+    constexpr auto kPathDiagnosticsDefault = 1;
+#endif
+
+    static TAutoConsoleVariable<int32> CVar_PathDiagnostics(
+        TEXT("ck.GroundNav.PathDiagnostics"), kPathDiagnosticsDefault,
+        TEXT("1 stamps FFragment_GroundNavPath_Diagnostics onto every agent holding the path feature ")
+        TEXT("once a tick, which is what the per-agent debug views read. 0 runs the pass over nobody; ")
+        TEXT("fragments already stamped stay as they were, so a viewer reading one is told the last ")
+        TEXT("state the pass saw rather than a blank."));
+
     static TAutoConsoleVariable<int32> CVar_DrawMarkup(
         TEXT("ck.GroundNav.Debug.DrawMarkup"), 1,
         TEXT("Outline the area markup the world's ground-nav volumes hold in the plate view and in ")
@@ -69,6 +85,15 @@ namespace ck::groundnav::debug
         }
 
         return Bypassed;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_IsPathDiagnosticsEnabled()
+        -> bool
+    {
+        return ck_groundnav_debuggates::CVar_PathDiagnostics.GetValueOnGameThread() != 0;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
