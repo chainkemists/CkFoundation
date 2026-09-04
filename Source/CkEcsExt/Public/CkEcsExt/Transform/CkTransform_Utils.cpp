@@ -619,8 +619,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -641,8 +640,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -663,8 +661,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -685,8 +682,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -706,8 +702,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -728,8 +723,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;
@@ -750,8 +744,7 @@ auto
     const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
 
     CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Transform request on Handle [{}] REFUSED: {}"),
-        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle)) {}
-    if (NOT TransformHandleIsValid)
+        InHandle, ck_transform_utils::Get_TransformCastFailureReason(InHandle))
     {
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return;

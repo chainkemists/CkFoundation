@@ -98,8 +98,6 @@ namespace ck_entity_script_utils
         const auto HasScriptStruct = ScriptStruct != nullptr;
         CK_ENSURE_IF_NOT(HasScriptStruct,
             TEXT("{} rejected EntityScript spawn params without a reflected struct type"), InOperation)
-        { }
-        if (NOT HasScriptStruct)
         { return false; }
 
         const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
@@ -110,9 +108,6 @@ namespace ck_entity_script_utils
             ScriptStruct->GetName(),
             Safety.FailurePath,
             Safety.FailureReason)
-        { }
-
-        if (NOT IsSpawnParamsSafe)
         { return false; }
 
         return true;

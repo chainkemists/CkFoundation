@@ -426,8 +426,6 @@ namespace ck
         CK_ENSURE_IF_NOT(IsOffsetValid,
             TEXT("IskmProxy [{}]: late SetCustomDataFloat offset [{}] is out of range (allocated slots: [{}]). RendererData._NumCustomDataFloat must cover the requested offset"),
             InHandle, InRequest.Get_Offset(), InCustomData._Values.Num())
-        {}
-        if (NOT IsOffsetValid)
         { return false; }
 
         const auto& SKMC = InCurrent.Get_BaseSKMC();
@@ -435,8 +433,6 @@ namespace ck
         CK_ENSURE_IF_NOT(HasLiveSkmc,
             TEXT("IskmProxy [{}]: BaseSKMC missing in late SetCustomDataFloat handler"),
             InHandle)
-        {}
-        if (NOT HasLiveSkmc)
         { return false; }
 
         InCustomData._Values[InRequest.Get_Offset()] = InRequest.Get_Value();

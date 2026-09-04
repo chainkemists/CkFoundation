@@ -39,8 +39,6 @@ auto
         || ck::IsValid(InFilterClass.Get());
     CK_ENSURE_IF_NOT(FilterClassIsValid,
         TEXT("Nav query filter resolution received an invalid filter class"))
-    {}
-    if (NOT FilterClassIsValid)
     { return {}; }
 
     auto BaseFilter = InNavData.GetDefaultQueryFilter();
@@ -51,8 +49,6 @@ auto
     CK_ENSURE_IF_NOT(BaseFilterIsValid,
         TEXT("Nav query filter resolution failed: base filter [{}] is invalid"),
         GetNameSafe(InFilterClass.Get()))
-    {}
-    if (NOT BaseFilterIsValid)
     { return {}; }
 
     if (InOverlay.Get_ExcludedAreaClasses().IsEmpty())
@@ -63,8 +59,6 @@ auto
     CK_ENSURE_IF_NOT(OverlayFilterIsValid,
         TEXT("Nav query filter resolution failed: could not copy base filter [{}]"),
         GetNameSafe(InFilterClass.Get()))
-    {}
-    if (NOT OverlayFilterIsValid)
     { return {}; }
 
     auto SeenAreaClasses = TSet<UClass*>{};
@@ -73,8 +67,6 @@ auto
         const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
         CK_ENSURE_IF_NOT(AreaClassIsValid,
             TEXT("Nav query filter overlay contains an invalid excluded area class"))
-        {}
-        if (NOT AreaClassIsValid)
         { return {}; }
 
         if (SeenAreaClasses.Contains(AreaClass.Get()))
@@ -86,8 +78,6 @@ auto
         CK_ENSURE_IF_NOT(AreaIsRegistered,
             TEXT("Nav query filter overlay area [{}] is not registered on NavData [{}]"),
             GetNameSafe(AreaClass.Get()), InNavData.GetName())
-        {}
-        if (NOT AreaIsRegistered)
         { return {}; }
 
         OverlayFilter->SetExcludedArea(static_cast<uint8>(AreaId));

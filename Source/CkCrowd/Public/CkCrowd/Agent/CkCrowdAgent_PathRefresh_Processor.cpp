@@ -158,8 +158,6 @@ namespace ck
                         Record._PaintedObb.IsFiniteAndPositive();
                     CK_ENSURE_IF_NOT(RecordIsValid,
                         TEXT("CrowdAvoidanceVolume retirement record contains invalid OBB geometry"))
-                    { }
-                    if (NOT RecordIsValid)
                     {
                         Records.RemoveAtSwap(RecordIndex);
                         continue;

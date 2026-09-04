@@ -198,8 +198,6 @@ namespace ck
             TEXT("QueueCoordinator [{}] cannot register Queue [{}]: registry, authority, feature, or category is invalid"),
             InCoordinator,
             Queue)
-        {}
-        if (NOT RequestIsValid)
         { return false; }
 
         const auto AlreadyRegistered = InCurrent._Services.ContainsByPredicate(
@@ -232,8 +230,6 @@ namespace ck
             TEXT("QueueCoordinator [{}] cannot unregister foreign or invalid Queue [{}]"),
             InCoordinator,
             Queue)
-        {}
-        if (NOT QueueIsInSameRegistry)
         { return false; }
 
         const auto RemovedCount = InCurrent._Services.RemoveAll(
@@ -264,8 +260,6 @@ namespace ck
             TEXT("QueueCoordinator [{}] cannot select for member [{}]: member, location, or result delegate is invalid"),
             InCoordinator,
             InRequest.Get_Member())
-        {}
-        if (NOT RequestIsValid)
         {
             ResultDelegate.ExecuteIfBound(FCk_QueueCoordinator_SelectResult{
                 ECk_QueueCoordinator_SelectOutcome::NoEligibleQueue,
@@ -306,8 +300,6 @@ namespace ck
             InCoordinator,
             InRequest.Get_Member(),
             ExistingQueues.Num())
-        {}
-        if (MemberIsInMultipleQueues)
         {
             ResultDelegate.Execute(FCk_QueueCoordinator_SelectResult{
                 ECk_QueueCoordinator_SelectOutcome::MemberInMultipleQueues,
@@ -356,8 +348,6 @@ namespace ck
                 TEXT("QueueCoordinator [{}] registered Queue [{}] lost its required Transform"),
                 InCoordinator,
                 Queue)
-            {}
-            if (NOT QueueHasTransform)
             { continue; }
 
             const auto Pressure = UCk_Utils_Queue_UE::Get_Pressure(Queue);

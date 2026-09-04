@@ -83,8 +83,6 @@ auto
         TEXT("Dynamic Fragment schema [{}] is unsafe at [{}]: {}. Strong UObject references in named EnTT storage "
              "are not GC-traced; use weak/soft references or a stable CK handle."),
         InFragmentData.GetScriptStruct(), Schema.FailurePath, Schema.FailureReason)
-    {}
-    if (NOT Schema.IsSafe)
     { return {}; }
 
     if (InReplication == ECk_Replication::Replicates && NOT CanSetupReplication(InHandle, InFragmentData))
@@ -151,8 +149,6 @@ auto
         TEXT("Dynamic Fragment schema [{}] is unsafe at [{}]: {}. Strong UObject references in named EnTT storage "
              "are not GC-traced; use weak/soft references or a stable CK handle."),
         InStructType, Schema.FailurePath, Schema.FailureReason)
-    {}
-    if (NOT Schema.IsSafe)
     { return nullptr; }
 
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -279,8 +275,6 @@ auto
     CK_ENSURE_IF_NOT(Schema.IsSafe,
         TEXT("Refusing to expose unsafe Dynamic Fragment schema [{}] at [{}]: {}"),
         InStructType, Schema.FailurePath, Schema.FailureReason)
-    {}
-    if (NOT Schema.IsSafe)
     { return nullptr; }
 
     const auto HandleIsValid = ck::IsValid(InHandle);

@@ -78,8 +78,6 @@ auto
 {
     const auto ValueHasNewline = InValue.Contains(TEXT("\n")) || InValue.Contains(TEXT("\r"));
     CK_ENSURE_IF_NOT(NOT ValueHasNewline, TEXT("GameSettings value for key [{}] contains a newline and cannot be stored in the ini provider"), InKey)
-    {}
-    if (ValueHasNewline)
     { return; }
 
     DoEnsureLoaded();

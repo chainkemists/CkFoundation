@@ -480,13 +480,11 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
         auto Candidates = TArray<FVector, TInlineAllocator<32>>{};
         const auto HasValidAngularDivs = InAngularDivs >= 1 && InAngularDivs <= MaximumSampleAngularDivs;
         CK_ENSURE_IF_NOT(HasValidAngularDivs,
-            TEXT("Invalid crowd avoidance sample angular divisions [{}]"), InAngularDivs) {}
-        if (NOT HasValidAngularDivs)
+            TEXT("Invalid crowd avoidance sample angular divisions [{}]"), InAngularDivs)
         { return Candidates; }
 
         const auto HasValidRings = InRings >= 1 && InRings <= MaximumSampleRings;
-        CK_ENSURE_IF_NOT(HasValidRings, TEXT("Invalid crowd avoidance sample rings [{}]"), InRings) {}
-        if (NOT HasValidRings)
+        CK_ENSURE_IF_NOT(HasValidRings, TEXT("Invalid crowd avoidance sample rings [{}]"), InRings)
         { return Candidates; }
 
         Candidates.Reserve(InAngularDivs * InRings + 1);

@@ -128,9 +128,6 @@ namespace ck
         const auto IsOwnerEntityValid = ck::IsValid(InOwnerEntity);
         CK_ENSURE_IF_NOT(IsOwnerEntityValid,
             TEXT("CreateInventory: Invalid owner entity"))
-        { }
-
-        if (NOT IsOwnerEntityValid)
         { return {}; }
 
         auto NewInventoryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Inventory>(InOwnerEntity);
@@ -138,9 +135,6 @@ namespace ck
         const auto IsNewInventoryEntityValid = ck::IsValid(NewInventoryEntity);
         CK_ENSURE_IF_NOT(IsNewInventoryEntityValid,
             TEXT("CreateInventory: Failed to create inventory entity"))
-        { }
-
-        if (NOT IsNewInventoryEntityValid)
         { return {}; }
 
         auto FixedParams = InParams;

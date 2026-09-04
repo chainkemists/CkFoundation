@@ -721,8 +721,6 @@ namespace ck::snapshot
                      "retirement suppresses. Complete the relocation, cancel the retirement, or destroy the retired "
                      "source before saving."),
                 Handle, SaveKey)
-            { }
-            if (HasSuppressedSaveKey)
             { return ECk_SnapshotResult::Failed_NotQuiescent; }
 
             PersistedIds.Add(RawId);

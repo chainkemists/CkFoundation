@@ -453,8 +453,6 @@ namespace ck::details
         const auto HasContactFilter = ContactFilterContext != nullptr && ContactFilterContext->Filter != nullptr;
         CK_ENSURE_IF_NOT(HasContactFilter,
             TEXT("Probe setup requires the SpatialQuery contact-filter registry context"))
-        { }
-        if (NOT HasContactFilter)
         { return; }
 
         const auto ContactSignature = ContactFilterContext->Get_OrRegisterSignature(InParams);
@@ -736,8 +734,6 @@ namespace ck
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
             TEXT("PhysicsSystem is no longer valid during Probe UpdateTransform"))
-        { }
-        if (ck::Is_NOT_Valid(PhysicsSystem))
         { return; }
 
         PhysicsSystem->GetBodyInterface().SetPositionsAndRotations(

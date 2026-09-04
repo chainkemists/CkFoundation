@@ -120,8 +120,6 @@ auto
     const auto IsValidNewEntity = ck::IsValid(NewEntity);
     CK_ENSURE_IF_NOT(IsValidNewEntity,
         TEXT("InputSource creation returned an invalid entity outside world teardown"))
-    {}
-    if (NOT IsValidNewEntity)
     { return; }
 
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING

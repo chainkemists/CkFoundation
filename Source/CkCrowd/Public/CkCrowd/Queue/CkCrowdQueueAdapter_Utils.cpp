@@ -45,8 +45,6 @@ auto
     }
     CK_ENSURE_IF_NOT(AgentIsValid && QueueIsValid && HasAuthority && HasCompatibleAdapter,
         TEXT("Cannot join CrowdAgent [{}] to Queue [{}]: invalid agent, queue, authority, or conflicting adapter"), InAgent, InQueue)
-    {}
-    if (NOT AgentIsValid || NOT QueueIsValid || NOT HasAuthority || NOT HasCompatibleAdapter)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -117,8 +115,6 @@ auto
     CK_ENSURE_IF_NOT(AgentIsValid && QueueIsValid && HasAuthority && TicketIsValid && HasCompatibleAdapter,
         TEXT("Cannot restore join CrowdAgent [{}] to Queue [{}]: invalid agent, queue, authority, ticket, or adapter"),
         InAgent, InQueue)
-    {}
-    if (NOT AgentIsValid || NOT QueueIsValid || NOT HasAuthority || NOT TicketIsValid || NOT HasCompatibleAdapter)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -158,8 +154,6 @@ auto
     const auto HasAdapter = AgentIsValid && InAgent.Has<ck::FFragment_CrowdQueueAdapter>();
     CK_ENSURE_IF_NOT(HasAdapter,
         TEXT("Cannot leave Queue: CrowdAgent [{}] has no Queue adapter"), InAgent)
-    {}
-    if (NOT HasAdapter)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;
@@ -171,8 +165,6 @@ auto
     const auto HasAuthority = QueueIsValid && UCk_Utils_Net_UE::Get_HasAuthority(InAgent);
     CK_ENSURE_IF_NOT(QueueIsValid && HasAuthority,
         TEXT("Cannot leave Queue from CrowdAgent [{}]: queue is invalid or non-authoritative"), InAgent)
-    {}
-    if (NOT QueueIsValid || NOT HasAuthority)
     {
         InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InAgent;

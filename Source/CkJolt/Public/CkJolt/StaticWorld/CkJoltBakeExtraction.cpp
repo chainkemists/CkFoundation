@@ -495,9 +495,6 @@ namespace ck_jolt_bake_extraction
         CK_ENSURE_IF_NOT(GeometryIsValid,
             TEXT("Cooked tri-mesh on BodySetup for [{}] cannot be extracted (status [{}])"),
             InDebugName, static_cast<uint8>(Geometry._Status))
-        { }
-
-        if (NOT GeometryIsValid)
         { return {}; }
 
         auto Vertices = MoveTemp(Geometry._Vertices);
@@ -530,9 +527,6 @@ namespace ck_jolt_bake_extraction
                  "{} malformed geometry component(s)): refusing to bake single-sided collision. Correct the "
                  "source indices or triangle winding."),
             InDebugName, WindingRatio, Normalization._NumMalformedComponents)
-        { }
-
-        if (NOT WindingIsSafe)
         { return {}; }
 
         const auto Settings = JPH::MeshShapeSettings{Vertices, Triangles};
@@ -650,8 +644,6 @@ namespace ck::jolt::bake
             CK_ENSURE_IF_NOT(ck::IsValid(Resolved),
                 TEXT("Bake-filter excluded actor class [{}] is unset or failed to load — the entry is IGNORED. "
                      "Fix or remove the row in Project Settings > Jolt > Bake Filter."), SoftClass.ToString())
-            {}
-            if (ck::Is_NOT_Valid(Resolved))
             { continue; }
 
             Filter._ExcludedActorClasses.Emplace(TStrongObjectPtr{Resolved});

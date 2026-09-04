@@ -425,9 +425,6 @@ FCk_DebugScene_Target::
     const auto ConfigIsValid = ck::IsValid(_Impl->_World.Get()) && _Impl->_MaxItems >= 0 && _Impl->_MaxInstances >= 0;
     CK_ENSURE_IF_NOT(ConfigIsValid, TEXT("CkDebugScene rejected an invalid target configuration"))
     {
-    }
-    if (NOT ConfigIsValid)
-    {
         return;
     }
 
@@ -494,9 +491,6 @@ ApplyWireframeBucket(ECk_DebugScene_WireframeMode InMode, const FBucketKey& InKe
         const auto WireframeIsValid = ck::IsValid(Wireframe);
         CK_ENSURE_IF_NOT(WireframeIsValid, TEXT("CkDebugScene could not load the engine wireframe material"))
         {
-        }
-        if (NOT WireframeIsValid)
-        {
             Component->SetOverlayMaterial(nullptr);
             return;
         }
@@ -528,9 +522,6 @@ TryCreateBucket(UWorld* InWorld, const FBucketKey& InKey, const FCk_DebugScene_I
     const auto ComponentWasCreated = ck::IsValid(Component);
     CK_ENSURE_IF_NOT(ComponentWasCreated, TEXT("CkDebugScene failed to create an instanced mesh component"))
     {
-    }
-    if (NOT ComponentWasCreated)
-    {
         return false;
     }
 
@@ -551,9 +542,6 @@ TryCreateBucket(UWorld* InWorld, const FBucketKey& InKey, const FCk_DebugScene_I
     const auto ComponentRegistered = Component->IsRegistered();
     CK_ENSURE_IF_NOT(ComponentRegistered, TEXT("CkDebugScene failed to register an instanced mesh component"))
     {
-    }
-    if (NOT ComponentRegistered)
-    {
         Component->DestroyComponent();
         return false;
     }
@@ -561,9 +549,6 @@ TryCreateBucket(UWorld* InWorld, const FBucketKey& InKey, const FCk_DebugScene_I
     auto* Mid = UMaterialInstanceDynamic::Create(InSubmission.Get_Appearance().Get_BaseMaterial(), Component);
     const auto MidWasCreated = ck::IsValid(Mid);
     CK_ENSURE_IF_NOT(MidWasCreated, TEXT("CkDebugScene failed to create an instance material"))
-    {
-    }
-    if (NOT MidWasCreated)
     {
         Component->DestroyComponent();
         return false;
@@ -650,9 +635,6 @@ auto
 
     CK_ENSURE_IF_NOT(IsValidSubmission, TEXT("CkDebugScene rejected invalid item submission"))
     {
-    }
-    if (NOT IsValidSubmission)
-    {
         _Impl->_FrameInputValid = false;
         return false;
     }
@@ -681,9 +663,6 @@ auto
     const auto FitsFrameCapacity = _Impl->_FrameInputValid && _Impl->_StagedItems.Num() <= _Impl->_MaxItems &&
                                    TotalInstances <= _Impl->_MaxInstances;
     CK_ENSURE_IF_NOT(FitsFrameCapacity, TEXT("CkDebugScene rejected an over-capacity reconcile frame"))
-    {
-    }
-    if (NOT FitsFrameCapacity)
     {
         Abort_Reconcile();
         return false;
@@ -821,9 +800,6 @@ auto
         const auto LinesWereCreated = ck::IsValid(Lines);
         CK_ENSURE_IF_NOT(LinesWereCreated, TEXT("CkDebugScene failed to prepare a line batch component"))
         {
-        }
-        if (NOT LinesWereCreated)
-        {
             ck_debug_scene_target::DestroyStagedBuckets(PreparedBuckets);
             Abort_Reconcile();
             return false;
@@ -886,9 +862,6 @@ auto
             Addition._Submission.Get_Transform(), ck_debug_scene_target::IsWorldSpace);
         const auto InstanceWasAdded = Component->IsValidId(InstanceId);
         CK_ENSURE_IF_NOT(InstanceWasAdded, TEXT("CkDebugScene failed to commit a prepared instance"))
-        {
-        }
-        if (NOT InstanceWasAdded)
         {
             DidCommitAdditions = false;
             break;
@@ -1037,9 +1010,6 @@ auto
     InputIsValid &= _Impl->_Stats._InstanceCount - ReplacedInstanceCount + InInstances.Num() <= _Impl->_MaxInstances;
 
     CK_ENSURE_IF_NOT(InputIsValid, TEXT("CkDebugScene rejected invalid item submission"))
-    {
-    }
-    if (NOT InputIsValid)
     {
         return false;
     }
@@ -1398,9 +1368,6 @@ auto
 
     CK_ENSURE_IF_NOT(InputIsValid, TEXT("CkDebugScene rejected invalid line channel input"))
     {
-    }
-    if (NOT InputIsValid)
-    {
         return false;
     }
 
@@ -1418,9 +1385,6 @@ auto
             World, MakeUniqueObjectName(World, ULineBatchComponent::StaticClass(), TEXT("CkDebugSceneLines")));
         const auto LinesWereCreated = ck::IsValid(Lines);
         CK_ENSURE_IF_NOT(LinesWereCreated, TEXT("CkDebugScene failed to create a line batch component"))
-        {
-        }
-        if (NOT LinesWereCreated)
         {
             return false;
         }
@@ -1501,9 +1465,6 @@ auto
 
     CK_ENSURE_IF_NOT(InputIsValid, TEXT("CkDebugScene rejected invalid label channel input"))
     {
-    }
-    if (NOT InputIsValid)
-    {
         return false;
     }
 
@@ -1546,9 +1507,6 @@ auto
     }
 
     CK_ENSURE_IF_NOT(InputIsValid, TEXT("CkDebugScene rejected invalid vector channel input"))
-    {
-    }
-    if (NOT InputIsValid)
     {
         return false;
     }
@@ -1825,9 +1783,6 @@ auto
     const auto DirectionIsUsable = ck_debug_scene_target::IsFinite(InOrigin) &&
                                    ck_debug_scene_target::IsFinite(InDirection) && NOT InDirection.IsNearlyZero();
     CK_ENSURE_IF_NOT(DirectionIsUsable, TEXT("CkDebugScene rejected a degenerate pick ray"))
-    {
-    }
-    if (NOT DirectionIsUsable)
     {
         return {};
     }

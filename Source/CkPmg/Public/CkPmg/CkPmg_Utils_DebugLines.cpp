@@ -53,8 +53,6 @@ namespace ck::pmg
         CK_ENSURE_IF_NOT(OwnerIsValid,
             TEXT("Cannot create a retained PMG line set under invalid owner [{}]"),
             InOwningEntity)
-        {}
-        if (NOT OwnerIsValid)
         { return {}; }
 
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwningEntity);
@@ -62,8 +60,6 @@ namespace ck::pmg
         CK_ENSURE_IF_NOT(EntityWasCreated,
             TEXT("Cannot create a retained PMG line-set entity under owner [{}]"),
             InOwningEntity)
-        {}
-        if (NOT EntityWasCreated)
         { return {}; }
 
         auto Common = FFragment_Pmg_DebugShape_Common{};
