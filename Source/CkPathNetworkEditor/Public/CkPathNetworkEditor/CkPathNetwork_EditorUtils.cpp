@@ -14,13 +14,23 @@
 
 namespace ck_pathnetwork_editor
 {
-    struct FNavmeshConformance
+    auto
+    Make_NavmeshConformance(
+        const FVector& InSourcePoint,
+        const FCk_NavSurface_ProjectionResult& InProjected)
+        -> FNavmeshConformance
     {
-        bool _Projected = false;
-        FVector _ProjectedPoint = FVector::ZeroVector;
-        float _PlanarDelta = 0.0f;
-        float _VerticalDelta = 0.0f;
-    };
+        auto Result = FNavmeshConformance{};
+        Result._Status = InProjected.Get_Status();
+        Result._Projected = InProjected.Get_Status() == ECk_NavSurface_QueryStatus::Success;
+        if (NOT Result._Projected)
+        { return Result; }
+
+        Result._ProjectedPoint = InProjected.Get_Location();
+        Result._PlanarDelta = FVector::Dist2D(InSourcePoint, InProjected.Get_Location());
+        Result._VerticalDelta = FMath::Abs(InSourcePoint.Z - InProjected.Get_Location().Z);
+        return Result;
+    }
 
     auto
     Evaluate_NavmeshConformance(
@@ -32,17 +42,8 @@ namespace ck_pathnetwork_editor
         const auto Query = FCk_NavSurface_ProjectionQuery{InSourcePoint}
             .Set_SearchHalfExtents(InProjectionExtent);
 
-        const auto Projected = UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorldContext, Query);
-
-        auto Result = FNavmeshConformance{};
-        Result._Projected = Projected.Get_Status() == ECk_NavSurface_QueryStatus::Success;
-        if (NOT Result._Projected)
-        { return Result; }
-
-        Result._ProjectedPoint = Projected.Get_Location();
-        Result._PlanarDelta = FVector::Dist2D(InSourcePoint, Projected.Get_Location());
-        Result._VerticalDelta = FMath::Abs(InSourcePoint.Z - Projected.Get_Location().Z);
-        return Result;
+        return Make_NavmeshConformance(
+            InSourcePoint, UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorldContext, Query));
     }
 
     auto
@@ -200,6 +201,7 @@ auto
         Failure._PlanarDelta = InConformance._PlanarDelta;
         Failure._VerticalDelta = InConformance._VerticalDelta;
         Failure._Projected = InConformance._Projected;
+        Failure._Status = InConformance._Status;
         Result._NonconformantPoints.Add(MoveTemp(Failure));
     };
 
@@ -378,6 +380,7 @@ auto
                 Failure._PlanarDelta = Conformance._PlanarDelta;
                 Failure._VerticalDelta = Conformance._VerticalDelta;
                 Failure._Projected = Conformance._Projected;
+                Failure._Status = Conformance._Status;
                 Result._NonconformantPoints.Add(MoveTemp(Failure));
             }
         }
