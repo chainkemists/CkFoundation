@@ -47,6 +47,28 @@ Each cell carries the distance to the nearest cell an agent cannot stand on, and
 cell by testing its own radius against that number. Baking per radius is the thing this design
 exists to avoid — do not reintroduce it.
 
+*Profile variants, and what earns one.* A volume may carry `_ProfileVariants` — extra
+`FCk_GroundNav_AgentProfile`s, each named by an `FGameplayTag`, each baked into its own field out of
+the same single pass over the geometry. **Radius never justifies one**: it is answered at query time
+by idea 1, and a variant for a wider agent is the per-radius bake this design refuses. What earns a
+variant is a *walkable-set* change — a shorter step, a steeper slope limit, a lower standing volume —
+because no query-time predicate can recover which ground a different profile could stand on from a
+field baked under another. `_Profile` stays the **untagged default**: it is what a query carrying no
+`_ProfileTag` is answered from, and it is never one of the variants. The selector is the tag, all the
+way down — `FCk_NavSurface_*Query::_ProfileTag` and `FCk_Request_GroundNavPath_FindPath::_ProfileTag`
+reach `world_fields::TryGet_Field(world, location, profileTag)`, which returns that profile's field or
+**nothing**, never the default's: silently substituting it would walk an agent up a step it cannot
+climb. A tag must be non-empty and unique per volume; both are refused where the params are judged.
+The variants are published in the same call as the default — one `world_fields::Publish`, one write
+lock — and re-derived beside it, each keeping its own epoch with the fragment's `_Epoch` as the
+newest. An invalidator resolves a cached corridor's field through the corridor's OWN profile tag, so a
+change that reached only a variant invalidates the routes planned over that variant and leaves the
+routes planned over the default alone. **A repair on a volume that holds variants converts to a full
+rebuild** — local repair is single-field, and repairing only the default would leave it describing the
+world as it is and every variant as it was. A volume that repairs often and holds variants therefore
+pays a whole-volume bake for every dirty region; a repair that runs over every profile is what removes
+that cost.
+
 **2. A plate's clearance cannot admit an agent; a portal's can.** Two rooms wide enough for anybody,
 joined by a doorway narrow enough for nobody, both report generous clearance. The crossing carries
 the number that decides passage. That number is the tightest point on the *widest* crossing the
