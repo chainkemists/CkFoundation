@@ -88,6 +88,12 @@ namespace ck::groundnav
         int32 _PlateCount = 0;
         int32 _WalkableCellCount = 0;
 
+        // The epoch this tile was last baked under. Carried per tile rather than once per field
+        // because a local repair moves only the tiles it re-baked: the ones still holding an older
+        // epoch are the ground the repair carried across untouched, and without this the two are
+        // indistinguishable in a view that shows every tile alike.
+        int64 _Epoch = 0;
+
         // Drawn differently rather than omitted. A tile nothing is known about and a tile with no floor
         // in it look identical if only the built ones are shown, and they are the two things a viewer
         // most needs to tell apart.
@@ -298,6 +304,25 @@ namespace ck::groundnav
         // never the span between them.
         TArray<FBox> _ChangedBounds;
 
+        // Dirty ground a volume has accumulated that no repair has opened for yet. Invalid when
+        // nothing is pending, which is a different thing from an empty box at the origin.
+        FBox _PendingDirtyBounds = FBox{ForceInit};
+
+        // The box the OPEN repair fixed its tile set from. Held apart from the pending box because
+        // the two are consecutive states of the same ground and a viewer that drew them alike could
+        // not tell a repair that has started from one still waiting to.
+        FBox _RepairDirtyBounds = FBox{ForceInit};
+
+        // The tiles that repair is re-baking, indexed into the VOLUME's field.
+        TArray<int32> _RepairTileIndices;
+
+        // Those same tiles placed in world space at capture. The indices above address the volume's
+        // lattice, and a snapshot's own tiles come from a separate debug bake, so nothing at draw
+        // time could place them.
+        TArray<FBox> _RepairTileBounds;
+
+        bool _RepairInProgress = false;
+
         // Set when the cell list was capped. The counts above stay TRUE totals, so a viewer reports
         // what the bake found rather than what it managed to draw.
         bool _CellsWereTruncated = false;
@@ -316,6 +341,13 @@ namespace ck::groundnav
         auto Get_BoundaryCount() const -> int32 { return _Boundary.Num(); }
 
         auto Get_BuiltTileCount() const -> int32;
+
+        auto Get_RepairTileCount() const -> int32 { return _RepairTileIndices.Num(); }
+
+        /** The highest epoch any tile carries, which is the one the latest publish stamped: a repair
+         *  moves only the tiles it re-baked, so the tiles at this epoch are exactly that publish's
+         *  news. Zero for a snapshot with no tiles. */
+        auto Get_NewestTileEpoch() const -> int64;
 
         auto Get_OpenBodyCount() const -> int32 { return _OpenBodies.Num(); }
 

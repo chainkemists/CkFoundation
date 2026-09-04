@@ -61,6 +61,28 @@ public:
         const FCk_Request_GroundNavVolume_Build& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** Declares a world-space box whose ground is no longer trustworthy and schedules a LOCAL repair of
+     *  exactly that ground - never a whole-volume rebake. Boxes arriving before the repair opens are
+     *  UNIONED into one pass, so many bodies moving in one frame cost one repair.
+     *
+     *  For a MOVED body the box is the union of where it was and where it is: the new half closes the
+     *  ground it arrived on, the old half reopens the ground it left.
+     *
+     *  Refused before it is enqueued when the box is not a box - degenerate on any axis, or carrying a
+     *  non-finite corner - because a repair over nothing publishes an epoch nothing changed.
+     *
+     *  The completion delegate fires when the REPAIR ends, not when the box is accepted; a build that
+     *  supersedes the pending repair completes it instead, having rebaked the same ground. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Request Repair",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_GroundNavVolume
+    Request_Repair(
+        UPARAM(ref) FCk_Handle_GroundNavVolume& InVolume,
+        const FCk_Request_GroundNavVolume_Repair& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     /** Paints an authored area tag onto the ground a shape covers, keyed on the markup ENTITY: a
      *  second request naming the same entity updates that record in place instead of adding another,
      *  so moving, retagging or disabling a placed volume is one call rather than a release and an add.
@@ -238,6 +260,23 @@ public:
     TryGet_MarkupRecord(
         const FCk_Handle_GroundNavVolume& InVolume,
         int32 InRecordId) -> TOptional<FCk_GroundNav_MarkupRecord>;
+
+    /**
+     * The dirty ground accumulated on the volume that no repair has opened for yet, or an invalid box
+     * when none is pending.
+     *
+     * C++ only, for the same reason Get_Field is: the consumers are the repair stages. An invalid box
+     * is the answer to "nothing is pending", never an empty region at the origin.
+     */
+    static auto
+    Get_PendingDirtyBounds(
+        const FCk_Handle_GroundNavVolume& InVolume) -> FBox;
+
+    /** Whether a repair state currently holds a source field and is being sliced. A volume with dirty
+     *  ground pending but no repair opened yet reads false - that is what the pending bounds say. */
+    static auto
+    Get_IsRepairInProgress(
+        const FCk_Handle_GroundNavVolume& InVolume) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
