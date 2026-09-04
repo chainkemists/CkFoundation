@@ -85,12 +85,11 @@ namespace ck
             TEXT("VoxelNav Occluder [{}] cannot be tracked. Half-extents [{}] must be positive on every "
                  "axis and the movement threshold override [{}]uu cannot be negative"),
             InOccluderEntity, InParams.Get_HalfExtentsUu(), InParams.Get_MovementThresholdUuOverride())
-        {}
-
-        // The occluder stays inert rather than emitting dirty regions of a degenerate box, which would cost
-        // repairs without ever changing a voxel.
-        if (NOT ExtentsAreUsable)
-        { return; }
+        {
+            // The occluder stays inert rather than emitting dirty regions of a degenerate box, which would cost
+            // repairs without ever changing a voxel.
+            return;
+        }
 
         const auto TransformHandle = UCk_Utils_Transform_UE::Cast(InOccluderEntity);
 
