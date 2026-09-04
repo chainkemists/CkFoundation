@@ -444,6 +444,7 @@ namespace ck
         InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
         InCurrent._LastCorridorLinkIds = Get_CorridorLinkIds(*InCurrent._Field, SearchResult);
         InCurrent._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
+        InCurrent._ProfileTag = Request.Get_ProfileTag();
         InCurrent._LastCorridorBounds = CorridorBounds;
         InCurrent._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;
         InCurrent._LastSourceFlatPlate = SearchResult._PlateCorridor.IsEmpty()
@@ -504,8 +505,11 @@ namespace ck
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity);
 
+        // The request's profile tag rides the lookup, so an episode opened for a tagged walker plans
+        // over that walker's field. A tag the world holds no field for is parked, not answered from
+        // the untagged one - the same wait an unbuilt start gets, and for the same reason.
         const auto Field = groundnav::world_fields::TryGet_Field(
-            World, InCurrent._PendingRequest.Get_From());
+            World, InCurrent._PendingRequest.Get_From(), InCurrent._PendingRequest.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         { return; }

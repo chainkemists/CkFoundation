@@ -209,8 +209,43 @@ public:
     Get_IsBuilding(
         const FCk_Handle_GroundNavVolume& InVolume);
 
-    /** Bumps on every completed build. A consumer holding a field compares against this to learn it is
-     *  behind — staleness is derived here rather than stored anywhere. */
+    /**
+     * The profile tags this volume AUTHORS a variant for, in authored order, or an empty array when it
+     * authors none.
+     *
+     * Read off the params rather than off what is published: a tag is authored data and survives a
+     * failed build, where the published set is empty until the first one completes. Whether a tag's
+     * ground exists yet is the separate question Get_IsBuilt_ForProfile answers.
+     *
+     * The untagged default is NOT in here. It is not a variant, and returning an empty tag beside the
+     * real ones would make the list unusable as a set of selectors.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Profile Variant Tags")
+    static TArray<FGameplayTag>
+    Get_ProfileVariantTags(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /**
+     * Whether the volume has a published field for one profile.
+     *
+     * An EMPTY tag asks about the untagged default, which is exactly Get_IsBuilt. A tag the volume
+     * authors no variant for reads false however built the volume is: there is no ground for that
+     * profile, and a query naming it is answered from nothing rather than from the default's field.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Is Built For Profile")
+    static bool
+    Get_IsBuilt_ForProfile(
+        const FCk_Handle_GroundNavVolume& InVolume,
+        FGameplayTag InProfileTag);
+
+    /** Bumps on every completed build, and on any derive that moved a field — the NEWEST epoch across
+     *  the untagged default and every profile variant. A consumer holding the default's field can
+     *  therefore read behind after a change that reached only a variant; staleness is derived here
+     *  rather than stored anywhere. */
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GroundNavVolume",
               DisplayName="[Ck][GroundNavVolume] Get Build Epoch")
