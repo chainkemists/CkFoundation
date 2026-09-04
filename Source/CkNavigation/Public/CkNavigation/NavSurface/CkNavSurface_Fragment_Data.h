@@ -121,11 +121,20 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _QueryFilter;
 
+    // Which class of walker is asking. Empty - the default - is the provider's untagged surface, which
+    // is the only one a provider is obliged to have; a tag names a surface baked for a profile that
+    // reaches different ground, and a provider holding none for it answers no surface rather than
+    // substituting the untagged one. NOT a query filter: what a filter can reach is a property of the
+    // query, where this selects which surface the query is put to at all.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY(_SearchHalfExtents);
     CK_PROPERTY(_Mode);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_ProjectionQuery, _Location);
@@ -180,11 +189,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_Start);
     CK_PROPERTY_GET(_End);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_MoveAlongSurfaceQuery, _Start, _End);
@@ -231,11 +245,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_Start);
     CK_PROPERTY_GET(_End);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_RaycastQuery, _Start, _End);
@@ -285,11 +304,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _QueryFilter;
 
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_Center);
     CK_PROPERTY_GET(_Radius);
     CK_PROPERTY(_SearchHalfExtents);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_BoundaryQuery, _Center, _Radius);
@@ -358,10 +382,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _QueryFilter;
 
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
 public:
     CK_PROPERTY_GET(_Start);
     CK_PROPERTY_GET(_End);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_ProfileTag);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_ReachabilityQuery, _Start, _End);
