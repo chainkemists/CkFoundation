@@ -65,9 +65,6 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup VisualLodArbiter [{}] - loading its Config [{}] through CkResourceLoader failed"),
             InHandle, InParams.Get_Config().ToSoftObjectPath())
-        {}
-
-        if (NOT AssetsAreLoaded)
         {
             InCurrent._LoadedAssets = {};
             InCurrent._RuntimeTunerAssets = {};
@@ -103,9 +100,6 @@ namespace ck
             || NOT InCurrent._RuntimeTunerAssets.Get_HasFailed();
         CK_ENSURE_IF_NOT(RuntimeTunerAssetsAreLoaded,
             TEXT("Cannot setup VisualLodArbiter [{}] - loading its runtime tuner profiles failed"), InHandle)
-        {}
-
-        if (NOT RuntimeTunerAssetsAreLoaded)
         {
             InCurrent._LoadedAssets = {};
             InCurrent._RuntimeTunerAssets = {};
@@ -119,9 +113,6 @@ namespace ck
         CK_ENSURE_IF_NOT(RuntimeTunersAreValid,
             TEXT("Cannot setup VisualLodArbiter [{}] - Config [{}] has invalid runtime tuners"),
             InHandle, InParams.Get_Config().ToSoftObjectPath())
-        {}
-
-        if (NOT RuntimeTunersAreValid)
         {
             // Keep the rooted assets so an editor-time config correction can be revalidated without
             // reloading, and retain NeedsSetup so no update observes an unpublished current snapshot.
@@ -291,25 +282,16 @@ namespace ck
         const auto ConfigIsValid = ck::IsValid(Config);
         CK_ENSURE_IF_NOT(ConfigIsValid,
             TEXT("VisualLodArbiter [{}] cannot set runtime tuners without its resolved config"), InHandle)
-        {}
-
-        if (NOT ConfigIsValid)
         { return false; }
 
         const auto TunersAreValid = visual_lod::Get_AreRuntimeTunersValid(InRequest.Get_RuntimeTuners(), *Config);
         CK_ENSURE_IF_NOT(TunersAreValid,
             TEXT("VisualLodArbiter [{}] rejected invalid runtime tuners atomically"), InHandle)
-        {}
-
-        if (NOT TunersAreValid)
         { return false; }
 
         const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, InRequest.Get_RuntimeTuners());
         CK_ENSURE_IF_NOT(RendererAccepted,
             TEXT("VisualLodArbiter [{}] rejected runtime profile tuner transaction atomically"), InHandle)
-        {}
-
-        if (NOT RendererAccepted)
         { return false; }
 
         return visual_lod::TrySetRuntimeTuners(InCurrent._RuntimeTuners, InRequest.Get_RuntimeTuners(), *Config);
@@ -327,26 +309,17 @@ namespace ck
         const auto ConfigIsValid = ck::IsValid(Config);
         CK_ENSURE_IF_NOT(ConfigIsValid,
             TEXT("VisualLodArbiter [{}] cannot reset runtime tuners without its resolved config"), InHandle)
-        {}
-
-        if (NOT ConfigIsValid)
         { return false; }
 
         const auto RuntimeTuners = visual_lod::MakeRuntimeTuners(*Config);
         const auto RuntimeTunersAreValid = visual_lod::Get_AreRuntimeTunersValid(RuntimeTuners, *Config);
         CK_ENSURE_IF_NOT(RuntimeTunersAreValid,
             TEXT("VisualLodArbiter [{}] cannot reset to malformed authored runtime tuners"), InHandle)
-        {}
-
-        if (NOT RuntimeTunersAreValid)
         { return false; }
 
         const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, RuntimeTuners);
         CK_ENSURE_IF_NOT(RendererAccepted,
             TEXT("VisualLodArbiter [{}] rejected runtime profile reset transaction atomically"), InHandle)
-        {}
-
-        if (NOT RendererAccepted)
         { return false; }
 
         InCurrent._RuntimeTuners = RuntimeTuners;
@@ -829,8 +802,6 @@ namespace ck
         CK_ENSURE_IF_NOT(CrowdIndexIsValid,
             TEXT("VisualLod member crowd index [{}] is outside arbiter [{}]'s [{}] configured crowds"),
             InCrowdIndex, InCtx._Arbiter, Current._Crowds.Num())
-        {}
-        if (NOT CrowdIndexIsValid)
         { return nullptr; }
 
         auto& Runtime = Current._Crowds[InCrowdIndex];
@@ -857,8 +828,6 @@ namespace ck
             TEXT("VisualLod crowd [{}] on arbiter [{}] has malformed RenderBands: first threshold must be zero, "
                  "thresholds strictly increase, and return hysteresis must stay before the preceding boundary"),
             InCrowdIndex, InCtx._Arbiter)
-        {}
-        if (NOT BandsAreValid)
         { return nullptr; }
 
         if (NOT Runtime._LoadedAssets.Get_IsRequested())
@@ -883,8 +852,6 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot stand up VisualLod crowd [{}] for arbiter [{}] - loading AnimCollection [{}] failed"),
             InCrowdIndex, InCtx._Arbiter, CrowdConfig.Get_AnimCollection().ToSoftObjectPath())
-        {}
-        if (NOT AssetsAreLoaded)
         {
             Runtime._LoadedAssets = {};
             return nullptr;
@@ -907,8 +874,6 @@ namespace ck
                 TEXT("VisualLod crowd [{}] on arbiter [{}] RenderBand profile [{}] must resolve and use the exact "
                      "crowd AnimCollection/default mesh; no crowd is created"),
                 InCrowdIndex, InCtx._Arbiter, RenderBand.Get_RendererProfile().ToSoftObjectPath())
-            {}
-            if (NOT ProfileIsCompatible)
             {
                 Runtime._LoadedAssets = {};
                 return nullptr;
@@ -930,8 +895,6 @@ namespace ck
         CK_ENSURE_IF_NOT(ProfilesWereApplied,
             TEXT("VisualLod crowd [{}] on arbiter [{}] rejected its validated render profile set"),
             InCrowdIndex, InCtx._Arbiter)
-        {}
-        if (NOT ProfilesWereApplied)
         {
             Crowd->Destroy();
             Runtime._LoadedAssets = {};
@@ -948,8 +911,6 @@ namespace ck
         CK_ENSURE_IF_NOT(RuntimeTunersWereApplied,
             TEXT("VisualLod crowd [{}] on arbiter [{}] rejected its runtime profile tuners"),
             InCrowdIndex, InCtx._Arbiter)
-        {}
-        if (NOT RuntimeTunersWereApplied)
         {
             Crowd->Destroy();
             Runtime._LoadedAssets = {};
@@ -1521,8 +1482,6 @@ namespace ck
             TEXT("VisualLod member [{}] failed to migrate crowd member [{}] to render profile [{}] — renderer reports [{}]; "
                  "VisualLod band state remains unchanged"),
             InMember, InMemberCurrent._MemberIndex, NewBandIndex, AppliedBandIndex)
-        {}
-        if (NOT RendererStateMatches)
         { return; }
 
         InMemberCurrent._RenderBandIndex = NewBandIndex;

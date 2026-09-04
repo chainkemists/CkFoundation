@@ -170,8 +170,6 @@ namespace ck
                 CK_ENSURE_IF_NOT(ChunkIsValid,
                     TEXT("Cannot create retained CrowdDiag breadcrumb chunk for agent [{}]"),
                     InHandle)
-                {}
-                if (NOT ChunkIsValid)
                 { return; }
 
                 InBreadcrumb._Chunks.Add(Chunk);
@@ -189,8 +187,6 @@ namespace ck
             CK_ENSURE_IF_NOT(HasActiveChunk,
                 TEXT("Cannot append CrowdDiag breadcrumb for agent [{}] without a live PMG chunk"),
                 InHandle)
-            {}
-            if (NOT HasActiveChunk)
             { return; }
 
             pmg::Append_DebugLine_World(

@@ -70,8 +70,6 @@ namespace ck
         CK_ENSURE_IF_NOT(IsValidInput,
             TEXT("CrowdAvoidanceVolume [{}] requires a finite static Transform, positive world extents, non-negative influence, and a valid traversal policy."),
             Volume)
-        { }
-        if (NOT IsValidInput)
         {
             FProcessor_CrowdAvoidanceVolume_Monitor::Release_Runtime(InRuntime);
             Volume.Try_Remove<FTag_CrowdAvoidanceVolume_NeedsSetup>();
@@ -82,8 +80,6 @@ namespace ck
         auto ProbeChild = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Volume);
         const auto HasProbeChild = ck::IsValid(ProbeChild);
         CK_ENSURE_IF_NOT(HasProbeChild, TEXT("CrowdAvoidanceVolume [{}] failed to create its probe child."), Volume)
-        { }
-        if (NOT HasProbeChild)
         {
             Volume.Try_Remove<FTag_CrowdAvoidanceVolume_NeedsSetup>();
             Volume.AddOrGet<FTag_CrowdAvoidanceVolume_Invalid>();
@@ -102,8 +98,6 @@ namespace ck
         auto ProbeTransform = UCk_Utils_Transform_UE::Add(ProbeChild, AuthoredTransform, ECk_Replication::DoesNotReplicate);
         const auto HasProbeTransform = ck::IsValid(ProbeTransform);
         CK_ENSURE_IF_NOT(HasProbeTransform, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe Transform."), Volume)
-        { }
-        if (NOT HasProbeTransform)
         { Cleanup(nullptr); return; }
 
         // The child inherits AuthoredTransform from its scene-node parent. Keep the shape in
@@ -115,8 +109,6 @@ namespace ck
         const auto ProbeShape = UCk_Utils_ShapeBox_UE::Add(ProbeChild, FCk_Fragment_ShapeBox_ParamsData{ProbeDimensions});
         const auto HasProbeShape = ck::IsValid(ProbeShape);
         CK_ENSURE_IF_NOT(HasProbeShape, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe box."), Volume)
-        { }
-        if (NOT HasProbeShape)
         { Cleanup(nullptr); return; }
 
         auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_AvoidanceVolume};
@@ -126,22 +118,16 @@ namespace ck
         const auto Probe = UCk_Utils_Probe_UE::Add(ProbeTransform, ProbeParams, FCk_Probe_DebugInfo{});
         const auto HasProbe = ck::IsValid(Probe);
         CK_ENSURE_IF_NOT(HasProbe, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe feature."), Volume)
-        { }
-        if (NOT HasProbe)
         { Cleanup(nullptr); return; }
 
         auto VolumeTransform = UCk_Utils_Transform_UE::Cast(Volume);
         const auto HasVolumeTransform = ck::IsValid(VolumeTransform);
         CK_ENSURE_IF_NOT(HasVolumeTransform, TEXT("CrowdAvoidanceVolume [{}] lost its Transform during setup."), Volume)
-        { }
-        if (NOT HasVolumeTransform)
         { Cleanup(nullptr); return; }
 
         const auto ProbeNode = UCk_Utils_SceneNode_UE::Add(ProbeTransform, VolumeTransform, FTransform::Identity);
         const auto HasProbeNode = ck::IsValid(ProbeNode);
         CK_ENSURE_IF_NOT(HasProbeNode, TEXT("CrowdAvoidanceVolume [{}] failed to attach its probe child."), Volume)
-        { }
-        if (NOT HasProbeNode)
         { Cleanup(nullptr); return; }
 
         auto GenericVolume = static_cast<FCk_Handle>(Volume);
@@ -152,8 +138,6 @@ namespace ck
             NavAreaClass);
         const auto HasMarkup = IsValid(Markup);
         CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] failed to register nav-area markup."), Volume)
-        { }
-        if (NOT HasMarkup)
         { Cleanup(Markup); return; }
 
         InRuntime._ProbeChild = Probe;

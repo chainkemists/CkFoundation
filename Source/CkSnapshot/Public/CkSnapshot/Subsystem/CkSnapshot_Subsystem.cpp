@@ -631,8 +631,6 @@ void
     }
     CK_ENSURE_IF_NOT(SuppressedKeysAreValid,
         TEXT("Request_Load: slot [{}] contains an invalid suppressed SaveKey"), InSlotName)
-    { }
-    if (NOT SuppressedKeysAreValid)
     {
         InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt, &_V3Header));
         return;
@@ -3976,15 +3974,11 @@ auto
     const auto SourceIsValid = ck::IsValid(InSource);
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("SaveKey relocation refused: source entity is invalid"))
-    { }
-    if (NOT SourceIsValid)
     { return {}; }
 
     const auto HasSaveKey = InSource.Has<FFragment_SaveKey>();
     CK_ENSURE_IF_NOT(HasSaveKey,
         TEXT("SaveKey relocation refused: source entity [{}] has no save identity"), InSource)
-    { }
-    if (NOT HasSaveKey)
     { return {}; }
 
     const auto& SaveKey = InSource.Get<FFragment_SaveKey>();
@@ -3992,30 +3986,22 @@ auto
     const auto KeyIsValid = Key.IsValid();
     CK_ENSURE_IF_NOT(KeyIsValid,
         TEXT("SaveKey relocation refused: source entity [{}] has an invalid save identity"), InSource)
-    { }
-    if (NOT KeyIsValid)
     { return {}; }
 
     const auto IsUniqueKey = NOT SaveKey.Get_IsSharedRendezvousGroup();
     CK_ENSURE_IF_NOT(IsUniqueKey,
         TEXT("SaveKey relocation refused: source entity [{}] uses a shared infrastructure SaveKey [{}]"), InSource, Key)
-    { }
-    if (NOT IsUniqueKey)
     { return {}; }
 
     const auto IsLevelPlacedRoot = SaveKey.Get_IsLevelPlacedRoot();
     CK_ENSURE_IF_NOT(IsLevelPlacedRoot,
         TEXT("SaveKey relocation refused: source entity [{}] was not created from a level-authored root"), InSource)
-    { }
-    if (NOT IsLevelPlacedRoot)
     { return {}; }
 
     const auto IsNotAlreadySuppressed = NOT _SuppressedSaveKeys.Contains(Key);
     CK_ENSURE_IF_NOT(IsNotAlreadySuppressed,
         TEXT("SaveKey relocation refused: source entity [{}] already has an unfinished relocation for SaveKey [{}]"),
         InSource, Key)
-    { }
-    if (NOT IsNotAlreadySuppressed)
     { return {}; }
 
     _SuppressedSaveKeys.Add(Key);
@@ -4121,29 +4107,21 @@ auto
     const auto DestinationIsValid = ck::IsValid(InDestination);
     CK_ENSURE_IF_NOT(DestinationIsValid,
         TEXT("SaveKey relocation completion refused: destination entity is invalid"))
-    { }
-    if (NOT DestinationIsValid)
     { return false; }
 
     const auto KeyIsValid = InSaveKey.IsValid();
     CK_ENSURE_IF_NOT(KeyIsValid,
         TEXT("SaveKey relocation completion refused: supplied SaveKey is invalid"))
-    { }
-    if (NOT KeyIsValid)
     { return false; }
 
     const auto IsSuppressed = _SuppressedSaveKeys.Contains(InSaveKey);
     CK_ENSURE_IF_NOT(IsSuppressed,
         TEXT("SaveKey relocation completion refused: SaveKey [{}] is not held by an unfinished relocation"), InSaveKey)
-    { }
-    if (NOT IsSuppressed)
     { return false; }
 
     const auto DestinationHasNoSaveKey = NOT InDestination.Has<FFragment_SaveKey>();
     CK_ENSURE_IF_NOT(DestinationHasNoSaveKey,
         TEXT("SaveKey relocation completion refused: destination entity [{}] already has a SaveKey"), InDestination)
-    { }
-    if (NOT DestinationHasNoSaveKey)
     { return false; }
 
     const auto* ExistingPublisher = _SaveKeyResolverMap.Find(InSaveKey);
@@ -4151,8 +4129,6 @@ auto
     CK_ENSURE_IF_NOT(ExistingPublisherIsAvailable,
         TEXT("SaveKey relocation completion refused: SaveKey [{}] is still published by live entity [{}]"),
         InSaveKey, ExistingPublisher != nullptr ? *ExistingPublisher : FCk_Handle{})
-    { }
-    if (NOT ExistingPublisherIsAvailable)
     { return false; }
 
     if (ExistingPublisher != nullptr)

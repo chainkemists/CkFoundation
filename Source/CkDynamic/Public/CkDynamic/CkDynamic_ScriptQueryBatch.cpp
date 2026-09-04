@@ -198,8 +198,6 @@ auto
             TEXT("Script query [{}] contains unsafe Dynamic Fragment schema [{}]; [{}]: {}. "
                  "Rejecting the complete query."),
             InContext, Type, Schema.FailurePath, Schema.FailureReason)
-        {}
-        if (NOT Schema.IsSafe)
         { return false; }
     }
 
@@ -272,8 +270,6 @@ auto
     CK_ENSURE_IF_NOT(IndexIsValid,
         TEXT("Script query batch Get index [{}] out of range [0, {}) for fragment [{}]"),
         InIndex, State->_Entities.Num(), InType)
-    {}
-    if (NOT IndexIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto* Slot = State->_Slots.FindByPredicate(
@@ -321,8 +317,6 @@ auto
     CK_ENSURE_IF_NOT(IndexIsValid,
         TEXT("Script query batch GetReadOnly index [{}] out of range [0, {}) for fragment [{}]"),
         InIndex, State->_Entities.Num(), InType)
-    {}
-    if (NOT IndexIsValid)
     { return ck_dynamic_script_query_batch::ReturnFailedWildcardAccess(InType); }
 
     const auto* Slot = State->_Slots.FindByPredicate(

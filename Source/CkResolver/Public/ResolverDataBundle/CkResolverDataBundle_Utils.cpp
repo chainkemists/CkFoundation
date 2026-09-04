@@ -198,8 +198,6 @@ auto
                 TEXT("Cannot add operation to [{}] because opertions have already been RESOLVED for DataBundle [{}]. "
                     "A new phase is about to start and the current phase [{}] (if INVALID, we have not yet started resolution) just ended"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (OperationsAlreadyResolved)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;
@@ -258,8 +256,6 @@ auto
                 TEXT("Cannot add operation to [{}] because opertions have already been RESOLVED for DataBundle [{}]. "
                     "A new phase is about to start and the current phase [{}] (if INVALID, we have not yet started resolution) just ended"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            {}
-            if (OperationsAlreadyResolved)
             {
                 InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
                 return InDataBundle;

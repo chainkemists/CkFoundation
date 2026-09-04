@@ -235,8 +235,6 @@ auto
             TEXT("Request_RebuildFromDetector on [{}] could not vectorize detector output: [{}]"),
             InNetwork,
             Vectorized._FailureReason)
-        { }
-        if (NOT GeneratedRibbonsWereVectorized)
         {
             InDelegate.ExecuteIfBound(
                 InNetwork,

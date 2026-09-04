@@ -321,8 +321,6 @@ auto
         const auto HasScriptStruct = ScriptStruct != nullptr;
         CK_ENSURE_IF_NOT(HasScriptStruct,
             TEXT("SharedInstancedStruct rejected a value without a reflected struct type"))
-        { }
-        if (NOT HasScriptStruct)
         { return false; }
 
         const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
@@ -332,8 +330,6 @@ auto
             ScriptStruct->GetName(),
             Safety.FailurePath,
             Safety.FailureReason)
-        { }
-        if (NOT IsValueSafe)
         { return false; }
     }
 

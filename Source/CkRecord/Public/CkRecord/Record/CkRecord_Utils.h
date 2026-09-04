@@ -950,8 +950,6 @@ namespace ck
         const auto AlreadyContainsEntry = CurrentRecordEntries.Contains(InRecordEntry);
         CK_ENSURE_IF_NOT(NOT AlreadyContainsEntry,
             TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
-        {}
-        if (AlreadyContainsEntry)
         {
             // The entry is already connected — the caller's intent already holds.
             InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Succeeded);
@@ -971,8 +969,6 @@ namespace ck
                         InRecordEntry,
                         InRecordHandle,
                         RecordEntryLabel)
-                    {}
-                    if (HasConflictingLabel)
                     {
                         // A different entry already owns this label under a no-duplicates policy — this
                         // entry's intent does not hold and retrying will not change that.
@@ -991,8 +987,6 @@ namespace ck
                 TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel and the record doesn't allow duplicate names!"),
                 InRecordEntry,
                 InRecordHandle)
-            {}
-            if (DisallowsUnlabeledEntries)
             {
                 // No label and the record requires unique names — this entry cannot connect.
                 InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);

@@ -127,8 +127,6 @@ namespace ck
                     TEXT("Variable [{}] on Handle [{}] rejected an InstancedStruct without a reflected struct type"),
                     InVariableName,
                     InHandle)
-                { }
-                if (NOT HasScriptStruct)
                 { return; }
 
                 const auto Safety = ck::Analyze_UntracedStructSafety(ScriptStruct);
@@ -140,9 +138,6 @@ namespace ck
                     ScriptStruct->GetName(),
                     Safety.FailurePath,
                     Safety.FailureReason)
-                { }
-
-                if (NOT IsValueSafe)
                 { return; }
             }
         }

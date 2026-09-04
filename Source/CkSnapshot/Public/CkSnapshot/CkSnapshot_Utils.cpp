@@ -219,8 +219,6 @@ auto
     const auto SourceIsValid = ck::IsValid(InSource);
     CK_ENSURE_IF_NOT(SourceIsValid,
         TEXT("SaveKey relocation requires a valid source entity"))
-    { }
-    if (NOT SourceIsValid)
     { return {}; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InSource);
@@ -231,8 +229,6 @@ auto
     const auto HasSubsystem = ck::IsValid(Subsystem);
     CK_ENSURE_IF_NOT(HasSubsystem,
         TEXT("SaveKey relocation source [{}] has no snapshot subsystem"), InSource)
-    { }
-    if (NOT HasSubsystem)
     { return {}; }
 
     return Subsystem->Request_BeginSaveKeyRelocation(InSource);
@@ -250,8 +246,6 @@ auto
     const auto DestinationIsValid = ck::IsValid(InDestination);
     CK_ENSURE_IF_NOT(DestinationIsValid,
         TEXT("SaveKey relocation requires a valid destination entity"))
-    { }
-    if (NOT DestinationIsValid)
     { return false; }
 
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InDestination);
@@ -262,8 +256,6 @@ auto
     const auto HasSubsystem = ck::IsValid(Subsystem);
     CK_ENSURE_IF_NOT(HasSubsystem,
         TEXT("SaveKey relocation destination [{}] has no snapshot subsystem"), InDestination)
-    { }
-    if (NOT HasSubsystem)
     { return false; }
 
     return Subsystem->Request_CompleteSaveKeyRelocation(InDestination, InSaveKey);

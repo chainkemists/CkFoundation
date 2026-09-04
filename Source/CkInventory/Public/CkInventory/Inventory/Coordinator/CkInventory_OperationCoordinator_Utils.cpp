@@ -18,16 +18,12 @@ namespace ck::inventory_operation_coordinator
         const auto IsHandleValid = ck::IsValid(InAnyHandle);
         CK_ENSURE_IF_NOT(IsHandleValid,
             TEXT("Cannot reserve an inventory operation ordinal from invalid handle [{}]"), InAnyHandle)
-        {}
-        if (NOT IsHandleValid)
         { return 0; }
 
         auto Coordinator = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
         const auto IsCoordinatorValid = ck::IsValid(Coordinator);
         CK_ENSURE_IF_NOT(IsCoordinatorValid,
             TEXT("Cannot resolve the inventory operation coordinator from handle [{}]"), InAnyHandle)
-        {}
-        if (NOT IsCoordinatorValid)
         { return 0; }
 
         return Coordinator.AddOrGet<FFragment_Inventory_OperationCoordinator_Current>()
@@ -43,16 +39,12 @@ namespace ck::inventory_operation_coordinator
         const auto IsHandleValid = ck::IsValid(InAnyHandle);
         CK_ENSURE_IF_NOT(IsHandleValid,
             TEXT("Cannot submit an inventory operation from invalid handle [{}]"), InAnyHandle)
-        {}
-        if (NOT IsHandleValid)
         { return false; }
 
         auto Coordinator = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
         const auto IsCoordinatorValid = ck::IsValid(Coordinator);
         CK_ENSURE_IF_NOT(IsCoordinatorValid,
             TEXT("Cannot resolve the inventory operation coordinator from handle [{}]"), InAnyHandle)
-        {}
-        if (NOT IsCoordinatorValid)
         { return false; }
 
         if (InSubmission.Ordinal == 0)

@@ -40,9 +40,6 @@ namespace ck_tween_utils
         CK_ENSURE_IF_NOT(CanCreate,
             TEXT("{} cannot animate parent-driven SceneNode [{}] in world space. The parent owns this child's world transform, so the animation can snap back when the parent moves or restore incorrectly after save/load rebuilds the hierarchy. Use the Create_TweenSceneNodeOffset* API so the tween updates the child's relative offset instead."),
             InCreator, InHandle)
-        {}
-
-        if (NOT CanCreate)
         { return false; }
 
         return true;
@@ -57,9 +54,6 @@ namespace ck_tween_utils
         const auto IsSceneNodeValid = ck::IsValid(InSceneNode);
         CK_ENSURE_IF_NOT(IsSceneNodeValid,
             TEXT("{} needs a valid SceneNode handle."), InCreator)
-        {}
-
-        if (NOT IsSceneNodeValid)
         { return false; }
 
         return true;

@@ -30,8 +30,6 @@ namespace ck_dynamic_script_query
         CK_ENSURE_IF_NOT(Schema.IsSafe,
             TEXT("Unsafe Dynamic Fragment schema [{}] cannot be registered in a script query; [{}]: {}"),
             InType, Schema.FailurePath, Schema.FailureReason)
-        {}
-        if (NOT Schema.IsSafe)
         { InQuery._AdmissionFailed = true; return; }
 
         const auto AlreadyPresent = InQuery._Slots.ContainsByPredicate(

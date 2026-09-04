@@ -23,8 +23,6 @@ auto UCk_CrowdAvoidanceVolume_EntityScript::Construct(
     const auto IsVolumeValid = ck::IsValid(Volume);
     CK_ENSURE_IF_NOT(IsVolumeValid,
         TEXT("CrowdAvoidanceVolume EntityScript failed to compose its volume feature."))
-    { }
-    if (NOT IsVolumeValid)
     { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle); }
     return Ret;
 }

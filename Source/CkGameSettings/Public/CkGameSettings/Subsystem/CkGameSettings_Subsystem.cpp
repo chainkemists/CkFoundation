@@ -719,8 +719,6 @@ auto
 
     const auto ValueHasNewline = NewValue.Contains(TEXT("\n")) || NewValue.Contains(TEXT("\r"));
     CK_ENSURE_IF_NOT(NOT ValueHasNewline, TEXT("Cannot set GameSettings key [{}], the value contains a newline"), Key)
-    {}
-    if (ValueHasNewline)
     { return false; }
 
     const auto MatchesOptions = Definition->Get_Options().IsEmpty() ||
@@ -1561,8 +1559,6 @@ auto
         const auto TimedOut = NowSeconds - Entry._EnqueuedAtSeconds > TimeoutSeconds;
         CK_ENSURE_IF_NOT(NOT TimedOut, TEXT("GameSettings deferred apply for key [{}] timed out, CVar [{}] never registered within [{}] seconds. The stored value is retained and will apply next boot."),
             Entry._Key, Entry._CVar.Get_Name(), TimeoutSeconds)
-        {}
-        if (TimedOut)
         { _DeferredCVarApplies.RemoveAt(Index); }
     }
 
