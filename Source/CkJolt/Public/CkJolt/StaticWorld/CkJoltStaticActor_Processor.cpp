@@ -54,15 +54,6 @@ namespace ck
             ? World->GetSubsystem<UCk_JoltStaticWorld_Subsystem_UE>()
             : nullptr;
 
-        // ASYNC GUARD (house rule for Jolt *_EndPlay processors): the removal funnel below mutates the
-        // broadphase an in-flight Update is reading. Self-guarded on future validity, so free in sync mode.
-        auto* JoltWorld = ck_jolt_static_actor_processor::TryResolve_JoltWorld(_TransientEntity);
-        if (JoltWorld != nullptr && JoltWorld->Get_AsyncFuture().IsValid())
-        {
-            SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticActorEndPlayWaitForAsync);
-            JoltWorld->WaitForAsyncStep();
-        }
-
         TProcessor::DoTick(InDeltaT);
     }
 
@@ -77,6 +68,18 @@ namespace ck
         auto* Subsystem = _StaticWorldSubsystem.Get();
         if (ck::Is_NOT_Valid(Subsystem))
         { return; }
+
+        if (InCurrent.Get_BodyIds().IsEmpty())
+        { return; }
+
+        // FGroup_EndPlay runs later in the same tick that starts the async step. Wait only after the view found
+        // real removal work; doing this in DoTick serializes every frame even when no static actor is ending.
+        auto* JoltWorld = ck_jolt_static_actor_processor::TryResolve_JoltWorld(_TransientEntity);
+        if (JoltWorld != nullptr && JoltWorld->Get_AsyncFuture().IsValid())
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticActorEndPlayWaitForAsync);
+            JoltWorld->WaitForAsyncStep();
+        }
 
         Subsystem->Request_RemoveBodiesForEntity(InHandle);
     }
