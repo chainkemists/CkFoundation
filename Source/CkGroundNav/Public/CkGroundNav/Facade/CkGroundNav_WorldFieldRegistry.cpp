@@ -25,6 +25,14 @@ namespace ck_groundnav_world_fields
         return Entries;
     }
 
+    // Per world, keyed and cleared exactly as the entries are: the epoch sums of fields whose volumes
+    // are gone, so the surface revision keeps counting ground that no longer exists.
+    auto Get_RetiredRevisions() -> TMap<TWeakObjectPtr<UWorld>, int64>&
+    {
+        static auto RetiredRevisions = TMap<TWeakObjectPtr<UWorld>, int64>{};
+        return RetiredRevisions;
+    }
+
     // The lock guards the POINTER HANDOFF and nothing else. A reader copies a shared pointer out and
     // then queries the field it names with no lock held: the field is immutable, so the only thing two
     // threads can disagree about is which pointer is current, and that is exactly what this covers.
@@ -48,6 +56,7 @@ namespace ck_groundnav_world_fields
             {
                 auto Lock = FRWScopeLock{Get_Lock(), SLT_Write};
                 Get_Entries().Remove(TWeakObjectPtr<UWorld>{InWorld});
+                Get_RetiredRevisions().Remove(TWeakObjectPtr<UWorld>{InWorld});
             });
     }
 }
@@ -81,6 +90,57 @@ auto
     }
 
     Entries.Emplace(ck_groundnav_world_fields::FEntry{InVolumeEntity, MoveTemp(InField)});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::world_fields::
+    Unpublish(
+        UWorld*           InWorld,
+        const FCk_Handle& InVolumeEntity)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return; }
+
+    auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_Write};
+
+    auto* Entries = ck_groundnav_world_fields::Get_Entries().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    if (Entries == nullptr)
+    { return; }
+
+    auto& RetiredRevision = ck_groundnav_world_fields::Get_RetiredRevisions().FindOrAdd(TWeakObjectPtr<UWorld>{InWorld});
+
+    Entries->RemoveAll([&](const ck_groundnav_world_fields::FEntry& InEntry) -> bool
+    {
+        if (InEntry._VolumeEntity != InVolumeEntity)
+        { return false; }
+
+        if (InEntry._Field.IsValid())
+        { RetiredRevision += InEntry._Field->Get_AggregatedTileEpochSum(); }
+
+        return true;
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::world_fields::
+    Get_RetiredRevision(
+        UWorld* InWorld)
+    -> int64
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return 0; }
+
+    auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_ReadOnly};
+
+    const auto* RetiredRevision = ck_groundnav_world_fields::Get_RetiredRevisions().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    return RetiredRevision == nullptr ? int64{0} : *RetiredRevision;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
