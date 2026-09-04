@@ -1,15 +1,11 @@
 #include "CkGroundNav_DebugDraw.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
-#include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
-#include "CkGroundNav/Bake/CkGroundNav_Layers.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
-#include "CkGroundNav/Bake/CkGroundNav_Portals.h"
-#include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
-#include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
@@ -30,6 +26,8 @@
 
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+
+#include "CkPmg/CkPmg_Utils_DebugLines.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
 
@@ -74,6 +72,8 @@ namespace ck::groundnav
                 FLinearColor{0.1f, 0.3f, 1.0f}, FLinearColor{1.0f, 0.2f, 0.1f}, Alpha).ToFColor(false);
         }
 
+        constexpr auto DrawShadow = true;
+
         /**
          * The open Solid bodies, in red, before anything else and in every mode.
          *
@@ -82,31 +82,40 @@ namespace ck::groundnav
          * found the body that is the reason it failed. A developer who never switches mode must still
          * be unable to miss this.
          */
-        auto Do_DrawOpenBodies(
-            UWorld*                            InWorld,
-            const FCk_GroundNav_DebugSnapshot& InSnapshot,
-            float                              InLifetimeSeconds) -> void
+        auto Do_BuildOpenBodies(
+            FCk_GroundNav_DebugDrawBuild&      InOutBuild,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
         {
-            constexpr auto Persistent = true;
-            constexpr auto DepthPriority = 0;
-            constexpr auto DrawShadow = true;
-
             // Clear of the surface the edge lies on, so an underside hole still reads as a line rather
             // than z-fighting the floor it is flush with.
             const auto Lift = FVector{0.0, 0.0, 2.0};
 
             for (const auto& OpenBody : InSnapshot._OpenBodies)
             {
-                DrawDebugBox(InWorld, OpenBody._Bounds.GetCenter(), OpenBody._Bounds.GetExtent(),
-                    FColor::Red, Persistent, InLifetimeSeconds, DepthPriority, 4.0f);
+                InOutBuild.Add_Box(OpenBody._Bounds.GetCenter(), OpenBody._Bounds.GetExtent(),
+                    FColor::Red, 4.0f);
+
+                ++InOutBuild._Tally._OpenBodyBoxes;
 
                 for (auto Index = 0; Index + 1 < OpenBody._OpenEdgePoints.Num(); Index += 2)
                 {
-                    DrawDebugLine(InWorld, OpenBody._OpenEdgePoints[Index] + Lift,
-                        OpenBody._OpenEdgePoints[Index + 1] + Lift, FColor::Red, Persistent,
-                        InLifetimeSeconds, DepthPriority, 6.0f);
-                }
+                    InOutBuild.Add_Line(OpenBody._OpenEdgePoints[Index] + Lift,
+                        OpenBody._OpenEdgePoints[Index + 1] + Lift, FColor::Red, 6.0f);
 
+                    ++InOutBuild._Tally._OpenBodyEdgeSegments;
+                }
+            }
+        }
+
+        // The wording, which the retained tier has no equivalent for. A build that loses it keeps the
+        // red box, which is the half a developer cannot miss.
+        auto Do_DrawOpenBodyLabels(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot,
+            float                              InLifetimeSeconds) -> void
+        {
+            for (const auto& OpenBody : InSnapshot._OpenBodies)
+            {
                 const auto Centre = OpenBody._Bounds.GetCenter();
 
                 DrawDebugString(InWorld, FVector{Centre.X, Centre.Y, OpenBody._Bounds.Max.Z},
@@ -116,14 +125,12 @@ namespace ck::groundnav
             }
         }
 
-        auto Do_DrawDashedBox(
-            UWorld*     InWorld,
-            const FBox& InBounds,
-            FColor      InColor,
-            float       InLifetimeSeconds) -> void
+        // Returns how many dashes it added, so a caller can bill them to the right count.
+        auto Do_BuildDashedBox(
+            FCk_GroundNav_DebugDrawBuild& InOutBuild,
+            const FBox&                   InBounds,
+            FColor                        InColor) -> int32
         {
-            constexpr auto Persistent = true;
-            constexpr auto DepthPriority = 0;
             constexpr auto Thickness = 2.0f;
             constexpr auto DashUu = 20.0;
             constexpr auto CornerCount = 8;
@@ -146,6 +153,8 @@ namespace ck::groundnav
                 {0, 1}, {1, 2}, {2, 3}, {3, 0},
                 {4, 5}, {5, 6}, {6, 7}, {7, 4},
                 {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+
+            auto DashesAdded = 0;
 
             for (auto EdgeIndex = 0; EdgeIndex < EdgeCount; ++EdgeIndex)
             {
@@ -172,25 +181,33 @@ namespace ck::groundnav
                     const auto DashEnd =
                         Start + (Direction * FMath::Min(AlongUu + DashLengthUu, EdgeLengthUu));
 
-                    DrawDebugLine(InWorld, DashStart, DashEnd, InColor, Persistent,
-                        InLifetimeSeconds, DepthPriority, Thickness);
+                    InOutBuild.Add_Line(DashStart, DashEnd, InColor, Thickness);
+
+                    ++DashesAdded;
                 }
             }
+
+            return DashesAdded;
         }
 
-        auto Do_DrawMarkups(
-            UWorld*                                    InWorld,
-            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
-            float                                      InLifetimeSeconds) -> void
-        {
-            constexpr auto Persistent = true;
-            constexpr auto DepthPriority = 0;
-            constexpr auto DrawShadow = true;
-            constexpr auto SolidThickness = 3.0f;
+        const auto MarkupImpassableColor = FColor{220, 60, 60};
+        const auto MarkupCostColor = FColor{255, 180, 60};
+        const auto MarkupDisabledColor = FColor{130, 130, 130};
 
-            const auto ImpassableColor = FColor{220, 60, 60};
-            const auto CostColor = FColor{255, 180, 60};
-            const auto DisabledColor = FColor{130, 130, 130};
+        auto Get_MarkupColor(const FCk_GroundNav_DebugMarkup& InMarkup) -> FColor
+        {
+            const auto KindColor = InMarkup._Kind == ECk_GroundNav_MarkupKind::Walkability
+                ? MarkupImpassableColor
+                : MarkupCostColor;
+
+            return InMarkup._IsEnabled ? KindColor : MarkupDisabledColor;
+        }
+
+        auto Do_BuildMarkups(
+            FCk_GroundNav_DebugDrawBuild&              InOutBuild,
+            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups) -> void
+        {
+            constexpr auto SolidThickness = 3.0f;
 
             for (const auto& Markup : InMarkups)
             {
@@ -199,21 +216,34 @@ namespace ck::groundnav
                 if (NOT Markup._Bounds.IsValid)
                 { continue; }
 
-                const auto KindColor = Markup._Kind == ECk_GroundNav_MarkupKind::Walkability
-                    ? ImpassableColor
-                    : CostColor;
-
-                const auto Color = Markup._IsEnabled ? KindColor : DisabledColor;
+                const auto Color = Get_MarkupColor(Markup);
 
                 if (Markup._IsEnabled)
                 {
-                    DrawDebugBox(InWorld, Markup._Bounds.GetCenter(), Markup._Bounds.GetExtent(),
-                        Color, Persistent, InLifetimeSeconds, DepthPriority, SolidThickness);
+                    InOutBuild.Add_Box(Markup._Bounds.GetCenter(), Markup._Bounds.GetExtent(),
+                        Color, SolidThickness);
+
+                    ++InOutBuild._Tally._MarkupBoxes;
                 }
                 else
                 {
-                    Do_DrawDashedBox(InWorld, Markup._Bounds, Color, InLifetimeSeconds);
+                    InOutBuild._Tally._MarkupDashSegments +=
+                        Do_BuildDashedBox(InOutBuild, Markup._Bounds, Color);
                 }
+            }
+        }
+
+        auto Do_DrawMarkupLabels(
+            UWorld*                                    InWorld,
+            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
+            float                                      InLifetimeSeconds) -> void
+        {
+            for (const auto& Markup : InMarkups)
+            {
+                if (NOT Markup._Bounds.IsValid)
+                { continue; }
+
+                const auto Color = Get_MarkupColor(Markup);
 
                 const auto MultiplierLabel = Markup._Kind == ECk_GroundNav_MarkupKind::Cost
                     ? FString::Printf(TEXT(" x%.2f"), Markup._CostMultiplier)
@@ -255,70 +285,91 @@ namespace ck::groundnav
             return InLink._Enabled ? FColor{80, 220, 120} : FColor{130, 130, 130};
         }
 
-        auto Do_DrawLinks(
+        // Clear of the surface the ends stand on, so a link lying along a floor reads as a line
+        // rather than z-fighting the ground it joins.
+        const auto LinkLift = FVector{0.0, 0.0, 4.0};
+
+        constexpr auto LinkSpanThickness = 4.0f;
+        constexpr auto LinkTickThickness = 3.0f;
+        constexpr auto LinkArrowSizeUu = 12.0f;
+        constexpr auto LinkArrowStubUu = 40.0;
+        constexpr auto LinkTickUu = 30.0;
+
+        auto Do_BuildLinks(
+            FCk_GroundNav_DebugDrawBuild&            InOutBuild,
+            TConstArrayView<FCk_GroundNav_DebugLink> InLinks) -> void
+        {
+            for (const auto& Link : InLinks)
+            {
+                const auto Color = Get_LinkColor(Link);
+
+                const auto Start = Link._Start + LinkLift;
+                const auto End = Link._End + LinkLift;
+
+                InOutBuild.Add_Line(Start, End, Color, LinkSpanThickness);
+
+                ++InOutBuild._Tally._LinkSegments;
+
+                // A tick only where an end actually landed on a surface. An end with nothing under it
+                // has no surface point to stand one on, and drawing it anyway would claim ground.
+                if (Link._StartStatus == ECk_NavSurface_QueryStatus::Success)
+                {
+                    InOutBuild.Add_Line(Start, Start + FVector{0.0, 0.0, LinkTickUu}, Color,
+                        LinkTickThickness);
+
+                    ++InOutBuild._Tally._LinkTickSegments;
+                }
+
+                if (Link._EndStatus == ECk_NavSurface_QueryStatus::Success)
+                {
+                    InOutBuild.Add_Line(End, End + FVector{0.0, 0.0, LinkTickUu}, Color,
+                        LinkTickThickness);
+
+                    ++InOutBuild._Tally._LinkTickSegments;
+                }
+            }
+        }
+
+        // The arrowheads and the id. PMG's retained tier draws neither a cone nor text, so which way
+        // a link may be walked is the one thing a build cannot carry - the span, its colour and its
+        // ticks all survive.
+        auto Do_DrawLinkArrowsAndLabels(
             UWorld*                                  InWorld,
             TConstArrayView<FCk_GroundNav_DebugLink> InLinks,
             float                                    InLifetimeSeconds) -> void
         {
             constexpr auto Persistent = true;
             constexpr auto DepthPriority = 0;
-            constexpr auto DrawShadow = true;
-            constexpr auto SpanThickness = 4.0f;
-            constexpr auto TickThickness = 3.0f;
-            constexpr auto ArrowSizeUu = 12.0f;
-            constexpr auto ArrowStubUu = 40.0;
-            constexpr auto TickUu = 30.0;
-
-            // Clear of the surface the ends stand on, so a link lying along a floor reads as a line
-            // rather than z-fighting the ground it joins.
-            const auto Lift = FVector{0.0, 0.0, 4.0};
 
             for (const auto& Link : InLinks)
             {
                 const auto Color = Get_LinkColor(Link);
 
-                const auto Start = Link._Start + Lift;
-                const auto End = Link._End + Lift;
-
-                DrawDebugLine(InWorld, Start, End, Color, Persistent, InLifetimeSeconds,
-                    DepthPriority, SpanThickness);
+                const auto Start = Link._Start + LinkLift;
+                const auto End = Link._End + LinkLift;
 
                 const auto SpanUu = (End - Start).Length();
 
                 if (SpanUu > 0.0)
                 {
                     const auto Direction = (End - Start) / SpanUu;
-                    const auto StubUu = FMath::Min(ArrowStubUu, SpanUu);
+                    const auto StubUu = FMath::Min(LinkArrowStubUu, SpanUu);
 
                     // One head per direction the link may be walked, both of them for a bidirectional
                     // one: which way a link runs is the half of it no geometry can be read to infer.
                     if (Link._Direction != ECk_GroundNav_LinkDirection::Backward)
                     {
                         DrawDebugDirectionalArrow(InWorld, End - (Direction * StubUu), End,
-                            ArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
-                            SpanThickness);
+                            LinkArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
+                            LinkSpanThickness);
                     }
 
                     if (Link._Direction != ECk_GroundNav_LinkDirection::Forward)
                     {
                         DrawDebugDirectionalArrow(InWorld, Start + (Direction * StubUu), Start,
-                            ArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
-                            SpanThickness);
+                            LinkArrowSizeUu, Color, Persistent, InLifetimeSeconds, DepthPriority,
+                            LinkSpanThickness);
                     }
-                }
-
-                // A tick only where an end actually landed on a surface. An end with nothing under it
-                // has no surface point to stand one on, and drawing it anyway would claim ground.
-                if (Link._StartStatus == ECk_NavSurface_QueryStatus::Success)
-                {
-                    DrawDebugLine(InWorld, Start, Start + FVector{0.0, 0.0, TickUu}, Color,
-                        Persistent, InLifetimeSeconds, DepthPriority, TickThickness);
-                }
-
-                if (Link._EndStatus == ECk_NavSurface_QueryStatus::Success)
-                {
-                    DrawDebugLine(InWorld, End, End + FVector{0.0, 0.0, TickUu}, Color,
-                        Persistent, InLifetimeSeconds, DepthPriority, TickThickness);
                 }
 
                 DrawDebugString(InWorld, (Start + End) * 0.5,
@@ -328,42 +379,64 @@ namespace ck::groundnav
         }
 
         // One publish is news only until the next one arrives, where a corridor stands until its
-        // agent replans. Drawing the two at one lifetime would leave a stale orange box per
-        // republish over a plate view that persists for a minute.
+        // agent replans. The retained geometry of both is replaced whole on the next rebuild, so the
+        // short lifetime survives on the LABELS - which is where a stale box would otherwise be read
+        // as a fresh one.
         constexpr auto kChangedBoundsLifetimeSeconds = 2.0f;
 
         static TAutoConsoleVariable<float> CVar_RepairHighlightSeconds(
             TEXT("ck.GroundNav.Debug.RepairHighlightSeconds"), 2.0f,
-            TEXT("How long the tiles an open local repair is re-baking stay highlighted, in seconds. ")
-            TEXT("A repair's tile set describes ONE publish and stops being true the moment the next ")
-            TEXT("slice lands, so it carries a short lifetime of its own rather than the view's - but ")
-            TEXT("a repair can finish inside a frame, and a highlight that expired with it could not ")
-            TEXT("be caught."));
+            TEXT("How long the label on the tiles an open local repair is re-baking stays up, in ")
+            TEXT("seconds. A repair's tile set describes ONE publish and stops being true the moment ")
+            TEXT("the next slice lands, so it carries a short lifetime of its own rather than the ")
+            TEXT("view's - but a repair can finish inside a frame, and a highlight that expired with ")
+            TEXT("it could not be caught."));
 
-        auto Do_DrawInvalidation(
-            UWorld*                                      InWorld,
+        const auto CorridorColor = FColor{60, 220, 220};
+        const auto ChangedBoundsColor = FColor{255, 140, 40};
+
+        auto Do_BuildInvalidation(
+            FCk_GroundNav_DebugDrawBuild&                InOutBuild,
             TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
-            TConstArrayView<FBox>                        InChangedBounds,
-            float                                        InLifetimeSeconds) -> void
+            TConstArrayView<FBox>                        InChangedBounds) -> void
         {
-            constexpr auto Persistent = true;
-            constexpr auto DepthPriority = 0;
-            constexpr auto DrawShadow = true;
             constexpr auto CorridorThickness = 2.0f;
             constexpr auto FlaggedThickness = 4.0f;
             constexpr auto ChangedThickness = 4.0f;
-
-            const auto CorridorColor = FColor{60, 220, 220};
-            const auto ChangedColor = FColor{255, 140, 40};
 
             for (const auto& Corridor : InCorridors)
             {
                 if (Corridor._Bounds.IsValid == 0)
                 { continue; }
 
-                DrawDebugBox(InWorld, Corridor._Bounds.GetCenter(), Corridor._Bounds.GetExtent(),
-                    CorridorColor, Persistent, InLifetimeSeconds, DepthPriority,
-                    Corridor._RepathRequired ? FlaggedThickness : CorridorThickness);
+                InOutBuild.Add_Box(Corridor._Bounds.GetCenter(), Corridor._Bounds.GetExtent(),
+                    CorridorColor, Corridor._RepathRequired ? FlaggedThickness : CorridorThickness);
+
+                ++InOutBuild._Tally._CorridorBoxes;
+            }
+
+            for (const auto& Changed : InChangedBounds)
+            {
+                if (Changed.IsValid == 0)
+                { continue; }
+
+                InOutBuild.Add_Box(Changed.GetCenter(), Changed.GetExtent(), ChangedBoundsColor,
+                    ChangedThickness);
+
+                ++InOutBuild._Tally._ChangedBoundsBoxes;
+            }
+        }
+
+        auto Do_DrawInvalidationLabels(
+            UWorld*                                      InWorld,
+            TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
+            TConstArrayView<FBox>                        InChangedBounds,
+            float                                        InLifetimeSeconds) -> void
+        {
+            for (const auto& Corridor : InCorridors)
+            {
+                if (Corridor._Bounds.IsValid == 0)
+                { continue; }
 
                 const auto FieldEpochText = Corridor._HasField
                     ? FString::Printf(TEXT("%lld"), static_cast<long long>(Corridor._FieldEpoch))
@@ -388,12 +461,9 @@ namespace ck::groundnav
                 if (Changed.IsValid == 0)
                 { continue; }
 
-                DrawDebugBox(InWorld, Changed.GetCenter(), Changed.GetExtent(), ChangedColor,
-                    Persistent, kChangedBoundsLifetimeSeconds, DepthPriority, ChangedThickness);
-
                 DrawDebugString(InWorld,
                     FVector{Changed.GetCenter().X, Changed.GetCenter().Y, Changed.Max.Z},
-                    TEXT("last published changed bounds"), nullptr, ChangedColor,
+                    TEXT("last published changed bounds"), nullptr, ChangedBoundsColor,
                     kChangedBoundsLifetimeSeconds, DrawShadow);
             }
         }
@@ -403,30 +473,19 @@ namespace ck::groundnav
         // what was re-baked, and the blue ones are the ground carried across untouched.
         const auto RepairColor = FColor{120, 235, 140};
 
-        auto Do_DrawRepair(
-            UWorld*                            InWorld,
-            const FCk_GroundNav_DebugSnapshot& InSnapshot,
-            float                              InHighlightSeconds) -> void
+        const auto RepairPendingColor = FColor{255, 140, 40};
+
+        auto Do_BuildRepair(
+            FCk_GroundNav_DebugDrawBuild&      InOutBuild,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
         {
-            constexpr auto Persistent = true;
-            constexpr auto DepthPriority = 0;
-            constexpr auto DrawShadow = true;
             constexpr auto RepairThickness = 4.0f;
             constexpr auto HighlightThickness = 5.0f;
 
-            const auto PendingColor = FColor{255, 140, 40};
-
             if (InSnapshot._PendingDirtyBounds.IsValid != 0)
             {
-                Do_DrawDashedBox(InWorld, InSnapshot._PendingDirtyBounds, PendingColor,
-                    kChangedBoundsLifetimeSeconds);
-
-                DrawDebugString(InWorld,
-                    FVector{InSnapshot._PendingDirtyBounds.GetCenter().X,
-                        InSnapshot._PendingDirtyBounds.GetCenter().Y,
-                        InSnapshot._PendingDirtyBounds.Max.Z},
-                    TEXT("dirty ground pending a repair"), nullptr, PendingColor,
-                    kChangedBoundsLifetimeSeconds, DrawShadow);
+                InOutBuild._Tally._RepairDashSegments +=
+                    Do_BuildDashedBox(InOutBuild, InSnapshot._PendingDirtyBounds, RepairPendingColor);
             }
 
             if (NOT InSnapshot._RepairInProgress)
@@ -434,17 +493,10 @@ namespace ck::groundnav
 
             if (InSnapshot._RepairDirtyBounds.IsValid != 0)
             {
-                DrawDebugBox(InWorld, InSnapshot._RepairDirtyBounds.GetCenter(),
-                    InSnapshot._RepairDirtyBounds.GetExtent(), RepairColor, Persistent,
-                    kChangedBoundsLifetimeSeconds, DepthPriority, RepairThickness);
+                InOutBuild.Add_Box(InSnapshot._RepairDirtyBounds.GetCenter(),
+                    InSnapshot._RepairDirtyBounds.GetExtent(), RepairColor, RepairThickness);
 
-                DrawDebugString(InWorld,
-                    FVector{InSnapshot._RepairDirtyBounds.GetCenter().X,
-                        InSnapshot._RepairDirtyBounds.GetCenter().Y,
-                        InSnapshot._RepairDirtyBounds.Max.Z},
-                    FString::Printf(TEXT("repair in flight | %d tile(s)"),
-                        InSnapshot.Get_RepairTileCount()),
-                    nullptr, RepairColor, kChangedBoundsLifetimeSeconds, DrawShadow);
+                ++InOutBuild._Tally._RepairBoxes;
             }
 
             for (const auto& TileBounds : InSnapshot._RepairTileBounds)
@@ -452,8 +504,178 @@ namespace ck::groundnav
                 if (TileBounds.IsValid == 0)
                 { continue; }
 
-                DrawDebugBox(InWorld, TileBounds.GetCenter(), TileBounds.GetExtent(), RepairColor,
-                    Persistent, InHighlightSeconds, DepthPriority, HighlightThickness);
+                InOutBuild.Add_Box(TileBounds.GetCenter(), TileBounds.GetExtent(), RepairColor,
+                    HighlightThickness);
+
+                ++InOutBuild._Tally._RepairBoxes;
+            }
+        }
+
+        auto Do_DrawRepairLabels(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
+        {
+            if (InSnapshot._PendingDirtyBounds.IsValid != 0)
+            {
+                DrawDebugString(InWorld,
+                    FVector{InSnapshot._PendingDirtyBounds.GetCenter().X,
+                        InSnapshot._PendingDirtyBounds.GetCenter().Y,
+                        InSnapshot._PendingDirtyBounds.Max.Z},
+                    TEXT("dirty ground pending a repair"), nullptr, RepairPendingColor,
+                    kChangedBoundsLifetimeSeconds, DrawShadow);
+            }
+
+            if (NOT InSnapshot._RepairInProgress)
+            { return; }
+
+            if (InSnapshot._RepairDirtyBounds.IsValid == 0)
+            { return; }
+
+            DrawDebugString(InWorld,
+                FVector{InSnapshot._RepairDirtyBounds.GetCenter().X,
+                    InSnapshot._RepairDirtyBounds.GetCenter().Y,
+                    InSnapshot._RepairDirtyBounds.Max.Z},
+                FString::Printf(TEXT("repair in flight | %d tile(s)"),
+                    InSnapshot.Get_RepairTileCount()),
+                nullptr, RepairColor,
+                CVar_RepairHighlightSeconds.GetValueOnGameThread(), DrawShadow);
+        }
+
+        // ------------------------------------------------------------------------------------------
+        // The retained tier.
+        //
+        // A group is a list of PMG line-set entities parented to the world's transient entity, so it
+        // dies with the world whether or not anybody released it, and the state beside it is what
+        // makes a rebuild a decision rather than a per-frame cost.
+        // ------------------------------------------------------------------------------------------
+
+        // Mirrors the crowd's retained breadcrumb: one set per 128 primitives, so a bake with tens of
+        // thousands of segments does not become one mesh section that has to be rebuilt whole.
+        constexpr auto kPrimitivesPerLineSet = 128;
+
+        struct FRetainedGroup
+        {
+            TArray<FCk_Handle_Pmg_DebugShape> _Sets;
+
+            FCk_GroundNav_DebugDrawTally _Tally;
+
+            int32 _RebuildCount = 0;
+        };
+
+        struct FRetainedDrawState
+        {
+            FRetainedGroup _Field;
+            FRetainedGroup _Query;
+
+            // What the FIELD group was last built for. A build is a function of exactly these two, so
+            // they are the whole of what a rebuild has to be gated on.
+            FCk_GroundNav_DebugSnapshotCacheKey _Key;
+            FCk_GroundNav_DebugDrawSelection _Selection;
+
+            bool _HasBuiltField = false;
+        };
+
+        using FRetainedDrawStates = TMap<TWeakObjectPtr<UWorld>, FRetainedDrawState>;
+
+        auto Get_RetainedDrawStates() -> FRetainedDrawStates&
+        {
+            static auto States = FRetainedDrawStates{};
+            return States;
+        }
+
+        auto DoBind_RetainedCleanupHookOnce() -> void
+        {
+            static auto CleanupHookIsBound = false;
+
+            if (CleanupHookIsBound)
+            { return; }
+
+            CleanupHookIsBound = true;
+
+            // The sets are the world's own entities and go with it; what is dropped here is the
+            // bookkeeping, so a later world reusing the address starts from no key rather than from
+            // one naming ground that is gone.
+            FWorldDelegates::OnWorldCleanup.AddLambda(
+                [](UWorld* InWorld, bool /*InSessionEnded*/, bool /*InCleanupResources*/) -> void
+                {
+                    Get_RetainedDrawStates().Remove(TWeakObjectPtr<UWorld>{InWorld});
+                });
+        }
+
+        auto Get_Group(FRetainedDrawState& InOutState, EDebugDrawGroup InGroup) -> FRetainedGroup&
+        {
+            return InGroup == EDebugDrawGroup::Field ? InOutState._Field : InOutState._Query;
+        }
+
+        auto Do_DestroySets(FRetainedGroup& InOutGroup) -> void
+        {
+            for (auto& Set : InOutGroup._Sets)
+            {
+                if (ck::IsValid(Set))
+                { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Set); }
+            }
+
+            InOutGroup._Sets.Reset();
+            InOutGroup._Tally = FCk_GroundNav_DebugDrawTally{};
+        }
+
+        auto Do_AppendBuildToGroup(
+            UWorld*                             InWorld,
+            FRetainedGroup&                     InOutGroup,
+            const FCk_GroundNav_DebugDrawBuild& InBuild) -> void
+        {
+            auto Owner = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorld);
+
+            const auto OwnerIsValid = ck::IsValid(Owner);
+
+            CK_ENSURE_IF_NOT(OwnerIsValid,
+                TEXT("Cannot retain a GroundNav debug draw in a world with no ECS registry"))
+            { return; }
+
+            auto Emitted = 0;
+            auto Set = FCk_Handle_Pmg_DebugShape{};
+
+            const auto Get_Set = [&]() -> bool
+            {
+                if (ck::IsValid(Set) && (Emitted % kPrimitivesPerLineSet) != 0)
+                { return true; }
+
+                // A set's own colour and thickness are the defaults every appended primitive
+                // overrides, so one set carries a whole chunk however many colours are in it.
+                Set = pmg::Create_DebugLineSet(Owner, FTransform::Identity, FLinearColor::White,
+                    1.0f, ECk_Pmg_RenderMode::DoubleSided);
+
+                const auto SetIsValid = ck::IsValid(Set);
+
+                CK_ENSURE_IF_NOT(SetIsValid,
+                    TEXT("Cannot create a retained GroundNav debug line set under [{}]"), Owner)
+                { return false; }
+
+                InOutGroup._Sets.Emplace(Set);
+
+                return true;
+            };
+
+            for (const auto& Box : InBuild._Boxes)
+            {
+                if (NOT Get_Set())
+                { return; }
+
+                pmg::Append_DebugBox_World(Set, Box._Centre, Box._Extent, FRotator::ZeroRotator,
+                    FLinearColor{Box._Color}, Box._Thickness);
+
+                ++Emitted;
+            }
+
+            for (const auto& Line : InBuild._Lines)
+            {
+                if (NOT Get_Set())
+                { return; }
+
+                pmg::Append_DebugLine_World(Set, Line._Start, Line._End, FLinearColor{Line._Color},
+                    Line._Thickness);
+
+                ++Emitted;
             }
         }
     }
@@ -466,129 +688,12 @@ namespace ck::groundnav
             const FCk_GroundNav_DebugBakeParams& InParams)
         -> FCk_GroundNav_DebugSnapshot
     {
-        auto Snapshot = FCk_GroundNav_DebugSnapshot{};
-
-        const auto Region = FBox::BuildAABB(InParams._Centre, InParams._Extent);
-        Snapshot._Region = Region;
-        Snapshot._CellSizeUu = InParams._Config.Get_CellSizeUu();
-
+        // The backend answers Get_IsValid() false when it cannot reach a physics world, and the
+        // derivation turns that into BackendUnavailable. Checking it here as well would put the same
+        // status behind two producers, and only one of them could ever be pinned.
         const auto Backend = FCk_GroundNav_GeometryBackend_Jolt{InWorldContextObject};
 
-        if (NOT Backend.Get_IsValid())
-        {
-            Snapshot._Status = EDebugSnapshotStatus::BackendUnavailable;
-            return Snapshot;
-        }
-
-        const auto StartedAt = FPlatformTime::Seconds();
-
-        auto Geometry = FCk_GroundNav_GeometryBatch{};
-        const auto SourceTriangles = Backend.Get_TrianglesInBounds(Region, Geometry);
-
-        if (Geometry.Get_IsEmpty())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::NoGeometryInRegion;
-            return Snapshot;
-        }
-
-        // The same check a field bake runs, over the bodies of this one region. It reads each body's
-        // WHOLE mesh, so it is deliberately not part of the triangle fetch above: a mesh clipped to the
-        // region has cut edges that look exactly like the holes this is looking for.
-        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
-        Backend.Get_StaticBodiesInBounds(Region, Bodies);
-
-        auto CheckedBodies = TSet<uint64>{};
-        auto OpenBodies = TArray<FCk_GroundNav_OpenBody>{};
-        auto ProbesForClosure = 0;
-
-        DoCheck_GeometryClosure(Backend, Bodies, CheckedBodies, OpenBodies, ProbesForClosure);
-        DoReport_OpenBodies(OpenBodies);
-
-        auto Spans = FCk_GroundNav_SpanField{};
-        const auto RasterResult = DoRasterizeSpans(
-            Geometry, Region, InParams._Config, InParams._Profile, Spans);
-
-        if (NOT RasterResult.Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        // Kept so the filters can be judged by what they REMOVED, not only by what survived.
-        const auto SpansBeforeFiltering = Spans;
-
-        auto Connections = FCk_GroundNav_ConnectionField{};
-
-        if (NOT DoFilter_Walkability(InParams._Profile, Spans, Connections).Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        auto Layers = FCk_GroundNav_LayerField{};
-
-        if (NOT DoExtract_Layers(Spans, Connections, Layers).Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        auto Clearance = FCk_GroundNav_ClearanceField{};
-
-        if (NOT DoCompute_Clearance(Layers, Connections, InParams._Config.Get_CellSizeUu(), Clearance).Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        auto Plates = FCk_GroundNav_PlateField{};
-
-        if (NOT DoDecompose_Plates(Spans, Layers, InParams._MergeTunables, Plates).Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        auto Portals = FCk_GroundNav_PortalField{};
-
-        if (NOT DoExtract_Portals(Spans, Layers, Connections, Plates, Clearance, Portals).Get_IsCompleted())
-        {
-            Snapshot._SourceTriangleCount = SourceTriangles;
-            Snapshot._Status = EDebugSnapshotStatus::Failed;
-            return Snapshot;
-        }
-
-        const auto ElapsedMilliseconds = (FPlatformTime::Seconds() - StartedAt) * 1000.0;
-
-        auto Built = Make_DebugSnapshot(Spans, Layers, Clearance, Plates, Portals, Region, InParams._MaxCells);
-        Do_RecordRejectedCells(SpansBeforeFiltering, Spans, Built);
-
-        Built._SourceTriangleCount = SourceTriangles;
-        Built._DroppedTriangleCount = RasterResult.Get_DroppedInputCount();
-        Built._BakeMilliseconds = ElapsedMilliseconds;
-
-        Built._OpenBodies.Reserve(OpenBodies.Num());
-
-        for (const auto& OpenBody : OpenBodies)
-        {
-            auto DebugOpenBody = FCk_GroundNav_DebugOpenBody{};
-
-            DebugOpenBody._Description = OpenBody._Description;
-            DebugOpenBody._Bounds = OpenBody._Bounds;
-            DebugOpenBody._TriangleCount = OpenBody._TriangleCount;
-            DebugOpenBody._OpenEdgeCount = OpenBody._OpenEdgeCount;
-            DebugOpenBody._OpenEdgePoints = OpenBody._OpenEdgePoints;
-
-            Built._OpenBodies.Emplace(MoveTemp(DebugOpenBody));
-        }
-
-        return Built;
+        return Make_DebugSnapshotFromBackend(Backend, InParams);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -680,65 +785,55 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        DoDraw_DebugSnapshot(
-            UWorld*                            InWorld,
-            const FCk_GroundNav_DebugSnapshot& InSnapshot,
-            EDebugDrawMode                     InMode,
-            FCk_Time                           InLifetime)
-        -> void
+        Make_DebugSnapshotDrawBuild(
+            const FCk_GroundNav_DebugSnapshot&      InSnapshot,
+            const FCk_GroundNav_DebugDrawSelection& InSelection)
+        -> FCk_GroundNav_DebugDrawBuild
     {
-        const auto WorldIsValid = ck::IsValid(InWorld);
+        using namespace debugdraw_private;
 
-        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw a GroundNav debug snapshot without a World"))
-        { return; }
-
-        const auto LifetimeSeconds = static_cast<float>(InLifetime.Get_Seconds());
-
-        constexpr auto Persistent = true;
-        constexpr auto DepthPriority = 0;
+        auto Build = FCk_GroundNav_DebugDrawBuild{};
 
         // The region always draws, whatever the status. A viewer that showed nothing for a failed
         // bake would be indistinguishable from one pointed at empty space.
-        DrawDebugBox(InWorld, InSnapshot._Region.GetCenter(), InSnapshot._Region.GetExtent(),
-            FColor::White, Persistent, LifetimeSeconds, DepthPriority, 2.0f);
+        Build.Add_Box(InSnapshot._Region.GetCenter(), InSnapshot._Region.GetExtent(),
+            FColor::White, 2.0f);
 
-        debugdraw_private::Do_DrawOpenBodies(InWorld, InSnapshot, LifetimeSeconds);
+        ++Build._Tally._RegionBoxes;
+
+        Do_BuildOpenBodies(Build, InSnapshot);
 
         if (NOT InSnapshot.Get_IsDrawable())
-        { return; }
-
-        using namespace debugdraw_private;
+        { return Build; }
 
         // Every mode, for a related reason to the open bodies above: an authored link is the one
         // crossing in the field that no geometry accounts for, and a developer who never switches
         // mode must still see one. Collection is what the cvar gates, so a snapshot nobody collected
         // links into draws none.
-        Do_DrawLinks(InWorld, InSnapshot._Links, LifetimeSeconds);
+        Do_BuildLinks(Build, InSnapshot._Links);
 
-        if (InMode == EDebugDrawMode::Plates)
+        if (InSelection._Mode == EDebugDrawMode::Plates)
         {
             for (const auto& Plate : InSnapshot._Plates)
             {
                 // A perfectly flat plate has no thickness to draw, so give it just enough to be a box.
                 const auto Extent = Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0};
 
-                DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Extent,
-                    Get_LayerColor(Plate._LayerIndex), Persistent, LifetimeSeconds, DepthPriority, 1.5f);
+                Build.Add_Box(Plate._Bounds.GetCenter(), Extent, Get_LayerColor(Plate._LayerIndex),
+                    1.5f);
+
+                ++Build._Tally._PlateBoxes;
             }
 
-            Do_DrawMarkups(InWorld, InSnapshot._Markups, LifetimeSeconds);
-            Do_DrawInvalidation(InWorld, InSnapshot._Corridors, InSnapshot._ChangedBounds,
-                LifetimeSeconds);
-            Do_DrawRepair(InWorld, InSnapshot,
-                CVar_RepairHighlightSeconds.GetValueOnGameThread());
+            Do_BuildMarkups(Build, InSnapshot._Markups);
+            Do_BuildInvalidation(Build, InSnapshot._Corridors, InSnapshot._ChangedBounds);
+            Do_BuildRepair(Build, InSnapshot);
 
-            return;
+            return Build;
         }
 
-        if (InMode == EDebugDrawMode::Tiles)
+        if (InSelection._Mode == EDebugDrawMode::Tiles)
         {
-            constexpr auto DrawShadow = true;
-
             const auto NewestEpoch = InSnapshot.Get_NewestTileEpoch();
 
             // Nothing to pick out where every built tile carries the same epoch: a whole-field bake
@@ -766,21 +861,13 @@ namespace ck::groundnav
                     ? (IsFromLatestPublish ? RepairColor : FColor{90, 150, 255})
                     : FColor{200, 90, 60};
 
-                DrawDebugBox(InWorld, Tile._Bounds.GetCenter(), Tile._Bounds.GetExtent(), Color,
-                    Persistent, LifetimeSeconds, DepthPriority, Tile._IsBuilt ? 1.5f : 3.0f);
+                Build.Add_Box(Tile._Bounds.GetCenter(), Tile._Bounds.GetExtent(), Color,
+                    Tile._IsBuilt ? 1.5f : 3.0f);
 
-                if (NOT IsFromLatestPublish)
-                { continue; }
-
-                DrawDebugString(InWorld,
-                    FVector{Tile._Bounds.GetCenter().X, Tile._Bounds.GetCenter().Y,
-                        Tile._Bounds.Max.Z},
-                    FString::Printf(TEXT("epoch %lld"), static_cast<long long>(Tile._Epoch)),
-                    nullptr, Color, LifetimeSeconds, DrawShadow);
+                ++Build._Tally._TileBoxes;
             }
 
-            Do_DrawRepair(InWorld, InSnapshot,
-                CVar_RepairHighlightSeconds.GetValueOnGameThread());
+            Do_BuildRepair(Build, InSnapshot);
 
             auto WidestSeamUu = 0.0f;
 
@@ -791,22 +878,25 @@ namespace ck::groundnav
 
             for (const auto& Seam : InSnapshot._Seams)
             {
-                DrawDebugLine(InWorld, Seam._MinEnd + Lift, Seam._MaxEnd + Lift,
-                    Get_ClearanceColor(Seam._TraversalClearanceUu, WidestSeamUu),
-                    Persistent, LifetimeSeconds, DepthPriority, 8.0f);
+                Build.Add_Line(Seam._MinEnd + Lift, Seam._MaxEnd + Lift,
+                    Get_ClearanceColor(Seam._TraversalClearanceUu, WidestSeamUu), 8.0f);
+
+                ++Build._Tally._SeamSegments;
             }
 
-            return;
+            return Build;
         }
 
-        if (InMode == EDebugDrawMode::Portals)
+        if (InSelection._Mode == EDebugDrawMode::Portals)
         {
             // The plates, dimmed, so a crossing is read against the two things it joins rather than
             // floating in space.
             for (const auto& Plate : InSnapshot._Plates)
             {
-                DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0},
-                    FColor{55, 60, 65}, Persistent, LifetimeSeconds, DepthPriority, 1.0f);
+                Build.Add_Box(Plate._Bounds.GetCenter(),
+                    Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0}, FColor{55, 60, 65}, 1.0f);
+
+                ++Build._Tally._PlateBoxes;
             }
 
             // The ramp runs against the WIDEST crossing in this bake, not against the most open cell:
@@ -825,8 +915,9 @@ namespace ck::groundnav
             {
                 const auto Color = Get_ClearanceColor(Portal._TraversalClearanceUu, WidestPortalUu);
 
-                DrawDebugLine(InWorld, Portal._MinEnd + Lift, Portal._MaxEnd + Lift, Color, Persistent,
-                    LifetimeSeconds, DepthPriority, 6.0f);
+                Build.Add_Line(Portal._MinEnd + Lift, Portal._MaxEnd + Lift, Color, 6.0f);
+
+                ++Build._Tally._PortalSegments;
 
                 if (NOT Portal._IsCrossLayer)
                 { continue; }
@@ -835,27 +926,31 @@ namespace ck::groundnav
                 // already spoken for and the two ends can be a whole storey apart.
                 const auto Midpoint = (Portal._MinEnd + Portal._MaxEnd) * 0.5;
 
-                DrawDebugLine(InWorld, Midpoint + Lift, Midpoint + Lift + FVector{0.0, 0.0, 60.0},
-                    Color, Persistent, LifetimeSeconds, DepthPriority, 3.0f);
+                Build.Add_Line(Midpoint + Lift, Midpoint + Lift + FVector{0.0, 0.0, 60.0}, Color,
+                    3.0f);
+
+                ++Build._Tally._PortalMastSegments;
             }
 
-            return;
+            return Build;
         }
 
-        if (InMode == EDebugDrawMode::Links)
+        if (InSelection._Mode == EDebugDrawMode::Links)
         {
             // The plates, dimmed, so a link is read against the two pieces of ground it joins rather
-            // than floating in space. The links themselves are drawn above, in every mode.
+            // than floating in space. The links themselves are built above, in every mode.
             for (const auto& Plate : InSnapshot._Plates)
             {
-                DrawDebugBox(InWorld, Plate._Bounds.GetCenter(), Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0},
-                    FColor{55, 60, 65}, Persistent, LifetimeSeconds, DepthPriority, 1.0f);
+                Build.Add_Box(Plate._Bounds.GetCenter(),
+                    Plate._Bounds.GetExtent() + FVector{0.0, 0.0, 1.0}, FColor{55, 60, 65}, 1.0f);
+
+                ++Build._Tally._PlateBoxes;
             }
 
-            return;
+            return Build;
         }
 
-        if (InMode == EDebugDrawMode::Boundary)
+        if (InSelection._Mode == EDebugDrawMode::Boundary)
         {
             // Lifted for the same reason a crossing is: a run drawn exactly on the surface it bounds
             // disappears into that surface from every angle a player actually looks from.
@@ -869,24 +964,111 @@ namespace ck::groundnav
             {
                 const auto Color = Run._IsTileRim ? TileRimColor : Get_LayerColor(Run._LayerIndex);
 
-                DrawDebugLine(InWorld, Run._Start + Lift, Run._End + Lift, Color, Persistent,
-                    LifetimeSeconds, DepthPriority, 3.0f);
+                Build.Add_Line(Run._Start + Lift, Run._End + Lift, Color, 3.0f);
+
+                ++Build._Tally._BoundarySegments;
 
                 // Which side of the run the floor is on. Two runs a cell apart facing each other and
                 // two facing away are a corridor and a pillar, and the lines alone cannot say which.
                 const auto Midpoint = ((Run._Start + Run._End) * 0.5) + Lift;
                 const auto Inward = FVector{Run._InwardNormalXY.X, Run._InwardNormalXY.Y, 0.0};
 
-                DrawDebugLine(InWorld, Midpoint, Midpoint + (Inward * 20.0), Color, Persistent,
-                    LifetimeSeconds, DepthPriority, 1.5f);
+                Build.Add_Line(Midpoint, Midpoint + (Inward * 20.0), Color, 1.5f);
+
+                ++Build._Tally._BoundaryTickSegments;
             }
+
+            return Build;
+        }
+
+        // Clearance, Layers and Rejected are per-CELL views, and a cell is drawn as a point. PMG's
+        // retained tier has no point, so those three are emitted immediately by the draw below and
+        // this build carries only what every mode shares.
+        return Build;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDraw_DebugSnapshot(
+            UWorld*                                 InWorld,
+            const FCk_GroundNav_DebugSnapshot&      InSnapshot,
+            const FCk_GroundNav_DebugDrawSelection& InSelection,
+            FCk_Time                                InLifetime)
+        -> void
+    {
+        const auto WorldIsValid = ck::IsValid(InWorld);
+
+        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw a GroundNav debug snapshot without a World"))
+        { return; }
+
+        using namespace debugdraw_private;
+
+        Do_PublishRetainedDebugDraw(InWorld, EDebugDrawGroup::Field,
+            Make_DebugSnapshotDrawBuild(InSnapshot, InSelection));
+
+        const auto LifetimeSeconds = static_cast<float>(InLifetime.Get_Seconds());
+
+        Do_DrawOpenBodyLabels(InWorld, InSnapshot, LifetimeSeconds);
+
+        if (NOT InSnapshot.Get_IsDrawable())
+        { return; }
+
+        Do_DrawLinkArrowsAndLabels(InWorld, InSnapshot._Links, LifetimeSeconds);
+
+        constexpr auto Persistent = true;
+        constexpr auto DepthPriority = 0;
+
+        if (InSelection._Mode == EDebugDrawMode::Plates)
+        {
+            Do_DrawMarkupLabels(InWorld, InSnapshot._Markups, LifetimeSeconds);
+            Do_DrawInvalidationLabels(InWorld, InSnapshot._Corridors, InSnapshot._ChangedBounds,
+                LifetimeSeconds);
+            Do_DrawRepairLabels(InWorld, InSnapshot);
 
             return;
         }
 
+        if (InSelection._Mode == EDebugDrawMode::Tiles)
+        {
+            const auto NewestEpoch = InSnapshot.Get_NewestTileEpoch();
+
+            auto EpochsDiffer = false;
+
+            for (const auto& Tile : InSnapshot._Tiles)
+            {
+                if (Tile._IsBuilt && Tile._Epoch != NewestEpoch)
+                {
+                    EpochsDiffer = true;
+                    break;
+                }
+            }
+
+            for (const auto& Tile : InSnapshot._Tiles)
+            {
+                if (NOT (EpochsDiffer && Tile._IsBuilt && Tile._Epoch == NewestEpoch))
+                { continue; }
+
+                DrawDebugString(InWorld,
+                    FVector{Tile._Bounds.GetCenter().X, Tile._Bounds.GetCenter().Y,
+                        Tile._Bounds.Max.Z},
+                    FString::Printf(TEXT("epoch %lld"), static_cast<long long>(Tile._Epoch)),
+                    nullptr, RepairColor, LifetimeSeconds, DrawShadow);
+            }
+
+            Do_DrawRepairLabels(InWorld, InSnapshot);
+
+            return;
+        }
+
+        if (InSelection._Mode == EDebugDrawMode::Portals ||
+            InSelection._Mode == EDebugDrawMode::Links ||
+            InSelection._Mode == EDebugDrawMode::Boundary)
+        { return; }
+
         const auto PointSize = FMath::Max(4.0f, InSnapshot._CellSizeUu * 0.35f);
 
-        if (InMode == EDebugDrawMode::Rejected)
+        if (InSelection._Mode == EDebugDrawMode::Rejected)
         {
             // What survived, dimmed, so the rejections are read against the ground they were cut from
             // rather than against an empty screen.
@@ -907,7 +1089,7 @@ namespace ck::groundnav
 
         for (const auto& Cell : InSnapshot._Cells)
         {
-            const auto Color = InMode == EDebugDrawMode::Clearance
+            const auto Color = InSelection._Mode == EDebugDrawMode::Clearance
                 ? Get_ClearanceColor(Cell._ClearanceUu, InSnapshot._MaxClearanceUu)
                 : Get_LayerColor(Cell._LayerIndex);
 
@@ -982,7 +1164,14 @@ namespace ck::groundnav
         CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav markup outlines without a World"))
         { return; }
 
-        debugdraw_private::Do_DrawMarkups(
+        auto Build = FCk_GroundNav_DebugDrawBuild{};
+        debugdraw_private::Do_BuildMarkups(Build, InMarkups);
+
+        // Appended rather than published: a query command's overlay is assembled from several of
+        // these, and each replacing the group would leave only the last one drawn.
+        Do_AppendRetainedDebugDraw(InWorld, EDebugDrawGroup::Query, Build);
+
+        debugdraw_private::Do_DrawMarkupLabels(
             InWorld, InMarkups, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
@@ -1070,7 +1259,12 @@ namespace ck::groundnav
         CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav links without a World"))
         { return; }
 
-        debugdraw_private::Do_DrawLinks(
+        auto Build = FCk_GroundNav_DebugDrawBuild{};
+        debugdraw_private::Do_BuildLinks(Build, InLinks);
+
+        Do_AppendRetainedDebugDraw(InWorld, EDebugDrawGroup::Query, Build);
+
+        debugdraw_private::Do_DrawLinkArrowsAndLabels(
             InWorld, InLinks, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
@@ -1171,7 +1365,12 @@ namespace ck::groundnav
         CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav corridor outlines without a World"))
         { return; }
 
-        debugdraw_private::Do_DrawInvalidation(
+        auto Build = FCk_GroundNav_DebugDrawBuild{};
+        debugdraw_private::Do_BuildInvalidation(Build, InCorridors, InChangedBounds);
+
+        Do_AppendRetainedDebugDraw(InWorld, EDebugDrawGroup::Query, Build);
+
+        debugdraw_private::Do_DrawInvalidationLabels(
             InWorld, InCorridors, InChangedBounds, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
@@ -1248,8 +1447,12 @@ namespace ck::groundnav
         CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav repair outlines without a World"))
         { return; }
 
-        debugdraw_private::Do_DrawRepair(InWorld, InSnapshot,
-            debugdraw_private::CVar_RepairHighlightSeconds.GetValueOnGameThread());
+        auto Build = FCk_GroundNav_DebugDrawBuild{};
+        debugdraw_private::Do_BuildRepair(Build, InSnapshot);
+
+        Do_AppendRetainedDebugDraw(InWorld, EDebugDrawGroup::Query, Build);
+
+        debugdraw_private::Do_DrawRepairLabels(InWorld, InSnapshot);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1375,6 +1578,310 @@ namespace ck::groundnav
             InSnapshot._MaxClearanceUu,
             static_cast<double>(InSnapshot._AllocatedBytes) / 1024.0,
             IsTiledField ? TEXT("the published field") : TEXT("the bake products"));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_GroundNav_DebugDrawSelection::
+        Get_IsEqual(
+            const FCk_GroundNav_DebugDrawSelection& InOther) const
+        -> bool
+    {
+        return _Mode == InOther._Mode &&
+               _DrawMarkup == InOther._DrawMarkup &&
+               _DrawLinks == InOther._DrawLinks &&
+               _DrawInvalidation == InOther._DrawInvalidation;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_GroundNav_DebugDrawTally::
+        Get_Total() const
+        -> int32
+    {
+        return _RegionBoxes +
+               _OpenBodyBoxes + _OpenBodyEdgeSegments +
+               _PlateBoxes +
+               _PortalSegments + _PortalMastSegments +
+               _TileBoxes + _SeamSegments +
+               _BoundarySegments + _BoundaryTickSegments +
+               _LinkSegments + _LinkTickSegments +
+               _MarkupBoxes + _MarkupDashSegments +
+               _CorridorBoxes + _ChangedBoundsBoxes +
+               _RepairBoxes + _RepairDashSegments +
+               _QuerySegments;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_GroundNav_DebugDrawBuild::
+        Add_Line(
+            const FVector& InStart,
+            const FVector& InEnd,
+            FColor         InColor,
+            float          InThickness)
+        -> void
+    {
+        _Lines.Emplace(FCk_GroundNav_DebugDrawLine{InStart, InEnd, InColor, InThickness});
+    }
+
+    auto
+        FCk_GroundNav_DebugDrawBuild::
+        Add_Box(
+            const FVector& InCentre,
+            const FVector& InExtent,
+            FColor         InColor,
+            float          InThickness)
+        -> void
+    {
+        _Boxes.Emplace(FCk_GroundNav_DebugDrawBox{InCentre, InExtent, InColor, InThickness});
+    }
+
+    auto
+        FCk_GroundNav_DebugDrawBuild::
+        Get_ElementCount() const
+        -> int32
+    {
+        return _Lines.Num() + _Boxes.Num();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Do_PublishRetainedDebugDraw(
+            UWorld*                             InWorld,
+            EDebugDrawGroup                     InGroup,
+            const FCk_GroundNav_DebugDrawBuild& InBuild)
+        -> void
+    {
+        using namespace debugdraw_private;
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        DoBind_RetainedCleanupHookOnce();
+
+        auto& State = Get_RetainedDrawStates().FindOrAdd(TWeakObjectPtr<UWorld>{InWorld});
+        auto& Group = Get_Group(State, InGroup);
+
+        Do_DestroySets(Group);
+
+        // Switched off is a RELEASE and not a skip: geometry left standing while the switch says the
+        // view is off is the one state a developer cannot reason about.
+        if (NOT debug::Get_IsRetainedDrawEnabled())
+        {
+            State._HasBuiltField = InGroup == EDebugDrawGroup::Field ? false : State._HasBuiltField;
+            return;
+        }
+
+        Do_AppendBuildToGroup(InWorld, Group, InBuild);
+
+        Group._Tally = InBuild._Tally;
+        ++Group._RebuildCount;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Do_AppendRetainedDebugDraw(
+            UWorld*                             InWorld,
+            EDebugDrawGroup                     InGroup,
+            const FCk_GroundNav_DebugDrawBuild& InBuild)
+        -> void
+    {
+        using namespace debugdraw_private;
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        if (NOT debug::Get_IsRetainedDrawEnabled())
+        { return; }
+
+        DoBind_RetainedCleanupHookOnce();
+
+        auto& State = Get_RetainedDrawStates().FindOrAdd(TWeakObjectPtr<UWorld>{InWorld});
+        auto& Group = Get_Group(State, InGroup);
+
+        Do_AppendBuildToGroup(InWorld, Group, InBuild);
+
+        const auto& Added = InBuild._Tally;
+
+        Group._Tally._RegionBoxes += Added._RegionBoxes;
+        Group._Tally._OpenBodyBoxes += Added._OpenBodyBoxes;
+        Group._Tally._OpenBodyEdgeSegments += Added._OpenBodyEdgeSegments;
+        Group._Tally._PlateBoxes += Added._PlateBoxes;
+        Group._Tally._PortalSegments += Added._PortalSegments;
+        Group._Tally._PortalMastSegments += Added._PortalMastSegments;
+        Group._Tally._TileBoxes += Added._TileBoxes;
+        Group._Tally._SeamSegments += Added._SeamSegments;
+        Group._Tally._BoundarySegments += Added._BoundarySegments;
+        Group._Tally._BoundaryTickSegments += Added._BoundaryTickSegments;
+        Group._Tally._LinkSegments += Added._LinkSegments;
+        Group._Tally._LinkTickSegments += Added._LinkTickSegments;
+        Group._Tally._MarkupBoxes += Added._MarkupBoxes;
+        Group._Tally._MarkupDashSegments += Added._MarkupDashSegments;
+        Group._Tally._CorridorBoxes += Added._CorridorBoxes;
+        Group._Tally._ChangedBoundsBoxes += Added._ChangedBoundsBoxes;
+        Group._Tally._RepairBoxes += Added._RepairBoxes;
+        Group._Tally._RepairDashSegments += Added._RepairDashSegments;
+        Group._Tally._QuerySegments += Added._QuerySegments;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Do_UpdateRetainedDebugDraw(
+            UWorld*                                    InWorld,
+            const FCk_GroundNav_DebugSnapshot&         InSnapshot,
+            const FCk_GroundNav_DebugSnapshotCacheKey& InKey,
+            const FCk_GroundNav_DebugDrawSelection&    InSelection)
+        -> void
+    {
+        using namespace debugdraw_private;
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        DoBind_RetainedCleanupHookOnce();
+
+        auto& State = Get_RetainedDrawStates().FindOrAdd(TWeakObjectPtr<UWorld>{InWorld});
+
+        // A set the world destroyed under us reads invalid, and a view that kept counting it as built
+        // would draw nothing for as long as the key held still.
+        const auto AnySetIsGone = State._Field._Sets.ContainsByPredicate(
+            [](const FCk_Handle_Pmg_DebugShape& InSet) -> bool { return ck::Is_NOT_Valid(InSet); });
+
+        const auto RetainedDrawIsEnabled = debug::Get_IsRetainedDrawEnabled();
+
+        const auto NothingMoved = RetainedDrawIsEnabled &&
+                                  State._HasBuiltField &&
+                                  NOT AnySetIsGone &&
+                                  State._Key.Get_IsEqual(InKey) &&
+                                  State._Selection.Get_IsEqual(InSelection);
+
+        if (NothingMoved)
+        { return; }
+
+        // Both answers are reached BEFORE any geometry is assembled: this is the per-frame form, so a
+        // view that is switched off, or one whose capture and selection have not moved, must not pay
+        // to build what it will not publish. Switched off still RELEASES - the sets stand until
+        // something takes them down.
+        if (NOT RetainedDrawIsEnabled)
+        {
+            Do_DestroySets(State._Field);
+
+            State._Key = InKey;
+            State._Selection = InSelection;
+            State._HasBuiltField = false;
+
+            return;
+        }
+
+        Do_PublishRetainedDebugDraw(InWorld, EDebugDrawGroup::Field,
+            Make_DebugSnapshotDrawBuild(InSnapshot, InSelection));
+
+        State._Key = InKey;
+        State._Selection = InSelection;
+        State._HasBuiltField = true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Do_ReleaseRetainedDebugDraw(
+            UWorld* InWorld)
+        -> void
+    {
+        using namespace debugdraw_private;
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return; }
+
+        auto* State = Get_RetainedDrawStates().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+        if (State == nullptr)
+        { return; }
+
+        Do_DestroySets(State->_Field);
+        Do_DestroySets(State->_Query);
+
+        State->_Key = FCk_GroundNav_DebugSnapshotCacheKey{};
+        State->_Selection = FCk_GroundNav_DebugDrawSelection{};
+        State->_HasBuiltField = false;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Do_ReleaseAllRetainedDebugDraw()
+        -> void
+    {
+        using namespace debugdraw_private;
+
+        for (auto& Entry : Get_RetainedDrawStates())
+        {
+            auto& State = Entry.Value;
+
+            Do_DestroySets(State._Field);
+            Do_DestroySets(State._Query);
+
+            State._Key = FCk_GroundNav_DebugSnapshotCacheKey{};
+            State._Selection = FCk_GroundNav_DebugDrawSelection{};
+            State._HasBuiltField = false;
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_RetainedDebugDrawRebuildCount(
+            UWorld*         InWorld,
+            EDebugDrawGroup InGroup)
+        -> int32
+    {
+        using namespace debugdraw_private;
+
+        auto* State = Get_RetainedDrawStates().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+        if (State == nullptr)
+        { return 0; }
+
+        return Get_Group(*State, InGroup)._RebuildCount;
+    }
+
+    auto
+        Get_RetainedDebugDrawTally(
+            UWorld*         InWorld,
+            EDebugDrawGroup InGroup)
+        -> FCk_GroundNav_DebugDrawTally
+    {
+        using namespace debugdraw_private;
+
+        auto* State = Get_RetainedDrawStates().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+        if (State == nullptr)
+        { return {}; }
+
+        return Get_Group(*State, InGroup)._Tally;
+    }
+
+    auto
+        Get_RetainedDebugDrawSetCount(
+            UWorld*         InWorld,
+            EDebugDrawGroup InGroup)
+        -> int32
+    {
+        using namespace debugdraw_private;
+
+        auto* State = Get_RetainedDrawStates().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+        if (State == nullptr)
+        { return 0; }
+
+        return Get_Group(*State, InGroup)._Sets.Num();
     }
 }
 
@@ -1517,7 +2024,9 @@ namespace ck_groundnav_debugconsole
 
     static TAutoConsoleVariable<float> CVar_LifetimeSeconds(
         TEXT("ck.GroundNav.Debug.LifetimeSeconds"), 60.0f,
-        TEXT("How long the drawn field persists."));
+        TEXT("How long the IMMEDIATE part of a view persists - the text labels, the per-cell points, ")
+        TEXT("the spheres and the arrowheads. The retained line geometry is not timed: it stands until ")
+        TEXT("a rebuild replaces it or something releases it."));
 
     static TAutoConsoleVariable<int32> CVar_MaxCells(
         TEXT("ck.GroundNav.Debug.MaxCells"), 20000,
@@ -1693,9 +2202,24 @@ namespace ck_groundnav_debugconsole
         return Params;
     }
 
+    // What the presentation cvars are ASKING for, gathered as one value: a retained view is rebuilt
+    // on this beside the capture's key, so a cvar flipped with the field standing still is exactly
+    // what a rebuild has to notice.
+    auto Get_DrawSelection() -> ck::groundnav::FCk_GroundNav_DebugDrawSelection
+    {
+        auto Selection = ck::groundnav::FCk_GroundNav_DebugDrawSelection{};
+
+        Selection._Mode = Get_DrawMode();
+        Selection._DrawMarkup = ck::groundnav::debug::Get_IsMarkupDrawEnabled();
+        Selection._DrawLinks = CVar_DrawLinks.GetValueOnGameThread() != 0;
+        Selection._DrawInvalidation = CVar_DrawInvalidation.GetValueOnGameThread() != 0;
+
+        return Selection;
+    }
+
     auto DoDrawAndReport(UWorld* InWorld, const ck::groundnav::FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
     {
-        ck::groundnav::DoDraw_DebugSnapshot(InWorld, InSnapshot, Get_DrawMode(),
+        ck::groundnav::DoDraw_DebugSnapshot(InWorld, InSnapshot, Get_DrawSelection(),
             FCk_Time{static_cast<double>(CVar_LifetimeSeconds.GetValueOnGameThread())});
 
         ck::groundnav::Display(TEXT("{}"), ck::groundnav::Get_DebugSnapshotSummary(InSnapshot));
@@ -1982,6 +2506,13 @@ namespace ck_groundnav_debugconsole
     {
         const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
 
+        // The Query group is REPLACED before this command's overlays append to it, the way ReachAt and
+        // PathAt replace it with their own answer: one command is one answer, so running it twice
+        // draws it once and moves the Query rebuild count once.
+        ck::groundnav::Do_PublishRetainedDebugDraw(
+            InWorld, ck::groundnav::EDebugDrawGroup::Query,
+            ck::groundnav::FCk_GroundNav_DebugDrawBuild{});
+
         const auto Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
 
         ck::groundnav::DoDraw_DebugMarkups(
@@ -2078,6 +2609,13 @@ namespace ck_groundnav_debugconsole
     auto DoLinksAndReport(UWorld* InWorld, const FVector& InPoint) -> void
     {
         const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        // The Query group is REPLACED before this command's overlays append to it, the way ReachAt and
+        // PathAt replace it with their own answer: one command is one answer, so running it twice
+        // draws it once and moves the Query rebuild count once.
+        ck::groundnav::Do_PublishRetainedDebugDraw(
+            InWorld, ck::groundnav::EDebugDrawGroup::Query,
+            ck::groundnav::FCk_GroundNav_DebugDrawBuild{});
 
         const auto Links = ck::groundnav::Make_DebugLinksFromWorld(InWorld);
 
@@ -2177,6 +2715,13 @@ namespace ck_groundnav_debugconsole
     auto DoInvalidationAndReport(UWorld* InWorld) -> void
     {
         const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        // The Query group is REPLACED before this command's overlays append to it, the way ReachAt and
+        // PathAt replace it with their own answer: one command is one answer, so running it twice
+        // draws it once and moves the Query rebuild count once.
+        ck::groundnav::Do_PublishRetainedDebugDraw(
+            InWorld, ck::groundnav::EDebugDrawGroup::Query,
+            ck::groundnav::FCk_GroundNav_DebugDrawBuild{});
 
         const auto Corridors = ck::groundnav::Make_DebugCorridorsFromWorld(InWorld);
         const auto ChangedBounds = ck::groundnav::Make_DebugChangedBoundsFromWorld(InWorld);
@@ -2685,15 +3230,23 @@ namespace ck_groundnav_debugconsole
 
         const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
 
+        // The verdict is the LINE and its colour, so that is what the retained tier carries. The two
+        // end spheres and the wording are immediate: PMG's line sets draw neither a sphere nor text.
+        auto Build = ck::groundnav::FCk_GroundNav_DebugDrawBuild{};
+
+        Build.Add_Line(InStart, InEnd, Get_ReachabilityColor(Reach._Status, Reach._Reachability),
+            2.0f);
+
+        ++Build._Tally._QuerySegments;
+
+        ck::groundnav::Do_PublishRetainedDebugDraw(
+            InWorld, ck::groundnav::EDebugDrawGroup::Query, Build);
+
         DrawDebugSphere(InWorld, InStart, 8.0f, SphereSegments, FColor::White, Persistent,
             LifetimeSeconds, DepthPriority);
 
         DrawDebugSphere(InWorld, InEnd, 8.0f, SphereSegments, FColor::White, Persistent,
             LifetimeSeconds, DepthPriority);
-
-        DrawDebugLine(InWorld, InStart, InEnd,
-            Get_ReachabilityColor(Reach._Status, Reach._Reachability), Persistent, LifetimeSeconds,
-            DepthPriority, 2.0f);
 
         const auto Summary = FString::Printf(
             TEXT("reach %s | %s | expansions %d"),
@@ -2866,13 +3419,12 @@ namespace ck_groundnav_debugconsole
             InSource.X, InSource.Y, InSource.Z, InRadiusUu, Summary);
     }
 
-    auto DoDrawPlateOutline(
-        UWorld*                                   InWorld,
-        const ck::groundnav::FCk_GroundNav_Field& InField,
-        int32                                     InFlatPlate,
-        FColor                                    InColor,
-        float                                     InLifetimeSeconds,
-        float                                     InThickness) -> void
+    auto DoBuildPlateOutline(
+        ck::groundnav::FCk_GroundNav_DebugDrawBuild& InOutBuild,
+        const ck::groundnav::FCk_GroundNav_Field&    InField,
+        int32                                        InFlatPlate,
+        FColor                                       InColor,
+        float                                        InThickness) -> void
     {
         int32 TileIndex = INDEX_NONE;
         int32 PlateIndex = INDEX_NONE;
@@ -2911,8 +3463,6 @@ namespace ck_groundnav_debugconsole
         if (NOT PlateHasSurface)
         { return; }
 
-        constexpr auto Persistent = true;
-        constexpr auto DepthPriority = 0;
         constexpr auto CornerCount = 4;
 
         const auto CellUu = static_cast<double>(Tile._CellSizeUu);
@@ -2932,8 +3482,10 @@ namespace ck_groundnav_debugconsole
 
         for (auto CornerIndex = 0; CornerIndex < CornerCount; ++CornerIndex)
         {
-            DrawDebugLine(InWorld, Corners[CornerIndex], Corners[(CornerIndex + 1) % CornerCount],
-                InColor, Persistent, InLifetimeSeconds, DepthPriority, InThickness);
+            InOutBuild.Add_Line(Corners[CornerIndex], Corners[(CornerIndex + 1) % CornerCount],
+                InColor, InThickness);
+
+            ++InOutBuild._Tally._QuerySegments;
         }
     }
 
@@ -3012,19 +3564,21 @@ namespace ck_groundnav_debugconsole
 
         const auto CorridorColor = FColor{90, 150, 255};
 
+        // The corridor, the crossings and both strings are lines, so the whole shape of the answer is
+        // retained; the spheres at the ends and at each crossing, the per-waypoint arrowheads and the
+        // summary are immediate, because the retained tier draws none of the three.
+        auto Build = ck::groundnav::FCk_GroundNav_DebugDrawBuild{};
+
         for (const auto FlatPlate : Path._PlateCorridor)
         {
-            DoDrawPlateOutline(
-                InWorld, Field, FlatPlate, CorridorColor, LifetimeSeconds, CorridorThickness);
+            DoBuildPlateOutline(Build, Field, FlatPlate, CorridorColor, CorridorThickness);
         }
 
         for (const auto& Crossing : Path._Crossings)
         {
-            DrawDebugLine(InWorld, Crossing._Left, Crossing._Right, FColor::Yellow, Persistent,
-                LifetimeSeconds, DepthPriority, 2.0f);
+            Build.Add_Line(Crossing._Left, Crossing._Right, FColor::Yellow, 2.0f);
 
-            DrawDebugSphere(InWorld, ck::groundnav::Get_CrossingTransitionPoint(Crossing), 4.0f,
-                SphereSegments, FColor::Yellow, Persistent, LifetimeSeconds, DepthPriority);
+            ++Build._Tally._QuerySegments;
         }
 
         // Clear of the floors the route runs over, or the string z-fights every one of them.
@@ -3037,16 +3591,29 @@ namespace ck_groundnav_debugconsole
 
         for (auto WaypointIndex = 1; WaypointIndex < PreOffsetWaypoints.Num(); ++WaypointIndex)
         {
-            DrawDebugLine(InWorld, PreOffsetWaypoints[WaypointIndex - 1] + Lift,
-                PreOffsetWaypoints[WaypointIndex] + Lift, PreOffsetColor, Persistent,
-                LifetimeSeconds, DepthPriority, PreOffsetThickness);
+            Build.Add_Line(PreOffsetWaypoints[WaypointIndex - 1] + Lift,
+                PreOffsetWaypoints[WaypointIndex] + Lift, PreOffsetColor, PreOffsetThickness);
+
+            ++Build._Tally._QuerySegments;
         }
 
         for (auto WaypointIndex = 1; WaypointIndex < Plan._Waypoints.Num(); ++WaypointIndex)
         {
-            DrawDebugLine(InWorld, Plan._Waypoints[WaypointIndex - 1]._Location + Lift,
-                Plan._Waypoints[WaypointIndex]._Location + Lift, FColor::Magenta, Persistent,
-                LifetimeSeconds, DepthPriority, 4.0f);
+            Build.Add_Line(Plan._Waypoints[WaypointIndex - 1]._Location + Lift,
+                Plan._Waypoints[WaypointIndex]._Location + Lift, FColor::Magenta, 4.0f);
+
+            ++Build._Tally._QuerySegments;
+        }
+
+        // Replaced whole, and BEFORE the markup and link overlays append to it below: this command's
+        // answer supersedes the last one's, and those two are part of the same answer.
+        ck::groundnav::Do_PublishRetainedDebugDraw(
+            InWorld, ck::groundnav::EDebugDrawGroup::Query, Build);
+
+        for (const auto& Crossing : Path._Crossings)
+        {
+            DrawDebugSphere(InWorld, ck::groundnav::Get_CrossingTransitionPoint(Crossing), 4.0f,
+                SphereSegments, FColor::Yellow, Persistent, LifetimeSeconds, DepthPriority);
         }
 
         constexpr auto ArrowSize = 10.0f;
@@ -3849,6 +4416,10 @@ namespace ck_groundnav_debugconsole
             if (ck::Is_NOT_Valid(InWorld))
             { return; }
 
+            // Both tiers: the immediate lines expire on their own and the retained sets do not, so
+            // clearing one and not the other would leave the field half-drawn.
+            ck::groundnav::Do_ReleaseRetainedDebugDraw(InWorld);
+
             FlushPersistentDebugLines(InWorld);
         }));
 
@@ -3866,7 +4437,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {} DrawLinks {}")
-                TEXT("\n            DrawInvalidation {} RepairHighlightSeconds {}")
+                TEXT("\n            DrawInvalidation {} RepairHighlightSeconds {} RetainedDraw {}")
                 TEXT("\n  gates   : MarkupLiveGate bypassed {} RepathOnRebuild bypassed {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
@@ -3895,6 +4466,7 @@ namespace ck_groundnav_debugconsole
                 CVar_DrawLinks.GetValueOnGameThread(),
                 CVar_DrawInvalidation.GetValueOnGameThread(),
                 ck::groundnav::debugdraw_private::CVar_RepairHighlightSeconds.GetValueOnGameThread(),
+                ck::groundnav::debug::Get_IsRetainedDrawEnabled(),
                 ck::groundnav::debug::Get_IsMarkupLiveGateBypassed(),
                 ck::groundnav::debug::Get_IsRepathOnRebuildBypassed());
         }));
