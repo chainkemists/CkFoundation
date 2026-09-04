@@ -239,6 +239,17 @@ answer TRUE straight after its back-pointer guard, so a fixture that settles on 
 nothing. It is a fixture-proving tool, not a fallback: a paint-then-repath race pin that passes
 under it has pinned nothing, and the default of 1 is the field's own answer.
 
+**Settled** is the other named condition, and it is about the VOLUME rather than about one paint.
+`UCk_Utils_GroundNavVolume_UE::Get_IsSettled` is true when a field is published and no stage still owes
+this volume a publish: not building (`NeedsBuild`/`BuildInProgress`), no repair open or armed
+(`RepairInProgress`/`NeedsRepair`), no cost re-derive owed (`MarkupCostDirty`), and none of the three
+request queues holding anything — emptiness, never presence, because the drains reset a queue's array
+in place and leave the fragment on the volume. The provider table's `_IsSurfaceSettled` folds it over
+every volume in the world and answers false for a world holding none. It is what a fixture waits on
+after a paint, a release, or a rebuild kick, instead of a hop count. Note that the rebuild hook stays a
+KICK: `_RequestSurfaceRebuild` enqueues a build per volume and returns the moment they are enqueued, so
+the request landing is never the answer — settling is.
+
 ## What a plate's price reaches
 
 `Get_SurfaceAttributes` answers `_CostMultiplier` and `_AreaTags` from the resolved PLATE's own label
@@ -258,6 +269,33 @@ region whose bake could not run are identical in the data and could not be less 
 first is a place with nowhere to walk, the second a place nothing is known about. A backend that
 cannot answer yields `BackendUnavailable`, an exhausted budget yields `BudgetExhausted`, and neither
 is ever published as a built field with no cells.
+
+---
+
+## Nothing outlives its world
+
+Every field, markup record, revision, repair and queued request lives on an entity in ONE world's
+registry, and the four things that are not entities are keyed by the world and dropped at
+`FWorldDelegates::OnWorldCleanup`: the world-field registry (`Facade/CkGroundNav_WorldFieldRegistry`),
+the debug field the query commands read (`Debug/CkGroundNav_DebugDraw`), and CkNavigation's two
+per-world mirrors (which provider a world chose, which shadow mode). Nor does a field outlive its
+VOLUME: a volume leaves the registry at end-play, so a destroyed volume answers no query on its world
+from then on, and its tile epochs are carried as retired revision so the world's surface revision
+never falls - a consumer holding the old number sees ground that went away as a change, not a rewind. What is process-wide is CODE — a
+provider table per provider, the area-policy registry and the Recast adapter's tag tables, all seeded
+once at module load and never written by a world. Two PIE worlds therefore never see each other's
+paint or each other's rebuilds, and ending one leaves the other's queries correct; the multi-world pins
+(`MultiWorld.*`, `Ck_AutoTest_Net_GroundNav_TwoWorldsDoNotShareFields`) hold that line. Before adding a
+`static` that holds a handle, a field pointer or a `UWorld`, key it by the world and clear it in the
+same cleanup hook, or put it on an entity.
+
+"Settled" is a question, never a wait. `UCk_Utils_GroundNavVolume_UE::Get_IsSettled` is true when a
+volume has a published field, is not building, has no repair open or pending, no cost derive owed and
+nothing queued that no stage has picked up yet;
+the world answers `Get_IsSurfaceSettled` through the neutral facade only when every volume is settled
+AND no markup request or release is still riding the pipeline — a release is work the provider has
+not seen yet, so the world is not settled the frame it is requested. Tests kick a rebuild with
+`Request_SurfaceRebuild_ForTesting` and wait on that named condition; a hop count is not evidence.
 
 ---
 
@@ -290,7 +328,7 @@ is ever published as a built field with no cells.
 | `ck.GroundNav.Debug.RepairHighlightSeconds` | (default 2.0) how long the tiles an open local repair is re-baking stay highlighted in green, alongside that repair's dirty box and the dashed box of ground still waiting for one — all drawn under `DrawInvalidation`. A short lifetime of its own for the same reason the changed-bounds box has one: a repair's tile set describes ONE publish and stops being true the moment the next slice lands, and a repair that finishes inside a frame would otherwise leave nothing to catch |
 | `ck.GroundNav.Debug.RepathOnRebuild` | (default 1) flags an agent for a repath when a published rebuild meets its cached corridor, which is the shipping behaviour. At 0 the invalidator flags nobody however much ground moved — the bypass a rebuild-then-repath pin must FAIL under to be evidence |
 
-The query commands read the field the last `BakeFieldAt` kept; `Bake`/`BakeAt` produce a region snapshot
+The query commands read the field the last `BakeFieldAt` kept for THIS world (each world keeps its own, dropped with it); `Bake`/`BakeAt` produce a region snapshot
 with no field to query. The body radius every query uses is `ck.GroundNav.Debug.AgentRadiusUu`.
 
 Draw modes (`ck.GroundNav.Debug.Mode`): 0 plates, 1 clearance ramp, 2 layers, 3 the cells the filters

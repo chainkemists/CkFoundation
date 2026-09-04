@@ -409,6 +409,28 @@ auto
 
 auto
     UCk_Utils_NavSurface_UE::
+    Get_IsSurfaceSettled(
+        const UObject* InWorldContext)
+    -> bool
+{
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    // Asked FIRST, because the provider cannot answer for work that has not reached it: a queued paint
+    // and an unreleased markup teardown both leave it idle with the ground still wrong.
+    if (ck::nav_surface::Get_HasPendingMarkupWork(World))
+    { return false; }
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return false; }
+
+    return Table->_IsSurfaceSettled(World);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
     Request_SurfaceRebuild_ForTesting(
         const UObject* InWorldContext,
         const FCk_Delegate_Request_OnCompleted& InDelegate)
@@ -491,6 +513,44 @@ namespace ck::nav_surface
         { return; }
 
         WorldEntity.AddOrGet<FFragment_NavSurface_PendingRebuilds>()._Bounds.Emplace(InChangedBounds);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_HasPendingMarkupWork(
+            UWorld* InWorld)
+        -> bool
+    {
+        const auto WorldEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorld);
+
+        if (ck::Is_NOT_Valid(WorldEntity))
+        { return false; }
+
+        const auto Registry = WorldEntity.Get_RegistryView();
+
+        auto HasQueuedPaint = false;
+
+        Registry.View<FFragment_NavSurfaceMarkup_Requests>().ForEach(
+            [&HasQueuedPaint](
+                FCk_Entity,
+                const FFragment_NavSurfaceMarkup_Requests& InRequests)
+            {
+                HasQueuedPaint = HasQueuedPaint || NOT InRequests.Get_Requests().IsEmpty();
+            });
+
+        if (HasQueuedPaint)
+        { return true; }
+
+        // Initiate is the stamp Request_DestroyEntity adds synchronously, and Teardown is added strictly
+        // after every FGroup_EndPlay processor has run -- so the window between them is exactly the span
+        // in which FProcessor_NavSurfaceMarkup_EndPlay has not yet handed the release to the provider.
+        return Registry.View<
+            FFragment_NavSurfaceMarkup_Current,
+            FTag_DestroyEntity_Initiate,
+            TExclude<FTag_DestroyEntity_Teardown>,
+            TExclude<FTag_DestroyEntity_Await>,
+            TExclude<FTag_DestroyEntity_Finalize>>().HasAny();
     }
 }
 
