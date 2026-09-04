@@ -109,25 +109,35 @@ namespace ck_jolt_cook_commandlet
         return LevelWorld->PersistentLevel;
     }
 
-    static auto DoEnsure_AlwaysCookEntry() -> void
+    static auto Validate_CookedDataPackagingRoot(
+        const UProjectPackagingSettings& InPackagingSettings) -> bool
     {
         const auto RootPath = UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath();
 
         auto AlwaysCookDirectories = TArray<FString>{};
-        GConfig->GetArray(TEXT("/Script/UnrealEd.ProjectPackagingSettings"),
-            TEXT("DirectoriesToAlwaysCook"), AlwaysCookDirectories, GGameIni);
+        for (const auto& Directory : InPackagingSettings.DirectoriesToAlwaysCook)
+        { AlwaysCookDirectories.Add(Directory.Path); }
 
-        const auto HasEntry = AlwaysCookDirectories.ContainsByPredicate(
-            [&](const FString& InEntry)
-            {
-                return InEntry.Contains(RootPath);
-            });
+        auto ExcludedDirectories = TArray<FString>{};
+        for (const auto& Directory : InPackagingSettings.DirectoriesToNeverCook)
+        { ExcludedDirectories.Add(Directory.Path); }
+        ExcludedDirectories.Append(UCk_Utils_Jolt_ProjectSettings::Get_CookExcludedMapPathPrefixes());
+
+        const auto HasEntry = ck::jolt::cook::Get_IsPackageIncludedByDirectory(RootPath, AlwaysCookDirectories);
+        const auto IsExcluded = ck::jolt::cook::Get_IsPackageExcluded(RootPath, ExcludedDirectories);
 
         CK_ENSURE_IF_NOT(HasEntry,
             TEXT("[{}] is NOT in DirectoriesToAlwaysCook — packaged builds will ship WITHOUT cooked Jolt data. "
                  "Add to DefaultGame.ini under [/Script/UnrealEd.ProjectPackagingSettings]:\n"
                  "+DirectoriesToAlwaysCook=(Path=\"{}\")"), RootPath, RootPath)
-        { return; }
+        { }
+
+        CK_ENSURE_IF_NOT(NOT IsExcluded,
+            TEXT("[{}] is excluded by DirectoriesToNeverCook or CkJolt CookExcludedMapPathPrefixes — "
+                 "packaged builds will ship WITHOUT cooked Jolt data."), RootPath)
+        { }
+
+        return HasEntry && NOT IsExcluded;
     }
 
     /// Map selection is intentionally world-free, but packaging entry roots must still resolve to
@@ -189,27 +199,20 @@ auto
     if (NOT RebuildModeIsValid)
     { return 1; }
 
-    // Per-mesh shape sweep (-MeshShapes): independent of any map. May be combined with -Map,
-    // -AllMaps, or -PackagingMaps, or run alone.
-    const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
-    auto MeshShapesFailed = false;
+    const auto PackagingSettings = TWeakObjectPtr<const UProjectPackagingSettings>{
+        GetDefault<UProjectPackagingSettings>()};
+    const auto HasPackagingSettings = PackagingSettings.IsValid();
 
-    if (CookMeshShapes)
-    {
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
-        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes (%s)"),
-            ForceRebuild ? TEXT("full rebuild") : TEXT("freshness check"));
-        const auto MeshStats = FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode, ForceRebuild);
-        MeshShapesFailed = NOT MeshStats._Success;
-        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes complete: %d rebuilt, %d current, %d failed"),
-            MeshStats._NumShapesCooked, MeshStats._NumUpToDate, MeshStats._NumFailed);
-    }
-
-    CK_ENSURE_IF_NOT(NOT MeshShapesFailed,
-        TEXT("CkJoltCook: mesh-shape sweep failed — refusing map selection or world loading"))
+    CK_ENSURE_IF_NOT(HasPackagingSettings,
+        TEXT("CkJoltCook: UProjectPackagingSettings is unavailable — refusing to validate or write cooked data"))
     { }
 
-    if (MeshShapesFailed)
+    if (NOT HasPackagingSettings)
+    { return 1; }
+
+    const auto CookedDataRootIsPackageable =
+        ck_jolt_cook_commandlet::Validate_CookedDataPackagingRoot(*PackagingSettings);
+    if (NOT CookedDataRootIsPackageable)
     { return 1; }
 
     auto PackagingMaps = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionResult{};
@@ -217,17 +220,6 @@ auto
 
     if (CookPackagingMaps)
     {
-        const auto PackagingSettings = TWeakObjectPtr<const UProjectPackagingSettings>{
-            GetDefault<UProjectPackagingSettings>()};
-        const auto HasPackagingSettings = PackagingSettings.IsValid();
-
-        CK_ENSURE_IF_NOT(HasPackagingSettings,
-            TEXT("CkJoltCook: UProjectPackagingSettings is unavailable — refusing -PackagingMaps"))
-        { }
-
-        if (NOT HasPackagingSettings)
-        { return 1; }
-
         auto SelectionInput = ck::jolt::cook::FCk_Jolt_PackagingMapSelectionInput{};
         SelectionInput._bPackagingMaps = true;
         SelectionInput._bMap = HasExplicitMap;
@@ -286,7 +278,29 @@ auto
         { return 1; }
     }
 
-    ck_jolt_cook_commandlet::DoEnsure_AlwaysCookEntry();
+    // PackagingMaps selection, its empty-plan check, and every selected .umap existence check have
+    // completed above. A bad packaging request must never refresh mesh assets before it fails.
+    // Mesh-only invocation skips that preflight entirely and remains a supported standalone sweep.
+    const auto CookMeshShapes = Switches.Contains(TEXT("MeshShapes"));
+    auto MeshShapesFailed = false;
+
+    if (CookMeshShapes)
+    {
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().SearchAllAssets(true);
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes (%s)"),
+            ForceRebuild ? TEXT("full rebuild") : TEXT("freshness check"));
+        const auto MeshStats = FCk_Jolt_MeshShapeCooker::Cook_MeshShapes(CookMode, ForceRebuild);
+        MeshShapesFailed = NOT MeshStats._Success;
+        UE_LOG(CkJolt, Display, TEXT("CkJoltCook: mesh shapes complete: %d rebuilt, %d current, %d failed"),
+            MeshStats._NumShapesCooked, MeshStats._NumUpToDate, MeshStats._NumFailed);
+    }
+
+    CK_ENSURE_IF_NOT(NOT MeshShapesFailed,
+        TEXT("CkJoltCook: mesh-shape sweep failed — refusing world loading"))
+    { }
+
+    if (MeshShapesFailed)
+    { return 1; }
 
     auto MapsToCook = TArray<FString>{};
 
@@ -334,6 +348,9 @@ auto
     const auto NothingRequested = MapsToCook.IsEmpty() && NOT CookMeshShapes;
     CK_ENSURE_IF_NOT(NOT NothingRequested,
         TEXT("CkJoltCook: nothing to cook — pass -Map=/Game/Path/ToMap, -AllMaps, and/or -MeshShapes"))
+    { }
+
+    if (NothingRequested)
     { return 1; }
 
     auto FailureCount = 0;

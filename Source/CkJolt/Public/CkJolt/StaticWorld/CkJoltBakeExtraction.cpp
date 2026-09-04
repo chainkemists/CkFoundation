@@ -489,88 +489,23 @@ namespace ck_jolt_bake_extraction
         const FString& InDebugName)
         -> JPH::Ref<JPH::Shape>
     {
-        CK_ENSURE_IF_NOT(InBodySetup.TriMeshGeometries.Num() > 0,
-            TEXT("No cooked tri-mesh on BodySetup for [{}] — complex collision cannot be baked. "
-                 "Re-cook the asset or author simple collision."), InDebugName)
-        { return {}; }
+        auto Geometry = Extract_TriMeshGeometry(InBodySetup, InScale);
+        const auto GeometryIsValid = Geometry.Get_IsValid();
 
-        const auto& TriMesh = InBodySetup.TriMeshGeometries[0];
-
-        CK_ENSURE_IF_NOT(TriMesh.IsValid(), TEXT("Cooked tri-mesh on BodySetup for [{}] is INVALID"), InDebugName)
-        { return {}; }
-
-        const auto& Particles = TriMesh->Particles();
-        const auto& Elements = TriMesh->Elements();
-        const auto NumVerts = static_cast<int32>(Particles.Size());
-        const auto NumTris = Elements.GetNumTriangles();
-
-        auto Vertices = JPH::VertexList{};
-        Vertices.reserve(NumVerts);
-
-        for (auto Index = 0; Index < NumVerts; ++Index)
-        {
-            const auto& Particle = Particles.GetX(Index);
-            Vertices.push_back(JPH::Float3(
-                Particle[0] * static_cast<float>(InScale.X),
-                Particle[1] * static_cast<float>(InScale.Y),
-                Particle[2] * static_cast<float>(InScale.Z)));
-        }
-
-        auto Triangles = JPH::IndexedTriangleList{};
-        Triangles.reserve(NumTris);
-
-        // Chaos and Jolt AGREE on triangle winding — copy indices as-is. UE authors front faces
-        // LEFT-handed (VectorUtil::Normal reverses its cross product, saying why), and every
-        // collision provider marks its raw triangles bFlipNormals=true so the Chaos cook stores
-        // them RIGHT-handed — which is exactly Jolt's front-face convention. This code shipped for
-        // months with an extra b/c swap here that flipped the stored winding BACK to left-handed,
-        // baking every tri-mesh INSIDE-OUT (proven by Ck.Jolt.Bake.StaticMesh.
-        // EngineCubeTriMeshBakesOutward measuring the canonical engine cube at ratio -1). The
-        // DynamicMesh winding specs did not catch it because their fixtures were authored under
-        // the same reversed assumption — two errors cancelling; they are now authored in UE
-        // convention and pin the corrected chain.
-        //
-        // A MIRRORING scale (negative determinant — odd count of negative components) flips the
-        // handedness of the vertices baked above, so the index order must flip WITH it to keep the
-        // final orientation outward. The pre-baked ScaledShape path never needs this (Jolt's
-        // ScaleHelpers handles inside-out scale internally).
-        const bool ScaleIsInsideOut = (InScale.X * InScale.Y * InScale.Z) < 0.0;
-        auto HasInvalidTriangleIndices = false;
-        const auto PushTriangle = [&](uint32 InA, uint32 InB, uint32 InC) -> void
-        {
-            if (InA < static_cast<uint32>(NumVerts) && InB < static_cast<uint32>(NumVerts) && InC < static_cast<uint32>(NumVerts))
-            {
-                if (ScaleIsInsideOut)
-                { Triangles.push_back(JPH::IndexedTriangle(InA, InC, InB)); }
-                else
-                { Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
-            }
-            else
-            { HasInvalidTriangleIndices = true; }
-        };
-
-        if (Elements.RequiresLargeIndices())
-        {
-            for (const auto& Triangle : Elements.GetLargeIndexBuffer())
-            { PushTriangle(Triangle[0], Triangle[1], Triangle[2]); }
-        }
-        else
-        {
-            for (const auto& Triangle : Elements.GetSmallIndexBuffer())
-            { PushTriangle(Triangle[0], Triangle[1], Triangle[2]); }
-        }
-
-        CK_ENSURE_IF_NOT(NOT HasInvalidTriangleIndices,
-            TEXT("Cooked tri-mesh for [{}] contains an out-of-range vertex index — refusing to bake collision."),
-            InDebugName)
+        CK_ENSURE_IF_NOT(GeometryIsValid,
+            TEXT("Cooked tri-mesh on BodySetup for [{}] cannot be extracted (status [{}])"),
+            InDebugName, static_cast<uint8>(Geometry._Status))
         { }
 
-        if (HasInvalidTriangleIndices)
+        if (NOT GeometryIsValid)
         { return {}; }
 
+        auto Vertices = MoveTemp(Geometry._Vertices);
+        auto Triangles = MoveTemp(Geometry._Triangles);
+
         // A strongly negative volume verdict is sufficient to reverse a geometrically valid connected
-        // component, including open or non-manifold topology. Bad indices remain fail-closed because a
-        // component walk or index swap cannot safely proceed from them.
+        // component, including open or non-manifold topology. Any malformed geometry remains
+        // fail-closed because a component walk or index swap cannot safely proceed from it.
         const auto Normalization = NormalizeInsideOutMeshComponents(Vertices, Triangles);
         if (Normalization._NumRepairedComponents > 0 || Normalization._NumAggregateNoVerdictComponentsRepaired > 0)
         {
@@ -587,14 +522,14 @@ namespace ck_jolt_bake_extraction
         constexpr auto InsideOutWindingRatioThreshold = -0.05;
         const auto WindingRatio = ComputeMeshWindingRatio(Vertices, Triangles);
         const auto IsStillInsideOut = WindingRatio < InsideOutWindingRatioThreshold;
-        const auto HasMalformedIndices = Normalization.Get_HasMalformedIndices();
-        const auto WindingIsSafe = NOT IsStillInsideOut && NOT HasMalformedIndices;
+        const auto HasMalformedGeometry = Normalization.Get_HasMalformedGeometry();
+        const auto WindingIsSafe = NOT IsStillInsideOut && NOT HasMalformedGeometry;
 
         CK_ENSURE_IF_NOT(WindingIsSafe,
             TEXT("Tri-mesh for [{}] cannot safely normalize its winding (signed-volume/bounds ratio [{}], "
-                 "{} malformed-index component(s)): refusing to bake single-sided collision. Correct the "
+                 "{} malformed geometry component(s)): refusing to bake single-sided collision. Correct the "
                  "source indices or triangle winding."),
-            InDebugName, WindingRatio, Normalization._NumMalformedIndexComponents)
+            InDebugName, WindingRatio, Normalization._NumMalformedComponents)
         { }
 
         if (NOT WindingIsSafe)
@@ -610,6 +545,88 @@ namespace ck_jolt_bake_extraction
 namespace ck::jolt::bake
 {
     using namespace ck_jolt_bake_extraction;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Extract_TriMeshGeometry(
+            const UBodySetup& InBodySetup,
+            const FVector& InScale)
+        -> FCk_Jolt_TriMeshGeometry
+    {
+        auto Geometry = FCk_Jolt_TriMeshGeometry{};
+
+        if (InBodySetup.TriMeshGeometries.IsEmpty())
+        { return Geometry; }
+
+        const auto& TriMesh = InBodySetup.TriMeshGeometries[0];
+        if (NOT TriMesh.IsValid())
+        {
+            Geometry._Status = ECk_Jolt_TriMeshExtractionStatus::InvalidTriMesh;
+            return Geometry;
+        }
+
+        const auto& Particles = TriMesh->Particles();
+        const auto& Elements = TriMesh->Elements();
+        const auto NumVertices = static_cast<uint32>(Particles.Size());
+
+        Geometry._Vertices.reserve(Particles.Size());
+        for (auto Index = 0; Index < static_cast<int32>(Particles.Size()); ++Index)
+        {
+            const auto& Particle = Particles.GetX(Index);
+            Geometry._Vertices.push_back(JPH::Float3(
+                Particle[0] * static_cast<float>(InScale.X),
+                Particle[1] * static_cast<float>(InScale.Y),
+                Particle[2] * static_cast<float>(InScale.Z)));
+        }
+
+        Geometry._Triangles.reserve(Elements.GetNumTriangles());
+        // Chaos cooked collision already uses Jolt's front-face winding. Keep this shared extraction
+        // path for the production shape and editor preview; a mirrored component scale alone reverses
+        // handedness, so it reverses every extracted face.
+        const auto ScaleIsInsideOut = (InScale.X * InScale.Y * InScale.Z) < 0.0;
+        const auto AddTriangle = [&](uint32 InA, uint32 InB, uint32 InC) -> bool
+        {
+            if (InA >= NumVertices || InB >= NumVertices || InC >= NumVertices)
+            { return false; }
+
+            if (ScaleIsInsideOut)
+            { Geometry._Triangles.push_back(JPH::IndexedTriangle(InA, InC, InB)); }
+            else
+            { Geometry._Triangles.push_back(JPH::IndexedTriangle(InA, InB, InC)); }
+            return true;
+        };
+
+        if (Elements.RequiresLargeIndices())
+        {
+            for (const auto& Triangle : Elements.GetLargeIndexBuffer())
+            {
+                if (NOT AddTriangle(Triangle[0], Triangle[1], Triangle[2]))
+                {
+                    Geometry._Status = ECk_Jolt_TriMeshExtractionStatus::InvalidTriangleIndices;
+                    Geometry._Vertices.clear();
+                    Geometry._Triangles.clear();
+                    return Geometry;
+                }
+            }
+        }
+        else
+        {
+            for (const auto& Triangle : Elements.GetSmallIndexBuffer())
+            {
+                if (NOT AddTriangle(Triangle[0], Triangle[1], Triangle[2]))
+                {
+                    Geometry._Status = ECk_Jolt_TriMeshExtractionStatus::InvalidTriangleIndices;
+                    Geometry._Vertices.clear();
+                    Geometry._Triangles.clear();
+                    return Geometry;
+                }
+            }
+        }
+
+        Geometry._Status = ECk_Jolt_TriMeshExtractionStatus::Success;
+        return Geometry;
+    }
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -813,19 +830,38 @@ namespace ck::jolt::bake
         // Index validity is the one precondition that cannot be recovered locally: any attempt to
         // discover components or swap indices after it fails could address arbitrary memory. Reject
         // the whole normalization atomically before touching a triangle.
-        auto HasMalformedIndices = false;
+        auto HasMalformedGeometry = false;
         for (const auto& Triangle : InOutTriangles)
         {
             if (NOT Get_AreTriangleIndicesValid(InVertices, Triangle))
             {
-                HasMalformedIndices = true;
+                HasMalformedGeometry = true;
                 ++Result._NumComponents;
                 ++Result._NumMalformedComponents;
                 ++Result._NumMalformedIndexComponents;
             }
         }
 
-        if (HasMalformedIndices)
+        if (HasMalformedGeometry)
+        {
+            Result._Status = ECk_Jolt_WindingNormalizationStatus::Malformed;
+            return Result;
+        }
+
+        // Finite, distinct indices are not sufficient: collinear or duplicate-position faces still
+        // make malformed collision. Preflight them before any winding repair so rejection remains
+        // atomic across valid and invalid disconnected components.
+        for (const auto& Triangle : InOutTriangles)
+        {
+            if (NOT Get_IsTriangleGeometricallyValid(InVertices, Triangle))
+            {
+                HasMalformedGeometry = true;
+                ++Result._NumComponents;
+                ++Result._NumMalformedComponents;
+            }
+        }
+
+        if (HasMalformedGeometry)
         {
             Result._Status = ECk_Jolt_WindingNormalizationStatus::Malformed;
             return Result;
@@ -838,13 +874,6 @@ namespace ck::jolt::bake
         for (auto TriangleIndex = 0; TriangleIndex < static_cast<int32>(InOutTriangles.size()); ++TriangleIndex)
         {
             const auto& Triangle = InOutTriangles[TriangleIndex];
-            if (NOT Get_IsTriangleGeometricallyValid(InVertices, Triangle))
-            {
-                ++Result._NumComponents;
-                ++Result._NumMalformedComponents;
-                continue;
-            }
-
             ValidTriangles[TriangleIndex] = true;
             const auto& Indices = Triangle.mIdx;
             const auto AddEdgeUse = [&](uint32 InStartVertex, uint32 InEndVertex) -> void

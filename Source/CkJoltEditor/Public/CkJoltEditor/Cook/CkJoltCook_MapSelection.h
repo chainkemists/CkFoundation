@@ -43,6 +43,13 @@ namespace ck::jolt::cook
             const FString& InPackageName,
             const TArray<FString>& InExcludedPackagePaths) -> bool;
 
+    /// Tests whether a package is equal to or below at least one configured directory. Relative paths
+    /// are rooted at /Game; trailing slashes are ignored; matching respects path components and case.
+    CKJOLTEDITOR_API auto
+        Get_IsPackageIncludedByDirectory(
+            const FString& InPackageName,
+            const TArray<FString>& InIncludedPackagePaths) -> bool;
+
     /// Resolves authored MapsToCook first, then optionally lexically ordered UWorld candidates found under the
     /// configured DirectoriesToAlwaysCook. Exclusions skip either source; rejected command-line/settings input
     /// yields no plan.
