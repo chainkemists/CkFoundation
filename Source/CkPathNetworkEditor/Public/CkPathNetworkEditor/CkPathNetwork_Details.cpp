@@ -262,8 +262,8 @@ namespace ck::layout
             }
             for (const auto& Failure : Result.Get_NonconformantPoints())
             {
-                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: generated point {} projected [{}] (projected={}, planar delta={}cm, vertical delta={}cm) exceeds conformance tolerance"),
-                    Actor, Failure.Get_SourcePoint(), Failure.Get_ProjectedPoint(), Failure.Get_Projected(),
+                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: generated point {} projected [{}] (status={}, planar delta={}cm, vertical delta={}cm) exceeds conformance tolerance"),
+                    Actor, Failure.Get_SourcePoint(), Failure.Get_ProjectedPoint(), Failure.Get_Status(),
                     Failure.Get_PlanarDelta(), Failure.Get_VerticalDelta());
             }
 
