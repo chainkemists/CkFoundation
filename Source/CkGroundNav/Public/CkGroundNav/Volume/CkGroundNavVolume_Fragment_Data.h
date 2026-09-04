@@ -12,6 +12,8 @@
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
+
 #include "CkShapes/CkShapes_Common.h"
 
 #include <GameplayTagContainer.h>
@@ -290,6 +292,150 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_ReleaseLink, _LinkEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Drops the record carrying this id, wherever the entity that authored it has got to. Releasing an
+ *  id the volume does not hold is an idempotent no-op for the same reason releasing an unheld entity
+ *  is: the caller's intent - this volume holds no record under that id - already holds afterwards.
+ *
+ *  Ids are never reused, so an id that names nothing means retired and never means renumbered. */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_ReleaseLink_ById : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_ReleaseLink_ById);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_ReleaseLink_ById);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _LinkId = INDEX_NONE;
+
+public:
+    CK_PROPERTY_GET(_LinkId);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_ReleaseLink_ById, _LinkId);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Drops every record the volume holds, and the back-pointer each link entity carries. A volume that
+ *  holds none is an idempotent no-op, for the same reason releasing one unheld record is.
+ *
+ *  The id counter is NOT rewound: every id this volume ever handed out stays retired, so a field
+ *  resolved against the emptied list can still be diffed against an older one. */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_ReleaseAllLinks : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_ReleaseAllLinks);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_ReleaseAllLinks);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Authors many links under one admission and one completion.
+ *
+ * ATOMIC: every entry is judged before any is applied, so a batch carrying one refusal leaves the
+ * volume exactly as it found it and completes Failed. A batch that applied its good half would leave
+ * the caller unable to say which part of its intent holds, with ids already spent on the rest.
+ *
+ * The completion is the only thing this adds over the same entries issued singly: the drain takes the
+ * whole queue in one pass and the derive tag is idempotent, so N single requests landing in one tick
+ * already cost exactly one derive.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_Request_GroundNavVolume_LinkBatch : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_GroundNavVolume_LinkBatch);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_GroundNavVolume_LinkBatch);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Request_GroundNavVolume_Link> _Entries;
+
+public:
+    CK_PROPERTY_GET(_Entries);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavVolume_LinkBatch, _Entries);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * What one authored link RESOLVED to on the field the volume currently has published.
+ *
+ * Flat and reflected rather than the field's own resolution: every index here - the plates above all
+ * - is valid only against that one publish, exactly like a reachability label, so this is a snapshot
+ * of one call and never something to hold. The authored record is what survives a rebuild, and
+ * TryGet_LinkRecord is where it is read.
+ *
+ * An id the published field carries no entry for reads as the default - no id, no plates, NoSurface
+ * at both ends, neither resolved nor live - and so does every id while nothing is published at all. A
+ * resolution is a property of a publish, and there is no publish to have one against.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FCk_GroundNav_LinkResolution
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_GroundNav_LinkResolution);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _LinkId = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_QueryStatus _StartStatus = ECk_NavSurface_QueryStatus::NoSurface;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_QueryStatus _EndStatus = ECk_NavSurface_QueryStatus::NoSurface;
+
+    // Flat plate indices, the index space the reachability labels and the crossings speak.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _StartFlatPlate = INDEX_NONE;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _EndFlatPlate = INDEX_NONE;
+
+    /** Both ends found ground. Says nothing about whether the link may be used. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    bool _Resolved = false;
+
+    /** Resolved, switched on, and reflected by a publish PAST the change that authored it - the same
+     *  rule Get_IsLinkLive answers, carried here so one read covers both questions. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    bool _Live = false;
+
+public:
+    CK_PROPERTY(_LinkId);
+    CK_PROPERTY(_StartStatus);
+    CK_PROPERTY(_EndStatus);
+    CK_PROPERTY(_StartFlatPlate);
+    CK_PROPERTY(_EndFlatPlate);
+    CK_PROPERTY(_Resolved);
+    CK_PROPERTY(_Live);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
