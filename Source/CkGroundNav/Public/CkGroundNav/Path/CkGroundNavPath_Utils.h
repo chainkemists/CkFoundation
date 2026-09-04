@@ -280,6 +280,24 @@ public:
     UnbindFrom_OnPathFailed(
         UPARAM(ref) FCk_Handle_GroundNavPath& InPath,
         const FCk_Delegate_GroundNavPath_OnPathFailed& InDelegate);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|GroundNavPath",
+        DisplayName="[Ck][GroundNavPath] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_GroundNavPath
+    DoCast(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|GroundNavPath",
+        DisplayName="[Ck][GroundNavPath] Handle -> GroundNavPath Handle",
+        meta = (CompactNodeTitle = "<AsGroundNavPath>", BlueprintAutocast))
+    static FCk_Handle_GroundNavPath
+    DoCastChecked(
+        FCk_Handle InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

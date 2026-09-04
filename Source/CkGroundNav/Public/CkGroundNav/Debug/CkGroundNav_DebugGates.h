@@ -47,6 +47,18 @@ namespace ck::groundnav::debug
      */
     CKGROUNDNAV_API auto
     Get_IsPathDiagnosticsEnabled() -> bool;
+
+    /**
+     * Whether ck.GroundNav.Debug.RetainedDraw is on, so the debug views hold their line geometry as
+     * PMG line sets.
+     *
+     * This is what PUTS THE VIEW AWAY: the retained sets stand until something releases them, where
+     * an immediate draw expired on its own, so a view that is no longer wanted has to be switched
+     * off rather than merely left alone. Turning it to 0 releases every set the world holds and
+     * emits nothing further; turning it back on redraws on the next bake or the next update.
+     */
+    CKGROUNDNAV_API auto
+    Get_IsRetainedDrawEnabled() -> bool;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

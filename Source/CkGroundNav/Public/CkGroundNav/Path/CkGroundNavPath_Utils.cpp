@@ -339,3 +339,50 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// The two REFLECTED casts. The C++ Cast/CastChecked templates beside them are unreachable from
+// Blueprint and from AngelScript - both call a UFUNCTION by name - so a script that has a bare handle
+// and wants a planner needs these. Written out rather than taken from
+// CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE because that macro defines Has as well, and this class
+// already has its own.
+
+auto
+    UCk_Utils_GroundNavPath_UE::
+    DoCast(
+        FCk_Handle&          InHandle,
+        ECk_SucceededFailed& OutResult)
+    -> FCk_Handle_GroundNavPath
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+
+    if (NOT Has(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ck::StaticCast<FCk_Handle_GroundNavPath>(InHandle);
+}
+
+auto
+    UCk_Utils_GroundNavPath_UE::
+    DoCastChecked(
+        FCk_Handle InHandle)
+    -> FCk_Handle_GroundNavPath
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),
+        InHandle, ck::Get_RuntimeTypeToString<FCk_Handle_GroundNavPath>())
+    { return {}; }
+
+    return ck::StaticCast<FCk_Handle_GroundNavPath>(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
