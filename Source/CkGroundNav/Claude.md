@@ -454,6 +454,63 @@ query. `Get_MaxMerged` stays the pure table helper it always was.
 
 ---
 
+## The bake identity
+
+`ck::groundnav::Get_ContentFingerprint` reduces everything one bake's output depends on to a single
+64-bit value. Equal fingerprints mean a rebuild would reproduce the same field, so the previous result
+may be reused; any difference forces a bake. The header carries the FROZEN ENUMERATION of what goes
+in — geometry, region, bake config, agent profile, markup, links, the merge tunables, the clearance
+cap and the profile variants — and it is frozen in the sense that matters: anything a bake reads and
+the list omits is a latent staleness bug, because the field would silently keep a result computed
+under inputs that have since moved. **A new bake input means a new item on that list and its
+perturbation case in `Test_GroundNav_Fingerprint.cpp`, in the same change** — never one without the
+other.
+
+The enumeration is answered by TWO functions over one implementation. `Get_InputFingerprint` answers
+items 2 through 9 — everything AUTHORED, with the geometry left out — and `Get_ContentFingerprint`
+answers all nine by handing the geometry hash to the same chain as its seed, so the two cannot drift
+as items are added. The split exists because a volume can always answer the authored half and can
+only sometimes reach a physics world, and because "the records moved" and "the world moved" are two
+questions that one number could not tell apart.
+
+Order independence is a contract. Triangles combine commutatively (by ADDITION, not XOR — under XOR a
+duplicated triangle would cancel and a doubled surface would fingerprint as no surface), markup hashes
+in ascending id, links in the order the list already carries them, and tags hash through their NAME
+rather than `GetTypeHash`: an `FName`'s hash is an index into a per-process table and is not the same
+number next run, which is exactly the property a fingerprint compared across sessions cannot have.
+
+Geometry enters through a 64-bit value rather than a batch. `Get_GeometryHash` computes it from
+triangles for a caller that has them; the overload taking the value directly is for one that never
+holds a whole region's — which is every tiled build, since a slice collects one tile's halo and
+nothing wider. What the volume's build stores there is the backend's world revision, the token
+`ICk_GroundNav_GeometryBackend::Get_WorldRevision` already holds "the static world changed" against
+and the same one a later slice fails closed on.
+
+`FFragment_GroundNavVolume_BuiltField` carries the identity of the field it is PUBLISHING: the input
+fingerprint that field went out with, beside the geometry revision it was produced against. A build
+records both where it BEGINS — the finished field is a statement about the inputs the build
+snapshotted, not about a record admitted while it ran — carries them on the build state, and hands
+them over at the publish, so a build that FAILS leaves the standing field still naming what it was
+actually produced from.
+
+**Every publisher refreshes it**, through one helper the four of them share: the build, the local
+repair, and the cost and link derives. The two derives have no backend and read no geometry — they
+re-label ground that is already published — so they carry the revision FORWARD unchanged and refresh
+only the authored half, which is exactly what moved. A derive that republished without restamping
+would leave the volume claiming a record list it had itself already re-labelled past.
+
+`Get_BuildFingerprint` reads the input half back. `Get_IsBuildCurrent` answers **has the world or the
+authored records moved under the published field with no publish yet**: the stored revision against
+the backend's current one, and the stored input fingerprint against the fingerprint of the volume's
+current params and records. A volume with nothing published reads false, and so does one whose world
+no backend can be made for — ground nothing can re-read has no honest answer but false. The revision
+is monotonic, so ground that moved and moved back reads not-current: conservative on purpose, because
+an unnecessary rebuild costs a bake where a field trusted past a change it never saw answers about
+ground that is not there. Whether a paint is in EFFECT is `Get_IsMarkupLive`; whether anything is
+still owed is `Get_IsSettled`.
+
+---
+
 ## Failure is a status, never an empty field
 
 `ECk_GroundNav_BakeStatus` and `ECk_GroundNav_BuildStatus` exist because a region with no floor and a
@@ -461,6 +518,60 @@ region whose bake could not run are identical in the data and could not be less 
 first is a place with nowhere to walk, the second a place nothing is known about. A backend that
 cannot answer yields `BackendUnavailable`, an exhausted budget yields `BudgetExhausted`, and neither
 is ever published as a built field with no cells.
+
+---
+
+## Serialization
+
+`Field/CkGroundNav_FieldSerialize.h` writes a published field to bytes and reads it back, at three
+granularities: the whole field, one tile, and a spatial subset. The format is hand-rolled over an
+`FArchive` — every scalar written out by name and by size — because the field types are plain C++ with
+no `GENERATED_BODY`, and reflecting them would drag a `.generated.h` into the bake layer.
+
+**What is persisted is the bake product and the params that produced it**: the tiles as the field
+holds them — cells, clearance, plates, portals, boundary runs, seam stubs — plus `_Params` and the
+open-body diagnostics. **Everything a composition DERIVES is re-derived on load**, through the same
+pure derives a bake runs and in the same order: `DoDerive_SeamPortals`, then `DoResolve_Links`, then
+`DoLabel_Reachability` (which numbers the plate offsets on its way). The seam portals, the tile edge
+boundary, the resolved links, the plate offsets, the reachability labels and the per-component open
+flags are therefore never read out of a blob, and a loaded field cannot carry a crossing or a label
+the tiles beside it do not support. It keeps the format small as well: the derived arrays are the
+large half of a field and none of them is an independent fact.
+
+**Nothing process-relative is persisted.** An `FName` and an `FGameplayTag` are indices into a
+per-process table, so a blob carries a NAME TABLE — every tag the field's plates and records name,
+written once as a string and addressed everywhere else as an `int32` index into it. The table is
+SORTED BY STRING rather than kept in encounter order, so two fields whose content matches produce the
+same table whatever order their records were authored in. An absolute UTC cook date in the header is
+admissible, and is the only run of bytes two writes of one field may differ in.
+`TIsPersistableValue` (`Field/CkGroundNav_FieldSerializeTraits.h`) is the fence, and it is stricter
+than the debug capture's beside it: it REJECTS `FName`, `FGameplayTag` and `FGameplayTagContainer`
+where that one admits them, because a capture is read by the process that made it and a blob is not.
+One `static_assert` per persisted type lists that type's members against the fence, naming a tag
+member by the `int32` the blob carries in its place — a member added to any of those types belongs on
+its list in the same change.
+
+**Granularity is on the FIXED lattice.** The lattice rides the header, so a per-tile blob names the
+lattice it belongs to and a read into a field divided differently answers `LatticeMismatch` rather
+than laying cells over ground they were never baked from. A SUBSET is a whole-field blob whose absent
+tiles are written PRESENT and Unbuilt, holding no cells and no plates: the loaded field is a valid
+field of the same lattice with fewer built tiles, nothing is renumbered, and the crossings and links
+that touched an absent tile are gone for free — the reader re-derives both, an unbuilt neighbour
+yields no seam portal, and a link end over unbuilt ground resolves to nothing and is counted.
+
+**A blob a reader cannot use is refused with a status, never an ensure.**
+`ECk_GroundNav_LoadStatus` answers `WrongMagic`, `WrongVersion`, `Truncated`, `UnknownTag`,
+`LatticeMismatch` or `Corrupt`, and the caller's field is left untouched in every case but `Loaded`
+— a fallback needs something to fall back TO. `Corrupt` is the one the reader DERIVES rather than
+reads: every floating-point member is judged finite, and every rotation judged a unit quaternion,
+before the value it belongs to is constructed, because a NaN that reached a bound or a transform
+compares false against everything it is tested with and would stop the field deciding anything there
+in silence. Counts are bounded the same way — by the bytes actually left divided by the smallest one
+element can be — so a corrupt count asks for a reservation the size of the blob rather than the size
+of the number its bytes happened to spell. A cook older than the code reading it is an ordinary state of a
+shipped game and not a defect. `kFieldBlobFormatVersion` is BUMPED WHENEVER A BYTE MOVES: a blob
+decoded past a version it does not match reads its members at the wrong offsets and produces a field
+that is plausible and wrong.
 
 ---
 
@@ -605,6 +716,54 @@ with the epoch it was found on, whether the agent stands flagged for a repath, a
 plan was dated at by the world it was planned in. All values, so a viewer reads one after the agent is gone. Where the body IS
 along that route is deliberately absent: the cursor belongs to the crowd agent walking it, and this
 carries what GroundNav owns.
+
+---
+
+## Cooked assets
+
+The cooked form of a baked field is data assets, one per built tile. A
+`UCk_GroundNav_CookedTile_UE` (`Cook/CkGroundNav_CookedTile.h`) carries the tile's serialized blob,
+the blob format version it was written under, its coord in the lattice, the content fingerprint of
+the bake it came out of, and the lattice itself — origin, divisions, tile size, cell size, cell height
+— as an `FCk_GroundNav_CookedLatticeKey` of plain values. The lattice rides every tile rather than
+only the collection it belongs to because a tile asset is loadable on its own: read into a field
+divided differently it would lay its cells over ground it was never baked from, and every index it
+carries would name something else. `Get_IsCompatibleWith` answers the version question by exact
+equality — a format the reader does not speak is refused, never reinterpreted.
+
+The properties are `VisibleAnywhere` rather than `EditAnywhere` throughout — read-only in the details
+panel, not read-only on disk. The cook writes every one of them through the setters; what the
+specifier buys is that a human cannot edit a coord, a lattice or a fingerprint into disagreeing with
+the bytes it sits next to, which nothing downstream could tell. The writing side lives in
+`CkGroundNavEditor`, an UncookedOnly module; the asset types stay in the runtime module, because the
+game loads them and only the editor writes them.
+
+**A volume's cook identity is a NAME it authors.** `FCk_Fragment_GroundNavVolume_ParamsData::_CookKey`
+is that name, and **None means runtime-only**: no cooked field is ever written for such a volume and
+none is ever looked up for it, which is the honest answer for every gym, test and prototype volume
+rather than a key invented on their behalf. Nothing else about a volume is stable enough to key on —
+the params carry bounds, config and profile, the world-field registry keys on a runtime handle, and
+there is no volume actor. Two volumes in one world carrying the SAME key is an admission failure,
+refused where the params are judged and again where a build is asked for: a duplicate would have the
+two of them writing over each other's tiles and reading back whichever landed last. None is exempt,
+because it is not a key.
+
+`UCk_GroundNav_CookedFieldIndex_UE` (`Cook/CkGroundNav_CookedFieldIndex.h`) is one volume's cooked
+field: the level package the cook ran over, the volume's cook key, the INPUT fingerprint of the bake,
+the blob format version, the lattice, and the tiles as soft references in the lattice's own tile-index
+order. Soft, because hard ones would load the whole field with the index, which is the cost the cooked
+form exists to avoid. The geometry half of the bake identity is deliberately absent for now — it
+belongs beside the fingerprint the day a cook can record the world revision it ran against.
+
+Nothing hard-references a cooked asset, so the PATH is the reference. `Get_CookedIndexAssetPath` and
+`Get_CookedTileAssetPath` are the convention, mirroring CkJolt's cooked world index: the level
+package's path under the content root, then `GroundNavIndex_<CookKey>` or
+`GroundNavTile_<CookKey>_<X>_<Y>`. The key is in the asset NAME rather than in the directory, so one
+level's volumes sit beside each other. `Get_PackageLookupKey` normalises a package name into the form
+the cook recorded — PIE renames every level package, the cook only ever runs on non-PIE worlds, and a
+raw PIE name would match nothing and degrade silently to a runtime bake. The content root is a
+constant in that header today: CkGroundNav has no project-settings object to hang one on, and it
+belongs beside CkJolt's own `_CookedDataRootPath` the moment the module has one.
 
 ---
 

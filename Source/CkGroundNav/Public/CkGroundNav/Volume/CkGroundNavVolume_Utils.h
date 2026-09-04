@@ -253,6 +253,55 @@ public:
     Get_BuildEpoch(
         const FCk_Handle_GroundNavVolume& InVolume);
 
+    /**
+     * The INPUT fingerprint of the field the volume currently has published, or 0 while nothing is
+     * published.
+     *
+     * The authored half of the bake identity - region, config, profile, markup, links, merge tunables,
+     * clearance cap and profile variants - and not the geometry: what the world was at is the separate
+     * revision Get_IsBuildCurrent compares, because "the records moved" and "the world moved" are two
+     * questions and one number cannot answer both.
+     *
+     * An opaque identity and not a number to reason about: equal fingerprints mean the same authored
+     * inputs, and nothing else may be read out of one. Signed because that is the widest integer
+     * Blueprint and AngelScript carry - the bits are the unsigned hash unchanged.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Build Fingerprint")
+    static int64
+    Get_BuildFingerprint(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
+    /**
+     * Whether the world or the authored records have moved under the published field with no publish
+     * yet.
+     *
+     * Two comparisons, because two different things drift. The geometry half is the backend's WORLD
+     * REVISION against the one the standing field was produced at; the authored half is the input
+     * fingerprint of the volume's current params and records against the one that field went out with.
+     * Either differing means the ground standing here is describing a world that has moved on.
+     *
+     * EVERY PUBLISHER refreshes the stored identity - the build, the local repair and the cost and
+     * link derives - so a paint the derive has already brought the published field up to date with
+     * reads true again the moment that publish lands, rather than waiting on a whole-volume rebuild.
+     *
+     * The revision is MONOTONIC, so ground that moved and moved back reads not-current: conservative,
+     * because an unnecessary rebuild costs a bake where a field trusted past a change it never saw
+     * answers about ground that is no longer there.
+     *
+     * False while nothing is published - a volume with no field has no bake to be current with - and
+     * false when no geometry backend can be made at all, which is a world nothing can re-read.
+     *
+     * Whether a paint is in EFFECT is Get_IsMarkupLive; whether anything is still owed is Get_IsSettled.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Is Build Current")
+    static bool
+    Get_IsBuildCurrent(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
 public:
     /**
      * How many tiles the published field is divided into, or 0 while nothing is published.
