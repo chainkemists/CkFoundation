@@ -541,7 +541,36 @@ Every per-cell count is bounded by the lattice the summary prints, and halving t
 that lattice; a count read against the wrong cell size has already sent one investigation down a hole.
 
 `FCk_GroundNav_DebugSnapshot` is the copy boundary: a value-only structure holding no world, no actor,
-no handle and no span field, so a viewer can draw it a frame later or after its world is gone.
+no handle and no span field, so a viewer can draw it a frame later or after its world is gone. Value-only
+is a compile-time claim rather than a convention — `TIsDebugSnapshotValue` says what a member may BE, and
+one `static_assert` per captured type lists that type's members against it, so a `TObjectPtr`, a
+`TWeakObjectPtr`, a `TSharedPtr`, an `FCk_Handle` or a raw pointer named on any of those lists fails the build
+instead of failing in a torn-down world. The lists are what make the claim, so a member added to a captured
+type belongs on its list in the same change.
+
+A capture reports itself through five statuses and no others — `NeverBuilt`, `BackendUnavailable`,
+`NoGeometryInRegion`, `Failed`, `Current` — and only `Current` is drawable. That is the vocabulary the
+draw modes and query commands above are read under: an empty scene is never the answer, so a viewer
+holding no cells is holding a status that says why.
+
+`FCk_GroundNav_DebugSnapshotCache` keeps the last capture beside the key it was taken under: the world's
+name, the volume entity's number, that number's version, the newest tile epoch and the world's surface
+revision, all values, so a key outlives the volume it names and can still be compared after it is gone.
+The number carries its version because a number on its own is a slot the next volume inherits, and it
+carries the world's name because two PIE worlds can hold the same entity number at the same epoch. A reader checks the key first and enumerates
+only what `TryGet_Current` hands back for it; `Replace` swaps the key and the whole capture together,
+exactly as a publish swaps a whole field, because a partial update is the corruption both shapes exist to
+make unrepresentable.
+
+`UCk_Utils_GroundNavPath_UE::Get_Diagnostics` is the same boundary one agent wide. It hands back
+`FFragment_GroundNavPath_Diagnostics`, which a small pass in `Path/` copies onto every entity holding
+the path feature once a tick: which provider answers that agent's world, the profile its cached
+corridor was planned for, the verdict of the last finished episode carried across the search that
+follows it, how many waypoints the slot is publishing, the authored link ids that corridor crosses
+with the epoch it was found on, whether the agent stands flagged for a repath, and the `FCk_Time` the
+plan was dated at by the world it was planned in. All values, so a viewer reads one after the agent is gone. Where the body IS
+along that route is deliberately absent: the cursor belongs to the crowd agent walking it, and this
+carries what GroundNav owns.
 
 ---
 

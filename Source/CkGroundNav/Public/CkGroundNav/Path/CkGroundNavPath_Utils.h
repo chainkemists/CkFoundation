@@ -202,6 +202,21 @@ public:
     Get_HasFreshResult(
         const FCk_Handle_GroundNavPath& InPath);
 
+    /** Everything the diagnostics pass last copied off this agent's planner: which provider answers
+     *  its world, which profile its corridor was planned for, the last verdict, how many waypoints
+     *  the slot publishes, the links that corridor crosses with the epoch it was found on, whether
+     *  the agent stands flagged for a repath, and the world time the plan was dated at.
+     *
+     *  All values. An agent the pass has not visited yet reads back defaults, which is also what an
+     *  invalid handle answers - the two are indistinguishable on purpose, because neither is a
+     *  planner state anybody should act on. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavPath",
+              DisplayName="[Ck][GroundNavPath] Get Diagnostics")
+    static FFragment_GroundNavPath_Diagnostics
+    Get_Diagnostics(
+        const FCk_Handle_GroundNavPath& InPath);
+
     /** The world box the agent's last published corridor covers, ALREADY inflated by the body's radius
      *  plus the corridor margin. Invalid where nothing is cached.
      *
