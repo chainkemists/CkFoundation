@@ -495,6 +495,30 @@ not seen yet, so the world is not settled the frame it is requested. Tests kick 
 
 `Debug/CkGroundNav_DebugDraw.h` bakes the live world around a point and draws the result.
 
+The draw is RETAINED. `Make_DebugSnapshotDrawBuild` turns a capture and a selection (the mode plus the
+three overlay toggles) into an `FCk_GroundNav_DebugDrawBuild` — world-space lines and boxes beside a
+per-kind tally — and `Do_PublishRetainedDebugDraw` emits that build as CkPmg line sets parented to the
+world's transient entity, chunked at 128 primitives per set. `Do_UpdateRetainedDebugDraw` is the
+per-frame form: it rebuilds ONLY when the capture's `FCk_GroundNav_DebugSnapshotCacheKey` or the
+selection changes, so a caller drawing a field that is standing still pays for one rebuild and then
+nothing. `Do_ReleaseRetainedDebugDraw` — what `ck.GroundNav.Clear` and
+`ck.GroundNav.Debug.RetainedDraw 0` reach — destroys the sets; a world's own teardown destroys them
+with it. Query commands publish into their own group, so `PathAt` answering does not erase the field
+view it was asked about.
+
+Retained is what makes a Test build draw at all: the engine's immediate helpers compile out where
+`ENABLE_DRAW_DEBUG` is off, and a view that silently drew nothing in exactly the configuration a
+packaged check runs would report a baked level as unbaked. What stays immediate is what PMG's line
+tier has no equivalent for — every text label, the per-cell points of the clearance, layer and
+rejected views, the link and waypoint arrowheads, and the query commands' spheres — so a build
+without them loses the labelling and keeps the geometry.
+
+Because a build is a pure function of a capture and a selection, what a mode DRAWS is assertable
+without a world: `FCk_GroundNav_DebugDrawTally` counts plate outlines, portal segments, boundary runs
+and link spans separately, and those counts are the capture's own counts. A capture that is not
+drawable emits its region box and its open bodies and nothing else, which is the same rule the status
+vocabulary states: failure is a status, never an empty scene.
+
 | Command | Behaviour |
 |---|---|
 | `ck.GroundNav.Bake` | bake around the player pawn |
@@ -519,7 +543,8 @@ not seen yet, so the world is not settled the frame it is requested. Tests kick 
 | `ck.GroundNav.Debug.DrawMarkup` / `.MarkupLiveGate` | `DrawMarkup` (default 1) outlines markup in the plate view and in `PathAt`/`FloodAt`: impassable red, cost amber with its multiplier, disabled dashed grey. `MarkupLiveGate` (default 1) at 0 forces GroundNav's `Get_IsMarkupLive` true — the bypass a paint-then-repath race pin must FAIL under to be evidence |
 | `ck.GroundNav.Debug.DrawLinks` | (default 1) draws the links the world's published fields resolved, in EVERY draw mode and in `PathAt`/`FloodAt`: green traversable, grey a record the author disabled, orange an end over ground nobody has baked yet, red an end that found no ground at all — an arrowhead per direction the link may be walked, a tick at each resolved end, and the id at the midpoint. It gates COLLECTION, so a view drawn with it off carries no links rather than hiding ones it holds |
 | `ck.GroundNav.Debug.DrawInvalidation` | (default 0) draws the invalidation state in the plate view: every cached corridor box in cyan, thicker where it is flagged for a repath and labelled with its two epochs and its inflation, and the ground each published field last reported changed in orange. The orange box carries a short lifetime of its own because it describes ONE publish. Off by default — a corridor is per AGENT, so a crowd draws one box each |
-| `ck.GroundNav.Debug.RepairHighlightSeconds` | (default 2.0) how long the tiles an open local repair is re-baking stay highlighted in green, alongside that repair's dirty box and the dashed box of ground still waiting for one — all drawn under `DrawInvalidation`. A short lifetime of its own for the same reason the changed-bounds box has one: a repair's tile set describes ONE publish and stops being true the moment the next slice lands, and a repair that finishes inside a frame would otherwise leave nothing to catch |
+| `ck.GroundNav.Debug.RepairHighlightSeconds` | (default 2.0) how long the LABEL on an open local repair stays up, beside the green tiles it is re-baking, its dirty box and the dashed box of ground still waiting for one — all drawn under `DrawInvalidation`. A short lifetime of its own because a repair's tile set describes ONE publish and stops being true the moment the next slice lands, and a repair that finishes inside a frame would otherwise leave nothing to catch. The green geometry is retained rather than timed, so it stands until the next rebuild replaces it |
+| `ck.GroundNav.Debug.RetainedDraw` | (default 1) holds the LINE geometry of every view — the region box, the plates, the crossings, the tile lattice and its seams, the boundary runs, the links, the markup and invalidation outlines, and the `PathAt`/`ReachAt` overlays — as CkPmg retained line sets instead of immediate debug lines. At 0 every set the world holds is released and nothing further is emitted: a retained view stands until something releases it, so switching it off is how it is put away, and `ck.GroundNav.Clear` releases both tiers at once |
 | `ck.GroundNav.Debug.RepathOnRebuild` | (default 1) flags an agent for a repath when a published rebuild meets its cached corridor, which is the shipping behaviour. At 0 the invalidator flags nobody however much ground moved — the bypass a rebuild-then-repath pin must FAIL under to be evidence |
 
 The query commands read the field the last `BakeFieldAt` kept for THIS world (each world keeps its own, dropped with it); `Bake`/`BakeAt` produce a region snapshot
@@ -552,6 +577,15 @@ A capture reports itself through five statuses and no others — `NeverBuilt`, `
 `NoGeometryInRegion`, `Failed`, `Current` — and only `Current` is drawable. That is the vocabulary the
 draw modes and query commands above are read under: an empty scene is never the answer, so a viewer
 holding no cells is holding a status that says why.
+
+Four of those five are decided in ONE place: `Make_DebugSnapshotFromBackend`
+(`Debug/CkGroundNav_DebugSnapshot.h`), which takes an `ICk_GroundNav_GeometryBackend&` and nothing
+else — no world, no registry, no actor. `Make_DebugSnapshotFromWorld` is a thin caller that resolves
+the Jolt backend and delegates, so a backend that cannot reach a physics world answers
+`BackendUnavailable` through the same derivation a stub does rather than through a check of its own.
+That is what lets each status be PINNED: the stub backend drives an empty region to
+`NoGeometryInRegion` and a refused config to `Failed` headless, against the identical code the live
+bake runs. `NeverBuilt` needs no producer — it is what a capture nobody filled in already reads as.
 
 `FCk_GroundNav_DebugSnapshotCache` keeps the last capture beside the key it was taken under: the world's
 name, the volume entity's number, that number's version, the newest tile epoch and the world's surface
