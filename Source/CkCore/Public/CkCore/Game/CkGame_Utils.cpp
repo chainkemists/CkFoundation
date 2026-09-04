@@ -71,12 +71,6 @@ auto
         TEXT("Unable to get the World. InContextObject is INVALID."))
     { return {}; }
 
-    if (ck::Is_NOT_Valid(InWorldContextObject))
-    {
-        CK_TRIGGER_ENSURE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
-        return false;
-    }
-
     const UWorld* World = Get_WorldForObject(InWorldContextObject);
 
     if (ck::Is_NOT_Valid(World))
