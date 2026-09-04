@@ -39,6 +39,52 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_BuildStatus);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * How reading a serialized field ended.
+ *
+ * A blob a reader cannot use is REFUSED WITH A STATUS, never with an ensure. A cook older than the
+ * code reading it, or a file that is not a field at all, is an ordinary state of a shipped game - the
+ * caller bakes at runtime instead - and an ensure would turn the ordinary case into a crash in a
+ * development build while telling a shipping build nothing. The field the caller passed is left
+ * untouched in every case but Loaded, so the fallback has something to fall back TO.
+ */
+UENUM(BlueprintType)
+enum class ECk_GroundNav_LoadStatus : uint8
+{
+    // The blob was read and every derived array re-derived. The field is usable.
+    Loaded,
+
+    // The leading bytes are not a ground-field blob, or are one of the other granularity.
+    WrongMagic,
+
+    // A ground-field blob written under a different version of the format. Nothing is decoded: the
+    // members would be read at the wrong offsets and the field would come out plausible and wrong.
+    WrongVersion,
+
+    // The blob ended before the field did.
+    Truncated,
+
+    // The blob names a gameplay tag this process does not have. A tag is part of what the field
+    // MEANS - an area policy, a link's user type - so a field loaded without one would answer
+    // differently from the field that was written.
+    UnknownTag,
+
+    // A tile blob read against a field divided differently. A tile carries tile-local indices and
+    // nothing else, so placing one against a lattice that did not produce it is cells over the wrong
+    // ground.
+    LatticeMismatch,
+
+    // The blob spells a value the field cannot hold: a non-finite coordinate, or a rotation that is
+    // not a unit quaternion. Neither is caught by anything downstream - a NaN bound compares false
+    // against everything it is tested with, and a rotation that is not unit is silently renormalised
+    // on first use - so it is refused where it is read.
+    Corrupt
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_LoadStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::groundnav
 {
     /**
