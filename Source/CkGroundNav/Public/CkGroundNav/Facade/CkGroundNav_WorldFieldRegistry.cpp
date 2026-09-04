@@ -16,6 +16,12 @@ namespace ck_groundnav_world_fields
         FCk_Handle _VolumeEntity;
         ck::groundnav::FCk_GroundNav_FieldPtr _Field;
 
+        // The volume's profile-variant fields, keyed by profile tag, held on the SAME entry as the
+        // default rather than in a second map: they are dropped with the entry at unpublish and at
+        // world cleanup for free, and no second keying can disagree with this one about which volume
+        // a location resolves to.
+        TMap<FGameplayTag, ck::groundnav::FCk_GroundNav_FieldPtr> _VariantFields;
+
         // Beside the pointer it accounts for and updated with it, so the two can never describe
         // different publishes for as long as a reader holds the lock.
         ck::groundnav::world_fields::FCk_GroundNav_PublishNote _PublishNote;
@@ -101,6 +107,38 @@ namespace ck_groundnav_world_fields
         InOutNote._ChangedLinkIdsSinceGeometry.Sort();
     }
 
+    /**
+     * Retires the tile-epoch sums a new variant map is about to take out of the live count.
+     *
+     * A tag the new map does not hold, and a tag it holds a DIFFERENT field for, are both sums that stop
+     * being counted the moment the map is replaced. Retiring them is what keeps a surface revision
+     * monotone across a variant being dropped or rebaked, exactly as Unpublish keeps it monotone across
+     * a volume going away. Callers hold the write lock; nothing here takes one.
+     */
+    auto DoRetire_ReplacedVariants(
+        UWorld*                                                          InWorld,
+        const TMap<FGameplayTag, ck::groundnav::FCk_GroundNav_FieldPtr>& InOldVariantFields,
+        const TMap<FGameplayTag, ck::groundnav::FCk_GroundNav_FieldPtr>& InNewVariantFields) -> void
+    {
+        if (InOldVariantFields.IsEmpty())
+        { return; }
+
+        auto& RetiredRevision = Get_RetiredRevisions().FindOrAdd(TWeakObjectPtr<UWorld>{InWorld});
+
+        for (const auto& OldVariantField : InOldVariantFields)
+        {
+            if (NOT OldVariantField.Value.IsValid())
+            { continue; }
+
+            const auto* NewVariantField = InNewVariantFields.Find(OldVariantField.Key);
+
+            if (NewVariantField != nullptr && *NewVariantField == OldVariantField.Value)
+            { continue; }
+
+            RetiredRevision += OldVariantField.Value->Get_AggregatedTileEpochSum();
+        }
+    }
+
     auto DoBind_CleanupHookOnce() -> void
     {
         static auto CleanupHookIsBound = false;
@@ -125,10 +163,11 @@ namespace ck_groundnav_world_fields
 auto
     ck::groundnav::world_fields::
     Publish(
-        UWorld*                         InWorld,
-        const FCk_Handle&               InVolumeEntity,
-        FCk_GroundNav_FieldPtr          InField,
-        const TOptional<TArray<int32>>& InLinkOnlyChangedLinkIds)
+        UWorld*                                           InWorld,
+        const FCk_Handle&                                 InVolumeEntity,
+        FCk_GroundNav_FieldPtr                            InField,
+        const TMap<FGameplayTag, FCk_GroundNav_FieldPtr>& InVariantFields,
+        const TOptional<TArray<int32>>&                   InLinkOnlyChangedLinkIds)
     -> void
 {
     if (ck::Is_NOT_Valid(InWorld))
@@ -150,7 +189,13 @@ auto
         if (Entry._VolumeEntity != InVolumeEntity)
         { continue; }
 
+        // Retired BEFORE the map goes, because the sums that are about to stop being counted can only
+        // be read off the map that still holds them.
+        ck_groundnav_world_fields::DoRetire_ReplacedVariants(
+            InWorld, Entry._VariantFields, InVariantFields);
+
         Entry._Field = MoveTemp(InField);
+        Entry._VariantFields = InVariantFields;
 
         ck_groundnav_world_fields::DoApply_Publish(
             Entry._PublishNote, PublishedEpoch, InLinkOnlyChangedLinkIds);
@@ -158,7 +203,8 @@ auto
         return;
     }
 
-    auto NewEntry = ck_groundnav_world_fields::FEntry{InVolumeEntity, MoveTemp(InField), {}};
+    auto NewEntry = ck_groundnav_world_fields::FEntry{
+        InVolumeEntity, MoveTemp(InField), InVariantFields, {}};
 
     ck_groundnav_world_fields::DoApply_Publish(
         NewEntry._PublishNote, PublishedEpoch, InLinkOnlyChangedLinkIds);
@@ -195,6 +241,15 @@ auto
         if (InEntry._Field.IsValid())
         { RetiredRevision += InEntry._Field->Get_AggregatedTileEpochSum(); }
 
+        // The variants retire with the default and count exactly as it does: a world that keeps
+        // counting ground that went away must keep counting every profile's copy of it, or the
+        // revision falls the moment a volume holding variants tears down.
+        for (const auto& VariantField : InEntry._VariantFields)
+        {
+            if (VariantField.Value.IsValid())
+            { RetiredRevision += VariantField.Value->Get_AggregatedTileEpochSum(); }
+        }
+
         return true;
     });
 }
@@ -221,6 +276,40 @@ auto
 
 auto
     ck::groundnav::world_fields::
+    Get_VariantRevision(
+        UWorld* InWorld)
+    -> int64
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return 0; }
+
+    auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_ReadOnly};
+
+    const auto* Entries = ck_groundnav_world_fields::Get_Entries().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    if (Entries == nullptr)
+    { return 0; }
+
+    auto Revision = int64{0};
+
+    for (const auto& Entry : *Entries)
+    {
+        for (const auto& VariantField : Entry._VariantFields)
+        {
+            if (NOT VariantField.Value.IsValid())
+            { continue; }
+
+            Revision += VariantField.Value->Get_AggregatedTileEpochSum();
+        }
+    }
+
+    return Revision;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::world_fields::
     TryGet_Field(
         UWorld*        InWorld,
         const FVector& InLocation)
@@ -239,6 +328,41 @@ auto
     const auto* Entry = ck_groundnav_world_fields::TryGet_EntryFor(*Entries, InLocation);
 
     return Entry == nullptr ? FCk_GroundNav_FieldPtr{} : Entry->_Field;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::world_fields::
+    TryGet_Field(
+        UWorld*             InWorld,
+        const FVector&      InLocation,
+        const FGameplayTag& InProfileTag)
+    -> FCk_GroundNav_FieldPtr
+{
+    if (ck::Is_NOT_Valid(InWorld))
+    { return {}; }
+
+    auto Lock = FRWScopeLock{ck_groundnav_world_fields::Get_Lock(), SLT_ReadOnly};
+
+    const auto* Entries = ck_groundnav_world_fields::Get_Entries().Find(TWeakObjectPtr<UWorld>{InWorld});
+
+    if (Entries == nullptr)
+    { return {}; }
+
+    const auto* Entry = ck_groundnav_world_fields::TryGet_EntryFor(*Entries, InLocation);
+
+    if (Entry == nullptr)
+    { return {}; }
+
+    if (NOT InProfileTag.IsValid())
+    { return Entry->_Field; }
+
+    const auto* VariantField = Entry->_VariantFields.Find(InProfileTag);
+
+    // No fallback: a volume that authored no variant under this tag has no ground for that profile,
+    // and the default's is a different world to walk in.
+    return VariantField == nullptr ? FCk_GroundNav_FieldPtr{} : *VariantField;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

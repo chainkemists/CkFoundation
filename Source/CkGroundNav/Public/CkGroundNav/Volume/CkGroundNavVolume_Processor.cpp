@@ -107,6 +107,85 @@ namespace ck
             return FieldParams;
         }
 
+        /**
+         * The params of every field this volume bakes: the untagged default FIRST, then one per
+         * authored variant differing from it in nothing but the profile.
+         *
+         * Assembled by COPYING the default and replacing its profile, rather than built independently
+         * per variant, because Request_BeginBuild_MultiProfile refuses a list that disagrees anywhere
+         * else - and a second construction path is exactly how two entries drift apart on a field
+         * nobody thought to keep in step.
+         *
+         * The default's position is load-bearing: it is the field a query carrying no profile tag is
+         * answered from, and the fields come back from the build index-aligned with what went in.
+         */
+        auto Get_MultiProfileFieldParams(
+            const FFragment_GroundNavVolume_Params&   InParams,
+            const TArray<FCk_GroundNav_MarkupRecord>& InMarkupRecords,
+            const TArray<FCk_GroundNav_LinkRecord>&   InLinkRecords)
+            -> TArray<groundnav::FCk_GroundNav_FieldParams>
+        {
+            const auto DefaultParams = Get_FieldParams(InParams, InMarkupRecords, InLinkRecords);
+
+            auto AllParams = TArray<groundnav::FCk_GroundNav_FieldParams>{};
+            AllParams.Reserve(InParams.Get_ProfileVariants().Num() + 1);
+
+            AllParams.Emplace(DefaultParams);
+
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            {
+                auto VariantParams = DefaultParams;
+                VariantParams._Profile = Variant.Get_Profile();
+
+                AllParams.Emplace(MoveTemp(VariantParams));
+            }
+
+            return AllParams;
+        }
+
+        // A variant is reached ONLY by its tag, so an empty one names nothing and a repeated one names
+        // two profiles at once. Both are refused where the params are judged rather than resolved to
+        // some arbitrary field at query time.
+        auto Get_ProfileVariantTagsAreUsable(const FFragment_GroundNavVolume_Params& InParams) -> bool
+        {
+            auto SeenTags = TSet<FGameplayTag>{};
+
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            {
+                if (NOT Variant.Get_ProfileTag().IsValid())
+                { return false; }
+
+                auto TagWasAlreadySeen = false;
+                SeenTags.Add(Variant.Get_ProfileTag(), &TagWasAlreadySeen);
+
+                if (TagWasAlreadySeen)
+                { return false; }
+            }
+
+            return true;
+        }
+
+        // A variant's PROFILE is judged by the very check the default's is, on params that differ from
+        // the default's in nothing else - which is the only way the two can be held to one standard. A
+        // variant admitted on the strength of the default's profile arms the volume, reaches the build,
+        // and is refused there instead: a warning where a clean refusal at the params belongs.
+        auto Get_ProfileVariantProfilesAreBakeable(
+            const FFragment_GroundNavVolume_Params& InParams) -> bool
+        {
+            const auto DefaultParams = Get_FieldParams(InParams, {}, {});
+
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            {
+                auto VariantParams = DefaultParams;
+                VariantParams._Profile = Variant.Get_Profile();
+
+                if (NOT VariantParams.Get_IsValid())
+                { return false; }
+            }
+
+            return true;
+        }
+
         // Markup is deliberately absent: what a volume is PAINTED with cannot make its bake settings
         // valid or invalid, and feeding the records in here would suggest it could.
         auto Get_ParamsAreBakeable(const FFragment_GroundNavVolume_Params& InParams) -> bool
@@ -116,6 +195,8 @@ namespace ck
             return Bounds.IsValid != 0 &&
                    Bounds.GetSize().X > 0.0 && Bounds.GetSize().Y > 0.0 && Bounds.GetSize().Z > 0.0 &&
                    Get_FieldParams(InParams, {}, {}).Get_IsValid() &&
+                   Get_ProfileVariantTagsAreUsable(InParams) &&
+                   Get_ProfileVariantProfilesAreBakeable(InParams) &&
                    InParams.Get_ProbeBudgetPerTick() > 0;
         }
 
@@ -316,6 +397,7 @@ namespace ck
         groundnav::world_fields::Publish(
             UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
             InVolumeEntity,
+            {},
             {});
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
@@ -1044,8 +1126,27 @@ namespace ck
             InBuildState._PendingRequest.TryFireCompletion(
                 InVolumeEntity, ECk_Request_OperationResult::Failed);
 
+            // The repairs this start took over above rode a build that never began: their regions went
+            // with the box that named them, and no publish is coming for them. They are told so here
+            // rather than left holding a delegate nothing will ever fire.
+            for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+            { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+
+            InRepairState._RidingBuildRequests.Reset();
+
             return;
         }
+
+        // Snapshotted here, out of the same array the params list below is assembled from. Completion
+        // keys the fields it releases by THIS list and not by the params: _ProfileVariants is writable,
+        // and a list edited while the build ran would key a finished field under a tag it was never
+        // baked for.
+        InBuildState._ProfileVariantTags = algo::Transform<TArray<FGameplayTag>>(
+            InParams.Get_ProfileVariants(),
+            [](const FCk_GroundNav_ProfileVariant& InVariant) -> FGameplayTag
+            {
+                return InVariant.Get_ProfileTag();
+            });
 
         // The epoch comes from what is PUBLISHED, not from the build state: beginning a build resets
         // that state, so reading the counter from it would restart at one on every rebuild and every
@@ -1058,8 +1159,14 @@ namespace ck
         // The links ride in the same way and for the same reason: a rebuild that took no links would
         // silently un-link the world, and it is what makes a link authored before the first bake - or
         // while one is running - resolved by the publish that follows rather than lost with it.
-        const auto BeginResult = groundnav::Request_BeginBuild(
-            Get_FieldParams(InParams,
+        //
+        // ONE BUILD PER VOLUME whatever the profile count. The variants share this volume's lattice,
+        // config, markup and links, so they ride the same pass over the geometry: the tile is fetched
+        // once and baked under each profile before the resume point moves, which is what stops two
+        // profiles ever being baked against two different worlds. A volume with no variant is the
+        // one-element case of the same call rather than a second path through this processor.
+        const auto BeginResult = groundnav::Request_BeginBuild_MultiProfile(
+            Get_MultiProfileFieldParams(InParams,
                 Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity)),
                 Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity))),
             InBuiltField.Get_Epoch().Get_Next(),
@@ -1073,6 +1180,13 @@ namespace ck
 
             InBuildState._PendingRequest.TryFireCompletion(
                 InVolumeEntity, ECk_Request_OperationResult::Failed);
+
+            // On the same terms as the backend refusal above: nothing began, so nothing will publish
+            // the ground these regions named.
+            for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+            { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+
+            InRepairState._RidingBuildRequests.Reset();
 
             return;
         }
@@ -1116,7 +1230,14 @@ namespace ck
         InVolumeEntity.Remove<FTag_GroundNavVolume_BuildInProgress>();
         InBuildState._Backend.Reset();
 
-        auto Completed = groundnav::Request_ReleaseCompletedField(InBuildState._Build);
+        // The PLURAL release, index-aligned with the params the build began with: element zero is the
+        // untagged default and the rest are this volume's variants in authored order. A volume with no
+        // variant releases a one-element array, which is why there is no second shape here.
+        auto CompletedFields = groundnav::Request_ReleaseCompletedFields(InBuildState._Build);
+
+        auto Completed = CompletedFields.IsEmpty()
+            ? groundnav::FCk_GroundNav_FieldPtr{}
+            : CompletedFields[0];
 
         if (NOT SliceResult.Get_IsCompleted() || NOT Completed.IsValid())
         {
@@ -1139,16 +1260,56 @@ namespace ck
             return;
         }
 
+        // The count is a CONTRACT with the build and not a bound to loop within: the release comes back
+        // index-aligned with the params that went in, so a field per variant plus the default is the
+        // only shape it can have. Truncating to whichever list is shorter would publish a map that
+        // silently omits a profile, so a mismatch publishes nothing at all.
+        const auto& ProfileVariantTags = InBuildState._ProfileVariantTags;
+
+        const auto CompletedFieldCount = CompletedFields.Num();
+        const auto ExpectedFieldCount = ProfileVariantTags.Num() + 1;
+
+        CK_ENSURE_IF_NOT(CompletedFieldCount == ExpectedFieldCount,
+            TEXT("GroundNav Volume [{}] finished a build holding [{}] field(s) where its profiles asked "
+                 "for [{}]. Publishing nothing: a partial map would leave a profile answering from "
+                 "another profile's ground"),
+            InVolumeEntity, CompletedFieldCount, ExpectedFieldCount)
+        {
+            InBuildState._PendingRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed);
+
+            for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+            { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+
+            InRepairState._RidingBuildRequests.Reset();
+
+            return;
+        }
+
         // Published by SWAPPING the pointer. Whoever is holding the previous field keeps reading it,
         // whole, for as long as they hold it.
         InBuiltField._Epoch = Completed->_Epoch;
         InBuiltField._Field = MoveTemp(Completed);
 
+        // The variants are keyed on their tags HERE, where the fields and the order they came back in
+        // are both in hand, against the tag list this build BEGAN with. Rebuilt from scratch rather
+        // than merged into whatever was published before, so a variant this build no longer bakes
+        // leaves nothing behind under its tag.
+        InBuiltField._VariantFields.Reset();
+
+        for (auto VariantIndex = 0; VariantIndex < ProfileVariantTags.Num(); ++VariantIndex)
+        {
+            InBuiltField._VariantFields.Emplace(
+                ProfileVariantTags[VariantIndex], CompletedFields[VariantIndex + 1]);
+        }
+
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
         // A published field nobody can find from a world answers nothing: this is what the NavSurface
-        // provider adapter resolves against.
-        groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+        // provider adapter resolves against. The variants go out in the same call under the same lock,
+        // so no reader can see one half of a publish.
+        groundnav::world_fields::Publish(
+            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
 
         // An invalid box goes out AS IS when no tile built: bounds-unknown is the honest payload, where
         // substituting the volume's own bounds would name ground this publish never produced.
@@ -1190,6 +1351,22 @@ namespace ck
         using namespace ck_groundnav_volume_processor;
 
         InVolumeEntity.Remove<MarkedDirtyBy>();
+
+        // A LOCAL REPAIR IS SINGLE-FIELD, so a volume holding profile variants is repaired by a full
+        // rebuild instead. Repairing the default alone would leave it describing the world as it is and
+        // every variant describing it as it was - one volume answering two different worlds depending
+        // on which profile asked, which is the split-brain the multi-profile build's own admission rule
+        // exists to forbid.
+        //
+        // Nothing is moved here: arming the build is enough, because a build START already takes over
+        // every pending region and the requests parked behind it, and publishes their ground. The cost
+        // is a whole-volume bake where a repair would have done, paid on every dirty region: a repair
+        // that runs over every profile is what removes it.
+        if (NOT InBuiltField.Get_VariantFields().IsEmpty())
+        {
+            InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsBuild>();
+            return;
+        }
 
         // Snapshotted and cleared in ONE step. The tile set a repair fixes at Begin is the set this box
         // selects and no other, so a box arriving from here on belongs to the next repair - which is
@@ -1361,7 +1538,11 @@ namespace ck
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-            groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+            // The variant map is empty by StartRepair's own rule - a volume holding one is rebuilt
+            // rather than repaired - and rides along so this is the same whole swap the build publishes
+            // through.
+            groundnav::world_fields::Publish(
+                World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
 
             // Only the re-baked tiles carry the new epoch, so this names exactly the ground the repair
             // touched and nothing besides.
@@ -1453,8 +1634,12 @@ namespace ck
 
         const auto Records = Get_MarkupRecordsOf(InMarkup.Get_Entries());
 
-        const auto Derived = groundnav::Get_FieldWithMarkupCost(
-            *Published, Records, InBuiltField.Get_Epoch().Get_Next());
+        // ONE epoch for the whole pass, and the same one for every profile. Whichever fields move take
+        // it; the ones that do not keep the epoch they already carried, which is what makes "did this
+        // field move" a comparison against its OWN epoch rather than against the volume's newest.
+        const auto NextEpoch = InBuiltField.Get_Epoch().Get_Next();
+
+        const auto Derived = groundnav::Get_FieldWithMarkupCost(*Published, Records, NextEpoch);
 
         const auto DeriveProducedAField = Derived.Value.Get_IsCompleted() && Derived.Key.IsValid();
 
@@ -1463,23 +1648,77 @@ namespace ck
             InVolumeEntity, Derived.Value.Get_Status())
         { return; }
 
+        // The records are the VOLUME's, so every profile's field is priced with the same ones: a paint
+        // that made ground dear for one class of walker and left it cheap for another would be a cost
+        // nobody authored. Only the walkable set differs between the profiles, and pricing does not
+        // decide that.
+        auto MovedVariants = TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr>{};
+
+        for (const auto& VariantField : InBuiltField.Get_VariantFields())
+        {
+            if (NOT VariantField.Value.IsValid())
+            { continue; }
+
+            const auto DerivedVariant =
+                groundnav::Get_FieldWithMarkupCost(*VariantField.Value, Records, NextEpoch);
+
+            const auto VariantDeriveProducedAField =
+                DerivedVariant.Value.Get_IsCompleted() && DerivedVariant.Key.IsValid();
+
+            CK_ENSURE_IF_NOT(VariantDeriveProducedAField,
+                TEXT("GroundNav Volume [{}] could not derive a cost-only field for profile [{}] from what "
+                     "it has published: [{}]"),
+                InVolumeEntity, VariantField.Key, DerivedVariant.Value.Get_Status())
+            { return; }
+
+            if (NOT DerivedVariant.Key->_Epoch.Get_IsNewerThan(VariantField.Value->_Epoch))
+            { continue; }
+
+            MovedVariants.Emplace(VariantField.Key, DerivedVariant.Key);
+        }
+
         // A restamp that lands on the labels already published moves no epoch, so there is nothing for
-        // a reader to notice and nothing worth swapping a pointer for.
-        if (NOT Derived.Key->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
+        // a reader to notice and nothing worth swapping a pointer for. ANY field moving is enough,
+        // though: a change that reached only one profile's ground still reached ground somebody walks
+        // on, and leaving it unpublished would strand that profile on labels nothing will restamp again.
+        const auto DefaultMoved = Derived.Key->_Epoch.Get_IsNewerThan(Published->_Epoch);
+
+        if (NOT DefaultMoved && MovedVariants.IsEmpty())
         { return; }
 
         // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
-        InBuiltField._Epoch = Derived.Key->_Epoch;
-        InBuiltField._Field = Derived.Key;
+        auto ChangedBounds = FBox{ForceInit};
+
+        if (DefaultMoved)
+        {
+            InBuiltField._Field = Derived.Key;
+
+            ChangedBounds = Get_UnionedBounds(ChangedBounds,
+                groundnav::Get_ChangedTileBounds(*Derived.Key, NextEpoch));
+        }
+
+        for (const auto& MovedVariant : MovedVariants)
+        {
+            InBuiltField._VariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
+
+            ChangedBounds = Get_UnionedBounds(ChangedBounds,
+                groundnav::Get_ChangedTileBounds(*MovedVariant.Value, NextEpoch));
+        }
+
+        // The NEWEST epoch across every field the volume holds. Anything that moved took NextEpoch, and
+        // NextEpoch is past every epoch the unmoved fields still carry, so it is that maximum.
+        InBuiltField._Epoch = NextEpoch;
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+        groundnav::world_fields::Publish(
+            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
 
         // Past the no-change early-out above, so this notify is only ever raised for a publish that
-        // moved something. An invalid box is reported as-is for the same reason the build reports one.
-        nav_surface::Request_NotifySurfaceRebuilt(World,
-            groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+        // moved something. The UNION over every field that moved: a reader is told to look again
+        // wherever any profile's ground did, and a field that stood still contributes nothing. An
+        // invalid box is reported as-is for the same reason the build reports one.
+        nav_surface::Request_NotifySurfaceRebuilt(World, ChangedBounds);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1526,8 +1765,11 @@ namespace ck
 
         const auto Records = Get_LinkRecordsOf(InLinks.Get_Entries());
 
-        const auto Derived = groundnav::Get_FieldWithLinks(
-            *Published, Records, InBuiltField.Get_Epoch().Get_Next());
+        // ONE epoch for the whole pass, on the same terms the cost derive takes one: whichever fields
+        // move take it, and a field that did not keeps its own.
+        const auto NextEpoch = InBuiltField.Get_Epoch().Get_Next();
+
+        const auto Derived = groundnav::Get_FieldWithLinks(*Published, Records, NextEpoch);
 
         const auto DeriveProducedAField = Derived._Result.Get_IsCompleted() && Derived._Field.IsValid();
 
@@ -1536,14 +1778,71 @@ namespace ck
             InVolumeEntity, Derived._Result.Get_Status())
         { return; }
 
+        // The records are the VOLUME's, so every profile resolves the same authored links - but not
+        // necessarily to the same answer: an end that finds ground for one profile can find none for
+        // another, because what is standable is exactly what a profile changes.
+        auto MovedVariants = TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr>{};
+        auto ChangedLinkIds = Derived._ChangedLinkIds;
+
+        for (const auto& VariantField : InBuiltField.Get_VariantFields())
+        {
+            if (NOT VariantField.Value.IsValid())
+            { continue; }
+
+            const auto DerivedVariant =
+                groundnav::Get_FieldWithLinks(*VariantField.Value, Records, NextEpoch);
+
+            const auto VariantDeriveProducedAField =
+                DerivedVariant._Result.Get_IsCompleted() && DerivedVariant._Field.IsValid();
+
+            CK_ENSURE_IF_NOT(VariantDeriveProducedAField,
+                TEXT("GroundNav Volume [{}] could not derive a link-only field for profile [{}] from what "
+                     "it has published: [{}]"),
+                InVolumeEntity, VariantField.Key, DerivedVariant._Result.Get_Status())
+            { return; }
+
+            if (NOT DerivedVariant._Field->_Epoch.Get_IsNewerThan(VariantField.Value->_Epoch))
+            { continue; }
+
+            MovedVariants.Emplace(VariantField.Key, DerivedVariant._Field);
+
+            // The note narrows by link IDENTITY and the identity is the volume's, not a profile's, so
+            // an id that moved on any one field is an id this publish changed. Narrower than the union
+            // would be a note that failed to mention something it changed.
+            for (const auto ChangedLinkId : DerivedVariant._ChangedLinkIds)
+            { ChangedLinkIds.AddUnique(ChangedLinkId); }
+        }
+
         // A re-resolution that lands on what is already published moves no epoch, so there is nothing
-        // for a reader to notice and nothing worth swapping a pointer for.
-        if (NOT Derived._Field->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
+        // for a reader to notice and nothing worth swapping a pointer for. ANY field moving is enough,
+        // on the same terms the cost derive publishes under.
+        const auto DefaultMoved = Derived._Field->_Epoch.Get_IsNewerThan(Published->_Epoch);
+
+        if (NOT DefaultMoved && MovedVariants.IsEmpty())
         { return; }
 
         // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
-        InBuiltField._Epoch = Derived._Field->_Epoch;
-        InBuiltField._Field = Derived._Field;
+        auto ChangedBounds = FBox{ForceInit};
+
+        if (DefaultMoved)
+        {
+            InBuiltField._Field = Derived._Field;
+
+            ChangedBounds = Get_UnionedBounds(ChangedBounds,
+                groundnav::Get_ChangedTileBounds(*Derived._Field, NextEpoch));
+        }
+
+        for (const auto& MovedVariant : MovedVariants)
+        {
+            InBuiltField._VariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
+
+            ChangedBounds = Get_UnionedBounds(ChangedBounds,
+                groundnav::Get_ChangedTileBounds(*MovedVariant.Value, NextEpoch));
+        }
+
+        // The NEWEST epoch across every field the volume holds, for the same reason the cost derive
+        // takes it.
+        InBuiltField._Epoch = NextEpoch;
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
@@ -1553,13 +1852,13 @@ namespace ck
         // beneath can only answer "a route through this tile". The registry accumulates them onto
         // whatever run is open, so a reader that has missed several of these still reads one list.
         groundnav::world_fields::Publish(
-            World, InVolumeEntity, InBuiltField._Field, Derived._ChangedLinkIds);
+            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields, ChangedLinkIds);
 
         // Past the no-change early-out above, so this notify is only ever raised for a publish that
-        // moved something. An invalid box is reported as-is for the same reason the build reports one,
-        // and the note above narrows past it rather than replacing it: bounds stay the floor.
-        nav_surface::Request_NotifySurfaceRebuilt(World,
-            groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+        // moved something. The UNION over every field that moved. An invalid box is reported as-is for
+        // the same reason the build reports one, and the note above narrows past it rather than
+        // replacing it: bounds stay the floor.
+        nav_surface::Request_NotifySurfaceRebuilt(World, ChangedBounds);
     }
 
     // ----------------------------------------------------------------------------------------------------------------

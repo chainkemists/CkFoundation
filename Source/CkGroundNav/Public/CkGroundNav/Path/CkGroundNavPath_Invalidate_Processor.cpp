@@ -80,7 +80,12 @@ namespace ck
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity);
 
-        const auto Field = groundnav::world_fields::TryGet_Field(World, Corridor.GetCenter());
+        // The corridor's OWN profile rides the lookup. A route planned over a variant is answered by
+        // that variant's field, which is the one its epoch dates it against; resolving the untagged
+        // default here would measure a plan against ground it was never made on, and a change that
+        // reached only the variant would read as no change at all.
+        const auto Field = groundnav::world_fields::TryGet_Field(
+            World, Corridor.GetCenter(), InCurrent.Get_ProfileTag());
 
         // A corridor found on the epoch the world publishes NOW already postdates every rebuild this
         // queue can describe, however many boxes one burst pushed - so a route planned between the
@@ -102,7 +107,10 @@ namespace ck
         // and takes the floor. The epochs are also compared because the note and the field are read
         // under two separate locks, and a note describing a publish this field is not the product of
         // accounts for nothing here. A world with no field has no epoch to agree with, and the boxes
-        // are then the whole answer.
+        // are then the whole answer. A note is stamped from the entry's DEFAULT field, so a corridor
+        // planned over a variant only ever agrees with it while nothing has moved either apart - which
+        // is what drops a variant-only change to the boxes below instead of letting it narrow by link
+        // identity.
         const auto NoteAccountsForEverythingSinceThePlan =
             PublishNote.IsSet() && Field.IsValid() &&
             PublishNote->_Epoch == Field->_Epoch &&
