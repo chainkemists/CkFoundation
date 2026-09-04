@@ -1,4 +1,5 @@
 #include "CkJoltCook_MeshShapeCooker.h"
+#include "CkJoltCook_MeshShapeAudit.h"
 
 #include "CkJoltCook_AssetSave.h"
 
@@ -63,45 +64,34 @@ namespace ck_jolt_cook_mesh_shape_cooker
         return OutBlob.Num() > 0;
     }
 
-    enum class ECurrentShapeBlobFreshness : uint8
-    {
-        UpToDate,
-        RequiresRebuild,
-        Failed,
-    };
-
     static auto Audit_CurrentShapeBlobFreshness(
         const UCk_Jolt_CookedMeshShape_UE& InShapeAsset,
-        const FString& InMeshPackagePath) -> ECurrentShapeBlobFreshness
+        const FString& InMeshPackagePath) -> ck::jolt::cook::ECk_Jolt_MeshShapeCurrentBlobFreshness
     {
-        const auto RestoredShape = mesh_shape_utils::TryRestore_ShapeBlob(
-            InShapeAsset.Get_ShapeBlob(), InMeshPackagePath);
-        const auto ShapeRestored = ck::IsValid(RestoredShape);
+        const auto RestoreResult = mesh_shape_utils::Restore_ShapeBlobForAnalysis(InShapeAsset.Get_ShapeBlob());
+        if (NOT RestoreResult._Success)
+        {
+            // The BodySetup is still available to the caller. Treat a corrupt CURRENT blob as stale
+            // optimization data and proceed to the normal source build, which remains the final
+            // fail-closed admission point for malformed collision.
+            ck::jolt::Warning(TEXT("JoltMeshCook: current cooked shape blob for mesh [{}] is CORRUPT "
+                "([{}]); rebuilding from its source."), InMeshPackagePath, RestoreResult._Failure);
+            return ck::jolt::cook::Get_MeshShapeCurrentBlobFreshness({});
+        }
 
-        CK_ENSURE_IF_NOT(ShapeRestored,
-            TEXT("JoltMeshCook: current cooked shape blob for mesh [{}] could not be restored "
-                 "for the freshness audit"),
-            InMeshPackagePath)
-        { }
+        const auto RestoredShape = RestoreResult._Shape;
+        const auto IsTriMesh = RestoredShape->GetSubType() == JPH::EShapeSubType::Mesh;
+        const auto WindingRatio = IsTriMesh ? ComputeShapeWindingRatio(*RestoredShape) : 0.0;
+        const auto Freshness = ck::jolt::cook::Get_MeshShapeCurrentBlobFreshness({true, IsTriMesh, WindingRatio});
 
-        if (NOT ShapeRestored)
-        { return ECurrentShapeBlobFreshness::Failed; }
-
-        // Convex and other non-tri-mesh shapes deliberately have no winding verdict.
-        if (RestoredShape->GetSubType() != JPH::EShapeSubType::Mesh)
-        { return ECurrentShapeBlobFreshness::UpToDate; }
-
-        constexpr auto InsideOutWindingRatioThreshold = -0.05;
-        const auto WindingRatio = ComputeShapeWindingRatio(*RestoredShape);
-        if (WindingRatio < InsideOutWindingRatioThreshold)
+        if (Freshness == ck::jolt::cook::ECk_Jolt_MeshShapeCurrentBlobFreshness::RebuildFromSource)
         {
             ck::jolt::Warning(TEXT("JoltMeshCook: current cooked tri-mesh blob for mesh [{}] is INSIDE-OUT "
                 "(signed-volume/bounds ratio [{}]); rebuilding from its source so its winding can be normalized."),
                 InMeshPackagePath, WindingRatio);
-            return ECurrentShapeBlobFreshness::RequiresRebuild;
         }
 
-        return ECurrentShapeBlobFreshness::UpToDate;
+        return Freshness;
     }
 }
 
@@ -182,10 +172,8 @@ auto
         {
             const auto CurrentShapeBlobFreshness = Audit_CurrentShapeBlobFreshness(*Existing, MeshPackagePath);
 
-            if (CurrentShapeBlobFreshness == ECurrentShapeBlobFreshness::Failed)
-            { return ECk_Jolt_MeshShapeCookResult::Failed; }
-
-            if (NOT InForceRebuild && CurrentShapeBlobFreshness == ECurrentShapeBlobFreshness::UpToDate)
+            if (NOT InForceRebuild
+                && CurrentShapeBlobFreshness == ECk_Jolt_MeshShapeCurrentBlobFreshness::UpToDate)
             { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
         }
 

@@ -19,6 +19,13 @@ class UBodySetup;
 
 namespace ck::jolt::bake
 {
+    struct FCk_Jolt_ShapeBlobRestoreResult
+    {
+        JPH::Ref<JPH::Shape> _Shape;
+        FString _Failure;
+        bool _Success = false;
+    };
+
     /// Runtime access to the pre-baked per-mesh Jolt shapes (UCk_Jolt_CookedMeshShape_UE, cooked by
     /// CkJoltEditor's mesh-shape sweep). Game thread only, like every Jolt surface in this module.
     ///
@@ -83,6 +90,12 @@ namespace ck::jolt::bake
         CKJOLT_API auto TryRestore_ShapeBlob(
             const TArray<uint8>& InBlob,
             const FString& InDebugName) -> JPH::Ref<JPH::Shape>;
+
+        /// Side-effect-free restore result for editor diagnostics. Unlike TryRestore_ShapeBlob, a corrupt
+        /// stream returns its Jolt error text without emitting an ensure; callers decide whether that is a
+        /// runtime defect, a cook failure, or merely a selected asset being inspected.
+        CKJOLT_API auto Restore_ShapeBlobForAnalysis(
+            const TArray<uint8>& InBlob) -> FCk_Jolt_ShapeBlobRestoreResult;
 
         /// The cook version that predates the tri-mesh winding fix. Blobs stamped with it share the
         /// current ENCODING and their convex content is still valid — only tri-mesh blobs from that

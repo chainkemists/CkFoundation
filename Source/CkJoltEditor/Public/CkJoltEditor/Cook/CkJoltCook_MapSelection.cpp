@@ -24,8 +24,8 @@ namespace ck::jolt::cook
             if (NOT NormalizedPath.StartsWith(TEXT("/")))
             { NormalizedPath = TEXT("/Game/") + NormalizedPath; }
 
-            return InPackageName == NormalizedPath
-                || InPackageName.StartsWith(NormalizedPath + TEXT("/"));
+            return InPackageName.Equals(NormalizedPath, ESearchCase::IgnoreCase)
+                || InPackageName.StartsWith(NormalizedPath + TEXT("/"), ESearchCase::IgnoreCase);
         }
 
         static auto Get_ExcludedPath(
@@ -52,7 +52,23 @@ namespace ck::jolt::cook
                 [&](const FString& InDirectory)
                 {
                     return IsEqualToOrUnderPath(InMapPackageName, InDirectory);
+            });
+        }
+
+        static auto AddUniquePackageName(
+            TArray<FString>& InOutPackageNames,
+            const FString& InPackageName) -> bool
+        {
+            const auto AlreadySelected = InOutPackageNames.ContainsByPredicate(
+                [&](const FString& InExistingPackageName)
+                {
+                    return InExistingPackageName.Equals(InPackageName, ESearchCase::IgnoreCase);
                 });
+            if (AlreadySelected)
+            { return false; }
+
+            InOutPackageNames.Add(InPackageName);
+            return true;
         }
     }
 
@@ -69,6 +85,23 @@ namespace ck::jolt::cook
             [&](const FString& InExcludedPath)
             {
                 return IsEqualToOrUnderPath(InPackageName, InExcludedPath);
+            });
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_IsPackageIncludedByDirectory(
+            const FString& InPackageName,
+            const TArray<FString>& InIncludedPackagePaths)
+        -> bool
+    {
+        using namespace ck_jolt_cook_map_selection;
+
+        return InIncludedPackagePaths.ContainsByPredicate(
+            [&](const FString& InIncludedPath)
+            {
+                return IsEqualToOrUnderPath(InPackageName, InIncludedPath);
             });
     }
 
@@ -119,9 +152,7 @@ namespace ck::jolt::cook
             if (NOT Get_ExcludedPath(AuthoredMap, InInput).IsEmpty())
             { continue; }
 
-            const auto NumBeforeAdd = SelectedMaps.Num();
-            SelectedMaps.AddUnique(AuthoredMap);
-            if (SelectedMaps.Num() > NumBeforeAdd)
+            if (AddUniquePackageName(SelectedMaps, AuthoredMap))
             { ++NumAuthoredMaps; }
         }
 
@@ -142,9 +173,7 @@ namespace ck::jolt::cook
                 if (NOT Get_ExcludedPath(CandidateMap, InInput).IsEmpty())
                 { continue; }
 
-                const auto NumBeforeAdd = SelectedMaps.Num();
-                SelectedMaps.AddUnique(CandidateMap);
-                if (SelectedMaps.Num() > NumBeforeAdd)
+                if (AddUniquePackageName(SelectedMaps, CandidateMap))
                 { ++NumAlwaysCookMaps; }
             }
         }

@@ -22,6 +22,8 @@
 
 namespace ck_jolt_mesh_shape_utils
 {
+    using ck::jolt::bake::FCk_Jolt_ShapeBlobRestoreResult;
+
     struct FCacheEntry
     {
         // Null shape = memoized negative (asset absent or stale) — the disk lookup runs ONCE per
@@ -41,9 +43,15 @@ namespace ck_jolt_mesh_shape_utils
     }
 
     static auto Restore_SingleShapeFromBlob(
-        const TArray<uint8>& InBlob,
-        const FString& InDebugName) -> JPH::Ref<JPH::Shape>
+        const TArray<uint8>& InBlob) -> FCk_Jolt_ShapeBlobRestoreResult
     {
+        if (InBlob.IsEmpty())
+        {
+            auto RestoreResult = FCk_Jolt_ShapeBlobRestoreResult{};
+            RestoreResult._Failure = TEXT("shape blob is empty");
+            return RestoreResult;
+        }
+
         auto BlobStream = std::istringstream{
             std::string{reinterpret_cast<const char*>(InBlob.GetData()), static_cast<size_t>(InBlob.Num())}};
         auto StreamWrapper = JPH::StreamInWrapper{BlobStream};
@@ -53,12 +61,17 @@ namespace ck_jolt_mesh_shape_utils
 
         const auto Result = JPH::Shape::sRestoreWithChildren(StreamWrapper, IdToShape, IdToMaterial);
 
-        CK_ENSURE_IF_NOT(Result.IsValid(),
-            TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
-            InDebugName, FString{Result.GetError().c_str()})
-        { return {}; }
+        if (NOT Result.IsValid())
+        {
+            auto RestoreResult = FCk_Jolt_ShapeBlobRestoreResult{};
+            RestoreResult._Failure = FString{Result.GetError().c_str()};
+            return RestoreResult;
+        }
 
-        return Result.Get();
+        auto RestoreResult = FCk_Jolt_ShapeBlobRestoreResult{};
+        RestoreResult._Shape = Result.Get();
+        RestoreResult._Success = true;
+        return RestoreResult;
     }
 }
 
@@ -178,11 +191,15 @@ namespace ck::jolt::bake::mesh_shape_utils
         // mesh whose collision stopped being worth pre-baking, so it can never refresh this blob and
         // "re-run the cook" would be advice that provably cannot work. Deleting the asset is the only
         // fix, and costs nothing — the shape it holds is one the runtime rebuilds for free.
-        CK_ENSURE_IF_NOT(BlobIsUsable || MeshIsWorthPreBaking,
+        const auto IsNotOrphaned = BlobIsUsable || MeshIsWorthPreBaking;
+        CK_ENSURE_IF_NOT(IsNotOrphaned,
             TEXT("Cooked Jolt shape [{}] is ORPHANED — mesh [{}] no longer has hull or tri-mesh collision, "
                  "so the mesh cook SKIPS it and will never refresh this blob. DELETE the cooked asset; "
                  "re-running the cook does NOT help. The shape is built at runtime meanwhile."),
             AssetPath, MeshPackagePath)
+        { }
+
+        if (NOT IsNotOrphaned)
         { return Memoize({}); }
 
         CK_ENSURE_IF_NOT(BlobIsUsable,
@@ -191,9 +208,23 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "runtime. Re-run the Jolt mesh cook."),
             MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current,
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
+        { }
+
+        if (NOT BlobIsUsable)
         { return Memoize({}); }
 
-        auto RestoredShape = Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob(), MeshPackagePath);
+        const auto RestoreResult = Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob());
+        const auto BlobRestored = RestoreResult._Success;
+
+        CK_ENSURE_IF_NOT(BlobRestored,
+            TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
+            MeshPackagePath, RestoreResult._Failure)
+        { }
+
+        if (NOT BlobRestored)
+        { return Memoize({}); }
+
+        auto RestoredShape = RestoreResult._Shape;
 
         // The one thing a v2 blob can be wrong about: its tri-mesh winding is inverted by
         // construction (the bake's pre-fix b/c swap). Convex v2 content is untouched by the fix and
@@ -222,15 +253,19 @@ namespace ck::jolt::bake::mesh_shape_utils
             constexpr auto InsideOutWindingRatioThreshold = -0.05;
             const auto WindingRatio = ComputeShapeWindingRatio(*RestoredShape);
 
-            CK_ENSURE_IF_NOT(WindingRatio >= InsideOutWindingRatioThreshold,
+            const auto WindingIsSafe = WindingRatio >= InsideOutWindingRatioThreshold;
+            CK_ENSURE_IF_NOT(WindingIsSafe,
                 TEXT("Cooked Jolt shape for mesh [{}] is INSIDE-OUT (signed-volume/bounds ratio [{}]): its "
                      "single-sided collision faces INWARD — items pass through from outside and collide "
                      "inside the mesh, and the Jolt debug draw shows a hollow shell. The blob faithfully "
                      "bakes a source mesh whose triangle winding is inverted: flip the normals in the DCC "
-                     "(or author simple collision on the asset), then re-save so the mesh cook refreshes "
-                     "this blob. The shape is used as-is meanwhile."),
+                 "(or author simple collision on the asset), then re-save so the mesh cook refreshes "
+                 "this blob. The runtime falls back to the source shape meanwhile."),
                 MeshPackagePath, WindingRatio)
             {}
+
+            if (NOT WindingIsSafe)
+            { return Memoize({}); }
         }
 
         return Memoize(RestoredShape);
@@ -293,7 +328,25 @@ namespace ck::jolt::bake::mesh_shape_utils
             const FString& InDebugName)
         -> JPH::Ref<JPH::Shape>
     {
-        return Restore_SingleShapeFromBlob(InBlob, InDebugName);
+        const auto RestoreResult = Restore_SingleShapeFromBlob(InBlob);
+
+        CK_ENSURE_IF_NOT(RestoreResult._Success,
+            TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
+            InDebugName, RestoreResult._Failure)
+        { }
+
+        if (NOT RestoreResult._Success)
+        { return {}; }
+
+        return RestoreResult._Shape;
+    }
+
+    auto
+        Restore_ShapeBlobForAnalysis(
+            const TArray<uint8>& InBlob)
+        -> FCk_Jolt_ShapeBlobRestoreResult
+    {
+        return Restore_SingleShapeFromBlob(InBlob);
     }
 
     auto
