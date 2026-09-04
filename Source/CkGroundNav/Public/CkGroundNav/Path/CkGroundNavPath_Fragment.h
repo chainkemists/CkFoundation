@@ -149,6 +149,11 @@ namespace ck
      * verdict: the status alone cannot, because a failed episode and an episode that has not run both
      * leave a non-Ready status behind. It is set when a result is published and cleared the moment a
      * new episode is parked, so it is true exactly while the result belongs to no in-flight search.
+     *
+     * _PublishSequence is the plan's IDENTITY, which a bool cannot be: it moves once per publish and
+     * on nothing else, so a reader holding the number it last saw can tell a plan it has already read
+     * from a new one that landed in the same slot - including two plans that publish between two of
+     * its own reads, which a flag it has to clear behind itself cannot.
      */
     struct CKGROUNDNAV_API FFragment_GroundNavPath_Result
     {
@@ -165,9 +170,14 @@ namespace ck
 
         bool _HasFreshResult = false;
 
+        // Starts at 0, which is the number no publish can answer, so a reader that has seen nothing
+        // and a slot that has published nothing agree without either having to say so.
+        int32 _PublishSequence = 0;
+
     public:
         CK_PROPERTY_GET(_Result);
         CK_PROPERTY_GET(_HasFreshResult);
+        CK_PROPERTY_GET(_PublishSequence);
     };
 
     // ----------------------------------------------------------------------------------------------------------------

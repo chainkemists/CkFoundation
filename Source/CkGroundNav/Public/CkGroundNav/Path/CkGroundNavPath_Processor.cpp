@@ -362,6 +362,7 @@ namespace ck
             .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
+        ++InResult._PublishSequence;
 
         DoLog_Published(InPathEntity, InResult._Result);
 
@@ -433,6 +434,7 @@ namespace ck
             .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
+        ++InResult._PublishSequence;
 
         DoLog_Published(InPathEntity, InResult._Result);
 

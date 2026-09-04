@@ -3,6 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -11,9 +12,18 @@
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
+
 #include <GameplayTagContainer.h>
 
 #include "CkGroundNavPath_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    class FProcessor_GroundNavPath_Diagnostics;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -405,6 +415,108 @@ public:
     CK_PROPERTY(_PlannedAgainstEpoch);
     CK_PROPERTY(_RepairVerdict);
     CK_PROPERTY(_LinkWaypoints);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * What this agent's planner is doing, as values and nothing else.
+ *
+ * Every field is a COPY taken while the agent's own path fragments were readable - no field pointer,
+ * no handle, no world - so a viewer reads it a frame later, or off a record kept after the world that
+ * produced it is gone, without asking whether anything behind it still exists.
+ *
+ * It carries what GROUNDNAV owns and stops there. How far along the route a body has walked is the
+ * CROWD's cursor and lives on the crowd agent, so it is not here; and the corridor is named by the
+ * plan's own stable link ids rather than by area tags, because a tag is a name only the volume's
+ * records resolve and resolving one here would be a second answer to a question the volume answers.
+ */
+USTRUCT(BlueprintType)
+struct CKGROUNDNAV_API FFragment_GroundNavPath_Diagnostics
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FFragment_GroundNavPath_Diagnostics);
+
+    // The one pass that stamps this. Everything else reads it.
+    friend class ck::FProcessor_GroundNavPath_Diagnostics;
+
+private:
+    /** Whether the pass has ever written this value. False on a default one and on the one an invalid
+     *  handle answers with, true from the first visit onwards. Every other column is read under it:
+     *  an enum has no spare "nobody has said" value to spend, so this bool is what tells a stamped
+     *  default from a default nothing has stamped. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    bool _HasBeenStamped = false;
+
+    /** Which provider answers the world this agent stands in. A GroundNav planner in a Recast world
+     *  is a planner nothing is driving, which is what this column is here to make visible. The
+     *  initialiser is the enum's own first value and not a claim - _HasBeenStamped is the gate, and
+     *  it is false until a pass has read a world. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_Provider _Provider = ECk_NavSurface_Provider::Recast;
+
+    // The profile the cached corridor was planned for. Empty is the volume's untagged default.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
+    /** What the last FINISHED episode answered, CARRIED across the search that follows it. Read only
+     *  off a slot that is fresh and then left standing, so a viewer asking mid-search is told the
+     *  verdict that stands rather than the InProgress every unanswered slot reads as. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNav_PathStatus _PathStatus = ECk_GroundNav_PathStatus::InProgress;
+
+    // How many waypoints the slot is publishing. Zero on every status that publishes no route.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int32 _PublishedWaypointCount = 0;
+
+    /** The AUTHORED ids of the links the cached corridor crosses, in walk order and without repeats.
+     *  Empty for a route that crosses none. Ids rather than names: an id is volume-scoped, monotone
+     *  and never reused, and a name is the volume's own read of its records. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    TArray<int32> _CorridorLinkIds;
+
+    /** The field epoch that corridor was found on, as its bare counter: FCk_GroundNav_Epoch is a
+     *  plain struct and is not reflected. Zero where nothing is cached. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    int64 _CorridorEpoch = 0;
+
+    // Whether the agent stands flagged for a repath by ground that moved under its corridor.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    bool _RepathRequired = false;
+
+    /** The world time at the tick a plan was seen to publish, and zero before the first one. Dated by
+     *  the WORLD rather than by the platform clock, so it reads against everything else a world-dated
+     *  view shows and means the same thing in a second world. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _LastPlanWorldTime;
+
+    /** The published sequence the date above was taken at. The pass re-dates when the slot's sequence
+     *  has moved past this and never otherwise, so a standing plan read for the next hundred ticks
+     *  keeps the date it was planned at rather than the date it was last looked at. */
+    int32 _LastPlanSequence = 0;
+
+public:
+    CK_PROPERTY_GET(_HasBeenStamped);
+    CK_PROPERTY_GET(_Provider);
+    CK_PROPERTY_GET(_ProfileTag);
+    CK_PROPERTY_GET(_PathStatus);
+    CK_PROPERTY_GET(_PublishedWaypointCount);
+    CK_PROPERTY_GET(_CorridorLinkIds);
+    CK_PROPERTY_GET(_CorridorEpoch);
+    CK_PROPERTY_GET(_RepathRequired);
+    CK_PROPERTY_GET(_LastPlanWorldTime);
+    CK_PROPERTY_GET(_LastPlanSequence);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
