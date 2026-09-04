@@ -26,7 +26,8 @@ namespace ck::jolt
     /// v2: current shape blob encoding.
     /// v3: tri-mesh winding corrected (the bake's extra b/c swap flipped Chaos's already-right-handed
     ///     stored triangles back to left-handed, so every v2 tri-mesh blob is INSIDE-OUT — one-sided
-    ///     Jolt collision facing inward). v2 blobs are unusable regardless of GUID freshness.
+    ///     Jolt collision facing inward). v2 is unsafe for runtime tri-mesh collision, but shares the
+    ///     v3 encoding and may be decoded read-only by editor diagnostics.
     constexpr uint32 MeshShapeCookVersion_Current = 3;
 
     /// The per-map JoltIndex + JoltCell assets.

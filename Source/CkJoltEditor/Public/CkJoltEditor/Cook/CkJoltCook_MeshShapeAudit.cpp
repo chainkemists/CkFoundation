@@ -61,6 +61,24 @@ namespace ck::jolt::cook
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_MeshShapeAuditCookedPreviewCompatibility(
+            uint32 InCookVersion,
+            uint32 InJoltVersionId)
+        -> ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility
+    {
+        if (InJoltVersionId != static_cast<uint32>(JPH_VERSION_ID))
+        { return ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility::IncompatibleJoltVersion; }
+
+        const auto UsesKnownBlobEncoding = InCookVersion == MeshShapeCookVersion_Current
+            || InCookVersion == ck::jolt::bake::mesh_shape_utils::PreWindingFixMeshShapeCookVersion;
+        return UsesKnownBlobEncoding
+            ? ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility::Restorable
+            : ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility::IncompatibleCookVersion;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Build_MeshShapeAuditPreview(
             const JPH::VertexList& InVertices,
             const JPH::IndexedTriangleList& InTriangles,
@@ -216,11 +234,6 @@ namespace ck::jolt::cook
                 ? ECk_Jolt_MeshShapeAuditAction::CookMissing
                 : ECk_Jolt_MeshShapeAuditAction::None;
         }
-        else if (NOT IsWorthPreBaking)
-        {
-            Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Orphan;
-            Result._RecommendedAction = ECk_Jolt_MeshShapeAuditAction::DeleteOrphan;
-        }
         else
         {
             const auto CookVersionMatches = CookedAsset->Get_CookVersion() == MeshShapeCookVersion_Current;
@@ -229,7 +242,12 @@ namespace ck::jolt::cook
             const auto TraceFlagMatches = CookedAsset->Get_TraceFlag()
                 == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
 
-            if (NOT CookVersionMatches)
+            if (NOT IsWorthPreBaking)
+            {
+                Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Orphan;
+                Result._RecommendedAction = ECk_Jolt_MeshShapeAuditAction::DeleteOrphan;
+            }
+            else if (NOT CookVersionMatches)
             { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::StaleCookVersion; }
             else if (NOT JoltVersionMatches)
             { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::StaleJoltVersion; }
@@ -238,16 +256,27 @@ namespace ck::jolt::cook
             else if (NOT TraceFlagMatches)
             { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::StaleTraceFlag; }
             else
+            { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Current; }
+
+            const auto PreviewCompatibility = Get_MeshShapeAuditCookedPreviewCompatibility(
+                CookedAsset->Get_CookVersion(), CookedAsset->Get_JoltVersionId());
+            if (PreviewCompatibility != ECk_Jolt_MeshShapeAuditCookedPreviewCompatibility::Restorable)
+            {
+                Result._CookedPreviewAvailability =
+                    ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::IncompatibleStale;
+            }
+            else
             {
                 const auto Restore = mesh_shape_utils::Restore_ShapeBlobForAnalysis(CookedAsset->Get_ShapeBlob());
                 if (NOT Restore._Success)
                 {
-                    Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Corrupt;
+                    if (Result._CookedState == ECk_Jolt_MeshShapeAuditCookedState::Current)
+                    { Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Corrupt; }
+                    Result._CookedPreviewAvailability = ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::CorruptBlob;
                     Result._Failure = Restore._Failure;
                 }
                 else
                 {
-                    Result._CookedState = ECk_Jolt_MeshShapeAuditCookedState::Current;
                     const auto IsTriMesh = Restore._Shape->GetSubType() == JPH::EShapeSubType::Mesh;
                     Result._CookedWindingRatio = IsTriMesh ? ComputeShapeWindingRatio(*Restore._Shape) : 0.0;
                     Result._CookedWinding = IsTriMesh
@@ -259,14 +288,20 @@ namespace ck::jolt::cook
                     Result._CookedPreviewTriangles = MoveTemp(CookedPreview._Triangles);
                     Result._bCookedPreviewTruncated = CookedPreview._bTruncated;
                     Result._bCookedPreviewUnavailable = CookedPreview._bUnavailable;
+                    Result._CookedPreviewAvailability = CookedPreview._bUnavailable
+                        ? ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::NonTriMesh
+                        : ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::Available;
                 }
             }
 
-            if (Result._CookedState == ECk_Jolt_MeshShapeAuditCookedState::Corrupt)
+            if (Result._CookedPreviewAvailability == ECk_Jolt_MeshShapeAuditCookedPreviewAvailability::CorruptBlob
+                && Result._CookedState != ECk_Jolt_MeshShapeAuditCookedState::Orphan)
             { Result._RecommendedAction = ECk_Jolt_MeshShapeAuditAction::RebuildCorrupt; }
-            else if (Result._CookedState != ECk_Jolt_MeshShapeAuditCookedState::Current)
+            else if (Result._CookedState != ECk_Jolt_MeshShapeAuditCookedState::Current
+                && Result._CookedState != ECk_Jolt_MeshShapeAuditCookedState::Orphan)
             { Result._RecommendedAction = ECk_Jolt_MeshShapeAuditAction::RebuildStale; }
-            else if (CurrentBlobFreshness == ECk_Jolt_MeshShapeCurrentBlobFreshness::RebuildFromSource)
+            else if (Result._CookedState == ECk_Jolt_MeshShapeAuditCookedState::Current
+                && CurrentBlobFreshness == ECk_Jolt_MeshShapeCurrentBlobFreshness::RebuildFromSource)
             { Result._RecommendedAction = ECk_Jolt_MeshShapeAuditAction::RebuildInsideOut; }
         }
 
