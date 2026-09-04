@@ -12,7 +12,7 @@
 // output, then the fill that measures it.
 //
 // Pure functions over a field the caller already holds. No world, no registry, no state — so any
-// stage can be run alone by a test or a debug view, and the composed answer is exactly the four
+// stage can be run alone by a test or a debug view, and the composed answer is exactly the five
 // stages in order and nothing else.
 //
 // The plan is a SEPARATE value from FCk_GroundNav_PathResult on purpose. A result is rewritten every
@@ -22,6 +22,22 @@
 
 namespace ck::groundnav
 {
+    /**
+     * Which end of an authored link a waypoint stands on, and None for every point the lattice put
+     * there.
+     *
+     * Unreflected and module-local for the same reason the waypoint it rides on is: the plan is an
+     * internal value, and the reflected twin a consumer reads is minted where the plan is flattened.
+     */
+    enum class ECk_GroundNav_LinkWaypointRole : uint8
+    {
+        None,
+        Entry,
+        Exit
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * One point of a walkable line, with everything a follower would otherwise re-derive by asking
      * the field again at the same position.
@@ -47,6 +63,17 @@ namespace ck::groundnav
         FVector _SurfaceNormal = FVector::UpVector;
 
         FGameplayTagContainer _AreaTags;
+
+        // The STABLE authored id of the link this point is an end of, and INDEX_NONE for a point no
+        // link put here. The id rather than the field-local index because a plan outlives the field it
+        // was made against, and that index would name a different link after the next derive.
+        int32 _LinkId = INDEX_NONE;
+
+        ECk_GroundNav_LinkWaypointRole _LinkRole = ECk_GroundNav_LinkWaypointRole::None;
+
+        // Which way the link is being walked, carried on BOTH of its points so the exit answers what
+        // its entry did. Bidirectional is what a point of no link reads: a traversal has one direction.
+        ECk_GroundNav_LinkDirection _LinkEntryDirection = ECk_GroundNav_LinkDirection::Bidirectional;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -107,6 +134,28 @@ namespace ck::groundnav
         const FCk_GroundNav_PathResult& InResult,
         float                           InRadiusUu,
         TArray<FVector>&                OutWaypoints) -> double;
+
+    /**
+     * Every endpoint of an authored link the corridor crossed, present in the polyline.
+     *
+     * The funnel emits an apex only where the string BENDS, so a link whose two degenerate portals lie
+     * on the line the apex already sees leaves no waypoint for either of them. The stamp downstream
+     * recognises a link endpoint by its exact position, so a route that provably crossed a link would
+     * carry no waypoint saying so. An authored endpoint is a place a body must pass THROUGH rather
+     * than a corner it hugs, which is why it is put back rather than left to the funnel's bend rule.
+     *
+     * An absent endpoint is inserted on the segment carrying it - collinear in XY, which is the
+     * arithmetic the funnel itself string-pulls in, and between that segment's ends by its own
+     * dot-product parameter. Portals are walked in corridor order, so an entry is placed before its
+     * exit and the two are adjacent wherever the segment between them carries nothing else.
+     *
+     * A route whose corridor crossed no link comes back element for element: the pass inserts only
+     * where a link portal's endpoint is MISSING, and a corridor with no link portals has none to miss.
+     */
+    CKGROUNDNAV_API auto
+    Get_WithLinkEndpointsEmitted(
+        TConstArrayView<FVector>        InWaypoints,
+        const FCk_GroundNav_PathResult& InResult) -> TArray<FVector>;
 
     /**
      * Every interior waypoint pushed off its corner along the interior bisector, endpoints untouched.
@@ -175,11 +224,16 @@ namespace ck::groundnav
         TConstArrayView<TMap<int32, float>> InTables) -> TMap<int32, float>;
 
     /**
-     * The whole post-process: funnel, corner offset, skip-first, fill — in that order, with the
-     * status, the plate corridor and the planned-against epoch carried through.
+     * The whole post-process: funnel, link endpoints, corner offset, skip-first, fill — in that
+     * order, with the status, the plate corridor and the planned-against epoch carried through.
      *
      * The corner offset is the cost model's own multiple of the agent radius, so one number tunes the
      * pass and zero switches it off.
+     *
+     * The link stamp is applied AFTER the fill, not at the funnel: the passes in between speak
+     * locations and not waypoints, so an index taken earlier would name a different point by the time
+     * the fill runs. A filled waypoint EXACTLY equal to a link portal's endpoint is that link's, the
+     * same exact comparison the corner offset's pinned-point rule already makes.
      */
     CKGROUNDNAV_API auto
     Get_PathPlan(

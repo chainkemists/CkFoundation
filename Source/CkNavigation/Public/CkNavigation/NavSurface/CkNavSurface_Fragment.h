@@ -2,13 +2,16 @@
 
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
+#include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+#include "CkEcs/Tag/CkTag.h"
 
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_NavAreaMarkup_UE;
+class UCk_Utils_NavSurface_LinkTraversal_UE;
 class UCk_Utils_NavSurface_UE;
 class UWorld;
 
@@ -151,12 +154,83 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The crossing this entity is in, if any. Composed on the first traversal request rather than at
+    // spawn: any entity may traverse a link, and most never do.
+    struct CKNAVIGATION_API FFragment_NavSurface_LinkTraversal_Current
+    {
+        CK_GENERATED_BODY(FFragment_NavSurface_LinkTraversal_Current);
+
+        friend class FProcessor_NavSurface_LinkTraversal_HandleRequests;
+        friend class FProcessor_NavSurface_LinkTraversal_EndPlay;
+        friend class ::UCk_Utils_NavSurface_LinkTraversal_UE;
+
+    private:
+        int32 _ActiveLinkId = INDEX_NONE;
+        int32 _ActiveCorrelatorId = INDEX_NONE;
+        ECk_NavSurface_LinkEntryDirection _EntryDirection = ECk_NavSurface_LinkEntryDirection::Forward;
+        ECk_NavSurface_LinkTraversalState _State = ECk_NavSurface_LinkTraversalState::None;
+
+    public:
+        CK_PROPERTY_GET(_ActiveLinkId);
+        CK_PROPERTY_GET(_ActiveCorrelatorId);
+        CK_PROPERTY_GET(_EntryDirection);
+        CK_PROPERTY_GET(_State);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKNAVIGATION_API FFragment_NavSurface_LinkTraversal_Requests
+    {
+        CK_GENERATED_BODY(FFragment_NavSurface_LinkTraversal_Requests);
+
+        friend class FProcessor_NavSurface_LinkTraversal_HandleRequests;
+        friend class ::UCk_Utils_NavSurface_LinkTraversal_UE;
+
+        using RequestType = std::variant<
+            FCk_Request_NavSurface_BeginLinkTraversal,
+            FCk_Request_NavSurface_CompleteLinkTraversal,
+            FCk_Request_NavSurface_CancelLinkTraversal>;
+
+    private:
+        TArray<RequestType> _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Carried while _State is Traversing, so a view can filter on "mid-crossing" without touching the
+    // fragment. NON-exclusive: it says nothing about any other state the traverser is in.
+    CK_DEFINE_ECS_TAG(FTag_NavSurface_LinkTraversal_Active);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKNAVIGATION_API,
         NavSurface_OnSurfaceRebuilt,
         FCk_Delegate_NavSurface_OnSurfaceRebuilt,
         FCk_Handle,
         FBox);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNAVIGATION_API,
+        NavSurface_OnLinkTraversalBegun,
+        FCk_Delegate_NavSurface_OnLinkTraversalBegun,
+        FCk_Handle,
+        int32,
+        int32);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNAVIGATION_API,
+        NavSurface_OnLinkTraversalCompleted,
+        FCk_Delegate_NavSurface_OnLinkTraversalCompleted,
+        FCk_Handle,
+        int32,
+        int32,
+        ECk_Request_OperationResult);
+
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_NavSurface_LinkTraversal_Requests);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

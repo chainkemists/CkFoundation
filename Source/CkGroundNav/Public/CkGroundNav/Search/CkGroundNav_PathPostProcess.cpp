@@ -32,6 +32,11 @@ namespace ck::groundnav
 
         constexpr auto kFewestPointsWithAnInterior = 3;
 
+        // A link endpoint stands ON the corridor, so it can miss the segment carrying it only by the
+        // arithmetic that produced that segment's own ends. A wider window would let a route that
+        // doubles back claim the leg beside the one the endpoint is actually on.
+        constexpr auto kOnSegmentToleranceUu = 0.1;
+
         // ------------------------------------------------------------------------------------------------------------
 
         /**
@@ -54,6 +59,125 @@ namespace ck::groundnav
             }
 
             return Pinned;
+        }
+
+        /**
+         * Whether a point lies on a polyline leg, in XY - the arithmetic the funnel string-pulls in,
+         * so a point the corridor put on the line is on it by the same measure that placed it.
+         *
+         * The parameter bound is the dot-product one, so a point beyond either end is rejected however
+         * exactly it sits on the leg's infinite line.
+         */
+        auto Get_IsOnSegmentXY(
+            const FVector& InFrom,
+            const FVector& InTo,
+            const FVector& InPoint) -> bool
+        {
+            const auto SegmentX = InTo.X - InFrom.X;
+            const auto SegmentY = InTo.Y - InFrom.Y;
+            const auto LengthSquared = (SegmentX * SegmentX) + (SegmentY * SegmentY);
+
+            if (LengthSquared <= 0.0)
+            { return false; }
+
+            const auto ToPointX = InPoint.X - InFrom.X;
+            const auto ToPointY = InPoint.Y - InFrom.Y;
+
+            const auto Parameter = ((ToPointX * SegmentX) + (ToPointY * SegmentY)) / LengthSquared;
+
+            if (Parameter < 0.0 || Parameter > 1.0)
+            { return false; }
+
+            const auto Cross = (ToPointX * SegmentY) - (ToPointY * SegmentX);
+
+            return FMath::Abs(Cross) <= kOnSegmentToleranceUu * FMath::Sqrt(LengthSquared);
+        }
+
+        /** The index of the first leg carrying a point, as the index of that leg's FIRST waypoint. */
+        auto Get_SegmentContaining(
+            TConstArrayView<FVector> InWaypoints,
+            const FVector&           InPoint) -> int32
+        {
+            for (auto Index = 1; Index < InWaypoints.Num(); ++Index)
+            {
+                if (Get_IsOnSegmentXY(InWaypoints[Index - 1], InWaypoints[Index], InPoint))
+                { return Index - 1; }
+            }
+
+            return INDEX_NONE;
+        }
+
+        /**
+         * The resolved link a point stands on an end of, as an index into the field's own array, and
+         * INDEX_NONE for a point no link put there.
+         *
+         * Compared EXACTLY, for the reason the pinned-point rule above is: the portal's point and the
+         * waypoint are both copies of the one resolved endpoint, so an epsilon here would claim a
+         * neighbouring corner for the link.
+         */
+        auto Get_LinkIndexAt(
+            const FCk_GroundNav_PathResult& InResult,
+            const FVector&                  InPoint) -> int32
+        {
+            for (const auto& Portal : InResult._FunnelPortals)
+            {
+                if (Portal._LinkIndex == INDEX_NONE)
+                { continue; }
+
+                if (Portal._Left == InPoint)
+                { return Portal._LinkIndex; }
+            }
+
+            return INDEX_NONE;
+        }
+
+        /**
+         * Which of the finished waypoints an authored link put on the route, and which way it is walked.
+         *
+         * The first waypoint of a link in WALK order is its entry and the next one its exit. The
+         * direction is decided at the entry - entered at the record's _Start is Forward, the rule
+         * Get_IsEnteredAtLinkStart already applies - and then carried onto the exit, so both ends of
+         * one traversal answer the same.
+         *
+         * A link the field no longer resolves is left unstamped rather than stamped with a broken id:
+         * the portals were enumerated from this field, so the index is expected to be good, and a
+         * waypoint that says nothing is what a consumer can act on.
+         */
+        auto DoStamp_LinkWaypoints(
+            const FCk_GroundNav_PathResult&     InResult,
+            const FCk_GroundNav_Field&          InField,
+            TArray<FCk_GroundNav_PathWaypoint>& InOutWaypoints) -> void
+        {
+            auto EntryDirectionByLinkIndex = TMap<int32, ECk_GroundNav_LinkDirection>{};
+
+            for (auto& Waypoint : InOutWaypoints)
+            {
+                const int32 LinkIndex = Get_LinkIndexAt(InResult, Waypoint._Location);
+
+                if (LinkIndex == INDEX_NONE || NOT InField._ResolvedLinks.IsValidIndex(LinkIndex))
+                { continue; }
+
+                const auto& Link = InField._ResolvedLinks[LinkIndex];
+
+                Waypoint._LinkId = Link._Id;
+
+                if (const auto* EntryDirection = EntryDirectionByLinkIndex.Find(LinkIndex))
+                {
+                    Waypoint._LinkRole = ECk_GroundNav_LinkWaypointRole::Exit;
+                    Waypoint._LinkEntryDirection = *EntryDirection;
+
+                    continue;
+                }
+
+                const auto Direction = Waypoint._Location == Link._Start
+                    ? ECk_GroundNav_LinkDirection::Forward
+                    : ECk_GroundNav_LinkDirection::Backward;
+
+                Waypoint._LinkRole = ECk_GroundNav_LinkWaypointRole::Entry;
+                Waypoint._LinkEntryDirection = Direction;
+
+                EntryDirectionByLinkIndex.Add(LinkIndex, Direction);
+            }
         }
 
         // ------------------------------------------------------------------------------------------------------------
@@ -149,6 +273,54 @@ namespace ck::groundnav
             InResult._FunnelPortals,
             InRadiusUu,
             OutWaypoints);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_WithLinkEndpointsEmitted(
+            TConstArrayView<FVector>        InWaypoints,
+            const FCk_GroundNav_PathResult& InResult)
+        -> TArray<FVector>
+    {
+        using namespace pathpostprocess_private;
+
+        auto Emitted = TArray<FVector>{};
+        Emitted.Append(InWaypoints.GetData(), InWaypoints.Num());
+
+        // The start, which precedes every link endpoint in walk order, so the fallback below has an
+        // endpoint to place after before any link point of its own has been placed.
+        auto LastPlacedIndex = 0;
+
+        for (const auto& Portal : InResult._FunnelPortals)
+        {
+            if (Portal._LinkIndex == INDEX_NONE)
+            { continue; }
+
+            // Exactly, for the reason the pinned-point rule is exact: the portal's point and the
+            // waypoint are both copies of the one resolved endpoint.
+            const auto ExistingIndex = Emitted.Find(Portal._Left);
+
+            if (ExistingIndex != INDEX_NONE)
+            {
+                LastPlacedIndex = ExistingIndex;
+                continue;
+            }
+
+            // A crossed link's endpoint stands on the corridor, so no leg carrying it would mean the
+            // polyline and the portal list disagree. Placing it after the endpoint before it keeps
+            // walk order - entry then exit - which is the one property the stamp downstream reads.
+            const auto SegmentIndex = Get_SegmentContaining(Emitted, Portal._Left);
+
+            const auto InsertAtIndex = FMath::Min(
+                (SegmentIndex == INDEX_NONE ? LastPlacedIndex : SegmentIndex) + 1, Emitted.Num());
+
+            Emitted.Insert(Portal._Left, InsertAtIndex);
+
+            LastPlacedIndex = InsertAtIndex;
+        }
+
+        return Emitted;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -362,10 +534,12 @@ namespace ck::groundnav
         auto Funnelled = TArray<FVector>{};
         Get_Funnelled(InResult, RadiusUu, Funnelled);
 
+        const auto Emitted = Get_WithLinkEndpointsEmitted(Funnelled, InResult);
+
         const auto Pinned = Get_LinkWaypoints(InResult);
 
         const auto Offset = Get_CornerOffset(
-            Funnelled,
+            Emitted,
             Pinned,
             InField,
             InParams._Cost._CornerOffsetK * RadiusUu,
@@ -380,6 +554,8 @@ namespace ck::groundnav
             InParams._Cost,
             InParams._Agent,
             InParams._VerticalToleranceUu);
+
+        DoStamp_LinkWaypoints(InResult, InField, Plan._Waypoints);
 
         Plan._LengthUu = Plan._Waypoints.IsEmpty()
             ? 0.0
