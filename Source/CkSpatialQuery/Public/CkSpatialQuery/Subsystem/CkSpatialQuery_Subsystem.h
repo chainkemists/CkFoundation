@@ -8,7 +8,36 @@
 #include "CkJolt/CkJolt_ContactEvent.h"
 #include "CkJolt/Subsystem/CkJolt_Subsystem.h"
 
+#include <GameplayTagContainer.h>
+
 #include "CkSpatialQuery_Subsystem.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_spatial_query::diagnostics
+{
+    struct FProbePairKey
+    {
+        FName A;
+        FName B;
+
+        bool operator==(const FProbePairKey& InOther) const
+        { return A == InOther.A && B == InOther.B; }
+
+        friend uint32 GetTypeHash(const FProbePairKey& InKey)
+        { return HashCombine(GetTypeHash(InKey.A), GetTypeHash(InKey.B)); }
+    };
+
+    struct FProbePairCounts
+    {
+        uint64 Added = 0;
+        uint64 Persisted = 0;
+        uint64 Removed = 0;
+
+        auto Get_Total() const -> uint64
+        { return Added + Persisted + Removed; }
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,6 +80,15 @@ private:
 
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_Jolt_Subsystem> _JoltSubsystem;
+
+    TMap<ck_spatial_query::diagnostics::FProbePairKey, ck_spatial_query::diagnostics::FProbePairCounts>
+        _ProbePairAttribution;
+    int32 _ProbePairAttributionFramesRemaining = 0;
+    int32 _ProbePairAttributionFramesObserved = 0;
+    uint64 _ProbePairAttributionAdded = 0;
+    uint64 _ProbePairAttributionPersisted = 0;
+    uint64 _ProbePairAttributionRemoved = 0;
+    uint64 _ProbePairAttributionDroppedEvents = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

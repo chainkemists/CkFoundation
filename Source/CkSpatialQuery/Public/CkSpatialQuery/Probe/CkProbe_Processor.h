@@ -16,6 +16,9 @@
 #include "CkShapes/Cylinder/CkShapeCylinder_Fragment.h"
 #include "CkShapes/Sphere/CkShapeSphere_Fragment.h"
 
+#include <Jolt/Math/Quat.h>
+#include <Jolt/Math/Real.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // ReSharper disable once CppInconsistentNaming
@@ -214,16 +217,21 @@ namespace ck
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 
     public:
+        auto DoTick(TimeType InDeltaT) -> void;
+
         auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
-            const FFragment_Transform& InTransform) const -> void;
+            const FFragment_Transform& InTransform) -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+        TArray<JPH::BodyID> _PendingBodyIds;
+        TArray<JPH::RVec3> _PendingPositions;
+        TArray<JPH::Quat> _PendingRotations;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
