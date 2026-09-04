@@ -184,6 +184,42 @@ namespace ck::jolt::bake
         const FVector& InScale,
         const FString& InDebugName) -> JPH::Ref<JPH::Shape>;
 
+    enum class ECk_Jolt_WindingNormalizationStatus : uint8
+    {
+        NoVerdict,
+        Unchanged,
+        Normalized,
+        AmbiguousNegative,
+    };
+
+    /// Detailed outcome of NormalizeInsideOutClosedMeshComponents. Components whose topology cannot
+    /// prove a safe reversal remain unchanged; a strongly negative ratio on one of those components
+    /// is ambiguous and must reject the tri-mesh bake rather than silently shipping wrong-sided collision.
+    struct FCk_Jolt_WindingNormalizationResult
+    {
+        ECk_Jolt_WindingNormalizationStatus _Status = ECk_Jolt_WindingNormalizationStatus::NoVerdict;
+        int32 _NumComponents = 0;
+        int32 _NumHealthyComponents = 0;
+        int32 _NumRepairedComponents = 0;
+        int32 _NumOpenComponents = 0;
+        int32 _NumNonManifoldComponents = 0;
+        int32 _NumInconsistentComponents = 0;
+        int32 _NumMalformedComponents = 0;
+        int32 _NumNoVerdictComponents = 0;
+        int32 _NumAmbiguousNegativeComponents = 0;
+
+        auto Get_HasAmbiguousNegative() const -> bool
+        { return _NumAmbiguousNegativeComponents > 0; }
+    };
+
+    /// Reverses only closed, manifold, consistently oriented connected components with a strongly
+    /// negative signed-volume/AABB ratio. This is pure: it performs no asset or Jolt-shape work.
+    /// Open, non-manifold, inconsistent, malformed, and no-verdict components are intentionally left
+    /// unchanged and reported in the result.
+    CKJOLT_API auto NormalizeInsideOutClosedMeshComponents(
+        const JPH::VertexList& InVertices,
+        JPH::IndexedTriangleList& InOutTriangles) -> FCk_Jolt_WindingNormalizationResult;
+
     /// Signed enclosed volume of the triangle list (front face = right-handed winding, matching Jolt's
     /// single-sided mesh collision), normalized by AABB volume and measured about the AABB center so an
     /// open sheet stays near zero wherever the mesh sits. ~+1 for an outward-wound solid, strongly

@@ -16,9 +16,9 @@ class UStaticMesh;
 /// blob) per mesh under the configured _BakedMeshShapeRoots whose collision is worth pre-baking
 /// (contains a convex hull or cooked tri-mesh — pure-primitive collision is cheaper to rebuild at
 /// runtime than to load). Incremental: an existing asset whose BodySetupGuid, trace flag, and
-/// versions all match is skipped only after its current tri-mesh blob passes the winding audit.
-/// Forced rebuilds run the same audit before replacing a current blob, so invalid source content
-/// fails before any map is loaded.
+/// versions all match is skipped only after its current tri-mesh blob passes the winding audit. A
+/// strongly inside-out current blob rebuilds from source so closed components can normalize; a corrupt
+/// blob fails. Forced rebuilds run the same audit before replacing a current blob.
 /// Orphaned shape assets (source mesh gone or no longer worth
 /// baking) are LOGGED, not auto-deleted — same v1 policy as the map cook.
 ///
