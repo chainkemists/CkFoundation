@@ -71,9 +71,7 @@ namespace ck::inventory_handlers
             // path below. The framework's own creation code treats absence as possible.
             //
             // Said out loud rather than returned silently: leaving the claim in place re-creates the
-            // exact orphan this function exists to prevent, and nothing else at this point would ever
-            // record that it happened -- only a later census would see the corpse, with no way back to
-            // the site that made it.
+            // exact orphan this function exists to prevent, and only a later census would ever see it.
             if (NOT UCk_Utils_ContextOwner_UE::Has(InInventory))
             {
                 if (NOT InItemIsAboutToBeDestroyed)
@@ -88,8 +86,7 @@ namespace ck::inventory_handlers
 
             // No context owner to fall back to (or it IS the item) leaves the existing claim in
             // place -- wrong, but strictly better than orphaning the item onto nothing. Warned for the
-            // same reason as the branch above: the outcome is a leaked orphan, and a silent one is
-            // untraceable to its cause.
+            // same reason as above.
             const FCk_Handle ItemEntity = InItem;
             if (ck::Is_NOT_Valid(ContextOwner) || ContextOwner == ItemEntity)
             {
