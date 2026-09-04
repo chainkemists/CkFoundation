@@ -379,6 +379,101 @@ namespace ck_jolt_bake_extraction
     // Chaos cooked tri-mesh -> Jolt MeshShape
     // ----------------------------------------------------------------------------------------------------------------
 
+    struct FTriangleEdgeUse
+    {
+        int32 _TriangleIndex = INDEX_NONE;
+        uint32 _StartVertex = 0;
+        uint32 _EndVertex = 0;
+    };
+
+    static auto Get_UndirectedEdgeKey(uint32 InFirstVertex, uint32 InSecondVertex) -> uint64
+    {
+        const auto Lower = FMath::Min(InFirstVertex, InSecondVertex);
+        const auto Upper = FMath::Max(InFirstVertex, InSecondVertex);
+        return (static_cast<uint64>(Lower) << 32) | static_cast<uint64>(Upper);
+    }
+
+    static auto Get_ComponentWindingRatio(
+        const JPH::VertexList& InVertices,
+        const JPH::IndexedTriangleList& InTriangles,
+        const TArray<int32>& InComponentTriangleIndices) -> double
+    {
+        auto ComponentVertexIndices = TSet<uint32>{};
+
+        for (const auto TriangleIndex : InComponentTriangleIndices)
+        {
+            const auto& Indices = InTriangles[TriangleIndex].mIdx;
+            ComponentVertexIndices.Add(Indices[0]);
+            ComponentVertexIndices.Add(Indices[1]);
+            ComponentVertexIndices.Add(Indices[2]);
+        }
+
+        auto BoundsMin = FVector{TNumericLimits<double>::Max()};
+        auto BoundsMax = FVector{TNumericLimits<double>::Lowest()};
+
+        for (const auto VertexIndex : ComponentVertexIndices)
+        {
+            const auto& Vertex = InVertices[VertexIndex];
+            BoundsMin.X = FMath::Min(BoundsMin.X, static_cast<double>(Vertex.x));
+            BoundsMin.Y = FMath::Min(BoundsMin.Y, static_cast<double>(Vertex.y));
+            BoundsMin.Z = FMath::Min(BoundsMin.Z, static_cast<double>(Vertex.z));
+            BoundsMax.X = FMath::Max(BoundsMax.X, static_cast<double>(Vertex.x));
+            BoundsMax.Y = FMath::Max(BoundsMax.Y, static_cast<double>(Vertex.y));
+            BoundsMax.Z = FMath::Max(BoundsMax.Z, static_cast<double>(Vertex.z));
+        }
+
+        const auto BoundsSize = BoundsMax - BoundsMin;
+        constexpr auto MinJudgeableExtent = 0.1;
+        if (BoundsSize.GetMin() <= MinJudgeableExtent)
+        { return 0.0; }
+
+        const auto BoundsVolume = BoundsSize.X * BoundsSize.Y * BoundsSize.Z;
+        const auto Center = (BoundsMin + BoundsMax) * 0.5;
+        auto SignedVolumeSum = 0.0;
+
+        for (const auto TriangleIndex : InComponentTriangleIndices)
+        {
+            const auto& Indices = InTriangles[TriangleIndex].mIdx;
+            const auto ToCenteredVector = [&](uint32 InVertexIndex) -> FVector
+            {
+                const auto& Vertex = InVertices[InVertexIndex];
+                return FVector{Vertex.x, Vertex.y, Vertex.z} - Center;
+            };
+            const auto A = ToCenteredVector(Indices[0]);
+            const auto B = ToCenteredVector(Indices[1]);
+            const auto C = ToCenteredVector(Indices[2]);
+            SignedVolumeSum += FVector::DotProduct(A, FVector::CrossProduct(B, C));
+        }
+
+        return (SignedVolumeSum / 6.0) / BoundsVolume;
+    }
+
+    static auto Get_IsTriangleValid(
+        const JPH::VertexList& InVertices,
+        const JPH::IndexedTriangle& InTriangle) -> bool
+    {
+        const auto& Indices = InTriangle.mIdx;
+        const auto NumVertices = static_cast<uint32>(InVertices.size());
+
+        if (Indices[0] >= NumVertices || Indices[1] >= NumVertices || Indices[2] >= NumVertices
+            || Indices[0] == Indices[1] || Indices[1] == Indices[2] || Indices[2] == Indices[0])
+        { return false; }
+
+        const auto ToVector = [&](uint32 InVertexIndex) -> FVector
+        {
+            const auto& Vertex = InVertices[InVertexIndex];
+            return FVector{Vertex.x, Vertex.y, Vertex.z};
+        };
+
+        const auto A = ToVector(Indices[0]);
+        const auto B = ToVector(Indices[1]);
+        const auto C = ToVector(Indices[2]);
+        const auto HasFiniteVertices = NOT A.ContainsNaN() && NOT B.ContainsNaN() && NOT C.ContainsNaN();
+        const auto TwiceAreaSquared = FVector::CrossProduct(B - A, C - A).SizeSquared();
+
+        return HasFiniteVertices && TwiceAreaSquared > TNumericLimits<double>::Min();
+    }
+
     static auto Build_TriMeshShape(
         const UBodySetup& InBodySetup,
         const FVector& InScale,
@@ -453,22 +548,36 @@ namespace ck_jolt_bake_extraction
             { PushTriangle(Triangle[0], Triangle[1], Triangle[2]); }
         }
 
-        // Jolt mesh collision is SINGLE-SIDED: a mesh whose triangles face inward lets items through
-        // its visually-front side (they stop on the far face, inside the mesh) and the back-face-culled
-        // debug draw shows it as a hollow shell. The bake cannot repair winding — that is a source-asset
-        // defect — so it reports loudly and still bakes: refusing would downgrade wrong-sided collision
-        // to NO collision at all.
+        // Repair only closed, manifold, consistently oriented components whose signed volume proves they
+        // are wholly inside-out. Open and ambiguous topology remains untouched: reversing it would invent
+        // collision semantics, so the final validation below refuses to bake a strongly negative verdict.
+        const auto Normalization = NormalizeInsideOutClosedMeshComponents(Vertices, Triangles);
+        if (Normalization._NumRepairedComponents > 0)
+        {
+            ck::jolt::Warning(TEXT("Tri-mesh source [{}] had {} closed inside-out component(s) normalized "
+                "during the Jolt bake ({} healthy, {} no-verdict, {} open, {} non-manifold, {} inconsistent, "
+                "{} malformed)."),
+                InDebugName, Normalization._NumRepairedComponents, Normalization._NumHealthyComponents,
+                Normalization._NumNoVerdictComponents, Normalization._NumOpenComponents,
+                Normalization._NumNonManifoldComponents, Normalization._NumInconsistentComponents,
+                Normalization._NumMalformedComponents);
+        }
+
         constexpr auto InsideOutWindingRatioThreshold = -0.05;
         const auto WindingRatio = ComputeMeshWindingRatio(Vertices, Triangles);
+        const auto IsStillInsideOut = WindingRatio < InsideOutWindingRatioThreshold;
+        const auto HasAmbiguousNegative = Normalization.Get_HasAmbiguousNegative();
+        const auto WindingIsSafe = NOT IsStillInsideOut && NOT HasAmbiguousNegative;
 
-        CK_ENSURE_IF_NOT(WindingRatio >= InsideOutWindingRatioThreshold,
-            TEXT("Tri-mesh for [{}] baked INSIDE-OUT (signed-volume/bounds ratio [{}]): its single-sided "
-                 "Jolt collision faces INWARD — items pass through from outside and collide inside the "
-                 "mesh, and the Jolt debug draw shows a hollow shell. The SOURCE mesh's triangle winding "
-                 "is inverted: flip the normals in the DCC (or author simple collision on the asset). "
-                 "The shape is baked anyway so collision is not silently absent."),
-            InDebugName, WindingRatio)
-        {}
+        CK_ENSURE_IF_NOT(WindingIsSafe,
+            TEXT("Tri-mesh for [{}] cannot safely normalize its winding (signed-volume/bounds ratio [{}], "
+                 "{} ambiguous negative component(s)): refusing to bake single-sided collision. Correct the "
+                 "source topology or triangle winding."),
+            InDebugName, WindingRatio, Normalization._NumAmbiguousNegativeComponents)
+        { }
+
+        if (NOT WindingIsSafe)
+        { return {}; }
 
         const auto Settings = JPH::MeshShapeSettings{Vertices, Triangles};
         return Create_ShapeFromSettings(Settings, InDebugName);
@@ -663,6 +772,157 @@ namespace ck::jolt::bake
         }
 
         return Combine_Leaves(MoveTemp(Leaves), InDebugName);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        NormalizeInsideOutClosedMeshComponents(
+            const JPH::VertexList& InVertices,
+            JPH::IndexedTriangleList& InOutTriangles)
+        -> FCk_Jolt_WindingNormalizationResult
+    {
+        constexpr auto InsideOutWindingRatioThreshold = -0.05;
+        constexpr auto OutwardWindingRatioThreshold = 0.05;
+
+        auto Result = FCk_Jolt_WindingNormalizationResult{};
+        if (InVertices.empty() || InOutTriangles.empty())
+        { return Result; }
+
+        auto EdgeUsesByKey = TMap<uint64, TArray<FTriangleEdgeUse>>{};
+        auto ValidTriangles = TArray<bool>{};
+        ValidTriangles.Init(false, static_cast<int32>(InOutTriangles.size()));
+
+        for (auto TriangleIndex = 0; TriangleIndex < static_cast<int32>(InOutTriangles.size()); ++TriangleIndex)
+        {
+            const auto& Triangle = InOutTriangles[TriangleIndex];
+            if (NOT Get_IsTriangleValid(InVertices, Triangle))
+            {
+                ++Result._NumComponents;
+                ++Result._NumMalformedComponents;
+                continue;
+            }
+
+            ValidTriangles[TriangleIndex] = true;
+            const auto& Indices = Triangle.mIdx;
+            const auto AddEdgeUse = [&](uint32 InStartVertex, uint32 InEndVertex) -> void
+            {
+                EdgeUsesByKey.FindOrAdd(Get_UndirectedEdgeKey(InStartVertex, InEndVertex)).Add(
+                    FTriangleEdgeUse{TriangleIndex, InStartVertex, InEndVertex});
+            };
+
+            AddEdgeUse(Indices[0], Indices[1]);
+            AddEdgeUse(Indices[1], Indices[2]);
+            AddEdgeUse(Indices[2], Indices[0]);
+        }
+
+        auto VisitedTriangles = TArray<bool>{};
+        VisitedTriangles.Init(false, static_cast<int32>(InOutTriangles.size()));
+
+        const auto NumTriangles = static_cast<int32>(InOutTriangles.size());
+        for (auto StartTriangleIndex = 0; StartTriangleIndex < NumTriangles; ++StartTriangleIndex)
+        {
+            if (NOT ValidTriangles[StartTriangleIndex] || VisitedTriangles[StartTriangleIndex])
+            { continue; }
+
+            auto ComponentTriangleIndices = TArray<int32>{StartTriangleIndex};
+            VisitedTriangles[StartTriangleIndex] = true;
+
+            for (auto QueueIndex = 0; QueueIndex < ComponentTriangleIndices.Num(); ++QueueIndex)
+            {
+                const auto& Indices = InOutTriangles[ComponentTriangleIndices[QueueIndex]].mIdx;
+                const auto VisitEdge = [&](uint32 InStartVertex, uint32 InEndVertex) -> void
+                {
+                    const auto EdgeKey = Get_UndirectedEdgeKey(InStartVertex, InEndVertex);
+                    const auto& EdgeUses = EdgeUsesByKey.FindChecked(EdgeKey);
+                    for (const auto& EdgeUse : EdgeUses)
+                    {
+                        if (NOT VisitedTriangles[EdgeUse._TriangleIndex])
+                        {
+                            VisitedTriangles[EdgeUse._TriangleIndex] = true;
+                            ComponentTriangleIndices.Add(EdgeUse._TriangleIndex);
+                        }
+                    }
+                };
+
+                VisitEdge(Indices[0], Indices[1]);
+                VisitEdge(Indices[1], Indices[2]);
+                VisitEdge(Indices[2], Indices[0]);
+            }
+
+            ++Result._NumComponents;
+            auto IsClosed = true;
+            auto IsManifold = true;
+            auto IsConsistentlyOriented = true;
+
+            for (const auto TriangleIndex : ComponentTriangleIndices)
+            {
+                const auto& Indices = InOutTriangles[TriangleIndex].mIdx;
+                const auto AssessEdge = [&](uint32 InStartVertex, uint32 InEndVertex) -> void
+                {
+                    const auto EdgeKey = Get_UndirectedEdgeKey(InStartVertex, InEndVertex);
+                    const auto& EdgeUses = EdgeUsesByKey.FindChecked(EdgeKey);
+                    if (EdgeUses.Num() < 2)
+                    {
+                        IsClosed = false;
+                        return;
+                    }
+                    if (EdgeUses.Num() > 2)
+                    {
+                        IsManifold = false;
+                        return;
+                    }
+
+                    const auto& FirstUse = EdgeUses[0];
+                    const auto& SecondUse = EdgeUses[1];
+                    if (FirstUse._StartVertex != SecondUse._EndVertex || FirstUse._EndVertex != SecondUse._StartVertex)
+                    { IsConsistentlyOriented = false; }
+                };
+
+                AssessEdge(Indices[0], Indices[1]);
+                AssessEdge(Indices[1], Indices[2]);
+                AssessEdge(Indices[2], Indices[0]);
+            }
+
+            if (NOT IsClosed)
+            { ++Result._NumOpenComponents; }
+            if (NOT IsManifold)
+            { ++Result._NumNonManifoldComponents; }
+            if (NOT IsConsistentlyOriented)
+            { ++Result._NumInconsistentComponents; }
+
+            const auto WindingRatio = Get_ComponentWindingRatio(
+                InVertices, InOutTriangles, ComponentTriangleIndices);
+            const auto IsStronglyNegative = WindingRatio < InsideOutWindingRatioThreshold;
+            const auto IsSafelyReversible = IsClosed && IsManifold && IsConsistentlyOriented;
+
+            if (NOT IsSafelyReversible)
+            {
+                if (IsStronglyNegative)
+                { ++Result._NumAmbiguousNegativeComponents; }
+                continue;
+            }
+
+            if (IsStronglyNegative)
+            {
+                for (const auto TriangleIndex : ComponentTriangleIndices)
+                { Swap(InOutTriangles[TriangleIndex].mIdx[1], InOutTriangles[TriangleIndex].mIdx[2]); }
+                ++Result._NumRepairedComponents;
+            }
+            else if (WindingRatio > OutwardWindingRatioThreshold)
+            { ++Result._NumHealthyComponents; }
+            else
+            { ++Result._NumNoVerdictComponents; }
+        }
+
+        if (Result.Get_HasAmbiguousNegative())
+        { Result._Status = ECk_Jolt_WindingNormalizationStatus::AmbiguousNegative; }
+        else if (Result._NumRepairedComponents > 0)
+        { Result._Status = ECk_Jolt_WindingNormalizationStatus::Normalized; }
+        else if (Result._NumHealthyComponents > 0)
+        { Result._Status = ECk_Jolt_WindingNormalizationStatus::Unchanged; }
+
+        return Result;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -125,7 +125,7 @@ namespace ck::jolt::cook
             { ++NumAuthoredMaps; }
         }
 
-        if (InInput._bIncludeAlwaysCookDirectories)
+        if (InInput._IncludeAlwaysCookDirectories)
         {
             auto SortedCandidates = InInput._DiscoveredAlwaysCookMapCandidates;
             SortedCandidates.Sort();

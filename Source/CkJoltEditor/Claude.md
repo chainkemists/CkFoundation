@@ -29,6 +29,11 @@ build-cost optimization, so a drifted blob is loud on a LiveExtract project wher
 stale ensure provably cannot fire. That asymmetry is deliberate: an absent asset is an expected
 miss, a *present but wrong* one is always a defect.
 
+The tri-mesh bake safely reverses only a closed, manifold, consistently oriented component with a
+strongly negative signed-volume/AABB ratio. A current pre-baked tri-mesh with that verdict is rebuilt
+from source; open, non-manifold, inconsistent, malformed, and no-verdict components are never
+reversed. Ambiguous negative topology rejects the shape instead of shipping wrong-sided collision.
+
 ## Key API
 
 - `FCk_Jolt_WorldCooker::Cook_World(World, Mode)` — rebuilds every cell + the index from scratch.
