@@ -312,6 +312,18 @@ namespace ck::groundnav::nav_surface_adapter_private
         return false;
     }
 
+    /**
+     * MONOTONE for the life of a world, and it is the REGISTRY that makes it so.
+     *
+     * The sum runs over whatever fields world_fields currently holds, and that map has no per-volume
+     * unpublish: an entry is dropped only when the OnWorldCleanup hook drops the whole world's list
+     * (CkGroundNav_WorldFieldRegistry.cpp). A volume torn down mid-session therefore keeps its last
+     * published field — and every tile epoch in it — contributing here until the world ends.
+     *
+     * That retention is what keeps this number from FALLING, which is the property consumers read it
+     * for: a watcher treats any move as "the surface changed", so a drop would announce a rebuild that
+     * never happened and, worse, could land back on a value it had already caught up to.
+     */
     auto Do_SurfaceRevision(
         UWorld* InWorld) -> int64
     {

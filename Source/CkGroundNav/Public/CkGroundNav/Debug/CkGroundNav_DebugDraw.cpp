@@ -1,5 +1,7 @@
 #include "CkGroundNav_DebugDraw.h"
 
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend_Jolt.h"
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
@@ -11,6 +13,8 @@
 #include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 #include "CkGroundNav/Query/CkGroundNav_Funnel.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Points.h"
@@ -23,6 +27,7 @@
 #include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment_Data.h"
@@ -223,6 +228,69 @@ namespace ck::groundnav
                     FVector{Markup._Bounds.GetCenter().X, Markup._Bounds.GetCenter().Y,
                         Markup._Bounds.Max.Z},
                     Label, nullptr, Color, InLifetimeSeconds, DrawShadow);
+            }
+        }
+
+        // One publish is news only until the next one arrives, where a corridor stands until its
+        // agent replans. Drawing the two at one lifetime would leave a stale orange box per
+        // republish over a plate view that persists for a minute.
+        constexpr auto kChangedBoundsLifetimeSeconds = 2.0f;
+
+        auto Do_DrawInvalidation(
+            UWorld*                                      InWorld,
+            TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
+            TConstArrayView<FBox>                        InChangedBounds,
+            float                                        InLifetimeSeconds) -> void
+        {
+            constexpr auto Persistent = true;
+            constexpr auto DepthPriority = 0;
+            constexpr auto DrawShadow = true;
+            constexpr auto CorridorThickness = 2.0f;
+            constexpr auto FlaggedThickness = 4.0f;
+            constexpr auto ChangedThickness = 4.0f;
+
+            const auto CorridorColor = FColor{60, 220, 220};
+            const auto ChangedColor = FColor{255, 140, 40};
+
+            for (const auto& Corridor : InCorridors)
+            {
+                if (Corridor._Bounds.IsValid == 0)
+                { continue; }
+
+                DrawDebugBox(InWorld, Corridor._Bounds.GetCenter(), Corridor._Bounds.GetExtent(),
+                    CorridorColor, Persistent, InLifetimeSeconds, DepthPriority,
+                    Corridor._RepathRequired ? FlaggedThickness : CorridorThickness);
+
+                const auto FieldEpochText = Corridor._HasField
+                    ? FString::Printf(TEXT("%lld"), static_cast<long long>(Corridor._FieldEpoch))
+                    : FString{TEXT("none here")};
+
+                const auto Label = FString::Printf(
+                    TEXT("corridor %s | epoch %lld vs field %s | +%.0fuu | %s"),
+                    *Corridor._PathName,
+                    static_cast<long long>(Corridor._CorridorEpoch),
+                    *FieldEpochText,
+                    Corridor._InflationUu,
+                    Corridor._RepathRequired ? TEXT("REPATH REQUIRED") : TEXT("not flagged"));
+
+                DrawDebugString(InWorld,
+                    FVector{Corridor._Bounds.GetCenter().X, Corridor._Bounds.GetCenter().Y,
+                        Corridor._Bounds.Max.Z},
+                    Label, nullptr, CorridorColor, InLifetimeSeconds, DrawShadow);
+            }
+
+            for (const auto& Changed : InChangedBounds)
+            {
+                if (Changed.IsValid == 0)
+                { continue; }
+
+                DrawDebugBox(InWorld, Changed.GetCenter(), Changed.GetExtent(), ChangedColor,
+                    Persistent, kChangedBoundsLifetimeSeconds, DepthPriority, ChangedThickness);
+
+                DrawDebugString(InWorld,
+                    FVector{Changed.GetCenter().X, Changed.GetCenter().Y, Changed.Max.Z},
+                    TEXT("last published changed bounds"), nullptr, ChangedColor,
+                    kChangedBoundsLifetimeSeconds, DrawShadow);
             }
         }
     }
@@ -490,6 +558,8 @@ namespace ck::groundnav
             }
 
             Do_DrawMarkups(InWorld, InSnapshot._Markups, LifetimeSeconds);
+            Do_DrawInvalidation(InWorld, InSnapshot._Corridors, InSnapshot._ChangedBounds,
+                LifetimeSeconds);
 
             return;
         }
@@ -696,6 +766,107 @@ namespace ck::groundnav
 
         debugdraw_private::Do_DrawMarkups(
             InWorld, InMarkups, static_cast<float>(InLifetime.Get_Seconds()));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugCorridorsFromWorld(
+            UWorld* InWorld)
+        -> TArray<FCk_GroundNav_DebugCorridor>
+    {
+        auto Corridors = TArray<FCk_GroundNav_DebugCorridor>{};
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return Corridors; }
+
+        auto* Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+        if (ck::Is_NOT_Valid(Subsystem))
+        { return Corridors; }
+
+        auto TransientEntity = Subsystem->Get_TransientEntity();
+
+        if (ck::Is_NOT_Valid(TransientEntity))
+        { return Corridors; }
+
+        auto Registry = Subsystem->Get_Registry();
+
+        Registry.View<ck::FFragment_GroundNavPath_Current>().ForEach(
+            [&](FCk_Entity InEntity, const ck::FFragment_GroundNavPath_Current& InCurrent)
+            {
+                const auto& Bounds = InCurrent.Get_LastCorridorBounds();
+
+                // The same entity the invalidator itself skips: no corridor is no route a rebuild
+                // can have moved, and a box at the world origin would read as one.
+                if (Bounds.IsValid == 0)
+                { return; }
+
+                auto PathEntity = ck::MakeHandle(InEntity, TransientEntity);
+
+                const auto Field = world_fields::TryGet_Field(InWorld, Bounds.GetCenter());
+
+                auto Drawn = FCk_GroundNav_DebugCorridor{};
+
+                Drawn._Bounds = Bounds;
+                Drawn._PathName = ck::Format_UE(TEXT("{}"), PathEntity);
+                Drawn._InflationUu = InCurrent.Get_CorridorInflationUu();
+                Drawn._CorridorEpoch = InCurrent.Get_LastCorridorEpoch()._Value;
+                Drawn._HasField = Field.IsValid();
+                Drawn._FieldEpoch = Field.IsValid() ? Field->_Epoch._Value : 0;
+                Drawn._RepathRequired = PathEntity.Has<ck::FTag_GroundNavPath_RepathRequired>();
+
+                Corridors.Emplace(MoveTemp(Drawn));
+            });
+
+        return Corridors;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Make_DebugChangedBoundsFromWorld(
+            UWorld* InWorld)
+        -> TArray<FBox>
+    {
+        auto ChangedBounds = TArray<FBox>{};
+
+        if (ck::Is_NOT_Valid(InWorld))
+        { return ChangedBounds; }
+
+        for (const auto& Field : world_fields::Get_Fields(InWorld))
+        {
+            if (NOT Field.IsValid())
+            { continue; }
+
+            const auto Changed = Get_ChangedTileBounds(*Field, Field->_Epoch);
+
+            if (Changed.IsValid == 0)
+            { continue; }
+
+            ChangedBounds.Emplace(Changed);
+        }
+
+        return ChangedBounds;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDraw_DebugInvalidation(
+            UWorld*                                      InWorld,
+            TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
+            TConstArrayView<FBox>                        InChangedBounds,
+            FCk_Time                                     InLifetime)
+        -> void
+    {
+        const auto WorldIsValid = ck::IsValid(InWorld);
+
+        CK_ENSURE_IF_NOT(WorldIsValid, TEXT("Cannot draw GroundNav corridor outlines without a World"))
+        { return; }
+
+        debugdraw_private::Do_DrawInvalidation(
+            InWorld, InCorridors, InChangedBounds, static_cast<float>(InLifetime.Get_Seconds()));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -914,6 +1085,14 @@ namespace ck_groundnav_debugconsole
         TEXT("ck.GroundNav.Debug.MaxCells"), 20000,
         TEXT("Cap on DRAWN cells. Reported counts stay exact when the draw is capped."));
 
+    static TAutoConsoleVariable<int32> CVar_DrawInvalidation(
+        TEXT("ck.GroundNav.Debug.DrawInvalidation"), 0,
+        TEXT("Outline every cached path corridor in the plate view in cyan - thicker where it is ")
+        TEXT("flagged for a repath - and the ground each published field last reported changed in ")
+        TEXT("orange, which fades after a couple of seconds because it describes one publish. Off ")
+        TEXT("by default: a corridor is per AGENT, so a crowd draws one box each and the plate ")
+        TEXT("view stops being readable."));
+
     // ---- Projection probe -------------------------------------------------------------------------
 
     static TAutoConsoleVariable<float> CVar_ProbeExtentUu(
@@ -1062,6 +1241,32 @@ namespace ck_groundnav_debugconsole
         InOutSnapshot._Markups = ck::groundnav::Make_DebugMarkupsFromWorld(InWorld);
     }
 
+    // Collected here for the same reason the markup is: the bake produces a value that outlives
+    // its world, and a corridor is only readable while the registry holding it is still there.
+    auto DoStamp_Invalidation(UWorld* InWorld, ck::groundnav::FCk_GroundNav_DebugSnapshot& InOutSnapshot) -> void
+    {
+        if (CVar_DrawInvalidation.GetValueOnGameThread() == 0)
+        { return; }
+
+        InOutSnapshot._Corridors = ck::groundnav::Make_DebugCorridorsFromWorld(InWorld);
+        InOutSnapshot._ChangedBounds = ck::groundnav::Make_DebugChangedBoundsFromWorld(InWorld);
+    }
+
+    // What a provider has pushed and the revision watch has not broadcast yet. Reported apart
+    // from the changed bounds above, which are what the LAST publish already announced.
+    auto Get_PendingRebuildCount(UWorld* InWorld) -> int32
+    {
+        auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorld);
+
+        if (ck::Is_NOT_Valid(TransientEntity))
+        { return 0; }
+
+        if (NOT TransientEntity.Has<ck::FFragment_NavSurface_PendingRebuilds>())
+        { return 0; }
+
+        return TransientEntity.Get<ck::FFragment_NavSurface_PendingRebuilds>().Get_Bounds().Num();
+    }
+
     auto DoDraw_MarkupsIfEnabled(UWorld* InWorld, float InLifetimeSeconds) -> void
     {
         if (NOT ck::groundnav::debug::Get_IsMarkupDrawEnabled())
@@ -1078,6 +1283,7 @@ namespace ck_groundnav_debugconsole
         auto Snapshot = ck::groundnav::Make_DebugSnapshotFromWorld(InWorld, Make_BakeParams(InCentre));
 
         DoStamp_Markups(InWorld, Snapshot);
+        DoStamp_Invalidation(InWorld, Snapshot);
         DoDrawAndReport(InWorld, Snapshot);
     }
 
@@ -1087,6 +1293,7 @@ namespace ck_groundnav_debugconsole
             InWorld, Make_BakeParams(InCentre), LastDebugField);
 
         DoStamp_Markups(InWorld, Snapshot);
+        DoStamp_Invalidation(InWorld, Snapshot);
         DoDrawAndReport(InWorld, Snapshot);
     }
 
@@ -1332,6 +1539,64 @@ namespace ck_groundnav_debugconsole
             Report += TEXT("  no ground-nav volume has published a field in this world, so there is ")
                       TEXT("no markup to report and no plate to look under\n");
         }
+
+        DoLog_Report(Report);
+    }
+
+    auto DoInvalidationAndReport(UWorld* InWorld) -> void
+    {
+        const auto LifetimeSeconds = CVar_LifetimeSeconds.GetValueOnGameThread();
+
+        const auto Corridors = ck::groundnav::Make_DebugCorridorsFromWorld(InWorld);
+        const auto ChangedBounds = ck::groundnav::Make_DebugChangedBoundsFromWorld(InWorld);
+
+        ck::groundnav::DoDraw_DebugInvalidation(InWorld, Corridors, ChangedBounds,
+            FCk_Time{static_cast<double>(LifetimeSeconds)});
+
+        auto Report = FString::Printf(
+            TEXT("[GroundNav] invalidation: %d cached corridor(s)\n"), Corridors.Num());
+
+        for (const auto& Corridor : Corridors)
+        {
+            // Hoisted rather than spelled inline: a TCHAR* taken off a temporary FString inside
+            // the Printf argument list dangles before the format runs.
+            const auto FieldEpochText = Corridor._HasField
+                ? FString::Printf(TEXT("%lld"), static_cast<long long>(Corridor._FieldEpoch))
+                : FString{TEXT("no field covers this corridor")};
+
+            Report += FString::Printf(
+                TEXT("  %s : planned on epoch %lld, field at %s | inflated by %.1fuu | repath %s\n")
+                TEXT("    corridor bounds %s\n"),
+                *Corridor._PathName,
+                static_cast<long long>(Corridor._CorridorEpoch),
+                *FieldEpochText,
+                Corridor._InflationUu,
+                Corridor._RepathRequired ? TEXT("REQUIRED") : TEXT("not flagged"),
+                *Corridor._Bounds.ToString());
+        }
+
+        if (Corridors.IsEmpty())
+        {
+            Report += TEXT("  no agent in this world holds a cached corridor, so a rebuild has ")
+                      TEXT("nothing to be news to\n");
+        }
+
+        for (const auto& Changed : ChangedBounds)
+        {
+            Report += FString::Printf(
+                TEXT("  last published changed bounds : %s\n"), *Changed.ToString());
+        }
+
+        Report += FString::Printf(
+            TEXT("  pending rebuilds : %d box(es) pushed and not broadcast yet\n"),
+            Get_PendingRebuildCount(InWorld));
+
+        Report += FString::Printf(
+            TEXT("  gates : RepathOnRebuild bypassed %s | MarkupLiveGate bypassed %s | ")
+            TEXT("DrawInvalidation %d\n"),
+            ck::groundnav::debug::Get_IsRepathOnRebuildBypassed() ? TEXT("YES") : TEXT("no"),
+            ck::groundnav::debug::Get_IsMarkupLiveGateBypassed() ? TEXT("YES") : TEXT("no"),
+            CVar_DrawInvalidation.GetValueOnGameThread());
 
         DoLog_Report(Report);
     }
@@ -2413,6 +2678,28 @@ namespace ck_groundnav_debugconsole
             DoMarkupAndReport(InWorld, Point);
         }));
 
+    static FAutoConsoleCommandWithWorld ConsoleCommand_Invalidation(
+        TEXT("ck.GroundNav.Invalidation"),
+        TEXT("Report every cached ground-path corridor in this world and what a republish would ")
+        TEXT("be measured against: the corridor box the invalidator intersects, what that box was ")
+        TEXT("inflated by, the epoch the plan was made on against the epoch the field covering it ")
+        TEXT("has published, and whether the agent is already flagged for a repath. A corridor ")
+        TEXT("whose own epoch is not behind the field's is one no queued rebuild can be news to, ")
+        TEXT("which is the first thing the invalidator decides. Also reports the ground each ")
+        TEXT("field last published changed, how many rebuild boxes are pushed but not broadcast ")
+        TEXT("yet, and whether either debug gate is bypassing the answer. Every corridor also ")
+        TEXT("outlines in the world in cyan, and every changed-bounds box in orange. Reads the ")
+        TEXT("PUBLISHED fields, so ck.GroundNav.BakeFieldAt is not needed."),
+        FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* InWorld) -> void
+        {
+            const auto WorldIsValid = ck::IsValid(InWorld);
+
+            CK_ENSURE_IF_NOT(WorldIsValid, TEXT("ck.GroundNav.Invalidation ran without a World"))
+            { return; }
+
+            DoInvalidationAndReport(InWorld);
+        }));
+
     static FAutoConsoleCommandWithWorld ConsoleCommand_Probe(
         TEXT("ck.GroundNav.Probe"),
         TEXT("Project the player's own position onto the last field bake and draw the answer. ")
@@ -2753,7 +3040,8 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {}")
-                TEXT("\n  gates   : MarkupLiveGate bypassed {}"),
+                TEXT("\n            DrawInvalidation {}")
+                TEXT("\n  gates   : MarkupLiveGate bypassed {} RepathOnRebuild bypassed {}"),
                 CVar_ExtentUu.GetValueOnGameThread(),
                 CVar_HeightUu.GetValueOnGameThread(),
                 CVar_CellSizeUu.GetValueOnGameThread(),
@@ -2778,7 +3066,9 @@ namespace ck_groundnav_debugconsole
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
                 CVar_MaxCells.GetValueOnGameThread(),
                 ck::groundnav::debug::Get_IsMarkupDrawEnabled(),
-                ck::groundnav::debug::Get_IsMarkupLiveGateBypassed());
+                CVar_DrawInvalidation.GetValueOnGameThread(),
+                ck::groundnav::debug::Get_IsMarkupLiveGateBypassed(),
+                ck::groundnav::debug::Get_IsRepathOnRebuildBypassed());
         }));
 }
 

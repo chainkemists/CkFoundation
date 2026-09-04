@@ -15,6 +15,7 @@
 #include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_AreaPolicy.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 #include <Engine/World.h>
 
@@ -520,12 +521,16 @@ namespace ck
         InBuiltField._Epoch = Completed->_Epoch;
         InBuiltField._Field = MoveTemp(Completed);
 
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
         // A published field nobody can find from a world answers nothing: this is what the NavSurface
         // provider adapter resolves against.
-        groundnav::world_fields::Publish(
-            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
-            InVolumeEntity,
-            InBuiltField._Field);
+        groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+
+        // An invalid box goes out AS IS when no tile built: bounds-unknown is the honest payload, where
+        // substituting the volume's own bounds would name ground this publish never produced.
+        nav_surface::Request_NotifySurfaceRebuilt(World,
+            groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
 
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
 
@@ -576,10 +581,14 @@ namespace ck
         InBuiltField._Epoch = Derived.Key->_Epoch;
         InBuiltField._Field = Derived.Key;
 
-        groundnav::world_fields::Publish(
-            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
-            InVolumeEntity,
-            InBuiltField._Field);
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+        groundnav::world_fields::Publish(World, InVolumeEntity, InBuiltField._Field);
+
+        // Past the no-change early-out above, so this notify is only ever raised for a publish that
+        // moved something. An invalid box is reported as-is for the same reason the build reports one.
+        nav_surface::Request_NotifySurfaceRebuilt(World,
+            groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
