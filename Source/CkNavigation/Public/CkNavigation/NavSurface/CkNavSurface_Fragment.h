@@ -12,6 +12,13 @@ class UCk_NavAreaMarkup_UE;
 class UCk_Utils_NavSurface_UE;
 class UWorld;
 
+namespace ck::nav_surface
+{
+    CKNAVIGATION_API auto Request_NotifySurfaceRebuilt(
+        UWorld*     InWorld,
+        const FBox& InChangedBounds) -> void;
+}
+
 namespace ck::nav_surface_recast
 {
     CKNAVIGATION_API auto Apply_AreaMarkup(
@@ -62,6 +69,26 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_LastBroadcastRevision);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Rebuild bounds a provider has published and the watch has not broadcast yet, in publish order.
+    // Lives on the world's transient entity.
+    struct CKNAVIGATION_API FFragment_NavSurface_PendingRebuilds
+    {
+        CK_GENERATED_BODY(FFragment_NavSurface_PendingRebuilds);
+
+        friend class FProcessor_NavSurface_RevisionWatch;
+        friend auto nav_surface::Request_NotifySurfaceRebuilt(
+            UWorld*     InWorld,
+            const FBox& InChangedBounds) -> void;
+
+    private:
+        TArray<FBox> _Bounds;
+
+    public:
+        CK_PROPERTY_GET(_Bounds);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -121,7 +148,8 @@ namespace ck
         CKNAVIGATION_API,
         NavSurface_OnSurfaceRebuilt,
         FCk_Delegate_NavSurface_OnSurfaceRebuilt,
-        FCk_Handle);
+        FCk_Handle,
+        FBox);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -148,6 +148,18 @@ auto
     return InPath.Get<ck::FFragment_GroundNavPath_Result>().Get_HasFreshResult();
 }
 
+auto
+    UCk_Utils_GroundNavPath_UE::
+    Get_LastCorridorBounds(
+        const FCk_Handle_GroundNavPath& InPath)
+    -> FBox
+{
+    if (ck::Is_NOT_Valid(InPath))
+    { return FBox{ForceInit}; }
+
+    return InPath.Get<ck::FFragment_GroundNavPath_Current>().Get_LastCorridorBounds();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

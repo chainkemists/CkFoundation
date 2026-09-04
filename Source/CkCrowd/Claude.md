@@ -117,8 +117,8 @@ Plus `FProcessor_CrowdAgent_BlockedRecheck` (FGroup_Gameplay): resumes a held ag
 Plus `FProcessor_CrowdAgent_PathPendingWatchdog` (FGroup_Gameplay): the reconciler for the shared
 nav-path slot. **Read this before touching episode teardown.**
 
-Every provider — CkNavigation, CkPathNetwork, CkVoxelNav — parks the SAME
-`FFragment_Nav_PathResult` at `Pending` via `MarkPathPending`, but on the PathNetwork and VoxelNav
+Every provider — CkNavigation, CkPathNetwork, CkVoxelNav, CkGroundNav — parks the SAME
+`FFragment_Nav_PathResult` at `Pending` via `MarkPathPending`, but on the PathNetwork, VoxelNav and GroundNav
 branches no CkNavigation request is enqueued, so `MarkPathPending` is that slot's only writer and
 `OnRouteResolved` / `OnVoxelPathResolved` are the only things that can advance it — both gated on
 the agent still holding `PathPending` or `Walking`. `Request_Stop` removes both. Until 2026-08-19
@@ -174,6 +174,20 @@ band would find finishing the crossing cheaper than backing out plus detouring �
 re-path site (MoveTo, BlockedRecheck, PathRefresh) plans from just OUTSIDE the band via
 `Get_EscapedQueryStart` + the FindPath request's start override when the agent is inside and its
 goal is not. Master switch `_PathRefreshMode` (default Enabled).
+
+The same processor carries the ground-provider half of that mechanism, ahead of the disc pass and
+independent of it. When CkGroundNav republishes a rebuilt surface,
+`FProcessor_GroundNavPath_InvalidateOnRebuilt` raises `ck::FTag_GroundNavPath_RepathRequired` on
+every agent whose cached corridor the rebuild's bounds reach; GroundNav never clears it, and
+`PathRefresh`'s first gate is that flag's only consumer. The gate clears the tag for whichever
+provider carries it (a Recast agent shadowing on GroundNav holds a corridor too) and acts on it only
+where `_ActiveProvider` is `GroundNav` and a route is installed, re-issuing the SAME goal with
+`ECk_GroundNav_PlanMode::Repair` so the search warm-starts from the corridor already held. Nothing
+about the movement state changes: the agent keeps `Walking` its installed polyline while the repair
+is in flight — `MarkPathPending` parks the status without touching the corridor, and the watchdog
+reads Walking-without-`PathPending` as live — and `OnGroundNavPathResolved` swaps the polyline when
+the repair lands. A rebuild under a walking agent costs it a re-plan, never a stop; each one logs a
+single `[REBUILD-REPLAN]` Display line.
 
 **Two-phase planning** (`_PlanAroundStandingCrowds`, default Enabled, gated on markup being
 Enabled) sits on top of the toll: every agent FindPath plans FIRST with a STRICT filter that
