@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 #include "CkPathNetwork/Network/CkPathNetwork_Types.h"
 
 #include <CoreMinimal.h>
@@ -11,6 +12,37 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class ACk_PathNetwork_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_pathnetwork_editor
+{
+    // The projection verdict for one authored point. _Status is the provider's answer verbatim, so an
+    // unbuilt region stays distinguishable from a region that has no walkable surface at all; _Projected
+    // is only the Success shorthand under which the two delta fields are meaningful.
+    struct FNavmeshConformance
+    {
+        ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoProvider;
+        bool _Projected = false;
+        FVector _ProjectedPoint = FVector::ZeroVector;
+        float _PlanarDelta = 0.0f;
+        float _VerticalDelta = 0.0f;
+    };
+
+    // Pure: derives the conformance from a projection result already in hand. Takes no world and resolves
+    // no provider, which is what lets every status be exercised without one.
+    CKPATHNETWORKEDITOR_API auto
+    Make_NavmeshConformance(
+        const FVector& InSourcePoint,
+        const FCk_NavSurface_ProjectionResult& InProjected) -> FNavmeshConformance;
+
+    // Conformance is projected-and-within-both-deltas. The status is diagnostic and never a gate here.
+    CKPATHNETWORKEDITOR_API auto
+    Is_Conformant(
+        const FNavmeshConformance& InConformance,
+        float InMaxPlanarProjectionDelta,
+        float InMaxVerticalProjectionDelta) -> bool;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -71,12 +103,18 @@ private:
     UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     bool _Projected = false;
 
+    // The provider's verbatim verdict. Unbuilt and NoSurface both collapse into _Projected == false, and
+    // only this field tells a not-baked-yet region apart from one with nothing walkable in it.
+    UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoProvider;
+
 public:
     CK_PROPERTY_GET(_SourcePoint);
     CK_PROPERTY_GET(_ProjectedPoint);
     CK_PROPERTY_GET(_PlanarDelta);
     CK_PROPERTY_GET(_VerticalDelta);
     CK_PROPERTY_GET(_Projected);
+    CK_PROPERTY_GET(_Status);
 
 private:
     friend class UCk_Utils_PathNetworkEditor_UE;
