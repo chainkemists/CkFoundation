@@ -1,5 +1,8 @@
 #pragma once
 
+#include "CkGroundNav/Backend/CkGroundNav_GeometryBackend.h"
+#include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
+#include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
@@ -7,6 +10,7 @@
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_SpanField.h"
+#include "CkGroundNav/Debug/CkGroundNav_DebugSnapshotTraits.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 
 #include <CoreMinimal.h>
@@ -419,65 +423,10 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /**
-     * What a member of a captured value is allowed to BE.
-     *
-     * The value-only contract above is a comment until something checks it: every member is a copy
-     * today because every member was written as one, and one TObjectPtr added in good faith turns a
-     * drawable value into a dangling read that surfaces only after the world it came from is gone.
-     *
-     * True for the types a capture is actually made of - numbers, enums, the engine's own value
-     * structs, and arrays of those - and false for everything else BY DEFAULT, which is what makes
-     * this a fence rather than a blacklist: a raw pointer, a TObjectPtr, a TWeakObjectPtr, a
-     * TSharedPtr, an FCk_Handle and any type nobody has judged yet all fail the same way.
-     */
-    template <typename T>
-    struct TIsDebugSnapshotValue
-    {
-        static constexpr bool Value = std::is_arithmetic_v<T> || std::is_enum_v<T>;
-    };
-
-    template <>
-    struct TIsDebugSnapshotValue<FVector>
-    {
-        static constexpr bool Value = true;
-    };
-
-    template <>
-    struct TIsDebugSnapshotValue<FVector2D>
-    {
-        static constexpr bool Value = true;
-    };
-
-    template <>
-    struct TIsDebugSnapshotValue<FBox>
-    {
-        static constexpr bool Value = true;
-    };
-
-    template <>
-    struct TIsDebugSnapshotValue<FName>
-    {
-        static constexpr bool Value = true;
-    };
-
-    template <>
-    struct TIsDebugSnapshotValue<FString>
-    {
-        static constexpr bool Value = true;
-    };
-
-    template <typename T, typename T_Allocator>
-    struct TIsDebugSnapshotValue<TArray<T, T_Allocator>>
-    {
-        static constexpr bool Value = TIsDebugSnapshotValue<T>::Value;
-    };
-
-    /** Every member listed must pass. The language cannot enumerate a struct's members, so a type is
-     *  judged by NAMING them - which is why the list lives beside the type it describes, and why a
-     *  member added later belongs on it. */
-    template <typename... T_Members>
-    inline constexpr bool kDebugSnapshotMembersAreValues = (TIsDebugSnapshotValue<T_Members>::Value && ...);
+    // The fence itself is in Debug/CkGroundNav_DebugSnapshotTraits.h - it judges no capture type, so a
+    // capture that is not this one can reach it without reaching this file. What follows is this
+    // capture's own side of it: one assertion per type it is made of, each beside the type, and one
+    // specialisation per type so a capture built out of those types passes in turn.
 
     static_assert(kDebugSnapshotMembersAreValues<
             decltype(FCk_GroundNav_DebugCell::_SurfaceCentre), decltype(FCk_GroundNav_DebugCell::_ClearanceUu),
@@ -780,6 +729,46 @@ namespace ck::groundnav
         const FCk_GroundNav_PortalField&    InPortals,
         const FBox&                         InRegion,
         int32                               InMaxCells) -> FCk_GroundNav_DebugSnapshot;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every input the debug bake takes.
+     *
+     * Grouped rather than passed loose so that adding a tunable later does not re-order an argument
+     * list that console commands and callers both depend on positionally.
+     */
+    struct CKGROUNDNAV_API FCk_GroundNav_DebugBakeParams
+    {
+    public:
+        FVector _Centre = FVector::ZeroVector;
+        FVector _Extent = FVector{1500.0, 1500.0, 500.0};
+
+        FCk_GroundNav_BakeConfig _Config;
+        FCk_GroundNav_AgentProfile _Profile;
+        FCk_GroundNav_MergeTunables _MergeTunables;
+
+        int32 _MaxCells = 20000;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Bake the region around a point out of whatever geometry a backend hands over, and answer a
+     * standalone snapshot carrying the status that bake earned.
+     *
+     * This is where every status but NeverBuilt is DECIDED. A backend that cannot answer is
+     * BackendUnavailable and never an empty bake; a region no geometry reaches is NoGeometryInRegion;
+     * a stage that refused its inputs or hit a structural limit is Failed; a bake that ran to the end
+     * is Current. Nothing here touches a world, an actor or the registry - geometry arrives through
+     * the backend seam and nothing else does - so a hand-authored box list drives this derivation
+     * exactly as the live physics world drives it, which is what lets each status be pinned rather
+     * than reasoned about.
+     */
+    CKGROUNDNAV_API auto
+    Make_DebugSnapshotFromBackend(
+        const ICk_GroundNav_GeometryBackend& InBackend,
+        const FCk_GroundNav_DebugBakeParams& InParams) -> FCk_GroundNav_DebugSnapshot;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
