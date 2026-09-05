@@ -18,6 +18,7 @@
 #include "CkJolt/Subsystem/CkJolt_DebugRenderer.h"
 
 #include <HAL/IConsoleManager.h>
+#include <HAL/PlatformMisc.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -357,10 +358,19 @@ static TAutoConsoleVariable<int32> CVarJoltEnableAsyncPhysicsUpdate(
     TEXT("Only evaluated at subsystem initialization; runtime changes have no effect.")
 );
 
+static TAutoConsoleVariable<int32> CVarJoltNumPhysicsThreads(
+    TEXT("jolt.NumPhysicsThreads"),
+    -1,
+    TEXT("Override Jolt worker count. -1 = use project setting (default), 0 = automatic, 1..31 = explicit.\n")
+    TEXT("Only evaluated at subsystem initialization; runtime changes have no effect.")
+);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_jolt_subsystem
 {
+    static constexpr int32 MaxPhysicsWorkerThreads = 31;
+
     namespace cvar
     {
         static bool DebugDrawEnabled = false;
@@ -473,6 +483,26 @@ namespace ck_jolt_subsystem
         }
         return InProjectSettingValue;
     }
+
+    static auto ResolvePhysicsThreadCountOverride() -> int32
+    {
+        int32 CmdLineValue = -1;
+        FParse::Value(FCommandLine::Get(), TEXT("jolt.NumPhysicsThreads="), CmdLineValue);
+
+        const auto CVarValue = CVarJoltNumPhysicsThreads.GetValueOnGameThread();
+        const auto EffectiveValue = CmdLineValue >= 0 ? CmdLineValue : CVarValue;
+        if (EffectiveValue < 0)
+        { return -1; }
+
+        const auto ClampedValue = FMath::Clamp(EffectiveValue, 0, MaxPhysicsWorkerThreads);
+        const auto* Source = CmdLineValue >= 0 ? TEXT("command line") : TEXT("CVar");
+        ck::jolt::Log(
+            TEXT("Jolt: [NumPhysicsThreads] overridden by {} to [{}] (requested [{}])"),
+            Source,
+            ClampedValue,
+            EffectiveValue);
+        return ClampedValue;
+    }
 }
 
 auto
@@ -512,14 +542,32 @@ auto
     if (_ParallelPhysicsEnabled)
     {
         auto NumThreads = UCk_Utils_Jolt_ProjectSettings::Get_NumPhysicsThreads();
+        const auto NumThreadsOverride = ck_jolt_subsystem::ResolvePhysicsThreadCountOverride();
+        if (NumThreadsOverride >= 0)
+        { NumThreads = NumThreadsOverride; }
+
         if (NumThreads <= 0)
         {
-            NumThreads = FMath::Max(1, static_cast<int32>(std::thread::hardware_concurrency()) - 1);
+            // SMT siblings share execution and cache resources. Treating every logical processor as a full
+            // physics worker can more than double broadphase work on high-SMT desktop CPUs, so automatic mode
+            // follows the platform's physical-core count. Project/CVar/command-line overrides remain available
+            // for consoles, hybrid CPUs, and title-specific hardware matrices.
+            NumThreads = FMath::Clamp(
+                FPlatformMisc::NumberOfCores(),
+                1,
+                ck_jolt_subsystem::MaxPhysicsWorkerThreads);
+
+            ck::jolt::Log(
+                TEXT("Jolt: automatic worker count selected [{}] physical-core worker(s)"),
+                NumThreads);
         }
 
         _PhysicsThreadCount = NumThreads;
 
-        ck::jolt::Log(TEXT("Jolt: Creating JobSystemThreadPool with [{}] threads"), _PhysicsThreadCount);
+        ck::jolt::Log(
+            TEXT("Jolt: Creating JobSystemThreadPool with [{}] workers ([{}] total Jolt concurrency including caller)"),
+            _PhysicsThreadCount,
+            _PhysicsThreadCount + 1);
 
         // Two-step: SetThreadInitFunction must be set before Init() (names the workers for Insights).
         auto* ThreadPool = new JobSystemThreadPool();
