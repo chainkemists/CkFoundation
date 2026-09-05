@@ -114,7 +114,7 @@ namespace ck
         auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_AvoidanceVolume};
         ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
-        ProbeParams.Set_MotionType(ECk_MotionType::Kinematic);
+        ProbeParams.Set_MotionType(ECk_MotionType::Static);
         const auto Probe = UCk_Utils_Probe_UE::Add(ProbeTransform, ProbeParams, FCk_Probe_DebugInfo{});
         const auto HasProbe = ck::IsValid(Probe);
         CK_ENSURE_IF_NOT(HasProbe, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe feature."), Volume)
