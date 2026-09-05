@@ -53,6 +53,11 @@ namespace ck
      * providers are separate modules and neither can see the other's slot. Reads both, writes
      * neither - the shadow answer is never installed, and nothing here touches the nav slot the
      * Recast result was installed into.
+     *
+     * It also owns the WRITE into the world's diagnostics, which is why the per-frame containment
+     * escape is banked through it rather than from the pass that detects one: the diagnostics
+     * fragment names this processor as the crowd-side writer it trusts, and a second writer would be
+     * a second definition of where a fixture's counters live.
      */
     class CKCROWD_API FProcessor_GroundNav_ShadowCompare : public ck_exp::TProcessor<
             FProcessor_GroundNav_ShadowCompare,
@@ -76,6 +81,19 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InNavResult,
             const FFragment_GroundNavPath_Result& InGroundNavResult) -> void;
+
+        /**
+         * Banks one containment escape against the fixture the world's shadow run is open on, or
+         * against the fallback key when none is.
+         *
+         * Deliberately says nothing about what an escape IS - that is the detecting pass's question,
+         * asked once per agent per frame - and nothing about whether the world is shadowing, which
+         * the caller has already answered before paying for either projection.
+         */
+        static auto
+        DoRecord_ContainmentEscape(
+            const FCk_Handle& InAgent,
+            const UObject*    InWorldContext) -> void;
     };
 }
 

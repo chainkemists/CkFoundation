@@ -223,9 +223,20 @@ namespace ck::groundnav
         int32 _FailReasonDisagree = 0;
         int32 _PartialDisagree = 0;
 
-        // Produced by whoever owns the per-frame containment check, which is not a per-comparison
-        // question and so has no producer on this side. The column exists so the report's schema is
-        // complete whether or not a producer is wired up.
+        // Produced by the crowd's single Transform writer, FProcessor_CrowdAgent_ConstrainToNavmesh,
+        // and banked here through FProcessor_GroundNav_ShadowCompare: once per agent per frame, when
+        // the position that pass resolved projects onto walkable ground for one of the two providers
+        // and onto none for the other. Not a per-comparison question - it is asked of a POSITION
+        // rather than of a query pair - which is why it is raised there and only counted here.
+        //
+        // The count also folds COVERAGE divergence, and will until a whole-band field is staged: an
+        // agent standing outside every GroundNav volume is a split verdict on every frame it stands
+        // there, and the number therefore says how much of the run happened off the shadow provider's
+        // ground as well as where the two disagreed about ground both cover.
+        //
+        // Readable only through the shadow REPORT and through Get_ShadowContainmentEscapes - the
+        // per-comparison [SHADOW-CMP] line does not carry it, because the line describes a query pair
+        // and this describes a body.
         int32 _ContainmentEscapes = 0;
 
         int32 _StatusPairs[ShadowRecastStatusCount][ShadowGroundNavStatusCount] = {};

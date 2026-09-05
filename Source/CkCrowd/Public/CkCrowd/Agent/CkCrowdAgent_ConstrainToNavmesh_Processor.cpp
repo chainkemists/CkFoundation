@@ -10,7 +10,9 @@
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
+#include "CkCrowd/Shadow/CkCrowd_ShadowCompare_Processor.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,11 +50,87 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
-            FFragment_CrowdAgent_Grounding& InGrounding)
+            FFragment_CrowdAgent_Grounding& InGrounding) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_ConstrainToNavmeshProc);
 
+        auto ResolvedOffset = FVector::ZeroVector;
+
+        DoConstrain(InDeltaT, InHandle, InTransform, InParams, InPending, InGrounding, ResolvedOffset);
+
+        DoRecord_ContainmentEscape(
+            InHandle, InParams, InTransform.Get_Transform().GetLocation() + ResolvedOffset);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_ConstrainToNavmesh::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        _ActiveProviderTable = nullptr;
+        _ShadowProviderTable = nullptr;
+
+        DoRefresh_ShadowPairing();
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_ConstrainToNavmesh::
+        DoRefresh_ShadowPairing()
+        -> void
+    {
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(this->_TransientEntity);
+
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        if (nav_surface::Get_ShadowModeForWorld(World) != ECk_NavSurface_ShadowMode::GroundNavShadowsRecast)
+        { return; }
+
+        // The same pairing the path shadow dispatches under
+        // (CkCrowdAgent_HandleRequests_Processor.cpp:372): the shadowing provider answers ALONGSIDE
+        // the installing one, and the mode names which is which.
+        if (nav_surface::Get_ProviderForWorld(World) != ECk_NavSurface_Provider::Recast)
+        {
+            if (_UncountablePairingAnnounced)
+            { return; }
+
+            _UncountablePairingAnnounced = true;
+
+            ck::crowd::Display(
+                TEXT("World [{}] is shadowing while it already plans on GroundNav: there is no second ")
+                TEXT("answer for a position to disagree with, so containment escapes are NOT collected ")
+                TEXT("under that pairing and the shadow report's counter stands at zero"),
+                GetNameSafe(World));
+
+            return;
+        }
+
+        _ActiveProviderTable = nav_surface::TryGet_ProviderTable(ECk_NavSurface_Provider::Recast);
+        _ShadowProviderTable = nav_surface::TryGet_ProviderTable(ECk_NavSurface_Provider::GroundNav);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_ConstrainToNavmesh::
+        DoConstrain(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PendingDisplacement& InPending,
+            FFragment_CrowdAgent_Grounding& InGrounding,
+            FVector& InOutResolvedOffset)
+        -> void
+    {
         using namespace ck_crowd_agent_constrain_to_navmesh_algorithm;
 
         InGrounding._SecondsSinceVerified += static_cast<float>(InDeltaT.Get_Seconds());
@@ -78,6 +156,8 @@ namespace ck
         {
             if (InOffset.IsNearlyZero())
             { return; }
+
+            InOutResolvedOffset += InOffset;
 
             UCk_Utils_Transform_UE::Request_AddLocationOffset(
                 SelfTransform,
@@ -274,6 +354,66 @@ namespace ck
         }
 
         EnqueueOffset(SurfaceOffset);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_ConstrainToNavmesh::
+        Get_IsContainmentEscape(
+            ECk_NavSurface_QueryStatus InActiveStatus,
+            ECk_NavSurface_QueryStatus InShadowStatus)
+        -> bool
+    {
+        const auto ActiveFoundGround = InActiveStatus == ECk_NavSurface_QueryStatus::Success;
+        const auto ShadowFoundGround = InShadowStatus == ECk_NavSurface_QueryStatus::Success;
+
+        return ActiveFoundGround != ShadowFoundGround;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_ConstrainToNavmesh::
+        DoRecord_ContainmentEscape(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InResolvedLocation) const
+        -> void
+    {
+        if (_ActiveProviderTable == nullptr || _ShadowProviderTable == nullptr)
+        { return; }
+
+        // A body part-way across an authored link is between the two points the link joins and on no
+        // walkable cell in between, so what the two providers answer about where it stands says
+        // nothing about the ground either of them covers.
+        if (InHandle.Has<FTag_CrowdAgent_TraversingLink>())
+        { return; }
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        // The same box the constraint itself projects through, so a disagreement is about the two
+        // surfaces rather than about two differently sized searches.
+        const auto ProjectionExtent = FVector
+        {
+            InParams.Get_Radius(),
+            InParams.Get_Radius(),
+            InParams.Get_Height()
+        };
+
+        const auto Query = FCk_NavSurface_ProjectionQuery{InResolvedLocation}
+            .Set_SearchHalfExtents(ProjectionExtent);
+
+        const auto ActiveResult = _ActiveProviderTable->_ProjectPoint(World, Query);
+        const auto ShadowResult = _ShadowProviderTable->_ProjectPoint(World, Query);
+
+        if (NOT Get_IsContainmentEscape(ActiveResult.Get_Status(), ShadowResult.Get_Status()))
+        { return; }
+
+        FProcessor_GroundNav_ShadowCompare::DoRecord_ContainmentEscape(InHandle, World);
     }
 }
 

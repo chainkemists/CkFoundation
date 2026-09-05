@@ -23,19 +23,3 @@ UCk_NavArea_CrowdAvoidanceVolume_HardExclude::UCk_NavArea_CrowdAvoidanceVolume_H
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto ck::crowd_avoidance_volume::Get_NavAreaClass(
-    ECk_CrowdAvoidanceVolume_TraversalPolicy InTraversalPolicy) -> TSubclassOf<UNavArea>
-{
-    switch (InTraversalPolicy)
-    {
-        case ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible:
-            return UCk_NavArea_CrowdAvoidanceVolume::StaticClass();
-        case ECk_CrowdAvoidanceVolume_TraversalPolicy::HardExclude:
-            return UCk_NavArea_CrowdAvoidanceVolume_HardExclude::StaticClass();
-        case ECk_CrowdAvoidanceVolume_TraversalPolicy::CostOnly:
-            return UCk_NavArea_CrowdAvoidanceVolume_CostOnly::StaticClass();
-        default:
-            return {};
-    }
-}

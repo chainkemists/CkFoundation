@@ -56,6 +56,9 @@ namespace ck::groundnav::debug
      * an immediate draw expired on its own, so a view that is no longer wanted has to be switched
      * off rather than merely left alone. Turning it to 0 releases every set the world holds and
      * emits nothing further; turning it back on redraws on the next bake or the next update.
+     *
+     * A Shipping build holds no retained tier at all - the sets, the state behind them and this
+     * variable are compiled out - so it answers false there and nothing consults it.
      */
     CKGROUNDNAV_API auto
     Get_IsRetainedDrawEnabled() -> bool;
