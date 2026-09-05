@@ -16,15 +16,25 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_FollowUnrealAnchor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_QueueRootChildren);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer0>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer1>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer1>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer2>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer2>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer3>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer3>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer4>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer4>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer5>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer5>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer6>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer6>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer7>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer7>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer8>);
+CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer8>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer9>);
 
 namespace ck
@@ -75,6 +85,7 @@ namespace ck
         InCurrent._RelativeTransform = InRequest.Get_NewRelativeTransform();
 
         InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+        FUtils_SceneNodePropagation::Queue(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -136,6 +147,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    auto
+        FProcessor_SceneNode_QueueRootChildren::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren)
+        -> void
+    {
+        FUtils_SceneNodePropagation::PublishChildrenIfChanged(InHandle, InTransform.Get_Transform());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_Layer>
     TProcessor_SceneNode_Update<T_Layer>::
         TProcessor_SceneNode_Update(
@@ -152,18 +177,17 @@ namespace ck
             const SceneNodeParent& InParent,
             const FFragment_SceneNode_Current& InCurrent,
             FFragment_Transform& InTransform,
-            FFragment_Transform_Previous& InPrevTransform)
+            FFragment_Transform_Previous& InPrevTransform,
+            const FFragment_SceneNode_PropagationState& InPropagationState)
         -> void
     {
+        FUtils_SceneNodePropagation::DeferConsume(InHandle, InPropagationState.Get_QueueGeneration());
+
         const auto HadRelativeTransformUpdatedTag = InHandle.template Has<FTag_SceneNode_RelativeTransformUpdated>();
 
         const auto ParentEntity = InParent.Get_Entity().Get_Entity();
         auto ReadOnlyParent = InHandle.ReadEntity(ParentEntity);
-        const auto ParentHasTransformUpdated = ReadOnlyParent.template Has<FTag_Transform_Updated>();
         const auto ParentHasRestoreRebase = ReadOnlyParent.template Has<FTag_Transform_RestoreRebase>();
-
-        if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
-        { return; }
 
         // Cleared BEFORE the early return below, so root-component/mesh-socket entities don't keep it
         // permanently (which would block probe setup)
@@ -200,15 +224,39 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_Layer>
+    auto
+        TProcessor_SceneNode_QueueChildren<T_Layer>::
+        ForEachEntity(
+            typename Super::TimeType InDeltaT,
+            typename Super::HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren)
+        -> void
+    {
+        FUtils_SceneNodePropagation::PublishChildrenIfChanged(InHandle, InTransform.Get_Transform());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer0>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer0>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer1>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer1>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer2>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer2>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer3>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer3>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer4>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer4>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer5>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer5>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer6>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer6>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer7>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer7>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer8>;
+    template TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer8>;
     template TProcessor_SceneNode_Update<FTag_SceneNode_Layer9>;
 }
 
