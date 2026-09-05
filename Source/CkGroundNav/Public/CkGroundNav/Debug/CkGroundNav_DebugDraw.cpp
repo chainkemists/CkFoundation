@@ -107,23 +107,6 @@ namespace ck::groundnav
             }
         }
 
-        // The wording, which the retained tier has no equivalent for. A build that loses it keeps the
-        // red box, which is the half a developer cannot miss.
-        auto Do_DrawOpenBodyLabels(
-            UWorld*                            InWorld,
-            const FCk_GroundNav_DebugSnapshot& InSnapshot,
-            float                              InLifetimeSeconds) -> void
-        {
-            for (const auto& OpenBody : InSnapshot._OpenBodies)
-            {
-                const auto Centre = OpenBody._Bounds.GetCenter();
-
-                DrawDebugString(InWorld, FVector{Centre.X, Centre.Y, OpenBody._Bounds.Max.Z},
-                    FString::Printf(TEXT("OPEN COLLISION - %s - %d open edges"),
-                        *OpenBody._Description, OpenBody._OpenEdgeCount),
-                    nullptr, FColor::Red, InLifetimeSeconds, DrawShadow);
-            }
-        }
 
         // Returns how many dashes it added, so a caller can bill them to the right count.
         auto Do_BuildDashedBox(
@@ -233,36 +216,6 @@ namespace ck::groundnav
             }
         }
 
-        auto Do_DrawMarkupLabels(
-            UWorld*                                    InWorld,
-            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
-            float                                      InLifetimeSeconds) -> void
-        {
-            for (const auto& Markup : InMarkups)
-            {
-                if (NOT Markup._Bounds.IsValid)
-                { continue; }
-
-                const auto Color = Get_MarkupColor(Markup);
-
-                const auto MultiplierLabel = Markup._Kind == ECk_GroundNav_MarkupKind::Cost
-                    ? FString::Printf(TEXT(" x%.2f"), Markup._CostMultiplier)
-                    : FString{};
-
-                const auto Label = FString::Printf(TEXT("markup #%d %s | %s%s | %s | %s"),
-                    Markup._RecordId,
-                    *ck::Format_UE(TEXT("{}"), Markup._Kind),
-                    *Markup._AreaTagName.ToString(),
-                    *MultiplierLabel,
-                    Markup._IsEnabled ? TEXT("enabled") : TEXT("DISABLED"),
-                    Markup._IsLive ? TEXT("live") : TEXT("NOT live"));
-
-                DrawDebugString(InWorld,
-                    FVector{Markup._Bounds.GetCenter().X, Markup._Bounds.GetCenter().Y,
-                        Markup._Bounds.Max.Z},
-                    Label, nullptr, Color, InLifetimeSeconds, DrawShadow);
-            }
-        }
 
         // An end that found NO ground outranks an end merely waiting on a bake, and both outrank a
         // disable: an author can switch a disabled link back on and cannot switch on ground that is
@@ -330,6 +283,156 @@ namespace ck::groundnav
             }
         }
 
+
+        // One publish is news only until the next one arrives, where a corridor stands until its
+        // agent replans. The retained geometry of both is replaced whole on the next rebuild, so the
+        // short lifetime survives on the LABELS - which is where a stale box would otherwise be read
+        // as a fresh one.
+        constexpr auto kChangedBoundsLifetimeSeconds = 2.0f;
+
+#if !UE_BUILD_SHIPPING
+        static TAutoConsoleVariable<float> CVar_RepairHighlightSeconds(
+            TEXT("ck.GroundNav.Debug.RepairHighlightSeconds"), 2.0f,
+            TEXT("How long the label on the tiles an open local repair is re-baking stays up, in ")
+            TEXT("seconds. A repair's tile set describes ONE publish and stops being true the moment ")
+            TEXT("the next slice lands, so it carries a short lifetime of its own rather than the ")
+            TEXT("view's - but a repair can finish inside a frame, and a highlight that expired with ")
+            TEXT("it could not be caught."));
+#endif
+
+        const auto CorridorColor = FColor{60, 220, 220};
+        const auto ChangedBoundsColor = FColor{255, 140, 40};
+
+        auto Do_BuildInvalidation(
+            FCk_GroundNav_DebugDrawBuild&                InOutBuild,
+            TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
+            TConstArrayView<FBox>                        InChangedBounds) -> void
+        {
+            constexpr auto CorridorThickness = 2.0f;
+            constexpr auto FlaggedThickness = 4.0f;
+            constexpr auto ChangedThickness = 4.0f;
+
+            for (const auto& Corridor : InCorridors)
+            {
+                if (Corridor._Bounds.IsValid == 0)
+                { continue; }
+
+                InOutBuild.Add_Box(Corridor._Bounds.GetCenter(), Corridor._Bounds.GetExtent(),
+                    CorridorColor, Corridor._RepathRequired ? FlaggedThickness : CorridorThickness);
+
+                ++InOutBuild._Tally._CorridorBoxes;
+            }
+
+            for (const auto& Changed : InChangedBounds)
+            {
+                if (Changed.IsValid == 0)
+                { continue; }
+
+                InOutBuild.Add_Box(Changed.GetCenter(), Changed.GetExtent(), ChangedBoundsColor,
+                    ChangedThickness);
+
+                ++InOutBuild._Tally._ChangedBoundsBoxes;
+            }
+        }
+
+
+        // The epoch the latest publish stamped reads GREEN wherever it landed, apart from the blue
+        // every other built tile draws in. After a local repair those green tiles are the whole of
+        // what was re-baked, and the blue ones are the ground carried across untouched.
+        const auto RepairColor = FColor{120, 235, 140};
+
+        const auto RepairPendingColor = FColor{255, 140, 40};
+
+        auto Do_BuildRepair(
+            FCk_GroundNav_DebugDrawBuild&      InOutBuild,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
+        {
+            constexpr auto RepairThickness = 4.0f;
+            constexpr auto HighlightThickness = 5.0f;
+
+            if (InSnapshot._PendingDirtyBounds.IsValid != 0)
+            {
+                InOutBuild._Tally._RepairDashSegments +=
+                    Do_BuildDashedBox(InOutBuild, InSnapshot._PendingDirtyBounds, RepairPendingColor);
+            }
+
+            if (NOT InSnapshot._RepairInProgress)
+            { return; }
+
+            if (InSnapshot._RepairDirtyBounds.IsValid != 0)
+            {
+                InOutBuild.Add_Box(InSnapshot._RepairDirtyBounds.GetCenter(),
+                    InSnapshot._RepairDirtyBounds.GetExtent(), RepairColor, RepairThickness);
+
+                ++InOutBuild._Tally._RepairBoxes;
+            }
+
+            for (const auto& TileBounds : InSnapshot._RepairTileBounds)
+            {
+                if (TileBounds.IsValid == 0)
+                { continue; }
+
+                InOutBuild.Add_Box(TileBounds.GetCenter(), TileBounds.GetExtent(), RepairColor,
+                    HighlightThickness);
+
+                ++InOutBuild._Tally._RepairBoxes;
+            }
+        }
+
+        // Every label draw and the retained tier below are what a Shipping build has no viewer for:
+        // the text, the sets, the state that decides when one is rebuilt, and the variable above. The
+        // label helpers sit here rather than beside the pure BUILD each of them accompanies, because a
+        // build is a value a shipped binary can still be asked for and a DrawDebugString is not.
+#if !UE_BUILD_SHIPPING
+        // The wording, which the retained tier has no equivalent for. A build that loses it keeps the
+        // red box, which is the half a developer cannot miss.
+        auto Do_DrawOpenBodyLabels(
+            UWorld*                            InWorld,
+            const FCk_GroundNav_DebugSnapshot& InSnapshot,
+            float                              InLifetimeSeconds) -> void
+        {
+            for (const auto& OpenBody : InSnapshot._OpenBodies)
+            {
+                const auto Centre = OpenBody._Bounds.GetCenter();
+
+                DrawDebugString(InWorld, FVector{Centre.X, Centre.Y, OpenBody._Bounds.Max.Z},
+                    FString::Printf(TEXT("OPEN COLLISION - %s - %d open edges"),
+                        *OpenBody._Description, OpenBody._OpenEdgeCount),
+                    nullptr, FColor::Red, InLifetimeSeconds, DrawShadow);
+            }
+        }
+
+        auto Do_DrawMarkupLabels(
+            UWorld*                                    InWorld,
+            TConstArrayView<FCk_GroundNav_DebugMarkup> InMarkups,
+            float                                      InLifetimeSeconds) -> void
+        {
+            for (const auto& Markup : InMarkups)
+            {
+                if (NOT Markup._Bounds.IsValid)
+                { continue; }
+
+                const auto Color = Get_MarkupColor(Markup);
+
+                const auto MultiplierLabel = Markup._Kind == ECk_GroundNav_MarkupKind::Cost
+                    ? FString::Printf(TEXT(" x%.2f"), Markup._CostMultiplier)
+                    : FString{};
+
+                const auto Label = FString::Printf(TEXT("markup #%d %s | %s%s | %s | %s"),
+                    Markup._RecordId,
+                    *ck::Format_UE(TEXT("{}"), Markup._Kind),
+                    *Markup._AreaTagName.ToString(),
+                    *MultiplierLabel,
+                    Markup._IsEnabled ? TEXT("enabled") : TEXT("DISABLED"),
+                    Markup._IsLive ? TEXT("live") : TEXT("NOT live"));
+
+                DrawDebugString(InWorld,
+                    FVector{Markup._Bounds.GetCenter().X, Markup._Bounds.GetCenter().Y,
+                        Markup._Bounds.Max.Z},
+                    Label, nullptr, Color, InLifetimeSeconds, DrawShadow);
+            }
+        }
+
         // The arrowheads and the id. PMG's retained tier draws neither a cone nor text, so which way
         // a link may be walked is the one thing a build cannot carry - the span, its colour and its
         // ticks all survive.
@@ -378,55 +481,6 @@ namespace ck::groundnav
             }
         }
 
-        // One publish is news only until the next one arrives, where a corridor stands until its
-        // agent replans. The retained geometry of both is replaced whole on the next rebuild, so the
-        // short lifetime survives on the LABELS - which is where a stale box would otherwise be read
-        // as a fresh one.
-        constexpr auto kChangedBoundsLifetimeSeconds = 2.0f;
-
-        static TAutoConsoleVariable<float> CVar_RepairHighlightSeconds(
-            TEXT("ck.GroundNav.Debug.RepairHighlightSeconds"), 2.0f,
-            TEXT("How long the label on the tiles an open local repair is re-baking stays up, in ")
-            TEXT("seconds. A repair's tile set describes ONE publish and stops being true the moment ")
-            TEXT("the next slice lands, so it carries a short lifetime of its own rather than the ")
-            TEXT("view's - but a repair can finish inside a frame, and a highlight that expired with ")
-            TEXT("it could not be caught."));
-
-        const auto CorridorColor = FColor{60, 220, 220};
-        const auto ChangedBoundsColor = FColor{255, 140, 40};
-
-        auto Do_BuildInvalidation(
-            FCk_GroundNav_DebugDrawBuild&                InOutBuild,
-            TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
-            TConstArrayView<FBox>                        InChangedBounds) -> void
-        {
-            constexpr auto CorridorThickness = 2.0f;
-            constexpr auto FlaggedThickness = 4.0f;
-            constexpr auto ChangedThickness = 4.0f;
-
-            for (const auto& Corridor : InCorridors)
-            {
-                if (Corridor._Bounds.IsValid == 0)
-                { continue; }
-
-                InOutBuild.Add_Box(Corridor._Bounds.GetCenter(), Corridor._Bounds.GetExtent(),
-                    CorridorColor, Corridor._RepathRequired ? FlaggedThickness : CorridorThickness);
-
-                ++InOutBuild._Tally._CorridorBoxes;
-            }
-
-            for (const auto& Changed : InChangedBounds)
-            {
-                if (Changed.IsValid == 0)
-                { continue; }
-
-                InOutBuild.Add_Box(Changed.GetCenter(), Changed.GetExtent(), ChangedBoundsColor,
-                    ChangedThickness);
-
-                ++InOutBuild._Tally._ChangedBoundsBoxes;
-            }
-        }
-
         auto Do_DrawInvalidationLabels(
             UWorld*                                      InWorld,
             TConstArrayView<FCk_GroundNav_DebugCorridor> InCorridors,
@@ -465,49 +519,6 @@ namespace ck::groundnav
                     FVector{Changed.GetCenter().X, Changed.GetCenter().Y, Changed.Max.Z},
                     TEXT("last published changed bounds"), nullptr, ChangedBoundsColor,
                     kChangedBoundsLifetimeSeconds, DrawShadow);
-            }
-        }
-
-        // The epoch the latest publish stamped reads GREEN wherever it landed, apart from the blue
-        // every other built tile draws in. After a local repair those green tiles are the whole of
-        // what was re-baked, and the blue ones are the ground carried across untouched.
-        const auto RepairColor = FColor{120, 235, 140};
-
-        const auto RepairPendingColor = FColor{255, 140, 40};
-
-        auto Do_BuildRepair(
-            FCk_GroundNav_DebugDrawBuild&      InOutBuild,
-            const FCk_GroundNav_DebugSnapshot& InSnapshot) -> void
-        {
-            constexpr auto RepairThickness = 4.0f;
-            constexpr auto HighlightThickness = 5.0f;
-
-            if (InSnapshot._PendingDirtyBounds.IsValid != 0)
-            {
-                InOutBuild._Tally._RepairDashSegments +=
-                    Do_BuildDashedBox(InOutBuild, InSnapshot._PendingDirtyBounds, RepairPendingColor);
-            }
-
-            if (NOT InSnapshot._RepairInProgress)
-            { return; }
-
-            if (InSnapshot._RepairDirtyBounds.IsValid != 0)
-            {
-                InOutBuild.Add_Box(InSnapshot._RepairDirtyBounds.GetCenter(),
-                    InSnapshot._RepairDirtyBounds.GetExtent(), RepairColor, RepairThickness);
-
-                ++InOutBuild._Tally._RepairBoxes;
-            }
-
-            for (const auto& TileBounds : InSnapshot._RepairTileBounds)
-            {
-                if (TileBounds.IsValid == 0)
-                { continue; }
-
-                InOutBuild.Add_Box(TileBounds.GetCenter(), TileBounds.GetExtent(), RepairColor,
-                    HighlightThickness);
-
-                ++InOutBuild._Tally._RepairBoxes;
             }
         }
 
@@ -678,6 +689,7 @@ namespace ck::groundnav
                 ++Emitted;
             }
         }
+#endif
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -989,6 +1001,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         DoDraw_DebugSnapshot(
             UWorld*                                 InWorld,
@@ -1097,6 +1110,19 @@ namespace ck::groundnav
                 DepthPriority);
         }
     }
+#else
+    // A Shipping build has nobody to draw for, so the entry points stand as no-ops rather than
+    // disappearing: every caller compiles in every configuration without an #if of its own.
+    auto
+        DoDraw_DebugSnapshot(
+            UWorld*,
+            const FCk_GroundNav_DebugSnapshot&,
+            const FCk_GroundNav_DebugDrawSelection&,
+            FCk_Time)
+        -> void
+    {
+    }
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -1152,6 +1178,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         DoDraw_DebugMarkups(
             UWorld*                                    InWorld,
@@ -1174,6 +1201,16 @@ namespace ck::groundnav
         debugdraw_private::Do_DrawMarkupLabels(
             InWorld, InMarkups, static_cast<float>(InLifetime.Get_Seconds()));
     }
+#else
+    auto
+        DoDraw_DebugMarkups(
+            UWorld*,
+            TConstArrayView<FCk_GroundNav_DebugMarkup>,
+            FCk_Time)
+        -> void
+    {
+    }
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -1247,6 +1284,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         DoDraw_DebugLinks(
             UWorld*                                  InWorld,
@@ -1267,6 +1305,16 @@ namespace ck::groundnav
         debugdraw_private::Do_DrawLinkArrowsAndLabels(
             InWorld, InLinks, static_cast<float>(InLifetime.Get_Seconds()));
     }
+#else
+    auto
+        DoDraw_DebugLinks(
+            UWorld*,
+            TConstArrayView<FCk_GroundNav_DebugLink>,
+            FCk_Time)
+        -> void
+    {
+    }
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -1352,6 +1400,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         DoDraw_DebugInvalidation(
             UWorld*                                      InWorld,
@@ -1373,6 +1422,17 @@ namespace ck::groundnav
         debugdraw_private::Do_DrawInvalidationLabels(
             InWorld, InCorridors, InChangedBounds, static_cast<float>(InLifetime.Get_Seconds()));
     }
+#else
+    auto
+        DoDraw_DebugInvalidation(
+            UWorld*,
+            TConstArrayView<FCk_GroundNav_DebugCorridor>,
+            TConstArrayView<FBox>,
+            FCk_Time)
+        -> void
+    {
+    }
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -1436,6 +1496,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         DoDraw_DebugRepair(
             UWorld*                            InWorld,
@@ -1454,6 +1515,15 @@ namespace ck::groundnav
 
         debugdraw_private::Do_DrawRepairLabels(InWorld, InSnapshot);
     }
+#else
+    auto
+        DoDraw_DebugRepair(
+            UWorld*,
+            const FCk_GroundNav_DebugSnapshot&)
+        -> void
+    {
+    }
+#endif
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -1650,6 +1720,7 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+#if !UE_BUILD_SHIPPING
     auto
         Do_PublishRetainedDebugDraw(
             UWorld*                             InWorld,
@@ -1883,6 +1954,77 @@ namespace ck::groundnav
 
         return Get_Group(*State, InGroup)._Sets.Num();
     }
+#else
+    // Nothing is retained in a Shipping build, so the readers answer exactly what a world that has
+    // released everything answers.
+    auto
+        Do_PublishRetainedDebugDraw(
+            UWorld*,
+            EDebugDrawGroup,
+            const FCk_GroundNav_DebugDrawBuild&)
+        -> void
+    {
+    }
+
+    auto
+        Do_AppendRetainedDebugDraw(
+            UWorld*,
+            EDebugDrawGroup,
+            const FCk_GroundNav_DebugDrawBuild&)
+        -> void
+    {
+    }
+
+    auto
+        Do_UpdateRetainedDebugDraw(
+            UWorld*,
+            const FCk_GroundNav_DebugSnapshot&,
+            const FCk_GroundNav_DebugSnapshotCacheKey&,
+            const FCk_GroundNav_DebugDrawSelection&)
+        -> void
+    {
+    }
+
+    auto
+        Do_ReleaseRetainedDebugDraw(
+            UWorld*)
+        -> void
+    {
+    }
+
+    auto
+        Do_ReleaseAllRetainedDebugDraw()
+        -> void
+    {
+    }
+
+    auto
+        Get_RetainedDebugDrawRebuildCount(
+            UWorld*,
+            EDebugDrawGroup)
+        -> int32
+    {
+        return 0;
+    }
+
+    auto
+        Get_RetainedDebugDrawTally(
+            UWorld*,
+            EDebugDrawGroup)
+        -> FCk_GroundNav_DebugDrawTally
+    {
+        return {};
+    }
+
+    auto
+        Get_RetainedDebugDrawSetCount(
+            UWorld*,
+            EDebugDrawGroup)
+        -> int32
+    {
+        return 0;
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1919,6 +2061,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Every command and variable below exists for a developer looking at a world, so none of it is in a
+// Shipping build. ck.GroundNav.PathDiagnostics is deliberately NOT here - it is a runtime gate that
+// merely DEFAULTS to 0 there, and lives with the other gates.
+#if !UE_BUILD_SHIPPING
 namespace ck_groundnav_debugconsole
 {
     // ---- Region -----------------------------------------------------------------------------------
@@ -4471,5 +4617,6 @@ namespace ck_groundnav_debugconsole
                 ck::groundnav::debug::Get_IsRepathOnRebuildBypassed());
         }));
 }
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

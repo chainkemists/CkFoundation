@@ -80,7 +80,7 @@ Before writing any code, navigate the documentation in this order:
 | GOAP planner (A* over Action entities) | `CkGoap` |
 | grid-based pathfinding | `CkAStar` + `CkGrid` |
 | volumetric 3D pathfinding for flying/swimming agents | `CkVoxelNav` |
-| grounded navigation for walking agents (floors, ramps, stairs) | `CkGroundNav` (under construction) |
+| grounded navigation for walking agents (floors, ramps, stairs) | `CkGroundNav` |
 | ECS raycast sensing | `CkRaySense` |
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
@@ -249,7 +249,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
 | CkVisualLod | Camera,Core,Ecs,EcsExt,IskmRenderer,Log,Physics,ResourceLoader (budgeted SKMC-proxy ↔ batched-crowd LOD arbitration; added 2026-08-27, under construction — see its CLAUDE.md) |
 | CkVoiceChat | ActorRelay,Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings,Shapes,SpatialQuery (P4 2026-08-04 — feature-complete; engine deps AudioMixer/DeveloperSettings/GameplayTags/NetCore/Voice; never Relationship) |
-| CkGroundNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Record,Settings,Shapes,ThirdParty (grounded-navigation provider: layered ground field, merged plates, portal graph; bake math is ECS-free and world-free; all geometry via CkJolt's JPH-free surface — no direct Jolt includes; added 2026-08-31, under construction) |
+| CkGroundNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Record,Settings,Shapes,ThirdParty (grounded-navigation provider: layered ground field, merged plates, portal graph; bake math is ECS-free and world-free; all geometry via CkJolt's JPH-free surface — no direct Jolt includes; added 2026-08-31) |
 | CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UICore (UI→UICore 2026-08-14) |
 | CkWorldSpaceWidget | Core,Ecs,EcsExt,Log,Settings,ThirdParty,UICore (extracted from CkUI 2026-08-08; hosts `UCk_WidgetComponent_UE`; UI→UICore 2026-08-14) |
