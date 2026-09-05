@@ -207,11 +207,20 @@ namespace ck
         auto DoOptimizeBroadPhase() -> void;
 
         // ---- Step primitives ----
-        // Advances the simulation one fixed sub-step. Jolt-only; task-graph safe.
-        auto DoPhysicsUpdate(float InFixedDt) -> void;
+        // Advances the simulation one fixed sub-step. Jolt-only; task-graph safe. Returns the
+        // EPhysicsUpdateError bit mask as a plain integer so the frame pump can trace it without
+        // exposing a Jolt enum through this header.
+        auto DoPhysicsUpdate(float InFixedDt) -> uint32;
         // Snapshots every active rigid body's pose into _PoseBuffer. NO registry/UObject access.
         auto DoCapturePoses_AnyThread() -> void;
         auto DoApplyPoseBuffer_GameThread(const FCk_Handle& InTransientEntity) -> void;
+
+        // O(1) step census except Get_NumBodies_AnyThread, which takes Jolt's body-list mutex once.
+        // Call only from the stable pre-step window or the step thread itself.
+        auto Get_NumBodies_AnyThread() const -> int32;
+        auto Get_NumActiveRigidBodies_AnyThread() const -> int32;
+        auto Get_NumActiveSoftBodies_AnyThread() const -> int32;
+        auto Get_NumRegisteredCharacters_AnyThread() const -> int32;
 
         // ---- Character registry (game-thread only for register/unregister/intent/apply) ----
         // Non-owning pointer, keyed by UserData (the versioned entity id).
