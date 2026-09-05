@@ -67,6 +67,19 @@ public:
         const UObject* InWorldContextObject,
         FName InFixture);
 
+    /** Every containment escape the run has banked, summed over every fixture rather than asked of
+     *  one. The producer is the crowd's single Transform writer and it counts per AGENT per frame,
+     *  so an escape is not attributable to a query and there is no fixture a caller could name for
+     *  it; what the sum answers is whether the two providers ever disagreed about the ground a body
+     *  was standing on. Zero for a run that never shadowed, which is the honest reading. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNav|Shadow",
+              DisplayName = "[Ck][GroundNav][Shadow] Get Shadow Containment Escapes",
+              meta = (WorldContext = "InWorldContextObject"))
+    static int64
+    Get_ShadowContainmentEscapes(
+        const UObject* InWorldContextObject);
+
     /** Drop every fixture, every diverging id and the open fixture name. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GroundNav|Shadow",

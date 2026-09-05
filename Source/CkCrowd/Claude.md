@@ -148,7 +148,7 @@ Plus `FProcessor_CrowdAgent_StationaryMarkup` (FGroup_Gameplay) + `_NavMarkup_En
 at or below `_StationaryMarkupSpeedThreshold` past `_StationaryMarkupDelaySeconds` (windowed
 physical displacement, NOT the Idle tag — a blocked/pressing walker plugs a corridor exactly
 like an idle agent) paints a
-`UCk_NavArea_CrowdAgent` COST disc (`UCk_NavAreaMarkup_UE`, actor-free) so fresh paths — a
+`Nav.Area.Crowd.Agent` COST disc so fresh paths — a
 joiner's first FindPath, BlockedRecheck's re-path — route AROUND standing crowds; unpainted the
 moment it genuinely moves. Cost (64x — any finite toll has a break-even line length where
 detouring costs more than crossing; 64x with the 2x extent multiplier puts that at ~85 agents,
@@ -157,6 +157,22 @@ a plugged corridor still paths through, and the mesh under the agent stays walka
 clamp/path starts. The path planner is otherwise agent-blind and the avoidance sampler is a
 short-horizon local optimizer — without this tier, an agent headed past a standing line presses
 into it forever. Master switch `_StationaryMarkupMode` (default Enabled). Server-only.
+
+**The painter is provider-neutral.** Both crowd painters — the stationary disc and the avoidance
+volume's box — raise the paint as an area-TAG markup through `UCk_Utils_NavSurface_UE`
+(`Request_AreaMarkup`), and the fragments hold the resulting `FCk_Handle_NavSurfaceMarkup`;
+unpainting is `Request_DestroyEntity` on that handle. Naming the area by tag rather than by
+`UNavArea` class is what makes the crowd work on either provider: Recast resolves
+`Nav.Area.Crowd.*` back to the same `UCk_NavArea_*` classes through its own area table
+(`CkCrowd_NavGameplayTags.cpp`), and a provider with no such class reads the tag's registered
+policy instead. The paint is a REQUEST — the handle is valid at once, the area is not live until
+the drain reaches it and the provider's surface has caught up — so eligibility is still gated on
+`_ConfirmedOnMesh` and never on the handle existing. What CONFIRMS a paint is the neutral
+`UCk_Utils_NavSurface_UE::Get_IsMarkupLive(handle)`, which is the provider's own answer to "has my
+paint landed" — GroundNav's strict epoch rule, Recast's area probe inside its own adapter. Both
+confirmation sites (the stationary disc's in `PathRefresh`, the avoidance volume's in its Monitor)
+ask that and nothing else; asking Recast's area probe directly, as they used to, could never confirm
+on a world planning on GroundNav.
 
 Plus `FProcessor_CrowdAgent_PathRefresh` (FGroup_Gameplay, RunAfter StationaryMarkup): the discs
 only bend paths computed AFTER they paint — a path computed before a crowd formed is a frozen
@@ -246,7 +262,7 @@ this tier exists to make unnecessary.
 | `FFragment_CrowdAgent_MoveRequests` | Variant of pending request types | Per-tick (drained) |
 | `FFragment_CrowdAgent_InstalledRoute` | Goal + network epoch of the installed corridor (PathNetwork) | OnRouteResolved |
 | `FFragment_CrowdAgent_PendingDisplacement` | Per-frame displacement staging (ApplyOffset + PushApart write; ConstrainToNavmesh consumes) | `Add()` |
-| `FFragment_CrowdAgent_NavMarkup` | Stationary timer + strong ref to the painted cost-area object + paint serial/age (PathRefresh trigger data) | `Add()` |
+| `FFragment_CrowdAgent_NavMarkup` | Stationary timer + handle to the painted cost-area markup entity + paint serial/age (PathRefresh trigger data) | `Add()` |
 
 `FFragment_CrowdAgent_PathFollow` also carries `_CurrentSegmentStart` — the world-space start of the
 current path segment. Steering's plane-crossing waypoint retirement needs the *incoming* segment
@@ -680,8 +696,8 @@ final-approach envelope (below), and at least one cached neighbour or avoidance 
 ### Avoidance volumes — path-aware nav areas with local rebuild-window steering
 
 `UCk_Utils_CrowdAvoidanceVolume_UE::Add` composes a yaw-oriented box on a Transform entity. A
-query-only Jolt probe supplies broadphase overlap while a pooled `UCk_NavAreaMarkup_UE` paints the
-dedicated `UCk_NavArea_CrowdAvoidanceVolume` into Recast. Crowd navigation requests deep-copy their
+query-only Jolt probe supplies broadphase overlap while a neutral markup paints the dedicated
+`Nav.Area.Crowd.AvoidanceVolume` area onto the world's navigation surface. Crowd navigation requests deep-copy their
 resolved host filter and exclude that area; the base filter's costs, flags, and exclusions survive.
 `_PathPlanningClearance` expands the painted XY bounds (default 50uu) so Recast centre-line paths
 clear ordinary agent bodies. PathNetwork persists the same overlay through route, tuning, and epoch
@@ -695,7 +711,7 @@ The sampler converts the radius-inflated OBB to four wall segments and scores th
 time-to-impact term as nav-boundary walls. An agent already inside receives a nearest-face escape
 direction. Flyers and permeable agents preserve their existing sampler exclusions.
 
-Markup ownership is rooted by CkObjectPooling; ECS fragments retain weak references. Volumes are
+Markup ownership is the markup ENTITY's own; ECS fragments hold its handle. Volumes are
 static after composition: transform drift fails closed and requires destroy/recreate. Confirmation
 shares PathRefresh's process-wide monotonic serial, so a route installed during async tile rebuild
 is invalidated exactly once after the area appears. An agent composed inside painted markup plans
@@ -1198,6 +1214,24 @@ and teardown cancel or complete it on their own paths.
   while downward recovery stays unlimited. A stranded agent also re-reports every 30s
   (`still OFF the navmesh after ...`), so a long session's log names its floaters without having
   caught the transition edge.
+- **The constraint is also where a shadow run's CONTAINMENT question is answered.** While
+  `ECk_NavSurface_ShadowMode::GroundNavShadowsRecast` is on for the world, the pass ends by
+  projecting the position it just resolved onto BOTH providers through the neutral facade's
+  capability tables, with the same search box it constrains against; a split verdict — walkable
+  ground under the agent for one provider and none for the other, in either direction — banks one
+  `_ContainmentEscapes` against the world's open shadow fixture (or its fallback key), at most once
+  per agent per frame. It belongs here and nowhere else because this is the single Transform writer:
+  the shadow comparison of ROUTES has both plans but not the position, and a per-frame question about
+  where the body ended up cannot be answered from a query pair. It is also why the count is readable
+  only through the shadow REPORT (and `Get_ShadowContainmentEscapes`) — the per-comparison
+  `[SHADOW-CMP]` line does not carry it, because that line describes a query pair and this describes a
+  body. Agreement in either direction is not
+  an escape — off both surfaces is an agent genuinely in free space, which `_IsOffNavmesh` already
+  reports; an agent part-way across an authored link is skipped outright, because a body between the
+  two points a link joins stands on no walkable cell in between and whichever way that pair lands it
+  measures the link. The world's shadow mode and the provider pairing it names are read ONCE per tick,
+  so a world running one provider pays nothing per agent and a shadowing one pays one registry read a
+  frame rather than one per body.
 - **`Get_EscapedQueryStart` gates on PAINTED, not `_ConfirmedOnMesh`** — unlike the re-path trigger.
   The escape is pure geometry: planning from a pushed-out start is valid the moment the disc exists
   and merely arrives early when the rebake hasn't landed. Gating it on `_ConfirmedOnMesh` opened a

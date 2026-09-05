@@ -9,6 +9,7 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
+#include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
@@ -491,14 +492,22 @@ namespace ck::groundnav::nav_surface_adapter_private
             AnyVolumeTookIt = true;
         }
 
-        // A volume is what HOLDS a record, so a paint that reaches none has nowhere to be recorded and
-        // nothing to become live on. That is a caller error rather than a deferred paint: this provider
-        // answers for the ground its volumes cover, and there is no volume here to cover this one.
-        CK_ENSURE_IF_NOT(AnyVolumeTookIt,
-            TEXT("GroundNav cannot apply the area markup on [{}] - its bounds [{}] meet no ground-nav "
-                 "volume in world [{}], and a volume is the only thing that holds a record"),
-            InMarkupEntity, MarkupBounds, GetNameSafe(InWorld))
-        { return false; }
+        // A volume is what HOLDS a record, so a paint that reaches none has nowhere to be recorded
+        // and nothing to become live on. That is this provider saying "no surface here" about ground
+        // it does not cover, and NOT a caller error: the crowd paints under every standing body, so a
+        // world whose volumes cover part of a level would fire once per body per repaint. The markup
+        // entity stays valid and Get_IsMarkupLive answers false for it, which is the whole of what a
+        // consumer reads - a paint that landed nowhere and a paint that has not landed yet are the
+        // same answer to the only question anybody asks.
+        if (NOT AnyVolumeTookIt)
+        {
+            ck::groundnav::Verbose(
+                TEXT("GroundNav did not take the area markup on [{}] - its bounds [{}] meet no "
+                     "ground-nav volume in world [{}], so there is no ground here for it to be live on"),
+                InMarkupEntity, MarkupBounds, GetNameSafe(InWorld));
+
+            return false;
+        }
 
         return true;
     }
