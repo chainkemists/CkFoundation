@@ -12,6 +12,7 @@
 
 #include <Async/Async.h>
 #include <Engine/World.h>
+#include <ProfilingDebugging/CountersTrace.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,9 +28,33 @@ DECLARE_CYCLE_STAT(TEXT("JoltPhysics_WaitForAsync"), STAT_CkJolt_WaitForAsync, S
 DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkJolt_ContactsDrainQueue, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update_Async"), STAT_CkJolt_UpdateAsync, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update"), STAT_CkJolt_Update, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltStep_Characters"), STAT_CkJolt_StepCharacters, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltStep_PhysicsSystemUpdate"), STAT_CkJolt_StepPhysicsSystemUpdate, STATGROUP_CkJolt);
+DECLARE_CYCLE_STAT(TEXT("JoltStep_PoseCapture"), STAT_CkJolt_StepPoseCapture, STATGROUP_CkJolt);
 
 // The whole fixed-step pump; wraps the nested STAT_CkJolt_Update/_UpdateAsync (the Update loop alone).
 DECLARE_CYCLE_STAT(TEXT("JoltWorld_Step"), STAT_CkJolt_WorldStep, STATGROUP_CkJolt);
+
+// Global trace counters are meaningful for the packaged, single-world performance lane. Atomic storage keeps
+// multi-world PIE race-free, but values from concurrent worlds still interleave and must not be read as one census.
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_FixedSteps, TEXT("CkJolt/Fixed Steps"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_TotalBodies, TEXT("CkJolt/Total Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkJolt_ActiveRigidBodySamplesSum,
+    TEXT("CkJolt/Active Rigid Body Samples Sum"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_MaxActiveRigidBodies, TEXT("CkJolt/Max Active Rigid Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkJolt_ActiveSoftBodySamplesSum,
+    TEXT("CkJolt/Active Soft Body Samples Sum"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_MaxActiveSoftBodies, TEXT("CkJolt/Max Active Soft Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_RegisteredCharacters, TEXT("CkJolt/Registered Characters"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkJolt_TouchingManifoldCallbacksPerBatch,
+    TEXT("CkJolt/Touching Manifold Callbacks Per Batch"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkJolt_MaxTouchingManifoldCallbacksPerStep,
+    TEXT("CkJolt/Max Touching Manifold Callbacks Per Step"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_UpdateErrorBits, TEXT("CkJolt/Update Error Bits"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -253,9 +278,36 @@ namespace ck
         { JoltWorld->DoOptimizeBroadPhase(); }
 
         const auto NumSteps = JoltWorld->Get_NumStepsLastFrame();
+#if COUNTERSTRACE_ENABLED
+        const auto TraceCountersEnabled = UE_TRACE_CHANNELEXPR_IS_ENABLED(CountersChannel);
+#else
+        constexpr auto TraceCountersEnabled = false;
+#endif
+        // Sample census data after the prior async step has been consumed and before dispatching the next one. In
+        // particular, Get_NumBodies_AnyThread takes Jolt's body-list mutex and must not perturb the async span.
+        const auto TotalBodies = TraceCountersEnabled ? JoltWorld->Get_NumBodies_AnyThread() : 0;
+        const auto RegisteredCharacters = TraceCountersEnabled
+            ? JoltWorld->Get_NumRegisteredCharacters_AnyThread()
+            : 0;
 
         if (NumSteps == 0)
-        { return; }
+        {
+            if (TraceCountersEnabled)
+            {
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_FixedSteps, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_TotalBodies, TotalBodies);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveRigidBodySamplesSum, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxActiveRigidBodies, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveSoftBodySamplesSum, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxActiveSoftBodies, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_RegisteredCharacters, RegisteredCharacters);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_TouchingManifoldCallbacksPerBatch, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxTouchingManifoldCallbacksPerStep, 0);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_UpdateErrorBits, 0);
+            }
+
+            return;
+        }
 
         // Recomputed from the same project setting PlanStep read — constant within the frame, so no drift.
         const auto FixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
@@ -267,19 +319,74 @@ namespace ck
         // pose capture excluded — because that is the number a stats panel means by "step time". It is taken
         // inside the loop rather than around the dispatch so the async branch measures the task-graph thread's
         // own work instead of the cost of handing it off.
-        const auto StepLoop = [JoltWorld, FixedDt, NumSteps]()
+        const auto StepLoop =
+            [JoltWorld, FixedDt, NumSteps, TraceCountersEnabled, TotalBodies, RegisteredCharacters]()
         {
             auto UpdateSeconds = 0.0;
+            auto ActiveRigidBodiesTotal = int32{0};
+            auto MaxActiveRigidBodies = int32{0};
+            auto ActiveSoftBodiesTotal = int32{0};
+            auto MaxActiveSoftBodies = int32{0};
+            auto TouchingManifoldCallbacksPerBatch = int32{0};
+            auto MaxTouchingManifoldCallbacksPerStep = int32{0};
+            auto UpdateErrorBits = uint32{0};
 
             for (auto Step = 0; Step < NumSteps; ++Step)
             {
-                JoltWorld->DoStepCharacters_AnyThread(FixedDt);
+                {
+                    SCOPE_CYCLE_COUNTER(STAT_CkJolt_StepCharacters);
+                    JoltWorld->DoStepCharacters_AnyThread(FixedDt);
+                }
+
+                if (TraceCountersEnabled)
+                {
+                    const auto ActiveRigidBodies = JoltWorld->Get_NumActiveRigidBodies_AnyThread();
+                    ActiveRigidBodiesTotal += ActiveRigidBodies;
+                    MaxActiveRigidBodies = FMath::Max(MaxActiveRigidBodies, ActiveRigidBodies);
+
+                    const auto ActiveSoftBodies = JoltWorld->Get_NumActiveSoftBodies_AnyThread();
+                    ActiveSoftBodiesTotal += ActiveSoftBodies;
+                    MaxActiveSoftBodies = FMath::Max(MaxActiveSoftBodies, ActiveSoftBodies);
+                }
 
                 const auto UpdateStartSeconds = FPlatformTime::Seconds();
-                JoltWorld->DoPhysicsUpdate(FixedDt);
+                {
+                    SCOPE_CYCLE_COUNTER(STAT_CkJolt_StepPhysicsSystemUpdate);
+                    UpdateErrorBits |= JoltWorld->DoPhysicsUpdate(FixedDt);
+                }
                 UpdateSeconds += FPlatformTime::Seconds() - UpdateStartSeconds;
 
-                JoltWorld->DoCapturePoses_AnyThread();
+                if (TraceCountersEnabled)
+                {
+                    const auto TouchingManifoldCallbacksThisStep = JoltWorld->Get_ContactPairsLastStep();
+                    TouchingManifoldCallbacksPerBatch += TouchingManifoldCallbacksThisStep;
+                    MaxTouchingManifoldCallbacksPerStep = FMath::Max(
+                        MaxTouchingManifoldCallbacksPerStep,
+                        TouchingManifoldCallbacksThisStep);
+                }
+
+                {
+                    SCOPE_CYCLE_COUNTER(STAT_CkJolt_StepPoseCapture);
+                    JoltWorld->DoCapturePoses_AnyThread();
+                }
+            }
+
+            if (TraceCountersEnabled)
+            {
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_FixedSteps, NumSteps);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_TotalBodies, TotalBodies);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveRigidBodySamplesSum, ActiveRigidBodiesTotal);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxActiveRigidBodies, MaxActiveRigidBodies);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveSoftBodySamplesSum, ActiveSoftBodiesTotal);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxActiveSoftBodies, MaxActiveSoftBodies);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_RegisteredCharacters, RegisteredCharacters);
+                TRACE_COUNTER_SET_ALWAYS(
+                    CkJolt_TouchingManifoldCallbacksPerBatch,
+                    TouchingManifoldCallbacksPerBatch);
+                TRACE_COUNTER_SET_ALWAYS(
+                    CkJolt_MaxTouchingManifoldCallbacksPerStep,
+                    MaxTouchingManifoldCallbacksPerStep);
+                TRACE_COUNTER_SET_ALWAYS(CkJolt_UpdateErrorBits, static_cast<int64>(UpdateErrorBits));
             }
 
             constexpr auto MillisecondsPerSecond = 1000.0;
