@@ -32,11 +32,26 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Core/QuickSort.h>
 #include <Jolt/Core/ScopeExit.h>
+#include <ProfilingDebugging/CountersTrace.h>
+#include <ProfilingDebugging/CpuProfilerTrace.h>
 #ifdef JPH_DEBUG_RENDERER
 	#include <Jolt/Renderer/DebugRenderer.h>
 #endif // JPH_DEBUG_RENDERER
 
 JPH_NAMESPACE_BEGIN
+
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+	CkJolt_ProcessedBodyPairsPerPhysicsUpdate,
+	TEXT("CkJolt/Processed Body Pairs Per Physics Update"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+	CkJolt_MaxProcessedBodyPairsPerCollisionStep,
+	TEXT("CkJolt/Max Processed Body Pairs Per Collision Step"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+	CkJolt_ContactManifoldsPerPhysicsUpdate,
+	TEXT("CkJolt/Contact Manifolds Per Physics Update"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+	CkJolt_MaxContactManifoldsPerCollisionStep,
+	TEXT("CkJolt/Max Contact Manifolds Per Collision Step"));
 
 #ifdef JPH_DEBUG_RENDERER
 bool PhysicsSystem::sDrawMotionQualityLinearCast = false;
@@ -156,6 +171,10 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 		mContactManager.FinalizeContactCacheAndCallContactPointRemovedCallbacks(0, 0);
 
 		mBodyManager.UnlockAllBodies();
+		TRACE_COUNTER_SET_ALWAYS(CkJolt_ProcessedBodyPairsPerPhysicsUpdate, 0);
+		TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxProcessedBodyPairsPerCollisionStep, 0);
+		TRACE_COUNTER_SET_ALWAYS(CkJolt_ContactManifoldsPerPhysicsUpdate, 0);
+		TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxContactManifoldsPerCollisionStep, 0);
 		return EPhysicsUpdateError::None;
 	}
 
@@ -227,6 +246,7 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 			// This job must finish before integrating velocities. Until then the positions will not be updated neither will bodies be added / removed.
 			step.mUpdateBroadphaseFinalize = inJobSystem->CreateJob("UpdateBroadPhaseFinalize", cColorUpdateBroadPhaseFinalize, [&context, &step]()
 				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_UpdateBroadPhaseFinalize);
 					// Validate that all find collision jobs have stopped
 					JPH_ASSERT(step.mActiveFindCollisionJobs.load(memory_order_relaxed) == 0);
 
@@ -245,6 +265,7 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 			// If this is turned around the RemoveBody call will hang since it locks in that order
 			step.mBroadPhasePrepare = inJobSystem->CreateJob("UpdateBroadPhasePrepare", cColorUpdateBroadPhasePrepare, [&context, &step]()
 				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_UpdateBroadPhasePrepare);
 					// Prepare the broadphase update
 					step.mBroadPhaseUpdateState = context.mPhysicsSystem->mBroadPhase->UpdatePrepare();
 
@@ -391,6 +412,7 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 				PhysicsUpdateContext::Step *next_step = &context.mSteps[step_idx + 1];
 				step.mStartNextStep = inJobSystem->CreateJob("StartNextStep", cColorStartNextStep, [this, next_step]()
 					{
+						TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_StartNextStep);
 					#ifdef JPH_DEBUG
 						// Validate that the cached bounds are correct
 						mBodyManager.ValidateActiveBodyBounds();
@@ -569,6 +591,27 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 	// lock a body mutex while this thread has already locked the mutex
 	inJobSystem->WaitForJobs(barrier);
 
+	// Preserve the collision census before the update context and its per-step counters are released. Body pairs are
+	// broadphase results processed into the current contact cache, including cache hits and pairs with no manifold;
+	// manifolds are the current contact manifolds, including manifolds copied from the previous cache.
+	uint64 body_pairs = 0;
+	uint64 manifolds = 0;
+	uint32 max_body_pairs = 0;
+	uint32 max_manifolds = 0;
+	for (const PhysicsUpdateContext::Step &step : context.mSteps)
+	{
+		const uint32 step_body_pairs = step.mNumBodyPairs.load(memory_order_relaxed);
+		const uint32 step_manifolds = step.mNumManifolds.load(memory_order_relaxed);
+		body_pairs += step_body_pairs;
+		manifolds += step_manifolds;
+		max_body_pairs = max(max_body_pairs, step_body_pairs);
+		max_manifolds = max(max_manifolds, step_manifolds);
+	}
+	TRACE_COUNTER_SET_ALWAYS(CkJolt_ProcessedBodyPairsPerPhysicsUpdate, static_cast<int64>(body_pairs));
+	TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxProcessedBodyPairsPerCollisionStep, static_cast<int64>(max_body_pairs));
+	TRACE_COUNTER_SET_ALWAYS(CkJolt_ContactManifoldsPerPhysicsUpdate, static_cast<int64>(manifolds));
+	TRACE_COUNTER_SET_ALWAYS(CkJolt_MaxContactManifoldsPerCollisionStep, static_cast<int64>(max_manifolds));
+
 	// We're done with the barrier for this update
 	inJobSystem->DestroyBarrier(barrier);
 
@@ -619,6 +662,7 @@ EPhysicsUpdateError PhysicsSystem::Update(float inDeltaTime, int inCollisionStep
 
 void PhysicsSystem::JobStepListeners(PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_StepListeners);
 #ifdef JPH_ENABLE_ASSERTS
 	// Read positions (broadphase updates concurrently so we can't write), read/write velocities
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::Read);
@@ -649,6 +693,7 @@ void PhysicsSystem::JobStepListeners(PhysicsUpdateContext::Step *ioStep)
 
 void PhysicsSystem::JobDetermineActiveConstraints(PhysicsUpdateContext::Step *ioStep) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_DetermineActiveConstraints);
 #ifdef JPH_ENABLE_ASSERTS
 	// No body access
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::None);
@@ -682,6 +727,7 @@ void PhysicsSystem::JobDetermineActiveConstraints(PhysicsUpdateContext::Step *io
 
 void PhysicsSystem::JobApplyGravity(const PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_ApplyGravity);
 #ifdef JPH_ENABLE_ASSERTS
 	// We update velocities and need the rotation to do so
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::Read);
@@ -729,6 +775,7 @@ void PhysicsSystem::JobApplyGravity(const PhysicsUpdateContext *ioContext, Physi
 
 void PhysicsSystem::JobSetupVelocityConstraints(float inDeltaTime, PhysicsUpdateContext::Step *ioStep) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SetupVelocityConstraints);
 #ifdef JPH_ENABLE_ASSERTS
 	// We only read positions
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::Read);
@@ -749,6 +796,7 @@ void PhysicsSystem::JobSetupVelocityConstraints(float inDeltaTime, PhysicsUpdate
 
 void PhysicsSystem::JobBuildIslandsFromConstraints(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_BuildIslandsFromConstraints);
 #ifdef JPH_ENABLE_ASSERTS
 	// We read constraints and positions
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::Read);
@@ -829,6 +877,7 @@ static void sFinalizeContactAllocator(PhysicsUpdateContext::Step &ioStep, const 
 JPH_TSAN_NO_SANITIZE
 void PhysicsSystem::JobFindCollisions(PhysicsUpdateContext::Step *ioStep, int inJobIndex)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_FindCollisions);
 #ifdef JPH_ENABLE_ASSERTS
 	// We read positions and read velocities (for elastic collisions)
 	BodyAccess::Grant grant(BodyAccess::EAccess::Read, BodyAccess::EAccess::Read);
@@ -876,7 +925,7 @@ void PhysicsSystem::JobFindCollisions(PhysicsUpdateContext::Step *ioStep, int in
 						if (body_pairs_in_queue >= mStep->mMaxBodyPairsPerQueue)
 						{
 							// Buffer full, process the pair now
-							mStep->mContext->mPhysicsSystem->ProcessBodyPair(mContactAllocator, inPair);
+						mStep->mContext->mPhysicsSystem->ProcessBodyPair(mContactAllocator, inPair);
 						}
 						else
 						{
@@ -898,8 +947,11 @@ void PhysicsSystem::JobFindCollisions(PhysicsUpdateContext::Step *ioStep, int in
 				BodyID *active_bodies = (BodyID *)JPH_STACK_ALLOC(batch_size * sizeof(BodyID));
 				memcpy(active_bodies, mBodyManager.GetActiveBodiesUnsafe(EBodyType::RigidBody) + active_bodies_read_idx, batch_size * sizeof(BodyID));
 
-				// Find pairs in the broadphase
-				mBroadPhase->FindCollidingPairs(active_bodies, batch_size, mPhysicsSettings.mSpeculativeContactDistance, *mObjectVsBroadPhaseLayerFilter, *mObjectLayerPairFilter, add_pair);
+				// Find pairs in the broadphase. Keep this one nested phase coarse: per-pair scopes would perturb the workload.
+				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(JoltPhase_BroadphaseFindPairs);
+					mBroadPhase->FindCollidingPairs(active_bodies, batch_size, mPhysicsSettings.mSpeculativeContactDistance, *mObjectVsBroadPhaseLayerFilter, *mObjectLayerPairFilter, add_pair);
+				}
 
 				// Check if we have enough pairs in the buffer to start a new job
 				const PhysicsUpdateContext::BodyPairQueue &queue = ioStep->mBodyPairQueues[inJobIndex];
@@ -1266,6 +1318,7 @@ void PhysicsSystem::ProcessBodyPair(ContactAllocator &ioContactAllocator, const 
 
 void PhysicsSystem::JobFinalizeIslands(PhysicsUpdateContext *ioContext)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_FinalizeIslands);
 #ifdef JPH_ENABLE_ASSERTS
 	// We only touch island data
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::None);
@@ -1281,6 +1334,7 @@ void PhysicsSystem::JobFinalizeIslands(PhysicsUpdateContext *ioContext)
 
 void PhysicsSystem::JobBodySetIslandIndex()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_BodySetIslandIndex);
 #ifdef JPH_ENABLE_ASSERTS
 	// We only touch island data
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::None);
@@ -1301,6 +1355,7 @@ JPH_CLANG_SUPPRESS_WARNING("-Wundefined-func-template") // ConstraintManager::sW
 
 void PhysicsSystem::JobSolveVelocityConstraints(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SolveVelocityConstraints);
 #ifdef JPH_ENABLE_ASSERTS
 	// We update velocities and need to read positions to do so
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::Read);
@@ -1458,6 +1513,7 @@ JPH_SUPPRESS_WARNING_POP
 
 void PhysicsSystem::JobPreIntegrateVelocity(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_PreIntegrateVelocity);
 	// Reserve enough space for all bodies that may need a cast
 	TempAllocator *temp_allocator = ioContext->mTempAllocator;
 	JPH_ASSERT(ioStep->mCCDBodies == nullptr);
@@ -1475,6 +1531,7 @@ void PhysicsSystem::JobPreIntegrateVelocity(PhysicsUpdateContext *ioContext, Phy
 
 void PhysicsSystem::JobIntegrateVelocity(const PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_IntegrateVelocity);
 #ifdef JPH_ENABLE_ASSERTS
 	// We update positions and need velocity to do so, we also clamp velocities so need to write to them
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::ReadWrite);
@@ -1605,6 +1662,7 @@ void PhysicsSystem::JobIntegrateVelocity(const PhysicsUpdateContext *ioContext, 
 
 void PhysicsSystem::JobPostIntegrateVelocity(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_PostIntegrateVelocity);
 	// Validate that our reservations were correct
 	JPH_ASSERT(ioStep->mNumCCDBodies <= mBodyManager.GetNumActiveCCDBodies());
 
@@ -1674,6 +1732,7 @@ inline static PhysicsUpdateContext::Step::CCDBody *sGetCCDBody(const Body &inBod
 
 void PhysicsSystem::JobFindCCDContacts(const PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_FindCCDContacts);
 #ifdef JPH_ENABLE_ASSERTS
 	// We only read positions, but the validate callback may read body positions and velocities
 	BodyAccess::Grant grant(BodyAccess::EAccess::Read, BodyAccess::EAccess::Read);
@@ -1967,6 +2026,7 @@ void PhysicsSystem::JobFindCCDContacts(const PhysicsUpdateContext *ioContext, Ph
 
 void PhysicsSystem::JobResolveCCDContacts(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_ResolveCCDContacts);
 #ifdef JPH_ENABLE_ASSERTS
 	// Read/write body access
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::ReadWrite);
@@ -2241,6 +2301,7 @@ void PhysicsSystem::JobResolveCCDContacts(PhysicsUpdateContext *ioContext, Physi
 
 void PhysicsSystem::JobContactRemovedCallbacks(const PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_ContactRemovedCallbacks);
 #ifdef JPH_ENABLE_ASSERTS
 	// We don't touch any bodies
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::None);
@@ -2358,6 +2419,7 @@ void PhysicsSystem::CheckSleepAndUpdateBounds(uint32 inIslandIndex, const Physic
 
 void PhysicsSystem::JobSolvePositionConstraints(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SolvePositionConstraints);
 #ifdef JPH_ENABLE_ASSERTS
 	// We fix up position errors
 	BodyAccess::Grant grant(BodyAccess::EAccess::None, BodyAccess::EAccess::ReadWrite);
@@ -2475,6 +2537,7 @@ void PhysicsSystem::JobSolvePositionConstraints(PhysicsUpdateContext *ioContext,
 
 void PhysicsSystem::JobSoftBodyPrepare(PhysicsUpdateContext *ioContext, PhysicsUpdateContext::Step *ioStep)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SoftBodyPrepare);
 	JPH_PROFILE_FUNCTION();
 
 	{
@@ -2556,6 +2619,7 @@ void PhysicsSystem::JobSoftBodyPrepare(PhysicsUpdateContext *ioContext, PhysicsU
 
 void PhysicsSystem::JobSoftBodyCollide(PhysicsUpdateContext *ioContext) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SoftBodyCollide);
 #ifdef JPH_ENABLE_ASSERTS
 	// Reading rigid body positions and velocities
 	BodyAccess::Grant grant(BodyAccess::EAccess::Read, BodyAccess::EAccess::Read);
@@ -2576,6 +2640,7 @@ void PhysicsSystem::JobSoftBodyCollide(PhysicsUpdateContext *ioContext) const
 
 void PhysicsSystem::JobSoftBodySimulate(PhysicsUpdateContext *ioContext, uint inThreadIndex) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SoftBodySimulate);
 #ifdef JPH_ENABLE_ASSERTS
 	// Updating velocities of soft bodies, allow the contact listener to read the soft body state
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::Read);
@@ -2616,6 +2681,7 @@ void PhysicsSystem::JobSoftBodySimulate(PhysicsUpdateContext *ioContext, uint in
 
 void PhysicsSystem::JobSoftBodyFinalize(PhysicsUpdateContext *ioContext)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(JoltJob_SoftBodyFinalize);
 #ifdef JPH_ENABLE_ASSERTS
 	// Updating rigid body velocities and soft body positions / velocities
 	BodyAccess::Grant grant(BodyAccess::EAccess::ReadWrite, BodyAccess::EAccess::ReadWrite);
