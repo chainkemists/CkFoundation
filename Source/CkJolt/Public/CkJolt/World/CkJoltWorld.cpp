@@ -31,6 +31,16 @@
 #include <Jolt/Physics/Collision/ShapeFilter.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
+#include <ProfilingDebugging/CountersTrace.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Emitted from the post-update pose walk only while the counters channel is enabled. This classifies the active
+// rigid-body census without adding a second body traversal to the measured step.
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_ActiveDynamicBodies, TEXT("CkJolt/Active Dynamic Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_ActiveKinematicBodies, TEXT("CkJolt/Active Kinematic Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_ActiveSensorBodies, TEXT("CkJolt/Active Sensor Bodies"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkJolt_ActiveKinematicSensorBodies, TEXT("CkJolt/Active Kinematic Sensor Bodies"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -865,11 +875,11 @@ namespace ck
         FJoltWorld::
         DoPhysicsUpdate(
             float InFixedDt)
-        -> void
+        -> uint32
     {
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (NOT PhysicsSystem.IsValid())
-        { return; }
+        { return 0; }
 
         // Per STEP, not per frame: a frame that runs four sub-steps would otherwise report four steps' worth of
         // pairs as one step's, which is exactly the number a stats panel would misread as a spike.
@@ -888,11 +898,52 @@ namespace ck
         ck::jolt::debug_draw::Begin_ContactRecord(PhysicsSystem.Get());
 #endif
 
-        PhysicsSystem->Update(InFixedDt, _CollisionSteps, _TempAllocator, _JobSystem);
+        const auto UpdateError = PhysicsSystem->Update(InFixedDt, _CollisionSteps, _TempAllocator, _JobSystem);
 
 #if JPH_DEBUG_RENDERER
         ck::jolt::debug_draw::End_ContactRecord(PhysicsSystem.Get());
 #endif
+
+        return static_cast<uint32>(UpdateError);
+    }
+
+    auto
+        FJoltWorld::
+        Get_NumBodies_AnyThread() const
+        -> int32
+    {
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        return PhysicsSystem.IsValid() ? static_cast<int32>(PhysicsSystem->GetNumBodies()) : 0;
+    }
+
+    auto
+        FJoltWorld::
+        Get_NumActiveRigidBodies_AnyThread() const
+        -> int32
+    {
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        return PhysicsSystem.IsValid()
+            ? static_cast<int32>(PhysicsSystem->GetNumActiveBodies(JPH::EBodyType::RigidBody))
+            : 0;
+    }
+
+    auto
+        FJoltWorld::
+        Get_NumActiveSoftBodies_AnyThread() const
+        -> int32
+    {
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
+        return PhysicsSystem.IsValid()
+            ? static_cast<int32>(PhysicsSystem->GetNumActiveBodies(JPH::EBodyType::SoftBody))
+            : 0;
+    }
+
+    auto
+        FJoltWorld::
+        Get_NumRegisteredCharacters_AnyThread() const
+        -> int32
+    {
+        return _CharacterRegistry.Num();
     }
 
     auto
@@ -910,9 +961,32 @@ namespace ck
         // NoLock is safe here: PhysicsSystem::Update has returned on this thread, so no worker is mutating
         // bodies, and the game thread does not touch Jolt while an async step is pending (see class contract).
         const auto& BodyInterface = PhysicsSystem->GetBodyInterfaceNoLock();
+        const auto& LockInterface = PhysicsSystem->GetBodyLockInterfaceNoLock();
+#if COUNTERSTRACE_ENABLED
+        const auto TraceCountersEnabled = UE_TRACE_CHANNELEXPR_IS_ENABLED(CountersChannel);
+#else
+        constexpr auto TraceCountersEnabled = false;
+#endif
+        auto ActiveDynamicBodies = int32{0};
+        auto ActiveKinematicBodies = int32{0};
+        auto ActiveSensorBodies = int32{0};
+        auto ActiveKinematicSensorBodies = int32{0};
 
         for (const auto BodyId : ActiveBodies)
         {
+            if (TraceCountersEnabled)
+            {
+                if (const auto* Body = LockInterface.TryGetBody(BodyId))
+                {
+                    const auto MotionType = Body->GetMotionType();
+                    const auto IsKinematic = MotionType == JPH::EMotionType::Kinematic;
+                    ActiveDynamicBodies += MotionType == JPH::EMotionType::Dynamic ? 1 : 0;
+                    ActiveKinematicBodies += IsKinematic ? 1 : 0;
+                    ActiveSensorBodies += Body->IsSensor() ? 1 : 0;
+                    ActiveKinematicSensorBodies += IsKinematic && Body->IsSensor() ? 1 : 0;
+                }
+            }
+
             auto Position = JPH::RVec3{};
             auto Rotation = JPH::Quat{};
             BodyInterface.GetPositionAndRotation(BodyId, Position, Rotation);
@@ -942,6 +1016,14 @@ namespace ck
                 Entry.DirtyThisFrame = true;
                 _PoseBuffer.Add(Key, Entry);
             }
+        }
+
+        if (TraceCountersEnabled)
+        {
+            TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveDynamicBodies, ActiveDynamicBodies);
+            TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveKinematicBodies, ActiveKinematicBodies);
+            TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveSensorBodies, ActiveSensorBodies);
+            TRACE_COUNTER_SET_ALWAYS(CkJolt_ActiveKinematicSensorBodies, ActiveKinematicSensorBodies);
         }
     }
 
