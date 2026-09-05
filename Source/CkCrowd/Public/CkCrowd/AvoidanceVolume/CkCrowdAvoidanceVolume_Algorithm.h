@@ -169,24 +169,6 @@ namespace ck::crowd_avoidance_volume
         { return {}; }
         return InInsidePoint + WorldDirection * (ExitDistance + InMargin);
     }
-
-    inline auto GetConfirmationSamplePoints(const FCk_Obb& InObb) -> TArray<FVector, TInlineAllocator<9>>
-    {
-        auto Result = TArray<FVector, TInlineAllocator<9>>{};
-        if (NOT InObb.IsFiniteAndPositive())
-        { return Result; }
-
-        constexpr auto InsetFraction = 0.75f;
-        for (const auto X : {-InsetFraction, 0.0f, InsetFraction})
-        {
-            for (const auto Y : {-InsetFraction, 0.0f, InsetFraction})
-            {
-                Result.Add(InObb._YawTransform.TransformPositionNoScale(FVector{
-                    X * InObb._WorldHalfExtents.X, Y * InObb._WorldHalfExtents.Y, 0.0f}));
-            }
-        }
-        return Result;
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

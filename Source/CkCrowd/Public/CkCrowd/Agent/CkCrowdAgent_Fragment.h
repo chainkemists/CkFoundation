@@ -5,8 +5,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
-#include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Fragment_Data.h"
 
@@ -210,8 +210,9 @@ namespace ck
         CK_PROPERTY_GET(_IsOffNavmesh);
     };
 
-    // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The CkCore ObjectPooling subsystem
-    // owns the painter's lifetime; the fragment observes it weakly.
+    // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The paint is a provider-neutral markup
+    // entity raised through the NavSurface facade; the fragment holds its handle, and destroying
+    // that entity is what unpaints.
     struct CKCROWD_API FFragment_CrowdAgent_NavMarkup
     {
     public:
@@ -224,7 +225,7 @@ namespace ck
     private:
         float _StationarySeconds = 0.0f;
         FVector _MarkupLocation = FVector::ZeroVector;
-        TWeakObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
+        FCk_Handle_NavSurfaceMarkup _Markup;
 
         // Stillness is sampled over a window, not instantaneously, so a push-apart shove spike
         // cannot unpaint a standing queue.

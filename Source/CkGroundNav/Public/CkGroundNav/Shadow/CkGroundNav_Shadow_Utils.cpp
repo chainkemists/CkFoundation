@@ -155,6 +155,31 @@ auto
 
 auto
     UCk_Utils_GroundNav_Shadow_UE::
+    Get_ShadowContainmentEscapes(
+        const UObject* InWorldContextObject)
+    -> int64
+{
+    auto* Diagnostics = ck_groundnav_shadow_utils::TryGet_Diagnostics(InWorldContextObject);
+
+    const auto DiagnosticsAreReachable = Diagnostics != nullptr;
+
+    CK_ENSURE_IF_NOT(DiagnosticsAreReachable,
+        TEXT("Get_ShadowContainmentEscapes could not resolve an ECS world from context object [{}]"),
+        ck_groundnav_shadow_utils::Get_ContextName(InWorldContextObject))
+    { return 0; }
+
+    auto Escapes = int64{0};
+
+    for (const auto& Fixture : Diagnostics->Get_PerFixture())
+    { Escapes += Fixture.Value._ContainmentEscapes; }
+
+    return Escapes;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_GroundNav_Shadow_UE::
     Request_ResetShadowDiagnostics(
         const UObject* InWorldContextObject)
     -> void

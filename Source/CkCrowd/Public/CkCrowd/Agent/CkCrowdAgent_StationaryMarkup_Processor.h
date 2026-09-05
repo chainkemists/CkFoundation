@@ -15,7 +15,7 @@ namespace ck
     // Stationary-agent nav markup. The path planner only sees static geometry, so a path for an
     // agent headed past a standing crowd goes straight THROUGH it, and the local avoidance
     // sampler (short-horizon, greedy) cannot escape a line-shaped local minimum — the agent
-    // presses into the crowd. This processor paints a UCk_NavArea_CrowdAgent COST disc under any
+    // presses into the crowd. This processor paints a Nav.Area.Crowd.Agent COST disc under any
     // agent that has stayed below _StationaryMarkupSpeedThreshold for
     // _StationaryMarkupDelaySeconds — measured by windowed displacement, NOT the Idle tag: a
     // blocked/pressing walker plugs a corridor exactly like an idle agent, and mutual pressers
@@ -29,8 +29,13 @@ namespace ck
     //
     // Server-only: pathfinding is server-authoritative; client worlds skip painting.
     //
-    // A flying agent is excluded: the disc is a Recast cost area, and a hovering flyer standing still
-    // in mid-air blocks nothing a walker paths through.
+    // Provider-neutral: the disc is raised through the NavSurface facade as an area-tag markup, so
+    // whichever provider answers the world paints it. The paint is a REQUEST — it lands on a later
+    // drain, never in the frame it was raised — which is why eligibility is gated on _ConfirmedOnMesh
+    // rather than on the handle existing.
+    //
+    // A flying agent is excluded: the disc is a cost area on the walkable surface, and a hovering
+    // flyer standing still in mid-air blocks nothing a walker paths through.
     class CKCROWD_API FProcessor_CrowdAgent_StationaryMarkup : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_StationaryMarkup,
             FCk_Handle_CrowdAgent,
@@ -67,8 +72,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Unregisters and releases the subsystem-pinned painter on entity teardown, so no stale
-    // registration remains in the nav octree.
+    // Destroys the markup entity on agent teardown, so no stale paint remains on the world's
+    // navigation surface.
     class CKCROWD_API FProcessor_CrowdAgent_NavMarkup_EndPlay : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_NavMarkup_EndPlay,
             FCk_Handle_CrowdAgent,
