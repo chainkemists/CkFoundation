@@ -81,6 +81,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_GroundNavVolume_BuiltField);
 
+        friend class FProcessor_GroundNavVolume_Setup;
         friend class FProcessor_GroundNavVolume_Build;
         friend class FProcessor_GroundNavVolume_Repair;
         friend class FProcessor_GroundNavVolume_MarkupCostDerive;
@@ -124,12 +125,20 @@ namespace ck
         groundnav::FCk_GroundNav_ContentFingerprint _BakedInputFingerprint;
         uint64 _BakedGeometryRevision = 0;
 
+        // SETUP answers it - the cook is resolved there and nowhere else. A runtime build that
+        // publishes over a cooked field DEMOTES it to StaleCook: the ground standing here stopped
+        // being the cook's the moment that field was replaced, and only a fresh Setup reads one again.
+        // The repair and the two derives carry whatever stands, for the reason they carry the geometry
+        // revision forward - they re-label ground somebody else published.
+        ECk_GroundNav_CookStatus _CookStatus = ECk_GroundNav_CookStatus::RuntimeOnly;
+
     public:
         CK_PROPERTY_GET(_Field);
         CK_PROPERTY_GET(_VariantFields);
         CK_PROPERTY_GET(_Epoch);
         CK_PROPERTY_GET(_BakedInputFingerprint);
         CK_PROPERTY_GET(_BakedGeometryRevision);
+        CK_PROPERTY_GET(_CookStatus);
     };
 
     // ----------------------------------------------------------------------------------------------------------------

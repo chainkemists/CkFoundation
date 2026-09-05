@@ -85,6 +85,41 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_LoadStatus);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Where the ground a volume has published came from, and - when it did not come from the cook - why
+ * not.
+ *
+ * PROVENANCE, never health. A field baked at runtime because no cook was found answers every query
+ * exactly as well as one loaded from a cook; what this says is which of the two happened, so a level
+ * that was supposed to ship cooked ground can be caught reporting that it did not. Whether the ground
+ * is usable at all is what ECk_NavSurface_ProviderHealth answers, and the two are deliberately not
+ * folded together.
+ */
+UENUM(BlueprintType)
+enum class ECk_GroundNav_CookStatus : uint8
+{
+    // The volume authored no cook key. No cooked field is ever looked up for it and none is ever
+    // written - the honest state of every gym, test and prototype volume.
+    RuntimeOnly,
+
+    // A key is authored and no index asset exists at the convention path for {this level package,
+    // that key}. Absence is LEGAL - a level opts into cooked ground - and the volume bakes at runtime.
+    MissingCook,
+
+    // An index exists and cannot be used: its fingerprint names inputs that have since moved, its
+    // format version is one the reader does not speak, its lattice is not this volume's, or a tile it
+    // names would not load. The volume bakes at runtime rather than reading ground that describes
+    // another world.
+    StaleCook,
+
+    // The published field came out of the cook.
+    Cooked
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GroundNav_CookStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::groundnav
 {
     /**
