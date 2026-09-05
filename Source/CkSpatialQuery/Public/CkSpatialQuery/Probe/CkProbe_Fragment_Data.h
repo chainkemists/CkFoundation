@@ -74,11 +74,29 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_HitKind);
 UENUM(BlueprintType)
 enum class ECk_ProbeResponse_Policy : uint8
 {
-    Notify,
-    Silent
+    // Receives physical Probe overlap callbacks when its filter admits the other Probe.
+    Notify = 0,
+
+    // Does not receive physical Probe overlap callbacks, but remains a possible target for an
+    // admitting Notify Probe and for ProbeTrace queries.
+    Silent = 1
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeResponse_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Probe_ContactParticipation : uint8
+{
+    // The Probe is eligible for physical Probe contacts, subject to response and filter admission.
+    PhysicalContacts = 0,
+
+    // The Probe remains visible to ProbeTrace queries but rejects physical Probe contacts in both directions.
+    QueryOnly = 1
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Probe_ContactParticipation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -172,6 +190,12 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_ProbeResponse_Policy _ResponsePolicy = ECk_ProbeResponse_Policy::Notify;
 
+    // QueryOnly is an explicit query-target contract: it remains traceable but rejects every physical
+    // Probe contact pair. It is deliberately separate from directional Notify/Silent callback policy.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_Probe_ContactParticipation _ContactParticipation = ECk_Probe_ContactParticipation::PhysicalContacts;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, Categories = "Probe",
             EditCondition = "_ResponsePolicy == ECk_ProbeResponse_Policy::Notify"))
@@ -204,6 +228,7 @@ private:
 public:
     CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
+    CK_PROPERTY(_ContactParticipation);
     CK_PROPERTY(_Filter);
     CK_PROPERTY(_ContextOverlapPolicy);
     CK_PROPERTY(_StartingState);
