@@ -1883,9 +1883,20 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        Read_TileInto(
-            const TArray<uint8>& InBlob,
+        Compose_LoadedField(
             FCk_GroundNav_Field& InOutField)
+        -> void
+    {
+        fieldserialize_private::Do_Compose(InOutField);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Read_TileInto(
+            const TArray<uint8>&        InBlob,
+            FCk_GroundNav_Field&        InOutField,
+            ECk_GroundNav_ComposeOnLoad InCompose)
         -> ECk_GroundNav_LoadStatus
     {
         using namespace fieldserialize_private;
@@ -1922,7 +1933,8 @@ namespace ck::groundnav
 
         InOutField._Tiles[TileIndex] = MoveTemp(Tile);
 
-        Do_Compose(InOutField);
+        if (InCompose == ECk_GroundNav_ComposeOnLoad::Now)
+        { Do_Compose(InOutField); }
 
         return ECk_GroundNav_LoadStatus::Loaded;
     }

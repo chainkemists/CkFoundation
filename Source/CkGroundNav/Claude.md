@@ -748,6 +748,12 @@ refused where the params are judged and again where a build is asked for: a dupl
 two of them writing over each other's tiles and reading back whichever landed last. None is exempt,
 because it is not a key.
 
+**A key and a profile variant cannot both stand**, refused at those same two sites. An index names ONE
+field for a volume, so a volume reading its ground from a cook has no field under any variant's tag —
+and a query naming one is answered from nothing rather than from the default's ground, which would
+walk an agent up a step its own profile cannot climb. Refusing the two together is what tells an
+author which of them to give up; dropping the variants quietly at the load would not.
+
 `UCk_GroundNav_CookedFieldIndex_UE` (`Cook/CkGroundNav_CookedFieldIndex.h`) is one volume's cooked
 field: the level package the cook ran over, the volume's cook key, the INPUT fingerprint of the bake,
 the blob format version, the lattice, and the tiles as soft references in the lattice's own tile-index
@@ -764,6 +770,81 @@ the cook recorded — PIE renames every level package, the cook only ever runs o
 raw PIE name would match nothing and degrade silently to a runtime bake. The content root is a
 constant in that header today: CkGroundNav has no project-settings object to hang one on, and it
 belongs beside CkJolt's own `_CookedDataRootPath` the moment the module has one.
+
+**`ECk_GroundNav_CookStatus` is the vocabulary, and it is four values wide.** `RuntimeOnly` — the
+volume authored no key, so nothing was ever looked up and nothing is ever written. `MissingCook` — a
+key is authored and no index exists at the convention path for {this level package, that key};
+absence is LEGAL, a level opts into cooked ground. `StaleCook` — an index exists and cannot be used:
+its fingerprint names inputs that have since moved, its format version is one the reader does not
+speak, its lattice is not this volume's, or a tile it names would not load. `Cooked` — the published
+field came out of the cook. `UCk_Utils_GroundNavVolume_UE::Get_CookStatus` reads it back in all three
+environments.
+
+**The fallback is STATE-SELECTED, not compiled** — the shape `CkJoltStaticWorld_Subsystem`'s
+`Get_UsesCookedData()` branch has, with no `#if` anywhere in it. `FProcessor_GroundNavVolume_Setup`,
+after the volume is admitted, walks the states in the order they rule one another out: no key →
+`RuntimeOnly`, arm the build as before; no index → `MissingCook`, arm the build as before;
+`Try_LoadCookedField` refuses → `StaleCook`, arm the build as before; the load holds → `Cooked`,
+publish that field exactly as the build's publish does and arm nothing. `_AutoBuildOnSetup` is moot
+on the last of those: it says whether the volume bakes itself unasked, and the ground is already
+published. The variant map goes out empty there, and by ADMISSION rather than by a decision at the
+publish: a volume carrying a cook key cannot carry a profile variant. A cooked field participates in
+repair, in the cost derive and in the link derive like any other published field — it is a field, and
+nothing downstream of the publish knows where it came from.
+
+**The cooked publish RESTAMPS every tile's epoch** to the one it is going out under, exactly as a bake
+stamps every tile it builds. The loaded tiles carry the COOK's epochs, which count a run of publishes
+this volume never made, so without the restamp `Get_ChangedTileBounds` would find no tile carrying the
+new epoch and the `Request_NotifySurfaceRebuilt` bounds would be the empty box. With it they are the
+union of every tile the cook held — a fresh publish of everything, which is what a cooked publish is.
+
+The load itself is PURE and lives apart from the world for that reason.
+`Cook/CkGroundNav_CookedFieldLoad.h` splits it in two: `Find_CookedFieldIndex(world, cookKey)`
+resolves the persistent level's package through `Get_LevelPackageKey` — the one derivation of it,
+`Get_PackageLookupKey` over the persistent level — and the path convention, and loads the asset; null
+is `MissingCook`. `Try_LoadCookedField(index, levelPackage, cookKey, params, inputFingerprint,
+outField)` reaches no world at all. Nothing in it ensures, and `OutField` is untouched unless the whole
+load held — a cook older than the code reading it is an ordinary state of a shipped game whose answer
+is to bake at runtime, and a caller falling back needs something to fall back TO. All of which is what
+makes every refusal assertable headless against assets built in a transient package.
+
+**What it judges, in the order that pays least.** First the index's own IDENTITY — the level package
+it records and the cook key it was written for, against the ones the caller asked for. A cooked asset
+is reached by PATH and by nothing else, so an index moved, renamed or copied in from another level
+would answer the lookup while being internally consistent about a volume nobody asked about. Then the
+index's format version, its fingerprint and its lattice, all before a single tile is resolved. Then,
+per tile, what the ASSET claims about the blob it carries: its format version, its lattice against the
+index's, its coord against the slot it is listed for (`_Tiles` is in the lattice's flat tile-index
+order), and its fingerprint against the index's. The blob's own header answers for the bytes below it
+— magic, version, truncation, tags, lattice — and the serializer is what asks those; these four are
+the claims sitting BESIDE the bytes, and until they are compared a tile from another bake, another
+lattice or another slot loads perfectly and lands over ground it was never baked from.
+
+**The composition runs ONCE.** `Read_TileInto` takes an `ECk_GroundNav_ComposeOnLoad` and the loader
+passes `Deferred` for every tile, then calls `Compose_LoadedField` after the last one. The derives are
+whole-field — the seam portals, the resolved links and the reachability labels are re-derived over
+every tile — so composing per tile would run them once per tile and keep only the last run's answer.
+A `Deferred` reader OWES that call: a field left uncomposed carries tiles no crossing, no resolved
+link and no label supports.
+
+**A cooked field carries NO open body.** The per-tile form holds no closure report, and the check
+belongs to the run that read the meshes — which was the cook's, and is the cooker's to report.
+`Try_LoadCookedField` leaves `_OpenBodies` empty rather than reconstructing a list it cannot know is
+still true.
+
+`FFragment_GroundNavVolume_BuiltField::_CookStatus` carries the answer. SETUP answers it — the cook is
+resolved there and nowhere else. A runtime bake that followed a `MissingCook` or a `StaleCook` KEEPS
+that status: it still names why the ground standing there is not the cook's. A runtime build that
+publishes over a `Cooked` field DEMOTES it to `StaleCook`, because the ground standing there stopped
+being the cook's the moment that field was replaced, and only a fresh Setup reads one again. A repair
+or a derive keeps whatever stood, for the reason they carry the geometry revision forward — they
+re-label ground somebody else published.
+
+**Health is not provenance.** `Do_ProviderHealth` in `Facade/CkGroundNav_NavSurfaceAdapter.cpp` is
+UNCHANGED by any of this and must stay so. It answers whether a world has usable ground; where that
+ground came from does not bear on the question, and a level that bakes at runtime because nobody
+cooked it is `Ready` in exactly the way a cooked one is. Folding the two would make a missing cook
+read as a broken nav surface, which is a different and much louder claim.
 
 ---
 

@@ -302,6 +302,19 @@ public:
     Get_IsBuildCurrent(
         const FCk_Handle_GroundNavVolume& InVolume);
 
+    /**
+     * Where this volume's ground came from, and when it did not come from a cook, why not.
+     *
+     * RuntimeOnly for a volume that has not been set up yet, and for one that is not a volume at all -
+     * neither has a cook key that was ever read, so neither has had a cooked field looked for.
+     */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GroundNavVolume",
+              DisplayName="[Ck][GroundNavVolume] Get Cook Status")
+    static ECk_GroundNav_CookStatus
+    Get_CookStatus(
+        const FCk_Handle_GroundNavVolume& InVolume);
+
 public:
     /**
      * How many tiles the published field is divided into, or 0 while nothing is published.

@@ -21,11 +21,17 @@
 
 namespace ck
 {
-    // Validates the authored params and, unless the volume opted out, arms the first build.
+    // Validates the authored params, resolves the volume's cooked field if it authored a key, and —
+    // unless a cooked field was published or the volume opted out — arms the first build.
+    //
+    // The built field is WRITABLE here because the cooked path publishes into it: a cooked field is a
+    // published field like any other, and the alternative — arming a build that would re-bake ground
+    // already sitting on disk — is the cost the cooked form exists to avoid.
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_Setup : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_Setup,
         FCk_Handle_GroundNavVolume,
         ck::TReadOnly<FFragment_GroundNavVolume_Params>,
+        ck::TReadWrite<FFragment_GroundNavVolume_BuiltField>,
         FTag_GroundNavVolume_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -41,7 +47,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVolumeEntity,
-            const FFragment_GroundNavVolume_Params& InParams) -> void;
+            const FFragment_GroundNavVolume_Params& InParams,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
