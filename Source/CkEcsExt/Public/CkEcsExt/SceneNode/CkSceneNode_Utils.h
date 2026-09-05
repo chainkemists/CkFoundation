@@ -76,6 +76,19 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+    // Development-only, one-shot runtime attribution for SceneNode frontier investigations. The census only
+    // reads the current registry and logs bounded aggregate/provenance rows; it never retains a registry view,
+    // fragment reference, or entity handle beyond this call.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SceneNode|Debug",
+              DisplayName="[Ck][SceneNode] Log Provenance Census",
+              meta=(DevelopmentOnly))
+    static void
+    Log_ProvenanceCensus(
+        const FCk_Handle& InContext,
+        const FString& InLabel,
+        int32 InTopN = 20);
+
 private:
     static FCk_Handle_SceneNode
     DoAdd(
