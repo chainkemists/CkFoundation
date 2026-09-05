@@ -26,6 +26,7 @@ namespace ck::spatialquery
         const auto Signature = FCk_ProbeContactSignature{
             .ProbeName = InParams.Get_ProbeName(),
             .ResponsePolicy = InParams.Get_ResponsePolicy(),
+            .ContactParticipation = InParams.Get_ContactParticipation(),
             .Filter = InParams.Get_Filter()};
 
         for (uint32 Index = 0; Index < static_cast<uint32>(_Signatures.Num()); ++Index)
@@ -33,6 +34,7 @@ namespace ck::spatialquery
             const auto& Existing = _Signatures[Index];
             if (Existing.ProbeName == Signature.ProbeName
                 && Existing.ResponsePolicy == Signature.ResponsePolicy
+                && Existing.ContactParticipation == Signature.ContactParticipation
                 && Existing.Filter == Signature.Filter)
             {
                 return Index;
@@ -76,6 +78,12 @@ namespace ck::spatialquery
         const auto* Signatures = _Signatures.GetData();
         const auto& A = Signatures[SignatureA];
         const auto& B = Signatures[SignatureB];
+
+        // QueryOnly bodies remain broadphase and ProbeTrace-visible, but never create a physical
+        // Probe contact. This bilateral gate is intentionally before directional receive policy.
+        if (A.ContactParticipation == ECk_Probe_ContactParticipation::QueryOnly
+            || B.ContactParticipation == ECk_Probe_ContactParticipation::QueryOnly)
+        { return false; }
 
         // Preserve game-thread semantics: either notifying side can receive the pair. Same signatures are legal.
         return Get_CanReceive(A, B) || Get_CanReceive(B, A);

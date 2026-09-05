@@ -23,6 +23,7 @@ namespace ck::spatialquery
     {
         FGameplayTag                 ProbeName;
         ECk_ProbeResponse_Policy     ResponsePolicy = ECk_ProbeResponse_Policy::Notify;
+        ECk_Probe_ContactParticipation ContactParticipation = ECk_Probe_ContactParticipation::PhysicalContacts;
         FGameplayTagContainer        Filter;
     };
 

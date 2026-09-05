@@ -6,6 +6,8 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_RestoreRebase.h"
 
+#include "CkEcs/ContextOwner/CkContextOwner_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 
 #include "CkShapes/Capsule/CkShapeCapsule_Utils.h"
@@ -40,6 +42,8 @@
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
 #include <DrawDebugHelpers.h>
+#include <HAL/IConsoleManager.h>
+#include <ProfilingDebugging/CountersTrace.h>
 
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -49,11 +53,43 @@
 DECLARE_CYCLE_STAT(TEXT("SpatialQuery::CastShape"), STAT_CkSpatialQuery_CastShape, STATGROUP_CkSpatialQuery);
 DECLARE_CYCLE_STAT(TEXT("SpatialQuery::OverlapReconcile"), STAT_CkSpatialQuery_OverlapReconcile, STATGROUP_CkSpatialQuery);
 
+// Single-world performance counters. Multi-world PIE interleaves values, matching the Jolt census counters.
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_TransformVisited, TEXT("CkProbe/Transform Visited"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_TransformStaticSkipped, TEXT("CkProbe/Transform Static Skipped"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_TransformActivateWrites, TEXT("CkProbe/Transform Activate Writes"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_TransformDontActivateWrites, TEXT("CkProbe/Transform DontActivate Writes"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_PhysicalKinematicTotal, TEXT("CkProbe/Idle Physical Kinematic Total"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_OverlapsEmpty, TEXT("CkProbe/Idle Overlaps Empty"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_OverlapHeld, TEXT("CkProbe/Idle Overlap Held"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(CkProbe_PendingRequestsHeld, TEXT("CkProbe/Idle Pending Requests Held"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkProbe_IdleEligibleStationary,
+    TEXT("CkProbe/Idle Eligible Stationary"));
+TRACE_DECLARE_ATOMIC_INT_COUNTER(
+    CkProbe_IdleAwaitingMovedPose,
+    TEXT("CkProbe/Idle Awaiting Moved Pose"));
+
+// --------------------------------------------------------------------------------------------------------------------
+
+static TAutoConsoleVariable<int32> CVarProbeCensusFrames(
+    TEXT("ck.SpatialQuery.ProbeCensusFrames"),
+    0,
+    TEXT("Aggregate physical-contact kinematic Probes by name and owner for N frames, then dump and disable.\n")
+    TEXT("Default 0 is off. Diagnostic only; values above 0 add bounded game-thread aggregation cost."),
+    ECVF_Cheat);
+
+namespace probe_census
+{
+    constexpr int32 RowCapacity = 128;
+    constexpr int32 DroppedKeyCapacity = 128;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_EnsureStaticNotMoved_DEBUG);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_DebugDraw);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_DebugDrawAll);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_IdleCensus);
 
 #define CK_PROBE_FACTORY(ProcessorType) \
     CK_REGISTER_PROCESSOR_WITH_FACTORY(ProcessorType, \
@@ -126,6 +162,20 @@ namespace ck_probe
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_probe_processor
+{
+    auto
+        Get_ActivationMode(
+            const ck::FFragment_Probe_Params& InParams)
+        -> JPH::EActivation
+    {
+        return InParams.Get_MotionType() == ECk_MotionType::Kinematic
+            && InParams.Get_ContactParticipation() == ECk_Probe_ContactParticipation::QueryOnly
+            ? JPH::EActivation::DontActivate
+            : JPH::EActivation::Activate;
+    }
+}
 
 namespace ck::details
 {
@@ -535,7 +585,7 @@ namespace ck::details
         if (InHandle.template Has<FTag_Probe_LinearCast>())
         { return; }
 
-        BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
+        BodyInterface.AddBody(Body->GetID(), ::ck_probe_processor::Get_ActivationMode(InParams));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -555,6 +605,7 @@ namespace ck::details
             TimeType InDeltaT,
             HandleType InHandle,
             const T_ShapeFragment& InShape,
+            const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const
         -> void
     {
@@ -588,7 +639,7 @@ namespace ck::details
             InCurrent.Get_BodyId(),
             NewShape,
             false,
-            EActivation::Activate);
+            ::ck_probe_processor::Get_ActivationMode(InParams));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -722,13 +773,28 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _PendingBodyIds.Reset();
-        _PendingPositions.Reset();
-        _PendingRotations.Reset();
+        _PendingActiveBodyIds.Reset();
+        _PendingActivePositions.Reset();
+        _PendingActiveRotations.Reset();
+        _PendingInactiveBodyIds.Reset();
+        _PendingInactivePositions.Reset();
+        _PendingInactiveRotations.Reset();
 
         TProcessor::DoTick(InDeltaT);
 
-        if (_PendingBodyIds.IsEmpty())
+#if COUNTERSTRACE_ENABLED
+        if (UE_TRACE_CHANNELEXPR_IS_ENABLED(CountersChannel))
+        {
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_TransformVisited, _LastVisitedCount);
+            TRACE_COUNTER_SET_ALWAYS(
+                CkProbe_TransformStaticSkipped,
+                _LastVisitedCount - _PendingActiveBodyIds.Num() - _PendingInactiveBodyIds.Num());
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_TransformActivateWrites, _PendingActiveBodyIds.Num());
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_TransformDontActivateWrites, _PendingInactiveBodyIds.Num());
+        }
+#endif
+
+        if (_PendingActiveBodyIds.IsEmpty() && _PendingInactiveBodyIds.IsEmpty())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -736,12 +802,28 @@ namespace ck
             TEXT("PhysicsSystem is no longer valid during Probe UpdateTransform"))
         { return; }
 
-        PhysicsSystem->GetBodyInterface().SetPositionsAndRotations(
-            _PendingBodyIds.GetData(),
-            _PendingPositions.GetData(),
-            _PendingRotations.GetData(),
-            _PendingBodyIds.Num(),
-            JPH::EActivation::Activate);
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        if (NOT _PendingActiveBodyIds.IsEmpty())
+        {
+            BodyInterface.SetPositionsAndRotations(
+                _PendingActiveBodyIds.GetData(),
+                _PendingActivePositions.GetData(),
+                _PendingActiveRotations.GetData(),
+                _PendingActiveBodyIds.Num(),
+                JPH::EActivation::Activate);
+        }
+
+        if (NOT _PendingInactiveBodyIds.IsEmpty())
+        {
+            BodyInterface.SetPositionsAndRotations(
+                _PendingInactiveBodyIds.GetData(),
+                _PendingInactivePositions.GetData(),
+                _PendingInactiveRotations.GetData(),
+                _PendingInactiveBodyIds.Num(),
+                JPH::EActivation::DontActivate);
+        }
+
     }
 
     auto
@@ -760,9 +842,21 @@ namespace ck
         { return; }
 
         const auto& EntityTransform = InTransform.Get_Transform();
-        _PendingBodyIds.Add(InCurrent.Get_BodyId());
-        _PendingPositions.Add(jolt::Conv(EntityTransform.GetLocation()));
-        _PendingRotations.Add(jolt::Conv(EntityTransform.GetRotation()));
+        const auto Position = jolt::Conv(EntityTransform.GetLocation());
+        const auto Rotation = jolt::Conv(EntityTransform.GetRotation());
+
+        if (::ck_probe_processor::Get_ActivationMode(InParams) == JPH::EActivation::DontActivate)
+        {
+            _PendingInactiveBodyIds.Add(InCurrent.Get_BodyId());
+            _PendingInactivePositions.Add(Position);
+            _PendingInactiveRotations.Add(Rotation);
+        }
+        else
+        {
+            _PendingActiveBodyIds.Add(InCurrent.Get_BodyId());
+            _PendingActivePositions.Add(Position);
+            _PendingActiveRotations.Add(Rotation);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1030,6 +1124,228 @@ namespace ck
     }
 
     auto
+        FProcessor_Probe_IdleCensus::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        const auto RequestedCensusFrames = FMath::Max(0, CVarProbeCensusFrames.GetValueOnGameThread());
+        if (RequestedCensusFrames == 0 && _ProbeCensusFramesRemaining > 0)
+        {
+            ResetProbeCensus();
+        }
+        else if (RequestedCensusFrames > 0 && _ProbeCensusFramesRemaining == 0)
+        {
+            ResetProbeCensus();
+            _ProbeCensusFramesRemaining = RequestedCensusFrames;
+        }
+
+#if COUNTERSTRACE_ENABLED
+        const auto TraceCountersEnabled = UE_TRACE_CHANNELEXPR_IS_ENABLED(CountersChannel);
+#else
+        constexpr auto TraceCountersEnabled = false;
+#endif
+        const auto ProbeCensusEnabled = _ProbeCensusFramesRemaining > 0;
+        if (NOT TraceCountersEnabled && NOT ProbeCensusEnabled)
+        {
+            _LastVisitedCount = 0;
+            return;
+        }
+
+        _PhysicalKinematicCount = 0;
+        _OverlapsEmptyCount = 0;
+        _OverlapHeldCount = 0;
+        _PendingRequestsHeldCount = 0;
+        _IdleEligibleStationaryCount = 0;
+        _IdleAwaitingMovedPoseCount = 0;
+
+        TProcessor::DoTick(InDeltaT);
+
+#if COUNTERSTRACE_ENABLED
+        if (TraceCountersEnabled)
+        {
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_PhysicalKinematicTotal, _PhysicalKinematicCount);
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_OverlapsEmpty, _OverlapsEmptyCount);
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_OverlapHeld, _OverlapHeldCount);
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_PendingRequestsHeld, _PendingRequestsHeldCount);
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_IdleEligibleStationary, _IdleEligibleStationaryCount);
+            TRACE_COUNTER_SET_ALWAYS(CkProbe_IdleAwaitingMovedPose, _IdleAwaitingMovedPoseCount);
+        }
+#endif
+
+        if (ProbeCensusEnabled)
+        {
+            ++_ProbeCensusFramesObserved;
+            --_ProbeCensusFramesRemaining;
+            if (_ProbeCensusFramesRemaining == 0)
+            {
+                DumpProbeCensus();
+                CVarProbeCensusFrames->Set(0, ECVF_SetByConsole);
+                ResetProbeCensus();
+            }
+        }
+    }
+
+    auto
+        FProcessor_Probe_IdleCensus::
+        ResetProbeCensus()
+        -> void
+    {
+        _ProbeCensusRows.Reset();
+        _DroppedProbeCensusKeys.Reset();
+        _ProbeCensusFramesRemaining = 0;
+        _ProbeCensusFramesObserved = 0;
+        _ProbeCensusDroppedSamples = 0;
+    }
+
+    auto
+        FProcessor_Probe_IdleCensus::
+        DumpProbeCensus()
+        -> void
+    {
+        using FRowPair = TPair<FString, FProbeCensusRow>;
+        auto Rows = TArray<FRowPair>{};
+        Rows.Reserve(_ProbeCensusRows.Num());
+        for (const auto& Pair : _ProbeCensusRows)
+        {
+            Rows.Emplace(Pair.Key, Pair.Value);
+        }
+
+        Rows.Sort([](const FRowPair& InA, const FRowPair& InB)
+        {
+            if (InA.Value.Samples != InB.Value.Samples)
+            { return InA.Value.Samples > InB.Value.Samples; }
+            return InA.Key < InB.Key;
+        });
+
+        ck::spatialquery::Display(
+            TEXT("[ProbeCensus] frames={} rows={} rowCapacity={} droppedKeysTracked={} droppedKeyCapacity={} droppedSamples={}"),
+            _ProbeCensusFramesObserved,
+            Rows.Num(),
+            probe_census::RowCapacity,
+            _DroppedProbeCensusKeys.Num(),
+            probe_census::DroppedKeyCapacity,
+            _ProbeCensusDroppedSamples);
+
+        for (int32 Rank = 0; Rank < Rows.Num(); ++Rank)
+        {
+            const auto& Row = Rows[Rank].Value;
+            ck::spatialquery::Display(
+                TEXT("[ProbeCensus] rank={} probe=[{}] context=[{}] script=[{}] unique={} samples={} transformUpdated={} overlapHeld={} overlapCardinality={} pendingRequests={}"),
+                Rank + 1,
+                Row.ProbeName,
+                Row.ContextOwnerDebugName,
+                Row.EntityScriptClassName,
+                Row.UniqueProbeIds.Num(),
+                Row.Samples,
+                Row.TransformUpdatedSamples,
+                Row.OverlapHeldSamples,
+                Row.OverlapCardinalitySamples,
+                Row.PendingRequestSamples);
+        }
+    }
+
+    auto
+        FProcessor_Probe_IdleCensus::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            const FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        if (InParams.Get_MotionType() != ECk_MotionType::Kinematic
+            || InParams.Get_ContactParticipation() != ECk_Probe_ContactParticipation::PhysicalContacts)
+        { return; }
+
+        ++_PhysicalKinematicCount;
+
+        const auto HasCurrentOverlaps = NOT InCurrent.Get_CurrentOverlaps().IsEmpty();
+        if (HasCurrentOverlaps)
+        { ++_OverlapHeldCount; }
+        else
+        { ++_OverlapsEmptyCount; }
+
+        // The requests fragment persists, so only a non-empty queue counts as pending. This category is
+        // intentionally independent of overlap-held: a probe can have current overlaps and queued updates/ends.
+        const auto HasPendingRequests = InHandle.Has<FFragment_Probe_Requests>()
+            && NOT InHandle.Get<FFragment_Probe_Requests>().Get_Requests().IsEmpty();
+        if (HasPendingRequests)
+        { ++_PendingRequestsHeldCount; }
+
+        if (_ProbeCensusFramesRemaining > 0)
+        {
+            auto ContextOwnerDebugName = FName{NAME_None};
+            if (UCk_Utils_ContextOwner_UE::Has(InHandle))
+            {
+                const auto ContextOwner = UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle);
+                if (ck::IsValid(ContextOwner))
+                { ContextOwnerDebugName = ContextOwner.Get_DebugName(); }
+            }
+
+            auto EntityScriptClassName = FName{NAME_None};
+            const auto EntityScriptEntity =
+                UCk_Utils_EntityScript_UE::TryGet_Entity_EntityScript_InOwnershipChain(InHandle);
+            if (ck::IsValid(EntityScriptEntity))
+            {
+                const auto EntityScriptHandle = UCk_Utils_EntityScript_UE::CastChecked(EntityScriptEntity);
+                if (ck::IsValid(EntityScriptHandle)
+                    && EntityScriptHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().IsValid())
+                {
+                    const auto EntityScriptClass = UCk_Utils_EntityScript_UE::Get_ScriptClass(EntityScriptHandle);
+                    if (EntityScriptClass)
+                    { EntityScriptClassName = EntityScriptClass->GetFName(); }
+                }
+            }
+
+            const auto ProbeName = InParams.Get_ProbeName().GetTagName();
+            const auto Key = FString::Printf(
+                TEXT("%s|%s|%s"),
+                *ProbeName.ToString(),
+                *ContextOwnerDebugName.ToString(),
+                *EntityScriptClassName.ToString());
+
+            auto* Row = _ProbeCensusRows.Find(Key);
+            if (Row == nullptr)
+            {
+                if (_ProbeCensusRows.Num() >= probe_census::RowCapacity)
+                {
+                    if (_DroppedProbeCensusKeys.Num() < probe_census::DroppedKeyCapacity)
+                    { _DroppedProbeCensusKeys.Add(Key); }
+                    ++_ProbeCensusDroppedSamples;
+                }
+                else
+                {
+                    Row = &_ProbeCensusRows.Add(Key);
+                    Row->ProbeName = ProbeName;
+                    Row->ContextOwnerDebugName = ContextOwnerDebugName;
+                    Row->EntityScriptClassName = EntityScriptClassName;
+                }
+            }
+
+            if (Row != nullptr)
+            {
+                Row->UniqueProbeIds.Add(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+                ++Row->Samples;
+                Row->TransformUpdatedSamples += InHandle.Has<FTag_Transform_Updated>() ? 1 : 0;
+                Row->OverlapHeldSamples += HasCurrentOverlaps ? 1 : 0;
+                Row->OverlapCardinalitySamples += InCurrent.Get_CurrentOverlaps().Num();
+                Row->PendingRequestSamples += HasPendingRequests ? 1 : 0;
+            }
+        }
+
+        if (NOT HasCurrentOverlaps && NOT HasPendingRequests)
+        {
+            // A moved pose must survive the upcoming nonzero physics batch. Only a stationary, settled probe is a
+            // deactivation candidate; keeping both buckets explicit prevents the census from overstating the win.
+            if (InHandle.Has<FTag_Transform_Updated>())
+            { ++_IdleAwaitingMovedPoseCount; }
+            else
+            { ++_IdleEligibleStationaryCount; }
+        }
+    }
+
+    auto
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
@@ -1158,7 +1474,9 @@ namespace ck
                 {
                     auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-                    BodyInterface.AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+                    const auto ActivationMode = ::ck_probe_processor::Get_ActivationMode(
+                        InHandle.Get<FFragment_Probe_Params>());
+                    BodyInterface.AddBody(InCurrent.Get_BodyId(), ActivationMode);
 
                     const auto& EntityTransform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
                     const auto& EntityPosition = EntityTransform.GetLocation();
@@ -1167,7 +1485,7 @@ namespace ck
                     const auto EntityRotationQuat = FQuat{EntityRotation};
                     const auto Rot = jolt::Conv(EntityRotationQuat);
 
-                    BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, JPH::EActivation::Activate);
+                    BodyInterface.SetPositionAndRotation(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot, ActivationMode);
                 }
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
