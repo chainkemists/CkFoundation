@@ -106,6 +106,7 @@ namespace ck::details
         TProcessor_ProbeUpdateShape<T_ShapeFragment>,
         FCk_Handle_Probe,
         ck::TReadOnly<T_ShapeFragment>,
+        ck::TReadOnly<FFragment_Probe_Params>,
         ck::TReadWrite<FFragment_Probe_Current>,
         FTag_Probe_ShapeUpdated,
         TExclude<FTag_Probe_NeedsSetup>,
@@ -116,6 +117,7 @@ namespace ck::details
             TProcessor_ProbeUpdateShape<T_ShapeFragment>,
             FCk_Handle_Probe,
             ck::TReadOnly<T_ShapeFragment>,
+            ck::TReadOnly<FFragment_Probe_Params>,
             ck::TReadWrite<FFragment_Probe_Current>,
             FTag_Probe_ShapeUpdated,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -142,6 +144,7 @@ namespace ck::details
             TimeType InDeltaT,
             HandleType InHandle,
             const T_ShapeFragment& InShape,
+            const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const -> void;
 
     private:
@@ -229,9 +232,12 @@ namespace ck
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-        TArray<JPH::BodyID> _PendingBodyIds;
-        TArray<JPH::RVec3> _PendingPositions;
-        TArray<JPH::Quat> _PendingRotations;
+        TArray<JPH::BodyID> _PendingActiveBodyIds;
+        TArray<JPH::RVec3> _PendingActivePositions;
+        TArray<JPH::Quat> _PendingActiveRotations;
+        TArray<JPH::BodyID> _PendingInactiveBodyIds;
+        TArray<JPH::RVec3> _PendingInactivePositions;
+        TArray<JPH::Quat> _PendingInactiveRotations;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -414,6 +420,69 @@ namespace ck
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_Probe_IdleCensus : public ck_exp::TProcessor<
+            FProcessor_Probe_IdleCensus,
+            FCk_Handle_Probe,
+            ck::TReadOnly<FFragment_Probe_Params>,
+            ck::TReadOnly<FFragment_Probe_Current>,
+            TExclude<FTag_Probe_LinearCast>,
+            TExclude<FTag_Probe_Disabled>,
+            TExclude<FTag_Probe_NeedsSetup>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Overlap;
+        using RunAfter = TDepList<FProcessor_Probe_UpdateTransform_LinearCast>;
+        using RunBefore = TDepList<FProcessor_Probe_HandleRequests>;
+        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto DoTick(TimeType InDeltaT) -> void;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            const FFragment_Probe_Current& InCurrent) -> void;
+
+    private:
+        struct FProbeCensusRow
+        {
+            FName ProbeName;
+            FName ContextOwnerDebugName;
+            FName EntityScriptClassName;
+            TSet<uint64> UniqueProbeIds;
+            uint64 Samples = 0;
+            uint64 TransformUpdatedSamples = 0;
+            uint64 OverlapHeldSamples = 0;
+            uint64 OverlapCardinalitySamples = 0;
+            uint64 PendingRequestSamples = 0;
+        };
+
+        auto ResetProbeCensus() -> void;
+        auto DumpProbeCensus() -> void;
+
+    private:
+        int32 _PhysicalKinematicCount = 0;
+        int32 _OverlapsEmptyCount = 0;
+        int32 _OverlapHeldCount = 0;
+        int32 _PendingRequestsHeldCount = 0;
+        int32 _IdleEligibleStationaryCount = 0;
+        int32 _IdleAwaitingMovedPoseCount = 0;
+        TMap<FString, FProbeCensusRow> _ProbeCensusRows;
+        TSet<FString> _DroppedProbeCensusKeys;
+        int32 _ProbeCensusFramesRemaining = 0;
+        int32 _ProbeCensusFramesObserved = 0;
+        uint64 _ProbeCensusDroppedSamples = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
