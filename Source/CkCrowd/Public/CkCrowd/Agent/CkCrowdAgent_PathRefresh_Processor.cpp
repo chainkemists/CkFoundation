@@ -14,7 +14,6 @@
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
-#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
@@ -87,21 +86,18 @@ namespace ck
                 this->_TransientEntity.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
                     [&](FCk_Entity InEntity, FFragment_CrowdAgent_NavMarkup& InMarkup)
                 {
-                    if (NOT InMarkup.Get_Markup().IsValid())
+                    if (NOT ck::IsValid(InMarkup.Get_Markup()))
                     { return; }
 
                     if (InMarkup.Get_SecondsSincePaint() < SettleSeconds)
                     { return; }
 
-                    // Tile rebake latency is unbounded under churn, so eligibility is ground truth
-                    // and not a timer: the mesh must actually report the cost area at the centre.
+                    // Rebuild latency is unbounded under churn, so eligibility is the provider's own
+                    // answer and not a timer: the paint must have LANDED on the surface it was raised
+                    // against, which is a question only the provider that took it can answer.
                     if (NOT InMarkup.Get_ConfirmedOnMesh())
                     {
-                        // Vertical extent is the painted box's — the disc centre rides at capsule
-                        // height, and a shorter probe misses the floor polys the box marked.
-                        const auto Extent = FVector{InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupVerticalHalfExtentUu()};
-                        if (NOT ck::nav_surface_recast::Get_IsAreaLiveAt(
-                            World, TAG_Nav_Area_Crowd_Agent, InMarkup.Get_MarkupLocation(), Extent))
+                        if (NOT UCk_Utils_NavSurface_UE::Get_IsMarkupLive(InMarkup.Get_Markup()))
                         { return; }
 
                         InMarkup._ConfirmationSerial = IssueConfirmationSerial();
@@ -130,7 +126,7 @@ namespace ck
             this->_TransientEntity.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
                 [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
             {
-                if (NOT InRuntime.Get_Markup().IsValid() ||
+                if (NOT ck::IsValid(InRuntime.Get_Markup()) ||
                     NOT InRuntime.Get_ConfirmedOnMesh() ||
                     NOT InRuntime.Get_AuthoredObb().IsFiniteAndPositive() ||
                     InRuntime.Get_ConfirmationSerial() == 0)
@@ -238,7 +234,7 @@ namespace ck
                 // geometry and is valid the moment the disc exists.
                 const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
                 const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
-                if (NOT InMarkup.Get_Markup().IsValid() ||
+                if (NOT ck::IsValid(InMarkup.Get_Markup()) ||
                     MarkupLocation.ContainsNaN() ||
                     NOT FMath::IsFinite(MarkupRadius) ||
                     MarkupRadius <= 0.0f)
@@ -255,7 +251,7 @@ namespace ck
         {
             const auto EffectiveObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
                 InRuntime.Get_AuthoredObb(), InRuntime.Get_PaintedObb(), InAgentRadius);
-            if (InRuntime.Get_Markup().IsValid() && EffectiveObb.IsFiniteAndPositive())
+            if (ck::IsValid(InRuntime.Get_Markup()) && EffectiveObb.IsFiniteAndPositive())
             { Volumes.Add(EffectiveObb); }
         });
 
@@ -502,7 +498,7 @@ namespace ck
         {
             if (NOT ProjectedEscapeIsClear ||
                 InEntity == InSelfEntity ||
-                NOT InMarkup.Get_Markup().IsValid())
+                NOT ck::IsValid(InMarkup.Get_Markup()))
             { return; }
 
             const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
@@ -537,7 +533,7 @@ namespace ck
         InAnyWorldHandle.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
             [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
         {
-            if (NOT ProjectedEscapeIsClear || NOT InRuntime.Get_Markup().IsValid())
+            if (NOT ProjectedEscapeIsClear || NOT ck::IsValid(InRuntime.Get_Markup()))
             { return; }
 
             constexpr auto EndpointMarginUu = 1.0f;
@@ -709,7 +705,7 @@ namespace ck
             [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
         {
             if (InEntity == InSelfEntity ||
-                NOT InMarkup.Get_Markup().IsValid() ||
+                NOT ck::IsValid(InMarkup.Get_Markup()) ||
                 NOT InMarkup.Get_ConfirmedOnMesh())
             { return; }
 
@@ -730,7 +726,7 @@ namespace ck
         InAnyWorldHandle.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
             [&](FCk_Entity InEntity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
         {
-            if (NOT InRuntime.Get_Markup().IsValid() || NOT InRuntime.Get_ConfirmedOnMesh())
+            if (NOT ck::IsValid(InRuntime.Get_Markup()) || NOT InRuntime.Get_ConfirmedOnMesh())
             { return; }
             const auto Expanded = crowd_avoidance_volume::MakeEffectiveAgentObb(
                 InRuntime.Get_AuthoredObb(),

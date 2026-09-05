@@ -104,7 +104,7 @@ namespace ck
                     const auto& Runtime = OtherAgent.Get<FFragment_CrowdAvoidanceVolume_ProbeRef>();
                     const auto& VolumeParams = OtherAgent.Get<FFragment_CrowdAvoidanceVolume_Params>();
                     const auto& Obb = Runtime.Get_AuthoredObb();
-                    const auto RuntimeIsValid = Runtime.Get_Markup().IsValid()
+                    const auto RuntimeIsValid = ck::IsValid(Runtime.Get_Markup())
                         && Obb.IsFiniteAndPositive();
                     CK_ENSURE_IF_NOT(RuntimeIsValid,
                         TEXT("CrowdAvoidanceVolume [{}] has runtime state but no valid canonical OBB/markup"),

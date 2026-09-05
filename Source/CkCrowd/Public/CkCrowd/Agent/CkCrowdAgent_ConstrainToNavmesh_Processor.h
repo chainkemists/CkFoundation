@@ -9,6 +9,12 @@
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PushApart_Processor.h"
 
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct FCk_NavSurface_ProviderTable;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -54,6 +60,14 @@ namespace ck
     // A flying agent is not on a surface, so it is excluded and its staged displacement is applied
     // whole by FProcessor_CrowdAgent_ApplyDisplacement3D instead — the two views partition the agent
     // population, keeping exactly one Transform writer per agent.
+    //
+    // Being the single Transform writer is also what makes this the only honest place to ask the
+    // per-frame containment question a shadow run needs answered: whether the position the constraint
+    // just resolved is on walkable ground for BOTH providers. It is a question about a position, not
+    // about a query pair, so the shadow comparison of routes cannot ask it — nothing else in the frame
+    // knows where the agent ended up. The world's shadow mode and the provider pairing it names are
+    // read once per tick, so a world that is not shadowing pays nothing per agent and a world that is
+    // pays one registry read a frame rather than one per body.
     class CKCROWD_API FProcessor_CrowdAgent_ConstrainToNavmesh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_ConstrainToNavmesh,
             FCk_Handle_CrowdAgent,
@@ -73,14 +87,72 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        static auto
+        auto DoTick(FCk_Time InDeltaT) -> void;
+
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
-            FFragment_CrowdAgent_Grounding& InGrounding) -> void;
+            FFragment_CrowdAgent_Grounding& InGrounding) const -> void;
+
+        /**
+         * Whether two providers disagree about whether a position is contained at all: one found
+         * walkable ground under it and the other found none.
+         *
+         * Agreement is not an escape in EITHER direction - contained on both is the ordinary answer,
+         * and off both is an agent genuinely in free space, which the grounding report already owns.
+         * Only the split verdict says the two providers cover different ground, which is the whole
+         * question a shadow run is asking.
+         */
+        static auto
+        Get_IsContainmentEscape(
+            ECk_NavSurface_QueryStatus InActiveStatus,
+            ECk_NavSurface_QueryStatus InShadowStatus) -> bool;
+
+    private:
+        // The constraint proper. Hands back through InOutResolvedOffset everything it enqueued this
+        // frame, so the containment check downstream asks about the position this pass RESOLVED
+        // rather than the one it was handed - the Transform write is a queued request and has not
+        // landed by the time the check runs.
+        static auto
+        DoConstrain(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PendingDisplacement& InPending,
+            FFragment_CrowdAgent_Grounding& InGrounding,
+            FVector& InOutResolvedOffset) -> void;
+
+        // Costs nothing at all while the world is not shadowing, and nothing extra per agent while
+        // it is: the tick has already resolved the pairing, so this either holds two provider tables
+        // to project onto or leaves on its first read. An agent part-way across an authored link is
+        // skipped outright - it stands between the two points the link joins and on no walkable cell
+        // in between, so whichever way that pair lands it measures the link and not the ground.
+        auto
+        DoRecord_ContainmentEscape(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InResolvedLocation) const -> void;
+
+    private:
+        // Resolves the world's shadow mode and the provider pairing it names into the two tables
+        // below, or leaves both null when there is nothing to count.
+        auto DoRefresh_ShadowPairing() -> void;
+
+    private:
+        // Rebuilt every tick; read by the per-entity pass the same tick. Which provider a world plans
+        // on and whether it is shadowing cannot move under the pass, so both are asked once.
+        const FCk_NavSurface_ProviderTable* _ActiveProviderTable = nullptr;
+        const FCk_NavSurface_ProviderTable* _ShadowProviderTable = nullptr;
+
+        // Said once for the life of the world. A world shadowing while it ALREADY plans on GroundNav
+        // has no second answer to disagree with, so the counter cannot be collected under that
+        // pairing at all - and a reader of a zero is owed the reason rather than left to infer one.
+        bool _UncountablePairingAnnounced = false;
     };
 }
 
