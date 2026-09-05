@@ -46,8 +46,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: without it the scheduler's lexical tie-break races CreateBody against the async step.
-        using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_WaitForAsync>;
+        // TransformWriters is the post-async reader boundary: CreateBody cannot race the prior async step or
+        // LatestCompleted readers that consume its solved state.
+        using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_TransformWriters>;
         using MarkedDirtyBy = FTag_JoltBody_NeedsSetup;
 
     public:
