@@ -1,8 +1,13 @@
 #include "CkSceneNode_Utils.h"
 
+#include "CkEcsExt/CkEcsExt_Log.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Handle/CkHandle_ReadOnly.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "Components/SceneComponent.h"
@@ -19,6 +24,246 @@ Get_SceneNodeAnchorLabel(
     { return DebugName.ToString(); }
 
     return ck::Format_UE(TEXT("#{}"), InHandle.Get_Entity().Get_EntityNumber());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::FUtils_SceneNodePropagation::
+    Queue(
+        FCk_Handle& InSceneNode)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InSceneNode) ||
+        NOT InSceneNode.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode_Current>() ||
+        InSceneNode.Has<ck::FFragment_SceneNode_UnrealAnchor>())
+    { return; }
+
+    auto& State = InSceneNode.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
+    ++State._QueueGeneration;
+    InSceneNode.AddOrGet<ck::FTag_SceneNode_PropagationQueued>();
+}
+
+auto
+    ck::FUtils_SceneNodePropagation::
+    DeferConsume(
+        const FCk_Handle_ReadOnly& InSceneNode,
+        uint64 InGeneration)
+    -> void
+{
+    InSceneNode.DeferCustom([InGeneration](FCk_Handle& InDeferredSceneNode)
+    {
+        if (ck::Is_NOT_Valid(InDeferredSceneNode) ||
+            NOT InDeferredSceneNode.Has<ck::FFragment_SceneNode_PropagationState>())
+        { return; }
+
+        const auto& State = InDeferredSceneNode.Get<ck::FFragment_SceneNode_PropagationState>();
+        if (State.Get_QueueGeneration() == InGeneration)
+        { InDeferredSceneNode.Try_Remove<ck::FTag_SceneNode_PropagationQueued>(); }
+    });
+}
+
+auto
+    ck::FUtils_SceneNodePropagation::
+    PublishChildrenIfChanged(
+        FCk_Handle& InParent,
+        const FTransform& InWorldTransform)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InParent) || NOT InParent.Has<ck::FFragment_RecordOfSceneNodes>())
+    { return; }
+
+    auto& State = InParent.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
+    if (State._HasPublishedWorldTransform && State._LastPublishedWorldTransform.Equals(InWorldTransform))
+    { return; }
+
+    State._LastPublishedWorldTransform = InWorldTransform;
+    State._HasPublishedWorldTransform = true;
+
+    ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InParent, [](FCk_Handle_SceneNode InChild)
+    {
+        Queue(InChild);
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_Utils_SceneNode_UE::
+    Log_ProvenanceCensus(
+        const FCk_Handle& InContext,
+        const FString& InLabel,
+        int32 InTopN)
+{
+#if !UE_BUILD_SHIPPING
+    if (NOT ck::IsValid(InContext))
+    {
+        UE_LOG(CkEcsExt, Display, TEXT("[SceneNodeCensus] label=\"%s\" invalid context"), *InLabel);
+        return;
+    }
+
+    const auto TopN = FMath::Clamp(InTopN, 1, 20);
+    const auto Registry = InContext.Get_RegistryView();
+
+    struct FCounts
+    {
+        int32 Total = 0;
+        int32 Layers[3] = {};
+        int32 UnrealComponent = 0;
+        int32 UnrealMeshSocket = 0;
+        int32 RootComponent = 0;
+        int32 MeshSocket = 0;
+        int32 Bare = 0;
+        int32 ExternallyDriven = 0;
+        int32 UnrealComponentExternal = 0;
+        int32 UnrealMeshSocketExternal = 0;
+        int32 RootComponentExternal = 0;
+        int32 MeshSocketExternal = 0;
+        int32 BareExternal = 0;
+        int32 PropagationState = 0;
+        int32 PropagationQueued = 0;
+    } Counts;
+
+    auto CompositeBuckets = TMap<FString, int32>{};
+    auto NodeMarginals = TMap<FString, int32>{};
+    auto ParentMarginals = TMap<FString, int32>{};
+
+    const auto GetName = [](const FCk_Handle& InHandle) -> FString
+    {
+        if (NOT ck::IsValid(InHandle))
+        { return TEXT("<invalid>"); }
+
+        const auto Name = UCk_Utils_Handle_UE::Get_DebugName(InHandle);
+        return Name.IsNone()
+            ? ck::Format_UE(TEXT("#{}"), InHandle.Get_Entity().Get_EntityNumber())
+            : Name.ToString();
+    };
+
+    const auto CensusNode = [&](const FCk_Entity InEntity,
+                                const ck::SceneNodeParent& InParent,
+                                const int32 InLayer)
+    {
+        const auto Node = FCk_Handle{InEntity, Registry.Get_RegistryHandle()};
+        const auto Parent = FCk_Handle{InParent.Get_Entity().Get_Entity(), Registry.Get_RegistryHandle()};
+        const auto NodeName = GetName(Node);
+        const auto ParentName = GetName(Parent);
+        const auto IsExternallyDriven = Node.Has<ck::FTag_Transform_ExternallyDriven>();
+
+        auto AnchorKind = FString{TEXT("Bare")};
+        if (Node.Has<ck::FFragment_SceneNode_UnrealAnchor>())
+        {
+            const auto& Anchor = Node.Get<ck::FFragment_SceneNode_UnrealAnchor>();
+            AnchorKind = Anchor.Get_Socket().IsNone() ? TEXT("UnrealComponent") : TEXT("UnrealMeshSocket");
+        }
+        else if (Node.Has<ck::FFragment_Transform_RootComponent>())
+        { AnchorKind = TEXT("RootComponent"); }
+        else if (Node.Has<ck::FFragment_Transform_MeshSocket>())
+        { AnchorKind = TEXT("MeshSocket"); }
+
+        ++Counts.Total;
+        ++Counts.Layers[InLayer];
+        if (IsExternallyDriven)
+        { ++Counts.ExternallyDriven; }
+        if (Node.Has<ck::FFragment_SceneNode_PropagationState>())
+        { ++Counts.PropagationState; }
+        if (Node.Has<ck::FTag_SceneNode_PropagationQueued>())
+        { ++Counts.PropagationQueued; }
+
+        if (AnchorKind == TEXT("UnrealComponent"))
+        {
+            ++Counts.UnrealComponent;
+            Counts.UnrealComponentExternal += IsExternallyDriven ? 1 : 0;
+        }
+        else if (AnchorKind == TEXT("UnrealMeshSocket"))
+        {
+            ++Counts.UnrealMeshSocket;
+            Counts.UnrealMeshSocketExternal += IsExternallyDriven ? 1 : 0;
+        }
+        else if (AnchorKind == TEXT("RootComponent"))
+        {
+            ++Counts.RootComponent;
+            Counts.RootComponentExternal += IsExternallyDriven ? 1 : 0;
+        }
+        else if (AnchorKind == TEXT("MeshSocket"))
+        {
+            ++Counts.MeshSocket;
+            Counts.MeshSocketExternal += IsExternallyDriven ? 1 : 0;
+        }
+        else
+        {
+            ++Counts.Bare;
+            Counts.BareExternal += IsExternallyDriven ? 1 : 0;
+        }
+
+        ++CompositeBuckets.FindOrAdd(FString::Printf(TEXT("L%d|%s|%s|%s|external=%d"),
+            InLayer, *NodeName, *ParentName, *AnchorKind, IsExternallyDriven ? 1 : 0));
+        ++NodeMarginals.FindOrAdd(FString::Printf(TEXT("L%d|%s"), InLayer, *NodeName));
+        ++ParentMarginals.FindOrAdd(FString::Printf(TEXT("L%d|%s"), InLayer, *ParentName));
+    };
+
+    Registry.View<ck::FTag_SceneNode_Layer0, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+                  ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
+        [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
+        { CensusNode(Entity, Parent, 0); });
+    Registry.View<ck::FTag_SceneNode_Layer1, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+                  ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
+        [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
+        { CensusNode(Entity, Parent, 1); });
+    Registry.View<ck::FTag_SceneNode_Layer2, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+                  ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
+        [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
+        { CensusNode(Entity, Parent, 2); });
+
+    const auto LogTop = [TopN, &InLabel](const TCHAR* InKind, const TMap<FString, int32>& InBuckets)
+    {
+        auto Rows = TArray<TPair<FString, int32>>{};
+        Rows.Reserve(InBuckets.Num());
+        for (const auto& Pair : InBuckets)
+        { Rows.Emplace(Pair.Key, Pair.Value); }
+        Rows.Sort([](const TPair<FString, int32>& A, const TPair<FString, int32>& B)
+        {
+            return A.Value != B.Value ? A.Value > B.Value : A.Key < B.Key;
+        });
+
+        const auto NumRows = FMath::Min(TopN, Rows.Num());
+        auto ShownCount = int32{0};
+        for (int32 Index = 0; Index < NumRows; ++Index)
+        {
+            const auto& Row = Rows[Index];
+            ShownCount += Row.Value;
+            UE_LOG(CkEcsExt, Display, TEXT("[SceneNodeCensus] label=\"%s\" %s rank=%d count=%d key=\"%s\""),
+                *InLabel, InKind, Index + 1, Row.Value, *Row.Key);
+        }
+
+        auto TotalCount = int32{0};
+        for (const auto& Pair : InBuckets)
+        { TotalCount += Pair.Value; }
+        UE_LOG(CkEcsExt, Display,
+            TEXT("[SceneNodeCensus] label=\"%s\" %s distinct=%d shown=%d shownCount=%d otherCount=%d"),
+            *InLabel, InKind, Rows.Num(), NumRows, ShownCount, TotalCount - ShownCount);
+    };
+
+    UE_LOG(CkEcsExt, Display,
+        TEXT("[SceneNodeCensus] label=\"%s\" total=%d L0=%d L1=%d L2=%d anchors={UnrealComponent=%d UnrealMeshSocket=%d RootComponent=%d MeshSocket=%d Bare=%d} externallyDriven=%d propagation={state=%d queued=%d} topN=%d"),
+        *InLabel, Counts.Total, Counts.Layers[0], Counts.Layers[1], Counts.Layers[2],
+        Counts.UnrealComponent, Counts.UnrealMeshSocket, Counts.RootComponent, Counts.MeshSocket, Counts.Bare,
+        Counts.ExternallyDriven, Counts.PropagationState, Counts.PropagationQueued, TopN);
+    UE_LOG(CkEcsExt, Display,
+        TEXT("[SceneNodeCensus] label=\"%s\" anchorExternal={UnrealComponent=%d/%d UnrealMeshSocket=%d/%d RootComponent=%d/%d MeshSocket=%d/%d Bare=%d/%d}"),
+        *InLabel,
+        Counts.UnrealComponentExternal, Counts.UnrealComponent,
+        Counts.UnrealMeshSocketExternal, Counts.UnrealMeshSocket,
+        Counts.RootComponentExternal, Counts.RootComponent,
+        Counts.MeshSocketExternal, Counts.MeshSocket,
+        Counts.BareExternal, Counts.Bare);
+    LogTop(TEXT("composite"), CompositeBuckets);
+    LogTop(TEXT("node"), NodeMarginals);
+    LogTop(TEXT("parent"), ParentMarginals);
+#else
+    static_cast<void>(InContext);
+    static_cast<void>(InLabel);
+    static_cast<void>(InTopN);
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -132,6 +377,9 @@ auto
     InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
+    InHandle.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
+    InAttachTo.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
+    ck::FUtils_SceneNodePropagation::Queue(InHandle);
 
     if (InDrivenBy == ECk_SceneNode_DrivenBy::Parent)
     {
@@ -225,6 +473,7 @@ auto
 
     InSceneNode.Try_Remove<ck::SceneNodeParent>();
     InSceneNode.Try_Remove<ck::FFragment_SceneNode_Current>();
+    InSceneNode.Try_Remove<ck::FTag_SceneNode_PropagationQueued>();
 
     RemoveExistingLayerTag(NodeAsTransform);
     NodeAsTransform.Try_Remove<ck::FTag_Transform_ExternallyDriven>();
@@ -369,6 +618,9 @@ auto
 
         if (NOT AssignLayerByIndex(ChildTransform, ChildLayerIndex))
         { return; }
+
+        ChildTransform.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
+        ck::FUtils_SceneNodePropagation::Queue(ChildTransform);
 
         PropagateLayerToChildren(ChildTransform, ChildLayerIndex);
     });

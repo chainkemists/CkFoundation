@@ -11,12 +11,14 @@
 
 class UCk_Utils_SceneNode_UE;
 class USceneComponent;
+struct FCk_Handle_ReadOnly;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_SceneNode_RelativeTransformUpdated);
+    CK_DEFINE_ECS_TAG(FTag_SceneNode_PropagationQueued);
 
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer0);
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer1);
@@ -28,6 +30,33 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer7);
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer8);
     CK_DEFINE_ECS_TAG(FTag_SceneNode_Layer9);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSEXT_API FFragment_SceneNode_PropagationState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SceneNode_PropagationState);
+
+        friend struct FUtils_SceneNodePropagation;
+
+    private:
+        uint64 _QueueGeneration = 0;
+        FTransform _LastPublishedWorldTransform = FTransform::Identity;
+        bool _HasPublishedWorldTransform = false;
+
+    public:
+        CK_PROPERTY_GET(_QueueGeneration);
+    };
+
+    // Sparse propagation plumbing shared by SceneNode composition and its ordered processors. All state is
+    // runtime-derived: none of it participates in snapshot persistence.
+    struct CKECSEXT_API FUtils_SceneNodePropagation
+    {
+        static auto Queue(FCk_Handle& InSceneNode) -> void;
+        static auto DeferConsume(const FCk_Handle_ReadOnly& InSceneNode, uint64 InGeneration) -> void;
+        static auto PublishChildrenIfChanged(FCk_Handle& InParent, const FTransform& InWorldTransform) -> void;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
