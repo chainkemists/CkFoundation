@@ -457,17 +457,46 @@ namespace ck::groundnav
         FCk_GroundNav_Field& OutField) -> ECk_GroundNav_LoadStatus;
 
     /**
+     * Whether a tile read composes the field it landed in before it returns.
+     *
+     * The derives are WHOLE-FIELD - the seam portals, the links and the reachability labels are all
+     * re-derived over every tile - so a caller reading N tiles into one field with the default runs
+     * them N times and keeps only the last run's answer. Deferred lets such a caller pay for one, and
+     * it OWES Compose_LoadedField afterwards: a field left uncomposed carries tiles no crossing, no
+     * resolved link and no label supports, which is a field that answers nothing.
+     */
+    enum class ECk_GroundNav_ComposeOnLoad : uint8
+    {
+        Now,
+        Deferred
+    };
+
+    /**
+     * The derives a load owes, over a field whose tiles are all in place.
+     *
+     * Public so a caller that read its tiles Deferred can settle the debt, and the same call the
+     * readers make so a composed-by-hand field cannot differ from a composed-by-read one.
+     */
+    CKGROUNDNAV_API auto
+    Compose_LoadedField(
+        FCk_GroundNav_Field& InOutField) -> void;
+
+    /**
      * One tile blob into an existing field, replacing whatever that field held at the tile's coord and
      * re-deriving the whole field afterwards.
      *
      * THE LATTICE MUST MATCH. A tile carries nothing but tile-local indices, so one read into a field
      * divided differently would be cells placed against a lattice that never produced them; that is
      * LatticeMismatch, and the field is left alone.
+     *
+     * A REFUSED read composes nothing whatever InCompose says: the field was not changed, so there is
+     * nothing to re-derive.
      */
     CKGROUNDNAV_API auto
     Read_TileInto(
-        const TArray<uint8>& InBlob,
-        FCk_GroundNav_Field& InOutField) -> ECk_GroundNav_LoadStatus;
+        const TArray<uint8>&        InBlob,
+        FCk_GroundNav_Field&        InOutField,
+        ECk_GroundNav_ComposeOnLoad InCompose = ECk_GroundNav_ComposeOnLoad::Now) -> ECk_GroundNav_LoadStatus;
 
     /**
      * The blob's name table alone, in the order it is written - ascending by string.
