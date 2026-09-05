@@ -40,9 +40,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: without it the scheduler's lexical tie-break races CharacterVirtual creation
-        // against the async step.
-        using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_WaitForAsync>;
+        // TransformWriters is the post-async reader boundary: CharacterVirtual creation cannot race the prior
+        // async step or LatestCompleted readers that consume its solved state.
+        using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_TransformWriters>;
         using MarkedDirtyBy = FTag_JoltCharacter_NeedsSetup;
 
     public:
