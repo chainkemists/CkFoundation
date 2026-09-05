@@ -36,10 +36,4 @@ public:
     UCk_NavArea_CrowdAvoidanceVolume_HardExclude();
 };
 
-namespace ck::crowd_avoidance_volume
-{
-    CKCROWD_API auto Get_NavAreaClass(
-        ECk_CrowdAvoidanceVolume_TraversalPolicy InTraversalPolicy) -> TSubclassOf<UNavArea>;
-}
-
 // --------------------------------------------------------------------------------------------------------------------

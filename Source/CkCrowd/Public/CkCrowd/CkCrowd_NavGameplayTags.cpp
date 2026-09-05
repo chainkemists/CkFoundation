@@ -78,6 +78,11 @@ namespace ck_crowd_nav_gameplay_tags
             TAG_Nav_Area_Crowd_AvoidanceVolume, UCk_NavArea_CrowdAvoidanceVolume::StaticClass());
         DoRegister_CostPolicy(
             TAG_Nav_Area_Crowd_AvoidanceVolume_CostOnly, UCk_NavArea_CrowdAvoidanceVolume_CostOnly::StaticClass());
+
+        // A hard exclusion is a PRICE on both providers, not a walkability rejection: Recast carries it
+        // as the area class's prohibitive DefaultCost, and the neutral policy reads that same number off
+        // the class, so a hard-exclude volume is as expensive on GroundNav as it is on Recast. The one
+        // area that removes walkability is Nav.Area.Impassable, and this is not it.
         DoRegister_CostPolicy(
             TAG_Nav_Area_Crowd_AvoidanceVolume_HardExclude, UCk_NavArea_CrowdAvoidanceVolume_HardExclude::StaticClass());
     }};
