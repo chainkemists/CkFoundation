@@ -11,6 +11,8 @@
 #include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
+#include "CkGroundNav/Cook/CkGroundNav_CookedFieldIndex.h"
+#include "CkGroundNav/Cook/CkGroundNav_CookedFieldLoad.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
@@ -285,6 +287,116 @@ namespace ck
             return true;
         }
 
+        /**
+         * Whether this volume's profile set is one a cooked field could carry.
+         *
+         * An index names ONE field for a volume, so a volume that authors profile variants and reads
+         * its ground from a cook would have no field under any of their tags - and a query naming one
+         * is answered from nothing rather than from the default's ground, which would walk an agent up
+         * a step its own profile cannot climb. The two are refused together rather than the variants
+         * being silently dropped at the load, so an author is told which of the two to give up.
+         *
+         * A volume carrying no key is not asking for a cooked field at all, and may hold any number of
+         * variants.
+         */
+        auto Get_CookKeyAdmitsTheProfiles(
+            const FFragment_GroundNavVolume_Params& InParams) -> bool
+        {
+            if (InParams.Get_CookKey().IsNone())
+            { return true; }
+
+            return InParams.Get_ProfileVariants().IsEmpty();
+        }
+
+        /**
+         * What the cook had for this volume, and — when it had a usable field — everything a publish of
+         * that field needs.
+         *
+         * One resolution rather than a status followed by a second call that loads the field, because
+         * the two cannot be allowed to disagree: the status IS the outcome of the load, and asking
+         * twice would be asking about two reads of an asset that can move between them.
+         */
+        struct FCookResolution
+        {
+        public:
+            ECk_GroundNav_CookStatus _Status = ECk_GroundNav_CookStatus::RuntimeOnly;
+
+            // Meaningful only under Cooked. Left as the empty field every other status describes.
+            groundnav::FCk_GroundNav_Field _Field;
+
+            groundnav::FCk_GroundNav_ContentFingerprint _InputFingerprint;
+            uint64 _GeometryRevision = 0;
+        };
+
+        /**
+         * The state-selected cooked/runtime answer, in the order the states rule out one another.
+         *
+         * No key is RUNTIME-ONLY and nothing is looked up. A key with no index at the convention path is
+         * MissingCook — absence is legal, a level opts into cooked ground. An index that cannot be used
+         * is StaleCook. Only a load that held is Cooked, and only then is there a field to publish.
+         *
+         * The fingerprint compared against the index is assembled by the same helper every PUBLISH uses,
+         * with the geometry half deliberately left out: what the index carries is the INPUT half, and a
+         * cook cannot record a world revision yet.
+         *
+         * The revision stamped on a cooked publish is the backend's CURRENT one, or zero where no
+         * physics world can be reached. Zero is honest rather than convenient — it is the revision an
+         * unpublished volume already carries, so a cooked field in a world with no backend reads
+         * not-build-current, which is what a field nothing can re-read against deserves.
+         */
+        auto Get_CookResolution(
+            const FCk_Handle_GroundNavVolume&       InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams) -> FCookResolution
+        {
+            auto Resolution = FCookResolution{};
+
+            if (InParams.Get_CookKey().IsNone())
+            { return Resolution; }
+
+            const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+            const auto* CookedIndex = groundnav::Find_CookedFieldIndex(World, InParams.Get_CookKey());
+
+            if (ck::Is_NOT_Valid(CookedIndex))
+            {
+                Resolution._Status = ECk_GroundNav_CookStatus::MissingCook;
+                return Resolution;
+            }
+
+            constexpr auto NoGeometryRevision = uint64{0};
+
+            const auto CurrentIdentity = Get_PublishedIdentity(InVolumeEntity, InParams, NoGeometryRevision);
+
+            const auto MarkupRecords =
+                Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
+            const auto LinkRecords =
+                Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
+
+            Resolution._Status = groundnav::Try_LoadCookedField(
+                *CookedIndex,
+                groundnav::Get_LevelPackageKey(World),
+                InParams.Get_CookKey(),
+                Get_FieldParams(InParams, MarkupRecords, LinkRecords),
+                CurrentIdentity._InputFingerprint._Value,
+                Resolution._Field);
+
+            if (Resolution._Status != ECk_GroundNav_CookStatus::Cooked)
+            { return Resolution; }
+
+            // Taken from the INDEX rather than recomputed: the load only reached here because the two
+            // are equal, and reading it off the asset is what makes the stored identity name the bake
+            // the tiles actually came out of.
+            Resolution._InputFingerprint =
+                groundnav::FCk_GroundNav_ContentFingerprint{CookedIndex->Get_Fingerprint()};
+
+            const auto Backend = groundnav::FCk_GroundNav_GeometryBackend_Jolt{World};
+
+            Resolution._GeometryRevision = Backend.Get_IsValid()
+                ? Backend.Get_WorldRevision()
+                : NoGeometryRevision;
+
+            return Resolution;
+        }
+
         auto Get_MarkupKind(
             ECk_NavSurface_AreaPolicyKind InPolicyKind) -> ECk_GroundNav_MarkupKind
         {
@@ -456,7 +568,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVolumeEntity,
-            const FFragment_GroundNavVolume_Params& InParams)
+            const FFragment_GroundNavVolume_Params& InParams,
+            FFragment_GroundNavVolume_BuiltField& InBuiltField)
         -> void
     {
         using namespace ck_groundnav_volume_processor;
@@ -486,12 +599,77 @@ namespace ck
             InVolumeEntity, InParams.Get_CookKey())
         { return; }
 
+        const auto CookKeyAdmitsTheProfiles = Get_CookKeyAdmitsTheProfiles(InParams);
+
+        CK_ENSURE_IF_NOT(CookKeyAdmitsTheProfiles,
+            TEXT("GroundNav Volume [{}] cannot be admitted: a cooked field carries one profile; its "
+                 "cook key [{}] and its [{}] profile variant(s) cannot both stand. Drop the key to "
+                 "bake at runtime, or drop the variants to read the cook"),
+            InVolumeEntity, InParams.Get_CookKey(), InParams.Get_ProfileVariants().Num())
+        { return; }
+
+        auto CookResolution = Get_CookResolution(InVolumeEntity, InParams);
+
+        // Stamped whatever the outcome. Three of the four values are the volume saying why the ground
+        // it is about to bake is not coming from a cook, which is the half of the question a caller
+        // asking "did this level ship cooked ground" actually needs answered.
+        InBuiltField._CookStatus = CookResolution._Status;
+
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+        if (CookResolution._Status == ECk_GroundNav_CookStatus::Cooked)
+        {
+            // The epoch comes from what is PUBLISHED, exactly as a build takes it, so a reader
+            // comparing epochs against a cooked volume is comparing the same counter it would against
+            // a baked one.
+            CookResolution._Field._Epoch = InBuiltField.Get_Epoch().Get_Next();
+
+            // The loaded tiles carry the COOK's epochs, which count a run of publishes this volume
+            // never made. Every one of them is restamped to the epoch going out - exactly what a bake
+            // does to every tile it builds - so the changed-bounds below name the whole loaded field
+            // rather than the empty set an epoch nothing carries would answer with.
+            for (auto& LoadedTile : CookResolution._Field._Tiles)
+            { LoadedTile._Epoch = CookResolution._Field._Epoch; }
+
+            InBuiltField._Epoch = CookResolution._Field._Epoch;
+            InBuiltField._Field =
+                MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(CookResolution._Field));
+
+            InBuiltField._BakedInputFingerprint = CookResolution._InputFingerprint;
+
+            // The revision the world had when the cook was LOADED, not when it was baked: the cooker
+            // records none. So Get_IsBuildCurrent reads current on a cooked volume until the world
+            // moves after the load, which is the most a stored revision can honestly claim about
+            // geometry nobody wrote down. Zero where no backend could be made, exactly as an
+            // unpublished volume already reads.
+            InBuiltField._BakedGeometryRevision = CookResolution._GeometryRevision;
+
+            // Empty by admission: a volume carrying a cook key cannot carry a profile variant.
+            InBuiltField._VariantFields.Reset();
+
+            groundnav::world_fields::Publish(
+                World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
+
+            // The union of every tile the cook held, because the restamp above put this epoch on all
+            // of them: a cooked publish is a fresh publish of everything, and that is the honest
+            // payload for one. An invalid box goes out AS IS where the cook held no built tile, on the
+            // same terms a build's publish sends one.
+            nav_surface::Request_NotifySurfaceRebuilt(World,
+                groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+
+            InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
+
+            // _AutoBuildOnSetup is moot here. It says whether the volume bakes itself without being
+            // asked, and this volume's ground is already published.
+            return;
+        }
+
         // Registered before anything is baked, with no field yet, so a caller that can only name a
         // WORLD — the NavSurface provider adapter — can find the volume to paint on it. A volume that
         // only entered the registry at its first publish could not be painted until then, and the
         // paint would be refused rather than deferred.
         groundnav::world_fields::Publish(
-            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity),
+            World,
             InVolumeEntity,
             {},
             {});
@@ -551,6 +729,18 @@ namespace ck
             TEXT("Cannot build GroundNav Volume [{}] - another volume in this world already carries "
                  "its cook key [{}]"),
             InVolumeEntity, InParams.Get_CookKey())
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        const auto CookKeyAdmitsTheProfiles = Get_CookKeyAdmitsTheProfiles(InParams);
+
+        CK_ENSURE_IF_NOT(CookKeyAdmitsTheProfiles,
+            TEXT("Cannot build GroundNav Volume [{}] - a cooked field carries one profile; its cook "
+                 "key [{}] and its [{}] profile variant(s) cannot both stand. Drop the key to bake at "
+                 "runtime, or drop the variants to read the cook"),
+            InVolumeEntity, InParams.Get_CookKey(), InParams.Get_ProfileVariants().Num())
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -1423,6 +1613,14 @@ namespace ck
         // under - a record admitted while it ran is not in the ground it baked.
         InBuiltField._BakedInputFingerprint = InBuildState._BakedInputFingerprint;
         InBuiltField._BakedGeometryRevision = InBuildState._BakedGeometryRevision;
+
+        // The ground standing here was the cook's until this build replaced it, and it is not any
+        // more. StaleCook is exactly what that means - an index exists and the field published over it
+        // did not come out of it - and a Setup on a fresh volume re-loads the cook rather than
+        // inheriting this. Every other status already names why the ground is not the cook's and is
+        // carried through unchanged.
+        if (InBuiltField._CookStatus == ECk_GroundNav_CookStatus::Cooked)
+        { InBuiltField._CookStatus = ECk_GroundNav_CookStatus::StaleCook; }
 
         // The variants are keyed on their tags HERE, where the fields and the order they came back in
         // are both in hand, against the tag list this build BEGAN with. Rebuilt from scratch rather

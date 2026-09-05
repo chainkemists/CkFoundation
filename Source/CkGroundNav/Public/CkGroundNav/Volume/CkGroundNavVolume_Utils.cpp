@@ -508,6 +508,18 @@ auto
 
 auto
     UCk_Utils_GroundNavVolume_UE::
+    Get_CookStatus(
+        const FCk_Handle_GroundNavVolume& InVolume)
+    -> ECk_GroundNav_CookStatus
+{
+    if (ck::Is_NOT_Valid(InVolume) || NOT InVolume.Has<ck::FFragment_GroundNavVolume_BuiltField>())
+    { return ECk_GroundNav_CookStatus::RuntimeOnly; }
+
+    return InVolume.Get<ck::FFragment_GroundNavVolume_BuiltField>().Get_CookStatus();
+}
+
+auto
+    UCk_Utils_GroundNavVolume_UE::
     Get_TileCount(
         const FCk_Handle_GroundNavVolume& InVolume)
     -> int32
