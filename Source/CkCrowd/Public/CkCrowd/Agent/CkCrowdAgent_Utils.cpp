@@ -690,7 +690,7 @@ auto
     if (NOT InAgent.Has<ck::FFragment_CrowdAgent_NavMarkup>())
     { return false; }
 
-    return InAgent.Get<ck::FFragment_CrowdAgent_NavMarkup>().Get_Markup().IsValid();
+    return ck::IsValid(InAgent.Get<ck::FFragment_CrowdAgent_NavMarkup>().Get_Markup());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -709,7 +709,7 @@ auto
     { return false; }
 
     const auto& Markup = InAgent.Get<ck::FFragment_CrowdAgent_NavMarkup>();
-    return Markup.Get_Markup().IsValid() && Markup.Get_ConfirmedOnMesh();
+    return ck::IsValid(Markup.Get_Markup()) && Markup.Get_ConfirmedOnMesh();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

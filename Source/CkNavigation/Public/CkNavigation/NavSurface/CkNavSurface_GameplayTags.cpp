@@ -10,6 +10,8 @@
 UE_DEFINE_GAMEPLAY_TAG(TAG_Nav_Area_Restricted, TEXT("Nav.Area.Restricted"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_Nav_Area_Impassable, TEXT("Nav.Area.Impassable"));
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Nav_Filter_Customer, TEXT("Nav.Filter.Customer"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_nav_surface_gameplay_tags

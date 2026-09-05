@@ -45,6 +45,13 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// The DRAW half of this header - the DoDraw_* entry points, the retained set behind them and the
+// ck.GroundNav.* console commands that reach them - compiles out of a Shipping build, where the entry
+// points keep no-op bodies so that a caller needs no #if of its own. The CAPTURE half -
+// Make_DebugSnapshotFromWorld, the Make_Debug*FromWorld collectors and the pure
+// Make_DebugSnapshotDrawBuild - is untouched, because the gameplay debugger and the cook read it.
+// Development and Test are identical: a Test build still draws, which is what the retained tier is for.
+
 namespace ck::groundnav
 {
     /**

@@ -4,11 +4,8 @@
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Algorithm.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
-
-#include <UObject/WeakObjectPtr.h>
-
-class UCk_NavAreaMarkup_UE;
 
 namespace ck
 {
@@ -28,7 +25,7 @@ namespace ck
 
     private:
         FCk_Handle_Probe _ProbeChild;
-        TWeakObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
+        FCk_Handle_NavSurfaceMarkup _Markup;
         crowd_avoidance_volume::FCk_Obb _AuthoredObb;
         crowd_avoidance_volume::FCk_Obb _PaintedObb;
         FTransform _AuthoredTransform = FTransform::Identity;

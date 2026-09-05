@@ -1,14 +1,19 @@
 #include "CkCrowdAgent_StationaryMarkup_Processor.h"
 
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
+#include "CkShapes/CkShapes_Common.h"
+
+#include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/CkCrowd_Stats.h"
-#include "CkCrowd/Agent/CkCrowdAgent_NavArea.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -43,10 +48,10 @@ namespace ck
             FFragment_CrowdAgent_NavMarkup& InMarkup)
         -> void
     {
-        if (InMarkup._Markup.IsValid())
+        if (ck::IsValid(InMarkup._Markup))
         {
-            UCk_Utils_NavAreaMarkup_UE::Request_Destroy(InMarkup._Markup.Get());
-            InMarkup._Markup.Reset();
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InMarkup._Markup);
+            InMarkup._Markup = {};
         }
         InMarkup._StationarySeconds = 0.0f;
         InMarkup._SecondsSincePaint = 0.0f;
@@ -124,7 +129,7 @@ namespace ck
         if (InMarkup._StationarySeconds < Settings.Get_StationaryMarkupDelaySeconds())
         { return; }
 
-        if (InMarkup._Markup.IsValid())
+        if (ck::IsValid(InMarkup._Markup))
         {
             InMarkup._SecondsSincePaint += static_cast<float>(InDeltaT.Get_Seconds());
 
@@ -141,12 +146,17 @@ namespace ck
         // INSIDE the box, and a half-height band bottoms out above the floor and paints nothing.
         const auto HalfExtents = FVector{HalfExtentXY, HalfExtentXY, InParams.Get_Height()};
 
-        auto GenericHandle = static_cast<FCk_Handle>(InHandle);
-        InMarkup._Markup = UCk_Utils_NavAreaMarkup_UE::Request_Create(
-            GenericHandle,
-            FTransform{FQuat::Identity, Location},
-            HalfExtents,
-            UCk_NavArea_CrowdAgent::StaticClass());
+        // The area TAG, not a UNavArea class: whichever provider answers this world paints the disc,
+        // and Recast still resolves this tag to UCk_NavArea_CrowdAgent through its own area table.
+        auto MarkupRequest = FCk_Request_NavSurface_AreaMarkup{
+            FCk_AnyShape{FCk_ShapeBox_Dimensions{HalfExtents}},
+            TAG_Nav_Area_Crowd_Agent.GetTag()};
+        MarkupRequest.Set_WorldTransform(FTransform{FQuat::Identity, Location});
+
+        InMarkup._Markup = UCk_Utils_NavSurface_UE::Request_AreaMarkup(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle),
+            MarkupRequest,
+            {});
         InMarkup._MarkupLocation = Location;
         InMarkup._MarkupRadiusUu = HalfExtentXY;
         InMarkup._MarkupVerticalHalfExtentUu = HalfExtents.Z;

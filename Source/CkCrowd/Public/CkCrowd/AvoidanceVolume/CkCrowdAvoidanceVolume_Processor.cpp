@@ -2,7 +2,6 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
-#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_NavArea.h"
 #include "CkCrowd/CkCrowd_NavGameplayTags.h"
 
 #include "CkCore/Validation/CkIsValid.h"
@@ -10,10 +9,10 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
-#include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
-#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 #include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 #include "CkShapes/Box/CkShapeBox_Utils.h"
+#include "CkShapes/CkShapes_Common.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAvoidanceVolume_Setup);
@@ -24,8 +23,9 @@ namespace ck_crowd_avoidance_volume
 {
     constexpr auto TransformDriftTolerance = 0.01f;
 
-    // The tag twin of ck::crowd_avoidance_volume::Get_NavAreaClass — the confirmation probe asks the
-    // surface which AREA it reports, and the surface speaks tags.
+    // The painted area, named the way the provider-neutral surface names areas. The paint is raised
+    // by TAG and each provider resolves that tag its own way, which is the whole of what lets one
+    // painter serve both.
     auto Get_NavAreaTag(
         ECk_CrowdAvoidanceVolume_TraversalPolicy InTraversalPolicy)
         -> FGameplayTag
@@ -49,9 +49,9 @@ namespace ck
     auto FProcessor_CrowdAvoidanceVolume_Monitor::Release_Runtime(
         FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime) -> void
     {
-        if (InRuntime._Markup.IsValid())
-        { UCk_Utils_NavAreaMarkup_UE::Request_Destroy(InRuntime._Markup.Get()); }
-        InRuntime._Markup.Reset();
+        if (ck::IsValid(InRuntime._Markup))
+        { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InRuntime._Markup); }
+        InRuntime._Markup = {};
 
         if (ck::IsValid(InRuntime._ProbeChild))
         { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InRuntime._ProbeChild); }
@@ -78,13 +78,13 @@ namespace ck
         const auto Influence = InParams.Get_InfluenceRange();
         const auto PathPlanningClearance = InParams.Get_PathPlanningClearance();
         const auto TraversalPolicy = InParams.Get_TraversalPolicy();
-        const auto NavAreaClass = crowd_avoidance_volume::Get_NavAreaClass(TraversalPolicy);
+        const auto NavAreaTag = ck_crowd_avoidance_volume::Get_NavAreaTag(TraversalPolicy);
         const auto PaintedObb = Obb.ExpandedXY(PathPlanningClearance);
         const auto IsValidInput = Obb.IsFiniteAndPositive() && FMath::IsFinite(Influence) && Influence >= 0.0f &&
             PaintedObb.IsFiniteAndPositive() &&
             FMath::IsFinite(Obb._WorldHalfExtents.X + Influence) &&
             FMath::IsFinite(Obb._WorldHalfExtents.Y + Influence) &&
-            IsValid(NavAreaClass.Get());
+            NavAreaTag.IsValid();
         CK_ENSURE_IF_NOT(IsValidInput,
             TEXT("CrowdAvoidanceVolume [{}] requires a finite static Transform, positive world extents, non-negative influence, and a valid traversal policy."),
             Volume)
@@ -108,9 +108,10 @@ namespace ck
             return;
         }
 
-        const auto Cleanup = [&](UCk_NavAreaMarkup_UE* InMarkup) -> void
+        const auto Cleanup = [&](FCk_Handle_NavSurfaceMarkup InMarkup) -> void
         {
-            UCk_Utils_NavAreaMarkup_UE::Request_Destroy(InMarkup);
+            if (ck::IsValid(InMarkup))
+            { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InMarkup); }
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ProbeChild);
             FProcessor_CrowdAvoidanceVolume_Monitor::Release_Runtime(InRuntime);
             Volume.Try_Remove<FTag_CrowdAvoidanceVolume_NeedsSetup>();
@@ -122,7 +123,7 @@ namespace ck
         CK_ENSURE_IF_NOT(HasProbeTransform, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe Transform."), Volume)
         { }
         if (NOT HasProbeTransform)
-        { Cleanup(nullptr); return; }
+        { Cleanup({}); return; }
 
         // The child inherits AuthoredTransform from its scene-node parent. Keep the shape in
         // authored local space so parent scale is applied exactly once.
@@ -135,7 +136,7 @@ namespace ck
         CK_ENSURE_IF_NOT(HasProbeShape, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe box."), Volume)
         { }
         if (NOT HasProbeShape)
-        { Cleanup(nullptr); return; }
+        { Cleanup({}); return; }
 
         auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_AvoidanceVolume};
         ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
@@ -146,29 +147,32 @@ namespace ck
         CK_ENSURE_IF_NOT(HasProbe, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe feature."), Volume)
         { }
         if (NOT HasProbe)
-        { Cleanup(nullptr); return; }
+        { Cleanup({}); return; }
 
         auto VolumeTransform = UCk_Utils_Transform_UE::Cast(Volume);
         const auto HasVolumeTransform = ck::IsValid(VolumeTransform);
         CK_ENSURE_IF_NOT(HasVolumeTransform, TEXT("CrowdAvoidanceVolume [{}] lost its Transform during setup."), Volume)
         { }
         if (NOT HasVolumeTransform)
-        { Cleanup(nullptr); return; }
+        { Cleanup({}); return; }
 
         const auto ProbeNode = UCk_Utils_SceneNode_UE::Add(ProbeTransform, VolumeTransform, FTransform::Identity);
         const auto HasProbeNode = ck::IsValid(ProbeNode);
         CK_ENSURE_IF_NOT(HasProbeNode, TEXT("CrowdAvoidanceVolume [{}] failed to attach its probe child."), Volume)
         { }
         if (NOT HasProbeNode)
-        { Cleanup(nullptr); return; }
+        { Cleanup({}); return; }
 
-        auto GenericVolume = static_cast<FCk_Handle>(Volume);
-        auto* Markup = UCk_Utils_NavAreaMarkup_UE::Request_Create(
-            GenericVolume,
-            PaintedObb._YawTransform,
-            PaintedObb._WorldHalfExtents,
-            NavAreaClass);
-        const auto HasMarkup = IsValid(Markup);
+        auto MarkupRequest = FCk_Request_NavSurface_AreaMarkup{
+            FCk_AnyShape{FCk_ShapeBox_Dimensions{PaintedObb._WorldHalfExtents}},
+            NavAreaTag};
+        MarkupRequest.Set_WorldTransform(PaintedObb._YawTransform);
+
+        auto Markup = UCk_Utils_NavSurface_UE::Request_AreaMarkup(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Volume),
+            MarkupRequest,
+            {});
+        const auto HasMarkup = ck::IsValid(Markup);
         CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] failed to register nav-area markup."), Volume)
         { }
         if (NOT HasMarkup)
@@ -200,8 +204,8 @@ namespace ck
             TEXT("CrowdAvoidanceVolume [{}] moved after composition; destroy and recreate it instead of repainting nav tiles."),
             Volume)
         { }
-        const auto HasMarkup = InRuntime._Markup.IsValid();
-        CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] lost its pooled nav-area markup."), Volume)
+        const auto HasMarkup = ck::IsValid(InRuntime._Markup);
+        CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] lost its nav-area markup."), Volume)
         { }
         if (NOT IsStatic || NOT HasMarkup)
         {
@@ -216,20 +220,10 @@ namespace ck
         if (InRuntime._ConfirmedOnMesh)
         { return; }
 
-        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Volume);
-        const auto AreaTag = ck_crowd_avoidance_volume::Get_NavAreaTag(InRuntime.Get_TraversalPolicy());
-
-        const auto Samples = crowd_avoidance_volume::GetConfirmationSamplePoints(InRuntime._PaintedObb);
-        const auto ProbeExtent = FVector{10.0f, 10.0f, InRuntime._PaintedObb._WorldHalfExtents.Z};
-        auto IsConfirmed = NOT Samples.IsEmpty();
-        for (const auto& Sample : Samples)
-        {
-            if (ck::nav_surface_recast::Get_IsAreaLiveAt(World, AreaTag, Sample, ProbeExtent))
-            { continue; }
-            IsConfirmed = false;
-            break;
-        }
-        if (NOT IsConfirmed)
+        // The provider's own answer to "has my paint landed", asked of the markup rather than
+        // sampled off Recast: a per-sample area probe can only ever confirm on a world planning on
+        // Recast, and on a GroundNav world it never confirmed at all.
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsMarkupLive(InRuntime.Get_Markup()))
         { return; }
 
         InRuntime._ConfirmationSerial = FProcessor_CrowdAgent_PathRefresh::IssueConfirmationSerial();
@@ -262,7 +256,7 @@ namespace ck
             : nullptr;
         const auto CanTrackRetirement = IsValid(RevisionSubsystem) &&
             RevisionSubsystem->TryEnsureBound();
-        if (InRuntime._Markup.IsValid() &&
+        if (ck::IsValid(InRuntime._Markup) &&
             InRuntime._ConfirmedOnMesh &&
             InRuntime._AuthoredObb.IsFiniteAndPositive() &&
             InRuntime._PaintedObb.IsFiniteAndPositive() &&

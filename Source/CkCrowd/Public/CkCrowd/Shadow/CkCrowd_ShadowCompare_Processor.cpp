@@ -223,6 +223,27 @@ namespace ck
         auto NonConstHandle = InHandle;
         NonConstHandle.AddOrGet<FFragment_CrowdAgent_ShadowCompared>()._LastComparedRevision = Revision;
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNav_ShadowCompare::
+        DoRecord_ContainmentEscape(
+            const FCk_Handle& InAgent,
+            const UObject*    InWorldContext)
+        -> void
+    {
+        // Same bucketing rule the comparison rows follow, so an escape and the comparisons around it
+        // land on the SAME report row rather than in two fixtures a reader has to reconcile.
+        auto WorldEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAgent);
+        auto& Diagnostics = WorldEntity.AddOrGet<FFragment_GroundNav_ShadowDiagnostics>();
+
+        const auto FixtureKey = Diagnostics.Get_ActiveFixture().IsNone()
+            ? UCk_Utils_GroundNav_Shadow_UE::Get_FallbackFixtureKey(InWorldContext)
+            : Diagnostics.Get_ActiveFixture();
+
+        ++Diagnostics._PerFixture.FindOrAdd(FixtureKey)._ContainmentEscapes;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

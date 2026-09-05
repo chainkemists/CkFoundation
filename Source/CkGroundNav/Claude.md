@@ -624,6 +624,19 @@ tier has no equivalent for — every text label, the per-cell points of the clea
 rejected views, the link and waypoint arrowheads, and the query commands' spheres — so a build
 without them loses the labelling and keeps the geometry.
 
+A Shipping build keeps the CAPTURE and drops the DRAW. `Make_DebugSnapshotFromWorld`, the
+`Make_Debug*FromWorld` collectors, `FCk_GroundNav_DebugSnapshot` and its cache compile in every
+configuration, because the gameplay debugger and the cook read them, and so does the pure
+`Make_DebugSnapshotDrawBuild` — a build is a value and costs a shipped binary nothing it does not ask
+for. What compiles out is everything that puts geometry in a world: the retained sets and the state
+that decides when one is rebuilt, the label draws, and every `ck.GroundNav.*` console command and
+`ck.GroundNav.Debug.*` variable that reaches them. The public entry points stay declared and stand as
+no-ops there, so no caller needs an `#if` of its own, and `Get_IsRetainedDrawEnabled` answers false.
+`ck.GroundNav.PathDiagnostics` is NOT part of this — it is a runtime gate that merely DEFAULTS to 0 in
+Shipping, so a shipped build can still be told to answer what an agent's planner is doing.
+Development and Test are identical in behaviour: a Test build still draws, which is the whole reason
+the retained tier exists.
+
 Because a build is a pure function of a capture and a selection, what a mode DRAWS is assertable
 without a world: `FCk_GroundNav_DebugDrawTally` counts plate outlines, portal segments, boundary runs
 and link spans separately, and those counts are the capture's own counts. A capture that is not

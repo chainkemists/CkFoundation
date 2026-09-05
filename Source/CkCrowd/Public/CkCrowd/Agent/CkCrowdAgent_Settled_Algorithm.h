@@ -29,7 +29,7 @@ namespace ck::ck_crowd_agent_settled_algorithm
     {
         const auto NeighbourIsParked = InMarkupAnchorsEnabled &&
             InNeighbour.Has<FFragment_CrowdAgent_NavMarkup>() &&
-            InNeighbour.Get<FFragment_CrowdAgent_NavMarkup>().Get_Markup().IsValid();
+            ck::IsValid(InNeighbour.Get<FFragment_CrowdAgent_NavMarkup>().Get_Markup());
 
         return UCk_Utils_CrowdAgent_UE::Get_HasReachedActiveGoal(InNeighbour) ||
             InNeighbour.Has<FTag_CrowdAgent_GoalBlocked>() ||

@@ -39,6 +39,7 @@ namespace ck_groundnav_debuggates
         TEXT("fragments already stamped stay as they were, so a viewer reading one is told the last ")
         TEXT("state the pass saw rather than a blank."));
 
+#if !UE_BUILD_SHIPPING
     static TAutoConsoleVariable<int32> CVar_RetainedDraw(
         TEXT("ck.GroundNav.Debug.RetainedDraw"), 1,
         TEXT("1 holds the line geometry of every GroundNav debug view as PMG retained line sets, ")
@@ -75,12 +76,15 @@ namespace ck_groundnav_debuggates
                     ck::groundnav::Do_ReleaseAllRetainedDebugDraw();
                 }));
     }
+#endif
 
+#if !UE_BUILD_SHIPPING
     static TAutoConsoleVariable<int32> CVar_DrawMarkup(
         TEXT("ck.GroundNav.Debug.DrawMarkup"), 1,
         TEXT("Outline the area markup the world's ground-nav volumes hold in the plate view and in ")
         TEXT("ck.GroundNav.PathAt / FloodAt: impassable in red, cost in amber with its multiplier, ")
         TEXT("and a record the volume still holds but has disabled in dashed grey."));
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -140,7 +144,11 @@ namespace ck::groundnav::debug
         Get_IsMarkupDrawEnabled()
         -> bool
     {
+#if !UE_BUILD_SHIPPING
         return ck_groundnav_debuggates::CVar_DrawMarkup.GetValueOnGameThread() != 0;
+#else
+        return false;
+#endif
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -149,9 +157,13 @@ namespace ck::groundnav::debug
         Get_IsRetainedDrawEnabled()
         -> bool
     {
+#if !UE_BUILD_SHIPPING
         ck_groundnav_debuggates::DoBind_RetainedDrawSinkOnce();
 
         return ck_groundnav_debuggates::CVar_RetainedDraw.GetValueOnGameThread() != 0;
+#else
+        return false;
+#endif
     }
 }
 

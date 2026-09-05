@@ -20,7 +20,7 @@ namespace ck_crowd_avoidance_volume
         { return ECk_CrowdAvoidanceVolume_DebugState::Invalid; }
         if (InVolume.Has<ck::FTag_CrowdAvoidanceVolume_NeedsSetup>())
         { return ECk_CrowdAvoidanceVolume_DebugState::PendingSetup; }
-        if (InRuntime.Get_Markup().IsValid() && InRuntime.Get_ConfirmedOnMesh())
+        if (ck::IsValid(InRuntime.Get_Markup()) && InRuntime.Get_ConfirmedOnMesh())
         { return ECk_CrowdAvoidanceVolume_DebugState::Confirmed; }
         return ECk_CrowdAvoidanceVolume_DebugState::PendingNavigationConfirmation;
     }
@@ -94,7 +94,7 @@ auto UCk_Utils_CrowdAvoidanceVolume_UE::Get_IsNavigationConfirmed(
     { return false; }
 
     const auto& Runtime = InVolume.Get<ck::FFragment_CrowdAvoidanceVolume_ProbeRef>();
-    return Runtime.Get_Markup().IsValid() && Runtime.Get_ConfirmedOnMesh();
+    return ck::IsValid(Runtime.Get_Markup()) && Runtime.Get_ConfirmedOnMesh();
 }
 
 auto UCk_Utils_CrowdAvoidanceVolume_UE::Get_DebugSnapshots(
@@ -211,7 +211,7 @@ auto UCk_Utils_CrowdAvoidanceVolume_UE::Get_HasAvoidIfPossibleVolumes(
             HasAvoidIfPossibleVolume = HasAvoidIfPossibleVolume ||
                 (InRuntime.Get_TraversalPolicy() ==
                     ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible &&
-                InRuntime.Get_Markup().IsValid());
+                ck::IsValid(InRuntime.Get_Markup()));
         });
     return HasAvoidIfPossibleVolume;
 }
