@@ -105,8 +105,50 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECSEXT_API FProcessor_SceneNode_QueueRootChildren : public ck_exp::TProcessor<
+            FProcessor_SceneNode_QueueRootChildren,
+            FCk_Handle_Transform,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_RecordOfSceneNodes>,
+            FTag_Transform_Updated,
+            TExclude<FTag_SceneNode_Layer0>,
+            TExclude<FTag_SceneNode_Layer1>,
+            TExclude<FTag_SceneNode_Layer2>,
+            TExclude<FTag_SceneNode_Layer3>,
+            TExclude<FTag_SceneNode_Layer4>,
+            TExclude<FTag_SceneNode_Layer5>,
+            TExclude<FTag_SceneNode_Layer6>,
+            TExclude<FTag_SceneNode_Layer7>,
+            TExclude<FTag_SceneNode_Layer8>,
+            TExclude<FTag_SceneNode_Layer9>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<
+            FProcessor_SceneNode_FollowUnrealAnchor,
+            FProcessor_Transform_HandleRequests>;
+        using LocalSettleAfter = FGroup_Transform_Derived;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_Layer>
     class TProcessor_SceneNode_Update;
+
+    template <typename T_Layer>
+    class TProcessor_SceneNode_QueueChildren;
 
     // Per-layer RunAfter list. Dropping either dependency — Transform_HandleRequests for layer 0, or the
     // layer N-1 chain for the rest — stops motion propagating past the first scene-node link.
@@ -115,80 +157,62 @@ namespace ck
     struct TSceneNode_Update_RunAfter
     {
         using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            FProcessor_Transform_HandleRequests>;
+            FProcessor_SceneNode_HandleRequests,
+            FProcessor_SceneNode_QueueRootChildren>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer1>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer0>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer0>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer2>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer1>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer1>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer3>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer2>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer2>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer4>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer3>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer3>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer5>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer4>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer4>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer6>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer5>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer5>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer7>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer6>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer6>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer8>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer7>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer7>>;
     };
 
     template <>
     struct TSceneNode_Update_RunAfter<FTag_SceneNode_Layer9>
     {
-        using type = TDepList<
-            FProcessor_SceneNode_FollowUnrealAnchor,
-            TProcessor_SceneNode_Update<FTag_SceneNode_Layer8>>;
+        using type = TDepList<TProcessor_SceneNode_QueueChildren<FTag_SceneNode_Layer8>>;
     };
 
     // The canonical depth chain runs in FGroup_Transform, then may be replayed in the same order by the
@@ -202,18 +226,22 @@ namespace ck
             TReadOnly<FFragment_SceneNode_Current>,
             TReadWrite<FFragment_Transform>,
             TReadWrite<FFragment_Transform_Previous>,
+            TReadOnly<FFragment_SceneNode_PropagationState>,
+            FTag_SceneNode_PropagationQueued,
             TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>
     {
         using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
             TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode_Current>,
             TReadWrite<FFragment_Transform>, TReadWrite<FFragment_Transform_Previous>,
+            TReadOnly<FFragment_SceneNode_PropagationState>, FTag_SceneNode_PropagationQueued,
             TExclude<FFragment_SceneNode_UnrealAnchor>,
             CK_IGNORE_PENDING_KILL>;
 
     public:
         using Group = FGroup_Transform;
         using RunAfter = typename TSceneNode_Update_RunAfter<T_Layer>::type;
+        using MarkedDirtyBy = FTag_SceneNode_PropagationQueued;
         using LocalSettleAfter = FGroup_Transform_Derived;
 
     public:
@@ -228,7 +256,42 @@ namespace ck
             const SceneNodeParent& InParent,
             const FFragment_SceneNode_Current& InCurrent,
             FFragment_Transform& InTransform,
-            FFragment_Transform_Previous& InPrevTransform) -> void;
+            FFragment_Transform_Previous& InPrevTransform,
+            const FFragment_SceneNode_PropagationState& InPropagationState) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_Layer>
+    class CKECSEXT_API TProcessor_SceneNode_QueueChildren : public ck_exp::TProcessor<
+            TProcessor_SceneNode_QueueChildren<T_Layer>,
+            FCk_Handle_Transform,
+            T_Layer,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_RecordOfSceneNodes>,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
+    {
+        using Super = ck_exp::TProcessor<
+            TProcessor_SceneNode_QueueChildren<T_Layer>, FCk_Handle_Transform, T_Layer,
+            ck::TReadOnly<FFragment_Transform>, ck::TReadOnly<FFragment_RecordOfSceneNodes>,
+            FTag_Transform_Updated, CK_IGNORE_PENDING_KILL>;
+
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<TProcessor_SceneNode_Update<T_Layer>>;
+        using LocalSettleAfter = FGroup_Transform_Derived;
+
+    public:
+        using Super::Super;
+
+    public:
+        static auto
+        ForEachEntity(
+            typename Super::TimeType InDeltaT,
+            typename Super::HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
