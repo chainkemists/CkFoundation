@@ -359,6 +359,14 @@ namespace ck_deferred_asset_init_angelscript
 
         // From here to the end of the constructor the CDO's script members are destroyed. There is no safe
         // bail inside that window - which is why the failure below is an ensure, not a quiet return.
+        //
+        // What the ensure does in each configuration, since it is easy to assume wrongly: CkBuildConfig
+        // pins BuildConfigurationOverride to MatchWithUnreal, so Shipping sets CK_DISABLE_ENSURE_CHECKS=0
+        // and CK_DISABLE_ENSURE_DEBUGGING=1 - the macro expands to a plain `if (NOT expr)`, the body runs,
+        // the class is skipped, and the diagnostic comes from Execute_Logging's ck::core::Error rather than
+        // from the ensure. It does NOT proceed and crash. True compile-out (`if constexpr(false)`) needs the
+        // unreachable Profile branch, and THERE this would run the defaults chain over destroyed members and
+        // report success - if Profile is ever enabled, this pair of ensures must become checkf first.
         const auto ConstructSucceeded = [&]
         {
             auto Context = FAngelscriptContext{CDO};
