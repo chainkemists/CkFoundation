@@ -52,6 +52,27 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Scheduling-only boundary. Readers placed before this marker observe the completed prior batch; Jolt
+    // writers are ordered after it, so no reader can race body/character setup or request handling.
+    class CKJOLT_API FProcessor_JoltWorld_TransformWriters : public TProcessorBase<FProcessor_JoltWorld_TransformWriters>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync>;
+
+    private:
+        using Super = TProcessorBase;
+        friend class Super;
+
+    public:
+        explicit FProcessor_JoltWorld_TransformWriters(const RegistryType& InRegistry);
+
+    public:
+        auto DoTick(TimeType InDeltaT) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Drains the last step's contact queue to the registered routers. Runs even while paused.
     class CKJOLT_API FProcessor_JoltWorld_DrainEvents : public TProcessorBase<FProcessor_JoltWorld_DrainEvents>
     {
