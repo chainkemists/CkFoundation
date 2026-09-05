@@ -201,6 +201,73 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
+    // Pre-clear capture: a packaged boot from the precompiled script cache runs the literal __Inits and
+    // CDO defaults during AS init (deferring every assets::load::), then ClearUnneededRuntimeData EMPTIES
+    // FAngelscriptManager::ActiveModules and every module's globalFunctionList before the sweep can run —
+    // both phases enumerate nothing and every deferred field stays null (bodyless NPCs, dead item
+    // traits). The metadata is alive at OnPostReload, which fires on BOTH boot
+    // paths pre-clear, so snapshot what the sweep needs there. asCScriptFunction pointers survive the
+    // clear (it deletes only unused SYSTEM functions; the handle registry banks pointers the same way).
+    // The capture runs OFF the game thread in cooked builds — pointers and strings only, no UObject work.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    struct FCapturedLiteralInit
+    {
+        FString            AssetName;
+        asCScriptFunction* GetterFunction = nullptr;
+        asCScriptFunction* InitFunction   = nullptr;
+    };
+
+    TArray<TWeakObjectPtr<UASClass>> GPreClearCapturedClasses;
+    TArray<FCapturedLiteralInit>     GPreClearCapturedLiterals;
+
+    auto CapturePreClearHealSources() -> void
+    {
+        GPreClearCapturedClasses.Reset();
+        GPreClearCapturedLiterals.Reset();
+
+        auto ActiveModules = FAngelscriptManager::Get().GetActiveModules();
+
+        ck::algo::ForEach(ActiveModules, [&](const TSharedRef<FAngelscriptModuleDesc>& Module)
+        {
+            ck::algo::ForEach(Module->Classes, [&](const TSharedRef<FAngelscriptClassDesc>& ClassDesc)
+            {
+                if (auto* ASClass = Cast<UASClass>(ClassDesc->Class))
+                { GPreClearCapturedClasses.Emplace(ASClass); }
+            });
+
+            if (Module->ScriptModule == nullptr)
+            { return; }
+
+            // Names derive from PostInitFunctions' Get<Name> getters — the field the precompiled cache
+            // RESTORES. DeclaredLiteralAssets is populated by the source-path preprocessor only.
+            if (Module->PostInitFunctions.IsEmpty())
+            { return; }
+
+            const auto FunctionMap = BuildFunctionMap(Module->ScriptModule);
+
+            ck::algo::ForEach(Module->PostInitFunctions, [&](const FString& GetterName)
+            {
+                static const auto GetterPrefix = FString{TEXT("Get")};
+                if (NOT GetterName.StartsWith(GetterPrefix))
+                { return; }
+
+                const auto AssetName = GetterName.RightChop(GetterPrefix.Len());
+
+                auto Captured = FCapturedLiteralInit{};
+                Captured.AssetName      = AssetName;
+                Captured.GetterFunction = FunctionMap.FindRef(GetterName);
+                Captured.InitFunction   = FunctionMap.FindRef(ck::Format_UE(TEXT("__Init_{}"), AssetName));
+
+                if (Captured.GetterFunction == nullptr || Captured.InitFunction == nullptr)
+                { return; }
+
+                GPreClearCapturedLiterals.Emplace(MoveTemp(Captured));
+            });
+        });
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
     // Phase 1 matches the engine's ExecuteDefaultsFunctions (ASClass.cpp): collect DefaultsFunctions
     // child→parent up the super chain, execute in reverse so parents run first. No CDO pre-reset —
     // re-running over the top is idempotent for the scalar/object-ref assignments AS defaults almost are.
@@ -263,6 +330,17 @@ namespace ck_deferred_asset_init_angelscript
             });
         });
 
+        if (ActiveModules.Num() == 0 && NOT GPreClearCapturedClasses.IsEmpty())
+        {
+            // Precompiled-cache boot: the module registry was emptied post-init — heal from the
+            // pre-clear capture instead (see the capture block above).
+            ck::algo::ForEach(GPreClearCapturedClasses, [&](const TWeakObjectPtr<UASClass>& WeakClass)
+            {
+                if (ReRunClassDefaultsFor(WeakClass.Get()))
+                { ++SucceededCount; }
+            });
+        }
+
         return SucceededCount;
     }
 
@@ -298,6 +376,41 @@ namespace ck_deferred_asset_init_angelscript
         int32 Succeeded = 0;
         int32 Declared  = 0;
     };
+
+    // Getter → cached instance, reset to CDO, then __Init_ re-executes the user's asset body.
+    auto ReRunOneLiteralInit(
+        const FString& InAssetName,
+        asCScriptFunction* InGetterFunction,
+        asCScriptFunction* InInitFunction) -> bool
+    {
+        UObject* AssetInstance = nullptr;
+        {
+            auto Context = FAngelscriptContext{};
+            Context->Prepare(InGetterFunction);
+            if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("Get{}"), InAssetName)))
+            { return false; }
+
+            AssetInstance = *static_cast<UObject**>(Context->GetAddressOfReturnValue());
+        }
+
+        if (ck::Is_NOT_Valid(AssetInstance))
+        {
+            ck::core::Error(TEXT("[DeferredAssetInit] Literal asset '{}' — getter returned null/invalid instance"), InAssetName);
+            return false;
+        }
+
+        ResetInstanceFromCDO(AssetInstance);
+
+        {
+            auto Context = FAngelscriptContext{};
+            Context->Prepare(InInitFunction);
+            Context->SetArgObject(0, AssetInstance);
+            if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("__Init_{}"), InAssetName)))
+            { return false; }
+        }
+
+        return true;
+    }
 
     // Full heal is the safety fallback and the hot-reload path, where first-pass attribution never applied.
     auto ReRunLiteralAssetInits(bool InFullHeal) -> FPhase2Stats
@@ -348,35 +461,24 @@ namespace ck_deferred_asset_init_angelscript
                     return;
                 }
 
-                UObject* AssetInstance = nullptr;
-                {
-                    auto Context = FAngelscriptContext{};
-                    Context->Prepare(GetterFunction);
-                    if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("Get{}"), AssetName)))
-                    { return; }
-
-                    AssetInstance = *static_cast<UObject**>(Context->GetAddressOfReturnValue());
-                }
-
-                if (ck::Is_NOT_Valid(AssetInstance))
-                {
-                    ck::core::Error(TEXT("[DeferredAssetInit] Literal asset '{}' — getter returned null/invalid instance"), AssetName);
-                    return;
-                }
-
-                ResetInstanceFromCDO(AssetInstance);
-
-                {
-                    auto Context = FAngelscriptContext{};
-                    Context->Prepare(InitFunction);
-                    Context->SetArgObject(0, AssetInstance);
-                    if (NOT Execute_Logging(Context, ck::Format_UE(TEXT("__Init_{}"), AssetName)))
-                    { return; }
-                }
-
-                ++Stats.Succeeded;
+                if (ReRunOneLiteralInit(AssetName, GetterFunction, InitFunction))
+                { ++Stats.Succeeded; }
             });
         });
+
+        if (Stats.Declared == 0 && NOT GPreClearCapturedLiterals.IsEmpty())
+        {
+            // Precompiled-cache boot: DeclaredLiteralAssets is never restored and the module registry
+            // is emptied post-init, so the walk above declared nothing — heal from the pre-clear
+            // capture. The FULL captured set runs regardless of InFullHeal: surgical attribution
+            // records names from an AS stack the cache path does not surface.
+            ck::algo::ForEach(GPreClearCapturedLiterals, [&](const FCapturedLiteralInit& InCaptured)
+            {
+                ++Stats.Declared;
+                if (ReRunOneLiteralInit(InCaptured.AssetName, InCaptured.GetterFunction, InCaptured.InitFunction))
+                { ++Stats.Succeeded; }
+            });
+        }
 
         return Stats;
     }
@@ -558,13 +660,24 @@ auto
     if (const auto PrematureCount = UCk_Utils_IO_UE::Get_PrematureAssetLoadCount();
         PrematureCount > 0)
     {
-#if WITH_EDITOR
-        ck::core::Display(TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe and resolved by this sweep (first: '{}')"),
-                          PrematureCount, UCk_Utils_IO_UE::Get_FirstPrematureAssetLoadMessage());
-#else
-        ck::core::Verbose(TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe and resolved by this sweep (first: '{}')"),
-                          PrematureCount, UCk_Utils_IO_UE::Get_FirstPrematureAssetLoadMessage());
-#endif
+        // A deferred count with ZERO heals means the enumeration came up empty and every deferred
+        // field is still null (bodyless NPCs, dead item data) — that combination shipped silently
+        // once and must never again. Loud in every config; the counts name the missing source.
+        const auto SweepHealedSomething = CdoCount > 0 || LiteralAssetStats.Succeeded > 0;
+        CK_ENSURE_IF_NOT(SweepHealedSomething,
+            TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe but the sweep healed NOTHING "
+                 "(CDOs=[{}], literals=[{}/{}], ActiveModules=[{}], captured classes=[{}], captured literals=[{}])"),
+            PrematureCount, CdoCount, LiteralAssetStats.Succeeded, LiteralAssetStats.Declared,
+            FAngelscriptManager::Get().GetActiveModules().Num(),
+            ck_deferred_asset_init_angelscript::GPreClearCapturedClasses.Num(),
+            ck_deferred_asset_init_angelscript::GPreClearCapturedLiterals.Num())
+        {}
+
+        // Display in EVERY config — the heal-vs-deferred delta is the one line that says whether AS
+        // asset data survived boot, and Verbose hid it on the packaged build that shipped broken.
+        ck::core::Display(TEXT("[DeferredAssetInit] {} assets::load::* call(s) deferred before engine-safe; sweep re-ran {} CDO(s) + {}/{} literal(s) (first deferred: '{}')"),
+                          PrematureCount, CdoCount, LiteralAssetStats.Succeeded, LiteralAssetStats.Declared,
+                          UCk_Utils_IO_UE::Get_FirstPrematureAssetLoadMessage());
     }
     UCk_Utils_IO_UE::Reset_PrematureAssetLoadReport();
 
@@ -585,6 +698,11 @@ auto
     -> void
 {
 #if WITH_ANGELSCRIPT_CK
+
+    // Snapshot the sweep's enumeration sources while the module registry is still alive — a
+    // precompiled-cache boot empties it (ClearUnneededRuntimeData) before ResolveAllPending runs.
+    // Fires on both boot paths and on hot-reload, so the capture also refreshes stale pointers.
+    ck_deferred_asset_init_angelscript::CapturePreClearHealSources();
 
     // The initial-compile post-reload fires BEFORE OnFEngineLoopInitComplete, where the sweep would heal
     // nothing and storm ensures; ResolveAllPending is a strict superset of it. The peek is deliberate —
