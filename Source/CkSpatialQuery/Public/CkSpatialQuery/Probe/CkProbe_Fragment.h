@@ -87,6 +87,32 @@ namespace ck { namespace details
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Early LatestCompleted queries retain only value results until the Overlap group reconciles them in the
+    // same rendered frame. The frame stamp makes disable/destruction/failed early passes fail closed.
+    struct CKSPATIALQUERY_API FFragment_ProbeTrace_RayCast_LatestCompleted
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProbeTrace_RayCast_LatestCompleted);
+
+    public:
+        TArray<FCk_Probe_RayCast_Result> _Results;
+        int64 _FrameNumber = 0;
+        bool _IsReady = false;
+    };
+
+    struct CKSPATIALQUERY_API FFragment_ProbeTrace_ShapeCast_LatestCompleted
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProbeTrace_ShapeCast_LatestCompleted);
+
+    public:
+        TArray<FCk_ShapeCast_Result> _Results;
+        int64 _FrameNumber = 0;
+        bool _IsReady = false;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     /// Per-episode dedup for OnProbeTraceWorldHit: the signal fires on NEW contact only. A named wrapper
     /// rather than a bare TSet<FCk_Handle> because component pools are type-keyed and a generic container
     /// type would collide with any other feature that registered the same one.

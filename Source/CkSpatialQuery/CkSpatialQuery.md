@@ -6,10 +6,14 @@ Collision probes using Jolt Physics. Persistent shapes in the physics world that
 
 - **Probe** — An ECS entity with a Jolt physics body. Tracks overlaps with other probes and fires signals on begin/update/end.
 - **Motion Types** — Static, Kinematic, or Dynamic bodies. LinearCast (CCD) for fast-moving objects.
-- **Response Policy** — `Notify` (fire signals on overlap) or `Silent` (no callbacks).
-- **Contact Admission** — Jolt creates a Probe/Probe contact only when at least one `Notify` side accepts the other probe name through its filter. `Silent` query targets remain visible to ProbeTrace without generating physical contact callbacks.
+- **Response Policy** — `Notify` receives overlap signals; `Silent` receives none but remains a target for an admitting `Notify` probe.
+- **Contact Participation** — `PhysicalContacts` allows normal Probe contact admission; `QueryOnly` remains visible to ProbeTrace but rejects physical Probe contacts in both directions.
+- **Contact Admission** — Jolt creates a Probe/Probe contact only when at least one `Notify` side accepts the other probe name through its filter. `QueryOnly` rejects the pair before directional admission, while `Silent` deliberately preserves the targetable asymmetry.
 - **Context Overlap Policy** — Controls whether probes overlap with same-context or different-context probes.
 - **Persistent Traces** — Long-lived line/shape casts that update every frame.
+- **Persistent Physics State Policy** — `CurrentSolved` waits for the just-dispatched batch before its
+  Overlap-group query. `LatestCompleted` captures the latest completed scheduled pre-step state before Jolt
+  Transform writers and reconciles those value hits in the same rendered frame.
 - **Debug Draw** — Optional visualization with configurable colors per state.
 
 ## Example: NPC Overlap Detection
@@ -55,10 +59,14 @@ bool Overlapping = UCk_Utils_Probe_UE::Get_IsOverlapping(ProbeHandle);
 
 ## Contact and transform performance contracts
 
-- Probe contact signatures are immutable after publication to Jolt worker threads. The signature contains the probe name, response policy, and tag filter; game-specific tags are not hard-coded in CkSpatialQuery.
-- Contact admission preserves the existing directional callback contract: a pair is admitted when either notifying receiver accepts the other probe. Context policy and overlap bookkeeping remain game-thread checks.
+- Probe contact signatures are immutable after publication to Jolt worker threads. The signature contains the probe name, response policy, contact participation, and tag filter; game-specific tags are not hard-coded in CkSpatialQuery.
+- Contact admission preserves the existing directional callback contract: a pair is admitted when either notifying receiver accepts the other probe. `QueryOnly` is the explicit bilateral exception: it is traceable but excludes both directions before narrow phase. Context policy and overlap bookkeeping remain game-thread checks.
 - Contact events must resolve both entities to the exact live Probe `BodyID`, including its sequence number. A sibling JoltBody on the same ECS entity must never masquerade as the Probe or end one of its overlaps.
-- Probe pose changes are applied as one aligned Jolt batch per processor tick. Body IDs, positions, and rotations must be appended in lockstep; stale body IDs are skipped, and static probes move only during restore rebasing.
+- Probe pose changes are applied as one aligned Jolt batch per activation mode per processor tick. Body IDs, positions, and rotations must be appended in lockstep; stale body IDs are skipped, static probes move only during restore rebasing, and kinematic `QueryOnly` probes update with `DontActivate`.
+- Persistent ProbeTrace defaults to `CurrentSolved`. Its completed just-dispatched batch intentionally does not
+  include Probe transforms pushed later in PostPhysics. `LatestCompleted` does not wait for that just-dispatched
+  batch: it reports the latest completed scheduled pre-step state, with its buffered results consumed only in the
+  matching rendered frame.
 - `ck.SpatialQuery.ProbePairAttributionFrames N` enables a bounded, temporary pair counter for diagnostics. It is off by default and must not be left armed during normal profiling.
 
 ## Tests

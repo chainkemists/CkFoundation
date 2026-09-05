@@ -16,6 +16,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_WaitForAsync);
+CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_TransformWriters);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_DrainEvents);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_PlanStep);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_Step);
@@ -77,6 +78,23 @@ namespace ck
         // Dirty-flag guarded: a no-op in sync mode because Step already applied + cleared this frame's poses.
         JoltWorld->DoApplyPoseBuffer_GameThread(_TransientEntity);
         JoltWorld->DoApplyCharacterPoses_GameThread(_TransientEntity);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_JoltWorld_TransformWriters::
+        FProcessor_JoltWorld_TransformWriters(
+            const RegistryType& InRegistry)
+        : Super(InRegistry)
+    {
+    }
+
+    auto
+        FProcessor_JoltWorld_TransformWriters::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -37,6 +37,22 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Selects the physics snapshot used by persistent ProbeTrace processors only. One-shot Request_* calls
+// always query their current synchronous state.
+UENUM(BlueprintType)
+enum class ECk_ProbeTrace_PhysicsStatePolicy : uint8
+{
+    // Wait for this frame's dispatched Jolt batch before tracing.
+    CurrentSolved = 0,
+
+    // Query the latest completed batch before Jolt's Transform writers, then reconcile those values later this frame.
+    LatestCompleted = 1
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeTrace_PhysicsStatePolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /// Whether a ProbeTrace also sees NON-probe Jolt bodies (baked static world, JoltBodies), and what
 /// it does with them. Opt-in per call: the default keeps a trace probe-only, which every existing
 /// caller (EQS line-of-sight, crowd counts, the claw-machine cabinet scan) depends on.
@@ -720,6 +736,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_PhysicsStatePolicy _PhysicsStatePolicy = ECk_ProbeTrace_PhysicsStatePolicy::CurrentSolved;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -738,6 +758,7 @@ public:
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
     CK_PROPERTY(_TracePolicy);
+    CK_PROPERTY(_PhysicsStatePolicy);
     CK_PROPERTY(_WorldHitPolicy);
     CK_PROPERTY(_WorldFilter);
     CK_PROPERTY(_IgnoredEntities);
@@ -787,6 +808,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_ProbeTrace_PhysicsStatePolicy _PhysicsStatePolicy = ECk_ProbeTrace_PhysicsStatePolicy::CurrentSolved;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     ECk_ProbeTrace_WorldHitPolicy _WorldHitPolicy = ECk_ProbeTrace_WorldHitPolicy::Ignore;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -806,6 +831,7 @@ public:
     CK_PROPERTY(_BackFaceModeTriangles);
     CK_PROPERTY(_BackFaceModeConvex);
     CK_PROPERTY(_TracePolicy);
+    CK_PROPERTY(_PhysicsStatePolicy);
     CK_PROPERTY(_WorldHitPolicy);
     CK_PROPERTY(_WorldFilter);
     CK_PROPERTY(_IgnoredEntities);
