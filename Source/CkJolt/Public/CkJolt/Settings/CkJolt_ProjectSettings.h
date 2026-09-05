@@ -143,7 +143,7 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _EnableParallelPhysics = true;
 
-    // Number of threads for parallel physics. 0 = automatic (hardware_concurrency - 1).
+    // Number of worker threads for parallel physics. 0 = automatic (platform physical-core count).
     // Only used when EnableParallelPhysics is true.
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Threading",
               meta = (AllowPrivateAccess = true, ClampMin = 0, UIMin = 0,
