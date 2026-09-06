@@ -33,10 +33,12 @@ namespace ck::groundnav
 
         constexpr auto kFewestPointsWithAnInterior = 3;
 
-        // The raycast's budget is a float and the chord it is derived from is a double, so a chord a
-        // body can exactly afford can round to a cap one ulp under its own cost and be refused. The
-        // slack is relative and three orders of magnitude under a cell, so it admits that rounding
-        // and nothing a plate price could hide in.
+        // The ray budget is a sum of FLOAT segment prices - _AccumulatedCost is a float - accumulated
+        // in double, and the cap that sum becomes is a float again, so a chord a body can exactly
+        // afford is exposed to BOTH roundings: the summands it is measured against were rounded once
+        // where the ray answered them, and the cap rounds a second time and can land one ulp under
+        // the chord's own cost. The slack is relative and three orders of magnitude under a cell, so
+        // it absorbs both and nothing a plate price could hide in.
         constexpr auto kShortcutBudgetSlack = 1.0e-5;
 
         // A link endpoint stands ON the corridor, so it can miss the segment carrying it only by the
@@ -318,36 +320,162 @@ namespace ck::groundnav
         }
 
         /**
-         * What the polyline between two indices costs, priced the way the fill prices it: each segment
-         * at its XY length times the greater of its two endpoints' plate multipliers. This is the
-         * budget a chord replacing that stretch is judged against - not the dearest plate times the
-         * chord, which bounds by the worst ground the stretch touched rather than by what it paid and
-         * so admits a chord dearer than the detour it removes.
+         * The cost query a chord and a replaced segment are BOTH priced through, so the two sides of
+         * the comparison can only ever differ in their cap.
+         *
+         * The plate table rides the query and the baked price is merged into it, which is
+         * Get_AreaMultiplier's own rule - so a ray through marked ground is charged for it whether or
+         * not a waypoint ever stood on that plate.
          */
-        auto Get_ReplacedStretchCostUu(
-            TConstArrayView<FVector> InWaypoints,
-            TConstArrayView<float>   InMultipliers,
-            int32                    InFromIndex,
-            int32                    InToIndex) -> double
+        auto Make_ChordCostQuery(
+            const FVector&                      InFrom,
+            const FVector&                      InTo,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu) -> FCk_GroundNav_RaycastQuery
         {
-            auto CostUu = 0.0;
+            auto Query = FCk_GroundNav_RaycastQuery{};
+            Query._Start = InFrom;
+            Query._End = InTo;
+            Query._StartVerticalToleranceUu = InVerticalToleranceUu;
+            Query._Agent = InAgent;
+            Query._PlateCostMultipliers = InCost._PlateCostMultipliers;
+            Query._UseBakedPlateCost = true;
 
-            for (auto Index = InFromIndex; Index < InToIndex; ++Index)
-            {
-                const auto Multiplier = FMath::Max(InMultipliers[Index], InMultipliers[Index + 1]);
-                CostUu += static_cast<double>(Multiplier) * FVector::Dist2D(InWaypoints[Index], InWaypoints[Index + 1]);
-            }
-
-            return CostUu;
+            return Query;
         }
 
         /**
-         * Whether a body can walk the chord AND walk it for what the waypoints it replaces were
-         * priced at.
+         * What ONE polyline segment costs under the ray's own per-cell pricing, and unset where the
+         * segment's own ray is not clear.
          *
-         * One raycast answers both: the plate table rides the query, so the traversal weights each
-         * cell by the same multiplier the search charged for that ground, and the cap it is judged
-         * against is a cost budget rather than a distance.
+         * Uncapped, so the answer is the segment's price rather than a cap it was measured against.
+         * A funnel apex hugs its wall at exactly one radius, so a segment between two of them can be
+         * refused on geometry by the same ray the chord is judged with - which is why this answers
+         * with an optional rather than a number the caller would have to guess the meaning of.
+         */
+        auto Get_SegmentRayCostUu(
+            const FCk_GroundNav_Field&          InField,
+            const FVector&                      InFrom,
+            const FVector&                      InTo,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu) -> TOptional<double>
+        {
+            auto Query = Make_ChordCostQuery(InFrom, InTo, InCost, InAgent, InVerticalToleranceUu);
+
+            // Zero is SurfaceWalk's "no cap" (CapIsActive in Get_SurfaceRaycast), which is what this
+            // asks for: the segment's price, not a verdict against a budget.
+            Query._MaxCost = 0.0f;
+
+            const auto Result = Get_SurfaceRaycast(InField, Query);
+
+            if (NOT Result.Get_IsClear())
+            { return {}; }
+
+            return static_cast<double>(Result._AccumulatedCost);
+        }
+
+        /**
+         * The ray prices of the ORIGINAL segments of one pass, cast on first use and kept, so a
+         * segment spanned by five candidates is cast once rather than five times.
+         *
+         * The fallback count is how many segments answered with no price at all - the ones the ray
+         * budget below had to price the endpoint-max way. It is reported and never asserted: it says
+         * how much of the ray budget is really the ray's.
+         */
+        struct FSegmentRayCosts
+        {
+            TArray<TOptional<double>> _CostUu;
+            TArray<bool>              _Asked;
+            int32                     _FallbackCount = 0;
+        };
+
+        /**
+         * The two numbers a stretch is worth, carried together because a chord is only taken when it
+         * is inside both and a caller that could pass one without the other is a caller that can
+         * check half the rule.
+         */
+        struct FStretchBudgets
+        {
+            double _RayBudgetUu = 0.0;
+            double _FillBudgetUu = 0.0;
+        };
+
+        /**
+         * The two prices of one replaced stretch, because a chord is judged by two different rules
+         * and each needs the stretch measured in its own units.
+         *
+         * The RAY budget is the sum of the segments' own ray prices, which is the same per-cell
+         * arithmetic the chord's ray will answer in - so ground no waypoint stands on is charged on
+         * both sides. Where a segment's ray is not clear there is no ray price to sum, and it falls
+         * back to the endpoint-max price - the rule the whole budget used before.
+         *
+         * The FILL budget is the sum of Get_LegCost over the same segments, which is the arithmetic
+         * the plan PUBLISHES through - so it carries the 3D length and the slope penalty the other
+         * two sites do not see.
+         */
+        auto Get_ReplacedStretchBudgets(
+            TConstArrayView<FVector>            InWaypoints,
+            TConstArrayView<float>              InMultipliers,
+            const FCk_GroundNav_Field&          InField,
+            const FCk_GroundNav_PathSharedData& InShared,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu,
+            int32                               InFromIndex,
+            int32                               InToIndex,
+            FSegmentRayCosts&                   InOutSegmentRayCosts) -> FStretchBudgets
+        {
+            auto Budgets = FStretchBudgets{};
+
+            for (auto Index = InFromIndex; Index < InToIndex; ++Index)
+            {
+                const auto& From = InWaypoints[Index];
+                const auto& To = InWaypoints[Index + 1];
+
+                const auto Multiplier = FMath::Max(InMultipliers[Index], InMultipliers[Index + 1]);
+
+                if (NOT InOutSegmentRayCosts._Asked[Index])
+                {
+                    InOutSegmentRayCosts._CostUu[Index] = Get_SegmentRayCostUu(
+                        InField, From, To, InCost, InAgent, InVerticalToleranceUu);
+
+                    InOutSegmentRayCosts._Asked[Index] = true;
+
+                    if (NOT InOutSegmentRayCosts._CostUu[Index].IsSet())
+                    { ++InOutSegmentRayCosts._FallbackCount; }
+                }
+
+                const auto& SegmentRayCostUu = InOutSegmentRayCosts._CostUu[Index];
+
+                Budgets._RayBudgetUu += SegmentRayCostUu.IsSet()
+                    ? SegmentRayCostUu.GetValue()
+                    : static_cast<double>(Multiplier) * FVector::Dist2D(From, To);
+
+                Budgets._FillBudgetUu += static_cast<double>(
+                    Get_LegCost(InShared, From, To, Multiplier, kNoClearanceFactor));
+            }
+
+            return Budgets;
+        }
+
+        /**
+         * Whether a body can walk the chord, and whether the chord is worth what the waypoints it
+         * replaces were worth - under BOTH prices, because they answer different questions.
+         *
+         * (i) The ray's per-cell cost against the ray budget: never pay MORE for the chord than the
+         * corridor it replaces cost. That bounds the TOTAL and not the dearness per unit - a short
+         * chord across dear ground is admitted against a long cheap detour whenever the two numbers
+         * come out that way. (ii) The fill's own price of the chord against the fill budget: never
+         * publish a cost higher than the plan already carried. Neither implies the other - the ray
+         * samples cells and knows no slope, the fill samples endpoints and does - so a chord must
+         * clear both to be taken.
+         *
+         * A budget of zero REFUSES without casting, and so does one that merely ROUNDS to zero on
+         * the way into the float cap. Zero is SurfaceWalk's "no cap" (CapIsActive in
+         * Get_SurfaceRaycast), so either would hand the ray an unbounded budget and admit anything;
+         * a stretch worth nothing buys nothing.
          */
         auto Get_IsChordWalkableWithinBudget(
             const FCk_GroundNav_Field&          InField,
@@ -356,21 +484,29 @@ namespace ck::groundnav
             const FCk_GroundNav_PathCostParams& InCost,
             const FCk_GroundNav_QueryAgent&     InAgent,
             float                               InVerticalToleranceUu,
-            double                              InReplacedCostUu) -> bool
+            const FCk_GroundNav_PathSharedData& InShared,
+            float                               InChordMultiplier,
+            const FStretchBudgets&              InBudgets) -> bool
         {
-            const auto BudgetUu = InReplacedCostUu * (1.0 + kShortcutBudgetSlack);
+            if (InBudgets._RayBudgetUu <= 0.0 || InBudgets._FillBudgetUu <= 0.0)
+            { return false; }
 
-            auto Query = FCk_GroundNav_RaycastQuery{};
-            Query._Start = InFrom;
-            Query._End = InTo;
-            Query._StartVerticalToleranceUu = InVerticalToleranceUu;
-            Query._Agent = InAgent;
-            Query._PlateCostMultipliers = InCost._PlateCostMultipliers;
-            // The ray prices every plate it crosses the way the budget above was priced - the greater
-            // of the plate's baked markup price and the table - so a chord through marked ground is
-            // charged for it whether or not a waypoint ever stood on that plate.
-            Query._UseBakedPlateCost = true;
-            Query._MaxCost = static_cast<float>(BudgetUu);
+            // The number SurfaceWalk reads is this FLOAT, not the double it was narrowed from, so a
+            // budget positive in double that rounds to zero here would arrive as the ray's "no cap".
+            // Refused on the value the ray will actually see.
+            const auto RayCapUu = static_cast<float>(InBudgets._RayBudgetUu * (1.0 + kShortcutBudgetSlack));
+
+            if (RayCapUu <= 0.0f)
+            { return false; }
+
+            const auto ChordFillCostUu = static_cast<double>(
+                Get_LegCost(InShared, InFrom, InTo, InChordMultiplier, kNoClearanceFactor));
+
+            if (ChordFillCostUu > InBudgets._FillBudgetUu * (1.0 + kShortcutBudgetSlack))
+            { return false; }
+
+            auto Query = Make_ChordCostQuery(InFrom, InTo, InCost, InAgent, InVerticalToleranceUu);
+            Query._MaxCost = RayCapUu;
 
             return Get_SurfaceRaycast(InField, Query).Get_IsClear();
         }
@@ -450,12 +586,18 @@ namespace ck::groundnav
             const FCk_GroundNav_Field&          InField,
             const FCk_GroundNav_PathCostParams& InCost,
             const FCk_GroundNav_QueryAgent&     InAgent,
-            float                               InVerticalToleranceUu)
+            float                               InVerticalToleranceUu,
+            int32*                              OutSegmentRayFallbacks)
         -> TArray<FVector>
     {
         using namespace pathpostprocess_private;
 
-        const auto PassIsEnabled = InCost._ShortcutSpanCap > 0;
+        if (OutSegmentRayFallbacks != nullptr)
+        { *OutSegmentRayFallbacks = 0; }
+
+        // Two, not one: the candidate loop below runs from the capped index down to two ahead, so a
+        // cap of one leaves it empty and the pass would be a silent no-op rather than an off switch.
+        const auto PassIsEnabled = InCost._ShortcutSpanCap >= 2;
 
         if (InWaypoints.Num() < kFewestPointsWithAnInterior || NOT PassIsEnabled)
         {
@@ -468,7 +610,15 @@ namespace ck::groundnav
         const auto Multipliers = Get_PlateMultipliers(
             InWaypoints, InField, InCost, InAgent, InVerticalToleranceUu);
 
+        // The same shared data the fill prices its legs through, so the fill budget below and the
+        // number the plan publishes are one arithmetic rather than two.
+        const auto Shared = Make_SharedData(InField, InCost, InAgent);
+
         const auto LastIndex = InWaypoints.Num() - 1;
+
+        auto SegmentRayCosts = FSegmentRayCosts{};
+        SegmentRayCosts._CostUu.SetNum(LastIndex);
+        SegmentRayCosts._Asked.Init(false, LastIndex);
 
         auto Kept = TArray<FVector>{};
         Kept.Reserve(InWaypoints.Num());
@@ -491,8 +641,19 @@ namespace ck::groundnav
 
             for (auto Candidate = FarthestIndex; Candidate >= Index + 2; --Candidate)
             {
-                const auto ReplacedCostUu =
-                    Get_ReplacedStretchCostUu(InWaypoints, Multipliers, Index, Candidate);
+                const auto Budgets = Get_ReplacedStretchBudgets(
+                    InWaypoints,
+                    Multipliers,
+                    InField,
+                    Shared,
+                    InCost,
+                    InAgent,
+                    InVerticalToleranceUu,
+                    Index,
+                    Candidate,
+                    SegmentRayCosts);
+
+                const auto ChordMultiplier = FMath::Max(Multipliers[Index], Multipliers[Candidate]);
 
                 if (Get_IsChordWalkableWithinBudget(
                         InField,
@@ -501,7 +662,9 @@ namespace ck::groundnav
                         InCost,
                         InAgent,
                         InVerticalToleranceUu,
-                        ReplacedCostUu))
+                        Shared,
+                        ChordMultiplier,
+                        Budgets))
                 {
                     NextIndex = Candidate;
                     break;
@@ -512,6 +675,9 @@ namespace ck::groundnav
 
             Index = NextIndex;
         }
+
+        if (OutSegmentRayFallbacks != nullptr)
+        { *OutSegmentRayFallbacks = SegmentRayCosts._FallbackCount; }
 
         return Kept;
     }

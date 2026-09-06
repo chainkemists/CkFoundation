@@ -2225,6 +2225,11 @@ namespace ck_groundnav_debugconsole
         TEXT("radius. 0 draws the raw funnel; the offset never lands a waypoint off walkable ground ")
         TEXT("or inside the radius, so a corner that cannot take the whole offset takes less of it."));
 
+    static TAutoConsoleVariable<int32> CVar_ShortcutSpanCap(
+        TEXT("ck.GroundNav.Debug.ShortcutSpanCap"), MAX_int32,
+        TEXT("Shortcut pass reach in waypoints from each kept point: <2 = off, N = at most N ahead, ")
+        TEXT("2147483647 = unbounded (default)"));
+
     // ----------------------------------------------------------------------------------------------
 
     // A query runs against a FIELD, and only the field bake produces one - a region bake has no
@@ -3661,6 +3666,7 @@ namespace ck_groundnav_debugconsole
         PathQuery._Cost._SlopePenaltyK = CVar_SlopePenaltyK.GetValueOnGameThread();
         PathQuery._Cost._ClearanceBiasK = CVar_ClearanceBiasK.GetValueOnGameThread();
         PathQuery._Cost._CornerOffsetK = CVar_CornerOffsetK.GetValueOnGameThread();
+        PathQuery._Cost._ShortcutSpanCap = CVar_ShortcutSpanCap.GetValueOnGameThread();
 
         const auto Path = ck::groundnav::Get_Path(DebugField, PathQuery);
 
@@ -4394,7 +4400,8 @@ namespace ck_groundnav_debugconsole
         TEXT("shorter corridor. Needs ck.GroundNav.BakeFieldAt to have run - a region bake produces ")
         TEXT("no field to query. The body radius comes from ck.GroundNav.Debug.AgentRadiusUu, and is ")
         TEXT("the inset the funnel walks the route through; the cost model comes from ")
-        TEXT("ck.GroundNav.Debug.SlopePenaltyK, .ClearanceBiasK and .CornerOffsetK."),
+        TEXT("ck.GroundNav.Debug.SlopePenaltyK, .ClearanceBiasK, .CornerOffsetK and ")
+        TEXT(".ShortcutSpanCap."),
         FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
             [](const TArray<FString>& InArgs, UWorld* InWorld) -> void
         {
@@ -4582,6 +4589,7 @@ namespace ck_groundnav_debugconsole
                 TEXT("\n  merge   : PlaneFitToleranceUu {} NormalConeDegrees {}")
                 TEXT("\n  probe   : ProbeExtentUu {} ProbeUpUu {} ProbeDownUu {} ProbeMode {}")
                 TEXT("\n  cost    : SlopePenaltyK {} ClearanceBiasK {} CornerOffsetK {}")
+                TEXT("\n            ShortcutSpanCap {}")
                 TEXT("\n  display : Mode {} LifetimeSeconds {} MaxCells {} DrawMarkup {} DrawLinks {}")
                 TEXT("\n            DrawInvalidation {} RepairHighlightSeconds {} RetainedDraw {}")
                 TEXT("\n  gates   : MarkupLiveGate bypassed {} RepathOnRebuild bypassed {}"),
@@ -4605,6 +4613,7 @@ namespace ck_groundnav_debugconsole
                 CVar_SlopePenaltyK.GetValueOnGameThread(),
                 CVar_ClearanceBiasK.GetValueOnGameThread(),
                 CVar_CornerOffsetK.GetValueOnGameThread(),
+                CVar_ShortcutSpanCap.GetValueOnGameThread(),
                 CVar_Mode.GetValueOnGameThread(),
                 CVar_LifetimeSeconds.GetValueOnGameThread(),
                 CVar_MaxCells.GetValueOnGameThread(),
