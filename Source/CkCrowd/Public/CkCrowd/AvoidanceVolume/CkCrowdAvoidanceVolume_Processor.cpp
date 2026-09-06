@@ -182,23 +182,24 @@ namespace ck
         FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime) const -> void
     {
         auto Volume = InHandle;
-        const auto IsStatic = InTransform.Get_Transform().Equals(
-            InRuntime._AuthoredTransform, ck_crowd_avoidance_volume::TransformDriftTolerance);
-        CK_ENSURE_IF_NOT(IsStatic,
-            TEXT("CrowdAvoidanceVolume [{}] moved after composition; destroy and recreate it instead of repainting nav tiles."),
-            Volume)
-        { }
-        const auto HasMarkup = ck::IsValid(InRuntime._Markup);
-        CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] lost its nav-area markup."), Volume)
-        { }
-        if (NOT IsStatic || NOT HasMarkup)
+        const auto Invalidate = [&]() -> void
         {
             Release_Runtime(InRuntime);
             Volume.Try_Remove<FTag_CrowdAvoidanceVolume_HasRuntime>();
             Volume.Try_Remove<FTag_CrowdAvoidanceVolume_NeedsSetup>();
             Volume.AddOrGet<FTag_CrowdAvoidanceVolume_Invalid>();
-            return;
-        }
+        };
+
+        const auto IsStatic = InTransform.Get_Transform().Equals(
+            InRuntime._AuthoredTransform, ck_crowd_avoidance_volume::TransformDriftTolerance);
+        CK_ENSURE_IF_NOT(IsStatic,
+            TEXT("CrowdAvoidanceVolume [{}] moved after composition; destroy and recreate it instead of repainting nav tiles."),
+            Volume)
+        { Invalidate(); return; }
+
+        const auto HasMarkup = ck::IsValid(InRuntime._Markup);
+        CK_ENSURE_IF_NOT(HasMarkup, TEXT("CrowdAvoidanceVolume [{}] lost its nav-area markup."), Volume)
+        { Invalidate(); return; }
 
         InRuntime._SecondsSincePaint += static_cast<float>(InDeltaT.Get_Seconds());
         if (InRuntime._ConfirmedOnMesh)

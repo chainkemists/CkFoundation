@@ -81,13 +81,16 @@ namespace ck
 
         // Reconciles the recorded crossing against where the cursor now stands: Begin on the span the
         // cursor has reached and not passed, Complete once it is past that span's exit, Cancel when
-        // the route ran out under a crossing that never finished.
+        // the route ran out under a crossing that never finished. A caller that may not BEGIN one
+        // (a route under repair: its spans are the stale route's, and the links may be exactly what
+        // the repair is about) still gets its completes and cancels.
         static auto
         DoDriveLinkTraversalCursor(
             FCk_Handle&                      InHandle,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             int32                            InCursor,
-            int32                            InWaypointCount) -> void;
+            int32                            InWaypointCount,
+            bool                             InMayBeginACrossing) -> void;
     };
 }
 

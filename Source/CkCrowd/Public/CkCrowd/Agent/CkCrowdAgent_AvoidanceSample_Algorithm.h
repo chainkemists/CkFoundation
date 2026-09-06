@@ -560,8 +560,9 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
     inline auto CalculateNeighborSidePenalty(const FVector& InCandidateVelocity, const FVector& InNeighborRelativeOffset, const float InMaxSpeed, const ECk_AvoidanceSidePreference InPreference) -> float
     {
         const auto IsValidPreference = InPreference == ECk_AvoidanceSidePreference::Disabled || InPreference == ECk_AvoidanceSidePreference::PassLeft || InPreference == ECk_AvoidanceSidePreference::PassRight;
-        CK_ENSURE_IF_NOT(IsValidPreference, TEXT("Invalid crowd avoidance side preference [{}]"), static_cast<uint8>(InPreference)) {}
-        if (NOT IsValidPreference || InMaxSpeed <= KINDA_SMALL_NUMBER || InPreference == ECk_AvoidanceSidePreference::Disabled)
+        CK_ENSURE_IF_NOT(IsValidPreference, TEXT("Invalid crowd avoidance side preference [{}]"), static_cast<uint8>(InPreference))
+        { return 0.0f; }
+        if (InMaxSpeed <= KINDA_SMALL_NUMBER || InPreference == ECk_AvoidanceSidePreference::Disabled)
         { return 0.0f; }
 
         const auto PreferenceSign = InPreference == ECk_AvoidanceSidePreference::PassLeft ? -1.0f : 1.0f;

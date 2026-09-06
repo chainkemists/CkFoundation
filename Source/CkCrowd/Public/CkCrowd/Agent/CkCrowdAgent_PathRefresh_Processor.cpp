@@ -945,14 +945,14 @@ namespace ck
             auto RepathHandle = InHandle;
             RepathHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
 
-            // Only a route someone is WALKING is worth repairing. The installed identity and the
-            // provider both outlive the episode (nothing removes them at arrival or failure), so
-            // without the Walking test an arrived or goal-failed agent would be re-planned on every
-            // rebuild only for the install seam to drop the answer as one with no episode to serve,
-            // and an agent whose FRESH plan is in flight would have it superseded by a "repair" of
-            // the previous goal's corridor.
+            // Every row this consumer sees is already WALKING — the view requires the tag — so there
+            // is no arrived or goal-failed agent here to filter out. A publish that reaches one of
+            // those instead leaves the flag LATCHED on it (GroundNav raises, never clears), and the
+            // dispatch of that agent's NEXT plan clears it
+            // (CkCrowdAgent_HandleRequests_Processor.cpp, Request_NavigationPath's GroundNav branch)
+            // because a plan made against the field as published now cannot owe a repair to the
+            // corridor it replaces. So a latched invalidation never becomes a repair of a fresh route.
             if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav &&
-                RepathHandle.Has<FTag_CrowdAgent_Walking>() &&
                 RepathHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
             {
                 const auto RepathGoal = InPathFollow.Get_ActiveGoal();
