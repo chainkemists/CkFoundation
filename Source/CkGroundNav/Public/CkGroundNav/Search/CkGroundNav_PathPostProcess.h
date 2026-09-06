@@ -12,7 +12,7 @@
 // output, then the fill that measures it.
 //
 // Pure functions over a field the caller already holds. No world, no registry, no state — so any
-// stage can be run alone by a test or a debug view, and the composed answer is exactly the five
+// stage can be run alone by a test or a debug view, and the composed answer is exactly the six
 // stages in order and nothing else.
 //
 // The plan is a SEPARATE value from FCk_GroundNav_PathResult on purpose. A result is rewritten every
@@ -158,6 +158,45 @@ namespace ck::groundnav
         const FCk_GroundNav_PathResult& InResult) -> TArray<FVector>;
 
     /**
+     * Every waypoint a straight walkable line makes unnecessary, dropped: from each point it keeps,
+     * the farthest point that point can both SEE and AFFORD, and everything between the two gone.
+     *
+     * The funnel is taut over the corridor it was HANDED, and a decomposition into rectangles hands
+     * it corners that are artefacts of where a slab was cut rather than of anything a body must walk
+     * around. A surface raycast is the only thing that can tell those two apart, because it re-asks
+     * the field instead of the corridor: a corner a ray walks straight through was never a corner.
+     *
+     * A candidate is AFFORDED when its raycast stays inside a budget of what the stretch it replaces
+     * COSTS - each replaced segment at its XY length times the greater of its endpoints' plate
+     * multipliers, the fill's own pricing - rather than a plate-set membership test, because leaving
+     * the corridor's own plates is exactly what a shortcut must be allowed to do, while paying more
+     * for the ground than the detour it removes is exactly what it must not. The ray prices every
+     * plate it crosses by the same merged rule (_UseBakedPlateCost), so both sides of the comparison
+     * come from one arithmetic the search already owns.
+     *
+     * Link endpoints are hard span SPLITS: never a candidate, never crossed, never dropped. An
+     * authored endpoint is a place a body must pass THROUGH, so a chord spanning one would walk the
+     * route around a link the search decided to take. The two ends of the polyline are pinned for the
+     * same reason.
+     *
+     * Idempotent at the unbounded cap, to within the rounding slack: a second run's points are a
+     * subset of the first's and its spans are delimited by the same pinned points, so every chord it
+     * can offer was already offered - and offered at a budget no larger, since the stretch it would
+     * now replace is made of chords the first run accepted, each priced at no more than the stretch
+     * it replaced. What the first run refused the second refuses. A FINITE _ShortcutSpanCap trades
+     * that away, which is why unbounded is the default: a shorter list puts points inside a reach
+     * the first run never looked as far as.
+     */
+    CKGROUNDNAV_API auto
+    Get_Shortcut(
+        TConstArrayView<FVector>            InWaypoints,
+        TConstArrayView<FVector>            InPinnedWaypoints,
+        const FCk_GroundNav_Field&          InField,
+        const FCk_GroundNav_PathCostParams& InCost,
+        const FCk_GroundNav_QueryAgent&     InAgent,
+        float                               InVerticalToleranceUu) -> TArray<FVector>;
+
+    /**
      * Every interior waypoint pushed off its corner along the interior bisector, endpoints untouched.
      *
      * The funnel emits an interior waypoint only where the string bends around a portal vertex, so
@@ -224,8 +263,15 @@ namespace ck::groundnav
         TConstArrayView<TMap<int32, float>> InTables) -> TMap<int32, float>;
 
     /**
-     * The whole post-process: funnel, link endpoints, corner offset, skip-first, fill — in that
-     * order, with the status, the plate corridor and the planned-against epoch carried through.
+     * The whole post-process: funnel, link endpoints, corner offset, shortcut, skip-first, fill —
+     * in that order, with the status, the plate corridor and the planned-against epoch carried
+     * through.
+     *
+     * The shortcut runs AFTER the corner offset. The funnel's apexes hug their walls at exactly one
+     * radius, so a chord between two of them passes an obstacle standing between them at just under
+     * a radius and the radius-aware ray refuses it; offset first and that chord clears. A false
+     * corner the offset pushed a radius further out costs nothing, because the shortcut drops it
+     * whole rather than having to undo it.
      *
      * The corner offset is the cost model's own multiple of the agent radius, so one number tunes the
      * pass and zero switches it off.

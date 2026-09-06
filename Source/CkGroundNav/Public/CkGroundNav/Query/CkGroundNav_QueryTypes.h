@@ -276,6 +276,19 @@ namespace ck::groundnav
         FCk_GroundNav_QueryAgent _Agent;
 
         float _MaxCost = 0.0f;
+
+        // What each plate the ray walks is priced at, keyed by FLAT plate (Get_FlatPlateIndex) - the
+        // same index space the search's own cost table speaks, so a caller feeds one table to both.
+        // EMPTY means every plate weighs 1.0 and _MaxCost is the distance cap it has always been; a
+        // plate the table does not name weighs 1.0 whatever the field's markup priced it at, so a
+        // caller that wants the field's price puts Get_AreaMultiplier's answer in here.
+        TMap<int32, float> _PlateCostMultipliers;
+
+        // When set, a plate the table does not name weighs its OWN baked price (Plate._CostMultiplier)
+        // rather than 1.0, and a named plate weighs the greater of the two - Get_AreaMultiplier's
+        // rule, so a ray and a search price one plate the same way. Off by default: a query that
+        // never asked for it prices nothing it did not price before.
+        bool _UseBakedPlateCost = false;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
