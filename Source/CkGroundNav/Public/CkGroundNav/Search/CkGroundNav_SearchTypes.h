@@ -111,6 +111,13 @@ namespace ck::groundnav
         // Inside-corner offset, as a multiple of the agent radius.
         float _CornerOffsetK = 1.0f;
 
+        // How many waypoints ahead the shortcut pass may look from each point it keeps. Zero
+        // switches the pass OFF, the way a zero corner offset switches that one off, and MAX_int32
+        // lets it reach the whole span between two pinned points — which is what makes the pass
+        // idempotent, and why it is the default. A finite cap bounds the work at cap raycasts per
+        // waypoint instead of the span's own length, and is a benchmark's answer rather than a guess.
+        int32 _ShortcutSpanCap = MAX_int32;
+
         // Flat plate id to a multiplier this ONE query asks for, merged upward with what the field's
         // plate already carries. An empty table is therefore the field's own price and nothing else.
         TMap<int32, float> _PlateCostMultipliers;
