@@ -17,8 +17,14 @@ class FJsonObject;
  *
  * Mirrors the data behind the markdown reports (FCk_FrameReport / FCk_MultiFrameReport) but emits
  * structured output for scripts, CI gates, and AI consumption:
- * - Schema version 2 adds generator metadata and detailed multi-frame hotFrames while preserving
- *   all existing keys. Times are milliseconds, keys are camelCase, and empty sections are omitted.
+ * - Schema version 3 adds per-frame and average GameThread accounting, exact frame bounds,
+ *   threshold omission totals, outer-inclusive timer averages, and explicit wait-analysis status.
+ *   Existing keys remain. Durations are milliseconds; fields suffixed Seconds are exact trace
+ *   timestamps. Threshold omission totals are average milliseconds per analysed frame.
+ * - Instrumented intervals are unioned; named waits are classified heuristically by timer name.
+ *   Other instrumented time does not establish CPU busy time, and uncovered time is not idle time.
+ *   ExclusiveCoverageErrorMs exposes disagreement between scope attribution and interval coverage.
+ *   Inclusive values are non-additive and do not establish critical-path savings.
  * - The call tree is the TRUE aggregated call tree built from raw timing events (events merged by
  *   call path) — no wrapper collapsing and no display-name simplification. The one exception is
  *   workerThreads[].topTimers, which reuses the shared summary computation and therefore carries

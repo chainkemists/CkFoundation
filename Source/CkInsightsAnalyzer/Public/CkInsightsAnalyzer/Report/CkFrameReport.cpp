@@ -95,6 +95,34 @@ auto
     return FString::Printf(TEXT("UNKNOWN_%u"), TimerIndex);
 }
 
+auto
+    FCk_FrameReport::
+    ComputeFrameAccounting(const FCk_FrameAnalysisResult& Result,
+                           const FTimerNameMap& TimerNames) -> FCk_FrameAccounting
+{
+    FCk_FrameAccounting Accounting;
+    if (NOT Result.HasValidTimeRange)
+    { return Accounting; }
+
+    Accounting.FrameIndex = Result.FrameIndex;
+    Accounting.ThreadId = Result.ThreadId;
+    Accounting.StartTime = Result.FrameStartTime;
+    Accounting.EndTime = Result.FrameEndTime;
+    Accounting.FrameMs = Result.FrameDurationMs;
+    Accounting.InstrumentedMs = Result.InstrumentedMs;
+    for (const auto& [TimerIndex, ExclusiveSeconds] : Result.TimerExclusive)
+    {
+        const double ExclusiveMs = ExclusiveSeconds * 1000.0;
+        Accounting.ExclusiveSumMs += ExclusiveMs;
+        if (FCk_TimerCategorizer::IsWaitTimer(GetTimerName(TimerNames, TimerIndex)))
+        { Accounting.NamedWaitMs += ExclusiveMs; }
+    }
+    Accounting.OtherInstrumentedMs = FMath::Max(0.0, Accounting.InstrumentedMs - Accounting.NamedWaitMs);
+    Accounting.UninstrumentedMs = FMath::Max(0.0, Accounting.FrameMs - Accounting.InstrumentedMs);
+    Accounting.ExclusiveCoverageErrorMs = Accounting.ExclusiveSumMs - Accounting.InstrumentedMs;
+    return Accounting;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -878,7 +906,6 @@ auto
     for (const auto& [TimerIndex, ExclSeconds] : Result.TimerExclusive)
     {
         const double ExclMs = ExclSeconds * 1000.0;
-        if (ExclMs < 0.01) continue;
 
         const FString TimerName = GetTimerName(TimerNames, TimerIndex);
         const FString Category = _Categorizer.Categorize(TimerName);

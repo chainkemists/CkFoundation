@@ -15,6 +15,26 @@
 
 namespace ck_json_report
 {
+    auto Make_FrameAccounting(const FCk_FrameAccounting& InAccounting, bool bIncludeIdentityAndTimes) -> TSharedPtr<FJsonObject>
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+        if (bIncludeIdentityAndTimes)
+        {
+            Obj->SetNumberField(TEXT("frameIndex"), static_cast<double>(InAccounting.FrameIndex));
+            Obj->SetNumberField(TEXT("threadId"), InAccounting.ThreadId);
+            Obj->SetNumberField(TEXT("frameStartSeconds"), InAccounting.StartTime);
+            Obj->SetNumberField(TEXT("frameEndSeconds"), InAccounting.EndTime);
+        }
+        Obj->SetNumberField(TEXT("frameMs"), InAccounting.FrameMs);
+        Obj->SetNumberField(TEXT("instrumentedMs"), InAccounting.InstrumentedMs);
+        Obj->SetNumberField(TEXT("namedWaitMs"), InAccounting.NamedWaitMs);
+        Obj->SetNumberField(TEXT("otherInstrumentedMs"), InAccounting.OtherInstrumentedMs);
+        Obj->SetNumberField(TEXT("uninstrumentedMs"), InAccounting.UninstrumentedMs);
+        Obj->SetNumberField(TEXT("exclusiveSumMs"), InAccounting.ExclusiveSumMs);
+        Obj->SetNumberField(TEXT("exclusiveCoverageErrorMs"), InAccounting.ExclusiveCoverageErrorMs);
+        return Obj;
+    }
+
     // Takes the rounder rather than reaching for FCk_JsonReport::Round3: that one is private, and a
     // second copy of the rounding rule would let this section drift from every other number here.
     // PerFrameInclusiveMs is deliberately not exported: it is (nodes x analysed frames) numbers, and
@@ -257,9 +277,16 @@ auto
     TSharedPtr<FJsonObject> Frame = MakeShared<FJsonObject>();
     Frame->SetNumberField(TEXT("frameIndex"), static_cast<double>(Result.FrameIndex));
     Frame->SetNumberField(TEXT("durationMs"), Round3(Result.FrameDurationMs));
+    Frame->SetNumberField(TEXT("frameStartSeconds"), Result.FrameStartTime);
+    Frame->SetNumberField(TEXT("frameEndSeconds"), Result.FrameEndTime);
 
     TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
     const FCk_FrameReport::FTimerNameMap TimerNames = FCk_FrameReport::BuildTimerNameMap(Session);
+    if (Result.HasValidTimeRange)
+    {
+        Frame->SetObjectField(TEXT("accounting"), ck_json_report::Make_FrameAccounting(
+            FCk_FrameReport::ComputeFrameAccounting(Result, TimerNames), true));
+    }
 
     // ---- Call tree ----
 
@@ -321,7 +348,6 @@ auto
     for (const auto& [TimerIndex, ExclSec] : Result.TimerExclusive)
     {
         const double ExclMs = ExclSec * 1000.0;
-        if (ExclMs < 0.01) continue;
 
         const FString Category = Categorizer.Categorize(
             FCk_FrameReport::GetTimerName(TimerNames, TimerIndex));
@@ -445,11 +471,15 @@ auto
     -> FString
 {
     TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
-    Root->SetNumberField(TEXT("schemaVersion"), 2);
+    Root->SetNumberField(TEXT("schemaVersion"), 3);
 
     TSharedPtr<FJsonObject> Generator = MakeShared<FJsonObject>();
     Generator->SetStringField(TEXT("name"), TEXT("CkInsightsAnalyzer"));
     Generator->SetStringField(TEXT("reportKind"), TEXT("singleFrame"));
+    Generator->SetStringField(TEXT("accountingScope"), TEXT("GameThread only; elapsed frame time is not asserted CPU busy"));
+    Generator->SetStringField(TEXT("accountingValidity"), TEXT("exclusiveCoverageErrorMs beyond floating-point tolerance means exclusive attribution does not reconcile with interval coverage"));
+    Generator->SetStringField(TEXT("waitClassification"), TEXT("Named wait scopes only; heuristic, not a critical-path inference"));
+    Generator->SetStringField(TEXT("inclusiveSemantics"), TEXT("inclusive timing is nested and non-additive"));
     Root->SetObjectField(TEXT("generator"), Generator);
     Root->SetObjectField(TEXT("trace"), MakeTraceOverview(Session));
     Root->SetNumberField(TEXT("budgetMs"), Round3(Config.TargetFrameMs));
@@ -469,12 +499,16 @@ auto
     -> FString
 {
     TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
-    Root->SetNumberField(TEXT("schemaVersion"), 2);
+    Root->SetNumberField(TEXT("schemaVersion"), 3);
 
     TSharedPtr<FJsonObject> Generator = MakeShared<FJsonObject>();
     Generator->SetStringField(TEXT("name"), TEXT("CkInsightsAnalyzer"));
     Generator->SetStringField(TEXT("reportKind"), TEXT("multiFrame"));
     Generator->SetNumberField(TEXT("hotFrameDetailLimit"), Config.WorstFrameCount);
+    Generator->SetStringField(TEXT("accountingScope"), TEXT("GameThread only; elapsed frame time is not asserted CPU busy"));
+    Generator->SetStringField(TEXT("accountingValidity"), TEXT("exclusiveCoverageErrorMs beyond floating-point tolerance means exclusive attribution does not reconcile with interval coverage"));
+    Generator->SetStringField(TEXT("waitClassification"), TEXT("Named wait scopes only; heuristic, not a critical-path inference"));
+    Generator->SetStringField(TEXT("inclusiveSemantics"), TEXT("avgInclusiveMs is nested and non-additive; avgOuterInclusiveMs unions same-timer outer scopes"));
     Root->SetObjectField(TEXT("generator"), Generator);
     Root->SetObjectField(TEXT("trace"), MakeTraceOverview(Session));
     Root->SetNumberField(TEXT("budgetMs"), Round3(Config.TargetFrameMs));
@@ -486,6 +520,31 @@ auto
     Multi->SetNumberField(TEXT("maxMs"), Round3(Stats.MaxFrameMs));
     Multi->SetNumberField(TEXT("p95Ms"), Round3(Stats.P95FrameMs));
     Multi->SetNumberField(TEXT("p99Ms"), Round3(Stats.P99FrameMs));
+    Multi->SetBoolField(TEXT("waitAveragesComputed"), Stats.WaitAveragesComputed);
+
+    if (Stats.AverageAccounting.IsSet())
+    {
+        Multi->SetObjectField(TEXT("averageAccounting"),
+            ck_json_report::Make_FrameAccounting(*Stats.AverageAccounting, false));
+    }
+    if (NOT Stats.FrameAccounting.IsEmpty())
+    {
+        const auto AccountingValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(
+            Stats.FrameAccounting, [](const FCk_FrameAccounting& Accounting) -> TSharedPtr<FJsonValue>
+            {
+                return MakeShared<FJsonValueObject>(ck_json_report::Make_FrameAccounting(Accounting, true));
+            });
+        Multi->SetArrayField(TEXT("frameAccounting"), AccountingValues);
+    }
+
+    TSharedPtr<FJsonObject> Thresholds = MakeShared<FJsonObject>();
+    Thresholds->SetNumberField(TEXT("totalExclusiveMs"), Stats.TotalExclusiveMs);
+    Thresholds->SetNumberField(TEXT("reportedTimerExclusiveMs"), Stats.ReportedTimerExclusiveMs);
+    Thresholds->SetNumberField(TEXT("omittedTimerExclusiveMs"), Stats.OmittedTimerExclusiveMs);
+    Thresholds->SetNumberField(TEXT("reportedCategoryExclusiveMs"), Stats.ReportedCategoryExclusiveMs);
+    Thresholds->SetNumberField(TEXT("omittedCategoryExclusiveMs"), Stats.OmittedCategoryExclusiveMs);
+    Thresholds->SetStringField(TEXT("units"), TEXT("milliseconds per analysed GameThread frame"));
+    Multi->SetObjectField(TEXT("thresholdOmissionAccounting"), Thresholds);
 
     // The SELECTION, not the outcome: frameCount above is what survived analysis, these runs are
     // what was asked for. Inclusive on both ends, matching FCk_FrameRun.
@@ -578,7 +637,7 @@ auto
         CatObj->SetNumberField(TEXT("pctOfTotal"), Round3(Cat.TotalPct));
         CategoryValues.Add(MakeShared<FJsonValueObject>(CatObj));
     }
-    if (CategoryValues.Num() > 0)
+    if (Config.ShowCategoryAverages && CategoryValues.Num() > 0)
     {
         Multi->SetArrayField(TEXT("categoryAverages"), CategoryValues);
     }
@@ -592,6 +651,7 @@ auto
             TimerObj->SetNumberField(TEXT("avgExclusiveMs"), Round3(InTimer.AvgExclMs));
             TimerObj->SetNumberField(TEXT("p95ExclusiveMs"), Round3(InTimer.P95ExclMs));
             TimerObj->SetNumberField(TEXT("maxExclusiveMs"), Round3(InTimer.MaxExclMs));
+            TimerObj->SetNumberField(TEXT("avgOuterInclusiveMs"), Round3(InTimer.AvgOuterInclMs));
             TimerObj->SetNumberField(TEXT("avgInclusiveMs"), Round3(InTimer.AvgInclMs));
             TimerObj->SetNumberField(TEXT("avgCount"), Round3(InTimer.AvgCount));
             TimerObj->SetNumberField(TEXT("framesPresent"), static_cast<double>(InTimer.FramesPresent));
@@ -602,6 +662,33 @@ auto
     if (NOT TimerValues.IsEmpty())
     {
         Multi->SetArrayField(TEXT("timerAverages"), TimerValues);
+    }
+
+    if (Stats.WaitAveragesComputed)
+    {
+        TArray<TSharedPtr<FJsonValue>> WaitValues;
+        for (const FCk_WaitThreadSummary& Wait : Stats.WaitAverages)
+        {
+            TSharedPtr<FJsonObject> WaitObj = MakeShared<FJsonObject>();
+            WaitObj->SetNumberField(TEXT("id"), Wait.ThreadId);
+            WaitObj->SetStringField(TEXT("name"), Wait.ThreadName);
+            WaitObj->SetBoolField(TEXT("isGameThread"), Wait.bIsGameThread);
+            WaitObj->SetNumberField(TEXT("waitMs"), Round3(Wait.WaitMs));
+            WaitObj->SetNumberField(TEXT("wallMs"), Round3(Wait.WallMs));
+            TArray<TSharedPtr<FJsonValue>> TopValues;
+            for (const FCk_WaitThreadSummary::FWaitScope& Top : Wait.TopWaits)
+            {
+                TSharedPtr<FJsonObject> TopObj = MakeShared<FJsonObject>();
+                TopObj->SetStringField(TEXT("name"), Top.Name);
+                TopObj->SetNumberField(TEXT("exclusiveMs"), Round3(Top.ExclusiveMs));
+                TopObj->SetNumberField(TEXT("count"), Top.Count);
+                TopValues.Add(MakeShared<FJsonValueObject>(TopObj));
+            }
+            if (NOT TopValues.IsEmpty())
+            { WaitObj->SetArrayField(TEXT("topWaits"), TopValues); }
+            WaitValues.Add(MakeShared<FJsonValueObject>(WaitObj));
+        }
+        Multi->SetArrayField(TEXT("waitAverages"), WaitValues);
     }
 
     if (Stats.ExcludedScreenshotFrameCount > 0)

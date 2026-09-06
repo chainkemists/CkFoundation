@@ -236,6 +236,24 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
      */
     TArray<FCk_WaitThreadSummary> WaitAverages;
 
+    /** True only when ComputeWaitAverages paid the per-thread scans and populated WaitAverages. */
+    bool WaitAveragesComputed = false;
+
+    /** GT-only accounting for every frame that survived analysis/exclusion, in AnalysedFrameIndices order. */
+    TArray<FCk_FrameAccounting> FrameAccounting;
+
+    /** Arithmetic means of numeric accounting fields only; start/end timestamps are deliberately absent. */
+    TOptional<FCk_FrameAccounting> AverageAccounting;
+
+    /** Timer-table threshold/cap reconciliation against all GT exclusive time, averaged per analysed frame (ms). */
+    double TotalExclusiveMs = 0.0;
+    double ReportedTimerExclusiveMs = 0.0;
+    double OmittedTimerExclusiveMs = 0.0;
+
+    /** Category-table threshold reconciliation against all GT exclusive time, averaged per analysed frame (ms). */
+    double ReportedCategoryExclusiveMs = 0.0;
+    double OmittedCategoryExclusiveMs = 0.0;
+
     double AvgFrameMs = 0.0;
     double MinFrameMs = 0.0;
     double MaxFrameMs = 0.0;
@@ -296,6 +314,9 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameStats
 
         /** How many analysed frames contained this timer at all. */
         uint64 FramesPresent = 0;
+
+        /** Outer-scope union per timer; unlike AvgInclMs this avoids same-name recursive double count. */
+        double AvgOuterInclMs = 0.0;
     };
     TArray<FTimerStats> TimerAverages;
 };
@@ -437,6 +458,7 @@ private:
         const TMap<uint32, FString>& InTimerNames,
         TMap<uint32, TArray<double>>& InTimerExclusivePerFrame,
         const TMap<uint32, double>& InTimerInclusiveSum,
+        const TMap<uint32, double>& InTimerOuterInclusiveSum,
         const TMap<uint32, uint64>& InTimerCallSum)
         -> void;
 

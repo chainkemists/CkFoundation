@@ -278,6 +278,28 @@ struct CKINSIGHTSANALYZER_API FCk_WaitThreadSummary
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Reconciles one real game-frame window without claiming that all elapsed wall time was CPU busy.
+ * NamedWaitMs is only the explicit-name heuristic in FCk_TimerCategorizer::IsWaitTimer.
+ */
+struct CKINSIGHTSANALYZER_API FCk_FrameAccounting
+{
+    uint64 FrameIndex = 0;
+    uint32 ThreadId = 0;
+    double StartTime = 0.0;
+    double EndTime = 0.0;
+    double FrameMs = 0.0;
+    double InstrumentedMs = 0.0;
+    double NamedWaitMs = 0.0;
+    double OtherInstrumentedMs = 0.0;
+    double UninstrumentedMs = 0.0;
+    double ExclusiveSumMs = 0.0;
+    /** ExclusiveSumMs - InstrumentedMs; a diagnostic for malformed/overlapping scope accounting. */
+    double ExclusiveCoverageErrorMs = 0.0;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /** Per-category exclusive-time entry for structured display. */
 struct CKINSIGHTSANALYZER_API FCk_CategorySummaryEntry
 {
@@ -376,6 +398,10 @@ public:
 
     /** Get timer name, with fallback. */
     static auto GetTimerName(const FTimerNameMap& Names, uint32 TimerIndex) -> FString;
+
+    /** Compute GT-only accounting from one real result and a caller-owned timer-name map. */
+    static auto ComputeFrameAccounting(const FCk_FrameAnalysisResult& Result,
+                                       const FTimerNameMap& TimerNames) -> FCk_FrameAccounting;
 
     /**
      * ComputeWaitSummaries for callers that already hold the timer-name map — a per-frame loop that

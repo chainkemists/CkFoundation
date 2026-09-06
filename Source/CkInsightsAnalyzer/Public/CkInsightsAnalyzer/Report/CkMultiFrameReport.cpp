@@ -431,6 +431,7 @@ auto
         const TMap<uint32, FString>& InTimerNames,
         TMap<uint32, TArray<double>>& InTimerExclusivePerFrame,
         const TMap<uint32, double>& InTimerInclusiveSum,
+        const TMap<uint32, double>& InTimerOuterInclusiveSum,
         const TMap<uint32, uint64>& InTimerCallSum)
     -> void
 {
@@ -464,6 +465,7 @@ auto
             : FString::Printf(TEXT("UNKNOWN_%u"), TimerIndex);
 
         const auto* FoundInclusiveSum = InTimerInclusiveSum.Find(TimerIndex);
+        const auto* FoundOuterInclusiveSum = InTimerOuterInclusiveSum.Find(TimerIndex);
         const auto* FoundCallSum = InTimerCallSum.Find(TimerIndex);
 
         _Stats.TimerAverages.Add(FCk_MultiFrameStats::FTimerStats
@@ -475,7 +477,8 @@ auto
             PerFrame.Last(),
             FoundInclusiveSum != nullptr ? (*FoundInclusiveSum / AnalysedFramesAsDouble) : 0.0,
             FoundCallSum != nullptr ? (static_cast<double>(*FoundCallSum) / AnalysedFramesAsDouble) : 0.0,
-            FramesPresent
+            FramesPresent,
+            FoundOuterInclusiveSum != nullptr ? (*FoundOuterInclusiveSum / AnalysedFramesAsDouble) : 0.0
         });
     }
 
@@ -699,6 +702,7 @@ auto
     // percentile is available; inclusive and count only need running totals.
     auto TimerExclusivePerFrame = TMap<uint32, TArray<double>>{};
     auto TimerInclusiveSum = TMap<uint32, double>{};
+    auto TimerOuterInclusiveSum = TMap<uint32, double>{};
     auto TimerCallSum = TMap<uint32, uint64>{};
 
     auto AveragedFrameAccumulator = FAveragedFrameAccumulator{};
@@ -747,6 +751,10 @@ auto
         // The ordinal space every per-frame series hangs off, appended here so a frame that failed to
         // analyse or was excluded above never takes an ordinal.
         _Stats.AnalysedFrameIndices.Add(FrameIdx);
+        if (Result.HasValidTimeRange)
+        {
+            _Stats.FrameAccounting.Add(FCk_FrameReport::ComputeFrameAccounting(Result, TimerNames));
+        }
 
         if (_Config.BuildMergedHotPaths)
         {
@@ -768,7 +776,6 @@ auto
         for (const auto& [TimerIndex, ExclSec] : Result.TimerExclusive)
         {
             const double ExclMs = ExclSec * 1000.0;
-            if (ExclMs < 0.01) continue;
 
             const FString* NamePtr = TimerNames.Find(TimerIndex);
             const FString TimerName = NamePtr ? *NamePtr : FString::Printf(TEXT("UNKNOWN_%u"), TimerIndex);
@@ -785,9 +792,9 @@ auto
 
         if (_Config.TimerAverageCount > 0)
         {
-            // No 0.01 ms floor here, unlike the category pass above: a timer can be individually
-            // tiny and still be one of the biggest rows once it fires a few hundred times a frame.
-            // The floor that matters is MinTimerAverageMs, applied to the average at emit time.
+            // The category pass also retains every timer until it applies the category threshold:
+            // individually tiny timers can add up to a meaningful category. The floor that matters
+            // here is MinTimerAverageMs, applied to this timer's average at emit time.
             ck::algo::ForEach(Result.TimerExclusive, [&](const auto& InEntry)
             {
                 TimerExclusivePerFrame.FindOrAdd(InEntry.Key).Add(InEntry.Value * 1000.0);
@@ -796,6 +803,11 @@ auto
             ck::algo::ForEach(Result.TimerInclusive, [&](const auto& InEntry)
             {
                 TimerInclusiveSum.FindOrAdd(InEntry.Key, 0.0) += InEntry.Value * 1000.0;
+            });
+
+            ck::algo::ForEach(Result.TimerOuterInclusive, [&](const auto& InEntry)
+            {
+                TimerOuterInclusiveSum.FindOrAdd(InEntry.Key, 0.0) += InEntry.Value * 1000.0;
             });
 
             ck::algo::ForEach(Result.TimerCount, [&](const auto& InEntry)
@@ -889,6 +901,10 @@ auto
         _Stats.WorstFrameIndex = AllSummaries[0].FrameIndex;
     }
 
+    _Stats.TotalExclusiveMs = 0.0;
+    for (const FCk_FrameAccounting& Accounting : _Stats.FrameAccounting)
+    { _Stats.TotalExclusiveMs += Accounting.ExclusiveSumMs; }
+
     for (auto& [CatName, PerFrame] : CategoryPerFrame)
     {
         if (PerFrame.Num() == 0) continue;
@@ -906,7 +922,9 @@ auto
         const double CatAvg = CatSum / PerFrame.Num();
         const double CatP95 = Percentile(PerFrame, 95.0);
 
-        if (CatAvg < _Config.MinCategoryMs) continue;
+        if (CatAvg < _Config.MinCategoryMs || NOT _Config.ShowCategoryAverages) continue;
+
+        _Stats.ReportedCategoryExclusiveMs += CatSum;
 
         const double CatPct = (_Stats.AvgFrameMs > 0.0) ? (CatAvg / _Stats.AvgFrameMs) * 100.0 : 0.0;
 
@@ -922,7 +940,15 @@ auto
             return A.AvgExclMs > B.AvgExclMs;
         });
 
-    DoBuild_TimerAverages(TimerNames, TimerExclusivePerFrame, TimerInclusiveSum, TimerCallSum);
+    DoBuild_TimerAverages(TimerNames, TimerExclusivePerFrame, TimerInclusiveSum, TimerOuterInclusiveSum, TimerCallSum);
+    for (const FCk_MultiFrameStats::FTimerStats& Timer : _Stats.TimerAverages)
+    { _Stats.ReportedTimerExclusiveMs += Timer.AvgExclMs * static_cast<double>(_Stats.FrameCount); }
+    const double AccountingDivisor = static_cast<double>(_Stats.FrameCount);
+    _Stats.TotalExclusiveMs /= AccountingDivisor;
+    _Stats.ReportedTimerExclusiveMs /= AccountingDivisor;
+    _Stats.ReportedCategoryExclusiveMs /= AccountingDivisor;
+    _Stats.OmittedTimerExclusiveMs = FMath::Max(0.0, _Stats.TotalExclusiveMs - _Stats.ReportedTimerExclusiveMs);
+    _Stats.OmittedCategoryExclusiveMs = FMath::Max(0.0, _Stats.TotalExclusiveMs - _Stats.ReportedCategoryExclusiveMs);
     DoBuild_AveragedFrame(AveragedFrameAccumulator);
 
     if (_Config.BuildMergedHotPaths)
@@ -933,6 +959,31 @@ auto
     if (_Config.ComputeWaitAverages)
     {
         DoBuild_WaitAverages(WaitPerThread);
+        _Stats.WaitAveragesComputed = true;
+    }
+
+    if (NOT _Stats.FrameAccounting.IsEmpty())
+    {
+        FCk_FrameAccounting Average;
+        const double Divisor = static_cast<double>(_Stats.FrameAccounting.Num());
+        for (const FCk_FrameAccounting& Accounting : _Stats.FrameAccounting)
+        {
+            Average.FrameMs += Accounting.FrameMs;
+            Average.InstrumentedMs += Accounting.InstrumentedMs;
+            Average.NamedWaitMs += Accounting.NamedWaitMs;
+            Average.OtherInstrumentedMs += Accounting.OtherInstrumentedMs;
+            Average.UninstrumentedMs += Accounting.UninstrumentedMs;
+            Average.ExclusiveSumMs += Accounting.ExclusiveSumMs;
+            Average.ExclusiveCoverageErrorMs += Accounting.ExclusiveCoverageErrorMs;
+        }
+        Average.FrameMs /= Divisor;
+        Average.InstrumentedMs /= Divisor;
+        Average.NamedWaitMs /= Divisor;
+        Average.OtherInstrumentedMs /= Divisor;
+        Average.UninstrumentedMs /= Divisor;
+        Average.ExclusiveSumMs /= Divisor;
+        Average.ExclusiveCoverageErrorMs /= Divisor;
+        _Stats.AverageAccounting = MoveTemp(Average);
     }
 
     return true;
