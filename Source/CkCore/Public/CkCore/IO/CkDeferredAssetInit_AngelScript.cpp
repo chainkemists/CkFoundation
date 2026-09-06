@@ -326,15 +326,33 @@ namespace ck_deferred_asset_init_angelscript
         if (ck::Is_NOT_Valid(InASClass))
         { return false; }
 
-        if (InASClass->DefaultsFunction == nullptr)
+        // Ask the whole AS chain, not just the leaf. __InitDefaults is emitted only for a class that
+        // declares its OWN default statements (as_builder.cpp:750-752) and the generator takes it only
+        // when DefaultsFunction->objectType == ObjType (AngelscriptClassGenerator.cpp:5648-5650), so a
+        // child class with no default block of its own - whose PARENT's defaults deferred a load - is
+        // recorded in GDeferredLoadCDOs by attribution and would be skipped here. That is an
+        // under-heal, and this file's contract is that we never under-heal. The chain walk further down
+        // already executes the parent's function correctly once we get that far.
+        const auto ChainHasDefaults = [&]
+        {
+            for (auto* WalkClass = InASClass; ck::IsValid(WalkClass); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
+            {
+                if (WalkClass->DefaultsFunction != nullptr)
+                { return true; }
+            }
+            return false;
+        }();
+
+        if (NOT ChainHasDefaults)
         { return false; }
 
         if (InASClass->HasAnyClassFlags(CLASS_Abstract | CLASS_NewerVersionExists))
         { return false; }
 
         // A UASClass with a null script type is a hot-reload corpse: nothing to destroy, nothing to
-        // reconstruct. (Unreachable in practice: the sites that null ScriptTypePtr null DefaultsFunction
-        // too.)
+        // reconstruct. This used to be unreachable - the sites that null ScriptTypePtr null
+        // DefaultsFunction too, and the guard above tested the leaf's. Now that the guard asks the whole
+        // chain, a corpse LEAF under a live parent reaches here, so this check is load-bearing.
         if (InASClass->ScriptTypePtr == nullptr)
         { return false; }
 
