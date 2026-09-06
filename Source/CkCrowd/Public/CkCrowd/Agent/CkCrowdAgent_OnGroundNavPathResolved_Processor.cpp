@@ -95,8 +95,15 @@ namespace ck
                 // recognised by its epoch and goal and not installed again. Only while nothing is
                 // WAITING: a pending episode asked for this plan - a block-detect resume or a permissive
                 // retry re-plans the same goal on the same field - and dropping its answer here would
-                // park the episode until the watchdog fails it.
-                if (NOT IsPathPending && InHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
+                // park the episode until the watchdog fails it. The same goes for a nav slot a repair
+                // parked at Pending with no tag transition ([REBUILD-REPLAN]): that slot is waiting for
+                // exactly this answer, and a dropped one would leave it Pending until the next episode,
+                // with Steering following a route the slot says is still in flight.
+                const auto SlotIsWaiting = InHandle.Has<FFragment_Nav_PathResult>() &&
+                    InHandle.Get<FFragment_Nav_PathResult>().Get_Status() == ECk_Nav_PathStatus::Pending;
+
+                if (NOT IsPathPending && NOT SlotIsWaiting &&
+                    InHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
                 {
                     const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledGroundNavPath>();
 
