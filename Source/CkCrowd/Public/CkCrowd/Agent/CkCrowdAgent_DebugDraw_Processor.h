@@ -35,6 +35,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
+        auto
+        DoTick(
+            FCk_Time InDeltaT) -> void;
+
         static auto
         ForEachEntity(
             TimeType InDeltaT,

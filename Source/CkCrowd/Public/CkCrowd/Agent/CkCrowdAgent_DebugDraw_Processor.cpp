@@ -24,6 +24,23 @@ namespace ck
 {
     auto
         FProcessor_CrowdAgent_DebugDraw::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        // The visualization switch is global and live. Gate before TProcessor::DoTick so the
+        // disabled default performs zero query visits.
+        if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawSeparation())
+        {
+            _LastVisitedCount = 0;
+            return;
+        }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_CrowdAgent_DebugDraw::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
