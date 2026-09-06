@@ -406,7 +406,7 @@ namespace ck
             Slots[InIndex].Emplace(FCk_Compass_Entry
             {
                 PoiHandle,
-                UCk_Utils_Poi_UE::Get_CategoryTags(PoiHandle).First(),
+                UCk_Utils_Poi_UE::Get_FirstCategoryTag(PoiHandle),
                 SignedBearing,
                 UCk_Utils_Compass_UE::Get_NormalizedArcOffset(SignedBearing, ArcDegrees),
                 ArcState,

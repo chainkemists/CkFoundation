@@ -470,7 +470,7 @@ namespace ck
             Slots[InIndex].Emplace(FCk_Minimap_Entry
             {
                 PoiHandle,
-                UCk_Utils_Poi_UE::Get_CategoryTags(PoiHandle).First(),
+                UCk_Utils_Poi_UE::Get_FirstCategoryTag(PoiHandle),
                 IsOutsideFrame ? UCk_Utils_Minimap_UE::Get_ClampToFrame(FramePos, FrameShape) : FramePos,
                 EdgeState,
                 static_cast<float>(PoiWorldTransform.Rotator().Yaw),
