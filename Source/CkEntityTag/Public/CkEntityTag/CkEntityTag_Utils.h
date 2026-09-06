@@ -74,6 +74,13 @@ public:
     Get_AllTagsAsContainer(
         const FCk_Handle& InHandle);
 
+    // Native-only fast path for callers that need only the first gameplay tag below a root tag. The result follows
+    // the existing EntityTag gameplay-tag storage order and is empty when the store is absent or no tag matches.
+    static FGameplayTag
+    Get_FirstMatchingGameplayTag(
+        const FCk_Handle& InHandle,
+        FGameplayTag InParentTag);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
               DisplayName="[Ck][EntityTag] Get All Tags (Debug Only)",

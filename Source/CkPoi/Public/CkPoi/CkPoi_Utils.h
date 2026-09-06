@@ -90,6 +90,11 @@ public:
     static FGameplayTagContainer
     Get_CategoryTags(
         const FCk_Handle_Poi& InPoi);
+
+    // Native-only fast path for projectors that need only the first POI category tag.
+    static FGameplayTag
+    Get_FirstCategoryTag(
+        const FCk_Handle_Poi& InPoi);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
