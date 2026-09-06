@@ -78,6 +78,13 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
     float _CornerOffsetK = 1.0f;
 
+    /** How many waypoints ahead the shortcut pass may look from each point it keeps. Below 2
+     *  switches the pass off - a chord needs two segments to replace - and 2147483647 lets it
+     *  reach the whole span between two pinned points, which is the default. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "0"))
+    int32 _ShortcutSpanCap = MAX_int32;
+
     /** Greedy weight. One is admissible; above one trades optimality for expansions, bounded by
      *  (w - 1) on the answered length. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -106,6 +113,7 @@ public:
     CK_PROPERTY(_SlopePenaltyK);
     CK_PROPERTY(_ClearanceBiasK);
     CK_PROPERTY(_CornerOffsetK);
+    CK_PROPERTY(_ShortcutSpanCap);
     CK_PROPERTY(_GreedyWeightW);
     CK_PROPERTY(_MaxExpansions);
     CK_PROPERTY(_MaxCorridorLength);

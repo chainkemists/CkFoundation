@@ -166,26 +166,53 @@ namespace ck::groundnav
      * around. A surface raycast is the only thing that can tell those two apart, because it re-asks
      * the field instead of the corridor: a corner a ray walks straight through was never a corner.
      *
-     * A candidate is AFFORDED when its raycast stays inside a budget of what the stretch it replaces
-     * COSTS - each replaced segment at its XY length times the greater of its endpoints' plate
-     * multipliers, the fill's own pricing - rather than a plate-set membership test, because leaving
-     * the corridor's own plates is exactly what a shortcut must be allowed to do, while paying more
-     * for the ground than the detour it removes is exactly what it must not. The ray prices every
-     * plate it crosses by the same merged rule (_UseBakedPlateCost), so both sides of the comparison
-     * come from one arithmetic the search already owns.
+     * A candidate is AFFORDED when it is inside BOTH of the prices the stretch it replaces carries,
+     * rather than a plate-set membership test: leaving the corridor's own plates is exactly what a
+     * shortcut must be allowed to do, while paying more for the ground than the detour it removes is
+     * exactly what it must not.
+     *
+     * (i) The chord's raycast, priced per cell, against the sum of the replaced segments' OWN
+     * uncapped raycasts - so ground no waypoint stands on is charged on both sides. The bound is on
+     * the TOTAL, never on dearness per unit: a short chord across dear ground is admitted against a
+     * long cheap detour whenever the two numbers come out that way, and what (i) forbids is paying
+     * MORE for the chord than the corridor it replaces cost. Each original segment is cast at most
+     * once per pass. A segment whose own ray is not clear - a funnel apex hugs its wall at exactly
+     * one radius, so this happens - has no ray price to give, and falls back to its XY length times
+     * the greater of its endpoints' plate multipliers: the rule the whole budget used before.
+     *
+     * (ii) Get_LegCost over the chord against the sum of Get_LegCost over the replaced segments -
+     * the arithmetic the fill PUBLISHES through, which is the only one of the three that carries the
+     * 3D length and the slope penalty. That makes the plan's _CostFromStart monotone across this
+     * pass by construction rather than by hope.
+     *
+     * A budget of zero REFUSES, without a ray. Zero is the raycast's own "no cap", so a stretch that
+     * cost nothing would hand the ray an unbounded budget and admit anything; a stretch worth nothing
+     * buys nothing.
      *
      * Link endpoints are hard span SPLITS: never a candidate, never crossed, never dropped. An
      * authored endpoint is a place a body must pass THROUGH, so a chord spanning one would walk the
      * route around a link the search decided to take. The two ends of the polyline are pinned for the
      * same reason.
      *
-     * Idempotent at the unbounded cap, to within the rounding slack: a second run's points are a
-     * subset of the first's and its spans are delimited by the same pinned points, so every chord it
-     * can offer was already offered - and offered at a budget no larger, since the stretch it would
-     * now replace is made of chords the first run accepted, each priced at no more than the stretch
-     * it replaced. What the first run refused the second refuses. A FINITE _ShortcutSpanCap trades
-     * that away, which is why unbounded is the default: a shorter list puts points inside a reach
-     * the first run never looked as far as.
+     * Idempotent at the unbounded cap, to within the rounding slack, and now for a reason that can be
+     * stated. Take either conjunct alone. Its budget is a SUM over segments of one function - the
+     * segment's own uncapped raycast for (i), Get_LegCost for (ii) - so it is additive over
+     * sub-stretches, and the chord under test is priced by that SAME function. A second run's spans
+     * are delimited by the same pinned points, and every segment a second run is handed is one of two
+     * things. Either it is a chord the first run ACCEPTED - and then its capped ray came back clear,
+     * so its uncapped ray is clear too and prices it at the very number the first run measured
+     * against the sub-stretch it replaced, with no fallback reachable for it - or it is an ORIGINAL
+     * segment the first run kept, which both runs price by casting the same ray between the same two
+     * points. Either way the second run's budget for any span is no larger than the first's, and the
+     * chord's own price does not depend on which run offers it. So a first-run refusal under a
+     * conjunct is a second-run refusal under that same conjunct, and a conjunction of two idempotent
+     * accept rules is idempotent. A FINITE _ShortcutSpanCap trades the property away outright, which
+     * is why unbounded is the default: a shorter list puts points inside a reach the first run never
+     * looked as far as.
+     *
+     * OutSegmentRayFallbacks, when given, answers how many ORIGINAL segments took the fallback in (i).
+     * It is a diagnostic for how much of the ray budget is really the ray's, and nothing reads it to
+     * decide anything.
      */
     CKGROUNDNAV_API auto
     Get_Shortcut(
@@ -194,7 +221,8 @@ namespace ck::groundnav
         const FCk_GroundNav_Field&          InField,
         const FCk_GroundNav_PathCostParams& InCost,
         const FCk_GroundNav_QueryAgent&     InAgent,
-        float                               InVerticalToleranceUu) -> TArray<FVector>;
+        float                               InVerticalToleranceUu,
+        int32*                              OutSegmentRayFallbacks = nullptr) -> TArray<FVector>;
 
     /**
      * Every interior waypoint pushed off its corner along the interior bisector, endpoints untouched.
