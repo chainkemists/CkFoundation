@@ -7,6 +7,7 @@
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
 #include "CkGroundNav/Search/CkGroundNav_PlatePortalGraph.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,6 +32,12 @@ namespace ck::groundnav
         constexpr auto kNoClearanceFactor = 1.0f;
 
         constexpr auto kFewestPointsWithAnInterior = 3;
+
+        // The raycast's budget is a float and the chord it is derived from is a double, so a chord a
+        // body can exactly afford can round to a cap one ulp under its own cost and be refused. The
+        // slack is relative and three orders of magnitude under a cell, so it admits that rounding
+        // and nothing a plate price could hide in.
+        constexpr auto kShortcutBudgetSlack = 1.0e-5;
 
         // A link endpoint stands ON the corridor, so it can miss the segment carrying it only by the
         // arithmetic that produced that segment's own ends. A wider window would let a route that
@@ -256,6 +263,117 @@ namespace ck::groundnav
 
             return Boundary._DistanceUu >= InAgent._RadiusUu;
         }
+
+        /**
+         * What the ground under each waypoint is priced at, one entry per point, so a span's budget
+         * is a max over a slice rather than a projection re-run per candidate.
+         *
+         * Read through Get_AreaMultiplier, which is where the field's own baked plate price and the
+         * query's table are merged — the same one function the fill prices its legs through, so the
+         * budget a chord is judged against and the cost the plan reports cannot come from two rules.
+         */
+        auto Get_PlateMultipliers(
+            TConstArrayView<FVector>            InWaypoints,
+            const FCk_GroundNav_Field&          InField,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu) -> TArray<float>
+        {
+            const auto Shared = Make_SharedData(InField, InCost, InAgent);
+
+            auto Multipliers = TArray<float>{};
+            Multipliers.Reserve(InWaypoints.Num());
+
+            for (const auto& Location : InWaypoints)
+            {
+                const auto Attributes = Get_SurfaceAttributesAt(
+                    InField, Make_IsNavigableQuery(Location, InAgent, InVerticalToleranceUu));
+
+                Multipliers.Emplace(
+                    Get_AreaMultiplier(InField, Shared, Get_FlatPlateOf(InField, Attributes)));
+            }
+
+            return Multipliers;
+        }
+
+        /**
+         * The last point of the span starting at an index: the next PINNED point, or the end of the
+         * polyline when nothing is pinned beyond here.
+         *
+         * Pinned by exact position, the same comparison the corner offset's own rule makes and for
+         * the same reason: both points are copies of one resolved link endpoint.
+         */
+        auto Get_SpanEndIndex(
+            TConstArrayView<FVector> InWaypoints,
+            TConstArrayView<FVector> InPinnedWaypoints,
+            int32                    InFromIndex) -> int32
+        {
+            for (auto Index = InFromIndex + 1; Index < InWaypoints.Num(); ++Index)
+            {
+                if (InPinnedWaypoints.Contains(InWaypoints[Index]))
+                { return Index; }
+            }
+
+            return InWaypoints.Num() - 1;
+        }
+
+        /**
+         * What the polyline between two indices costs, priced the way the fill prices it: each segment
+         * at its XY length times the greater of its two endpoints' plate multipliers. This is the
+         * budget a chord replacing that stretch is judged against - not the dearest plate times the
+         * chord, which bounds by the worst ground the stretch touched rather than by what it paid and
+         * so admits a chord dearer than the detour it removes.
+         */
+        auto Get_ReplacedStretchCostUu(
+            TConstArrayView<FVector> InWaypoints,
+            TConstArrayView<float>   InMultipliers,
+            int32                    InFromIndex,
+            int32                    InToIndex) -> double
+        {
+            auto CostUu = 0.0;
+
+            for (auto Index = InFromIndex; Index < InToIndex; ++Index)
+            {
+                const auto Multiplier = FMath::Max(InMultipliers[Index], InMultipliers[Index + 1]);
+                CostUu += static_cast<double>(Multiplier) * FVector::Dist2D(InWaypoints[Index], InWaypoints[Index + 1]);
+            }
+
+            return CostUu;
+        }
+
+        /**
+         * Whether a body can walk the chord AND walk it for what the waypoints it replaces were
+         * priced at.
+         *
+         * One raycast answers both: the plate table rides the query, so the traversal weights each
+         * cell by the same multiplier the search charged for that ground, and the cap it is judged
+         * against is a cost budget rather than a distance.
+         */
+        auto Get_IsChordWalkableWithinBudget(
+            const FCk_GroundNav_Field&          InField,
+            const FVector&                      InFrom,
+            const FVector&                      InTo,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu,
+            double                              InReplacedCostUu) -> bool
+        {
+            const auto BudgetUu = InReplacedCostUu * (1.0 + kShortcutBudgetSlack);
+
+            auto Query = FCk_GroundNav_RaycastQuery{};
+            Query._Start = InFrom;
+            Query._End = InTo;
+            Query._StartVerticalToleranceUu = InVerticalToleranceUu;
+            Query._Agent = InAgent;
+            Query._PlateCostMultipliers = InCost._PlateCostMultipliers;
+            // The ray prices every plate it crosses the way the budget above was priced - the greater
+            // of the plate's baked markup price and the table - so a chord through marked ground is
+            // charged for it whether or not a waypoint ever stood on that plate.
+            Query._UseBakedPlateCost = true;
+            Query._MaxCost = static_cast<float>(BudgetUu);
+
+            return Get_SurfaceRaycast(InField, Query).Get_IsClear();
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -321,6 +439,81 @@ namespace ck::groundnav
         }
 
         return Emitted;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Get_Shortcut(
+            TConstArrayView<FVector>            InWaypoints,
+            TConstArrayView<FVector>            InPinnedWaypoints,
+            const FCk_GroundNav_Field&          InField,
+            const FCk_GroundNav_PathCostParams& InCost,
+            const FCk_GroundNav_QueryAgent&     InAgent,
+            float                               InVerticalToleranceUu)
+        -> TArray<FVector>
+    {
+        using namespace pathpostprocess_private;
+
+        const auto PassIsEnabled = InCost._ShortcutSpanCap > 0;
+
+        if (InWaypoints.Num() < kFewestPointsWithAnInterior || NOT PassIsEnabled)
+        {
+            auto Unchanged = TArray<FVector>{};
+            Unchanged.Append(InWaypoints.GetData(), InWaypoints.Num());
+
+            return Unchanged;
+        }
+
+        const auto Multipliers = Get_PlateMultipliers(
+            InWaypoints, InField, InCost, InAgent, InVerticalToleranceUu);
+
+        const auto LastIndex = InWaypoints.Num() - 1;
+
+        auto Kept = TArray<FVector>{};
+        Kept.Reserve(InWaypoints.Num());
+        Kept.Emplace(InWaypoints[0]);
+
+        auto Index = 0;
+
+        while (Index < LastIndex)
+        {
+            const auto SpanEndIndex = Get_SpanEndIndex(InWaypoints, InPinnedWaypoints, Index);
+
+            // The span's own end capped by the reach, rather than the index plus the reach, which
+            // overflows at the unbounded default.
+            const auto FarthestIndex =
+                Index + FMath::Min(SpanEndIndex - Index, InCost._ShortcutSpanCap);
+
+            // The next point along, which the funnel already proved walkable, so the pass always
+            // answers and never answers with something worse than what it was given.
+            auto NextIndex = Index + 1;
+
+            for (auto Candidate = FarthestIndex; Candidate >= Index + 2; --Candidate)
+            {
+                const auto ReplacedCostUu =
+                    Get_ReplacedStretchCostUu(InWaypoints, Multipliers, Index, Candidate);
+
+                if (Get_IsChordWalkableWithinBudget(
+                        InField,
+                        InWaypoints[Index],
+                        InWaypoints[Candidate],
+                        InCost,
+                        InAgent,
+                        InVerticalToleranceUu,
+                        ReplacedCostUu))
+                {
+                    NextIndex = Candidate;
+                    break;
+                }
+            }
+
+            Kept.Emplace(InWaypoints[NextIndex]);
+
+            Index = NextIndex;
+        }
+
+        return Kept;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -546,7 +739,20 @@ namespace ck::groundnav
             InParams._Agent,
             InParams._VerticalToleranceUu);
 
-        const auto Trimmed = Get_SkipFirstWaypoint(Offset, InParams._AgentLocation, RadiusUu);
+        // AFTER the offset, and that is measured rather than preferred: the funnel's apexes hug their
+        // walls at exactly one radius, so a chord between two of them passes an obstacle standing
+        // between at just under a radius and the radius-aware ray refuses it (the four-pillar slab
+        // kept its false corner that way). Offset first and the same chord clears by a further radius.
+        // A false corner the offset pushed out costs nothing - the shortcut drops it whole.
+        const auto Shortcut = Get_Shortcut(
+            Offset,
+            Pinned,
+            InField,
+            InParams._Cost,
+            InParams._Agent,
+            InParams._VerticalToleranceUu);
+
+        const auto Trimmed = Get_SkipFirstWaypoint(Shortcut, InParams._AgentLocation, RadiusUu);
 
         Plan._Waypoints = Get_FilledWaypoints(
             Trimmed,
