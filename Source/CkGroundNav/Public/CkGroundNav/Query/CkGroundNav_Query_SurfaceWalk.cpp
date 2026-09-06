@@ -3,7 +3,10 @@
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_CellStep.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_QueryCore.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -18,8 +21,7 @@ namespace ck::groundnav
         // Motion shorter than this is nothing left to walk.
         constexpr auto kResidualMotionUu = 1e-6;
 
-        // A cell costs the length walked inside it. The bake carries no traversal policy yet, so this is
-        // where a plate's own multiplier will be read from once it does.
+        // What a cell costs per unit walked where the query's table names no price for its plate.
         constexpr auto kCostMultiplier = 1.0;
 
         // ------------------------------------------------------------------------------------------------------------
@@ -113,6 +115,53 @@ namespace ck::groundnav
         // ------------------------------------------------------------------------------------------------------------
 
         /**
+         * What a query's cost table prices one plate at, and kCostMultiplier for a plate it names none
+         * for - which an empty table is for every plate, and is what keeps _MaxCost the plain distance
+         * cap it was before there was a table.
+         */
+        auto Get_PlateCostMultiplier(
+            const FCk_GroundNav_Field&      InField,
+            const TMap<int32, float>&       InTable,
+            bool                            InUseBakedPlateCost,
+            const FCk_GroundNav_SurfaceRef& InSurface) -> double
+        {
+            if (InTable.IsEmpty() && NOT InUseBakedPlateCost)
+            { return kCostMultiplier; }
+
+            // The plate's own baked price is the floor only when the query asked for it; otherwise the
+            // table is the whole answer and an unnamed plate weighs 1.0, as before there was a table.
+            auto Base = kCostMultiplier;
+
+            if (InUseBakedPlateCost &&
+                InField._Tiles.IsValidIndex(InSurface._TileIndex) &&
+                InField._Tiles[InSurface._TileIndex]._Plates._Plates.IsValidIndex(InSurface._PlateIndex))
+            {
+                Base = static_cast<double>(
+                    InField._Tiles[InSurface._TileIndex]._Plates._Plates[InSurface._PlateIndex]._CostMultiplier);
+            }
+
+            if (InTable.IsEmpty())
+            { return Base; }
+
+            const auto FlatPlate = Get_FlatPlateIndex(InField, InSurface._TileIndex, InSurface._PlateIndex);
+            const auto* Named = InTable.Find(FlatPlate);
+
+            if (Named == nullptr)
+            { return Base; }
+
+            const auto MultiplierIsUsable = *Named > 0.0f;
+
+            CK_ENSURE_IF_NOT(MultiplierIsUsable,
+                TEXT("Raycast cost table prices flat plate [{}] at [{}]; a plate multiplier must be positive"),
+                FlatPlate, *Named)
+            { return Base; }
+
+            return FMath::Max(Base, static_cast<double>(*Named));
+        }
+
+        // ------------------------------------------------------------------------------------------------------------
+
+        /**
          * The grid line traversal both queries walk: a segment in XY stepped cell by cell through
          * Get_StepAcross, stopping at the target or at the first step the ground refuses.
          *
@@ -127,6 +176,12 @@ namespace ck::groundnav
             FCk_GroundNav_QueryCost _Cost;
 
             FCk_GroundNav_SurfaceRef _Current;
+
+            // Null for a traversal nobody prices - the walk, and a raycast whose query named no table.
+            const TMap<int32, float>* _PlateCostMultipliers = nullptr;
+            bool _UseBakedPlateCost = false;
+
+            double _CostMultiplier = kCostMultiplier;
 
             // Field-wide, unlike the surface's own tile-local index.
             FIntPoint _Cell = FIntPoint::ZeroValue;
@@ -152,6 +207,16 @@ namespace ck::groundnav
             int32 _CellsStepped = 0;
             int32 _PortalCrossings = 0;
             int32 _SeamCrossings = 0;
+
+            /** The price of the plate the walker stands on, re-read only where that plate changes. */
+            auto DoRefresh_CostMultiplier() -> void
+            {
+                if (_PlateCostMultipliers == nullptr)
+                { return; }
+
+                _CostMultiplier = Get_PlateCostMultiplier(
+                    _Field, *_PlateCostMultipliers, _UseBakedPlateCost, _Current);
+            }
 
             auto DoInitialise(
                 const FVector2D& InFrom,
@@ -261,6 +326,11 @@ namespace ck::groundnav
                 }
                 else if (CrossedAPlate)
                 { ++_PortalCrossings; }
+
+                // A tile crossing counts as a plate change: a plate index is tile-local, so the same number
+                // in the next tile addresses a different plate.
+                if (CrossedATile || CrossedAPlate)
+                { DoRefresh_CostMultiplier(); }
 
                 return true;
             }
@@ -434,6 +504,7 @@ namespace ck::groundnav
             InOutTraversal._Cell = Get_FieldCellOf(InOutTraversal._Field, InStart._Surface);
             InOutTraversal._SurfaceZUu = InStart._SurfaceZUu;
 
+            InOutTraversal.DoRefresh_CostMultiplier();
             InOutTraversal.DoInitialise(InStartXY, InTargetXY);
         }
     }
@@ -590,9 +661,14 @@ namespace ck::groundnav
         const auto CapIsActive = InQuery._MaxCost > 0.0f;
         const auto MaxCost = static_cast<double>(InQuery._MaxCost);
 
+        // The early-out answers only a segment that never leaves the start's own plate, so that one
+        // plate's price is the whole segment's.
+        const auto StartCostMultiplier = Get_PlateCostMultiplier(
+            InField, InQuery._PlateCostMultipliers, InQuery._UseBakedPlateCost, Start._Surface);
+
         // A segment the cap would stop inside is stepped instead, so the ray ends where the accumulation
         // reached the cap rather than at the plate's far end.
-        const auto CapAdmitsTheWholeSegment = NOT CapIsActive || (kCostMultiplier * SegmentLengthUu) <= MaxCost;
+        const auto CapAdmitsTheWholeSegment = NOT CapIsActive || (StartCostMultiplier * SegmentLengthUu) <= MaxCost;
 
         if (CapAdmitsTheWholeSegment)
         {
@@ -603,13 +679,15 @@ namespace ck::groundnav
                 Result._Status = ECk_NavSurface_QueryStatus::Success;
                 Result._HitLocation = FVector{EndXY.X, EndXY.Y, static_cast<double>(EarlyOut._SurfaceZUu)};
                 Result._LastSurface = EarlyOut._Surface;
-                Result._AccumulatedCost = static_cast<float>(kCostMultiplier * SegmentLengthUu);
+                Result._AccumulatedCost = static_cast<float>(StartCostMultiplier * SegmentLengthUu);
 
                 return Result;
             }
         }
 
         auto Traversal = FTraversal{InField};
+        Traversal._PlateCostMultipliers = &InQuery._PlateCostMultipliers;
+        Traversal._UseBakedPlateCost = InQuery._UseBakedPlateCost;
         DoBegin_Traversal(Traversal, Start, InQuery._Agent, Result._Cost, StartXY, EndXY);
 
         auto AccumulatedCost = 0.0;
@@ -617,11 +695,11 @@ namespace ck::groundnav
         while (true)
         {
             const auto LengthInCellUu = (Traversal.Get_NextT() - Traversal._T) * Traversal._TotalLengthUu;
-            const auto SegmentCost = kCostMultiplier * LengthInCellUu;
+            const auto SegmentCost = Traversal._CostMultiplier * LengthInCellUu;
 
             if (CapIsActive && (AccumulatedCost + SegmentCost) > MaxCost)
             {
-                const auto RemainingLengthUu = (MaxCost - AccumulatedCost) / kCostMultiplier;
+                const auto RemainingLengthUu = (MaxCost - AccumulatedCost) / Traversal._CostMultiplier;
                 const auto CapT = Traversal._TotalLengthUu > 0.0
                     ? Traversal._T + (RemainingLengthUu / Traversal._TotalLengthUu)
                     : Traversal._T;
