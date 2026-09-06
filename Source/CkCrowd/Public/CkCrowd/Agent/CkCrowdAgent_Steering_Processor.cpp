@@ -73,8 +73,27 @@ namespace ck
             InDesired._Velocity = FVector::ZeroVector;
         };
 
+        // A LIVE route whose replacement is in flight. This view requires Walking, and every fresh
+        // plan steps the agent out of Walking and into PathPending before it dispatches
+        // (CkCrowdAgent_HandleRequests_Processor.cpp:233-238), so Walking WITHOUT PathPending on a
+        // Pending slot that still carries waypoints can only be a re-plan that parked the status
+        // without a tag transition — [REBUILD-REPLAN] in PathRefresh is the one that does that. It is
+        // the same definition of "live" the pending watchdog uses
+        // (CkCrowdAgent_PathPendingWatchdog_Processor.cpp:44-64). The body keeps walking its
+        // installed, stale polyline below and the install swaps it when the repair lands; zeroing
+        // here instead halted the walker for the whole repair latency. NOT while a crossing is in
+        // flight, though: the stand-down that licenses a crossing leaves the body ungrounded, and
+        // steering it up a link the repair may be removing is the climb-into-the-sky defect again -
+        // a body mid-link holds where it is for the repair's latency, as it always did.
+        const auto RepairInFlight =
+            InPathResult.Get_Status() == ECk_Nav_PathStatus::Pending &&
+            NOT InHandle.Has<FTag_CrowdAgent_PathPending>() &&
+            NOT InHandle.Has<FTag_CrowdAgent_TraversingLink>() &&
+            InPathResult.Get_Waypoints().Num() > 0;
+
         if (InPathResult.Get_Status() != ECk_Nav_PathStatus::Ready &&
-            InPathResult.Get_Status() != ECk_Nav_PathStatus::Partial)
+            InPathResult.Get_Status() != ECk_Nav_PathStatus::Partial &&
+            NOT RepairInFlight)
         {
             DoZeroDesiredVelocity();
             return;
@@ -212,7 +231,7 @@ namespace ck
             auto LinkHandle = InHandle.ConvertToHandle();
 
             if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav)
-            { DoDriveLinkTraversalCursor(LinkHandle, InPathFollow, InCursor, Waypoints.Num()); }
+            { DoDriveLinkTraversalCursor(LinkHandle, InPathFollow, InCursor, Waypoints.Num(), NOT RepairInFlight); }
             else
             { DoCancelActiveLinkTraversal(LinkHandle, InPathFollow); }
         };
@@ -396,6 +415,13 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
+        // Nothing crossing and nothing to retire. DoDriveLinks' else-branch reaches here EVERY frame
+        // for every walking Recast/PathNetwork/Voxel agent, and this early-out is that row's whole
+        // cost; the removal below is unchanged for anyone the tag actually stands on.
+        if (InPathFollow.Get_ActiveLinkCorrelator() == INDEX_NONE &&
+            NOT InHandle.Has<FTag_CrowdAgent_TraversingLink>())
+        { return; }
+
         // Ahead of the correlator gate, and unconditional. The tag is what licenses
         // ConstrainToNavmesh to stand its surface walk down and to report the body ON the mesh, so a
         // tag left standing beside a correlator that has already gone is a body nothing grounds and
@@ -420,7 +446,8 @@ namespace ck
             FCk_Handle&                      InHandle,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             int32                            InCursor,
-            int32                            InWaypointCount)
+            int32                            InWaypointCount,
+            bool                             InMayBeginACrossing)
         -> void
     {
         // Reconciled against where the cursor stands rather than edge-detected on the advance. The
@@ -490,7 +517,11 @@ namespace ck
             }
         }
 
-        if (DesiredSpan == nullptr)
+        // A route under repair may be WALKED but not newly LINKED: the span the cursor reached belongs
+        // to the stale polyline, and a link the field just republished is the likeliest reason the
+        // repair exists. The crossing begins on the fresh route's own spans once the install lands -
+        // beginning it here re-announced a crossing on a link the publish had disabled.
+        if (DesiredSpan == nullptr || NOT InMayBeginACrossing)
         { return; }
 
         UCk_Utils_NavSurface_LinkTraversal_UE::Request_BeginLinkTraversal(InHandle,

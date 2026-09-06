@@ -636,8 +636,9 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_ActiveMoveEpisode"), InAgent)
-    {}
-    if (NOT AgentIsValid || NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
+    { return 0; }
+
+    if (NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
     { return 0; }
 
     return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveMoveEpisode();
@@ -654,8 +655,9 @@ auto
     const auto AgentIsValid = ck::IsValid(InAgent);
     CK_ENSURE_IF_NOT(AgentIsValid,
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_ActiveMoveCorrelationId"), InAgent)
-    {}
-    if (NOT AgentIsValid || NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
+    { return 0; }
+
+    if (NOT InAgent.Has<ck::FFragment_CrowdAgent_PathFollow>())
     { return 0; }
 
     return InAgent.Get<ck::FFragment_CrowdAgent_PathFollow>().Get_ActiveMoveCorrelationId();
@@ -714,6 +716,19 @@ auto
     { return false; }
 
     return InAgent.Get<ck::FFragment_CrowdAgent_Grounding>().Get_IsOffNavmesh();
+}
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_IsTraversingLink(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_IsTraversingLink"), InAgent)
+    { return false; }
+
+    return InAgent.Has<ck::FTag_CrowdAgent_TraversingLink>();
 }
 
 auto
