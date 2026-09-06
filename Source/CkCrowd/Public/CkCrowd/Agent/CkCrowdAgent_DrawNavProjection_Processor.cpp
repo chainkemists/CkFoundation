@@ -30,6 +30,22 @@ namespace ck
 {
     auto
         FProcessor_CrowdAgent_DrawNavProjection::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        // The disabled default must not iterate agents or enter their synchronous nav projection path.
+        if (NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawNavProjection())
+        {
+            _LastVisitedCount = 0;
+            return;
+        }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_CrowdAgent_DrawNavProjection::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
