@@ -197,16 +197,25 @@ independent of it. When CkGroundNav republishes a rebuilt surface,
 every agent whose cached corridor the rebuild's bounds reach; GroundNav never clears it, and
 `PathRefresh`'s first gate is that flag's only consumer. The gate clears the tag for whichever
 provider carries it (a Recast agent shadowing on GroundNav holds a corridor too) and acts on it only
-where `_ActiveProvider` is `GroundNav`, a route is installed AND the agent is `Walking` it,
-re-issuing the SAME goal with `ECk_GroundNav_PlanMode::Repair` so the search warm-starts from the
-corridor already held. The Walking test is load-bearing: the installed identity and the provider
-both outlive the episode, so without it an arrived or goal-failed agent is re-planned on every
-rebuild for the install seam to drop, and a fresh plan in flight is superseded by a "repair" of the
-previous goal's corridor. Nothing about the movement state changes: the agent keeps `Walking` its
-installed polyline while the repair is in flight — `MarkPathPending` parks the status without
-touching the corridor, and the watchdog reads Walking-without-`PathPending` as live — and
-`OnGroundNavPathResolved` swaps the polyline when the repair lands. A rebuild under a walking agent
-costs it a re-plan, never a stop; each one logs a single `[REBUILD-REPLAN]` Display line. **When the
+where `_ActiveProvider` is `GroundNav` and a route is installed, re-issuing the SAME goal with
+`ECk_GroundNav_PlanMode::Repair` so the search warm-starts from the corridor already held. There is
+no `Walking` test in the gate and there is nothing for one to do: `PathRefresh`'s view REQUIRES
+`FTag_CrowdAgent_Walking` (`CkCrowdAgent_PathRefresh_Processor.h:47-58`), so an arrived, goal-failed
+or plan-pending agent never reaches the consumer at all — the flag simply LATCHES on it. What keeps
+a latched flag from later repairing a route it has nothing to say about is the dispatch side:
+`Request_NavigationPath`'s GroundNav branch clears `FTag_GroundNavPath_RepathRequired` right after it
+parks the slot, because a plan made against the field as published NOW cannot owe a repair to the
+corridor it replaces. A publish that lands between that dispatch and its install re-raises the flag
+against the still-installed corridor, and the repair consumer takes THAT one once the agent is
+walking again. Nothing about the movement state changes across a repair: the agent keeps `Walking`
+its installed polyline while the repair is in flight — `MarkPathPending` parks the status without
+touching the corridor, the watchdog reads Walking-without-`PathPending` as live
+(`CkCrowdAgent_PathPendingWatchdog_Processor.cpp:44-64`), and `Steering` reads the same pair as a
+live route under repair and keeps following the stale waypoints
+(`CkCrowdAgent_Steering_Processor.cpp:85-95`) rather than zeroing the desired velocity for the
+repair's whole latency — and `OnGroundNavPathResolved` swaps the polyline when the repair lands. A
+rebuild under a walking agent costs it a re-plan, never a stop; each one logs a single
+`[REBUILD-REPLAN]` Display line. **When the
 repair FAILS** (the rebuild made the goal an island, or the body stands off every cell), the install
 seam's Fail branch steps the agent `Walking` → `PathPending` before it writes the Failed status,
 because `OnPathResolved` — the one owner of a failure's tag transition and its single `OnGoalFailed`
@@ -1144,15 +1153,32 @@ Three details are load-bearing:
   stamps them, so a PathNetwork or Voxel corridor installed over a ground one would otherwise be walked
   against the previous route's link indices.
 - **The grounding stand-down needs `Walking` AND the crossing tag (2026-09-06).** `ConstrainToNavmesh`
-  hands the staged displacement through in 3D only while both stand. Steering is the crossing's only
-  ender and runs only on a Walking agent with a Ready route, so every other way out of Walking - a
-  block, a stall re-path, `PathRefresh`, the shared slot's Failed branch, a link disabled under a body
-  mid-climb - used to leave the tag latched on a route-less agent: an ungrounded free body that
-  `MarkOnMesh` reported as grounded and that drifted up a ladder's own steering direction. A tagged agent
-  that is not Walking now has its crossing ended in `DoConstrain` (`Failed_Cancelled` to listeners) and
-  falls through to the grounded pass, which recovers it onto the link end it can reach - the foot
-  mid-ladder, since the step-up cap cannot lift it onto the far one. A stall or disc re-path that fires
-  mid-climb therefore drops the body to the foot rather than hovering it.
+  hands the staged displacement through in 3D only while both stand. `DoCancelActiveLinkTraversal` has
+  five callers and they are the whole set of enders: `Steering` itself twice — `DoDriveLinks`' non-GroundNav
+  else-branch (`CkCrowdAgent_Steering_Processor.cpp:232`, a corridor from another provider does not
+  contain the crossing) and `DoDriveLinkTraversalCursor`'s abandoned-crossing branch (`:511`, the cursor
+  left the span without walking off its exit); the install seam on BOTH branches
+  (`CkCrowdAgent_OnGroundNavPathResolved_Processor.cpp:127` when a new polyline replaces the one that
+  bounded the crossing, `:201` when the ground answer Failed and the episode ends); the request abandon
+  path (`CkCrowdAgent_HandleRequests_Processor.cpp:526`, `DoAbandonActiveProviderQuery` — so every new
+  episode and every `Stop`); and `ConstrainToNavmesh`'s own non-Walking branch
+  (`CkCrowdAgent_ConstrainToNavmesh_Processor.cpp:208`). That last one is the backstop, because Steering
+  runs only on a Walking agent with a route, so ways out of Walking that no seam above covers — a block,
+  a stall re-path, `PathRefresh`'s markup re-plan, a link disabled under a body mid-climb — used to leave
+  the tag latched on a route-less agent: an ungrounded free body that `MarkOnMesh` reported as grounded
+  and that drifted up a ladder's own steering direction. A tagged agent that is not Walking now has its
+  crossing ended in `DoConstrain` (`Failed_Cancelled` to listeners) and falls through to the grounded pass.
+  **The backstop is not unconditional, and the recovery is bounded.** `DoConstrain` reaches the crossing
+  check only when the pass is DUE at all — the agent is displacing, or the grounding verify interval has
+  elapsed (`:144-148`) — and only when `_NavmeshConstraintMode` is not `Disabled`, which returns one gate
+  earlier (`:177-181`). And the grounded pass recovers a body only within its projection box: half-extents
+  `{Radius, Radius, Height}` (`:233-236`), widened horizontally for the recovery probe (`:244-249`), with
+  any recovery that would LIFT the body past `Get_GroundingRecoveryMaxStepUpCm()` refused (`:261-264`). So
+  a stall or disc re-path mid-ladder drops the body to the foot it can reach rather than hovering it, but
+  a body higher than the box — or one whose only nearby cell is a lift beyond step height — is left off
+  the mesh under the `Hold` displacement mode and merely REPORTED: `_IsOffNavmesh`/`_SecondsOffNavmesh` are
+  stamped and a single `[RECOVERY-REJECT]` or `[GLIDE-HOLD]` line is logged (`:282-305`). Nothing hoists it
+  back.
 
 **Which links an agent may take is on its own params.** `FCk_Fragment_CrowdAgent_ParamsData` carries
 `_DeniedLinkIds` (stable link ids this body may never traverse), `_DeniedLinkUserTypeTags` (the same denial
