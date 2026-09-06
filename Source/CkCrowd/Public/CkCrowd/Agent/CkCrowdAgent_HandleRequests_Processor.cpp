@@ -17,6 +17,7 @@
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
 
@@ -275,6 +276,15 @@ namespace ck
         {
             FCk_Nav_Algorithm::MarkPathPending(
                 InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+
+            // The plan dispatched below is planned against the field as it is published NOW, so an
+            // invalidation raised against the corridor this plan replaces is moot and must not
+            // survive to become a "repair" of the answer. A publish landing between this dispatch
+            // and its install re-raises the flag against the corridor still installed, and
+            // PathRefresh's repair consumer takes that one once the agent is Walking. (The repair
+            // dispatch itself comes through here having already removed the flag; this is a no-op
+            // for it.)
+            InHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
 
             // The same phase decision ApplyPlanPhase makes, minus the query filter and overlay it
             // stamps onto a Recast request: a ground path is planned over clearance and cost, and

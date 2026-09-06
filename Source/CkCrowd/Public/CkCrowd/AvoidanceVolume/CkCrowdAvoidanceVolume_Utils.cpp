@@ -86,9 +86,9 @@ auto UCk_Utils_CrowdAvoidanceVolume_UE::Get_IsNavigationConfirmed(
     CK_ENSURE_IF_NOT(VolumeIsValid,
         TEXT("Invalid CrowdAvoidanceVolume handle [{}] passed to Get_IsNavigationConfirmed"),
         InVolume)
-    { }
-    if (NOT VolumeIsValid ||
-        NOT InVolume.Has<ck::FFragment_CrowdAvoidanceVolume_ProbeRef>())
+    { return false; }
+
+    if (NOT InVolume.Has<ck::FFragment_CrowdAvoidanceVolume_ProbeRef>())
     { return false; }
 
     const auto& Runtime = InVolume.Get<ck::FFragment_CrowdAvoidanceVolume_ProbeRef>();
