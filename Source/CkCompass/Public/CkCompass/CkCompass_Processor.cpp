@@ -476,6 +476,20 @@ namespace ck
         const auto& NewEntries = InCurrent._ScratchEntries;
         const auto& OldEntries = InCurrent._Entries;
 
+        // Stable ordered membership cannot emit appeared/disappeared signals. Still publish the
+        // newly projected entries: positions and other display values can change without membership.
+        auto MembershipIsUnchanged = NewEntries.Num() == OldEntries.Num();
+        for (auto Index = 0; MembershipIsUnchanged && Index < NewEntries.Num(); ++Index)
+        {
+            MembershipIsUnchanged = NewEntries[Index].Get_Poi() == OldEntries[Index].Get_Poi();
+        }
+
+        if (MembershipIsUnchanged)
+        {
+            Swap(InCurrent._Entries, InCurrent._ScratchEntries);
+            return;
+        }
+
         for (const auto& NewEntry : NewEntries)
         {
             const auto WasAlreadyPresent = OldEntries.ContainsByPredicate(
