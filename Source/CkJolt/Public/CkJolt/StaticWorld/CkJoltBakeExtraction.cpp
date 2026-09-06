@@ -17,6 +17,7 @@
 #include <GameFramework/Actor.h>
 #include <Hash/xxhash.h>
 #include <PhysicsEngine/BodySetup.h>
+#include <Renderers/Text3DRendererBase.h>
 
 #include <Chaos/TriangleMeshImplicitObject.h>
 
@@ -165,11 +166,25 @@ namespace ck_jolt_bake_extraction
             [&](const FName& InTag) { return InFilter._ExcludedActorTags.Contains(InTag); });
     }
 
+    static auto Get_IsText3DStaticMeshGlyph(
+        const UPrimitiveComponent& InComponent) -> bool
+    {
+        const auto* StaticMesh = Cast<UStaticMeshComponent>(&InComponent);
+        if (ck::Is_NOT_Valid(StaticMesh))
+        { return false; }
+
+        const auto* Outer = StaticMesh->GetOuter();
+        return Outer != nullptr && Outer->IsA<UText3DRendererBase>();
+    }
+
     static auto Get_ComponentSkipReason(
         const UPrimitiveComponent& InComponent,
         ECk_Jolt_ExtractionPolicy InPolicy,
         const FCk_Jolt_BakeFilter& InFilter) -> ECk_Jolt_ComponentSkipReason
     {
+        if (Get_IsText3DStaticMeshGlyph(InComponent))
+        { return ECk_Jolt_ComponentSkipReason::NotEligible; }
+
         if (NOT InComponent.IsRegistered())
         { return ECk_Jolt_ComponentSkipReason::NotEligible; }
 

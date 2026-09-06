@@ -39,5 +39,10 @@ public class CkJolt : CkModuleRules
             "CkResourceLoader",
             "CkSettings",
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "Text3D",
+        });
     }
 }
