@@ -100,6 +100,11 @@ namespace ck_loading_screen_subsystem
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_LoadingScreen_Subsystem_UE::UCk_LoadingScreen_Subsystem_UE()
+    : FTickableGameObject(ETickableTickType::Never)
+{
+}
+
 auto
     UCk_LoadingScreen_Subsystem_UE::
     Initialize(
@@ -110,6 +115,8 @@ auto
     FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &ThisType::DoHandlePostLoadMap);
 
     DoRequestTransitionAssets();
+
+    SetTickableTickType(GetTickableTickType());
 }
 
 auto

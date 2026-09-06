@@ -50,6 +50,9 @@ public:
     CK_GENERATED_BODY(UCk_LoadingScreen_Subsystem_UE);
 
 public:
+    UCk_LoadingScreen_Subsystem_UE();
+
+public:
     auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
     auto Deinitialize() -> void override;
     auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
