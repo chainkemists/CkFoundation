@@ -945,7 +945,14 @@ namespace ck
             auto RepathHandle = InHandle;
             RepathHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
 
+            // Only a route someone is WALKING is worth repairing. The installed identity and the
+            // provider both outlive the episode (nothing removes them at arrival or failure), so
+            // without the Walking test an arrived or goal-failed agent would be re-planned on every
+            // rebuild only for the install seam to drop the answer as one with no episode to serve,
+            // and an agent whose FRESH plan is in flight would have it superseded by a "repair" of
+            // the previous goal's corridor.
             if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav &&
+                RepathHandle.Has<FTag_CrowdAgent_Walking>() &&
                 RepathHandle.Has<FFragment_CrowdAgent_InstalledGroundNavPath>())
             {
                 const auto RepathGoal = InPathFollow.Get_ActiveGoal();

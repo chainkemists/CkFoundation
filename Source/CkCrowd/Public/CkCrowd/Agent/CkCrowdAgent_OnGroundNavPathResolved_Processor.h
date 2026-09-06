@@ -41,7 +41,9 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     // The view deliberately does NOT require PathPending: a field rebuild replans for agents that are
-    // already WALKING, and the fresh route must swap in mid-walk.
+    // already WALKING, and the fresh route must swap in mid-walk. When that repair FAILS instead, the
+    // Fail branch steps the agent Walking -> PathPending before it writes the status, because the
+    // processor that owns a failure's tag transition and its single OnGoalFailed views PathPending.
     //
     // PumpPolicy::SkipPump — the body broadcasts Nav_OnPathReady (via the install seam) and
     // Nav_OnPathFailed; pumping with DeltaT=0 would re-broadcast before the tag transition takes effect.
