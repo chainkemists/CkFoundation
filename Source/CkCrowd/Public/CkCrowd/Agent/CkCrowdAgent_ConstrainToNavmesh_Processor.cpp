@@ -50,14 +50,16 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
-            FFragment_CrowdAgent_Grounding& InGrounding) const
+            FFragment_CrowdAgent_Grounding& InGrounding,
+            FFragment_CrowdAgent_PathFollow& InPathFollow) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_ConstrainToNavmeshProc);
 
         auto ResolvedOffset = FVector::ZeroVector;
 
-        DoConstrain(InDeltaT, InHandle, InTransform, InParams, InPending, InGrounding, ResolvedOffset);
+        DoConstrain(InDeltaT, InHandle, InTransform, InParams, InPending, InGrounding, InPathFollow,
+            ResolvedOffset);
 
         DoRecord_ContainmentEscape(
             InHandle, InParams, InTransform.Get_Transform().GetLocation() + ResolvedOffset);
@@ -128,6 +130,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
             FVector& InOutResolvedOffset)
         -> void
     {
@@ -182,11 +185,31 @@ namespace ck
         // the walkable set, would pin it to the entry. The steering aims it at the exit waypoint; the
         // displacement is applied as steered, and the constraint resumes the frame the cursor walks off
         // the exit and the crossing completes.
+        //
+        // The crossing licenses that stand-down only while the agent is still WALKING the route whose
+        // spans bound it. Steering ends a crossing, and Steering needs Walking AND a Ready route to
+        // run at all, so every OTHER way out of Walking - BlockDetect's block and its stall re-path,
+        // the shared slot's Failed branch, a link disabled under a body mid-climb - left the tag
+        // standing on an agent with no route: a free 3D body whose staged displacement was applied
+        // verbatim and which MarkOnMesh reported as grounded while it drifted. Ending it here
+        // converges from arbitrary state instead of asking every present and future terminal to
+        // remember, and the ordinary pass below then recovers the body onto the nearest walkable cell
+        // - the link end it can reach, since a step-up-capped recovery cannot lift it onto the far one.
         if (InHandle.Has<FTag_CrowdAgent_TraversingLink>())
         {
-            EnqueueOffset(Displacement);
-            MarkOnMesh();
-            return;
+            if (InHandle.Has<FTag_CrowdAgent_Walking>())
+            {
+                EnqueueOffset(Displacement);
+                MarkOnMesh();
+                return;
+            }
+
+            auto LinkHandle = InHandle.ConvertToHandle();
+            FProcessor_CrowdAgent_Steering::DoCancelActiveLinkTraversal(LinkHandle, InPathFollow);
+
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] left its route part-way across a link at [{}] — the crossing is ended and the body is grounded"),
+                InHandle, InTransform.Get_Transform().GetLocation());
         }
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
