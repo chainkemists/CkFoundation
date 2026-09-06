@@ -5,6 +5,81 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <limits>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto IsValidAnalysisWindow(double InStartTime, double InEndTime) -> bool
+    {
+        if (NOT FMath::IsFinite(InStartTime) ||
+            NOT FMath::IsFinite(InEndTime) ||
+            InStartTime >= InEndTime)
+        { return false; }
+
+        const double DurationSeconds = InEndTime - InStartTime;
+        return FMath::IsFinite(DurationSeconds) &&
+            FMath::IsFinite(DurationSeconds * 1000.0);
+    }
+
+    auto IsPositiveInfinite(double InValue) -> bool
+    {
+        return InValue == std::numeric_limits<double>::infinity();
+    }
+
+    auto SortEventsParentBeforeChildren(TArray<FCk_TimingEvent>& InOutEvents) -> void
+    {
+        InOutEvents.Sort([](const FCk_TimingEvent& A, const FCk_TimingEvent& B)
+        {
+            if (A.StartTime != B.StartTime)
+            { return A.StartTime < B.StartTime; }
+
+            if (A.Depth != B.Depth)
+            { return A.Depth < B.Depth; }
+
+            if (A.EndTime != B.EndTime)
+            { return A.EndTime > B.EndTime; }
+
+            return A.TimerIndex < B.TimerIndex;
+        });
+    }
+
+    auto ComputeUnionTotals(FCk_FrameAnalysisResult& InOutResult) -> void
+    {
+        auto InstrumentedEnd = TNumericLimits<double>::Lowest();
+        auto TimerEnds = TMap<uint32, double>{};
+
+        for (const FCk_TimingEvent& Event : InOutResult.Events)
+        {
+            if (Event.StartTime > InstrumentedEnd)
+            {
+                InOutResult.InstrumentedMs += (Event.EndTime - Event.StartTime) * 1000.0;
+                InstrumentedEnd = Event.EndTime;
+            }
+            else if (Event.EndTime > InstrumentedEnd)
+            {
+                InOutResult.InstrumentedMs += (Event.EndTime - InstrumentedEnd) * 1000.0;
+                InstrumentedEnd = Event.EndTime;
+            }
+
+            double* TimerEnd = TimerEnds.Find(Event.TimerIndex);
+            if (TimerEnd == nullptr || Event.StartTime > *TimerEnd)
+            {
+                InOutResult.TimerOuterInclusive.FindOrAdd(Event.TimerIndex) +=
+                    Event.EndTime - Event.StartTime;
+                TimerEnds.Add(Event.TimerIndex, Event.EndTime);
+            }
+            else if (Event.EndTime > *TimerEnd)
+            {
+                InOutResult.TimerOuterInclusive.FindOrAdd(Event.TimerIndex) +=
+                    Event.EndTime - *TimerEnd;
+                *TimerEnd = Event.EndTime;
+            }
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -94,20 +169,21 @@ auto
     AnalyzeTimeRange(const FCk_TraceSession& Session,
                      uint32 ThreadId,
                      double StartTime, double EndTime,
-                     uint64 FrameIndex)
+    uint64 FrameIndex)
     -> FCk_FrameAnalysisResult
 {
-    FCk_FrameAnalysisResult Result;
-    Result.FrameIndex = FrameIndex;
-    Result.FrameStartTime = StartTime;
-    Result.FrameEndTime = EndTime;
-    Result.FrameDurationMs = (EndTime - StartTime) * 1000.0;
-    Result.ThreadId = ThreadId;
-
     if (NOT Session.IsOpen())
     {
         ck::insights_analyzer::Error(TEXT("AnalyzeTimeRange: Session not open"));
-        return Result;
+        return {};
+    }
+
+    if (NOT IsValidAnalysisWindow(StartTime, EndTime))
+    {
+        ck::insights_analyzer::Warning(
+            TEXT("AnalyzeTimeRange: Invalid time range [{:.6f}, {:.6f}]"),
+            StartTime, EndTime);
+        return {};
     }
 
     const auto TimelineIndex = Session.GetTimelineIndex(ThreadId);
@@ -115,31 +191,71 @@ auto
     {
         ck::insights_analyzer::Warning(
             TEXT("AnalyzeTimeRange: No timeline for thread {}"), ThreadId);
-        return Result;
+        return {};
     }
 
-    Result.Events = ExtractEvents(Session, TimelineIndex, StartTime, EndTime);
+    return AnalyzeEvents(
+        ExtractEvents(Session, TimelineIndex, StartTime, EndTime),
+        StartTime, EndTime, ThreadId, FrameIndex);
+}
 
-    if (Result.Events.Num() == 0)
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_FrameAnalyzer::
+    AnalyzeEvents(
+        const TArray<FCk_TimingEvent>& InEvents,
+        double InStartTime, double InEndTime,
+        uint32 InThreadId, uint64 InFrameIndex)
+    -> FCk_FrameAnalysisResult
+{
+    if (NOT IsValidAnalysisWindow(InStartTime, InEndTime))
+    { return {}; }
+
+    auto Result = FCk_FrameAnalysisResult{};
+    Result.FrameIndex = InFrameIndex;
+    Result.FrameStartTime = InStartTime;
+    Result.FrameEndTime = InEndTime;
+    Result.FrameDurationMs = (InEndTime - InStartTime) * 1000.0;
+    Result.ThreadId = InThreadId;
+    Result.HasValidTimeRange = true;
+
+    Result.Events.Reserve(InEvents.Num());
+    for (const FCk_TimingEvent& Event : InEvents)
     {
-        ck::insights_analyzer::Warning(
-            TEXT("AnalyzeTimeRange: No events in [{:.6f}, {:.6f}] on thread {}"),
-            StartTime, EndTime, ThreadId);
-        return Result;
+        if (NOT FMath::IsFinite(Event.StartTime) ||
+            (NOT FMath::IsFinite(Event.EndTime) && NOT IsPositiveInfinite(Event.EndTime)))
+        { continue; }
+
+        const double ClippedStart = FMath::Max(Event.StartTime, InStartTime);
+        const double ClippedEnd = FMath::Min(Event.EndTime, InEndTime);
+        if (ClippedEnd <= ClippedStart)
+        { continue; }
+
+        Result.Events.Add(FCk_TimingEvent{
+            Event.TimerIndex,
+            ClippedStart,
+            ClippedEnd,
+            Event.Depth});
     }
+
+    SortEventsParentBeforeChildren(Result.Events);
+    ComputeUnionTotals(Result);
+
+    if (Result.Events.IsEmpty())
+    { return Result; }
 
     uint32 MinDepth = MAX_uint32;
-    for (const FCk_TimingEvent& Evt : Result.Events)
+    for (const FCk_TimingEvent& Event : Result.Events)
     {
-        if (Evt.Depth < MinDepth)
+        if (Event.Depth < MinDepth)
         {
-            MinDepth = Evt.Depth;
-            Result.FrameRootTimerIndex = Evt.TimerIndex;
+            MinDepth = Event.Depth;
+            Result.FrameRootTimerIndex = Event.TimerIndex;
         }
     }
 
     ComputeExclusiveTimes(Result.Events, Result);
-
     return Result;
 }
 
@@ -182,15 +298,16 @@ auto
         [&Events, StartTime, EndTime](const TraceServices::ITimingProfilerProvider::Timeline& Timeline)
         {
             Timeline.EnumerateEvents(StartTime, EndTime,
-                [&Events, EndTime](double EvtStartTime, double EvtEndTime, uint32 EvtDepth,
+                [&Events](double EvtStartTime, double EvtEndTime, uint32 EvtDepth,
                           const TraceServices::FTimingProfilerEvent& Event)
                     -> TraceServices::EEventEnumerate
                 {
-                    // Events still open at capture stop report EndTime = +inf — clamp to the window.
+                    // AnalyzeEvents owns boundary handling: it accepts a +inf capture tail,
+                    // but rejects all other malformed non-finite event bounds.
                     Events.Add(FCk_TimingEvent{
                         Event.TimerIndex,
                         EvtStartTime,
-                        FMath::IsFinite(EvtEndTime) ? EvtEndTime : EndTime,
+                        EvtEndTime,
                         EvtDepth
                     });
                     return TraceServices::EEventEnumerate::Continue;
@@ -223,8 +340,12 @@ auto
         const FCk_TimingEvent& EA = Events[A];
         const FCk_TimingEvent& EB = Events[B];
         if (EA.StartTime != EB.StartTime)
-            return EA.StartTime < EB.StartTime;
-        return EA.Depth < EB.Depth;
+        { return EA.StartTime < EB.StartTime; }
+        if (EA.Depth != EB.Depth)
+        { return EA.Depth < EB.Depth; }
+        if (EA.EndTime != EB.EndTime)
+        { return EA.EndTime > EB.EndTime; }
+        return EA.TimerIndex < EB.TimerIndex;
     });
 
     TArray<double> RemainingExclusiveSeconds;

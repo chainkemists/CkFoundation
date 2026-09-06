@@ -41,11 +41,20 @@ struct CKINSIGHTSANALYZER_API FCk_FrameAnalysisResult
     /** Total frame duration in milliseconds. */
     double FrameDurationMs = 0.0;
 
+    /** Union of all instrumented event intervals in milliseconds (nested scopes counted once). */
+    double InstrumentedMs = 0.0;
+
     /** Thread ID that was analyzed (typically game thread). */
     uint32 ThreadId = 0;
 
     /** Per-timer inclusive time in seconds. TimerIndex → total inclusive seconds. */
     TMap<uint32, double> TimerInclusive;
+
+    /**
+     * Per-timer outer inclusive time in seconds. Recursive or overlapping calls of the
+     * same timer are unioned, unlike TimerInclusive's intentionally summed nested total.
+     */
+    TMap<uint32, double> TimerOuterInclusive;
 
     /** Per-timer exclusive time in seconds. TimerIndex → total exclusive seconds. */
     TMap<uint32, double> TimerExclusive;
@@ -77,8 +86,14 @@ struct CKINSIGHTSANALYZER_API FCk_FrameAnalysisResult
      */
     bool IsSynthesizedAverage = false;
 
-    /** Check if the result has data. */
-    auto IsValid() const -> bool { return Events.Num() > 0; }
+    /**
+     * True when analysis successfully accepted a finite, non-empty time window.
+     * A valid window can contain no instrumentation, which is distinct from an invalid analysis.
+     */
+    bool HasValidTimeRange = false;
+
+    /** Check whether this is a valid time-range result or a legacy synthetic event result. */
+    auto IsValid() const -> bool { return HasValidTimeRange || Events.Num() > 0; }
 
     // ---- Convenience accessors (times in milliseconds) ----
 
@@ -149,6 +164,18 @@ public:
                                  uint32 ThreadId,
                                  double StartTime, double EndTime,
                                  uint64 FrameIndex = 0)
+        -> FCk_FrameAnalysisResult;
+
+    /**
+     * Analyze already extracted events within a finite, non-empty time window.
+     *
+     * Every accepted event is clipped to the window before nesting, totals, and counts
+     * are computed. An event may have +infinity as its end time to represent a capture
+     * tail; all other non-finite bounds and zero-length intersections are rejected.
+     */
+    static auto AnalyzeEvents(const TArray<FCk_TimingEvent>& InEvents,
+                              double InStartTime, double InEndTime,
+                              uint32 InThreadId = 0, uint64 InFrameIndex = 0)
         -> FCk_FrameAnalysisResult;
 
     /**
