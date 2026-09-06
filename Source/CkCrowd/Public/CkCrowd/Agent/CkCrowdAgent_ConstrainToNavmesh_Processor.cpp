@@ -191,10 +191,13 @@ namespace ck
         // run at all, so every OTHER way out of Walking - BlockDetect's block and its stall re-path,
         // the shared slot's Failed branch, a link disabled under a body mid-climb - left the tag
         // standing on an agent with no route: a free 3D body whose staged displacement was applied
-        // verbatim and which MarkOnMesh reported as grounded while it drifted. Ending it here
-        // converges from arbitrary state instead of asking every present and future terminal to
-        // remember, and the ordinary pass below then recovers the body onto the nearest walkable cell
-        // - the link end it can reach, since a step-up-capped recovery cannot lift it onto the far one.
+        // verbatim and which MarkOnMesh reported as grounded while it drifted. Ending it here catches
+        // every terminal that forgot - whenever this pass runs at all: the Disabled early-out and the
+        // verify-due gate above both return before reaching this line - and the ordinary pass below
+        // then recovers the body onto the nearest walkable cell within its projection reach: the link
+        // end it can reach, since a step-up-capped recovery cannot lift it onto the far one. A body
+        // standing higher above the foot than that reach is left in Hold off-mesh, which the
+        // off-navmesh watchdog reports rather than this pass repairing.
         if (InHandle.Has<FTag_CrowdAgent_TraversingLink>())
         {
             if (InHandle.Has<FTag_CrowdAgent_Walking>())
