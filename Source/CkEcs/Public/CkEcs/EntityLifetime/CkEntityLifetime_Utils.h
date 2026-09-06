@@ -60,6 +60,14 @@ public:
         UPARAM(ref) TArray<FCk_Handle>& InHandles,
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 
+    /** Admission preflight for a new child; false for invalid owners or world teardown. Does not allocate. */
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get Can Create Entity",
+              Category = "Ck|Utils|Lifetime")
+    static bool
+    Get_CanCreateEntity(
+        const FCk_Handle& InOwner);
+
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Lifetime] Request Create New Entity",
               Category = "Ck|Utils|Lifetime",

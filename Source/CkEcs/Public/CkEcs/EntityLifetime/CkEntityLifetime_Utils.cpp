@@ -85,6 +85,18 @@ namespace ck_entity_lifetime_utils
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_CanCreateEntity(
+        const FCk_Handle& InOwner)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InOwner))
+    { return false; }
+
+    return ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InOwner.Get_RegistryView());
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_DestroyEntity(
         FCk_Handle& InHandle,
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
@@ -425,7 +437,10 @@ auto
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
+    const auto IsOwnerValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(IsOwnerValid, TEXT("Cannot create Entity with Invalid Handle"))
+    { return {}; }
+    if (NOT IsOwnerValid)
     { return {}; }
 
     auto RegistryView = InHandle.Get_RegistryView();
@@ -454,6 +469,8 @@ auto
     const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
     CK_ENSURE_IF_NOT(CanCreateEntity,
         TEXT("Request_CreateEntity rejected new world population after ECS world teardown began"))
+    { return {}; }
+    if (NOT CanCreateEntity)
     { return {}; }
 
     const auto& NewEntity = InRegistry.CreateEntity();
@@ -484,6 +501,8 @@ auto
     const auto CanCreateEntity = ck_entity_lifetime_utils::Get_CanCreateEntityInWorld(InRegistry);
     CK_ENSURE_IF_NOT(CanCreateEntity,
         TEXT("Request_CreateEntity with ID hint rejected new world population after ECS world teardown began"))
+    { return {}; }
+    if (NOT CanCreateEntity)
     { return {}; }
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
