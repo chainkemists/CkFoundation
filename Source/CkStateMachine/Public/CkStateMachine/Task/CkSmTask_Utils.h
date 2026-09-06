@@ -62,6 +62,16 @@ public:
     Get_LastResult(
         const FCk_Handle_SmTask& InTask);
 
+    // For processors that own recurring work scoped by an EnterExitOnly task.
+    // Rejects inactive, exiting, dying or malformed ownership before resolving authority.
+    // Does not require Tick mode and does not schedule or execute any work.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SmTask",
+        DisplayName = "[Ck][SmTask] Can Run Scoped Work")
+    static bool
+    Get_CanRunScopedWork(
+        const FCk_Handle_SmTask& InTask);
+
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|SmTask",
         DisplayName = "[Ck][SmTask] Get Owning State Machine",

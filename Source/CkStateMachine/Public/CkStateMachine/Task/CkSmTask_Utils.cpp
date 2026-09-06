@@ -1,6 +1,7 @@
 #include "CkSmTask_Utils.h"
 
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
+#include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
@@ -140,6 +141,55 @@ auto
     -> ECk_SmTaskResult
 {
     return InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+}
+
+auto
+    UCk_Utils_SmTask_UE::
+    Get_CanRunScopedWork(
+        const FCk_Handle_SmTask& InTask)
+    -> bool
+{
+    if (NOT Has(InTask))
+    { return false; }
+
+    if (NOT InTask.Has<ck::FTag_SmTask_Active>() || InTask.Has<ck::FTag_SmTask_PendingExit>())
+    { return false; }
+
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InTask,
+        ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+    { return false; }
+
+    if (NOT ck::TUtils_Sm_OwningStateMachine::Has(InTask))
+    { return false; }
+
+    const auto OwningSm = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InTask);
+    auto Current = OwningSm;
+    auto Visited = TArray<FCk_Handle, TInlineAllocator<8>>{};
+
+    // Authority resolution walks to the root SM. Validate that entire chain first:
+    // a stale link or cycle must not enter the resolver or add its per-frame memo.
+    while (true)
+    {
+        if (ck::Is_NOT_Valid(Current))
+        { return false; }
+
+        if (NOT Current.Has_All<ck::FFragment_Sm_Current, ck::FFragment_Sm_Params>())
+        { return false; }
+
+        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Current,
+            ECk_EntityLifetime_DestructionPhase::BeginDestroy))
+        { return false; }
+
+        if (Visited.Contains(Current))
+        { return false; }
+        Visited.Add(Current);
+
+        if (NOT ck::TUtils_Sm_OwningStateMachine::Has(Current))
+        { break; }
+        Current = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(Current);
+    }
+
+    return ck::statemachine::Get_IsTransitionAuthority(OwningSm);
 }
 
 auto
