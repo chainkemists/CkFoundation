@@ -11,6 +11,12 @@
 
 - `UCk_Utils_SmCondition_UE` — add condition entities to state machine.
 - `UCk_SmCondition_EntityScript` — override to define state transition conditions in C++ or Blueprint.
+- `UCk_Utils_SmTask_UE::Get_CanRunScopedWork` — lets a feature processor retain an
+  EnterExitOnly task's active, non-exiting lifetime and transition-authority gates.
+  Default, malformed, dying, inactive and cyclic-owner inputs return false before
+  authority resolution. It does not require Tick mode, advance task results or
+  schedule work. Keep recurring processors in the original task's main-pass phase;
+  this predicate does not make a later scheduling group behavior-equivalent.
 
 ---
 
