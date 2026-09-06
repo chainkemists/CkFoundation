@@ -356,6 +356,15 @@ public:
     Get_IsOffNavmesh(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // True while FTag_CrowdAgent_TraversingLink stands: the tag licensing ConstrainToNavmesh to
+    // stand down. A body between a link's ends must carry it; one with no route must not.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Traversing Link")
+    static bool
+    Get_IsTraversingLink(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // Seconds the agent has continuously been off the navmesh beyond recovery (0 while on-mesh).
     // The instrument for the "how far gone is this floater" question a packaged-build log needs
     // answered.
