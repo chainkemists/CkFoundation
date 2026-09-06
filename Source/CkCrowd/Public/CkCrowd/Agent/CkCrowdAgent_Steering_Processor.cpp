@@ -396,6 +396,12 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
+        // Ahead of the correlator gate, and unconditional. The tag is what licenses
+        // ConstrainToNavmesh to stand its surface walk down and to report the body ON the mesh, so a
+        // tag left standing beside a correlator that has already gone is a body nothing grounds and
+        // nothing reports — the two must never be able to disagree.
+        InHandle.Try_Remove<FTag_CrowdAgent_TraversingLink>();
+
         if (InPathFollow.Get_ActiveLinkCorrelator() == INDEX_NONE)
         { return; }
 
@@ -404,8 +410,6 @@ namespace ck
 
         InPathFollow._ActiveLinkId = INDEX_NONE;
         InPathFollow._ActiveLinkCorrelator = INDEX_NONE;
-
-        InHandle.Try_Remove<FTag_CrowdAgent_TraversingLink>();
     }
 
     // ----------------------------------------------------------------------------------------------------------------

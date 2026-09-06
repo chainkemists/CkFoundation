@@ -8,6 +8,7 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PushApart_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
@@ -75,13 +76,16 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             ck::TReadWrite<FFragment_CrowdAgent_Grounding>,
+            ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Physics;
-        using RunAfter = TDepList<FProcessor_CrowdAgent_PushApart>;
+        // Steering is named alongside the staging chain because this pass now WRITES the same
+        // path-follow fragment Steering owns, to end a crossing the route left behind.
+        using RunAfter = TDepList<FProcessor_CrowdAgent_PushApart, FProcessor_CrowdAgent_Steering>;
 
     public:
         using TProcessor::TProcessor;
@@ -96,7 +100,8 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
-            FFragment_CrowdAgent_Grounding& InGrounding) const -> void;
+            FFragment_CrowdAgent_Grounding& InGrounding,
+            FFragment_CrowdAgent_PathFollow& InPathFollow) const -> void;
 
         /**
          * Whether two providers disagree about whether a position is contained at all: one found
@@ -125,6 +130,7 @@ namespace ck
             const FFragment_CrowdAgent_Params& InParams,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
             FVector& InOutResolvedOffset) -> void;
 
         // Costs nothing at all while the world is not shadowing, and nothing extra per agent while

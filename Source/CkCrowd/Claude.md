@@ -197,13 +197,22 @@ independent of it. When CkGroundNav republishes a rebuilt surface,
 every agent whose cached corridor the rebuild's bounds reach; GroundNav never clears it, and
 `PathRefresh`'s first gate is that flag's only consumer. The gate clears the tag for whichever
 provider carries it (a Recast agent shadowing on GroundNav holds a corridor too) and acts on it only
-where `_ActiveProvider` is `GroundNav` and a route is installed, re-issuing the SAME goal with
-`ECk_GroundNav_PlanMode::Repair` so the search warm-starts from the corridor already held. Nothing
-about the movement state changes: the agent keeps `Walking` its installed polyline while the repair
-is in flight — `MarkPathPending` parks the status without touching the corridor, and the watchdog
-reads Walking-without-`PathPending` as live — and `OnGroundNavPathResolved` swaps the polyline when
-the repair lands. A rebuild under a walking agent costs it a re-plan, never a stop; each one logs a
-single `[REBUILD-REPLAN]` Display line.
+where `_ActiveProvider` is `GroundNav`, a route is installed AND the agent is `Walking` it,
+re-issuing the SAME goal with `ECk_GroundNav_PlanMode::Repair` so the search warm-starts from the
+corridor already held. The Walking test is load-bearing: the installed identity and the provider
+both outlive the episode, so without it an arrived or goal-failed agent is re-planned on every
+rebuild for the install seam to drop, and a fresh plan in flight is superseded by a "repair" of the
+previous goal's corridor. Nothing about the movement state changes: the agent keeps `Walking` its
+installed polyline while the repair is in flight — `MarkPathPending` parks the status without
+touching the corridor, and the watchdog reads Walking-without-`PathPending` as live — and
+`OnGroundNavPathResolved` swaps the polyline when the repair lands. A rebuild under a walking agent
+costs it a re-plan, never a stop; each one logs a single `[REBUILD-REPLAN]` Display line. **When the
+repair FAILS** (the rebuild made the goal an island, or the body stands off every cell), the install
+seam's Fail branch steps the agent `Walking` → `PathPending` before it writes the Failed status,
+because `OnPathResolved` — the one owner of a failure's tag transition and its single `OnGoalFailed`
+— views `PathPending`. Before that step the body stood `Walking` on a Failed slot: no hold, no
+failure reported, the watchdog reading it as live, and a same-goal MoveTo refused as the walking
+no-op (`CkAutoTest_GroundNav_Link_DisabledMidCrossingHoldsTheBodyAndResumesOnEnable` pins it).
 
 **Two-phase planning** (`_PlanAroundStandingCrowds`, default Enabled, gated on markup being
 Enabled) sits on top of the toll: every agent FindPath plans FIRST with a STRICT filter that
@@ -1134,6 +1143,16 @@ Three details are load-bearing:
 - **The spans are only read while `_ActiveProvider` is `GroundNav`.** Nothing but the ground install
   stamps them, so a PathNetwork or Voxel corridor installed over a ground one would otherwise be walked
   against the previous route's link indices.
+- **The grounding stand-down needs `Walking` AND the crossing tag (2026-09-06).** `ConstrainToNavmesh`
+  hands the staged displacement through in 3D only while both stand. Steering is the crossing's only
+  ender and runs only on a Walking agent with a Ready route, so every other way out of Walking - a
+  block, a stall re-path, `PathRefresh`, the shared slot's Failed branch, a link disabled under a body
+  mid-climb - used to leave the tag latched on a route-less agent: an ungrounded free body that
+  `MarkOnMesh` reported as grounded and that drifted up a ladder's own steering direction. A tagged agent
+  that is not Walking now has its crossing ended in `DoConstrain` (`Failed_Cancelled` to listeners) and
+  falls through to the grounded pass, which recovers it onto the link end it can reach - the foot
+  mid-ladder, since the step-up cap cannot lift it onto the far one. A stall or disc re-path that fires
+  mid-climb therefore drops the body to the foot rather than hovering it.
 
 **Which links an agent may take is on its own params.** `FCk_Fragment_CrowdAgent_ParamsData` carries
 `_DeniedLinkIds` (stable link ids this body may never traverse), `_DeniedLinkUserTypeTags` (the same denial
