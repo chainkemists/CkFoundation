@@ -29,12 +29,16 @@ namespace ck_inventory_utils
     enum class EDispatchValidity
     {
         Valid,
+        WorldTeardown, // the world is destroying its ECS population; no new request child may be admitted
         NoAuthority,    // caller lacks authority over the inventory entity
         UnknownShape    // inventory has neither the Spatial nor DataOnly shape tag (composition bug)
     };
 
     auto Get_DispatchValidity(const FCk_Handle_Inventory& InInventory) -> EDispatchValidity
     {
+        if (NOT UCk_Utils_EntityLifetime_UE::Get_CanCreateEntity(InInventory))
+        { return EDispatchValidity::WorldTeardown; }
+
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InInventory))
         { return EDispatchValidity::NoAuthority; }
 
@@ -53,6 +57,10 @@ namespace ck_inventory_utils
     {
         switch (InValidity)
         {
+            case EDispatchValidity::WorldTeardown:
+                ck::inventory::Display(TEXT("{}: World teardown is in progress for inventory [{}] — request rejected (not enqueued)."),
+                    InContext, InInventory);
+                break;
             case EDispatchValidity::NoAuthority:
                 ck::inventory::Display(TEXT("{}: No authority over inventory [{}] — request rejected (not enqueued)."),
                     InContext, InInventory);
@@ -75,9 +83,30 @@ namespace ck_inventory_utils
         const TCHAR* InContext,
         TReject InReject) -> bool
     {
-        CK_ENSURE_IF_NOT(NOT InRequest.Get_IsRequestHandleValid(),
+        const auto IsInventoryValid = ck::IsValid(InInventory);
+        CK_ENSURE_IF_NOT(IsInventoryValid,
+            TEXT("{}: inventory [{}] is invalid — request rejected (not enqueued)."),
+            InContext, InInventory)
+        {
+            InReject();
+            return false;
+        }
+        if (NOT IsInventoryValid)
+        {
+            InReject();
+            return false;
+        }
+
+        const auto IsFreshRequest = NOT InRequest.Get_IsRequestHandleValid();
+        CK_ENSURE_IF_NOT(IsFreshRequest,
             TEXT("{}: request struct reused (already populated) for inventory [{}]. Construct a fresh request per submission."),
             InContext, InInventory)
+        {
+            InReject();
+            return false;
+        }
+
+        if (NOT IsFreshRequest)
         {
             InReject();
             return false;
