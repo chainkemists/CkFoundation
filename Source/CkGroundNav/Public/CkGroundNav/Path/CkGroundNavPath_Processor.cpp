@@ -94,6 +94,7 @@ namespace ck_groundnav_path_processor
         Cost._SlopePenaltyK = InParams.Get_SlopePenaltyK();
         Cost._ClearanceBiasK = InParams.Get_ClearanceBiasK();
         Cost._CornerOffsetK = InParams.Get_CornerOffsetK();
+        Cost._ShortcutSpanCap = InParams.Get_ShortcutSpanCap();
 
         // The per-plate multiplier table is deliberately left empty: it is markup the field carries,
         // and an empty table prices every plate at one, which is the unmarked field.
