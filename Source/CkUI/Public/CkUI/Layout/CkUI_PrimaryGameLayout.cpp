@@ -16,6 +16,7 @@
 #include <Blueprint/WidgetTree.h>
 #include <Components/Overlay.h>
 #include <Components/OverlaySlot.h>
+#include <Engine/GameInstance.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -268,6 +269,14 @@ auto
     NativeDestruct()
     -> void
 {
+    // Stop participating in CommonUI routing before child stacks notify their
+    // removal. Otherwise clearing the final active child can make this
+    // non-focusable root the leaf-most active node during teardown.
+    if (GetGameInstance<UGameInstance>())
+    {
+        DeactivateWidget();
+    }
+
     UCk_Utils_ContextReceiver_UE::Request_UnbindAll(_ContextReceiver, this);
 
     for (auto& SuspensionHandle : _TransitionSuspensionHandles)
