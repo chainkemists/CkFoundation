@@ -53,6 +53,24 @@ namespace ck
 {
     auto
         FProcessor_CrowdAgent_DrawNavStatus::
+        DoTick(
+            FCk_Time InDeltaT)
+        -> void
+    {
+        // Both presentation gates are global and live. Keep the per-agent checks below as a
+        // defensive local guard, but avoid all query visits while the overlay is unavailable.
+        if (ck::diagnostic_visibility::Is_HiddenForStreamerMode() ||
+            NOT UCk_Utils_Crowd_DebugSettings_UE::Get_DrawPathTrouble())
+        {
+            _LastVisitedCount = 0;
+            return;
+        }
+
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    auto
+        FProcessor_CrowdAgent_DrawNavStatus::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
