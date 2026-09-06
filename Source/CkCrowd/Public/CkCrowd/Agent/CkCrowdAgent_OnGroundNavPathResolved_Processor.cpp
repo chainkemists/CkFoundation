@@ -174,6 +174,19 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
 
+                // A repair of a LIVE route was dispatched without the PathPending tag so the body could
+                // keep walking the stale polyline until the fresh one swapped in (PathRefresh). Its
+                // failure ends the episode, and the one processor that owns an ending - the tag
+                // transition and the single OnGoalFailed - views PathPending. This is where a failed
+                // repair re-enters that view: the same Walking -> PathPending step every other re-plan
+                // takes before it dispatches. Without it the body stood Walking on a Failed slot - no
+                // hold, no failure reported, and the watchdog reads Walking-without-PathPending as live.
+                if (NOT IsPathPending)
+                {
+                    NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+                    NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+                }
+
                 FCk_Nav_Algorithm::FailPath(NonConstHandle, Verdict._Reason, ActiveRevision);
 
                 // The status write alone drives the crowd's failure sequence — OnPathResolved owns the
