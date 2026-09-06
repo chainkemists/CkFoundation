@@ -337,6 +337,34 @@ auto
 
 auto
     UCk_Utils_EntityTag_UE::
+    Get_FirstMatchingGameplayTag(
+        const FCk_Handle& InHandle,
+        FGameplayTag InParentTag)
+    -> FGameplayTag
+{
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Unable to get first matching gameplay tag on Handle [{}] that is INVALID"), InHandle)
+    {}
+
+    if (NOT HandleIsValid)
+    { return {}; }
+
+    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    { return {}; }
+
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    for (const auto& GameplayTagCount : Current._GameplayTagCounts)
+    {
+        if (GameplayTagCount._Tag.MatchesTag(InParentTag))
+        { return GameplayTagCount._Tag; }
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_EntityTag_UE::
     Get_AllTags(
         const FCk_Handle& InHandle)
     -> TArray<FName>

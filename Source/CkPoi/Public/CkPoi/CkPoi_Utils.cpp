@@ -83,4 +83,13 @@ auto
     return AllTags.Filter(FGameplayTagContainer{Tag_Poi_CategoryName});
 }
 
+auto
+    UCk_Utils_Poi_UE::
+    Get_FirstCategoryTag(
+        const FCk_Handle_Poi& InPoi)
+    -> FGameplayTag
+{
+    return UCk_Utils_EntityTag_UE::Get_FirstMatchingGameplayTag(InPoi, Tag_Poi_CategoryName);
+}
+
 //--------------------------------------------------------------------------------------------------------------------
