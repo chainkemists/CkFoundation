@@ -1,6 +1,8 @@
 #include "CkTimer_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -42,6 +44,16 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
+    const auto IsTimerOwnerValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(IsTimerOwnerValid,
+        TEXT("Timer Add rejected invalid owner [{}]."), InHandle)
+    { return {}; }
+    if (NOT IsTimerOwnerValid)
+    { return {}; }
+
+    if (NOT UCk_Utils_EntityLifetime_UE::Get_CanCreateEntity(InHandle))
+    { return {}; }
+
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
         if (InParams.Get_TimerName().IsValid())
@@ -68,6 +80,13 @@ auto
             InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
         }
     });
+
+    const auto IsNewTimerEntityValid = ck::IsValid(NewEntity);
+    CK_ENSURE_IF_NOT(IsNewTimerEntityValid,
+        TEXT("Timer Add could not create a timer entity for owner [{}]."), InHandle)
+    { return {}; }
+    if (NOT IsNewTimerEntityValid)
+    { return {}; }
 
     auto NewTimerEntity = UCk_Utils_Timer_UE::CastChecked(NewEntity);
 
