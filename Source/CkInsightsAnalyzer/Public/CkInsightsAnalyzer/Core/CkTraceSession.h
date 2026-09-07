@@ -43,6 +43,20 @@ struct FCk_TraceScreenshot
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * A bounded, copied prefix of the game-frame stream. Durations are contiguous from the requested
+ * first index; an unfinished tail is deliberately omitted so callers retry that same index later.
+ */
+struct FCk_AvailableFrameBatch
+{
+    TArray<double> Durations;
+    uint64 FrameCount = 0;
+    bool IsAnalysisComplete = false;
+    FString Error;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Wrapper around UE TraceServices that opens a .utrace file and provides
  * convenient access to timing, frame, and thread providers.
  *
@@ -55,8 +69,9 @@ struct FCk_TraceScreenshot
  *       // ... enumerate frames, read timelines, etc.
  *   }
  *
- * All provider access methods require the session to be open and analysis complete.
- * Thread-safety: Create a FAnalysisSessionReadScope before accessing providers.
+ * Existing provider access methods require the session to be open and analysis complete.
+ * The dedicated progressive reads copy bounded data while parsing. Thread-safety: create a
+ * FAnalysisSessionReadScope before accessing providers.
  */
 class CKINSIGHTSANALYZER_API FCk_TraceSession
 {
@@ -104,6 +119,9 @@ public:
     /** Close the session and release all resources. */
     auto Close() -> void;
 
+    /** Request that an in-progress analysis stop without releasing its session storage. */
+    auto RequestStop() -> void;
+
     /** Whether a session is currently open and analysis is complete. */
     auto IsOpen() const -> bool;
 
@@ -144,6 +162,13 @@ public:
 
     /** Get total number of render frames in the trace. 0 when the capture has no rendering frames (e.g. -nullrhi). */
     auto GetRenderFrameCount() const -> uint64;
+
+    /**
+     * Copy a bounded contiguous prefix of currently available game-frame durations while analysis runs.
+     * An active non-finite tail is deferred; after completion an infinite tail is clamped to session duration.
+     */
+    auto ReadAvailableFrames(uint64 FirstFrame, uint32 MaxFrames = 2000) const
+        -> FCk_AvailableFrameBatch;
 
     /** Get a specific game frame by index. Returns nullptr if index is invalid. */
     auto GetFrame(uint64 Index) const -> const TraceServices::FFrame*;

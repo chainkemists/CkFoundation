@@ -171,6 +171,213 @@ auto
 
 auto
     FCk_FrameAnalyzer::
+    TryCaptureFrameSnapshot(const FCk_TraceSession& Session,
+                            uint64 FrameIndex,
+                            FCk_FrameSnapshot& OutSnapshot,
+                            const TAtomic<bool>* Cancelled)
+    -> bool
+{
+    OutSnapshot = {};
+    if (Cancelled != nullptr && Cancelled->Load())
+    {
+        OutSnapshot.UnavailableReason = TEXT("Frame capture was cancelled.");
+        return false;
+    }
+
+    if (Session.GetSession() == nullptr)
+    {
+        OutSnapshot.UnavailableReason = TEXT("Trace session is not available.");
+        return false;
+    }
+
+    const bool IsAnalysisComplete = Session.IsAnalysisComplete();
+    OutSnapshot.IsProvisional = NOT IsAnalysisComplete;
+
+    auto Events = TArray<FCk_TimingEvent>{};
+    auto TimerNames = TMap<uint32, FString>{};
+    auto Result = FCk_FrameAnalysisResult{};
+
+    {
+        TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
+        const auto FrameProvider = Session.GetFrameProvider();
+        const auto TimingProvider = Session.GetTimingProvider();
+        const auto ThreadProvider = Session.GetThreadProvider();
+        if (ck::Is_NOT_Valid(FrameProvider, ck::IsValid_Policy_NullptrOnly{}) ||
+            ck::Is_NOT_Valid(TimingProvider, ck::IsValid_Policy_NullptrOnly{}) ||
+            ck::Is_NOT_Valid(ThreadProvider, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            OutSnapshot.UnavailableReason = TEXT("Trace providers are not available yet.");
+            return false;
+        }
+
+        const auto Frame = FrameProvider->GetFrame(ETraceFrameType::TraceFrameType_Game, FrameIndex);
+        if (ck::Is_NOT_Valid(Frame, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            OutSnapshot.UnavailableReason = TEXT("Requested game frame is not available yet.");
+            return false;
+        }
+
+        if (NOT FMath::IsFinite(Frame->StartTime) || Frame->StartTime < 0.0 ||
+            Frame->EndTime < Frame->StartTime)
+        {
+            OutSnapshot.UnavailableReason = TEXT("Requested game frame does not have closed finite boundaries.");
+            return false;
+        }
+
+        double FrameEndTime = Frame->EndTime;
+        if (NOT FMath::IsFinite(FrameEndTime))
+        {
+            if (FrameEndTime != FrameEndTime || FrameEndTime < 0.0 || NOT IsAnalysisComplete)
+            {
+                OutSnapshot.UnavailableReason = TEXT("Requested game frame does not have closed finite boundaries.");
+                return false;
+            }
+
+            FrameEndTime = Session.GetDurationSeconds();
+            if (NOT FMath::IsFinite(FrameEndTime) || FrameEndTime < Frame->StartTime)
+            {
+                OutSnapshot.UnavailableReason = TEXT("Requested game frame cannot be clamped to trace duration.");
+                return false;
+            }
+        }
+
+        uint32 GameThreadId = static_cast<uint32>(INDEX_NONE);
+        ThreadProvider->EnumerateThreads(
+            [&GameThreadId](const TraceServices::FThreadInfo& Info)
+            {
+                if (Info.Name != nullptr && FCString::Strcmp(Info.Name, TEXT("GameThread")) == 0)
+                {
+                    GameThreadId = Info.Id;
+                }
+            });
+
+        // Keep the legacy completed-trace fallback, but do it inside this scope instead of touching
+        // FCk_TraceSession's mutable cache from a worker thread.
+        if (GameThreadId == static_cast<uint32>(INDEX_NONE) && IsAnalysisComplete)
+        {
+            uint64 MaxEvents = 0;
+            ThreadProvider->EnumerateThreads(
+                [&](const TraceServices::FThreadInfo& Info)
+                {
+                    uint32 TimelineIndex = 0;
+                    if (TimingProvider->GetCpuThreadTimelineIndex(Info.Id, TimelineIndex))
+                    {
+                        TimingProvider->ReadTimeline(TimelineIndex,
+                            [&](const TraceServices::ITimingProfilerProvider::Timeline& Timeline)
+                            {
+                                const uint64 EventCount = Timeline.GetEventCount();
+                                if (EventCount > MaxEvents)
+                                {
+                                    MaxEvents = EventCount;
+                                    GameThreadId = Info.Id;
+                                }
+                            });
+                    }
+                });
+        }
+
+        if (GameThreadId == static_cast<uint32>(INDEX_NONE))
+        {
+            OutSnapshot.UnavailableReason = IsAnalysisComplete
+                ? TEXT("Could not identify the game thread.")
+                : TEXT("GameThread identity is not available yet.");
+            return false;
+        }
+
+        uint32 TimelineIndex = 0;
+        if (NOT TimingProvider->GetCpuThreadTimelineIndex(GameThreadId, TimelineIndex))
+        {
+            OutSnapshot.UnavailableReason = TEXT("GameThread timeline is not available yet.");
+            return false;
+        }
+
+        bool WasCancelled = false;
+        const bool ReadTimeline = TimingProvider->ReadTimeline(TimelineIndex,
+            [&](const TraceServices::ITimingProfilerProvider::Timeline& Timeline)
+            {
+                Timeline.EnumerateEvents(Frame->StartTime, FrameEndTime,
+                    [&](double EventStartTime, double EventEndTime, uint32 EventDepth,
+                        const TraceServices::FTimingProfilerEvent& Event)
+                        -> TraceServices::EEventEnumerate
+                    {
+                        if (Cancelled != nullptr && Cancelled->Load())
+                        {
+                            WasCancelled = true;
+                            return TraceServices::EEventEnumerate::Stop;
+                        }
+
+                        Events.Add(FCk_TimingEvent{
+                            Event.TimerIndex,
+                            EventStartTime,
+                            FMath::IsFinite(EventEndTime) ? EventEndTime : FrameEndTime,
+                            EventDepth});
+                        return TraceServices::EEventEnumerate::Continue;
+                    });
+            });
+
+        if (WasCancelled)
+        {
+            OutSnapshot.UnavailableReason = TEXT("Frame capture was cancelled.");
+            return false;
+        }
+        if (NOT ReadTimeline)
+        {
+            OutSnapshot.UnavailableReason = TEXT("GameThread timeline is not available yet.");
+            return false;
+        }
+        if (Events.IsEmpty())
+        {
+            OutSnapshot.UnavailableReason = TEXT("Requested game frame has no timing events yet.");
+            return false;
+        }
+
+        TSet<uint32> UsedTimerIndices;
+        for (const FCk_TimingEvent& Event : Events)
+        {
+            UsedTimerIndices.Add(Event.TimerIndex);
+        }
+        TimingProvider->ReadTimers(
+            [&TimerNames, &UsedTimerIndices](const TraceServices::ITimingProfilerTimerReader& Reader)
+            {
+                const uint32 Count = Reader.GetTimerCount();
+                for (uint32 Index = 0; Index < Count; ++Index)
+                {
+                    const TraceServices::FTimingProfilerTimer* Timer = Reader.GetTimer(Index);
+                    if (Timer != nullptr && Timer->Name != nullptr && UsedTimerIndices.Contains(Timer->Id))
+                    {
+                        TimerNames.Add(Timer->Id, FString(Timer->Name));
+                    }
+                }
+            });
+
+        Result.FrameIndex = FrameIndex;
+        Result.FrameStartTime = Frame->StartTime;
+        Result.FrameEndTime = FrameEndTime;
+        Result.FrameDurationMs = (FrameEndTime - Frame->StartTime) * 1000.0;
+        Result.ThreadId = GameThreadId;
+        Result.Events = MoveTemp(Events);
+    }
+
+    uint32 MinDepth = MAX_uint32;
+    for (const FCk_TimingEvent& Event : Result.Events)
+    {
+        if (Event.Depth < MinDepth)
+        {
+            MinDepth = Event.Depth;
+            Result.FrameRootTimerIndex = Event.TimerIndex;
+        }
+    }
+    ComputeExclusiveTimes(Result.Events, Result);
+
+    OutSnapshot.Result = MoveTemp(Result);
+    OutSnapshot.TimerNames = MoveTemp(TimerNames);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_FrameAnalyzer::
     ExtractEvents(const FCk_TraceSession& Session,
                   uint32 TimelineIndex,
                   double StartTime, double EndTime)

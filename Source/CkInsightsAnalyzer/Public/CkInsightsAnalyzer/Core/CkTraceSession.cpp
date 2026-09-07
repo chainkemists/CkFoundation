@@ -220,6 +220,17 @@ auto
 
 auto
     FCk_TraceSession::
+    RequestStop()
+    -> void
+{
+    if (_Session.IsValid())
+    {
+        _Session->Stop(/*bAndWait=*/ false);
+    }
+}
+
+auto
+    FCk_TraceSession::
     IsOpen() const
     -> bool
 {
@@ -397,6 +408,87 @@ auto
     TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
     const TraceServices::IFrameProvider* FrameProvider = GetFrameProvider();
     return FrameProvider ? FrameProvider->GetFrameCount(ETraceFrameType::TraceFrameType_Rendering) : 0;
+}
+
+auto
+    FCk_TraceSession::
+    ReadAvailableFrames(uint64 FirstFrame, uint32 MaxFrames) const
+    -> FCk_AvailableFrameBatch
+{
+    FCk_AvailableFrameBatch Result;
+    if (NOT _Session.IsValid())
+    {
+        Result.Error = TEXT("Trace session is not available.");
+        return Result;
+    }
+
+    TraceServices::FAnalysisSessionReadScope ReadScope(*_Session.Get());
+    Result.IsAnalysisComplete = _Session->IsAnalysisComplete();
+
+    const auto FrameProvider = GetFrameProvider();
+    if (ck::Is_NOT_Valid(FrameProvider, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        Result.Error = TEXT("Trace frame provider is not available.");
+        return Result;
+    }
+
+    Result.FrameCount = FrameProvider->GetFrameCount(ETraceFrameType::TraceFrameType_Game);
+    if (FirstFrame >= Result.FrameCount || MaxFrames == 0)
+    {
+        return Result;
+    }
+
+    const uint64 EndFrame = FMath::Min(Result.FrameCount, FirstFrame + static_cast<uint64>(MaxFrames));
+    Result.Durations.Reserve(static_cast<int32>(EndFrame - FirstFrame));
+
+    for (uint64 FrameIndex = FirstFrame; FrameIndex < EndFrame; ++FrameIndex)
+    {
+        const auto Frame = FrameProvider->GetFrame(ETraceFrameType::TraceFrameType_Game, FrameIndex);
+        if (ck::Is_NOT_Valid(Frame, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            Result.Durations.Reset();
+            Result.Error = FString::Printf(TEXT("Game frame %llu is unavailable."), FrameIndex);
+            return Result;
+        }
+
+        if (NOT FMath::IsFinite(Frame->StartTime) || Frame->StartTime < 0.0 ||
+            Frame->EndTime < Frame->StartTime)
+        {
+            Result.Durations.Reset();
+            Result.Error = FString::Printf(TEXT("Game frame %llu has malformed boundaries."), FrameIndex);
+            return Result;
+        }
+
+        double EndTime = Frame->EndTime;
+        if (NOT FMath::IsFinite(EndTime))
+        {
+            // NaN and negative infinity are malformed even while the parser is active. Only its
+            // positive-infinity tail sentinel is allowed to defer or clamp.
+            if (EndTime != EndTime || EndTime < 0.0)
+            {
+                Result.Durations.Reset();
+                Result.Error = FString::Printf(TEXT("Game frame %llu has malformed boundaries."), FrameIndex);
+                return Result;
+            }
+
+            if (NOT Result.IsAnalysisComplete)
+            {
+                break;
+            }
+
+            EndTime = _Session->GetDurationSeconds();
+            if (NOT FMath::IsFinite(EndTime) || EndTime < Frame->StartTime)
+            {
+                Result.Durations.Reset();
+                Result.Error = FString::Printf(TEXT("Game frame %llu cannot be clamped to trace duration."), FrameIndex);
+                return Result;
+            }
+        }
+
+        Result.Durations.Add((EndTime - Frame->StartTime) * 1000.0);
+    }
+
+    return Result;
 }
 
 auto
