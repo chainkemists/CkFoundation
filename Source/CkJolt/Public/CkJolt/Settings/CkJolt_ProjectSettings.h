@@ -33,6 +33,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_PIEStaticWorldMode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/// Whether an EDITOR world (a map open in the level editor, and the world a cook commandlet loads) hosts a
+/// Jolt static world at all. It exists so authoring-time and cook-time consumers can read the same geometry
+/// PIE reads. Deliberately no Cooked variant: a second editor geometry surface would have to be proven
+/// byte-identical to both the live extract and PIE.
+UENUM(BlueprintType)
+enum class ECk_Jolt_EditorStaticWorldMode : uint8
+{
+    // No Jolt world in editor worlds — an opened map pays nothing. (Default)
+    Disabled,
+    // Extract collision live from level actors, exactly as PIE's LiveExtract does.
+    LiveExtract
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_EditorStaticWorldMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /// Which component mobilities the static-world LEVEL SWEEP bakes. ExplicitActor bakes (Request_BakeActor)
 /// always bake every mobility — the caller declared the actor static-in-intent.
 UENUM(BlueprintType)
@@ -161,6 +178,13 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Jolt_PIEStaticWorldMode _PIEStaticWorldMode = ECk_Jolt_PIEStaticWorldMode::LiveExtract;
 
+    // Whether editor worlds host a Jolt static world for authoring and cook-time geometry reads.
+    // Takes effect on the NEXT MAP LOAD: a world's subsystem collection is built once, when the world is
+    // created, so flipping this in a running editor does not create or destroy anything already open.
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Jolt Physics|Static World",
+              meta = (AllowPrivateAccess = true))
+    ECk_Jolt_EditorStaticWorldMode _EditorStaticWorldMode = ECk_Jolt_EditorStaticWorldMode::Disabled;
+
     // Content root for cooked Jolt data assets. Must be listed in DirectoriesToAlwaysCook
     // (the cook commandlet ensures this loudly).
     UPROPERTY(Config, EditDefaultsOnly, Category = "Jolt Physics|Static World",
@@ -257,6 +281,7 @@ public:
     CK_PROPERTY_GET(_NumPhysicsThreads);
     CK_PROPERTY_GET(_EnableAsyncPhysicsUpdate);
     CK_PROPERTY_GET(_PIEStaticWorldMode);
+    CK_PROPERTY_GET(_EditorStaticWorldMode);
     CK_PROPERTY_GET(_CookedDataRootPath);
     CK_PROPERTY_GET(_BakeGridCellSize);
     CK_PROPERTY_GET(_CompoundShapeInstanceThreshold);
@@ -270,6 +295,14 @@ public:
     CK_PROPERTY_GET(_BakeExcludedCollisionProfiles);
     CK_PROPERTY_GET(_BakeExcludeOverlapOnlyComponents);
     CK_PROPERTY_GET(_BakedMeshShapeRoots);
+
+#if WITH_AUTOMATION_TESTS
+public:
+    // A test asserting the editor-world gating must pin the mode: the project's own configuration would
+    // otherwise decide whether either half of the assertion is reachable.
+    auto TestOnly_Set_EditorStaticWorldMode(ECk_Jolt_EditorStaticWorldMode InMode) -> void
+    { _EditorStaticWorldMode = InMode; }
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -291,6 +324,7 @@ public:
     static auto Get_NumPhysicsThreads() -> int32;
     static auto Get_EnableAsyncPhysicsUpdate() -> bool;
     static auto Get_PIEStaticWorldMode() -> ECk_Jolt_PIEStaticWorldMode;
+    static auto Get_EditorStaticWorldMode() -> ECk_Jolt_EditorStaticWorldMode;
     static auto Get_CookedDataRootPath() -> FString;
     static auto Get_BakeGridCellSize() -> float;
     static auto Get_CompoundShapeInstanceThreshold() -> int32;
