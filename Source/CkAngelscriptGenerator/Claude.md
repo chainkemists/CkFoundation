@@ -239,7 +239,9 @@ When upgrading the AngelscriptCode engine plugin: run `CkAngelscriptGenerator.Un
 
 Emits `<PluginBaseDir>/Script/Generated/<PluginName>_AutoTestActors.as`, plus `<ProjectDir>/Script/Generated/<ProjectName>_AutoTestActors.as` for game-module test classes — mirroring `FCkAngelscriptEntityScriptParamsGenerator`'s bucketing.
 
-**Collision rule = the opt-out.** If a class named `A<TestName>_Actor` already exists OUTSIDE `Script/Generated/`, the generator skips emission for that test and the hand-authored wrapper stays authoritative. That is the sanctioned way to hand-author a wrapper.
+**Collision rule = the opt-out.** The generator skips emission for a test — leaving the hand-authored wrapper authoritative — when EITHER authority answers for `A<TestName>_Actor`: a **live class** of that name whose source sits outside `Script/Generated/` (`Has_HandAuthoredWrapper`, the live object table), OR a **declaration** of that class found by scanning every `.as` outside `Generated/` (`Collect_SourceDeclaredWrapperNames`, comment- and string-aware through `FCkAsSourceScanner::Parse_ClassDeclaration`). That is the sanctioned way to hand-author a wrapper.
+
+**Why two authorities.** A hand-authored wrapper lives at the bottom of the test's own `.as`, so while that file fails to compile — a mid-edit error, the S10-7 boot abort — no live class answers for it and the live-table check alone says "no wrapper". The generator then emits one into `Script/Generated/<Plugin>_AutoTestActors.as`, and the next successful compile sees TWO classes of one name and aborts the AS boot until someone deletes the generated entry by hand. The source scan makes the `.as` text the authority the live table cannot be during a failed compile, so that loop cannot recur. Pinned by `CkAngelscriptGenerator.UnitTests.AutoTestWrapperGenerator.SourceDeclaredWrappers_*`.
 
 Triggers (editor-only): `FCoreDelegates::OnPostEngineInit` (so the file exists before the first manual recompile) and `FAngelscriptCodeModule::GetPostCompile()` (picks up newly compiled AS tests).
 
