@@ -510,6 +510,7 @@ auto
 
     auto Emittable = TArray<UClass*>{};
     auto SkippedCount = int32{0};
+    auto SkippedBySourceOnlyCount = int32{0};
     for (auto* Class : AllSubclasses)
     {
         const auto WrapperBareName = ck_autotest_wrapper_generator::Get_WrapperBareName(Class);
@@ -520,6 +521,10 @@ auto
         if (HasLiveWrapper || HasSourceDeclaredWrapper)
         {
             ++SkippedCount;
+
+            if (NOT HasLiveWrapper && HasSourceDeclaredWrapper)
+            { ++SkippedBySourceOnlyCount; }
+
             const auto Authority = HasLiveWrapper
                 ? FString{TEXT("live class")}
                 : FString{TEXT("declared in source")};
@@ -536,9 +541,9 @@ auto
 
     ck::angelscriptgenerator::Log(
         TEXT("[CkAS AutoTest Wrappers] Discovered {} subclasses of Ck_AutoTest_Base - ")
-        TEXT("{} will be emitted, {} have hand-authored wrappers (skipped); ")
-        TEXT("{} wrapper classes are declared in .as source."),
-        AllSubclasses.Num(), Emittable.Num(), SkippedCount, SourceDeclared.Num());
+        TEXT("{} will be emitted, {} have hand-authored wrappers (skipped; {} of those found only by ")
+        TEXT("the source scan); {} wrapper classes are declared in .as source."),
+        AllSubclasses.Num(), Emittable.Num(), SkippedCount, SkippedBySourceOnlyCount, SourceDeclared.Num());
 
     const auto Buckets = ck_autotest_wrapper_generator::Bucket_ClassesByPlugin(Emittable);
 
