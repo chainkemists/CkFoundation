@@ -9,7 +9,12 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "Async/Async.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/Paths.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -678,6 +683,172 @@ bool FCkTest_MultiFrameReport_ThousandCuts::RunTest(const FString&)
     }
     TestTrue(TEXT("single-frame tiny children expose at least 97% of parent cost"), SingleVisibleMs >= 1.94 - 0.000001);
     TestTrue(TEXT("averaged tiny children expose at least 97% of parent cost"), MergedVisibleMs >= 1.94 - 0.000001);
+    return true;
+}
+
+// Cancellation is an atomic admission rule: callers must never receive a partial selection
+// masquerading as a small complete result.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_CancellationClearsOutput,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.CancellationClearsOutput",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_CancellationClearsOutput::RunTest(const FString&)
+{
+    auto Cancelled = TAtomic<bool>{true};
+    auto Config = FCk_MultiFrameReportConfig{};
+    Config.Cancelled = &Cancelled;
+
+    auto Report = FCk_MultiFrameReport{Config};
+    const auto Session = FCk_TraceSession{};
+    const FString RangeMarkdown = Report.AnalyzeAndGenerate(Session);
+    const FString FrameSetMarkdown = Report.AnalyzeFrameSet(Session, {{0, 0}});
+    const FString WorstMarkdown = Report.AnalyzeWorstFrames(Session);
+    const FCk_MultiFrameStats& Stats = Report.GetStats();
+    const auto Tree = TArray<TArray<TSharedPtr<FCk_HotPathNode>>>{
+        {ck_multi_frame_report_tests::Make_HotPathNode(TEXT("cancelled root"), 1.0, 1.0, 1)}};
+    const auto Presentation = FCk_FrameReportConfig{};
+
+    TestTrue(TEXT("cancelled range analysis returns no markdown"), RangeMarkdown.IsEmpty());
+    TestTrue(TEXT("cancelled frame-set analysis returns no markdown"), FrameSetMarkdown.IsEmpty());
+    TestTrue(TEXT("cancelled worst-frame analysis returns no markdown"), WorstMarkdown.IsEmpty());
+    TestTrue(TEXT("cancelled raw hot-path merge publishes no roots"),
+        FCk_MultiFrameReport::DoMerge_HotPathTrees(Tree, &Cancelled).IsEmpty());
+    TestTrue(TEXT("cancelled presented hot-path merge publishes no roots"),
+        FCk_MultiFrameReport::DoBuild_MergedHotPaths(Tree, Presentation, &Cancelled).IsEmpty());
+    TestEqual(TEXT("cancelled analysis publishes zero frames"), Stats.FrameCount, uint64{0});
+    TestEqual(TEXT("cancelled analysis clears selected runs"), Stats.SelectedRuns.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears analysed frame indices"), Stats.AnalysedFrameIndices.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears frame durations"), Stats.FrameDurationsMs.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears worst-frame summaries"), Stats.WorstFrames.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears hot-frame detail"), Stats.HotFrames.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears merged hot paths"), Stats.MergedHotPaths.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears category averages"), Stats.CategoryAverages.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears timer averages"), Stats.TimerAverages.Num(), 0);
+    TestEqual(TEXT("cancelled analysis clears wait averages"), Stats.WaitAverages.Num(), 0);
+    TestFalse(TEXT("cancelled analysis clears averaged frame"), Stats.AveragedFrame.IsSet());
+
+    // Source control does not own this development-machine fixture. When present, exercise a real
+    // completed provider session before cancellation so the second request proves stale statistics
+    // are cleared after the narrowed provider-read scopes have populated them.
+    const FString TracePath = FPaths::ProjectSavedDir() / TEXT("Profiling/20260807_192547_5F8520.utrace");
+    if (NOT IFileManager::Get().FileExists(*TracePath))
+    {
+        AddWarning(TEXT("SKIPPED: multi-frame cancellation fixture is not present in Saved/Profiling."));
+        return true;
+    }
+
+    Cancelled.Store(false);
+    auto FixtureSession = FCk_TraceSession{};
+    if (NOT TestTrue(TEXT("multi-frame fixture prepares TraceServices"), FixtureSession.PrepareAnalysisService()) ||
+        NOT TestTrue(TEXT("multi-frame fixture starts asynchronous analysis"), FixtureSession.StartAnalysis(TracePath)))
+    {
+        return false;
+    }
+
+    const double Deadline = FPlatformTime::Seconds() + 30.0;
+    while (FPlatformTime::Seconds() < Deadline && NOT FixtureSession.IsAnalysisComplete())
+    {
+        FPlatformProcess::Sleep(0.001f);
+    }
+    if (NOT TestTrue(TEXT("multi-frame fixture completes TraceServices analysis"), FixtureSession.IsAnalysisComplete()))
+    {
+        FixtureSession.Close();
+        return false;
+    }
+
+    const FCk_AvailableFrameBatch Batch = FixtureSession.ReadAvailableFrames(0, 8);
+    if (NOT TestTrue(TEXT("multi-frame fixture has closed frames"), Batch.Durations.Num() > 0))
+    {
+        FixtureSession.Close();
+        return false;
+    }
+
+    Config.ComputeWaitAverages = true;
+    Config.BuildMergedHotPaths = true;
+    Config.ProgressIntervalSeconds = 0.0;
+    auto ProgressSnapshots = TArray<FCk_MultiFrameStats>{};
+    auto CancelOnProgress = false;
+    Config.OnProgress = [&ProgressSnapshots, &Cancelled, &CancelOnProgress](FCk_MultiFrameStats&& InStats,
+                                                                              uint64,
+                                                                              uint64)
+    {
+        ProgressSnapshots.Add(MoveTemp(InStats));
+        if (CancelOnProgress) Cancelled.Store(true);
+    };
+    const FCk_FrameRun Run{0, static_cast<uint64>(Batch.Durations.Num() - 1)};
+    FixtureSession.GetGameThreadId(); // Prime the compatibility cache on the test owner before worker reads.
+
+    struct FWorkerResult
+    {
+        FString Markdown;
+        FCk_MultiFrameStats Stats;
+    };
+    const auto AnalyzeOnWorker = [&FixtureSession, Config, Run]() -> FWorkerResult
+    {
+        auto WorkerReport = FCk_MultiFrameReport{Config};
+        auto Result = FWorkerResult{};
+        Result.Markdown = WorkerReport.AnalyzeFrameSet(FixtureSession, {Run});
+        Result.Stats = WorkerReport.GetStats();
+        return Result;
+    };
+
+    auto PopulatedFuture = Async(EAsyncExecution::ThreadPool, AnalyzeOnWorker);
+    const FWorkerResult Populated = PopulatedFuture.Get();
+    const FCk_MultiFrameStats& PopulatedStats = Populated.Stats;
+    const bool HasPopulatedStats = PopulatedStats.FrameCount > 0
+        && NOT PopulatedStats.AnalysedFrameIndices.IsEmpty()
+        && NOT PopulatedStats.FrameDurationsMs.IsEmpty();
+    TestTrue(TEXT("multi-frame fixture produces a populated report before cancellation"),
+        NOT Populated.Markdown.IsEmpty() && HasPopulatedStats);
+    if (NOT HasPopulatedStats)
+    {
+        FixtureSession.Close();
+        return false;
+    }
+    TestTrue(TEXT("zero test interval publishes progress for completed frames"), ProgressSnapshots.Num() > 0);
+    if (ProgressSnapshots.Num() > 0)
+    {
+        const FCk_MultiFrameStats& LastProgress = ProgressSnapshots.Last();
+        TestEqual(TEXT("progress denominator is the processed valid-frame count"),
+            LastProgress.FrameCount, PopulatedStats.FrameCount);
+        TestEqual(TEXT("progress indices stop at its processed prefix"),
+            LastProgress.AnalysedFrameIndices.Num(), PopulatedStats.AnalysedFrameIndices.Num());
+        if (LastProgress.MergedHotPaths.Num() > 0)
+        {
+            TestEqual(TEXT("progress hot-path strip uses the processed denominator"),
+                LastProgress.MergedHotPaths[0]->PerFrameInclusiveMs.Num(),
+                LastProgress.AnalysedFrameIndices.Num());
+        }
+    }
+    if (ProgressSnapshots.Num() > 1 && ProgressSnapshots[0].MergedHotPaths.Num() > 0 &&
+        ProgressSnapshots.Last().MergedHotPaths.Num() > 0)
+    {
+        TestTrue(TEXT("progress hot-path snapshots own independent tree nodes"),
+            ProgressSnapshots[0].MergedHotPaths[0] != ProgressSnapshots.Last().MergedHotPaths[0]);
+    }
+
+    const int32 ProgressCountBeforeCancellation = ProgressSnapshots.Num();
+    CancelOnProgress = true;
+    Cancelled.Store(false);
+    auto ClearedFuture = Async(EAsyncExecution::ThreadPool, AnalyzeOnWorker);
+    const FWorkerResult Cleared = ClearedFuture.Get();
+    const FCk_MultiFrameStats& ClearedStats = Cleared.Stats;
+    TestTrue(TEXT("cancelled populated re-run returns no markdown"), Cleared.Markdown.IsEmpty());
+    TestTrue(TEXT("mid-progress cancellation fires the callback before clearing output"),
+        ProgressSnapshots.Num() > ProgressCountBeforeCancellation);
+    TestEqual(TEXT("cancelled populated re-run clears frame count"), ClearedStats.FrameCount, uint64{0});
+    TestTrue(TEXT("cancelled populated re-run clears selected runs"), ClearedStats.SelectedRuns.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears frame indices"), ClearedStats.AnalysedFrameIndices.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears frame durations"), ClearedStats.FrameDurationsMs.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears hot paths"), ClearedStats.MergedHotPaths.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears worst frames"), ClearedStats.WorstFrames.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears hot frame detail"), ClearedStats.HotFrames.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears category averages"), ClearedStats.CategoryAverages.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears timer averages"), ClearedStats.TimerAverages.IsEmpty());
+    TestTrue(TEXT("cancelled populated re-run clears wait averages"), ClearedStats.WaitAverages.IsEmpty());
+    TestFalse(TEXT("cancelled populated re-run clears averaged frame"), ClearedStats.AveragedFrame.IsSet());
+    FixtureSession.Close();
     return true;
 }
 

@@ -8,6 +8,7 @@
 
 #include "Algo/Accumulate.h"
 #include "Containers/ArrayView.h"
+#include "HAL/PlatformTime.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,6 +21,19 @@ namespace ck_multi_frame_report
 
     // The human report gets a readable slice; the JSON carries the full TimerAverageCount rows.
     constexpr int32 MarkdownTimerRows = 25;
+
+    auto GetPercentile(const TArray<double>& InSortedValues, double InPercentile) -> double
+    {
+        if (InSortedValues.Num() == 0) return 0.0;
+        if (InSortedValues.Num() == 1) return InSortedValues[0];
+        const double Index = (InPercentile / 100.0) * (InSortedValues.Num() - 1);
+        const int32 Lower = FMath::FloorToInt32(Index);
+        const int32 Upper = FMath::CeilToInt32(Index);
+        if (Lower == Upper || Upper >= InSortedValues.Num())
+        { return InSortedValues[FMath::Min(Lower, InSortedValues.Num() - 1)]; }
+        const double Fraction = Index - Lower;
+        return InSortedValues[Lower] * (1.0 - Fraction) + InSortedValues[Upper] * Fraction;
+    }
 
     // Identity fields of an averaged frame (root timer, thread) are constant across the frames of
     // any real selection; the vote exists so a malformed frame in the middle cannot redefine them.
@@ -89,6 +103,14 @@ namespace ck_multi_frame_report
         TArray<int32> ChildIndices;
     };
 
+    struct FHotPathMergePool
+    {
+        TArray<FHotPathMergeEntry> Entries;
+        TMap<FHotPathNodeKey, int32> RootIndexByKey;
+        TArray<int32> RootIndices;
+        int32 SelectionFrameCount = 0;
+    };
+
     auto Ingest_HotPathNodes(
         const TArray<TSharedPtr<FCk_HotPathNode>>& InNodes,
         int32 InFrameOrdinal,
@@ -96,13 +118,16 @@ namespace ck_multi_frame_report
         int32 InParentEntryIndex,
         TMap<FHotPathNodeKey, int32>& InOutRootIndexByKey,
         TArray<int32>& InOutRootIndices,
-        TArray<FHotPathMergeEntry>& InOutPool)
-        -> void
+        TArray<FHotPathMergeEntry>& InOutPool,
+        const TAtomic<bool>* InCancelled)
+        -> bool
     {
         const auto IsRootLevel = InParentEntryIndex == INDEX_NONE;
 
         for (const auto& Source : InNodes)
         {
+            if (InCancelled != nullptr && InCancelled->Load())
+            { return false; }
             if (NOT Source.IsValid())
             { continue; }
 
@@ -148,24 +173,65 @@ namespace ck_multi_frame_report
                 Entry.CountSum += static_cast<double>(Source->Count);
             }
 
-            Ingest_HotPathNodes(Source->Children, InFrameOrdinal, InTotalFrames, EntryIndex,
-                InOutRootIndexByKey, InOutRootIndices, InOutPool);
+            if (NOT Ingest_HotPathNodes(Source->Children, InFrameOrdinal, InTotalFrames, EntryIndex,
+                InOutRootIndexByKey, InOutRootIndices, InOutPool, InCancelled))
+            { return false; }
         }
+
+        return true;
     }
 
-    auto Emit_MergedHotPathNode(int32 InEntryIndex, const TArray<FHotPathMergeEntry>& InPool)
+    auto Emit_MergedHotPathNode(
+        int32 InEntryIndex,
+        const TArray<FHotPathMergeEntry>& InPool,
+        int32 InPublishedFrameCount,
+        const TAtomic<bool>* InCancelled)
         -> TSharedPtr<FCk_MergedHotPathNode>
     {
+        if (InCancelled != nullptr && InCancelled->Load())
+        { return nullptr; }
         const auto& Entry = InPool[InEntryIndex];
 
-        auto Node = MakeShared<FCk_MergedHotPathNode>(Entry.Node);
+        auto Node = MakeShared<FCk_MergedHotPathNode>();
+        Node->RawName = Entry.Node.RawName;
+        Node->DisplayName = Entry.Node.DisplayName;
+        Node->Breadcrumbs = Entry.Node.Breadcrumbs;
+        Node->bIsAggregate = Entry.Node.bIsAggregate;
+        if (InPublishedFrameCount > 0)
+        {
+            Node->PerFrameInclusiveMs.Append(
+                Entry.Node.PerFrameInclusiveMs.GetData(), InPublishedFrameCount);
+        }
 
-        Node->Children = ck::algo::Transform<TArray<TSharedPtr<FCk_MergedHotPathNode>>>(
-            Entry.ChildIndices,
-            [&InPool](int32 InChildIndex) -> TSharedPtr<FCk_MergedHotPathNode>
-            {
-                return Emit_MergedHotPathNode(InChildIndex, InPool);
-            });
+        auto PresentSamples = TArray<double>{};
+        PresentSamples.Reserve(InPublishedFrameCount);
+        for (const float InclusiveMs : Node->PerFrameInclusiveMs)
+        {
+            if (InCancelled != nullptr && InCancelled->Load()) return nullptr;
+            if (InclusiveMs >= 0.0f) PresentSamples.Add(InclusiveMs);
+        }
+        ck::algo::Sort(PresentSamples);
+        if (InCancelled != nullptr && InCancelled->Load()) return nullptr;
+
+        const double Denominator = static_cast<double>(InPublishedFrameCount);
+        Node->FramesPresent = static_cast<uint64>(PresentSamples.Num());
+        Node->AvgInclusiveMs = InPublishedFrameCount > 0 ? Entry.InclusiveSumMs / Denominator : 0.0;
+        Node->AvgExclusiveMs = InPublishedFrameCount > 0 ? Entry.ExclusiveSumMs / Denominator : 0.0;
+        Node->AvgCount = InPublishedFrameCount > 0 ? Entry.CountSum / Denominator : 0.0;
+        Node->HitAvgInclusiveMs = PresentSamples.IsEmpty() ? 0.0
+            : Entry.InclusiveSumMs / static_cast<double>(PresentSamples.Num());
+        Node->P95InclusiveMs = GetPercentile(PresentSamples, 95.0);
+        Node->MaxInclusiveMs = PresentSamples.IsEmpty() ? 0.0 : PresentSamples.Last();
+
+        Node->Children.Reserve(Entry.ChildIndices.Num());
+        for (const int32 ChildIndex : Entry.ChildIndices)
+        {
+            if (const auto Child = Emit_MergedHotPathNode(
+                ChildIndex, InPool, InPublishedFrameCount, InCancelled); Child.IsValid())
+            { Node->Children.Add(Child); }
+            else if (InCancelled != nullptr && InCancelled->Load())
+            { return nullptr; }
+        }
 
         ck::algo::Sort(Node->Children,
             [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs,
@@ -348,7 +414,8 @@ auto
 auto
     FCk_MultiFrameReport::
     DoMerge_HotPathTrees(
-        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees)
+        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
+        const TAtomic<bool>* InCancelled)
     -> TArray<TSharedPtr<FCk_MergedHotPathNode>>
 {
     using namespace ck_multi_frame_report;
@@ -366,47 +433,28 @@ auto
 
     for (auto FrameOrdinal = 0; FrameOrdinal < TotalFrames; ++FrameOrdinal)
     {
-        Ingest_HotPathNodes(InPerFrameTrees[FrameOrdinal], FrameOrdinal, TotalFrames, NoParent,
-            RootIndexByKey, RootIndices, Pool);
+        if (NOT Ingest_HotPathNodes(InPerFrameTrees[FrameOrdinal], FrameOrdinal, TotalFrames, NoParent,
+            RootIndexByKey, RootIndices, Pool, InCancelled))
+        { return {}; }
     }
 
-    const auto TotalFramesAsDouble = static_cast<double>(TotalFrames);
-
-    for (auto& Entry : Pool)
+    auto Roots = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+    Roots.Reserve(RootIndices.Num());
+    for (const int32 RootIndex : RootIndices)
     {
-        auto PresentSamples = TArray<double>{};
-        PresentSamples.Reserve(Entry.Node.PerFrameInclusiveMs.Num());
-
-        ck::algo::ForEach(Entry.Node.PerFrameInclusiveMs, [&PresentSamples](float InInclusiveMs)
-        {
-            if (InInclusiveMs >= 0.0f)
-            { PresentSamples.Add(static_cast<double>(InInclusiveMs)); }
-        });
-
-        ck::algo::Sort(PresentSamples);
-
-        Entry.Node.FramesPresent = static_cast<uint64>(PresentSamples.Num());
-        Entry.Node.AvgInclusiveMs = Entry.InclusiveSumMs / TotalFramesAsDouble;
-        Entry.Node.AvgExclusiveMs = Entry.ExclusiveSumMs / TotalFramesAsDouble;
-        Entry.Node.AvgCount = Entry.CountSum / TotalFramesAsDouble;
-        Entry.Node.HitAvgInclusiveMs = PresentSamples.IsEmpty()
-            ? 0.0
-            : Entry.InclusiveSumMs / static_cast<double>(PresentSamples.Num());
-        Entry.Node.P95InclusiveMs = Percentile(PresentSamples, 95.0);
-        Entry.Node.MaxInclusiveMs = PresentSamples.IsEmpty() ? 0.0 : PresentSamples.Last();
+        if (const auto Root = Emit_MergedHotPathNode(RootIndex, Pool, TotalFrames, InCancelled); Root.IsValid())
+        { Roots.Add(Root); }
+        else if (InCancelled != nullptr && InCancelled->Load())
+        { return {}; }
     }
-
-    auto Roots = ck::algo::Transform<TArray<TSharedPtr<FCk_MergedHotPathNode>>>(RootIndices,
-        [&Pool](int32 InRootIndex) -> TSharedPtr<FCk_MergedHotPathNode>
-        {
-            return Emit_MergedHotPathNode(InRootIndex, Pool);
-        });
 
     ck::algo::Sort(Roots,
         [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs, const TSharedPtr<FCk_MergedHotPathNode>& InRhs)
         {
             return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
         });
+    if (InCancelled != nullptr && InCancelled->Load())
+    { return {}; }
 
     return Roots;
 }
@@ -415,14 +463,36 @@ auto
     FCk_MultiFrameReport::
     DoBuild_MergedHotPaths(
         const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
-        const FCk_FrameReportConfig& InPresentationConfig)
+        const FCk_FrameReportConfig& InPresentationConfig,
+        const TAtomic<bool>* InCancelled)
     -> TArray<TSharedPtr<FCk_MergedHotPathNode>>
 {
-    auto Roots = DoMerge_HotPathTrees(InPerFrameTrees);
+    if (InCancelled != nullptr && InCancelled->Load())
+    { return {}; }
+    return DoPresent_MergedHotPaths(DoMerge_HotPathTrees(InPerFrameTrees, InCancelled),
+        InPresentationConfig, InCancelled);
+}
 
-    const auto MakeAggregate = [](const TArray<TSharedPtr<FCk_MergedHotPathNode>>& InHidden)
+auto
+    FCk_MultiFrameReport::
+    DoPresent_MergedHotPaths(
+        TArray<TSharedPtr<FCk_MergedHotPathNode>> Roots,
+        const FCk_FrameReportConfig& InPresentationConfig,
+        const TAtomic<bool>* InCancelled)
+    -> TArray<TSharedPtr<FCk_MergedHotPathNode>>
+{
+    if (InCancelled != nullptr && InCancelled->Load())
+    { return {}; }
+
+    auto WasCancelled = [InCancelled]() -> bool
+    {
+        return InCancelled != nullptr && InCancelled->Load();
+    };
+
+    const auto MakeAggregate = [&WasCancelled](const TArray<TSharedPtr<FCk_MergedHotPathNode>>& InHidden)
         -> TSharedPtr<FCk_MergedHotPathNode>
     {
+        if (WasCancelled()) return nullptr;
         if (InHidden.IsEmpty()) return nullptr;
 
         auto Aggregate = MakeShared<FCk_MergedHotPathNode>();
@@ -435,12 +505,14 @@ auto
 
         for (const auto& Child : InHidden)
         {
+            if (WasCancelled()) return nullptr;
             Aggregate->AvgInclusiveMs += Child->AvgInclusiveMs;
             Aggregate->AvgExclusiveMs += Child->AvgExclusiveMs;
             Aggregate->AvgCount += Child->AvgCount;
 
             for (int32 FrameOrdinal = 0; FrameOrdinal < FrameCount; ++FrameOrdinal)
             {
+                if (WasCancelled()) return nullptr;
                 const auto Value = Child->PerFrameInclusiveMs[FrameOrdinal];
                 if (Value >= 0.0f)
                 {
@@ -453,6 +525,7 @@ auto
         auto PresentSamples = TArray<double>{};
         for (const auto Value : Aggregate->PerFrameInclusiveMs)
         {
+            if (WasCancelled()) return nullptr;
             if (Value >= 0.0f)
             { PresentSamples.Add(Value); }
         }
@@ -470,6 +543,7 @@ auto
 
     const auto FilterChildren = [&](auto&& Self, const TSharedPtr<FCk_MergedHotPathNode>& InParent) -> void
     {
+        if (WasCancelled()) return;
         auto& Children = InParent->Children;
         auto Hidden = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
         auto Visible = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
@@ -484,6 +558,7 @@ auto
 
         for (const auto& Child : Children)
         {
+            if (WasCancelled()) return;
             if (Child->bIsAggregate)
             {
                 Hidden.Add(Child);
@@ -503,14 +578,17 @@ auto
             {
                 return InLhs->AvgInclusiveMs < InRhs->AvgInclusiveMs;
             });
+        if (WasCancelled()) return;
 
         auto HiddenAverageMs = 0.0;
         for (const auto& Child : Hidden)
         {
+            if (WasCancelled()) return;
             HiddenAverageMs += Child->AvgInclusiveMs;
         }
         for (const auto& Child : Subthreshold)
         {
+            if (WasCancelled()) return;
             if (HiddenAverageMs + Child->AvgInclusiveMs <= HiddenBudget)
             {
                 Hidden.Add(Child);
@@ -528,19 +606,23 @@ auto
             {
                 return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
             });
+        if (WasCancelled()) return;
 
         while (Visible.Num() > MaxVisible)
         {
+            if (WasCancelled()) return;
             Hidden.Add(Visible.Pop());
         }
 
         for (const auto& Child : Visible)
         {
             Self(Self, Child);
+            if (WasCancelled()) return;
         }
 
         if (const auto Aggregate = MakeAggregate(Hidden); Aggregate.IsValid())
         { Visible.Add(Aggregate); }
+        if (WasCancelled()) return;
 
         ck::algo::Sort(Visible,
             [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs,
@@ -548,6 +630,7 @@ auto
             {
                 return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
             });
+        if (WasCancelled()) return;
 
         Children = MoveTemp(Visible);
     };
@@ -555,6 +638,7 @@ auto
     for (const auto& Root : Roots)
     {
         FilterChildren(FilterChildren, Root);
+        if (WasCancelled()) return {};
     }
 
     return Roots;
@@ -589,16 +673,18 @@ auto
         TMap<uint32, TArray<double>>& InTimerExclusivePerFrame,
         const TMap<uint32, double>& InTimerInclusiveSum,
         const TMap<uint32, uint64>& InTimerCallSum)
-    -> void
+    -> bool
 {
+    if (DoCancelIfRequested()) return false;
     if (_Config.TimerAverageCount <= 0 || _Stats.FrameCount == 0)
-    { return; }
+    { return true; }
 
     const auto AnalysedFrames = static_cast<int32>(_Stats.FrameCount);
     const auto AnalysedFramesAsDouble = static_cast<double>(_Stats.FrameCount);
 
     for (auto& [TimerIndex, PerFrame] : InTimerExclusivePerFrame)
     {
+        if (DoCancelIfRequested()) return false;
         if (PerFrame.IsEmpty())
         { continue; }
 
@@ -641,9 +727,11 @@ auto
         {
             return InLhs.AvgExclMs > InRhs.AvgExclMs;
         });
+    if (DoCancelIfRequested()) return false;
 
     if (_Stats.TimerAverages.Num() > _Config.TimerAverageCount)
     { _Stats.TimerAverages.SetNum(_Config.TimerAverageCount); }
+    return true;
 }
 
 auto
@@ -673,10 +761,11 @@ auto
 auto
     FCk_MultiFrameReport::
     DoBuild_AveragedFrame(const FAveragedFrameAccumulator& InAccumulator)
-    -> void
+    -> bool
 {
+    if (DoCancelIfRequested()) return false;
     if (_Stats.FrameCount == 0)
-    { return; }
+    { return true; }
 
     const auto AnalysedFrames = static_cast<double>(_Stats.FrameCount);
 
@@ -715,20 +804,23 @@ auto
         Averaged.FrameRootTimerIndex, Averaged.FrameStartTime, Averaged.FrameEndTime, RootDepth});
 
     _Stats.AveragedFrame = MoveTemp(Averaged);
+    return NOT DoCancelIfRequested();
 }
 
 auto
     FCk_MultiFrameReport::
     DoBuild_WaitAverages(const TMap<uint32, FWaitAverageAccumulator>& InPerThread)
-    -> void
+    -> bool
 {
+    if (DoCancelIfRequested()) return false;
     if (_Stats.FrameCount == 0)
-    { return; }
+    { return true; }
 
     const auto AnalysedFrames = static_cast<double>(_Stats.FrameCount);
 
     for (const auto& [ThreadId, Accumulated] : InPerThread)
     {
+        if (DoCancelIfRequested()) return false;
         auto Summary = FCk_WaitThreadSummary{};
         Summary.ThreadId = ThreadId;
         Summary.ThreadName = Accumulated.ThreadName;
@@ -776,6 +868,7 @@ auto
 
             return InLhs.WaitMs > InRhs.WaitMs;
         });
+    return NOT DoCancelIfRequested();
 }
 
 auto
@@ -785,10 +878,15 @@ auto
     -> bool
 {
     _Stats = FCk_MultiFrameStats{};
+    if (DoCancelIfRequested()) return false;
 
     if (NOT Session.IsOpen())
     {
         ck::insights_analyzer::Error(TEXT("MultiFrameReport: Session not open"));
+        return false;
+    }
+    if (NOT Session.IsAnalysisComplete())
+    {
         return false;
     }
 
@@ -815,10 +913,15 @@ auto
     -> bool
 {
     _Stats = FCk_MultiFrameStats{};
+    if (DoCancelIfRequested()) return false;
 
     if (NOT InSession.IsOpen())
     {
         ck::insights_analyzer::Error(TEXT("MultiFrameReport: Session not open"));
+        return false;
+    }
+    if (NOT InSession.IsAnalysisComplete())
+    {
         return false;
     }
 
@@ -846,9 +949,12 @@ auto
 
     _Stats.SelectedRuns = InRuns;
 
-    TraceServices::FAnalysisSessionReadScope ReadScope = InSession.CreateReadScope();
-
-    const auto TimerNames = FCk_FrameReport::BuildTimerNameMap(InSession);
+    auto TimerNames = FCk_FrameReport::FTimerNameMap{};
+    {
+        TraceServices::FAnalysisSessionReadScope ReadScope = InSession.CreateReadScope();
+        TimerNames = FCk_FrameReport::BuildTimerNameMap(InSession);
+    }
+    if (DoCancelIfRequested()) return false;
 
     TMap<FString, TArray<double>> CategoryPerFrame;
 
@@ -870,9 +976,10 @@ auto
     PerFrameHotPathConfig.ShowAllChildren = true;
 
     const auto PerFrameHotPathReport = FCk_FrameReport{PerFrameHotPathConfig};
-    auto PerFrameHotPaths = TArray<TArray<TSharedPtr<FCk_HotPathNode>>>{};
 
     const auto FrameCount = static_cast<uint64>(SelectedFrames.Num());
+    auto HotPathPool = ck_multi_frame_report::FHotPathMergePool{};
+    HotPathPool.SelectionFrameCount = static_cast<int32>(FrameCount);
     _Stats.FrameCount = FrameCount;
     _Stats.FrameDurationsMs.Reserve(FrameCount);
     _Stats.AnalysedFrameIndices.Reserve(FrameCount);
@@ -884,9 +991,75 @@ auto
     TArray<FCk_FrameSummary> AllSummaries;
     AllSummaries.Reserve(FrameCount);
 
+    auto VisitedFrames = uint64{0};
+    auto ProcessedDurationMsSum = 0.0;
+    auto NextProgressPublishSeconds = 0.0;
+    const double ProgressIntervalSeconds = _Config.ProgressIntervalSeconds <= 0.0
+        ? 0.0
+        : FMath::Clamp(_Config.ProgressIntervalSeconds, 0.5, 1.0);
+    const auto EmitProgress = [&](bool InForce) -> bool
+    {
+        if (NOT _Config.OnProgress || DoCancelIfRequested()) return NOT _WasCancelled;
+
+        const double Now = FPlatformTime::Seconds();
+        if (NOT InForce && Now < NextProgressPublishSeconds) return true;
+
+        const double PublishStart = Now;
+        auto Progress = FCk_MultiFrameStats{};
+        Progress.FrameCount = static_cast<uint64>(_Stats.AnalysedFrameIndices.Num());
+        Progress.AnalysedFrameIndices = _Stats.AnalysedFrameIndices;
+        if (Progress.FrameCount == 0) return true;
+        Progress.AvgFrameMs = ProcessedDurationMsSum / static_cast<double>(Progress.FrameCount);
+
+        for (const uint64 Index : Progress.AnalysedFrameIndices)
+        {
+            if (Progress.SelectedRuns.IsEmpty() || Index != Progress.SelectedRuns.Last().LastFrame + 1)
+            { Progress.SelectedRuns.Add({Index, Index}); }
+            else
+            { Progress.SelectedRuns.Last().LastFrame = Index; }
+        }
+
+        if (_Config.BuildMergedHotPaths)
+        {
+            auto Roots = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+            Roots.Reserve(HotPathPool.RootIndices.Num());
+            for (const int32 RootIndex : HotPathPool.RootIndices)
+            {
+                const auto Root = ck_multi_frame_report::Emit_MergedHotPathNode(
+                    RootIndex, HotPathPool.Entries, static_cast<int32>(Progress.FrameCount), _Config.Cancelled);
+                if (NOT Root.IsValid()) return false;
+                Roots.Add(Root);
+            }
+            auto Presentation = FCk_FrameReportConfig{};
+            Presentation.Depth = _Config.Depth;
+            Presentation.TargetFrameMs = _Config.TargetFrameMs;
+            Presentation.ApplyDepth();
+            Presentation.ShowAllChildren = _Config.ShowAllChildren;
+            Progress.MergedHotPaths = DoPresent_MergedHotPaths(MoveTemp(Roots), Presentation, _Config.Cancelled);
+        }
+
+        auto ProgressConfig = _Config;
+        ProgressConfig.OnProgress = {};
+        auto ProgressReport = FCk_MultiFrameReport{ProgressConfig};
+        ProgressReport._Stats.FrameCount = Progress.FrameCount;
+        if (NOT ProgressReport.DoBuild_AveragedFrame(AveragedFrameAccumulator)) return false;
+        Progress.AveragedFrame = MoveTemp(ProgressReport._Stats.AveragedFrame);
+
+        if (DoCancelIfRequested()) return false;
+        _Config.OnProgress(MoveTemp(Progress), FrameCount, VisitedFrames);
+        if (DoCancelIfRequested()) return false;
+
+        const double SnapshotCostSeconds = FPlatformTime::Seconds() - PublishStart;
+        NextProgressPublishSeconds = PublishStart + FMath::Max(ProgressIntervalSeconds, SnapshotCostSeconds * 5.0);
+        return true;
+    };
+
     for (const uint64 FrameIdx : SelectedFrames)
     {
+        ++VisitedFrames;
+        if (DoCancelIfRequested()) return false;
         FCk_FrameAnalysisResult Result = FCk_FrameAnalyzer::AnalyzeFrame(InSession, FrameIdx);
+        if (DoCancelIfRequested()) return false;
         if (NOT Result.IsValid()) continue;
 
         const bool IsScreenshotFrame = DoIs_ScreenshotFrame(Result, TimerNames);
@@ -902,6 +1075,7 @@ auto
 
         const double DurationMs = Result.FrameDurationMs;
         _Stats.FrameDurationsMs.Add(DurationMs);
+        ProcessedDurationMsSum += DurationMs;
 
         // The ordinal space every per-frame series hangs off, appended here so a frame that failed to
         // analyse or was excluded above never takes an ordinal.
@@ -909,8 +1083,14 @@ auto
 
         if (_Config.BuildMergedHotPaths)
         {
-            PerFrameHotPaths.Add(
-                PerFrameHotPathReport.BuildHotPathTree(InSession, Result, TimerNames));
+            if (DoCancelIfRequested()) return false;
+            const int32 ValidFrameOrdinal = _Stats.AnalysedFrameIndices.Num() - 1;
+            const auto Tree = PerFrameHotPathReport.BuildHotPathTree(InSession, Result, TimerNames);
+            if (NOT ck_multi_frame_report::Ingest_HotPathNodes(
+                Tree, ValidFrameOrdinal, HotPathPool.SelectionFrameCount, INDEX_NONE,
+                HotPathPool.RootIndexByKey, HotPathPool.RootIndices, HotPathPool.Entries, _Config.Cancelled))
+            { return false; }
+            if (DoCancelIfRequested()) return false;
         }
 
         auto [DomCost, DomMs] = IdentifyDominantCost(Result, TimerNames);
@@ -970,8 +1150,13 @@ auto
             // No floor: a thread whose wait is negligible on any single frame can still matter once
             // averaged, and filtering is the consumer's call.
             constexpr auto NoWaitFloor = 0.0;
-            const auto FrameWaits =
-                FCk_FrameReport::ComputeWaitSummaries(InSession, Result, NoWaitFloor, TimerNames);
+            auto FrameWaits = TArray<FCk_WaitThreadSummary>{};
+            {
+                TraceServices::FAnalysisSessionReadScope ReadScope = InSession.CreateReadScope();
+                FrameWaits = FCk_FrameReport::ComputeWaitSummaries(
+                    InSession, Result, NoWaitFloor, TimerNames);
+            }
+            if (DoCancelIfRequested()) return false;
 
             ck::algo::ForEach(FrameWaits, [&WaitPerThread](const FCk_WaitThreadSummary& InWait)
             {
@@ -992,7 +1177,11 @@ auto
                     });
             });
         }
+
+        if (NOT EmitProgress(_Stats.AnalysedFrameIndices.Num() == 1)) return false;
     }
+
+    if (NOT EmitProgress(true)) return false;
 
     if (_Stats.FrameDurationsMs.Num() == 0)
     {
@@ -1025,6 +1214,7 @@ auto
     // excluded — ScreenshotFrameIndices reports them so the ranking skip hides nothing.
     for (const FCk_FrameSummary& Candidate : AllSummaries)
     {
+        if (DoCancelIfRequested()) return false;
         if (_Stats.WorstFrames.Num() >= _Config.WorstFrameCount)
         { break; }
         if (Candidate.IsScreenshotFrame)
@@ -1033,6 +1223,7 @@ auto
         _Stats.WorstFrames.Add(Candidate);
 
         FCk_FrameAnalysisResult Analysis = FCk_FrameAnalyzer::AnalyzeFrame(InSession, Candidate.FrameIndex);
+        if (DoCancelIfRequested()) return false;
         if (Analysis.IsValid())
         {
             _Stats.HotFrames.Add(FCk_HotFrameDetails{Candidate, MoveTemp(Analysis)});
@@ -1050,6 +1241,7 @@ auto
 
     for (auto& [CatName, PerFrame] : CategoryPerFrame)
     {
+        if (DoCancelIfRequested()) return false;
         if (PerFrame.Num() == 0) continue;
 
         // Pad with zeros for frames that didn't have this category
@@ -1080,9 +1272,12 @@ auto
         {
             return A.AvgExclMs > B.AvgExclMs;
         });
+    if (DoCancelIfRequested()) return false;
 
-    DoBuild_TimerAverages(TimerNames, TimerExclusivePerFrame, TimerInclusiveSum, TimerCallSum);
-    DoBuild_AveragedFrame(AveragedFrameAccumulator);
+    if (NOT DoBuild_TimerAverages(TimerNames, TimerExclusivePerFrame, TimerInclusiveSum, TimerCallSum))
+    { return false; }
+    if (NOT DoBuild_AveragedFrame(AveragedFrameAccumulator))
+    { return false; }
 
     if (_Config.BuildMergedHotPaths)
     {
@@ -1091,12 +1286,23 @@ auto
         MergedHotPathPresentationConfig.TargetFrameMs = _Config.TargetFrameMs;
         MergedHotPathPresentationConfig.ApplyDepth();
         MergedHotPathPresentationConfig.ShowAllChildren = _Config.ShowAllChildren;
-        _Stats.MergedHotPaths = DoBuild_MergedHotPaths(PerFrameHotPaths, MergedHotPathPresentationConfig);
+        auto Roots = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+        Roots.Reserve(HotPathPool.RootIndices.Num());
+        for (const int32 RootIndex : HotPathPool.RootIndices)
+        {
+            const auto Root = ck_multi_frame_report::Emit_MergedHotPathNode(
+                RootIndex, HotPathPool.Entries, static_cast<int32>(_Stats.FrameCount), _Config.Cancelled);
+            if (NOT Root.IsValid()) return false;
+            Roots.Add(Root);
+        }
+        _Stats.MergedHotPaths = DoPresent_MergedHotPaths(
+            MoveTemp(Roots), MergedHotPathPresentationConfig, _Config.Cancelled);
+        if (DoCancelIfRequested()) return false;
     }
 
     if (_Config.ComputeWaitAverages)
     {
-        DoBuild_WaitAverages(WaitPerThread);
+        if (NOT DoBuild_WaitAverages(WaitPerThread)) return false;
     }
 
     return true;
@@ -1134,6 +1340,21 @@ auto
     return { FString::Printf(TEXT("%s (%s)"), *Category, *SimpleName), MaxExclMs };
 }
 
+auto
+    FCk_MultiFrameReport::
+    DoCancelIfRequested()
+    -> bool
+{
+    if (_Config.Cancelled == nullptr || NOT _Config.Cancelled->Load())
+    {
+        return false;
+    }
+
+    _Stats = FCk_MultiFrameStats{};
+    _WasCancelled = true;
+    return true;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // Public API
 // --------------------------------------------------------------------------------------------------------------------
@@ -1144,10 +1365,14 @@ auto
                        uint64 StartFrame, uint64 EndFrame)
     -> FString
 {
+    _WasCancelled = false;
     if (NOT DoAnalyzeFrameRange(Session, StartFrame, EndFrame))
     {
-        return TEXT("(No frame data to analyze)");
+        const bool WasCancelled = DoCancelIfRequested() || _WasCancelled;
+        _Stats = FCk_MultiFrameStats{};
+        return WasCancelled ? FString{} : TEXT("(No frame data to analyze)");
     }
+    if (DoCancelIfRequested()) return FString{};
     return GenerateReport(Session);
 }
 
@@ -1157,10 +1382,14 @@ auto
                     const TArray<FCk_FrameRun>& InRuns)
     -> FString
 {
+    _WasCancelled = false;
     if (NOT DoAnalyzeFrameSet(InSession, InRuns))
     {
-        return TEXT("(No frame data to analyze)");
+        const bool WasCancelled = DoCancelIfRequested() || _WasCancelled;
+        _Stats = FCk_MultiFrameStats{};
+        return WasCancelled ? FString{} : TEXT("(No frame data to analyze)");
     }
+    if (DoCancelIfRequested()) return FString{};
     return GenerateReport(InSession);
 }
 
@@ -1169,14 +1398,18 @@ auto
     AnalyzeWorstFrames(const FCk_TraceSession& Session, int32 Count)
     -> FString
 {
+    _WasCancelled = false;
     _Config.WorstFrameCount = Count;
 
     constexpr uint64 FromFirstFrame = 0;
     constexpr uint64 ToEndOfTrace = 0;
     if (NOT DoAnalyzeFrameRange(Session, FromFirstFrame, ToEndOfTrace))
     {
-        return TEXT("(No frame data to analyze)");
+        const bool WasCancelled = DoCancelIfRequested() || _WasCancelled;
+        _Stats = FCk_MultiFrameStats{};
+        return WasCancelled ? FString{} : TEXT("(No frame data to analyze)");
     }
+    if (DoCancelIfRequested()) return FString{};
     return GenerateReport(Session);
 }
 
@@ -1186,9 +1419,10 @@ auto
 
 auto
     FCk_MultiFrameReport::
-    GenerateReport(const FCk_TraceSession& Session) const
+    GenerateReport(const FCk_TraceSession& Session)
     -> FString
 {
+    if (DoCancelIfRequested()) return FString{};
     TArray<FString> Lines;
     Lines.Reserve(64);
 
@@ -1311,7 +1545,8 @@ auto
             _Stats.ExcludedScreenshotFrameCount));
     }
 
-    return FString::Join(Lines, TEXT("\n"));
+    const FString Report = FString::Join(Lines, TEXT("\n"));
+    return DoCancelIfRequested() ? FString{} : Report;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
