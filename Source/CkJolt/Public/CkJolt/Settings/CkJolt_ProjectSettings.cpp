@@ -216,6 +216,19 @@ auto
 
 auto
     UCk_Utils_Jolt_ProjectSettings::
+    Get_EditorStaticWorldMode()
+    -> ECk_Jolt_EditorStaticWorldMode
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Jolt_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_Jolt_EditorStaticWorldMode::Disabled; }
+
+    return Settings->Get_EditorStaticWorldMode();
+}
+
+auto
+    UCk_Utils_Jolt_ProjectSettings::
     Get_CookedDataRootPath()
     -> FString
 {
