@@ -328,10 +328,13 @@ namespace ck::groundnav
                     return false;
                 }
 
-                // The query's own refusal, read where the field's admission rule already stopped the
-                // ray and refusing on the same terms - so the walker stays on the plate it was on and
-                // the hit lands on the edge it would have crossed, exactly as a wall's does.
-                if (_DeniedPlates != nullptr &&
+                const auto CrossedATile = NextSurface._TileIndex != _Current._TileIndex;
+                const auto CrossedAPlate = NextSurface._PlateIndex != _Current._PlateIndex;
+
+                // The query's own refusal, fired only on ENTERING a denied plate - a step that stays
+                // on the plate the walker already stands on never blocks, whatever that plate's status.
+                // Reads where the field's admission rule already stopped the ray, refusing on the same terms.
+                if (_DeniedPlates != nullptr && (CrossedATile || CrossedAPlate) &&
                     Get_IsPlateDenied(_Field, *_DeniedPlates, NextSurface))
                 {
                     _Blocked = true;
@@ -340,9 +343,6 @@ namespace ck::groundnav
 
                     return false;
                 }
-
-                const auto CrossedATile = NextSurface._TileIndex != _Current._TileIndex;
-                const auto CrossedAPlate = NextSurface._PlateIndex != _Current._PlateIndex;
 
                 _Current = NextSurface;
                 _Cell += Get_DirectionOffset(Direction);
@@ -689,18 +689,10 @@ namespace ck::groundnav
             return Result;
         }
 
-        // Ahead of the plate early-out, which answers a segment that never leaves the start's own
-        // plate without ever stepping: a ray standing on refused ground has already left the segment
-        // it was asked about, and the early-out would answer Success for exactly that ray.
-        if (Get_IsPlateDenied(InField, InQuery._DeniedPlates, Start._Surface))
-        {
-            Result._Status = ECk_NavSurface_QueryStatus::Blocked;
-            Result._HitLocation = FVector{StartXY.X, StartXY.Y, static_cast<double>(Start._SurfaceZUu)};
-            Result._LastSurface = Start._Surface;
-
-            return Result;
-        }
-
+        // The start plate is never denied: the ray already stands there, and `DoAdvance`'s step check
+        // is what blocks entering a denied plate ahead. A ray that starts on and stays entirely on a
+        // denied plate never enters another one, so it answers Success through the plate early-out
+        // below exactly as it would from any other plate.
         const auto SegmentLengthUu = FVector2D::Distance(StartXY, EndXY);
         const auto CapIsActive = InQuery._MaxCost > 0.0f;
         const auto MaxCost = static_cast<double>(InQuery._MaxCost);
