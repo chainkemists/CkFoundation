@@ -28,6 +28,12 @@ namespace ck_navigation_module
         Table._IsReachable = [](UWorld* InWorld, const FCk_NavSurface_ReachabilityQuery& InQuery)
         { return ck::nav_surface_recast::Get_IsReachable(InWorld, InQuery); };
 
+        Table._FindPathSync = [](UWorld* InWorld, const FCk_NavSurface_PathQuery& InQuery)
+        { return ck::nav_surface_recast::Try_FindPathSync(InWorld, InQuery); };
+
+        Table._FindDistanceToWall = [](UWorld* InWorld, const FCk_NavSurface_WallDistanceQuery& InQuery)
+        { return ck::nav_surface_recast::Try_FindDistanceToWall(InWorld, InQuery); };
+
         Table._SurfaceBounds = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Get_SurfaceBounds(InWorld); };
 

@@ -342,6 +342,11 @@ namespace ck::groundnav
             Query._PlateCostMultipliers = InCost._PlateCostMultipliers;
             Query._UseBakedPlateCost = true;
 
+            // The chord is judged by the same refusal the search routed under, or a shortcut would
+            // cut straight across the ground the corridor exists to avoid - a route the search never
+            // priced and never admitted.
+            Query._DeniedPlates = InCost._DeniedPlates;
+
             return Query;
         }
 

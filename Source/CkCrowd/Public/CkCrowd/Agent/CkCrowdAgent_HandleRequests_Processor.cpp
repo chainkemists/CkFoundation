@@ -22,6 +22,7 @@
 #include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
 #include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
@@ -41,6 +42,99 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_CancelPendingRequests);
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Crowd::HandleRequests"), STAT_CkCrowd_HandleRequestsProc, STATGROUP_CkCrowd);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_crowd_agent_handle_requests
+{
+    /**
+     * What ONE planning phase decides about the filter a route is planned under.
+     *
+     * Provider-neutral on purpose: the phase is the crowd's own idea and the two providers merely
+     * carry it differently — Recast takes the base tag and the override as separate fields it
+     * resolves, GroundNav takes one tag through the neutral filter registry. Deciding it twice, once
+     * per branch, is how the two would drift about what "strict" means for the same agent.
+     */
+    struct FCk_CrowdAgent_PlanPhaseFilter
+    {
+        ECk_CrowdAgent_PlanPhase _Phase = ECk_CrowdAgent_PlanPhase::Permissive;
+
+        FGameplayTag _QueryFilter;
+
+        // Outranks _QueryFilter where it is set, which is the precedence Recast's own resolver applies.
+        FGameplayTag _QueryFilterOverride;
+
+        FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
+        bool _UsesStrictStandingCrowdFilter = false;
+
+        /** The ONE tag a provider carrying a single filter field is planned under. */
+        auto Get_EffectiveQueryFilter() const -> FGameplayTag
+        {
+            return _QueryFilterOverride.IsValid() ? _QueryFilterOverride : _QueryFilter;
+        }
+    };
+
+    /**
+     * The phase decision every FRESH dispatch makes: strict first, because a crowd-free route may
+     * exist now even if it did not a moment ago. The one caller that must not retry strict —
+     * OnPathResolved's strict→permissive fallback — passes InForcePermissive.
+     *
+     * _StrictPlanFailed is deliberately NOT reset here. Only a dispatch carrying NEW evidence retries
+     * strict — a fresh MoveTo, a BlockedRecheck resume (the pack drained), a PathRefresh trigger (a
+     * new disc confirmed), a caller ForceReplan — and those sites reset the flag themselves. The stall
+     * ladder's re-paths carry no new evidence: retrying strict there re-fails against the same plugged
+     * route and doubles every rung's Pending stop-start cycle, which the body visibly tracks (measured
+     * as a facing-whip regression).
+     */
+    auto Get_PlanPhaseFilter(
+        FCk_Handle_CrowdAgent                      InHandle,
+        const ck::FFragment_CrowdAgent_Params&     InParams,
+        const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
+        bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter
+    {
+        auto Filter = FCk_CrowdAgent_PlanPhaseFilter{};
+
+        const auto StationaryStrictWanted =
+            UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
+                ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
+            UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() ==
+                ECk_CrowdStationaryMarkupMode::Enabled;
+
+        const auto StrictWanted = NOT InForcePermissive &&
+            ck::FProcessor_CrowdAgent_HandleRequests::Get_ShouldPlanStrict(InHandle, InPathFollow);
+
+        if (NOT StrictWanted)
+        {
+            Filter._Phase = ECk_CrowdAgent_PlanPhase::Permissive;
+            Filter._UsesStrictStandingCrowdFilter = false;
+            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            Filter._QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+                ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
+            return Filter;
+        }
+
+        Filter._Phase = ECk_CrowdAgent_PlanPhase::Strict;
+        Filter._UsesStrictStandingCrowdFilter = StationaryStrictWanted;
+        Filter._QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+            ECk_CrowdAvoidanceVolume_QueryPhase::Strict);
+
+        if (NOT StationaryStrictWanted)
+        {
+            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            return Filter;
+        }
+
+        if (InParams.Get_NavQueryFilterStrict().IsValid())
+        {
+            Filter._QueryFilter = InParams.Get_NavQueryFilterStrict();
+            return Filter;
+        }
+
+        Filter._QueryFilterOverride = TAG_Nav_Filter_Crowd_AvoidStandingCrowds;
+        return Filter;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -286,13 +380,15 @@ namespace ck
             // for it.)
             InHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
 
-            // The same phase decision ApplyPlanPhase makes, minus the query filter and overlay it
-            // stamps onto a Recast request: a ground path is planned over clearance and cost, and
-            // there is nothing on the request for a filter tag to reach.
-            InPathFollow._PlanPhase = InForcePermissivePlan || NOT Get_ShouldPlanStrict(InHandle, InPathFollow)
-                ? ECk_CrowdAgent_PlanPhase::Permissive
-                : ECk_CrowdAgent_PlanPhase::Strict;
-            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
+            // The SAME phase decision ApplyPlanPhase makes, from the same helper, so the two
+            // providers cannot drift about what a phase means for one agent. GroundNav's request
+            // carries a single filter field, so the strict override collapses onto it through
+            // Get_EffectiveQueryFilter — the precedence Recast's own resolver applies.
+            const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
+                InHandle, InParams, InPathFollow, InForcePermissivePlan);
+
+            InPathFollow._PlanPhase = PlanFilter._Phase;
+            InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
 
             // Cleared, but never rebuilt: the escape prefix escapes painted stationary-crowd markup,
             // which is Recast nav-area markup. GroundNav does not read it, so its plan was never
@@ -319,6 +415,8 @@ namespace ck
             Request.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
             Request.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
             Request.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
+            Request.Set_QueryFilter(PlanFilter.Get_EffectiveQueryFilter());
+            Request.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
             UCk_Utils_GroundNavPath_UE::Request_FindPath(Path, Request, {});
             return;
         }
@@ -436,60 +534,17 @@ namespace ck
             bool InForcePermissive)
         -> void
     {
-        if (InForcePermissive)
-        {
-            InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
-            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
-            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
-            InOutRequest.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                    ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
-            return;
-        }
+        const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
+            InHandle, InParams, InPathFollow, InForcePermissive);
 
-        // _StrictPlanFailed is deliberately NOT reset here. Only a dispatch carrying NEW evidence
-        // retries strict — a fresh MoveTo, a BlockedRecheck resume (the pack drained), a
-        // PathRefresh trigger (a new disc confirmed), a caller ForceReplan — and those sites reset
-        // the flag themselves. The stall ladder's re-paths carry no new evidence: retrying strict
-        // there re-fails against the same plugged route and doubles every rung's Pending stop-start
-        // cycle, which the body visibly tracks (measured as a facing-whip regression).
-        const auto StationaryStrictWanted =
-            UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
-                ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
-            UCk_Utils_Crowd_Settings_UE::Get_StationaryMarkupMode() ==
-                ECk_CrowdStationaryMarkupMode::Enabled;
-        const auto StrictWanted = Get_ShouldPlanStrict(InHandle, InPathFollow);
+        InPathFollow._PlanPhase = PlanFilter._Phase;
+        InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
 
-        if (NOT StrictWanted)
-        {
-            InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Permissive;
-            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
-            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
-            InOutRequest.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                    ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
-            return;
-        }
-
-        InPathFollow._PlanPhase = ECk_CrowdAgent_PlanPhase::Strict;
-        InPathFollow._PlanUsesStrictStandingCrowdFilter = StationaryStrictWanted;
-        InOutRequest.Set_QueryFilterOverlay(
-            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                ECk_CrowdAvoidanceVolume_QueryPhase::Strict));
-
-        if (NOT StationaryStrictWanted)
-        {
-            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilter());
-            return;
-        }
-
-        if (InParams.Get_NavQueryFilterStrict().IsValid())
-        {
-            InOutRequest.Set_QueryFilter(InParams.Get_NavQueryFilterStrict());
-            return;
-        }
-
-        InOutRequest.Set_QueryFilterOverride(TAG_Nav_Filter_Crowd_AvoidStandingCrowds);
+        // All three stamped unconditionally: an unset half of the decision is an empty tag, which is
+        // what the request already carries, so a branch here would only be a second way to say that.
+        InOutRequest.Set_QueryFilter(PlanFilter._QueryFilter);
+        InOutRequest.Set_QueryFilterOverride(PlanFilter._QueryFilterOverride);
+        InOutRequest.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -668,6 +723,7 @@ namespace ck
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
+            Request.Set_AgentRadiusUu(InParams.Get_Radius());
             ApplyMarkupEscapeStart(InHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
