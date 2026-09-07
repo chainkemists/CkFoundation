@@ -111,6 +111,20 @@ struct CKINSIGHTSANALYZER_API FCk_FrameAnalysisResult
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Immutable single-frame data copied while the TraceServices read lock is held.
+ * The result is fully computed after the lock is released and never needs provider access again.
+ */
+struct CKINSIGHTSANALYZER_API FCk_FrameSnapshot
+{
+    FCk_FrameAnalysisResult Result;
+    TMap<uint32, FString> TimerNames;
+    bool IsProvisional = false;
+    FString UnavailableReason;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
  * Per-frame analysis engine.
  *
  * Extracts timing events from a trace session for a specific frame and computes:
@@ -161,6 +175,16 @@ public:
      */
     static auto AnalyzeThread(const FCk_TraceSession& Session, uint32 ThreadId)
         -> FCk_FrameAnalysisResult;
+
+    /**
+     * Copy and analyze one closed game frame without waiting for whole-trace completion.
+     * During parsing only an exact "GameThread" name is accepted; incomplete data defers normally.
+     */
+    static auto TryCaptureFrameSnapshot(const FCk_TraceSession& Session,
+                                        uint64 FrameIndex,
+                                        FCk_FrameSnapshot& OutSnapshot,
+                                        const TAtomic<bool>* Cancelled = nullptr)
+        -> bool;
 
     /**
      * Compute exclusive times from a set of pre-extracted events.
