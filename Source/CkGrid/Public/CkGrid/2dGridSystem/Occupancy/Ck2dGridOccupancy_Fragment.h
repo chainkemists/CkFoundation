@@ -40,6 +40,7 @@ namespace ck
 
     private:
         TMap<FIntPoint, FCk_Handle_2dGridPlacement> _StampedCells;
+        TMap<FIntPoint, FCk_Handle_2dGridPlacement> _DesiredCellsScratch;
 
     public:
         CK_PROPERTY_GET(_StampedCells);

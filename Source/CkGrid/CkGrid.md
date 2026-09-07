@@ -54,4 +54,16 @@ auto WorldPos = UCk_Utils_Grid_UE::Get_CoordinateAsLocation(Coord, CellSize);
 
 ## Tests
 
-No tests found for this module in CkTest.
+`CkTests/Script/CkGrid` covers occupancy, placement and external occupant destruction.
+The native `Ck.Grid.OccupancyScratch.LifecycleAndMapWorkload` test exercises production
+stamping, replacement, destruction cleanup and grid isolation, plus an informational map microbenchmark.
+
+## Occupancy reconciliation
+
+`StampCells` deliberately sweeps every tick: record reverse-links can prune destroyed placements
+without a grid dirty tag, and that must clear the old cell stamps. It builds the desired footprint,
+diffs it against the previous footprint, and publishes the result in the same pass.
+
+A private per-grid scratch map reuses allocation between passes. Displaced placement handles are
+cleared immediately; scratch allocations above 256 KiB are released. This buffer is empty between
+passes and is not snapshot or replication state.
