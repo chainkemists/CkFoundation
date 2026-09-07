@@ -53,10 +53,13 @@ namespace ck_multi_frame_report
     {
         FString RawName;
         TArray<FString> Breadcrumbs;
+        bool IsAggregate = false;
 
         auto operator==(const FHotPathNodeKey& InOther) const -> bool
         {
-            return RawName == InOther.RawName && Breadcrumbs == InOther.Breadcrumbs;
+            return RawName == InOther.RawName
+                && Breadcrumbs == InOther.Breadcrumbs
+                && IsAggregate == InOther.IsAggregate;
         }
     };
 
@@ -68,6 +71,8 @@ namespace ck_multi_frame_report
         {
             Hash = HashCombine(Hash, GetTypeHash(InBreadcrumb));
         });
+
+        Hash = HashCombine(Hash, ::GetTypeHash(InKey.IsAggregate));
 
         return Hash;
     }
@@ -101,7 +106,10 @@ namespace ck_multi_frame_report
             if (NOT Source.IsValid())
             { continue; }
 
-            const auto Key = FHotPathNodeKey{Source->RawName, Source->Breadcrumbs};
+            const auto Key = FHotPathNodeKey{
+                Source->bIsAggregate ? TEXT("(other children)") : Source->RawName,
+                Source->bIsAggregate ? TArray<FString>{} : Source->Breadcrumbs,
+                Source->bIsAggregate};
 
             const auto* Found = IsRootLevel
                 ? InOutRootIndexByKey.Find(Key)
@@ -112,9 +120,9 @@ namespace ck_multi_frame_report
             if (EntryIndex == INDEX_NONE)
             {
                 auto Entry = FHotPathMergeEntry{};
-                Entry.Node.RawName = Source->RawName;
-                Entry.Node.DisplayName = Source->DisplayName;
-                Entry.Node.Breadcrumbs = Source->Breadcrumbs;
+                Entry.Node.RawName = Key.RawName;
+                Entry.Node.DisplayName = Source->bIsAggregate ? TEXT("(other children)") : Source->DisplayName;
+                Entry.Node.Breadcrumbs = Key.Breadcrumbs;
                 Entry.Node.bIsAggregate = Source->bIsAggregate;
                 Entry.Node.PerFrameInclusiveMs.Init(AbsentInclusiveMs, InTotalFrames);
 
@@ -399,6 +407,155 @@ auto
         {
             return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
         });
+
+    return Roots;
+}
+
+auto
+    FCk_MultiFrameReport::
+    DoBuild_MergedHotPaths(
+        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
+        const FCk_FrameReportConfig& InPresentationConfig)
+    -> TArray<TSharedPtr<FCk_MergedHotPathNode>>
+{
+    auto Roots = DoMerge_HotPathTrees(InPerFrameTrees);
+
+    const auto MakeAggregate = [](const TArray<TSharedPtr<FCk_MergedHotPathNode>>& InHidden)
+        -> TSharedPtr<FCk_MergedHotPathNode>
+    {
+        if (InHidden.IsEmpty()) return nullptr;
+
+        auto Aggregate = MakeShared<FCk_MergedHotPathNode>();
+        Aggregate->RawName = TEXT("(other children)");
+        Aggregate->DisplayName = Aggregate->RawName;
+        Aggregate->bIsAggregate = true;
+
+        const auto FrameCount = InHidden[0]->PerFrameInclusiveMs.Num();
+        Aggregate->PerFrameInclusiveMs.Init(ck_multi_frame_report::AbsentInclusiveMs, FrameCount);
+
+        for (const auto& Child : InHidden)
+        {
+            Aggregate->AvgInclusiveMs += Child->AvgInclusiveMs;
+            Aggregate->AvgExclusiveMs += Child->AvgExclusiveMs;
+            Aggregate->AvgCount += Child->AvgCount;
+
+            for (int32 FrameOrdinal = 0; FrameOrdinal < FrameCount; ++FrameOrdinal)
+            {
+                const auto Value = Child->PerFrameInclusiveMs[FrameOrdinal];
+                if (Value >= 0.0f)
+                {
+                    auto& Sum = Aggregate->PerFrameInclusiveMs[FrameOrdinal];
+                    Sum = (Sum < 0.0f ? 0.0f : Sum) + Value;
+                }
+            }
+        }
+
+        auto PresentSamples = TArray<double>{};
+        for (const auto Value : Aggregate->PerFrameInclusiveMs)
+        {
+            if (Value >= 0.0f)
+            { PresentSamples.Add(Value); }
+        }
+        ck::algo::Sort(PresentSamples);
+
+        Aggregate->FramesPresent = PresentSamples.Num();
+        Aggregate->HitAvgInclusiveMs = PresentSamples.IsEmpty()
+            ? 0.0
+            : Aggregate->AvgInclusiveMs * static_cast<double>(FrameCount) / PresentSamples.Num();
+        Aggregate->P95InclusiveMs = Percentile(PresentSamples, 95.0);
+        Aggregate->MaxInclusiveMs = PresentSamples.IsEmpty() ? 0.0 : PresentSamples.Last();
+
+        return Aggregate;
+    };
+
+    const auto FilterChildren = [&](auto&& Self, const TSharedPtr<FCk_MergedHotPathNode>& InParent) -> void
+    {
+        auto& Children = InParent->Children;
+        auto Hidden = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+        auto Visible = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+        auto Subthreshold = TArray<TSharedPtr<FCk_MergedHotPathNode>>{};
+        const auto ParentRelativeFloor =
+            InParent->AvgInclusiveMs * InPresentationConfig.MinChildPctOfParent;
+        const auto Threshold = FMath::Max(InPresentationConfig.MinChildMs, ParentRelativeFloor);
+        const auto HiddenBudget = FMath::Min(InPresentationConfig.MinChildMs, ParentRelativeFloor);
+        const auto MaxVisible = InPresentationConfig.ShowAllChildren
+            ? MAX_int32
+            : FMath::Max(0, InPresentationConfig.MaxVisibleChildren);
+
+        for (const auto& Child : Children)
+        {
+            if (Child->bIsAggregate)
+            {
+                Hidden.Add(Child);
+                continue;
+            }
+            if (NOT InPresentationConfig.ShowAllChildren && Child->AvgInclusiveMs < Threshold)
+            {
+                Subthreshold.Add(Child);
+                continue;
+            }
+            Visible.Add(Child);
+        }
+
+        ck::algo::Sort(Subthreshold,
+            [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs,
+               const TSharedPtr<FCk_MergedHotPathNode>& InRhs)
+            {
+                return InLhs->AvgInclusiveMs < InRhs->AvgInclusiveMs;
+            });
+
+        auto HiddenAverageMs = 0.0;
+        for (const auto& Child : Hidden)
+        {
+            HiddenAverageMs += Child->AvgInclusiveMs;
+        }
+        for (const auto& Child : Subthreshold)
+        {
+            if (HiddenAverageMs + Child->AvgInclusiveMs <= HiddenBudget)
+            {
+                Hidden.Add(Child);
+                HiddenAverageMs += Child->AvgInclusiveMs;
+            }
+            else
+            {
+                Visible.Add(Child);
+            }
+        }
+
+        ck::algo::Sort(Visible,
+            [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs,
+               const TSharedPtr<FCk_MergedHotPathNode>& InRhs)
+            {
+                return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
+            });
+
+        while (Visible.Num() > MaxVisible)
+        {
+            Hidden.Add(Visible.Pop());
+        }
+
+        for (const auto& Child : Visible)
+        {
+            Self(Self, Child);
+        }
+
+        if (const auto Aggregate = MakeAggregate(Hidden); Aggregate.IsValid())
+        { Visible.Add(Aggregate); }
+
+        ck::algo::Sort(Visible,
+            [](const TSharedPtr<FCk_MergedHotPathNode>& InLhs,
+               const TSharedPtr<FCk_MergedHotPathNode>& InRhs)
+            {
+                return InLhs->AvgInclusiveMs > InRhs->AvgInclusiveMs;
+            });
+
+        Children = MoveTemp(Visible);
+    };
+
+    for (const auto& Root : Roots)
+    {
+        FilterChildren(FilterChildren, Root);
+    }
 
     return Roots;
 }
@@ -708,7 +865,9 @@ auto
     PerFrameHotPathConfig.Depth = _Config.Depth;
     PerFrameHotPathConfig.TargetFrameMs = _Config.TargetFrameMs;
     PerFrameHotPathConfig.ApplyDepth();
-    PerFrameHotPathConfig.ShowAllChildren = _Config.ShowAllChildren;
+    // Filtering a single frame loses a child before its selection average can exceed the display
+    // threshold. Retain the complete tree here and filter only after the merge.
+    PerFrameHotPathConfig.ShowAllChildren = true;
 
     const auto PerFrameHotPathReport = FCk_FrameReport{PerFrameHotPathConfig};
     auto PerFrameHotPaths = TArray<TArray<TSharedPtr<FCk_HotPathNode>>>{};
@@ -927,7 +1086,12 @@ auto
 
     if (_Config.BuildMergedHotPaths)
     {
-        _Stats.MergedHotPaths = DoMerge_HotPathTrees(PerFrameHotPaths);
+        auto MergedHotPathPresentationConfig = FCk_FrameReportConfig{};
+        MergedHotPathPresentationConfig.Depth = _Config.Depth;
+        MergedHotPathPresentationConfig.TargetFrameMs = _Config.TargetFrameMs;
+        MergedHotPathPresentationConfig.ApplyDepth();
+        MergedHotPathPresentationConfig.ShowAllChildren = _Config.ShowAllChildren;
+        _Stats.MergedHotPaths = DoBuild_MergedHotPaths(PerFrameHotPaths, MergedHotPathPresentationConfig);
     }
 
     if (_Config.ComputeWaitAverages)
