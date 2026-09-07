@@ -6,6 +6,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h"
 #include "CkNavigation/NavSurface/CkNavSurface_AreaPolicy.h"
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
@@ -63,11 +64,14 @@ namespace ck_crowd_nav_gameplay_tags
             TAG_Nav_Area_Crowd_AvoidanceVolume_CostOnly, UCk_NavArea_CrowdAvoidanceVolume_CostOnly::StaticClass());
         ck::nav_surface_recast::Register_AreaTag(
             TAG_Nav_Area_Crowd_AvoidanceVolume_HardExclude, UCk_NavArea_CrowdAvoidanceVolume_HardExclude::StaticClass());
+    }};
 
+    const auto FilterRegistration = ck::nav_surface::FFilterRegistrar{[]
+    {
         auto StrictDefinition = FCk_NavFilter_Definition{};
         StrictDefinition.Set_ExcludedAreaTags(FGameplayTagContainer{TAG_Nav_Area_Crowd_Agent.GetTag()});
-        ck::nav_surface_recast::Register_FilterDefinition(
-            TAG_Nav_Filter_Crowd_AvoidStandingCrowds, MoveTemp(StrictDefinition));
+        ck::nav_surface::Register_FilterDefinition(
+            TAG_Nav_Filter_Crowd_AvoidStandingCrowds, StrictDefinition);
     }};
 
     const auto PolicyRegistration = ck::nav_surface::FRegistrar{[]
