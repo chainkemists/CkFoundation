@@ -291,9 +291,9 @@ namespace ck::groundnav
         bool _UseBakedPlateCost = false;
 
         // Flat plates this ONE ray may not walk onto, in the same index space the table above uses.
-        // A denied plate stops the ray at the edge it would have crossed, exactly as a wall does, and
-        // a ray that STARTS on one is refused where it stands - the ground is there, this query may
-        // just not use it. A refusal and not a huge multiplier for the reason the search states: a
+        // A denied plate stops the ray at the edge it would have crossed, exactly as a wall does; a
+        // ray that STARTS on one simply walks off it (the ground is there and the body is on it -
+        // only ENTERING denied ground is refused). A refusal and not a huge multiplier for the reason the search states: a
         // price the ray can afford is a route, and "no route through this ground" is not a price.
         TSet<int32> _DeniedPlates;
     };

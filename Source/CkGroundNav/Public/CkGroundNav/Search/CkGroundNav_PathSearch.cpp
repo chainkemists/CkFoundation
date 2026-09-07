@@ -285,14 +285,9 @@ namespace ck::groundnav
         if (StartFlatPlate == INDEX_NONE)
         { return Stop(ECk_GroundNav_PathStatus::NoStartSurface); }
 
-        // Blocked and not NoStartSurface: there IS ground under the body and the field found it - this
-        // query is simply not allowed to use it, which is the same verdict a body wider than the
-        // field's clearance ceiling gets. Reading it as "no surface" would tell a caller the field
-        // has nothing there, and a caller that reacts by rebuilding or re-projecting would be chasing
-        // ground that is already present.
-        if (InQuery._Cost._DeniedPlates.Contains(StartFlatPlate))
-        { return Stop(ECk_GroundNav_PathStatus::Blocked); }
-
+        // The start plate is never denied: the body already stands there, and refusing the ground
+        // under it only strands it. A denied plate is enforced as neighbour admission below, which
+        // means the search may never RE-ENTER it once it leaves - not that it may never begin there.
         const auto GoalFlatPlate = Get_FlatPlateIndex(
             Field, Goal._Surface._TileIndex, Goal._Surface._PlateIndex);
 
