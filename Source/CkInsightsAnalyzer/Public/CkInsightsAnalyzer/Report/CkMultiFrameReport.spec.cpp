@@ -5,6 +5,7 @@
 // sampled through a generated report.
 
 #include "CkInsightsAnalyzer/Report/CkMultiFrameReport.h"
+#include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -502,5 +503,182 @@ bool FCkTest_MultiFrameReport_MergedHotPathDenominator::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_FilterAfterAveraging,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.FilterAfterAveraging",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_FilterAfterAveraging::RunTest(const FString&)
+{
+    using namespace ck_multi_frame_report_tests;
+
+    // Exercise event accounting and the real tree builder, rather than inventing partially
+    // populated timer maps. The variable child crosses the per-frame floor but averages above it.
+    auto Names = FCk_FrameReport::FTimerNameMap{{0, TEXT("Frame")}, {1, TEXT("Scheduler")},
+        {2, TEXT("Variable")}, {3, TEXT("Tiny")}};
+    for (uint32 Index = 10; Index < 22; ++Index)
+    { Names.Add(Index, FString::Printf(TEXT("Steady%u"), Index)); }
+
+    auto Config = FCk_FrameReportConfig{};
+    auto SamplingConfig = Config;
+    SamplingConfig.ShowAllChildren = true;
+    const auto Session = FCk_TraceSession{};
+    auto CompleteTrees = TArray<TArray<TSharedPtr<FCk_HotPathNode>>>{};
+
+    for (const auto VariableMs : {0.2, 1.8})
+    {
+        auto Frame = FCk_FrameAnalysisResult{};
+        Frame.FrameRootTimerIndex = 0;
+        Frame.FrameDurationMs = 30.0;
+        Frame.Events = {{0, 0.0, 0.030, 0}, {1, 0.0, 0.020, 1},
+            {2, 0.0, VariableMs / 1000.0, 2}};
+        auto Cursor = VariableMs / 1000.0;
+        Frame.Events.Add({3, Cursor, Cursor + 0.0001, 2});
+        Cursor += 0.0001;
+        for (uint32 Index = 10; Index < 22; ++Index)
+        {
+            Frame.Events.Add({Index, Cursor, Cursor + 0.0008, 2});
+            Cursor += 0.0008;
+        }
+        FCk_FrameAnalyzer::ComputeExclusiveTimes(Frame.Events, Frame);
+        CompleteTrees.Add(FCk_FrameReport{SamplingConfig}.BuildHotPathTree(Session, Frame, Names));
+    }
+
+    const auto Filtered = FCk_MultiFrameReport::DoBuild_MergedHotPaths(CompleteTrees, Config);
+    const auto ShowAll = FCk_MultiFrameReport::DoBuild_MergedHotPaths(CompleteTrees, SamplingConfig);
+    if (Filtered.Num() != 1 || ShowAll.Num() != 1)
+    {
+        AddError(TEXT("Expected one scheduler root in each presentation"));
+        return false;
+    }
+
+    const auto Variable = Find_MergedChild(Filtered[0], TEXT("Variable"));
+    const auto AllVariable = Find_MergedChild(ShowAll[0], TEXT("Variable"));
+    if (NOT Variable.IsValid() || NOT AllVariable.IsValid())
+    {
+        AddError(TEXT("Variable child missing"));
+        return false;
+    }
+    TestEqual(TEXT("filtering retains both samples"), Variable->FramesPresent, uint64{2});
+    TestTrue(TEXT("displayed mean includes every sample"), FMath::IsNearlyEqual(Variable->AvgInclusiveMs, 1.0));
+    TestEqual(TEXT("show all cannot change the mean"), Variable->AvgInclusiveMs, AllVariable->AvgInclusiveMs);
+    TestTrue(TEXT("show all cannot change the presence series"),
+        Variable->PerFrameInclusiveMs == AllVariable->PerFrameInclusiveMs);
+    for (uint32 Index = 10; Index < 22; ++Index)
+    {
+        TestTrue(TEXT("all twelve significant siblings survive the default filter"),
+            Find_MergedChild(Filtered[0], Names[Index]).IsValid());
+    }
+    TestFalse(TEXT("tiny child is filtered by its displayed mean"),
+        Find_MergedChild(Filtered[0], TEXT("Tiny")).IsValid());
+    TestTrue(TEXT("show all reveals tiny child"), Find_MergedChild(ShowAll[0], TEXT("Tiny")).IsValid());
+    TestEqual(TEXT("twelve steady + variable + one remainder"), Filtered[0]->Children.Num(), 14);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_AggregateIdentityAndSamples,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.AggregateIdentityAndSamples",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_AggregateIdentityAndSamples::RunTest(const FString&)
+{
+    using namespace ck_multi_frame_report_tests;
+    auto First = Make_HotPathNode(TEXT("Parent"), 20.0, 18.0, 1);
+    auto Second = Make_HotPathNode(TEXT("Parent"), 20.0, 16.0, 1);
+    auto RemainderA = Make_HotPathNode(TEXT("(+501 below threshold)"), 2.0, 0.0, 501);
+    auto RemainderB = Make_HotPathNode(TEXT("(+500 below threshold)"), 4.0, 0.0, 500);
+    RemainderA->bIsAggregate = true;
+    RemainderB->bIsAggregate = true;
+    First->Children = {RemainderA};
+    Second->Children = {RemainderB};
+    const auto Merged = FCk_MultiFrameReport::DoMerge_HotPathTrees({{First}, {Second}, {}});
+    if (Merged.Num() != 1 || Merged[0]->Children.Num() != 1)
+    {
+        AddError(TEXT("Changing hidden counts must merge into exactly one remainder per parent"));
+        return false;
+    }
+    const auto Remainder = Merged[0]->Children[0];
+    TestTrue(TEXT("remainder retains aggregate flag"), Remainder->bIsAggregate);
+    TestEqual(TEXT("all-frame mean"), Remainder->AvgInclusiveMs, 2.0);
+    TestEqual(TEXT("presence across count changes"), Remainder->FramesPresent, uint64{2});
+    TestEqual(TEXT("hit average"), Remainder->HitAvgInclusiveMs, 3.0);
+    TestEqual(TEXT("absent ordinal stays absent"), Remainder->PerFrameInclusiveMs[2], -1.0f);
+
+    // A real timer using the same text must not collide with the synthetic row.
+    First->Children.Add(Make_HotPathNode(Remainder->RawName, 1.0, 1.0, 1));
+    const auto Collision = FCk_MultiFrameReport::DoMerge_HotPathTrees({{First}, {Second}});
+    TestEqual(TEXT("aggregate flag is part of identity"), Collision[0]->Children.Num(), 2);
+
+    auto Config = FCk_FrameReportConfig{};
+    Config.MinChildMs = 5.0;
+    Config.MinChildPctOfParent = 1.0;
+    const auto Folded = FCk_MultiFrameReport::DoBuild_MergedHotPaths({{First}, {Second}, {}}, Config);
+    if (Folded.Num() != 1 || Folded[0]->Children.Num() != 1)
+    {
+        AddError(TEXT("Filtered children and existing remainder must form one group"));
+        return false;
+    }
+    const auto Group = Folded[0]->Children[0];
+    TestTrue(TEXT("group mean sums original means"), FMath::IsNearlyEqual(Group->AvgInclusiveMs, 7.0 / 3.0));
+    TestEqual(TEXT("group presence is union, not sum"), Group->FramesPresent, uint64{2});
+    TestEqual(TEXT("group series adds simultaneous samples"), Group->PerFrameInclusiveMs[0], 3.0f);
+    TestEqual(TEXT("group series keeps other sample"), Group->PerFrameInclusiveMs[1], 4.0f);
+    TestEqual(TEXT("group series preserves absent ordinal"), Group->PerFrameInclusiveMs[2], -1.0f);
+    TestEqual(TEXT("group hit average"), Group->HitAvgInclusiveMs, 3.5);
+    TestEqual(TEXT("group maximum"), Group->MaxInclusiveMs, 4.0);
+    TestTrue(TEXT("group p95 is computed from the summed series"), FMath::IsNearlyEqual(Group->P95InclusiveMs, 3.95));
+    TestTrue(TEXT("empty input remains empty"), FCk_MultiFrameReport::DoBuild_MergedHotPaths({}, Config).IsEmpty());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_ThousandCuts,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.ThousandCuts",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_ThousandCuts::RunTest(const FString&)
+{
+    auto Frame = FCk_FrameAnalysisResult{};
+    Frame.FrameRootTimerIndex = 0;
+    Frame.FrameDurationMs = 3.0;
+    Frame.Events = {{0, 0.0, 0.003, 0}, {1, 0.0, 0.002, 1}};
+    auto Names = FCk_FrameReport::FTimerNameMap{{0, TEXT("Frame")}, {1, TEXT("ManySmallChildren")}};
+    for (uint32 Index = 0; Index < 100; ++Index)
+    {
+        const auto Start = static_cast<double>(Index) * 0.00002;
+        Frame.Events.Add({Index + 2, Start, FMath::Min(Start + 0.00002, 0.002), 2});
+        Names.Add(Index + 2, FString::Printf(TEXT("Tiny%u"), Index));
+    }
+    FCk_FrameAnalyzer::ComputeExclusiveTimes(Frame.Events, Frame);
+    const auto Session = FCk_TraceSession{};
+    const auto Config = FCk_FrameReportConfig{};
+    const auto Single = FCk_FrameReport{Config}.BuildHotPathTree(Session, Frame, Names);
+    auto AllConfig = Config;
+    AllConfig.ShowAllChildren = true;
+    const auto Complete = FCk_FrameReport{AllConfig}.BuildHotPathTree(Session, Frame, Names);
+    const auto Merged = FCk_MultiFrameReport::DoBuild_MergedHotPaths({Complete, Complete}, Config);
+    if (Single.Num() != 1 || Merged.Num() != 1)
+    {
+        AddError(TEXT("Expected one 2ms root"));
+        return false;
+    }
+    double SingleVisibleMs = 0.0;
+    for (const auto& Child : Single[0]->Children)
+    {
+        if (NOT Child->bIsAggregate)
+        { SingleVisibleMs += Child->InclusiveMs; }
+    }
+    double MergedVisibleMs = 0.0;
+    for (const auto& Child : Merged[0]->Children)
+    {
+        if (NOT Child->bIsAggregate)
+        { MergedVisibleMs += Child->AvgInclusiveMs; }
+    }
+    TestTrue(TEXT("single-frame tiny children expose at least 97% of parent cost"), SingleVisibleMs >= 1.94 - 0.000001);
+    TestTrue(TEXT("averaged tiny children expose at least 97% of parent cost"), MergedVisibleMs >= 1.94 - 0.000001);
+    return true;
+}
 
 #endif // WITH_DEV_AUTOMATION_TESTS

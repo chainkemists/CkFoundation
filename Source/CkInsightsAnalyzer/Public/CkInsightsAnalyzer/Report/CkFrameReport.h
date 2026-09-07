@@ -50,14 +50,14 @@ struct CKINSIGHTSANALYZER_API FCk_FrameReportConfig
     /** Minimum inclusive time (ms) for a timer to appear in the tree. */
     double MinInclusiveMs = 1.0;
 
-    /** Floor (ms) below which a child folds into the "(+N below threshold)" aggregate row. */
+    /** Individual child floor (ms); also bounds the combined cost allowed to be hidden. */
     double MinChildMs = 0.3;
 
-    /** Fraction of the parent's inclusive time below which a child folds into the aggregate row. */
+    /** Relative child floor; combined hidden cost must fit BOTH this fraction and MinChildMs. */
     double MinChildPctOfParent = 0.03;
 
-    /** Maximum visible children per node; the remainder folds into the aggregate row. */
-    int32 MaxVisibleChildren = 8;
+    /** Optional explicit child cap, overriding the hidden-cost budget. Unlimited by default. */
+    int32 MaxVisibleChildren = MAX_int32;
 
     /**
      * Bypass the child threshold and cap entirely — every child renders and no aggregate rows are
@@ -207,24 +207,25 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
  * One node of a hot-path tree merged across several analysed frames
  * (FCk_MultiFrameReport::DoMerge_HotPathTrees).
  *
- * Identity is (RawName, Breadcrumbs) WITHIN a parent: the same timer legitimately appears under
- * different collapsed wrapper chains, and merging those into one row attributes cost to a call path
- * that never ran.
+ * Identity is (RawName, Breadcrumbs, bIsAggregate) WITHIN a parent: the same timer legitimately
+ * appears under different collapsed wrapper chains, and merging those into one row attributes cost
+ * to a call path that never ran. Aggregate rows use a separate identity from real timers.
  *
  * Statistics contract:
  * - AvgInclusiveMs / AvgExclusiveMs / AvgCount are means over ALL analysed frames — a frame the node
  *   is absent from contributes zero, matching FCk_MultiFrameStats::TimerAverages, so the rows read as
  *   "cost added to a typical frame" and sum toward the frame average.
- * - FramesPresent counts the analysed frames whose OWN hot-path tree contained this node. A node
- *   below that frame's thresholds is absent, so presence means "made that frame's tree", not
- *   "the timer fired".
+ * - FramesPresent counts the analysed frames whose retained per-frame hot-path tree contained this
+ *   node. It means "made that frame's tree", not "the timer fired"; merged presentation filtering
+ *   can later fold the row into an aggregate without changing its source statistics.
  * - HitAvgInclusiveMs is the mean over FramesPresent alone — what the node costs on a frame it shows
  *   up in, which for a spiky node is the number that explains the spike.
  * - P95InclusiveMs / MaxInclusiveMs are over the PRESENT samples only.
  * - PerFrameInclusiveMs is indexed by analysed-frame ORDINAL, parallel to
  *   FCk_MultiFrameStats::AnalysedFrameIndices, and holds a negative value for a frame the node was
  *   absent from — zero would be indistinguishable from a node that ran for no measurable time.
- * - Children are sorted by AvgInclusiveMs descending.
+ * - Children are sorted by AvgInclusiveMs descending. Presentation filtering happens after merging,
+ *   so it evaluates the selection-average rather than one frame's transient child threshold.
  */
 struct CKINSIGHTSANALYZER_API FCk_MergedHotPathNode
 {
