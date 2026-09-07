@@ -285,6 +285,14 @@ namespace ck::groundnav
         if (StartFlatPlate == INDEX_NONE)
         { return Stop(ECk_GroundNav_PathStatus::NoStartSurface); }
 
+        // Blocked and not NoStartSurface: there IS ground under the body and the field found it - this
+        // query is simply not allowed to use it, which is the same verdict a body wider than the
+        // field's clearance ceiling gets. Reading it as "no surface" would tell a caller the field
+        // has nothing there, and a caller that reacts by rebuilding or re-projecting would be chasing
+        // ground that is already present.
+        if (InQuery._Cost._DeniedPlates.Contains(StartFlatPlate))
+        { return Stop(ECk_GroundNav_PathStatus::Blocked); }
+
         const auto GoalFlatPlate = Get_FlatPlateIndex(
             Field, Goal._Surface._TileIndex, Goal._Surface._PlateIndex);
 
@@ -302,6 +310,7 @@ namespace ck::groundnav
         Shared->_SlopePenaltyK = InQuery._Cost._SlopePenaltyK;
         Shared->_ClearanceBiasK = InQuery._Cost._ClearanceBiasK;
         Shared->_PlateCostMultipliers = InQuery._Cost._PlateCostMultipliers;
+        Shared->_DeniedPlates = InQuery._Cost._DeniedPlates;
         Shared->_DeniedLinkIds = InQuery._Cost._DeniedLinkIds;
         Shared->_DeniedLinkUserTypeTags = InQuery._Cost._DeniedLinkUserTypeTags;
         Shared->_LinkCostMultipliers = InQuery._Cost._LinkCostMultipliers;

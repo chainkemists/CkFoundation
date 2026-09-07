@@ -338,6 +338,11 @@ namespace ck::groundnav
             if (Get_IsLinkDenied(*_Shared->_Field, *_Shared, Crossing))
             { continue; }
 
+            // The same refusal about GROUND rather than about a link, and at the same point for the
+            // same reason: a plate this query may not stand on is entered by no door at all.
+            if (_Shared->_DeniedPlates.Contains(Crossing._ToFlatPlate))
+            { continue; }
+
             // Links are exempt: the skip exists so a leg is never walked straight back through the
             // door it came from, and a ladder beside the ramp that was just descended is a
             // genuinely different route between those same two plates rather than that door again.
