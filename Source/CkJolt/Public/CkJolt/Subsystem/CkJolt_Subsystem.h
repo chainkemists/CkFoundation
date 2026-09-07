@@ -51,6 +51,11 @@ public:
     auto
     Deinitialize() -> void override;
 
+protected:
+    // Editor worlds host the Jolt world too when ECk_Jolt_EditorStaticWorldMode is on, so authoring and
+    // cook-time consumers read the same geometry PIE reads.
+    auto DoesSupportWorldType(const EWorldType::Type InWorldType) const -> bool override;
+
 private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
