@@ -8,6 +8,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class FCk_TraceSession;
+struct FCk_MultiFrameStats;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -94,6 +95,24 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
      * always retain all children so their merged averages are complete. Orthogonal to Depth.
      */
     bool ShowAllChildren = false;
+
+    /**
+     * Optional cooperative cancellation signal for asynchronous selection analysis. Cancellation
+     * clears the complete result and returns an empty report; partial aggregate statistics are
+     * never published. The caller owns the signal and keeps it alive for the analysis call. The
+     * default keeps existing synchronous callers unchanged.
+     */
+    const TAtomic<bool>* Cancelled = nullptr;
+
+    /**
+     * Worker-thread progress handoff for completed-trace multi-frame selection. The stats object is
+     * independent of the report's live accumulators and is moved to the callback. RequestedFrames
+     * is the full selection size; VisitedFrames includes selected frames reached so far.
+     */
+    TFunction<void(FCk_MultiFrameStats&&, uint64 RequestedFrames, uint64 VisitedFrames)> OnProgress;
+
+    /** Seconds between progress snapshots. Production values clamp to [0.5, 1.0]; zero is reserved for specs. */
+    double ProgressIntervalSeconds = 0.75;
 
     /** Set all individual fields from Depth. */
     auto ApplyDepth() -> void
@@ -427,7 +446,8 @@ public:
      * Public like DoIs_ValidRunSelection: a pure reduction the spec pins directly.
      */
     static auto DoMerge_HotPathTrees(
-        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees)
+        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
+        const TAtomic<bool>* InCancelled = nullptr)
         -> TArray<TSharedPtr<FCk_MergedHotPathNode>>;
 
     /**
@@ -437,10 +457,18 @@ public:
      */
     static auto DoBuild_MergedHotPaths(
         const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
-        const FCk_FrameReportConfig& InPresentationConfig)
+        const FCk_FrameReportConfig& InPresentationConfig,
+        const TAtomic<bool>* InCancelled = nullptr)
         -> TArray<TSharedPtr<FCk_MergedHotPathNode>>;
 
 private:
+
+    /** Apply the ordinary merged-hot-path presentation filter to independently emitted roots. */
+    static auto DoPresent_MergedHotPaths(
+        TArray<TSharedPtr<FCk_MergedHotPathNode>> InRoots,
+        const FCk_FrameReportConfig& InPresentationConfig,
+        const TAtomic<bool>* InCancelled)
+        -> TArray<TSharedPtr<FCk_MergedHotPathNode>>;
 
     /** Reduce the per-frame timer accumulators into _Stats.TimerAverages. Sorts the exclusive samples in place. */
     auto DoBuild_TimerAverages(
@@ -448,7 +476,7 @@ private:
         TMap<uint32, TArray<double>>& InTimerExclusivePerFrame,
         const TMap<uint32, double>& InTimerInclusiveSum,
         const TMap<uint32, uint64>& InTimerCallSum)
-        -> void;
+        -> bool;
 
     /** Per-frame accumulators for FCk_MultiFrameStats::AveragedFrame. Times stay in SECONDS. */
     struct FAveragedFrameAccumulator
@@ -463,7 +491,7 @@ private:
     };
 
     /** Divide the accumulator by the analysed frame count into _Stats.AveragedFrame. */
-    auto DoBuild_AveragedFrame(const FAveragedFrameAccumulator& InAccumulator) -> void;
+    auto DoBuild_AveragedFrame(const FAveragedFrameAccumulator& InAccumulator) -> bool;
 
     /**
      * Per-thread wait accumulation for FCk_MultiFrameStats::WaitAverages. Scopes are keyed by their
@@ -481,10 +509,13 @@ private:
     };
 
     /** Divide the per-thread wait accumulation by the analysed frame count into _Stats.WaitAverages. */
-    auto DoBuild_WaitAverages(const TMap<uint32, FWaitAverageAccumulator>& InPerThread) -> void;
+    auto DoBuild_WaitAverages(const TMap<uint32, FWaitAverageAccumulator>& InPerThread) -> bool;
 
     /** Generate the markdown report from populated _Stats. */
-    auto GenerateReport(const FCk_TraceSession& Session) const -> FString;
+    auto GenerateReport(const FCk_TraceSession& Session) -> FString;
+
+    /** Clears all output and records cancellation when the configured signal is set. */
+    auto DoCancelIfRequested() -> bool;
 
     /** Compute percentile from a sorted array. */
     static auto Percentile(const TArray<double>& SortedValues, double P) -> double;
@@ -511,6 +542,7 @@ private:
     FCk_MultiFrameReportConfig _Config;
     FCk_MultiFrameStats _Stats;
     FCk_TimerCategorizer _Categorizer;
+    bool _WasCancelled = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
