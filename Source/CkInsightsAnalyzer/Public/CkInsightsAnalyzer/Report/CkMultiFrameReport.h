@@ -90,8 +90,8 @@ struct CKINSIGHTSANALYZER_API FCk_MultiFrameReportConfig
     bool BuildMergedHotPaths = false;
 
     /**
-     * Forwarded into each per-frame hot-path tree build (FCk_FrameReportConfig::ShowAllChildren),
-     * so the merged tree honors the same toggle the single-frame tree does. Orthogonal to Depth.
+     * Bypass child thresholding and the child cap when presenting merged hot paths. Per-frame trees
+     * always retain all children so their merged averages are complete. Orthogonal to Depth.
      */
     bool ShowAllChildren = false;
 
@@ -428,6 +428,16 @@ public:
      */
     static auto DoMerge_HotPathTrees(
         const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees)
+        -> TArray<TSharedPtr<FCk_MergedHotPathNode>>;
+
+    /**
+     * Merge complete per-frame trees, then apply the normal child presentation threshold and cap to
+     * their selection averages. Hidden children and pre-existing reconciliation rows become one
+     * non-expandable aggregate row with correct per-frame statistics.
+     */
+    static auto DoBuild_MergedHotPaths(
+        const TArray<TArray<TSharedPtr<FCk_HotPathNode>>>& InPerFrameTrees,
+        const FCk_FrameReportConfig& InPresentationConfig)
         -> TArray<TSharedPtr<FCk_MergedHotPathNode>>;
 
 private:

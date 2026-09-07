@@ -476,8 +476,9 @@ auto
     const double MinChildMs = _Config.ShowAllChildren
         ? 0.0
         : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
+    // Keep all candidates until their displayed cost and combined hidden cost are known.
     TArray<FChildInfo> Children = GetSignificantChildren(
-        Collapsed.TimerIndex, Result, MinChildMs);
+        Collapsed.TimerIndex, Result, 0.0);
 
     struct FDedupedChild
     {
@@ -523,14 +524,28 @@ auto
     // Deliberately NOT filtered by ShownTimers — each branch shows its full subtree; the check at
     // the top of BuildTreeLines is what prevents infinite recursion.
     const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
+    const double HiddenBudgetMs = FMath::Min(
+        _Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
+    double RemainingChildrenMs = 0.0;
+    for (const FDedupedChild& Child : Deduped)
+    {
+        if (Child.TimerIndex != Collapsed.TimerIndex)
+        { RemainingChildrenMs += Child.InclusiveMs; }
+    }
+
     TArray<FDedupedChild> Visible;
     for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
     {
         if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
+        const auto KeepChild = _Config.ShowAllChildren
+            || Deduped[i].InclusiveMs >= MinChildMs
+            || RemainingChildrenMs > HiddenBudgetMs;
+        if (NOT KeepChild) continue;
+        RemainingChildrenMs -= Deduped[i].InclusiveMs;
         Visible.Add(MoveTemp(Deduped[i]));
     }
 
-    // Reconciliation row (mirrors DoBuildTreeNode): children dropped by the threshold, the 8-child
+    // Reconciliation row (mirrors DoBuildTreeNode): children dropped by the threshold, an explicit child
     // cap, or dedup otherwise read as a silent gap under the parent. Computed before the recursion
     // so the last real child keeps a "├" glyph when the synthetic row takes the "└".
     double ShownChildrenMs = 0.0;
@@ -680,8 +695,9 @@ auto
     const double MinChildMs = _Config.ShowAllChildren
         ? 0.0
         : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
+    // Keep all candidates until their displayed cost and combined hidden cost are known.
     TArray<FChildInfo> Children = GetSignificantChildren(
-        Collapsed.TimerIndex, Result, MinChildMs);
+        Collapsed.TimerIndex, Result, 0.0);
 
     struct FDedupedChild
     {
@@ -725,10 +741,24 @@ auto
     });
 
     const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
+    const double HiddenBudgetMs = FMath::Min(
+        _Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
+    double RemainingChildrenMs = 0.0;
+    for (const FDedupedChild& Child : Deduped)
+    {
+        if (Child.TimerIndex != Collapsed.TimerIndex)
+        { RemainingChildrenMs += Child.InclusiveMs; }
+    }
+
     TArray<FDedupedChild> Visible;
     for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
     {
         if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
+        const auto KeepChild = _Config.ShowAllChildren
+            || Deduped[i].InclusiveMs >= MinChildMs
+            || RemainingChildrenMs > HiddenBudgetMs;
+        if (NOT KeepChild) continue;
+        RemainingChildrenMs -= Deduped[i].InclusiveMs;
         Visible.Add(MoveTemp(Deduped[i]));
     }
 

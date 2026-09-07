@@ -82,8 +82,12 @@ to `Runtime` or introduce gameplay-module dependencies.
   present in a minority of frames sinks under the floor and the tree comes back empty — silently, an
   empty root list rather than an error. The merged edge set is also a union of every frame's edges,
   which is a graph, not a tree. So the tree is built PER FRAME and the trees are merged
-  (`DoMerge_HotPathTrees`) into `FCk_MultiFrameStats::MergedHotPaths`, keyed by (RawName,
-  Breadcrumbs) within a parent. `AveragedFrame->ChildrenOf` is consequently no longer populated and
+  (`DoBuild_MergedHotPaths`) into `FCk_MultiFrameStats::MergedHotPaths`, keyed by (RawName,
+  Breadcrumbs, aggregate-kind) within a parent. Per-frame trees retain all children; presentation
+  thresholds and caps apply after the merge against selection averages. The filter only folds the
+  smallest individually sub-threshold rows while their combined average fits the smaller of the
+  absolute and parent-relative floors, then joins them with any pre-existing reconciliation row in
+  one non-expandable `(other children)` row. `AveragedFrame->ChildrenOf` is consequently no longer populated and
   `BuildHotPathTree` ensures on a synthesized result.
 - **Presence is what the merge adds.** A node's averages divide by every analysed frame (absent
   contributes zero, consistent with `TimerAverages`), while `FramesPresent`, `HitAvgInclusiveMs`, and
