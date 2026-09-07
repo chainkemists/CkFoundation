@@ -23,6 +23,13 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridOccupancy_SyncReplication);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_2d_grid_occupancy_processor
+{
+    constexpr auto DesiredCellsScratchMaxBytes = 256 * 1024;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -34,7 +41,9 @@ namespace ck
         -> void
     {
         auto GridBase = FCk_Handle{InHandle};
-        auto Desired = TMap<FIntPoint, FCk_Handle_2dGridPlacement>{};
+        auto Desired = MoveTemp(InCurrent._DesiredCellsScratch);
+        Desired.Reset();
+
         RecordOf_GridPlacements_Utils::ForEach_ValidEntry(GridBase,
         [&](FCk_Handle_2dGridPlacement InPlacement)
         {
@@ -74,7 +83,14 @@ namespace ck
             Cell.AddOrGet<FFragment_2dGridCell_Occupancy>()._Placement = DesiredPair.Value;
         }
 
-        InCurrent._StampedCells = MoveTemp(Desired);
+        Swap(InCurrent._StampedCells, Desired);
+
+        if (Desired.GetAllocatedSize() > ck_2d_grid_occupancy_processor::DesiredCellsScratchMaxBytes)
+        { Desired.Empty(); }
+        else
+        { Desired.Reset(); }
+
+        InCurrent._DesiredCellsScratch = MoveTemp(Desired);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
