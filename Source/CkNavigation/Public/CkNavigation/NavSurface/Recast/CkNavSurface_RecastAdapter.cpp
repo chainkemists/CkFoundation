@@ -1,13 +1,14 @@
 #include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
 
 #include "CkNavigation/CkNavigation_Log.h"
+#include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment.h"
 #include "CkNavigation/Revision/CkNavigationRevision_Subsystem.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
-#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/World.h>
@@ -23,7 +24,6 @@ namespace ck_nav_surface_recast_adapter
     struct FTables
     {
         TMap<FGameplayTag, TSubclassOf<UNavArea>> AreaClassByTag;
-        TMap<FGameplayTag, FCk_NavFilter_Definition> FilterDefinitionByTag;
     };
 
     auto Get_Tables() -> FTables&
@@ -233,23 +233,6 @@ namespace ck::nav_surface_recast
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        Register_FilterDefinition(
-            const FGameplayTag& InFilterTag,
-            FCk_NavFilter_Definition InDefinition)
-        -> void
-    {
-        const auto RegistrationIsValid = InFilterTag.IsValid();
-        CK_ENSURE_IF_NOT(RegistrationIsValid,
-            TEXT("Rejected nav filter definition registration: invalid tag"))
-        { return; }
-
-        ck_nav_surface_recast_adapter::Get_Tables().FilterDefinitionByTag.Add(
-            InFilterTag, MoveTemp(InDefinition));
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    auto
         Get_AreaClass(
             const FGameplayTag& InAreaTag)
         -> TSubclassOf<UNavArea>
@@ -275,43 +258,6 @@ namespace ck::nav_surface_recast
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
-        TryGet_FilterDefinition(
-            const FGameplayTag& InFilterTag)
-        -> TOptional<FCk_NavFilter_Definition>
-    {
-        if (NOT InFilterTag.IsValid())
-        { return {}; }
-
-        const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Nav_ProjectSettings_UE>();
-        if (ck::IsValid(Settings))
-        {
-            if (const auto* Configured = Settings->Get_QueryFilters().Find(InFilterTag))
-            {
-                const auto* Definition = Configured->LoadSynchronous();
-
-                const auto DefinitionIsValid = ck::IsValid(Definition);
-                CK_ENSURE_IF_NOT(DefinitionIsValid,
-                    TEXT("Nav QueryFilter tag [{}] maps to a filter definition that failed to load — using default filter"),
-                    InFilterTag)
-                { return {}; }
-
-                return Definition->Get_Definition();
-            }
-        }
-
-        const auto& Tables = ck_nav_surface_recast_adapter::Get_SeededTables();
-        if (const auto* Native = Tables.FilterDefinitionByTag.Find(InFilterTag))
-        { return *Native; }
-
-        CK_TRIGGER_ENSURE(
-            TEXT("Nav QueryFilter tag [{}] has no mapping in Ck Navigation project settings — using default filter"),
-            InFilterTag);
-        return {};
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    auto
         Get_CompiledQueryFilter(
             ARecastNavMesh& InNavData,
             const FGameplayTag& InFilterTag,
@@ -326,7 +272,7 @@ namespace ck::nav_surface_recast
             InNavData.GetName())
         { return {}; }
 
-        const auto Definition = TryGet_FilterDefinition(InFilterTag);
+        const auto Definition = ck::nav_surface::TryGet_FilterDefinition(InFilterTag);
         if (NOT Definition.IsSet() && InOverlay.Get_ExcludedAreaTags().IsEmpty())
         { return BaseFilter; }
 
@@ -404,7 +350,8 @@ namespace ck::nav_surface_recast
             return Result;
         }
 
-        const auto QueryFilter = Get_CompiledQueryFilter(*NavData, InQuery.Get_QueryFilter(), {});
+        const auto QueryFilter = Get_CompiledQueryFilter(
+            *NavData, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
         if (NOT QueryFilter.IsValid())
         {
             Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
@@ -621,6 +568,183 @@ namespace ck::nav_surface_recast
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // _MaxExpansions and _MaxCorridorLength ARE IGNORED HERE, as the query struct says: Detour's
+    // synchronous find takes neither ceiling. Nothing is silently substituted for them - a bounded
+    // query is answered unbounded, which is why the neutral query carries no wall-clock budget that
+    // one provider could honour and the other could not.
+    //
+    // _AgentRadiusUu IS ALSO IGNORED HERE, by design: Detour always uses the navmesh's own baked
+    // agent, at any value - AgentRadiusForFirstSkip below is a distinct zero for the skip-first pass
+    // and is not where a caller's radius would go if this provider read it.
+    auto
+        Try_FindPathSync(
+            UWorld* InWorld,
+            const FCk_NavSurface_PathQuery& InQuery)
+        -> FCk_NavSurface_PathResult
+    {
+        auto Result = FCk_NavSurface_PathResult{};
+
+        auto* NavSys = TryGet_NavSystem(InWorld);
+        auto* NavData = TryGet_NavData(InWorld);
+        if (NavSys == nullptr || NavData == nullptr)
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+            return Result;
+        }
+
+        const auto Extent = ck_nav_surface_recast_adapter::Get_ProjectionExtent(InQuery.Get_SearchHalfExtents());
+
+        const auto AllowPartial = InQuery.Get_AllowPartial() == ECk_EnableDisable::Enable;
+
+        // Zero, deliberately: the skip-first pass drops a waypoint the ASKING BODY already stands on,
+        // and a query carries no body. A consumer that wants it drops the waypoint itself, against
+        // where its body actually is.
+        constexpr auto AgentRadiusForFirstSkip = 0.0f;
+
+        // This provider's own corner treatment IS the navmesh's baked agent radius - it is what every
+        // direct Detour caller passed by hand, and so what ProviderDefault has to keep meaning here.
+        const auto CornerOffsetDistanceUu = [&]() -> float
+        {
+            switch (InQuery.Get_CornerOffset())
+            {
+                case ECk_NavSurface_CornerOffset::None:
+                { return 0.0f; }
+                case ECk_NavSurface_CornerOffset::Explicit:
+                { return InQuery.Get_CornerOffsetDistanceUu(); }
+                case ECk_NavSurface_CornerOffset::ProviderDefault:
+                default:
+                { return NavData->GetConfig().AgentRadius; }
+            }
+        }();
+
+        auto NavResult = FCk_Nav_PathResult{};
+
+        FCk_Nav_Algorithm::FindPathSync(
+            *NavSys,
+            *NavData,
+            InQuery.Get_Start(),
+            InQuery.Get_End(),
+            AllowPartial,
+            static_cast<float>(Extent.X),
+            static_cast<float>(Extent.Z),
+            AgentRadiusForFirstSkip,
+            NavResult,
+            InQuery.Get_QueryFilter(),
+            CornerOffsetDistanceUu,
+            InQuery.Get_QueryFilterOverlay());
+
+        const auto& Diagnostics = NavResult.Get_Diagnostics();
+
+        Result.Set_StartProjected(Diagnostics.Get_LastProjectedStart());
+        Result.Set_EndProjected(Diagnostics.Get_LastProjectedEnd());
+
+        switch (NavResult.Get_Status())
+        {
+            case ECk_Nav_PathStatus::Ready:
+            {
+                Result.Set_Status(ECk_NavSurface_QueryStatus::Success);
+                break;
+            }
+            case ECk_Nav_PathStatus::Partial:
+            {
+                // A partial answer nobody asked for is not a shorter route, it is no route. Refused
+                // rather than handed over, which is the same rule GroundNav's side keeps.
+                Result.Set_Status(AllowPartial
+                    ? ECk_NavSurface_QueryStatus::Success
+                    : ECk_NavSurface_QueryStatus::Blocked);
+                Result.Set_IsPartial(AllowPartial);
+                break;
+            }
+            default:
+            {
+                switch (Diagnostics.Get_LastFailReason())
+                {
+                    case ECk_Nav_PathFailReason::NoNavSystem:
+                    case ECk_Nav_PathFailReason::NoNavData:
+                    case ECk_Nav_PathFailReason::NoDefaultFilter:
+                    {
+                        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+                        break;
+                    }
+                    case ECk_Nav_PathFailReason::StartProjectFailed:
+                    case ECk_Nav_PathFailReason::EndProjectFailed:
+                    {
+                        // The same split Try_ProjectPoint above makes, for the same reason: ground
+                        // nobody has baked yet is worth waiting for and ground with nowhere to stand
+                        // on it is not, and a consumer defers on one and gives up on the other.
+                        Result.Set_Status(Get_IsBuildInProgress(InWorld)
+                            ? ECk_NavSurface_QueryStatus::Unbuilt
+                            : ECk_NavSurface_QueryStatus::NoSurface);
+                        break;
+                    }
+                    default:
+                    {
+                        Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+                        break;
+                    }
+                }
+
+                return Result;
+            }
+        }
+
+        auto Waypoints = NavResult.Get_Waypoints();
+
+        auto LengthUu = 0.0;
+        for (auto Index = 1; Index < Waypoints.Num(); ++Index)
+        { LengthUu += FVector::Dist(Waypoints[Index - 1], Waypoints[Index]); }
+
+        Result.Set_LengthUu(static_cast<float>(LengthUu));
+        Result.Set_Waypoints(MoveTemp(Waypoints));
+
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Try_FindDistanceToWall(
+            UWorld* InWorld,
+            const FCk_NavSurface_WallDistanceQuery& InQuery)
+        -> FCk_NavSurface_WallDistanceResult
+    {
+        auto Result = FCk_NavSurface_WallDistanceResult{};
+
+        auto* NavData = TryGet_NavData(InWorld);
+        if (NavData == nullptr)
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+            return Result;
+        }
+
+        const auto QueryFilter = Get_CompiledQueryFilter(
+            *NavData, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
+        if (NOT QueryFilter.IsValid())
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+            return Result;
+        }
+
+        // Detour reports "no wall in range" by leaving the out point untouched, so the sentinel has to
+        // be a value it could never write. A bool the consumer can read is what replaces it here.
+        const auto SentinelValue = TNumericLimits<FVector::FReal>::Max();
+        auto ClosestWall = FVector{SentinelValue, SentinelValue, SentinelValue};
+
+        const auto DistanceUu = NavData->FindDistanceToWall(
+            InQuery.Get_Location(), QueryFilter, InQuery.Get_MaxRadiusUu(), &ClosestWall);
+
+        const auto FoundWall = ClosestWall.X != SentinelValue;
+
+        Result.Set_Status(ECk_NavSurface_QueryStatus::Success);
+        Result.Set_FoundWall(FoundWall);
+        Result.Set_DistanceUu(FoundWall ? static_cast<float>(DistanceUu) : 0.0f);
+        Result.Set_ClosestWallPoint(FoundWall ? ClosestWall : FVector::ZeroVector);
+
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         Get_SurfaceBounds(
             UWorld* InWorld)
@@ -643,7 +767,17 @@ namespace ck::nav_surface_recast
         if (ck::Is_NOT_Valid(InWorld))
         { return ECk_NavSurface_ProviderHealth::Error; }
 
-        if (TryGet_NavData(InWorld) == nullptr)
+        auto* NavData = TryGet_NavData(InWorld);
+        if (NavData == nullptr)
+        { return ECk_NavSurface_ProviderHealth::NoData; }
+
+        // An actor with no Detour mesh under it is data nobody can query, so it answers NoData rather
+        // than Ready. This is the guard every direct-Recast caller used to carry itself - the
+        // `NavData == nullptr || NOT NavData->HasValidNavmesh()` pair that stood at
+        // CkPathNetwork_Processor.cpp's Resolve_OffPathLeg, Try_ResolvePathOntoNavmesh and
+        // Try_ResolvePathOntoNavmeshWithRibbonConstraints - restated once, here, where the facade can
+        // answer it for every provider's consumers at the same time.
+        if (NOT NavData->HasValidNavmesh())
         { return ECk_NavSurface_ProviderHealth::NoData; }
 
         return Get_IsBuildInProgress(InWorld)
