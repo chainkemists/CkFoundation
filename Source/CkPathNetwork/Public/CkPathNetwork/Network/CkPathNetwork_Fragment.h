@@ -104,6 +104,8 @@ namespace ck
         FCk_Handle_PathNetwork _Network;
         FGameplayTag _NavQueryFilter;
         FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+        // The radius the corridor was planned for; restored onto a replan request.
+        float _AgentRadiusUu = 0.0f;
         int32 _NetworkEpoch = 0;
 
     public:
@@ -111,6 +113,7 @@ namespace ck
         CK_PROPERTY_GET(_Network);
         CK_PROPERTY_GET(_NavQueryFilter);
         CK_PROPERTY_GET(_QueryFilterOverlay);
+        CK_PROPERTY_GET(_AgentRadiusUu);
         CK_PROPERTY_GET(_NetworkEpoch);
     };
 

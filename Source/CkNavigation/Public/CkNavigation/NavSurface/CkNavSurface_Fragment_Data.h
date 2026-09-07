@@ -118,8 +118,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_NavSurface_ProjectionMode _Mode = ECk_NavSurface_ProjectionMode::Closest;
 
+    // Honoured on Recast; ignored on GroundNav, which has no filter vocabulary yet (P5-B1-F).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _QueryFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
     // Which class of walker is asking. Empty - the default - is the provider's untagged surface, which
     // is the only one a provider is obliged to have; a tag names a surface baked for a profile that
@@ -134,6 +138,7 @@ public:
     CK_PROPERTY(_SearchHalfExtents);
     CK_PROPERTY(_Mode);
     CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_QueryFilterOverlay);
     CK_PROPERTY(_ProfileTag);
 
 public:
@@ -249,12 +254,24 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _ProfileTag;
 
+    // What the segment may cost before the ray refuses it: the traversal cost the ground under it is
+    // priced at, accumulated over the length walked. Zero is uncapped, which is what every caller
+    // before this field asked for.
+    //
+    // IGNORED ON RECAST, and said here rather than left to be discovered: a Detour raycast answers
+    // walkability and carries no cost accumulation to compare a cap against, so a capped query is
+    // answered uncapped there. A caller that needs the cap honoured has to be on a provider that
+    // prices ground per query.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _MaxCost = 0.0f;
+
 public:
     CK_PROPERTY_GET(_Start);
     CK_PROPERTY_GET(_End);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_QueryFilterOverlay);
     CK_PROPERTY(_ProfileTag);
+    CK_PROPERTY(_MaxCost);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_RaycastQuery, _Start, _End);
@@ -410,6 +427,232 @@ private:
 
 public:
     CK_PROPERTY(_Reachability);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_NavSurface_CornerOffset : uint8
+{
+    // Whatever this provider already does to a corner, named by the provider and not by the query
+    ProviderDefault,
+    // Raw corners, on every provider
+    None,
+    // The distance the query names, on every provider
+    Explicit
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NavSurface_CornerOffset);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// One synchronous route between two points, answered inside the call. Deliberately NOT the episode
+// vocabulary: a query carries no revision, no pending age and no diagnostics, because it has no
+// episode to carry them for.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_NavSurface_PathQuery
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_NavSurface_PathQuery);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FVector _Start = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FVector _End = FVector::ZeroVector;
+
+    // Honoured on Recast; ignored on GroundNav, which has no filter vocabulary yet (P5-B1-F).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _QueryFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
+    // Enabled: a search that cannot reach the end answers Success with the route to the closest
+    // point it did reach, and _IsPartial says so. Disabled: that same search answers Blocked with
+    // nothing, because a truncated route walked as a whole one walks into a wall.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _AllowPartial = ECk_EnableDisable::Disable;
+
+    // The two ceilings a search may not exceed - the work it may do, and the length of the answer it
+    // may return. Zero is unbounded on each. There is deliberately no wall-clock budget: a Detour
+    // FindPathSync cannot honour one, and a budget one provider ignores is worse than no budget.
+    //
+    // BOTH ARE IGNORED ON RECAST, and said here rather than left to be discovered: Detour's
+    // synchronous find takes neither ceiling, so a bounded query is answered unbounded there. The
+    // per-frame ceiling a consumer really has stays where it already is - in the consumer.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _MaxExpansions = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    int32 _MaxCorridorLength = 0;
+
+    // 0 = the provider's own agent - IGNORED ON RECAST, whose synchronous find always uses the
+    // navmesh's own baked agent at any value. GroundNav clamps its clearance filtering to this
+    // radius when it is set, and to none at zero (every walkable cell admitted, exactly as
+    // FCk_Fragment_GroundNavPath_ParamsData::_AgentRadiusUu already documents).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _AgentRadiusUu = 0.0f;
+
+    // WHICH corner treatment the route gets. A policy rather than a magic distance, because a
+    // distance cannot say "whatever this provider already does" and "nothing at all" in the same
+    // channel.
+    //
+    // ProviderDefault is the provider's own treatment: Recast offsets by the agent radius its navmesh
+    // was baked with (ARecastNavMesh::GetConfig().AgentRadius), which is what every direct Detour
+    // caller passed by hand before this facade existed; GroundNav offsets by its default corner
+    // multiple times _AgentRadiusUu, and so by nothing at all when the query named no radius, because
+    // a multiple has no distance to be a multiple of. None is raw corners on BOTH. Explicit is the
+    // distance _CornerOffsetDistanceUu names, on BOTH.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_CornerOffset _CornerOffset = ECk_NavSurface_CornerOffset::ProviderDefault;
+
+    // How far an interior corner of the route is pushed off the wall it bends around, in uu.
+    //
+    // READ ONLY UNDER _CornerOffset == Explicit, and ignored entirely under the other two - a
+    // distance beside a policy that did not ask for one is not a quieter policy. GroundNav divides it
+    // by _AgentRadiusUu to reach the multiple its post-process takes.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _CornerOffsetDistanceUu = 0.0f;
+
+    // The box each end is resolved onto the surface with. Zero opts into the project-wide projection
+    // extent, exactly as FCk_NavSurface_ProjectionQuery::_SearchHalfExtents does.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FVector _SearchHalfExtents = FVector::ZeroVector;
+
+public:
+    CK_PROPERTY_GET(_Start);
+    CK_PROPERTY_GET(_End);
+    CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_ProfileTag);
+    CK_PROPERTY(_AllowPartial);
+    CK_PROPERTY(_MaxExpansions);
+    CK_PROPERTY(_MaxCorridorLength);
+    CK_PROPERTY(_AgentRadiusUu);
+    CK_PROPERTY(_CornerOffset);
+    CK_PROPERTY(_CornerOffsetDistanceUu);
+    CK_PROPERTY(_SearchHalfExtents);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_PathQuery, _Start, _End);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Success means _Waypoints is a route the caller may walk - the whole way when _IsPartial is false,
+// and as far as the search reached when it is true. Every other status answers with no waypoints at
+// all: a route that is not a route is never a shorter route.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_NavSurface_PathResult
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_NavSurface_PathResult);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoProvider;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TArray<FVector> _Waypoints;
+
+    // The two ends as the provider resolved them onto its surface, which is what the route actually
+    // runs between and is not what the query asked for.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _StartProjected = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _EndProjected = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _IsPartial = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _LengthUu = 0.0f;
+
+public:
+    CK_PROPERTY(_Status);
+    CK_PROPERTY(_Waypoints);
+    CK_PROPERTY(_StartProjected);
+    CK_PROPERTY(_EndProjected);
+    CK_PROPERTY(_IsPartial);
+    CK_PROPERTY(_LengthUu);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How far the nearest wall is from a point, and where it is. Its own capability rather than a mode of
+// the boundary query: that one answers RUNS, so a consumer asking for one wall would have to
+// re-implement the nearest-run search itself and could not express the radius-bounded early-out.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_NavSurface_WallDistanceQuery
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_NavSurface_WallDistanceQuery);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FVector _Location = FVector::ZeroVector;
+
+    // How far the search may look. A wall beyond it is not reported, which is what makes the query
+    // bounded rather than a whole-surface scan.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    float _MaxRadiusUu = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _QueryFilter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
+    /** Which class of walker is asking. See FCk_NavSurface_ProjectionQuery::_ProfileTag. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
+public:
+    CK_PROPERTY_GET(_Location);
+    CK_PROPERTY_GET(_MaxRadiusUu);
+    CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_ProfileTag);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_NavSurface_WallDistanceQuery, _Location, _MaxRadiusUu);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// _FoundWall is the answer, and _DistanceUu is only meaningful when it is true: a point with open
+// floor all around it inside the radius is a Success that found nothing, and a consumer that read the
+// distance alone could not tell that from a wall exactly at the radius.
+USTRUCT(BlueprintType)
+struct CKNAVIGATION_API FCk_NavSurface_WallDistanceResult
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_NavSurface_WallDistanceResult);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_NavSurface_QueryStatus _Status = ECk_NavSurface_QueryStatus::NoProvider;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _DistanceUu = 0.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _ClosestWallPoint = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _FoundWall = false;
+
+public:
+    CK_PROPERTY(_Status);
+    CK_PROPERTY(_DistanceUu);
+    CK_PROPERTY(_ClosestWallPoint);
+    CK_PROPERTY(_FoundWall);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
