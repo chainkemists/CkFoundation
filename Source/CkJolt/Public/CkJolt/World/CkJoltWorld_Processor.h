@@ -38,6 +38,11 @@ namespace ck
     public:
         using Group = FGroup_Transform;
         using RunAfter = TDepList<FProcessor_Transform_HandleRequests>;
+        // An Editor world with the static world enabled answers queries from static bodies and never steps
+        // (the cook commandlet is the precedent - it drives the same bodies with no tick loop), so the step
+        // quartet is runtime-only by construction; the editor-world sweep and edit hooks add/remove bodies
+        // through the subsystem's public requests, not through a step.
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     private:
         using Super = TProcessorBase;
@@ -79,6 +84,7 @@ namespace ck
     public:
         using Group = FGroup_Transform;
         using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync>;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     private:
         using Super = TProcessorBase;
@@ -101,6 +107,7 @@ namespace ck
     public:
         using Group = FGroup_Transform;
         using RunAfter = TDepList<FProcessor_JoltWorld_DrainEvents>;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     private:
         using Super = TProcessorBase;
@@ -124,6 +131,7 @@ namespace ck
         using Group = FGroup_Transform;
         // After BOTH, so this frame's ECS-driven kinematic targets and character intents ride the same step.
         using RunAfter = TDepList<FProcessor_JoltBody_KinematicPush, FProcessor_JoltCharacter_PreStep>;
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     private:
         using Super = TProcessorBase;

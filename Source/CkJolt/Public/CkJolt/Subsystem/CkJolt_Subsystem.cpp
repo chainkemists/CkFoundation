@@ -4,6 +4,7 @@
 #include "CkCore/Diagnostics/CkDiagnosticVisibility.h"
 
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkJolt/Body/CkJoltBody_ContactRouter.h"
@@ -512,7 +513,17 @@ auto
         -> void
 {
     Super::Initialize(InCollection);
-    _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
+
+    // Which ECS world owns this world's registry depends on the world type, and the dependency also buys the
+    // init ordering that keeps that registry alive past this subsystem — the Jolt world is published into it.
+    const auto IsEditorWorld = GetWorld()->WorldType == EWorldType::Editor;
+
+    if (IsEditorWorld)
+    { InCollection.InitializeDependency<UCk_EditorEcsWorld_Subsystem_UE>(); }
+    else
+    { _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>(); }
+
+    auto EcsRegistry = UCk_Utils_EcsWorld_Subsystem_UE::TryGet_RegistryForWorld(*GetWorld());
 
     using namespace JPH;
 
@@ -671,8 +682,8 @@ auto
     _ContactListener = MakePimpl<CkContactListener>();
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
-    _EcsWorldSubsystem->Get_Registry().SetContext<TWeakPtr<JPH::PhysicsSystem>>(_PhysicsSystem);
-    _EcsWorldSubsystem->Get_Registry().SetContext<ck::jolt::FCk_Jolt_LayerContext>(
+    EcsRegistry.SetContext<TWeakPtr<JPH::PhysicsSystem>>(_PhysicsSystem);
+    EcsRegistry.SetContext<ck::jolt::FCk_Jolt_LayerContext>(
         ck::jolt::FCk_Jolt_LayerContext{_LayerTable.Get(), _LayerTable->Get_ProbeLayer()});
 
     _AsyncPhysicsUpdate = ck_jolt_subsystem::ResolveCVarOverride(
@@ -709,7 +720,7 @@ auto
         },
     });
 
-    _EcsWorldSubsystem->Get_Registry().SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
+    EcsRegistry.SetContext<TSharedPtr<ck::FJoltWorld>>(_JoltWorld);
 
     // The world is built after the listener, so the counter it feeds can only be wired here. Cleared in
     // Deinitialize is unnecessary — the listener is destroyed first.
@@ -752,6 +763,11 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_SubsystemTick);
     Super::Tick(InDeltaTime);
+
+    // An Editor world hosts the Jolt world as a geometry surface for authoring and cook-time reads; the
+    // in-world debug draw below is a game-viewport concern with no consumer there.
+    if (GetWorld()->WorldType == EWorldType::Editor)
+    { return; }
 
     // Only the debug draw lives here; the physics step runs in the FGroup_Transform processors. This
     // Tick and the ECS group order are unpinned, so the draw may lag the step by one frame — accepted.
@@ -848,6 +864,17 @@ auto
     ck::jolt::Request_GlobalJoltShutdown();
 
     Super::Deinitialize();
+}
+
+auto
+    UCk_Jolt_Subsystem::
+    DoesSupportWorldType(
+        const EWorldType::Type InWorldType) const
+        -> bool
+{
+    return Super::DoesSupportWorldType(InWorldType) ||
+        (InWorldType == EWorldType::Editor &&
+            UCk_Utils_Jolt_ProjectSettings::Get_EditorStaticWorldMode() != ECk_Jolt_EditorStaticWorldMode::Disabled);
 }
 
 auto
@@ -1179,7 +1206,15 @@ auto
     const auto* EcsWorldSubsystem = _EcsWorldSubsystem.Get();
 
     if (ck::Is_NOT_Valid(EcsWorldSubsystem))
-    { return {}; }
+    {
+        // An Editor world has no runtime ECS subsystem to cache; the seam resolves whichever one it does have.
+        auto* World = GetWorld();
+
+        if (ck::Is_NOT_Valid(World))
+        { return {}; }
+
+        return UCk_Utils_EcsWorld_Subsystem_UE::TryGet_TransientEntityForWorld(*World);
+    }
 
     return EcsWorldSubsystem->Get_TransientEntity();
 }

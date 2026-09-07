@@ -92,6 +92,11 @@ public:
     OnWorldBeginPlay(
         UWorld& InWorld) -> void override;
 
+protected:
+    // Follows UCk_Jolt_Subsystem into Editor worlds when ECk_Jolt_EditorStaticWorldMode is on — the static
+    // world IS the geometry an editor-time or cook-time consumer reads.
+    auto DoesSupportWorldType(const EWorldType::Type InWorldType) const -> bool override;
+
 public:
     auto
     Get_NumStaticBodies() const -> int32;
@@ -104,6 +109,13 @@ public:
     Get_RayCastStaticWorld(
         const FVector& InStart,
         const FVector& InEnd) const -> ck::jolt::FCk_Jolt_StaticWorldRayHit;
+
+    /// Runs this world's one-time initial sweep of its levels if it has not run yet, and does nothing on
+    /// every later call. The lazy entry point for a consumer that needs static geometry in a world where
+    /// OnWorldBeginPlay never fires — an Editor world, or the world a cook commandlet loads. Nothing sweeps
+    /// a map merely because it was opened, so the cost lands on the consumer that asked for geometry.
+    auto
+    Request_EnsureSwept() -> void;
 
     /// Extracts and adds static bodies for a single actor at runtime; returns the number added.
     auto
@@ -156,6 +168,13 @@ private:
     DoHandle_LevelRemoved(
         ULevel* InLevel,
         UWorld* InWorld) -> void;
+
+    // The world's initial sweep of every loaded level, and the single writer of _HasSwept. Reached from
+    // OnWorldBeginPlay in a Game/PIE world and from Request_EnsureSwept everywhere else; each caller gates
+    // on its OWN setting before calling, so neither setting can silently disable the other's world.
+    auto
+    DoRun_InitialSweep(
+        UWorld& InWorld) -> void;
 
     // Returns the level's extraction stats so the BeginPlay sweep can report a per-world summary
     // (zeroed for the cooked path — its skips happened at cook time and are loud there).
@@ -315,6 +334,7 @@ private:
     int32 _NumStaticBodies = 0;
     int32 _BodyChurnSinceOptimize = 0;
     bool _CookedIndexLoadAttempted = false;
+    bool _HasSwept = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

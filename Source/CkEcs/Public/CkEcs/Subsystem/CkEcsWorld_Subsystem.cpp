@@ -713,6 +713,54 @@ auto
     return Get_TransientEntity(InWorldContextObject->GetWorld());
 }
 
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    TryGet_RegistryForWorld(
+        UWorld& InWorld)
+    -> FCk_Registry
+{
+    if (InWorld.WorldType == EWorldType::Editor)
+    {
+        const auto* EditorSubsystem = InWorld.GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+
+        if (ck::Is_NOT_Valid(EditorSubsystem))
+        { return {}; }
+
+        return EditorSubsystem->Get_Registry();
+    }
+
+    const auto* RuntimeSubsystem = InWorld.GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(RuntimeSubsystem))
+    { return {}; }
+
+    return RuntimeSubsystem->Get_Registry();
+}
+
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    TryGet_TransientEntityForWorld(
+        UWorld& InWorld)
+    -> FCk_Handle
+{
+    if (InWorld.WorldType == EWorldType::Editor)
+    {
+        const auto* EditorSubsystem = InWorld.GetSubsystem<UCk_EditorEcsWorld_Subsystem_UE>();
+
+        if (ck::Is_NOT_Valid(EditorSubsystem))
+        { return {}; }
+
+        return EditorSubsystem->Get_TransientEntity();
+    }
+
+    const auto* RuntimeSubsystem = InWorld.GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(RuntimeSubsystem))
+    { return {}; }
+
+    return RuntimeSubsystem->Get_TransientEntity();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ecs_world_subsystem

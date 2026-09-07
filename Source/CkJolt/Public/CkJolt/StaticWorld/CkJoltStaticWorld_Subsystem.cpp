@@ -7,6 +7,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 
 #include "CkJolt/CkJolt_Log.h"
 #include "CkJolt/CkJolt_Stats.h"
@@ -112,7 +113,11 @@ auto
     _JoltSubsystem = InCollection.InitializeDependency<UCk_Jolt_Subsystem>();
 
     // Depend on the ECS world subsystem so it outlives us: Deinitialize still reads attribution fragments.
-    _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
+    // Which one that is depends on the world type — an Editor world has only the editor ECS world.
+    if (GetWorld()->WorldType == EWorldType::Editor)
+    { InCollection.InitializeDependency<UCk_EditorEcsWorld_Subsystem_UE>(); }
+    else
+    { _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>(); }
 
     _LevelAddedHandle = FWorldDelegates::LevelAddedToWorld.AddUObject(
         this, &ThisType::DoHandle_LevelAdded);
@@ -189,6 +194,47 @@ auto
     { return; }
 #endif
 
+    DoRun_InitialSweep(InWorld);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    Request_EnsureSwept()
+        -> void
+{
+    if (_HasSwept)
+    { return; }
+
+    auto* World = GetWorld();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("JoltStaticWorld subsystem was asked to sweep, but it has no world"))
+    { return; }
+
+#if WITH_EDITOR
+    // Two independent gates, because there are two independent settings. An Editor world answers to
+    // _EditorStaticWorldMode ONLY: routing it through the PIE gate would mean turning the PIE static world
+    // off silently killed authoring- and cook-time geometry as well.
+    if (World->WorldType == EWorldType::Editor)
+    {
+        if (UCk_Utils_Jolt_ProjectSettings::Get_EditorStaticWorldMode() == ECk_Jolt_EditorStaticWorldMode::Disabled)
+        { return; }
+    }
+    else if (UCk_Utils_Jolt_ProjectSettings::Get_PIEStaticWorldMode() == ECk_Jolt_PIEStaticWorldMode::Disabled)
+    { return; }
+#endif
+
+    DoRun_InitialSweep(*World);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoRun_InitialSweep(
+        UWorld& InWorld)
+        -> void
+{
+    _HasSwept = true;
+
     auto SweepStats = ck::jolt::bake::FCk_Jolt_ExtractionStats{};
     auto NumLevels = int32{0};
 
@@ -203,13 +249,24 @@ auto
 
     // Always at Log verbosity: an EMPTY static world means probe traces cannot hit world geometry, and
     // that emptiness used to be invisible below VeryVerbose. One line per world boot, spam-free.
-    ck::jolt::Log(TEXT("JoltStaticWorld: BeginPlay sweep for [{}]: [{}] static bodies across [{}] levels "
+    ck::jolt::Log(TEXT("JoltStaticWorld: initial sweep for [{}]: [{}] static bodies across [{}] levels "
         "(mobility policy [{}]: [{}] components excluded by mobility, [{}] components + [{}] actors excluded "
         "by bake-filter settings)"),
         InWorld.GetFName(), _NumStaticBodies, NumLevels,
         UCk_Utils_Jolt_ProjectSettings::Get_BakeMobilityPolicy(),
         SweepStats._NumComponentsExcludedByMobility, SweepStats._NumComponentsExcludedByFilter,
         SweepStats._NumActorsExcludedByFilter);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoesSupportWorldType(
+        const EWorldType::Type InWorldType) const
+        -> bool
+{
+    return Super::DoesSupportWorldType(InWorldType) ||
+        (InWorldType == EWorldType::Editor &&
+            UCk_Utils_Jolt_ProjectSettings::Get_EditorStaticWorldMode() != ECk_Jolt_EditorStaticWorldMode::Disabled);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1177,6 +1234,11 @@ auto
     -> bool
 {
 #if WITH_EDITOR
+    // An Editor world always live-extracts - the cooked/PIE-mode path is a PIE / packaged concern
+    // and never applies to the Editor world itself.
+    if (GetWorld()->WorldType == EWorldType::Editor)
+    { return false; }
+
     return UCk_Utils_Jolt_ProjectSettings::Get_PIEStaticWorldMode() == ECk_Jolt_PIEStaticWorldMode::Cooked;
 #else
     return true;
@@ -1191,7 +1253,15 @@ auto
     -> FCk_Handle
 {
     if (ck::Is_NOT_Valid(_EcsWorldSubsystem))
-    { return {}; }
+    {
+        // An Editor world has no runtime ECS subsystem to cache; the seam resolves whichever one it does have.
+        auto* World = GetWorld();
+
+        if (ck::Is_NOT_Valid(World))
+        { return {}; }
+
+        return UCk_Utils_EcsWorld_Subsystem_UE::TryGet_TransientEntityForWorld(*World);
+    }
 
     return _EcsWorldSubsystem->Get_TransientEntity();
 }
@@ -1206,10 +1276,9 @@ auto
     if (InUserData == 0)
     { return {}; }
 
-    if (ck::Is_NOT_Valid(_EcsWorldSubsystem))
-    { return {}; }
-
-    const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
+    // Through the same resolution DoGet_TransientEntity performs, so a body added in an EDITOR world — where
+    // there is no runtime ECS subsystem to cache — resolves back to its attribution entity.
+    const auto TransientEntity = DoGet_TransientEntity();
     if (ck::Is_NOT_Valid(TransientEntity))
     { return {}; }
 

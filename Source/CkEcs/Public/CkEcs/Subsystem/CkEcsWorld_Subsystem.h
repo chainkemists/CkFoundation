@@ -384,6 +384,24 @@ public:
         const UObject* InWorldContextObject);
 
 public:
+    /*
+     * Which ECS world owns a UWorld's registry is decided by its WorldType: Game and PIE are the runtime
+     * UCk_EcsWorld_Subsystem_UE's, Editor is UCk_EditorEcsWorld_Subsystem_UE's. Every other world type
+     * (EditorPreview, GamePreview, Inactive) has no ECS world at all.
+     *
+     * INVALID rather than an ensure when there is none, because a caller that legitimately runs outside or
+     * before an ECS world must be able to ask without tripping a diagnostic — Get_TransientEntity above is
+     * the asserting variant for callers that require one.
+     */
+    static auto
+    TryGet_RegistryForWorld(
+        UWorld& InWorld) -> FCk_Registry;
+
+    static auto
+    TryGet_TransientEntityForWorld(
+        UWorld& InWorld) -> FCk_Handle;
+
+public:
     // Test/diagnostic hooks over the scheduler's per-frame debug history (300-frame ring); -1 when
     // the frame or processor is not in the history. Reading through these arms the demand-driven
     // timing collection, but only from the NEXT frame — a caller asking about a PAST frame gets
