@@ -111,6 +111,10 @@ namespace ck::groundnav
         // plate already carries. A plate the table does not name is priced at whatever the field says.
         TMap<int32, float> _PlateCostMultipliers;
 
+        // The query's own GROUND veto, read where a crossing is admitted: a plate in here is entered
+        // by no crossing, so it mints no node and no corridor can hold it.
+        TSet<int32> _DeniedPlates;
+
         // The query's own link veto, mirrored off the cost params exactly as the plate table above is.
         // The two deny sets are read where a crossing is admitted, so a refused link mints no node;
         // the rewrite is read where a link's own traverse is priced, and names the multiplier that

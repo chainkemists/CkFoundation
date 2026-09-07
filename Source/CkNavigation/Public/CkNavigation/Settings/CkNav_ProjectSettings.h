@@ -46,7 +46,7 @@ private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "NavSurface",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Which provider answers navigation-surface queries in a world that has not chosen one"))
-    ECk_NavSurface_Provider _DefaultNavSurfaceProvider = ECk_NavSurface_Provider::Recast;
+    ECk_NavSurface_Provider _DefaultNavSurfaceProvider = ECk_NavSurface_Provider::GroundNav;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "NavSurface",
         meta = (AllowPrivateAccess = true,

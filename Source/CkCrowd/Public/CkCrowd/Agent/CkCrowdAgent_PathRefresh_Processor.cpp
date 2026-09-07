@@ -1122,6 +1122,7 @@ namespace ck
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
+            Request.Set_AgentRadiusUu(InParams.Get_Radius());
             FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
                 NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());

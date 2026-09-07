@@ -16,7 +16,6 @@ public class CkPathNetwork : CkModuleRules
 
 			"GameplayTags",
 			"DeveloperSettings",
-			"NavigationSystem",
 
 			"CkAStar",
 			"CkCore",

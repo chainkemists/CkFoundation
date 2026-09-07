@@ -221,6 +221,25 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTag _ProfileTag;
 
+    /** Which registered query filter THIS plan is made under, honoured through the neutral filter
+     *  registry: the definition's excluded areas become plates the search may not enter and its
+     *  per-area multipliers become what their plates cost. A tag no definition is registered for
+     *  means no filter, which is the unfiltered field.
+     *
+     *  Per REQUEST rather than on the params, because a planning PHASE is not a body's policy - the
+     *  crowd's strict attempt and the permissive retry that follows it are two filters for one
+     *  agent, and a filter stored on the entity could not tell them apart. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _QueryFilter;
+
+    /** Value-only exclusions laid over that definition for THIS plan, exactly as the neutral surface
+     *  queries carry them: an area tag named here is refused whether or not the filter's own
+     *  definition mentions it. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
@@ -231,6 +250,8 @@ public:
     CK_PROPERTY(_DeniedLinkUserTypeTags);
     CK_PROPERTY(_LinkCostMultipliers);
     CK_PROPERTY(_ProfileTag);
+    CK_PROPERTY(_QueryFilter);
+    CK_PROPERTY(_QueryFilterOverlay);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);

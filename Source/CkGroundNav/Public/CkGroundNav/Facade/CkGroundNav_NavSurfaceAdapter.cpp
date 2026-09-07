@@ -20,6 +20,10 @@
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_SurfaceWalk.h"
+#include "CkGroundNav/Search/CkGroundNav_FilterCompile.h"
+#include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
+#include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
+#include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Fragment_Data.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 
@@ -58,6 +62,8 @@ namespace ck::groundnav::nav_surface_adapter_private
     {
         return static_cast<float>(UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec().Z);
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
 
     auto Get_MappedReachability(
         const FCk_GroundNav_ReachabilityResult& InResult) -> ECk_NavSurface_Reachability
@@ -100,6 +106,51 @@ namespace ck::groundnav::nav_surface_adapter_private
         }
     }
 
+    /**
+     * The map from a search's own vocabulary onto the neutral one.
+     *
+     * BudgetExceeded folds into Blocked rather than into a status of its own: a search that ran out of
+     * budget answered with no corridor, which is the same thing a consumer must do about it as a
+     * search that found none. Unbuilt stays apart from NoSurface here as everywhere - a consumer waits
+     * on the first and gives up on the second.
+     */
+    auto Get_MappedPathStatus(
+        ECk_GroundNav_PathStatus InStatus,
+        bool                     InAllowPartial) -> ECk_NavSurface_QueryStatus
+    {
+        switch (InStatus)
+        {
+            case ECk_GroundNav_PathStatus::Ready:
+            {
+                return ECk_NavSurface_QueryStatus::Success;
+            }
+            case ECk_GroundNav_PathStatus::Partial:
+            {
+                // A partial answer nobody asked for is not a shorter route, it is no route - so it is
+                // refused rather than handed over as though it reached the goal.
+                return InAllowPartial
+                    ? ECk_NavSurface_QueryStatus::Success
+                    : ECk_NavSurface_QueryStatus::Blocked;
+            }
+            case ECk_GroundNav_PathStatus::Unbuilt:
+            {
+                return ECk_NavSurface_QueryStatus::Unbuilt;
+            }
+            case ECk_GroundNav_PathStatus::NoStartSurface:
+            case ECk_GroundNav_PathStatus::NoGoalSurface:
+            {
+                return ECk_NavSurface_QueryStatus::NoSurface;
+            }
+            case ECk_GroundNav_PathStatus::Unreachable:
+            case ECk_GroundNav_PathStatus::BudgetExceeded:
+            case ECk_GroundNav_PathStatus::Blocked:
+            default:
+            {
+                return ECk_NavSurface_QueryStatus::Blocked;
+            }
+        }
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto Do_ProjectPoint(
@@ -128,6 +179,12 @@ namespace ck::groundnav::nav_surface_adapter_private
         Query._UpExtentUu = VerticalExtentUu;
         Query._DownExtentUu = VerticalExtentUu;
         Query._Mode = InQuery.Get_Mode();
+
+        // _QueryFilter and _QueryFilterOverlay are unread, and unlike the raycast beneath this there
+        // is nothing here that COULD read them: FCk_GroundNav_ProjectionQuery carries no cost table
+        // and no cost cap, so a projection has no channel a filter could act through at all. The
+        // raycast has one (_PlateCostMultipliers / _MaxCost) and is only missing the tag-to-plate
+        // translation; this one is missing the input.
 
         const auto GroundResult = Get_ProjectPoint(*Field, Query);
 
@@ -189,11 +246,216 @@ namespace ck::groundnav::nav_surface_adapter_private
         Query._Start = InQuery.Get_Start();
         Query._End = InQuery.Get_End();
         Query._StartVerticalToleranceUu = Get_VerticalToleranceUu();
+        Query._MaxCost = InQuery.Get_MaxCost();
+
+        // The cap is a COST cap, and the cost it caps has to be the one the field was authored with -
+        // otherwise every plate weighs 1.0, the cap degenerates into a distance cap, and a query
+        // capped to refuse expensive ground admits it. Unconditional rather than gated on the cap
+        // being set: with no cap the accumulation is never compared against anything, so this changes
+        // no verdict a query without a cap could observe.
+        Query._UseBakedPlateCost = true;
+
+        // The filter, compiled once per (field snapshot, tag, overlay): its excluded areas become
+        // ground this ray may not walk onto, and its per-area multipliers become the price of the
+        // plates carrying them.
+        const auto& FilterTables = Get_CompiledFilterTables(
+            Field, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
+
+        Query._PlateCostMultipliers = FilterTables._Multipliers;
+        Query._DeniedPlates = FilterTables._Denied;
 
         const auto RaycastResult = Get_SurfaceRaycast(*Field, Query);
 
         Result.Set_Status(RaycastResult._Status);
         Result.Set_HitLocation(RaycastResult._HitLocation);
+
+        return Result;
+    }
+
+    /**
+     * One route, answered inside the call. No entity, no fragment, no processor: a one-shot search is
+     * the sliced one with no limits, over an immutable field snapshot the registry already holds.
+     *
+     * _QueryFilter and _QueryFilterOverlay are compiled into the plate tables the search reads -
+     * excluded areas become plates it may not enter, per-area multipliers become what their plates
+     * cost. Do_SurfaceRaycast above compiles the same filter into the same two tables.
+     */
+    auto Do_FindPathSync(
+        UWorld*                          InWorld,
+        const FCk_NavSurface_PathQuery&  InQuery) -> FCk_NavSurface_PathResult
+    {
+        auto Result = FCk_NavSurface_PathResult{};
+
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Start(), InQuery.Get_ProfileTag());
+
+        if (NOT Field.IsValid())
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+            return Result;
+        }
+
+        const auto AllowPartial = InQuery.Get_AllowPartial() == ECk_EnableDisable::Enable;
+
+        auto Query = FCk_GroundNav_PathQuery{};
+        Query._Start = InQuery.Get_Start();
+        Query._Goal = InQuery.Get_End();
+        Query._VerticalToleranceUu = Get_VerticalExtentUu(InQuery.Get_SearchHalfExtents());
+        Query._MaxExpansions = InQuery.Get_MaxExpansions();
+        Query._MaxCorridorLength = InQuery.Get_MaxCorridorLength();
+        Query._AllowPartialPath = InQuery.Get_AllowPartial();
+
+        // Left at its zero default rather than assigned unconditionally: zero is what
+        // FCk_NavSurface_PathQuery::_AgentRadiusUu documents as the provider's own agent, and today
+        // that default IS the search this function already ran before AgentRadiusUu existed - a point
+        // agent, with clearance filtering skipped (CkGroundNav_QueryCore.cpp's RadiusUu <= 0 rule).
+        if (InQuery.Get_AgentRadiusUu() > 0.0f)
+        { Query._Agent._RadiusUu = InQuery.Get_AgentRadiusUu(); }
+
+        const auto& FilterTables = Get_CompiledFilterTables(
+            Field, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
+
+        Query._Cost._PlateCostMultipliers = FilterTables._Multipliers;
+        Query._Cost._DeniedPlates = FilterTables._Denied;
+
+        auto Search = FCk_GroundNav_PathSearch{};
+
+        const auto SearchStatus = Search.Request_Begin(Field, Query);
+
+        // Request_Begin answers the query outright or stands a search up for the slices that will.
+        // A DEFAULT slice has both of its ceilings off (CkGroundNav_PathSearch.h:58-61), so the one
+        // call below runs a stood-up search all the way to a terminal status - which is what makes
+        // the one-shot form the sliced form with no limits rather than a second driver.
+        if (SearchStatus == ECk_GroundNav_PathStatus::InProgress)
+        { Search.ContinueSearch(FCk_GroundNav_PathSliceParams{}); }
+
+        // The invariant the ensure guards is therefore ONE UNLIMITED SLICE IS TERMINAL: an InProgress
+        // still standing here means the search stopped for a reason no ceiling named.
+        const auto TerminalStatus = Search.Get_Status();
+        const auto SearchIsTerminal = TerminalStatus != ECk_GroundNav_PathStatus::InProgress;
+
+        CK_ENSURE_IF_NOT(SearchIsTerminal,
+            TEXT("A one-shot GroundNav path search from [{}] to [{}] answered InProgress. A begin plus "
+                 "one slice with no limits must answer terminally."),
+            InQuery.Get_Start(), InQuery.Get_End())
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+            return Result;
+        }
+
+        const auto& SearchResult = Search.Get_Result();
+
+        Result.Set_StartProjected(SearchResult._StartPoint);
+        Result.Set_EndProjected(SearchResult._GoalPoint);
+        Result.Set_Status(Get_MappedPathStatus(TerminalStatus, AllowPartial));
+        Result.Set_IsPartial(AllowPartial && TerminalStatus == ECk_GroundNav_PathStatus::Partial);
+
+        if (Result.Get_Status() != ECk_NavSurface_QueryStatus::Success)
+        { return Result; }
+
+        // The agent location the post-process drops its first waypoint against is the query's own
+        // start: nothing here has a body, and the start is where the caller said the route begins.
+        auto PostParams = FCk_GroundNav_PathPostParams{};
+        PostParams._VerticalToleranceUu = Query._VerticalToleranceUu;
+        PostParams._AgentLocation = InQuery.Get_Start();
+        PostParams._Agent._RadiusUu = Query._Agent._RadiusUu;
+
+        // The post-process prices and shortcuts under the SAME filter the search routed under. Without
+        // this the shortcut's chord would be judged against unfiltered ground and could cut straight
+        // across the very plates the corridor went round.
+        PostParams._Cost._PlateCostMultipliers = Query._Cost._PlateCostMultipliers;
+        PostParams._Cost._DeniedPlates = Query._Cost._DeniedPlates;
+
+        // _CornerOffsetK is a MULTIPLE of the radius the funnel already ran with, and
+        // _CornerOffsetDistanceUu is a uu distance - so this provider's own corner treatment is the
+        // struct's default multiple, and an explicit distance only reaches a K through a radius to be
+        // a multiple of.
+        const auto EffectiveRadiusUu = PostParams._Agent._RadiusUu;
+
+        switch (InQuery.Get_CornerOffset())
+        {
+            case ECk_NavSurface_CornerOffset::None:
+            {
+                PostParams._Cost._CornerOffsetK = 0.0f;
+                break;
+            }
+            case ECk_NavSurface_CornerOffset::Explicit:
+            {
+                if (EffectiveRadiusUu > 0.0f)
+                { PostParams._Cost._CornerOffsetK = InQuery.Get_CornerOffsetDistanceUu() / EffectiveRadiusUu; }
+                else
+                {
+                    PostParams._Cost._CornerOffsetK = 0.0f;
+
+                    ck::groundnav::Verbose(
+                        TEXT("A GroundNav path query from [{}] to [{}] asked for an explicit corner offset of "
+                             "[{}]uu with no agent radius - a point agent has no radius to scale the offset by, "
+                             "so its corners are left raw"),
+                        InQuery.Get_Start(), InQuery.Get_End(), InQuery.Get_CornerOffsetDistanceUu());
+                }
+                break;
+            }
+            case ECk_NavSurface_CornerOffset::ProviderDefault:
+            default:
+            {
+                // K STAYS AT THE STRUCT DEFAULT - that default multiple of the query's radius IS this
+                // provider's own treatment, and so nothing at all when the query named no radius,
+                // because Get_PathPlan applies K * radius and that radius is zero.
+                break;
+            }
+        }
+
+        const auto Plan = Get_PathPlan(SearchResult, *Field, PostParams);
+
+        auto Waypoints = TArray<FVector>{};
+        Waypoints.Reserve(Plan._Waypoints.Num());
+
+        for (const auto& Waypoint : Plan._Waypoints)
+        { Waypoints.Emplace(Waypoint._Location); }
+
+        Result.Set_LengthUu(static_cast<float>(Plan._LengthUu));
+        Result.Set_Waypoints(MoveTemp(Waypoints));
+
+        return Result;
+    }
+
+    auto Do_FindDistanceToWall(
+        UWorld*                                 InWorld,
+        const FCk_NavSurface_WallDistanceQuery& InQuery) -> FCk_NavSurface_WallDistanceResult
+    {
+        auto Result = FCk_NavSurface_WallDistanceResult{};
+
+        const auto Field = world_fields::TryGet_Field(
+            InWorld, InQuery.Get_Location(), InQuery.Get_ProfileTag());
+
+        if (NOT Field.IsValid())
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+            return Result;
+        }
+
+        auto Query = FCk_GroundNav_ClosestBoundaryQuery{};
+        Query._Location = InQuery.Get_Location();
+        Query._MaxRadiusUu = InQuery.Get_MaxRadiusUu();
+        Query._VerticalWindowUu = Get_VerticalToleranceUu();
+
+        const auto BoundaryResult = Get_ClosestBoundary(*Field, Query);
+
+        const auto FoundWall = BoundaryResult.Get_IsSuccess();
+
+        // NoSurface folds into a Success that found nothing rather than staying a failure: the ring
+        // search answers it both when the point stands on no ground AND when it exhausted the radius
+        // without meeting a wall, and the two are indistinguishable at the return. Recast conflates
+        // exactly the same pair - a point that projects to no polygon leaves its out point untouched,
+        // which reads as "no wall in range" there too - so this is the two providers agreeing rather
+        // than this one losing something the other keeps. _FoundWall is what a consumer reads.
+        Result.Set_Status(BoundaryResult._Status == ECk_NavSurface_QueryStatus::NoSurface
+            ? ECk_NavSurface_QueryStatus::Success
+            : BoundaryResult._Status);
+
+        Result.Set_FoundWall(FoundWall);
+        Result.Set_DistanceUu(FoundWall ? BoundaryResult._DistanceUu : 0.0f);
+        Result.Set_ClosestWallPoint(FoundWall ? BoundaryResult._ClosestPoint : FVector::ZeroVector);
 
         return Result;
     }
@@ -638,6 +900,8 @@ auto
     Table._SurfaceRaycast = &nav_surface_adapter_private::Do_SurfaceRaycast;
     Table._BoundarySegments = &nav_surface_adapter_private::Do_BoundarySegments;
     Table._IsReachable = &nav_surface_adapter_private::Do_IsReachable;
+    Table._FindPathSync = &nav_surface_adapter_private::Do_FindPathSync;
+    Table._FindDistanceToWall = &nav_surface_adapter_private::Do_FindDistanceToWall;
     Table._SurfaceBounds = &nav_surface_adapter_private::Do_SurfaceBounds;
     Table._ProviderHealth = &nav_surface_adapter_private::Do_ProviderHealth;
     Table._IsBuildInProgress = &nav_surface_adapter_private::Do_IsBuildInProgress;

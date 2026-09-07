@@ -19,12 +19,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNavigation/Nav/CkNav_Algorithm.h"
-#include "CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
+#include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
-
-#include <NavigationSystem.h>
-#include <NavMesh/RecastNavMesh.h>
 
 #include <array>
 #include <type_traits>
@@ -162,9 +158,9 @@ namespace ck_pathnetwork_processor
         EOffPathResolve _Outcome = EOffPathResolve::NoNavmesh;
     };
 
-    // Direct FindPathSync (bypassing the CkNavigation request path) is safe here: every caller drains
-    // under the route processor's budget (_MaxRouteQueriesPerFrame), which is spent once per FRAME
-    // across the main pass and every pump pass, not re-armed per Tick.
+    // The synchronous query goes through the NavSurface facade (Try_FindPathSync); every caller drains
+    // under the route processor's budget (_MaxRouteQueriesPerFrame), which is unchanged - spent once per
+    // FRAME across the main pass and every pump pass, not re-armed per Tick.
     auto
     Resolve_OffPathLeg(
         UWorld* InWorld,
@@ -173,44 +169,23 @@ namespace ck_pathnetwork_processor
         bool InFromIsRouteEndpoint,
         bool InToIsRouteEndpoint,
         FGameplayTag InFilterTag,
-        const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay) -> FOffPathLegResolution
+        const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
+        float InAgentRadiusUu) -> FOffPathLegResolution
     {
         auto Result = FOffPathLegResolution{};
         Result._Waypoints = {InFrom, InTo};
         Result._Length = static_cast<float>(FVector::Dist(InFrom, InTo));
 
-        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        const auto HasValidNavmesh =
-            NavData != nullptr
-            && NavData->HasValidNavmesh();
-
-        if (NavSys == nullptr
-            || NavData == nullptr
-            || NOT HasValidNavmesh)
+        const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld);
+        if (ProviderHealth != ECk_NavSurface_ProviderHealth::Ready)
         {
             ck::pathnetwork::Verbose(
                 TEXT("[PNDiag] off-path nav unavailable: raw [{}] -> [{}], "
-                     "world [{}], navSystem [{}], navData [{}], validNavmesh [{}]"),
+                     "world [{}], providerHealth [{}]"),
                 InFrom,
                 InTo,
                 IsValid(InWorld),
-                NavSys != nullptr,
-                NavData != nullptr,
-                HasValidNavmesh);
-            return Result;
-        }
-
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
-        {
-            ck::pathnetwork::Verbose(
-                TEXT("[PNDiag] off-path query rejected: raw [{}] -> [{}], "
-                     "query filter invalid, allowPartial [false]"),
-                InFrom,
-                InTo);
-            Result._Outcome = EOffPathResolve::PathFailed;
+                ProviderHealth);
             return Result;
         }
 
@@ -226,21 +201,29 @@ namespace ck_pathnetwork_processor
         const auto ToProjectionExtent = InToIsRouteEndpoint
             ? NavQueryProjectionExtent
             : StrictProjectionExtent;
-        auto ProjectedFrom = FNavLocation{};
-        auto ProjectedTo = FNavLocation{};
+        auto FromProjectionQuery = FCk_NavSurface_ProjectionQuery{InFrom};
+        FromProjectionQuery.Set_SearchHalfExtents(FromProjectionExtent);
+        FromProjectionQuery.Set_QueryFilter(InFilterTag);
+        FromProjectionQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+        const auto ProjectedFrom =
+            UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorld, FromProjectionQuery);
         const auto FromProjected =
-            NavData->ProjectPoint(
-                InFrom,
-                ProjectedFrom,
-                FromProjectionExtent,
-                QueryFilter);
+            ProjectedFrom.Get_Status() == ECk_NavSurface_QueryStatus::Success;
+
+        auto ProjectedTo = FCk_NavSurface_ProjectionResult{};
+        if (FromProjected)
+        {
+            auto ToProjectionQuery = FCk_NavSurface_ProjectionQuery{InTo};
+            ToProjectionQuery.Set_SearchHalfExtents(ToProjectionExtent);
+            ToProjectionQuery.Set_QueryFilter(InFilterTag);
+            ToProjectionQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+            ProjectedTo = UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorld, ToProjectionQuery);
+        }
         const auto ToProjected =
             FromProjected
-            && NavData->ProjectPoint(
-                InTo,
-                ProjectedTo,
-                ToProjectionExtent,
-                QueryFilter);
+            && ProjectedTo.Get_Status() == ECk_NavSurface_QueryStatus::Success;
         if (NOT FromProjected || NOT ToProjected)
         {
             ck::pathnetwork::Verbose(
@@ -250,9 +233,9 @@ namespace ck_pathnetwork_processor
                 InFrom,
                 InTo,
                 FromProjected,
-                ProjectedFrom.Location,
+                ProjectedFrom.Get_Location(),
                 ToProjected,
-                ProjectedTo.Location,
+                ProjectedTo.Get_Location(),
                 FromProjectionExtent,
                 ToProjectionExtent);
             Result._Outcome = EOffPathResolve::PathFailed;
@@ -260,59 +243,50 @@ namespace ck_pathnetwork_processor
         }
 
         Result._Waypoints =
-            {ProjectedFrom.Location, ProjectedTo.Location};
+            {ProjectedFrom.Get_Location(), ProjectedTo.Get_Location()};
         Result._Length = static_cast<float>(
             FVector::Dist(
-                ProjectedFrom.Location,
-                ProjectedTo.Location));
+                ProjectedFrom.Get_Location(),
+                ProjectedTo.Get_Location()));
 
-        auto NavResult = FCk_Nav_PathResult{};
+        // _SearchHalfExtents is left at zero and folds to the project extents, which is what this site
+        // used to name by hand. An off-path connector is never ribbon-contained, so there is no slack
+        // to cap a corner offset at and the provider's own treatment is the right one - the navmesh's
+        // baked agent radius on Recast, named here rather than implied by a magic distance.
+        auto PathQuery = FCk_NavSurface_PathQuery{
+            ProjectedFrom.Get_Location(),
+            ProjectedTo.Get_Location()};
+        PathQuery.Set_QueryFilter(InFilterTag);
+        PathQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+        PathQuery.Set_AllowPartial(ECk_EnableDisable::Disable);
+        PathQuery.Set_AgentRadiusUu(InAgentRadiusUu);
+        PathQuery.Set_CornerOffset(ECk_NavSurface_CornerOffset::ProviderDefault);
 
-        constexpr auto AllowPartial = false;
-        constexpr auto AgentRadiusForFirstSkip = 0.0f;
-        const auto CornerOffsetDistance = NavData->GetConfig().AgentRadius;
-
-        const auto FoundPath = FCk_Nav_Algorithm::FindPathSync(
-            *NavSys,
-            *NavData,
-            ProjectedFrom.Location,
-            ProjectedTo.Location,
-            AllowPartial,
-            UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
-            UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
-            AgentRadiusForFirstSkip,
-            NavResult,
-            InFilterTag,
-            CornerOffsetDistance,
-            InQueryFilterOverlay);
+        const auto PathResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(InWorld, PathQuery);
+        const auto FoundPath = PathResult.Get_Status() == ECk_NavSurface_QueryStatus::Success;
 
         if (NOT FoundPath)
         {
-            const auto& Diagnostics = NavResult.Get_Diagnostics();
+            // The neutral result carries no _LastFailReason and no raw-vs-last projection split, so the
+            // line reports the one status and the one pair of projected ends every provider can answer.
             ck::pathnetwork::Verbose(
                 TEXT("[PNDiag] off-path FindPathSync failed: raw [{}] -> [{}], "
-                     "endpointProjected [{}] -> [{}], navProjected [{}:{}] -> [{}:{}], "
-                     "endpointExtents [{}] -> [{}], queryExtent [xy={}, z={}], "
-                     "allowPartial [false], status [{}], reason [{}]"),
+                     "endpointProjected [{}] -> [{}], navProjected [{}] -> [{}], "
+                     "endpointExtents [{}] -> [{}], allowPartial [false], status [{}]"),
                 InFrom,
                 InTo,
-                ProjectedFrom.Location,
-                ProjectedTo.Location,
-                Diagnostics.Get_StartProjected(),
-                Diagnostics.Get_LastProjectedStart(),
-                Diagnostics.Get_EndProjected(),
-                Diagnostics.Get_LastProjectedEnd(),
+                ProjectedFrom.Get_Location(),
+                ProjectedTo.Get_Location(),
+                PathResult.Get_StartProjected(),
+                PathResult.Get_EndProjected(),
                 FromProjectionExtent,
                 ToProjectionExtent,
-                UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
-                UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
-                NavResult.Get_Status(),
-                Diagnostics.Get_LastFailReason());
+                PathResult.Get_Status());
             Result._Outcome = EOffPathResolve::PathFailed;
             return Result;
         }
 
-        const auto& Waypoints = NavResult.Get_Waypoints();
+        const auto& Waypoints = PathResult.Get_Waypoints();
 
         const auto StartIsEffectivelyTheEnd = Waypoints.Num() < 2;
 
@@ -346,33 +320,30 @@ namespace ck_pathnetwork_processor
 
     auto
     Is_NavmeshSegmentDirectlyWalkable(
-        const ARecastNavMesh& InNavData,
-        const FSharedConstNavQueryFilter& InQueryFilter,
+        UWorld* InWorld,
+        FGameplayTag InFilterTag,
+        const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         const FVector& InFrom,
         const FVector& InTo) -> bool
     {
-        auto HitLocation = FVector::ZeroVector;
-        auto RaycastResult = ARecastNavMesh::FRaycastResult{};
-        return NOT ARecastNavMesh::NavMeshRaycast(
-            &InNavData,
-            InFrom,
-            InTo,
-            HitLocation,
-            InQueryFilter,
-            nullptr,
-            RaycastResult);
+        auto Query = FCk_NavSurface_RaycastQuery{InFrom, InTo};
+        Query.Set_QueryFilter(InFilterTag);
+        Query.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+        return UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(InWorld, Query).Get_Status()
+            == ECk_NavSurface_QueryStatus::Success;
     }
 
     auto
     Try_ResolveNavmeshSegment(
-        UNavigationSystemV1& InNavSys,
-        ARecastNavMesh& InNavData,
-        const FSharedConstNavQueryFilter& InQueryFilter,
+        UWorld* InWorld,
         FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
+        float InAgentRadiusUu,
         const FVector& InFrom,
         const FVector& InTo,
-        float InMaxCornerOffsetCm,
+        ECk_NavSurface_CornerOffset InCornerOffset,
+        float InCornerOffsetDistanceCm,
         TArray<FVector>& OutWaypoints) -> bool
     {
         OutWaypoints.Reset();
@@ -382,45 +353,34 @@ namespace ck_pathnetwork_processor
         if (FVector::DistSquared(InFrom, InTo) <= FMath::Square(CompiledWaypointMergeDistance))
         { return true; }
 
-        auto HitLocation = FVector::ZeroVector;
-        auto RaycastResult = ARecastNavMesh::FRaycastResult{};
-        const auto HitNavmeshBoundary = ARecastNavMesh::NavMeshRaycast(
-            &InNavData,
-            InFrom,
-            InTo,
-            HitLocation,
-            InQueryFilter,
-            nullptr,
-            RaycastResult);
-        if (NOT HitNavmeshBoundary)
+        auto RaycastQuery = FCk_NavSurface_RaycastQuery{InFrom, InTo};
+        RaycastQuery.Set_QueryFilter(InFilterTag);
+        RaycastQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+        const auto Raycast = UCk_Utils_NavSurface_UE::Try_SurfaceRaycast(InWorld, RaycastQuery);
+        if (Raycast.Get_Status() == ECk_NavSurface_QueryStatus::Success)
         { return true; }
 
-        // A raycast only answers whether this exact Detour corridor stays unobstructed. Points on
-        // shared polygon seams can start in the wrong containing polygon, and genuine local
-        // obstacles may have a short valid detour. Ask Unreal for that route and publish its actual
-        // waypoints instead of rejecting a path Unreal can walk.
-        auto DetourResult = FCk_Nav_PathResult{};
-        constexpr auto AllowPartial = false;
-        constexpr auto AgentRadiusForFirstSkip = 0.0f;
-        // An offset corner can leave the ribbon by up to the offset distance, so callers whose
-        // waypoints face a downstream Is_SegmentInsideRibbonRun check cap it at their slack.
-        const auto CornerOffsetDistance = FMath::Min(
-            InNavData.GetConfig().AgentRadius,
-            InMaxCornerOffsetCm);
-        const auto DetourFound = FCk_Nav_Algorithm::FindPathSync(
-            InNavSys,
-            InNavData,
-            InFrom,
-            InTo,
-            AllowPartial,
+        // A raycast only answers whether this exact corridor stays unobstructed. Points on shared
+        // polygon seams can start in the wrong containing polygon, and genuine local obstacles may
+        // have a short valid detour. Ask the provider for that route and publish its actual
+        // waypoints instead of rejecting a path the provider can walk.
+        auto PathQuery = FCk_NavSurface_PathQuery{InFrom, InTo};
+        PathQuery.Set_QueryFilter(InFilterTag);
+        PathQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+        PathQuery.Set_AllowPartial(ECk_EnableDisable::Disable);
+        PathQuery.Set_AgentRadiusUu(InAgentRadiusUu);
+        PathQuery.Set_CornerOffset(InCornerOffset);
+
+        if (InCornerOffset == ECk_NavSurface_CornerOffset::Explicit)
+        { PathQuery.Set_CornerOffsetDistanceUu(InCornerOffsetDistanceCm); }
+        PathQuery.Set_SearchHalfExtents(FVector{
             ClearanceProjectionPlanarExtentCm,
-            ClearanceProjectionVerticalExtentCm,
-            AgentRadiusForFirstSkip,
-            DetourResult,
-            InFilterTag,
-            CornerOffsetDistance,
-            InQueryFilterOverlay);
-        if (NOT DetourFound || DetourResult.Get_Status() != ECk_Nav_PathStatus::Ready)
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionVerticalExtentCm});
+
+        const auto DetourResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(InWorld, PathQuery);
+        if (DetourResult.Get_Status() != ECk_NavSurface_QueryStatus::Success)
         { return false; }
 
         const auto& DetourWaypoints = DetourResult.Get_Waypoints();
@@ -431,14 +391,14 @@ namespace ck_pathnetwork_processor
         for (const auto& Waypoint : DetourWaypoints)
         { Append_CompiledWaypoint(OutWaypoints, Waypoint); }
 
+        // The hit fraction and the end-in-corridor flag are gone with the Detour result they were read
+        // from - a Recast-shaped diagnostic no other provider can fill.
         ck::pathnetwork::Verbose(
             TEXT("[PNDiag] nav raycast boundary recovered by strict path: [{}] -> [{}], "
-                 "hit [{}] at [{}], endInCorridor [{}], waypoints [{}]"),
+                 "hit at [{}], waypoints [{}]"),
             InFrom,
             InTo,
-            RaycastResult.HitTime,
-            HitLocation,
-            static_cast<bool>(RaycastResult.bIsRaycastEndInCorridor),
+            Raycast.Get_HitLocation(),
             OutWaypoints.Num());
         return NOT OutWaypoints.IsEmpty();
     }
@@ -451,14 +411,9 @@ namespace ck_pathnetwork_processor
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         float InPlanarExtentCm) -> bool
     {
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
         { return true; }
 
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
-        { return false; }
         const auto ProjectionExtent = FVector{
             InPlanarExtentCm,
             InPlanarExtentCm,
@@ -467,12 +422,14 @@ namespace ck_pathnetwork_processor
         for (auto WaypointIndex = 0; WaypointIndex < InOutWaypoints.Num(); ++WaypointIndex)
         {
             const auto AuthoredWaypoint = InOutWaypoints[WaypointIndex];
-            auto ProjectedWaypoint = FNavLocation{};
-            if (NOT NavData->ProjectPoint(
-                    AuthoredWaypoint,
-                    ProjectedWaypoint,
-                    ProjectionExtent,
-                    QueryFilter))
+            auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{AuthoredWaypoint};
+            ProjectionQuery.Set_SearchHalfExtents(ProjectionExtent);
+            ProjectionQuery.Set_QueryFilter(InFilterTag);
+            ProjectionQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+            const auto Projection =
+                UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorld, ProjectionQuery);
+            if (Projection.Get_Status() != ECk_NavSurface_QueryStatus::Success)
             {
                 ck::pathnetwork::Verbose(
                     TEXT("PathNetwork nav normalization failed to project waypoint [{}] at [{}]"),
@@ -481,22 +438,23 @@ namespace ck_pathnetwork_processor
                 return false;
             }
 
-            if (FVector::Dist2D(ProjectedWaypoint.Location, AuthoredWaypoint) >
+            const auto ProjectedWaypoint = Projection.Get_Location();
+            if (FVector::Dist2D(ProjectedWaypoint, AuthoredWaypoint) >
                     InPlanarExtentCm ||
-                FMath::Abs(ProjectedWaypoint.Location.Z - AuthoredWaypoint.Z) >
+                FMath::Abs(ProjectedWaypoint.Z - AuthoredWaypoint.Z) >
                     ClearanceProjectionVerticalExtentCm)
             {
                 ck::pathnetwork::Verbose(
                     TEXT("PathNetwork nav normalization rejected waypoint [{}]: [{}] -> [{}]"),
                     WaypointIndex,
                     AuthoredWaypoint,
-                    ProjectedWaypoint.Location);
+                    ProjectedWaypoint);
                 return false;
             }
 
             // Publish the projected point itself. Validating a projected copy while leaving the
             // authored point in the movement path would recreate the airborne-route defect.
-            InOutWaypoints[WaypointIndex] = ProjectedWaypoint.Location;
+            InOutWaypoints[WaypointIndex] = ProjectedWaypoint;
         }
 
         return true;
@@ -512,24 +470,21 @@ namespace ck_pathnetwork_processor
     {
         OutProjectedEndpoint = InEndpoint;
 
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
         { return true; }
 
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
+        auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{InEndpoint};
+        ProjectionQuery.Set_SearchHalfExtents(
+            UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec());
+        ProjectionQuery.Set_QueryFilter(InFilterTag);
+        ProjectionQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+        const auto Projection =
+            UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorld, ProjectionQuery);
+        if (Projection.Get_Status() != ECk_NavSurface_QueryStatus::Success)
         { return false; }
 
-        auto ProjectedEndpoint = FNavLocation{};
-        if (NOT NavData->ProjectPoint(
-                InEndpoint,
-                ProjectedEndpoint,
-                UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec(),
-                QueryFilter))
-        { return false; }
-
-        OutProjectedEndpoint = ProjectedEndpoint.Location;
+        OutProjectedEndpoint = Projection.Get_Location();
         return true;
     }
 
@@ -539,20 +494,15 @@ namespace ck_pathnetwork_processor
         TArray<FVector>& InOutWaypoints,
         FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
-        float InMaxCornerOffsetCm) -> bool
+        float InAgentRadiusUu,
+        ECk_NavSurface_CornerOffset InCornerOffset,
+        float InCornerOffsetDistanceCm) -> bool
     {
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
         { return true; }
 
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
-        { return false; }
-
-        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
-        if (NavSys == nullptr || InOutWaypoints.Num() < 2)
-        { return NavSys != nullptr; }
+        if (InOutWaypoints.Num() < 2)
+        { return true; }
 
         auto ResolvedWaypoints = TArray<FVector>{};
         ResolvedWaypoints.Reserve(InOutWaypoints.Num());
@@ -562,14 +512,14 @@ namespace ck_pathnetwork_processor
         {
             auto SegmentWaypoints = TArray<FVector>{};
             if (NOT Try_ResolveNavmeshSegment(
-                    *NavSys,
-                    *NavData,
-                    QueryFilter,
+                    InWorld,
                     InFilterTag,
                     InQueryFilterOverlay,
+                    InAgentRadiusUu,
                     InOutWaypoints[Index],
                     InOutWaypoints[Index + 1],
-                    InMaxCornerOffsetCm,
+                    InCornerOffset,
+                    InCornerOffsetDistanceCm,
                     SegmentWaypoints))
             { return false; }
 
@@ -599,6 +549,9 @@ namespace ck_pathnetwork_processor
         float InRibbonTolerance,
         FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
+        float InAgentRadiusUu,
+        ECk_NavSurface_CornerOffset InCornerOffset,
+        float InCornerOffsetDistanceCm,
         FRibbonContainmentFailure& OutContainmentFailure,
         int32& OutOriginalSegmentIndex,
         int32& OutRibbonRunIndex) -> EConstrainedPathResolution
@@ -607,17 +560,10 @@ namespace ck_pathnetwork_processor
         OutOriginalSegmentIndex = INDEX_NONE;
         OutRibbonRunIndex = INDEX_NONE;
 
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
         { return EConstrainedPathResolution::Succeeded; }
 
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
-        { return EConstrainedPathResolution::NavFailed; }
-
-        auto* NavSys = ck::nav_surface_recast::TryGet_NavSystem(InWorld);
-        if (NavSys == nullptr || InOutWaypoints.Num() < 2 ||
+        if (InOutWaypoints.Num() < 2 ||
             InSegmentRibbonRunIndices.Num() != InOutWaypoints.Num() - 1 ||
             InSegmentNeedsValidation.Num() != InOutWaypoints.Num() - 1)
         { return EConstrainedPathResolution::NavFailed; }
@@ -626,8 +572,6 @@ namespace ck_pathnetwork_processor
         ResolvedWaypoints.Reserve(InOutWaypoints.Num());
         Append_CompiledWaypoint(ResolvedWaypoints, InOutWaypoints[0]);
 
-        const auto MaxCornerOffsetCm =
-            FMath::Max(0.0f, InRibbonTolerance - RibbonContainmentToleranceCm);
         for (auto Index = 0; Index < InOutWaypoints.Num() - 1; ++Index)
         {
             auto SegmentWaypoints = TArray<FVector>{};
@@ -635,14 +579,14 @@ namespace ck_pathnetwork_processor
             if (NeedsValidation)
             {
                 if (NOT Try_ResolveNavmeshSegment(
-                        *NavSys,
-                        *NavData,
-                        QueryFilter,
+                        InWorld,
                         InFilterTag,
                         InQueryFilterOverlay,
+                        InAgentRadiusUu,
                         InOutWaypoints[Index],
                         InOutWaypoints[Index + 1],
-                        MaxCornerOffsetCm,
+                        InCornerOffset,
+                        InCornerOffsetDistanceCm,
                         SegmentWaypoints))
                 { return EConstrainedPathResolution::NavFailed; }
             }
@@ -695,6 +639,7 @@ namespace ck_pathnetwork_processor
         bool InToIsRouteEndpoint,
         FGameplayTag InFilterTag,
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
+        float InAgentRadiusUu,
         FOffPathLegResolution& InOutResolution) -> bool
     {
         if (InOutResolution._Outcome != EOffPathResolve::Resolved)
@@ -708,8 +653,8 @@ namespace ck_pathnetwork_processor
         if (NOT InToIsRouteEndpoint)
         { Append_CompiledWaypoint(ConnectedWaypoints, InTo); }
 
-        // Off-path connectors are never ribbon-contained, so corner offsetting stays unbounded.
-        constexpr auto UnboundedCornerOffsetCm = TNumericLimits<float>::Max();
+        // Off-path connectors are never ribbon-contained, so there is no slack to cap the corner
+        // offset at - it is left to the provider's own default treatment.
         const auto PathIsValid =
             ConnectedWaypoints.Num() >= 2
             && Try_ProjectPathOntoNavmesh(
@@ -723,43 +668,36 @@ namespace ck_pathnetwork_processor
                 ConnectedWaypoints,
                 InFilterTag,
                 InQueryFilterOverlay,
-                UnboundedCornerOffsetCm);
+                InAgentRadiusUu,
+                ECk_NavSurface_CornerOffset::ProviderDefault,
+                0.0f);
         if (NOT PathIsValid)
         {
             InOutResolution._Outcome = EOffPathResolve::PathFailed;
             return false;
         }
 
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData != nullptr && NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) == ECk_NavSurface_ProviderHealth::Ready)
         {
-            const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-                *NavData, InFilterTag, InQueryFilterOverlay);
-            if (NOT QueryFilter.IsValid())
-            {
-                InOutResolution._Outcome = EOffPathResolve::PathFailed;
-                return false;
-            }
-            {
-                const auto OriginalWaypointCount = ConnectedWaypoints.Num();
-                ConnectedWaypoints = Simplify_PathByTraversal(
-                    ConnectedWaypoints,
-                    [&](const FVector& InShortcutFrom, const FVector& InShortcutTo)
-                    {
-                        return Is_NavmeshSegmentDirectlyWalkable(
-                            *NavData,
-                            QueryFilter,
-                            InShortcutFrom,
-                            InShortcutTo);
-                    },
-                    OffPathSimplificationMaximumVerticalDeviationCm);
-
-                if (ConnectedWaypoints.Num() < OriginalWaypointCount)
+            const auto OriginalWaypointCount = ConnectedWaypoints.Num();
+            ConnectedWaypoints = Simplify_PathByTraversal(
+                ConnectedWaypoints,
+                [&](const FVector& InShortcutFrom, const FVector& InShortcutTo)
                 {
-                    ck::pathnetwork::Verbose(
-                        TEXT("[PNDiag] off-path connector removed [{}] redundant nav waypoints"),
-                        OriginalWaypointCount - ConnectedWaypoints.Num());
-                }
+                    return Is_NavmeshSegmentDirectlyWalkable(
+                        InWorld,
+                        InFilterTag,
+                        InQueryFilterOverlay,
+                        InShortcutFrom,
+                        InShortcutTo);
+                },
+                OffPathSimplificationMaximumVerticalDeviationCm);
+
+            if (ConnectedWaypoints.Num() < OriginalWaypointCount)
+            {
+                ck::pathnetwork::Verbose(
+                    TEXT("[PNDiag] off-path connector removed [{}] redundant nav waypoints"),
+                    OriginalWaypointCount - ConnectedWaypoints.Num());
             }
         }
 
@@ -790,36 +728,30 @@ namespace ck_pathnetwork_processor
         if (InDesiredClearance <= UE_KINDA_SMALL_NUMBER || InOutWaypoints.Num() < 3)
         { return; }
 
-        auto* NavData = ck::nav_surface_recast::TryGet_NavData(InWorld);
-        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
         { return; }
 
-        const auto QueryFilter = ck::nav_surface_recast::Get_CompiledQueryFilter(
-            *NavData, InFilterTag, InQueryFilterOverlay);
-        if (NOT QueryFilter.IsValid())
-        { return; }
         const auto ProjectionExtent = FVector{
             ClearanceProjectionPlanarExtentCm,
             ClearanceProjectionPlanarExtentCm,
             ClearanceProjectionVerticalExtentCm};
-        const auto SentinelValue = TNumericLimits<FVector::FReal>::Max();
-        const auto Sentinel = FVector{SentinelValue, SentinelValue, SentinelValue};
 
         for (auto WaypointIndex = 1; WaypointIndex < InOutWaypoints.Num() - 1; ++WaypointIndex)
         {
             const auto Original = InOutWaypoints[WaypointIndex];
-            auto ClosestWall = Sentinel;
-            const auto CurrentClearance = static_cast<float>(NavData->FindDistanceToWall(
-                Original,
-                QueryFilter,
-                InDesiredClearance,
-                &ClosestWall));
+            auto WallQuery = FCk_NavSurface_WallDistanceQuery{Original, InDesiredClearance};
+            WallQuery.Set_QueryFilter(InFilterTag);
+            WallQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
 
-            const auto FoundNearbyWall = ClosestWall.X != SentinelValue;
+            const auto WallDistance =
+                UCk_Utils_NavSurface_UE::Try_FindDistanceToWall(InWorld, WallQuery);
+            const auto CurrentClearance = WallDistance.Get_DistanceUu();
+
+            const auto FoundNearbyWall = WallDistance.Get_FoundWall();
             if (NOT FoundNearbyWall || CurrentClearance >= InDesiredClearance - ClearanceImprovementEpsilonCm)
             { continue; }
 
-            auto AwayFromWall = Original - ClosestWall;
+            auto AwayFromWall = Original - WallDistance.Get_ClosestWallPoint();
             AwayFromWall.Z = 0.0;
             AwayFromWall = AwayFromWall.GetSafeNormal();
             if (AwayFromWall.IsNearlyZero())
@@ -832,15 +764,17 @@ namespace ck_pathnetwork_processor
             {
                 const auto UnprojectedCandidate =
                     Original + AwayFromWall * RequestedShift * Fraction;
-                auto ProjectedCandidate = FNavLocation{};
-                if (NOT NavData->ProjectPoint(
-                    UnprojectedCandidate,
-                    ProjectedCandidate,
-                    ProjectionExtent,
-                    QueryFilter))
+                auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{UnprojectedCandidate};
+                ProjectionQuery.Set_SearchHalfExtents(ProjectionExtent);
+                ProjectionQuery.Set_QueryFilter(InFilterTag);
+                ProjectionQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+                const auto Projection =
+                    UCk_Utils_NavSurface_UE::Try_ProjectPoint(InWorld, ProjectionQuery);
+                if (Projection.Get_Status() != ECk_NavSurface_QueryStatus::Success)
                 { continue; }
 
-                auto Candidate = ProjectedCandidate.Location;
+                const auto Candidate = Projection.Get_Location();
                 if (FVector::Dist2D(Candidate, UnprojectedCandidate) >
                         ClearanceProjectionPlanarExtentCm ||
                     FMath::Abs(Candidate.Z - UnprojectedCandidate.Z) >
@@ -869,24 +803,28 @@ namespace ck_pathnetwork_processor
                 { continue; }
 
                 if (NOT Is_NavmeshSegmentDirectlyWalkable(
-                        *NavData,
-                        QueryFilter,
+                        InWorld,
+                        InFilterTag,
+                        InQueryFilterOverlay,
                         InOutWaypoints[WaypointIndex - 1],
                         Candidate) ||
                     NOT Is_NavmeshSegmentDirectlyWalkable(
-                        *NavData,
-                        QueryFilter,
+                        InWorld,
+                        InFilterTag,
+                        InQueryFilterOverlay,
                         Candidate,
                         InOutWaypoints[WaypointIndex + 1]))
                 { continue; }
 
-                auto CandidateClosestWall = Sentinel;
-                const auto CandidateClearance = static_cast<float>(NavData->FindDistanceToWall(
-                    Candidate,
-                    QueryFilter,
-                    InDesiredClearance,
-                    &CandidateClosestWall));
-                const auto CandidateHasNearbyWall = CandidateClosestWall.X != SentinelValue;
+                auto CandidateWallQuery =
+                    FCk_NavSurface_WallDistanceQuery{Candidate, InDesiredClearance};
+                CandidateWallQuery.Set_QueryFilter(InFilterTag);
+                CandidateWallQuery.Set_QueryFilterOverlay(InQueryFilterOverlay);
+
+                const auto CandidateWallDistance =
+                    UCk_Utils_NavSurface_UE::Try_FindDistanceToWall(InWorld, CandidateWallQuery);
+                const auto CandidateClearance = CandidateWallDistance.Get_DistanceUu();
+                const auto CandidateHasNearbyWall = CandidateWallDistance.Get_FoundWall();
                 if (CandidateHasNearbyWall &&
                     CandidateClearance <= CurrentClearance + ClearanceImprovementEpsilonCm)
                 { continue; }
@@ -1095,6 +1033,7 @@ namespace ck
         const auto GoalLocation = InRequest.Get_GoalLocation();
         const auto FilterTag = InRequest.Get_NavQueryFilter();
         const auto& QueryFilterOverlay = InRequest.Get_QueryFilterOverlay();
+        const auto AgentRadiusUu = InRequest.Get_AgentRadiusUu();
         auto FailureStage = ERouteFailureStage::NotResolved;
 
         const auto FailRoute = [&](ECk_PathNetwork_RouteFailReason InReason)
@@ -1325,7 +1264,8 @@ namespace ck
                             FromIsRouteEndpoint,
                             ToIsRouteEndpoint,
                             FilterTag,
-                            QueryFilterOverlay);
+                            QueryFilterOverlay,
+                            AgentRadiusUu);
                     Validate_ResolvedOffPathLeg(
                         World,
                         Span._FromLocation,
@@ -1334,6 +1274,7 @@ namespace ck
                         ToIsRouteEndpoint,
                         FilterTag,
                         QueryFilterOverlay,
+                        AgentRadiusUu,
                         Resolution);
                 }
                 if (Resolution._Outcome == EOffPathResolve::NoNavmesh
@@ -1762,6 +1703,21 @@ namespace ck
                         }
                         // The projected waypoints already sit within RibbonContainmentToleranceCm,
                         // so the resolved-tolerance headroom is the whole corner-offset budget.
+                        //
+                        // An offset corner can leave the ribbon by up to the offset distance, so a
+                        // caller whose waypoints face a downstream Is_SegmentInsideRibbonRun check
+                        // caps it at their slack, and that slack IS the tolerance here. A zero
+                        // tolerance is not "whatever the provider does" - it is no room at all, so
+                        // the corners stay raw.
+                        //
+                        // A/B DEBT (filed): the old site capped the explicit distance with
+                        // FMath::Min(the navmesh's baked agent radius, the tolerance). That cap is
+                        // NOT reproduced, so a tolerance above the baked radius now offsets further
+                        // than it used to.
+                        const auto RibbonResolveTolerance = InParams.Get_NavmeshResolvedRibbonTolerance();
+                        const auto RibbonResolveCornerOffset = RibbonResolveTolerance <= 0.0f
+                            ? ECk_NavSurface_CornerOffset::None
+                            : ECk_NavSurface_CornerOffset::Explicit;
                         auto Resolved = false;
                         {
                             SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonResolve);
@@ -1770,7 +1726,9 @@ namespace ck
                                 CandidateWaypoints,
                                 FilterTag,
                                 QueryFilterOverlay,
-                                InParams.Get_NavmeshResolvedRibbonTolerance());
+                                AgentRadiusUu,
+                                RibbonResolveCornerOffset,
+                                RibbonResolveTolerance);
                         }
                         if (NOT Resolved)
                         {
@@ -1928,6 +1886,19 @@ namespace ck
             auto FullPathResolution = EConstrainedPathResolution{};
             {
                 SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_FinalResolve);
+                // An offset corner can leave the ribbon by up to the offset distance, so this
+                // caller's waypoints (facing the containment check below) cap it at their slack,
+                // and that slack IS the resolved-tolerance headroom. A zero headroom is not
+                // "whatever the provider does" - it is no room at all, so the corners stay raw.
+                //
+                // A/B DEBT (filed): the old site capped the explicit distance with
+                // FMath::Min(the navmesh's baked agent radius, the tolerance). That cap is NOT
+                // reproduced, so a tolerance above the baked radius now offsets further than it
+                // used to.
+                const auto FinalResolveTolerance = InParams.Get_NavmeshResolvedRibbonTolerance();
+                const auto FinalResolveCornerOffset = FinalResolveTolerance <= 0.0f
+                    ? ECk_NavSurface_CornerOffset::None
+                    : ECk_NavSurface_CornerOffset::Explicit;
                 FullPathResolution =
                     Try_ResolvePathOntoNavmeshWithRibbonConstraints(
                         World,
@@ -1940,6 +1911,9 @@ namespace ck
                         InParams.Get_NavmeshResolvedRibbonTolerance(),
                         FilterTag,
                         QueryFilterOverlay,
+                        AgentRadiusUu,
+                        FinalResolveCornerOffset,
+                        FinalResolveTolerance,
                         FinalContainmentFailure,
                         FinalContainmentOriginalSegmentIndex,
                         FinalContainmentRibbonRunIndex);
@@ -1998,6 +1972,7 @@ namespace ck
         InCorridor._Network = Network;
         InCorridor._NavQueryFilter = InRequest.Get_NavQueryFilter();
         InCorridor._QueryFilterOverlay = InRequest.Get_QueryFilterOverlay();
+        InCorridor._AgentRadiusUu = InRequest.Get_AgentRadiusUu();
         InCorridor._NetworkEpoch = GraphFragment.Get_Epoch();
 
         auto Follower = InHandle;
@@ -2114,6 +2089,7 @@ namespace ck
         Replan.Set_Network(InCorridor._Network);
         Replan.Set_NavQueryFilter(InCorridor._NavQueryFilter);
         Replan.Set_QueryFilterOverlay(InCorridor._QueryFilterOverlay);
+        Replan.Set_AgentRadiusUu(InCorridor._AgentRadiusUu);
         Replan.Set_TuningRevision(InParams.Get_TuningRevision());
         Replan.Set_RequestRevision(InCorridor._Result.Get_RequestRevision());
         auto NonConstHandle = InHandle;
@@ -2152,6 +2128,7 @@ namespace ck
         Request.Set_Network(InCorridor.Get_Network());
         Request.Set_NavQueryFilter(InCorridor.Get_NavQueryFilter());
         Request.Set_QueryFilterOverlay(InCorridor.Get_QueryFilterOverlay());
+        Request.Set_AgentRadiusUu(InCorridor.Get_AgentRadiusUu());
         Request.Set_TuningRevision(InParams.Get_TuningRevision());
         Request.Set_RequestRevision(InCorridor.Get_Result().Get_RequestRevision());
 

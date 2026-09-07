@@ -125,6 +125,16 @@ namespace ck::groundnav
         // plate already carries. An empty table is therefore the field's own price and nothing else.
         TMap<int32, float> _PlateCostMultipliers;
 
+        // Flat plate ids this ONE query may not stand on. A denied plate is skipped where a crossing
+        // INTO it would be admitted, so no node is minted for it and no corridor can hold it - and a
+        // start already standing on one answers Blocked.
+        //
+        // A refusal rather than a very large multiplier because the two mean different things: a
+        // finite price lets the search cross the ground when nothing cheaper exists, which is exactly
+        // the false success a caller asking "is there a route that avoids this ground at all" must
+        // not be given. The plate table is where "dear" is said; this is where "no" is.
+        TSet<int32> _DeniedPlates;
+
         // Stable link ids this ONE query may not traverse. A denied link is skipped where crossings
         // are admitted, so no node is minted for it and no corridor can hold it - a connectivity
         // decision a reader of the answer can see, rather than a magnitude inside a float compare.

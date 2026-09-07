@@ -159,6 +159,22 @@ namespace ck::groundnav
             return FMath::Max(Base, static_cast<double>(*Named));
         }
 
+        /**
+         * Whether THIS query refuses the ground a surface stands on. False for an empty set, which is
+         * every query that never asked for a refusal, and which therefore pays no flat-plate lookup.
+         */
+        auto Get_IsPlateDenied(
+            const FCk_GroundNav_Field&      InField,
+            const TSet<int32>&              InDenied,
+            const FCk_GroundNav_SurfaceRef& InSurface) -> bool
+        {
+            if (InDenied.IsEmpty())
+            { return false; }
+
+            return InDenied.Contains(
+                Get_FlatPlateIndex(InField, InSurface._TileIndex, InSurface._PlateIndex));
+        }
+
         // ------------------------------------------------------------------------------------------------------------
 
         /**
@@ -180,6 +196,9 @@ namespace ck::groundnav
             // Null for a traversal nobody prices - the walk, and a raycast whose query named no table.
             const TMap<int32, float>* _PlateCostMultipliers = nullptr;
             bool _UseBakedPlateCost = false;
+
+            // Null for a traversal that refuses no ground, which the walk always is.
+            const TSet<int32>* _DeniedPlates = nullptr;
 
             double _CostMultiplier = kCostMultiplier;
 
@@ -301,6 +320,19 @@ namespace ck::groundnav
                 _Position = _Origin + (_Delta * _T);
 
                 if (Verdict != ECk_GroundNav_StepVerdict::Admitted)
+                {
+                    _Blocked = true;
+                    _BlockedAxis = Axis;
+                    _BlockedDirection = Direction;
+
+                    return false;
+                }
+
+                // The query's own refusal, read where the field's admission rule already stopped the
+                // ray and refusing on the same terms - so the walker stays on the plate it was on and
+                // the hit lands on the edge it would have crossed, exactly as a wall's does.
+                if (_DeniedPlates != nullptr &&
+                    Get_IsPlateDenied(_Field, *_DeniedPlates, NextSurface))
                 {
                     _Blocked = true;
                     _BlockedAxis = Axis;
@@ -657,6 +689,18 @@ namespace ck::groundnav
             return Result;
         }
 
+        // Ahead of the plate early-out, which answers a segment that never leaves the start's own
+        // plate without ever stepping: a ray standing on refused ground has already left the segment
+        // it was asked about, and the early-out would answer Success for exactly that ray.
+        if (Get_IsPlateDenied(InField, InQuery._DeniedPlates, Start._Surface))
+        {
+            Result._Status = ECk_NavSurface_QueryStatus::Blocked;
+            Result._HitLocation = FVector{StartXY.X, StartXY.Y, static_cast<double>(Start._SurfaceZUu)};
+            Result._LastSurface = Start._Surface;
+
+            return Result;
+        }
+
         const auto SegmentLengthUu = FVector2D::Distance(StartXY, EndXY);
         const auto CapIsActive = InQuery._MaxCost > 0.0f;
         const auto MaxCost = static_cast<double>(InQuery._MaxCost);
@@ -688,6 +732,7 @@ namespace ck::groundnav
         auto Traversal = FTraversal{InField};
         Traversal._PlateCostMultipliers = &InQuery._PlateCostMultipliers;
         Traversal._UseBakedPlateCost = InQuery._UseBakedPlateCost;
+        Traversal._DeniedPlates = &InQuery._DeniedPlates;
         DoBegin_Traversal(Traversal, Start, InQuery._Agent, Result._Cost, StartXY, EndXY);
 
         auto AccumulatedCost = 0.0;

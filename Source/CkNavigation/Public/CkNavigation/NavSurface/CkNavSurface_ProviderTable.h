@@ -38,6 +38,17 @@ public:
     TFunction<FCk_NavSurface_ReachabilityResult(UWorld*, const FCk_NavSurface_ReachabilityQuery&)>
         _IsReachable;
 
+    // THREAD CONTRACT: GAME THREAD ONLY - the opposite of _BoundarySegments above, and stated beside
+    // it so the precedent that one sets cannot be read as covering these two. Recast answers both by
+    // querying a live ARecastNavMesh rather than an immutable snapshot, so a worker calling either
+    // races the navigation build.
+    TFunction<FCk_NavSurface_PathResult(UWorld*, const FCk_NavSurface_PathQuery&)>
+        _FindPathSync;
+
+    // THREAD CONTRACT: GAME THREAD ONLY, for the same reason as _FindPathSync.
+    TFunction<FCk_NavSurface_WallDistanceResult(UWorld*, const FCk_NavSurface_WallDistanceQuery&)>
+        _FindDistanceToWall;
+
     TFunction<FBox(UWorld*)>
         _SurfaceBounds;
 

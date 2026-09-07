@@ -22,16 +22,12 @@ class UNavigationSystemV1;
 
 namespace ck::nav_surface_recast
 {
-    // Area tags and native filter definitions are contributed by the modules that own the area
-    // classes, so the registration cannot run before the gameplay-tag manager exists. A registrar
-    // parks the work at static-init time; the table runs every pending one on first use.
+    // Area tags are contributed by the modules that own the area classes, so the registration
+    // cannot run before the gameplay-tag manager exists. A registrar parks the work at static-init
+    // time; the table runs every pending one on first use.
     CKNAVIGATION_API auto Register_AreaTag(
         const FGameplayTag& InAreaTag,
         TSubclassOf<UNavArea> InAreaClass) -> void;
-
-    CKNAVIGATION_API auto Register_FilterDefinition(
-        const FGameplayTag& InFilterTag,
-        FCk_NavFilter_Definition InDefinition) -> void;
 
     struct CKNAVIGATION_API FRegistrar
     {
@@ -43,12 +39,11 @@ namespace ck::nav_surface_recast
 
     CKNAVIGATION_API auto Get_RegisteredAreaTags() -> TArray<FGameplayTag>;
 
-    CKNAVIGATION_API auto TryGet_FilterDefinition(
-        const FGameplayTag& InFilterTag) -> TOptional<FCk_NavFilter_Definition>;
-
     // Compiles a filter tag plus a value-only overlay into the engine filter the query runs with.
-    // An unmapped tag falls back to the NavData default; a malformed overlay or definition fails
-    // closed rather than silently weakening the caller's path policy.
+    // The DEFINITION behind the tag comes from the neutral registry, so this provider and a
+    // grounded one compile the same authored intent. An unmapped tag falls back to the NavData
+    // default; a malformed overlay or definition fails closed rather than silently weakening the
+    // caller's path policy.
     CKNAVIGATION_API auto Get_CompiledQueryFilter(
         ARecastNavMesh& InNavData,
         const FGameplayTag& InFilterTag,
@@ -80,6 +75,15 @@ namespace ck::nav_surface_recast
     CKNAVIGATION_API auto Get_IsReachable(
         UWorld* InWorld,
         const FCk_NavSurface_ReachabilityQuery& InQuery) -> FCk_NavSurface_ReachabilityResult;
+
+    // GAME THREAD ONLY, unlike Get_BoundarySegments above: both of these query a live ARecastNavMesh.
+    CKNAVIGATION_API auto Try_FindPathSync(
+        UWorld* InWorld,
+        const FCk_NavSurface_PathQuery& InQuery) -> FCk_NavSurface_PathResult;
+
+    CKNAVIGATION_API auto Try_FindDistanceToWall(
+        UWorld* InWorld,
+        const FCk_NavSurface_WallDistanceQuery& InQuery) -> FCk_NavSurface_WallDistanceResult;
 
     CKNAVIGATION_API auto Get_SurfaceBounds(UWorld* InWorld) -> FBox;
     CKNAVIGATION_API auto Get_ProviderHealth(UWorld* InWorld) -> ECk_NavSurface_ProviderHealth;
