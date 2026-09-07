@@ -1,7 +1,9 @@
 #include "CkInsightsAnalyzer/Core/CkFrameAnalyzer.h"
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
+#include "CkInsightsAnalyzer/Report/CkFrameReport.h"
 
 #include "HAL/FileManager.h"
+#include "HAL/PlatformMisc.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
@@ -87,9 +89,18 @@ bool FCkTest_FrameAnalyzerProgressive_RealTraceSnapshotParity::RunTest(const FSt
 {
     // This is intentionally a machine-fixture test. The saved trace is large enough to expose the
     // parser's intermediate state on the development machine, but source control does not own it.
-    const FString TracePath = FPaths::ProjectSavedDir() / TEXT("Profiling/20260807_192547_5F8520.utrace");
+    FString TracePath = FPlatformMisc::GetEnvironmentVariable(TEXT("CK_INSIGHTS_TEST_TRACE"));
+    const bool UsesEnvironmentTrace = NOT TracePath.IsEmpty();
+    if (NOT UsesEnvironmentTrace)
+    { TracePath = FPaths::ProjectSavedDir() / TEXT("Profiling/20260807_192547_5F8520.utrace"); }
     if (NOT IFileManager::Get().FileExists(*TracePath))
     {
+        if (UsesEnvironmentTrace)
+        {
+            AddError(*FString::Printf(TEXT("CK_INSIGHTS_TEST_TRACE does not exist: %s"), *TracePath));
+            return false;
+        }
+
         AddWarning(TEXT("SKIPPED: progressive TraceServices fixture is not present in Saved/Profiling."));
         return true;
     }
@@ -204,11 +215,20 @@ bool FCkTest_FrameAnalyzerProgressive_RealTraceSnapshotParity::RunTest(const FSt
         FinalSnapshot.Result.FrameIndex, Completed.FrameIndex);
     TestEqual(TEXT("Final snapshot and completed GameThread IDs match"),
         FinalSnapshot.Result.ThreadId, Completed.ThreadId);
+    TestEqual(TEXT("Final snapshot and completed time-range validity match"),
+        FinalSnapshot.Result.HasValidTimeRange, Completed.HasValidTimeRange);
+    TestTrue(TEXT("Final snapshot preserves a valid completed time range"),
+        FinalSnapshot.Result.HasValidTimeRange);
     TestEqual(TEXT("Final snapshot and completed event counts match"),
         FinalSnapshot.Result.Events.Num(), Completed.Events.Num());
+    TestTrue(TEXT("Final snapshot and completed instrumented totals match"),
+        FMath::IsNearlyEqual(FinalSnapshot.Result.InstrumentedMs, Completed.InstrumentedMs, 0.001));
     TestTrue(TEXT("Final snapshot and completed inclusive maps match"),
         ck_frame_analyzer_progressive_tests::AreEqual(
             FinalSnapshot.Result.TimerInclusive, Completed.TimerInclusive));
+    TestTrue(TEXT("Final snapshot and completed outer-inclusive maps match"),
+        ck_frame_analyzer_progressive_tests::AreEqual(
+            FinalSnapshot.Result.TimerOuterInclusive, Completed.TimerOuterInclusive));
     TestTrue(TEXT("Final snapshot and completed exclusive maps match"),
         ck_frame_analyzer_progressive_tests::AreEqual(
             FinalSnapshot.Result.TimerExclusive, Completed.TimerExclusive));
@@ -218,6 +238,20 @@ bool FCkTest_FrameAnalyzerProgressive_RealTraceSnapshotParity::RunTest(const FSt
     TestTrue(TEXT("Final snapshot and completed child graphs match"),
         ck_frame_analyzer_progressive_tests::AreEqual(
             FinalSnapshot.Result.ChildrenOf, Completed.ChildrenOf));
+    const auto SnapshotAccounting = FCk_FrameReport::ComputeFrameAccounting(
+        FinalSnapshot.Result, FinalSnapshot.TimerNames);
+    const auto CompletedAccounting = FCk_FrameReport::ComputeFrameAccounting(
+        Completed, FinalSnapshot.TimerNames);
+    TestTrue(TEXT("Final snapshot and completed uninstrumented accounting match"),
+        FMath::IsNearlyEqual(
+            SnapshotAccounting.UninstrumentedMs,
+            CompletedAccounting.UninstrumentedMs,
+            0.001));
+    TestTrue(TEXT("Final snapshot and completed exclusive coverage errors match"),
+        FMath::IsNearlyEqual(
+            SnapshotAccounting.ExclusiveCoverageErrorMs,
+            CompletedAccounting.ExclusiveCoverageErrorMs,
+            0.001));
     AddInfo(FString::Printf(
         TEXT("Verified final snapshot parity: frame=%llu events=%d names=%d."),
         ProvisionalFrameIndex,

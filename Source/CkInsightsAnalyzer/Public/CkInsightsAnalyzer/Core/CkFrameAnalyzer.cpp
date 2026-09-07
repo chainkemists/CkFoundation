@@ -474,16 +474,30 @@ auto
         Result.Events = MoveTemp(Events);
     }
 
-    uint32 MinDepth = MAX_uint32;
-    for (const FCk_TimingEvent& Event : Result.Events)
+    // Use the same clipping and accounting as completed-frame analysis after releasing the provider lock.
+    Result = AnalyzeEvents(Result.Events, Result.FrameStartTime, Result.FrameEndTime,
+        Result.ThreadId, Result.FrameIndex);
+    if (Cancelled != nullptr && Cancelled->Load())
     {
-        if (Event.Depth < MinDepth)
-        {
-            MinDepth = Event.Depth;
-            Result.FrameRootTimerIndex = Event.TimerIndex;
-        }
+        OutSnapshot.UnavailableReason = TEXT("Frame capture was cancelled.");
+        return false;
     }
-    ComputeExclusiveTimes(Result.Events, Result);
+
+    if (Result.Events.IsEmpty())
+    {
+        OutSnapshot.UnavailableReason = TEXT("Requested game frame has no timing events yet.");
+        return false;
+    }
+
+    // Clipping can discard boundary-only events; retain names only for events in the published snapshot.
+    auto ReferencedTimers = TSet<uint32>{};
+    for (const FCk_TimingEvent& Event : Result.Events)
+    { ReferencedTimers.Add(Event.TimerIndex); }
+    for (auto It = TimerNames.CreateIterator(); It; ++It)
+    {
+        if (NOT ReferencedTimers.Contains(It.Key()))
+        { It.RemoveCurrent(); }
+    }
 
     OutSnapshot.Result = MoveTemp(Result);
     OutSnapshot.TimerNames = MoveTemp(TimerNames);
