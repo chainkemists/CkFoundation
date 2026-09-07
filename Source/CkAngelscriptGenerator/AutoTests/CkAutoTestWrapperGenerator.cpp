@@ -3,6 +3,7 @@
 #include "CkAngelscriptGenerator/AutoTests/CkAutoTestNetStubGenerator.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_Log.h"
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
+#include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
@@ -10,6 +11,7 @@
 
 #include <HAL/FileManager.h>
 #include <Interfaces/IPluginManager.h>
+#include <Internationalization/Regex.h>
 #include <Misc/App.h>
 #include <Misc/FileHelper.h>
 #include <Misc/Paths.h>
@@ -123,7 +125,14 @@ namespace ck_autotest_wrapper_generator
 
     // ---- Hand-authored wrapper detection -------------------------------
 
-    // True only for a USER-authored wrapper. Our own previous output is ignored (we would
+    // TWO authorities answer "does a hand-authored wrapper already own this name": this one, which
+    // asks the live object table, and `FCkAutoTestWrapperGenerator::Collect_SourceDeclaredWrapperNames`,
+    // which asks the .as source. The source authority exists because a wrapper whose file failed to
+    // compile has NO live class to answer for it — emitting beside it lands a second class of the
+    // same name in Script/Generated/, and the next successful compile aborts the AS boot on the
+    // duplicate until someone deletes the generated entry by hand.
+    //
+    // This one is true only for a USER-authored wrapper. Our own previous output is ignored (we would
     // otherwise deadlock ourselves), as are stale UClasses of just-removed AS classes.
     auto Has_HandAuthoredWrapper(const FString& InWrapperBareName) -> bool
     {
@@ -413,10 +422,55 @@ namespace ck_autotest_wrapper_generator
 
 auto
     FCkAutoTestWrapperGenerator::
+    Collect_SourceDeclaredWrapperNames(
+        const TArray<FString>& InAsSourceFiles)
+    -> TSet<FString>
+{
+    using ck::angelscriptgenerator::self_heal::FCkAsSourceScanner;
+
+    // Raw text, so this over-matches into comments and string literals on purpose — the scanner
+    // below is what decides, and a regex is far cheaper than parsing every file for every name.
+    static const auto WrapperDeclarationPattern = FRegexPattern{TEXT(R"(class\s+(A[A-Za-z0-9_]+_Actor)\b)")};
+
+    auto Result = TSet<FString>{};
+
+    for (const auto& SourceFilePath : InAsSourceFiles)
+    {
+        auto Contents = FString{};
+        if (NOT FFileHelper::LoadFileToString(Contents, *SourceFilePath))
+        { continue; }
+
+        auto Candidates = TSet<FString>{};
+        auto Matcher = FRegexMatcher{WrapperDeclarationPattern, Contents};
+        while (Matcher.FindNext())
+        {
+            Candidates.Add(Matcher.GetCaptureGroup(1));
+        }
+
+        for (const auto& Candidate : Candidates)
+        {
+            // Blanks comments and string literals first, so a commented-out or quoted declaration
+            // never suppresses emission.
+            if (NOT FCkAsSourceScanner::Parse_ClassDeclaration(Contents, Candidate, SourceFilePath).Found)
+            { continue; }
+
+            Result.Add(Candidate.RightChop(1));
+        }
+    }
+
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAutoTestWrapperGenerator::
     GenerateAll()
     -> void
 {
 #if WITH_EDITOR
+
+    using ck::angelscriptgenerator::self_heal::FCkAsSourceScanner;
 
     // Single-writer gate (G4): a secondary instance must not rewrite <Plugin>_AutoTestActors.as.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
@@ -451,18 +505,30 @@ auto
         return InA.GetPathName() < InB.GetPathName();
     });
 
+    const auto SourceDeclared = Collect_SourceDeclaredWrapperNames(
+        FCkAsSourceScanner::Enumerate_AsSourceFiles(FCkAsSourceScanner::Get_DefaultScanRoots()));
+
     auto Emittable = TArray<UClass*>{};
     auto SkippedCount = int32{0};
     for (auto* Class : AllSubclasses)
     {
         const auto WrapperBareName = ck_autotest_wrapper_generator::Get_WrapperBareName(Class);
-        if (ck_autotest_wrapper_generator::Has_HandAuthoredWrapper(WrapperBareName))
+
+        const auto HasLiveWrapper = ck_autotest_wrapper_generator::Has_HandAuthoredWrapper(WrapperBareName);
+        const auto HasSourceDeclaredWrapper = SourceDeclared.Contains(WrapperBareName);
+
+        if (HasLiveWrapper || HasSourceDeclaredWrapper)
         {
             ++SkippedCount;
+            const auto Authority = HasLiveWrapper
+                ? FString{TEXT("live class")}
+                : FString{TEXT("declared in source")};
+
             ck::angelscriptgenerator::VeryVerbose(
-                TEXT("[CkAS AutoTest Wrappers] Skipping {} - hand-authored {} already exists."),
+                TEXT("[CkAS AutoTest Wrappers] Skipping {} - hand-authored {} already exists ({})."),
                 Class->GetName(),
-                ck_autotest_wrapper_generator::Get_WrapperSourceName(Class));
+                ck_autotest_wrapper_generator::Get_WrapperSourceName(Class),
+                Authority);
             continue;
         }
         Emittable.Add(Class);
@@ -470,8 +536,9 @@ auto
 
     ck::angelscriptgenerator::Log(
         TEXT("[CkAS AutoTest Wrappers] Discovered {} subclasses of Ck_AutoTest_Base - ")
-        TEXT("{} will be emitted, {} have hand-authored wrappers (skipped)."),
-        AllSubclasses.Num(), Emittable.Num(), SkippedCount);
+        TEXT("{} will be emitted, {} have hand-authored wrappers (skipped); ")
+        TEXT("{} wrapper classes are declared in .as source."),
+        AllSubclasses.Num(), Emittable.Num(), SkippedCount, SourceDeclared.Num());
 
     const auto Buckets = ck_autotest_wrapper_generator::Bucket_ClassesByPlugin(Emittable);
 
