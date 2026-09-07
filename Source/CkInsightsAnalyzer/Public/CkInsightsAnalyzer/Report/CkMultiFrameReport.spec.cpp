@@ -11,6 +11,7 @@
 
 #include "Async/Async.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformMisc.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
@@ -726,14 +727,26 @@ bool FCkTest_MultiFrameReport_CancellationClearsOutput::RunTest(const FString&)
     TestEqual(TEXT("cancelled analysis clears category averages"), Stats.CategoryAverages.Num(), 0);
     TestEqual(TEXT("cancelled analysis clears timer averages"), Stats.TimerAverages.Num(), 0);
     TestEqual(TEXT("cancelled analysis clears wait averages"), Stats.WaitAverages.Num(), 0);
+    TestFalse(TEXT("cancelled analysis clears the wait-computed flag"), Stats.WaitAveragesComputed);
+    TestTrue(TEXT("cancelled analysis clears per-frame accounting"), Stats.FrameAccounting.IsEmpty());
+    TestFalse(TEXT("cancelled analysis clears average accounting"), Stats.AverageAccounting.IsSet());
     TestFalse(TEXT("cancelled analysis clears averaged frame"), Stats.AveragedFrame.IsSet());
 
     // Source control does not own this development-machine fixture. When present, exercise a real
     // completed provider session before cancellation so the second request proves stale statistics
     // are cleared after the narrowed provider-read scopes have populated them.
-    const FString TracePath = FPaths::ProjectSavedDir() / TEXT("Profiling/20260807_192547_5F8520.utrace");
+    FString TracePath = FPlatformMisc::GetEnvironmentVariable(TEXT("CK_INSIGHTS_TEST_TRACE"));
+    const bool UsesEnvironmentTrace = NOT TracePath.IsEmpty();
+    if (NOT UsesEnvironmentTrace)
+    { TracePath = FPaths::ProjectSavedDir() / TEXT("Profiling/20260807_192547_5F8520.utrace"); }
     if (NOT IFileManager::Get().FileExists(*TracePath))
     {
+        if (UsesEnvironmentTrace)
+        {
+            AddError(*FString::Printf(TEXT("CK_INSIGHTS_TEST_TRACE does not exist: %s"), *TracePath));
+            return false;
+        }
+
         AddWarning(TEXT("SKIPPED: multi-frame cancellation fixture is not present in Saved/Profiling."));
         return true;
     }
@@ -806,6 +819,18 @@ bool FCkTest_MultiFrameReport_CancellationClearsOutput::RunTest(const FString&)
         FixtureSession.Close();
         return false;
     }
+    TestEqual(TEXT("completed progressive report accounts for every analysed frame"),
+        PopulatedStats.FrameAccounting.Num(), static_cast<int32>(PopulatedStats.FrameCount));
+    TestTrue(TEXT("completed progressive report has average accounting"), PopulatedStats.AverageAccounting.IsSet());
+    TestTrue(TEXT("completed progressive report computes wait averages"), PopulatedStats.WaitAveragesComputed);
+    if (PopulatedStats.AverageAccounting.IsSet())
+    {
+        TestTrue(TEXT("completed progressive report reconciles total exclusive time with average accounting"),
+            FMath::IsNearlyEqual(
+                PopulatedStats.TotalExclusiveMs,
+                PopulatedStats.AverageAccounting->ExclusiveSumMs,
+                0.001));
+    }
     TestTrue(TEXT("zero test interval publishes progress for completed frames"), ProgressSnapshots.Num() > 0);
     if (ProgressSnapshots.Num() > 0)
     {
@@ -847,6 +872,9 @@ bool FCkTest_MultiFrameReport_CancellationClearsOutput::RunTest(const FString&)
     TestTrue(TEXT("cancelled populated re-run clears category averages"), ClearedStats.CategoryAverages.IsEmpty());
     TestTrue(TEXT("cancelled populated re-run clears timer averages"), ClearedStats.TimerAverages.IsEmpty());
     TestTrue(TEXT("cancelled populated re-run clears wait averages"), ClearedStats.WaitAverages.IsEmpty());
+    TestFalse(TEXT("cancelled populated re-run clears the wait-computed flag"), ClearedStats.WaitAveragesComputed);
+    TestTrue(TEXT("cancelled populated re-run clears per-frame accounting"), ClearedStats.FrameAccounting.IsEmpty());
+    TestFalse(TEXT("cancelled populated re-run clears average accounting"), ClearedStats.AverageAccounting.IsSet());
     TestFalse(TEXT("cancelled populated re-run clears averaged frame"), ClearedStats.AveragedFrame.IsSet());
     FixtureSession.Close();
     return true;
