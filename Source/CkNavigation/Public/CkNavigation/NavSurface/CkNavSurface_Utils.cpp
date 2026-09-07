@@ -69,6 +69,20 @@ namespace ck_nav_surface_utils
         Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
         return Result;
     }
+
+    auto Get_NoProvider_Path() -> FCk_NavSurface_PathResult
+    {
+        auto Result = FCk_NavSurface_PathResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
+
+    auto Get_NoProvider_WallDistance() -> FCk_NavSurface_WallDistanceResult
+    {
+        auto Result = FCk_NavSurface_WallDistanceResult{};
+        Result.Set_Status(ECk_NavSurface_QueryStatus::NoProvider);
+        return Result;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -214,6 +228,42 @@ auto
     { return ck_nav_surface_utils::Get_NoProvider_Raycast(); }
 
     return Table->_SurfaceRaycast(World, InQuery);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
+    Try_FindPathSync(
+        const UObject* InWorldContext,
+        const FCk_NavSurface_PathQuery& InQuery)
+    -> FCk_NavSurface_PathResult
+{
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ck_nav_surface_utils::Get_NoProvider_Path(); }
+
+    return Table->_FindPathSync(World, InQuery);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
+    Try_FindDistanceToWall(
+        const UObject* InWorldContext,
+        const FCk_NavSurface_WallDistanceQuery& InQuery)
+    -> FCk_NavSurface_WallDistanceResult
+{
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return ck_nav_surface_utils::Get_NoProvider_WallDistance(); }
+
+    return Table->_FindDistanceToWall(World, InQuery);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

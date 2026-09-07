@@ -114,6 +114,38 @@ public:
         const UObject* InWorldContext,
         const FCk_NavSurface_RaycastQuery& InQuery);
 
+    /**
+     * One route between two points, answered inside this call.
+     *
+     * THREAD CONTRACT: GAME THREAD ONLY. Get_BoundarySegments below is the exception in this class,
+     * not the rule - Recast answers this by querying a live navmesh.
+     *
+     * A world whose provider registered no table, and a provider with nothing to answer from, both
+     * answer NoProvider with no waypoints.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Try Find Path Sync",
+              meta = (WorldContext = "InWorldContext"))
+    static FCk_NavSurface_PathResult
+    Try_FindPathSync(
+        const UObject* InWorldContext,
+        const FCk_NavSurface_PathQuery& InQuery);
+
+    /**
+     * The nearest wall to a point within a radius, and where it is.
+     *
+     * THREAD CONTRACT: GAME THREAD ONLY, for the same reason as Try_FindPathSync.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Try Find Distance To Wall",
+              meta = (WorldContext = "InWorldContext"))
+    static FCk_NavSurface_WallDistanceResult
+    Try_FindDistanceToWall(
+        const UObject* InWorldContext,
+        const FCk_NavSurface_WallDistanceQuery& InQuery);
+
     // THREAD CONTRACT: callable off the game thread against an immutable field snapshot. C++-only
     // by contract — no UFUNCTION here; Blueprint and AngelScript reach the capability through a
     // separate game-thread wrapper. Results are written into caller-provided storage.

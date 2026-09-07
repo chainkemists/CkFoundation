@@ -95,6 +95,8 @@ auto
            static_cast<bool>(_SurfaceRaycast) &&
            static_cast<bool>(_BoundarySegments) &&
            static_cast<bool>(_IsReachable) &&
+           static_cast<bool>(_FindPathSync) &&
+           static_cast<bool>(_FindDistanceToWall) &&
            static_cast<bool>(_SurfaceBounds) &&
            static_cast<bool>(_ProviderHealth) &&
            static_cast<bool>(_IsBuildInProgress) &&

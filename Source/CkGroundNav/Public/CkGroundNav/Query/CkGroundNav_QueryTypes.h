@@ -289,6 +289,13 @@ namespace ck::groundnav
         // rule, so a ray and a search price one plate the same way. Off by default: a query that
         // never asked for it prices nothing it did not price before.
         bool _UseBakedPlateCost = false;
+
+        // Flat plates this ONE ray may not walk onto, in the same index space the table above uses.
+        // A denied plate stops the ray at the edge it would have crossed, exactly as a wall does, and
+        // a ray that STARTS on one is refused where it stands - the ground is there, this query may
+        // just not use it. A refusal and not a huge multiplier for the reason the search states: a
+        // price the ray can afford is a route, and "no route through this ground" is not a price.
+        TSet<int32> _DeniedPlates;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -460,9 +460,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _CornerSmoothingDistance = 150.0f;
 
-    // Preferred distance from the already agent-radius-eroded Recast boundary. This is a soft
-    // on-ribbon compile-time preference: zero disables it and insufficient room keeps the
-    // original valid corridor.
+    // Preferred distance from the walkable boundary the NavSurface provider reports (already
+    // eroded by agent radius). This is a soft on-ribbon compile-time preference: zero disables
+    // it and insufficient room keeps the original valid corridor.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _DesiredNavmeshClearance = 75.0f;
 
@@ -554,6 +554,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
+    // The requesting body's radius, in uu. Zero means unknown, and a GroundNav plan then admits every
+    // walkable cell however tight it is - a direct caller should set it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    float _AgentRadiusUu = 0.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_EnableDisable _StartOverride = ECk_EnableDisable::Disable;
 
@@ -571,6 +576,7 @@ public:
     CK_PROPERTY(_Network);
     CK_PROPERTY(_NavQueryFilter);
     CK_PROPERTY(_QueryFilterOverlay);
+    CK_PROPERTY(_AgentRadiusUu);
     CK_PROPERTY(_StartOverride);
     CK_PROPERTY(_StartOverrideLocation);
     CK_PROPERTY(_TuningRevision);

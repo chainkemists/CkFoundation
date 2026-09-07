@@ -12,6 +12,7 @@
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
+#include "CkGroundNav/Search/CkGroundNav_FilterCompile.h"
 #include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
 
 #include <Engine/World.h>
@@ -127,6 +128,7 @@ namespace ck_groundnav_path_processor
     auto
         Get_Query(
             const ck::FFragment_GroundNavPath_Params& InParams,
+            const FCk_GroundNav_FieldPtr&             InField,
             const FCk_Request_GroundNavPath_FindPath& InRequest)
         -> FCk_GroundNav_PathQuery
     {
@@ -142,15 +144,31 @@ namespace ck_groundnav_path_processor
         Query._MaxCorridorLength = InParams.Get_MaxCorridorLength();
         Query._AllowPartialPath = InParams.Get_AllowPartialPath();
 
+        // The request's filter, compiled once per (field snapshot, tag, overlay): its excluded areas
+        // become plates this search may not enter, and its per-area multipliers become the price of
+        // the plates carrying them. Assigned rather than merged for the reason Get_CostParams states
+        // - it leaves both tables empty, so the filter's answer IS the query's answer.
+        const auto& FilterTables = Get_CompiledFilterTables(
+            InField, InRequest.Get_QueryFilter(), InRequest.Get_QueryFilterOverlay());
+
+        Query._Cost._PlateCostMultipliers = FilterTables._Multipliers;
+        Query._Cost._DeniedPlates = FilterTables._Denied;
+
         return Query;
     }
 
     /** The agent location the post-process drops the first waypoint against is the request's own From:
      *  the path entity carries no transform of its own, and From is where the caller said the body was
-     *  when it asked. */
+     *  when it asked.
+     *
+     *  The post-process prices and shortcuts under the SAME filter the search routed under. Without
+     *  that the shortcut's chord would be judged against unfiltered ground and could cut straight
+     *  across the very plates the corridor went round. */
     auto
         Get_PostParams(
             const ck::FFragment_GroundNavPath_Params& InParams,
+            const FCk_GroundNav_FieldPtr&             InField,
+            const FCk_Request_GroundNavPath_FindPath& InRequest,
             const FVector&                            InAgentLocation)
         -> FCk_GroundNav_PathPostParams
     {
@@ -160,6 +178,12 @@ namespace ck_groundnav_path_processor
         PostParams._VerticalToleranceUu = InParams.Get_VerticalToleranceUu();
         PostParams._AgentLocation = InAgentLocation;
         PostParams._Cost = Get_CostParams(InParams);
+
+        const auto& FilterTables = Get_CompiledFilterTables(
+            InField, InRequest.Get_QueryFilter(), InRequest.Get_QueryFilterOverlay());
+
+        PostParams._Cost._PlateCostMultipliers = FilterTables._Multipliers;
+        PostParams._Cost._DeniedPlates = FilterTables._Denied;
 
         return PostParams;
     }
@@ -396,7 +420,7 @@ namespace ck
         const auto Plan = groundnav::Get_PathPlan(
             SearchResult,
             *InCurrent._Field,
-            Get_PostParams(InParams, Request.Get_From()));
+            Get_PostParams(InParams, InCurrent._Field, Request, Request.Get_From()));
 
         auto Locations = TArray<FVector>{};
         Locations.Reserve(Plan._Waypoints.Num());
@@ -519,7 +543,7 @@ namespace ck
 
         auto Search = groundnav::FCk_GroundNav_PathSearch{};
 
-        const auto Query = Get_Query(InParams, InCurrent._PendingRequest);
+        const auto Query = Get_Query(InParams, Field, InCurrent._PendingRequest);
 
         const auto RepairWasAsked =
             InCurrent._PendingRequest.Get_PlanMode() == ECk_GroundNav_PlanMode::Repair;
