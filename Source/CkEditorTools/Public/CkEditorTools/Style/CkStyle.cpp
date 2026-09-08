@@ -200,7 +200,7 @@ auto
 	GetRoundedBrush_Pill()
 	-> const FSlateBrush*
 {
-	static const FSlateRoundedBoxBrush Brush{FLinearColor::White, 99.0f};
+	static const FSlateRoundedBoxBrush Brush{FLinearColor::White};
 	return &Brush;
 }
 
