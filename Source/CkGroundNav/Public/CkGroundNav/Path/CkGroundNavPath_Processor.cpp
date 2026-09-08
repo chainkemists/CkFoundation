@@ -65,23 +65,9 @@ namespace ck_groundnav_path_processor
         TEXT("out of Pending. Default 5s."),
         ECVF_Default);
 
-    /**
-     * What the corridor box is grown by beyond the body's own radius: ONE CELL of the field's default
-     * lattice (FCk_GroundNav_BakeConfig::_CellSizeUu, 25uu).
-     *
-     * The box covers plate RECTANGLES, and a plate rectangle is where the ground is, not where the
-     * body may be while walking it: a string-pulled route hugs a plate edge, and a body of radius r
-     * standing on that edge occupies r past it. The radius answers that. The cell on top answers the
-     * lattice itself - a rebuild that changed only the cells either side of a door moves ground the
-     * corridor was priced through while leaving every plate rectangle it named intact, and a box cut
-     * exactly to those rectangles would read such a rebuild as untouching the route.
-     *
-     * One cell rather than the field's own cell size because a compile-time constant cannot ask a
-     * field that does not exist yet, and because the margin exists to absorb the lattice's grain
-     * rather than to measure it: a field baked finer than the default is covered by more than a cell
-     * of margin, which errs toward invalidating.
-     */
-    constexpr auto kCorridorInflationMarginUu = 25.0f;
+    // What the corridor box is grown by beyond the body's own radius lives in the fragment header,
+    // because the invalidator grows an in-flight search's request bounds by the same number:
+    // ck::kCorridorInflationMarginUu.
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -478,6 +464,32 @@ namespace ck
             ? INDEX_NONE
             : SearchResult._PlateCorridor[0];
 
+        // A rebuild that landed while this search was in flight is ground the search never read: the
+        // field snapshot was pinned at Request_Begin. The route publishes anyway - a half-answered
+        // episode is worth nothing to the consumer - and is flagged here so the next tick re-plans it
+        // once against the field as it now is. HERE and not in the invalidator, because when that
+        // rebuild arrived this agent held no corridor for it to measure.
+        //
+        // AT MOST ONCE PER AGENT LIFETIME, and the corridor above is what holds that - not a flag.
+        // DoTry_ArmInFlightSearch is reached only while this slot holds no corridor, and
+        // _LastCorridorBounds, set a few lines above, never goes invalid again once a route has
+        // published: the corridor half of the invalidator owns every rebuild from here on.
+        //
+        // SUCCESS only. A terminal failure has no route to re-plan and the crowd retries on its own,
+        // so DoPublish_Failure leaves the flag standing for the next request's drain to clear.
+        if (InResult.Get_RebuiltWhileInFlight())
+        {
+            InResult._RebuiltWhileInFlight = false;
+
+            InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
+
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] flagged for repath: a surface rebuild landed while this ")
+                TEXT("search was in flight, so the route it just published was planned over ground ")
+                TEXT("that has since moved"),
+                InPathEntity);
+        }
+
         DoClear(InCurrent);
         InPathEntity.Try_Remove<FTag_GroundNavPath_SearchInFlight>();
 
@@ -631,6 +643,10 @@ namespace ck
 
         InResult._HasFreshResult = false;
 
+        // The news belonged to the episode being replaced. A plan about to be made against the field
+        // as it is published NOW owes nothing to a rebuild that moved ground under the last one.
+        InResult._RebuiltWhileInFlight = false;
+
         InCurrent._PendingRequest = InRequest;
         InCurrent._PendingSince = FCk_Time{FPlatformTime::Seconds()};
 
@@ -671,6 +687,10 @@ namespace ck
             .Set_RequestRevision(InRequest.Get_RequestRevision());
 
         InResult._HasFreshResult = false;
+
+        // Abandoned with nothing to publish, so the rebuild this episode was carrying has no route
+        // left to re-plan.
+        InResult._RebuiltWhileInFlight = false;
     }
 
     // ----------------------------------------------------------------------------------------------------------------

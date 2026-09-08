@@ -167,16 +167,17 @@ namespace ck
             const auto NeighbourDistanceToGoal =
                 static_cast<float>(FVector::Dist2D(InNeighbourCentre, InSelfGoal));
 
-            // Parked ON the destination — close enough that this agent could not stand where
-            // the neighbour does and still be short of its own arrival tolerance — OR already
-            // settled as part of the pack occupying it, in which case the allowance grows by
-            // one body diameter per ring already stacked up. That is the exact rate at which a
-            // physical pile grows outward, and because a chain only extends through agents that
-            // are themselves GoalCrowded, every chain bottoms out at a body genuinely standing
-            // on the destination.
+            // The neighbour anchors the goal only if its body overlaps the agent's ARRIVAL disc
+            // — the agent cannot rest within ArrivalRadius of the goal without overlapping a body
+            // closer than SelfRadius + NeighbourRadius - ArrivalRadius from it (Get_GoalBlocker's
+            // ClosestApproach bound), plus the contact pad. Farther out is merely NEAR the goal
+            // (a neighbour on the adjacent queue slot, F9) and must not anchor a hold. Settled
+            // pack members extend the reach by one body diameter per ring stacked up — the rate
+            // a pile grows outward — so a chain, extending only through agents themselves
+            // GoalCrowded, bottoms out at a body genuinely standing on the destination.
             const auto AnchorDepth = Get_AnchorCrowdDepth(InNeighbourHandle);
             const auto GoalRegionRadius =
-                InSelfRadius + NeighbourRadius + InArrivalRadius + InContactPadCm +
+                InSelfRadius + NeighbourRadius - InArrivalRadius + InContactPadCm +
                 (static_cast<float>(AnchorDepth) * (InSelfRadius + NeighbourRadius));
 
             if (NeighbourDistanceToGoal > GoalRegionRadius)

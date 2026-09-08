@@ -1,8 +1,16 @@
 #include "CkJoltEditor_Module.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
+
+#include "CkJolt/StaticWorld/CkJoltStaticWorld_Subsystem.h"
+
 #include "CkJoltEditor/AssetAction/CkJoltMeshShapeCook_AssetAction.h"
 #include "CkJoltEditor/Cook/CkJoltCook_EditorSubsystem.h"
 
+#include <Editor.h>
+#include <Engine/Engine.h>
+#include <Engine/World.h>
 #include <ToolMenus.h>
 
 #define LOCTEXT_NAMESPACE "FCkJoltEditorModule"
@@ -27,10 +35,42 @@ namespace ck_jolt_editor_module
                 { Action(*Subsystem); }
             })});
     }
+
+    /*
+     * Undo and redo restore and remove level actors without broadcasting OnLevelActorAdded /
+     * OnLevelActorDeleted / OnActorMoved, and this hook names no actors — so every undo/redo pays a full
+     * editor-world re-extract. A world with no static-world subsystem has the editor static world mode
+     * set to Disabled and is skipped, not ensured.
+     */
+    static auto DoHandle_PostUndoRedo() -> void
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(GEngine),
+            TEXT("Undo/redo fired with no GEngine — the editor worlds cannot be enumerated, so the Jolt "
+                 "static world cannot be re-derived"))
+        { return; }
+
+        for (const auto& WorldContext : GEngine->GetWorldContexts())
+        {
+            auto* World = WorldContext.World();
+
+            if (ck::Is_NOT_Valid(World) || World->WorldType != EWorldType::Editor)
+            { continue; }
+
+            auto* StaticWorldSubsystem = World->GetSubsystem<UCk_JoltStaticWorld_Subsystem_UE>();
+
+            if (ck::Is_NOT_Valid(StaticWorldSubsystem))
+            { continue; }
+
+            StaticWorldSubsystem->Request_ResweepAllLevels();
+        }
+    }
 }
 
 void FCkJoltEditorModule::StartupModule()
 {
+    _PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddStatic(
+        &ck_jolt_editor_module::DoHandle_PostUndoRedo);
+
     UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateLambda([]()
     {
         using namespace ck_jolt_editor_module;
@@ -82,6 +122,9 @@ void FCkJoltEditorModule::StartupModule()
 
 void FCkJoltEditorModule::ShutdownModule()
 {
+    FEditorDelegates::PostUndoRedo.Remove(_PostUndoRedoHandle);
+    _PostUndoRedoHandle.Reset();
+
     UToolMenus::UnRegisterStartupCallback(this);
     UToolMenus::UnregisterOwner(this);
 }

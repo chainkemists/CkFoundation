@@ -17,6 +17,7 @@
 #include "CkJolt/World/CkJoltWorld.h"
 
 #include <Components/PrimitiveComponent.h>
+#include <Engine/Engine.h>
 #include <Engine/Level.h>
 #include <Engine/World.h>
 #include <GameFramework/Actor.h>
@@ -112,9 +113,16 @@ auto
 
     _JoltSubsystem = InCollection.InitializeDependency<UCk_Jolt_Subsystem>();
 
+    auto* World = GetWorld();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("JoltStaticWorld subsystem is initializing with NO world — it cannot resolve which ECS world "
+             "owns its attribution entities"))
+    { return; }
+
     // Depend on the ECS world subsystem so it outlives us: Deinitialize still reads attribution fragments.
     // Which one that is depends on the world type — an Editor world has only the editor ECS world.
-    if (GetWorld()->WorldType == EWorldType::Editor)
+    if (World->WorldType == EWorldType::Editor)
     { InCollection.InitializeDependency<UCk_EditorEcsWorld_Subsystem_UE>(); }
     else
     { _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>(); }
@@ -123,6 +131,25 @@ auto
         this, &ThisType::DoHandle_LevelAdded);
     _LevelRemovedHandle = FWorldDelegates::LevelRemovedFromWorld.AddUObject(
         this, &ThisType::DoHandle_LevelRemoved);
+
+#if WITH_EDITOR
+    // Editor-world authoring sync, bound HERE (not in an OnWorldBeginPlay sibling an Editor world never
+    // reaches) so it pairs with Deinitialize's unbind. Reaching this in an Editor world already means the
+    // editor static world is enabled — DoesSupportWorldType refused the subsystem otherwise.
+    //
+    // GEngine, not GEditor: OnLevelActorAdded / OnLevelActorDeleted / OnActorMoved are all UEngine events,
+    // and in an editor process GEngine IS the UEditorEngine that broadcasts them (AActor::PostEditMove
+    // fires GEngine->BroadcastOnActorMoved once on release, not per drag frame). No UnrealEd dependency.
+    if (World->WorldType == EWorldType::Editor && ck::IsValid(GEngine))
+    {
+        _EditorActorAddedHandle = GEngine->OnLevelActorAdded().AddUObject(
+            this, &ThisType::DoHandle_EditorActorAdded);
+        _EditorActorDeletedHandle = GEngine->OnLevelActorDeleted().AddUObject(
+            this, &ThisType::DoHandle_EditorActorDeleted);
+        _EditorActorMovedHandle = GEngine->OnActorMoved().AddUObject(
+            this, &ThisType::DoHandle_EditorActorMoved);
+    }
+#endif
 }
 
 auto
@@ -133,6 +160,19 @@ auto
     FWorldDelegates::LevelAddedToWorld.Remove(_LevelAddedHandle);
     FWorldDelegates::LevelRemovedFromWorld.Remove(_LevelRemovedHandle);
 
+#if WITH_EDITOR
+    if (ck::IsValid(GEngine))
+    {
+        GEngine->OnLevelActorAdded().Remove(_EditorActorAddedHandle);
+        GEngine->OnLevelActorDeleted().Remove(_EditorActorDeletedHandle);
+        GEngine->OnActorMoved().Remove(_EditorActorMovedHandle);
+    }
+
+    _EditorActorAddedHandle.Reset();
+    _EditorActorDeletedHandle.Reset();
+    _EditorActorMovedHandle.Reset();
+#endif
+
     // Levels do not reliably fire LevelRemovedFromWorld during world teardown — free everything remaining
     // while the Jolt world and the ECS registry are both still alive. Dead handles are tolerated.
     for (auto& [Level, LevelBodies] : _LevelBodies)
@@ -142,6 +182,10 @@ auto
             if (ck::Is_NOT_Valid(ActorEntity))
             { continue; }
 
+            // Unfile as we go: a swept entity is in the actor index TOO, and the loop below must not
+            // destroy it a second time.
+            DoUnfile_ActorEntity(ActorEntity);
+
             Request_RemoveBodiesForEntity(ActorEntity);
 
             auto GenericHandle = FCk_Handle{ActorEntity};
@@ -149,7 +193,7 @@ auto
         }
     }
 
-    for (auto& [Actor, ActorEntity] : _ManualActorEntities)
+    for (auto& [Actor, ActorEntity] : _ActorEntities)
     {
         if (ck::Is_NOT_Valid(ActorEntity))
         { continue; }
@@ -172,7 +216,7 @@ auto
     }
 
     _LevelBodies.Empty();
-    _ManualActorEntities.Empty();
+    _ActorEntities.Empty();
     _ManualComponentEntities.Empty();
     _LoadedCells.Empty();
     _ComponentEventRoutes.Empty();
@@ -212,20 +256,54 @@ auto
     { return; }
 
 #if WITH_EDITOR
-    // Two independent gates, because there are two independent settings. An Editor world answers to
-    // _EditorStaticWorldMode ONLY: routing it through the PIE gate would mean turning the PIE static world
-    // off silently killed authoring- and cook-time geometry as well.
-    if (World->WorldType == EWorldType::Editor)
-    {
-        if (UCk_Utils_Jolt_ProjectSettings::Get_EditorStaticWorldMode() == ECk_Jolt_EditorStaticWorldMode::Disabled)
-        { return; }
-    }
-    else if (UCk_Utils_Jolt_ProjectSettings::Get_PIEStaticWorldMode() == ECk_Jolt_PIEStaticWorldMode::Disabled)
+    if (NOT DoGet_IsStaticWorldEnabled(*World))
     { return; }
 #endif
 
     DoRun_InitialSweep(*World);
 }
+
+#if WITH_EDITOR
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    Request_ResweepAllLevels()
+        -> void
+{
+    // Nothing has been derived from this world yet, so there is nothing to RE-derive — the lazy entry
+    // point still owes the first sweep, and running one here would only move that cost earlier.
+    if (NOT _HasSwept)
+    { return; }
+
+    auto* World = GetWorld();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(World),
+        TEXT("JoltStaticWorld subsystem was asked to re-sweep, but it has no world"))
+    { return; }
+
+    if (World->WorldType != EWorldType::Editor)
+    { return; }
+
+    if (NOT DoGet_IsStaticWorldEnabled(*World))
+    { return; }
+
+    // A copy of the keys, because DoRemove_BodiesForLevel erases the entry it frees (taking its _Swept
+    // flag with it, which is what lets the sweep below re-visit the level).
+    auto TrackedLevels = TArray<TWeakObjectPtr<ULevel>>{};
+    _LevelBodies.GetKeys(TrackedLevels);
+
+    for (const auto& TrackedLevel : TrackedLevels)
+    {
+        auto* Level = TrackedLevel.Get();
+
+        if (ck::Is_NOT_Valid(Level))
+        { continue; }
+
+        DoRemove_BodiesForLevel(*Level);
+    }
+
+    DoRun_InitialSweep(*World);
+}
+#endif
 
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
@@ -238,6 +316,9 @@ auto
     auto SweepStats = ck::jolt::bake::FCk_Jolt_ExtractionStats{};
     auto NumLevels = int32{0};
 
+    // The add handler must not bake into a sweep in progress — the sweep will reach that actor itself.
+    _IsSweeping = true;
+
     for (const auto& Level : InWorld.GetLevels())
     {
         if (ck::Is_NOT_Valid(Level))
@@ -246,6 +327,8 @@ auto
         SweepStats += DoAdd_BodiesForLevel(*Level);
         ++NumLevels;
     }
+
+    _IsSweeping = false;
 
     // Always at Log verbosity: an EMPTY static world means probe traces cannot hit world geometry, and
     // that emptiness used to be invisible below VeryVerbose. One line per world boot, spam-free.
@@ -332,9 +415,19 @@ auto
         -> int32
 {
     // ExplicitActor ignores the bake filter — the caller declared the actor static-in-intent.
+    return DoBake_Actor(InActor, ck::jolt::bake::ECk_Jolt_ExtractionPolicy::ExplicitActor, {});
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoBake_Actor(
+        const AActor& InActor,
+        ck::jolt::bake::ECk_Jolt_ExtractionPolicy InPolicy,
+        const ck::jolt::bake::FCk_Jolt_BakeFilter& InFilter)
+        -> int32
+{
     auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
-    ck::jolt::bake::ExtractActor(InActor, _LiveShapeCache, Extracted, {},
-        ck::jolt::bake::ECk_Jolt_ExtractionPolicy::ExplicitActor);
+    ck::jolt::bake::ExtractActor(InActor, _LiveShapeCache, Extracted, InFilter, InPolicy);
 
     if (Extracted.IsEmpty())
     { return 0; }
@@ -342,23 +435,27 @@ auto
     const auto TransientEntity = DoGet_TransientEntity();
 
     CK_ENSURE_IF_NOT(ck::IsValid(TransientEntity),
-        TEXT("Request_BakeActor for [{}] has no live ECS transient entity to attribute bodies to — the ECS "
+        TEXT("Baking actor [{}] has no live ECS transient entity to attribute bodies to — the ECS "
              "world is not ready."), InActor.GetFName())
     { return 0; }
 
     // Re-baking REPLACES the previous attribution: overwriting the map entry would orphan its bodies
     // (unreachable by Request_RemoveActor AND by Deinitialize).
-    if (auto* ExistingEntity = _ManualActorEntities.Find(&InActor))
+    if (auto* ExistingEntity = _ActorEntities.Find(&InActor))
     {
         if (ck::IsValid(*ExistingEntity))
         {
+            // The previous entity can be a SWEPT one: drop it from its level's teardown list too, or the
+            // level would later re-visit an entity this call is destroying.
+            DoUnlist_EntityFromLevel(InActor, *ExistingEntity);
+
             Request_RemoveBodiesForEntity(*ExistingEntity);
 
             auto GenericHandle = FCk_Handle{*ExistingEntity};
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
         }
 
-        _ManualActorEntities.Remove(&InActor);
+        _ActorEntities.Remove(&InActor);
     }
 
     auto ActorEntity = DoCreate_ActorEntity(TransientEntity, InActor);
@@ -369,7 +466,8 @@ auto
     DoCreate_BodiesFromExtracted(Extracted, ActorEntity, BodyIds);
     DoBatchAdd_Bodies(BodyIds);
 
-    _ManualActorEntities.Add(&InActor, ActorEntity);
+    _ActorEntities.Add(&InActor, ActorEntity);
+    DoList_EntityInLevel(InActor, ActorEntity);
     DoNote_BodiesChanged(BodyIds.Num());
 
     return BodyIds.Num();
@@ -452,11 +550,15 @@ auto
         -> void
 {
     auto ActorEntity = FCk_Handle_JoltStaticActor{};
-    if (NOT _ManualActorEntities.RemoveAndCopyValue(&InActor, ActorEntity))
+    if (NOT _ActorEntities.RemoveAndCopyValue(&InActor, ActorEntity))
     { return; }
 
     if (ck::Is_NOT_Valid(ActorEntity))
     { return; }
+
+    // A sweep-baked entity is in its level's teardown list as well: drop it there, or level removal (and
+    // Deinitialize) would free and destroy an entity this call already destroyed.
+    DoUnlist_EntityFromLevel(InActor, ActorEntity);
 
     Request_RemoveBodiesForEntity(ActorEntity);
 
@@ -778,7 +880,7 @@ auto
     { return; }
 
 #if WITH_EDITOR
-    if (UCk_Utils_Jolt_ProjectSettings::Get_PIEStaticWorldMode() == ECk_Jolt_PIEStaticWorldMode::Disabled)
+    if (NOT DoGet_IsStaticWorldEnabled(*InWorld))
     { return; }
 #endif
 
@@ -798,6 +900,106 @@ auto
     DoRemove_BodiesForLevel(*InLevel);
 }
 
+#if WITH_EDITOR
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoHandle_EditorActorAdded(
+        AActor* InActor)
+        -> void
+{
+    if (NOT DoGet_IsEditorSyncCandidate(InActor))
+    { return; }
+
+    DoBake_Actor(*InActor, ck::jolt::bake::ECk_Jolt_ExtractionPolicy::LevelSweep,
+        ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings());
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoHandle_EditorActorDeleted(
+        AActor* InActor)
+        -> void
+{
+    // No admission check on the way OUT: what matters is whether the actor IS baked, not whether it would
+    // be baked now (its collision may have changed since). An unbaked actor is absent from the index and
+    // the request no-ops.
+    if (NOT _HasSwept || ck::Is_NOT_Valid(InActor) || InActor->GetWorld() != GetWorld())
+    { return; }
+
+    Request_RemoveActor(*InActor);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoHandle_EditorActorMoved(
+        AActor* InActor)
+        -> void
+{
+    if (NOT _HasSwept || ck::Is_NOT_Valid(InActor) || InActor->GetWorld() != GetWorld())
+    { return; }
+
+    // A static body's pose is baked INTO the body, so a move is a remove + re-bake. The REMOVE is not
+    // gated on admission — an actor set to NoCollision after it was swept is no longer a candidate, and
+    // skipping its removal would leave stale-pose bodies that a later re-enable flips back into the scene.
+    // Both halves bump the static-scene revision; a consumer holding the old token fails closed either way.
+    if (_ActorEntities.Contains(InActor))
+    { Request_RemoveActor(*InActor); }
+
+    if (NOT DoGet_IsEditorSyncCandidate(InActor))
+    { return; }
+
+    DoBake_Actor(*InActor, ck::jolt::bake::ECk_Jolt_ExtractionPolicy::LevelSweep,
+        ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings());
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoGet_IsEditorSyncCandidate(
+        const AActor* InActor)
+        -> bool
+{
+    // Before the world's own sweep there is no static world to keep current, and baking here would give
+    // the actor a SECOND entity when the sweep eventually runs.
+    if (NOT _HasSwept)
+    { return false; }
+
+    // The add handler must not bake into a sweep in progress — the sweep will reach that actor itself.
+    if (_IsSweeping)
+    { return false; }
+
+    if (ck::Is_NOT_Valid(InActor) || InActor->GetWorld() != GetWorld())
+    { return false; }
+
+    // The sweep's own admission rule, not a copy of it: an actor is swept exactly when a LevelSweep
+    // extraction under the project's bake filter yields at least one body (mobility policy and every
+    // settings exclusion included). The bake that follows admission runs the SAME policy and the SAME
+    // filter, so the bodies it produces are exactly the ones counted here.
+    auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
+    ck::jolt::bake::ExtractActor(*InActor, _LiveShapeCache, Extracted,
+        ck::jolt::bake::FCk_Jolt_BakeFilter::Make_FromProjectSettings(),
+        ck::jolt::bake::ECk_Jolt_ExtractionPolicy::LevelSweep);
+
+    return NOT Extracted.IsEmpty();
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoGet_IsStaticWorldEnabled(
+        const UWorld& InWorld) const
+        -> bool
+{
+    // An Editor world answers to _EditorStaticWorldMode ONLY: routing it through the PIE gate would mean
+    // turning the PIE static world off silently killed authoring- and cook-time geometry as well.
+    if (InWorld.WorldType == EWorldType::Editor)
+    {
+        return UCk_Utils_Jolt_ProjectSettings::Get_EditorStaticWorldMode() !=
+            ECk_Jolt_EditorStaticWorldMode::Disabled;
+    }
+
+    return UCk_Utils_Jolt_ProjectSettings::Get_PIEStaticWorldMode() != ECk_Jolt_PIEStaticWorldMode::Disabled;
+}
+#endif
+
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoAdd_BodiesForLevel(
@@ -806,7 +1008,10 @@ auto
 {
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldLevelAdd);
 
-    if (_LevelBodies.Contains(&InLevel))
+    // The explicit flag, not the entry's mere presence: a request bake files its entity in this level's
+    // list too, and a level whose only entries came that way has not been swept yet.
+    if (const auto* AlreadyListed = _LevelBodies.Find(&InLevel);
+        AlreadyListed != nullptr && AlreadyListed->_Swept)
     { return {}; }
 
     // A level can be added before BeginPlay: with no transient entity to parent attribution entities under,
@@ -852,9 +1057,17 @@ auto
     const auto NumBodies = BodyIds.Num();
     const auto NumEntities = ActorEntities.Num();
 
-    auto& LevelBodies = _LevelBodies.Add(&InLevel);
-    LevelBodies._ActorEntities = MoveTemp(ActorEntities);
-    LevelBodies._CellIndices = MoveTemp(CellIndices);
+    // The sweep indexes every actor it baked exactly as Request_BakeActor does — ONE place for both the
+    // live-extract and the cooked path.
+    for (const auto& ActorEntity : ActorEntities)
+    { DoFile_ActorEntity(ActorEntity); }
+
+    // FindOrAdd + Append, never Add: replacing the entry would strand the bodies of any entity a request
+    // bake already filed under this level.
+    auto& LevelBodies = _LevelBodies.FindOrAdd(&InLevel);
+    LevelBodies._ActorEntities.Append(MoveTemp(ActorEntities));
+    LevelBodies._CellIndices.Append(MoveTemp(CellIndices));
+    LevelBodies._Swept = true;
 
     DoNote_BodiesChanged(NumBodies);
 
@@ -882,6 +1095,10 @@ auto
         if (ck::Is_NOT_Valid(ActorEntity))
         { continue; }
 
+        // The actor index must not outlive the level's entities — a later request would otherwise
+        // resolve a destroyed entity.
+        DoUnfile_ActorEntity(ActorEntity);
+
         Request_RemoveBodiesForEntity(ActorEntity);
 
         auto GenericHandle = FCk_Handle{ActorEntity};
@@ -894,6 +1111,81 @@ auto
 
     ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] removed [{}] source entities (total bodies now [{}])"),
         InLevel.GetOutermost()->GetName(), LevelBodies._ActorEntities.Num(), _NumStaticBodies);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoFile_ActorEntity(
+        const FCk_Handle_JoltStaticActor& InActorEntity)
+        -> void
+{
+    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    { return; }
+
+    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActor();
+
+    if (SourceActor.Get() == nullptr)
+    { return; }
+
+    // Never displace an existing entry: a manual bake that happened before this sweep owns the actor, and
+    // overwriting it would leave ITS bodies reachable by nothing but world teardown.
+    if (_ActorEntities.Contains(SourceActor))
+    { return; }
+
+    _ActorEntities.Add(SourceActor, InActorEntity);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoUnfile_ActorEntity(
+        const FCk_Handle_JoltStaticActor& InActorEntity)
+        -> void
+{
+    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    { return; }
+
+    // The weak key hashes by index+serial, so this still finds (and removes) the entry of an actor that is
+    // already dead — the same rule _ComponentEventRoutes relies on.
+    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActor();
+
+    if (const auto* FiledEntity = _ActorEntities.Find(SourceActor);
+        FiledEntity != nullptr && *FiledEntity == InActorEntity)
+    { _ActorEntities.Remove(SourceActor); }
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoList_EntityInLevel(
+        const AActor& InActor,
+        const FCk_Handle_JoltStaticActor& InActorEntity)
+        -> void
+{
+    auto* Level = InActor.GetLevel();
+
+    if (ck::Is_NOT_Valid(Level))
+    { return; }
+
+    // A request-baked entity is in the actor index only, so a sub-level unload would free the level's own
+    // bodies and leave this actor's behind. The level entry it creates carries _Swept = false, so the
+    // level still owes its sweep.
+    _LevelBodies.FindOrAdd(Level)._ActorEntities.AddUnique(InActorEntity);
+}
+
+auto
+    UCk_JoltStaticWorld_Subsystem_UE::
+    DoUnlist_EntityFromLevel(
+        const AActor& InActor,
+        const FCk_Handle_JoltStaticActor& InActorEntity)
+        -> void
+{
+    auto* LevelBodies = _LevelBodies.Find(InActor.GetLevel());
+
+    if (LevelBodies == nullptr)
+    { return; }
+
+    LevelBodies->_ActorEntities.RemoveSingle(InActorEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -25,14 +25,18 @@ namespace ck::groundnav::nav_surface_adapter
     // ----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Whether the ground a record covers has been published under a field that already knows about it.
+     * Whether the ground a record covers has been published under a field that already priced it.
      *
-     * DERIVED AT THE READ, and nothing anywhere stores it. Every tile the record's world bounds meet
-     * must be Built and must carry an epoch STRICTLY PAST the one the record was submitted against —
-     * every one, because a record that reaches two tiles is only as live as its laggard, and a caller
-     * told otherwise would act on ground the paint has not reached yet. A record whose bounds meet no
-     * tile at all is NOT live: there is no ground for it to be live on, and answering true would make
-     * "live" mean "nothing contradicted it".
+     * DERIVED AT THE READ, and nothing anywhere stores it. Two things must both hold. First, the field
+     * must have PRICED the record: `_Params._MarkupRecords` must carry a reflected-equal copy of it.
+     * The epoch alone cannot stand in for this — a build already in flight when the paint drained
+     * snapshotted its record list before the record existed, and its publish still lands with a
+     * strictly newer epoch on every tile it reaches, off plates that were never stamped from it. Second,
+     * every tile the record's world bounds meet must be Built and must carry an epoch STRICTLY PAST the
+     * one the record was submitted against — every one, because a record that reaches two tiles is only
+     * as live as its laggard, and a caller told otherwise would act on ground the paint has not reached
+     * yet. A record whose bounds meet no tile at all is NOT live: there is no ground for it to be live
+     * on, and answering true would make "live" mean "nothing contradicted it".
      *
      * Strictly past, not at or past, because _RequestedAtEpoch is stamped at admission with the epoch
      * the field was ALREADY published at. An equal epoch is therefore the very publish the record was

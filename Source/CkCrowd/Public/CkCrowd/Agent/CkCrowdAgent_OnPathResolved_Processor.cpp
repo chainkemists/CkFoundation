@@ -106,7 +106,9 @@ namespace ck
         // returns the closest reachable poly outside the excluded band). Neither is terminal for
         // the EPISODE: re-dispatch once with the permissive toll filter. Runs BEFORE the path-trouble stamp and the
         // switch — a strict miss is expected control flow, not trouble for the overlay to flag and
-        // never a caller-facing failure.
+        // never a caller-facing CROWD failure: no OnGoalFailed, no hold. The per-query
+        // Nav_OnPathFailed still fires for the failed strict query, exactly as it does for any
+        // Request_FindPath.
         if (IsTerminalPathResult &&
             InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict)
         {

@@ -208,7 +208,6 @@ namespace ck
 
         InCurrent._Services.Emplace(Queue, InCurrent._NextRegistrationOrdinal++);
         ++InCurrent._Revision;
-        InCoordinator.AddOrGet<FTag_QueueCoordinator_NeedsReconcile>();
         return true;
     }
 
@@ -434,7 +433,6 @@ namespace ck
             });
         if (RemovedCount > 0)
         { ++InCurrent._Revision; }
-        InCoordinator.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

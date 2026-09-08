@@ -68,15 +68,22 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent) const
+            const FFragment_GroundNavPath_Params& InParams,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath_Result& InResult) const
         -> void
     {
         const auto& Corridor = InCurrent.Get_LastCorridorBounds();
 
-        // An agent holding no corridor has no route a rebuild can have moved: its next plan reads the
-        // field as it is, and a flag raised here would ask it to redo a plan it never made.
+        // An agent holding no corridor has no route a rebuild can have moved - UNLESS it is midway
+        // through finding one. A plan it has not begun reads the field as it is, and a flag raised
+        // here would ask it to redo a plan it never made; a search already standing has pinned the
+        // field it reads and cannot see this publish at all, which is the case below.
         if (Corridor.IsValid == 0)
-        { return; }
+        {
+            DoTry_ArmInFlightSearch(InPathEntity, InParams, InCurrent, InResult);
+            return;
+        }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity);
 
@@ -177,6 +184,69 @@ namespace ck
             TEXT("GroundNav Path [{}] left alone: the link-only publishes since this plan moved [{}] ")
             TEXT("link(s), none of the [{}] this corridor crosses"),
             InPathEntity, InNote._ChangedLinkIdsSinceGeometry.Num(), CorridorLinkIds.Num());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavPath_InvalidateOnRebuilt::
+        DoTry_ArmInFlightSearch(
+            HandleType                             InPathEntity,
+            const FFragment_GroundNavPath_Params&  InParams,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath_Result&        InResult) const
+        -> void
+    {
+        // Nothing is pinned yet. An episode parked on unbuilt ground re-probes the registry on every
+        // retry, so it will plan over whatever this publish leaves behind and owes it nothing; an
+        // entity carrying no episode at all is the same answer for the same reason.
+        if (NOT InCurrent.Get_HasBegun())
+        { return; }
+
+        // Armed already, by an earlier box in this burst or by an earlier publish in this episode. One
+        // re-plan answers every rebuild one search missed, so arming twice would buy nothing.
+        if (InResult.Get_RebuiltWhileInFlight())
+        { return; }
+
+        const auto& Request = InCurrent.Get_PendingRequest();
+
+        /**
+         * The corridor this search has not produced yet, stood in for by the box its two ends span and
+         * grown by exactly what the publish will grow the real corridor's box by - the body's radius
+         * plus the lattice margin - so this and the corridor test are one test applied either side of
+         * one plan.
+         *
+         * A FLOOR and not a promise: a route that detours outside the span of its own endpoints is
+         * answered by the corridor test on the next publish, which is the same answer every route
+         * planned before this rebuild already gets.
+         */
+        auto RequestBounds = FBox{ForceInit};
+
+        RequestBounds += Request.Get_From();
+        RequestBounds += Request.Get_Goal();
+
+        RequestBounds = RequestBounds.ExpandBy(
+            static_cast<double>(InParams.Get_AgentRadiusUu() + kCorridorInflationMarginUu));
+
+        for (const auto& RebuiltBounds : *_PublishedRebuilds)
+        {
+            // Read exactly as the corridor loop reads it: an invalid box is a publisher that did not
+            // know WHERE it rebuilt, so nothing can be ruled out against it.
+            const auto RequestWasReached =
+                RebuiltBounds.IsValid == 0 || RebuiltBounds.Intersect(RequestBounds);
+
+            if (NOT RequestWasReached)
+            { continue; }
+
+            InResult._RebuiltWhileInFlight = true;
+
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] armed for repath-on-publish: published rebuild [{}] meets ")
+                TEXT("the bounds [{}] of the search it has in flight"),
+                InPathEntity, RebuiltBounds, RequestBounds);
+
+            return;
+        }
     }
 }
 

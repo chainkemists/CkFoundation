@@ -47,46 +47,6 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::HandleRequests"), STAT_CkCrowd_HandleRequestsPro
 
 namespace ck_crowd_agent_handle_requests
 {
-    /**
-     * What ONE planning phase decides about the filter a route is planned under.
-     *
-     * Provider-neutral on purpose: the phase is the crowd's own idea and the two providers merely
-     * carry it differently — Recast takes the base tag and the override as separate fields it
-     * resolves, GroundNav takes one tag through the neutral filter registry. Deciding it twice, once
-     * per branch, is how the two would drift about what "strict" means for the same agent.
-     */
-    struct FCk_CrowdAgent_PlanPhaseFilter
-    {
-        ECk_CrowdAgent_PlanPhase _Phase = ECk_CrowdAgent_PlanPhase::Permissive;
-
-        FGameplayTag _QueryFilter;
-
-        // Outranks _QueryFilter where it is set, which is the precedence Recast's own resolver applies.
-        FGameplayTag _QueryFilterOverride;
-
-        FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
-
-        bool _UsesStrictStandingCrowdFilter = false;
-
-        /** The ONE tag a provider carrying a single filter field is planned under. */
-        auto Get_EffectiveQueryFilter() const -> FGameplayTag
-        {
-            return _QueryFilterOverride.IsValid() ? _QueryFilterOverride : _QueryFilter;
-        }
-    };
-
-    /**
-     * The phase decision every FRESH dispatch makes: strict first, because a crowd-free route may
-     * exist now even if it did not a moment ago. The one caller that must not retry strict —
-     * OnPathResolved's strict→permissive fallback — passes InForcePermissive.
-     *
-     * _StrictPlanFailed is deliberately NOT reset here. Only a dispatch carrying NEW evidence retries
-     * strict — a fresh MoveTo, a BlockedRecheck resume (the pack drained), a PathRefresh trigger (a
-     * new disc confirmed), a caller ForceReplan — and those sites reset the flag themselves. The stall
-     * ladder's re-paths carry no new evidence: retrying strict there re-fails against the same plugged
-     * route and doubles every rung's Pending stop-start cycle, which the body visibly tracks (measured
-     * as a facing-whip regression).
-     */
     auto Get_PlanPhaseFilter(
         FCk_Handle_CrowdAgent                      InHandle,
         const ck::FFragment_CrowdAgent_Params&     InParams,
@@ -456,6 +416,7 @@ namespace ck
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
+                    InParams.Get_NavQueryFilter(),
                     EscapePrefix))
                 {
                     Request.Set_StartOverride(ECk_EnableDisable::Enable)
@@ -497,6 +458,12 @@ namespace ck
             ShadowRequest.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
             ShadowRequest.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
             ShadowRequest.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
+            // Same helper the GroundNav branch stamps its request from — the shadow must plan under
+            // the identical filter/overlay so the A/B comparison stays like for like.
+            const auto ShadowPlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
+                InHandle, InParams, InPathFollow, InForcePermissivePlan);
+            ShadowRequest.Set_QueryFilter(ShadowPlanFilter.Get_EffectiveQueryFilter());
+            ShadowRequest.Set_QueryFilterOverlay(ShadowPlanFilter._QueryFilterOverlay);
             UCk_Utils_GroundNavPath_UE::Request_FindPath(ShadowPath, ShadowRequest, {});
         }
     }
@@ -713,6 +680,8 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            // BASE filter, not the strict standing-crowd one: the network provider announces a strict route MISS as a route
+            // FAILURE at resolution, so there is no retry here — the markup bypass helpers deny confirmed discs instead.
             InPathFollow._PlanPhase = Get_ShouldPlanStrict(InHandle, InPathFollow)
                 ? ECk_CrowdAgent_PlanPhase::Strict
                 : ECk_CrowdAgent_PlanPhase::Permissive;
