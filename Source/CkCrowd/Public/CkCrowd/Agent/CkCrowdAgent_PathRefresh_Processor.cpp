@@ -15,7 +15,6 @@
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
-#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
@@ -23,9 +22,6 @@
 #include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
-
-#include <NavigationSystem.h>
-#include <NavMesh/RecastNavMesh.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,6 +47,42 @@ namespace ck_crowd_agent_path_refresh
     auto Is_InsidePaintedBand(float InDistance2D, float InRadius) -> bool
     {
         return InDistance2D < InRadius - kBandContactToleranceUu;
+    }
+
+    // The neutral path facade hard-codes its skip-first pass to zero on Recast, by design: that pass
+    // drops the waypoint the ASKING BODY already stands on, and a query carries no body. The two
+    // stationary-markup helpers below DO have one, and their answers become a protected prefix that
+    // the ordinary already-passed trim never revisits - so a retained point at the agent's feet would
+    // hand Steering a degenerate zero-length first segment. Applied here with the SAME rule
+    // FCk_Nav_Algorithm::ExtractWaypoints applies: waypoint zero goes when it lies within 2 x radius
+    // of the query start, in 3D, boundary inclusive. On GroundNav the adapter already dropped it, so
+    // this is a distance-guarded no-op there rather than a second trim.
+    auto Get_WaypointsWithoutStandingPoint(
+        const TArray<FVector>& InWaypoints,
+        const FVector&         InQueryStart,
+        float                  InAgentRadius)
+        -> TArray<FVector>
+    {
+        constexpr auto SkipFirstRadiusMultiplier = 2.0f;
+        const auto SkipFirstThresholdSquared = (InAgentRadius > 0.0f)
+            ? FMath::Square(InAgentRadius * SkipFirstRadiusMultiplier)
+            : -1.0f;
+
+        auto Kept = TArray<FVector>{};
+        Kept.Reserve(InWaypoints.Num());
+
+        for (auto WaypointIndex = 0; WaypointIndex < InWaypoints.Num(); ++WaypointIndex)
+        {
+            const auto& Waypoint = InWaypoints[WaypointIndex];
+
+            if (WaypointIndex == 0 && SkipFirstThresholdSquared > 0.0f &&
+                FVector::DistSquared(Waypoint, InQueryStart) <= SkipFirstThresholdSquared)
+            { continue; }
+
+            Kept.Emplace(Waypoint);
+        }
+
+        return Kept;
     }
 }
 
@@ -442,6 +474,7 @@ namespace ck
             const FVector& InEscapedLocation,
             const FFragment_CrowdAgent_Params& InParams,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
+            const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints)
         -> bool
     {
@@ -463,32 +496,33 @@ namespace ck
         { return false; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
-        auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-        auto* NavData = NavSys != nullptr
-            ? Cast<ARecastNavMesh>(
-                NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
-        if (NavSys == nullptr || NavData == nullptr)
+
+        // _SearchHalfExtents left at zero: both adapters fold a zero extent to the project's own
+        // Get_NavQueryProjectionExtentVec(), which is built from the very two settings this query
+        // used to pass by hand. _CornerOffset is None rather than ProviderDefault because the direct
+        // Detour call this replaced passed a zero corner offset - ProviderDefault would newly push
+        // every interior corner off by the navmesh's baked agent radius. _AgentRadiusUu is GroundNav's
+        // clearance and is ignored on Recast, whose find always uses its own baked agent.
+        const auto EscapeQuery = FCk_NavSurface_PathQuery{InSelfLocation, InEscapedLocation}
+            .Set_AllowPartial(ECk_EnableDisable::Disable)
+            .Set_QueryFilter(InQueryFilter)
+            .Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase))
+            .Set_CornerOffset(ECk_NavSurface_CornerOffset::None)
+            .Set_AgentRadiusUu(InParams.Get_Radius());
+
+        const auto EscapeResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(World, EscapeQuery);
+        if (EscapeResult.Get_Status() != ECk_NavSurface_QueryStatus::Success)
         { return false; }
 
-        auto EscapeResult = FCk_Nav_PathResult{};
-        const auto FoundEscape = FCk_Nav_Algorithm::FindPathSync(
-            *NavSys,
-            *NavData,
+        const auto EscapeWaypoints = ck_crowd_agent_path_refresh::Get_WaypointsWithoutStandingPoint(
+            EscapeResult.Get_Waypoints(),
             InSelfLocation,
-            InEscapedLocation,
-            /*InAllowPartial*/ false,
-            UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
-            UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
-            InParams.Get_Radius(),
-            EscapeResult,
-            InParams.Get_NavQueryFilter(),
-            0.0f,
-            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
-        if (NOT FoundEscape || EscapeResult.Get_Waypoints().IsEmpty())
+            InParams.Get_Radius());
+        if (EscapeWaypoints.IsEmpty())
         { return false; }
 
-        const auto& ProjectedEscape = EscapeResult.Get_Waypoints().Last();
+        const auto& ProjectedEscape = EscapeWaypoints.Last();
         auto ProjectedEscapeIsClear = NOT ProjectedEscape.ContainsNaN();
         auto PaintedCenters = TArray<FVector2D, TInlineAllocator<32>>{};
         auto PaintedExpandedRadii = TArray<float, TInlineAllocator<32>>{};
@@ -568,7 +602,7 @@ namespace ck
         auto HasExitedPaintedUnion = false;
         auto SegmentStart = FVector2D{InSelfLocation};
         auto WorldSegmentStart = InSelfLocation;
-        for (const auto& Waypoint : EscapeResult.Get_Waypoints())
+        for (const auto& Waypoint : EscapeWaypoints)
         {
             if (Waypoint.ContainsNaN())
             { return false; }
@@ -652,7 +686,7 @@ namespace ck
         if (NOT HasExitedPaintedUnion)
         { return false; }
 
-        OutWaypoints = EscapeResult.Get_Waypoints();
+        OutWaypoints = EscapeWaypoints;
         return true;
     }
 
@@ -687,6 +721,7 @@ namespace ck
             float InArrivalRadius,
             const TArray<FVector>& InCorridorWaypoints,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
+            const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints)
         -> bool
     {
@@ -798,29 +833,30 @@ namespace ck
         const auto& ExitPoint = GetPoint(ExitPointIndex);
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
-        auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-        auto* NavData = (NavSys != nullptr)
-            ? Cast<ARecastNavMesh>(
-                NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
-            : nullptr;
-        if (NavSys == nullptr || NavData == nullptr)
-        { return false; }
 
-        auto DetourResult = FCk_Nav_PathResult{};
-        const auto FoundDetour = FCk_Nav_Algorithm::FindPathSync(
-            *NavSys,
-            *NavData,
-            EntryPoint,
-            ExitPoint,
-            /*InAllowPartial*/ false,
-            UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
-            UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
-            InParams.Get_Radius(),
-            DetourResult,
-            InParams.Get_NavQueryFilter(),
-            0.0f,
-            UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase));
-        if (NOT FoundDetour || DetourResult.Get_Waypoints().IsEmpty())
+        // Same query shape as the escape path above, for the same reasons: zero extents fold to the
+        // project's projection extent on both providers, and the corner treatment stays the raw one
+        // the direct Detour call passed.
+        const auto DetourQuery = FCk_NavSurface_PathQuery{EntryPoint, ExitPoint}
+            .Set_AllowPartial(ECk_EnableDisable::Disable)
+            .Set_QueryFilter(InQueryFilter)
+            .Set_QueryFilterOverlay(
+                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(InVolumeQueryPhase))
+            .Set_CornerOffset(ECk_NavSurface_CornerOffset::None)
+            .Set_AgentRadiusUu(InParams.Get_Radius());
+
+        const auto DetourResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(World, DetourQuery);
+
+        // The splice's own query start is the corridor's entry point, not the agent - that is the
+        // body position this detour's leading waypoint would duplicate.
+        const auto DetourWaypoints = DetourResult.Get_Status() == ECk_NavSurface_QueryStatus::Success
+            ? ck_crowd_agent_path_refresh::Get_WaypointsWithoutStandingPoint(
+                DetourResult.Get_Waypoints(),
+                EntryPoint,
+                InParams.Get_Radius())
+            : TArray<FVector>{};
+
+        if (DetourWaypoints.IsEmpty())
         {
             ck::crowd::Verbose(
                 TEXT("Stationary-markup corridor splice [{} -> {}] found no complete nav detour"),
@@ -831,7 +867,7 @@ namespace ck
 
         auto Candidate = TArray<FVector>{};
         Candidate.Reserve(
-            InCorridorWaypoints.Num() + DetourResult.Get_Waypoints().Num());
+            InCorridorWaypoints.Num() + DetourWaypoints.Num());
         const auto AppendDistinct = [&](const FVector& InPoint)
         {
             constexpr auto MergeDistanceUu = 1.0f;
@@ -851,7 +887,7 @@ namespace ck
         {
             AppendDistinct(InCorridorWaypoints[WaypointIndex]);
         }
-        for (const auto& DetourWaypoint : DetourResult.Get_Waypoints())
+        for (const auto& DetourWaypoint : DetourWaypoints)
         { AppendDistinct(DetourWaypoint); }
         for (auto WaypointIndex = ExitPointIndex;
              WaypointIndex < InCorridorWaypoints.Num();
@@ -863,9 +899,10 @@ namespace ck
         if (Candidate.IsEmpty())
         { return false; }
 
-        // Confirmation proves the cost reached Recast, but retain a total failure path: a custom
-        // filter may deliberately make the crowd area cheap enough to cross. In that case the
-        // corridor remains valid preferred geometry, so do not claim or install a fake detour.
+        // Confirmation proves the cost reached the surface its own provider answers for, but retain
+        // a total failure path: a custom filter may deliberately make the crowd area cheap enough to
+        // cross. In that case the corridor remains valid preferred geometry, so do not claim or
+        // install a fake detour.
         auto CandidateCrossesMarkup = false;
         auto SegmentStart = FVector2D{InStartLocation};
         auto WorldSegmentStart = InStartLocation;
@@ -914,7 +951,7 @@ namespace ck
             TEXT("Stationary-markup corridor splice replaced segments [{}..{}] with [{}] nav waypoints"),
             FirstHitSegment,
             LastHitSegment,
-            DetourResult.Get_Waypoints().Num());
+            DetourWaypoints.Num());
         OutWaypoints = MoveTemp(Candidate);
         return true;
     }

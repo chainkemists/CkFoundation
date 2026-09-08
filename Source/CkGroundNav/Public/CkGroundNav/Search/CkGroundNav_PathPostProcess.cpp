@@ -771,7 +771,7 @@ namespace ck::groundnav
         {
             const auto& Point = InWaypoints[Index];
 
-            if (Index == 0 && SkipFirstThresholdSquared > 0.0f &&
+            if (Index == 0 && InWaypoints.Num() > 1 && SkipFirstThresholdSquared > 0.0f &&
                 FVector::DistSquared(Point, InAgentLocation) <= SkipFirstThresholdSquared)
             { continue; }
 
