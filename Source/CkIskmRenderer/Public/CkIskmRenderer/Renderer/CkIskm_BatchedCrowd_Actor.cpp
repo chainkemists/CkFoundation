@@ -497,6 +497,7 @@ auto
     Member.Inst.PrevFrame = 0;
 
     const int32 MemberIndex = _Members.Add(Member);
+    _ActiveMemberIndices.Add(MemberIndex);
     _TileMembers.FindOrAdd(Bucket).Add(MemberIndex);
 }
 
@@ -622,10 +623,11 @@ auto
     int64 FrameChanges = 0;
     int64 VisibleFrameChanges = 0;
 
-    // Advance ALL members (hidden ones too, so they rejoin in phase after a flip-demote).
+    // Advance all active members (including hidden owned ones, so they rejoin in phase after a flip-demote).
     {
         TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdMemberLoop, CpuWorkEnabled);
-        for (FMember& M : _Members)
+        const auto AdvanceMember = [this, Baked, CpuWorkEnabled, InDeltaTime,
+            &FrozenSkips, &IntervalSkips, &ZeroRateSkips, &FrameChanges, &VisibleFrameChanges](FMember& M)
         {
             const auto* Tuners = _RuntimeProfileTuners.IsValidIndex(M.ProfileIndex)
                 ? &_RuntimeProfileTuners[M.ProfileIndex] : nullptr;
@@ -633,8 +635,9 @@ auto
             {
                 if (CpuWorkEnabled)
                 { ++FrozenSkips; }
-                continue;
+                return;
             }
+
             const float Interval = Tuners != nullptr
                 ? static_cast<float>(Tuners->Get_FarAnimationUpdateInterval().Get_Seconds()) : 0.0f;
             M.ProfileAnimationAccumulator += InDeltaTime;
@@ -642,17 +645,18 @@ auto
             {
                 if (CpuWorkEnabled)
                 { ++IntervalSkips; }
-                continue;
+                return;
             }
-            // Keep the authoritative monotonic clock continuous; interval only throttles pose uploads.
+
             const float AdvanceDelta = M.ProfileAnimationAccumulator;
             M.ProfileAnimationAccumulator = 0.0f;
             if (M.Inst.Rate == 0.0f)
             {
                 if (CpuWorkEnabled)
                 { ++ZeroRateSkips; }
-                continue;
+                return;
             }
+
             M.Inst.Time += AdvanceDelta * M.Inst.Rate;
             const int32 NewFrame = Baked->Get_LoopedFrameAtTime(M.Inst.SequenceIndex, M.Inst.Time);
             if (NewFrame != M.Inst.CurFrame)
@@ -668,6 +672,18 @@ auto
                     _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex));
                 }
             }
+        };
+
+        if (_ActiveMemberIndices.Num() == _Members.Num())
+        {
+            // Preserve the original contiguous dense-pool path. Sparse pool free slots take the indexed path below.
+            for (FMember& M : _Members)
+            { AdvanceMember(M); }
+        }
+        else
+        {
+            for (const int32 MemberIndex : _ActiveMemberIndices)
+            { AdvanceMember(_Members[MemberIndex]); }
         }
     }
 
@@ -696,7 +712,7 @@ auto
 
     if (CpuWorkEnabled)
     {
-        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdMembersVisited, _Members.Num());
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdMembersVisited, _ActiveMemberIndices.Num());
         ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdFrozenSkips, FrozenSkips);
         ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdIntervalSkips, IntervalSkips);
         ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdZeroRateSkips, ZeroRateSkips);
@@ -779,8 +795,25 @@ auto
     Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset)
     -> void
 {
-    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex) && ck::IsValid(InCosmetic),
-        TEXT("[CkIskm] Register_MemberCosmetic: invalid member index [{}] or cosmetic handle [{}]"), InIndex, InCosmetic)
+    const auto HasValidIndex = _Members.IsValidIndex(InIndex);
+    CK_ENSURE_IF_NOT(HasValidIndex,
+        TEXT("[CkIskm] Register_MemberCosmetic: invalid member index [{}]"), InIndex)
+    { return; }
+    if (HasValidIndex == false)
+    { return; }
+
+    const auto IsActive = _Members[InIndex].Active;
+    CK_ENSURE_IF_NOT(IsActive,
+        TEXT("[CkIskm] Register_MemberCosmetic: inactive crowd member [{}] cannot own cosmetics"), InIndex)
+    { return; }
+    if (IsActive == false)
+    { return; }
+
+    const auto HasValidCosmetic = ck::IsValid(InCosmetic);
+    CK_ENSURE_IF_NOT(HasValidCosmetic,
+        TEXT("[CkIskm] Register_MemberCosmetic: invalid cosmetic handle [{}]"), InCosmetic)
+    { return; }
+    if (HasValidCosmetic == false)
     { return; }
 
     TArray<FMemberCosmetic>& List = _MemberCosmetics.FindOrAdd(InIndex);
@@ -1017,19 +1050,89 @@ void
     ACk_Iskm_BatchedCrowd_Actor::
     Set_MemberVisible(int32 InIndex, bool InVisible)
 {
-    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+    const auto HasValidIndex = _Members.IsValidIndex(InIndex);
+    CK_ENSURE_IF_NOT(HasValidIndex,
         TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
-    if (_Members[InIndex].Visible == InVisible)
+    if (HasValidIndex == false)
     { return; }
-    _Members[InIndex].Visible = InVisible;
-    const FIntVector Key = MakeBucketKey(_Members[InIndex].Tile, _Members[InIndex].ProfileIndex);
+
+    FMember& Member = _Members[InIndex];
+    const auto MayBecomeVisible = InVisible == false || Member.Active;
+    CK_ENSURE_IF_NOT(MayBecomeVisible,
+        TEXT("[CkIskm] inactive crowd member [{}] cannot become visible; activate it before showing it"), InIndex)
+    { return; }
+    if (MayBecomeVisible == false)
+    { return; }
+
+    if (Member.Visible == InVisible)
+    { return; }
+    Member.Visible = InVisible;
+    const FIntVector Key = MakeBucketKey(Member.Tile, Member.ProfileIndex);
     RebuildTile(Key);
     _DirtyTiles.Remove(Key);
 
     // Hidden members leave their highlight cluster (their Plan-1 stand-in is styled via the entity API).
     if (auto* Group = DoFind_MemberHighlightGroup(InIndex))
     { Rebuild_HighlightGroup(*Group); }
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_MemberActive(int32 InIndex, bool InActive)
+{
+    const auto HasValidIndex = _Members.IsValidIndex(InIndex);
+    CK_ENSURE_IF_NOT(HasValidIndex,
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    { return; }
+    if (HasValidIndex == false)
+    { return; }
+
+    FMember& Member = _Members[InIndex];
+    const auto HasExpectedActiveMembership = InActive
+        ? _ActiveMemberIndices.Contains(InIndex)
+        : _ActiveMemberIndices.Contains(InIndex) == false;
+    if (Member.Active == InActive)
+    {
+        CK_ENSURE_IF_NOT(HasExpectedActiveMembership,
+            TEXT("[CkIskm] crowd member [{}] active-index membership is inconsistent"), InIndex)
+        { return; }
+        if (HasExpectedActiveMembership == false)
+        { return; }
+        return;
+    }
+
+    if (InActive == false)
+    {
+        const auto IsHidden = Member.Visible == false;
+        CK_ENSURE_IF_NOT(IsHidden,
+            TEXT("[CkIskm] deactivate crowd member [{}] only after hiding it"), InIndex)
+        { return; }
+        if (IsHidden == false)
+        { return; }
+        const auto HasNoCosmetics = _MemberCosmetics.Contains(InIndex) == false;
+        CK_ENSURE_IF_NOT(HasNoCosmetics,
+            TEXT("[CkIskm] inactive crowd member [{}] retains cosmetic registrations"), InIndex)
+        { return; }
+        if (HasNoCosmetics == false)
+        { return; }
+    }
+
+    Member.Active = InActive;
+    if (InActive == false)
+    {
+        _ActiveMemberIndices.Remove(InIndex);
+    }
+    else
+    { _ActiveMemberIndices.Add(InIndex); }
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberActive(int32 InIndex) const
+    -> bool
+{
+    return _Members.IsValidIndex(InIndex) && _Members[InIndex].Active;
 }
 
 auto
