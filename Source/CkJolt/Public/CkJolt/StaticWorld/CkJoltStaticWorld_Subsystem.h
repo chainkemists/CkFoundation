@@ -117,12 +117,23 @@ public:
     auto
     Request_EnsureSwept() -> void;
 
+#if WITH_EDITOR
+    /// The editor-world sibling of the actor-edit hooks, for the edits that broadcast none of them — undo
+    /// and redo. Frees every tracked level's bodies and re-runs the sweep, so the static world is
+    /// re-derived from the world as it now stands. Its cost is one full live extract, which is why it is
+    /// not bound to anything finer.
+    auto
+    Request_ResweepAllLevels() -> void;
+#endif
+
     /// Extracts and adds static bodies for a single actor at runtime; returns the number added.
     auto
     Request_BakeActor(
         const AActor& InActor) -> int32;
 
-    /// Removes bodies previously added via Request_BakeActor for this actor.
+    /// Removes the bodies baked for this actor — by Request_BakeActor OR by the level sweep, which files
+    /// every actor it bakes in the same index (so a request can reach level geometry, in Game/PIE as in
+    /// the editor). A never-baked actor is a no-op.
     auto
     Request_RemoveActor(
         const AActor& InActor) -> void;
@@ -159,6 +170,17 @@ private:
         UPrimitiveComponent* InChangedComponent);
 
 private:
+    // The bake path both Request_BakeActor and the editor authoring handlers land on. Policy and filter
+    // belong to the CALLER: the public request declares ExplicitActor (static-in-intent, filter bypassed),
+    // while an editor handler bakes through the SAME LevelSweep extraction it admitted the actor on —
+    // re-extracting under ExplicitActor there would skip the mobility test and the component filters, so a
+    // Movable door on an admitted actor would bake permanently.
+    auto
+    DoBake_Actor(
+        const AActor& InActor,
+        ck::jolt::bake::ECk_Jolt_ExtractionPolicy InPolicy,
+        const ck::jolt::bake::FCk_Jolt_BakeFilter& InFilter) -> int32;
+
     auto
     DoHandle_LevelAdded(
         ULevel* InLevel,
@@ -168,6 +190,35 @@ private:
     DoHandle_LevelRemoved(
         ULevel* InLevel,
         UWorld* InWorld) -> void;
+
+#if WITH_EDITOR
+    // Editor-world authoring sync. An Editor world never reaches OnWorldBeginPlay and never streams its
+    // levels, so the actor edits themselves are the only thing that can keep the static world current.
+    // A move is a remove + re-bake because a static body's pose is baked into the body.
+    auto
+    DoHandle_EditorActorAdded(
+        AActor* InActor) -> void;
+
+    auto
+    DoHandle_EditorActorDeleted(
+        AActor* InActor) -> void;
+
+    auto
+    DoHandle_EditorActorMoved(
+        AActor* InActor) -> void;
+
+    // World filter + the sweep's OWN admission rule (a LevelSweep extraction under the project bake filter
+    // yielding at least one body) — never a second copy of the mobility/filter policy.
+    auto
+    DoGet_IsEditorSyncCandidate(
+        const AActor* InActor) -> bool;
+
+    // Two independent gates, because there are two independent settings — an Editor world answers to
+    // _EditorStaticWorldMode ONLY. Shared by every entry point that may reach either world type.
+    auto
+    DoGet_IsStaticWorldEnabled(
+        const UWorld& InWorld) const -> bool;
+#endif
 
     // The world's initial sweep of every loaded level, and the single writer of _HasSwept. Reached from
     // OnWorldBeginPlay in a Game/PIE world and from Request_EnsureSwept everywhere else; each caller gates
@@ -185,6 +236,32 @@ private:
     auto
     DoRemove_BodiesForLevel(
         ULevel& InLevel) -> void;
+
+    // The two indexes are maintained together: _LevelBodies owns a level's teardown list, _ActorEntities
+    // owns actor -> entity resolution for requests. A swept entity is in BOTH, so every path that adds or
+    // frees one goes through these three.
+    auto
+    DoFile_ActorEntity(
+        const FCk_Handle_JoltStaticActor& InActorEntity) -> void;
+
+    // Drops the index entry only when it still points at THIS entity (a later re-bake owns its own entry).
+    auto
+    DoUnfile_ActorEntity(
+        const FCk_Handle_JoltStaticActor& InActorEntity) -> void;
+
+    // Adds a REQUEST-baked entity to its actor's level teardown list, so a sub-level unload frees it with
+    // the rest of the level instead of leaving its bodies behind.
+    auto
+    DoList_EntityInLevel(
+        const AActor& InActor,
+        const FCk_Handle_JoltStaticActor& InActorEntity) -> void;
+
+    // Drops the entity from its actor's level teardown list, so the level cannot re-visit an entity a
+    // request already destroyed.
+    auto
+    DoUnlist_EntityFromLevel(
+        const AActor& InActor,
+        const FCk_Handle_JoltStaticActor& InActorEntity) -> void;
 
     auto
     DoAdd_BodiesForLevel_LiveExtract(
@@ -313,16 +390,30 @@ private:
     FDelegateHandle _LevelAddedHandle;
     FDelegateHandle _LevelRemovedHandle;
 
+#if WITH_EDITOR
+    FDelegateHandle _EditorActorAddedHandle;
+    FDelegateHandle _EditorActorDeletedHandle;
+    FDelegateHandle _EditorActorMovedHandle;
+#endif
+
     ck::jolt::bake::FCk_Jolt_ShapeCache _LiveShapeCache;
 
     struct FLevelBodies
     {
         TArray<FCk_Handle_JoltStaticActor> _ActorEntities;
         TArray<int32> _CellIndices;
+
+        // The sweep's "already visited this level" answer. It cannot be the mere PRESENCE of the entry:
+        // a request bake files its entity here too, and a level whose only entries came that way still
+        // owes its sweep.
+        bool _Swept = false;
     };
 
     TMap<TWeakObjectPtr<ULevel>, FLevelBodies> _LevelBodies;
-    TMap<TWeakObjectPtr<const AActor>, FCk_Handle_JoltStaticActor> _ManualActorEntities;
+
+    // EVERY baked actor, sweep-baked and manually baked alike — the index Request_RemoveActor resolves
+    // through. _LevelBodies keeps its own per-level list because level removal frees by level, not by actor.
+    TMap<TWeakObjectPtr<const AActor>, FCk_Handle_JoltStaticActor> _ActorEntities;
     TMap<TWeakObjectPtr<const UPrimitiveComponent>, FCk_Handle_JoltStaticActor> _ManualComponentEntities;
     TMap<int32, FLoadedCell> _LoadedCells;
 
@@ -335,6 +426,11 @@ private:
     int32 _BodyChurnSinceOptimize = 0;
     bool _CookedIndexLoadAttempted = false;
     bool _HasSwept = false;
+
+    // True only while DoRun_InitialSweep is walking the world's levels. _HasSwept is set at the HEAD of
+    // that walk, so it alone would leave the add handler open for the sweep's whole duration and an actor
+    // spawned into a not-yet-visited level would be baked twice.
+    bool _IsSweeping = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

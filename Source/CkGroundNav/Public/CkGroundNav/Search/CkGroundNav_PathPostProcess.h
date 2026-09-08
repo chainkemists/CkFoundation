@@ -257,6 +257,9 @@ namespace ck::groundnav
      * Deliberately the same threshold as the Recast path takes — twice the radius, index zero only,
      * disabled at a radius of zero — because a body switching between the two providers must not
      * change which waypoint it steers at first.
+     *
+     * Never empties a non-empty route: a single-point route keeps its one point rather than dropping
+     * it, because no listener ever sees an empty waypoint list published as Ready.
      */
     CKGROUNDNAV_API auto
     Get_SkipFirstWaypoint(

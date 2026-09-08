@@ -461,7 +461,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _End = FVector::ZeroVector;
 
-    // Honoured on Recast; ignored on GroundNav, which has no filter vocabulary yet (P5-B1-F).
+    // Honoured on BOTH providers: Recast compiles it into a Detour query filter, GroundNav into the
+    // plate cost and denial tables its search reads (P5-B1-F).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FGameplayTag _QueryFilter;
 
