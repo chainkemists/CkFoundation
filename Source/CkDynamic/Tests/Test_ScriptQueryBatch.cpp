@@ -2,10 +2,25 @@
 // GetHandle and the wildcard Get need a live registry; their error paths are covered by the AS AutoTests.
 
 #include "CkDynamic/CkDynamic_ScriptQueryBatch.h"
+#include "CkDynamic/CkDynamic_ScriptQueryProcessor.h"
 
 #include "CkEcs/Processor/CkProcessor_ScriptQuery_Data.h"
 
 #include "Misc/AutomationTest.h"
+
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptBinds.h>
+
+AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_CkTest_ScriptQueryBatch_HostBenchmark(
+    static_cast<int32>(FAngelscriptBinds::EOrder::Late), []
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    FAngelscriptBinds::BindGlobalFunction("bool CkTest_ScriptQueryHost_RunPairedJoinBenchmark(FCk_Handle InAnyHandle, bool bForceRebuild = false)",
+        [](const FCk_Handle& InAnyHandle, bool bForceRebuild) -> bool
+        { return ck::FProcessor_ScriptQueryHosted::Run_JoinBenchmarkForTests(InAnyHandle, bForceRebuild); });
+#endif
+});
+#endif
 
 #if WITH_DEV_AUTOMATION_TESTS
 

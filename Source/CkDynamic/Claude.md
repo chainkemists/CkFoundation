@@ -158,6 +158,16 @@ comment-light; the *why* lives here.
 
 - **One native N-way join per tick, then ONE `ForEachBatch` call** — O(1) native→script crossings per
   tick instead of one per visited entity. That is the whole reason the hosted wrapper exists.
+- **Adaptive structural membership cache, never eligibility.** The default/dense path performs the structural
+  join directly and does not poll cache versions. If the structural result falls below 75% of the physical drive
+  storage count (including tombstones), it builds a cache for the next tick. The sparse-cache path validates exact
+  storage and dynamic dirty-marker versions plus lifecycle gates; if membership becomes dense again, it returns to
+  the uncached structural join on the next tick. Dynamic fragment add, remove, and `TryAddOrGet` paths must
+  continue to bump the matching `Get_DirtyMarkerHash` version. Full entity validity, destruction filtering, and
+  hydration quarantine remain per-dispatch gates, so a lifecycle transition can admit or reject an existing
+  candidate without a structural rescan.
+- **Verification:** paired host-join benchmarks preserve ordered results, with sparse joins showing lower
+  resolver cost. Dense joins retain direct traversal. These microbenchmarks do not establish packaged frame savings.
 - **Batch lifetime:** a process-lifetime resolver maps (opaque state pointer + generation) to the
   native state for the duration of `ForEachBatch` and drops the mapping before the call returns, so a
   stashed batch can neither dereference freed state nor alias a later state at the same address.
