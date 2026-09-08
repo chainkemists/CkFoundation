@@ -10,6 +10,8 @@
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+
 #include <GameplayTagContainer.h>
 
 #include "CkVisualLodArbiter_Fragment_Data.generated.h"
@@ -17,6 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_IskmAnimCollection_Data;
+class UCk_IskmRenderer_Data;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,6 +38,165 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_VisualLod_PoolExhaustionPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_VisualLod_RuntimeRenderBandTuners
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VisualLod_RuntimeRenderBandTuners);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _DistanceThreshold = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _ReturnHysteresis = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_IskmRenderer_RuntimeProfileTuners _ProfileTuners;
+
+public:
+    CK_PROPERTY(_DistanceThreshold);
+    CK_PROPERTY(_ReturnHysteresis);
+    CK_PROPERTY(_ProfileTuners);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_VisualLod_RuntimeCrowdTuners
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VisualLod_RuntimeCrowdTuners);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    int32 _IdleSequenceIndex = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    int32 _MoveSequenceIndex = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MoveSpeedThreshold = 25.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1))
+    float _MoveAuthoredSpeed = 200.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_FloatRange _MoveRateClamp = FCk_FloatRange{0.5f, 1.5f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_VisualLod_RuntimeRenderBandTuners> _RenderBands;
+
+public:
+    CK_PROPERTY(_IdleSequenceIndex);
+    CK_PROPERTY(_MoveSequenceIndex);
+    CK_PROPERTY(_MoveSpeedThreshold);
+    CK_PROPERTY(_MoveAuthoredSpeed);
+    CK_PROPERTY(_MoveRateClamp);
+    CK_PROPERTY(_RenderBands);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The mutable, per-arbiter decision surface. It is seeded from the authored data asset during
+// setup and may be changed through deferred arbiter requests without changing structural setup.
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_VisualLodArbiter_RuntimeTuners
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VisualLodArbiter_RuntimeTuners);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _PromoteDistance = 2200.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _DemoteDistance = 2600.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    int32 _NearBudget = 16;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    int32 _LockBudget = 8;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _LockPromoteMaxDistance = 8000.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_VisualLod_PoolExhaustionPolicy _ExhaustionPolicy = ECk_VisualLod_PoolExhaustionPolicy::PromoteInstead;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _ViewConeMarginDeg = 10.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _AlwaysInViewDistance = 600.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _PreemptDistanceMargin = 400.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    int32 _MaxPreemptsPerTick = 2;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _FadeDuration = FCk_Time{0.1};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _FadeAnchorLeadFrames = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _FadeAnchorBakeLagIntervals = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_VisualLod_RuntimeCrowdTuners> _CrowdTuners;
+
+public:
+    CK_PROPERTY(_PromoteDistance);
+    CK_PROPERTY(_DemoteDistance);
+    CK_PROPERTY(_NearBudget);
+    CK_PROPERTY(_LockBudget);
+    CK_PROPERTY(_LockPromoteMaxDistance);
+    CK_PROPERTY(_ExhaustionPolicy);
+    CK_PROPERTY(_ViewConeMarginDeg);
+    CK_PROPERTY(_AlwaysInViewDistance);
+    CK_PROPERTY(_PreemptDistanceMargin);
+    CK_PROPERTY(_MaxPreemptsPerTick);
+    CK_PROPERTY(_FadeDuration);
+    CK_PROPERTY(_FadeAnchorLeadFrames);
+    CK_PROPERTY(_FadeAnchorBakeLagIntervals);
+    CK_PROPERTY(_CrowdTuners);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKVISUALLOD_API FCk_Handle_VisualLodArbiter : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_VisualLodArbiter); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VisualLodArbiter);
@@ -43,6 +205,40 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VisualLodArbit
 
 // One batched crowd the arbiter can park far entities in. Members reference a config by index
 // (FCk_Fragment_VisualLod_ParamsData::_CrowdIndex)
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_VisualLod_RenderBand
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VisualLod_RenderBand);
+
+private:
+    // Outward boundary from the preceding band. The first band must start at zero.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Bands",
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _DistanceThreshold = 0.0f;
+
+    // On a return toward the viewer, stay in this band until distance is strictly below
+    // DistanceThreshold - ReturnHysteresis. This may not reach the preceding boundary.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Bands",
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _ReturnHysteresis = 0.0f;
+
+    // The batched renderer profile for this distance band. A terminal profile with no render
+    // passes is the cull representation; VisualLod does not add a separate cull policy.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Bands",
+              meta = (AllowPrivateAccess = true))
+    TSoftObjectPtr<UCk_IskmRenderer_Data> _RendererProfile;
+
+public:
+    CK_PROPERTY(_DistanceThreshold);
+    CK_PROPERTY(_ReturnHysteresis);
+    CK_PROPERTY(_RendererProfile);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKVISUALLOD_API FCk_VisualLod_CrowdConfig
 {
@@ -64,6 +260,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 100))
     float _TileSize = 2000.0f;
+
+    // Ordered far-renderer profiles. Empty preserves the legacy single-profile crowd behavior.
+    // When authored, band 0 starts at 0 and every band uses the crowd's exact AnimCollection.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Bands",
+              meta = (AllowPrivateAccess = true, TitleProperty = "{_DistanceThreshold}"))
+    TArray<FCk_VisualLod_RenderBand> _RenderBands;
 
     // ---- speed-driven far animation (ECk_VisualLod_FarAnimMode::SpeedDriven) ----
 
@@ -93,6 +295,7 @@ public:
     CK_PROPERTY_GET(_AnimCollection);
     CK_PROPERTY(_PoolSize);
     CK_PROPERTY(_TileSize);
+    CK_PROPERTY(_RenderBands);
     CK_PROPERTY(_IdleSequenceIndex);
     CK_PROPERTY(_MoveSequenceIndex);
     CK_PROPERTY(_MoveSpeedThreshold);
@@ -251,6 +454,36 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::visual_lod
+{
+    CKVISUALLOD_API auto
+    Get_AreRuntimeTunersValid(
+        const FCk_VisualLodArbiter_RuntimeTuners& InTuners) -> bool;
+
+    CKVISUALLOD_API auto
+    Get_AreRuntimeTunersValid(
+        const FCk_VisualLodArbiter_RuntimeTuners& InTuners,
+        const UCk_VisualLodArbiter_Data& InConfig) -> bool;
+
+    CKVISUALLOD_API auto
+    MakeRuntimeTuners(
+        const UCk_VisualLodArbiter_Data& InConfig) -> FCk_VisualLodArbiter_RuntimeTuners;
+
+    // Returns false without changing OutRuntimeTuners if the candidate is malformed.
+    CKVISUALLOD_API auto
+    TrySetRuntimeTuners(
+        FCk_VisualLodArbiter_RuntimeTuners& OutRuntimeTuners,
+        const FCk_VisualLodArbiter_RuntimeTuners& InCandidate) -> bool;
+
+    CKVISUALLOD_API auto
+    TrySetRuntimeTuners(
+        FCk_VisualLodArbiter_RuntimeTuners& OutRuntimeTuners,
+        const FCk_VisualLodArbiter_RuntimeTuners& InCandidate,
+        const UCk_VisualLodArbiter_Data& InConfig) -> bool;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKVISUALLOD_API FCk_Fragment_VisualLodArbiter_ParamsData
 {
@@ -331,6 +564,41 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_VisualLodArbiter_SetFrozen, _Frozen);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_Request_VisualLodArbiter_SetRuntimeTuners : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VisualLodArbiter_SetRuntimeTuners);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VisualLodArbiter_SetRuntimeTuners);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_VisualLodArbiter_RuntimeTuners _RuntimeTuners;
+
+public:
+    CK_PROPERTY_GET(_RuntimeTuners);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VisualLodArbiter_SetRuntimeTuners, _RuntimeTuners);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVISUALLOD_API FCk_Request_VisualLodArbiter_ResetRuntimeTuners : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VisualLodArbiter_ResetRuntimeTuners);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VisualLodArbiter_ResetRuntimeTuners);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

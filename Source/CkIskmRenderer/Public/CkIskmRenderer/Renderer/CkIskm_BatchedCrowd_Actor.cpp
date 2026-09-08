@@ -1,6 +1,8 @@
 #include "CkIskm_BatchedCrowd_Actor.h"
 
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+#include "CkIskmRenderer/Renderer/CkIskm_RenderProfile_Utils.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_BakedPose.h"
 #include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Processor.h" // FFragment_IskmCrowd_Controller
 
@@ -111,6 +113,200 @@ auto
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
+    Set_RenderProfiles(
+        const TArray<UCk_IskmRenderer_Data*>& InProfiles)
+    -> bool
+{
+    const auto CanReplaceProfiles = _Members.IsEmpty();
+    CK_ENSURE_IF_NOT(CanReplaceProfiles,
+        TEXT("[CkIskm] Set_RenderProfiles must run before AddInstance"))
+    {}
+    if (NOT CanReplaceProfiles)
+    { return false; }
+
+    auto PreparedProfiles = TArray<TObjectPtr<UCk_IskmRenderer_Data>>{};
+    PreparedProfiles.Reserve(InProfiles.Num());
+
+    for (auto* RenderProfile : InProfiles)
+    {
+        const auto ProfileCollection = ck::IsValid(RenderProfile)
+            ? RenderProfile->Get_AnimCollection().Get()
+            : nullptr;
+        const auto HasMatchingCollection =
+            ck::IsValid(RenderProfile) &&
+            ck::IsValid(_Collection) &&
+            ProfileCollection == _Collection.Get() &&
+            ck::IsValid(ProfileCollection->Get_DefaultMesh()) &&
+            ProfileCollection->Get_DefaultMesh() == _Collection->Get_DefaultMesh();
+
+        CK_ENSURE_IF_NOT(HasMatchingCollection,
+            TEXT("[CkIskm] Render profile must share the crowd AnimCollection"))
+        {}
+        if (NOT HasMatchingCollection)
+        { return false; }
+
+        PreparedProfiles.Add(RenderProfile);
+    }
+
+    auto PreparedTuners = TArray<FCk_IskmRenderer_RuntimeProfileTuners>{};
+    PreparedTuners.Reserve(PreparedProfiles.Num());
+    for (const auto& Profile : PreparedProfiles)
+    {
+        const auto Tuners = ck::iskm::MakeRuntimeProfileTuners(*Profile);
+        const auto AreTunersValid = ck::iskm::Get_AreRuntimeProfileTunersValid(Tuners);
+        CK_ENSURE_IF_NOT(AreTunersValid,
+            TEXT("[CkIskm] authored render profile has invalid runtime-tunable values"))
+        {}
+        if (NOT AreTunersValid)
+        { return false; }
+        PreparedTuners.Add(Tuners);
+    }
+
+    _RenderProfiles = MoveTemp(PreparedProfiles);
+    _RuntimeProfileTuners = MoveTemp(PreparedTuners);
+    return true;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_RuntimeProfileTuners(
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners)
+    -> bool
+{
+    const auto AreAllTunersValid = Can_SetRuntimeProfileTuners(InTuners);
+
+    CK_ENSURE_IF_NOT(AreAllTunersValid,
+        TEXT("[CkIskm] runtime render-profile tuners must be valid and profile-index aligned"))
+    {}
+    if (NOT AreAllTunersValid)
+    { return false; }
+
+    auto PreparedTuners = InTuners;
+    _RuntimeProfileTuners = MoveTemp(PreparedTuners);
+    for (const auto& Pair : _Tiles)
+    {
+        const auto ProfileIndex = Pair.Key.Z;
+        auto* Component = Pair.Value.Get();
+        if (ck::IsValid(Component) && _RenderProfiles.IsValidIndex(ProfileIndex))
+        {
+            Component->Apply_RenderProfile(
+                _RenderProfiles[ProfileIndex].Get(),
+                _RuntimeProfileTuners[ProfileIndex]);
+        }
+    }
+    return true;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Can_SetRuntimeProfileTuners(
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners) const
+    -> bool
+{
+    if (InTuners.Num() != _RenderProfiles.Num())
+    { return false; }
+
+    for (const auto& Tuners : InTuners)
+    {
+        if (NOT ck::iskm::Get_AreRuntimeProfileTunersValid(Tuners))
+        { return false; }
+    }
+
+    return true;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_MemberRenderProfile(
+        int32 InIndex,
+        int32 InProfileIndex)
+    -> bool
+{
+    const auto HasValidIndices =
+        _Members.IsValidIndex(InIndex) &&
+        _RenderProfiles.IsValidIndex(InProfileIndex);
+
+    CK_ENSURE_IF_NOT(HasValidIndices,
+        TEXT("[CkIskm] invalid member/profile index"))
+    {}
+    if (NOT HasValidIndices)
+    { return false; }
+
+    auto& Member = _Members[InIndex];
+    if (Member.ProfileIndex == InProfileIndex)
+    { return true; }
+
+    const auto OldKey = MakeBucketKey(Member.Tile, Member.ProfileIndex);
+    const auto NewKey = MakeBucketKey(Member.Tile, InProfileIndex);
+    auto* OldMembers = _TileMembers.Find(OldKey);
+    const auto* OldTile = _Tiles.Find(OldKey);
+    const auto HasOldMembership = OldMembers != nullptr && OldMembers->Contains(InIndex);
+    const auto HasOldTile = OldTile != nullptr && ck::IsValid(OldTile->Get());
+    const auto HasDuplicateDestination =
+        _TileMembers.Contains(NewKey) &&
+        _TileMembers[NewKey].Contains(InIndex);
+
+    CK_ENSURE_IF_NOT(HasOldMembership && HasOldTile && NOT HasDuplicateDestination,
+        TEXT("[CkIskm] member/profile bucket bookkeeping is inconsistent"))
+    {}
+    if (NOT HasOldMembership || NOT HasOldTile || HasDuplicateDestination)
+    { return false; }
+
+    const auto* NewTile = GetOrCreate_Tile(NewKey);
+    const auto HasDestinationTile = ck::IsValid(NewTile);
+    CK_ENSURE_IF_NOT(HasDestinationTile,
+        TEXT("[CkIskm] failed to prepare the destination render-profile bucket"))
+    {}
+    if (NOT HasDestinationTile)
+    { return false; }
+
+    OldMembers->RemoveSingleSwap(InIndex);
+    Member.ProfileIndex = InProfileIndex;
+    Member.Inst.PrevPushedTransform = Member.Inst.Transform;
+    _TileMembers.FindOrAdd(NewKey).Add(InIndex);
+    RebuildTile(OldKey);
+    RebuildTile(NewKey);
+    _DirtyTiles.Remove(OldKey);
+    _DirtyTiles.Remove(NewKey);
+
+    return true;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberRenderProfile(
+        int32 InIndex) const
+    -> int32
+{
+    return _Members.IsValidIndex(InIndex)
+        ? _Members[InIndex].ProfileIndex
+        : INDEX_NONE;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_ProfileBucketCount() const
+    -> int32
+{
+    return _Tiles.Num();
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_TileCount() const
+    -> int32
+{
+    auto SpatialTiles = TSet<FIntPoint>{};
+    for (const auto& Pair : _Tiles)
+    {
+        SpatialTiles.Add(TileOfBucketKey(Pair.Key));
+    }
+
+    return SpatialTiles.Num();
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
     TileCentre(const FIntPoint& InTile) const
     -> FVector
 {
@@ -141,10 +337,10 @@ auto
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
-    GetOrCreate_Tile(const FIntPoint& InTile)
+    GetOrCreate_Tile(const FIntVector& InKey)
     -> UCk_Iskm_BatchedClusterComponent*
 {
-    if (const TObjectPtr<UCk_Iskm_BatchedClusterComponent>* Found = _Tiles.Find(InTile))
+    if (const TObjectPtr<UCk_Iskm_BatchedClusterComponent>* Found = _Tiles.Find(InKey))
     { return *Found; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(_Collection),
@@ -159,10 +355,16 @@ auto
     UCk_Iskm_BatchedClusterComponent* Comp = NewObject<UCk_Iskm_BatchedClusterComponent>(this);
     Comp->SetupAttachment(_Root);
     Comp->RegisterComponent();
-    Comp->SetWorldLocation(TileCentre(InTile));
+    Comp->SetWorldLocation(TileCentre(TileOfBucketKey(InKey)));
     Comp->Setup(_Collection, Mesh);
     Comp->Set_ManagedExternally(true);        // the manager advances animation + pushes per-frame data
     Comp->Set_FixedLocalBounds(TileLocalBounds());
+    if (_RenderProfiles.IsValidIndex(InKey.Z) && _RuntimeProfileTuners.IsValidIndex(InKey.Z))
+    {
+        Comp->Apply_RenderProfile(
+            _RenderProfiles[InKey.Z].Get(),
+            _RuntimeProfileTuners[InKey.Z]);
+    }
 
     for (int32 Idx = 0; Idx < _DefaultTileCustomPrimitiveData.Num(); ++Idx)
     { Comp->SetCustomPrimitiveDataFloat(Idx, _DefaultTileCustomPrimitiveData[Idx]); }
@@ -170,15 +372,26 @@ auto
     if (ck::IsValid(_OverrideMaterial))
     { Comp->Set_OverrideMaterial(_OverrideMaterial); }
 
-    if (_SlotOverrideMaterials.Num() > 0)
+    // Whole-crowd override wins.  Otherwise compose profile base overrides over the crowd's
+    // per-slot defaults; null entries deliberately fall through to the lower layer/mesh default.
+    if (NOT ck::IsValid(_OverrideMaterial))
     {
         TArray<UMaterialInterface*> Slots;
         Slots.Reserve(_SlotOverrideMaterials.Num());
         for (const auto& M : _SlotOverrideMaterials) { Slots.Add(M.Get()); }
-        Comp->Set_SlotOverrideMaterials(Slots);
+        if (_RenderProfiles.IsValidIndex(InKey.Z))
+        {
+            const auto& Base = _RenderProfiles[InKey.Z]->Get_BaseOverrideMaterials();
+            if (Slots.Num() < Base.Num()) { Slots.SetNumZeroed(Base.Num()); }
+            for (int32 Idx = 0; Idx < Base.Num(); ++Idx)
+            {
+                if (Base[Idx] != nullptr) { Slots[Idx] = Base[Idx].Get(); }
+            }
+        }
+        if (Slots.Num() > 0) { Comp->Set_SlotOverrideMaterials(Slots); }
     }
 
-    _Tiles.Add(InTile, Comp);
+    _Tiles.Add(InKey, Comp);
     return Comp;
 }
 
@@ -194,6 +407,18 @@ auto
         if (ck::Is_NOT_Valid(Pair.Value))
         { continue; }
         Pair.Value->Set_OverrideMaterial(InMaterial);
+        if (InMaterial == nullptr)
+        {
+            TArray<UMaterialInterface*> Slots;
+            for (const auto& M : _SlotOverrideMaterials) { Slots.Add(M.Get()); }
+            if (_RenderProfiles.IsValidIndex(Pair.Key.Z))
+            {
+                const auto& Base = _RenderProfiles[Pair.Key.Z]->Get_BaseOverrideMaterials();
+                if (Slots.Num() < Base.Num()) { Slots.SetNumZeroed(Base.Num()); }
+                for (int32 I = 0; I < Base.Num(); ++I) { if (Base[I] != nullptr) { Slots[I] = Base[I].Get(); } }
+            }
+            Pair.Value->Set_SlotOverrideMaterials(Slots);
+        }
     }
 }
 
@@ -209,7 +434,15 @@ void
     {
         if (ck::Is_NOT_Valid(Pair.Value))
         { continue; }
-        Pair.Value->Set_SlotOverrideMaterials(InMaterials);
+        if (ck::IsValid(_OverrideMaterial)) { continue; }
+        TArray<UMaterialInterface*> Slots = InMaterials;
+        if (_RenderProfiles.IsValidIndex(Pair.Key.Z))
+        {
+            const auto& Base = _RenderProfiles[Pair.Key.Z]->Get_BaseOverrideMaterials();
+            if (Slots.Num() < Base.Num()) { Slots.SetNumZeroed(Base.Num()); }
+            for (int32 I = 0; I < Base.Num(); ++I) { if (Base[I] != nullptr) { Slots[I] = Base[I].Get(); } }
+        }
+        Pair.Value->Set_SlotOverrideMaterials(Slots);
     }
 }
 
@@ -241,7 +474,8 @@ auto
     -> void
 {
     const FIntPoint Tile = TileCoordOf(InWorldTransform.GetLocation());
-    auto* TileComp = GetOrCreate_Tile(Tile);
+    const FIntVector Bucket = MakeBucketKey(Tile, 0);
+    auto* TileComp = GetOrCreate_Tile(Bucket);
     CK_ENSURE_IF_NOT(ck::IsValid(TileComp),
         TEXT("[CkIskm] AddInstance on crowd [{}]: tile creation failed (no collection/default mesh) — member dropped, index space desyncs"), this)
     { return; }
@@ -273,22 +507,22 @@ auto
     Member.Inst.PrevFrame = 0;
 
     const int32 MemberIndex = _Members.Add(Member);
-    _TileMembers.FindOrAdd(Tile).Add(MemberIndex);
+    _TileMembers.FindOrAdd(Bucket).Add(MemberIndex);
 }
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
-    RebuildTile(const FIntPoint& InTile)
+    RebuildTile(const FIntVector& InKey)
     -> void
 {
-    UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
+    UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InKey);
     if (ck::Is_NOT_Valid(Comp))
     { return; }
 
     // Members carry LIVE animation state (the manager is the single source of truth), so a rebuild never
     // snaps animation back to the spawn pose.
     TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
-    if (const TArray<int32>* MemberIndices = _TileMembers.Find(InTile))
+    if (const TArray<int32>* MemberIndices = _TileMembers.Find(InKey))
     {
         Visible.Reserve(MemberIndices->Num());
         for (const int32 MemberIndex : *MemberIndices)
@@ -303,13 +537,13 @@ auto
 
 auto
     ACk_Iskm_BatchedCrowd_Actor::
-    PushTile(const FIntPoint& InTile)
+    PushTile(const FIntVector& InKey)
     -> void
 {
-    UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InTile);
+    UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InKey);
     if (ck::Is_NOT_Valid(Comp))
     { return; }
-    const TArray<int32>* MemberIndices = _TileMembers.Find(InTile);
+    const TArray<int32>* MemberIndices = _TileMembers.Find(InKey);
     if (MemberIndices == nullptr)
     { return; }
 
@@ -378,20 +612,32 @@ auto
     // Advance ALL members (hidden ones too, so they rejoin in phase after a flip-demote).
     for (FMember& M : _Members)
     {
+        const auto* Tuners = _RuntimeProfileTuners.IsValidIndex(M.ProfileIndex)
+            ? &_RuntimeProfileTuners[M.ProfileIndex] : nullptr;
+        if (Tuners != nullptr && Tuners->Get_FreezeFarAnimation() == ECk_EnableDisable::Enable)
+        { continue; }
+        const float Interval = Tuners != nullptr
+            ? static_cast<float>(Tuners->Get_FarAnimationUpdateInterval().Get_Seconds()) : 0.0f;
+        M.ProfileAnimationAccumulator += InDeltaTime;
+        if (Interval > 0.0f && M.ProfileAnimationAccumulator < Interval)
+        { continue; }
+        // Keep the authoritative monotonic clock continuous; interval only throttles pose uploads.
+        const float AdvanceDelta = M.ProfileAnimationAccumulator;
+        M.ProfileAnimationAccumulator = 0.0f;
         if (M.Inst.Rate == 0.0f)
         { continue; }
-        M.Inst.Time += InDeltaTime * M.Inst.Rate;
+        M.Inst.Time += AdvanceDelta * M.Inst.Rate;
         const int32 NewFrame = Baked->Get_LoopedFrameAtTime(M.Inst.SequenceIndex, M.Inst.Time);
         if (NewFrame != M.Inst.CurFrame)
         {
             M.Inst.PrevFrame = M.Inst.CurFrame;
             M.Inst.CurFrame = NewFrame;
             if (M.Visible)
-            { _DirtyTiles.Add(M.Tile); }
+            { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
         }
     }
 
-    for (const FIntPoint& Tile : _DirtyTiles)
+    for (const FIntVector& Tile : _DirtyTiles)
     {
         PushTile(Tile);
     }
@@ -547,7 +793,7 @@ auto
         // so the move produces a real motion vector.
         M.Inst.Transform = InWorldTransform.GetRelativeTransform(FTransform(TileCentre(M.Tile)));
         if (M.Visible)
-        { _DirtyTiles.Add(M.Tile); }
+        { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
 
         // Highlighted member walking out of its cluster's fixed bounds → rebuild (recomputes bounds).
         if (auto* Group = DoFind_MemberHighlightGroup(InIndex);
@@ -558,7 +804,8 @@ auto
 
     // Tile migration: rebuild both tiles (instance counts change on each).
     const FIntPoint OldTile = M.Tile;
-    if (TArray<int32>* OldList = _TileMembers.Find(OldTile))
+    const FIntVector OldKey = MakeBucketKey(OldTile, M.ProfileIndex);
+    if (TArray<int32>* OldList = _TileMembers.Find(OldKey))
     { OldList->RemoveSingleSwap(InIndex); }
 
     M.Tile = NewTile;
@@ -566,13 +813,14 @@ auto
     // Different proxy = different motion-vector space: zero velocity for one frame beats a cross-primitive smear.
     M.Inst.PrevPushedTransform = M.Inst.Transform;
 
-    if (GetOrCreate_Tile(NewTile) != nullptr)
-    { _TileMembers.FindOrAdd(NewTile).Add(InIndex); }
+    const FIntVector NewKey = MakeBucketKey(NewTile, M.ProfileIndex);
+    if (GetOrCreate_Tile(NewKey) != nullptr)
+    { _TileMembers.FindOrAdd(NewKey).Add(InIndex); }
 
-    RebuildTile(OldTile);
-    RebuildTile(NewTile);
-    _DirtyTiles.Remove(OldTile);
-    _DirtyTiles.Remove(NewTile);
+    RebuildTile(OldKey);
+    RebuildTile(NewKey);
+    _DirtyTiles.Remove(OldKey);
+    _DirtyTiles.Remove(NewKey);
 
     if (auto* Group = DoFind_MemberHighlightGroup(InIndex);
         Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
@@ -601,7 +849,7 @@ auto
     if (InResetTime)
     { M.Inst.Time = 0.0f; }
     if (M.Visible)
-    { _DirtyTiles.Add(M.Tile); }
+    { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
 
 #if WITH_EDITOR
     // The editor graph intentionally has no crowd-advance processor. Flush this explicit authored change
@@ -624,7 +872,7 @@ auto
     M.Inst.UserData[0] = InA;
     M.Inst.UserData[1] = InB;
     if (M.Visible)
-    { _DirtyTiles.Add(M.Tile); }
+    { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
 }
 
 auto
@@ -647,7 +895,7 @@ auto
     for (int32 K = 0; K < InValues.Num(); ++K)
     { M.Inst.UserData[InFirstFloat - 2 + K] = InValues[K]; }
     if (M.Visible)
-    { _DirtyTiles.Add(M.Tile); }
+    { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
 }
 
 float
@@ -696,8 +944,9 @@ void
     if (_Members[InIndex].Visible == InVisible)
     { return; }
     _Members[InIndex].Visible = InVisible;
-    RebuildTile(_Members[InIndex].Tile);
-    _DirtyTiles.Remove(_Members[InIndex].Tile);
+    const FIntVector Key = MakeBucketKey(_Members[InIndex].Tile, _Members[InIndex].ProfileIndex);
+    RebuildTile(Key);
+    _DirtyTiles.Remove(Key);
 
     // Hidden members leave their highlight cluster (their Plan-1 stand-in is styled via the entity API).
     if (auto* Group = DoFind_MemberHighlightGroup(InIndex))

@@ -550,10 +550,23 @@ void
 {
     const auto World = GetWorld();
 
-    auto MakeFailureReport = [&](ECk_SnapshotResult InResult) -> FCk_Snapshot_LoadReport
+    // InHeader is the header READ FOR THIS SLOT, or null when the failure happened before one could be read.
+    // A corrupt or incompatible save is precisely the report that needs to name the build that wrote it, and
+    // nobody can recover that afterwards - the slot on disk is the only record. It is a parameter rather than
+    // a read of _V3Header because that member survives the previous load, so stamping it unconditionally
+    // would attribute this failure to whichever slot was loaded last.
+    auto MakeFailureReport = [&](ECk_SnapshotResult InResult,
+                                 const FCk_Snapshot_HeaderV3* InHeader = nullptr) -> FCk_Snapshot_LoadReport
     {
         auto Report = FCk_Snapshot_LoadReport{};
         Report.Set_Result(InResult);
+
+        if (ck::IsValid(InHeader, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            Report.Set_ProjectVersion(InHeader->Get_ProjectVersion());
+            Report.Set_BuildId(InHeader->Get_BuildId());
+        }
+
         return Report;
     };
 
@@ -589,7 +602,7 @@ void
         ck::snapshot::Error(TEXT("Request_Load: slot [{}] has no compatible v3 payload (v3 version [{}], [{}] bytes) — "
             "rebuild+hydrate requires a v3 save"), InSlotName,
             SaveGame->_HeaderV3.Get_FormatVersion(), SaveGame->_SnapshotBytesV3.Num());
-        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IncompatibleSave));
+        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_IncompatibleSave, &SaveGame->_HeaderV3));
         return;
     }
 
@@ -602,7 +615,7 @@ void
         if (Reader.IsError())
         {
             ck::snapshot::Error(TEXT("Request_Load: v3 stream in slot [{}] is corrupt (deserialize failed)"), InSlotName);
-            InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt));
+            InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt, &_V3Header));
             return;
         }
     }
@@ -621,7 +634,7 @@ void
     { }
     if (NOT SuppressedKeysAreValid)
     {
-        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt));
+        InDelegate.ExecuteIfBound(MakeFailureReport(ECk_SnapshotResult::Failed_Corrupt, &_V3Header));
         return;
     }
     _SuppressedSaveKeys.Reset();
@@ -672,6 +685,8 @@ void
     _V3LoadReport = FCk_Snapshot_LoadReport{};
     _V3LoadReport.Set_Result(ECk_SnapshotResult::Success);
     _V3LoadReport.Set_SaveTimestamp(_V3Header.Get_TimestampUTC());
+    _V3LoadReport.Set_ProjectVersion(_V3Header.Get_ProjectVersion());
+    _V3LoadReport.Set_BuildId(_V3Header.Get_BuildId());
     _HydrationEnqueued = false;
     _QuarantineStamped = false;
     _QuarantineLifted  = false;
@@ -728,8 +743,19 @@ void
     _LoadTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UCk_Snapshot_Subsystem_UE::DoTick_Load));
 
-    ck::snapshot::Display(TEXT("Request_Load: v3 load [epoch {}] started for slot [{}] ([{}] entities, [{}] payloads; [{}] roots tearing down)"),
-        _LoadEpoch, InSlotName, _V3Tables.Get_Entities().Num(), _V3Tables.Get_Payloads().Num(), _PendingTeardownRoots.Num());
+    // The writing version rides the load-start line because it is the first thing a bug report needs and the
+    // last thing anyone can reconstruct afterwards: the slot on disk is the only record of which build wrote it.
+    const auto WritingVersion = _V3Header.Get_ProjectVersion().IsEmpty()
+        ? FString{TEXT("<unstamped>")}
+        : _V3Header.Get_ProjectVersion();
+
+    const auto WritingBuildId = _V3Header.Get_BuildId().IsEmpty()
+        ? FString{TEXT("<unstamped>")}
+        : _V3Header.Get_BuildId();
+
+    ck::snapshot::Display(TEXT("Request_Load: v3 load [epoch {}] started for slot [{}] ([{}] entities, [{}] payloads; [{}] roots tearing down), written by game version [{}] build [{}]"),
+        _LoadEpoch, InSlotName, _V3Tables.Get_Entities().Num(), _V3Tables.Get_Payloads().Num(), _PendingTeardownRoots.Num(),
+        WritingVersion, WritingBuildId);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -3312,6 +3338,8 @@ auto
                         kLoad_TeardownFrameCap);
                     auto Report = FCk_Snapshot_LoadReport{};
                     Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                    Report.Set_ProjectVersion(_V3Header.Get_ProjectVersion());
+                    Report.Set_BuildId(_V3Header.Get_BuildId());
                     DoFinish_Load(Report);
                     return false;
                 }
@@ -3335,6 +3363,8 @@ auto
                         kLoad_TravelFrameCap);
                     auto Report = FCk_Snapshot_LoadReport{};
                     Report.Set_Result(ECk_SnapshotResult::Failed_IO);
+                    Report.Set_ProjectVersion(_V3Header.Get_ProjectVersion());
+                    Report.Set_BuildId(_V3Header.Get_BuildId());
                     DoFinish_Load(Report);
                     return false;
                 }

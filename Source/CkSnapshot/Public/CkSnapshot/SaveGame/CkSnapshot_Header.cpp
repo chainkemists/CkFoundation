@@ -58,6 +58,79 @@ auto
 
 namespace ck_snapshot_header
 {
+    // The leading dotted-numeric run only. Anything from the first non-digit, non-dot character onward is a
+    // label ("-hotfix1", "-rc2") that carries no order. An empty result means "no numeric lead at all".
+    auto
+        DoParse_VersionSegments(
+            const FString& InVersion)
+        -> TArray<int64>
+    {
+        auto Segments = TArray<int64>{};
+        auto Current  = int64{0};
+        auto HasDigits = false;
+
+        for (const auto Char : InVersion)
+        {
+            if (FChar::IsDigit(Char))
+            {
+                // Saturate rather than overflow on an absurd segment: it stays "very new" instead of wrapping
+                // to a small number and reading as ancient.
+                Current = FMath::Min(Current * 10 + (Char - TCHAR('0')), TNumericLimits<int64>::Max() / 16);
+                HasDigits = true;
+                continue;
+            }
+
+            if (Char == TCHAR('.') && HasDigits)
+            {
+                Segments.Add(Current);
+                Current   = 0;
+                HasDigits = false;
+                continue;
+            }
+
+            break;
+        }
+
+        if (HasDigits)
+        { Segments.Add(Current); }
+
+        return Segments;
+    }
+}
+
+auto
+    ck::snapshot::
+    Compare_ProjectVersions(
+        const FString& InA,
+        const FString& InB)
+    -> int32
+{
+    const auto SegmentsA = ck_snapshot_header::DoParse_VersionSegments(InA);
+    const auto SegmentsB = ck_snapshot_header::DoParse_VersionSegments(InB);
+
+    // Unparseable is OLDER than anything parseable - an unstamped save must land on the compensating side of a
+    // gate - and two unparseable versions are indistinguishable rather than ordered.
+    if (SegmentsA.IsEmpty() || SegmentsB.IsEmpty())
+    { return SegmentsA.IsEmpty() && SegmentsB.IsEmpty() ? 0 : (SegmentsA.IsEmpty() ? -1 : 1); }
+
+    const auto SegmentCount = FMath::Max(SegmentsA.Num(), SegmentsB.Num());
+    for (auto Index = 0; Index < SegmentCount; ++Index)
+    {
+        // A missing trailing segment is zero, so "1.0" and "1.0.0" are the same version.
+        const auto ValueA = SegmentsA.IsValidIndex(Index) ? SegmentsA[Index] : 0;
+        const auto ValueB = SegmentsB.IsValidIndex(Index) ? SegmentsB[Index] : 0;
+
+        if (ValueA != ValueB)
+        { return ValueA < ValueB ? -1 : 1; }
+    }
+
+    return 0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_snapshot_header
+{
     // TArray<T>'s operator<< needs an `Ar << Element` for T, which a WithSerializer USTRUCT does not get.
     // Explicit count + per-element native Serialize keeps every nested array on the native path.
     // InMinWireBytesPerEntry is a conservative floor of one EMPTY entry's stream, so a corrupt count

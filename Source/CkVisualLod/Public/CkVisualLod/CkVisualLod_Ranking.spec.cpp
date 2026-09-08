@@ -1,6 +1,9 @@
 #include "CkVisualLod/CkVisualLod_Ranking.h"
+#include "CkVisualLod/CkVisualLodArbiter_Fragment_Data.h"
 
 #include "Misc/AutomationTest.h"
+
+#include <limits>
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -15,6 +18,18 @@ namespace ck_visuallod_ranking_spec
         Entry._Distance = InDistance;
         Entry._InView   = InInView;
         return Entry;
+    }
+
+    auto
+    MakeRenderBand(
+        float InThreshold,
+        float InReturnHysteresis)
+        -> ck::FVisualLod_RenderBandRange
+    {
+        auto Band = ck::FVisualLod_RenderBandRange{};
+        Band._DistanceThreshold = InThreshold;
+        Band._ReturnHysteresis  = InReturnHysteresis;
+        return Band;
     }
 }
 
@@ -223,6 +238,128 @@ bool FCkTest_VisualLod_Ranking_InViewCone::RunTest(const FString&)
 
     return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_VisualLod_RenderBands_BoundariesAndStability,
+    "Ck.CkVisualLod.RenderBands.BoundariesAndStability",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_VisualLod_RenderBands_BoundariesAndStability::RunTest(const FString&)
+{
+    using namespace ck_visuallod_ranking_spec;
+
+    const auto Bands = TArray<ck::FVisualLod_RenderBandRange>{
+        MakeRenderBand(0.0f, 0.0f),
+        MakeRenderBand(100.0f, 20.0f),
+        MakeRenderBand(200.0f, 30.0f),
+    };
+
+    TestTrue(TEXT("valid ordered bands"), ck::visual_lod::Get_AreRenderBandsValid(Bands));
+    TestEqual(TEXT("initial chooses zero band below first outward threshold"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 99.0f), 0);
+    TestEqual(TEXT("initial boundary belongs to next band"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 100.0f), 1);
+    TestEqual(TEXT("outward boundary advances"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 200.0f, 1), 2);
+    TestEqual(TEXT("inward equality holds current band"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 170.0f, 2), 2);
+    TestEqual(TEXT("inward below return boundary demotes one band"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 169.0f, 2), 1);
+    TestEqual(TEXT("inside hysteresis is stable"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 90.0f, 1), 1);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_VisualLod_RenderBands_TeleportAndMalformed,
+    "Ck.CkVisualLod.RenderBands.TeleportAndMalformed",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_VisualLod_RenderBands_TeleportAndMalformed::RunTest(const FString&)
+{
+    using namespace ck_visuallod_ranking_spec;
+
+    const auto Bands = TArray<ck::FVisualLod_RenderBandRange>{
+        MakeRenderBand(0.0f, 0.0f),
+        MakeRenderBand(100.0f, 20.0f),
+        MakeRenderBand(200.0f, 30.0f),
+        MakeRenderBand(300.0f, 40.0f),
+    };
+
+    TestEqual(TEXT("outward teleport crosses every eligible band"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 1000.0f, 0), 3);
+    TestEqual(TEXT("inward teleport crosses every return boundary"),
+        ck::visual_lod::Get_RenderBandIndex(Bands, 0.0f, 3), 0);
+    TestEqual(TEXT("empty bands retain legacy profile path"),
+        ck::visual_lod::Get_RenderBandIndex({}, 1000.0f), INDEX_NONE);
+
+    TestFalse(TEXT("first threshold must be zero"), ck::visual_lod::Get_AreRenderBandsValid({
+        MakeRenderBand(1.0f, 0.0f)}));
+    TestFalse(TEXT("thresholds strictly increase"), ck::visual_lod::Get_AreRenderBandsValid({
+        MakeRenderBand(0.0f, 0.0f), MakeRenderBand(100.0f, 0.0f), MakeRenderBand(100.0f, 0.0f)}));
+    TestFalse(TEXT("return hysteresis cannot reach prior threshold"), ck::visual_lod::Get_AreRenderBandsValid({
+        MakeRenderBand(0.0f, 0.0f), MakeRenderBand(100.0f, 100.0f)}));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_VisualLod_RuntimeTuners_Validation,
+    "Ck.CkVisualLod.RuntimeTuners.Validation",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_VisualLod_RuntimeTuners_Validation::RunTest(const FString&)
+{
+    auto Tuners = FCk_VisualLodArbiter_RuntimeTuners{};
+    TestTrue(TEXT("default runtime tuners are valid"), ck::visual_lod::Get_AreRuntimeTunersValid(Tuners));
+
+    Tuners.Set_PromoteDistance(2601.0f);
+    TestFalse(TEXT("promote distance cannot exceed demote distance"),
+        ck::visual_lod::Get_AreRuntimeTunersValid(Tuners));
+
+    Tuners.Set_PromoteDistance(2200.0f);
+    Tuners.Set_ViewConeMarginDeg(std::numeric_limits<float>::quiet_NaN());
+    TestFalse(TEXT("NaN view cone margin is rejected"), ck::visual_lod::Get_AreRuntimeTunersValid(Tuners));
+
+    Tuners.Set_ViewConeMarginDeg(10.0f);
+    Tuners.Set_ExhaustionPolicy(static_cast<ECk_VisualLod_PoolExhaustionPolicy>(255));
+    TestFalse(TEXT("unknown exhaustion policy is rejected"), ck::visual_lod::Get_AreRuntimeTunersValid(Tuners));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_VisualLod_RuntimeTuners_AtomicSet,
+    "Ck.CkVisualLod.RuntimeTuners.AtomicSet",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_VisualLod_RuntimeTuners_AtomicSet::RunTest(const FString&)
+{
+    auto Existing = FCk_VisualLodArbiter_RuntimeTuners{};
+    Existing.Set_NearBudget(7);
+
+    auto Malformed = Existing;
+    Malformed.Set_NearBudget(-1);
+    TestFalse(TEXT("malformed candidate is rejected"),
+        ck::visual_lod::TrySetRuntimeTuners(Existing, Malformed));
+    TestEqual(TEXT("rejected candidate retains the prior budget"), Existing.Get_NearBudget(), 7);
+
+    auto Accepted = Existing;
+    Accepted.Set_NearBudget(3);
+    TestTrue(TEXT("valid candidate is accepted"), ck::visual_lod::TrySetRuntimeTuners(Existing, Accepted));
+    TestEqual(TEXT("accepted candidate replaces the full tuner snapshot"), Existing.Get_NearBudget(), 3);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #endif // WITH_DEV_AUTOMATION_TESTS
 

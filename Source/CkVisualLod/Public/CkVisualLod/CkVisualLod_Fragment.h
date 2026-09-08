@@ -104,6 +104,11 @@ namespace ck
         int32 _CurrentSequenceIndex = INDEX_NONE;
         float _CurrentRate = 1.0f;
 
+        // Index into the crowd config's ordered RenderBands. INDEX_NONE means legacy (no bands)
+        // or no current crowd slot. Retained while promoted so demotion can restore the correct
+        // batched profile without changing ownership, budget, fade, or cosmetics.
+        int32 _RenderBandIndex = INDEX_NONE;
+
         // Last sequence/rate pushed to the PROMOTED PROXY (distinct from the crowd-slot cache
         // above), so the promote drive only re-issues PlayAnimation on an actual change. Reset when
         // the proxy is torn down
@@ -142,6 +147,7 @@ namespace ck
         CK_PROPERTY_GET(_PreemptDemote);
         CK_PROPERTY_GET(_CurrentSequenceIndex);
         CK_PROPERTY_GET(_CurrentRate);
+        CK_PROPERTY_GET(_RenderBandIndex);
         CK_PROPERTY_GET(_ProxySequenceIndex);
         CK_PROPERTY_GET(_ProxyRate);
         CK_PROPERTY_GET(_Proxy);

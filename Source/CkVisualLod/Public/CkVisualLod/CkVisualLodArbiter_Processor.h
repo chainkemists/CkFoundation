@@ -59,22 +59,39 @@ namespace ck
 
     private:
         static auto
-        DoHandleRequest(
-            HandleType InHandle,
+        DoTryApply_RuntimeTunerProfiles(
             FFragment_VisualLodArbiter_Current& InCurrent,
-            const FCk_Request_VisualLodArbiter_SetObserver& InRequest) -> void;
+            const FCk_VisualLodArbiter_RuntimeTuners& InCandidate) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
-            const FCk_Request_VisualLodArbiter_ClearObserver& InRequest) -> void;
+            const FCk_Request_VisualLodArbiter_SetObserver& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
-            const FCk_Request_VisualLodArbiter_SetFrozen& InRequest) -> void;
+            const FCk_Request_VisualLodArbiter_ClearObserver& InRequest) -> bool;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_SetFrozen& InRequest) -> bool;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest) -> bool;
+
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest) -> bool;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -131,6 +148,7 @@ namespace ck
             FCk_Handle_VisualLodArbiter _Arbiter;
             FFragment_VisualLodArbiter_Current* _Current = nullptr;
             const UCk_VisualLodArbiter_Data* _Config = nullptr;
+            FCk_VisualLodArbiter_RuntimeTuners _RuntimeTuners;
             FVisualLod_LocalView _View;
             UWorld* _World = nullptr;
             TArray<FCk_Handle_VisualLod> _Members;
@@ -146,7 +164,7 @@ namespace ck
         DoResolve_View(
             const FCk_Handle_VisualLodArbiter& InArbiter,
             const FFragment_VisualLodArbiter_Current& InCurrent,
-            const UCk_VisualLodArbiter_Data& InConfig) -> FVisualLod_LocalView;
+            const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners) -> FVisualLod_LocalView;
 
         static auto
         DoGather_Members(
@@ -239,6 +257,15 @@ namespace ck
             FFragment_VisualLod_Current& InMemberCurrent,
             const FTransform& InMemberXf) -> void;
 
+        // Changes only the batched renderer profile assignment. It deliberately has no authority
+        // over membership, visibility, fade alpha, cosmetics, proxy state, or promotion budgets.
+        static auto
+        DoUpdate_RenderBand(
+            FUpdateContext& InCtx,
+            FCk_Handle_VisualLod InMember,
+            FFragment_VisualLod_Current& InMemberCurrent,
+            float InDistance) -> void;
+
         // Mirrors the member's resolved far-anim onto the promoted proxy as a single looping
         // sequence (sequence pose mode, no AnimBP) so the near proxy keeps walking exactly as the
         // far member did. Idempotent per (seq, rate) via the proxy cache; a game wanting a richer
@@ -253,7 +280,7 @@ namespace ck
         static auto
         DoCompute_FarAnim(
             const FCk_VisualLod_FarAnim& InFarAnim,
-            const FCk_VisualLod_CrowdConfig& InCrowdConfig,
+            const FCk_VisualLod_RuntimeCrowdTuners& InCrowdTuners,
             float InPlanarSpeed) -> TTuple<int32, float>;
 
         static auto

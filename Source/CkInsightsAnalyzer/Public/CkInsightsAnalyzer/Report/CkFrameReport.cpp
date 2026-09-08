@@ -3,6 +3,7 @@
 #include "CkInsightsAnalyzer_Log.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -783,6 +784,28 @@ auto
                      const FCk_FrameAnalysisResult& Result) const
     -> TArray<TSharedPtr<FCk_HotPathNode>>
 {
+    TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
+
+    return BuildHotPathTree(Session, Result, BuildTimerNameMap(Session));
+}
+
+auto
+    FCk_FrameReport::
+    BuildHotPathTree(const FCk_TraceSession& Session,
+                     const FCk_FrameAnalysisResult& Result,
+                     const FTimerNameMap& TimerNames) const
+    -> TArray<TSharedPtr<FCk_HotPathNode>>
+{
+    // A synthesized average's parent-child edges are divided by EVERY analysed frame, while the
+    // floors below are absolute — an edge present in a minority of frames sinks under them, and the
+    // tree comes back empty rather than wrong-looking.
+    const auto ResultIsRealFrame = NOT Result.IsSynthesizedAverage;
+    CK_ENSURE_IF_NOT(ResultIsRealFrame,
+        TEXT("BuildHotPathTree needs a real frame - a synthesized averaged frame's parent-child edges ")
+        TEXT("are presence-diluted means that the tree's thresholds then reject. Use ")
+        TEXT("FCk_MultiFrameStats::MergedHotPaths instead."))
+    { return {}; }
+
     TArray<TSharedPtr<FCk_HotPathNode>> Roots;
 
     if (NOT Result.IsValid() ||
@@ -790,9 +813,6 @@ auto
     {
         return Roots;
     }
-
-    TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
-    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
 
     TMap<uint32, double> RootChildren = UnwrapRoots(
         Result.FrameRootTimerIndex, Result, TimerNames);
@@ -962,6 +982,14 @@ auto
                                  double MinWorkerThreadMs)
     -> TArray<FCk_WorkerThreadSummary>
 {
+    // Worker summaries are read back out of the session over the frame's time window, which a
+    // synthesized average does not have — see FCk_FrameAnalysisResult::IsSynthesizedAverage.
+    const auto ResultIsRealFrame = NOT GameThreadResult.IsSynthesizedAverage;
+    CK_ENSURE_IF_NOT(ResultIsRealFrame,
+        TEXT("ComputeWorkerThreadSummaries needs a real frame - a synthesized averaged frame has no ")
+        TEXT("session time window to re-read. Use FCk_MultiFrameStats aggregates instead."))
+    { return {}; }
+
     const TArray<TraceServices::FThreadInfo> ThreadInfos = Session.GetThreadInfos();
     const uint32 GameThreadId = GameThreadResult.ThreadId;
 
@@ -1082,7 +1110,25 @@ auto
                          double MinWaitMs)
     -> TArray<FCk_WaitThreadSummary>
 {
-    const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
+    return ComputeWaitSummaries(Session, GameThreadResult, MinWaitMs, BuildTimerNameMap(Session));
+}
+
+auto
+    FCk_FrameReport::
+    ComputeWaitSummaries(const FCk_TraceSession& Session,
+                         const FCk_FrameAnalysisResult& GameThreadResult,
+                         double MinWaitMs,
+                         const FTimerNameMap& TimerNames)
+    -> TArray<FCk_WaitThreadSummary>
+{
+    // Every non-game-thread row is read back out of the session over the frame's time window, which
+    // a synthesized average does not have — see FCk_FrameAnalysisResult::IsSynthesizedAverage.
+    const auto ResultIsRealFrame = NOT GameThreadResult.IsSynthesizedAverage;
+    CK_ENSURE_IF_NOT(ResultIsRealFrame,
+        TEXT("ComputeWaitSummaries needs a real frame - a synthesized averaged frame has no session ")
+        TEXT("time window to re-read. Use FCk_MultiFrameStats::WaitAverages instead."))
+    { return {}; }
+
     const uint32 GameThreadId = GameThreadResult.ThreadId;
 
     // Exclusive time, so nested waits never double count.

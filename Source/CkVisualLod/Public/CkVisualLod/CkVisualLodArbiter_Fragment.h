@@ -19,6 +19,7 @@
 class UCk_Utils_VisualLodArbiter_UE;
 class ACk_Iskm_BatchedCrowd_Actor;
 class UCk_IskmAnimCollection_Data;
+class UCk_IskmRenderer_Data;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -66,6 +67,11 @@ namespace ck
         // single-sequence locomotion, so a near proxy mirrors the far member's animation without a
         // heavy AnimBP. Invalid until the crowd stands up
         TWeakObjectPtr<const UCk_IskmAnimCollection_Data> _Collection;
+
+        // Index-aligned with CrowdConfig.RenderBands. Empty preserves the legacy renderer path.
+        // Rooted by _LoadedAssets with the collection, so a profile cannot vanish while a crowd
+        // uses it.
+        TArray<TWeakObjectPtr<UCk_IskmRenderer_Data>> _RenderProfiles;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -86,7 +92,13 @@ namespace ck
         // Resolved config asset — rooted by _LoadedAssets below for the arbiter's lifetime
         TWeakObjectPtr<const UCk_VisualLodArbiter_Data> _Config;
 
+        // Mutable decision values copied from _Config at setup. Structural data remains authored.
+        FCk_VisualLodArbiter_RuntimeTuners _RuntimeTuners;
+
         FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
+
+        // Keeps the profile assets alive while their values seed _RuntimeTuners during setup.
+        FCk_ResourceLoader_RootedAssetBatch _RuntimeTunerAssets;
 
         // Explicit observer (Request_SetObserver); invalid = fall back to local-view discovery
         FCk_Handle _Observer;
@@ -122,6 +134,7 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Config);
+        CK_PROPERTY_GET(_RuntimeTuners);
         CK_PROPERTY_GET(_Observer);
         CK_PROPERTY_GET(_PromotedOwners);
         CK_PROPERTY_GET(_NearPromotedCount);
@@ -148,7 +161,9 @@ namespace ck
         using RequestType = std::variant<
             FCk_Request_VisualLodArbiter_SetObserver,
             FCk_Request_VisualLodArbiter_ClearObserver,
-            FCk_Request_VisualLodArbiter_SetFrozen>;
+            FCk_Request_VisualLodArbiter_SetFrozen,
+            FCk_Request_VisualLodArbiter_SetRuntimeTuners,
+            FCk_Request_VisualLodArbiter_ResetRuntimeTuners>;
         using RequestList = TArray<RequestType>;
 
     private:

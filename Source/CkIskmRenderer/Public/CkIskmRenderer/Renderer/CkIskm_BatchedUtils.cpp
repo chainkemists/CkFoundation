@@ -2,6 +2,7 @@
 
 #include "CkIskm_BatchedClusterComponent.h"
 #include "CkIskm_BatchedCrowd_Actor.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/CkIskmSubsystem.h"
 
@@ -295,6 +296,60 @@ auto
     { return; }
 
     InCrowd->Finalize();
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdRenderProfiles(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const TArray<UCk_IskmRenderer_Data*>& InProfiles)
+    -> bool
+{
+    return ck::IsValid(InCrowd) && InCrowd->Set_RenderProfiles(InProfiles);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdRuntimeProfileTuners(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        const TArray<FCk_IskmRenderer_RuntimeProfileTuners>& InTuners)
+    -> bool
+{
+    return ck::IsValid(InCrowd) && InCrowd->Set_RuntimeProfileTuners(InTuners);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberRenderProfile(
+        ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        int32 InIndex,
+        int32 InProfileIndex)
+    -> bool
+{
+    return ck::IsValid(InCrowd) && InCrowd->Set_MemberRenderProfile(InIndex, InProfileIndex);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberRenderProfile(
+        const ACk_Iskm_BatchedCrowd_Actor* InCrowd,
+        int32 InIndex)
+    -> int32
+{
+    return ck::IsValid(InCrowd)
+        ? InCrowd->Get_MemberRenderProfile(InIndex)
+        : INDEX_NONE;
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdProfileBucketCount(
+        const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+    -> int32
+{
+    return ck::IsValid(InCrowd)
+        ? InCrowd->Get_ProfileBucketCount()
+        : 0;
 }
 
 auto

@@ -14,6 +14,7 @@
 #include "CkIskmRenderer/AnimCollection/CkIskmAnimCollection_Fragment_Data.h"
 #include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h"
 #include "CkIskmRenderer/Renderer/CkIskm_BatchedUtils.h"
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Utils.h"
 
@@ -64,14 +65,72 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup VisualLodArbiter [{}] - loading its Config [{}] through CkResourceLoader failed"),
             InHandle, InParams.Get_Config().ToSoftObjectPath())
+        {}
+
+        if (NOT AssetsAreLoaded)
         {
             InCurrent._LoadedAssets = {};
+            InCurrent._RuntimeTunerAssets = {};
             InHandle.Try_Remove<FTag_VisualLodArbiter_PendingAssetLoad>();
-            InHandle.Remove<MarkedDirtyBy>();
+            // Retain NeedsSetup: update processors must never admit a half-setup arbiter.
+            return;
+        }
+
+        // An empty arbiter has no crowd-owned assets to root; its empty runtime snapshot is valid.
+        if (NOT ResolvedConfig->Get_CrowdConfigs().IsEmpty()
+            && NOT InCurrent._RuntimeTunerAssets.Get_IsRequested())
+        {
+            auto ProfilePaths = TArray<FSoftObjectPath>{};
+            for (const auto& CrowdConfig : ResolvedConfig->Get_CrowdConfigs())
+            {
+                ProfilePaths.Emplace(CrowdConfig.Get_AnimCollection().ToSoftObjectPath());
+                for (const auto& RenderBand : CrowdConfig.Get_RenderBands())
+                { ProfilePaths.Emplace(RenderBand.Get_RendererProfile().ToSoftObjectPath()); }
+            }
+
+            InCurrent._RuntimeTunerAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                TEXT("VisualLodArbiter.RuntimeTuners"), ProfilePaths);
+        }
+
+        if (NOT ResolvedConfig->Get_CrowdConfigs().IsEmpty()
+            && NOT InCurrent._RuntimeTunerAssets.Get_IsReady())
+        {
+            InHandle.AddOrGet<FTag_VisualLodArbiter_PendingAssetLoad>();
+            return;
+        }
+
+        const auto RuntimeTunerAssetsAreLoaded = ResolvedConfig->Get_CrowdConfigs().IsEmpty()
+            || NOT InCurrent._RuntimeTunerAssets.Get_HasFailed();
+        CK_ENSURE_IF_NOT(RuntimeTunerAssetsAreLoaded,
+            TEXT("Cannot setup VisualLodArbiter [{}] - loading its runtime tuner profiles failed"), InHandle)
+        {}
+
+        if (NOT RuntimeTunerAssetsAreLoaded)
+        {
+            InCurrent._LoadedAssets = {};
+            InCurrent._RuntimeTunerAssets = {};
+            InHandle.Try_Remove<FTag_VisualLodArbiter_PendingAssetLoad>();
+            // Retain NeedsSetup: update processors must never admit a half-setup arbiter.
+            return;
+        }
+
+        const auto RuntimeTuners = visual_lod::MakeRuntimeTuners(*ResolvedConfig);
+        const auto RuntimeTunersAreValid = visual_lod::Get_AreRuntimeTunersValid(RuntimeTuners, *ResolvedConfig);
+        CK_ENSURE_IF_NOT(RuntimeTunersAreValid,
+            TEXT("Cannot setup VisualLodArbiter [{}] - Config [{}] has invalid runtime tuners"),
+            InHandle, InParams.Get_Config().ToSoftObjectPath())
+        {}
+
+        if (NOT RuntimeTunersAreValid)
+        {
+            // Keep the rooted assets so an editor-time config correction can be revalidated without
+            // reloading, and retain NeedsSetup so no update observes an unpublished current snapshot.
+            InHandle.Try_Remove<FTag_VisualLodArbiter_PendingAssetLoad>();
             return;
         }
 
         InCurrent._Config = ResolvedConfig;
+        InCurrent._RuntimeTuners = RuntimeTuners;
         InCurrent._Crowds.SetNum(ResolvedConfig->Get_CrowdConfigs().Num());
 
         // Two live arbiters with one domain tag would both claim the same members — catch the
@@ -100,6 +159,63 @@ namespace ck
 
     auto
         FProcessor_VisualLodArbiter_HandleRequests::
+        DoTryApply_RuntimeTunerProfiles(
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_VisualLodArbiter_RuntimeTuners& InCandidate)
+        -> bool
+    {
+        auto LiveCrowdIndices = TArray<int32>{};
+        for (auto CrowdIndex = 0; CrowdIndex < InCurrent._Crowds.Num(); ++CrowdIndex)
+        {
+            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            if (ck::Is_NOT_Valid(Crowd))
+            { continue; }
+
+            auto CandidateProfiles = TArray<FCk_IskmRenderer_RuntimeProfileTuners>{};
+            for (const auto& BandTuners : InCandidate.Get_CrowdTuners()[CrowdIndex].Get_RenderBands())
+            { CandidateProfiles.Add(BandTuners.Get_ProfileTuners()); }
+
+            if (NOT Crowd->Can_SetRuntimeProfileTuners(CandidateProfiles))
+            { return false; }
+
+            LiveCrowdIndices.Add(CrowdIndex);
+        }
+
+        auto PreviousProfiles = TArray<TArray<FCk_IskmRenderer_RuntimeProfileTuners>>{};
+        PreviousProfiles.Reserve(LiveCrowdIndices.Num());
+        for (const auto CrowdIndex : LiveCrowdIndices)
+        {
+            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            PreviousProfiles.Add(Crowd->Get_RuntimeProfileTuners());
+        }
+
+        for (auto AppliedIndex = 0; AppliedIndex < LiveCrowdIndices.Num(); ++AppliedIndex)
+        {
+            const auto CrowdIndex = LiveCrowdIndices[AppliedIndex];
+            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            auto CandidateProfiles = TArray<FCk_IskmRenderer_RuntimeProfileTuners>{};
+            for (const auto& BandTuners : InCandidate.Get_CrowdTuners()[CrowdIndex].Get_RenderBands())
+            { CandidateProfiles.Add(BandTuners.Get_ProfileTuners()); }
+
+            if (Crowd->Set_RuntimeProfileTuners(CandidateProfiles))
+            { continue; }
+
+            for (auto RollbackIndex = 0; RollbackIndex < AppliedIndex; ++RollbackIndex)
+            {
+                const auto RollbackCrowd = InCurrent._Crowds[LiveCrowdIndices[RollbackIndex]]._Crowd.Get();
+                if (ck::IsValid(RollbackCrowd))
+                { RollbackCrowd->Set_RuntimeProfileTuners(PreviousProfiles[RollbackIndex]); }
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VisualLodArbiter_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -116,9 +232,8 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InRequest);
-
-            Result = ECk_Request_OperationResult::Succeeded;
+            if (DoHandleRequest(InHandle, InCurrent, InRequest))
+            { Result = ECk_Request_OperationResult::Succeeded; }
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -131,9 +246,10 @@ namespace ck
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
             const FCk_Request_VisualLodArbiter_SetObserver& InRequest)
-        -> void
+        -> bool
     {
         InCurrent._Observer = InRequest.Get_Observer();
+        return true;
     }
 
     auto
@@ -142,9 +258,10 @@ namespace ck
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
             const FCk_Request_VisualLodArbiter_ClearObserver& InRequest)
-        -> void
+        -> bool
     {
         InCurrent._Observer = FCk_Handle{};
+        return true;
     }
 
     auto
@@ -153,12 +270,87 @@ namespace ck
             HandleType InHandle,
             FFragment_VisualLodArbiter_Current& InCurrent,
             const FCk_Request_VisualLodArbiter_SetFrozen& InRequest)
-        -> void
+        -> bool
     {
         if (InRequest.Get_Frozen() == ECk_EnableDisable::Enable)
         { InHandle.AddOrGet<FTag_VisualLodArbiter_Frozen>(); }
         else
         { InHandle.Try_Remove<FTag_VisualLodArbiter_Frozen>(); }
+        return true;
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest)
+        -> bool
+    {
+        const auto Config = InCurrent._Config.Get();
+        const auto ConfigIsValid = ck::IsValid(Config);
+        CK_ENSURE_IF_NOT(ConfigIsValid,
+            TEXT("VisualLodArbiter [{}] cannot set runtime tuners without its resolved config"), InHandle)
+        {}
+
+        if (NOT ConfigIsValid)
+        { return false; }
+
+        const auto TunersAreValid = visual_lod::Get_AreRuntimeTunersValid(InRequest.Get_RuntimeTuners(), *Config);
+        CK_ENSURE_IF_NOT(TunersAreValid,
+            TEXT("VisualLodArbiter [{}] rejected invalid runtime tuners atomically"), InHandle)
+        {}
+
+        if (NOT TunersAreValid)
+        { return false; }
+
+        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, InRequest.Get_RuntimeTuners());
+        CK_ENSURE_IF_NOT(RendererAccepted,
+            TEXT("VisualLodArbiter [{}] rejected runtime profile tuner transaction atomically"), InHandle)
+        {}
+
+        if (NOT RendererAccepted)
+        { return false; }
+
+        return visual_lod::TrySetRuntimeTuners(InCurrent._RuntimeTuners, InRequest.Get_RuntimeTuners(), *Config);
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_VisualLodArbiter_Current& InCurrent,
+            const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest)
+        -> bool
+    {
+        const auto Config = InCurrent._Config.Get();
+        const auto ConfigIsValid = ck::IsValid(Config);
+        CK_ENSURE_IF_NOT(ConfigIsValid,
+            TEXT("VisualLodArbiter [{}] cannot reset runtime tuners without its resolved config"), InHandle)
+        {}
+
+        if (NOT ConfigIsValid)
+        { return false; }
+
+        const auto RuntimeTuners = visual_lod::MakeRuntimeTuners(*Config);
+        const auto RuntimeTunersAreValid = visual_lod::Get_AreRuntimeTunersValid(RuntimeTuners, *Config);
+        CK_ENSURE_IF_NOT(RuntimeTunersAreValid,
+            TEXT("VisualLodArbiter [{}] cannot reset to malformed authored runtime tuners"), InHandle)
+        {}
+
+        if (NOT RuntimeTunersAreValid)
+        { return false; }
+
+        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, RuntimeTuners);
+        CK_ENSURE_IF_NOT(RendererAccepted,
+            TEXT("VisualLodArbiter [{}] rejected runtime profile reset transaction atomically"), InHandle)
+        {}
+
+        if (NOT RendererAccepted)
+        { return false; }
+
+        InCurrent._RuntimeTuners = RuntimeTuners;
+        return true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -219,10 +411,11 @@ namespace ck
         Ctx._DeltaT  = InDeltaT;
         Ctx._Arbiter = InArbiter;
         Ctx._Current = &Current;
-        Ctx._Config  = Config;
+        Ctx._Config        = Config;
+        Ctx._RuntimeTuners = Current._RuntimeTuners;
         Ctx._World   = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InArbiter);
 
-        Ctx._View = DoResolve_View(InArbiter, Current, *Config);
+        Ctx._View = DoResolve_View(InArbiter, Current, Ctx._RuntimeTuners);
         Current._LastView = Ctx._View;
 
         Current._PromotesThisTick = 0;
@@ -255,7 +448,7 @@ namespace ck
         DoResolve_View(
             const FCk_Handle_VisualLodArbiter& InArbiter,
             const FFragment_VisualLodArbiter_Current& InCurrent,
-            const UCk_VisualLodArbiter_Data& InConfig)
+            const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners)
         -> FVisualLod_LocalView
     {
         auto View = FVisualLod_LocalView{};
@@ -286,7 +479,7 @@ namespace ck
         View._Location    = ViewInfo.Location;
         View._Forward     = ViewInfo.Rotation.Vector();
         View._CosHalfCone = FMath::Cos(FMath::DegreesToRadians(
-            ViewInfo.FOV * 0.5f + InConfig.Get_ViewConeMarginDeg()));
+            ViewInfo.FOV * 0.5f + InRuntimeTuners.Get_ViewConeMarginDeg()));
 
         return View;
     }
@@ -442,7 +635,7 @@ namespace ck
             if (MemberCurrent._MemberIndex == INDEX_NONE)
             {
                 if (MemberParams.Get_PromotionMode() == ECk_VisualLod_PromotionMode::AlwaysPromoted
-                    || InCtx._Config->Get_ExhaustionPolicy() == ECk_VisualLod_PoolExhaustionPolicy::PromoteInstead)
+                    || InCtx._RuntimeTuners.Get_ExhaustionPolicy() == ECk_VisualLod_PoolExhaustionPolicy::PromoteInstead)
                 {
                     DoPromote(InCtx, InMember, MemberCurrent, MemberXf, EChargeClass::Unbudgeted);
                     return;
@@ -457,7 +650,7 @@ namespace ck
 
         const auto Distance = static_cast<float>((MemberXf.GetLocation() - InCtx._View._Location).Size());
         const auto InView   = visual_lod::Get_IsInView(MemberXf.GetLocation(), InCtx._View,
-            Config.Get_AlwaysInViewDistance(), Distance);
+            InCtx._RuntimeTuners.Get_AlwaysInViewDistance(), Distance);
 
         // Retained for tooling: the rank inputs the two candidate/incumbent branches below read
         MemberCurrent._LastDistance = Distance;
@@ -492,7 +685,7 @@ namespace ck
             }
 
             if (MemberCurrent._MemberIndex != INDEX_NONE && NOT LockHeld
-                && Distance > Config.Get_DemoteDistance())
+                && Distance > InCtx._RuntimeTuners.Get_DemoteDistance())
             {
                 DoDemote_Begin(InCtx, InMember, MemberCurrent, MemberXf);
                 return;
@@ -518,8 +711,8 @@ namespace ck
         if (NOT MemberCurrent._Hidden)
         {
             const auto WantLocked = LockHeld
-                && Distance < Config.Get_LockPromoteMaxDistance()
-                && InCtx._Current->_LockedPromotedCount < Config.Get_LockBudget();
+                && Distance < InCtx._RuntimeTuners.Get_LockPromoteMaxDistance()
+                && InCtx._Current->_LockedPromotedCount < InCtx._RuntimeTuners.Get_LockBudget();
 
             // The lock promote stays inline: it spends its OWN reserved budget, so it never
             // competes with the near candidates the ranked pass selects
@@ -529,7 +722,7 @@ namespace ck
                 return;
             }
 
-            if (MemberCurrent._MemberIndex != INDEX_NONE && Distance < Config.Get_PromoteDistance())
+            if (MemberCurrent._MemberIndex != INDEX_NONE && Distance < InCtx._RuntimeTuners.Get_PromoteDistance())
             {
                 auto Candidate = FVisualLod_RankEntry{};
                 Candidate._Index    = InScratchIdx;
@@ -588,10 +781,10 @@ namespace ck
         if (Current._Candidates.IsEmpty())
         { return; }
 
-        const auto FreeBudget = FMath::Max(InCtx._Config->Get_NearBudget() - Current._NearPromotedCount, 0);
+        const auto FreeBudget = FMath::Max(InCtx._RuntimeTuners.Get_NearBudget() - Current._NearPromotedCount, 0);
 
         const auto Selection = visual_lod::Select_Flips(Current._Candidates, Current._Incumbents,
-            FreeBudget, InCtx._Config->Get_MaxPreemptsPerTick(), InCtx._Config->Get_PreemptDistanceMargin());
+            FreeBudget, InCtx._RuntimeTuners.Get_MaxPreemptsPerTick(), InCtx._RuntimeTuners.Get_PreemptDistanceMargin());
 
         for (const auto ScratchIdx : Selection._PromoteIndices)
         {
@@ -632,9 +825,12 @@ namespace ck
     {
         auto& Current = *InCtx._Current;
 
-        CK_ENSURE_IF_NOT(Current._Crowds.IsValidIndex(InCrowdIndex),
+        const auto CrowdIndexIsValid = Current._Crowds.IsValidIndex(InCrowdIndex);
+        CK_ENSURE_IF_NOT(CrowdIndexIsValid,
             TEXT("VisualLod member crowd index [{}] is outside arbiter [{}]'s [{}] configured crowds"),
             InCrowdIndex, InCtx._Arbiter, Current._Crowds.Num())
+        {}
+        if (NOT CrowdIndexIsValid)
         { return nullptr; }
 
         auto& Runtime = Current._Crowds[InCrowdIndex];
@@ -644,11 +840,37 @@ namespace ck
         { return Existing; }
 
         const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[InCrowdIndex];
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[InCrowdIndex];
+
+        auto RenderBandRanges = TArray<FVisualLod_RenderBandRange>{};
+        RenderBandRanges.Reserve(CrowdTuners.Get_RenderBands().Num());
+        for (const auto& RenderBand : CrowdTuners.Get_RenderBands())
+        {
+            auto Range = FVisualLod_RenderBandRange{};
+            Range._DistanceThreshold = RenderBand.Get_DistanceThreshold();
+            Range._ReturnHysteresis  = RenderBand.Get_ReturnHysteresis();
+            RenderBandRanges.Add(Range);
+        }
+
+        const auto BandsAreValid = visual_lod::Get_AreRenderBandsValid(RenderBandRanges);
+        CK_ENSURE_IF_NOT(BandsAreValid,
+            TEXT("VisualLod crowd [{}] on arbiter [{}] has malformed RenderBands: first threshold must be zero, "
+                 "thresholds strictly increase, and return hysteresis must stay before the preceding boundary"),
+            InCrowdIndex, InCtx._Arbiter)
+        {}
+        if (NOT BandsAreValid)
+        { return nullptr; }
 
         if (NOT Runtime._LoadedAssets.Get_IsRequested())
         {
+            auto PathsToLoad = TArray<FSoftObjectPath>{};
+            PathsToLoad.Reserve(1 + CrowdConfig.Get_RenderBands().Num());
+            PathsToLoad.Emplace(CrowdConfig.Get_AnimCollection().ToSoftObjectPath());
+            for (const auto& RenderBand : CrowdConfig.Get_RenderBands())
+            { PathsToLoad.Emplace(RenderBand.Get_RendererProfile().ToSoftObjectPath()); }
+
             Runtime._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
-                TEXT("VisualLod.Crowd"), {CrowdConfig.Get_AnimCollection().ToSoftObjectPath()});
+                TEXT("VisualLod.Crowd"), PathsToLoad);
         }
 
         if (NOT Runtime._LoadedAssets.Get_IsReady())
@@ -661,15 +883,78 @@ namespace ck
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot stand up VisualLod crowd [{}] for arbiter [{}] - loading AnimCollection [{}] failed"),
             InCrowdIndex, InCtx._Arbiter, CrowdConfig.Get_AnimCollection().ToSoftObjectPath())
+        {}
+        if (NOT AssetsAreLoaded)
         {
             Runtime._LoadedAssets = {};
             return nullptr;
+        }
+
+        auto RenderProfiles = TArray<UCk_IskmRenderer_Data*>{};
+        RenderProfiles.Reserve(CrowdConfig.Get_RenderBands().Num());
+        for (const auto& RenderBand : CrowdConfig.Get_RenderBands())
+        {
+            const auto Profile = Cast<UCk_IskmRenderer_Data>(
+                Runtime._LoadedAssets.Get_ResolvedObject(RenderBand.Get_RendererProfile().ToSoftObjectPath()));
+            const auto ProfileCollection = ck::IsValid(Profile)
+                ? Profile->Get_AnimCollection().Get()
+                : nullptr;
+            const auto ProfileIsCompatible = ck::IsValid(Profile)
+                && ck::IsValid(Collection->Get_DefaultMesh())
+                && ProfileCollection == Collection
+                && ProfileCollection->Get_DefaultMesh() == Collection->Get_DefaultMesh();
+            CK_ENSURE_IF_NOT(ProfileIsCompatible,
+                TEXT("VisualLod crowd [{}] on arbiter [{}] RenderBand profile [{}] must resolve and use the exact "
+                     "crowd AnimCollection/default mesh; no crowd is created"),
+                InCrowdIndex, InCtx._Arbiter, RenderBand.Get_RendererProfile().ToSoftObjectPath())
+            {}
+            if (NOT ProfileIsCompatible)
+            {
+                Runtime._LoadedAssets = {};
+                return nullptr;
+            }
+
+            RenderProfiles.Add(Profile);
         }
 
         const auto Crowd = UCk_Utils_IskmBatched_UE::Create_Crowd(
             InCtx._World, Collection, CrowdConfig.Get_TileSize());
         if (ck::Is_NOT_Valid(Crowd))
         { return nullptr; }
+
+        // Configure the complete resolved set before a member exists. A failure above creates no
+        // crowd, so no partial profile subset can be published.
+        const auto ProfilesWereApplied =
+            RenderProfiles.IsEmpty() ||
+            UCk_Utils_IskmBatched_UE::Set_CrowdRenderProfiles(Crowd, RenderProfiles);
+        CK_ENSURE_IF_NOT(ProfilesWereApplied,
+            TEXT("VisualLod crowd [{}] on arbiter [{}] rejected its validated render profile set"),
+            InCrowdIndex, InCtx._Arbiter)
+        {}
+        if (NOT ProfilesWereApplied)
+        {
+            Crowd->Destroy();
+            Runtime._LoadedAssets = {};
+            return nullptr;
+        }
+
+        auto ProfileTuners = TArray<FCk_IskmRenderer_RuntimeProfileTuners>{};
+        ProfileTuners.Reserve(CrowdTuners.Get_RenderBands().Num());
+        for (const auto& BandTuners : CrowdTuners.Get_RenderBands())
+        { ProfileTuners.Add(BandTuners.Get_ProfileTuners()); }
+
+        const auto RuntimeTunersWereApplied = UCk_Utils_IskmBatched_UE::Set_CrowdRuntimeProfileTuners(
+            Crowd, ProfileTuners);
+        CK_ENSURE_IF_NOT(RuntimeTunersWereApplied,
+            TEXT("VisualLod crowd [{}] on arbiter [{}] rejected its runtime profile tuners"),
+            InCrowdIndex, InCtx._Arbiter)
+        {}
+        if (NOT RuntimeTunersWereApplied)
+        {
+            Crowd->Destroy();
+            Runtime._LoadedAssets = {};
+            return nullptr;
+        }
 
         // Fixed pool, parked out of sight; slots are recycled as members come and go
         const auto ParkXf = FTransform{
@@ -680,7 +965,7 @@ namespace ck
         for (auto Idx = 0; Idx < CrowdConfig.Get_PoolSize(); ++Idx)
         {
             UCk_Utils_IskmBatched_UE::Add_CrowdMember(
-                Crowd, ParkXf, CrowdConfig.Get_IdleSequenceIndex(), 1.0f, static_cast<float>(Idx) * 0.137f);
+                Crowd, ParkXf, CrowdTuners.Get_IdleSequenceIndex(), 1.0f, static_cast<float>(Idx) * 0.137f);
         }
         UCk_Utils_IskmBatched_UE::Finalize_Crowd(Crowd);
 
@@ -689,6 +974,10 @@ namespace ck
 
         Runtime._Crowd = Crowd;
         Runtime._Collection = Collection;
+        Runtime._RenderProfiles.Reset();
+        Runtime._RenderProfiles.Reserve(RenderProfiles.Num());
+        for (auto* Profile : RenderProfiles)
+        { Runtime._RenderProfiles.Add(Profile); }
         Runtime._FreeSlots.Reset();
         Runtime._SlotOwners.Reset();
         for (auto Idx = CrowdConfig.Get_PoolSize() - 1; Idx >= 0; --Idx)
@@ -725,12 +1014,17 @@ namespace ck
         const auto Index = Runtime._FreeSlots.Pop();
         Runtime._SlotOwners[Index] = InMember;
 
-        const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[CrowdIndex];
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[CrowdIndex];
 
         InMemberCurrent._MemberIndex          = Index;
         InMemberCurrent._Crowd                = Crowd;
-        InMemberCurrent._CurrentSequenceIndex = CrowdConfig.Get_IdleSequenceIndex();
+        InMemberCurrent._CurrentSequenceIndex = CrowdTuners.Get_IdleSequenceIndex();
         InMemberCurrent._CurrentRate          = 1.0f;
+
+        // Before the first visible frame. This only chooses the renderer partition; it does not
+        // change the slot, cosmetics, fade state, proxy, or budget accounting.
+        const auto Distance = static_cast<float>((InMemberXf.GetLocation() - InCtx._View._Location).Size());
+        DoUpdate_RenderBand(InCtx, InMember, InMemberCurrent, Distance);
 
         // Fade alpha MUST be written before the member is shown: with a masked crowd material an
         // unwritten fade slot reads 0 and clips the whole member invisible; slot recycling must
@@ -743,7 +1037,7 @@ namespace ck
 
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberTransform(Crowd, Index, InMemberXf);
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberAnimation(Crowd, Index,
-            CrowdConfig.Get_IdleSequenceIndex(), 1.0f, false);
+            CrowdTuners.Get_IdleSequenceIndex(), 1.0f, false);
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, Index, NOT InMemberCurrent._Hidden);
     }
 
@@ -772,6 +1066,7 @@ namespace ck
         // acquisition, and a stale value here would suppress that write's change check
         InMemberCurrent._CurrentSequenceIndex = INDEX_NONE;
         InMemberCurrent._CurrentRate          = 1.0f;
+        InMemberCurrent._RenderBandIndex      = INDEX_NONE;
         InMemberCurrent._FadePhase            = EVisualLod_FadePhase::None;
         InMemberCurrent._FadeAlpha            = 1.0f;
         InMemberCurrent._PreemptDemote        = false;
@@ -933,6 +1228,11 @@ namespace ck
 
         const auto FadeSlot = InCtx._Config->Get_FadeCustomDataSlot();
 
+        // A member can have spent the near state long enough to cross several render bands.
+        // Select the correct far profile before making its member visible for demotion.
+        const auto Distance = static_cast<float>((InMemberXf.GetLocation() - InCtx._View._Location).Size());
+        DoUpdate_RenderBand(InCtx, InMember, InMemberCurrent, Distance);
+
         // Fade = 0 BEFORE Set_CrowdMemberVisible(true), so the member's first visible frame is
         // fully dissolved — no 1-frame solid pop beside the still-present SKMC
         DoWrite_MemberFade(Crowd, InMemberCurrent._MemberIndex, FadeSlot, 0.0f);
@@ -940,8 +1240,8 @@ namespace ck
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberTransform(Crowd, InMemberCurrent._MemberIndex, InMemberXf);
 
         // Seq/rate from CURRENT velocity — never a hard idle reset (the idle-snap fix)
-        const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex()];
-        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdConfig, DoGet_PlanarSpeed(InMember));
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex()];
+        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdTuners, DoGet_PlanarSpeed(InMember));
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberAnimation(Crowd, InMemberCurrent._MemberIndex, Seq, Rate, false);
         InMemberCurrent._CurrentSequenceIndex = Seq;
         InMemberCurrent._CurrentRate          = Rate;
@@ -1092,16 +1392,16 @@ namespace ck
                 InMemberCurrent._PreemptDemote = false;
             }
             else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::PromoteFade
-                && InDistance > InCtx._Config->Get_DemoteDistance())
+                && InDistance > InCtx._RuntimeTuners.Get_DemoteDistance())
             { InMemberCurrent._FadePhase = EVisualLod_FadePhase::DemoteFade; }
             else if (InMemberCurrent._FadePhase == EVisualLod_FadePhase::DemoteFade
                 && NOT InMemberCurrent._PreemptDemote
-                && InDistance < InCtx._Config->Get_PromoteDistance())
+                && InDistance < InCtx._RuntimeTuners.Get_PromoteDistance())
             { InMemberCurrent._FadePhase = EVisualLod_FadePhase::PromoteFade; }
         }
 
         // 4. Step alpha toward the phase target
-        const auto FadeSeconds = static_cast<float>(InCtx._Config->Get_FadeDuration().Get_Seconds());
+        const auto FadeSeconds = static_cast<float>(InCtx._RuntimeTuners.Get_FadeDuration().Get_Seconds());
         const auto Step = FadeSeconds > 0.0f
             ? static_cast<float>(InCtx._DeltaT.Get_Seconds()) / FadeSeconds
             : 1.0f;
@@ -1151,10 +1451,16 @@ namespace ck
         if (ck::Is_NOT_Valid(Crowd) || InMemberCurrent._MemberIndex == INDEX_NONE)
         { return; }
 
+        if (NOT InCtx._Arbiter.Has<FTag_VisualLodArbiter_Frozen>())
+        {
+            const auto Distance = static_cast<float>((InMemberXf.GetLocation() - InCtx._View._Location).Size());
+            DoUpdate_RenderBand(InCtx, InMember, InMemberCurrent, Distance);
+        }
+
         UCk_Utils_IskmBatched_UE::Set_CrowdMemberTransform(Crowd, InMemberCurrent._MemberIndex, InMemberXf);
 
-        const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex()];
-        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdConfig, DoGet_PlanarSpeed(InMember));
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex()];
+        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdTuners, DoGet_PlanarSpeed(InMember));
 
         const auto SeqChanged  = Seq != InMemberCurrent._CurrentSequenceIndex;
         const auto RateChanged = FMath::Abs(Rate - InMemberCurrent._CurrentRate) > 0.1f;
@@ -1164,6 +1470,62 @@ namespace ck
             InMemberCurrent._CurrentSequenceIndex = Seq;
             InMemberCurrent._CurrentRate          = Rate;
         }
+    }
+
+    auto
+        FProcessor_VisualLodArbiter_Update::
+        DoUpdate_RenderBand(
+            FUpdateContext& InCtx,
+            FCk_Handle_VisualLod InMember,
+            FFragment_VisualLod_Current& InMemberCurrent,
+            float InDistance)
+        -> void
+    {
+        const auto Crowd = InMemberCurrent._Crowd.Get();
+        if (ck::Is_NOT_Valid(Crowd) || InMemberCurrent._MemberIndex == INDEX_NONE)
+        { return; }
+
+        const auto CrowdIndex = InMember.Get<FFragment_VisualLod_Params>().Get_CrowdIndex();
+        if (NOT InCtx._Current->_Crowds.IsValidIndex(CrowdIndex))
+        { return; }
+
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[CrowdIndex];
+        if (CrowdTuners.Get_RenderBands().IsEmpty())
+        {
+            InMemberCurrent._RenderBandIndex = INDEX_NONE;
+            return;
+        }
+
+        auto Ranges = TArray<FVisualLod_RenderBandRange>{};
+        Ranges.Reserve(CrowdTuners.Get_RenderBands().Num());
+        for (const auto& Band : CrowdTuners.Get_RenderBands())
+        {
+            auto Range = FVisualLod_RenderBandRange{};
+            Range._DistanceThreshold = Band.Get_DistanceThreshold();
+            Range._ReturnHysteresis  = Band.Get_ReturnHysteresis();
+            Ranges.Add(Range);
+        }
+
+        const auto NewBandIndex = visual_lod::Get_RenderBandIndex(
+            Ranges, InDistance, InMemberCurrent._RenderBandIndex);
+        if (NewBandIndex == InMemberCurrent._RenderBandIndex)
+        { return; }
+
+        const auto ProfileWasApplied = UCk_Utils_IskmBatched_UE::Set_CrowdMemberRenderProfile(
+            Crowd, InMemberCurrent._MemberIndex, NewBandIndex);
+
+        const auto AppliedBandIndex = UCk_Utils_IskmBatched_UE::Get_CrowdMemberRenderProfile(
+            Crowd, InMemberCurrent._MemberIndex);
+        const auto RendererStateMatches = ProfileWasApplied && AppliedBandIndex == NewBandIndex;
+        CK_ENSURE_IF_NOT(RendererStateMatches,
+            TEXT("VisualLod member [{}] failed to migrate crowd member [{}] to render profile [{}] — renderer reports [{}]; "
+                 "VisualLod band state remains unchanged"),
+            InMember, InMemberCurrent._MemberIndex, NewBandIndex, AppliedBandIndex)
+        {}
+        if (NOT RendererStateMatches)
+        { return; }
+
+        InMemberCurrent._RenderBandIndex = NewBandIndex;
     }
 
     auto
@@ -1188,8 +1550,8 @@ namespace ck
         if (ck::Is_NOT_Valid(Collection))
         { return; }
 
-        const auto& CrowdConfig = InCtx._Config->Get_CrowdConfigs()[CrowdIndex];
-        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdConfig, DoGet_PlanarSpeed(InMember));
+        const auto& CrowdTuners = InCtx._RuntimeTuners.Get_CrowdTuners()[CrowdIndex];
+        const auto [Seq, Rate] = DoCompute_FarAnim(InMemberCurrent._FarAnim, CrowdTuners, DoGet_PlanarSpeed(InMember));
 
         const auto SeqChanged  = Seq != InMemberCurrent._ProxySequenceIndex;
         const auto RateChanged = FMath::Abs(Rate - InMemberCurrent._ProxyRate) > 0.1f;
@@ -1225,8 +1587,8 @@ namespace ck
                 // average. Both magnitudes are config-tunable — the mechanics say 1.0 and 0.5, the
                 // game's eye gets the final word
                 const auto Lead =
-                    static_cast<float>(InCtx._DeltaT.Get_Seconds()) * Rate * InCtx._Config->Get_FadeAnchorLeadFrames()
-                    - InCtx._Config->Get_FadeAnchorBakeLagIntervals()
+                    static_cast<float>(InCtx._DeltaT.Get_Seconds()) * Rate * InCtx._RuntimeTuners.Get_FadeAnchorLeadFrames()
+                    - InCtx._RuntimeTuners.Get_FadeAnchorBakeLagIntervals()
                         / static_cast<float>(FMath::Max(1, Collection->Get_SampleFrequency()));
 
                 StartAt = FMath::Fmod(UCk_Utils_IskmBatched_UE::Get_CrowdMemberAnimationTime(
@@ -1290,22 +1652,22 @@ namespace ck
         FProcessor_VisualLodArbiter_Update::
         DoCompute_FarAnim(
             const FCk_VisualLod_FarAnim& InFarAnim,
-            const FCk_VisualLod_CrowdConfig& InCrowdConfig,
+            const FCk_VisualLod_RuntimeCrowdTuners& InCrowdTuners,
             float InPlanarSpeed)
         -> TTuple<int32, float>
     {
         if (InFarAnim.Get_Mode() == ECk_VisualLod_FarAnimMode::Fixed)
         { return MakeTuple(InFarAnim.Get_FixedSequenceIndex(), InFarAnim.Get_FixedRate()); }
 
-        if (InPlanarSpeed > InCrowdConfig.Get_MoveSpeedThreshold())
+        if (InPlanarSpeed > InCrowdTuners.Get_MoveSpeedThreshold())
         {
-            const auto Rate = FMath::Clamp(InPlanarSpeed / InCrowdConfig.Get_MoveAuthoredSpeed(),
-                static_cast<float>(InCrowdConfig.Get_MoveRateClamp().Get_Min()),
-                static_cast<float>(InCrowdConfig.Get_MoveRateClamp().Get_Max()));
-            return MakeTuple(InCrowdConfig.Get_MoveSequenceIndex(), Rate);
+            const auto Rate = FMath::Clamp(InPlanarSpeed / InCrowdTuners.Get_MoveAuthoredSpeed(),
+                static_cast<float>(InCrowdTuners.Get_MoveRateClamp().Get_Min()),
+                static_cast<float>(InCrowdTuners.Get_MoveRateClamp().Get_Max()));
+            return MakeTuple(InCrowdTuners.Get_MoveSequenceIndex(), Rate);
         }
 
-        return MakeTuple(InCrowdConfig.Get_IdleSequenceIndex(), 1.0f);
+        return MakeTuple(InCrowdTuners.Get_IdleSequenceIndex(), 1.0f);
     }
 
     auto

@@ -3,12 +3,15 @@
 #include "CoreMinimal.h"
 #include "Components/PrimitiveComponent.h"
 
+#include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
+
 #include "CkIskm_BatchedClusterComponent.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // CkIskmRenderer Plan-2 — one spatial cluster of batched skeletal instances; lives on the per-world manager actor.
 
 class UCk_IskmAnimCollection_Data;
+class UCk_IskmRenderer_Data;
 class USkeletalMesh;
 
 UCLASS(ClassGroup = (Ck), NotBlueprintable, meta = (BlueprintSpawnableComponent))
@@ -40,7 +43,29 @@ public:
         float UserData[NumUserDataFloats] = {};
     };
 
-    void Setup(UCk_IskmAnimCollection_Data* InCollection, USkeletalMesh* InMesh);
+    auto
+    Setup(
+        UCk_IskmAnimCollection_Data* InCollection,
+        USkeletalMesh* InMesh) -> void;
+
+    auto
+    Apply_RenderProfile(
+        UCk_IskmRenderer_Data* InProfile,
+        const FCk_IskmRenderer_RuntimeProfileTuners& InTuners) -> void;
+
+    auto
+    Apply_RenderProfile(
+        UCk_IskmRenderer_Data* InProfile) -> void;
+
+    auto
+    Get_RenderProfile() const -> UCk_IskmRenderer_Data*
+    {
+        return _RenderProfile.Get();
+    }
+
+    auto
+    Get_RuntimeProfileTuners() const -> const FCk_IskmRenderer_RuntimeProfileTuners&
+    { return _RuntimeProfileTuners; }
 
     // Replace the instance set; recomputes bounds + per-component frame, then recreates the proxy.
     void Set_Instances(const TArray<FInstance>& InInstances);
@@ -87,6 +112,12 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<USkeletalMesh> _Mesh;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_IskmRenderer_Data> _RenderProfile;
+
+    UPROPERTY(Transient)
+    FCk_IskmRenderer_RuntimeProfileTuners _RuntimeProfileTuners;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInterface> _OverrideMaterial;

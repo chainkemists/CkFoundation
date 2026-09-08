@@ -12,6 +12,45 @@
 #include "Serialization/JsonSerializer.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_json_report
+{
+    // Takes the rounder rather than reaching for FCk_JsonReport::Round3: that one is private, and a
+    // second copy of the rounding rule would let this section drift from every other number here.
+    // PerFrameInclusiveMs is deliberately not exported: it is (nodes x analysed frames) numbers, and
+    // the strip it feeds is a live UI affordance rather than something a report reader reads back.
+    auto Make_MergedHotPathNode(const FCk_MergedHotPathNode& InNode, double (*InRoundMs)(double))
+        -> TSharedPtr<FJsonObject>
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+
+        Obj->SetStringField(TEXT("name"), InNode.DisplayName);
+        Obj->SetStringField(TEXT("rawName"), InNode.RawName);
+        Obj->SetNumberField(TEXT("avgMs"), InRoundMs(InNode.AvgInclusiveMs));
+        Obj->SetNumberField(TEXT("selfAvgMs"), InRoundMs(InNode.AvgExclusiveMs));
+        Obj->SetNumberField(TEXT("avgCount"), InRoundMs(InNode.AvgCount));
+        Obj->SetNumberField(TEXT("framesPresent"), static_cast<double>(InNode.FramesPresent));
+        Obj->SetNumberField(TEXT("hitAvgMs"), InRoundMs(InNode.HitAvgInclusiveMs));
+        Obj->SetNumberField(TEXT("p95Ms"), InRoundMs(InNode.P95InclusiveMs));
+        Obj->SetNumberField(TEXT("maxMs"), InRoundMs(InNode.MaxInclusiveMs));
+        Obj->SetBoolField(TEXT("isAggregate"), InNode.bIsAggregate);
+
+        const auto ChildValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(InNode.Children,
+            [InRoundMs](const TSharedPtr<FCk_MergedHotPathNode>& InChild) -> TSharedPtr<FJsonValue>
+            {
+                return MakeShared<FJsonValueObject>(Make_MergedHotPathNode(*InChild, InRoundMs));
+            });
+
+        if (NOT ChildValues.IsEmpty())
+        {
+            Obj->SetArrayField(TEXT("children"), ChildValues);
+        }
+
+        return Obj;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -447,6 +486,54 @@ auto
     Multi->SetNumberField(TEXT("maxMs"), Round3(Stats.MaxFrameMs));
     Multi->SetNumberField(TEXT("p95Ms"), Round3(Stats.P95FrameMs));
     Multi->SetNumberField(TEXT("p99Ms"), Round3(Stats.P99FrameMs));
+
+    // The SELECTION, not the outcome: frameCount above is what survived analysis, these runs are
+    // what was asked for. Inclusive on both ends, matching FCk_FrameRun.
+    if (NOT Stats.SelectedRuns.IsEmpty())
+    {
+        const auto RunValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(Stats.SelectedRuns,
+            [](const FCk_FrameRun& InRun) -> TSharedPtr<FJsonValue>
+            {
+                TSharedPtr<FJsonObject> RunObj = MakeShared<FJsonObject>();
+                RunObj->SetNumberField(TEXT("firstFrame"), static_cast<double>(InRun.FirstFrame));
+                RunObj->SetNumberField(TEXT("lastFrame"), static_cast<double>(InRun.LastFrame));
+
+                return MakeShared<FJsonValueObject>(RunObj);
+            });
+
+        Multi->SetArrayField(TEXT("selectedRuns"), RunValues);
+        Multi->SetStringField(TEXT("selectedFrames"),
+            FCk_MultiFrameReport::DoGet_FrameRunsLabel(Stats.SelectedRuns));
+        Multi->SetNumberField(TEXT("selectedFrameCount"),
+            static_cast<double>(FCk_MultiFrameReport::DoGet_SelectedFrameCount(Stats.SelectedRuns)));
+    }
+
+    // The ordinal space of the per-frame series: what was actually analysed, which the runs above are
+    // not (they still contain excluded and failed frames).
+    if (NOT Stats.AnalysedFrameIndices.IsEmpty())
+    {
+        const auto AnalysedValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(
+            Stats.AnalysedFrameIndices,
+            [](uint64 InFrameIndex) -> TSharedPtr<FJsonValue>
+            {
+                return MakeShared<FJsonValueNumber>(static_cast<double>(InFrameIndex));
+            });
+
+        Multi->SetArrayField(TEXT("analysedFrameIndices"), AnalysedValues);
+    }
+
+    if (NOT Stats.MergedHotPaths.IsEmpty())
+    {
+        const auto MergedValues = ck::algo::Transform<TArray<TSharedPtr<FJsonValue>>>(
+            Stats.MergedHotPaths,
+            [](const TSharedPtr<FCk_MergedHotPathNode>& InRoot) -> TSharedPtr<FJsonValue>
+            {
+                return MakeShared<FJsonValueObject>(
+                    ck_json_report::Make_MergedHotPathNode(*InRoot, &FCk_JsonReport::Round3));
+            });
+
+        Multi->SetArrayField(TEXT("mergedHotPaths"), MergedValues);
+    }
 
     TArray<TSharedPtr<FJsonValue>> WorstValues;
     for (const FCk_FrameSummary& Frame : Stats.WorstFrames)

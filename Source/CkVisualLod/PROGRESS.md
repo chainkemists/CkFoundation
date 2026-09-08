@@ -1,6 +1,23 @@
 # CkVisualLod campaign — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
+**As of 2026-08-30 (`CkFoundation` base `af9f47379`, `CkTests` base `635361ef`): Gate 4 range
+render profiles plus live arbiter runtime tuners/debugger controls are automated-green; rendered
+pixel shadow/A-B evidence is still pending. This line supersedes the older current-state paragraphs below.**
+The dither mechanism and both generated masters are committed; the obsolete
+`VisualLodDissolve`/all-slots instructions below are history, not actions. Gate 4 adds shared
+renderer-data policy to pooled SKMCs and GPU clusters, stable `(tile, profile)` GPU buckets, and
+per-crowd hysteretic distance bands. Pre-change baseline:
+`scratch/baseline_visual_lod_render_profiles_20260830-200347.md`; its broad editor build failed at
+action 23/588 without diagnostics before tests. The final build succeeds and the fresh D3D12/SM6
+`VisualLod` filter reports 13/13 passed, including functional profile migration, deferred
+runtime-tuner set/reset through AngelScript, atomic invalid-tuner validation, and the
+mannequin/fade-material shadow-readiness contract. The GPU proxy now also forwards the component's
+depth-pass policy into primitive relevance. The gym has a dedicated shadow-casting directional key
+light; that makes the full-to-reduced transition judgeable, but automation does not inspect pixels.
+**Next action:** complete the gym's rendered threshold/shadow/material `[EDITOR-VERIFY]`, then
+capture N>=3 alternating full/reduced Unreal Insights or GPU Profiler windows. **Blocked on:** nothing.
+
 **As of 2026-08-29 — dither round REPLACES the gym-verify round's dissolve half (all UNCOMMITTED,
 gate GREEN 00:05):** maintainer rejected the noise-erosion dissolve ("electric"; crowd never faded)
 and chose a dithered crossfade on the REAL materials. The CkUsf surface-replacing dissolve is
@@ -72,8 +89,43 @@ visual; then Gate 2 remainder (flip-lifecycle AS autotests), then Gate 4 (BB ado
 | 2026-08-27 | **Agent runs NO test suites this campaign** — compile-only gates; tests are authored but maintainer-run; runtime behavior verified visually by maintainer via [EDITOR-VERIFY] lists | Maintainer: "Don't run gauntlets or other tests. It takes too long." | maintainer lifts it |
 | 2026-08-27 | Signals carry (handle, memberIndex); crowd read via Get_Crowd at handler time | No precedent for raw AActor* in replayable signal payloads; dangling-on-replay risk | — |
 | 2026-08-27 | Promote locks = immediate mutators (Timer's ChangeCountDirection shape), not deferred requests | Counter bump with no side effects; arbiter evaluates next tick either way | — |
+| 2026-08-30 | Renderer-data assets are the shared SKMC/GPU render profiles | Reuses the existing rendering/culling/lighting surface and avoids a duplicate profile asset type | a non-skeletal renderer needs the same contract |
+| 2026-08-30 | GPU members retain one logical index and rebucket by `(tile, profile)` | Shadow/material/pass state is primitive-wide; a per-instance bit cannot remove shadow or lighting work | engine gains verified per-instance pass filtering |
+| 2026-08-30 | Ordered outward thresholds + per-band return hysteresis | Prevents profile churn while keeping authoring deterministic across multiple bands | a game needs non-distance importance in the classifier |
+| 2026-08-30 | No engine fork or shadow-only replacement mesh in Gate 4 | Higher MinLOD + contact/dynamic-shadow policy supplies the measured first “cheap” tier | profiling proves replacement geometry earns its extra primitive |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-30 — Gate 4 implementation + automated evidence
+- Wrote: complete renderer-profile application for pooled base/child SKMCs and GPU clusters;
+  stable `(tile, profile)` crowd buckets; fail-closed pre-add profile validation; member profile
+  migration preserving identity, transform, animation phase, custom data, and visibility;
+  animation update intervals/freeze; velocity, ray-tracing, material, culling, shadow, lighting,
+  and pass controls.
+- Wrote: ordered VisualLod render bands with strict validation, outward thresholds, inward
+  hysteresis, multi-band teleport handling, rooted soft-profile loads, and cached active band.
+- Wrote: debugger profile/bucket/member-band visibility; three-band gym; C++ boundary/profile
+  overwrite tests; AS hidden/outward/inward lifecycle test and generated AutoTests map actor.
+- Ran: final incremental Development Editor build -> `=== Build succeeded ===`.
+- Ran: fresh discovery + D3D12/SM6 `VisualLod` filter -> Total 10, Passed 10, Failed 0,
+  Skipped 0, Contaminated 0. The discovery process logged generated spawn-param full-reload
+  diagnostics after regeneration; the fresh test process loaded the new scripts and had no AS
+  compile failure.
+- Not claimed: pixel-level shadow/material quality or a quantified performance delta. The AS
+  harness has no isolated GPU/render-thread query; use N>=3 rendered Insights/GPU Profiler
+  windows rather than whole-frame AutoTest duration.
+
+### 2026-08-30 — Gate 4 entry: range render profiles
+- Confirmed: GPU shadow/material/pass state is primitive-wide; `CkIskm_BatchedClusterProxy`
+  emits one mesh-batch family for all instances in a cluster.
+- Confirmed: `UCk_IskmRenderer_Data` already declares rendering/culling/lighting options but the
+  checked-out renderer has no consumers for those getters.
+- Confirmed: the stable member-index contract rules out moving members between crowd actors.
+- Pattern selected: `CkDebugScene_Target.cpp` bucket-key plus prepare/commit/rollback reconcile.
+- Baseline: Development Editor build stopped at 23/588 without compiler diagnostics; tests did not
+  run. See the dated scratch snapshot and `Saved/Logs/VisualLodProfiles_Baseline.log`.
+- Inferred until final rendered gate: authored unlit/cheap materials and disabled shadow passes
+  reduce GPU cost; no performance delta will be claimed without the required A/B measurement.
 
 ### 2026-08-27 — Gym-verify round: A-pose fix + surface-replacing CkUsf dissolve
 Two bugs from the maintainer's PIE pass ("close ones are in A pose, not playing walk"; "dissolve is

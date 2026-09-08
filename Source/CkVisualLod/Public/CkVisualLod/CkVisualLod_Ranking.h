@@ -54,6 +54,18 @@ namespace ck
         TArray<int32> _PreemptDemoteIndices;
     };
 
+    // Value-only projection of FCk_VisualLod_RenderBand, deliberately free of assets/UObjects so
+    // the threshold and hysteresis contract has cheap deterministic automation coverage.
+    struct CKVISUALLOD_API FVisualLod_RenderBandRange
+    {
+    public:
+        CK_GENERATED_BODY(FVisualLod_RenderBandRange);
+
+    public:
+        float _DistanceThreshold = 0.0f;
+        float _ReturnHysteresis = 0.0f;
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     namespace visual_lod
@@ -64,6 +76,21 @@ namespace ck
             const FVisualLod_LocalView& InView,
             float InAlwaysInViewDistance,
             float InDistance) -> bool;
+
+        // Empty is the legacy single-profile path. Authored bands start at zero, strictly increase,
+        // and must not let a band's inward return point reach the preceding threshold.
+        CKVISUALLOD_API auto
+        Get_AreRenderBandsValid(
+            const TArray<FVisualLod_RenderBandRange>& InBands) -> bool;
+
+        // Initial selection (INDEX_NONE) chooses the greatest threshold <= distance. Existing
+        // members step outward at the next threshold and inward only below the current band's
+        // return point; the loops intentionally support teleports across multiple bands.
+        CKVISUALLOD_API auto
+        Get_RenderBandIndex(
+            const TArray<FVisualLod_RenderBandRange>& InBands,
+            float InDistance,
+            int32 InCurrentBandIndex = INDEX_NONE) -> int32;
 
         // In-view-first then nearest-first partial ranking. Promotes into free budget unthrottled;
         // preempts the worst incumbent only when strictly better by the margin, at most
