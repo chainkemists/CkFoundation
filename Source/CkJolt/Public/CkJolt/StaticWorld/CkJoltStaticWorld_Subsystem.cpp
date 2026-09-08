@@ -1,5 +1,7 @@
 #include "CkJoltStaticWorld_Subsystem.h"
 
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+
 #include "CkJolt/StaticWorld/CkJoltStaticActor_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
@@ -232,6 +234,8 @@ auto
         UWorld& InWorld)
         -> void
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BeginPlaySweep);
+
     Super::OnWorldBeginPlay(InWorld);
 
 #if WITH_EDITOR
@@ -1007,6 +1011,7 @@ auto
         ULevel& InLevel)
         -> ck::jolt::bake::FCk_Jolt_ExtractionStats
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LevelAdd);
     SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldLevelAdd);
 
     // The explicit flag, not the entry's mere presence: a request bake files its entity in this level's
@@ -1608,7 +1613,11 @@ auto
     const auto IndexPath = ck::jolt::Get_CookedIndexAssetPath(
         UCk_Utils_Jolt_ProjectSettings::Get_CookedDataRootPath(), MapPackageName);
 
-    _CookedIndex = LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath);
+    _CookedIndex = [&]
+    {
+        TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LoadCookedIndex);
+        return LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath);
+    }();
 
     if (ck::Is_NOT_Valid(_CookedIndex))
     {
@@ -1661,7 +1670,11 @@ auto
     const auto& CellRef = Cells[InCellIndex];
 
     // Synchronous on purpose — collision must exist the frame the level is visible (as it does for Chaos).
-    const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
+    const auto* CellAsset = [&]
+    {
+        TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LoadCookedCell);
+        return CellRef.Get_CellAsset().LoadSynchronous();
+    }();
 
     CK_ENSURE_IF_NOT(ck::IsValid(CellAsset),
         TEXT("Cooked Jolt cell [{}] failed to load from [{}]"),

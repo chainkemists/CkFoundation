@@ -1,5 +1,7 @@
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_CookedQuery.h"
 
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkJolt/CkJolt_Utils.h"
@@ -129,7 +131,11 @@ namespace ck::jolt
         }
 
         const auto IndexPath = Get_CookedIndexAssetPath(InRequest._CookedDataRootPath, InRequest._MapPackageName);
-        const auto* Index = LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath);
+        const auto* Index = [&]
+        {
+            TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltCookedQuery_LoadIndex);
+            return LoadObject<UCk_Jolt_CookedWorldIndex_UE>(nullptr, *IndexPath);
+        }();
 
         const auto IndexLoaded = ck::IsValid(Index);
 
@@ -165,7 +171,11 @@ namespace ck::jolt
             if (InRequest._OptionalBounds.IsValid != 0 && NOT CellRef.Get_Bounds().Intersect(InRequest._OptionalBounds))
             { continue; }
 
-            const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
+            const auto* CellAsset = [&]
+            {
+                TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltCookedQuery_LoadCell);
+                return CellRef.Get_CellAsset().LoadSynchronous();
+            }();
             const auto CellLoaded = ck::IsValid(CellAsset);
 
             CK_ENSURE_IF_NOT(CellLoaded, TEXT("Cooked Jolt query cell [{}] failed to load"), CellRef.Get_CellId())
