@@ -184,11 +184,23 @@ public:
     Get_CrowdMemberAnimationTime(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
 
     // Hide/show a member in its batched tile. Hide a member so a per-SKMC proxy can stand in for it (ragdoll/montage);
-    // show it to return to batched rendering.
+    // show it to return to batched rendering. Inactive pooled members reject show until reactivated.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Member Visible")
     static void
     Set_CrowdMemberVisible(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InVisible);
+
+    // Pooled callers opt free slots out of manager work. Add_CrowdMember remains active by default. Deactivate only
+    // after hide + Clear_CrowdMemberCosmetics; activate before restoring visibility or registering cosmetics.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Active")
+    static void
+    Set_CrowdMemberActive(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InActive);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Active")
+    static bool
+    Get_CrowdMemberActive(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
 
     // Total instances actually in the tile proxies right now (only visible members) — drops when a member is hidden.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
@@ -238,7 +250,8 @@ public:
 
     // register a cosmetic entity to ride a member's baked socket while the member is far. The
     // crowd places it every frame from its own FGroup_Transform_Finalize advance (lockstep with the
-    // member). Replace-if-same-entity. Call on the far transition; pair with Clear on promote/hide/release.
+    // member). Replace-if-same-entity. Inactive pooled members reject registration. Call on the far transition;
+    // pair with Clear on promote/hide/release.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Register Crowd Member Cosmetic")
     static void

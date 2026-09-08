@@ -404,6 +404,24 @@ auto
 
 auto
     UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberActive(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, bool InActive)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberActive(InIndex, InActive);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberActive(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+    -> bool
+{
+    return ck::IsValid(InCrowd) && InCrowd->Get_MemberActive(InIndex);
+}
+
+auto
+    UCk_Utils_IskmBatched_UE::
     Get_CrowdRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
     -> int32
 {
