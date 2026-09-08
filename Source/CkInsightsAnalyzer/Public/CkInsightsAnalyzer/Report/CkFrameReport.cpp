@@ -221,165 +221,6 @@ auto
 
 auto
     FCk_FrameReport::
-    UnwrapRoots(uint32 ParentTimerIndex,
-                const FCk_FrameAnalysisResult& Result,
-                const FTimerNameMap& TimerNames,
-                int32 Depth) const
-    -> TMap<uint32, double>
-{
-    TMap<uint32, double> Roots;
-
-    const auto Children = Result.ChildrenOf.Find(ParentTimerIndex);
-    if (NOT Children) return Roots;
-
-    for (const auto& [ChildIndex, ChildInclSec] : *Children)
-    {
-        const double ChildInclMs = ChildInclSec * 1000.0;
-        if (ChildInclMs < 0.5)
-        {
-            continue;
-        }
-
-        const FString ChildName = GetTimerName(TimerNames, ChildIndex);
-
-        // Unnamed timers (no entry in the trace's timer table) behave like frame
-        // wrappers: drill through so real work (UWorld_Tick, Slate) surfaces as
-        // roots instead of an opaque UNKNOWN_<id> node covering the whole frame.
-        const bool IsUnnamed = ChildName.StartsWith(TEXT("UNKNOWN_"));
-
-        if ((IsFrameWrapper(ChildName) || IsUnnamed) && Depth < 5)
-        {
-            TMap<uint32, double> Deeper = UnwrapRoots(ChildIndex, Result, TimerNames, Depth + 1);
-
-            const bool IsUnnamedLeaf = Deeper.Num() == 0 && IsUnnamed;
-            if (IsUnnamedLeaf)
-            {
-                double& Existing = Roots.FindOrAdd(ChildIndex, 0.0);
-                Existing += ChildInclSec;
-                continue;
-            }
-
-            for (const auto& [K, V] : Deeper)
-            {
-                double& Existing = Roots.FindOrAdd(K, 0.0);
-                Existing += V;
-            }
-        }
-        else
-        {
-            double& Existing = Roots.FindOrAdd(ChildIndex, 0.0);
-            Existing += ChildInclSec;
-        }
-    }
-
-    return Roots;
-}
-
-auto
-    FCk_FrameReport::
-    GetSignificantChildren(uint32 ParentTimerIndex,
-                           const FCk_FrameAnalysisResult& Result,
-                           double MinInclusiveMs)
-    -> TArray<FChildInfo>
-{
-    TArray<FChildInfo> Children;
-
-    const auto ChildMap = Result.ChildrenOf.Find(ParentTimerIndex);
-    if (NOT ChildMap) return Children;
-
-    for (const auto& [ChildIndex, ChildInclSec] : *ChildMap)
-    {
-        const double InclMs = ChildInclSec * 1000.0;
-        if (InclMs >= MinInclusiveMs)
-        {
-            Children.Add(FChildInfo{
-                ChildIndex,
-                InclMs,
-                Result.GetExclusiveMs(ChildIndex),
-                Result.GetCount(ChildIndex)
-            });
-        }
-    }
-
-    ck::algo::Sort(Children, [](const FChildInfo& A, const FChildInfo& B)
-    {
-        return A.InclusiveMs > B.InclusiveMs;
-    });
-
-    return Children;
-}
-
-auto
-    FCk_FrameReport::
-    CollapseWrappers(uint32 TimerIndex, double InclMs, double ExclMs, uint32 Count,
-                     const FCk_FrameAnalysisResult& Result,
-                     const FTimerNameMap& TimerNames) const
-    -> FCollapsedTimer
-{
-    FCollapsedTimer Collapsed;
-    Collapsed.TimerIndex = TimerIndex;
-    Collapsed.InclusiveMs = InclMs;
-    Collapsed.ExclusiveMs = ExclMs;
-    Collapsed.Count = Count;
-
-    uint32 CurrentIndex = TimerIndex;
-    double CurrentIncl = InclMs;
-    double CurrentExcl = ExclMs;
-
-    constexpr auto MaxCollapseDepth = 10;
-    for (int32 Iter = 0; Iter < MaxCollapseDepth; ++Iter)
-    {
-        // `script::<Class>` IS the attribution the tree exists to show — see CkInsightsAnalyzer/Claude.md.
-        const bool IsScriptProcessorScope =
-            GetTimerName(TimerNames, CurrentIndex).StartsWith(TEXT("script::"));
-        if (IsScriptProcessorScope)
-        {
-            break;
-        }
-
-        const bool DoesSignificantSelfWork = CurrentExcl > CurrentIncl * 0.05 && CurrentExcl > 0.3;
-        if (DoesSignificantSelfWork)
-        {
-            break;
-        }
-
-        TArray<FChildInfo> Children = GetSignificantChildren(CurrentIndex, Result, 0.5);
-        if (Children.Num() == 0)
-        {
-            break;
-        }
-
-        const FChildInfo& TopChild = Children[0];
-
-        const double ChildIncl = FMath::Min(TopChild.InclusiveMs, CurrentIncl);
-
-        constexpr auto SecondaryPathMaxPctOfParent = 0.20;
-        const bool SinglePath =
-            (Children.Num() == 1) ||
-            (Children.Num() >= 2 && Children[1].InclusiveMs < CurrentIncl * SecondaryPathMaxPctOfParent);
-
-        if (SinglePath && ChildIncl > CurrentIncl * 0.7)
-        {
-            Collapsed.Breadcrumbs.Add(GetTimerName(TimerNames, CurrentIndex));
-            CurrentIndex = TopChild.TimerIndex;
-            CurrentIncl = ChildIncl;
-            CurrentExcl = TopChild.ExclusiveMs;
-            Collapsed.Count = TopChild.Count;
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    Collapsed.TimerIndex = CurrentIndex;
-    Collapsed.InclusiveMs = CurrentIncl;
-    Collapsed.ExclusiveMs = CurrentExcl;
-    return Collapsed;
-}
-
-auto
-    FCk_FrameReport::
     MakeTreePrefix(int32 Depth, const TMap<int32, bool>& IsLastAtDepth)
     -> FString
 {
@@ -414,427 +255,316 @@ auto
 
 auto
     FCk_FrameReport::
-    BuildTreeLines(uint32 TimerIndex, int32 Depth,
-                   double InclMs, double ExclMs, uint32 Count,
-                   const FCk_FrameAnalysisResult& Result,
-                   const FTimerNameMap& TimerNames,
-                   TSet<uint32>& ShownTimers,
-                   TMap<int32, bool>& IsLastAtDepth,
-                   const TArray<FString>* PreBreadcrumbs) const
-    -> TArray<FString>
-{
-    TArray<FString> Lines;
-
-    FCollapsedTimer Collapsed = CollapseWrappers(
-        TimerIndex, InclMs, ExclMs, Count, Result, TimerNames);
-
-    if (ShownTimers.Contains(Collapsed.TimerIndex))
-    {
-        return Lines;
-    }
-    ShownTimers.Add(Collapsed.TimerIndex);
-
-    TArray<FString> AllBreadcrumbs;
-    if (PreBreadcrumbs)
-    {
-        AllBreadcrumbs = *PreBreadcrumbs;
-    }
-    AllBreadcrumbs.Append(Collapsed.Breadcrumbs);
-
-    const FString RawName = GetTimerName(TimerNames, Collapsed.TimerIndex);
-    FString DisplayName = FCk_TimerCategorizer::SimplifyName(RawName);
-    if (DisplayName.Len() > 50)
-    {
-        DisplayName = DisplayName.Left(50) + TEXT("...");
-    }
-
-    const FString Prefix = MakeTreePrefix(Depth, IsLastAtDepth);
-    const FString Icon = FCk_TimerCategorizer::SeverityIcon(Collapsed.InclusiveMs);
-
-    const bool ShowSelf = Collapsed.ExclusiveMs > 0.3
-                       && Collapsed.ExclusiveMs > Collapsed.InclusiveMs * 0.08;
-    const bool ShowCount = Collapsed.Count > 1;
-
-    FString Line = FString::Printf(TEXT("%s%s `%s`  *%s*"),
-        *Prefix, *Icon, *DisplayName,
-        *FCk_TimerCategorizer::FormatMs(Collapsed.InclusiveMs));
-
-    if (ShowSelf)
-    {
-        Line += FString::Printf(TEXT("  _%s self_"),
-            *FCk_TimerCategorizer::FormatMs(Collapsed.ExclusiveMs));
-    }
-    if (ShowCount)
-    {
-        Line += FString::Printf(TEXT("  %s"),
-            *FCk_TimerCategorizer::FormatCount(Collapsed.Count));
-    }
-
-    if (AllBreadcrumbs.Num() > 0)
-    {
-        TArray<FString> BcNames;
-        const int32 Start = FMath::Max(0, AllBreadcrumbs.Num() - 2);
-        for (int32 i = Start; i < AllBreadcrumbs.Num(); ++i)
-        {
-            FString Simplified = FCk_TimerCategorizer::SimplifyName(AllBreadcrumbs[i]);
-            if (Simplified.Len() <= 30)
-            {
-                BcNames.Add(MoveTemp(Simplified));
-            }
-        }
-        if (BcNames.Num() > 0)
-        {
-            Line += TEXT("  _(");
-            for (int32 i = 0; i < BcNames.Num(); ++i)
-            {
-                if (i > 0) Line += TEXT(" \u2192 ");
-                Line += BcNames[i];
-            }
-            Line += TEXT(")_");
-        }
-    }
-
-    Lines.Add(MoveTemp(Line));
-
-    if (Depth >= _Config.MaxTreeDepth)
-    {
-        return Lines;
-    }
-
-    const double MinChildMs = _Config.ShowAllChildren
-        ? 0.0
-        : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
-    // Keep all candidates until their displayed cost and combined hidden cost are known.
-    TArray<FChildInfo> Children = GetSignificantChildren(
-        Collapsed.TimerIndex, Result, 0.0);
-
-    struct FDedupedChild
-    {
-        uint32 TimerIndex;
-        double InclusiveMs;
-        double ExclusiveMs;
-        uint32 Count;
-        TArray<FString> Breadcrumbs;
-    };
-    TMap<uint32, FDedupedChild> Seen;
-
-    for (const FChildInfo& Child : Children)
-    {
-        FCollapsedTimer CC = CollapseWrappers(
-            Child.TimerIndex, Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
-            Result, TimerNames);
-
-        const double GlobalIncl = FMath::Min(
-            Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        // Global exclusive can exceed this parent's slice, which would print "self" larger than "incl".
-        const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
-        const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
-
-        const auto Existing = Seen.Find(CC.TimerIndex);
-        if (NOT Existing || GlobalIncl > Existing->InclusiveMs)
-        {
-            Seen.FindOrAdd(CC.TimerIndex) = FDedupedChild{
-                CC.TimerIndex, GlobalIncl, GlobalExcl, GlobalCount, MoveTemp(CC.Breadcrumbs)
-            };
-        }
-    }
-
-    TArray<FDedupedChild> Deduped;
-    for (auto& [Key, Val] : Seen)
-    {
-        Deduped.Add(MoveTemp(Val));
-    }
-    ck::algo::Sort(Deduped, [](const FDedupedChild& A, const FDedupedChild& B)
-    {
-        return A.InclusiveMs > B.InclusiveMs;
-    });
-
-    // Deliberately NOT filtered by ShownTimers — each branch shows its full subtree; the check at
-    // the top of BuildTreeLines is what prevents infinite recursion.
-    const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
-    const double HiddenBudgetMs = FMath::Min(
-        _Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
-    double RemainingChildrenMs = 0.0;
-    for (const FDedupedChild& Child : Deduped)
-    {
-        if (Child.TimerIndex != Collapsed.TimerIndex)
-        { RemainingChildrenMs += Child.InclusiveMs; }
-    }
-
-    TArray<FDedupedChild> Visible;
-    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
-    {
-        if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
-        const auto KeepChild = _Config.ShowAllChildren
-            || Deduped[i].InclusiveMs >= MinChildMs
-            || RemainingChildrenMs > HiddenBudgetMs;
-        if (NOT KeepChild) continue;
-        RemainingChildrenMs -= Deduped[i].InclusiveMs;
-        Visible.Add(MoveTemp(Deduped[i]));
-    }
-
-    // Reconciliation row (mirrors DoBuildTreeNode): children dropped by the threshold, an explicit child
-    // cap, or dedup otherwise read as a silent gap under the parent. Computed before the recursion
-    // so the last real child keeps a "├" glyph when the synthetic row takes the "└".
-    double ShownChildrenMs = 0.0;
-    for (const FDedupedChild& Child : Visible)
-    {
-        ShownChildrenMs += Child.InclusiveMs;
-    }
-
-    const auto ChildMap = Result.ChildrenOf.Find(Collapsed.TimerIndex);
-    const double HiddenMs = Collapsed.InclusiveMs - Collapsed.ExclusiveMs - ShownChildrenMs;
-    const int32 HiddenChildCount = ChildMap ? ChildMap->Num() - Visible.Num() : 0;
-    const bool EmitHiddenRow = HiddenChildCount > 0
-                            && HiddenMs >= FMath::Max(0.1, Collapsed.InclusiveMs * 0.02);
-
-    for (int32 i = 0; i < Visible.Num(); ++i)
-    {
-        TMap<int32, bool> ChildIsLast = IsLastAtDepth;
-        ChildIsLast.Add(Depth + 1, i == Visible.Num() - 1 && NOT EmitHiddenRow);
-
-        TArray<FString> ChildLines = BuildTreeLines(
-            Visible[i].TimerIndex, Depth + 1,
-            Visible[i].InclusiveMs, Visible[i].ExclusiveMs, Visible[i].Count,
-            Result, TimerNames, ShownTimers, ChildIsLast,
-            &Visible[i].Breadcrumbs);
-
-        Lines.Append(MoveTemp(ChildLines));
-    }
-
-    if (EmitHiddenRow)
-    {
-        TMap<int32, bool> RowIsLast = IsLastAtDepth;
-        RowIsLast.Add(Depth + 1, true);
-
-        Lines.Add(FString::Printf(TEXT("%s(+%d below threshold)  *%s*"),
-            *MakeTreePrefix(Depth + 1, RowIsLast), HiddenChildCount,
-            *FCk_TimerCategorizer::FormatMs(HiddenMs)));
-    }
-
-    return Lines;
-}
-
-auto
-    FCk_FrameReport::
     GenerateHotPaths(const FCk_FrameAnalysisResult& Result,
                      const FTimerNameMap& TimerNames,
                      TArray<FString>& Lines) const
     -> void
 {
     Lines.Add(TEXT("*Game Thread Hot Paths*\n"));
-
-    if (Result.FrameRootTimerIndex == static_cast<uint32>(INDEX_NONE))
+    const auto Roots = BuildEventHotPaths(Result, TimerNames);
+    if (Roots.IsEmpty())
     {
         Lines.Add(TEXT("(No frame root found)"));
         return;
     }
-
-    TMap<uint32, double> RootChildren = UnwrapRoots(
-        Result.FrameRootTimerIndex, Result, TimerNames);
-
-    struct FRootEntry
+    TFunction<void(const TSharedPtr<FCk_HotPathNode>&, int32, TMap<int32, bool>)> AppendNode;
+    AppendNode = [&](const auto& Node, int32 Depth, TMap<int32, bool> LastAtDepth)
     {
-        uint32 TimerIndex;
-        double InclusiveMs;
-        double ExclusiveMs;
-        uint32 Count;
-    };
-    TArray<FRootEntry> RootList;
-
-    for (const auto& [TimerIndex, InclSeconds] : RootChildren)
-    {
-        const double InclMs = InclSeconds * 1000.0;
-        if (InclMs >= _Config.MinInclusiveMs)
+        const auto Prefix = MakeTreePrefix(Depth, LastAtDepth);
+        FString Line;
+        if (Node->bIsAggregate)
         {
-            RootList.Add(FRootEntry{
-                TimerIndex,
-                InclMs,
-                Result.GetExclusiveMs(TimerIndex),
-                Result.GetCount(TimerIndex)
-            });
+            Line = FString::Printf(TEXT("%s%s  *%s*"), *Prefix, *Node->DisplayName,
+                *FCk_TimerCategorizer::FormatMs(Node->InclusiveMs));
         }
-    }
-
-    ck::algo::Sort(RootList, [](const FRootEntry& A, const FRootEntry& B)
+        else
+        {
+            const auto Name = Node->DisplayName.Len() > 50 ? Node->DisplayName.Left(50) + TEXT("...") : Node->DisplayName;
+            Line = FString::Printf(TEXT("%s%s `%s`  *%s*"), *Prefix,
+                *FCk_TimerCategorizer::SeverityIcon(Node->InclusiveMs), *Name,
+                *FCk_TimerCategorizer::FormatMs(Node->InclusiveMs));
+            if (Node->ExclusiveMs > 0.3 && Node->ExclusiveMs > Node->InclusiveMs * 0.08)
+            { Line += FString::Printf(TEXT("  _%s self_"), *FCk_TimerCategorizer::FormatMs(Node->ExclusiveMs)); }
+            if (Node->Count > 1)
+            { Line += FString::Printf(TEXT("  %s"), *FCk_TimerCategorizer::FormatCount(Node->Count)); }
+            TArray<FString> Breadcrumbs;
+            for (int32 Index = FMath::Max(0, Node->Breadcrumbs.Num() - 2); Index < Node->Breadcrumbs.Num(); ++Index)
+            {
+                auto NamePart = FCk_TimerCategorizer::SimplifyName(Node->Breadcrumbs[Index]);
+                if (NamePart.Len() <= 30) { Breadcrumbs.Add(MoveTemp(NamePart)); }
+            }
+            if (NOT Breadcrumbs.IsEmpty())
+            { Line += TEXT("  _(") + FString::Join(Breadcrumbs, TEXT(" \u2192 ")) + TEXT(")_"); }
+        }
+        Lines.Add(MoveTemp(Line));
+        for (int32 Index = 0; Index < Node->Children.Num(); ++Index)
+        {
+            auto ChildLast = LastAtDepth;
+            ChildLast.Add(Depth + 1, Index == Node->Children.Num() - 1);
+            AppendNode(Node->Children[Index], Depth + 1, MoveTemp(ChildLast));
+        }
+    };
+    for (const auto& Root : Roots)
     {
-        return A.InclusiveMs > B.InclusiveMs;
-    });
-
-    const int32 MaxRoots = FMath::Min(RootList.Num(), _Config.MaxRootTimers);
-    for (int32 i = 0; i < MaxRoots; ++i)
-    {
-        const FRootEntry& Root = RootList[i];
-        TMap<int32, bool> IsLastAtDepth;
-        TSet<uint32> ShownTimers; // per-root dedup
-
-        TArray<FString> TreeLines = BuildTreeLines(
-            Root.TimerIndex, 0,
-            Root.InclusiveMs, Root.ExclusiveMs, Root.Count,
-            Result, TimerNames, ShownTimers, IsLastAtDepth);
-
-        Lines.Append(MoveTemp(TreeLines));
+        AppendNode(Root, 0, {});
         Lines.Add(TEXT(""));
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
-    DoBuildTreeNode(uint32 TimerIndex, int32 Depth,
-                    double InclMs, double ExclMs, uint32 Count,
-                    const FCk_FrameAnalysisResult& Result,
-                    const FTimerNameMap& TimerNames,
-                    TSet<uint32>& ShownTimers,
-                    const TArray<FString>* PreBreadcrumbs) const
-    -> TSharedPtr<FCk_HotPathNode>
+    BuildEventHotPaths(const FCk_FrameAnalysisResult& Result, const FTimerNameMap& TimerNames) const
+    -> TArray<TSharedPtr<FCk_HotPathNode>>
 {
-    FCollapsedTimer Collapsed = CollapseWrappers(
-        TimerIndex, InclMs, ExclMs, Count, Result, TimerNames);
-
-    // Skipping an already-shown timer is what prevents infinite recursion.
-    if (ShownTimers.Contains(Collapsed.TimerIndex))
+    // Timer-global ChildrenOf loses occurrence identity: A -> A counts A twice,
+    // and an A below another parent can inflate this parent's row. Retain paths
+    // only for the duration of report construction; frame accounting is unchanged.
+    struct FPath
     {
-        return nullptr;
-    }
-    ShownTimers.Add(Collapsed.TimerIndex);
-
-    TArray<FString> AllBreadcrumbs;
-    if (PreBreadcrumbs)
-    {
-        AllBreadcrumbs = *PreBreadcrumbs;
-    }
-    AllBreadcrumbs.Append(Collapsed.Breadcrumbs);
-
-    auto Node = MakeShared<FCk_HotPathNode>();
-    Node->RawName = GetTimerName(TimerNames, Collapsed.TimerIndex);
-    Node->DisplayName = FCk_TimerCategorizer::SimplifyName(Node->RawName);
-    Node->Breadcrumbs = MoveTemp(AllBreadcrumbs);
-    Node->InclusiveMs = Collapsed.InclusiveMs;
-    Node->ExclusiveMs = Collapsed.ExclusiveMs;
-    Node->Count = Collapsed.Count;
-
-    if (Depth >= _Config.MaxTreeDepth)
-    {
-        return Node;
-    }
-
-    const double MinChildMs = _Config.ShowAllChildren
-        ? 0.0
-        : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
-    // Keep all candidates until their displayed cost and combined hidden cost are known.
-    TArray<FChildInfo> Children = GetSignificantChildren(
-        Collapsed.TimerIndex, Result, 0.0);
-
-    struct FDedupedChild
-    {
-        uint32 TimerIndex;
-        double InclusiveMs;
-        double ExclusiveMs;
-        uint32 Count;
-        TArray<FString> Breadcrumbs;
+        uint32 Timer = 0;
+        double InclusiveMs = 0.0;
+        double ExclusiveMs = 0.0;
+        double CoveredEnd = TNumericLimits<double>::Lowest();
+        uint32 Count = 0;
+        TMap<uint32, int32> Children;
     };
-    TMap<uint32, FDedupedChild> Seen;
-
-    for (const FChildInfo& Child : Children)
+    struct FOccurrence
     {
-        FCollapsedTimer CC = CollapseWrappers(
-            Child.TimerIndex, Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
-            Result, TimerNames);
+        int32 EventIndex;
+        int32 PathIndex;
+        double ChildrenSeconds = 0.0;
+        double ChildrenEnd = TNumericLimits<double>::Lowest();
+    };
+    TArray<FPath> Paths;
+    TArray<FOccurrence> Occurrences;
+    TArray<int32> Stack;
+    TMap<uint32, int32> RootPaths;
+    Paths.Reserve(Result.Events.Num());
+    Occurrences.Reserve(Result.Events.Num());
+    Stack.Reserve(64);
 
-        const double GlobalIncl = FMath::Min(
-            Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        // Global exclusive can exceed this parent's slice, which would print "self" larger than "incl".
-        const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
-        const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
+    // AnalyzeEvents already clips and sorts by start/depth/end/timer. Use the
+    // same containing-parent rule as its exclusive-time reduction, including
+    // missing depth levels. Union direct-child intervals within each occurrence.
+    for (int32 EventIndex = 0; EventIndex < Result.Events.Num(); ++EventIndex)
+    {
+        const auto& Event = Result.Events[EventIndex];
+        while (Stack.Num() > 0 && Result.Events[Occurrences[Stack.Last()].EventIndex].EndTime <= Event.StartTime)
+        { Stack.Pop(EAllowShrinking::No); }
 
-        const auto Existing = Seen.Find(CC.TimerIndex);
-        if (NOT Existing || GlobalIncl > Existing->InclusiveMs)
+        int32 ParentOccurrence = INDEX_NONE;
+        for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
         {
-            Seen.FindOrAdd(CC.TimerIndex) = FDedupedChild{
-                CC.TimerIndex, GlobalIncl, GlobalExcl, GlobalCount, MoveTemp(CC.Breadcrumbs)
-            };
+            const auto& Parent = Result.Events[Occurrences[Stack[Index]].EventIndex];
+            if (Parent.Depth < Event.Depth && Parent.EndTime >= Event.EndTime)
+            { ParentOccurrence = Stack[Index]; break; }
+        }
+
+        const int32 ParentPath = ParentOccurrence == INDEX_NONE
+            ? INDEX_NONE : Occurrences[ParentOccurrence].PathIndex;
+        auto& Siblings = ParentPath == INDEX_NONE ? RootPaths : Paths[ParentPath].Children;
+        const int32* Existing = Siblings.Find(Event.TimerIndex);
+        int32 PathIndex = Existing != nullptr ? *Existing : INDEX_NONE;
+        if (PathIndex == INDEX_NONE)
+        {
+            PathIndex = Paths.AddDefaulted();
+            Paths[PathIndex].Timer = Event.TimerIndex;
+            // Do not keep a reference into Paths across AddDefaulted.
+            auto& UpdatedSiblings = ParentPath == INDEX_NONE ? RootPaths : Paths[ParentPath].Children;
+            UpdatedSiblings.Add(Event.TimerIndex, PathIndex);
+        }
+        auto& Path = Paths[PathIndex];
+        Path.InclusiveMs += FMath::Max(0.0, Event.EndTime - FMath::Max(Event.StartTime, Path.CoveredEnd)) * 1000.0;
+        Path.CoveredEnd = FMath::Max(Path.CoveredEnd, Event.EndTime);
+        ++Path.Count;
+
+        if (ParentOccurrence != INDEX_NONE)
+        {
+            auto& Parent = Occurrences[ParentOccurrence];
+            Parent.ChildrenSeconds += FMath::Max(0.0,
+                Event.EndTime - FMath::Max(Event.StartTime, Parent.ChildrenEnd));
+            Parent.ChildrenEnd = FMath::Max(Parent.ChildrenEnd, Event.EndTime);
+        }
+        Stack.Add(Occurrences.Add(FOccurrence{EventIndex, PathIndex}));
+    }
+    for (const auto& Occurrence : Occurrences)
+    {
+        const auto& Event = Result.Events[Occurrence.EventIndex];
+        Paths[Occurrence.PathIndex].ExclusiveMs +=
+            FMath::Max(0.0, Event.EndTime - Event.StartTime - Occurrence.ChildrenSeconds) * 1000.0;
+    }
+
+    TFunction<void(int32, int32)> MergePath = [&](int32 Into, int32 From)
+    {
+        Paths[Into].InclusiveMs += Paths[From].InclusiveMs;
+        Paths[Into].ExclusiveMs += Paths[From].ExclusiveMs;
+        Paths[Into].Count += Paths[From].Count;
+        const auto Children = Paths[From].Children;
+        for (const auto& Child : Children)
+        {
+            if (const auto* Existing = Paths[Into].Children.Find(Child.Key))
+            { MergePath(*Existing, Child.Value); }
+            else
+            { Paths[Into].Children.Add(Child.Key, Child.Value); }
+        }
+    };
+    // Suppress direct same-name recursion without suppressing its named work.
+    // Inclusive is already the outer occurrence; add only its self and calls.
+    for (int32 Index = Paths.Num() - 1; Index >= 0; --Index)
+    {
+        if (const auto* SameTimer = Paths[Index].Children.Find(Paths[Index].Timer))
+        {
+            const int32 ChildIndex = *SameTimer;
+            Paths[Index].ExclusiveMs += Paths[ChildIndex].ExclusiveMs;
+            Paths[Index].Count += Paths[ChildIndex].Count;
+            Paths[Index].Children.Remove(Paths[Index].Timer);
+            const auto Grandchildren = Paths[ChildIndex].Children;
+            for (const auto& Child : Grandchildren)
+            {
+                if (const auto* Existing = Paths[Index].Children.Find(Child.Key))
+                { MergePath(*Existing, Child.Value); }
+                else
+                { Paths[Index].Children.Add(Child.Key, Child.Value); }
+            }
         }
     }
 
-    TArray<FDedupedChild> Deduped;
-    for (auto& [Key, Val] : Seen)
+    const auto SortedChildren = [&Paths](int32 Index)
     {
-        Deduped.Add(MoveTemp(Val));
-    }
-    ck::algo::Sort(Deduped, [](const FDedupedChild& A, const FDedupedChild& B)
-    {
-        return A.InclusiveMs > B.InclusiveMs;
-    });
-
-    const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
-    const double HiddenBudgetMs = FMath::Min(
-        _Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
-    double RemainingChildrenMs = 0.0;
-    for (const FDedupedChild& Child : Deduped)
-    {
-        if (Child.TimerIndex != Collapsed.TimerIndex)
-        { RemainingChildrenMs += Child.InclusiveMs; }
-    }
-
-    TArray<FDedupedChild> Visible;
-    for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
-    {
-        if (Deduped[i].TimerIndex == Collapsed.TimerIndex) continue;
-        const auto KeepChild = _Config.ShowAllChildren
-            || Deduped[i].InclusiveMs >= MinChildMs
-            || RemainingChildrenMs > HiddenBudgetMs;
-        if (NOT KeepChild) continue;
-        RemainingChildrenMs -= Deduped[i].InclusiveMs;
-        Visible.Add(MoveTemp(Deduped[i]));
-    }
-
-    for (FDedupedChild& Child : Visible)
-    {
-        TSharedPtr<FCk_HotPathNode> ChildNode = DoBuildTreeNode(
-            Child.TimerIndex, Depth + 1,
-            Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
-            Result, TimerNames, ShownTimers,
-            &Child.Breadcrumbs);
-
-        if (ChildNode.IsValid())
+        TArray<int32> Children;
+        Paths[Index].Children.GenerateValueArray(Children);
+        Children.Sort([&Paths](int32 A, int32 B)
         {
-            Node->Children.Add(MoveTemp(ChildNode));
-        }
-    }
-
-    // Reconciliation row — makes the sums visibly add up (self + shown children + this row ≈
-    // inclusive) for children dropped by the threshold, the child cap, or the dedup above.
-    // Deliberately also emitted when EVERY child was pruned.
-    if (const auto ChildMap = Result.ChildrenOf.Find(Collapsed.TimerIndex))
+            if (Paths[A].InclusiveMs != Paths[B].InclusiveMs)
+            { return Paths[A].InclusiveMs > Paths[B].InclusiveMs; }
+            return Paths[A].Timer < Paths[B].Timer;
+        });
+        return Children;
+    };
+    TFunction<void(TSharedPtr<FCk_HotPathNode>&, const TSharedPtr<FCk_HotPathNode>&)> MergeNode;
+    MergeNode = [&MergeNode](TSharedPtr<FCk_HotPathNode>& Into, const TSharedPtr<FCk_HotPathNode>& From)
     {
-        double ShownChildrenMs = 0.0;
-        for (const TSharedPtr<FCk_HotPathNode>& Child : Node->Children)
+        Into->InclusiveMs += From->InclusiveMs;
+        Into->ExclusiveMs += From->ExclusiveMs;
+        Into->Count += From->Count;
+        for (const auto& Child : From->Children)
         {
-            ShownChildrenMs += Child->InclusiveMs;
+            auto* Existing = Into->Children.FindByPredicate([&Child](const auto& Other)
+            { return Other->RawName == Child->RawName && Other->Breadcrumbs == Child->Breadcrumbs; });
+            if (Existing != nullptr) { MergeNode(*Existing, Child); }
+            else { Into->Children.Add(Child); }
         }
-
-        // Global child stats make this remainder go slightly negative when a child also appears
-        // under another parent — the threshold below is what clamps it.
-        const double HiddenMs = Node->InclusiveMs - Node->ExclusiveMs - ShownChildrenMs;
-        const int32 HiddenChildCount = ChildMap->Num() - Node->Children.Num();
-
-        if (HiddenChildCount > 0 && HiddenMs >= FMath::Max(0.1, Node->InclusiveMs * 0.02))
+    };
+    TFunction<TSharedPtr<FCk_HotPathNode>(int32, int32)> BuildNode;
+    BuildNode = [&](int32 Index, int32 Depth)
+    {
+        auto Node = MakeShared<FCk_HotPathNode>();
+        for (int32 Iteration = 0; Iteration < 10; ++Iteration)
         {
-            auto HiddenNode = MakeShared<FCk_HotPathNode>();
-            HiddenNode->RawName = FString::Printf(TEXT("(+%d below threshold)"), HiddenChildCount);
-            HiddenNode->DisplayName = HiddenNode->RawName;
-            HiddenNode->InclusiveMs = HiddenMs;
-            HiddenNode->ExclusiveMs = 0.0;
-            HiddenNode->Count = static_cast<uint32>(HiddenChildCount);
-            HiddenNode->bIsAggregate = true;
-            Node->Children.Add(MoveTemp(HiddenNode));
+            const auto& Path = Paths[Index];
+            const auto Name = GetTimerName(TimerNames, Path.Timer);
+            if (Name.StartsWith(TEXT("script::")) ||
+                (Path.ExclusiveMs > Path.InclusiveMs * 0.05 && Path.ExclusiveMs > 0.3))
+            { break; }
+            const auto Children = SortedChildren(Index);
+            if (Children.IsEmpty() || Paths[Children[0]].InclusiveMs < 0.5)
+            { break; }
+            const bool SinglePath = Children.Num() == 1 ||
+                Paths[Children[1]].InclusiveMs < Path.InclusiveMs * 0.20;
+            if (NOT SinglePath || Paths[Children[0]].InclusiveMs <= Path.InclusiveMs * 0.7)
+            { break; }
+            Node->Breadcrumbs.Add(Name);
+            Index = Children[0];
         }
-    }
+        const auto& Path = Paths[Index];
+        Node->RawName = GetTimerName(TimerNames, Path.Timer);
+        Node->DisplayName = FCk_TimerCategorizer::SimplifyName(Node->RawName);
+        Node->InclusiveMs = Path.InclusiveMs;
+        Node->ExclusiveMs = FMath::Min(Path.ExclusiveMs, Path.InclusiveMs);
+        Node->Count = Path.Count;
+        if (Depth >= _Config.MaxTreeDepth) { return Node; }
+        for (int32 ChildIndex : SortedChildren(Index))
+        {
+            auto Child = BuildNode(ChildIndex, Depth + 1);
+            auto* Existing = Node->Children.FindByPredicate([&Child](const auto& Other)
+            { return Other->RawName == Child->RawName && Other->Breadcrumbs == Child->Breadcrumbs; });
+            if (Existing != nullptr) { MergeNode(*Existing, Child); }
+            else { Node->Children.Add(MoveTemp(Child)); }
+        }
+        return Node;
+    };
 
-    return Node;
+    TArray<TSharedPtr<FCk_HotPathNode>> Roots;
+    TFunction<void(int32, int32)> AddRoot = [&](int32 Index, int32 Depth)
+    {
+        const auto Name = GetTimerName(TimerNames, Paths[Index].Timer);
+        const bool Unnamed = Name.StartsWith(TEXT("UNKNOWN_"));
+        if (Depth < 5 && (IsFrameWrapper(Name) || Unnamed) && NOT Paths[Index].Children.IsEmpty())
+        {
+            for (int32 Child : SortedChildren(Index)) { AddRoot(Child, Depth + 1); }
+            return;
+        }
+        auto Node = BuildNode(Index, 0);
+        auto* Existing = Roots.FindByPredicate([&Node](const auto& Other)
+        { return Other->RawName == Node->RawName && Other->Breadcrumbs == Node->Breadcrumbs; });
+        if (Existing != nullptr) { MergeNode(*Existing, Node); }
+        else { Roots.Add(MoveTemp(Node)); }
+    };
+    for (const auto& Root : RootPaths) { AddRoot(Root.Value, 0); }
+    // Apply the root floor only after identical displayed paths have combined;
+    // two individually small disjoint calls can together be significant.
+    Roots.RemoveAll([this](const auto& Node) { return Node->InclusiveMs < _Config.MinInclusiveMs; });
+    const auto SortNodes = [](auto& Nodes)
+    {
+        Nodes.Sort([](const auto& A, const auto& B)
+        {
+            if (A->InclusiveMs != B->InclusiveMs) { return A->InclusiveMs > B->InclusiveMs; }
+            return A->RawName < B->RawName;
+        });
+    };
+    SortNodes(Roots);
+    if (Roots.Num() > _Config.MaxRootTimers)
+    { Roots.SetNum(FMath::Max(0, _Config.MaxRootTimers)); }
+
+    TFunction<void(const TSharedPtr<FCk_HotPathNode>&)> PruneNode = [&](const auto& Node)
+    {
+        SortNodes(Node->Children);
+        const auto AllChildren = MoveTemp(Node->Children);
+        const double MinChild = FMath::Max(_Config.MinChildMs, Node->InclusiveMs * _Config.MinChildPctOfParent);
+        const double HiddenBudget = FMath::Min(_Config.MinChildMs, Node->InclusiveMs * _Config.MinChildPctOfParent);
+        double Remaining = 0.0;
+        double Shown = 0.0;
+        for (const auto& Child : AllChildren) { Remaining += Child->InclusiveMs; }
+        for (const auto& Child : AllChildren)
+        {
+            if (_Config.ShowAllChildren || (Node->Children.Num() < _Config.MaxVisibleChildren &&
+                (Child->InclusiveMs >= MinChild || Remaining > HiddenBudget)))
+            {
+                Remaining -= Child->InclusiveMs;
+                Shown += Child->InclusiveMs;
+                PruneNode(Child);
+                Node->Children.Add(Child);
+            }
+        }
+        const int32 HiddenCount = AllChildren.Num() - Node->Children.Num();
+        const double HiddenMs = Node->InclusiveMs - Node->ExclusiveMs - Shown;
+        if (NOT AllChildren.IsEmpty() && HiddenMs >= FMath::Max(0.1, Node->InclusiveMs * 0.02))
+        {
+            auto Hidden = MakeShared<FCk_HotPathNode>();
+            Hidden->RawName = HiddenCount > 0
+                ? FString::Printf(TEXT("(+%d below threshold)"), HiddenCount) : TEXT("(other children)");
+            Hidden->DisplayName = Hidden->RawName;
+            Hidden->InclusiveMs = HiddenMs;
+            Hidden->Count = static_cast<uint32>(HiddenCount);
+            Hidden->bIsAggregate = true;
+            Node->Children.Add(MoveTemp(Hidden));
+        }
+    };
+    for (const auto& Root : Roots) { PruneNode(Root); }
+    return Roots;
 }
+
 
 auto
     FCk_FrameReport::
@@ -864,63 +594,10 @@ auto
         TEXT("FCk_MultiFrameStats::MergedHotPaths instead."))
     { return {}; }
 
-    TArray<TSharedPtr<FCk_HotPathNode>> Roots;
-
-    if (NOT Result.IsValid() ||
-        Result.FrameRootTimerIndex == static_cast<uint32>(INDEX_NONE))
-    {
-        return Roots;
-    }
-
-    TMap<uint32, double> RootChildren = UnwrapRoots(
-        Result.FrameRootTimerIndex, Result, TimerNames);
-
-    struct FRootEntry
-    {
-        uint32 TimerIndex;
-        double InclusiveMs;
-        double ExclusiveMs;
-        uint32 Count;
-    };
-    TArray<FRootEntry> RootList;
-
-    for (const auto& [TimerIndex, InclSeconds] : RootChildren)
-    {
-        const double InclMs = InclSeconds * 1000.0;
-        if (InclMs >= _Config.MinInclusiveMs)
-        {
-            RootList.Add(FRootEntry{
-                TimerIndex,
-                InclMs,
-                Result.GetExclusiveMs(TimerIndex),
-                Result.GetCount(TimerIndex)
-            });
-        }
-    }
-
-    ck::algo::Sort(RootList, [](const FRootEntry& A, const FRootEntry& B)
-    {
-        return A.InclusiveMs > B.InclusiveMs;
-    });
-
-    const int32 MaxRoots = FMath::Min(RootList.Num(), _Config.MaxRootTimers);
-    for (int32 i = 0; i < MaxRoots; ++i)
-    {
-        const FRootEntry& Root = RootList[i];
-        TSet<uint32> ShownTimers; // per-root dedup, same as the markdown tree
-
-        TSharedPtr<FCk_HotPathNode> Node = DoBuildTreeNode(
-            Root.TimerIndex, 0,
-            Root.InclusiveMs, Root.ExclusiveMs, Root.Count,
-            Result, TimerNames, ShownTimers);
-
-        if (Node.IsValid())
-        {
-            Roots.Add(MoveTemp(Node));
-        }
-    }
-
-    return Roots;
+    // Recovery must remain present when ensure diagnostics are compiled out.
+    if (NOT ResultIsRealFrame || NOT Result.IsValid())
+    { return {}; }
+    return BuildEventHotPaths(Result, TimerNames);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

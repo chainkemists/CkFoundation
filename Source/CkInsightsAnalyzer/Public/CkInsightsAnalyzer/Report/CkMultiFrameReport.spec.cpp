@@ -5,6 +5,7 @@
 // sampled through a generated report.
 
 #include "CkInsightsAnalyzer/Report/CkMultiFrameReport.h"
+#include "CkInsightsAnalyzer/Core/CkFrameAnalyzer.h"
 #include "CkInsightsAnalyzer/Core/CkTraceSession.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -547,7 +548,7 @@ bool FCkTest_MultiFrameReport_FilterAfterAveraging::RunTest(const FString&)
             Frame.Events.Add({Index, Cursor, Cursor + 0.0008, 2});
             Cursor += 0.0008;
         }
-        FCk_FrameAnalyzer::ComputeExclusiveTimes(Frame.Events, Frame);
+        Frame = FCk_FrameAnalyzer::AnalyzeEvents(Frame.Events, 0.0, 0.030, 0, 0);
         CompleteTrees.Add(FCk_FrameReport{SamplingConfig}.BuildHotPathTree(Session, Frame, Names));
     }
 
@@ -657,7 +658,7 @@ bool FCkTest_MultiFrameReport_ThousandCuts::RunTest(const FString&)
         Frame.Events.Add({Index + 2, Start, FMath::Min(Start + 0.00002, 0.002), 2});
         Names.Add(Index + 2, FString::Printf(TEXT("Tiny%u"), Index));
     }
-    FCk_FrameAnalyzer::ComputeExclusiveTimes(Frame.Events, Frame);
+    Frame = FCk_FrameAnalyzer::AnalyzeEvents(Frame.Events, 0.0, 0.003, 0, 0);
     const auto Session = FCk_TraceSession{};
     const auto Config = FCk_FrameReportConfig{};
     const auto Single = FCk_FrameReport{Config}.BuildHotPathTree(Session, Frame, Names);
@@ -687,6 +688,160 @@ bool FCkTest_MultiFrameReport_ThousandCuts::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_EventPathHotTree,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.EventPathHotTree",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_EventPathHotTree::RunTest(const FString&)
+{
+    using namespace ck_multi_frame_report_tests;
+
+    // AnalyzeEvents is the production clipping/sorting/accounting entrypoint. This deliberately
+    // avoids a hand-filled ChildrenOf map: the regression is caused by that reduced map losing
+    // occurrence and parent-path identity.
+    const auto Events = TArray<FCk_TimingEvent>{
+        {0, 0.000, 0.100, 0}, // Frame
+        {1, 0.000, 0.040, 1}, // ParentA
+        {3, 0.000, 0.020112, 2}, // Target outer
+        {3, 0.002, 0.018000, 3}, // Target recursive; must not inflate outer Target
+        {6, 0.004, 0.010000, 4}, // named grandchild of suppressed recursive Target
+        {3, 0.021, 0.030000, 2}, // disjoint same-path Target call
+        {2, 0.050, 0.080, 1}, // ParentB
+        {3, 0.055, 0.065, 2}, // same Target under a distinct parent
+        {4, 0.070, 0.075, 2}, // thin wrapper
+        {6, 0.070, 0.075, 3}, // wrapper's named grandchild
+        {7, 0.066, 0.068, 2}, // distinct thin wrapper A
+        {9, 0.066, 0.068, 3}, // same leaf name through wrapper A
+        {8, 0.068, 0.070, 2}, // distinct thin wrapper B
+        {9, 0.068, 0.070, 3}, // same leaf name through wrapper B
+    };
+    const auto Result = FCk_FrameAnalyzer::AnalyzeEvents(Events, 0.000, 0.100, 17, 42);
+    const auto Names = FCk_FrameReport::FTimerNameMap{
+        {0, TEXT("Frame")}, {1, TEXT("ParentA")}, {2, TEXT("ParentB")},
+        {3, TEXT("Target")}, {4, TEXT("ThinWrapper")}, {6, TEXT("NamedGrandchild")},
+        {7, TEXT("ThinWrapperA")}, {8, TEXT("ThinWrapperB")}, {9, TEXT("SharedLeaf")}};
+    auto Config = FCk_FrameReportConfig{};
+    Config.ShowAllChildren = true;
+    Config.MinInclusiveMs = 0.0;
+    Config.MaxTreeDepth = 8;
+
+    TestTrue(TEXT("normalized fixture is a real analysis result"), Result.IsValid());
+    const auto Tree = FCk_FrameReport{Config}.BuildHotPathTree(FCk_TraceSession{}, Result, Names);
+    const auto ParentA = Tree.FindByPredicate([](const TSharedPtr<FCk_HotPathNode>& Node)
+    { return Node->RawName == TEXT("ParentA"); });
+    const auto ParentB = Tree.FindByPredicate([](const TSharedPtr<FCk_HotPathNode>& Node)
+    { return Node->RawName == TEXT("ParentB"); });
+    if (ParentA == nullptr || ParentB == nullptr)
+    {
+        AddError(TEXT("Expected ParentA and ParentB hot-path roots"));
+        return false;
+    }
+
+    const auto FindChild = [](const TSharedPtr<FCk_HotPathNode>& Parent, const TCHAR* Name)
+    {
+        const auto* Found = Parent->Children.FindByPredicate([Name](const TSharedPtr<FCk_HotPathNode>& Child)
+        { return Child->RawName == Name; });
+        return Found != nullptr ? *Found : TSharedPtr<FCk_HotPathNode>{};
+    };
+
+    const auto ParentATarget = FindChild(*ParentA, TEXT("Target"));
+    const auto ParentBTarget = FindChild(*ParentB, TEXT("Target"));
+    if (NOT ParentATarget.IsValid() || NOT ParentBTarget.IsValid())
+    {
+        AddError(TEXT("Target must remain present under both distinct parents"));
+        return false;
+    }
+
+    // Old global-child reduction reports 40ms here (clamped global Target inclusive) and omits
+    // NamedGrandchild by suppressing the recursive Target row. The path tree instead unions the
+    // nested pair and sums only the disjoint second ParentA occurrence.
+    TestTrue(TEXT("ParentA Target uses outer union plus its disjoint sibling only"),
+        FMath::IsNearlyEqual(ParentATarget->InclusiveMs, 29.112, 0.001));
+    TestEqual(TEXT("ParentA Target retains outer, recursive, and disjoint call count"),
+        ParentATarget->Count, uint32{3});
+    TestTrue(TEXT("suppressed recursive Target promotes its named grandchild"),
+        FindChild(ParentATarget, TEXT("NamedGrandchild")).IsValid());
+
+    // The same timer under ParentB is a different occurrence path, not a 29.112/40ms global slice.
+    TestTrue(TEXT("ParentB Target retains its local parent-path cost"),
+        FMath::IsNearlyEqual(ParentBTarget->InclusiveMs, 10.0, 0.001));
+
+    TestTrue(TEXT("ParentA reconciles self and displayed child to its local inclusive time"),
+        FMath::IsNearlyEqual((*ParentA)->ExclusiveMs + ParentATarget->InclusiveMs, (*ParentA)->InclusiveMs, 0.001));
+
+    const auto SharedLeaves = (*ParentB)->Children.FilterByPredicate([](const TSharedPtr<FCk_HotPathNode>& Node)
+    { return Node->RawName == TEXT("SharedLeaf"); });
+    TestEqual(TEXT("distinct collapsed wrapper paths retain two same-name leaves"), SharedLeaves.Num(), 2);
+    if (SharedLeaves.Num() == 2)
+    {
+        TestTrue(TEXT("wrapper A identity remains attached"),
+            SharedLeaves[0]->Breadcrumbs.Contains(TEXT("ThinWrapperA")) ||
+            SharedLeaves[1]->Breadcrumbs.Contains(TEXT("ThinWrapperA")));
+        TestTrue(TEXT("wrapper B identity remains attached"),
+            SharedLeaves[0]->Breadcrumbs.Contains(TEXT("ThinWrapperB")) ||
+            SharedLeaves[1]->Breadcrumbs.Contains(TEXT("ThinWrapperB")));
+    }
+
+    auto CappedConfig = Config;
+    CappedConfig.ShowAllChildren = false;
+    CappedConfig.MaxVisibleChildren = 1;
+    CappedConfig.MinChildMs = 0.0;
+    CappedConfig.MinChildPctOfParent = 0.0;
+    const auto CappedTree = FCk_FrameReport{CappedConfig}.BuildHotPathTree(
+        FCk_TraceSession{}, Result, Names);
+    const auto CappedParentB = CappedTree.FindByPredicate([](const TSharedPtr<FCk_HotPathNode>& Node)
+    { return Node->RawName == TEXT("ParentB"); });
+    TestTrue(TEXT("capped tree retains ParentB"), CappedParentB != nullptr);
+    if (CappedParentB != nullptr)
+    {
+        const auto* Remainder = (*CappedParentB)->Children.FindByPredicate(
+            [](const TSharedPtr<FCk_HotPathNode>& Node) { return Node->bIsAggregate; });
+        TestTrue(TEXT("child cap emits an explicit omitted-cost aggregate"), Remainder != nullptr);
+        if (Remainder != nullptr)
+        {
+            double VisibleMs = 0.0;
+            for (const TSharedPtr<FCk_HotPathNode>& Child : (*CappedParentB)->Children)
+            {
+                if (NOT Child->bIsAggregate) VisibleMs += Child->InclusiveMs;
+            }
+            TestTrue(TEXT("capped self plus visible children plus omission reconciles"),
+                FMath::IsNearlyEqual((*CappedParentB)->ExclusiveMs + VisibleMs + (*Remainder)->InclusiveMs,
+                    (*CappedParentB)->InclusiveMs, 0.001));
+        }
+    }
+    const auto WrappedGrandchild = FindChild(*ParentB, TEXT("NamedGrandchild"));
+    TestTrue(TEXT("thin wrapper remains transparent"), WrappedGrandchild.IsValid());
+    if (WrappedGrandchild.IsValid())
+    {
+        TestTrue(TEXT("transparent wrapper retains breadcrumb"),
+            WrappedGrandchild->Breadcrumbs.Contains(TEXT("ThinWrapper")));
+        TestTrue(TEXT("transparent wrapper retains its named grandchild cost"),
+            FMath::IsNearlyEqual(WrappedGrandchild->InclusiveMs, 5.0, 0.001));
+    }
+
+    // Multi-frame presentation ingests the complete occurrence tree and preserves the same local
+    // paths in the final merged result; no progressive/final tree-specific reduction is allowed.
+    const auto Merged = FCk_MultiFrameReport::DoBuild_MergedHotPaths({Tree, Tree}, Config);
+    const auto MergedA = Merged.FindByPredicate([](const TSharedPtr<FCk_MergedHotPathNode>& Node)
+    { return Node->RawName == TEXT("ParentA"); });
+    const auto MergedB = Merged.FindByPredicate([](const TSharedPtr<FCk_MergedHotPathNode>& Node)
+    { return Node->RawName == TEXT("ParentB"); });
+    if (MergedA == nullptr || MergedB == nullptr)
+    {
+        AddError(TEXT("Merged presentation must retain both roots"));
+        return false;
+    }
+    const auto MergedATarget = Find_MergedChild(*MergedA, TEXT("Target"));
+    const auto MergedBTarget = Find_MergedChild(*MergedB, TEXT("Target"));
+    TestTrue(TEXT("merged ParentA preserves path-local mean"),
+        MergedATarget.IsValid() && FMath::IsNearlyEqual(MergedATarget->AvgInclusiveMs, 29.112, 0.001));
+    TestTrue(TEXT("merged ParentB preserves distinct path-local mean"),
+        MergedBTarget.IsValid() && FMath::IsNearlyEqual(MergedBTarget->AvgInclusiveMs, 10.0, 0.001));
+    return true;
+}
 // Cancellation is an atomic admission rule: callers must never receive a partial selection
 // masquerading as a small complete result.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

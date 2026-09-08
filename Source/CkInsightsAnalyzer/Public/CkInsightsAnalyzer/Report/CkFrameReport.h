@@ -483,71 +483,12 @@ private:
     /** Frame wrapper names to unwrap when finding root timers. */
     static auto IsFrameWrapper(const FString& TimerName) -> bool;
 
-    /**
-     * Recursively unwrap frame wrappers to find real root timers.
-     * Returns map of TimerIndex → inclusive seconds.
-     */
-    auto UnwrapRoots(uint32 ParentTimerIndex,
-                     const FCk_FrameAnalysisResult& Result,
-                     const FTimerNameMap& TimerNames,
-                     int32 Depth = 0) const -> TMap<uint32, double>;
+    /** Parent-local hot paths from normalized event occurrences, shared by text and UI. */
+    auto BuildEventHotPaths(const FCk_FrameAnalysisResult& Result, const FTimerNameMap& TimerNames) const
+        -> TArray<TSharedPtr<FCk_HotPathNode>>;
 
-    /** Intermediate data for wrapper collapsing. */
-    struct FCollapsedTimer
-    {
-        uint32 TimerIndex = 0;
-        double InclusiveMs = 0.0;
-        double ExclusiveMs = 0.0;
-        uint32 Count = 0;
-        TArray<FString> Breadcrumbs; // collapsed wrapper path
-    };
-
-    /**
-     * Collapse thin wrappers (low exclusive time, single dominant child).
-     * Chains through multiple levels. Mirrors Python collapse_wrappers().
-     */
-    auto CollapseWrappers(uint32 TimerIndex, double InclMs, double ExclMs, uint32 Count,
-                          const FCk_FrameAnalysisResult& Result,
-                          const FTimerNameMap& TimerNames) const -> FCollapsedTimer;
-
-    /** Get significant children of a timer above a threshold. */
-    struct FChildInfo
-    {
-        uint32 TimerIndex;
-        double InclusiveMs;
-        double ExclusiveMs;
-        uint32 Count;
-    };
-
-    static auto GetSignificantChildren(uint32 ParentTimerIndex,
-                                       const FCk_FrameAnalysisResult& Result,
-                                       double MinInclusiveMs = 0.5)
-        -> TArray<FChildInfo>;
-
-    /**
-     * Recursively build tree lines for a timer and its children.
-     * Handles wrapper collapsing, deduplication, and tree-drawing characters.
-     */
-    auto BuildTreeLines(uint32 TimerIndex, int32 Depth,
-                        double InclMs, double ExclMs, uint32 Count,
-                        const FCk_FrameAnalysisResult& Result,
-                        const FTimerNameMap& TimerNames,
-                        TSet<uint32>& ShownTimers,
-                        TMap<int32, bool>& IsLastAtDepth,
-                        const TArray<FString>* PreBreadcrumbs = nullptr) const
-        -> TArray<FString>;
-
-    /** Build tree-drawing prefix (e.g., "│  ├─ "). */
+    /** Build tree-drawing prefix from the already constructed display tree. */
     static auto MakeTreePrefix(int32 Depth, const TMap<int32, bool>& IsLastAtDepth) -> FString;
-
-    /** Node-producing analog of BuildTreeLines (shared collapse/dedup rules). */
-    auto DoBuildTreeNode(uint32 TimerIndex, int32 Depth,
-                         double InclMs, double ExclMs, uint32 Count,
-                         const FCk_FrameAnalysisResult& Result,
-                         const FTimerNameMap& TimerNames,
-                         TSet<uint32>& ShownTimers,
-                         const TArray<FString>* PreBreadcrumbs = nullptr) const
-        -> TSharedPtr<FCk_HotPathNode>;
 
 private:
     FCk_FrameReportConfig _Config;
