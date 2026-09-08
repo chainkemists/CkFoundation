@@ -48,11 +48,11 @@ namespace ck_ism_proxy
 
         CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
             TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"))
-        { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
+        { return FTransform{ CombinedRotation, CombinedLocation, FVector::OneVector }; }
 
         const auto& CombinedScale = InTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
-        return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+        return FTransform{ CombinedRotation, CombinedLocation, CombinedScale };
     }
 }
 
@@ -282,11 +282,11 @@ namespace ck
 
             CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
                 TEXT("IsmProxy Scale Multiplier [{}] has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
-            { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
+            { return FTransform{ CombinedRotation, CombinedLocation, FVector::OneVector }; }
 
             const auto& CombinedScale = InTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
-            return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+            return FTransform{ CombinedRotation, CombinedLocation, CombinedScale };
         };
 
         constexpr auto TransformAsWorldSpace = true;
@@ -366,7 +366,7 @@ namespace ck
             const auto& CombinedRotation = Transform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
             const auto& CombinedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
-            return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+            return FTransform{ CombinedRotation, CombinedLocation, CombinedScale };
         };
 
         constexpr auto TransformAsWorldSpace = false;
@@ -397,7 +397,7 @@ namespace ck
         const auto& ExpectedLocation = Transform.GetLocation() + InParams.Get_LocalLocationOffset();
         const auto& ExpectedRotation = Transform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
         const auto& ExpectedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
-        const auto ExpectedTransform = FTransform{ExpectedRotation.Rotator(), ExpectedLocation, ExpectedScale};
+        const auto ExpectedTransform = FTransform{ExpectedRotation, ExpectedLocation, ExpectedScale};
 
         return NOT ExpectedTransform.Equals(InInstanceTransform);
     }

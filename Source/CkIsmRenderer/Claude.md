@@ -108,6 +108,9 @@ would mirror the entity's rock relative to true child entities (e.g. SceneNode-p
 site that builds an instance transform (`AddInstance`, `TransformInstance`, `EnsureStaticNotMoved_DEBUG`,
 and the outline processors' `Get_TransformWithLocalOffset`) must compose identically or the shadow
 instance drifts off the main one.
+Keep the composed unit quaternion directly in the instance transform. Converting it to a rotator
+and back adds trigonometric work per updated instance and canonicalizes an already-composed rotation.
+Main, previous-instance, shadow and static-movement diagnostic construction use the same quaternion order.
 
 **`FProcessor_IsmProxy_Outline_TransformSync` is deliberately not keyed on `FTag_Transform_Updated`.**
 That dirty marker is shared by writers in other modules (`CkRaySense`) that we cannot declare ordering
