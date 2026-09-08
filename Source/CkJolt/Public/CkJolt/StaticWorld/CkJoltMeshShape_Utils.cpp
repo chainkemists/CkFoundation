@@ -1,5 +1,7 @@
 #include "CkJoltMeshShape_Utils.h"
 
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -123,6 +125,8 @@ namespace ck::jolt::bake::mesh_shape_utils
             const UStaticMesh& InMesh)
         -> JPH::Ref<JPH::Shape>
     {
+        TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltMeshShape_TryGetScaleOneShape);
+
         const auto MeshPackagePath = InMesh.GetOutermost()->GetName();
         const auto CacheKey = FName{*MeshPackagePath};
 
@@ -149,9 +153,14 @@ namespace ck::jolt::bake::mesh_shape_utils
         // "Failed to find object" + LogStreaming "SkipPackage" warnings that automation test
         // runs capture as failures. Loudness for a miss that SHOULD have been baked stays with
         // the CK_ENSURE below.
-        const auto* ShapeAsset = AssetPath.IsEmpty()
-            ? nullptr
-            : LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+        const auto* ShapeAsset = [&]() -> const UCk_Jolt_CookedMeshShape_UE*
+        {
+            if (AssetPath.IsEmpty())
+            { return nullptr; }
+
+            TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltMeshShape_LoadCookedAsset);
+            return LoadObject<UCk_Jolt_CookedMeshShape_UE>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+        }();
 
         if (ck::Is_NOT_Valid(ShapeAsset))
         {
