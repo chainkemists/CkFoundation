@@ -18,6 +18,56 @@ namespace ck
     // when there is no active script context (called from C++, or built without AngelScript).
     CKPROFILE_API auto
     Get_ActiveScriptScopeName() -> FString;
+
+#if STATS
+    // Resolves the active AngelScript function directly to its cached stat id. The cache stores
+    // only numeric function ids and TStatIds; it never retains AngelScript function/type objects.
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatId() -> TStatId;
+#endif
+
+    // Called from the AngelScript pre-compile boundary. It only advances an epoch: each thread
+    // clears its own function-id cache lazily on the next lookup.
+    CKPROFILE_API auto
+    Invalidate_ActiveScriptScopeStatCache() -> void;
+
+#if WITH_DEV_AUTOMATION_TESTS
+    // Narrow test seam for proving the same epoch transition without broadcasting the engine-wide
+    // PreCompile delegate, which has unrelated production subscribers.
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatCacheEpoch_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Get_IsScopedStatStatsEnabled_ForTests() -> bool;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatId_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Get_LegacyActiveScriptScopeStatId_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatName_ForTests() -> FString;
+
+    // Dynamic stats retain an encoded registry name separately from the user-facing description.
+    CKPROFILE_API auto
+    Get_LegacyActiveScriptScopeStatName_ForTests() -> FString;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatDescription_ForTests() -> FString;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatCacheHitCount_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeStatCacheMissCount_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Reset_ActiveScriptScopeStatCacheCounters_ForTests() -> void;
+
+    CKPROFILE_API auto
+    Run_ActiveScriptScopeStatBenchmark_ForTests() -> FString;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
