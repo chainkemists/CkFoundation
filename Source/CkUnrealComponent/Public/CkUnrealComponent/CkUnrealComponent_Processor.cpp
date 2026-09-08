@@ -12,6 +12,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkProfile/Stats/CkCpuWork.h"
+
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
@@ -231,21 +233,63 @@ namespace ck
     {
         // PostTransform runs after root-to-ECS synchronization and transform requests. At this point the
         // fragment is the authoritative value for both root-driven and externally-driven owners.
+        const auto Enabled = cpu_work::Get_Enabled();
+        TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_ComponentRecord, Enabled);
+
+        auto Entries = int32{0};
+        auto SetupRejected = int32{0};
+        auto PushDisabled = int32{0};
+        auto NonSceneRejected = int32{0};
+        auto MissingTransform = int32{0};
+        auto Invalid = int32{0};
+        auto Unchanged = int32{0};
+        auto Changed = int32{0};
+        auto StaticRebakes = int32{0};
+
         const auto& CurrentTransform = InTransform.Get_Transform();
         RecordOfUnrealComponents_Utils::ForEach_ValidEntry(
             InHandle,
-            [&CurrentTransform](FCk_Handle_UnrealComponent InComponentHandle)
+            [&](FCk_Handle_UnrealComponent InComponentHandle)
             {
-                if (InComponentHandle.Has<FTag_UnrealComponent_NeedsSetup>() ||
-                    InComponentHandle.Has<FTag_UnrealComponent_TransformPushDisabled>() ||
-                    NOT InComponentHandle.Has<FTag_UnrealComponent_IsScene>() ||
-                    NOT InComponentHandle.Has<FFragment_UnrealComponent_Current>())
-                { return; }
+                TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_ComponentCallback, Enabled);
+                if (Enabled)
+                { ++Entries; }
+
+                if (InComponentHandle.Has<FTag_UnrealComponent_NeedsSetup>())
+                {
+                    if (Enabled) { ++SetupRejected; }
+                    return;
+                }
+                if (InComponentHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
+                {
+                    if (Enabled) { ++PushDisabled; }
+                    return;
+                }
+                if (NOT InComponentHandle.Has<FTag_UnrealComponent_IsScene>())
+                {
+                    if (Enabled) { ++NonSceneRejected; }
+                    return;
+                }
+                if (NOT InComponentHandle.Has<FFragment_UnrealComponent_Current>())
+                {
+                    if (Enabled) { ++MissingTransform; }
+                    return;
+                }
 
                 auto* SceneComponent = Cast<USceneComponent>(
                     InComponentHandle.Get<FFragment_UnrealComponent_Current>().Get_Component().Get());
+                if (Enabled && ck::Is_NOT_Valid(SceneComponent))
+                {
+                    ++Invalid;
+                    return;
+                }
+
                 const auto TransformChanged =
                     ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
+                if (Enabled)
+                {
+                    TransformChanged ? ++Changed : ++Unchanged;
+                }
 
                 // A baked static-world body is a snapshot — when the component actually moves,
                 // re-bake at the new pose so queries stay correct (teleports, store rearrangement).
@@ -256,9 +300,25 @@ namespace ck
                 {
                     if (auto* PrimitiveComponent = Cast<UPrimitiveComponent>(SceneComponent);
                         ck::IsValid(PrimitiveComponent))
-                    { UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent); }
+                    {
+                        UCk_Utils_JoltStaticWorld_UE::Request_BakeComponent(PrimitiveComponent);
+                        if (Enabled) { ++StaticRebakes; }
+                    }
                 }
             });
+
+        if (Enabled)
+        {
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentEntries, Entries);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentSetupRejected, SetupRejected);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentPushDisabled, PushDisabled);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentNonSceneRejected, NonSceneRejected);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentMissingTransform, MissingTransform);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentInvalid, Invalid);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentUnchanged, Unchanged);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentChanged, Changed);
+            cpu_work::Add(ECk_CpuWorkCounter::ComponentStaticRebakes, StaticRebakes);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

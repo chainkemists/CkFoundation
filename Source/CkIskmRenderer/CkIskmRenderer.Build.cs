@@ -5,6 +5,8 @@ public class CkIskmRenderer : CkModuleRules
 {
     public CkIskmRenderer(ReadOnlyTargetRules Target) : base(Target)
     {
+        PrivateDependencyModuleNames.Add("CkProfile");
+
         PrivateIncludePaths.AddRange(new string[] {
             // Plan-2: FScene::PrimitiveUpdates + FUpdate*Command live in these private renderer headers
             // (version-fragile — re-verify on engine bumps). Used by the batched cluster proxy's per-frame upload.

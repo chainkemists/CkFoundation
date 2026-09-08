@@ -2,6 +2,8 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkProfile/Stats/CkCpuWork.h"
+
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -240,6 +242,9 @@ namespace ck
             return;
         }
 
+        const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+        int64 CancelledRequests = 0;
+
         {
             SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_Drain);
             Super::DoTick(InDeltaT);
@@ -274,6 +279,12 @@ namespace ck
                 // is the policy that matches this pass's own contract.
                 const auto& Requests = Owner.Get<FFragment_Transform_Requests, ck::IsValid_Policy_IncludePendingKill>();
 
+                if (CpuWorkEnabled)
+                {
+                    CancelledRequests += Requests._LocationRequests.Num() + Requests._RotationRequests.Num()
+                        + (Requests._ScaleRequests.IsSet() ? 1 : 0) + Requests._ForceRefreshRequests.Num();
+                }
+
                 request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
                 request::FireCancelledForPending(Owner, Requests.Get_RotationRequests());
 
@@ -288,6 +299,13 @@ namespace ck
                 {
                     InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
                 }, policy::DontResetContainer{});
+            }
+
+            if (CpuWorkEnabled && UndrainedOwners.Num() > 0)
+            {
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestBatches, UndrainedOwners.Num());
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestsCancelledUndrained, CancelledRequests);
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestBatchesUnchanged, UndrainedOwners.Num());
             }
         }
 
@@ -307,6 +325,16 @@ namespace ck
         -> void
     {
         InComp.Set_ComponentsModified(ECk_TransformComponents::None);
+
+        const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+        const int64 DrainedRequests = CpuWorkEnabled
+            ? InRequestsComp._LocationRequests.Num() + InRequestsComp._RotationRequests.Num()
+                + (InRequestsComp._ScaleRequests.IsSet() ? 1 : 0) + InRequestsComp._ForceRefreshRequests.Num()
+            : 0;
+        const int64 MutationRequests = CpuWorkEnabled
+            ? InRequestsComp._LocationRequests.Num() + InRequestsComp._RotationRequests.Num()
+                + (InRequestsComp._ScaleRequests.IsSet() ? 1 : 0)
+            : 0;
 
         // A parent-driven SceneNode's Transform is derived from its local SceneNode offset and
         // its parent's world transform. Writing the derived Transform works only until the parent
@@ -385,6 +413,14 @@ namespace ck
                     InRequests._ForceRefreshRequests.Reset();
                 }
             });
+
+            if (CpuWorkEnabled)
+            {
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestBatches, 1);
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestsDrained, DrainedRequests);
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestsRejectedParentDriven, MutationRequests);
+                ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestBatchesUnchanged, 1);
+            }
             return;
         }
 
@@ -508,6 +544,15 @@ namespace ck
         {
             ecs_extension::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
+        }
+
+        if (CpuWorkEnabled)
+        {
+            ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestBatches, 1);
+            ck::cpu_work::Add(ECk_CpuWorkCounter::TransformRequestsDrained, DrainedRequests);
+            ck::cpu_work::Add(TransformChanged
+                ? ECk_CpuWorkCounter::TransformRequestBatchesChanged
+                : ECk_CpuWorkCounter::TransformRequestBatchesUnchanged, 1);
         }
     }
 

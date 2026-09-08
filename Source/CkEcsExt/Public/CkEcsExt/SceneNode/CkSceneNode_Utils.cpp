@@ -10,6 +10,8 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkProfile/Stats/CkCpuWork.h"
+
 #include "Components/SceneComponent.h"
 #include "Components/MeshComponent.h"
 
@@ -70,20 +72,38 @@ auto
         const FTransform& InWorldTransform)
     -> void
 {
+    const auto Enabled = cpu_work::Get_Enabled();
+    TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_ScenePublishChildren, Enabled);
+    if (Enabled)
+    { cpu_work::Add(ECk_CpuWorkCounter::SceneParentsVisited, 1); }
+
     if (ck::Is_NOT_Valid(InParent) || NOT InParent.Has<ck::FFragment_RecordOfSceneNodes>())
-    { return; }
+    {
+        if (Enabled)
+        { cpu_work::Add(ECk_CpuWorkCounter::SceneMissingRecord, 1); }
+        return;
+    }
 
     auto& State = InParent.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
     if (State._HasPublishedWorldTransform && State._LastPublishedWorldTransform.Equals(InWorldTransform))
-    { return; }
+    {
+        if (Enabled)
+        { cpu_work::Add(ECk_CpuWorkCounter::SceneUnchangedParents, 1); }
+        return;
+    }
 
     State._LastPublishedWorldTransform = InWorldTransform;
     State._HasPublishedWorldTransform = true;
 
-    ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InParent, [](FCk_Handle_SceneNode InChild)
+    auto ChildrenVisited = int32{0};
+    ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InParent, [&](FCk_Handle_SceneNode InChild)
     {
+        if (Enabled)
+        { ++ChildrenVisited; }
         Queue(InChild);
     });
+    if (Enabled)
+    { cpu_work::Add(ECk_CpuWorkCounter::SceneChildrenVisited, ChildrenVisited); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
