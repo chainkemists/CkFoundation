@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Acceptance scenarios for both the browser design reference and the production-rendered native test app; this file is a specification, not passing test evidence.",
+  "datasets": [0, 1, 12, 1000, 10000],
+  "viewports": [[1280, 720], [800, 600], [640, 480]],
+  "dpiScales": [1, 1.5, 2],
+  "scenarios": [
+    {"id": "inventory.selection", "steps": ["Select a non-default row using mouse down", "Refresh the model before mouse up", "Release the mouse"], "expect": ["The clicked stable resource key stays selected", "Details and preview describe that key", "Exactly one selection write occurs"]},
+    {"id": "inventory.filter", "steps": ["Select a row", "Filter so that row is absent", "Clear the filter"], "expect": ["Selection follows the documented hidden-selection policy", "No unrelated row becomes selected", "Visible count equals filtered source count"]},
+    {"id": "inventory.sort", "steps": ["Select a row", "Sort each column ascending and descending", "Refresh with equal sort values"], "expect": ["Selection follows stable key", "Equal values use a deterministic key tie-breaker", "Rows do not flicker across identical refreshes"]},
+    {"id": "inventory.virtualization", "steps": ["Load 10000 records", "Scroll to the end", "Update and remove visible records"], "expect": ["Widget count is bounded by viewport plus overscan, not record count", "Displayed cells and selection match current keys", "Removed resources are released"]},
+    {"id": "navigation.tree", "steps": ["Expand a category", "Select a child by keyboard", "Refresh the data", "Collapse and reopen the category"], "expect": ["Stable expansion and selected key survive refresh", "Keyboard navigation reaches visible nodes", "Category filter and table agree"]},
+    {"id": "details.form", "steps": ["Edit a resource property", "Switch tabs and return", "Apply the edit", "Select another resource"], "expect": ["Edit belongs to the original stable key", "Apply emits one typed action", "Invalid numeric input cannot mutate the model", "Fields show the newly selected resource"]},
+    {"id": "layout.resize", "steps": ["Drag splitter to each constraint", "Resize through declared viewports and DPI scales", "Navigate all panes"], "expect": ["No overlapping controls or unreachable clipped actions", "Text wraps inside its allotted width", "Splitter constraints and scroll boundaries are respected"]},
+    {"id": "reload.retention", "steps": ["Focus an edited search", "Select a table row and scroll", "Resize splitter and switch details tab", "Reload valid styles"], "expect": ["Focused leaf has the new ancestor path", "Edit, selection, expansion, offsets, pane ratio and tab are retained", "No synthetic edit action occurs"]},
+    {"id": "reload.reject", "steps": ["Load a valid document", "Reload an invalid final node or missing typed binding"], "expect": ["Revision and all mounted regions stay unchanged", "No factory or model-write callback runs for schema-invalid input", "Diagnostic identifies source, node and property", "Corrected files recover normally"]},
+    {"id": "registry.extension", "steps": ["Register a custom graph widget with typed properties", "Mount it from markup", "Change bound values", "Remove and remount it"], "expect": ["No parser or renderer edits are needed for registration", "Values update through typed bindings", "Ownership and teardown are explicit", "Invalid registration rejects atomically"]},
+    {"id": "component.reuse", "steps": ["Instantiate two status-pill components", "Bind different values", "Change shared styling"], "expect": ["Scoped IDs do not collide", "Values remain independent", "Both instances receive styling", "Recursive or oversized expansion rejects atomically"]},
+    {"id": "lifecycle", "steps": ["Destroy a selected resource", "Destroy the view owner while controls have focus", "Close and reopen the app", "End the world session"], "expect": ["No stale brush/resource access", "No callbacks into destroyed owners", "No retained world handles or leaked widgets", "Fresh log contains no unexpected ensures, errors or script warnings"]},
+    {"id": "game.packaged", "steps": ["Launch packaged Development build", "Load staged authored files", "Navigate using keyboard and controller", "Change supported culture", "Close and reopen the surface"], "expect": ["No editor-only dependencies", "Every action is reachable with visible focus", "Localized text renders and wraps", "Runtime resources and teardown remain valid"]}
+  ]
+}
