@@ -52,10 +52,23 @@ namespace ck
             // an unconsumed CURRENT-revision answer means an episode ended without releasing the query.
             if (InPathResult.Get_HasFreshResult())
             {
-                ck::crowd::Log(
-                    TEXT("CrowdAgent [{}] dropped a GroundNav path result ({}) with no active "
-                         "movement tags — its episode ended without releasing the query"),
-                    InHandle, InPathResult.Get_Result().Get_Status());
+                // _HasFreshResult has no consumer-side clear (see the comment above), so the drop below
+                // would otherwise log every frame for as long as this stale result sits fresh. Keyed by
+                // revision like FFragment_CrowdAgent_ShadowCompared, so a fresh drop is still reported.
+                const auto DroppedRevision = InPathResult.Get_Result().Get_RequestRevision();
+
+                auto NonConstHandle = InHandle;
+                auto& DroppedSeen = NonConstHandle.AddOrGet<FFragment_CrowdAgent_DroppedResultSeen>();
+
+                if (DroppedSeen.Get_LastDroppedRevision() != DroppedRevision)
+                {
+                    DroppedSeen._LastDroppedRevision = DroppedRevision;
+
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] dropped a GroundNav path result ({}) with no active "
+                             "movement tags — its episode ended without releasing the query"),
+                        InHandle, InPathResult.Get_Result().Get_Status());
+                }
             }
             return;
         }
@@ -141,11 +154,14 @@ namespace ck
                 // Steering's plane-crossing retirement comes from where the agent IS at install time.
                 InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
-                // A ground route is not planned against Recast, so nothing about it can be invalidated
-                // by a stationary-markup disc — adopt the current serial so PathRefresh never re-paths
-                // a freshly installed one.
-                InPathFollow._PathSerial =
-                    FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
+                // PathRefresh re-paths only for a disc whose confirmation serial is NEWER than the
+                // path's, so the serial stamped here is the confirmation serial as of INSTALL time:
+                // every disc already confirmed when this route was planned is priced into it, and only
+                // one confirmed afterwards is fresh evidence against it. A DISPATCH-time serial is the
+                // wrong stamp: every route through a settling crowd would re-path on every later
+                // confirmation, an unbounded chase - the in-flight window is the rebuild invalidator's
+                // to cover, not this seam's.
+                InPathFollow._PathSerial = FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledGroundNavPath>();
                 Installed._GoalLocation = InPathFollow.Get_ActiveGoal();
@@ -196,12 +212,12 @@ namespace ck
 
                 FCk_Nav_Algorithm::FailPath(NonConstHandle, Verdict._Reason, ActiveRevision);
 
-                // The status write alone drives the crowd's failure sequence — OnPathResolved owns the
-                // tag transition and the single OnGoalFailed. The nav-layer signal is separate and is
-                // NOT emitted by that processor: CkNavigation broadcasts it beside its own status
-                // write, and the install seam broadcasts Nav_OnPathReady beside its own, so a provider
-                // that skipped this would leave a GroundNav failure silent to every consumer bound to
-                // the shared slot while a Recast failure is not.
+                // Nav_OnPathFailed is the per-query nav contract, not the crowd episode's verdict:
+                // both providers broadcast it once per FAILED QUERY, so a strict-phase failure the
+                // crowd retries with the permissive filter fires it too — that query genuinely
+                // failed, even though the episode itself has not ended. OnPathResolved owns the tag
+                // transition and the single terminal OnGoalFailed; a consumer that wants the
+                // EPISODE's verdict binds CrowdAgent_OnGoalFailed, not this signal.
                 auto BaseHandle = NonConstHandle.ConvertToHandle();
 
                 // The episode is over, so a crossing the dropped route was driving is over with it.

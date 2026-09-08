@@ -44,11 +44,25 @@ namespace ck
      * every route through the endpoint tile that did not use the link is unaffected. A corridor older
      * than it has missed ground moving - a repair and a derive landing in one tick is exactly that -
      * and falls to bounds, as does a world with no field to read a note from.
+     *
+     * A SEARCH IN FLIGHT IS ANSWERED BY ITS REQUEST, NOT BY ITS CORRIDOR. A sliced search pins the
+     * field it reads at Request_Begin and holds it for the whole episode, so a rebuild published
+     * mid-search moves ground the eventual route will not have seen - and there is no corridor yet
+     * to intersect. That agent is measured against the box its request's two ends span, grown by the
+     * same inflation a published corridor's box carries, and the answer is PARKED on the result slot
+     * rather than raised as a repath: a search has to finish before it can be told to start again.
+     * The success publish spends it (CkGroundNavPath_Processor.cpp, DoPublish_Success).
+     *
+     * THIS ARM FIRES AT MOST ONCE PER AGENT LIFETIME. It is reachable only while the path holds no
+     * corridor, and a corridor, once published, never goes invalid again - so every rebuild an agent
+     * meets after its first successful plan is answered by the corridor half above instead.
      */
     class CKGROUNDNAV_API FProcessor_GroundNavPath_InvalidateOnRebuilt : public ck_exp::TProcessor<
         FProcessor_GroundNavPath_InvalidateOnRebuilt,
         FCk_Handle_GroundNavPath,
+        ck::TReadOnly<FFragment_GroundNavPath_Params>,
         ck::TReadOnly<FFragment_GroundNavPath_Current>,
+        ck::TReadWrite<FFragment_GroundNavPath_Result>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -68,7 +82,9 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent) const -> void;
+            const FFragment_GroundNavPath_Params& InParams,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath_Result& InResult) const -> void;
 
     private:
         // The exact half of the decision: flags only when the corridor crosses one of the links the
@@ -78,6 +94,15 @@ namespace ck
             HandleType                                                InPathEntity,
             const FFragment_GroundNavPath_Current&                    InCurrent,
             const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const -> void;
+
+        // The corridor-less half: an episode whose search has BEGUN is measured against its request's
+        // own bounds, and what it finds is parked on the slot for the publish to spend.
+        auto
+        DoTry_ArmInFlightSearch(
+            HandleType                             InPathEntity,
+            const FFragment_GroundNavPath_Params&  InParams,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath_Result&        InResult) const -> void;
 
     private:
         // The world entity's queue, BORROWED for the length of one pass and never copied - a copy would

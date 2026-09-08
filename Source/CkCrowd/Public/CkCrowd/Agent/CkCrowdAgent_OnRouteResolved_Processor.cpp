@@ -156,6 +156,7 @@ namespace ck
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
+                        InParams.Get_NavQueryFilter(),
                         EscapeWaypoints);
                 const auto DetourStart = UsedNavigableEscapePrefix
                     ? EscapeWaypoints.Last()
@@ -174,6 +175,7 @@ namespace ck
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
+                        InParams.Get_NavQueryFilter(),
                         DetouredWaypoints);
                 if (UsedStationaryMarkupDetour)
                 { WaypointsToInstall = MoveTemp(DetouredWaypoints); }
