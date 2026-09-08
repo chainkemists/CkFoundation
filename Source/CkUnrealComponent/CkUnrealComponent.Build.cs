@@ -5,6 +5,8 @@ public class CkUnrealComponent : CkModuleRules
 {
     public CkUnrealComponent(ReadOnlyTargetRules Target) : base(Target)
     {
+        PrivateDependencyModuleNames.Add("CkProfile");
+
         PrivateIncludePaths.AddRange(new string[] {
         });
 
