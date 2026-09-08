@@ -9,6 +9,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkProfile/Stats/CkCpuWork.h"
+
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 #include "CkUsf/Stylize/CkUsf_CelShadeSubsystem.h"
@@ -22,6 +24,8 @@
 #include "Components/SceneComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
+
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 #if WITH_EDITOR
 namespace ck_iskm_batched_crowd
@@ -526,6 +530,9 @@ auto
     PushTile(const FIntVector& InKey)
     -> void
 {
+    const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+    TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdDirtyUploads, CpuWorkEnabled);
+
     UCk_Iskm_BatchedClusterComponent* Comp = _Tiles.FindRef(InKey);
     if (ck::Is_NOT_Valid(Comp))
     { return; }
@@ -535,11 +542,16 @@ auto
 
     TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
     Visible.Reserve(MemberIndices->Num());
+    int64 UploadedInstances = 0;
     for (const int32 MemberIndex : *MemberIndices)
     {
         const FMember& M = _Members[MemberIndex];
         if (M.Visible)
-        { Visible.Add(M.Inst); }
+        {
+            Visible.Add(M.Inst);
+            if (CpuWorkEnabled)
+            { ++UploadedInstances; }
+        }
     }
 
     // Visibility/migration already recreate the proxy at write time, so a mismatch here is a bookkeeping bug.
@@ -557,6 +569,12 @@ auto
     {
         FMember& M = _Members[MemberIndex];
         M.Inst.PrevPushedTransform = M.Inst.Transform;
+    }
+
+    if (CpuWorkEnabled)
+    {
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdUploadCandidates, MemberIndices->Num());
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdUploadedInstances, UploadedInstances);
     }
 }
 
@@ -585,6 +603,9 @@ auto
     AdvanceAnimation(float InDeltaTime)
     -> void
 {
+    const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+    TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdAdvance, CpuWorkEnabled);
+
     // Rendering is client-local; a dedicated server has nothing to feed.
     if (GetNetMode() == NM_DedicatedServer)
     { return; }
@@ -595,34 +616,62 @@ auto
         TEXT("[CkIskm] Crowd [{}]: AnimCollection [{}] has no baked pose — crowd animation frozen"), this, _Collection)
     { return; }
 
+    int64 FrozenSkips = 0;
+    int64 IntervalSkips = 0;
+    int64 ZeroRateSkips = 0;
+    int64 FrameChanges = 0;
+    int64 VisibleFrameChanges = 0;
+
     // Advance ALL members (hidden ones too, so they rejoin in phase after a flip-demote).
-    for (FMember& M : _Members)
     {
-        const auto* Tuners = _RuntimeProfileTuners.IsValidIndex(M.ProfileIndex)
-            ? &_RuntimeProfileTuners[M.ProfileIndex] : nullptr;
-        if (Tuners != nullptr && Tuners->Get_FreezeFarAnimation() == ECk_EnableDisable::Enable)
-        { continue; }
-        const float Interval = Tuners != nullptr
-            ? static_cast<float>(Tuners->Get_FarAnimationUpdateInterval().Get_Seconds()) : 0.0f;
-        M.ProfileAnimationAccumulator += InDeltaTime;
-        if (Interval > 0.0f && M.ProfileAnimationAccumulator < Interval)
-        { continue; }
-        // Keep the authoritative monotonic clock continuous; interval only throttles pose uploads.
-        const float AdvanceDelta = M.ProfileAnimationAccumulator;
-        M.ProfileAnimationAccumulator = 0.0f;
-        if (M.Inst.Rate == 0.0f)
-        { continue; }
-        M.Inst.Time += AdvanceDelta * M.Inst.Rate;
-        const int32 NewFrame = Baked->Get_LoopedFrameAtTime(M.Inst.SequenceIndex, M.Inst.Time);
-        if (NewFrame != M.Inst.CurFrame)
+        TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdMemberLoop, CpuWorkEnabled);
+        for (FMember& M : _Members)
         {
-            M.Inst.PrevFrame = M.Inst.CurFrame;
-            M.Inst.CurFrame = NewFrame;
-            if (M.Visible)
-            { _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex)); }
+            const auto* Tuners = _RuntimeProfileTuners.IsValidIndex(M.ProfileIndex)
+                ? &_RuntimeProfileTuners[M.ProfileIndex] : nullptr;
+            if (Tuners != nullptr && Tuners->Get_FreezeFarAnimation() == ECk_EnableDisable::Enable)
+            {
+                if (CpuWorkEnabled)
+                { ++FrozenSkips; }
+                continue;
+            }
+            const float Interval = Tuners != nullptr
+                ? static_cast<float>(Tuners->Get_FarAnimationUpdateInterval().Get_Seconds()) : 0.0f;
+            M.ProfileAnimationAccumulator += InDeltaTime;
+            if (Interval > 0.0f && M.ProfileAnimationAccumulator < Interval)
+            {
+                if (CpuWorkEnabled)
+                { ++IntervalSkips; }
+                continue;
+            }
+            // Keep the authoritative monotonic clock continuous; interval only throttles pose uploads.
+            const float AdvanceDelta = M.ProfileAnimationAccumulator;
+            M.ProfileAnimationAccumulator = 0.0f;
+            if (M.Inst.Rate == 0.0f)
+            {
+                if (CpuWorkEnabled)
+                { ++ZeroRateSkips; }
+                continue;
+            }
+            M.Inst.Time += AdvanceDelta * M.Inst.Rate;
+            const int32 NewFrame = Baked->Get_LoopedFrameAtTime(M.Inst.SequenceIndex, M.Inst.Time);
+            if (NewFrame != M.Inst.CurFrame)
+            {
+                if (CpuWorkEnabled)
+                { ++FrameChanges; }
+                M.Inst.PrevFrame = M.Inst.CurFrame;
+                M.Inst.CurFrame = NewFrame;
+                if (M.Visible)
+                {
+                    if (CpuWorkEnabled)
+                    { ++VisibleFrameChanges; }
+                    _DirtyTiles.Add(MakeBucketKey(M.Tile, M.ProfileIndex));
+                }
+            }
         }
     }
 
+    const auto DirtyTilePushes = static_cast<int64>(_DirtyTiles.Num());
     for (const FIntVector& Tile : _DirtyTiles)
     {
         PushTile(Tile);
@@ -644,6 +693,19 @@ auto
     {
         Push_HighlightGroup(Pair.Value);
     }
+
+    if (CpuWorkEnabled)
+    {
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdMembersVisited, _Members.Num());
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdFrozenSkips, FrozenSkips);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdIntervalSkips, IntervalSkips);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdZeroRateSkips, ZeroRateSkips);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdFrameChanges, FrameChanges);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdVisibleFrameChanges, VisibleFrameChanges);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdDirtyTilePushes, DirtyTilePushes);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CrowdHighlightPushes,
+            _OutlineGroups.Num() + _CelGroups.Num() + _StylizeMaskGroups.Num());
+    }
 }
 
 auto
@@ -651,8 +713,17 @@ auto
     DriveCosmetics()
     -> void
 {
+    const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+    TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdCosmetics, CpuWorkEnabled);
+
     if (_MemberCosmetics.Num() == 0)
     { return; }
+
+    const auto CosmeticBuckets = static_cast<int64>(_MemberCosmetics.Num());
+    int64 CosmeticsVisited = 0;
+    int64 CosmeticsPruned = 0;
+    int64 CosmeticSocketMisses = 0;
+    int64 CosmeticTransformRequests = 0;
 
     // Must run in the same processor tick as AdvanceAnimation, on the SAME _Members snapshot PushTile just
     // rendered. Request_SetTransform is the deferred cross-entity write: HandleRequests applies it later
@@ -665,19 +736,41 @@ auto
         for (int32 Idx = Cosmetics.Num() - 1; Idx >= 0; --Idx)
         {
             FMemberCosmetic& C = Cosmetics[Idx];
+            if (CpuWorkEnabled)
+            { ++CosmeticsVisited; }
             if (ck::Is_NOT_Valid(C.Cosmetic))
-            { Cosmetics.RemoveAtSwap(Idx); continue; }   // cosmetic destroyed — prune
+            {
+                if (CpuWorkEnabled)
+                { ++CosmeticsPruned; }
+                Cosmetics.RemoveAtSwap(Idx);
+                continue;
+            }   // cosmetic destroyed — prune
 
             FTransform SocketWorld;
             if (TryGet_MemberSocketTransform(MemberIndex, C.Socket, SocketWorld) == false)
-            { continue; }   // no baked socket / bad index — leave it parked
+            {
+                if (CpuWorkEnabled)
+                { ++CosmeticSocketMisses; }
+                continue;
+            }   // no baked socket / bad index — leave it parked
 
             UCk_Utils_Transform_UE::Request_SetTransform(
                 C.Cosmetic, FCk_Request_Transform_SetTransform{C.RelOffset * SocketWorld}, {});
+            if (CpuWorkEnabled)
+            { ++CosmeticTransformRequests; }
         }
 
         if (Cosmetics.Num() == 0)
         { It.RemoveCurrent(); }
+    }
+
+    if (CpuWorkEnabled)
+    {
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticBuckets, CosmeticBuckets);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticsVisited, CosmeticsVisited);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticsPruned, CosmeticsPruned);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticSocketMisses, CosmeticSocketMisses);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticTransformRequests, CosmeticTransformRequests);
     }
 }
 
@@ -1464,6 +1557,9 @@ void
     ACk_Iskm_BatchedCrowd_Actor::
     Push_HighlightGroup(FHighlightGroup& InGroup)
 {
+    const auto CpuWorkEnabled = ck::cpu_work::Get_Enabled();
+    TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_CrowdHighlightUploads, CpuWorkEnabled);
+
     auto* Comp = InGroup.Comp.Get();
     if (ck::Is_NOT_Valid(Comp))
     { return; }
