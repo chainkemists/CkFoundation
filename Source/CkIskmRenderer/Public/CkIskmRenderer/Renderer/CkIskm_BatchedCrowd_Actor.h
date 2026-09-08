@@ -104,7 +104,15 @@ public:
     bool       TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const;
 
     // Hide/show a member in its batched tile (rebuilds that one tile), leaving a gap for a per-SKMC stand-in.
+    // An inactive pooled member may remain hidden but cannot become visible until reactivated.
     void       Set_MemberVisible(int32 InIndex, bool InVisible);
+
+    // Opt a pooled member out of manager work while it has no owner. New members remain active for
+    // compatibility; callers must opt pooled free slots out explicitly. An inactive member does not advance
+    // its clock and cannot become visible or register cosmetics. Callers must hide it and clear any cosmetic
+    // registrations before deactivation, then activate it before restoring its visual/cosmetic state.
+    void       Set_MemberActive(int32 InIndex, bool InActive);
+    bool       Get_MemberActive(int32 InIndex) const;
 
     // Default CustomPrimitiveData floats applied to EVERY tile component, existing and future. One shared
     // value set per crowd; per-member variation needs the per-instance floats via Set_MemberCustomData.
@@ -199,6 +207,7 @@ public:
     void       DriveCosmetics();
 
     // A cosmetic ISM entity rides InIndex's baked socket while its member is far. Replace-if-same-entity.
+    // Inactive pooled members reject new registrations.
     void       Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset);
 
     // Drop all cosmetics registered to InIndex (promote / hide / slot release). Idempotent.
@@ -211,6 +220,7 @@ private:
         FIntPoint  Tile = FIntPoint(0, 0);
         UCk_Iskm_BatchedClusterComponent::FInstance Inst;
         bool       Visible = true;
+        bool       Active = true;
         int32      ProfileIndex = 0;
         float      ProfileAnimationAccumulator = 0.0f;
     };
@@ -279,6 +289,7 @@ private:
     TSet<FIntVector> _DirtyTiles;
 
     TArray<FMember> _Members;
+    TSet<int32> _ActiveMemberIndices;
 
     // ---- custom-depth highlight state (outlines + cel patterns share this machinery) ----
 

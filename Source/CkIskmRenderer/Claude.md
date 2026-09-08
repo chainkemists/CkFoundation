@@ -162,6 +162,10 @@ recomputes bounds. Rendering is client-local: no replication, and all ticking is
 - `Set_CrowdMemberVisible(i, false)` + spawn a Plan-1 `IskmProxy` at the member's transform — the distance-LOD /
   gameplay flip (ragdoll, montage, sockets). Reverse to return to batched. Hidden members keep advancing time, so
   they rejoin in phase. See the Flip gym station for the reference orbit (hysteresis + promote cap).
+- `Set_CrowdMemberActive(i, false)` — an opt-in pool-free-slot optimization. New members are active for backwards
+  compatibility; BusterBlock deactivates only slots with no owner after hiding and clearing cosmetics. Inactive
+  members do not advance, cannot be shown, and cannot acquire cosmetics. Reacquire in this order: activate, restore
+  member visual state, then register cosmetics. Hidden owned members remain active to preserve animation phase.
 - Mesh **variety**: one crowd actor per AnimCollection — use several collections (one per character mesh) for
   visual variety; they batch independently.
 
