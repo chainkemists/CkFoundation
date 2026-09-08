@@ -5,6 +5,9 @@
 
 #include <Containers/Map.h>
 #include <HAL/PlatformMisc.h>
+#include <HAL/PlatformTime.h>
+
+#include <atomic>
 
 #if WITH_ANGELSCRIPT_CK
 #include "AngelscriptBinds.h"
@@ -16,6 +19,47 @@
 
 namespace ck
 {
+    namespace
+    {
+        // The pre-compile callback can run on a worker in packaged builds. It must not clear a
+        // different thread's TLS map; lookup observes this epoch and clears its own map instead.
+        std::atomic<uint64> GActiveScriptScopeStatCacheEpoch{1};
+
+#if WITH_ANGELSCRIPT_CK
+#if STATS
+        struct FActiveScriptScopeStatThreadCache
+        {
+            uint64 _Epoch = 0;
+            TMap<int32, TStatId> _StatIds;
+
+#if WITH_DEV_AUTOMATION_TESTS
+            uint64 _HitCount = 0;
+            uint64 _MissCount = 0;
+#endif
+        };
+
+        static thread_local FActiveScriptScopeStatThreadCache GActiveScriptScopeStatThreadCache;
+#endif
+
+        auto
+            Get_ScriptScopeName(
+                asIScriptFunction* InFunction)
+            -> FString
+        {
+            auto Method = FString{StringCast<TCHAR>(InFunction->GetName()).Get()};
+            Method.RemoveFromEnd(TEXT("_Implementation"));
+
+            if (auto* ObjType = InFunction->GetObjectType(); ObjType != nullptr)
+            {
+                const auto ClassName = FString{StringCast<TCHAR>(ObjType->GetName()).Get()};
+                return ClassName + TEXT("::") + Method;
+            }
+
+            return Method;
+        }
+#endif
+    }
+
     auto
         Get_ScopedStat_StatId(
             const FString& InName)
@@ -53,20 +97,238 @@ namespace ck
         if (Func == nullptr)
         { return FString{TEXT("Script::Unknown")}; }
 
-        auto Method = FString{StringCast<TCHAR>(Func->GetName()).Get()};
-        Method.RemoveFromEnd(TEXT("_Implementation"));
-
-        if (auto* ObjType = Func->GetObjectType(); ObjType != nullptr)
-        {
-            const auto ClassName = FString{StringCast<TCHAR>(ObjType->GetName()).Get()};
-            return ClassName + TEXT("::") + Method;
-        }
-
-        return Method;
+        return Get_ScriptScopeName(Func);
 #else
         return FString{TEXT("Script::Unknown")};
 #endif
     }
+
+#if STATS
+    auto
+        Get_ActiveScriptScopeStatId()
+        -> TStatId
+    {
+#if WITH_ANGELSCRIPT_CK
+        auto* Context = FAngelscriptManager::GetCurrentScriptContext();
+        if (Context == nullptr)
+        { return Get_ScopedStat_StatId(FString{TEXT("Script::Unknown")}); }
+
+        auto* Func = Context->GetFunction(0);
+        if (Func == nullptr || Func->GetId() < 0)
+        { return Get_ScopedStat_StatId(FString{TEXT("Script::Unknown")}); }
+
+        auto& Cache = GActiveScriptScopeStatThreadCache;
+
+        const auto Epoch = GActiveScriptScopeStatCacheEpoch.load(std::memory_order_acquire);
+        if (Cache._Epoch != Epoch)
+        {
+            Cache._StatIds.Reset();
+            Cache._Epoch = Epoch;
+        }
+
+        const auto FunctionId = Func->GetId();
+        if (const auto* const Found = Cache._StatIds.Find(FunctionId))
+        {
+#if WITH_DEV_AUTOMATION_TESTS
+            ++Cache._HitCount;
+#endif
+            return *Found;
+        }
+
+        const auto StatId = Get_ScopedStat_StatId(Get_ScriptScopeName(Func));
+        Cache._StatIds.Add(FunctionId, StatId);
+#if WITH_DEV_AUTOMATION_TESTS
+        ++Cache._MissCount;
+#endif
+        return StatId;
+#else
+        return Get_ScopedStat_StatId(FString{TEXT("Script::Unknown")});
+#endif
+    }
+#endif
+
+    auto
+        Invalidate_ActiveScriptScopeStatCache()
+        -> void
+    {
+        GActiveScriptScopeStatCacheEpoch.fetch_add(1, std::memory_order_release);
+    }
+
+#if WITH_DEV_AUTOMATION_TESTS
+    auto
+        Get_ActiveScriptScopeStatCacheEpoch_ForTests()
+        -> uint64
+    {
+        return GActiveScriptScopeStatCacheEpoch.load(std::memory_order_acquire);
+    }
+
+    auto
+        Get_IsScopedStatStatsEnabled_ForTests()
+        -> bool
+    {
+#if STATS
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeStatId_ForTests()
+        -> uint64
+    {
+#if STATS
+        return reinterpret_cast<uint64>(Get_ActiveScriptScopeStatId().GetRawPointer());
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Get_LegacyActiveScriptScopeStatId_ForTests()
+        -> uint64
+    {
+#if STATS
+        return reinterpret_cast<uint64>(Get_ScopedStat_StatId(Get_ActiveScriptScopeName()).GetRawPointer());
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeStatName_ForTests()
+        -> FString
+    {
+#if STATS
+        return Get_ActiveScriptScopeStatId().GetName().ToString();
+#else
+        return FString{TEXT("Unsupported: STATS=0")};
+#endif
+    }
+
+    auto
+        Get_LegacyActiveScriptScopeStatName_ForTests()
+        -> FString
+    {
+#if STATS
+        return Get_ScopedStat_StatId(Get_ActiveScriptScopeName()).GetName().ToString();
+#else
+        return FString{TEXT("Unsupported: STATS=0")};
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeStatDescription_ForTests()
+        -> FString
+    {
+#if STATS
+        return FString{Get_ActiveScriptScopeStatId().GetStatDescriptionWIDE()};
+#else
+        return FString{TEXT("Unsupported: STATS=0")};
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeStatCacheHitCount_ForTests()
+        -> uint64
+    {
+#if STATS
+#if WITH_ANGELSCRIPT_CK
+        return GActiveScriptScopeStatThreadCache._HitCount;
+#else
+        return 0;
+#endif
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeStatCacheMissCount_ForTests()
+        -> uint64
+    {
+#if STATS
+#if WITH_ANGELSCRIPT_CK
+        return GActiveScriptScopeStatThreadCache._MissCount;
+#else
+        return 0;
+#endif
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Reset_ActiveScriptScopeStatCacheCounters_ForTests()
+        -> void
+    {
+#if STATS
+#if WITH_ANGELSCRIPT_CK
+        GActiveScriptScopeStatThreadCache._HitCount = 0;
+        GActiveScriptScopeStatThreadCache._MissCount = 0;
+#endif
+#endif
+    }
+
+    auto
+        Run_ActiveScriptScopeStatBenchmark_ForTests()
+        -> FString
+    {
+#if STATS
+        constexpr auto Iterations = 8192;
+        constexpr auto Repeats = 3;
+        auto CachedTotalSeconds = 0.0;
+        auto LegacyTotalSeconds = 0.0;
+        auto CachedChecksum = int64{0};
+        auto LegacyChecksum = int64{0};
+
+        const auto RunCached = [&CachedChecksum]() -> double
+        {
+            const auto StartSeconds = FPlatformTime::Seconds();
+            for (auto Index = 0; Index < Iterations; ++Index)
+            {
+                auto Scope = FCk_ScopedStat{};
+                CachedChecksum += Index;
+            }
+            return FPlatformTime::Seconds() - StartSeconds;
+        };
+        const auto RunLegacy = [&LegacyChecksum]() -> double
+        {
+            const auto StartSeconds = FPlatformTime::Seconds();
+            for (auto Index = 0; Index < Iterations; ++Index)
+            {
+                const auto ScopeName = Get_ActiveScriptScopeName();
+                auto Scope = FCk_ScopedStat{ScopeName};
+                LegacyChecksum += Index;
+            }
+            return FPlatformTime::Seconds() - StartSeconds;
+        };
+
+        auto Report = FString{};
+        for (auto Repeat = 0; Repeat < Repeats; ++Repeat)
+        {
+            const auto CachedFirst = (Repeat % 2) == 0;
+            const auto CachedSeconds = CachedFirst ? RunCached() : 0.0;
+            const auto LegacySeconds = CachedFirst ? RunLegacy() : 0.0;
+            const auto LegacySecondsSecond = CachedFirst ? 0.0 : RunLegacy();
+            const auto CachedSecondsSecond = CachedFirst ? 0.0 : RunCached();
+            const auto ActualCachedSeconds = CachedFirst ? CachedSeconds : CachedSecondsSecond;
+            const auto ActualLegacySeconds = CachedFirst ? LegacySeconds : LegacySecondsSecond;
+            CachedTotalSeconds += ActualCachedSeconds;
+            LegacyTotalSeconds += ActualLegacySeconds;
+            Report += FString::Printf(TEXT(" repeat=%d cached=%.3fms legacy=%.3fms"),
+                Repeat + 1, ActualCachedSeconds * 1000.0, ActualLegacySeconds * 1000.0);
+        }
+
+        return FString::Printf(
+            TEXT("[CkProfile ScopedStat lookup bench] actual AS context; iterations=%d repeats=%d cachedMean=%.3fms legacyMean=%.3fms cachedChecksum=%lld legacyChecksum=%lld;%s"),
+            Iterations, Repeats, CachedTotalSeconds * 1000.0 / Repeats, LegacyTotalSeconds * 1000.0 / Repeats,
+            CachedChecksum, LegacyChecksum, *Report);
+#else
+        return FString{TEXT("[CkProfile ScopedStat lookup bench] unsupported: STATS=0")};
+#endif
+    }
+#endif // WITH_DEV_AUTOMATION_TESTS
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -75,7 +337,7 @@ namespace ck
 
 FCk_ScopedStat::
     FCk_ScopedStat()
-    : _Cycle(ck::Get_ScopedStat_StatId(ck::Get_ActiveScriptScopeName()))
+    : _Cycle(ck::Get_ActiveScriptScopeStatId())
 {
 }
 
@@ -143,6 +405,33 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_ck_ScopedStat(FAngelscriptBind
     // Also the seam the AutoTest uses to assert "<Class>::<Method>".
     FAngelscriptBinds::BindGlobalFunction("FString Get_ActiveScriptScopeName()",
         []() -> FString { return ck::Get_ActiveScriptScopeName(); });
+
+#if WITH_DEV_AUTOMATION_TESTS
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeStatCacheEpoch_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeStatCacheEpoch_ForTests()); });
+    FAngelscriptBinds::BindGlobalFunction("void Invalidate_ActiveScriptScopeStatCache_ForTests()",
+        []() -> void { ck::Invalidate_ActiveScriptScopeStatCache(); });
+    FAngelscriptBinds::BindGlobalFunction("bool Get_IsScopedStatStatsEnabled_ForTests()",
+        []() -> bool { return ck::Get_IsScopedStatStatsEnabled_ForTests(); });
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeStatId_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeStatId_ForTests()); });
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_LegacyActiveScriptScopeStatId_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_LegacyActiveScriptScopeStatId_ForTests()); });
+    FAngelscriptBinds::BindGlobalFunction("FString Get_ActiveScriptScopeStatName_ForTests()",
+        []() -> FString { return ck::Get_ActiveScriptScopeStatName_ForTests(); });
+    FAngelscriptBinds::BindGlobalFunction("FString Get_LegacyActiveScriptScopeStatName_ForTests()",
+        []() -> FString { return ck::Get_LegacyActiveScriptScopeStatName_ForTests(); });
+    FAngelscriptBinds::BindGlobalFunction("FString Get_ActiveScriptScopeStatDescription_ForTests()",
+        []() -> FString { return ck::Get_ActiveScriptScopeStatDescription_ForTests(); });
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeStatCacheHitCount_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeStatCacheHitCount_ForTests()); });
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeStatCacheMissCount_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeStatCacheMissCount_ForTests()); });
+    FAngelscriptBinds::BindGlobalFunction("void Reset_ActiveScriptScopeStatCacheCounters_ForTests()",
+        []() -> void { ck::Reset_ActiveScriptScopeStatCacheCounters_ForTests(); });
+    FAngelscriptBinds::BindGlobalFunction("FString Run_ActiveScriptScopeStatBenchmark_ForTests()",
+        []() -> FString { return ck::Run_ActiveScriptScopeStatBenchmark_ForTests(); });
+#endif
 });
 
 #endif

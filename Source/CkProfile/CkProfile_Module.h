@@ -13,4 +13,9 @@ public:
 private:
     void OnBeginFrame();
     void OnEndFrame();
+
+#if WITH_ANGELSCRIPT_CK && STATS
+    FDelegateHandle _PreCompileDelegateHandle;
+    FDelegateHandle _PostCompileDelegateHandle;
+#endif
 };
