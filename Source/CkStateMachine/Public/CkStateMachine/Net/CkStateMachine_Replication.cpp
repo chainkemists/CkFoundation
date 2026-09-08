@@ -304,7 +304,9 @@ namespace ck_state_machine_replication
                         { return {}; }
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
-                        if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
+                        const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
+                        if (NOT Params.Get_ShouldPersistCurrentState()
+                            || Params.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
                         { return {}; }
 
                         const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
@@ -335,6 +337,10 @@ namespace ck_state_machine_replication
                     },
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
+                        if (Entity.Has<ck::FFragment_Sm_Params>()
+                            && NOT Entity.Get<ck::FFragment_Sm_Params>().Get_ShouldPersistCurrentState())
+                        { return ECk_Persistence_ApplyResult::Applied; }
+
                         const auto& Payload = New.Get<FCk_RepData_StateMachine_WithHistory>();
                         const auto DesiredStateClass = Payload.Get_History().IsEmpty()
                             ? TSubclassOf<UCk_SmState_EntityScript>{}
@@ -353,7 +359,9 @@ namespace ck_state_machine_replication
                         { return {}; }
                         if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
-                        if (Entity.Get<ck::FFragment_Sm_Params>().Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithoutHistory)
+                        const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
+                        if (NOT Params.Get_ShouldPersistCurrentState()
+                            || Params.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithoutHistory)
                         { return {}; }
 
                         const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
@@ -401,6 +409,10 @@ namespace ck_state_machine_replication
                     },
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
+                        if (Entity.Has<ck::FFragment_Sm_Params>()
+                            && NOT Entity.Get<ck::FFragment_Sm_Params>().Get_ShouldPersistCurrentState())
+                        { return ECk_Persistence_ApplyResult::Applied; }
+
                         const auto& Payload = New.Get<FCk_RepData_StateMachine_NoHistory>();
                         return Sm_StashHydrationResume(Entity, Payload.Get_RunStatus(), Payload.Get_CurrentStateClass(),
                             Payload.Get_SavedStateOverrides());

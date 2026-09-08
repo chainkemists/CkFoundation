@@ -431,6 +431,7 @@ private:
     int32 _BoundLimit = 1;
     ECk_Inventory_StackingPolicy _StackingPolicy = ECk_Inventory_StackingPolicy::UseItemDefinition;
     int32 _MaxStackSizeClamp = 1;
+    ECk_EnableDisable _PersistContents = ECk_EnableDisable::Enable;
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
     FMemberReference _CanAcceptItemRef;
@@ -449,6 +450,7 @@ public:
     CK_PROPERTY_GET(_BoundLimit);
     CK_PROPERTY_GET(_StackingPolicy);
     CK_PROPERTY_GET(_MaxStackSizeClamp);
+    CK_PROPERTY_GET(_PersistContents);
     CK_PROPERTY(_CustomCanAcceptItem);
     CK_PROPERTY(_CustomCanAcceptItemDynamic);
     CK_PROPERTY(_CanAcceptItemRef);

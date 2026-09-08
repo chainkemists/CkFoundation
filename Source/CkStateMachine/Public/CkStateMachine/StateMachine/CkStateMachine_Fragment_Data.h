@@ -223,12 +223,19 @@ private:
                 EditCondition = "_Replication == ECk_Replication::Replicates"))
     ECk_Sm_ReplicationModel _ReplicationModel = ECk_Sm_ReplicationModel::WithHistory;
 
+    // Save-only state transport is independent of live replication. When false, Produce omits the
+    // SM payload and HydrationApply ignores any older payload so reconstruction keeps its authored state.
+    UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _ShouldPersistCurrentState = true;
+
 public:
     CK_PROPERTY_GET(_InitialStateClass);
     CK_PROPERTY(_AutoStart);
     CK_PROPERTY(_Replication);
     CK_PROPERTY(_AuthorityModel);
     CK_PROPERTY(_ReplicationModel);
+    CK_PROPERTY(_ShouldPersistCurrentState);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_StateMachine_ParamsData, _InitialStateClass);
