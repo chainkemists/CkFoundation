@@ -1,0 +1,2 @@
+# Keep the verified upstream source byte-identical across Git checkouts.
+Public/CkYoga/yoga-3.2.1/** -text
