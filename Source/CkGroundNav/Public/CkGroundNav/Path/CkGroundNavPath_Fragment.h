@@ -35,6 +35,30 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * What the corridor box is grown by beyond the body's own radius: ONE CELL of the field's default
+     * lattice (FCk_GroundNav_BakeConfig::_CellSizeUu, 25uu).
+     *
+     * The box covers plate RECTANGLES, and a plate rectangle is where the ground is, not where the
+     * body may be while walking it: a string-pulled route hugs a plate edge, and a body of radius r
+     * standing on that edge occupies r past it. The radius answers that. The cell on top answers the
+     * lattice itself - a rebuild that changed only the cells either side of a door moves ground the
+     * corridor was priced through while leaving every plate rectangle it named intact, and a box cut
+     * exactly to those rectangles would read such a rebuild as untouching the route.
+     *
+     * One cell rather than the field's own cell size because a compile-time constant cannot ask a
+     * field that does not exist yet, and because the margin exists to absorb the lattice's grain
+     * rather than to measure it: a field baked finer than the default is covered by more than a cell
+     * of margin, which errs toward invalidating.
+     *
+     * IN THE HEADER because two passes have to agree on it: the publish that stores a corridor's box
+     * grows it by this, and the invalidator grows an in-flight search's request bounds by the same
+     * number so the two tests are one test on one geometry.
+     */
+    constexpr auto kCorridorInflationMarginUu = 25.0f;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     using FFragment_GroundNavPath_Params = FCk_Fragment_GroundNavPath_ParamsData;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -129,6 +153,7 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Field);
+        CK_PROPERTY_GET(_PendingRequest);
         CK_PROPERTY_GET(_HasBegun);
         CK_PROPERTY_GET(_PendingSince);
         CK_PROPERTY_GET(_LastCorridorKeys);
@@ -154,6 +179,11 @@ namespace ck
      * on nothing else, so a reader holding the number it last saw can tell a plan it has already read
      * from a new one that landed in the same slot - including two plans that publish between two of
      * its own reads, which a flag it has to clear behind itself cannot.
+     *
+     * _RebuiltWhileInFlight is the one thing here that is about the episode still RUNNING, and it
+     * lives beside the slot rather than on the episode because its whole life is the two ends of one
+     * publish: an episode cleared at the publish would take the answer with it. It is armed by the
+     * invalidator and disarmed either by the publish that acts on it or by the next request.
      */
     struct CKGROUNDNAV_API FFragment_GroundNavPath_Result
     {
@@ -162,6 +192,7 @@ namespace ck
 
         friend class FProcessor_GroundNavPath_HandleRequests;
         friend class FProcessor_GroundNavPath_Slice;
+        friend class FProcessor_GroundNavPath_InvalidateOnRebuilt;
         friend class ::UCk_Utils_GroundNavPath_UE;
         friend struct FGroundNavPath_Episode;
 
@@ -174,10 +205,19 @@ namespace ck
         // and a slot that has published nothing agree without either having to say so.
         int32 _PublishSequence = 0;
 
+        /** A published surface rebuild reached the bounds of the search this slot is waiting on. A
+         *  sliced search pins its field snapshot at Request_Begin, so a rebuild landing after that is
+         *  news the route it eventually answers cannot have read - and it holds no corridor yet for
+         *  the invalidator to measure, which is why the news is parked here instead of raising
+         *  FTag_GroundNavPath_RepathRequired against a plan that does not exist. The SUCCESS publish
+         *  is what spends it. */
+        bool _RebuiltWhileInFlight = false;
+
     public:
         CK_PROPERTY_GET(_Result);
         CK_PROPERTY_GET(_HasFreshResult);
         CK_PROPERTY_GET(_PublishSequence);
+        CK_PROPERTY_GET(_RebuiltWhileInFlight);
     };
 
     // ----------------------------------------------------------------------------------------------------------------

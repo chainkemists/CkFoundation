@@ -231,7 +231,10 @@ agents into bodies they could never pass (the queue-cross field symptom). A stri
 Failed on a genuine PLANNING VERDICT (no-path / find-path error / invalid / empty), or Partial
 ending short of the goal, re-dispatches the episode ONCE with the permissive toll filter
 (`OnPathResolved`, before the path-trouble stamp, revision advanced) — which is how queue-joiners
-still reach a slot beside standing bodies. Infrastructure failures never trigger the fallback:
+still reach a slot beside standing bodies. The strict query's own failure still broadcasts the
+per-query `Nav_OnPathFailed` signal exactly as any failed `Request_FindPath` would; the episode's
+verdict — whether it ultimately succeeds on the permissive retry or not — is CkCrowd's own
+`CrowdAgent_OnGoalFailed`, not that signal. Infrastructure failures never trigger the fallback:
 projection is unfiltered (a strict projection miss fails permissive identically), NoNavData is
 filter-independent, and the pending watchdog's `PendingTimeout` MUST terminate exactly once — a
 fallback there resurrected the timed-out episode into a second Pending wait
@@ -457,7 +460,7 @@ point came within arrival radius. Nothing in the system was aware.
 | detector | how | catches | misses |
 |---|---|---|---|
 | **Geometric** (primary) | a *stationary* neighbour sits on the final waypoint such that `SelfRadius + NbrRadius` exceeds the arrival radius — so the closest the agent can physically get is further out than "arrived" — AND stands strictly nearer the goal than the agent itself (2D). The nearer test is the same acyclicity rule the cluster detector enforces on anchors: without it, the markup-bootstrapped innermost and its own settled dependent hold each other — each inside the other's foreclosure ring (< `SelfR+NbrR−Arrival` of the goal) — and the goal is never taken (observed: 0/15 reached, whole pack terminal, ~50% of runs once upstream timing shifted the settle race) | agent-occupied goals, **exactly and immediately**, naming the blocker | walls, props, multi-agent plugs; a foreclosing body the agent has already gotten NEARER the goal than (it presses on until arrival or the no-progress ladder — the ladder's crowd-regime starvation is known deferred work) |
-| **Cluster** (propagation) | a cached neighbour has SETTLED (reached-and-Idle, `GoalBlocked`, `GoalFailedHold`, or stationary-markup PAINTED), is parked inside our depth-chained GOAL REGION (`SelfRadius + NbrRadius + ArrivalRadius + _CrowdedGoalContactPadCm + AnchorDepth * (SelfRadius + NbrRadius)` of our `_ActiveGoal`), is in 2D contact (`SelfRadius + NbrRadius + _CrowdedGoalContactPadCm`), stands strictly nearer the goal, and lies in a ±60° cone around our direction of travel | the agents the geometric detector structurally cannot answer for — everyone behind the first ring of a crowd converging on one destination, and anyone whose destination a stranger simply stopped on | anything not made of settled agents standing on the destination |
+| **Cluster** (propagation) | a cached neighbour has SETTLED (reached-and-Idle, `GoalBlocked`, `GoalFailedHold`, or stationary-markup PAINTED), is parked inside our depth-chained GOAL REGION (`SelfRadius + NbrRadius - ArrivalRadius + _CrowdedGoalContactPadCm + AnchorDepth * (SelfRadius + NbrRadius)` of our `_ActiveGoal`), is in 2D contact (`SelfRadius + NbrRadius + _CrowdedGoalContactPadCm`), stands strictly nearer the goal, and lies in a ±60° cone around our direction of travel | the agents the geometric detector structurally cannot answer for — everyone behind the first ring of a crowd converging on one destination, and anyone whose destination a stranger simply stopped on | anything not made of settled agents standing on the destination |
 | **No-progress** (safety net) | REMAINING PATH DISTANCE (agent → current waypoint + the polyline tail) sampled every `_BlockDetectionInterval`; a stall is `_BlockDetectionNoProgressWindowSeconds` without the windowed minimum improving by `_BlockDetectionProgressEpsilonCm` | everything else — walls, fixtures, multi-agent plugs, **and orbiting** | nothing the other two are for (it names no blocker) |
 
 **The no-progress detector measures progress along the path, not displacement.** It used to be UE's
@@ -525,21 +528,23 @@ a stable packed formation within about a second of contact.
 **It never reads the neighbour's goal, and that is the point.** Goal identity looked like the natural
 test and is the wrong one: agents sent to *nearby but unequal* points — a slot offset, a projected
 destination, two customers at the same shelf — form exactly the pile this tier exists for and would
-never match. And why a body is parked in your way is not a property you can act on: a stranger who
-simply stopped there obstructs precisely as much as a rival. What replaces goal identity is geometry,
-in three parts, each load-bearing:
+never match. Goals closer together than a body still pile — a 30 uu slot offset sits inside the 64 uu
+base region — while goals spaced a full body's width apart route around each other instead. And why a
+body is parked in your way is not a property you can act on: a stranger who simply stopped there
+obstructs precisely as much as a rival. What replaces goal identity is geometry, in three parts, each
+load-bearing:
 
-- **Goal region, chained by depth** — the neighbour must be parked within `SelfRadius + NbrRadius +
+- **Goal region, chained by depth** — the neighbour must be parked within `SelfRadius + NbrRadius -
   ArrivalRadius + _CrowdedGoalContactPadCm + AnchorDepth * (SelfRadius + NbrRadius)` of *your* goal.
-  The base term is "close enough that you could not stand where it does and still be short of your
-  own arrival tolerance"; the depth term is what lets the rule reach past the first ring (see below).
-  Since markup makes every stationary stranger a candidate anchor (see below), **this test plus
-  contact/nearer/cone is the entire protection against false blocks** — a picket line is "settled" now,
-  and only its distance from your goal keeps it inert. A stranger that is not itself crowd-blocked
-  (`GoalCrowded` or `GoalOccupied`)
+  The base term is the neighbour's body overlapping your ARRIVAL disc: you cannot rest within
+  `ArrivalRadius` of the goal without overlapping it; the depth term is what lets the rule reach past
+  the first ring (see below). Since markup makes every stationary stranger a candidate anchor (see
+  below), **this test plus contact/nearer/cone is the entire protection against false blocks** — a
+  picket line is "settled" now, and only its distance from your goal keeps it inert. A stranger that
+  is not itself crowd-blocked (`GoalCrowded` or `GoalOccupied`)
   contributes depth 0, so it never anchors beyond the base radius: `StationaryLine_PathsRouteAround`,
   both `PathRefresh` tests and `PathNetworkStationaryDetour` park their pickets 450-539cm from the
-  walker's goal against a 124cm base region, a 3.6-4.3× margin.
+  walker's goal against a 64cm base region, a 7.0-8.4× margin.
 - **Strictly nearer** — makes the anchor relation acyclic. A settled agent behind you can never stop
   you short of ground that is still free, and two agents can never hold each other.
 - **±60° frontal cone** (`FrontalConeCosine`, a file-local constant, not a knob) — the neighbour must
@@ -549,7 +554,7 @@ in three parts, each load-bearing:
   neighbour — passes the cone rather than failing it; the other tests already answer those states.
 
 **The region grows with the pile, via a depth chain.** A fixed region does not work, and the failure
-is not theoretical: with the flat 124cm region a 15-agent crowd settled at 96-180cm from the goal —
+is not theoretical: with the flat 64cm region a 15-agent crowd settled at 96-180cm from the goal —
 real packing is sparser than hex arithmetic predicts — so ring-2 bodies fell outside the region,
 could anchor nobody, and the 15th agent walked forever with no qualifying contact. Capacity landed
 at exactly the crowd size that had to fit.
@@ -1158,8 +1163,8 @@ Three details are load-bearing:
   else-branch (`CkCrowdAgent_Steering_Processor.cpp:232`, a corridor from another provider does not
   contain the crossing) and `DoDriveLinkTraversalCursor`'s abandoned-crossing branch (`:511`, the cursor
   left the span without walking off its exit); the install seam on BOTH branches
-  (`CkCrowdAgent_OnGroundNavPathResolved_Processor.cpp:127` when a new polyline replaces the one that
-  bounded the crossing, `:201` when the ground answer Failed and the episode ends); the request abandon
+  (`CkCrowdAgent_OnGroundNavPathResolved_Processor.cpp:147` when a new polyline replaces the one that
+  bounded the crossing, `:223` when the ground answer Failed and the episode ends); the request abandon
   path (`CkCrowdAgent_HandleRequests_Processor.cpp:526`, `DoAbandonActiveProviderQuery` — so every new
   episode and every `Stop`); and `ConstrainToNavmesh`'s own non-Walking branch
   (`CkCrowdAgent_ConstrainToNavmesh_Processor.cpp:208`). That last one is the backstop, because Steering

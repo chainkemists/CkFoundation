@@ -32,6 +32,8 @@
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include <Engine/World.h>
+#include <UObject/Class.h>
+#include <UObject/PropertyPortFlags.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -351,7 +353,39 @@ namespace ck::groundnav::nav_surface_adapter_private
         Result.Set_IsPartial(AllowPartial && TerminalStatus == ECk_GroundNav_PathStatus::Partial);
 
         if (Result.Get_Status() != ECk_NavSurface_QueryStatus::Success)
-        { return Result; }
+        {
+            // A non-Success terminal answer otherwise leaves no trace: the caller sees a mapped
+            // status and nothing else, so diagnosing *why* a strict filter or a denied plate turned
+            // a reachable-looking query into Blocked/Unreachable means re-running at Verbose after
+            // the fact. One line here carries the search's own verdict and what it spent alongside
+            // the mapped status a consumer actually reads.
+            const auto StartSurfaceIsValid = SearchResult._StartSurface.Get_IsValid();
+            const auto GoalSurfaceIsValid = SearchResult._GoalSurface.Get_IsValid();
+
+            if (StartSurfaceIsValid && GoalSurfaceIsValid)
+            {
+                const auto StartFlatPlate = Get_FlatPlateIndex(
+                    *Field, SearchResult._StartSurface._TileIndex, SearchResult._StartSurface._PlateIndex);
+                const auto GoalFlatPlate = Get_FlatPlateIndex(
+                    *Field, SearchResult._GoalSurface._TileIndex, SearchResult._GoalSurface._PlateIndex);
+
+                ck::groundnav::Verbose(
+                    TEXT("A GroundNav path query from [{}] to [{}] answered [{}] (search verdict [{}], "
+                         "[{}] expansions, [{}] denied plates, start/goal flat plate [{}]/[{}])"),
+                    InQuery.Get_Start(), InQuery.Get_End(), Result.Get_Status(), TerminalStatus,
+                    SearchResult._ExpansionCount, FilterTables._Denied.Num(), StartFlatPlate, GoalFlatPlate);
+            }
+            else
+            {
+                ck::groundnav::Verbose(
+                    TEXT("A GroundNav path query from [{}] to [{}] answered [{}] (search verdict [{}], "
+                         "[{}] expansions, [{}] denied plates)"),
+                    InQuery.Get_Start(), InQuery.Get_End(), Result.Get_Status(), TerminalStatus,
+                    SearchResult._ExpansionCount, FilterTables._Denied.Num());
+            }
+
+            return Result;
+        }
 
         // The agent location the post-process drops its first waypoint against is the query's own
         // start: nothing here has a body, and the start is where the caller said the route begins.
@@ -822,6 +856,20 @@ auto
     const auto RecordBounds = Get_MarkupWorldBounds(InRecord);
 
     if (NOT RecordBounds.IsValid)
+    { return false; }
+
+    // Live means the field PRICED the record, and the epoch alone proves only that a build happened
+    // after it was asked for: a tile's epoch bumps on mere reach, and a build already in flight when
+    // the paint drained publishes a higher epoch off the record snapshot it took BEFORE it arrived.
+    // The published params are what the plates were stamped from, so asking them is asking the plates.
+    const auto FieldPricedTheRecord = ck::algo::AnyOf(InField._Params._MarkupRecords,
+        [&](const FCk_GroundNav_MarkupRecord& InPriced) -> bool
+        {
+            return FCk_GroundNav_MarkupRecord::StaticStruct()->CompareScriptStruct(
+                &InPriced, &InRecord, PPF_None);
+        });
+
+    if (NOT FieldPricedTheRecord)
     { return false; }
 
     auto ReachedAnyTile = false;

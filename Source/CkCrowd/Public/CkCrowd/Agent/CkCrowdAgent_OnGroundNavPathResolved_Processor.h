@@ -40,6 +40,30 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * The revision of the last dropped GroundNav path result this agent has already logged.
+     *
+     * Same problem as FFragment_CrowdAgent_ShadowCompared, one slot over: FFragment_GroundNavPath_Result::
+     * _HasFreshResult is owned by the GroundNav slot and OnGroundNavPathResolved has no way to clear it once
+     * an episode ends without releasing the query, so the drop it logs would otherwise fire every frame for
+     * as long as the stale result sits fresh. Keyed by revision so the drop is logged once per result.
+     */
+    struct CKCROWD_API FFragment_CrowdAgent_DroppedResultSeen
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_DroppedResultSeen);
+
+        friend class FProcessor_CrowdAgent_OnGroundNavPathResolved;
+
+    private:
+        int32 _LastDroppedRevision = INDEX_NONE;
+
+    public:
+        CK_PROPERTY_GET(_LastDroppedRevision);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     // The view deliberately does NOT require PathPending: a field rebuild replans for agents that are
     // already WALKING, and the fresh route must swap in mid-walk. When that repair FAILS instead, the
     // Fail branch steps the agent Walking -> PathPending before it writes the status, because the
