@@ -16,7 +16,6 @@ class UCk_Utils_QueueCoordinator_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_QueueCoordinator_NeedsSetup);
-    CK_DEFINE_ECS_TAG(FTag_QueueCoordinator_NeedsReconcile);
 
     // --------------------------------------------------------------------------------------------------------------------
 

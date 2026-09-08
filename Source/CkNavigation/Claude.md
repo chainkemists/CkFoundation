@@ -86,6 +86,10 @@ The diagnostics struct carries: last fail reason, last target / agent location, 
 
 The module has **no subsystem** (the dtCrowd-era one was for crowd init, which is gone).
 
+`Nav_OnPathFailed` is a per-query signal on every provider that broadcasts it (this processor and
+CkCrowd's GroundNav install seam alike) — a crowd agent's own episode failure is CkCrowd's separate
+`CrowdAgent_OnGoalFailed`, not this one.
+
 ---
 
 ## Project settings
@@ -159,14 +163,17 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
 
 - ~~`_QueryFilter` field is reserved but unused~~ — **live, provider-neutral**: the tag resolves
   through `UCk_Nav_ProjectSettings_UE::_QueryFilters` (tag → `UCk_NavFilterDefinition_DataAsset`)
-  or the native filter-definition registry, and the Recast adapter
-  (`NavSurface/Recast/CkNavSurface_RecastAdapter`) compiles the definition into an engine filter at
-  query time; empty/unmapped falls back to NavData's default. A request may also carry
-  `_QueryFilterOverride` (a `FGameplayTag` that outranks the request's `_QueryFilter` for THAT
-  query) — used by CkCrowd's strict/permissive planning phases. Note the start/end projection is
-  UNFILTERED, so a query whose filter excludes the area under its own start still projects onto
-  it — callers standing inside an excluded band must move their start out first (CkCrowd's
-  `Get_EscapedQueryStart`).
+  into the neutral `CkNavFilterDefinition_Registry` (`ck::nav_surface::Register_FilterDefinition` /
+  `TryGet_FilterDefinition`, seeded by an `FFilterRegistrar` static — the same pattern as the
+  area-tag registries below). **Both** providers compile the same definition at query time: the
+  Recast adapter (`NavSurface/Recast/CkNavSurface_RecastAdapter`) into an engine filter, and
+  GroundNav's `Search/CkGroundNav_FilterCompile` into its own plate cost / denial tables, for both
+  the raycast and the synchronous path — so a filter tag means the same thing on either provider;
+  empty/unmapped falls back to NavData's default. A request may also carry `_QueryFilterOverride`
+  (a `FGameplayTag` that outranks the request's `_QueryFilter` for THAT query) — used by CkCrowd's
+  strict/permissive planning phases. Note the start/end projection is UNFILTERED, so a query whose
+  filter excludes the area under its own start still projects onto it — callers standing inside an
+  excluded band must move their start out first (CkCrowd's `Get_EscapedQueryStart`).
 - No async path queries. `FindPathSync` is fast enough at 8/frame for any realistic scenario; if it ever isn't, a dedicated async processor lives at the next layer.
 - No off-mesh links / jumps. Recast supports them but we don't surface them.
 - **The deferred-FindPath queue is per-world** (`ck::FFragment_Nav_DeferredRequests` on the

@@ -107,7 +107,11 @@ namespace ck
         // Converts a geometry-only escape point into a physically followable Recast prefix from
         // the agent's real location. Returns false without mutating OutWaypoints when either end
         // cannot be projected, no complete path exists, or the projected endpoint falls back
-        // inside another agent's expanded painted markup.
+        // inside another agent's expanded painted markup. InQueryFilter is the filter the route is
+        // PRICED under — the plan's own base filter: the provider prices the markup and this helper
+        // enforces avoidance geometrically on the answer it gets back, because a filter that DENIES
+        // the markup over-denies on a coarse field (a ground plate is denied whole, so a picket
+        // line's discs deny every plate around them and no admissible route exists at all).
         static auto
         Try_BuildStationaryMarkupEscapePath(
             FCk_Handle InAnyWorldHandle,
@@ -116,14 +120,19 @@ namespace ck
             const FVector& InEscapedLocation,
             const FFragment_CrowdAgent_Params& InParams,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
+            const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints) -> bool;
 
         // PathNetwork corridors are preferred geometry, not hard movement boundaries. When a
         // resolved corridor crosses confirmed stationary-agent markup, replace only the affected
-        // span with a Recast path computed under the agent's own query filter. The untouched
-        // prefix/suffix keep the agent on the authored route and make it rejoin immediately after
-        // clearing the standing crowd. Returns false without mutating OutWaypoints when no splice
-        // is needed or no valid detour exists.
+        // span with a surface path computed under InQueryFilter. The untouched prefix/suffix keep
+        // the agent on the authored route and make it rejoin immediately after clearing the
+        // standing crowd. Returns false without mutating OutWaypoints when no splice
+        // is needed or no valid detour exists. InQueryFilter is the filter the span is PRICED under
+        // — the plan's own base filter: the provider prices the markup and this helper enforces
+        // avoidance geometrically on the answer it gets back (the candidate is rejected when it
+        // still crosses a confirmed disc or volume), because a filter that DENIES the markup
+        // over-denies on a coarse field, where a ground plate is denied whole.
         static auto
         Try_BuildStationaryMarkupDetour(
             FCk_Handle InAnyWorldHandle,
@@ -134,6 +143,7 @@ namespace ck
             float InArrivalRadius,
             const TArray<FVector>& InCorridorWaypoints,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
+            const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints) -> bool;
 
     private:

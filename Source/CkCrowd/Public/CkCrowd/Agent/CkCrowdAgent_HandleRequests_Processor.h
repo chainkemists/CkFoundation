@@ -7,12 +7,74 @@
 
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
 #include "CkCrowd/Agent/CkCrowdAgent_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Request_Nav_FindPath;
 struct FCk_Request_PathNetworkFollower_FindRoute;
+
+namespace ck_crowd_agent_handle_requests
+{
+    /**
+     * What ONE planning phase decides about the filter a route is planned under.
+     *
+     * Provider-neutral on purpose: the phase is the crowd's own idea and the two providers merely
+     * carry it differently — Recast takes the base tag and the override as separate fields it
+     * resolves, GroundNav takes one tag through the neutral filter registry. Deciding it twice, once
+     * per branch, is how the two would drift about what "strict" means for the same agent.
+     */
+    struct FCk_CrowdAgent_PlanPhaseFilter
+    {
+        ECk_CrowdAgent_PlanPhase _Phase = ECk_CrowdAgent_PlanPhase::Permissive;
+
+        FGameplayTag _QueryFilter;
+
+        // Outranks _QueryFilter where it is set, which is the precedence Recast's own resolver applies.
+        FGameplayTag _QueryFilterOverride;
+
+        FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
+
+        bool _UsesStrictStandingCrowdFilter = false;
+
+        /** The ONE tag a provider carrying a single filter field is planned under. */
+        auto Get_EffectiveQueryFilter() const -> FGameplayTag
+        {
+            return _QueryFilterOverride.IsValid() ? _QueryFilterOverride : _QueryFilter;
+        }
+    };
+
+    /**
+     * The phase decision every FRESH dispatch makes: strict first, because a crowd-free route may
+     * exist now even if it did not a moment ago. The one caller that must not retry strict —
+     * OnPathResolved's strict→permissive fallback — passes InForcePermissive.
+     *
+     * _StrictPlanFailed is deliberately NOT reset here. Only a dispatch carrying NEW evidence retries
+     * strict — a fresh MoveTo, a BlockedRecheck resume (the pack drained), a PathRefresh trigger (a
+     * new disc confirmed), a caller ForceReplan — and those sites reset the flag themselves. The stall
+     * ladder's re-paths carry no new evidence: retrying strict there re-fails against the same plugged
+     * route and doubles every rung's Pending stop-start cycle, which the body visibly tracks (measured
+     * as a facing-whip regression).
+     *
+     * Declared here rather than kept .cpp-local because every FRESH path dispatch — the two
+     * providers' plans and the A/B shadow that has to mirror whichever one ran — derives its filter
+     * from this one decision, and a site that hardcodes the agent's base filter instead plans
+     * straight THROUGH painted standing-crowd markup: the base filter merely PRICES an agent disc,
+     * only the strict standing-crowd filter DENIES it. The PathNetwork route requests deliberately
+     * do NOT come through here — that provider announces a strict route MISS as a route FAILURE at
+     * resolution, so it has no strict-then-permissive retry and must plan under the base filter,
+     * leaving confirmed discs to the markup bypass helpers.
+     */
+    auto Get_PlanPhaseFilter(
+        FCk_Handle_CrowdAgent                      InHandle,
+        const ck::FFragment_CrowdAgent_Params&     InParams,
+        const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
+        bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {

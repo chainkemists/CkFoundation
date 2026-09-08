@@ -410,13 +410,16 @@ nothing — the same answer the cost derive gives when nothing it restamped move
 `ck::groundnav::nav_surface_adapter::Get_IsMarkupLive` is the whole rule and it is DERIVED at the
 read; nothing anywhere stores it. From the markup entity: no `FFragment_GroundNav_MarkupRef` (the
 paint has not drained onto a volume yet) is false, a record the named volume no longer holds is false,
-a volume with nothing published is false. Otherwise, over the published field, **every** tile whose
-world bounds meet the record's world bounds must be `Built` and must carry an epoch STRICTLY PAST the
-record's `_RequestedAtEpoch` — the stamp is the epoch the field was already published at, so an equal
-epoch is the very publish that knew nothing of the record — every one, because a record reaching two
-tiles is only as live as its
-laggard. A record whose bounds meet no tile at all is NOT live: there is no ground for it to be live
-on, and true would mean only that nothing contradicted it.
+a volume with nothing published is false. Otherwise, over the published field, the field must have
+**PRICED** the record — `_Params._MarkupRecords` must carry a reflected-equal copy of it — and, on top
+of that, **every** tile whose world bounds meet the record's world bounds must be `Built` and must carry
+an epoch STRICTLY PAST the record's `_RequestedAtEpoch` — the stamp is the epoch the field was already
+published at, so an equal epoch is the very publish that knew nothing of the record — every one, because
+a record reaching two tiles is only as live as its laggard. The epoch half alone is not enough: a build
+already in flight when the paint drains snapshotted its record list before the record existed, and its
+publish still lands with a strictly newer epoch on every tile it reaches, off plates that were never
+stamped from the record at all. A record whose bounds meet no tile at all is NOT live: there is no
+ground for it to be live on, and true would mean only that nothing contradicted it.
 
 The provider-neutral entries this backs (`_ApplyAreaMarkup`, `_IsMarkupLive`, `_ReleaseAreaMarkup` on
 `FCk_NavSurface_ProviderTable`) live in `Facade/CkGroundNav_NavSurfaceAdapter.cpp`. A paint is

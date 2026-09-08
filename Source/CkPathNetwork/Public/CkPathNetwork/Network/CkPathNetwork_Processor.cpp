@@ -645,6 +645,18 @@ namespace ck_pathnetwork_processor
         if (InOutResolution._Outcome != EOffPathResolve::Resolved)
         { return InOutResolution._Outcome != EOffPathResolve::PathFailed; }
 
+        // A connector whose ends coincide is the route already standing on the network - it
+        // neither needs the mesh nor can fail it. Short-circuit exactly as
+        // Try_ResolveNavmeshSegment does for the same degenerate case (:353-354), before the
+        // ConnectedWaypoints assembly below collapses the two near-identical endpoints to one
+        // and the >= 2 check rejects a leg that has nothing wrong with it.
+        if (FVector::DistSquared(InFrom, InTo) <= FMath::Square(CompiledWaypointMergeDistance))
+        {
+            InOutResolution._Waypoints = {InOutResolution._Waypoints[0]};
+            InOutResolution._Length = 0.0f;
+            return true;
+        }
+
         auto ConnectedWaypoints = TArray<FVector>{};
         if (NOT InFromIsRouteEndpoint)
         { Append_CompiledWaypoint(ConnectedWaypoints, InFrom); }
@@ -655,14 +667,18 @@ namespace ck_pathnetwork_processor
 
         // Off-path connectors are never ribbon-contained, so there is no slack to cap the corner
         // offset at - it is left to the provider's own default treatment.
-        const auto PathIsValid =
-            ConnectedWaypoints.Num() >= 2
+        const auto ConnectedWaypointCount = ConnectedWaypoints.Num();
+        const auto HasEnoughWaypoints = ConnectedWaypointCount >= 2;
+        const auto ProjectedOntoNavmesh =
+            HasEnoughWaypoints
             && Try_ProjectPathOntoNavmesh(
                 InWorld,
                 ConnectedWaypoints,
                 InFilterTag,
                 InQueryFilterOverlay,
-                ClearanceProjectionPlanarExtentCm)
+                ClearanceProjectionPlanarExtentCm);
+        const auto ResolvedOntoNavmesh =
+            ProjectedOntoNavmesh
             && Try_ResolvePathOntoNavmesh(
                 InWorld,
                 ConnectedWaypoints,
@@ -671,8 +687,18 @@ namespace ck_pathnetwork_processor
                 InAgentRadiusUu,
                 ECk_NavSurface_CornerOffset::ProviderDefault,
                 0.0f);
+        const auto PathIsValid = ResolvedOntoNavmesh;
         if (NOT PathIsValid)
         {
+            ck::pathnetwork::Verbose(
+                TEXT("[PNDiag] off-path connector validation failed: raw [{}] -> [{}], "
+                     "connectedWaypoints [{}], projectedOntoNavmesh [{}], "
+                     "resolvedOntoNavmesh [{}]"),
+                InFrom,
+                InTo,
+                ConnectedWaypointCount,
+                ProjectedOntoNavmesh,
+                ResolvedOntoNavmesh);
             InOutResolution._Outcome = EOffPathResolve::PathFailed;
             return false;
         }
