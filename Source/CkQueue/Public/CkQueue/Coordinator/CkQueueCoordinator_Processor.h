@@ -98,19 +98,19 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Runs every frame so a Queue destroyed out from under the Coordinator is pruned from
+    // _Services without a request re-opening a dirty gate. The per-frame cost is a RemoveAll
+    // over a small array, on Coordinator entities only.
     class CKQUEUE_API FProcessor_QueueCoordinator_Reconcile : public ck_exp::TProcessor<
         FProcessor_QueueCoordinator_Reconcile,
         FCk_Handle_QueueCoordinator,
         ck::TReadWrite<FFragment_QueueCoordinator_Current>,
-        FTag_QueueCoordinator_NeedsReconcile,
         TExclude<FTag_QueueCoordinator_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
         using RunAfter = TDepList<FProcessor_QueueCoordinator_HandleRequests>;
-        using MarkedDirtyBy = FTag_QueueCoordinator_NeedsReconcile;
-        static constexpr auto PumpPolicy = ECk_ProcessorPumpPolicy::SkipPump;
 
     public:
         using TProcessor::TProcessor;
