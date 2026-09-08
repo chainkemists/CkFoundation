@@ -5,6 +5,11 @@
 #include <Stats/Stats.h>
 #include <Misc/CoreDelegates.h>
 #include "CkProfile/Stats/CkCpuWork.h"
+#include "CkProfile/Stats/CkScopedStat.h"
+
+#if WITH_ANGELSCRIPT_CK
+#include <AngelscriptCodeModule.h>
+#endif
 
 DECLARE_CYCLE_STAT(TEXT("Script scopes"), STAT_CkScriptScopes, STATGROUP_CkScript);
 
@@ -17,12 +22,30 @@ void FCkProfileModule::StartupModule()
 #endif
     FCoreDelegates::OnBeginFrame.AddRaw(this, &FCkProfileModule::OnBeginFrame);
     FCoreDelegates::OnEndFrame.AddRaw(this, &FCkProfileModule::OnEndFrame);
+
+#if WITH_ANGELSCRIPT_CK && STATS
+    _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic(
+        &ck::Invalidate_ActiveScriptScopeStatCache);
+    // PreCompile runs before old modules become unavailable; a later callback could still enter
+    // an old script scope. Advance again after a successful swap before new code can reuse ids.
+    _PostCompileDelegateHandle = FAngelscriptCodeModule::GetPostCompile().AddStatic(
+        &ck::Invalidate_ActiveScriptScopeStatCache);
+#endif
 }
 
 void FCkProfileModule::ShutdownModule()
 {
     FCoreDelegates::OnBeginFrame.RemoveAll(this);
     FCoreDelegates::OnEndFrame.RemoveAll(this);
+
+#if WITH_ANGELSCRIPT_CK && STATS
+    if (_PreCompileDelegateHandle.IsValid() && FModuleManager::Get().IsModuleLoaded(TEXT("AngelscriptCode")))
+    { FAngelscriptCodeModule::GetPreCompile().Remove(_PreCompileDelegateHandle); }
+    if (_PostCompileDelegateHandle.IsValid() && FModuleManager::Get().IsModuleLoaded(TEXT("AngelscriptCode")))
+    { FAngelscriptCodeModule::GetPostCompile().Remove(_PostCompileDelegateHandle); }
+    _PreCompileDelegateHandle.Reset();
+    _PostCompileDelegateHandle.Reset();
+#endif
 }
 
 void FCkProfileModule::OnBeginFrame()

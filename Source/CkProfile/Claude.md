@@ -54,9 +54,11 @@ Use `STATGROUP_CkProcessors` for per-processor tick overhead (coarser) and `STAT
 auto _Sub = ck::ScopedStat("AI::EvaluateGoals::Phase2"); // explicit name (sub-method scopes)
 ```
 
-`auto _S = ck::ScopedStat()` is the intended idiom — AngelScript constructs the value in place (no copy), so the non-copyable guard records exactly once on scope exit. The no-arg form reads the calling script function from the active context (`ck::Get_ActiveScriptScopeName()`, also bound to script) — no string to type. `UFUNCTION(BlueprintOverride)` handlers report as `Method_Implementation`; the suffix is stripped so the name matches the clean handler name. Prefer the explicit-string form in genuinely hot per-frame loops, where skipping the per-call context lookup is worth it.
+`auto _S = ck::ScopedStat()` is the intended idiom — AngelScript constructs the value in place (no copy), so the non-copyable guard records exactly once on scope exit. The no-arg form reads the calling script function from the active context (`ck::Get_ActiveScriptScopeName()`, also bound to script) — no string to type. `UFUNCTION(BlueprintOverride)` handlers report as `Method_Implementation`; the suffix is stripped so the name matches the clean handler name.
 
-It's a non-copyable value type: `FScopeCycleCounter` under `STATS`, a named CPU event otherwise (mirrors `CK_STAT`'s non-STATS fallback). The resolved name goes through a per-thread `TStatId` cache (`ck::Get_ScopedStat_StatId`) so hot loops don't pay the `CreateStatId` FName-registration cost on every scope entry. Stats land in `STATGROUP_CkScript`.
+It's a non-copyable value type: `FScopeCycleCounter` under `STATS`, a named CPU event otherwise (mirrors `CK_STAT`'s non-STATS fallback). Under `STATS`, the auto form caches `TStatId` by the active script function's numeric ID in thread-local storage, so a hot loop avoids rebuilding the method/class `FString` as well as the dynamic-stat registration. The cache retains no script functions, types, or UObjects. The explicit-string form remains useful for sub-method scopes with a deliberately different name.
+
+AngelScript recompilation advances the cache epoch at both PreCompile and successful PostCompile. Each thread discards its own function-ID entries lazily when it observes the epoch; this prevents IDs from the outgoing module surviving a swap without mutating another thread's cache. The non-`STATS` named-event path does not use this cache and is unchanged.
 
 ---
 
