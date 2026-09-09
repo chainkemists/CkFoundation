@@ -30,6 +30,19 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::OnRouteResolved"), STAT_CkCrowd_OnRouteResolvedP
 
 namespace ck_crowd_agent_on_route_resolved_processor
 {
+    static TAutoConsoleVariable<int32> CVar_PathNetworkStationaryDetourDiagnostics(
+        TEXT("ck.Crowd.Debug.PathNetworkStationaryDetourDiagnostics"), 0,
+        TEXT("1 writes PathNetwork stationary-markup refresh, route-result, and splice diagnostics. "
+             "It does not change route installation or movement state."));
+
+    auto Get_ExcludedAreaTagsText(const FCk_Nav_QueryFilterOverlay& InOverlay) -> FString
+    {
+        return FString::JoinBy(
+            InOverlay.Get_ExcludedAreaTags(),
+            TEXT(", "),
+            [](const FGameplayTag& InTag) { return InTag.ToString(); });
+    }
+
     // Same surface the navmesh clamp walks against, so the install-time skip and the clamp agree
     // on what is walkable. Null means the gate switched off, and the skip reverts to its
     // projection-only form.
@@ -45,6 +58,16 @@ namespace ck_crowd_agent_on_route_resolved_processor
 
 namespace ck
 {
+    auto
+        FProcessor_CrowdAgent_OnRouteResolved::
+        Get_ShouldLogPathNetworkStationaryDetourDiagnostics() -> bool
+    {
+        return ck_crowd_agent_on_route_resolved_processor::
+            CVar_PathNetworkStationaryDetourDiagnostics.GetValueOnGameThread() != 0;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_CrowdAgent_OnRouteResolved::
         ForEachEntity(
@@ -118,6 +141,8 @@ namespace ck
                     HasRouteWaypoints,
                     TEXT("CrowdAgent [{}] received a Ready PathNetwork route with no waypoints"),
                     InHandle)
+                {}
+                if (NOT HasRouteWaypoints)
                 {
                     if (IsPathPending &&
                         NOT InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
@@ -144,25 +169,44 @@ namespace ck
                         ActiveGoal,
                         InParams.Get_Radius());
                 auto EscapeWaypoints = TArray<FVector>{};
-                const auto UsedNavigableEscapePrefix =
-                    EscapedStart.IsSet() &&
-                    FProcessor_CrowdAgent_PathRefresh::
+                const auto EscapePathResult = EscapedStart.IsSet()
+                    ? FProcessor_CrowdAgent_PathRefresh::
                     Try_BuildStationaryMarkupEscapePath(
                         NonConstHandle,
                         InHandle.Get_Entity(),
                         AgentLocation,
                         EscapedStart.GetValue(),
+                        ActiveGoal,
+                        InPathFollow.Get_ActiveArrivalRadius(),
                         InParams,
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
                         InParams.Get_NavQueryFilter(),
-                        EscapeWaypoints);
+                        EscapeWaypoints)
+                    : ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded;
+                if (EscapePathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Malformed)
+                {
+                    FProcessor_CrowdAgent_HandleRequests::FailStrictGroundNavDispatch(
+                        NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+                    break;
+                }
+                if (EscapePathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Failed)
+                {
+                    NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                    InPathFollow._ProtectedLeadingWaypointCount = 0;
+                    FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+                    FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                        NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                    break;
+                }
+                const auto UsedNavigableEscapePrefix =
+                    EscapePathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded;
                 const auto DetourStart = UsedNavigableEscapePrefix
                     ? EscapeWaypoints.Last()
                     : AgentLocation;
                 auto DetouredWaypoints = TArray<FVector>{};
-                const auto UsedStationaryMarkupDetour =
+                const auto DetourPathResult =
                     FProcessor_CrowdAgent_PathRefresh::
                     Try_BuildStationaryMarkupDetour(
                         NonConstHandle,
@@ -177,6 +221,23 @@ namespace ck
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
                         InParams.Get_NavQueryFilter(),
                         DetouredWaypoints);
+                if (DetourPathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Malformed)
+                {
+                    FProcessor_CrowdAgent_HandleRequests::FailStrictGroundNavDispatch(
+                        NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+                    break;
+                }
+                if (DetourPathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Failed)
+                {
+                    NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                    InPathFollow._ProtectedLeadingWaypointCount = 0;
+                    FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+                    FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                        NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                    break;
+                }
+                const auto UsedStationaryMarkupDetour =
+                    DetourPathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded;
                 if (UsedStationaryMarkupDetour)
                 { WaypointsToInstall = MoveTemp(DetouredWaypoints); }
 
@@ -215,11 +276,21 @@ namespace ck
                         TEXT("CrowdAgent [{}] could not append its PathNetwork route after a "
                              "stationary-markup escape prefix"),
                         InHandle)
+                    {}
+                    if (NOT CombinedPathIsValid)
                     {
                         InPathFollow._ProtectedLeadingWaypointCount = 0;
+                        if (IsPathPending &&
+                            NOT InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
+                        {
+                            NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                            FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+                            FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
+                                NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                        }
+                        break;
                     }
-                    else
-                    { WaypointsToInstall = MoveTemp(CombinedWaypoints); }
+                    WaypointsToInstall = MoveTemp(CombinedWaypoints);
                 }
 
                 FCk_Nav_Algorithm::InstallExternalPath(
@@ -293,6 +364,28 @@ namespace ck
                 Installed._NetworkEpoch = InCorridor.Get_NetworkEpoch();
                 Installed._TuningRevision = Result.Get_TuningRevision();
 
+                if (Get_ShouldLogPathNetworkStationaryDetourDiagnostics())
+                {
+                    const auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] PathNetwork stationary-detour result: status [{}], "
+                             "result rev [{}], active rev [{}], provider [{}], raw wps [{}], "
+                             "installed wps [{}], splice [{}], escape prefix [{}], base filter [{}], "
+                             "overlay excluded [{}]"),
+                        InHandle,
+                        Result.Get_Status(),
+                        Result.Get_RequestRevision(),
+                        InPathFollow.Get_ActiveNavigationRequestRevision(),
+                        UCk_Utils_NavSurface_UE::Get_Provider(World),
+                        Result.Get_CompiledWaypoints().Num(),
+                        InstalledWaypoints.Num(),
+                        UsedStationaryMarkupDetour,
+                        UsedNavigableEscapePrefix,
+                        InCorridor.Get_NavQueryFilter().ToString(),
+                        ck_crowd_agent_on_route_resolved_processor::Get_ExcludedAreaTagsText(
+                            InCorridor.Get_QueryFilterOverlay()));
+                }
+
                 ck::crowd::Verbose(
                     TEXT("CrowdAgent [{}] network route ready ({} raw wps, {} installed wps, "
                          "stationary detour={}, escape prefix={}, cost={}, epoch={}) — installed as nav path"),
@@ -316,6 +409,25 @@ namespace ck
                 // fresh nav request every frame until OnPathResolved consumed one of them.
                 if (InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
                 { break; }
+
+                if (Get_ShouldLogPathNetworkStationaryDetourDiagnostics())
+                {
+                    const auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+                    ck::crowd::Log(
+                        TEXT("CrowdAgent [{}] PathNetwork stationary-detour result: status [{}], "
+                             "result rev [{}], active rev [{}], provider [{}], raw wps [{}], "
+                             "fail reason [{}], base filter [{}], overlay excluded [{}] — fallback"),
+                        InHandle,
+                        Result.Get_Status(),
+                        Result.Get_RequestRevision(),
+                        InPathFollow.Get_ActiveNavigationRequestRevision(),
+                        UCk_Utils_NavSurface_UE::Get_Provider(World),
+                        Result.Get_CompiledWaypoints().Num(),
+                        Result.Get_FailReason(),
+                        InCorridor.Get_NavQueryFilter().ToString(),
+                        ck_crowd_agent_on_route_resolved_processor::Get_ExcludedAreaTagsText(
+                            InCorridor.Get_QueryFilterOverlay()));
+                }
 
                 InPathTrouble._AgentLocation = InTransform.Get_Transform().GetLocation();
                 InPathTrouble._GoalLocation = InPathFollow.Get_ActiveGoal();

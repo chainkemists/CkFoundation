@@ -203,6 +203,16 @@ namespace ck::jolt
         Get_StaticBodyBounds(
             uint64 InBodyId) const -> FBox;
 
+        /**
+         * Resolves one static body's canonical source data-layer names. Returns false when the body is
+         * no longer held or has no attribution entity; callers with a non-empty selector must reject
+         * that body rather than treating missing attribution as all layers.
+         */
+        auto
+        TryGet_StaticBodyDataLayerNames(
+            uint64        InBodyId,
+            TArray<FName>& OutDataLayerNames) const -> bool;
+
         /// EVERY world-space triangle of ONE static body, APPENDED to OutSoup; returns the number appended.
         ///
         /// UNCLIPPED, unlike the region form above, and that is the whole reason this call exists: a mesh
@@ -216,6 +226,13 @@ namespace ck::jolt
         auto
         Get_StaticBodyTriangles(
             uint64 InBodyId,
+            FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
+
+        /** Region-scoped counterpart of Get_StaticBodyTriangles for a body already selected by a caller. */
+        auto
+        Get_StaticBodyTrianglesInAABox(
+            uint64                    InBodyId,
+            const FBox&               InWorldBounds,
             FCk_Jolt_TriangleSoup& OutSoup) const -> int32;
 
         /// A name for one static body that a developer can act on: the attribution entity and the source

@@ -45,6 +45,22 @@ DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_DestroyBodies"), STAT_CkJolt_StaticWorl
 
 namespace ck::jolt
 {
+    namespace static_world_private
+    {
+        auto Get_CanonicalDataLayerNames(const AActor& InActor) -> TArray<FName>
+        {
+            auto Names = InActor.GetDataLayerInstanceNames();
+            Names.Remove(NAME_None);
+            Names.Sort(FNameLexicalLess{});
+            for (auto Index = Names.Num() - 1; Index > 0; --Index)
+            {
+                if (Names[Index] == Names[Index - 1])
+                { Names.RemoveAt(Index); }
+            }
+            return Names;
+        }
+    }
+
     auto
         Get_CookedIndexAssetPath(
             const FString& InCookedDataRootPath,
@@ -1309,7 +1325,7 @@ auto
             { ++Cell->_RefCount; }
         }
 
-        auto ActorEntity = DoCreate_ActorEntity(InTransientEntity, *Actor);
+        auto ActorEntity = DoCreate_ActorEntity(InTransientEntity, *Actor, &Group.Get_DataLayerNames());
         if (ck::Is_NOT_Valid(ActorEntity))
         { continue; }
 
@@ -1392,7 +1408,8 @@ auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoCreate_ActorEntity(
         const FCk_Handle& InTransientEntity,
-        const AActor& InSourceActor)
+        const AActor& InSourceActor,
+        const TArray<FName>* InCookedDataLayerNames)
         -> FCk_Handle_JoltStaticActor
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTransientEntity);
@@ -1404,6 +1421,9 @@ auto
     auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor_Current>();
     Fragment._SourceActor = &InSourceActor;
     Fragment._SourceActorName = InSourceActor.GetFName();
+    Fragment._DataLayerNames = InCookedDataLayerNames == nullptr
+        ? ck::jolt::static_world_private::Get_CanonicalDataLayerNames(InSourceActor)
+        : *InCookedDataLayerNames;
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceActor.GetFName());
 
