@@ -740,6 +740,8 @@ auto
     int64 CosmeticsPruned = 0;
     int64 CosmeticSocketMisses = 0;
     int64 CosmeticTransformRequests = 0;
+    int64 CosmeticTransformTargetUnchanged = 0;
+    int64 CosmeticTransformTargetChanged = 0;
 
     // Must run in the same processor tick as AdvanceAnimation, on the SAME _Members snapshot PushTile just
     // rendered. Request_SetTransform is the deferred cross-entity write: HandleRequests applies it later
@@ -770,8 +772,18 @@ auto
                 continue;
             }   // no baked socket / bad index — leave it parked
 
+            const auto TargetTransform = C.RelOffset * SocketWorld;
+            if (CpuWorkEnabled)
+            {
+                const auto CurrentTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(C.Cosmetic);
+                if (TargetTransform.Equals(CurrentTransform))
+                { ++CosmeticTransformTargetUnchanged; }
+                else
+                { ++CosmeticTransformTargetChanged; }
+            }
+
             UCk_Utils_Transform_UE::Request_SetTransform(
-                C.Cosmetic, FCk_Request_Transform_SetTransform{C.RelOffset * SocketWorld}, {});
+                C.Cosmetic, FCk_Request_Transform_SetTransform{TargetTransform}, {});
             if (CpuWorkEnabled)
             { ++CosmeticTransformRequests; }
         }
@@ -787,6 +799,8 @@ auto
         ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticsPruned, CosmeticsPruned);
         ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticSocketMisses, CosmeticSocketMisses);
         ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticTransformRequests, CosmeticTransformRequests);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticTransformTargetUnchanged, CosmeticTransformTargetUnchanged);
+        ck::cpu_work::Add(ECk_CpuWorkCounter::CosmeticTransformTargetChanged, CosmeticTransformTargetChanged);
     }
 }
 
