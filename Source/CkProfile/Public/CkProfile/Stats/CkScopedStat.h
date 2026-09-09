@@ -26,6 +26,15 @@ namespace ck
     Get_ActiveScriptScopeStatId() -> TStatId;
 #endif
 
+    // The named-event counterpart of the cache above, for the non-STATS FCk_ScopedStat ctor:
+    // BeginNamedEvent wants a NAME, not a stat id. Compiled in every configuration so the editor
+    // can test it, though only the non-STATS ctor calls it.
+    //
+    // Returns a pointer into this thread's cache, valid until the next epoch change. Hand it
+    // straight to BeginNamedEvent; do not store it.
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeName_Cached() -> const TCHAR*;
+
     // Called from the AngelScript pre-compile boundary. It only advances an epoch: each thread
     // clears its own function-id cache lazily on the next lookup.
     CKPROFILE_API auto
@@ -48,6 +57,18 @@ namespace ck
 
     CKPROFILE_API auto
     Get_ActiveScriptScopeStatName_ForTests() -> FString;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeNameCached_ForTests() -> FString;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeNameCacheHitCount_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Get_ActiveScriptScopeNameCacheMissCount_ForTests() -> uint64;
+
+    CKPROFILE_API auto
+    Reset_ActiveScriptScopeNameCacheCounters_ForTests() -> void;
 
     // Dynamic stats retain an encoded registry name separately from the user-facing description.
     CKPROFILE_API auto
