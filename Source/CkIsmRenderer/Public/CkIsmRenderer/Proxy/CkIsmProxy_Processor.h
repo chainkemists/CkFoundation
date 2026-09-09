@@ -137,6 +137,11 @@ namespace ck
     private:
         TWeakObjectPtr<UWorld> _World;
         TSet<UInstancedStaticMeshComponent*> _Isms;
+#if !WITH_EDITOR
+        // Only memoize within one synchronous runtime transform pass. The renderer subsystem remains
+        // the cross-frame owner, so teardown and recreated components are resolved again next tick.
+        TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> _IsmComponentsByRendererData;
+#endif
     };
 
     // --------------------------------------------------------------------------------------------------------------------
