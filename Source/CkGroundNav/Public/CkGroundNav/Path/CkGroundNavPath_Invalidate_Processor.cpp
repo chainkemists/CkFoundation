@@ -8,6 +8,7 @@
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Debug/CkGroundNav_DebugGates.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Search/CkGroundNav_FilterCompile.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_Fragment.h"
 #include "CkNavigation/NavSurface/CkNavSurface_ProviderTable.h"
@@ -104,7 +105,8 @@ namespace ck
         if (CorridorIsCurrent)
         { return; }
 
-        const auto PublishNote = groundnav::world_fields::TryGet_PublishNote(World, Corridor.GetCenter());
+        const auto PublishNote = groundnav::world_fields::TryGet_PublishNote(
+            World, Corridor.GetCenter(), InCurrent.Get_ProfileTag());
 
         // Narrowing needs the note to account for every publish THIS corridor has missed, not merely
         // for the newest one. What it accounts for is the run of link-only publishes since the last
@@ -114,10 +116,7 @@ namespace ck
         // and takes the floor. The epochs are also compared because the note and the field are read
         // under two separate locks, and a note describing a publish this field is not the product of
         // accounts for nothing here. A world with no field has no epoch to agree with, and the boxes
-        // are then the whole answer. A note is stamped from the entry's DEFAULT field, so a corridor
-        // planned over a variant only ever agrees with it while nothing has moved either apart - which
-        // is what drops a variant-only change to the boxes below instead of letting it narrow by link
-        // identity.
+        // are then the whole answer.
         const auto NoteAccountsForEverythingSinceThePlan =
             PublishNote.IsSet() && Field.IsValid() &&
             PublishNote->_Epoch == Field->_Epoch &&
@@ -126,6 +125,7 @@ namespace ck
         if (NoteAccountsForEverythingSinceThePlan)
         {
             DoTry_FlagOnChangedLink(InPathEntity, InCurrent, *PublishNote);
+            DoTry_FlagOnDeniedPlate(InPathEntity, InCurrent, Field);
             return;
         }
 
@@ -161,11 +161,14 @@ namespace ck
     {
         const auto& CorridorLinkIds = InCurrent.Get_LastCorridorLinkIds();
 
-        for (const auto ChangedLinkId : InNote._ChangedLinkIdsSinceGeometry)
+        for (const auto& ChangedLink : InNote._ChangedLinkEpochsSinceGeometry)
         {
+            if (NOT ChangedLink.Value.Get_IsNewerThan(InCurrent.Get_LastCorridorEpoch()))
+            { continue; }
+
             // Both lists are AUTHORED ids, so this comparison survives the renumbering of _ResolvedLinks
             // that the very publish being answered performed.
-            if (NOT CorridorLinkIds.Contains(ChangedLinkId))
+            if (NOT CorridorLinkIds.Contains(ChangedLink.Key))
             { continue; }
 
             InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
@@ -173,7 +176,7 @@ namespace ck
             groundnav::Verbose(
                 TEXT("GroundNav Path [{}] flagged for repath: a link-only publish since this plan moved ")
                 TEXT("link [{}], which this corridor crosses"),
-                InPathEntity, ChangedLinkId);
+                InPathEntity, ChangedLink.Key);
 
             return;
         }
@@ -183,7 +186,34 @@ namespace ck
         groundnav::Verbose(
             TEXT("GroundNav Path [{}] left alone: the link-only publishes since this plan moved [{}] ")
             TEXT("link(s), none of the [{}] this corridor crosses"),
-            InPathEntity, InNote._ChangedLinkIdsSinceGeometry.Num(), CorridorLinkIds.Num());
+            InPathEntity, InNote._ChangedLinkEpochsSinceGeometry.Num(), CorridorLinkIds.Num());
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GroundNavPath_InvalidateOnRebuilt::
+        DoTry_FlagOnDeniedPlate(
+            HandleType                             InPathEntity,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            const groundnav::FCk_GroundNav_FieldPtr& InField) const
+        -> void
+    {
+        const auto& Tables = groundnav::Get_CompiledFilterTables(
+            InField, InCurrent.Get_LastCorridorQueryFilter(), InCurrent.Get_LastCorridorQueryFilterOverlay());
+
+        for (const auto FlatPlate : InCurrent.Get_LastCorridorFlatPlates())
+        {
+            if (NOT Tables._Denied.Contains(FlatPlate))
+            { continue; }
+
+            InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
+
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] flagged for repath: its current filter now denies corridor plate [{}]"),
+                InPathEntity, FlatPlate);
+            return;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------

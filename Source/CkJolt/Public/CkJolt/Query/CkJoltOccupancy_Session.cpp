@@ -450,7 +450,7 @@ namespace ck::jolt
     }
 
     auto
-        FCk_Jolt_QuerySession::
+    FCk_Jolt_QuerySession::
         Get_StaticBodyBounds(
             uint64 InBodyId) const
         -> FBox
@@ -479,8 +479,44 @@ namespace ck::jolt
         return FBox{Conv(WorldBounds.mMin), Conv(WorldBounds.mMax)};
     }
 
+    // ----------------------------------------------------------------------------------------------------------------
+
     auto
         FCk_Jolt_QuerySession::
+        TryGet_StaticBodyDataLayerNames(
+            uint64         InBodyId,
+            TArray<FName>& OutDataLayerNames) const
+        -> bool
+    {
+        OutDataLayerNames.Reset();
+
+        if (ck::Is_NOT_Valid(_Impl, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        const auto PhysicsSystem = _Impl->_PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return false; }
+
+        const auto Lock = JPH::BodyLockRead{PhysicsSystem->GetBodyLockInterface(),
+            ck_jolt_occupancy_session::Conv_BodyId(InBodyId)};
+        if (NOT Lock.Succeeded() || NOT Lock.GetBody().IsStatic())
+        { return false; }
+
+        const auto* JoltSubsystem = _Impl->_JoltSubsystem.Get();
+        const auto TransientEntity = ck::IsValid(JoltSubsystem)
+            ? JoltSubsystem->Get_TransientEntity()
+            : FCk_Handle{};
+        const auto Entity = ck_jolt_occupancy_session::TryResolve_Handle(
+            Lock.GetBody().GetUserData(), TransientEntity);
+        if (ck::Is_NOT_Valid(Entity) || NOT Entity.Has<ck::FFragment_JoltStaticActor_Current>())
+        { return false; }
+
+        OutDataLayerNames = Entity.Get<ck::FFragment_JoltStaticActor_Current>().Get_DataLayerNames();
+        return true;
+    }
+
+    auto
+    FCk_Jolt_QuerySession::
         Get_StaticBodyTriangles(
             uint64 InBodyId,
             FCk_Jolt_TriangleSoup& OutSoup) const
@@ -518,6 +554,35 @@ namespace ck::jolt
         TriangleVertices.SetNumUninitialized(ck_jolt_occupancy_session::TriangleBatchSize * 3);
 
         return ck_jolt_occupancy_session::DoAppend_BodyTriangles(Body, QueryBox, TriangleVertices, OutSoup);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_Jolt_QuerySession::
+        Get_StaticBodyTrianglesInAABox(
+            uint64                     InBodyId,
+            const FBox&                InWorldBounds,
+            FCk_Jolt_TriangleSoup& OutSoup) const
+        -> int32
+    {
+        if (ck::Is_NOT_Valid(_Impl, ck::IsValid_Policy_NullptrOnly{}))
+        { return 0; }
+
+        const auto PhysicsSystem = _Impl->_PhysicsSystem.Pin();
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return 0; }
+
+        const auto Lock = JPH::BodyLockRead{PhysicsSystem->GetBodyLockInterface(),
+            ck_jolt_occupancy_session::Conv_BodyId(InBodyId)};
+        if (NOT Lock.Succeeded() || NOT Lock.GetBody().IsStatic())
+        { return 0; }
+
+        auto TriangleVertices = TArray<JPH::Float3>{};
+        TriangleVertices.SetNumUninitialized(ck_jolt_occupancy_session::TriangleBatchSize * 3);
+        const auto QueryBox = JPH::AABox{Conv(InWorldBounds.Min), Conv(InWorldBounds.Max)};
+        return ck_jolt_occupancy_session::DoAppend_BodyTriangles(
+            Lock.GetBody(), QueryBox, TriangleVertices, OutSoup);
     }
 
     auto

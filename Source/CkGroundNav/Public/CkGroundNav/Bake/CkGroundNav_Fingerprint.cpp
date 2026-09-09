@@ -183,7 +183,8 @@ namespace ck::groundnav
             TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
             const FCk_GroundNav_MergeTunables&                        InMergeTunables,
             float                                                     InMaxClearanceUu,
-            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants) -> uint64
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants,
+            const FCk_GroundNav_DataLayerSelector&                    InDataLayerSelector) -> uint64
         {
             auto Hash = InSeed;
 
@@ -284,6 +285,11 @@ namespace ck::groundnav
                 Hash = DoHash_Profile(Variant.Value, Hash);
             }
 
+            // ---- 10. Data-layer selector ---------------------------------------------------------------
+            Hash = DoHash_Scalar(static_cast<double>(InDataLayerSelector.Get_LayerNames().Num()), Hash);
+            for (const auto& LayerName : InDataLayerSelector.Get_LayerNames())
+            { Hash = DoHash_String(LayerName.ToString(), Hash); }
+
             return Hash;
         }
     }
@@ -328,13 +334,14 @@ namespace ck::groundnav
             TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
             const FCk_GroundNav_MergeTunables&                        InMergeTunables,
             float                                                     InMaxClearanceUu,
-            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants,
+            const FCk_GroundNav_DataLayerSelector&                    InDataLayerSelector)
         -> FCk_GroundNav_ContentFingerprint
     {
         // Item 1 reduced here and the rest decided below: one implementation of the enumeration, and a
         // batch is simply the caller that still has its triangles in hand.
         return Get_ContentFingerprint(Get_GeometryHash(InGeometry), InRegion, InConfig, InProfile,
-            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants);
+            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants, InDataLayerSelector);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -348,7 +355,8 @@ namespace ck::groundnav
             TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
             const FCk_GroundNav_MergeTunables&                        InMergeTunables,
             float                                                     InMaxClearanceUu,
-            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants,
+            const FCk_GroundNav_DataLayerSelector&                    InDataLayerSelector)
         -> FCk_GroundNav_ContentFingerprint
     {
         using namespace fingerprint_private;
@@ -358,7 +366,7 @@ namespace ck::groundnav
         constexpr auto NoGeometry = uint64{0};
 
         return FCk_GroundNav_ContentFingerprint{DoHash_Inputs(NoGeometry, InRegion, InConfig, InProfile,
-            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants)};
+            InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants, InDataLayerSelector)};
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -373,7 +381,8 @@ namespace ck::groundnav
             TConstArrayView<FCk_GroundNav_LinkRecord>                 InLinks,
             const FCk_GroundNav_MergeTunables&                        InMergeTunables,
             float                                                     InMaxClearanceUu,
-            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants)
+            TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants,
+            const FCk_GroundNav_DataLayerSelector&                    InDataLayerSelector)
         -> FCk_GroundNav_ContentFingerprint
     {
         using namespace fingerprint_private;
@@ -381,7 +390,7 @@ namespace ck::groundnav
         // Item 1 is the SEED the authored items chain onto, which is what makes this the input
         // fingerprint with the geometry folded in rather than a second enumeration beside it.
         return FCk_GroundNav_ContentFingerprint{DoHash_Inputs(InGeometryHash, InRegion, InConfig,
-            InProfile, InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants)};
+            InProfile, InMarkups, InLinks, InMergeTunables, InMaxClearanceUu, InVariants, InDataLayerSelector)};
     }
 }
 

@@ -121,7 +121,7 @@ private:
     DoDestroyRuntimeEntity() -> void;
 
     auto
-    DoInjectActorTransform() -> void;
+    DoInjectActorPlacement() -> void;
 
 private:
     UPROPERTY(EditAnywhere, Instanced,

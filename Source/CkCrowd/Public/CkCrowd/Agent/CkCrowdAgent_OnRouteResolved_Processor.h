@@ -46,6 +46,9 @@ namespace ck
 
     public:
         static auto
+        Get_ShouldLogPathNetworkStationaryDetourDiagnostics() -> bool;
+
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

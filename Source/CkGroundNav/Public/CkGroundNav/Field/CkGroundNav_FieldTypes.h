@@ -172,6 +172,61 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** Stable authored identity of one streamed ground volume. INDEX_NONE preserves legacy whole-
+     *  volume behavior; only positive values participate in streaming and zero is always invalid. */
+    struct CKGROUNDNAV_API FCk_GroundNav_VolumeId
+    {
+    public:
+        static constexpr int32 kLegacyValue = INDEX_NONE;
+
+    public:
+        FCk_GroundNav_VolumeId() = default;
+
+        explicit FCk_GroundNav_VolumeId(int32 InValue)
+            : _Value(InValue)
+        {}
+
+    public:
+        auto Get_Value() const -> int32 { return _Value; }
+
+        auto Get_IsLegacy() const -> bool { return _Value == kLegacyValue; }
+
+        auto Get_IsStreamingValid() const -> bool { return _Value > 0; }
+
+    public:
+        auto operator==(const FCk_GroundNav_VolumeId&) const -> bool = default;
+
+    private:
+        int32 _Value = kLegacyValue;
+    };
+
+    CKGROUNDNAV_API auto
+    GetTypeHash(
+        const FCk_GroundNav_VolumeId& InVolumeId) -> uint32;
+
+    /** A durable tile identity. The coordinate remains explicit so streaming never depends on array
+     *  insertion order; lattice admission separately proves that this coordinate exists. */
+    struct CKGROUNDNAV_API FCk_GroundNav_StreamTileId
+    {
+    public:
+        FCk_GroundNav_VolumeId _VolumeId;
+        FCk_GroundNav_TileCoord _Coord;
+
+    public:
+        auto Get_IsValid() const -> bool
+        {
+            return _VolumeId.Get_IsStreamingValid() && _Coord._X >= 0 && _Coord._Y >= 0;
+        }
+
+        auto operator==(const FCk_GroundNav_StreamTileId&) const -> bool = default;
+    };
+
+    CKGROUNDNAV_API auto
+    GetTypeHash(
+        const FCk_GroundNav_StreamTileId& InTileId) -> uint32;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * Where on the field a surface answer lives. Integer identity only, so a result can be held,
      * compared and drawn after the field it came from has been rebuilt; it is valid only against

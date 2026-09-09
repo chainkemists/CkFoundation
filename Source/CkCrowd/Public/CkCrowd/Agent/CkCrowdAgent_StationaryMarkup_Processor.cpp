@@ -9,6 +9,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
+#include "CkNavigation/Nav/CkNav_Fragment.h"
 
 #include "CkShapes/CkShapes_Common.h"
 
@@ -99,8 +100,25 @@ namespace ck
             SpeedThresholdIsValid,
             TEXT("Invalid stationary-markup speed threshold [{}]"),
             StationarySpeedThreshold)
+        {}
+        if (NOT SpeedThresholdIsValid)
         {
             Remove_Markup(InHandle, InMarkup);
+            return;
+        }
+
+        // A newly admitted agent has no route to stand on yet. Do not let the request backlog paint
+        // a body that will begin walking as soon as its first provider answer arrives. A retained
+        // corridor remains eligible during a refresh: MarkPathPending preserves its waypoints.
+        const auto IsInitialPathPending =
+            InHandle.Has<FTag_CrowdAgent_PathPending>() &&
+            (NOT InHandle.Has<FFragment_Nav_PathResult>() ||
+                InHandle.Get<FFragment_Nav_PathResult>().Get_Waypoints().IsEmpty());
+        if (IsInitialPathPending)
+        {
+            Remove_Markup(InHandle, InMarkup);
+            InMarkup._StillnessSampleAccumSec = 0.0f;
+            InMarkup._StillnessSampleLoc = Location;
             return;
         }
 

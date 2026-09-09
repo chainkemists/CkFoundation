@@ -8,6 +8,8 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/CkGroundNav_Log.h"
@@ -16,6 +18,7 @@
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldSerialize.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Utils.h"
 
 #include "CkNavigation/NavSurface/CkNavSurface_AreaPolicy.h"
@@ -26,6 +29,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_Setup);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_InvokerAggregation);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleRepairRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GroundNavVolume_HandleMarkupRequests);
@@ -98,7 +102,8 @@ namespace ck
         auto Get_PublishedIdentity(
             const FCk_Handle_GroundNavVolume&       InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
-            uint64                                  InGeometryRevision) -> FPublishedIdentity
+            uint64                                  InGeometryRevision,
+            const groundnav::FCk_GroundNav_DataLayerSelector& InDataLayerSelector) -> FPublishedIdentity
         {
             // The bake layer holds no volume concepts, so the variants cross that boundary as tag names
             // beside their profiles rather than as the authored type they live in.
@@ -118,7 +123,8 @@ namespace ck
                 Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity)),
                 InParams.Get_MergeTunables(),
                 InParams.Get_MaxClearanceUu(),
-                Variants);
+                Variants,
+                InDataLayerSelector);
 
             return FPublishedIdentity{InputFingerprint, InGeometryRevision};
         }
@@ -129,34 +135,7 @@ namespace ck
             const TArray<FCk_GroundNav_LinkRecord>&   InLinkRecords)
             -> groundnav::FCk_GroundNav_FieldParams
         {
-            auto FieldParams = groundnav::FCk_GroundNav_FieldParams{};
-
-            const auto Bounds = InParams.Get_VolumeBounds();
-
-            FieldParams._OriginXY = FVector2D{Bounds.Min.X, Bounds.Min.Y};
-            FieldParams._MinZUu = static_cast<float>(Bounds.Min.Z);
-            FieldParams._MaxZUu = static_cast<float>(Bounds.Max.Z);
-            FieldParams._Config = InParams.Get_Config();
-            FieldParams._Profile = InParams.Get_Profile();
-            FieldParams._MergeTunables = InParams.Get_MergeTunables();
-            FieldParams._MarkupRecords = InMarkupRecords;
-            FieldParams._Links = InLinkRecords;
-            FieldParams._MaxClearanceUu = InParams.Get_MaxClearanceUu();
-
-            // Derived rather than authored beside the bounds: an origin and a division count that
-            // disagreed about which ground the volume covers would each look reasonable on its own.
-            const auto SpanUu = FieldParams.Get_TileSpanUu();
-
-            if (SpanUu > 0.0)
-            {
-                const auto Size = Bounds.GetSize();
-
-                FieldParams._Divisions = FIntPoint{
-                    FMath::Max(1, FMath::CeilToInt32(Size.X / SpanUu)),
-                    FMath::Max(1, FMath::CeilToInt32(Size.Y / SpanUu))};
-            }
-
-            return FieldParams;
+            return groundnav::Get_VolumeFieldParams(InParams, InMarkupRecords, InLinkRecords);
         }
 
         /**
@@ -243,13 +222,19 @@ namespace ck
         auto Get_ParamsAreBakeable(const FFragment_GroundNavVolume_Params& InParams) -> bool
         {
             const auto Bounds = InParams.Get_VolumeBounds();
+            auto CanonicalSelector = groundnav::FCk_GroundNav_DataLayerSelector{};
+            const auto SelectorIsValid = groundnav::TryMake_DataLayerSelector(
+                InParams.Get_DataLayerSelector().Get_LayerNames(), CanonicalSelector);
 
             return Bounds.IsValid != 0 &&
                    Bounds.GetSize().X > 0.0 && Bounds.GetSize().Y > 0.0 && Bounds.GetSize().Z > 0.0 &&
                    Get_FieldParams(InParams, {}, {}).Get_IsValid() &&
                    Get_ProfileVariantTagsAreUsable(InParams) &&
                    Get_ProfileVariantProfilesAreBakeable(InParams) &&
-                   InParams.Get_ProbeBudgetPerTick() > 0;
+                   SelectorIsValid &&
+                   InParams.Get_ProbeBudgetPerTick() > 0 &&
+                   (InParams.Get_StreamingBuildScope() != ECk_GroundNav_StreamingBuildScope::InvokerDriven ||
+                    groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()}.Get_IsStreamingValid());
         }
 
         /**
@@ -270,6 +255,9 @@ namespace ck
             { return true; }
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+            const auto SourceLevelPackage = InParams.Get_CookLevelPackage().IsNone()
+                ? groundnav::Get_LevelPackageKey(World)
+                : groundnav::Get_PackageLookupKey(InParams.Get_CookLevelPackage().ToString());
             const auto Self = InVolumeEntity.ConvertToHandle();
 
             for (auto OtherEntity : groundnav::world_fields::Get_VolumeEntities(World))
@@ -280,32 +268,16 @@ namespace ck
                 if (NOT OtherEntity.Has<FFragment_GroundNavVolume_Params>())
                 { continue; }
 
-                if (OtherEntity.Get<FFragment_GroundNavVolume_Params>().Get_CookKey() == CookKey)
+                const auto& OtherParams = OtherEntity.Get<FFragment_GroundNavVolume_Params>();
+                const auto OtherSourceLevelPackage = OtherParams.Get_CookLevelPackage().IsNone()
+                    ? groundnav::Get_LevelPackageKey(World)
+                    : groundnav::Get_PackageLookupKey(OtherParams.Get_CookLevelPackage().ToString());
+
+                if (OtherParams.Get_CookKey() == CookKey && OtherSourceLevelPackage == SourceLevelPackage)
                 { return false; }
             }
 
             return true;
-        }
-
-        /**
-         * Whether this volume's profile set is one a cooked field could carry.
-         *
-         * An index names ONE field for a volume, so a volume that authors profile variants and reads
-         * its ground from a cook would have no field under any of their tags - and a query naming one
-         * is answered from nothing rather than from the default's ground, which would walk an agent up
-         * a step its own profile cannot climb. The two are refused together rather than the variants
-         * being silently dropped at the load, so an author is told which of the two to give up.
-         *
-         * A volume carrying no key is not asking for a cooked field at all, and may hold any number of
-         * variants.
-         */
-        auto Get_CookKeyAdmitsTheProfiles(
-            const FFragment_GroundNavVolume_Params& InParams) -> bool
-        {
-            if (InParams.Get_CookKey().IsNone())
-            { return true; }
-
-            return InParams.Get_ProfileVariants().IsEmpty();
         }
 
         /**
@@ -323,6 +295,7 @@ namespace ck
 
             // Meaningful only under Cooked. Left as the empty field every other status describes.
             groundnav::FCk_GroundNav_Field _Field;
+            TMap<FGameplayTag, groundnav::FCk_GroundNav_Field> _VariantFields;
 
             groundnav::FCk_GroundNav_ContentFingerprint _InputFingerprint;
             uint64 _GeometryRevision = 0;
@@ -354,39 +327,68 @@ namespace ck
             { return Resolution; }
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
-            const auto* CookedIndex = groundnav::Find_CookedFieldIndex(World, InParams.Get_CookKey());
-
-            if (ck::Is_NOT_Valid(CookedIndex))
-            {
-                Resolution._Status = ECk_GroundNav_CookStatus::MissingCook;
-                return Resolution;
-            }
+            const auto SourceLevelPackage = InParams.Get_CookLevelPackage().IsNone()
+                ? groundnav::Get_LevelPackageKey(World)
+                : groundnav::Get_PackageLookupKey(InParams.Get_CookLevelPackage().ToString());
 
             constexpr auto NoGeometryRevision = uint64{0};
 
-            const auto CurrentIdentity = Get_PublishedIdentity(InVolumeEntity, InParams, NoGeometryRevision);
+            auto DataLayerSelector = groundnav::FCk_GroundNav_DataLayerSelector{};
+            if (NOT groundnav::TryMake_DataLayerSelector(
+                InParams.Get_DataLayerSelector().Get_LayerNames(), DataLayerSelector))
+            { return Resolution; }
+
+            const auto CurrentIdentity = Get_PublishedIdentity(
+                InVolumeEntity, InParams, NoGeometryRevision, DataLayerSelector);
 
             const auto MarkupRecords =
                 Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
             const auto LinkRecords =
                 Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
 
-            Resolution._Status = groundnav::Try_LoadCookedField(
-                *CookedIndex,
-                groundnav::Get_LevelPackageKey(World),
-                InParams.Get_CookKey(),
-                Get_FieldParams(InParams, MarkupRecords, LinkRecords),
-                CurrentIdentity._InputFingerprint._Value,
-                Resolution._Field);
+            const auto DefaultParams = Get_FieldParams(InParams, MarkupRecords, LinkRecords);
+            const auto TryLoadProfile = [&](FGameplayTag InProfileTag, const groundnav::FCk_GroundNav_FieldParams& InFieldParams,
+                                            groundnav::FCk_GroundNav_Field& OutField) -> bool
+            {
+                const auto* CookedIndex = groundnav::Find_CookedFieldIndex(
+                    World, InParams.Get_CookKey(), InProfileTag, SourceLevelPackage,
+                    DataLayerSelector);
 
-            if (Resolution._Status != ECk_GroundNav_CookStatus::Cooked)
+                if (ck::Is_NOT_Valid(CookedIndex))
+                {
+                    Resolution._Status = ECk_GroundNav_CookStatus::MissingCook;
+                    return false;
+                }
+
+                Resolution._Status = groundnav::Try_LoadCookedField(
+                    *CookedIndex, SourceLevelPackage, InParams.Get_CookKey(), InFieldParams,
+                    CurrentIdentity._InputFingerprint._Value, OutField, InProfileTag,
+                    InParams.Get_StreamingVolumeId(), DataLayerSelector);
+                return Resolution._Status == ECk_GroundNav_CookStatus::Cooked;
+            };
+
+            if (NOT TryLoadProfile({}, DefaultParams, Resolution._Field))
             { return Resolution; }
 
-            // Taken from the INDEX rather than recomputed: the load only reached here because the two
-            // are equal, and reading it off the asset is what makes the stored identity name the bake
-            // the tiles actually came out of.
-            Resolution._InputFingerprint =
-                groundnav::FCk_GroundNav_ContentFingerprint{CookedIndex->Get_Fingerprint()};
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            {
+                auto VariantParams = DefaultParams;
+                VariantParams._Profile = Variant.Get_Profile();
+                auto VariantField = groundnav::FCk_GroundNav_Field{};
+
+                if (NOT TryLoadProfile(Variant.Get_ProfileTag(), VariantParams, VariantField))
+                {
+                    Resolution._Field = {};
+                    Resolution._VariantFields.Reset();
+                    return Resolution;
+                }
+
+                Resolution._VariantFields.Emplace(Variant.Get_ProfileTag(), MoveTemp(VariantField));
+            }
+
+            // The identity was computed from the complete current volume input and compared by every
+            // successful load. It names the default and every profile variant as one atomic publish.
+            Resolution._InputFingerprint = CurrentIdentity._InputFingerprint;
 
             const auto Backend = groundnav::FCk_GroundNav_GeometryBackend_Jolt{World};
 
@@ -559,6 +561,140 @@ namespace ck
 
             return {};
         }
+
+        /**
+         * Publishes the volume's complete field set through the identity selected by its authored
+         * streaming id. Legacy volumes retain the handle-keyed registry exactly as before. A streamed
+         * owner is registered only from a complete first field, then every later whole-field publish
+         * refreshes its reserved bootstrap source. The registry owns the masked query publication;
+         * this volume retains its complete producer bundle, including tiles a disabled source masks.
+         */
+        auto Publish_WholeVolume(
+            UWorld*                                             InWorld,
+            const FCk_Handle_GroundNavVolume&                   InVolumeEntity,
+            const FFragment_GroundNavVolume_Params&             InParams,
+            groundnav::FCk_GroundNav_FieldPtr&                  InOutField,
+            TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr>& InOutVariantFields,
+            groundnav::FCk_GroundNav_Epoch&                     InOutEpoch,
+            bool&                                                InOutStreamOwnerRegistered,
+            const groundnav::world_fields::FCk_GroundNav_PublishClaim& InClaim) -> bool
+        {
+            const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+
+            if (VolumeId.Get_IsLegacy())
+            {
+                groundnav::world_fields::Publish(
+                    InWorld, InVolumeEntity, InOutField, InOutVariantFields, InClaim);
+                return true;
+            }
+
+            auto CompleteBundleIsPresent = InOutField.IsValid();
+            for (const auto& Variant : InOutVariantFields)
+            { CompleteBundleIsPresent = CompleteBundleIsPresent && Variant.Key.IsValid() && Variant.Value.IsValid(); }
+            CK_ENSURE_IF_NOT(CompleteBundleIsPresent,
+                TEXT("GroundNav streamed Volume [{}] cannot publish an incomplete all-profile bundle"),
+                InVolumeEntity)
+            {}
+            if (NOT CompleteBundleIsPresent)
+            { return false; }
+
+            auto Bundle = groundnav::FCk_GroundNav_StreamFieldBundle{};
+            Bundle._DefaultField = *InOutField;
+            for (const auto& Variant : InOutVariantFields)
+            { Bundle._VariantFields.Emplace(Variant.Key, *Variant.Value); }
+            const auto SubmittedEpoch = InOutEpoch;
+
+            const auto Result = InOutStreamOwnerRegistered
+                ? groundnav::world_fields::Refresh_StreamOwnerBundle(InWorld, VolumeId, Bundle, InClaim)
+                : groundnav::world_fields::Register_StreamOwner(InWorld, InVolumeEntity, VolumeId, Bundle);
+
+            const auto StreamPublishSucceeded = Result.Get_Succeeded();
+            CK_ENSURE_IF_NOT(StreamPublishSucceeded,
+                TEXT("GroundNav streamed Volume [{}] could not publish its all-profile bundle: registry status [{}]"),
+                InVolumeEntity, static_cast<int32>(Result._Status))
+            {}
+            if (NOT StreamPublishSucceeded)
+            { return false; }
+
+            const auto Snapshot = groundnav::world_fields::TryGet_StreamOwnerSnapshot(InWorld, VolumeId);
+            auto SnapshotIsComplete = Snapshot.IsSet() && Snapshot->_DefaultField.IsValid() &&
+                Snapshot->_VariantFields.Num() == InOutVariantFields.Num();
+            if (Snapshot.IsSet())
+            {
+                for (const auto& Variant : InOutVariantFields)
+                {
+                    const auto* PublishedVariant = Snapshot->_VariantFields.Find(Variant.Key);
+                    SnapshotIsComplete = SnapshotIsComplete && PublishedVariant != nullptr && PublishedVariant->IsValid();
+                }
+            }
+            CK_ENSURE_IF_NOT(SnapshotIsComplete,
+                TEXT("GroundNav streamed Volume [{}] published without a complete owner snapshot"), InVolumeEntity)
+            {}
+            if (NOT SnapshotIsComplete)
+            { return false; }
+
+            // Disable/Unload masks tiles from the registry's query snapshot while retaining their
+            // blobs in the owner. Do not feed that masked answer back into the volume: its next
+            // complete derive must still be able to reserialize every retained source tile. The
+            // successful transaction advanced the owner to Result._Epoch, so mirror that field epoch
+            // in the producer bundle too. Preserve each field's changed-tile precision by remapping
+            // only tiles carrying this submitted publish epoch: a local repair must still name only
+            // the tiles it rebuilt, rather than its entire lattice, after the registry transaction.
+            Bundle._DefaultField._Epoch = Result._Epoch;
+            for (auto& Tile : Bundle._DefaultField._Tiles)
+            {
+                if (Tile._Epoch == SubmittedEpoch)
+                { Tile._Epoch = Result._Epoch; }
+            }
+            for (auto& Variant : Bundle._VariantFields)
+            {
+                Variant.Value._Epoch = Result._Epoch;
+                for (auto& Tile : Variant.Value._Tiles)
+                {
+                    if (Tile._Epoch == SubmittedEpoch)
+                    { Tile._Epoch = Result._Epoch; }
+                }
+            }
+
+            InOutField = MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Bundle._DefaultField));
+            InOutVariantFields.Reset();
+            for (auto& Variant : Bundle._VariantFields)
+            {
+                InOutVariantFields.Emplace(
+                    Variant.Key, MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Variant.Value)));
+            }
+            InOutEpoch = Result._Epoch;
+            InOutStreamOwnerRegistered = true;
+            return true;
+        }
+
+        /** Make the invoker mode's declared lattice without touching physics or marking a tile built. */
+        auto Get_EmptyStreamBundle(
+            const FFragment_GroundNavVolume_Params& InParams,
+            const TArray<FCk_GroundNav_MarkupRecord>& InMarkupRecords,
+            const TArray<FCk_GroundNav_LinkRecord>& InLinkRecords) -> groundnav::FCk_GroundNav_StreamFieldBundle
+        {
+            auto Bundle = groundnav::FCk_GroundNav_StreamFieldBundle{};
+            const auto Params = Get_MultiProfileFieldParams(InParams, InMarkupRecords, InLinkRecords);
+
+            const auto MakeField = [](const groundnav::FCk_GroundNav_FieldParams& FieldParams) -> groundnav::FCk_GroundNav_Field
+            {
+                auto Field = groundnav::FCk_GroundNav_Field{};
+                Field._Params = FieldParams;
+                Field._Tiles.SetNum(FieldParams.Get_TileCount());
+                for (auto TileIndex = 0; TileIndex < Field._Tiles.Num(); ++TileIndex)
+                { Field._Tiles[TileIndex]._Coord = groundnav::Get_TileCoord(FieldParams._Divisions, TileIndex); }
+                groundnav::DoDerive_SeamPortals(Field);
+                groundnav::DoResolve_Links(Field);
+                groundnav::DoLabel_Reachability(Field);
+                return Field;
+            };
+
+            Bundle._DefaultField = MakeField(Params[0]);
+            for (auto ProfileIndex = 0; ProfileIndex < InParams.Get_ProfileVariants().Num(); ++ProfileIndex)
+            { Bundle._VariantFields.Emplace(InParams.Get_ProfileVariants()[ProfileIndex].Get_ProfileTag(), MakeField(Params[ProfileIndex + 1])); }
+            return Bundle;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -586,7 +722,25 @@ namespace ck
             InVolumeEntity, InParams.Get_VolumeBounds(), InParams.Get_Config().Get_CellSizeUu(),
             InParams.Get_Config().Get_TileSizeUu(), InParams.Get_MaxClearanceUu(),
             InParams.Get_ProbeBudgetPerTick())
+        {}
+
+        if (NOT ParamsAreBakeable)
         { return; }
+
+        // Setup establishes the selector identity even for an invoker-driven empty lattice. Its first
+        // automatic targeted build must collect the authored subset rather than mistaking the default
+        // constructed empty selector for an intentional collect-all override.
+        auto DataLayerSelector = groundnav::FCk_GroundNav_DataLayerSelector{};
+        const auto SelectorWasCanonicalized = groundnav::TryMake_DataLayerSelector(
+            InParams.Get_DataLayerSelector().Get_LayerNames(), DataLayerSelector);
+        if (NOT SelectorWasCanonicalized)
+        { return; }
+        InBuiltField._DataLayerSelector = DataLayerSelector;
+
+        // StartBuild and Build carry the same fragment for legacy and invoker modes; legacy simply
+        // leaves it dormant. Composing it here prevents the scheduler from excluding the existing
+        // whole-volume path while keeping stream handles world-local runtime state.
+        InVolumeEntity.AddOrGet<FFragment_GroundNavVolume_InvokerState>();
 
         const auto CookKeyIsUnique = Get_CookKeyIsUnique(InVolumeEntity, InParams);
 
@@ -597,15 +751,9 @@ namespace ck
             TEXT("GroundNav Volume [{}] cannot be admitted: another volume in this world already "
                  "carries the cook key [{}]"),
             InVolumeEntity, InParams.Get_CookKey())
-        { return; }
+        {}
 
-        const auto CookKeyAdmitsTheProfiles = Get_CookKeyAdmitsTheProfiles(InParams);
-
-        CK_ENSURE_IF_NOT(CookKeyAdmitsTheProfiles,
-            TEXT("GroundNav Volume [{}] cannot be admitted: a cooked field carries one profile; its "
-                 "cook key [{}] and its [{}] profile variant(s) cannot both stand. Drop the key to "
-                 "bake at runtime, or drop the variants to read the cook"),
-            InVolumeEntity, InParams.Get_CookKey(), InParams.Get_ProfileVariants().Num())
+        if (NOT CookKeyIsUnique)
         { return; }
 
         auto CookResolution = Get_CookResolution(InVolumeEntity, InParams);
@@ -631,31 +779,60 @@ namespace ck
             for (auto& LoadedTile : CookResolution._Field._Tiles)
             { LoadedTile._Epoch = CookResolution._Field._Epoch; }
 
-            InBuiltField._Epoch = CookResolution._Field._Epoch;
-            InBuiltField._Field =
+            for (auto& VariantField : CookResolution._VariantFields)
+            {
+                VariantField.Value._Epoch = CookResolution._Field._Epoch;
+
+                for (auto& LoadedTile : VariantField.Value._Tiles)
+                { LoadedTile._Epoch = VariantField.Value._Epoch; }
+            }
+
+            auto PublishedEpoch = CookResolution._Field._Epoch;
+            groundnav::FCk_GroundNav_FieldPtr PublishedField =
                 MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(CookResolution._Field));
 
-            InBuiltField._BakedInputFingerprint = CookResolution._InputFingerprint;
+            auto PublishedVariantFields = TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr>{};
+
+            for (auto& VariantField : CookResolution._VariantFields)
+            {
+                PublishedVariantFields.Emplace(
+                    VariantField.Key,
+                    MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(VariantField.Value)));
+            }
 
             // The revision the world had when the cook was LOADED, not when it was baked: the cooker
             // records none. So Get_IsBuildCurrent reads current on a cooked volume until the world
             // moves after the load, which is the most a stored revision can honestly claim about
             // geometry nobody wrote down. Zero where no backend could be made, exactly as an
             // unpublished volume already reads.
+            auto StreamOwnerRegistered = InBuiltField.Get_IsStreamOwnerRegistered();
+            if (NOT Publish_WholeVolume(
+                World, InVolumeEntity, InParams, PublishedField, PublishedVariantFields, PublishedEpoch,
+                StreamOwnerRegistered,
+                groundnav::world_fields::FCk_GroundNav_PublishClaim::Geometry()))
+            { return; }
+
+            InBuiltField._Epoch = PublishedEpoch;
+            InBuiltField._Field = MoveTemp(PublishedField);
+            InBuiltField._VariantFields = MoveTemp(PublishedVariantFields);
+            InBuiltField._BakedInputFingerprint = CookResolution._InputFingerprint;
             InBuiltField._BakedGeometryRevision = CookResolution._GeometryRevision;
-
-            // Empty by admission: a volume carrying a cook key cannot carry a profile variant.
-            InBuiltField._VariantFields.Reset();
-
-            groundnav::world_fields::Publish(
-                World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
+            InBuiltField._DataLayerSelector = DataLayerSelector;
+            InBuiltField.Set_StreamOwnerRegistered(StreamOwnerRegistered);
 
             // The union of every tile the cook held, because the restamp above put this epoch on all
             // of them: a cooked publish is a fresh publish of everything, and that is the honest
             // payload for one. An invalid box goes out AS IS where the cook held no built tile, on the
             // same terms a build's publish sends one.
-            nav_surface::Request_NotifySurfaceRebuilt(World,
-                groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch));
+            auto ChangedBounds = groundnav::Get_ChangedTileBounds(*InBuiltField._Field, InBuiltField._Epoch);
+
+            for (const auto& VariantField : InBuiltField._VariantFields)
+            {
+                ChangedBounds = Get_UnionedBounds(
+                    ChangedBounds, groundnav::Get_ChangedTileBounds(*VariantField.Value, InBuiltField._Epoch));
+            }
+
+            nav_surface::Request_NotifySurfaceRebuilt(World, ChangedBounds);
 
             InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
 
@@ -664,15 +841,55 @@ namespace ck
             return;
         }
 
-        // Registered before anything is baked, with no field yet, so a caller that can only name a
-        // WORLD — the NavSurface provider adapter — can find the volume to paint on it. A volume that
-        // only entered the registry at its first publish could not be painted until then, and the
-        // paint would be refused rather than deferred.
-        groundnav::world_fields::Publish(
-            World,
-            InVolumeEntity,
-            {},
-            {});
+        // Invoker scope owns one canonical, all-profile unbuilt lattice from setup onward. It does not
+        // touch Jolt or arm a whole-volume bake: the aggregation pass is the only authority that turns
+        // a world-local invoker union into targeted work.
+        if (InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::InvokerDriven)
+        {
+            const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+            const auto StreamIdIsUsable = VolumeId.Get_IsStreamingValid();
+            CK_ENSURE_IF_NOT(StreamIdIsUsable,
+                TEXT("GroundNav invoker-driven Volume [{}] requires a positive streaming volume id"), InVolumeEntity)
+            {}
+            if (NOT StreamIdIsUsable)
+            { return; }
+
+            const auto MarkupRecords = Get_MarkupRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
+            const auto LinkRecords = Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
+            auto Bundle = Get_EmptyStreamBundle(InParams, MarkupRecords, LinkRecords);
+            const auto Registration = groundnav::world_fields::Register_StreamOwner(
+                World, InVolumeEntity, VolumeId, Bundle);
+            const auto RegistrationSucceeded = Registration.Get_Succeeded() && Registration._Source.Get_IsValid();
+            CK_ENSURE_IF_NOT(RegistrationSucceeded,
+                TEXT("GroundNav invoker-driven Volume [{}] could not register its canonical lattice: registry status [{}]"),
+                InVolumeEntity, static_cast<int32>(Registration._Status))
+            {}
+            if (NOT RegistrationSucceeded)
+            { return; }
+
+            Bundle._DefaultField._Epoch = Registration._Epoch;
+            for (auto& Variant : Bundle._VariantFields)
+            { Variant.Value._Epoch = Registration._Epoch; }
+            InBuiltField._Field = MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Bundle._DefaultField));
+            InBuiltField._VariantFields.Reset();
+            for (auto& Variant : Bundle._VariantFields)
+            { InBuiltField._VariantFields.Emplace(Variant.Key, MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Variant.Value))); }
+            InBuiltField._Epoch = Registration._Epoch;
+            InBuiltField.Set_StreamOwnerRegistered(true);
+
+            auto& InvokerState = InVolumeEntity.AddOrGet<FFragment_GroundNavVolume_InvokerState>();
+            InvokerState.Set_Source(Registration._Source);
+            return;
+        }
+
+        // Legacy volumes retain their early empty entry for provider discovery. A streaming owner is
+        // intentionally absent until it has a complete bundle for its reserved bootstrap source.
+        if (groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()}.Get_IsLegacy())
+        {
+            groundnav::world_fields::Publish(
+                World, InVolumeEntity, {}, {},
+                groundnav::world_fields::FCk_GroundNav_PublishClaim::Geometry());
+        }
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
         { return; }
@@ -683,11 +900,132 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_GroundNavVolume_InvokerAggregation::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState)
+        -> void
+    {
+        if (InParams.Get_StreamingBuildScope() != ECk_GroundNav_StreamingBuildScope::InvokerDriven)
+        { return; }
+
+        const auto Producer = InBuiltField.Get_Field();
+        const auto ProducerIsValid = Producer.IsValid();
+        CK_ENSURE_IF_NOT(ProducerIsValid,
+            TEXT("GroundNav invoker-driven Volume [{}] has no retained producer field"), InVolumeEntity)
+        {}
+        if (NOT ProducerIsValid)
+        { return; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+        if (World == nullptr)
+        { return; }
+
+        auto Points = TArray<groundnav::FCk_GroundNav_BuildInvokerPoint>{};
+        this->_TransientEntity.View<groundnav::FFragment_GroundNav_BuildInvoker, FFragment_Transform,
+            CK_IGNORE_PENDING_KILL>().ForEach(
+            [&](FCk_Entity InEntity, const groundnav::FFragment_GroundNav_BuildInvoker& InInvoker,
+                const FFragment_Transform& InTransform) -> void
+            {
+                const auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
+                if (UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Handle) != World)
+                { return; }
+                Points.Emplace(groundnav::FCk_GroundNav_BuildInvokerPoint{
+                    InTransform.Get_Transform().GetLocation(), InInvoker.Get_InnerGenerationRadiusUu(),
+                    InInvoker.Get_OuterRemovalRadiusUu()});
+            });
+
+        auto Boxes = TArray<groundnav::FCk_GroundNav_BuildInvokerBox>{};
+        this->_TransientEntity.View<groundnav::FFragment_GroundNav_BuildInvokerVolume,
+            CK_IGNORE_PENDING_KILL>().ForEach(
+            [&](FCk_Entity InEntity, const groundnav::FFragment_GroundNav_BuildInvokerVolume& InInvoker) -> void
+            {
+                const auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
+                if (UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Handle) != World)
+                { return; }
+                Boxes.Emplace(groundnav::FCk_GroundNav_BuildInvokerBox{
+                    InInvoker.Get_InnerBounds(), InInvoker.Get_OuterPaddingUu()});
+            });
+
+        auto Selection = groundnav::FCk_GroundNav_BuildInvokerSelection{};
+        if (NOT groundnav::Request_ComputeBuildInvokerSelection(
+            Producer->_Params, Points, Boxes, InInvokerState._EnabledTileIndices, Selection))
+        { return; }
+
+        auto Desired = InInvokerState._EnabledTileIndices;
+        for (const auto TileIndex : Selection._BuildTileIndices)
+        { Desired.Add(TileIndex); }
+        for (const auto TileIndex : Selection._PurgeTileIndices)
+        { Desired.Remove(TileIndex); }
+        Desired.Sort();
+
+        if (Desired == InInvokerState._DesiredTileIndices)
+        { return; }
+
+        const auto PreviousDesired = InInvokerState._DesiredTileIndices;
+        const auto PreviousGeneration = InInvokerState._TargetGeneration;
+        InInvokerState._DesiredTileIndices = MoveTemp(Desired);
+        ++InInvokerState._TargetGeneration;
+
+        auto ProducerBuilt = TSet<int32>{};
+        for (auto TileIndex = 0; TileIndex < Producer->_Tiles.Num(); ++TileIndex)
+        { if (Producer->_Tiles[TileIndex].Get_IsBuilt()) { ProducerBuilt.Add(TileIndex); } }
+
+        // A tile returning to generation can be producer-built while absent from the enabled query
+        // mask. It is therefore a zero-probe registry re-enable, not a targeted bake.
+        auto MissingBuild = TArray<int32>{};
+        for (const auto TileIndex : Selection._BuildTileIndices)
+        {
+            if (NOT ProducerBuilt.Contains(TileIndex))
+            { MissingBuild.Emplace(TileIndex); }
+        }
+
+        // A purge or retained re-enable needs no geometry work. Commit its exact desired mask first;
+        // local enabled state changes only after the registry accepted the same transaction.
+        if (MissingBuild.IsEmpty() && InInvokerState._Source.Get_IsValid())
+        {
+            auto EnabledCoords = TArray<groundnav::FCk_GroundNav_TileCoord>{};
+            EnabledCoords.Reserve(InInvokerState._DesiredTileIndices.Num());
+            for (const auto TileIndex : InInvokerState._DesiredTileIndices)
+            { EnabledCoords.Emplace(groundnav::Get_TileCoord(Producer->_Params._Divisions, TileIndex)); }
+            const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+            const auto Result = groundnav::world_fields::Upsert_StreamSourceTiles(
+                World, VolumeId, InInvokerState._Source, {}, EnabledCoords);
+            if (NOT Result.Get_Succeeded())
+            {
+                InInvokerState._DesiredTileIndices = PreviousDesired;
+                InInvokerState._TargetGeneration = PreviousGeneration;
+                return;
+            }
+            InInvokerState._EnabledTileIndices = InInvokerState._DesiredTileIndices;
+            if (Result._ChangedBounds.IsValid != 0)
+            { nav_surface::Request_NotifySurfaceRebuilt(World, Result._ChangedBounds); }
+        }
+
+        // An active target is never mutated in place. Its completion compares this generation before
+        // it is allowed to compose or publish, so a move during a budgeted bake cannot resurrect tiles
+        // the newer world aggregation already removed.
+        if (NOT MissingBuild.IsEmpty() &&
+            NOT InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>())
+        {
+            InInvokerState._ActiveBuildTileIndices = MoveTemp(MissingBuild);
+            InInvokerState._ActiveBuildGeneration = InInvokerState._TargetGeneration;
+            InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsBuild>();
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_GroundNavVolume_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Requests& InRequests) const
@@ -696,7 +1034,7 @@ namespace ck
         ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InVolumeEntity, InParams, InBuildState, InRepairState, InRequest);
+                DoHandleRequest(InVolumeEntity, InParams, InBuiltField, InBuildState, InRepairState, InRequest);
             }));
     }
 
@@ -705,6 +1043,7 @@ namespace ck
         DoHandleRequest(
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
             const FCk_Request_GroundNavVolume_Build& InRequest)
@@ -712,10 +1051,32 @@ namespace ck
     {
         using namespace ck_groundnav_volume_processor;
 
+        const auto& RequestedSelectorInput =
+            InRequest.Get_OverrideDataLayerSelector() == ECk_EnableDisable::Enable
+                ? InRequest.Get_DataLayerSelector()
+                : InParams.Get_DataLayerSelector();
+        auto RequestedSelector = groundnav::FCk_GroundNav_DataLayerSelector{};
+        const auto SelectorIsValid = groundnav::TryMake_DataLayerSelector(
+            RequestedSelectorInput.Get_LayerNames(), RequestedSelector);
+
+        CK_ENSURE_IF_NOT(SelectorIsValid,
+            TEXT("Cannot build GroundNav Volume [{}] - its requested data-layer selector is invalid"),
+            InVolumeEntity)
+        {}
+
+        if (NOT SelectorIsValid)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
         const auto ParamsAreBakeable = Get_ParamsAreBakeable(InParams);
 
         CK_ENSURE_IF_NOT(ParamsAreBakeable,
             TEXT("Cannot build GroundNav Volume [{}] - its params are not bakeable"), InVolumeEntity)
+        {}
+
+        if (NOT ParamsAreBakeable)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -729,18 +1090,9 @@ namespace ck
             TEXT("Cannot build GroundNav Volume [{}] - another volume in this world already carries "
                  "its cook key [{}]"),
             InVolumeEntity, InParams.Get_CookKey())
-        {
-            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
-            return;
-        }
+        {}
 
-        const auto CookKeyAdmitsTheProfiles = Get_CookKeyAdmitsTheProfiles(InParams);
-
-        CK_ENSURE_IF_NOT(CookKeyAdmitsTheProfiles,
-            TEXT("Cannot build GroundNav Volume [{}] - a cooked field carries one profile; its cook "
-                 "key [{}] and its [{}] profile variant(s) cannot both stand. Drop the key to bake at "
-                 "runtime, or drop the variants to read the cook"),
-            InVolumeEntity, InParams.Get_CookKey(), InParams.Get_ProfileVariants().Num())
+        if (NOT CookKeyIsUnique)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -749,9 +1101,21 @@ namespace ck
         const auto IsBuilding = InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>() ||
                                 InVolumeEntity.Has<FTag_GroundNavVolume_NeedsBuild>();
 
-        // A request arriving while a build is already running is an idempotent no-op: the running build
-        // already satisfies the caller's intent, and Succeeded is what that means.
-        if (IsBuilding && InRequest.Get_ForceRestart() == ECk_EnableDisable::Disable)
+        // A request arriving while work for the same selector is already armed is an idempotent no-op.
+        // A selector change is new work even without ForceRestart: the current build cannot satisfy it.
+        const auto ExistingSelector = InVolumeEntity.Has<FTag_GroundNavVolume_BuildInProgress>()
+            ? InBuildState._ActiveDataLayerSelector.Get_LayerNames()
+            : (InBuildState._HasPendingBuildRequest
+                ? (InBuildState._PendingRequest.Get_OverrideDataLayerSelector() == ECk_EnableDisable::Enable
+                    ? InBuildState._PendingRequest.Get_DataLayerSelector().Get_LayerNames()
+                    : RequestedSelector.Get_LayerNames())
+                : (InBuiltField.Get_Field().IsValid()
+                    ? InBuiltField.Get_DataLayerSelector().Get_LayerNames()
+                    : InParams.Get_DataLayerSelector().Get_LayerNames()));
+        const auto ExistingBuildSatisfiesRequest =
+            IsBuilding && ExistingSelector == RequestedSelector.Get_LayerNames();
+
+        if (ExistingBuildSatisfiesRequest && InRequest.Get_ForceRestart() == ECk_EnableDisable::Disable)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
             return;
@@ -766,6 +1130,8 @@ namespace ck
 
         InBuildState._Backend.Reset();
         InBuildState._PendingRequest = InRequest;
+        InBuildState._PendingRequest.Set_DataLayerSelector(RequestedSelector);
+        InBuildState._HasPendingBuildRequest = true;
 
         InVolumeEntity.Try_Remove<FTag_GroundNavVolume_BuildInProgress>();
         InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsBuild>();
@@ -1389,7 +1755,8 @@ namespace ck
             const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
-            FFragment_GroundNavVolume_RepairState& InRepairState) const
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState) const
         -> void
     {
         using namespace ck_groundnav_volume_processor;
@@ -1410,7 +1777,31 @@ namespace ck
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        InBuildState._Backend = MakeUnique<groundnav::FCk_GroundNav_GeometryBackend_Jolt>(World);
+        auto EffectiveDataLayerSelector = InBuildState._HasPendingBuildRequest
+            ? (InBuildState._PendingRequest.Get_OverrideDataLayerSelector() == ECk_EnableDisable::Enable
+                ? InBuildState._PendingRequest.Get_DataLayerSelector()
+                : InParams.Get_DataLayerSelector())
+            : (InBuiltField.Get_Field().IsValid()
+                ? InBuiltField.Get_DataLayerSelector()
+                : InParams.Get_DataLayerSelector());
+        auto CanonicalEffectiveSelector = groundnav::FCk_GroundNav_DataLayerSelector{};
+        const auto EffectiveSelectorIsValid = groundnav::TryMake_DataLayerSelector(
+            EffectiveDataLayerSelector.Get_LayerNames(), CanonicalEffectiveSelector);
+        CK_ENSURE_IF_NOT(EffectiveSelectorIsValid,
+            TEXT("GroundNav Volume [{}] cannot start a build with an invalid data-layer selector"), InVolumeEntity)
+        {}
+        if (NOT EffectiveSelectorIsValid)
+        {
+            InBuildState._HasPendingBuildRequest = false;
+            InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+        EffectiveDataLayerSelector = MoveTemp(CanonicalEffectiveSelector);
+        InBuildState._HasPendingBuildRequest = false;
+        InBuildState._ActiveDataLayerSelector = EffectiveDataLayerSelector;
+
+        InBuildState._Backend = MakeUnique<groundnav::FCk_GroundNav_GeometryBackend_Jolt>(
+            World, EffectiveDataLayerSelector);
 
         const auto BackendIsUsable = InBuildState._Backend->Get_IsValid();
 
@@ -1473,10 +1864,13 @@ namespace ck
         const auto LinkRecords =
             Get_LinkRecordsOf(UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
 
-        const auto BeginResult = groundnav::Request_BeginBuild_MultiProfile(
-            Get_MultiProfileFieldParams(InParams, MarkupRecords, LinkRecords),
-            InBuiltField.Get_Epoch().Get_Next(),
-            InBuildState._Build);
+        const auto FieldParams = Get_MultiProfileFieldParams(InParams, MarkupRecords, LinkRecords);
+        const auto IsInvokerBuild = InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::InvokerDriven;
+        const auto BeginResult = IsInvokerBuild
+            ? groundnav::Request_BeginBuild_MultiProfile_Targeted(
+                FieldParams, InBuiltField.Get_Epoch().Get_Next(), InInvokerState._ActiveBuildTileIndices, InBuildState._Build)
+            : groundnav::Request_BeginBuild_MultiProfile(
+                FieldParams, InBuiltField.Get_Epoch().Get_Next(), InBuildState._Build);
 
         CK_ENSURE_IF_NOT(BeginResult.Get_IsCompleted(),
             TEXT("GroundNav Volume [{}] could not begin a build: [{}]"),
@@ -1503,7 +1897,8 @@ namespace ck
         // geometry half, and it is the same token a later slice fails closed on when the world moves
         // underneath it.
         const auto Identity = Get_PublishedIdentity(
-            InVolumeEntity, InParams, InBuildState._Backend->Get_WorldRevision());
+            InVolumeEntity, InParams, InBuildState._Backend->Get_WorldRevision(),
+            InBuildState._ActiveDataLayerSelector);
 
         InBuildState._BakedInputFingerprint = Identity._InputFingerprint;
         InBuildState._BakedGeometryRevision = Identity._GeometryRevision;
@@ -1521,7 +1916,8 @@ namespace ck
             const FFragment_GroundNavVolume_Params& InParams,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
-            FFragment_GroundNavVolume_BuiltField& InBuiltField) const
+            FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState) const
         -> void
     {
         const auto BackendIsHeld = InBuildState._Backend.IsValid();
@@ -1605,32 +2001,145 @@ namespace ck
 
         // Published by SWAPPING the pointer. Whoever is holding the previous field keeps reading it,
         // whole, for as long as they hold it.
-        InBuiltField._Epoch = Completed->_Epoch;
-        InBuiltField._Field = MoveTemp(Completed);
+        const auto IsInvokerBuild = InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::InvokerDriven;
+        if (IsInvokerBuild)
+        {
+            const auto ExistingProducer = InBuiltField.Get_Field();
+            const auto ProducerIsUsable = ExistingProducer.IsValid() && InInvokerState._Source.Get_IsValid();
+            CK_ENSURE_IF_NOT(ProducerIsUsable,
+                TEXT("GroundNav invoker-driven Volume [{}] completed without its retained producer or source"), InVolumeEntity)
+            {}
+            if (NOT ProducerIsUsable)
+            {
+                InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+                return;
+            }
+
+            // The world can move while the target is budgeted. Discard the completed subset before it
+            // reaches the producer or registry when a later aggregation superseded this generation.
+            if (InInvokerState._ActiveBuildGeneration != InInvokerState._TargetGeneration)
+            {
+                auto ExistingIndices = TSet<int32>{};
+                for (auto TileIndex = 0; TileIndex < ExistingProducer->_Tiles.Num(); ++TileIndex)
+                {
+                    if (ExistingProducer->_Tiles[TileIndex].Get_IsBuilt())
+                    { ExistingIndices.Add(TileIndex); }
+                }
+                InInvokerState._ActiveBuildTileIndices.Reset();
+                for (const auto TileIndex : InInvokerState._DesiredTileIndices)
+                {
+                    if (NOT ExistingIndices.Contains(TileIndex))
+                    { InInvokerState._ActiveBuildTileIndices.Emplace(TileIndex); }
+                }
+                if (NOT InInvokerState._ActiveBuildTileIndices.IsEmpty())
+                {
+                    InInvokerState._ActiveBuildGeneration = InInvokerState._TargetGeneration;
+                    InVolumeEntity.AddOrGet<FTag_GroundNavVolume_NeedsBuild>();
+                }
+                InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+                return;
+            }
+
+            auto ProducerBundle = groundnav::FCk_GroundNav_StreamFieldBundle{};
+            ProducerBundle._DefaultField = *ExistingProducer;
+            for (const auto& Variant : InBuiltField.Get_VariantFields())
+            { ProducerBundle._VariantFields.Emplace(Variant.Key, *Variant.Value); }
+
+            auto Transitions = TArray<groundnav::FCk_GroundNav_StreamTileTransition>{};
+            const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+            for (const auto TileIndex : InInvokerState._ActiveBuildTileIndices)
+            {
+                ProducerBundle._DefaultField._Tiles[TileIndex] = CompletedFields[0]->_Tiles[TileIndex];
+                auto Transition = groundnav::FCk_GroundNav_StreamTileTransition{};
+                Transition._TileId = groundnav::FCk_GroundNav_StreamTileId{
+                    VolumeId, groundnav::Get_TileCoord(ProducerBundle._DefaultField._Params._Divisions, TileIndex)};
+                Transition._Kind = groundnav::ECk_GroundNav_StreamTileTransitionKind::Replace;
+                groundnav::Write_Tile(ProducerBundle._DefaultField, Transition._TileId._Coord, Transition._DefaultBlob);
+
+                for (auto VariantIndex = 0; VariantIndex < ProfileVariantTags.Num(); ++VariantIndex)
+                {
+                    auto* Variant = ProducerBundle._VariantFields.Find(ProfileVariantTags[VariantIndex]);
+                    if (Variant == nullptr)
+                    { continue; }
+                    Variant->_Tiles[TileIndex] = CompletedFields[VariantIndex + 1]->_Tiles[TileIndex];
+                    groundnav::Write_Tile(*Variant, Transition._TileId._Coord,
+                        Transition._VariantBlobs.FindOrAdd(ProfileVariantTags[VariantIndex]));
+                }
+                Transitions.Emplace(MoveTemp(Transition));
+            }
+
+            // The retained producer has just changed at selected coordinates. Re-derive the values
+            // which are functions of more than one tile before it becomes the source for future
+            // selection or zero-probe restore.
+            auto BundleIsComplete = ProducerBundle._VariantFields.Num() == ProfileVariantTags.Num();
+            CK_ENSURE_IF_NOT(BundleIsComplete,
+                TEXT("GroundNav invoker-driven Volume [{}] lost a profile while merging a tile subset"), InVolumeEntity)
+            {}
+            if (NOT BundleIsComplete)
+            {
+                InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+                return;
+            }
+            groundnav::DoDerive_SeamPortals(ProducerBundle._DefaultField);
+            groundnav::DoResolve_Links(ProducerBundle._DefaultField);
+            groundnav::DoLabel_Reachability(ProducerBundle._DefaultField);
+            for (auto& Variant : ProducerBundle._VariantFields)
+            {
+                groundnav::DoDerive_SeamPortals(Variant.Value);
+                groundnav::DoResolve_Links(Variant.Value);
+                groundnav::DoLabel_Reachability(Variant.Value);
+            }
+
+            auto EnabledCoords = TArray<groundnav::FCk_GroundNav_TileCoord>{};
+            EnabledCoords.Reserve(InInvokerState._DesiredTileIndices.Num());
+            for (const auto TileIndex : InInvokerState._DesiredTileIndices)
+            { EnabledCoords.Emplace(groundnav::Get_TileCoord(ProducerBundle._DefaultField._Params._Divisions, TileIndex)); }
+            const auto Result = groundnav::world_fields::Upsert_StreamSourceTiles(
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity), VolumeId,
+                InInvokerState._Source, Transitions, EnabledCoords);
+            if (NOT Result.Get_Succeeded())
+            {
+                // No local mask or desired publication is committed on a refused transaction. Reset
+                // to the last registry-confirmed mask so the next aggregation retries this target.
+                InInvokerState._DesiredTileIndices = InInvokerState._EnabledTileIndices;
+                InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+                return;
+            }
+
+            ProducerBundle._DefaultField._Epoch = Result._Epoch;
+            for (auto& Variant : ProducerBundle._VariantFields)
+            { Variant.Value._Epoch = Result._Epoch; }
+            InBuiltField._Field = MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(ProducerBundle._DefaultField));
+            InBuiltField._VariantFields.Reset();
+            for (auto& Variant : ProducerBundle._VariantFields)
+            { InBuiltField._VariantFields.Emplace(Variant.Key, MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Variant.Value))); }
+            InBuiltField._Epoch = Result._Epoch;
+            InInvokerState._EnabledTileIndices = InInvokerState._DesiredTileIndices;
+            InBuiltField._BakedInputFingerprint = InBuildState._BakedInputFingerprint;
+            InBuiltField._BakedGeometryRevision = InBuildState._BakedGeometryRevision;
+            InBuiltField._DataLayerSelector = InBuildState._ActiveDataLayerSelector;
+            nav_surface::Request_NotifySurfaceRebuilt(
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity), Result._ChangedBounds);
+            InVolumeEntity.AddOrGet<FTag_GroundNavVolume_Built>();
+            InBuildState._PendingRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+            return;
+        }
+
+        auto PublishedEpoch = Completed->_Epoch;
+        auto PublishedField = MoveTemp(Completed);
 
         // The identity moves with the field it belongs to. Taken from the build state rather than
         // recomputed here, because what this field is a statement about is what the build OPENED
         // under - a record admitted while it ran is not in the ground it baked.
-        InBuiltField._BakedInputFingerprint = InBuildState._BakedInputFingerprint;
-        InBuiltField._BakedGeometryRevision = InBuildState._BakedGeometryRevision;
-
-        // The ground standing here was the cook's until this build replaced it, and it is not any
-        // more. StaleCook is exactly what that means - an index exists and the field published over it
-        // did not come out of it - and a Setup on a fresh volume re-loads the cook rather than
-        // inheriting this. Every other status already names why the ground is not the cook's and is
-        // carried through unchanged.
-        if (InBuiltField._CookStatus == ECk_GroundNav_CookStatus::Cooked)
-        { InBuiltField._CookStatus = ECk_GroundNav_CookStatus::StaleCook; }
-
         // The variants are keyed on their tags HERE, where the fields and the order they came back in
         // are both in hand, against the tag list this build BEGAN with. Rebuilt from scratch rather
         // than merged into whatever was published before, so a variant this build no longer bakes
         // leaves nothing behind under its tag.
-        InBuiltField._VariantFields.Reset();
+        auto PublishedVariantFields = TMap<FGameplayTag, groundnav::FCk_GroundNav_FieldPtr>{};
 
         for (auto VariantIndex = 0; VariantIndex < ProfileVariantTags.Num(); ++VariantIndex)
         {
-            InBuiltField._VariantFields.Emplace(
+            PublishedVariantFields.Emplace(
                 ProfileVariantTags[VariantIndex], CompletedFields[VariantIndex + 1]);
         }
 
@@ -1639,8 +2148,35 @@ namespace ck
         // A published field nobody can find from a world answers nothing: this is what the NavSurface
         // provider adapter resolves against. The variants go out in the same call under the same lock,
         // so no reader can see one half of a publish.
-        groundnav::world_fields::Publish(
-            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
+        auto StreamOwnerRegistered = InBuiltField.Get_IsStreamOwnerRegistered();
+        if (NOT ck_groundnav_volume_processor::Publish_WholeVolume(
+            World, InVolumeEntity, InParams, PublishedField, PublishedVariantFields, PublishedEpoch,
+            StreamOwnerRegistered,
+            groundnav::world_fields::FCk_GroundNav_PublishClaim::Geometry()))
+        {
+            InBuildState._PendingRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed);
+            for (const auto& RidingRepairRequest : InRepairState._RidingBuildRequests)
+            { RidingRepairRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed); }
+            InRepairState._RidingBuildRequests.Reset();
+            return;
+        }
+
+        InBuiltField._Epoch = PublishedEpoch;
+        InBuiltField._Field = MoveTemp(PublishedField);
+        InBuiltField._VariantFields = MoveTemp(PublishedVariantFields);
+        InBuiltField._BakedInputFingerprint = InBuildState._BakedInputFingerprint;
+        InBuiltField._BakedGeometryRevision = InBuildState._BakedGeometryRevision;
+        InBuiltField._DataLayerSelector = InBuildState._ActiveDataLayerSelector;
+        InBuiltField.Set_StreamOwnerRegistered(StreamOwnerRegistered);
+
+        // The ground standing here was the cook's until this build replaced it, and it is not any
+        // more. StaleCook is exactly what that means - an index exists and the field published over it
+        // did not come out of it - and a Setup on a fresh volume re-loads the cook rather than
+        // inheriting this. Every other status already names why the ground is not the cook's and is
+        // carried through unchanged.
+        if (InBuiltField._CookStatus == ECk_GroundNav_CookStatus::Cooked)
+        { InBuiltField._CookStatus = ECk_GroundNav_CookStatus::StaleCook; }
 
         // An invalid box goes out AS IS when no tile built: bounds-unknown is the honest payload, where
         // substituting the volume's own bounds would name ground this publish never produced.
@@ -1737,7 +2273,8 @@ namespace ck
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        InRepairState._Backend = MakeUnique<groundnav::FCk_GroundNav_GeometryBackend_Jolt>(World);
+        InRepairState._Backend = MakeUnique<groundnav::FCk_GroundNav_GeometryBackend_Jolt>(
+            World, InBuiltField.Get_DataLayerSelector());
 
         const auto BackendIsUsable = InRepairState._Backend->Get_IsValid();
 
@@ -1866,24 +2403,37 @@ namespace ck
         if (Repaired->_Epoch.Get_IsNewerThan(InBuiltField.Get_Epoch()))
         {
             // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
-            InBuiltField._Epoch = Repaired->_Epoch;
-            InBuiltField._Field = MoveTemp(Repaired);
+            auto PublishedEpoch = Repaired->_Epoch;
+            auto PublishedField = MoveTemp(Repaired);
+            auto PublishedVariantFields = InBuiltField._VariantFields;
 
             // A repair re-bakes ground against the backend it has been slicing with, so it can answer
             // both halves: the records it published with, and the revision that backend is at.
             const auto Identity = Get_PublishedIdentity(
-                InVolumeEntity, InParams, InRepairState._Backend->Get_WorldRevision());
-
-            InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
-            InBuiltField._BakedGeometryRevision = Identity._GeometryRevision;
+                InVolumeEntity, InParams, InRepairState._Backend->Get_WorldRevision(),
+                InBuiltField.Get_DataLayerSelector());
 
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
             // The variant map is empty by StartRepair's own rule - a volume holding one is rebuilt
             // rather than repaired - and rides along so this is the same whole swap the build publishes
             // through.
-            groundnav::world_fields::Publish(
-                World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
+            auto StreamOwnerRegistered = InBuiltField.Get_IsStreamOwnerRegistered();
+            if (NOT ck_groundnav_volume_processor::Publish_WholeVolume(
+                World, InVolumeEntity, InParams, PublishedField, PublishedVariantFields, PublishedEpoch,
+                StreamOwnerRegistered,
+                groundnav::world_fields::FCk_GroundNav_PublishClaim::Geometry()))
+            {
+                DoEnd(InVolumeEntity, InRepairState, ECk_Request_OperationResult::Failed);
+                return;
+            }
+
+            InBuiltField._Epoch = PublishedEpoch;
+            InBuiltField._Field = MoveTemp(PublishedField);
+            InBuiltField._VariantFields = MoveTemp(PublishedVariantFields);
+            InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+            InBuiltField._BakedGeometryRevision = Identity._GeometryRevision;
+            InBuiltField.Set_StreamOwnerRegistered(StreamOwnerRegistered);
 
             // Only the re-baked tiles carry the new epoch, so this names exactly the ground the repair
             // touched and nothing besides.
@@ -2029,10 +2579,13 @@ namespace ck
 
         // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
         auto ChangedBounds = FBox{ForceInit};
+        auto PublishedField = InBuiltField._Field;
+        auto PublishedVariantFields = InBuiltField._VariantFields;
+        auto PublishedEpoch = NextEpoch;
 
         if (DefaultMoved)
         {
-            InBuiltField._Field = Derived.Key;
+            PublishedField = Derived.Key;
 
             ChangedBounds = Get_UnionedBounds(ChangedBounds,
                 groundnav::Get_ChangedTileBounds(*Derived.Key, NextEpoch));
@@ -2040,7 +2593,7 @@ namespace ck
 
         for (const auto& MovedVariant : MovedVariants)
         {
-            InBuiltField._VariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
+            PublishedVariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
 
             ChangedBounds = Get_UnionedBounds(ChangedBounds,
                 groundnav::Get_ChangedTileBounds(*MovedVariant.Value, NextEpoch));
@@ -2048,26 +2601,32 @@ namespace ck
 
         // The NEWEST epoch across every field the volume holds. Anything that moved took NextEpoch, and
         // NextEpoch is past every epoch the unmoved fields still carry, so it is that maximum.
-        InBuiltField._Epoch = NextEpoch;
-
         // A derive re-labels ground that is already published and reads no geometry, so the revision
         // that ground was baked against is carried FORWARD unchanged. What did move is the record list
         // this pass published with, which is the half refreshed here.
         const auto Identity = Get_PublishedIdentity(
             InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
-            InBuiltField._BakedGeometryRevision);
-
-        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+            InBuiltField._BakedGeometryRevision, InBuiltField.Get_DataLayerSelector());
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
-        groundnav::world_fields::Publish(
-            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields);
+        // Cost markup preserves geometry. The invalidator only repaths a cached route when its saved
+        // filter now denies a plate the route used.
+        auto StreamOwnerRegistered = InBuiltField.Get_IsStreamOwnerRegistered();
+        if (NOT ck_groundnav_volume_processor::Publish_WholeVolume(
+            World, InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
+            PublishedField, PublishedVariantFields, PublishedEpoch,
+            StreamOwnerRegistered,
+            groundnav::world_fields::FCk_GroundNav_PublishClaim::CostOnly()))
+        { return; }
+        InBuiltField._Field = MoveTemp(PublishedField);
+        InBuiltField._VariantFields = MoveTemp(PublishedVariantFields);
+        InBuiltField._Epoch = PublishedEpoch;
+        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+        InBuiltField.Set_StreamOwnerRegistered(StreamOwnerRegistered);
 
-        // Past the no-change early-out above, so this notify is only ever raised for a publish that
-        // moved something. The UNION over every field that moved: a reader is told to look again
-        // wherever any profile's ground did, and a field that stood still contributes nothing. An
-        // invalid box is reported as-is for the same reason the build reports one.
+        // Notify every changed field. Cached corridors keep their route unless their saved filter now
+        // denies a used plate; in-flight searches still arm against the replaced prices.
         nav_surface::Request_NotifySurfaceRebuilt(World, ChangedBounds);
     }
 
@@ -2173,10 +2732,13 @@ namespace ck
 
         // The same swap the build publishes through: what is out stays out, whole, for whoever holds it.
         auto ChangedBounds = FBox{ForceInit};
+        auto PublishedField = InBuiltField._Field;
+        auto PublishedVariantFields = InBuiltField._VariantFields;
+        auto PublishedEpoch = NextEpoch;
 
         if (DefaultMoved)
         {
-            InBuiltField._Field = Derived._Field;
+            PublishedField = Derived._Field;
 
             ChangedBounds = Get_UnionedBounds(ChangedBounds,
                 groundnav::Get_ChangedTileBounds(*Derived._Field, NextEpoch));
@@ -2184,7 +2746,7 @@ namespace ck
 
         for (const auto& MovedVariant : MovedVariants)
         {
-            InBuiltField._VariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
+            PublishedVariantFields.Emplace(MovedVariant.Key, MovedVariant.Value);
 
             ChangedBounds = Get_UnionedBounds(ChangedBounds,
                 groundnav::Get_ChangedTileBounds(*MovedVariant.Value, NextEpoch));
@@ -2192,15 +2754,11 @@ namespace ck
 
         // The NEWEST epoch across every field the volume holds, for the same reason the cost derive
         // takes it.
-        InBuiltField._Epoch = NextEpoch;
-
         // Carried forward and refreshed on the same terms the cost derive publishes under: no geometry
         // was read, so the revision stands, and the record list that moved is the half restamped.
         const auto Identity = Get_PublishedIdentity(
             InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
-            InBuiltField._BakedGeometryRevision);
-
-        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+            InBuiltField._BakedGeometryRevision, InBuiltField.Get_DataLayerSelector());
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
@@ -2209,8 +2767,18 @@ namespace ck
         // cached which links its route used can answer exactly here, where the endpoint-tile bounds
         // beneath can only answer "a route through this tile". The registry accumulates them onto
         // whatever run is open, so a reader that has missed several of these still reads one list.
-        groundnav::world_fields::Publish(
-            World, InVolumeEntity, InBuiltField._Field, InBuiltField._VariantFields, ChangedLinkIds);
+        auto StreamOwnerRegistered = InBuiltField.Get_IsStreamOwnerRegistered();
+        if (NOT ck_groundnav_volume_processor::Publish_WholeVolume(
+            World, InVolumeEntity, InVolumeEntity.Get<FFragment_GroundNavVolume_Params>(),
+            PublishedField, PublishedVariantFields, PublishedEpoch,
+            StreamOwnerRegistered,
+            groundnav::world_fields::FCk_GroundNav_PublishClaim::LinkOnly(MoveTemp(ChangedLinkIds))))
+        { return; }
+        InBuiltField._Field = MoveTemp(PublishedField);
+        InBuiltField._VariantFields = MoveTemp(PublishedVariantFields);
+        InBuiltField._Epoch = PublishedEpoch;
+        InBuiltField._BakedInputFingerprint = Identity._InputFingerprint;
+        InBuiltField.Set_StreamOwnerRegistered(StreamOwnerRegistered);
 
         // Past the no-change early-out above, so this notify is only ever raised for a publish that
         // moved something. The UNION over every field that moved. An invalid box is reported as-is for
@@ -2240,6 +2808,7 @@ namespace ck
 
         // Drops the pinned physics session with the entity rather than leaving it to fragment teardown.
         InBuildState._Backend.Reset();
+        InBuildState._HasPendingBuildRequest = false;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -2318,12 +2887,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField)
         -> void
     {
         // Whoever holds the field keeps it, whole; what ends here is only the world's way of finding it.
-        groundnav::world_fields::Unpublish(
-            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity), InVolumeEntity);
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+        const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+        if (VolumeId.Get_IsLegacy())
+        {
+            groundnav::world_fields::Unpublish(World, InVolumeEntity);
+            return;
+        }
+
+        const auto Result = groundnav::world_fields::Unregister_StreamOwner(World, InVolumeEntity, VolumeId);
+        const auto TeardownSucceeded = Result.Get_Succeeded() ||
+            Result._Status == groundnav::world_fields::ECk_GroundNav_StreamRegistryStatus::OwnerNotRegistered;
+        CK_ENSURE_IF_NOT(TeardownSucceeded,
+            TEXT("GroundNav streamed Volume [{}] could not unregister its stream owner: registry status [{}]"),
+            InVolumeEntity, static_cast<int32>(Result._Status))
+        {}
     }
 }
 
