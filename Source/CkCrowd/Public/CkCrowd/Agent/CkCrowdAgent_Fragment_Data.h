@@ -22,6 +22,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
+
 namespace ck
 {
     class FProcessor_CrowdAgent_Setup;
@@ -356,6 +358,8 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
 
     friend class ck::FProcessor_CrowdAgent_Steering;
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
+    // Native strict GroundNav install adversarial-input pin; no runtime mutation API is exposed.
+    friend class ::FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
     friend class ck::FProcessor_CrowdAgent_OnVoxelPathResolved;

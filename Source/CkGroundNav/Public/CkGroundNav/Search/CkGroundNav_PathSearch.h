@@ -8,6 +8,7 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
 #include "CkGroundNav/Search/CkGroundNav_PlatePortalGraph.h"
+#include "CkGroundNav/Search/CkGroundNav_CellPathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
 #include <CoreMinimal.h>
@@ -110,7 +111,8 @@ namespace ck::groundnav
             const FCk_GroundNav_FieldPtr&              InField,
             const FCk_GroundNav_PathQuery&             InQuery,
             TConstArrayView<FCk_GroundNav_CrossingKey> InExistingCorridor,
-            FCk_GroundNav_Epoch                        InPlannedAgainstEpoch) -> ECk_GroundNav_PathStatus;
+            FCk_GroundNav_Epoch                        InPlannedAgainstEpoch,
+            bool                                        InForceFullReplan = false) -> ECk_GroundNav_PathStatus;
 
         /** One slice of work. A search that has already stopped answers with the status it stopped at. */
         auto ContinueSearch(
@@ -130,6 +132,9 @@ namespace ck::groundnav
         auto Get_RepairVerdict() const -> ECk_GroundNav_RepairVerdict { return _RepairVerdict; }
 
         auto Get_Status() const -> ECk_GroundNav_PathStatus { return _Result._Status; }
+
+        /** Value-only strict-cell attribution, present only when ck.GroundNav.Debug.CellSearchTiming enabled it. */
+        auto Get_CellSearchTiming() const -> FCk_GroundNav_CellSearchTiming;
 
         auto Get_IsTerminal() const -> bool
         {
@@ -216,6 +221,9 @@ namespace ck::groundnav
         // prices — the step onto the goal, and a query whose two ends share one plate — must be
         // priced with the same numbers the route was chosen by.
         TSharedPtr<const FCk_GroundNav_PathSharedData> _Shared;
+
+        // Strict overlay searches own a separate graph and never manufacture plate repair keys.
+        TUniquePtr<FCk_GroundNav_CellPathSearch> _CellSearch;
 
         FCk_GroundNav_PlatePortalGraph _Graph;
 

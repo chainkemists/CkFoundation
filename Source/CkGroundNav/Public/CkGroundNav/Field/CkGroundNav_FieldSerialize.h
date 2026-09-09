@@ -33,10 +33,10 @@ namespace ck::groundnav
     inline constexpr uint32 kFieldBlobMagic = 0x4E474B43;
 
     /**
-     * The on-disk shape of a blob. BUMPED WHENEVER A BYTE MOVES - a field written by an older writer
-     * is refused with a status rather than decoded by a reader that would read the wrong members.
+     * The on-disk shape and baked meaning of a blob. Bump when a byte moves or the same inputs produce
+     * different persisted navigation, so a reader never accepts stale topology as current.
      */
-    inline constexpr int32 kFieldBlobFormatVersion = 1;
+    inline constexpr int32 kFieldBlobFormatVersion = 2;
 
     /**
      * Where the header's UTC cook seconds begin.

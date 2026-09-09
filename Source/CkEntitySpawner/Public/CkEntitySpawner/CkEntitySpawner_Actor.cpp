@@ -23,6 +23,8 @@
 #include <Components/BillboardComponent.h>
 #include <Components/SceneComponent.h>
 #include <Engine/World.h>
+#include <Engine/Level.h>
+#include <UObject/Package.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -291,7 +293,7 @@ auto
     if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(_EntityScript->GetClass()))
     { return; }
 
-    DoInjectActorTransform();
+    DoInjectActorPlacement();
 
     _EditorEntityHandle = EditorSubsystem->Request_SpawnEditorEntity(_EntityScript);
 
@@ -373,13 +375,22 @@ auto
 
 auto
     ACk_EntitySpawner_UE::
-    DoInjectActorTransform()
+    DoInjectActorPlacement()
     -> void
 {
     if (ck::Is_NOT_Valid(_EntityScript))
     { return; }
 
     const auto* ScriptClass = _EntityScript->GetClass();
+
+    // Scripts can opt into source-level identity without retaining the spawner actor. The value is
+    // copied with the archetype before runtime and editor-preview construction.
+    if (const auto* LevelProperty = FindFProperty<FNameProperty>(ScriptClass, TEXT("_SpawnLevelPackage")))
+    {
+        const auto* Level = GetLevel();
+        const auto LevelPackage = ck::IsValid(Level) ? Level->GetOutermost()->GetFName() : NAME_None;
+        LevelProperty->SetPropertyValue_InContainer(_EntityScript, LevelPackage);
+    }
 
     auto* Property = [&]() -> FProperty*
     {
@@ -413,7 +424,7 @@ auto
         TEXT("EntitySpawner [{}] has no EntityScript assigned."), this)
     { return; }
 
-    DoInjectActorTransform();
+    DoInjectActorPlacement();
 
     // A level-placed spawner re-creates the same entity on every boot, so keying that entity makes a load RENDEZVOUS
     // the saved state onto the fresh world's copy instead of rebuilding a second one beside it. The identity is the

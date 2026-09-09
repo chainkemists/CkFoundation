@@ -19,6 +19,14 @@ namespace ck::groundnav
         const FCk_GroundNav_Epoch&       InEpoch,
         FCk_GroundNav_FieldBuildState&   OutState) -> FCk_GroundNav_BakeStageResult;
 
+    /** Start a build for a validated subset of the declared fixed lattice. */
+    CKGROUNDNAV_API auto
+    Request_BeginBuild_Targeted(
+        const FCk_GroundNav_FieldParams& InParams,
+        const FCk_GroundNav_Epoch&       InEpoch,
+        TConstArrayView<int32>           InTileIndices,
+        FCk_GroundNav_FieldBuildState&   OutState) -> FCk_GroundNav_BakeStageResult;
+
     /**
      * Start a build that produces ONE FIELD PER AGENT PROFILE out of a single pass over the geometry.
      *
@@ -42,6 +50,14 @@ namespace ck::groundnav
     Request_BeginBuild_MultiProfile(
         TConstArrayView<FCk_GroundNav_FieldParams> InParams,
         const FCk_GroundNav_Epoch&                 InEpoch,
+        FCk_GroundNav_FieldBuildState&             OutState) -> FCk_GroundNav_BakeStageResult;
+
+    /** Multi-profile form of Request_BeginBuild_Targeted. */
+    CKGROUNDNAV_API auto
+    Request_BeginBuild_MultiProfile_Targeted(
+        TConstArrayView<FCk_GroundNav_FieldParams> InParams,
+        const FCk_GroundNav_Epoch&                 InEpoch,
+        TConstArrayView<int32>                     InTileIndices,
         FCk_GroundNav_FieldBuildState&             OutState) -> FCk_GroundNav_BakeStageResult;
 
     /**
@@ -189,6 +205,10 @@ namespace ck::groundnav
             TConstArrayView<FCk_GroundNav_FieldParams>, const FCk_GroundNav_Epoch&,
             FCk_GroundNav_FieldBuildState&) -> FCk_GroundNav_BakeStageResult;
 
+        friend CKGROUNDNAV_API auto Request_BeginBuild_MultiProfile_Targeted(
+            TConstArrayView<FCk_GroundNav_FieldParams>, const FCk_GroundNav_Epoch&,
+            TConstArrayView<int32>, FCk_GroundNav_FieldBuildState&) -> FCk_GroundNav_BakeStageResult;
+
         friend CKGROUNDNAV_API auto Request_AdvanceBuild(
             const ICk_GroundNav_GeometryBackend&, int32,
             FCk_GroundNav_FieldBuildState&) -> FCk_GroundNav_BakeStageResult;
@@ -200,6 +220,8 @@ namespace ck::groundnav
             FCk_GroundNav_FieldBuildState&) -> TArray<FCk_GroundNav_FieldPtr>;
 
         TArray<FCk_GroundNav_Field> _Partial;
+        TArray<int32> _RequestedTileIndices;
+        int32 _NextRequestedTileSlot = 0;
 
     public:
         auto Get_ProfileCount() const -> int32 { return _Partial.Num(); }
@@ -208,7 +230,7 @@ namespace ck::groundnav
         {
             return _Status == ECk_GroundNav_BuildStatus::Built &&
                    NOT _Partial.IsEmpty() &&
-                   _NextTileIndex >= _Partial[0].Get_TileCount();
+                   _NextRequestedTileSlot >= _RequestedTileIndices.Num();
         }
 
         // Read off the first profile's field: every profile shares one lattice by admission, so the

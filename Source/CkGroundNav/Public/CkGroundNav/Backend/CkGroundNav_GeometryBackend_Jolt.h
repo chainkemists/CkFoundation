@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGroundNav/Backend/CkGroundNav_GeometryBackend.h"
+#include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 
 #include "CkJolt/Query/CkJoltOccupancy_Session.h"
 
@@ -31,7 +32,8 @@ namespace ck::groundnav
         FCk_GroundNav_GeometryBackend_Jolt() = default;
 
         explicit FCk_GroundNav_GeometryBackend_Jolt(
-            const UObject* InWorldContextObject);
+            const UObject* InWorldContextObject,
+            FCk_GroundNav_DataLayerSelector InDataLayerSelector = {});
 
     public:
         auto Get_IsValid() const -> bool override;
@@ -63,7 +65,11 @@ namespace ck::groundnav
             const FCk_GroundNav_BodyRef& InBody) const -> FString override;
 
     private:
+        auto Get_IsBodySelected(const FCk_GroundNav_BodyRef& InBody) const -> bool;
+
+    private:
         ck::jolt::FCk_Jolt_QuerySession _Session;
+        FCk_GroundNav_DataLayerSelector  _DataLayerSelector;
     };
 }
 
