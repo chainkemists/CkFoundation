@@ -7,6 +7,7 @@
 
 #include <CoreMinimal.h>
 #include <Engine/EngineTypes.h>
+#include <UObject/StrongObjectPtr.h>
 
 #include "CkJolt_ProjectSettings.generated.h"
 
@@ -303,6 +304,9 @@ public:
     auto TestOnly_Set_EditorStaticWorldMode(ECk_Jolt_EditorStaticWorldMode InMode) -> void
     { _EditorStaticWorldMode = InMode; }
 #endif
+#if WITH_EDITOR
+    friend class FCk_Jolt_ScopedEditorStaticWorldModeOverride;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -339,5 +343,29 @@ public:
     static auto Get_BakeExcludeOverlapOnlyComponents() -> ECk_EnableDisable;
     static auto Get_BakedMeshShapeRoots() -> TArray<FString>;
 };
+
+#if WITH_EDITOR
+class CKJOLT_API FCk_Jolt_ScopedEditorStaticWorldModeOverride
+{
+public:
+    CK_GENERATED_BODY(FCk_Jolt_ScopedEditorStaticWorldModeOverride);
+
+    explicit FCk_Jolt_ScopedEditorStaticWorldModeOverride(ECk_Jolt_EditorStaticWorldMode InMode);
+    ~FCk_Jolt_ScopedEditorStaticWorldModeOverride();
+
+    FCk_Jolt_ScopedEditorStaticWorldModeOverride(const FCk_Jolt_ScopedEditorStaticWorldModeOverride&) = delete;
+    FCk_Jolt_ScopedEditorStaticWorldModeOverride(FCk_Jolt_ScopedEditorStaticWorldModeOverride&&) = delete;
+    auto operator=(const FCk_Jolt_ScopedEditorStaticWorldModeOverride&) -> FCk_Jolt_ScopedEditorStaticWorldModeOverride& = delete;
+    auto operator=(FCk_Jolt_ScopedEditorStaticWorldModeOverride&&) -> FCk_Jolt_ScopedEditorStaticWorldModeOverride& = delete;
+
+private:
+    TStrongObjectPtr<UCk_Jolt_ProjectSettings_UE> _Settings;
+    ECk_Jolt_EditorStaticWorldMode _Previous = ECk_Jolt_EditorStaticWorldMode::Disabled;
+    bool _IsApplied = false;
+
+public:
+    CK_PROPERTY_GET(_IsApplied);
+};
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------

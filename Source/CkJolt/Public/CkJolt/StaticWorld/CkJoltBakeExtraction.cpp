@@ -1719,6 +1719,22 @@ namespace ck::jolt::bake
         InOutBuilder.Update(*InString, InString.Len() * sizeof(TCHAR));
     }
 
+    static auto DoHash_DataLayerNames(FXxHash64Builder& InOutBuilder, const AActor& InActor) -> void
+    {
+        auto Names = InActor.GetDataLayerInstanceNames();
+        Names.Remove(NAME_None);
+        Names.Sort(FNameLexicalLess{});
+        for (auto Index = Names.Num() - 1; Index > 0; --Index)
+        {
+            if (Names[Index] == Names[Index - 1])
+            { Names.RemoveAt(Index); }
+        }
+        const int32 NumNames = Names.Num();
+        InOutBuilder.Update(&NumNames, sizeof(NumNames));
+        for (const auto& Name : Names)
+        { DoHash_String(InOutBuilder, Name.ToString()); }
+    }
+
     static auto DoGather_RelevantComponents(
         const AActor& InActor,
         const FCk_Jolt_BakeFilter& InFilter) -> TArray<const UPrimitiveComponent*>
@@ -1754,6 +1770,7 @@ namespace ck::jolt::bake
         -> uint64
     {
         auto Builder = FXxHash64Builder{};
+        DoHash_DataLayerNames(Builder, InActor);
 
         for (const auto* Component : DoGather_RelevantComponents(InActor, InFilter))
         {
@@ -1784,6 +1801,7 @@ namespace ck::jolt::bake
         -> uint64
     {
         auto Builder = FXxHash64Builder{};
+        DoHash_DataLayerNames(Builder, InActor);
 
         for (const auto* Component : DoGather_RelevantComponents(InActor, InFilter))
         {

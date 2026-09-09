@@ -32,14 +32,22 @@ namespace ck::groundnav
 {
     FCk_GroundNav_GeometryBackend_Jolt::
         FCk_GroundNav_GeometryBackend_Jolt(
-            const UObject* InWorldContextObject)
+            const UObject* InWorldContextObject,
+            FCk_GroundNav_DataLayerSelector InDataLayerSelector)
     {
         const auto WorldContextIsValid = ck::IsValid(InWorldContextObject);
+        const auto SelectorIsCanonical = InDataLayerSelector.Get_IsCanonical();
+        const auto InputsAreValid = WorldContextIsValid && SelectorIsCanonical;
 
-        CK_ENSURE_IF_NOT(WorldContextIsValid,
-            TEXT("Cannot resolve a GroundNav geometry backend without a World Context Object"))
+        CK_ENSURE_IF_NOT(InputsAreValid,
+            TEXT("Cannot resolve a GroundNav geometry backend without a World Context Object and canonical "
+                 "data-layer selector"))
         { return; }
 
+        if (NOT InputsAreValid)
+        { return; }
+
+        _DataLayerSelector = MoveTemp(InDataLayerSelector);
         _Session = ck::jolt::FCk_Jolt_QuerySession{InWorldContextObject};
     }
 
@@ -57,10 +65,8 @@ namespace ck::groundnav
             const FBox& InBounds) const
         -> bool
     {
-        auto BodyIds = TArray<uint64>{};
-        _Session.Get_BodiesInAABox(InBounds, BodyIds);
-
-        return NOT BodyIds.IsEmpty();
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
+        return Get_StaticBodiesInBounds(InBounds, Bodies) > 0;
     }
 
     auto
@@ -78,7 +84,11 @@ namespace ck::groundnav
         OutBodies.Reserve(BodyIds.Num());
 
         for (const auto& BodyId : BodyIds)
-        { OutBodies.Emplace(FCk_GroundNav_BodyRef{BodyId}); }
+        {
+            const auto Body = FCk_GroundNav_BodyRef{BodyId};
+            if (Get_IsBodySelected(Body))
+            { OutBodies.Emplace(Body); }
+        }
 
         return OutBodies.Num();
     }
@@ -90,15 +100,15 @@ namespace ck::groundnav
             FCk_GroundNav_GeometryBatch& OutBatch) const
         -> int32
     {
-        auto Soup = ck::jolt::FCk_Jolt_TriangleSoup{};
-
-        const auto TriangleCount = _Session.Get_StaticTrianglesInAABox(InBounds, Soup);
-
-        if (TriangleCount == 0)
-        { return 0; }
-
-        ck_groundnav_geometrybackend_jolt::DoAppend_SoupToBatch(Soup, OutBatch);
-
+        auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
+        Get_StaticBodiesInBounds(InBounds, Bodies);
+        auto TriangleCount = 0;
+        for (const auto& Body : Bodies)
+        {
+            auto Soup = ck::jolt::FCk_Jolt_TriangleSoup{};
+            TriangleCount += _Session.Get_StaticBodyTrianglesInAABox(Body._Value, InBounds, Soup);
+            ck_groundnav_geometrybackend_jolt::DoAppend_SoupToBatch(Soup, OutBatch);
+        }
         return TriangleCount;
     }
 
@@ -154,11 +164,25 @@ namespace ck::groundnav
 
     auto
         FCk_GroundNav_GeometryBackend_Jolt::
-        Get_BodyDescription(
+    Get_BodyDescription(
             const FCk_GroundNav_BodyRef& InBody) const
         -> FString
     {
         return _Session.Get_StaticBodyDescription(InBody._Value);
+    }
+
+    auto
+        FCk_GroundNav_GeometryBackend_Jolt::
+        Get_IsBodySelected(
+            const FCk_GroundNav_BodyRef& InBody) const
+        -> bool
+    {
+        if (_DataLayerSelector.Get_IsAll())
+        { return true; }
+
+        auto DataLayerNames = TArray<FName>{};
+        return _Session.TryGet_StaticBodyDataLayerNames(InBody._Value, DataLayerNames) &&
+            _DataLayerSelector.Get_MatchesAny(DataLayerNames);
     }
 }
 

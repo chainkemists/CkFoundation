@@ -53,10 +53,45 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * Computes one deterministic desired tile set for each invoker-driven owner from every invoker in
+     * that owner's world. It only arms work after the full world union is known, so entity iteration
+     * cannot publish an intermediate per-invoker answer.
+     */
+    class CKGROUNDNAV_API FProcessor_GroundNavVolume_InvokerAggregation : public ck_exp::TProcessor<
+        FProcessor_GroundNavVolume_InvokerAggregation,
+        FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_Params>,
+        ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
+        ck::TReadWrite<FFragment_GroundNavVolume_InvokerState>,
+        TExclude<FTag_GroundNavVolume_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_TimeDelta;
+        using RunAfter = TDepList<FProcessor_GroundNavVolume_Setup>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState) -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_HandleRequests : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_HandleRequests,
         FCk_Handle_GroundNavVolume,
         ck::TReadOnly<FFragment_GroundNavVolume_Params>,
+        ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
         ck::TReadWrite<FFragment_GroundNavVolume_BuildState>,
         ck::TReadWrite<FFragment_GroundNavVolume_RepairState>,
         ck::TReadWrite<FFragment_GroundNavVolume_Requests>,
@@ -78,6 +113,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
             FFragment_GroundNavVolume_Requests& InRequests) const -> void;
@@ -87,6 +123,7 @@ namespace ck
         DoHandleRequest(
             HandleType InVolumeEntity,
             const FFragment_GroundNavVolume_Params& InParams,
+            const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
             const FCk_Request_GroundNavVolume_Build& InRequest) -> void;
@@ -314,13 +351,14 @@ namespace ck
         ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
         ck::TReadWrite<FFragment_GroundNavVolume_BuildState>,
         ck::TReadWrite<FFragment_GroundNavVolume_RepairState>,
+        ck::TReadWrite<FFragment_GroundNavVolume_InvokerState>,
         FTag_GroundNavVolume_NeedsBuild,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Transform;
-        using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync>;
+        using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync, FProcessor_GroundNavVolume_InvokerAggregation>;
         using RunBefore = TDepList<FProcessor_JoltWorld_Step>;
         using MarkedDirtyBy = FTag_GroundNavVolume_NeedsBuild;
 
@@ -335,7 +373,8 @@ namespace ck
             const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField,
             FFragment_GroundNavVolume_BuildState& InBuildState,
-            FFragment_GroundNavVolume_RepairState& InRepairState) const -> void;
+            FFragment_GroundNavVolume_RepairState& InRepairState,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState) const -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -348,6 +387,7 @@ namespace ck
         ck::TReadWrite<FFragment_GroundNavVolume_BuildState>,
         ck::TReadWrite<FFragment_GroundNavVolume_RepairState>,
         ck::TReadWrite<FFragment_GroundNavVolume_BuiltField>,
+        ck::TReadWrite<FFragment_GroundNavVolume_InvokerState>,
         FTag_GroundNavVolume_BuildInProgress,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -368,7 +408,8 @@ namespace ck
             const FFragment_GroundNavVolume_Params& InParams,
             FFragment_GroundNavVolume_BuildState& InBuildState,
             FFragment_GroundNavVolume_RepairState& InRepairState,
-            FFragment_GroundNavVolume_BuiltField& InBuiltField) const -> void;
+            FFragment_GroundNavVolume_BuiltField& InBuiltField,
+            FFragment_GroundNavVolume_InvokerState& InInvokerState) const -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -663,11 +704,17 @@ namespace ck
     class CKGROUNDNAV_API FProcessor_GroundNavVolume_Unpublish : public ck_exp::TProcessor<
         FProcessor_GroundNavVolume_Unpublish,
         FCk_Handle_GroundNavVolume,
+        ck::TReadOnly<FFragment_GroundNavVolume_Params>,
         ck::TReadOnly<FFragment_GroundNavVolume_BuiltField>,
         CK_IF_END_PLAY>
     {
     public:
         using Group = FGroup_EndPlay;
+        using RunAfter = TDepList<
+            FProcessor_GroundNavVolume_CancelPendingRequests,
+            FProcessor_GroundNavVolume_CancelPendingRepairRequests,
+            FProcessor_GroundNavVolume_CancelPendingMarkupRequests,
+            FProcessor_GroundNavVolume_CancelPendingLinkRequests>;
 
     public:
         using TProcessor::TProcessor;
@@ -677,6 +724,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVolumeEntity,
+            const FFragment_GroundNavVolume_Params& InParams,
             const FFragment_GroundNavVolume_BuiltField& InBuiltField) -> void;
     };
 }

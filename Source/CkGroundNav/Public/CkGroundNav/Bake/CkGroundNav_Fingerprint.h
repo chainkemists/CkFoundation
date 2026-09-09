@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
+#include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 #include "CkGroundNav/Bake/CkGroundNav_GeometryBatch.h"
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
@@ -59,9 +60,11 @@ namespace ck::groundnav
      *                      variant is a whole second field baked out of the same geometry, so one
      *                      added, edited or dropped changes what the volume publishes even though
      *                      item 4 - the untagged default's profile - did not move.
+     *  10. Data layers  - canonical selected instance names. Empty means all; any different selector
+     *                      admits a different geometry population.
      *
-     * ITEM 1 IS THE ONLY ONE Get_InputFingerprint LEAVES OUT. Items 2 through 9 are the AUTHORED
-     * inputs and are what that function answers; Get_ContentFingerprint answers all nine, and is
+     * ITEM 1 IS THE ONLY ONE Get_InputFingerprint LEAVES OUT. Items 2 through 10 are the AUTHORED
+     * inputs and are what that function answers; Get_ContentFingerprint answers all ten, and is
      * implemented by handing item 1 to the same enumeration so the two cannot drift apart.
      *
      * THE TRAILING INPUTS CARRY DEFAULTS, and a default is a VALUE like any other: an omitted markup
@@ -101,7 +104,8 @@ namespace ck::groundnav
         TConstArrayView<FCk_GroundNav_LinkRecord>                InLinks = {},
         const FCk_GroundNav_MergeTunables&                       InMergeTunables = {},
         float                                                    InMaxClearanceUu = 0.0f,
-        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {})
+        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {},
+        const FCk_GroundNav_DataLayerSelector&                   InDataLayerSelector = {})
         -> FCk_GroundNav_ContentFingerprint;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -128,7 +132,8 @@ namespace ck::groundnav
         TConstArrayView<FCk_GroundNav_LinkRecord>                InLinks = {},
         const FCk_GroundNav_MergeTunables&                       InMergeTunables = {},
         float                                                    InMaxClearanceUu = 0.0f,
-        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {})
+        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {},
+        const FCk_GroundNav_DataLayerSelector&                   InDataLayerSelector = {})
         -> FCk_GroundNav_ContentFingerprint;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -165,7 +170,8 @@ namespace ck::groundnav
         TConstArrayView<FCk_GroundNav_LinkRecord>                InLinks = {},
         const FCk_GroundNav_MergeTunables&                       InMergeTunables = {},
         float                                                    InMaxClearanceUu = 0.0f,
-        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {})
+        TConstArrayView<TPair<FName, FCk_GroundNav_AgentProfile>> InVariants = {},
+        const FCk_GroundNav_DataLayerSelector&                   InDataLayerSelector = {})
         -> FCk_GroundNav_ContentFingerprint;
 }
 

@@ -303,8 +303,8 @@ namespace ck
                 else if (IsHolding)
                 {
                     ck::crowd::Log(
-                        TEXT("[GLIDE-HOLD] CrowdAgent [{}] went OFF the navmesh at [{}] — displacement held, not applied in free space"),
-                        InHandle, From);
+                        TEXT("[GLIDE-HOLD] CrowdAgent [{}] went OFF the navmesh at [{}] — displacement held, not applied in free space; pending [{}]uu, frame [{}]s"),
+                        InHandle, From, Displacement, InDeltaT.Get_Seconds());
                 }
                 else
                 {
@@ -324,8 +324,9 @@ namespace ck
                 if (NewReportBucket > PrevReportBucket)
                 {
                     ck::crowd::Log(
-                        TEXT("CrowdAgent [{}] still OFF the navmesh after [{}]s at [{}]"),
-                        InHandle, InGrounding.Get_SecondsOffNavmesh(), From);
+                        TEXT("CrowdAgent [{}] still OFF the navmesh after [{}]s at [{}]; pending [{}]uu, frame [{}]s, holding [{}]"),
+                        InHandle, InGrounding.Get_SecondsOffNavmesh(), From, Displacement,
+                        InDeltaT.Get_Seconds(), IsHolding);
                 }
             }
 

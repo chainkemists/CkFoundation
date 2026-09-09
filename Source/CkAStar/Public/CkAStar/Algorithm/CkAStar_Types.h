@@ -41,11 +41,17 @@ struct TOpenSetEntry
 {
 	T_NodeId Node;
 	float FScore = 0.0f;
+	float TieBreakScore = 0.0f;
 
 	auto
 	operator<(const TOpenSetEntry& InOther) const -> bool
 	{
-		return FScore < InOther.FScore;
+		if (FScore != InOther.FScore)
+		{
+			return FScore < InOther.FScore;
+		}
+
+		return TieBreakScore < InOther.TieBreakScore;
 	}
 };
 

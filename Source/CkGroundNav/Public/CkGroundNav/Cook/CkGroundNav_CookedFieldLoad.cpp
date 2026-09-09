@@ -4,9 +4,11 @@
 
 #include "CkGroundNav/Cook/CkGroundNav_CookedFieldIndex.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldSerialize.h"
+#include "CkGroundNav/Field/CkGroundNav_TileBake.h"
 
 #include <Engine/Level.h>
 #include <Engine/World.h>
+#include <Misc/PackageName.h>
 #include <UObject/Package.h>
 #include <UObject/UObjectGlobals.h>
 
@@ -46,20 +48,30 @@ namespace ck::groundnav
     auto
         Find_CookedFieldIndex(
             UWorld* InWorld,
-            FName   InCookKey)
+            FName   InCookKey,
+            FGameplayTag InProfileTag,
+            FName InSourceLevelPackage,
+            const FCk_GroundNav_DataLayerSelector& InDataLayerSelector)
         -> const UCk_GroundNav_CookedFieldIndex_UE*
     {
         // None is not a key. Skipped rather than looked up and answered null.
-        if (InCookKey.IsNone())
+        if (InCookKey.IsNone() || NOT InDataLayerSelector.Get_IsCanonical())
         { return nullptr; }
 
-        const auto LevelPackage = Get_LevelPackageKey(InWorld);
+        const auto LevelPackage = InSourceLevelPackage.IsNone()
+            ? Get_LevelPackageKey(InWorld)
+            : Get_PackageLookupKey(InSourceLevelPackage.ToString());
 
         if (LevelPackage.IsNone())
         { return nullptr; }
 
         const auto IndexPath = Get_CookedIndexAssetPath(
-            kCookedDataRootPath, LevelPackage.ToString(), InCookKey);
+            kCookedDataRootPath, LevelPackage.ToString(), InCookKey, InProfileTag, InDataLayerSelector);
+
+        // Cook keys and source packages are authored values. Do not hand an object-path parser a
+        // malformed value: a bad convention path is simply a cook that cannot be found.
+        if (NOT FPackageName::IsValidObjectPath(IndexPath))
+        { return nullptr; }
 
         // LOAD_NoWarn | LOAD_Quiet, the same way CkJolt's cooked mesh shape is reached: a level that
         // was never cooked is an EXPECTED miss whose answer is to bake at runtime, and the engine's
@@ -76,14 +88,42 @@ namespace ck::groundnav
             FName                                    InCookKey,
             const FCk_GroundNav_FieldParams&         InParams,
             uint64                                   InInputFingerprint,
-            FCk_GroundNav_Field&                     OutField)
+            FCk_GroundNav_Field&                     OutField,
+            FGameplayTag                             InProfileTag,
+            int32                                    InStreamingVolumeId,
+            const FCk_GroundNav_DataLayerSelector&   InDataLayerSelector)
         -> ECk_GroundNav_CookStatus
     {
         // The asset sitting at the convention path is not necessarily the one that path names: a
         // cooked asset is reached by PATH and by nothing else, so an index moved, renamed or copied
         // from another level would answer this lookup while describing somebody else's ground. It
         // says which level and which volume it was written for, and that is what is checked.
-        if (InIndex.Get_LevelPackage() != InLevelPackage || InIndex.Get_CookKey() != InCookKey)
+        if (InIndex.Get_LevelPackage() != InLevelPackage || InIndex.Get_CookKey() != InCookKey ||
+            InIndex.Get_ProfileTag() != InProfileTag)
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        // A positive id opts into streamed identity. The old assets carry INDEX_NONE and retain the
+        // original cook-key behaviour, but a streamed caller never admits an unscoped manifest.
+        if (InStreamingVolumeId == 0 || InIndex.Get_StreamingVolumeId() == 0)
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        const auto HasStreamingIdentity = InStreamingVolumeId > 0 || InIndex.Get_StreamingVolumeId() > 0;
+
+        if (HasStreamingIdentity &&
+            (InStreamingVolumeId <= 0 || InIndex.Get_StreamingVolumeId() != InStreamingVolumeId))
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        // The selector's representation is canonical before it reaches either cooker or loader. A
+        // malformed asset is rejected before a tile is resolved, and a value mismatch is a stale
+        // bake: it names geometry collected under a different data-layer population.
+        if (NOT InDataLayerSelector.Get_IsCanonical() ||
+            InIndex.Get_DataLayerNames() != InDataLayerSelector.Get_LayerNames())
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        auto IndexSelector = FCk_GroundNav_DataLayerSelector{};
+
+        if (NOT TryMake_DataLayerSelector(InIndex.Get_DataLayerNames(), IndexSelector) ||
+            IndexSelector.Get_LayerNames() != InIndex.Get_DataLayerNames())
         { return ECk_GroundNav_CookStatus::StaleCook; }
 
         // Refused before a single tile is resolved: the index carries every one of these so that a
@@ -94,9 +134,27 @@ namespace ck::groundnav
         if (InIndex.Get_Fingerprint() != InInputFingerprint)
         { return ECk_GroundNav_CookStatus::StaleCook; }
 
+        // This is a boundary that accepts data from assets. Reject a malformed lattice before using
+        // its dimensions for either allocation or tile indexing; an invalid params object is no more
+        // a field than a corrupt index is.
+        if (NOT InParams.Get_IsValid())
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        const auto ExpectedTileCount = int64{InParams._Divisions.X} * int64{InParams._Divisions.Y};
+
+        if (ExpectedTileCount <= 0 || ExpectedTileCount > MAX_int32)
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
         const auto LatticeKey = Get_CookedLatticeKey(InParams);
 
         if (NOT (InIndex.Get_LatticeKey() == LatticeKey))
+        { return ECk_GroundNav_CookStatus::StaleCook; }
+
+        const auto& CookedTileRefs = InIndex.Get_Tiles();
+
+        // A field has exactly one asset reference per lattice tile. Check this before allocating or
+        // resolving one tile: a malformed index should remain a cheap fallback to runtime baking.
+        if (CookedTileRefs.Num() != ExpectedTileCount)
         { return ECk_GroundNav_CookStatus::StaleCook; }
 
         // Composed into a field of its own and moved into the caller's only once every tile has held,
@@ -105,12 +163,10 @@ namespace ck::groundnav
         auto Field = FCk_GroundNav_Field{};
 
         Field._Params = InParams;
-        Field._Tiles.SetNum(InParams.Get_TileCount());
+        Field._Tiles.SetNum(static_cast<int32>(ExpectedTileCount));
 
         for (auto TileIndex = 0; TileIndex < Field._Tiles.Num(); ++TileIndex)
         { Field._Tiles[TileIndex]._Coord = Get_TileCoord(InParams._Divisions, TileIndex); }
-
-        const auto& CookedTileRefs = InIndex.Get_Tiles();
 
         for (auto SlotIndex = 0; SlotIndex < CookedTileRefs.Num(); ++SlotIndex)
         {
@@ -139,7 +195,29 @@ namespace ck::groundnav
             if (CookedTile->Get_TileCoord() != FIntPoint{SlotCoord._X, SlotCoord._Y})
             { return ECk_GroundNav_CookStatus::StaleCook; }
 
+            if (HasStreamingIdentity &&
+                CookedTile->Get_StreamingVolumeId() != InIndex.Get_StreamingVolumeId())
+            { return ECk_GroundNav_CookStatus::StaleCook; }
+
+            const auto ExpectedBounds = Get_TileBounds(
+                InParams.Get_TileBakeParams(SlotCoord, FCk_GroundNav_Epoch{}));
+
+            if (HasStreamingIdentity &&
+                (CookedTile->Get_WorldBounds().IsValid == 0 ||
+                 NOT (CookedTile->Get_WorldBounds() == ExpectedBounds)))
+            { return ECk_GroundNav_CookStatus::StaleCook; }
+
+            if (CookedTile->Get_DataLayerNames() != InIndex.Get_DataLayerNames())
+            { return ECk_GroundNav_CookStatus::StaleCook; }
+
+            if (CookedTile->Get_ContentHash() == 0 ||
+                CookedTile->Get_ContentHash() != Get_CookedTileContentHash(CookedTile->Get_Blob()))
+            { return ECk_GroundNav_CookStatus::StaleCook; }
+
             if (CookedTile->Get_Fingerprint() != InIndex.Get_Fingerprint())
+            { return ECk_GroundNav_CookStatus::StaleCook; }
+
+            if (CookedTile->Get_ProfileTag() != InProfileTag)
             { return ECk_GroundNav_CookStatus::StaleCook; }
 
             // Read DEFERRED: the derives are whole-field, so composing per tile would run them once

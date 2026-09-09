@@ -5,6 +5,7 @@
 
 #include "CkGroundNav/Field/CkGroundNav_FieldTypes.h"
 #include "CkGroundNav/Query/CkGroundNav_Funnel.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
 #include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
 
 #include <CoreMinimal.h>
@@ -174,6 +175,10 @@ namespace ck::groundnav
 
         FCk_GroundNav_PathCostParams _Cost;
 
+        // Immutable geometry captured when this search began. An empty snapshot selects the legacy
+        // plate-portal graph; a populated snapshot selects the strict cell graph.
+        FCk_GroundNav_DynamicObstacleSnapshot _DynamicObstacles;
+
         // Greedy weight. One is admissible; above one trades optimality for expansions, bounded by
         // (w - 1) on the answered length.
         float _GreedyWeightW = 1.0f;
@@ -191,6 +196,36 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** The graph representation that produced the result. */
+    enum class ECk_GroundNav_PathRouteKind : uint8
+    {
+        PlatePortal,
+        StrictCell
+    };
+
+    /** One predecessor edge from the strict cell graph. Link edges retain authored identity directly. */
+    enum class ECk_GroundNav_CellRouteEdgeKind : uint8
+    {
+        Ordinary,
+        Link,
+        Terminal
+    };
+
+    struct CKGROUNDNAV_API FCk_GroundNav_CellRouteEdge
+    {
+    public:
+        FCk_GroundNav_SurfaceRef _FromSurface;
+        FCk_GroundNav_SurfaceRef _ToSurface;
+        FVector _FromPoint = FVector::ZeroVector;
+        FVector _ToPoint = FVector::ZeroVector;
+        ECk_GroundNav_CellRouteEdgeKind _Kind = ECk_GroundNav_CellRouteEdgeKind::Ordinary;
+        int32 _LinkStableId = INDEX_NONE;
+        ECk_GroundNav_LinkDirection _LinkDirection = ECk_GroundNav_LinkDirection::Bidirectional;
+        float _Cost = 0.0f;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * What a search answered.
      *
@@ -203,6 +238,14 @@ namespace ck::groundnav
     {
     public:
         ECk_GroundNav_PathStatus _Status = ECk_GroundNav_PathStatus::NoStartSurface;
+
+        ECk_GroundNav_PathRouteKind _RouteKind = ECk_GroundNav_PathRouteKind::PlatePortal;
+
+        // The exact immutable overlay the graph planned against; post-process must read this copy.
+        FCk_GroundNav_DynamicObstacleSnapshot _DynamicObstacles;
+
+        // Ordered predecessor edges for a strict-cell route. Empty for the plate-portal graph.
+        TArray<FCk_GroundNav_CellRouteEdge> _CellRoute;
 
         // Ordered flat plate ids, the start plate first.
         TArray<int32> _PlateCorridor;

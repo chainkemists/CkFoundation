@@ -1,9 +1,46 @@
 #include "CkJolt_ProjectSettings.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include <GameFramework/Pawn.h>
+
+#if WITH_EDITOR
+FCk_Jolt_ScopedEditorStaticWorldModeOverride::
+    FCk_Jolt_ScopedEditorStaticWorldModeOverride(
+        ECk_Jolt_EditorStaticWorldMode InMode)
+{
+    const auto CanApply = IsInGameThread() &&
+        (InMode == ECk_Jolt_EditorStaticWorldMode::Disabled ||
+         InMode == ECk_Jolt_EditorStaticWorldMode::LiveExtract);
+    CK_ENSURE_IF_NOT(CanApply, TEXT("Jolt editor static-world overrides require the game thread and a valid mode."))
+    { }
+    if (NOT CanApply)
+    { return; }
+
+    _Settings = TStrongObjectPtr<UCk_Jolt_ProjectSettings_UE>{GetMutableDefault<UCk_Jolt_ProjectSettings_UE>()};
+    const auto SettingsAreValid = _Settings.IsValid();
+    CK_ENSURE_IF_NOT(SettingsAreValid, TEXT("Jolt editor static-world settings are unavailable."))
+    { }
+    if (NOT SettingsAreValid)
+    { return; }
+
+    _Previous = _Settings->Get_EditorStaticWorldMode();
+    _Settings->_EditorStaticWorldMode = InMode;
+    _IsApplied = true;
+}
+
+FCk_Jolt_ScopedEditorStaticWorldModeOverride::
+    ~FCk_Jolt_ScopedEditorStaticWorldModeOverride()
+{
+    if (NOT _IsApplied)
+    { return; }
+
+    // Nested scopes restore the setting that was active when each scope began. No config is saved.
+    _Settings->_EditorStaticWorldMode = _Previous;
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 

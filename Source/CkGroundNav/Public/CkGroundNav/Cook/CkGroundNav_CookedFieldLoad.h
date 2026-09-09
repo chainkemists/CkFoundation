@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGroundNav/Cook/CkGroundNav_CookedTile.h"
+#include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldTypes.h"
 
@@ -52,7 +53,7 @@ namespace ck::groundnav
         UWorld* InWorld) -> FName;
 
     /**
-     * The index asset for {the world's persistent level package, InCookKey}, or null.
+     * The index asset for {the selected source level package, InCookKey, InProfileTag}, or null.
      *
      * NULL IS THE ORDINARY ANSWER: a level opts into cooked ground, and one that never cooked simply
      * has nothing at the convention path. A None key is not a key at all - such a volume is
@@ -61,7 +62,11 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     Find_CookedFieldIndex(
         UWorld* InWorld,
-        FName   InCookKey) -> const UCk_GroundNav_CookedFieldIndex_UE*;
+        FName   InCookKey,
+        FGameplayTag InProfileTag = {},
+        FName InSourceLevelPackage = NAME_None,
+        const FCk_GroundNav_DataLayerSelector& InDataLayerSelector = {})
+        -> const UCk_GroundNav_CookedFieldIndex_UE*;
 
     /**
      * The cooked field the index names, composed into OutField.
@@ -74,10 +79,10 @@ namespace ck::groundnav
      * serializer will not read. StaleCook rather than a per-cause vocabulary because the caller's
      * answer is the same for all of them: bake at runtime.
      *
-     * InLevelPackage and InCookKey are the identity the caller ASKED FOR, and they are checked against
-     * the index's own: the path is the only reference a cooked asset has, so an asset that ended up at
-     * the convention path while describing another level or another volume would otherwise be read as
-     * this volume's ground.
+     * InLevelPackage, InCookKey and InProfileTag are the identity the caller ASKED FOR, and they are
+     * checked against the index's own: the path is the only reference a cooked asset has, so an asset
+     * that ended up at the convention path while describing another level, volume or profile would
+     * otherwise be read as this volume's ground.
      *
      * OutField IS NOT TOUCHED UNLESS THE LOAD SUCCEEDS, on the serializer's own terms - a caller
      * falling back needs something to fall back TO. The field is composed ONCE, after every tile has
@@ -98,7 +103,10 @@ namespace ck::groundnav
         FName                                    InCookKey,
         const FCk_GroundNav_FieldParams&         InParams,
         uint64                                   InInputFingerprint,
-        FCk_GroundNav_Field&                     OutField) -> ECk_GroundNav_CookStatus;
+        FCk_GroundNav_Field&                     OutField,
+        FGameplayTag                             InProfileTag = {},
+        int32                                    InStreamingVolumeId = INDEX_NONE,
+        const FCk_GroundNav_DataLayerSelector&   InDataLayerSelector = {}) -> ECk_GroundNav_CookStatus;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

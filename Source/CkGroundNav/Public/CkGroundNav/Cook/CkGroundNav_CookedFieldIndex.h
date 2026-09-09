@@ -2,10 +2,12 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 #include "CkGroundNav/Cook/CkGroundNav_CookedTile.h"
 
 #include <CoreMinimal.h>
 #include <Engine/DataAsset.h>
+#include <GameplayTagContainer.h>
 
 #include "CkGroundNav_CookedFieldIndex.generated.h"
 
@@ -44,6 +46,18 @@ private:
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     FName _CookKey;
 
+    /** Positive only for a streamed volume. INDEX_NONE preserves legacy whole-volume cooked fields. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    int32 _StreamingVolumeId = INDEX_NONE;
+
+    /** Canonical data-layer selector shared by every tile this manifest names. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    TArray<FName> _DataLayerNames;
+
+    /** Empty for the default profile. A non-empty tag names one authored profile variant. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
+
     /** The INPUT fingerprint of the bake these tiles came out of - the authored half of the identity.
      *  The geometry the bake read is a separate value the cooked form does not carry yet; it belongs
      *  beside this one when a cook can record the world revision it ran against. */
@@ -72,6 +86,15 @@ public:
     CK_PROPERTY_GET(_CookKey);
     CK_PROPERTY_SET(_CookKey);
 
+    CK_PROPERTY_GET(_StreamingVolumeId);
+    CK_PROPERTY_SET(_StreamingVolumeId);
+
+    CK_PROPERTY_GET(_DataLayerNames);
+    CK_PROPERTY_SET(_DataLayerNames);
+
+    CK_PROPERTY_GET(_ProfileTag);
+    CK_PROPERTY_SET(_ProfileTag);
+
     CK_PROPERTY_GET(_Fingerprint);
     CK_PROPERTY_SET(_Fingerprint);
 
@@ -98,16 +121,18 @@ namespace ck::groundnav
      * Where a cooked field lives, BY CONVENTION - nothing hard-references a cooked asset, and a level
      * that was never cooked simply has nothing at the path.
      *
-     * The shape mirrors CkJolt's cooked world index: the level package's path under the content root,
-     * then the asset. The volume's cook key is in the asset NAME rather than in the directory, so one
-     * level's volumes sit beside each other and a listing of the directory reads as the set of fields
-     * that level cooked.
+     * Default-profile assets retain the legacy shape: the level package's path under the content root,
+     * then the asset. Profile assets live below the dedicated __CkGroundNavProfiles root, with a
+     * component-count-delimited source package and encoded tag hierarchy segments. Their distinct
+     * asset names cannot overlap a default asset that happens to use the same directories.
      */
     CKGROUNDNAV_API auto
     Get_CookedIndexAssetPath(
         const FString& InCookedDataRootPath,
         const FString& InLevelPackageName,
-        FName          InCookKey) -> FString;
+        FName          InCookKey,
+        FGameplayTag   InProfileTag = {},
+        const FCk_GroundNav_DataLayerSelector& InDataLayerSelector = {}) -> FString;
 
     /** One tile of that field, named by its coord in the lattice. */
     CKGROUNDNAV_API auto
@@ -115,7 +140,9 @@ namespace ck::groundnav
         const FString& InCookedDataRootPath,
         const FString& InLevelPackageName,
         FName          InCookKey,
-        FIntPoint      InTileCoord) -> FString;
+        FIntPoint      InTileCoord,
+        FGameplayTag   InProfileTag = {},
+        const FCk_GroundNav_DataLayerSelector& InDataLayerSelector = {}) -> FString;
 
     /**
      * Normalises a package name into the form the COOK recorded.

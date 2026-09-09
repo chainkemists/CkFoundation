@@ -82,6 +82,17 @@ namespace ck::groundnav
 
             return {};
         }
+
+        auto Get_AllTileIndices(const int32 InTileCount) -> TArray<int32>
+        {
+            auto Result = TArray<int32>{};
+            Result.Reserve(InTileCount);
+
+            for (auto TileIndex = 0; TileIndex < InTileCount; ++TileIndex)
+            { Result.Emplace(TileIndex); }
+
+            return Result;
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -93,8 +104,21 @@ namespace ck::groundnav
             FCk_GroundNav_FieldBuildState&   OutState)
         -> FCk_GroundNav_BakeStageResult
     {
-        return Request_BeginBuild_MultiProfile(
-            TConstArrayView<FCk_GroundNav_FieldParams>{&InParams, 1}, InEpoch, OutState);
+        const auto TileIndices = fieldbuild_private::Get_AllTileIndices(InParams.Get_TileCount());
+
+        return Request_BeginBuild_Targeted(InParams, InEpoch, TileIndices, OutState);
+    }
+
+    auto
+        Request_BeginBuild_Targeted(
+            const FCk_GroundNav_FieldParams& InParams,
+            const FCk_GroundNav_Epoch&       InEpoch,
+            TConstArrayView<int32>           InTileIndices,
+            FCk_GroundNav_FieldBuildState&   OutState)
+        -> FCk_GroundNav_BakeStageResult
+    {
+        return Request_BeginBuild_MultiProfile_Targeted(
+            TConstArrayView<FCk_GroundNav_FieldParams>{&InParams, 1}, InEpoch, InTileIndices, OutState);
     }
 
     auto
@@ -104,16 +128,30 @@ namespace ck::groundnav
             FCk_GroundNav_FieldBuildState&             OutState)
         -> FCk_GroundNav_BakeStageResult
     {
-        auto Result = FCk_GroundNav_BakeStageResult{};
+        const auto TileIndices = InParams.IsEmpty()
+            ? TArray<int32>{}
+            : fieldbuild_private::Get_AllTileIndices(InParams[0].Get_TileCount());
 
-        OutState = FCk_GroundNav_FieldBuildState{};
-        OutState._Params.Append(InParams.GetData(), InParams.Num());
-        OutState._Epoch = InEpoch;
+        return Request_BeginBuild_MultiProfile_Targeted(InParams, InEpoch, TileIndices, OutState);
+    }
+
+    auto
+        Request_BeginBuild_MultiProfile_Targeted(
+            TConstArrayView<FCk_GroundNav_FieldParams> InParams,
+            const FCk_GroundNav_Epoch&                 InEpoch,
+            TConstArrayView<int32>                     InTileIndices,
+            FCk_GroundNav_FieldBuildState&             OutState)
+        -> FCk_GroundNav_BakeStageResult
+    {
+        auto Result = FCk_GroundNav_BakeStageResult{};
 
         const auto ThereIsSomethingToBake = NOT InParams.IsEmpty();
 
         CK_ENSURE_IF_NOT(ThereIsSomethingToBake,
             TEXT("A GroundNav field build was begun with no params, so there is no field for it to produce"))
+        {}
+
+        if (NOT ThereIsSomethingToBake)
         {
             Result.Set_Status(ECk_GroundNav_BakeStatus::InvalidInput);
             return Result;
@@ -146,22 +184,56 @@ namespace ck::groundnav
                 TEXT("GroundNav field build params must differ only in their agent profile. Variant [{}] ")
                 TEXT("disagrees with the first on [{}], so the two cannot share one geometry collection"),
                 ProfileIndex, Difference)
+            {}
+
+            if (NOT VariesOnlyByProfile)
             {
                 Result.Set_Status(ECk_GroundNav_BakeStatus::InvalidInput);
                 return Result;
             }
         }
 
-        OutState._Partial.SetNum(InParams.Num());
+        auto CanonicalTileIndices = TArray<int32>{};
+        CanonicalTileIndices.Append(InTileIndices.GetData(), InTileIndices.Num());
+        CanonicalTileIndices.Sort();
+        const auto TileCount = InParams[0].Get_TileCount();
+        auto TileListIsValid = NOT CanonicalTileIndices.IsEmpty();
+
+        for (auto TileSlot = 0; TileSlot < CanonicalTileIndices.Num() && TileListIsValid; ++TileSlot)
+        {
+            const auto TileIndex = CanonicalTileIndices[TileSlot];
+            TileListIsValid = TileIndex >= 0 && TileIndex < TileCount &&
+                              (TileSlot == 0 || CanonicalTileIndices[TileSlot - 1] != TileIndex);
+        }
+
+        CK_ENSURE_IF_NOT(TileListIsValid,
+            TEXT("GroundNav targeted field build requires unique in-range tile indices"))
+        {}
+
+        if (NOT TileListIsValid)
+        {
+            Result.Set_Status(ECk_GroundNav_BakeStatus::InvalidInput);
+            return Result;
+        }
+
+        auto NewState = FCk_GroundNav_FieldBuildState{};
+        NewState._Params.Append(InParams.GetData(), InParams.Num());
+        NewState._Epoch = InEpoch;
+        NewState._RequestedTileIndices = MoveTemp(CanonicalTileIndices);
+        NewState._NextTileIndex = NewState._RequestedTileIndices[0];
+
+        NewState._Partial.SetNum(InParams.Num());
 
         for (auto ProfileIndex = 0; ProfileIndex < InParams.Num(); ++ProfileIndex)
         {
-            auto& Partial = OutState._Partial[ProfileIndex];
+            auto& Partial = NewState._Partial[ProfileIndex];
 
             Partial._Params = InParams[ProfileIndex];
             Partial._Epoch = InEpoch;
             Partial._Tiles.SetNum(InParams[ProfileIndex].Get_TileCount());
         }
+
+        OutState = MoveTemp(NewState);
 
         Result.Set_Status(ECk_GroundNav_BakeStatus::Completed);
 
@@ -221,7 +293,7 @@ namespace ck::groundnav
         auto Geometry = FCk_GroundNav_GeometryBatch{};
         auto Bodies = TArray<FCk_GroundNav_BodyRef>{};
 
-        while (InOutState._NextTileIndex < TileCount)
+        while (InOutState._NextRequestedTileSlot < InOutState._RequestedTileIndices.Num())
         {
             // Checked AFTER the first tile of the slice rather than before it, so a budget smaller than
             // any single tile still advances the build instead of spinning forever on a resume point it
@@ -239,7 +311,7 @@ namespace ck::groundnav
                 return Result;
             }
 
-            const auto TileIndex = InOutState._NextTileIndex;
+            const auto TileIndex = InOutState._RequestedTileIndices[InOutState._NextRequestedTileSlot];
             const auto Coord = Get_TileCoord(InOutState._Params[0]._Divisions, TileIndex);
 
             // Placed off the FIRST profile's params, which admission has already established every
@@ -272,7 +344,11 @@ namespace ck::groundnav
                 DroppedThisSlice += TileResult.Get_DroppedInputCount();
             }
 
-            ++InOutState._NextTileIndex;
+            ++InOutState._NextRequestedTileSlot;
+            InOutState._NextTileIndex = InOutState._NextRequestedTileSlot <
+                InOutState._RequestedTileIndices.Num()
+                ? InOutState._RequestedTileIndices[InOutState._NextRequestedTileSlot]
+                : TileCount;
         }
 
         InOutState._ProbesSpent += SpentThisSlice;
@@ -280,7 +356,7 @@ namespace ck::groundnav
         Result.Set_ProbesSpent(SpentThisSlice);
         Result.Set_DroppedInputCount(DroppedThisSlice);
 
-        if (InOutState._NextTileIndex < TileCount)
+        if (InOutState._NextRequestedTileSlot < InOutState._RequestedTileIndices.Num())
         {
             // Paused with a resume point recorded. Nothing is published: the field is not reachable
             // until it is whole.
@@ -359,6 +435,10 @@ namespace ck::groundnav
         // whose tiles have no floor, the failure Get_CompletedField's own contract warns about.
         InOutState._Status = ECk_GroundNav_BuildStatus::Unbuilt;
         InOutState._NextTileIndex = 0;
+        InOutState._Params.Reset();
+        InOutState._Partial.Reset();
+        InOutState._RequestedTileIndices.Reset();
+        InOutState._NextRequestedTileSlot = 0;
 
         return Released;
     }

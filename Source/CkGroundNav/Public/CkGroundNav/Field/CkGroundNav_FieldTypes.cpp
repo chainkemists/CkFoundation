@@ -31,6 +31,26 @@ namespace ck::groundnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        GetTypeHash(
+            const FCk_GroundNav_VolumeId& InVolumeId)
+        -> uint32
+    {
+        return ::GetTypeHash(InVolumeId.Get_Value());
+    }
+
+    auto
+        GetTypeHash(
+            const FCk_GroundNav_StreamTileId& InTileId)
+        -> uint32
+    {
+        return HashCombineFast(
+            GetTypeHash(InTileId._VolumeId),
+            HashCombineFast(::GetTypeHash(InTileId._Coord._X), ::GetTypeHash(InTileId._Coord._Y)));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FCk_GroundNav_Tile::
         Get_AllocatedSize() const
         -> SIZE_T

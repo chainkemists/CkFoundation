@@ -40,7 +40,9 @@ namespace ck::jolt
     ///     every v3 cell containing a tri-mesh body is inside-out.
     /// v5: tri-mesh extraction now safely normalizes closed, consistently oriented inside-out
     ///     components. Existing v4 cells can retain source-matching inverted blobs, so they must rebake.
-    constexpr uint32 WorldCookVersion_Current = 5;
+    /// v6: cooked actor groups persist their canonical data-layer instance names, so a runtime geometry
+    ///     query can enforce a GroundNav data-layer selector without depending on a live editor actor.
+    constexpr uint32 WorldCookVersion_Current = 6;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -144,6 +146,12 @@ private:
     UPROPERTY()
     uint64 _RuntimeCheckHash = 0;
 
+    // Canonical FName-lexical, duplicate-free instance names captured from the source actor at cook
+    // time. Empty means the actor is unlayered; an old cell cannot safely be interpreted that way and
+    // is refused through WorldCookVersion_Current instead.
+    UPROPERTY()
+    TArray<FName> _DataLayerNames;
+
     UPROPERTY()
     TArray<FCk_Jolt_CookedBodyRecord> _Bodies;
 
@@ -153,6 +161,7 @@ public:
     CK_PROPERTY(_SourceActorPath);
     CK_PROPERTY(_SourceHash);
     CK_PROPERTY(_RuntimeCheckHash);
+    CK_PROPERTY(_DataLayerNames);
     CK_PROPERTY(_Bodies);
 };
 

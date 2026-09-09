@@ -22,6 +22,14 @@
 
 namespace ck
 {
+    enum class ECk_CrowdAgent_StationaryMarkupPathResult : uint8
+    {
+        NotNeeded,
+        Succeeded,
+        Failed,
+        Malformed
+    };
+
     // Mid-walk path refresh — the second half of StationaryMarkup. The cost discs only influence
     // FindPath at PLAN time; a path computed before a crowd formed is a frozen polyline the agent
     // follows INTO the crowd (UE's own UPathFollowingComponent re-paths when the navmesh under its
@@ -105,7 +113,8 @@ namespace ck
             float InAgentRadius) -> TOptional<FVector>;
 
         // Converts a geometry-only escape point into a physically followable Recast prefix from
-        // the agent's real location. Returns false without mutating OutWaypoints when either end
+        // the agent's real location. Returns Succeeded only after writing OutWaypoints; Failed preserves it,
+        // while Malformed rejects a strict snapshot and NotNeeded preserves it. Either end
         // cannot be projected, no complete path exists, or the projected endpoint falls back
         // inside another agent's expanded painted markup. InQueryFilter is the filter the route is
         // PRICED under — the plan's own base filter: the provider prices the markup and this helper
@@ -118,17 +127,30 @@ namespace ck
             FCk_Entity InSelfEntity,
             const FVector& InSelfLocation,
             const FVector& InEscapedLocation,
+            const FVector& InGoal,
+            float InArrivalRadius,
             const FFragment_CrowdAgent_Params& InParams,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             const FGameplayTag& InQueryFilter,
-            TArray<FVector>& OutWaypoints) -> bool;
+            TArray<FVector>& OutWaypoints) -> ECk_CrowdAgent_StationaryMarkupPathResult;
+
+        // Tests a route centreline against one confirmed stationary agent's painted extent expanded
+        // by the querying body. Tangency is admissible; only a physical overlap is a crossing.
+        static auto
+        Get_DoesSegmentCrossStationaryMarkup(
+            const FVector& InSegmentStart,
+            const FVector& InSegmentEnd,
+            const FVector& InMarkupCenter,
+            float          InMarkupRadius,
+            float          InAgentRadius) -> bool;
 
         // PathNetwork corridors are preferred geometry, not hard movement boundaries. When a
         // resolved corridor crosses confirmed stationary-agent markup, replace only the affected
         // span with a surface path computed under InQueryFilter. The untouched prefix/suffix keep
         // the agent on the authored route and make it rejoin immediately after clearing the
-        // standing crowd. Returns false without mutating OutWaypoints when no splice
-        // is needed or no valid detour exists. InQueryFilter is the filter the span is PRICED under
+        // standing crowd. Returns NotNeeded when no splice is required, Succeeded after writing
+        // OutWaypoints, Failed with unchanged output when a required detour cannot be made, and
+        // Malformed when strict dynamic geometry is invalid. InQueryFilter is the filter the span is PRICED under
         // — the plan's own base filter: the provider prices the markup and this helper enforces
         // avoidance geometrically on the answer it gets back (the candidate is rejected when it
         // still crosses a confirmed disc or volume), because a filter that DENIES the markup
@@ -144,7 +166,7 @@ namespace ck
             const TArray<FVector>& InCorridorWaypoints,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             const FGameplayTag& InQueryFilter,
-            TArray<FVector>& OutWaypoints) -> bool;
+            TArray<FVector>& OutWaypoints) -> ECk_CrowdAgent_StationaryMarkupPathResult;
 
     private:
         struct FSettledDisc

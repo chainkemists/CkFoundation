@@ -9,6 +9,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_AgentProfile.h"
 #include "CkGroundNav/Bake/CkGroundNav_BakeTypes.h"
+#include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_Plates.h"
 
@@ -64,6 +65,19 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_GroundNav_ProfileVariant, _ProfileTag, _Profile);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** How a positive streaming volume chooses the part of its fixed lattice it keeps live. */
+UENUM(BlueprintType)
+enum class ECk_GroundNav_StreamingBuildScope : uint8
+{
+    /** The established positive-id behavior: build and publish the complete authored lattice. */
+    WholeVolume,
+
+    /** Keep an empty canonical lattice until world-local build invokers select tiles. */
+    InvokerDriven
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -142,8 +156,34 @@ private:
               meta = (AllowPrivateAccess = true))
     FName _CookKey;
 
+    /** INDEX_NONE preserves legacy whole-volume publication. A positive value opts this volume into
+     *  world-scoped streaming identity; zero and values below INDEX_NONE are invalid authoring. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    int32 _StreamingVolumeId = INDEX_NONE;
+
+    /** Default geometry selector for this volume. Empty means every layer, including unlayered actors. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+
+    /**
+     * Applies only to a positive streaming id. InvokerDriven registers an all-profile empty lattice
+     * at setup, then admits tiles only through the world aggregation pass. Legacy volumes deliberately
+     * retain their established whole-volume behavior.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_GroundNav_StreamingBuildScope _StreamingBuildScope = ECk_GroundNav_StreamingBuildScope::WholeVolume;
+
+    // Source level for a placed volume. None uses the current world's persistent level.
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _CookLevelPackage;
+
 public:
     CK_PROPERTY_GET(_VolumeBounds);
+    // Placement can update bounds while preserving the remaining authored settings.
+    CK_PROPERTY_SET(_VolumeBounds);
     CK_PROPERTY_GET(_Config);
     CK_PROPERTY_GET(_Profile);
     CK_PROPERTY(_ProfileVariants);
@@ -152,6 +192,10 @@ public:
     CK_PROPERTY(_AutoBuildOnSetup);
     CK_PROPERTY(_ProbeBudgetPerTick);
     CK_PROPERTY(_CookKey);
+    CK_PROPERTY(_StreamingVolumeId);
+    CK_PROPERTY(_DataLayerSelector);
+    CK_PROPERTY(_StreamingBuildScope);
+    CK_PROPERTY(_CookLevelPackage);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_GroundNavVolume_ParamsData, _VolumeBounds, _Config, _Profile);
@@ -175,8 +219,19 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _ForceRestart = ECk_EnableDisable::Disable;
 
+    /** Disabled inherits the volume selector; enabled uses _DataLayerSelector even when it is empty. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _OverrideDataLayerSelector = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+
 public:
     CK_PROPERTY(_ForceRestart);
+    CK_PROPERTY(_OverrideDataLayerSelector);
+    CK_PROPERTY(_DataLayerSelector);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

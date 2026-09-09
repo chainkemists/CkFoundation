@@ -38,12 +38,10 @@ namespace ck
      *
      * BOUNDS ARE THE FLOOR, LINK IDENTITY NARROWS ONE CASE. The registry entry carries a note naming
      * the epoch of the last publish that could have moved ground and the authored link ids every
-     * link-only publish since it moved; a corridor caches the ids it crosses. A corridor planned at or
-     * after that geometry publish has missed nothing but link-only publishes, so the two lists are
-     * intersected and the box test is skipped: a link toggle moves connectivity and not ground, and
-     * every route through the endpoint tile that did not use the link is unaffected. A corridor older
-     * than it has missed ground moving - a repair and a derive landing in one tick is exactly that -
-     * and falls to bounds, as does a world with no field to read a note from.
+      * link-only publish since it moved; a corridor caches the ids it crosses. A corridor planned at or
+      * after that geometry publish checks only link ids changed after its own epoch and whether its
+      * saved filter now denies a used plate. A corridor older than geometry falls to bounds, as does a
+      * world with no field to read a note from.
      *
      * A SEARCH IN FLIGHT IS ANSWERED BY ITS REQUEST, NOT BY ITS CORRIDOR. A sliced search pins the
      * field it reads at Request_Begin and holds it for the whole episode, so a rebuild published
@@ -87,13 +85,18 @@ namespace ck
             FFragment_GroundNavPath_Result& InResult) const -> void;
 
     private:
-        // The exact half of the decision: flags only when the corridor crosses one of the links the
-        // note has accumulated, and never touches the queue's boxes.
+        // Flags only when the corridor crosses a link changed after its plan.
         auto
         DoTry_FlagOnChangedLink(
             HandleType                                                InPathEntity,
             const FFragment_GroundNavPath_Current&                    InCurrent,
             const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const -> void;
+
+        auto
+        DoTry_FlagOnDeniedPlate(
+            HandleType                             InPathEntity,
+            const FFragment_GroundNavPath_Current& InCurrent,
+            const groundnav::FCk_GroundNav_FieldPtr& InField) const -> void;
 
         // The corridor-less half: an episode whose search has BEGUN is measured against its request's
         // own bounds, and what it finds is parked on the slot for the publish to spend.

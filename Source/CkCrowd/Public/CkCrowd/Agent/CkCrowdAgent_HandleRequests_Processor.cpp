@@ -13,6 +13,8 @@
 
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Algorithm.h"
+#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Fragment.h"
 #include "CkCrowd/CkCrowd_NavGameplayTags.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -20,6 +22,7 @@
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Utils.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
@@ -47,10 +50,82 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::HandleRequests"), STAT_CkCrowd_HandleRequestsPro
 
 namespace ck_crowd_agent_handle_requests
 {
+    /** Copies only confirmed strict blockers into a request-local value. A failed factory rejects the
+     * complete collection: a malformed confirmed record must never silently become a permissive
+     * strict query by dropping just that obstacle. */
+    auto Get_StrictDynamicObstacles(
+        FCk_Handle InSelf,
+        const FVector& InGoal,
+        float InAgentRadius,
+        float InArrivalRadius) -> TOptional<ck::groundnav::FCk_GroundNav_DynamicObstacleSnapshot>
+    {
+        using namespace ck;
+        using namespace ck::groundnav;
+
+        auto Discs = TArray<FCk_GroundNav_DynamicObstacleDisc, TInlineAllocator<32>>{};
+        auto Obbs = TArray<FCk_GroundNav_DynamicObstacleObb, TInlineAllocator<16>>{};
+
+        InSelf.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
+        {
+            if (InEntity == InSelf.Get_Entity() || NOT InMarkup.Get_ConfirmedOnMesh())
+            { return; }
+
+            const auto& Centre = InMarkup.Get_MarkupLocation();
+            const auto Radius = InMarkup.Get_MarkupRadiusUu();
+            const auto HalfExtent = InMarkup.Get_MarkupVerticalHalfExtentUu();
+            const auto QueryRadius = Radius + InAgentRadius;
+            const auto IsRecordFinite = NOT Centre.ContainsNaN() &&
+                FMath::IsFinite(Radius) && FMath::IsFinite(HalfExtent) && FMath::IsFinite(QueryRadius) &&
+                FMath::IsFinite(InArrivalRadius) && InArrivalRadius >= 0.0f &&
+                Radius > 0.0f && HalfExtent > 0.0f && QueryRadius > 0.0f;
+            if (NOT IsRecordFinite)
+            {
+                // Append a deliberately invalid value so the atomic factory refuses the whole set.
+                Discs.Add(FCk_GroundNav_DynamicObstacleDisc{Centre, QueryRadius, HalfExtent});
+                return;
+            }
+            if (FVector::Dist2D(Centre, InGoal) <= QueryRadius + InArrivalRadius)
+            { return; }
+
+            // Deliberately append even malformed confirmed values: Try_Make is the atomic
+            // validation boundary, and filtering one out would change strict into permissive.
+            Discs.Add(FCk_GroundNav_DynamicObstacleDisc{Centre, QueryRadius, HalfExtent});
+        });
+
+        InSelf.View<FFragment_CrowdAvoidanceVolume_ProbeRef>().ForEach(
+            [&](FCk_Entity, const FFragment_CrowdAvoidanceVolume_ProbeRef& InRuntime)
+        {
+            if (NOT InRuntime.Get_ConfirmedOnMesh() ||
+                InRuntime.Get_TraversalPolicy() != ECk_CrowdAvoidanceVolume_TraversalPolicy::AvoidIfPossible)
+            { return; }
+
+            const auto Effective = crowd_avoidance_volume::MakeEffectiveAgentObb(
+                InRuntime.Get_AuthoredObb(), InRuntime.Get_PaintedObb(), InAgentRadius);
+            Obbs.Add(FCk_GroundNav_DynamicObstacleObb{
+                Effective._YawTransform, Effective._WorldHalfExtents});
+        });
+
+        return Try_MakeDynamicObstacleSnapshot(Discs, Obbs);
+    }
+
+    auto FailStrictGroundNavDispatch(FCk_Handle_CrowdAgent InHandle, int32 InRevision) -> void
+    {
+        auto NonConstHandle = InHandle;
+        FCk_Nav_Algorithm::FailPath(
+            // This is malformed provider input, not a route verdict. NoNavData follows the existing
+            // non-route-failure policy, so OnPathResolved cannot turn a rejected strict snapshot into
+            // a permissive retry.
+            NonConstHandle, ECk_Nav_PathFailReason::NoNavData, InRevision);
+        const auto BaseHandle = NonConstHandle.ConvertToHandle();
+        ck::UUtils_Signal_Nav_OnPathFailed::Broadcast(BaseHandle, ck::MakePayload(BaseHandle));
+    }
+
     auto Get_PlanPhaseFilter(
         FCk_Handle_CrowdAgent                      InHandle,
         const ck::FFragment_CrowdAgent_Params&     InParams,
         const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
+        ECk_CrowdAgent_PathProvider                InProvider,
         bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter
     {
         auto Filter = FCk_CrowdAgent_PlanPhaseFilter{};
@@ -85,6 +160,14 @@ namespace ck_crowd_agent_handle_requests
             return Filter;
         }
 
+        if (InProvider == ECk_CrowdAgent_PathProvider::GroundNav)
+        {
+            // GroundNav prices standing-crowd markup per plate. Its strict verdict is applied to
+            // the returned route at install, because denying a coarse plate over-denies the field.
+            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            return Filter;
+        }
+
         if (InParams.Get_NavQueryFilterStrict().IsValid())
         {
             Filter._QueryFilter = InParams.Get_NavQueryFilterStrict();
@@ -100,6 +183,25 @@ namespace ck_crowd_agent_handle_requests
 
 namespace ck
 {
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        Try_GetStrictDynamicObstacles(
+            FCk_Handle InSelf,
+            const FVector& InGoal,
+            float InAgentRadius,
+            float InArrivalRadius) -> TOptional<groundnav::FCk_GroundNav_DynamicObstacleSnapshot>
+    {
+        return ck_crowd_agent_handle_requests::Get_StrictDynamicObstacles(
+            InSelf, InGoal, InAgentRadius, InArrivalRadius);
+    }
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        FailStrictGroundNavDispatch(HandleType InHandle, int32 InRevision) -> void
+    {
+        ck_crowd_agent_handle_requests::FailStrictGroundNavDispatch(InHandle, InRevision);
+    }
+
     auto
         FProcessor_CrowdAgent_HandleRequests::
         ForEachEntity(
@@ -184,6 +286,9 @@ namespace ck
     {
         if (InPathFollow.Get_PlanUsesStrictStandingCrowdFilter())
         {
+            if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav)
+            { return InParams.Get_NavQueryFilter(); }
+
             if (InParams.Get_NavQueryFilterStrict().IsValid())
             { return InParams.Get_NavQueryFilterStrict(); }
 
@@ -340,12 +445,10 @@ namespace ck
             // for it.)
             InHandle.Try_Remove<FTag_GroundNavPath_RepathRequired>();
 
-            // The SAME phase decision ApplyPlanPhase makes, from the same helper, so the two
-            // providers cannot drift about what a phase means for one agent. GroundNav's request
-            // carries a single filter field, so the strict override collapses onto it through
-            // Get_EffectiveQueryFilter — the precedence Recast's own resolver applies.
+            // GroundNav prices strict standing-crowd markup and verifies the returned geometry at
+            // install; its request must therefore retain the agent's base filter.
             const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-                InHandle, InParams, InPathFollow, InForcePermissivePlan);
+                InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
 
             InPathFollow._PlanPhase = PlanFilter._Phase;
             InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
@@ -377,6 +480,24 @@ namespace ck
             Request.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
             Request.Set_QueryFilter(PlanFilter.Get_EffectiveQueryFilter());
             Request.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
+
+            if (PlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
+            {
+                const auto Obstacles = Try_GetStrictDynamicObstacles(
+                    InHandle, InGoal, InParams.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
+                const auto HasObstacles = Obstacles.IsSet();
+                CK_ENSURE_IF_NOT(HasObstacles,
+                    TEXT("CrowdAgent [{}] refused strict GroundNav dispatch: confirmed dynamic blocker geometry is malformed"),
+                    InHandle)
+                {}
+                if (NOT HasObstacles)
+                {
+                    FailStrictGroundNavDispatch(
+                        InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+                    return;
+                }
+                Request.Set_DynamicObstacles(Obstacles.GetValue());
+            }
             UCk_Utils_GroundNavPath_UE::Request_FindPath(Path, Request, {});
             return;
         }
@@ -412,12 +533,14 @@ namespace ck
                     InHandle.Get_Entity(),
                     UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
                     Escaped.GetValue(),
+                    InGoal,
+                    InPathFollow.Get_ActiveArrivalRadius(),
                     InParams,
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
                     InParams.Get_NavQueryFilter(),
-                    EscapePrefix))
+                    EscapePrefix) == ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded)
                 {
                     Request.Set_StartOverride(ECk_EnableDisable::Enable)
                            .Set_StartOverrideLocation(EscapePrefix.Last());
@@ -461,9 +584,26 @@ namespace ck
             // Same helper the GroundNav branch stamps its request from — the shadow must plan under
             // the identical filter/overlay so the A/B comparison stays like for like.
             const auto ShadowPlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-                InHandle, InParams, InPathFollow, InForcePermissivePlan);
+                InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
             ShadowRequest.Set_QueryFilter(ShadowPlanFilter.Get_EffectiveQueryFilter());
             ShadowRequest.Set_QueryFilterOverlay(ShadowPlanFilter._QueryFilterOverlay);
+            if (ShadowPlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
+            {
+                const auto Obstacles = Try_GetStrictDynamicObstacles(
+                    InHandle, InGoal, InParams.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
+                const auto HasObstacles = Obstacles.IsSet();
+                CK_ENSURE_IF_NOT(HasObstacles,
+                    TEXT("CrowdAgent [{}] refused strict GroundNav shadow dispatch: confirmed dynamic blocker geometry is malformed"),
+                    InHandle)
+                {}
+                if (NOT HasObstacles)
+                {
+                    FailStrictGroundNavDispatch(
+                        InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
+                    return;
+                }
+                ShadowRequest.Set_DynamicObstacles(Obstacles.GetValue());
+            }
             UCk_Utils_GroundNavPath_UE::Request_FindPath(ShadowPath, ShadowRequest, {});
         }
     }
@@ -502,7 +642,7 @@ namespace ck
         -> void
     {
         const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-            InHandle, InParams, InPathFollow, InForcePermissive);
+            InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::Navigation, InForcePermissive);
 
         InPathFollow._PlanPhase = PlanFilter._Phase;
         InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;

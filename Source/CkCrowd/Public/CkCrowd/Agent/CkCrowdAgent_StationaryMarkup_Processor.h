@@ -23,6 +23,10 @@ namespace ck
     // paths (a joiner's first FindPath, BlockedRecheck's re-path, PathRefresh) genuinely route
     // around standing crowds.
     //
+    // An initial PathPending agent without an installed shared navigation corridor is excluded: it
+    // is waiting for its first route, not settled in the world. A refresh retains its previous
+    // non-empty corridor and therefore remains eligible while the replacement is pending.
+    //
     // Cost, never a hole: the mesh under the agent stays walkable, so the agent's own navmesh
     // clamp (ConstrainToNavmesh), its path starts, and slot projections are unaffected, and a
     // fully-plugged corridor still paths through rather than failing.

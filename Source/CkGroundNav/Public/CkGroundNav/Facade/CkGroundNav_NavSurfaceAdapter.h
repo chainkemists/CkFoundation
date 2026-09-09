@@ -4,8 +4,13 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
+
+#include "CkNavigation/NavSurface/CkNavSurface_Fragment_Data.h"
 
 #include <CoreMinimal.h>
+
+class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 // CkGroundNav seen through CkNavigation's provider-neutral surface.
@@ -21,6 +26,17 @@ namespace ck::groundnav::nav_surface_adapter
     /** Builds the capability table and registers it as the GroundNav provider. Called at module startup. */
     CKGROUNDNAV_API auto
     Register() -> void;
+
+    /**
+     * One synchronous provider-neutral route over the field currently published for InWorld, with a
+     * caller-owned immutable dynamic-obstacle snapshot. A non-empty snapshot selects GroundNav's
+     * strict cell search; the ordinary facade remains the empty-snapshot path.
+     */
+    CKGROUNDNAV_API auto
+    Try_FindPathSyncWithDynamicObstacles(
+        UWorld*                                             InWorld,
+        const FCk_NavSurface_PathQuery&                     InQuery,
+        const FCk_GroundNav_DynamicObstacleSnapshot&        InDynamicObstacles) -> FCk_NavSurface_PathResult;
 
     // ----------------------------------------------------------------------------------------------------------------
 

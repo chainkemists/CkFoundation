@@ -15,6 +15,7 @@
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
 #include "CkGroundNav/Query/CkGroundNav_QueryTypes.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Boundary.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_BuildStatus.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Projection.h"
@@ -32,6 +33,7 @@
 #include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include <Engine/World.h>
+#include <HAL/IConsoleManager.h>
 #include <UObject/Class.h>
 #include <UObject/PropertyPortFlags.h>
 
@@ -39,6 +41,16 @@
 
 namespace ck::groundnav::nav_surface_adapter_private
 {
+    static TAutoConsoleVariable<int32> CVar_MarkupLiveDiagnostics(
+        TEXT("ck.GroundNav.Debug.MarkupLiveDiagnostics"), 0,
+        TEXT("1 writes visible GroundNav markup-liveness gate diagnostics. It does not change the "
+             "provider answer or retain markup state."));
+
+    auto Get_ShouldLogMarkupLiveDiagnostics() -> bool
+    {
+        return CVar_MarkupLiveDiagnostics.GetValueOnAnyThread() != 0;
+    }
+
     // The neutral queries opt into the project extents by carrying a zero vector. GroundNav's own
     // queries have no such sentinel, so the fold happens here — once, in one place, so the projection
     // and the boundary window cannot drift apart about what "unset" means.
@@ -282,11 +294,32 @@ namespace ck::groundnav::nav_surface_adapter_private
      * excluded areas become plates it may not enter, per-area multipliers become what their plates
      * cost. Do_SurfaceRaycast above compiles the same filter into the same two tables.
      */
-    auto Do_FindPathSync(
-        UWorld*                          InWorld,
-        const FCk_NavSurface_PathQuery&  InQuery) -> FCk_NavSurface_PathResult
+    auto Get_IsFinite(const FVector& InLocation) -> bool
+    {
+        return FMath::IsFinite(InLocation.X) && FMath::IsFinite(InLocation.Y) && FMath::IsFinite(InLocation.Z);
+    }
+
+    auto Do_FindPathSync_Impl(
+        UWorld*                                             InWorld,
+        const FCk_NavSurface_PathQuery&                     InQuery,
+        const FCk_GroundNav_DynamicObstacleSnapshot&        InDynamicObstacles) -> FCk_NavSurface_PathResult
     {
         auto Result = FCk_NavSurface_PathResult{};
+
+        // The registry key is geometry. Reject malformed geometry before the lookup, because a NaN
+        // endpoint must never enter field-coordinate arithmetic just to produce a diagnostic.
+        const auto EndpointsAreFinite = Get_IsFinite(InQuery.Get_Start()) && Get_IsFinite(InQuery.Get_End());
+
+        CK_ENSURE_IF_NOT(EndpointsAreFinite,
+            TEXT("A GroundNav facade path query received non-finite endpoints: start [{}], end [{}]"),
+            InQuery.Get_Start(), InQuery.Get_End())
+        {}
+
+        if (NOT EndpointsAreFinite)
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+            return Result;
+        }
 
         const auto Field = world_fields::TryGet_Field(
             InWorld, InQuery.Get_Start(), InQuery.Get_ProfileTag());
@@ -306,6 +339,7 @@ namespace ck::groundnav::nav_surface_adapter_private
         Query._MaxExpansions = InQuery.Get_MaxExpansions();
         Query._MaxCorridorLength = InQuery.Get_MaxCorridorLength();
         Query._AllowPartialPath = InQuery.Get_AllowPartial();
+        Query._DynamicObstacles = InDynamicObstacles;
 
         // Left at its zero default rather than assigned unconditionally: zero is what
         // FCk_NavSurface_PathQuery::_AgentRadiusUu documents as the provider's own agent, and today
@@ -340,6 +374,9 @@ namespace ck::groundnav::nav_surface_adapter_private
             TEXT("A one-shot GroundNav path search from [{}] to [{}] answered InProgress. A begin plus "
                  "one slice with no limits must answer terminally."),
             InQuery.Get_Start(), InQuery.Get_End())
+        {}
+
+        if (NOT SearchIsTerminal)
         {
             Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
             return Result;
@@ -451,6 +488,13 @@ namespace ck::groundnav::nav_surface_adapter_private
         Result.Set_Waypoints(MoveTemp(Waypoints));
 
         return Result;
+    }
+
+    auto Do_FindPathSync(
+        UWorld*                          InWorld,
+        const FCk_NavSurface_PathQuery&  InQuery) -> FCk_NavSurface_PathResult
+    {
+        return Do_FindPathSync_Impl(InWorld, InQuery, FCk_GroundNav_DynamicObstacleSnapshot{});
     }
 
     auto Do_FindDistanceToWall(
@@ -856,7 +900,14 @@ auto
     const auto RecordBounds = Get_MarkupWorldBounds(InRecord);
 
     if (NOT RecordBounds.IsValid)
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: record bounds are invalid (requested epoch [{}])"),
+                InRecord.Get_RequestedAtEpoch());
+        }
+        return false;
+    }
 
     // Live means the field PRICED the record, and the epoch alone proves only that a build happened
     // after it was asked for: a tile's epoch bumps on mere reach, and a build already in flight when
@@ -870,7 +921,15 @@ auto
         });
 
     if (NOT FieldPricedTheRecord)
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: published field epoch [{}] has no matching record "
+                         "requested at epoch [{}]"),
+                InField._Epoch._Value, InRecord.Get_RequestedAtEpoch());
+        }
+        return false;
+    }
 
     auto ReachedAnyTile = false;
 
@@ -885,9 +944,23 @@ auto
                                           Tile._Epoch._Value > InRecord.Get_RequestedAtEpoch();
 
         if (NOT TileCarriesTheRecord)
-        { return false; }
+        {
+            if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+            {
+                ck::groundnav::Log(TEXT("GroundNav MarkupLive false: intersecting tile [{}, {}] is built [{}] at epoch [{}], "
+                             "but markup was requested at epoch [{}]"),
+                    Tile._Coord._X, Tile._Coord._Y, Tile.Get_IsBuilt(), Tile._Epoch._Value,
+                    InRecord.Get_RequestedAtEpoch());
+            }
+            return false;
+        }
     }
 
+    if (NOT ReachedAnyTile && nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+    {
+        ck::groundnav::Log(TEXT("GroundNav MarkupLive false: matching record requested at epoch [{}] intersects no field tile"),
+            InRecord.Get_RequestedAtEpoch());
+    }
     return ReachedAnyTile;
 }
 
@@ -898,7 +971,14 @@ auto
     -> bool
 {
     if (ck::Is_NOT_Valid(InMarkupEntity) || NOT InMarkupEntity.Has<ck::FFragment_GroundNav_MarkupRef>())
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: markup [{}] is invalid or has no GroundNav markup reference"),
+                InMarkupEntity);
+        }
+        return false;
+    }
 
     // Debug-only and off unless a run asked for it. Forcing this true makes a fixture that settles
     // on liveness wait for nothing. It sits after the guards above so it can never report a markup
@@ -913,25 +993,66 @@ auto
     auto Volume = UCk_Utils_GroundNavVolume_UE::Cast(VolumeEntity);
 
     if (ck::Is_NOT_Valid(Volume))
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: markup [{}] record [{}] names invalid volume [{}]"),
+                InMarkupEntity, MarkupRef.Get_RecordId(), VolumeEntity);
+        }
+        return false;
+    }
 
     const auto Record = UCk_Utils_GroundNavVolume_UE::TryGet_MarkupRecord(
         Volume, MarkupRef.Get_RecordId());
 
     if (NOT Record.IsSet())
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: markup [{}] record [{}] is absent from volume [{}]"),
+                InMarkupEntity, MarkupRef.Get_RecordId(), Volume);
+        }
+        return false;
+    }
 
     // A disabled markup has no paint to be live, which is also the answer the Recast provider gives
     // once it has torn its painter down; the two providers must agree on what the flag means.
     if (Record->Get_Enable() == ECk_EnableDisable::Disable)
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: markup [{}] record [{}] is disabled"),
+                InMarkupEntity, MarkupRef.Get_RecordId());
+        }
+        return false;
+    }
 
     const auto Field = UCk_Utils_GroundNavVolume_UE::Get_Field(Volume);
 
     if (NOT Field.IsValid())
-    { return false; }
+    {
+        if (nav_surface_adapter_private::Get_ShouldLogMarkupLiveDiagnostics())
+        {
+            ck::groundnav::Log(TEXT("GroundNav MarkupLive false: markup [{}] record [{}] volume [{}] has no published field"),
+                InMarkupEntity, MarkupRef.Get_RecordId(), Volume);
+        }
+        return false;
+    }
 
     return Get_IsMarkupLive(*Field, *Record);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ck::groundnav::nav_surface_adapter::
+    Try_FindPathSyncWithDynamicObstacles(
+        UWorld*                                      InWorld,
+        const FCk_NavSurface_PathQuery&              InQuery,
+        const FCk_GroundNav_DynamicObstacleSnapshot& InDynamicObstacles)
+    -> FCk_NavSurface_PathResult
+{
+    return nav_surface_adapter_private::Do_FindPathSync_Impl(InWorld, InQuery, InDynamicObstacles);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

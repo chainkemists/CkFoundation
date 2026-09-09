@@ -665,7 +665,7 @@ namespace ck::groundnav
 
         auto Plates = FCk_GroundNav_PlateField{};
 
-        if (NOT DoDecompose_Plates(Spans, Layers, InParams._MergeTunables, Plates).Get_IsCompleted())
+        if (NOT DoDecompose_Plates(Spans, Layers, Connections, InParams._MergeTunables, Plates).Get_IsCompleted())
         {
             Snapshot._SourceTriangleCount = SourceTriangles;
             Snapshot._Status = EDebugSnapshotStatus::Failed;

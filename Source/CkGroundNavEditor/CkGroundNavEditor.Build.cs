@@ -12,10 +12,15 @@ public class CkGroundNavEditor : CkModuleRules
             // This module exists to WRITE ground-nav assets from the editor, which is UnrealEd's
             // package and asset-tools surface - the same dependency CkJoltEditor carries to write its own.
             "UnrealEd",
+            "AssetRegistry",
+            "DeveloperToolSettings",
 
             "CkCore",
             "CkEcs",
+            "CkEntitySpawner",
             "CkGroundNav",
+            "CkJolt",
+            "CkJoltEditor",
             "CkLog",
         });
     }

@@ -4,6 +4,7 @@
 
 #include <CoreMinimal.h>
 #include <Engine/DataAsset.h>
+#include <GameplayTagContainer.h>
 
 #include "CkGroundNav_CookedTile.generated.h"
 
@@ -111,10 +112,30 @@ private:
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     FIntPoint _TileCoord = FIntPoint::ZeroValue;
 
+    /** Positive only for a streamed volume. INDEX_NONE preserves the pre-streaming cooked schema. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    int32 _StreamingVolumeId = INDEX_NONE;
+
+    /** The exact published-cell slab for _TileCoord, rather than the halo the cook queried. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    FBox _WorldBounds = FBox{ForceInit};
+
+    /** Canonical data-layer selector that limited the geometry contributing to this tile. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    TArray<FName> _DataLayerNames;
+
     /** The content fingerprint of the bake this tile came out of, compared against the fingerprint of
      *  the CURRENT inputs: a tile cooked under inputs that have since moved describes other ground. */
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     uint64 _Fingerprint = 0;
+
+    /** Non-zero CRC of _Blob, checked before the tile is deserialized. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    uint32 _ContentHash = 0;
+
+    /** Empty for the default profile. A non-empty tag names one authored profile variant. */
+    UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
+    FGameplayTag _ProfileTag;
 
     UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = true))
     FCk_GroundNav_CookedLatticeKey _LatticeKey;
@@ -129,8 +150,23 @@ public:
     CK_PROPERTY_GET(_TileCoord);
     CK_PROPERTY_SET(_TileCoord);
 
+    CK_PROPERTY_GET(_StreamingVolumeId);
+    CK_PROPERTY_SET(_StreamingVolumeId);
+
+    CK_PROPERTY_GET(_WorldBounds);
+    CK_PROPERTY_SET(_WorldBounds);
+
+    CK_PROPERTY_GET(_DataLayerNames);
+    CK_PROPERTY_SET(_DataLayerNames);
+
     CK_PROPERTY_GET(_Fingerprint);
     CK_PROPERTY_SET(_Fingerprint);
+
+    CK_PROPERTY_GET(_ContentHash);
+    CK_PROPERTY_SET(_ContentHash);
+
+    CK_PROPERTY_GET(_ProfileTag);
+    CK_PROPERTY_SET(_ProfileTag);
 
     CK_PROPERTY_GET(_LatticeKey);
     CK_PROPERTY_SET(_LatticeKey);
@@ -144,5 +180,15 @@ public:
      *  when the alternative is reading a differently-shaped record as if it were this one. */
     auto Get_IsCompatibleWith(int32 InFormatVersion) const -> bool;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::groundnav
+{
+    /** The chunk-byte identity used by cooker and runtime before a tile blob is deserialized. */
+    CKGROUNDNAV_API auto
+    Get_CookedTileContentHash(
+        TConstArrayView<uint8> InBlob) -> uint32;
+}
 
 // --------------------------------------------------------------------------------------------------------------------

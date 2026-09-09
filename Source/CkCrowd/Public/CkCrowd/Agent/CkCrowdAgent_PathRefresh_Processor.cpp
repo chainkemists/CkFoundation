@@ -10,6 +10,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.h"
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
@@ -44,6 +45,14 @@ namespace ck_crowd_agent_path_refresh
     // blocked by it, not standing in it.
     constexpr auto kBandContactToleranceUu = 1.0f;
 
+    auto Get_ExcludedAreaTagsText(const FCk_Nav_QueryFilterOverlay& InOverlay) -> FString
+    {
+        return FString::JoinBy(
+            InOverlay.Get_ExcludedAreaTags(),
+            TEXT(", "),
+            [](const FGameplayTag& InTag) { return InTag.ToString(); });
+    }
+
     auto Is_InsidePaintedBand(float InDistance2D, float InRadius) -> bool
     {
         return InDistance2D < InRadius - kBandContactToleranceUu;
@@ -57,6 +66,37 @@ namespace ck_crowd_agent_path_refresh
     // FCk_Nav_Algorithm::ExtractWaypoints applies: waypoint zero goes when it lies within 2 x radius
     // of the query start, in 3D, boundary inclusive. On GroundNav the adapter already dropped it, so
     // this is a distance-guarded no-op there rather than a second trim.
+    auto Try_FindStationaryMarkupPath(
+        FCk_Handle InSelf,
+        const FVector& InGoal,
+        float InAgentRadius,
+        float InArrivalRadius,
+        ECk_CrowdAvoidanceVolume_QueryPhase InPhase,
+        UWorld* InWorld,
+        const FCk_NavSurface_PathQuery& InQuery,
+        FCk_NavSurface_PathResult& OutResult) -> ck::ECk_CrowdAgent_StationaryMarkupPathResult
+    {
+        const auto UsesStrictGroundNav =
+            InPhase == ECk_CrowdAvoidanceVolume_QueryPhase::Strict &&
+            UCk_Utils_NavSurface_UE::Get_Provider(InWorld) == ECk_NavSurface_Provider::GroundNav;
+        if (UsesStrictGroundNav)
+        {
+            const auto Snapshot = ck::FProcessor_CrowdAgent_HandleRequests::
+                Try_GetStrictDynamicObstacles(InSelf, InGoal, InAgentRadius, InArrivalRadius);
+            if (NOT Snapshot.IsSet())
+            { return ck::ECk_CrowdAgent_StationaryMarkupPathResult::Malformed; }
+
+            OutResult = ck::groundnav::nav_surface_adapter::Try_FindPathSyncWithDynamicObstacles(
+                InWorld, InQuery, Snapshot.GetValue());
+        }
+        else
+        { OutResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(InWorld, InQuery); }
+
+        return OutResult.Get_Status() == ECk_NavSurface_QueryStatus::Success
+            ? ck::ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded
+            : ck::ECk_CrowdAgent_StationaryMarkupPathResult::Failed;
+    }
+
     auto Get_WaypointsWithoutStandingPoint(
         const TArray<FVector>& InWaypoints,
         const FVector&         InQueryStart,
@@ -472,11 +512,13 @@ namespace ck
             FCk_Entity InSelfEntity,
             const FVector& InSelfLocation,
             const FVector& InEscapedLocation,
+            const FVector& InGoal,
+            float InArrivalRadius,
             const FFragment_CrowdAgent_Params& InParams,
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints)
-        -> bool
+        -> ECk_CrowdAgent_StationaryMarkupPathResult
     {
         const auto InputsAreValid =
             ck::IsValid(InAnyWorldHandle) &&
@@ -493,7 +535,9 @@ namespace ck
             InSelfLocation,
             InEscapedLocation,
             InParams.Get_Radius())
-        { return false; }
+        {}
+        if (NOT InputsAreValid)
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::Failed; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
 
@@ -511,16 +555,19 @@ namespace ck
             .Set_CornerOffset(ECk_NavSurface_CornerOffset::None)
             .Set_AgentRadiusUu(InParams.Get_Radius());
 
-        const auto EscapeResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(World, EscapeQuery);
-        if (EscapeResult.Get_Status() != ECk_NavSurface_QueryStatus::Success)
-        { return false; }
+        auto EscapeResult = FCk_NavSurface_PathResult{};
+        const auto EscapeQueryResult = ck_crowd_agent_path_refresh::Try_FindStationaryMarkupPath(
+            InAnyWorldHandle, InGoal, InParams.Get_Radius(), InArrivalRadius, InVolumeQueryPhase,
+            World, EscapeQuery, EscapeResult);
+        if (EscapeQueryResult != ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded)
+        { return EscapeQueryResult; }
 
         const auto EscapeWaypoints = ck_crowd_agent_path_refresh::Get_WaypointsWithoutStandingPoint(
             EscapeResult.Get_Waypoints(),
             InSelfLocation,
             InParams.Get_Radius());
         if (EscapeWaypoints.IsEmpty())
-        { return false; }
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::Failed; }
 
         const auto& ProjectedEscape = EscapeWaypoints.Last();
         auto ProjectedEscapeIsClear = NOT ProjectedEscape.ContainsNaN();
@@ -591,7 +638,7 @@ namespace ck
                 TEXT("Stationary-markup escape path [{} -> {}] projected back inside the expanded union"),
                 InSelfLocation,
                 ProjectedEscape);
-            return false;
+            return ECk_CrowdAgent_StationaryMarkupPathResult::Failed;
         }
 
         // The Recast filter treats painted agents as expensive rather than impassable. Starting
@@ -605,7 +652,7 @@ namespace ck
         for (const auto& Waypoint : EscapeWaypoints)
         {
             if (Waypoint.ContainsNaN())
-            { return false; }
+            { return ECk_CrowdAgent_StationaryMarkupPathResult::Failed; }
 
             const auto SegmentEnd = FVector2D{Waypoint};
             const auto Segment = SegmentEnd - SegmentStart;
@@ -671,7 +718,7 @@ namespace ck
                         TEXT("Stationary-markup escape path [{} -> {}] re-enters painted markup"),
                         InSelfLocation,
                         ProjectedEscape);
-                    return false;
+                    return ECk_CrowdAgent_StationaryMarkupPathResult::Failed;
                 }
 
                 if (Interval.Value < 1.0f - UE_KINDA_SMALL_NUMBER)
@@ -684,10 +731,10 @@ namespace ck
             WorldSegmentStart = Waypoint;
         }
         if (NOT HasExitedPaintedUnion)
-        { return false; }
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::Failed; }
 
         OutWaypoints = EscapeWaypoints;
-        return true;
+        return ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -712,6 +759,25 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_PathRefresh::
+        Get_DoesSegmentCrossStationaryMarkup(
+            const FVector& InSegmentStart,
+            const FVector& InSegmentEnd,
+            const FVector& InMarkupCenter,
+            float          InMarkupRadius,
+            float          InAgentRadius) -> bool
+    {
+        const auto SegmentStart = FVector2D{InSegmentStart};
+        const auto SegmentEnd = FVector2D{InSegmentEnd};
+        const auto MarkupCenter = FVector2D{InMarkupCenter};
+        const auto Closest = FMath::ClosestPointOnSegment2D(MarkupCenter, SegmentStart, SegmentEnd);
+
+        return FVector2D::Distance(Closest, MarkupCenter) < InMarkupRadius + InAgentRadius;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_PathRefresh::
         Try_BuildStationaryMarkupDetour(
             FCk_Handle InAnyWorldHandle,
             FCk_Entity InSelfEntity,
@@ -723,19 +789,32 @@ namespace ck
             ECk_CrowdAvoidanceVolume_QueryPhase InVolumeQueryPhase,
             const FGameplayTag& InQueryFilter,
             TArray<FVector>& OutWaypoints)
-        -> bool
+        -> ECk_CrowdAgent_StationaryMarkupPathResult
     {
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
+        const auto UsesStrictGroundNav =
+            InVolumeQueryPhase == ECk_CrowdAvoidanceVolume_QueryPhase::Strict &&
+            UCk_Utils_NavSurface_UE::Get_Provider(World) == ECk_NavSurface_Provider::GroundNav;
+        auto StrictSnapshot = TOptional<groundnav::FCk_GroundNav_DynamicObstacleSnapshot>{};
+        if (UsesStrictGroundNav)
+        {
+            StrictSnapshot = FProcessor_CrowdAgent_HandleRequests::Try_GetStrictDynamicObstacles(
+                InAnyWorldHandle, InGoal, InParams.Get_Radius(), InArrivalRadius);
+            if (NOT StrictSnapshot.IsSet())
+            { return ECk_CrowdAgent_StationaryMarkupPathResult::Malformed; }
+        }
         if (InCorridorWaypoints.IsEmpty())
-        { return false; }
-
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded; }
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
-        if (NOT IsValid(Settings) ||
-            Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled)
-        { return false; }
+        if (NOT UsesStrictGroundNav &&
+            (NOT IsValid(Settings) ||
+             Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled))
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded; }
 
         auto Discs = TArray<FSettledDisc, TInlineAllocator<32>>{};
         const auto GoalExemptionPad = InArrivalRadius + InParams.Get_Radius();
-        if (Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled)
+        if (NOT UsesStrictGroundNav && IsValid(Settings) &&
+            Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled)
         { InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
             [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
         {
@@ -771,8 +850,8 @@ namespace ck
             { Volumes.Add(Expanded); }
         });
 
-        if (Discs.IsEmpty() && Volumes.IsEmpty())
-        { return false; }
+        if (NOT UsesStrictGroundNav && Discs.IsEmpty() && Volumes.IsEmpty())
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded; }
 
         const auto GetPoint = [&](int32 InPointIndex) -> const FVector&
         {
@@ -787,16 +866,26 @@ namespace ck
         {
             const auto& WorldSegmentStart = GetPoint(SegmentIndex);
             const auto& WorldSegmentEnd = GetPoint(SegmentIndex + 1);
-            const auto SegmentStart = FVector2D{WorldSegmentStart};
-            const auto SegmentEnd = FVector2D{WorldSegmentEnd};
-
             auto SegmentHit = false;
+            if (UsesStrictGroundNav)
+            {
+                const auto UnionEdge = groundnav::Get_DynamicUnionEdge(
+                    StrictSnapshot.GetValue(), WorldSegmentStart, WorldSegmentEnd);
+                if (NOT UnionEdge.IsSet())
+                { return ECk_CrowdAgent_StationaryMarkupPathResult::Malformed; }
+                SegmentHit = UnionEdge.GetValue() != groundnav::ECk_GroundNav_DynamicUnionEdge::Clear;
+                if (SegmentHit)
+                {
+                    if (FirstHitSegment == INDEX_NONE)
+                    { FirstHitSegment = SegmentIndex; }
+                    LastHitSegment = SegmentIndex;
+                }
+                continue;
+            }
             for (const auto& Disc : Discs)
             {
-                const auto DiscCenter = FVector2D{Disc._Center};
-                const auto Closest =
-                    FMath::ClosestPointOnSegment2D(DiscCenter, SegmentStart, SegmentEnd);
-                if (FVector2D::Distance(Closest, DiscCenter) > Disc._Radius)
+                if (NOT Get_DoesSegmentCrossStationaryMarkup(
+                    WorldSegmentStart, WorldSegmentEnd, Disc._Center, Disc._Radius, InParams.Get_Radius()))
                 { continue; }
 
                 if (FirstHitSegment == INDEX_NONE)
@@ -821,7 +910,7 @@ namespace ck
         }
 
         if (FirstHitSegment == INDEX_NONE)
-        { return false; }
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded; }
 
         // Give Recast one clean corridor point on each side of the affected span. With the
         // normal corridor spacing this prevents either query endpoint from sitting on the cost
@@ -831,8 +920,6 @@ namespace ck
             FMath::Min(InCorridorWaypoints.Num(), LastHitSegment + 2);
         const auto& EntryPoint = GetPoint(EntryPointIndex);
         const auto& ExitPoint = GetPoint(ExitPointIndex);
-
-        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
 
         // Same query shape as the escape path above, for the same reasons: zero extents fold to the
         // project's projection extent on both providers, and the corner treatment stays the raw one
@@ -845,7 +932,12 @@ namespace ck
             .Set_CornerOffset(ECk_NavSurface_CornerOffset::None)
             .Set_AgentRadiusUu(InParams.Get_Radius());
 
-        const auto DetourResult = UCk_Utils_NavSurface_UE::Try_FindPathSync(World, DetourQuery);
+        auto DetourResult = FCk_NavSurface_PathResult{};
+        const auto DetourQueryResult = ck_crowd_agent_path_refresh::Try_FindStationaryMarkupPath(
+            InAnyWorldHandle, InGoal, InParams.Get_Radius(), InArrivalRadius, InVolumeQueryPhase,
+            World, DetourQuery, DetourResult);
+        if (DetourQueryResult != ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded)
+        { return DetourQueryResult; }
 
         // The splice's own query start is the corridor's entry point, not the agent - that is the
         // body position this detour's leading waypoint would duplicate.
@@ -862,7 +954,7 @@ namespace ck
                 TEXT("Stationary-markup corridor splice [{} -> {}] found no complete nav detour"),
                 EntryPoint,
                 ExitPoint);
-            return false;
+            return ECk_CrowdAgent_StationaryMarkupPathResult::Failed;
         }
 
         auto Candidate = TArray<FVector>{};
@@ -897,30 +989,35 @@ namespace ck
         }
 
         if (Candidate.IsEmpty())
-        { return false; }
+        { return ECk_CrowdAgent_StationaryMarkupPathResult::Failed; }
 
         // Confirmation proves the cost reached the surface its own provider answers for, but retain
         // a total failure path: a custom filter may deliberately make the crowd area cheap enough to
         // cross. In that case the corridor remains valid preferred geometry, so do not claim or
         // install a fake detour.
         auto CandidateCrossesMarkup = false;
-        auto SegmentStart = FVector2D{InStartLocation};
         auto WorldSegmentStart = InStartLocation;
         for (const auto& Waypoint : Candidate)
         {
-            const auto SegmentEnd = FVector2D{Waypoint};
-            for (const auto& Disc : Discs)
+            if (UsesStrictGroundNav)
             {
-                const auto DiscCenter = FVector2D{Disc._Center};
-                const auto Closest =
-                    FMath::ClosestPointOnSegment2D(DiscCenter, SegmentStart, SegmentEnd);
-                if (FVector2D::Distance(Closest, DiscCenter) <= Disc._Radius)
+                const auto UnionEdge = groundnav::Get_DynamicUnionEdge(
+                    StrictSnapshot.GetValue(), WorldSegmentStart, Waypoint);
+                if (NOT UnionEdge.IsSet())
+                { return ECk_CrowdAgent_StationaryMarkupPathResult::Malformed; }
+                CandidateCrossesMarkup =
+                    UnionEdge.GetValue() != groundnav::ECk_GroundNav_DynamicUnionEdge::Clear;
+            }
+            else for (const auto& Disc : Discs)
+            {
+                if (Get_DoesSegmentCrossStationaryMarkup(
+                    WorldSegmentStart, Waypoint, Disc._Center, Disc._Radius, InParams.Get_Radius()))
                 {
                     CandidateCrossesMarkup = true;
                     break;
                 }
             }
-            if (NOT CandidateCrossesMarkup)
+            if (NOT UsesStrictGroundNav && NOT CandidateCrossesMarkup)
             {
                 for (const auto& Volume : Volumes)
                 {
@@ -934,7 +1031,6 @@ namespace ck
             }
             if (CandidateCrossesMarkup)
             { break; }
-            SegmentStart = SegmentEnd;
             WorldSegmentStart = Waypoint;
         }
 
@@ -944,7 +1040,7 @@ namespace ck
                 TEXT("Stationary-markup corridor splice [{} -> {}] still crosses confirmed markup"),
                 EntryPoint,
                 ExitPoint);
-            return false;
+            return ECk_CrowdAgent_StationaryMarkupPathResult::Failed;
         }
 
         ck::crowd::Verbose(
@@ -953,7 +1049,7 @@ namespace ck
             LastHitSegment,
             DetourWaypoints.Num());
         OutWaypoints = MoveTemp(Candidate);
-        return true;
+        return ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1125,7 +1221,21 @@ namespace ck
         InPathFollow._PathSerial = _MaxConfirmationSerial;
 
         if (NOT CrossesFreshMarkup)
-        { return; }
+        {
+            if (FProcessor_CrowdAgent_OnRouteResolved::
+                    Get_ShouldLogPathNetworkStationaryDetourDiagnostics())
+            {
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] PathNetwork stationary-detour fresh-markup scan declined: "
+                         "path serial [{}] -> [{}], active rev [{}], remaining wps [{}]"),
+                    InHandle,
+                    PathSerial,
+                    _MaxConfirmationSerial,
+                    InPathFollow.Get_ActiveNavigationRequestRevision(),
+                    Waypoints.Num() - FirstIdx);
+            }
+            return;
+        }
 
         auto NonConstHandle = InHandle;
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
@@ -1164,6 +1274,27 @@ namespace ck
                 NonConstHandle, InParams, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
+
+            if (FProcessor_CrowdAgent_OnRouteResolved::
+                    Get_ShouldLogPathNetworkStationaryDetourDiagnostics())
+            {
+                const auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+                ck::crowd::Log(
+                    TEXT("CrowdAgent [{}] PathNetwork stationary-detour refresh enqueued: "
+                         "active rev [{}], request rev [{}], provider [{}], phase [{}], base filter [{}], "
+                         "overlay excluded [{}], radius [{}], path serial [{}] -> [{}]"),
+                    InHandle,
+                    InPathFollow.Get_ActiveNavigationRequestRevision(),
+                    Request.Get_RequestRevision(),
+                    UCk_Utils_NavSurface_UE::Get_Provider(World),
+                    InPathFollow.Get_PlanPhase(),
+                    Request.Get_NavQueryFilter().ToString(),
+                    ck_crowd_agent_path_refresh::Get_ExcludedAreaTagsText(
+                        Request.Get_QueryFilterOverlay()),
+                    Request.Get_AgentRadiusUu(),
+                    PathSerial,
+                    _MaxConfirmationSerial);
+            }
         }
         else
         {
