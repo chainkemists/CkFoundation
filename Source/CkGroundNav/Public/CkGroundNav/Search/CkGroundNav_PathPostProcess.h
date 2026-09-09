@@ -294,9 +294,10 @@ namespace ck::groundnav
         TConstArrayView<TMap<int32, float>> InTables) -> TMap<int32, float>;
 
     /**
-     * The whole post-process: funnel, link endpoints, corner offset, shortcut, skip-first, fill —
-     * in that order, with the status, the plate corridor and the planned-against epoch carried
-     * through.
+     * The whole post-process: plate-portal results run funnel, link endpoints, corner offset,
+     * shortcut, skip-first, and fill in that order. Strict-cell results retain the collector's exact
+     * source-to-goal predecessor rows, their per-leg prices, and their link endpoints; they do not
+     * reshape a line the strict graph already proved against its immutable dynamic snapshot.
      *
      * The shortcut runs AFTER the corner offset. The funnel's apexes hug their walls at exactly one
      * radius, so a chord between two of them passes an obstacle standing between them at just under

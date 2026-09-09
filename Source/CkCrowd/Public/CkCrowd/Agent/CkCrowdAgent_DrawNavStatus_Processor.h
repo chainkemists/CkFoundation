@@ -11,6 +11,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FBatchedLine;
+class FCkTest_Crowd_NavStatusGeometry;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // Draws the current or retained path-trouble evidence when the per-user world-overlay toggle is on.
@@ -39,6 +44,19 @@ namespace ck
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_CrowdAgent_PathTrouble& InPathTrouble) -> void;
+
+    private:
+        static auto
+        Build_GeometryLines(
+            FVector InMarkerCentre,
+            FVector InGoalLineStart,
+            FVector InGoalLineEnd,
+            float InGoalDashSize,
+            FLinearColor InMarkerColor,
+            float InLifetime,
+            TArray<FBatchedLine>& OutLines) -> void;
+
+        friend class ::FCkTest_Crowd_NavStatusGeometry;
     };
 }
 

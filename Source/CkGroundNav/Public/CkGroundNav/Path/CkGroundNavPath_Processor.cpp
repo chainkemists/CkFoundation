@@ -11,9 +11,12 @@
 
 #include "CkGroundNav/CkGroundNav_Log.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 #include "CkGroundNav/Search/CkGroundNav_FilterCompile.h"
 #include "CkGroundNav/Search/CkGroundNav_PathPostProcess.h"
+
+#include "HAL/PlatformTime.h"
 
 #include <Engine/World.h>
 
@@ -55,6 +58,13 @@ namespace ck_groundnav_path_processor
         TEXT("Slicing changes nothing but where the work stops, so this never changes a verdict."),
         ECVF_Default);
 
+    static TAutoConsoleVariable<int32> CVarSliceServiceWindow(
+        TEXT("ck.GroundNav.Debug.SliceServiceWindow"),
+        0,
+        TEXT("1 logs one world-scoped GroundNav slice-service accumulator at start and at most once per second. "
+             "Diagnostic only; default 0."),
+        ECVF_Default);
+
     /** Mirrors ck.Nav.MaxDeferralSeconds. An episode parked on ground nobody has baked is worth waiting
      *  for, but not forever - past this it is failed with Unbuilt so the caller leaves Pending. */
     static TAutoConsoleVariable<float> CVarMaxDeferralSeconds(
@@ -64,6 +74,34 @@ namespace ck_groundnav_path_processor
         TEXT("field to plan over, the request is force-failed with Unbuilt so the caller transitions\n")
         TEXT("out of Pending. Default 5s."),
         ECVF_Default);
+
+    /** One synchronous paired replay per world, only after the Crowd watchdog has timed the live
+     *  episode out. It stays separate from the timeout-state switch because it spends extra work. */
+    static TAutoConsoleVariable<int32> CVarStrictCrowdCostTimeoutReplay(
+        TEXT("ck.GroundNav.Debug.StrictCrowdCostTimeoutReplay"),
+        0,
+        TEXT("1 retains one active GroundNav query for a paired Crowd timeout replay per world. "
+             "Requires ck.Crowd.Debug.PendingTimeoutState=1. Diagnostic only; default 0."),
+        ECVF_Default);
+
+    constexpr auto StrictCrowdCostTimeoutReplayIterationCap = 50'000;
+    constexpr auto StrictCrowdCostTimeoutReplaySliceIterations = 1'024;
+
+    auto Get_ShouldCaptureStrictCrowdCostTimeoutReplay() -> bool
+    {
+        return CVarStrictCrowdCostTimeoutReplay.GetValueOnGameThread() != 0;
+    }
+
+    auto Get_ShouldLogSliceServiceWindow() -> bool
+    {
+        return CVarSliceServiceWindow.GetValueOnGameThread() != 0;
+    }
+
+    auto Get_StrictCrowdCostTimeoutReplayWorlds() -> TSet<TWeakObjectPtr<UWorld>>&
+    {
+        static auto Worlds = TSet<TWeakObjectPtr<UWorld>>{};
+        return Worlds;
+    }
 
     // What the corridor box is grown by beyond the body's own radius lives in the fragment header,
     // because the invalidator grows an in-flight search's request bounds by the same number:
@@ -129,6 +167,7 @@ namespace ck_groundnav_path_processor
         Query._MaxExpansions = InParams.Get_MaxExpansions();
         Query._MaxCorridorLength = InParams.Get_MaxCorridorLength();
         Query._AllowPartialPath = InParams.Get_AllowPartialPath();
+        Query._DynamicObstacles = InRequest.Get_DynamicObstacles();
 
         // The request's filter, compiled once per (field snapshot, tag, overlay): its excluded areas
         // become plates this search may not enter, and its per-area multipliers become the price of
@@ -225,6 +264,17 @@ namespace ck_groundnav_path_processor
     {
         auto LinkIds = TArray<int32>{};
 
+        if (InResult._RouteKind == ECk_GroundNav_PathRouteKind::StrictCell)
+        {
+            for (const auto& Edge : InResult._CellRoute)
+            {
+                if (Edge._Kind == ECk_GroundNav_CellRouteEdgeKind::Link &&
+                    Edge._LinkStableId != INDEX_NONE)
+                { LinkIds.AddUnique(Edge._LinkStableId); }
+            }
+            return LinkIds;
+        }
+
         for (const auto& Crossing : InResult._Crossings)
         {
             if (NOT InField._ResolvedLinks.IsValidIndex(Crossing._LinkIndex))
@@ -234,6 +284,109 @@ namespace ck_groundnav_path_processor
         }
 
         return LinkIds;
+    }
+
+    /** A strict cell route has no portal corridor, so derive the invalidator's plate set from every
+     *  endpoint it actually traversed. Both ends matter for a seam or link edge. */
+    auto
+        Get_CorridorFlatPlates(
+            const FCk_GroundNav_Field&      InField,
+            const FCk_GroundNav_PathResult& InResult)
+        -> TArray<int32>
+    {
+        if (InResult._RouteKind != ECk_GroundNav_PathRouteKind::StrictCell)
+        { return InResult._PlateCorridor; }
+
+        auto Plates = TArray<int32>{};
+        const auto AddSurfacePlate = [&InField, &Plates](const FCk_GroundNav_SurfaceRef& InSurface) -> void
+        {
+            const auto FlatPlate = Get_FlatPlateIndex(
+                InField, InSurface._TileIndex, InSurface._PlateIndex);
+            if (FlatPlate != INDEX_NONE)
+            { Plates.AddUnique(FlatPlate); }
+        };
+        for (const auto& Edge : InResult._CellRoute)
+        {
+            AddSurfacePlate(Edge._FromSurface);
+            AddSurfacePlate(Edge._ToSurface);
+        }
+        return Plates;
+    }
+
+    /**
+     * Names every fixed-lattice tile the completed search route actually traverses.
+     *
+     * The result's surface references belong to the pinned field, so resolve flat plates against that
+     * same field. The current publication is consulted only after these stable tile indices have been
+     * recovered; comparing graph-local plate ids directly across publications would be invalid.
+     */
+    auto
+        TryGet_RouteTileIndices(
+            const FCk_GroundNav_Field&      InPinnedField,
+            const FCk_GroundNav_PathResult& InResult,
+            TSet<int32>&                    OutTileIndices)
+        -> bool
+    {
+        OutTileIndices.Reset();
+
+        const auto TryAddSurface = [&InPinnedField, &OutTileIndices](
+            const FCk_GroundNav_SurfaceRef& InSurface) -> bool
+        {
+            if (NOT InPinnedField._Tiles.IsValidIndex(InSurface._TileIndex))
+            { return false; }
+
+            OutTileIndices.Add(InSurface._TileIndex);
+            return true;
+        };
+
+        if (NOT TryAddSurface(InResult._StartSurface) || NOT TryAddSurface(InResult._GoalSurface))
+        { return false; }
+
+        if (InResult._RouteKind == ECk_GroundNav_PathRouteKind::StrictCell)
+        {
+            for (const auto& Edge : InResult._CellRoute)
+            {
+                if (NOT TryAddSurface(Edge._FromSurface) || NOT TryAddSurface(Edge._ToSurface))
+                { return false; }
+            }
+
+            return true;
+        }
+
+        for (const auto FlatPlate : InResult._PlateCorridor)
+        {
+            auto TileIndex = int32{INDEX_NONE};
+            auto PlateIndex = int32{INDEX_NONE};
+            if (NOT Get_TileAndPlate(InPinnedField, FlatPlate, TileIndex, PlateIndex))
+            { return false; }
+
+            OutTileIndices.Add(TileIndex);
+        }
+
+        return true;
+    }
+
+    /** A newer geometry publish may remove route ground while a sliced search still reads its pin. */
+    auto
+        Get_RouteRemainsBuilt(
+            const FCk_GroundNav_Field&      InPinnedField,
+            const FCk_GroundNav_PathResult& InResult,
+            const FCk_GroundNav_Field&      InCurrentField)
+        -> bool
+    {
+        auto RouteTileIndices = TSet<int32>{};
+        if (NOT TryGet_RouteTileIndices(InPinnedField, InResult, RouteTileIndices))
+        { return false; }
+
+        for (const auto TileIndex : RouteTileIndices)
+        {
+            if (NOT InCurrentField._Tiles.IsValidIndex(TileIndex) ||
+                InCurrentField._Tiles[TileIndex]._Coord != InPinnedField._Tiles[TileIndex]._Coord ||
+                NOT InCurrentField._Tiles[TileIndex].Get_IsBuilt())
+            { return false; }
+        }
+
+        return true;
     }
 
     /**
@@ -288,7 +441,7 @@ namespace ck_groundnav_path_processor
     {
         auto Bounds = FBox{ForceInit};
 
-        for (const auto FlatPlate : InResult._PlateCorridor)
+        for (const auto FlatPlate : Get_CorridorFlatPlates(InField, InResult))
         {
             const auto PlateBounds = Get_FlatPlateWorldBounds(InField, FlatPlate);
 
@@ -319,6 +472,7 @@ namespace ck
     {
         InCurrent._Search = groundnav::FCk_GroundNav_PathSearch{};
         InCurrent._Field.Reset();
+        InCurrent._ActiveQueryForTimeoutReplay.Reset();
         InCurrent._PendingRequest = FCk_Request_GroundNavPath_FindPath{};
         InCurrent._HasBegun = false;
         InCurrent._PendingSince = FCk_Time{};
@@ -400,6 +554,18 @@ namespace ck
         const auto& SearchResult = InCurrent._Search.Get_Result();
         const auto Request = InCurrent._PendingRequest;
 
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity);
+        const auto Current = groundnav::world_fields::TryGet_FieldSnapshot(
+            World, Request.Get_From(), Request.Get_ProfileTag());
+        if (NOT Current.IsSet() ||
+            (Current->_PublishNote._LastGeometryEpoch.Get_IsNewerThan(SearchResult._PlannedAgainstEpoch) &&
+                NOT Get_RouteRemainsBuilt(*InCurrent._Field, SearchResult, *Current->_Field)))
+        {
+            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Unbuilt,
+                SearchResult._ExpansionCount, SearchResult._PlannedAgainstEpoch._Value);
+            return;
+        }
+
         const auto SearchDurationMs =
             static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
 
@@ -455,14 +621,19 @@ namespace ck
             Get_CorridorBounds(*InCurrent._Field, SearchResult, CorridorInflationUu);
 
         InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
+        InCurrent._HasCachedRoute = true;
+        InCurrent._LastRouteKind = SearchResult._RouteKind;
         InCurrent._LastCorridorLinkIds = Get_CorridorLinkIds(*InCurrent._Field, SearchResult);
+        InCurrent._LastCorridorFlatPlates = Get_CorridorFlatPlates(*InCurrent._Field, SearchResult);
         InCurrent._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
         InCurrent._ProfileTag = Request.Get_ProfileTag();
+        InCurrent._LastCorridorQueryFilter = Request.Get_QueryFilter();
+        InCurrent._LastCorridorQueryFilterOverlay = Request.Get_QueryFilterOverlay();
         InCurrent._LastCorridorBounds = CorridorBounds;
         InCurrent._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;
-        InCurrent._LastSourceFlatPlate = SearchResult._PlateCorridor.IsEmpty()
+        InCurrent._LastSourceFlatPlate = InCurrent._LastCorridorFlatPlates.IsEmpty()
             ? INDEX_NONE
-            : SearchResult._PlateCorridor[0];
+            : InCurrent._LastCorridorFlatPlates[0];
 
         // A rebuild that landed while this search was in flight is ground the search never read: the
         // field snapshot was pinned at Request_Begin. The route publishes anyway - a half-answered
@@ -557,6 +728,11 @@ namespace ck
 
         const auto Query = Get_Query(InParams, Field, InCurrent._PendingRequest);
 
+        if (Get_ShouldCaptureStrictCrowdCostTimeoutReplay())
+        { InCurrent._ActiveQueryForTimeoutReplay = Query; }
+        else
+        { InCurrent._ActiveQueryForTimeoutReplay.Reset(); }
+
         const auto RepairWasAsked =
             InCurrent._PendingRequest.Get_PlanMode() == ECk_GroundNav_PlanMode::Repair;
 
@@ -565,18 +741,20 @@ namespace ck
         // alone - which is exactly what Request_Begin opens with. Said out loud rather than quietly
         // substituted, because the result's verdict reads None either way and this line is the only
         // thing that separates "asked for cold" from "asked for repair and had nothing to repair".
+        const auto HasStrictCellRoute = RepairWasAsked && InCurrent._HasCachedRoute &&
+            InCurrent._LastRouteKind == groundnav::ECk_GroundNav_PathRouteKind::StrictCell;
         const auto CanRepair = RepairWasAsked && NOT InCurrent._LastCorridorKeys.IsEmpty();
 
-        if (RepairWasAsked && NOT CanRepair)
+        if (RepairWasAsked && NOT CanRepair && NOT HasStrictCellRoute)
         {
             groundnav::Verbose(
                 TEXT("GroundNav Path [{}] asked to repair rev [{}] with no corridor cached - planning cold"),
                 InPathEntity, InCurrent._PendingRequest.Get_RequestRevision());
         }
 
-        const auto Status = CanRepair
+        const auto Status = CanRepair || HasStrictCellRoute
             ? Search.Request_BeginRepair(
-                Field, Query, InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch)
+                Field, Query, InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch, HasStrictCellRoute)
             : Search.Request_Begin(Field, Query);
 
         // Ground the field itself has not baked. The episode stays parked and re-probes next tick,
@@ -587,6 +765,146 @@ namespace ck
         InCurrent._Field = Field;
         InCurrent._Search = MoveTemp(Search);
         InCurrent._HasBegun = true;
+    }
+
+    auto
+        FFragment_GroundNavPath_Current::
+        Try_RunStrictCrowdCostTimeoutReplay(
+            UWorld*             InWorld,
+            const FGameplayTag& InCrowdCostAreaTag,
+            int32               InServedExpansionCount) const
+        -> void
+    {
+        using namespace ck_groundnav_path_processor;
+
+        const auto HasReplayInput = _Field.IsValid() && _ActiveQueryForTimeoutReplay.IsSet();
+        const auto IsStrict = HasReplayInput && NOT _ActiveQueryForTimeoutReplay->_DynamicObstacles.Get_IsEmpty();
+
+        if (NOT Get_ShouldCaptureStrictCrowdCostTimeoutReplay() || NOT IsStrict ||
+            InServedExpansionCount <= 0 || NOT IsValid(InWorld))
+        { return; }
+
+        auto& ReplayedWorlds = Get_StrictCrowdCostTimeoutReplayWorlds();
+        for (auto WorldIt = ReplayedWorlds.CreateIterator(); WorldIt; ++WorldIt)
+        {
+            if (NOT WorldIt->IsValid())
+            { WorldIt.RemoveCurrent(); }
+        }
+
+        const auto WorldKey = TWeakObjectPtr<UWorld>{InWorld};
+        if (ReplayedWorlds.Contains(WorldKey))
+        { return; }
+
+        auto CostIdentityMarkups = _Field->_Params._MarkupRecords;
+        auto CrowdCostRecordCount = 0;
+
+        for (auto& Markup : CostIdentityMarkups)
+        {
+            const auto IsCrowdCostRecord = Markup.Get_AreaTag() == InCrowdCostAreaTag &&
+                Markup.Get_Kind() == ECk_GroundNav_MarkupKind::Cost;
+
+            if (NOT IsCrowdCostRecord)
+            { continue; }
+
+            // Keep its area identity, shape and enable state. Only suppress this policy's field cost.
+            Markup.Set_CostMultiplier(1.0f);
+            ++CrowdCostRecordCount;
+        }
+
+        const auto CostIdentityField = groundnav::Get_FieldWithMarkupCost(
+            *_Field, CostIdentityMarkups, _Field->_Epoch);
+        const auto HasCostIdentityField =
+            CostIdentityField.Key.IsValid() && CostIdentityField.Value.Get_IsCompleted();
+
+        CK_ENSURE_IF_NOT(HasCostIdentityField,
+            TEXT("GroundNav strict Crowd timeout replay could not derive its cost-only comparison field"))
+        {
+        }
+
+        if (NOT HasCostIdentityField)
+        { return; }
+
+        // Claim only after every immutable replay input exists. A failed derive leaves no half-capture.
+        ReplayedWorlds.Add(WorldKey);
+
+        struct FReplayRow
+        {
+            ECk_GroundNav_PathStatus _Status = ECk_GroundNav_PathStatus::InProgress;
+            bool _IsTerminal = false;
+            int32 _ExpansionCount = 0;
+            float _SearchCost = 0.0f;
+        };
+
+        const auto RunReplay = [this](const groundnav::FCk_GroundNav_FieldPtr& InReplayField) -> FReplayRow
+        {
+            auto Search = groundnav::FCk_GroundNav_PathSearch{};
+            Search.Request_Begin(InReplayField, _ActiveQueryForTimeoutReplay.GetValue());
+
+            auto IterationAllowance = StrictCrowdCostTimeoutReplayIterationCap;
+            auto Slice = groundnav::FCk_GroundNav_PathSliceParams{};
+            // Zero is the path-search contract for no wall-clock ceiling. The only replay ceiling is
+            // the explicit iteration cap below, so a capped row cannot hide a second time budget.
+            Slice._Budget = FCk_Time{};
+
+            while (NOT Search.Get_IsTerminal() && IterationAllowance > 0)
+            {
+                Slice._MaxIterations = FMath::Min(StrictCrowdCostTimeoutReplaySliceIterations, IterationAllowance);
+                Search.ContinueSearch(Slice);
+                IterationAllowance -= Slice._MaxIterations;
+            }
+
+            auto Row = FReplayRow{};
+            Row._Status = Search.Get_Status();
+            Row._IsTerminal = Search.Get_IsTerminal();
+
+            // A cap is an explicit incomplete diagnostic result. Get_Result is terminal-only here.
+            if (Row._IsTerminal)
+            {
+                const auto& Result = Search.Get_Result();
+                Row._ExpansionCount = Result._ExpansionCount;
+                Row._SearchCost = Result._SearchCost;
+            }
+
+            return Row;
+        };
+
+        const auto Exact = RunReplay(_Field);
+        const auto CostIdentity = RunReplay(CostIdentityField.Key);
+        const auto& Query = _ActiveQueryForTimeoutReplay.GetValue();
+        auto MaxFilterMultiplier = 1.0f;
+
+        for (const auto& Pair : Query._Cost._PlateCostMultipliers)
+        { MaxFilterMultiplier = FMath::Max(MaxFilterMultiplier, Pair.Value); }
+
+        groundnav::Display(
+            TEXT("[GROUNDNAV-STRICT-CROWD-COST-REPLAY] exact terminal [{}] capped [{}] status [{}] "
+                 "expansions [{}] cost [{}] start [{}] goal [{}] radius [{}] verticalTolerance [{}] greedyW [{}] "
+                 "maxExpansions [{}] maxCorridor [{}] partial [{}] discs [{}] obbs [{}] fieldEpoch [{}] "
+                 "markupRecords [{}] crowdCostRecords [{}] filterMultipliers [{}] filterMultiplierMax [{}] deniedPlates [{}] replayIterationCap [{}]"),
+            Exact._IsTerminal, NOT Exact._IsTerminal, Exact._Status,
+            Exact._IsTerminal ? Exact._ExpansionCount : INDEX_NONE,
+            Exact._IsTerminal ? Exact._SearchCost : -1.0f,
+            Query._Start, Query._Goal, Query._Agent._RadiusUu, Query._VerticalToleranceUu, Query._GreedyWeightW,
+            Query._MaxExpansions, Query._MaxCorridorLength, Query._AllowPartialPath,
+            Query._DynamicObstacles.Get_Discs().Num(), Query._DynamicObstacles.Get_Obbs().Num(), _Field->_Epoch._Value,
+            _Field->_Params._MarkupRecords.Num(), CrowdCostRecordCount,
+            Query._Cost._PlateCostMultipliers.Num(), MaxFilterMultiplier, Query._Cost._DeniedPlates.Num(),
+            StrictCrowdCostTimeoutReplayIterationCap);
+
+        groundnav::Display(
+            TEXT("[GROUNDNAV-STRICT-CROWD-COST-REPLAY] crowd-cost-identity terminal [{}] capped [{}] status [{}] "
+                 "expansions [{}] cost [{}] start [{}] goal [{}] radius [{}] verticalTolerance [{}] greedyW [{}] "
+                 "maxExpansions [{}] maxCorridor [{}] partial [{}] discs [{}] obbs [{}] fieldEpoch [{}] "
+                 "markupRecords [{}] crowdCostRecords [{}] filterMultipliers [{}] filterMultiplierMax [{}] deniedPlates [{}] replayIterationCap [{}]"),
+            CostIdentity._IsTerminal, NOT CostIdentity._IsTerminal, CostIdentity._Status,
+            CostIdentity._IsTerminal ? CostIdentity._ExpansionCount : INDEX_NONE,
+            CostIdentity._IsTerminal ? CostIdentity._SearchCost : -1.0f,
+            Query._Start, Query._Goal, Query._Agent._RadiusUu, Query._VerticalToleranceUu, Query._GreedyWeightW,
+            Query._MaxExpansions, Query._MaxCorridorLength, Query._AllowPartialPath,
+            Query._DynamicObstacles.Get_Discs().Num(), Query._DynamicObstacles.Get_Obbs().Num(), CostIdentityField.Key->_Epoch._Value,
+            CostIdentityField.Key->_Params._MarkupRecords.Num(), CrowdCostRecordCount,
+            Query._Cost._PlateCostMultipliers.Num(), MaxFilterMultiplier, Query._Cost._DeniedPlates.Num(),
+            StrictCrowdCostTimeoutReplayIterationCap);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -704,6 +1022,21 @@ namespace ck
         using namespace ck_groundnav_path_processor;
 
         constexpr auto MinSliceMs = 0.01;
+        const auto ShouldLogServiceWindow = Get_ShouldLogSliceServiceWindow();
+        const auto NowSeconds = ShouldLogServiceWindow ? FPlatformTime::Seconds() : 0.0;
+        if (NOT ShouldLogServiceWindow)
+        {
+            if (_SliceServiceWindow._IsActive)
+            { _SliceServiceWindow = FSliceServiceWindow{}; }
+        }
+        else if (NOT _SliceServiceWindow._IsActive)
+        {
+            _SliceServiceWindow._IsActive = true;
+            _SliceServiceWindow._StartedAtSeconds = NowSeconds;
+            _SliceServiceWindow._LastLoggedAtSeconds = NowSeconds - 1.0;
+            _SliceServiceWindow._StartedAtFrame = GFrameCounter;
+        }
+        if (ShouldLogServiceWindow) { ++_SliceServiceWindow._TickCount; }
 
         _SearchesRemainingThisTick = FMath::Max(1, CVarMaxSearchesPerFrame.GetValueOnGameThread());
 
@@ -711,7 +1044,45 @@ namespace ck
             FMath::Max(MinSliceMs, static_cast<double>(CVarSliceBudgetMs.GetValueOnGameThread()))
             / 1000.0};
 
+        // A saved path is only a turn marker. It owns no lifetime: terminal publishes, abandons and
+        // destruction may all remove it from this view between ticks. Starting from the head in that
+        // case is the only deterministic answer; holding a stale cursor would skip the whole pass.
+        if (NOT ck::IsValid(_NextPathToServe)
+            || NOT _NextPathToServe.Has<FTag_GroundNavPath_SearchInFlight>()
+            || _NextPathToServe.Has<FTag_DestroyEntity_Initiate>())
+        { _NextPathToServe = {}; }
+
+        _WaitingForNextPathThisTick = ck::IsValid(_NextPathToServe);
+        _FoundNextPathThisTick = false;
+
         TProcessor::DoTick(InDeltaT);
+
+        // The target was live when the tick began but disappeared before the base traversal reached
+        // it. Do not carry a dead/superseded turn marker into the next frame.
+        if (_WaitingForNextPathThisTick && NOT _FoundNextPathThisTick)
+        { _NextPathToServe = {}; }
+
+        if (ShouldLogServiceWindow)
+        {
+            _SliceServiceWindow._TickTimeSpent = _SliceServiceWindow._TickTimeSpent +
+                FCk_Time{FPlatformTime::Seconds() - NowSeconds};
+            if (_SliceRemainingThisTick.Get_Seconds() <= 0.0) { ++_SliceServiceWindow._TimeBudgetExhaustedTicks; }
+            if (_SearchesRemainingThisTick <= 0) { ++_SliceServiceWindow._SearchCapExhaustedTicks; }
+            if (NowSeconds - _SliceServiceWindow._LastLoggedAtSeconds >= 1.0)
+            {
+                groundnav::Display(
+                    TEXT("[GROUNDNAV-SLICE-SERVICE] world [{}] elapsedWall [{}] frameDelta [{}] ticks [{}] served [{}] "
+                         "tickMs [{}] searchMs [{}] timeCapTicks [{}] searchCapTicks [{}]"),
+                    _SliceServiceWindow._WorldName,
+                    NowSeconds - _SliceServiceWindow._StartedAtSeconds,
+                    GFrameCounter - _SliceServiceWindow._StartedAtFrame,
+                    _SliceServiceWindow._TickCount, _SliceServiceWindow._ServedSearchCount,
+                    _SliceServiceWindow._TickTimeSpent.Get_Milliseconds(),
+                    _SliceServiceWindow._SearchTimeSpent.Get_Milliseconds(),
+                    _SliceServiceWindow._TimeBudgetExhaustedTicks, _SliceServiceWindow._SearchCapExhaustedTicks);
+                _SliceServiceWindow._LastLoggedAtSeconds = NowSeconds;
+            }
+        }
     }
 
     auto
@@ -726,11 +1097,28 @@ namespace ck
     {
         using namespace ck_groundnav_path_processor;
 
-        // Both ceilings are read on EVERY entity and an exhausted one stops the pass. A budget that is
-        // seeded and never consulted bounds nothing, which is the state CkNavigation's own per-frame
-        // query cap is in.
+        // The view itself admits only live, in-flight paths. Entries skipped before the saved turn
+        // marker consume neither ceiling; this is rotation, not a hidden reduction of the budget.
+        if (_WaitingForNextPathThisTick)
+        {
+            if (InPathEntity != _NextPathToServe)
+            { return; }
+
+            _WaitingForNextPathThisTick = false;
+            _FoundNextPathThisTick = true;
+            _NextPathToServe = {};
+        }
+
+        // Both ceilings are read on every ELIGIBLE entity after the turn marker. Once one is spent,
+        // remember the first following eligible path for the next tick, then leave the rest untouched.
+        // This makes the cursor follow the base view's real order rather than assuming entity numbers
+        // or retaining a raw registry pointer.
         if (_SearchesRemainingThisTick <= 0 || _SliceRemainingThisTick.Get_Seconds() <= 0.0)
-        { return; }
+        {
+            if (NOT ck::IsValid(_NextPathToServe))
+            { _NextPathToServe = InPathEntity; }
+            return;
+        }
 
         --_SearchesRemainingThisTick;
 
@@ -783,6 +1171,17 @@ namespace ck
         const auto SpentSeconds = FPlatformTime::Seconds() - SliceBeganAt;
 
         InCurrent._SearchTimeSpent = InCurrent._SearchTimeSpent + FCk_Time{SpentSeconds};
+
+        if (_SliceServiceWindow._IsActive)
+        {
+            ++_SliceServiceWindow._ServedSearchCount;
+            _SliceServiceWindow._SearchTimeSpent = _SliceServiceWindow._SearchTimeSpent + FCk_Time{SpentSeconds};
+            if (_SliceServiceWindow._WorldName == TEXT("<unserved>"))
+            {
+                if (const auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity))
+                { _SliceServiceWindow._WorldName = World->GetName(); }
+            }
+        }
 
         _SliceRemainingThisTick = FCk_Time{
             FMath::Max(0.0, _SliceRemainingThisTick.Get_Seconds() - SpentSeconds)};

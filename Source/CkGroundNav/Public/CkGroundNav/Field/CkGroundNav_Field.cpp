@@ -394,6 +394,124 @@ namespace ck::groundnav
         }
     }
 
+    namespace field_private
+    {
+        auto DoDerive_SeamAdjacency(
+            const FCk_GroundNav_Field& InField,
+            int32                      InTileIndexA,
+            int32                      InDirection) -> FCk_GroundNav_SeamAdjacency
+        {
+            auto Adjacency = FCk_GroundNav_SeamAdjacency{};
+
+            if (NOT InField._Tiles.IsValidIndex(InTileIndexA) ||
+                InDirection < 0 || InDirection >= kPositiveDirectionCount)
+            { return Adjacency; }
+
+            const auto& TileA = InField._Tiles[InTileIndexA];
+            const auto Offset = Get_DirectionOffset(InDirection);
+            const auto TileIndexB = Get_TileIndex(
+                InField._Params._Divisions,
+                FCk_GroundNav_TileCoord{TileA._Coord._X + Offset.X, TileA._Coord._Y + Offset.Y});
+
+            if (NOT TileA.Get_IsBuilt() || NOT InField._Tiles.IsValidIndex(TileIndexB) ||
+                NOT InField._Tiles[TileIndexB].Get_IsBuilt())
+            { return Adjacency; }
+
+            Adjacency._TileIndexA = InTileIndexA;
+            Adjacency._TileIndexB = TileIndexB;
+            Adjacency._Direction = InDirection;
+
+            auto Crossings = TArray<FSeamCrossing>{};
+            const auto& TileB = InField._Tiles[TileIndexB];
+            const auto Opposite = Get_OppositeDirection(InDirection);
+
+            for (const auto& Stub : TileA._SeamStubs)
+            {
+                if (Stub._Direction != InDirection)
+                { continue; }
+
+                const auto* Match = Get_MatchingStub(TileB, Stub, Opposite);
+
+                if (Match == nullptr)
+                {
+                    ++Adjacency._UnmatchedStubCount;
+                    continue;
+                }
+
+                auto Crossing = FSeamCrossing{};
+                Crossing._TileIndexA = InTileIndexA;
+                Crossing._TileIndexB = TileIndexB;
+                Crossing._PlateA = Stub._PlateIndex;
+                Crossing._PlateB = Match->_PlateIndex;
+                Crossing._Direction = InDirection;
+                Crossing._Along = Stub._AlongIndex;
+                Crossing._ClearanceUu = FMath::Min(Stub._ClearanceUu, Match->_ClearanceUu);
+                Crossing._MidZUu = 0.5f * (Stub._NearSurfaceZUu + Stub._FarSurfaceZUu);
+                Crossings.Emplace(Crossing);
+            }
+
+            Crossings.Sort([](const FSeamCrossing& InLeft, const FSeamCrossing& InRight) -> bool
+            {
+                if (InLeft._PlateA != InRight._PlateA) { return InLeft._PlateA < InRight._PlateA; }
+                if (InLeft._PlateB != InRight._PlateB) { return InLeft._PlateB < InRight._PlateB; }
+                return InLeft._Along < InRight._Along;
+            });
+
+            for (auto Index = 0; Index < Crossings.Num(); ++Index)
+            {
+                const auto& Crossing = Crossings[Index];
+
+                if (Index > 0 && Get_IsSameRun(Crossings[Index - 1], Crossing))
+                {
+                    auto& Portal = Adjacency._Portals.Last();
+                    Portal._AlongMax = Crossing._Along;
+                    Portal._MaxEndZUu = Crossing._MidZUu;
+                    Portal._TraversalClearanceUu = FMath::Max(Portal._TraversalClearanceUu, Crossing._ClearanceUu);
+                    continue;
+                }
+
+                auto Portal = FCk_GroundNav_SeamPortal{};
+                Portal._TileIndexA = Crossing._TileIndexA;
+                Portal._TileIndexB = Crossing._TileIndexB;
+                Portal._PlateA = Crossing._PlateA;
+                Portal._PlateB = Crossing._PlateB;
+                Portal._Direction = Crossing._Direction;
+                Portal._AlongMin = Crossing._Along;
+                Portal._AlongMax = Crossing._Along;
+                Portal._MinEndZUu = Crossing._MidZUu;
+                Portal._MaxEndZUu = Crossing._MidZUu;
+                Portal._TraversalClearanceUu = Crossing._ClearanceUu;
+                Adjacency._Portals.Emplace(Portal);
+            }
+
+            return Adjacency;
+        }
+
+        auto DoSortAndFlattenSeamAdjacencies(FCk_GroundNav_Field& InOutField) -> void
+        {
+            InOutField._SeamAdjacencies.RemoveAll([](const FCk_GroundNav_SeamAdjacency& InAdjacency) -> bool
+            {
+                return InAdjacency._TileIndexA == INDEX_NONE;
+            });
+            InOutField._SeamAdjacencies.Sort([](const FCk_GroundNav_SeamAdjacency& InLeft,
+                                                const FCk_GroundNav_SeamAdjacency& InRight) -> bool
+            {
+                if (InLeft._TileIndexA != InRight._TileIndexA) { return InLeft._TileIndexA < InRight._TileIndexA; }
+                if (InLeft._TileIndexB != InRight._TileIndexB) { return InLeft._TileIndexB < InRight._TileIndexB; }
+                return InLeft._Direction < InRight._Direction;
+            });
+
+            InOutField._SeamPortals.Reset();
+            InOutField._UnmatchedSeamStubCount = 0;
+
+            for (const auto& Adjacency : InOutField._SeamAdjacencies)
+            {
+                InOutField._SeamPortals.Append(Adjacency._Portals);
+                InOutField._UnmatchedSeamStubCount += Adjacency._UnmatchedStubCount;
+            }
+        }
+    }
+
     auto
         DoDerive_PlateOffsets(
             FCk_GroundNav_Field& InOutField)
@@ -544,84 +662,95 @@ namespace ck::groundnav
          * what nothing crosses. A rim beside an unbuilt neighbour has no seam portals at all and is
          * therefore wholly a boundary: nothing is known past it, and a body kept off it is kept safe.
          */
-        auto DoDerive_TileEdgeBoundary(
-            FCk_GroundNav_Field& InOutField) -> void
+        auto DoDerive_TileEdgeBoundaryForTile(
+            FCk_GroundNav_Field& InOutField,
+            int32                 InTileIndex) -> void
+        {
+            if (NOT InOutField._Tiles.IsValidIndex(InTileIndex))
+            { return; }
+
+            if (InOutField._TileEdgeBoundary.Num() != InOutField._Tiles.Num())
+            { InOutField._TileEdgeBoundary.SetNum(InOutField._Tiles.Num()); }
+
+            auto& EdgeBoundary = InOutField._TileEdgeBoundary[InTileIndex];
+            EdgeBoundary.Reset();
+
+            const auto& Tile = InOutField._Tiles[InTileIndex];
+
+            if (NOT Tile.Get_IsBuilt())
+            { return; }
+
+            auto Lattice = FCk_GroundNav_BoundaryLattice{};
+            Lattice._Origin = Tile._Origin;
+            Lattice._CellSizeUu = Tile._CellSizeUu;
+            Lattice._SizeX = Tile._SizeX;
+            Lattice._SizeY = Tile._SizeY;
+            Lattice._LayerCount = Tile._LayerCount;
+            Lattice._SurfaceZ = &Tile._SurfaceZ;
+
+            for (const auto& Candidate : Tile._Boundary._EdgeCandidates)
+            {
+                const auto StepX = FMath::Sign(Candidate._ToCell.X - Candidate._FromCell.X);
+                const auto StepY = FMath::Sign(Candidate._ToCell.Y - Candidate._FromCell.Y);
+                const auto Count = Candidate.Get_CellCount();
+
+                int32 RunStart = INDEX_NONE;
+
+                const auto Do_CloseRun = [&](int32 InEndExclusive) -> void
+                {
+                    if (RunStart == INDEX_NONE)
+                    { return; }
+
+                    const auto From = FIntPoint{
+                        Candidate._FromCell.X + (StepX * RunStart), Candidate._FromCell.Y + (StepY * RunStart)};
+                    const auto To = FIntPoint{
+                        Candidate._FromCell.X + (StepX * (InEndExclusive - 1)),
+                        Candidate._FromCell.Y + (StepY * (InEndExclusive - 1))};
+
+                    EdgeBoundary.Add(Make_BoundarySegment(
+                        Lattice, Candidate._PlateIndex, Candidate._LayerIndex, Candidate._Side, From, To));
+
+                    RunStart = INDEX_NONE;
+                };
+
+                for (auto Step = 0; Step < Count; ++Step)
+                {
+                    const auto Cell = FIntPoint{
+                        Candidate._FromCell.X + (StepX * Step), Candidate._FromCell.Y + (StepY * Step)};
+                    const auto Along = Get_Along(Candidate._Side, Cell);
+
+                    auto Covered = false;
+
+                    for (const auto& Seam : InOutField._SeamPortals)
+                    {
+                        if (Get_IsCoveredBySeam(Seam, InTileIndex, Candidate._PlateIndex, Candidate._Side, Along))
+                        {
+                            Covered = true;
+                            break;
+                        }
+                    }
+
+                    if (Covered)
+                    {
+                        Do_CloseRun(Step);
+                        continue;
+                    }
+
+                    if (RunStart == INDEX_NONE)
+                    { RunStart = Step; }
+                }
+
+                Do_CloseRun(Count);
+            }
+        }
+
+        auto DoDerive_TileEdgeBoundary(FCk_GroundNav_Field& InOutField) -> void
         {
             InOutField._TileEdgeBoundary.Reset();
             InOutField._TileEdgeBoundary.SetNum(InOutField._Tiles.Num());
 
             for (auto TileIndex = 0; TileIndex < InOutField._Tiles.Num(); ++TileIndex)
-            {
-                const auto& Tile = InOutField._Tiles[TileIndex];
-
-                if (NOT Tile.Get_IsBuilt())
-                { continue; }
-
-                auto Lattice = FCk_GroundNav_BoundaryLattice{};
-                Lattice._Origin = Tile._Origin;
-                Lattice._CellSizeUu = Tile._CellSizeUu;
-                Lattice._SizeX = Tile._SizeX;
-                Lattice._SizeY = Tile._SizeY;
-                Lattice._LayerCount = Tile._LayerCount;
-                Lattice._SurfaceZ = &Tile._SurfaceZ;
-
-                auto& EdgeBoundary = InOutField._TileEdgeBoundary[TileIndex];
-
-                for (const auto& Candidate : Tile._Boundary._EdgeCandidates)
-                {
-                    const auto StepX = FMath::Sign(Candidate._ToCell.X - Candidate._FromCell.X);
-                    const auto StepY = FMath::Sign(Candidate._ToCell.Y - Candidate._FromCell.Y);
-                    const auto Count = Candidate.Get_CellCount();
-
-                    int32 RunStart = INDEX_NONE;
-
-                    const auto Do_CloseRun = [&](int32 InEndExclusive) -> void
-                    {
-                        if (RunStart == INDEX_NONE)
-                        { return; }
-
-                        const auto From = FIntPoint{
-                            Candidate._FromCell.X + (StepX * RunStart), Candidate._FromCell.Y + (StepY * RunStart)};
-                        const auto To = FIntPoint{
-                            Candidate._FromCell.X + (StepX * (InEndExclusive - 1)),
-                            Candidate._FromCell.Y + (StepY * (InEndExclusive - 1))};
-
-                        EdgeBoundary.Add(Make_BoundarySegment(
-                            Lattice, Candidate._PlateIndex, Candidate._LayerIndex, Candidate._Side, From, To));
-
-                        RunStart = INDEX_NONE;
-                    };
-
-                    for (auto Step = 0; Step < Count; ++Step)
-                    {
-                        const auto Cell = FIntPoint{
-                            Candidate._FromCell.X + (StepX * Step), Candidate._FromCell.Y + (StepY * Step)};
-                        const auto Along = Get_Along(Candidate._Side, Cell);
-
-                        auto Covered = false;
-
-                        for (const auto& Seam : InOutField._SeamPortals)
-                        {
-                            if (Get_IsCoveredBySeam(Seam, TileIndex, Candidate._PlateIndex, Candidate._Side, Along))
-                            {
-                                Covered = true;
-                                break;
-                            }
-                        }
-
-                        if (Covered)
-                        {
-                            Do_CloseRun(Step);
-                            continue;
-                        }
-
-                        if (RunStart == INDEX_NONE)
-                        { RunStart = Step; }
-                    }
-
-                    Do_CloseRun(Count);
-                }
-            }
+            { DoDerive_TileEdgeBoundaryForTile(InOutField, TileIndex); }
         }
     }
 
@@ -632,113 +761,20 @@ namespace ck::groundnav
     {
         using namespace field_private;
 
-        InOutField._SeamPortals.Reset();
-        InOutField._UnmatchedSeamStubCount = 0;
-
-        auto Crossings = TArray<FSeamCrossing>{};
+        // The whole derivation remains the bootstrap oracle. Its stable adjacency records are also the
+        // source bounded replacement updates edit, then flatten back into the legacy portal view.
+        InOutField._SeamAdjacencies.Reset();
 
         for (auto TileIndexA = 0; TileIndexA < InOutField._Tiles.Num(); ++TileIndexA)
         {
-            const auto& TileA = InOutField._Tiles[TileIndexA];
-
-            if (NOT TileA.Get_IsBuilt())
-            { continue; }
-
             for (auto Direction = 0; Direction < kPositiveDirectionCount; ++Direction)
             {
-                const auto Offset = Get_DirectionOffset(Direction);
-                const auto NeighbourCoord = FCk_GroundNav_TileCoord{
-                    TileA._Coord._X + Offset.X, TileA._Coord._Y + Offset.Y};
-
-                const auto TileIndexB = Get_TileIndex(InOutField._Params._Divisions, NeighbourCoord);
-
-                if (NOT InOutField._Tiles.IsValidIndex(TileIndexB))
-                { continue; }
-
-                const auto& TileB = InOutField._Tiles[TileIndexB];
-
-                // An unbuilt neighbour is a place nothing is known about, not a wall. No portal is
-                // emitted and the boundary reads as unbuilt to whatever tries to cross it.
-                if (NOT TileB.Get_IsBuilt())
-                { continue; }
-
-                const auto Opposite = Get_OppositeDirection(Direction);
-
-                for (const auto& Stub : TileA._SeamStubs)
-                {
-                    if (Stub._Direction != Direction)
-                    { continue; }
-
-                    const auto* Match = Get_MatchingStub(TileB, Stub, Opposite);
-
-                    if (Match == nullptr)
-                    {
-                        // Two BUILT tiles that disagree about a crossing they share. Counted rather than
-                        // repaired: there is no third account to arbitrate between them, and the crossing
-                        // simply does not exist for anything that comes after.
-                        ++InOutField._UnmatchedSeamStubCount;
-                        continue;
-                    }
-
-                    auto Crossing = FSeamCrossing{};
-
-                    Crossing._TileIndexA = TileIndexA;
-                    Crossing._TileIndexB = TileIndexB;
-                    Crossing._PlateA = Stub._PlateIndex;
-                    Crossing._PlateB = Match->_PlateIndex;
-                    Crossing._Direction = Direction;
-                    Crossing._Along = Stub._AlongIndex;
-                    Crossing._ClearanceUu = FMath::Min(Stub._ClearanceUu, Match->_ClearanceUu);
-                    Crossing._MidZUu = 0.5f * (Stub._NearSurfaceZUu + Stub._FarSurfaceZUu);
-
-                    Crossings.Emplace(Crossing);
-                }
+                InOutField._SeamAdjacencies.Emplace(
+                    DoDerive_SeamAdjacency(InOutField, TileIndexA, Direction));
             }
         }
 
-        Crossings.Sort([](const FSeamCrossing& InLeft, const FSeamCrossing& InRight) -> bool
-        {
-            if (InLeft._TileIndexA != InRight._TileIndexA) { return InLeft._TileIndexA < InRight._TileIndexA; }
-            if (InLeft._TileIndexB != InRight._TileIndexB) { return InLeft._TileIndexB < InRight._TileIndexB; }
-            if (InLeft._Direction  != InRight._Direction)  { return InLeft._Direction  < InRight._Direction; }
-            if (InLeft._PlateA     != InRight._PlateA)     { return InLeft._PlateA     < InRight._PlateA; }
-            if (InLeft._PlateB     != InRight._PlateB)     { return InLeft._PlateB     < InRight._PlateB; }
-
-            return InLeft._Along < InRight._Along;
-        });
-
-        for (auto Index = 0; Index < Crossings.Num(); ++Index)
-        {
-            const auto& Crossing = Crossings[Index];
-
-            if (Index > 0 && Get_IsSameRun(Crossings[Index - 1], Crossing))
-            {
-                auto& Portal = InOutField._SeamPortals.Last();
-
-                Portal._AlongMax = Crossing._Along;
-                Portal._MaxEndZUu = Crossing._MidZUu;
-                Portal._TraversalClearanceUu = FMath::Max(
-                    Portal._TraversalClearanceUu, Crossing._ClearanceUu);
-
-                continue;
-            }
-
-            auto Portal = FCk_GroundNav_SeamPortal{};
-
-            Portal._TileIndexA = Crossing._TileIndexA;
-            Portal._TileIndexB = Crossing._TileIndexB;
-            Portal._PlateA = Crossing._PlateA;
-            Portal._PlateB = Crossing._PlateB;
-            Portal._Direction = Crossing._Direction;
-            Portal._AlongMin = Crossing._Along;
-            Portal._AlongMax = Crossing._Along;
-            Portal._MinEndZUu = Crossing._MidZUu;
-            Portal._MaxEndZUu = Crossing._MidZUu;
-            Portal._TraversalClearanceUu = Crossing._ClearanceUu;
-
-            InOutField._SeamPortals.Emplace(Portal);
-        }
-
+        DoSortAndFlattenSeamAdjacencies(InOutField);
         field_boundary_private::DoDerive_TileEdgeBoundary(InOutField);
 
         // ONE line for the whole derivation, not one per stub: a field baked against a world that moved
@@ -752,6 +788,74 @@ namespace ck::groundnav
                 TEXT("impassable to every query afterwards."),
                 InOutField._UnmatchedSeamStubCount);
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoDerive_SeamPortalsForChangedTiles(
+            FCk_GroundNav_Field&                     InOutField,
+            TConstArrayView<FCk_GroundNav_TileCoord> InChangedCoords)
+        -> void
+    {
+        using namespace field_private;
+
+        auto ChangedTileIndices = TSet<int32>{};
+
+        for (const auto& Coord : InChangedCoords)
+        {
+            const auto TileIndex = Get_TileIndex(InOutField._Params._Divisions, Coord);
+
+            if (InOutField._Tiles.IsValidIndex(TileIndex))
+            { ChangedTileIndices.Add(TileIndex); }
+        }
+
+        if (ChangedTileIndices.IsEmpty())
+        { return; }
+
+        auto ChangedAdjacencyKeys = TSet<uint64>{};
+        auto AffectedTileIndices = TSet<int32>{};
+
+        for (const auto TileIndex : ChangedTileIndices)
+        {
+            const auto Coord = Get_TileCoord(InOutField._Params._Divisions, TileIndex);
+            AffectedTileIndices.Add(TileIndex);
+
+            for (auto Side = 0; Side < 4; ++Side)
+            {
+                const auto Offset = Get_DirectionOffset(Side);
+                const auto NeighbourIndex = Get_TileIndex(
+                    InOutField._Params._Divisions,
+                    FCk_GroundNav_TileCoord{Coord._X + Offset.X, Coord._Y + Offset.Y});
+
+                if (NOT InOutField._Tiles.IsValidIndex(NeighbourIndex))
+                { continue; }
+
+                AffectedTileIndices.Add(NeighbourIndex);
+                const auto TileIndexA = Side < kPositiveDirectionCount ? TileIndex : NeighbourIndex;
+                const auto Direction = Side < kPositiveDirectionCount ? Side : Get_OppositeDirection(Side);
+                ChangedAdjacencyKeys.Add((static_cast<uint64>(TileIndexA) << 32) | static_cast<uint32>(Direction));
+            }
+        }
+
+        InOutField._SeamAdjacencies.RemoveAll([&ChangedAdjacencyKeys](const FCk_GroundNav_SeamAdjacency& InAdjacency)
+        {
+            const auto Key = (static_cast<uint64>(InAdjacency._TileIndexA) << 32) |
+                             static_cast<uint32>(InAdjacency._Direction);
+            return ChangedAdjacencyKeys.Contains(Key);
+        });
+
+        for (const auto Key : ChangedAdjacencyKeys)
+        {
+            const auto TileIndexA = static_cast<int32>(Key >> 32);
+            const auto Direction = static_cast<int32>(Key & 0xffffffffu);
+            InOutField._SeamAdjacencies.Emplace(DoDerive_SeamAdjacency(InOutField, TileIndexA, Direction));
+        }
+
+        DoSortAndFlattenSeamAdjacencies(InOutField);
+
+        for (const auto TileIndex : AffectedTileIndices)
+        { field_boundary_private::DoDerive_TileEdgeBoundaryForTile(InOutField, TileIndex); }
     }
 
     // ----------------------------------------------------------------------------------------------------------------

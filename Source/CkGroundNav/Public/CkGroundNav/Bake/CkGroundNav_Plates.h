@@ -225,15 +225,17 @@ namespace ck::groundnav
      * criterion that also wrote the plate's policy would make the split and the label two accounts of
      * the same thing, and two accounts drift.
      *
+     * ConnectionField is required so a plate contains only reciprocal walkable edges.
      * Pure: no world, no registry, no physics.
      */
     CKGROUNDNAV_API auto
     DoDecompose_Plates(
-        const FCk_GroundNav_SpanField&     InSpans,
-        const FCk_GroundNav_LayerField&    InLayers,
-        const FCk_GroundNav_MergeTunables& InTunables,
-        FCk_GroundNav_PlateField&          OutPlates,
-        TConstArrayView<int32>             InCellPolicy = {}) -> FCk_GroundNav_BakeStageResult;
+        const FCk_GroundNav_SpanField&       InSpans,
+        const FCk_GroundNav_LayerField&      InLayers,
+        const FCk_GroundNav_ConnectionField& InConnections,
+        const FCk_GroundNav_MergeTunables&   InTunables,
+        FCk_GroundNav_PlateField&            OutPlates,
+        TConstArrayView<int32>               InCellPolicy = {}) -> FCk_GroundNav_BakeStageResult;
 
     /**
      * Give every plate the traversal policy and cost multiplier the Cost-kind markup over it implies.

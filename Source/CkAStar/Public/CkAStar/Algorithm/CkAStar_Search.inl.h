@@ -115,7 +115,7 @@ TSearchState<T_NodeId, T_Graph>::TSearchState(
 	_ClosedSet.Remove(LastValidNode);
 
 	const auto HeuristicCost = _Graph.Heuristic(LastValidNode, _Goal);
-	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{LastValidNode, AccumulatedCost + HeuristicCost}, TLess<>{});
+	_OpenSet.HeapPush(MakeOpenSetEntry(LastValidNode, AccumulatedCost + HeuristicCost), TLess<>{});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ auto
 
 			const auto HeuristicCost = _Graph.Heuristic(Neighbor, _Goal);
 			_OpenSet.HeapPush(
-				TOpenSetEntry<T_NodeId>{Neighbor, TentativeG + HeuristicCost},
+				MakeOpenSetEntry(Neighbor, TentativeG + HeuristicCost),
 				TLess<>{});
 		}
 	}
@@ -325,7 +325,26 @@ auto
 	_GScores.Add(_Start, 0.0f);
 
 	const auto HeuristicCost = _Graph.Heuristic(_Start, _Goal);
-	_OpenSet.HeapPush(TOpenSetEntry<T_NodeId>{_Start, HeuristicCost}, TLess<>{});
+	_OpenSet.HeapPush(MakeOpenSetEntry(_Start, HeuristicCost), TLess<>{});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <AStarNodeId T_NodeId, typename T_Graph>
+	requires AStarGraph<T_Graph, T_NodeId>
+auto
+	TSearchState<T_NodeId, T_Graph>::MakeOpenSetEntry(
+		const T_NodeId& InNode,
+		float InFScore) const
+	-> TOpenSetEntry<T_NodeId>
+{
+	auto TieBreakScore = 0.0f;
+	if constexpr (AStarGraphWithTieBreak<T_Graph, T_NodeId>)
+	{
+		TieBreakScore = _Graph.TieBreak(InNode, _Goal);
+	}
+
+	return TOpenSetEntry<T_NodeId>{InNode, InFScore, TieBreakScore};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
