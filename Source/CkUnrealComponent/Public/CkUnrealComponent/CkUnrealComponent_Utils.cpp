@@ -9,9 +9,12 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkJolt/StaticWorld/CkJoltStaticWorld_Utils.h"
 
 #include <Components/PrimitiveComponent.h>
+#include <Components/SceneComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -147,6 +150,135 @@ auto
     InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
 
     return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Request_EnableTransformPush(
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_UnrealComponent
+{
+    const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
+    CK_ENSURE_IF_NOT(UnrealComponentIsValid,
+        TEXT("Cannot enable transform-push on invalid UnrealComponent"))
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto SetupIsComplete = NOT InUnrealComponent.Has<ck::FTag_UnrealComponent_NeedsSetup>();
+    CK_ENSURE_IF_NOT(SetupIsComplete,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] before setup completes"), InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto IsSceneComponent = InUnrealComponent.Has<ck::FTag_UnrealComponent_IsScene>();
+    CK_ENSURE_IF_NOT(IsSceneComponent,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because it does not host a SceneComponent"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    // A static-world bake is a collision snapshot. Its existing rebake path is PostTransform, so
+    // this synchronous API rejects it rather than moving the Unreal component ahead of its bodies.
+    const auto IsBakedIntoStaticWorld = InUnrealComponent.Has<ck::FTag_UnrealComponent_BakedIntoStaticWorld>();
+    CK_ENSURE_IF_NOT(NOT IsBakedIntoStaticWorld,
+        TEXT("Cannot enable transform-push on static-world-baked UnrealComponent [{}] — remove its baked bodies first"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto HasCurrentFragment = InUnrealComponent.Has<ck::FFragment_UnrealComponent_Current>();
+    CK_ENSURE_IF_NOT(HasCurrentFragment,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] without a Current fragment"), InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>();
+    auto* SceneComponent = ::Cast<USceneComponent>(Current.Get_Component().Get());
+    const auto SceneComponentIsValid = ck::IsValid(SceneComponent);
+    CK_ENSURE_IF_NOT(SceneComponentIsValid,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] with an invalid SceneComponent"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto SceneComponentIsMovable = SceneComponent->Mobility == EComponentMobility::Movable;
+    CK_ENSURE_IF_NOT(SceneComponentIsMovable,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because its SceneComponent is not Movable"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto OwningEntity = Current.Get_OwningEntity();
+    const auto OwningEntityHasTransform = ck::IsValid(OwningEntity) && UCk_Utils_Transform_UE::Has(OwningEntity);
+    CK_ENSURE_IF_NOT(OwningEntityHasTransform,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because its owning entity has no valid Transform"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
+    const auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(OwningEntity);
+    const auto TargetTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
+    SceneComponent->SetWorldTransform(TargetTransform);
+
+    const auto DidSynchronize = SceneComponent->GetComponentTransform().Equals(TargetTransform);
+    CK_ENSURE_IF_NOT(DidSynchronize,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because its SceneComponent rejected the authoritative transform"),
+        InUnrealComponent)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed);
+        return InUnrealComponent;
+    }
+
+    // Do this only after every prerequisite and the immediate synchronization succeeded. Failed
+    // requests retain the disabled state, so PostTransform cannot take ownership of a stale component.
+    if (InUnrealComponent.Has<ck::FTag_UnrealComponent_TransformPushDisabled>())
+    { InUnrealComponent.Remove<ck::FTag_UnrealComponent_TransformPushDisabled>(); }
+    InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
+    return InUnrealComponent;
+}
+
+auto
+    UCk_Utils_UnrealComponent_UE::
+    Get_CanEnableTransformPush(
+        const FCk_Handle_UnrealComponent& InUnrealComponent)
+    -> bool
+{
+    const auto HandleIsValid = ck::IsValid(InUnrealComponent);
+    if (NOT HandleIsValid ||
+        InUnrealComponent.Has<ck::FTag_UnrealComponent_NeedsSetup>() ||
+        NOT InUnrealComponent.Has<ck::FTag_UnrealComponent_IsScene>() ||
+        InUnrealComponent.Has<ck::FTag_UnrealComponent_BakedIntoStaticWorld>() ||
+        NOT InUnrealComponent.Has<ck::FFragment_UnrealComponent_Current>())
+    { return false; }
+
+    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>();
+    auto* SceneComponent = ::Cast<USceneComponent>(Current.Get_Component().Get());
+    const auto SceneComponentIsValid = ck::IsValid(SceneComponent);
+    if (NOT SceneComponentIsValid)
+    { return false; }
+
+    if (SceneComponent->Mobility != EComponentMobility::Movable)
+    { return false; }
+
+    const auto OwningEntity = Current.Get_OwningEntity();
+    return ck::IsValid(OwningEntity) && UCk_Utils_Transform_UE::Has(OwningEntity);
 }
 
 auto
