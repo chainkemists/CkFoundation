@@ -119,8 +119,8 @@ public:
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Stops the per-tick push of the owning entity's world transform onto this component — use when
-    // it is about to be Unreal-physics-driven instead. ONE-WAY: there is no re-enable, and the
-    // component is expected to be short-lived after opting out.
+    // it is about to be Unreal-physics-driven instead. Request_EnableTransformPush restores the
+    // normal ownership contract when the external owner releases the component.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push",
@@ -129,6 +129,31 @@ public:
     Request_DisableTransformPush(
         UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Restores transform pushing and synchronously snaps the scene component to its owning entity's
+    // current authoritative transform before succeeding. This is safe to call immediately before a
+    // spatial consumer (for example audio playback); it does not wait for PostTransform. Components
+    // that are pending setup, non-scene, non-movable, invalid, or baked into the Jolt static world
+    // are rejected without removing the disabled tag.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Request Enable Transform Push",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_UnrealComponent
+    Request_EnableTransformPush(
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Returns whether Request_EnableTransformPush can synchronously take transform ownership now.
+    // Use this to preflight every component in a coupled set before enabling any of them; immediate
+    // calls on the same game-thread stack cannot interleave with the processor that changes setup,
+    // ownership, mobility, or the hosted component.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|UnrealComponent",
+              DisplayName = "[Ck][UnrealComponent] Get Can Enable Transform Push")
+    static bool
+    Get_CanEnableTransformPush(
+        const FCk_Handle_UnrealComponent& InUnrealComponent);
 
 public:
     UFUNCTION(BlueprintPure,
