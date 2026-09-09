@@ -491,6 +491,11 @@ auto
                 InVariant.Get_ProfileTag().GetTagName(), InVariant.Get_Profile()};
         });
 
+    auto DataLayerSelector = ck::groundnav::FCk_GroundNav_DataLayerSelector{};
+    if (NOT ck::groundnav::TryMake_DataLayerSelector(
+        Params.Get_DataLayerSelector().Get_LayerNames(), DataLayerSelector))
+    { return false; }
+
     // Every argument read exactly where a publish reads it: a second way of assembling them is a second
     // answer to what the standing field was produced from.
     const auto CurrentFingerprint = ck::groundnav::Get_InputFingerprint(
@@ -501,7 +506,8 @@ auto
         ck_groundnav_volume_utils::Get_LinkRecordsOf(Get_LinkEntries(InVolume)),
         Params.Get_MergeTunables(),
         Params.Get_MaxClearanceUu(),
-        Variants);
+        Variants,
+        DataLayerSelector);
 
     return CurrentFingerprint == BuiltField.Get_BakedInputFingerprint();
 }
@@ -920,6 +926,89 @@ bool
     { return false; }
 
     return Get_IsLinkLiveOnField(*Field, *Record);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::groundnav
+{
+    auto
+    Get_VolumeFieldParams(
+        const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+        TConstArrayView<FCk_GroundNav_MarkupRecord>    InMarkupRecords,
+        TConstArrayView<FCk_GroundNav_LinkRecord>      InLinkRecords)
+        -> FCk_GroundNav_FieldParams
+    {
+        auto FieldParams = FCk_GroundNav_FieldParams{};
+
+        // A default FCk_GroundNav_FieldParams describes one tile, while an invalid authored volume
+        // describes no field at all. Keep that distinction explicit for every rejected input.
+        FieldParams._Divisions = FIntPoint::ZeroValue;
+
+        const auto Bounds = InParams.Get_VolumeBounds();
+        const auto& Config = InParams.Get_Config();
+        const auto CellSizeUu = static_cast<double>(Config.Get_CellSizeUu());
+        const auto TileSizeUu = static_cast<double>(Config.Get_TileSizeUu());
+        constexpr auto MaxDivision = static_cast<double>(MAX_int32);
+
+        const auto BoundsAreFinite =
+            FMath::IsFinite(Bounds.Min.X) && FMath::IsFinite(Bounds.Min.Y) && FMath::IsFinite(Bounds.Min.Z) &&
+            FMath::IsFinite(Bounds.Max.X) && FMath::IsFinite(Bounds.Max.Y) && FMath::IsFinite(Bounds.Max.Z);
+        const auto BoundsAreNonDegenerate = Bounds.IsValid != 0 && BoundsAreFinite &&
+            Bounds.Min.X < Bounds.Max.X && Bounds.Min.Y < Bounds.Max.Y && Bounds.Min.Z < Bounds.Max.Z;
+        const auto TileRatio = CellSizeUu > 0.0 ? TileSizeUu / CellSizeUu : 0.0;
+        const auto ConfigCanDeriveSpan = Config.Get_IsValid() &&
+            FMath::IsFinite(CellSizeUu) && FMath::IsFinite(TileSizeUu) &&
+            CellSizeUu > 0.0 && TileSizeUu >= CellSizeUu &&
+            FMath::IsFinite(TileRatio) && TileRatio > 0.0 && TileRatio <= MaxDivision;
+
+        if (NOT BoundsAreNonDegenerate ||
+            NOT ConfigCanDeriveSpan ||
+            InParams.Get_MaxClearanceUu() < 0.0f || NOT FMath::IsFinite(InParams.Get_MaxClearanceUu()) ||
+            Get_ProfileRejection(InParams.Get_Profile()) != EProfileRejection::None)
+        { return FieldParams; }
+
+        const auto Size = Bounds.GetSize();
+        if (NOT FMath::IsFinite(Size.X) || NOT FMath::IsFinite(Size.Y) || NOT FMath::IsFinite(Size.Z) ||
+            Size.X <= 0.0 || Size.Y <= 0.0 || Size.Z <= 0.0)
+        { return FieldParams; }
+
+        const auto MinZUu = static_cast<float>(Bounds.Min.Z);
+        const auto MaxZUu = static_cast<float>(Bounds.Max.Z);
+        if (NOT FMath::IsFinite(MinZUu) || NOT FMath::IsFinite(MaxZUu) || MinZUu >= MaxZUu)
+        { return FieldParams; }
+
+        // Get_TileSpanUu rounds the safe, bounded TileRatio above. Never call it before that guard:
+        // it uses CeilToInt32 internally and malformed authoring must not reach that conversion.
+        FieldParams._Config = Config;
+        const auto SpanUu = FieldParams.Get_TileSpanUu();
+        const auto DivisionX = Size.X / SpanUu;
+        const auto DivisionY = Size.Y / SpanUu;
+
+        if (NOT FMath::IsFinite(SpanUu) || SpanUu <= 0.0 ||
+            NOT FMath::IsFinite(DivisionX) || NOT FMath::IsFinite(DivisionY) ||
+            DivisionX <= 0.0 || DivisionY <= 0.0 ||
+            DivisionX > MaxDivision || DivisionY > MaxDivision)
+        { return FieldParams; }
+
+        const auto DivisionsX = FMath::Max(1, FMath::CeilToInt32(DivisionX));
+        const auto DivisionsY = FMath::Max(1, FMath::CeilToInt32(DivisionY));
+        if (static_cast<int64>(DivisionsX) * static_cast<int64>(DivisionsY) > MAX_int32)
+        { return FieldParams; }
+
+        FieldParams._OriginXY = FVector2D{Bounds.Min.X, Bounds.Min.Y};
+        FieldParams._MinZUu = MinZUu;
+        FieldParams._MaxZUu = MaxZUu;
+        FieldParams._Profile = InParams.Get_Profile();
+        FieldParams._MergeTunables = InParams.Get_MergeTunables();
+        FieldParams._MarkupRecords.Append(InMarkupRecords);
+        FieldParams._Links.Append(InLinkRecords);
+        FieldParams._MaxClearanceUu = InParams.Get_MaxClearanceUu();
+
+        FieldParams._Divisions = FIntPoint{DivisionsX, DivisionsY};
+
+        return FieldParams;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

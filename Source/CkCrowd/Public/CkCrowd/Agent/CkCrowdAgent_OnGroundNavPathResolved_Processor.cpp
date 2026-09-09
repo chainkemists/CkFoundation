@@ -11,6 +11,11 @@
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
+#include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
+
+#include <HAL/IConsoleManager.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnGroundNavPathResolved);
@@ -18,6 +23,144 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnGroundNavPathResolved);
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Crowd::OnGroundNavPathResolved"), STAT_CkCrowd_OnGroundNavPathResolvedProc, STATGROUP_CkCrowd);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_crowd_agent_on_ground_nav_path_resolved
+{
+    static TAutoConsoleVariable<int32> CVar_GroundNavStrictDiagnostics(
+        TEXT("ck.Crowd.Debug.GroundNavStrictDiagnostics"), 0,
+        TEXT("1 writes visible Crowd GroundNav strict-verdict and dropped-result diagnostics. It does "
+             "not change route installation or movement state."));
+
+    auto Get_ShouldLogGroundNavStrictDiagnostics() -> bool
+    {
+        return CVar_GroundNavStrictDiagnostics.GetValueOnGameThread() != 0;
+    }
+
+    struct FConfirmedDisc
+    {
+        FVector _Center = FVector::ZeroVector;
+        float _Radius = 0.0f;
+        float _VerticalHalfExtent = 0.0f;
+    };
+
+    auto Get_DoesSegmentCrossConfirmedDisc(
+        const FVector&        InSegmentStart,
+        const FVector&        InSegmentEnd,
+        const FConfirmedDisc& InDisc) -> bool
+    {
+        const auto Discs = TArray<ck::groundnav::FCk_GroundNav_DynamicObstacleDisc>{
+            ck::groundnav::FCk_GroundNav_DynamicObstacleDisc{
+                InDisc._Center, InDisc._Radius, InDisc._VerticalHalfExtent}};
+        const auto Snapshot = ck::groundnav::Try_MakeDynamicObstacleSnapshot(
+            Discs,
+            TConstArrayView<ck::groundnav::FCk_GroundNav_DynamicObstacleObb>{});
+        if (NOT Snapshot.IsSet())
+        { return true; }
+
+        const auto UnionEdge = ck::groundnav::Get_DynamicUnionEdge(
+            Snapshot.GetValue(), InSegmentStart, InSegmentEnd);
+        if (NOT UnionEdge.IsSet())
+        { return true; }
+
+        return UnionEdge.GetValue() != ck::groundnav::ECk_GroundNav_DynamicUnionEdge::Clear;
+    }
+
+    auto Get_DoesStrictRouteCrossStandingCrowd(
+        FCk_Handle_CrowdAgent                        InHandle,
+        const ck::FFragment_CrowdAgent_Params&       InParams,
+        const ck::FFragment_CrowdAgent_PathFollow&   InPathFollow,
+        const FVector&                                InStart,
+        const FCk_GroundNavPath_Result&              InResult,
+        int32&                                        OutDiscCount) -> bool
+    {
+        const auto& Waypoints = InResult.Get_Waypoints();
+        auto AuthoredLinkSegmentEnds = TSet<int32>{};
+        const auto& LinkWaypoints = InResult.Get_LinkWaypoints();
+
+        // Link metadata is an authority boundary: only a complete, ordered Entry -> Exit pair for
+        // adjacent raw rows can exempt its authored traversal. A stale or hand-written result must
+        // fail closed rather than silently turning an ordinary crowd-crossing leg into a link.
+        if (NOT LinkWaypoints.IsEmpty())
+        {
+            if (LinkWaypoints.Num() % 2 != 0)
+            { return true; }
+
+            for (auto MetadataIndex = 0; MetadataIndex < LinkWaypoints.Num(); MetadataIndex += 2)
+            {
+                const auto& Entry = LinkWaypoints[MetadataIndex];
+                const auto& Exit = LinkWaypoints[MetadataIndex + 1];
+                const auto IsTraversalDirection =
+                    Entry.Get_EntryDirection() == ECk_GroundNav_LinkDirection::Forward ||
+                    Entry.Get_EntryDirection() == ECk_GroundNav_LinkDirection::Backward;
+
+                if (Entry.Get_Role() != ECk_GroundNavPath_LinkWaypointRole::Entry ||
+                    Exit.Get_Role() != ECk_GroundNavPath_LinkWaypointRole::Exit ||
+                    Entry.Get_LinkId() == INDEX_NONE || Entry.Get_LinkId() != Exit.Get_LinkId() ||
+                    Entry.Get_EntryDirection() != Exit.Get_EntryDirection() || NOT IsTraversalDirection ||
+                    NOT Waypoints.IsValidIndex(Entry.Get_WaypointIndex()) ||
+                    NOT Waypoints.IsValidIndex(Exit.Get_WaypointIndex()) ||
+                    Exit.Get_WaypointIndex() != Entry.Get_WaypointIndex() + 1 ||
+                    (MetadataIndex > 0 &&
+                     Entry.Get_WaypointIndex() <= LinkWaypoints[MetadataIndex - 1].Get_WaypointIndex()))
+                { return true; }
+
+                AuthoredLinkSegmentEnds.Add(Exit.Get_WaypointIndex());
+            }
+        }
+
+        auto Discs = TArray<FConfirmedDisc, TInlineAllocator<32>>{};
+        const auto GoalExemptionPad = InPathFollow.Get_ActiveArrivalRadius() + InParams.Get_Radius();
+
+        InHandle.View<ck::FFragment_CrowdAgent_NavMarkup>().ForEach(
+            [&](FCk_Entity InEntity, const ck::FFragment_CrowdAgent_NavMarkup& InMarkup)
+        {
+            if (InEntity == InHandle.Get_Entity() ||
+                NOT ck::IsValid(InMarkup.Get_Markup()) ||
+                NOT InMarkup.Get_ConfirmedOnMesh())
+            { return; }
+
+            if (FVector::Dist2D(InMarkup.Get_MarkupLocation(), InPathFollow.Get_ActiveGoal()) <=
+                InMarkup.Get_MarkupRadiusUu() + GoalExemptionPad)
+            { return; }
+
+            Discs.Add(FConfirmedDisc{
+                InMarkup.Get_MarkupLocation(), InMarkup.Get_MarkupRadiusUu(), InMarkup.Get_MarkupVerticalHalfExtentUu()});
+        });
+
+        OutDiscCount = Discs.Num();
+
+        auto SegmentStart = InStart;
+        for (auto WaypointIndex = 0; WaypointIndex < Waypoints.Num(); ++WaypointIndex)
+        {
+            const auto& Waypoint = Waypoints[WaypointIndex];
+
+            // This is the exact Entry -> Exit segment certified above. The approach to Entry and the
+            // departure from Exit remain ordinary ground movement and are still checked against every
+            // standing crowd disc.
+            if (AuthoredLinkSegmentEnds.Contains(WaypointIndex))
+            {
+                SegmentStart = Waypoint;
+                continue;
+            }
+
+            for (const auto& Disc : Discs)
+            {
+                // Reuse GroundNav's immutable 3D disc interval implementation. A whole-Z overlap
+                // check is insufficient for a sloped segment, whose XY collision can happen outside
+                // the disc's vertical interval.
+                if (Get_DoesSegmentCrossConfirmedDisc(
+                    SegmentStart, Waypoint, FConfirmedDisc{
+                        Disc._Center, Disc._Radius + InParams.Get_Radius(), Disc._VerticalHalfExtent}))
+                { return true; }
+            }
+            SegmentStart = Waypoint;
+        }
+
+        return false;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,6 +211,16 @@ namespace ck
                         TEXT("CrowdAgent [{}] dropped a GroundNav path result ({}) with no active "
                              "movement tags — its episode ended without releasing the query"),
                         InHandle, InPathResult.Get_Result().Get_Status());
+
+                    if (ck_crowd_agent_on_ground_nav_path_resolved::Get_ShouldLogGroundNavStrictDiagnostics())
+                    {
+                        ck::crowd::Log(
+                            TEXT("CrowdAgent [{}] dropped GroundNav diagnostic: result rev [{}], active rev [{}], "
+                                 "pending [{}], walking [{}], phase [{}], strict-standing [{}]"),
+                            InHandle, DroppedRevision, InPathFollow.Get_ActiveNavigationRequestRevision(),
+                            IsPathPending, IsWalking, static_cast<int32>(InPathFollow.Get_PlanPhase()),
+                            InPathFollow.Get_PlanUsesStrictStandingCrowdFilter());
+                    }
                 }
             }
             return;
@@ -128,6 +281,74 @@ namespace ck
 
                 auto NonConstHandle = InHandle;
                 auto WaypointsToInstall = Result.Get_Waypoints();
+
+                const auto NeedsStrictStandingCrowdVerdict =
+                    InPathFollow.Get_PlanUsesStrictStandingCrowdFilter() &&
+                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict &&
+                    InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav;
+
+                if (NeedsStrictStandingCrowdVerdict)
+                {
+                    auto DiscCount = 0;
+                    const auto CrossesStandingCrowd =
+                        ck_crowd_agent_on_ground_nav_path_resolved::Get_DoesStrictRouteCrossStandingCrowd(
+                            InHandle,
+                            InHandle.Get<FFragment_CrowdAgent_Params>(),
+                            InPathFollow,
+                            InTransform.Get_Transform().GetLocation(),
+                            Result,
+                            DiscCount);
+
+                    if (ck_crowd_agent_on_ground_nav_path_resolved::Get_ShouldLogGroundNavStrictDiagnostics())
+                    {
+                        ck::crowd::Log(
+                            TEXT("CrowdAgent [{}] strict GroundNav diagnostic: result rev [{}], active rev [{}], "
+                                 "pending [{}], walking [{}], discs [{}], crosses [{}]"),
+                            InHandle, Result.Get_RequestRevision(), ActiveRevision, IsPathPending, IsWalking,
+                            DiscCount, CrossesStandingCrowd);
+                    }
+
+                    if (CrossesStandingCrowd)
+                    {
+                        // A strict result that crosses a confirmed crowd disc, or whose authored-link
+                        // metadata cannot prove the exempt traversal, is not installable.
+                        ck::crowd::Verbose(
+                            TEXT("CrowdAgent [{}] strict GroundNav standing-crowd verdict failed ({} discs)"),
+                            InHandle, DiscCount);
+
+                        if (NOT IsPathPending)
+                        {
+                            NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+                            NonConstHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
+                        }
+
+                        FCk_Nav_Algorithm::FailPath(
+                            NonConstHandle,
+                            ECk_Nav_PathFailReason::FindPathNoPath,
+                            ActiveRevision);
+
+                        if (ck_crowd_agent_on_ground_nav_path_resolved::Get_ShouldLogGroundNavStrictDiagnostics())
+                        {
+                            ck::crowd::Log(
+                                TEXT("CrowdAgent [{}] strict GroundNav failure diagnostic: result rev [{}], "
+                                     "active rev [{}], pending [{}], walking [{}]"),
+                                InHandle, Result.Get_RequestRevision(), ActiveRevision,
+                                NonConstHandle.Has<FTag_CrowdAgent_PathPending>(),
+                                NonConstHandle.Has<FTag_CrowdAgent_Walking>());
+                        }
+                        auto BaseHandle = NonConstHandle.ConvertToHandle();
+                        FProcessor_CrowdAgent_Steering::DoCancelActiveLinkTraversal(
+                            BaseHandle, InPathFollow);
+                        UUtils_Signal_Nav_OnPathFailed::Broadcast(BaseHandle, MakePayload(BaseHandle));
+                        break;
+                    }
+                    else
+                    {
+                        ck::crowd::Verbose(
+                            TEXT("CrowdAgent [{}] strict GroundNav standing-crowd verdict crowd-free ({} discs)"),
+                            InHandle, DiscCount);
+                    }
+                }
                 InPathFollow._ProtectedLeadingWaypointCount = 0;
 
                 FCk_Nav_Algorithm::InstallExternalPath(

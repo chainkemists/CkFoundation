@@ -37,6 +37,9 @@ namespace ck
         TArray<uint32>               _BodyIds;
         TWeakObjectPtr<const AActor> _SourceActor;
         FName                        _SourceActorName;
+        // Actor data-layer membership captured with the static-world source. Cooked bodies may have no
+        // direct actor object at the query boundary, so this is the runtime attribution used by filters.
+        TArray<FName>                _DataLayerNames;
 
         // Collision-sync bookkeeping: the primitive components whose OnComponentCollisionSettingsChangedEvent
         // this entity is bound to (all of the source actor's primitives for an actor-path entity; the one
@@ -50,6 +53,7 @@ namespace ck
         CK_PROPERTY_GET(_BodyIds);
         CK_PROPERTY_GET(_SourceActor);
         CK_PROPERTY_GET(_SourceActorName);
+        CK_PROPERTY_GET(_DataLayerNames);
         CK_PROPERTY_GET(_BoundComponents);
         CK_PROPERTY_GET(_SourceComponent);
         CK_PROPERTY_GET(_BodiesInScene);

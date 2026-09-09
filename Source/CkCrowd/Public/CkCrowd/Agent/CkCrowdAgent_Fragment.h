@@ -14,6 +14,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Native adversarial-input pin for the strict GroundNav dispatch boundary. The test composes a
+// normal CrowdAgent, then injects one malformed confirmed record; production exposes no mutable
+// markup API for this deliberately impossible runtime state.
+class FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
+
 namespace ck
 {
     using FFragment_CrowdAgent_Params         = FCk_Fragment_CrowdAgent_ParamsData;
@@ -221,6 +226,7 @@ namespace ck
         friend class FProcessor_CrowdAgent_StationaryMarkup;
         friend class FProcessor_CrowdAgent_NavMarkup_EndPlay;
         friend class FProcessor_CrowdAgent_PathRefresh;
+        friend class ::FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
 
     private:
         float _StationarySeconds = 0.0f;

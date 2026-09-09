@@ -114,6 +114,9 @@ private:
 	auto
 	SeedFreshSearch() -> void;
 
+	auto
+	MakeOpenSetEntry(const T_NodeId& InNode, float InFScore) const -> TOpenSetEntry<T_NodeId>;
+
 	// ----------------------------------------------------------------------------------------------------------------
 
 	T_Graph _Graph{};

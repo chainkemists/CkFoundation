@@ -46,6 +46,7 @@ namespace ck_jolt_cook_world_cooker
         FSoftObjectPath _ActorPath;
         uint64 _SourceHash = 0;
         uint64 _RuntimeCheckHash = 0;
+        TArray<FName> _DataLayerNames;
         TArray<FCk_Jolt_ExtractedBody> _Bodies;
     };
 
@@ -75,6 +76,19 @@ namespace ck_jolt_cook_world_cooker
     static auto Get_CellIdForActor(const FActorCookData& InActorData, float InCellSize) -> FIntPoint
     {
         return Get_CellIdForPosition(InActorData._Bodies[0]._Position, InCellSize);
+    }
+
+    static auto Get_CanonicalDataLayerNames(const AActor& InActor) -> TArray<FName>
+    {
+        auto Names = InActor.GetDataLayerInstanceNames();
+        Names.Remove(NAME_None);
+        Names.Sort(FNameLexicalLess{});
+        for (auto Index = Names.Num() - 1; Index > 0; --Index)
+        {
+            if (Names[Index] == Names[Index - 1])
+            { Names.RemoveAt(Index); }
+        }
+        return Names;
     }
 
     /// The level an actor belongs to, normalized to the form the runtime will look it up under.
@@ -172,6 +186,7 @@ namespace ck_jolt_cook_world_cooker
         ActorData._ActorPath = FSoftObjectPath{&InActor};
         ActorData._SourceHash = ComputeSourceHash(InActor, InFilter);
         ActorData._RuntimeCheckHash = ComputeRuntimeCheckHash(InActor, InFilter);
+        ActorData._DataLayerNames = Get_CanonicalDataLayerNames(InActor);
         ActorData._Bodies = MoveTemp(Bodies);
 
         return ActorData._Bodies.Num();
@@ -234,6 +249,7 @@ namespace ck_jolt_cook_world_cooker
             Group.Set_SourceActorPath(ActorData._ActorPath);
             Group.Set_SourceHash(ActorData._SourceHash);
             Group.Set_RuntimeCheckHash(ActorData._RuntimeCheckHash);
+            Group.Set_DataLayerNames(ActorData._DataLayerNames);
 
             auto Records = TArray<FCk_Jolt_CookedBodyRecord>{};
 
@@ -381,6 +397,7 @@ namespace ck_jolt_cook_world_cooker
         ActorData._ActorPath = InGroup.Get_SourceActorPath();
         ActorData._SourceHash = InGroup.Get_SourceHash();
         ActorData._RuntimeCheckHash = InGroup.Get_RuntimeCheckHash();
+        ActorData._DataLayerNames = InGroup.Get_DataLayerNames();
 
         for (const auto& Record : InGroup.Get_Bodies())
         {

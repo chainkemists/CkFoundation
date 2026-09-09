@@ -19,6 +19,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_GroundNavPath_UE;
+class UWorld;
+class FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,6 +62,24 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     using FFragment_GroundNavPath_Params = FCk_Fragment_GroundNavPath_ParamsData;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** Value-only state captured when another module needs to explain a stalled GroundNav episode.
+     *  It deliberately copies no search or field ownership: both are process-local and must remain
+     *  owned by the path fragment for the episode's lifetime. */
+    struct CKGROUNDNAV_API FCk_GroundNavPath_TimeoutState
+    {
+        int32 _PendingRequestRevision = 0;
+        bool _HasBegun = false;
+        bool _FieldIsValid = false;
+        int64 _FieldEpoch = 0;
+        ECk_GroundNav_PathStatus _SearchStatus = ECk_GroundNav_PathStatus::InProgress;
+        int32 _SearchExpansionCount = 0;
+        FCk_Time _SearchTimeSpent;
+        groundnav::FCk_GroundNav_CellSearchTiming _CellSearchTiming;
+        FCk_Time _PendingSince;
+    };
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -111,10 +131,21 @@ namespace ck
         // wait and the work answer different questions: one dates the episode, the other prices it.
         FCk_Time _SearchTimeSpent;
 
+        // Opt-in timeout diagnostics retain the exact already-compiled query beside its pinned field.
+        // It is absent in ordinary searches and cleared with the episode: a later registry lookup
+        // could describe a different field or policy from the one this search opened on.
+        TOptional<groundnav::FCk_GroundNav_PathQuery> _ActiveQueryForTimeoutReplay;
+
         /** The corridor of the last plan, keyed by the ONE durable identity a crossing has. Node ids
          *  are per-search pool ids and mean nothing to a second search, so a stored corridor is stored
          *  as keys or it is not stored at all. Kept for a later repair to re-canonicalise against. */
         TArray<groundnav::FCk_GroundNav_CrossingKey> _LastCorridorKeys;
+
+        // A successful strict-cell route has no portable crossing keys, but it is still a cached
+        // route whose next Repair must report FullReplan rather than masquerading as no cache.
+        bool _HasCachedRoute = false;
+        groundnav::ECk_GroundNav_PathRouteKind _LastRouteKind =
+            groundnav::ECk_GroundNav_PathRouteKind::PlatePortal;
 
         /** The AUTHORED ids of the links the corridor above crosses, in walk order and without
          *  repeats, resolved against the field the plan was made on. The key's own _LinkIndex cannot
@@ -123,6 +154,9 @@ namespace ck
          *  volume-scoped, monotone and never reused, which is what lets an invalidator ask a LATER
          *  publish whether it moved anything this route depends on. Empty for a route that crosses none. */
         TArray<int32> _LastCorridorLinkIds;
+
+        // Every flat plate the successful search traversed. Used to check later filter denial.
+        TArray<int32> _LastCorridorFlatPlates;
 
         // The flat plate the last plan started from. A repair may only warm-start from a corridor whose
         // source the body still stands on.
@@ -141,6 +175,10 @@ namespace ck
          *  default, which is what an untagged request plans over. */
         FGameplayTag _ProfileTag;
 
+        // The filter that admitted this corridor, including its per-request exclusions.
+        FGameplayTag _LastCorridorQueryFilter;
+        FCk_Nav_QueryFilterOverlay _LastCorridorQueryFilterOverlay;
+
         /** The world box the corridor's plates cover, stored ALREADY inflated by _CorridorInflationUu.
          *  An invalidator asks it on every republish to decide whether a rebuilt tile could have moved
          *  this route, so it must not have to re-walk the corridor or re-derive a margin of its own.
@@ -157,12 +195,39 @@ namespace ck
         CK_PROPERTY_GET(_HasBegun);
         CK_PROPERTY_GET(_PendingSince);
         CK_PROPERTY_GET(_LastCorridorKeys);
+        CK_PROPERTY_GET(_HasCachedRoute);
+        CK_PROPERTY_GET(_LastRouteKind);
         CK_PROPERTY_GET(_LastCorridorLinkIds);
+        CK_PROPERTY_GET(_LastCorridorFlatPlates);
         CK_PROPERTY_GET(_LastSourceFlatPlate);
         CK_PROPERTY_GET(_LastCorridorEpoch);
         CK_PROPERTY_GET(_ProfileTag);
+        CK_PROPERTY_GET(_LastCorridorQueryFilter);
+        CK_PROPERTY_GET(_LastCorridorQueryFilterOverlay);
         CK_PROPERTY_GET(_LastCorridorBounds);
         CK_PROPERTY_GET(_CorridorInflationUu);
+
+        auto Get_TimeoutState() const -> FCk_GroundNavPath_TimeoutState
+        {
+            auto State = FCk_GroundNavPath_TimeoutState{};
+            State._PendingRequestRevision = _PendingRequest.Get_RequestRevision();
+            State._HasBegun = _HasBegun;
+            State._FieldIsValid = _Field.IsValid();
+            State._FieldEpoch = State._FieldIsValid ? _Field->_Epoch._Value : 0;
+            State._SearchStatus = _Search.Get_Status();
+            State._SearchExpansionCount = _Search.Get_Result()._ExpansionCount;
+            State._SearchTimeSpent = _SearchTimeSpent;
+            State._CellSearchTiming = _Search.Get_CellSearchTiming();
+            State._PendingSince = _PendingSince;
+            return State;
+        }
+
+        /** Runs one opt-in, diagnostic-only paired cold replay of this active strict search. The caller
+         *  supplies the Crowd cost tag rather than GroundNav taking a module dependency on CkCrowd. */
+        auto Try_RunStrictCrowdCostTimeoutReplay(
+            UWorld*             InWorld,
+            const FGameplayTag& InCrowdCostAreaTag,
+            int32               InServedExpansionCount) const -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -195,6 +260,8 @@ namespace ck
         friend class FProcessor_GroundNavPath_InvalidateOnRebuilt;
         friend class ::UCk_Utils_GroundNavPath_UE;
         friend struct FGroundNavPath_Episode;
+        // Native strict Crowd install adversarial-input pin; no runtime mutation API is exposed.
+        friend class ::FCkTest_Crowd_StrictDynamicDispatch_MalformedConfirmedBlockerFailsTerminally;
 
     private:
         FCk_GroundNavPath_Result _Result;

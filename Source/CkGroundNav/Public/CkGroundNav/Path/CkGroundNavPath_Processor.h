@@ -136,7 +136,9 @@ namespace ck
      * CkGroundNav owns this budget and actually spends it - both ceilings are read on every entity and
      * an exhausted one stops the pass rather than being reset and ignored. The searches-per-frame cap
      * bounds how many agents may be touched at all; the time slice bounds what each of them may spend,
-     * and the remainder of it is what the next agent is handed.
+     * and the remainder of it is what the next agent is handed. The base processor view has a stable
+     * traversal order, so this processor keeps the first eligible path left after a capped pass and
+     * starts there next tick. That makes a long-running early search unable to starve later episodes.
      */
     class CKGROUNDNAV_API FProcessor_GroundNavPath_Slice : public ck_exp::TProcessor<
         FProcessor_GroundNavPath_Slice,
@@ -167,9 +169,35 @@ namespace ck
             FFragment_GroundNavPath_Result& InResult) const -> void;
 
     private:
+        struct FSliceServiceWindow
+        {
+            bool _IsActive = false;
+            double _StartedAtSeconds = 0.0;
+            double _LastLoggedAtSeconds = 0.0;
+            uint64 _StartedAtFrame = 0;
+            int32 _TickCount = 0;
+            int32 _ServedSearchCount = 0;
+            int32 _TimeBudgetExhaustedTicks = 0;
+            int32 _SearchCapExhaustedTicks = 0;
+            FCk_Time _TickTimeSpent;
+            FCk_Time _SearchTimeSpent;
+            FString _WorldName = TEXT("<unserved>");
+        };
+
         mutable int32 _SearchesRemainingThisTick = 0;
 
         mutable FCk_Time _SliceRemainingThisTick;
+
+        // A handle, never a pointer: processor instances are registry/world scoped, while a queued
+        // entity may be destroyed or may finish before its next turn. DoTick validates the handle
+        // against the live in-flight view and falls back to the view head when it is gone.
+        mutable FCk_Handle_GroundNavPath _NextPathToServe;
+
+        // The base TProcessor owns traversal. These two values let ForEachEntity skip up to the saved
+        // live handle, then capture the first eligible entity after an exhausted budget for next tick.
+        mutable bool _WaitingForNextPathThisTick = false;
+        mutable bool _FoundNextPathThisTick = false;
+        mutable FSliceServiceWindow _SliceServiceWindow;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -113,6 +113,22 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** The complete derived result for one canonical positive-axis tile adjacency. Records are sorted
+     *  by their tile pair before flattening, so load order cannot choose the portal order. */
+    struct CKGROUNDNAV_API FCk_GroundNav_SeamAdjacency
+    {
+    public:
+        int32 _TileIndexA = INDEX_NONE;
+        int32 _TileIndexB = INDEX_NONE;
+        int32 _Direction = 0;
+
+        TArray<FCk_GroundNav_SeamPortal> _Portals;
+
+        int32 _UnmatchedStubCount = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /**
      * The one per-body diagnostic a bake produces: a Solid body whose mesh is not closed.
      *
@@ -165,6 +181,10 @@ namespace ck::groundnav
 
         // Derived at composition from the tiles' seam stubs, never carried across a rebuild.
         TArray<FCk_GroundNav_SeamPortal> _SeamPortals;
+
+        // One record per canonical (+X or +Y) adjacency. This is the bounded-composition source of
+        // truth; _SeamPortals remains its stable flattened compatibility view.
+        TArray<FCk_GroundNav_SeamAdjacency> _SeamAdjacencies;
 
         // One entry per authored record in _Params._Links, in that array's order, re-derived wholesale at
         // every composition exactly like the seam portals. Kept in authored order rather than sorted by
@@ -230,6 +250,10 @@ namespace ck::groundnav
 
             Bytes += _Tiles.GetAllocatedSize();
             Bytes += _SeamPortals.GetAllocatedSize();
+            Bytes += _SeamAdjacencies.GetAllocatedSize();
+
+            for (const auto& Adjacency : _SeamAdjacencies)
+            { Bytes += Adjacency._Portals.GetAllocatedSize(); }
             Bytes += _ResolvedLinks.GetAllocatedSize();
             Bytes += _TileEdgeBoundary.GetAllocatedSize();
 
@@ -396,6 +420,14 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     DoDerive_SeamPortals(
         FCk_GroundNav_Field& InOutField) -> void;
+
+    /** Re-derive only canonical adjacencies touching InChangedCoords and refresh their endpoint tile
+     *  boundaries. Compose_LoadedField remains the whole-field oracle for bootstrap and tests; this
+     *  bounded routine deliberately never invokes it. Callers settle links and reachability afterwards. */
+    CKGROUNDNAV_API auto
+    DoDerive_SeamPortalsForChangedTiles(
+        FCk_GroundNav_Field&                     InOutField,
+        TConstArrayView<FCk_GroundNav_TileCoord> InChangedCoords) -> void;
 
     /**
      * The flat plate numbering: _TilePlateOffsets[t] is the first flat plate index of tile t, with one

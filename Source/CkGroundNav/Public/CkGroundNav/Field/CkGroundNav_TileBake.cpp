@@ -2,6 +2,7 @@
 
 #include "CkGroundNav/Bake/CkGroundNav_Clearance.h"
 #include "CkGroundNav/Bake/CkGroundNav_Layers.h"
+#include "CkGroundNav/Bake/CkGroundNav_MarkupMask.h"
 #include "CkGroundNav/Bake/CkGroundNav_Portals.h"
 #include "CkGroundNav/Bake/CkGroundNav_Rasterize.h"
 #include "CkGroundNav/Bake/CkGroundNav_Walkability.h"
@@ -74,6 +75,118 @@ namespace ck::groundnav
                     for (auto& Layer : InOutLayers._Columns[InOutLayers.Get_ColumnIndex(X, Y)])
                     { Layer = FCk_GroundNav_LayerField::kNoLayer; }
                 }
+            }
+        }
+
+        /**
+         * The decomposition's third merge criterion, built from the Cost markup the bake was handed:
+         * which records cover each cell of the HALO lattice, as a key two cells compare equal on only
+         * when the same set of records covers both.
+         *
+         * Stamp_PlateCostPolicies prices a WHOLE plate that any record touches and cannot do
+         * otherwise — a plate is the unit everything above the cell grid addresses, and splitting one
+         * after the fact would renumber ids a tile has already published. The resolution is therefore
+         * bought HERE, before a plate exists: cut the ground where coverage changes and the label that
+         * lands on each piece is exact rather than a superset.
+         *
+         * Honours exactly the records Stamp_PlateCostPolicies honours — enabled, Cost-kind — read at
+         * each cell's own surface height through the same reducer, so the split and the label cannot
+         * disagree about which cells a volume reaches. The halo lattice and the published one describe
+         * the same ground at the same world positions, which is why the two may be read on different
+         * lattices at all.
+         *
+         * The entries index nothing: zero is "no record covers this cell", and every other value is an
+         * interned id of the sorted set of record indices that do. Left EMPTY when no record applies,
+         * which is the criterion's own inert case rather than a view of zeroes.
+         *
+         * Bills no probes, for the reason the stamp bills none: it reads no cell a plate rectangle will
+         * not already name, and a cost-only answer must stay free.
+         */
+        auto Get_MarkupCellPolicy(
+            const FCk_GroundNav_SpanField&              InSpans,
+            const FCk_GroundNav_LayerField&             InLayers,
+            TConstArrayView<FCk_GroundNav_MarkupRecord> InMarkups,
+            TArray<int32>&                              OutCellPolicy) -> void
+        {
+            OutCellPolicy.Reset();
+
+            const auto CellCount = InLayers._SizeX * InLayers._SizeY;
+
+            if (CellCount <= 0 || InLayers._LayerCount <= 0)
+            { return; }
+
+            const auto LatticeOriginXY = FVector2D{InSpans._Origin.X, InSpans._Origin.Y};
+
+            // Flat cell index to the records covering it, ascending because the records are walked in
+            // order — which is what makes two cells' entries comparable without a sort.
+            auto CoveringRecords = TMap<int32, TArray<int32>>{};
+
+            for (auto MarkupIndex = 0; MarkupIndex < InMarkups.Num(); ++MarkupIndex)
+            {
+                const auto& Markup = InMarkups[MarkupIndex];
+
+                const auto MarkupApplies = Markup.Get_Enable() == ECk_EnableDisable::Enable &&
+                                           Markup.Get_Kind() == ECk_GroundNav_MarkupKind::Cost;
+
+                if (NOT MarkupApplies)
+                { continue; }
+
+                const auto CellRect = Get_MarkupCellRect(
+                    Markup, LatticeOriginXY, InSpans._CellSizeUu, InLayers._SizeX, InLayers._SizeY);
+
+                if (NOT CellRect.IsSet())
+                { continue; }
+
+                for (auto LayerIndex = 0; LayerIndex < InLayers._LayerCount; ++LayerIndex)
+                {
+                    for (auto Y = CellRect->_MinY; Y <= CellRect->_MaxY; ++Y)
+                    {
+                        for (auto X = CellRect->_MinX; X <= CellRect->_MaxX; ++X)
+                        {
+                            auto TopZ = 0.0f;
+                            auto Normal = FVector::UpVector;
+
+                            if (NOT Get_CellSurface(InSpans, InLayers, X, Y, LayerIndex, TopZ, Normal))
+                            { continue; }
+
+                            const auto CoversCell = Get_IsMarkupCoveringCell(
+                                Markup, InSpans.Get_ColumnMinCorner(X, Y), InSpans._CellSizeUu, TopZ);
+
+                            if (NOT CoversCell)
+                            { continue; }
+
+                            CoveringRecords
+                                .FindOrAdd((LayerIndex * CellCount) + (Y * InLayers._SizeX) + X)
+                                .Emplace(MarkupIndex);
+                        }
+                    }
+                }
+            }
+
+            if (CoveringRecords.IsEmpty())
+            { return; }
+
+            OutCellPolicy.Init(0, CellCount * InLayers._LayerCount);
+
+            // Interned linearly and in cell order, the way Stamp_PlateCostPolicies interns its
+            // containers: the ids only ever have to compare equal, and a hash order would let the same
+            // input produce different ids on different runs.
+            auto DistinctSets = TArray<TArray<int32>>{};
+
+            for (auto CellIndex = 0; CellIndex < OutCellPolicy.Num(); ++CellIndex)
+            {
+                const auto* Records = CoveringRecords.Find(CellIndex);
+
+                if (Records == nullptr)
+                { continue; }
+
+                const auto Interned = DistinctSets.IndexOfByPredicate(
+                    [&](const TArray<int32>& InCandidate) -> bool { return InCandidate == *Records; });
+
+                // Offset by one, so that zero stays "no record covers this cell".
+                OutCellPolicy[CellIndex] = 1 + (Interned != INDEX_NONE
+                    ? Interned
+                    : DistinctSets.Emplace(*Records));
             }
         }
 
@@ -321,8 +434,14 @@ namespace ck::groundnav
 
         Do_MaskHalo(HaloCells, TileCells, Layers);
 
+        // After the mask, because the view is sized against the layer field the decomposition runs on
+        // and a masked cell carries no surface for a record to cover.
+        auto CellPolicy = TArray<int32>{};
+        Get_MarkupCellPolicy(Spans, Layers, InParams._MarkupRecords, CellPolicy);
+
         auto Plates = FCk_GroundNav_PlateField{};
-        const auto PlateResult = DoDecompose_Plates(Spans, Layers, InParams._MergeTunables, Plates);
+        const auto PlateResult = DoDecompose_Plates(
+            Spans, Layers, Connections, InParams._MergeTunables, Plates, CellPolicy);
 
         if (NOT PlateResult.Get_IsCompleted())
         {

@@ -10,6 +10,7 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkGroundNav/Debug/CkGroundNav_DebugSnapshotTraits.h"
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
 #include "CkGroundNav/Search/CkGroundNav_PathSearch.h"
 #include "CkGroundNav/Search/CkGroundNav_SearchTypes.h"
 
@@ -240,6 +241,10 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
+    /** Query-local strict geometry. This stays native-only: it is immutable value data for one
+     *  sliced search and must never expose Crowd handles, registry state, or UObject references. */
+    ck::groundnav::FCk_GroundNav_DynamicObstacleSnapshot _DynamicObstacles;
+
 public:
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_Goal);
@@ -252,6 +257,16 @@ public:
     CK_PROPERTY(_ProfileTag);
     CK_PROPERTY(_QueryFilter);
     CK_PROPERTY(_QueryFilterOverlay);
+
+    auto Get_DynamicObstacles() const -> const ck::groundnav::FCk_GroundNav_DynamicObstacleSnapshot&
+    { return _DynamicObstacles; }
+
+    auto Set_DynamicObstacles(ck::groundnav::FCk_GroundNav_DynamicObstacleSnapshot InDynamicObstacles)
+        -> FCk_Request_GroundNavPath_FindPath&
+    {
+        _DynamicObstacles = MoveTemp(InDynamicObstacles);
+        return *this;
+    }
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GroundNavPath_FindPath, _From, _Goal);

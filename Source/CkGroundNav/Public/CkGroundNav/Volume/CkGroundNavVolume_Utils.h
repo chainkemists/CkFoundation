@@ -570,3 +570,31 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::groundnav
+{
+    /**
+     * The FIELD params one volume's authored params describe, with the records a bake would take.
+     *
+     * The lattice is DERIVED here - an origin and a division count authored beside the bounds could
+     * disagree about which ground the volume covers - and that derivation is the whole reason this is
+     * a shared function rather than each driver's own arithmetic: the lattice is what a cooked field
+     * is keyed on (Get_CookedLatticeKey), so a cook whose divisions were rounded one cell differently
+     * from the runtime's would answer StaleCook forever and nothing would say why.
+     *
+     * The records travel as views because both callers already hold the arrays: the runtime build
+     * takes what the volume currently holds, and the COOK takes none - a cooked field is baked before
+     * any request could have painted or linked anything, which is why a cook is judged against the
+     * same empty pair.
+     *
+     * Reached by the volume processor's build and by CkGroundNavEditor's field cooker.
+     */
+    CKGROUNDNAV_API auto
+    Get_VolumeFieldParams(
+        const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+        TConstArrayView<FCk_GroundNav_MarkupRecord>    InMarkupRecords,
+        TConstArrayView<FCk_GroundNav_LinkRecord>      InLinkRecords)
+        -> FCk_GroundNav_FieldParams;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

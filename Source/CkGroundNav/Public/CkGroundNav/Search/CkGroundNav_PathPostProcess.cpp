@@ -191,6 +191,201 @@ namespace ck::groundnav
 
         // ------------------------------------------------------------------------------------------------------------
 
+        struct FStrictCellLinkStamp
+        {
+            int32 _WaypointIndex = INDEX_NONE;
+            int32 _LinkStableId = INDEX_NONE;
+            ECk_GroundNav_LinkWaypointRole _Role = ECk_GroundNav_LinkWaypointRole::None;
+            ECk_GroundNav_LinkDirection _Direction = ECk_GroundNav_LinkDirection::Bidirectional;
+        };
+
+        struct FStrictCellLegCost
+        {
+            int32 _WaypointIndex = INDEX_NONE;
+            float _Cost = 0.0f;
+        };
+
+        /**
+         * Turns the strict cell collector's exact predecessor rows into the line it proved.  Unlike a
+         * portal corridor this line is already the graph's collision-safe answer, so it deliberately
+         * does not go through the funnel, corner offset, or shortcut passes.
+         */
+        auto Get_StrictCellLocations(
+            const FCk_GroundNav_PathResult& InResult,
+            TArray<FStrictCellLinkStamp>&   OutLinkStamps,
+            TArray<FStrictCellLegCost>&     OutLegCosts) -> TOptional<TArray<FVector>>
+        {
+            auto Locations = TArray<FVector>{};
+            Locations.Emplace(InResult._StartPoint);
+
+            auto PreviousEdgeWasLink = false;
+            for (const auto& Edge : InResult._CellRoute)
+            {
+                // Predecessor rows are contiguous. Treat a broken handoff as no route rather than
+                // drawing an invented bridge between two points the strict graph never connected.
+                if (Locations.Last() != Edge._FromPoint)
+                { return {}; }
+
+                // One physical endpoint can be the exit of one link and the entry of the next. Keep
+                // two zero-length rows in that case: one waypoint can carry only one role, and losing
+                // either role would publish an incomplete traversal to the follower.
+                if (PreviousEdgeWasLink && Edge._Kind == ECk_GroundNav_CellRouteEdgeKind::Link)
+                {
+                    Locations.Emplace(Locations.Last());
+                    OutLegCosts.Emplace(FStrictCellLegCost{Locations.Num() - 1, 0.0f});
+                }
+
+                const auto FromIndex = Locations.Num() - 1;
+                if (NOT FMath::IsFinite(Edge._Cost) || Edge._Cost < 0.0f)
+                { return {}; }
+
+                // Retain every collector row, including a zero-length one: it has its own priced
+                // predecessor leg and might be an authored link endpoint with distinct metadata.
+                Locations.Emplace(Edge._ToPoint);
+                const auto ToIndex = Locations.Num() - 1;
+                OutLegCosts.Emplace(FStrictCellLegCost{ToIndex, Edge._Cost});
+
+                if (Edge._Kind != ECk_GroundNav_CellRouteEdgeKind::Link)
+                {
+                    PreviousEdgeWasLink = false;
+                    continue;
+                }
+
+                OutLinkStamps.Emplace(FStrictCellLinkStamp{
+                    FromIndex, Edge._LinkStableId, ECk_GroundNav_LinkWaypointRole::Entry, Edge._LinkDirection});
+                OutLinkStamps.Emplace(FStrictCellLinkStamp{
+                    ToIndex, Edge._LinkStableId, ECk_GroundNav_LinkWaypointRole::Exit, Edge._LinkDirection});
+                PreviousEdgeWasLink = true;
+            }
+
+            if (Locations.Last() != InResult._GoalPoint)
+            { return {}; }
+
+            return Locations;
+        }
+
+        auto DoApply_StrictCellLegCosts(
+            TConstArrayView<FStrictCellLegCost>     InLegCosts,
+            TArray<FCk_GroundNav_PathWaypoint>&     InOutWaypoints) -> bool
+        {
+            auto TotalCost = 0.0;
+            for (const auto& Leg : InLegCosts)
+            {
+                if (NOT InOutWaypoints.IsValidIndex(Leg._WaypointIndex))
+                { return false; }
+
+                TotalCost += static_cast<double>(Leg._Cost);
+                if (NOT FMath::IsFinite(TotalCost))
+                { return false; }
+
+                InOutWaypoints[Leg._WaypointIndex]._CostFromStart = TotalCost;
+            }
+
+            return true;
+        }
+
+        /**
+         * A route starting inside a dynamic union may leave it once.  Once it has left, neither an
+         * ordinary predecessor edge nor any later endpoint is allowed to enter again.  The snapshot
+         * came from the search result, so this validates the same immutable geometry rather than
+         * sampling a changed world while formatting the answer.
+         */
+        auto Get_IsStrictCellRouteMonotonicOutsideDynamicUnion(
+            TConstArrayView<FCk_GroundNav_CellRouteEdge>      InEdges,
+            const FCk_GroundNav_DynamicObstacleSnapshot&     InDynamicObstacles) -> bool
+        {
+            // The only legal covered prefix is the one that begins at source. Once a clear segment
+            // has appeared, a later ExitsOnce would necessarily have re-entered the union first.
+            auto MayStillBeInsideInitialUnion = true;
+
+            for (const auto& Edge : InEdges)
+            {
+                switch (Edge._Kind)
+                {
+                    case ECk_GroundNav_CellRouteEdgeKind::Link:
+                    {
+                        // An authored traversal may cross a covered interior, but it cannot serve as
+                        // the initial escape from the source union. Both exact ends must already stand
+                        // clear in the immutable search snapshot.
+                        if (MayStillBeInsideInitialUnion || Edge._LinkStableId == INDEX_NONE ||
+                            (Edge._LinkDirection != ECk_GroundNav_LinkDirection::Forward &&
+                             Edge._LinkDirection != ECk_GroundNav_LinkDirection::Backward))
+                        { return false; }
+
+                        const auto FromEndpoint = Get_DynamicUnionEdge(
+                            InDynamicObstacles, Edge._FromPoint, Edge._FromPoint);
+                        const auto ToEndpoint = Get_DynamicUnionEdge(
+                            InDynamicObstacles, Edge._ToPoint, Edge._ToPoint);
+
+                        if (NOT FromEndpoint.IsSet() || NOT ToEndpoint.IsSet() ||
+                            FromEndpoint.GetValue() != ECk_GroundNav_DynamicUnionEdge::Clear ||
+                            ToEndpoint.GetValue() != ECk_GroundNav_DynamicUnionEdge::Clear)
+                        { return false; }
+
+                        continue;
+                    }
+                    case ECk_GroundNav_CellRouteEdgeKind::Ordinary:
+                    case ECk_GroundNav_CellRouteEdgeKind::Terminal:
+                    { break; }
+                    default:
+                    { return false; }
+                }
+
+                const auto UnionEdge = Get_DynamicUnionEdge(
+                    InDynamicObstacles, Edge._FromPoint, Edge._ToPoint);
+
+                if (NOT UnionEdge.IsSet())
+                { return false; }
+
+                switch (UnionEdge.GetValue())
+                {
+                    case ECk_GroundNav_DynamicUnionEdge::Clear:
+                    {
+                        MayStillBeInsideInitialUnion = false;
+                        break;
+                    }
+                    case ECk_GroundNav_DynamicUnionEdge::InsideAll:
+                    {
+                        if (NOT MayStillBeInsideInitialUnion)
+                        { return false; }
+                        break;
+                    }
+                    case ECk_GroundNav_DynamicUnionEdge::ExitsOnce:
+                    {
+                        if (NOT MayStillBeInsideInitialUnion)
+                        { return false; }
+                        MayStillBeInsideInitialUnion = false;
+                        break;
+                    }
+                    case ECk_GroundNav_DynamicUnionEdge::NonMonotonic:
+                    default:
+                    { return false; }
+                }
+            }
+
+            return true;
+        }
+
+        auto DoStamp_StrictCellLinkWaypoints(
+            TConstArrayView<FStrictCellLinkStamp>        InStamps,
+            TArray<FCk_GroundNav_PathWaypoint>&          InOutWaypoints) -> bool
+        {
+            for (const auto& Stamp : InStamps)
+            {
+                if (NOT InOutWaypoints.IsValidIndex(Stamp._WaypointIndex))
+                { return false; }
+
+                auto& Waypoint = InOutWaypoints[Stamp._WaypointIndex];
+                Waypoint._LinkId = Stamp._LinkStableId;
+                Waypoint._LinkRole = Stamp._Role;
+                Waypoint._LinkEntryDirection = Stamp._Direction;
+            }
+
+            return true;
+        }
+
+        // ------------------------------------------------------------------------------------------------------------
+
         auto Make_IsNavigableQuery(
             const FVector&                  InLocation,
             const FCk_GroundNav_QueryAgent& InAgent,
@@ -892,6 +1087,44 @@ namespace ck::groundnav
         { return Plan; }
 
         Plan._PlateCorridor = InResult._PlateCorridor;
+
+        if (InResult._RouteKind == ECk_GroundNav_PathRouteKind::StrictCell)
+        {
+            auto LinkStamps = TArray<FStrictCellLinkStamp>{};
+            auto LegCosts = TArray<FStrictCellLegCost>{};
+            const auto Locations = Get_StrictCellLocations(InResult, LinkStamps, LegCosts);
+
+            // Keep the resolved source and goal rows even when the body already occupies the source.
+            // They are the exact endpoints the strict graph priced, and dropping the first would make
+            // both the published distance and the one-time dynamic-union escape answer about a shorter
+            // route than the search actually proved.
+            if (NOT Locations.IsSet() || Locations->Num() < 2 ||
+                NOT Get_IsStrictCellRouteMonotonicOutsideDynamicUnion(InResult._CellRoute, InResult._DynamicObstacles))
+            {
+                Plan._Status = ECk_GroundNav_PathStatus::Blocked;
+                Plan._PlateCorridor.Reset();
+                return Plan;
+            }
+
+            Plan._Waypoints = Get_FilledWaypoints(
+                *Locations, InField, InParams._Cost, InParams._Agent, InParams._VerticalToleranceUu);
+            if (NOT DoApply_StrictCellLegCosts(LegCosts, Plan._Waypoints))
+            {
+                Plan._Status = ECk_GroundNav_PathStatus::Blocked;
+                Plan._Waypoints.Reset();
+                Plan._PlateCorridor.Reset();
+                return Plan;
+            }
+            if (NOT DoStamp_StrictCellLinkWaypoints(LinkStamps, Plan._Waypoints))
+            {
+                Plan._Status = ECk_GroundNav_PathStatus::Blocked;
+                Plan._Waypoints.Reset();
+                Plan._PlateCorridor.Reset();
+                return Plan;
+            }
+            Plan._LengthUu = Plan._Waypoints.Last()._DistanceFromStart;
+            return Plan;
+        }
 
         const auto RadiusUu = InParams._Agent._RadiusUu;
 
