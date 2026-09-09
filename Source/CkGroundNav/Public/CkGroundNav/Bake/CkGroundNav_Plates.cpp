@@ -136,15 +136,34 @@ namespace ck::groundnav
         return false;
     }
 
+    auto
+        Get_SpanIndexForLayer(
+            const FCk_GroundNav_LayerField& InLayers,
+            int32                           InX,
+            int32                           InY,
+            int32                           InLayer) -> int32
+    {
+        const auto& LayerColumn = InLayers.Get_Column(InX, InY);
+
+        for (auto SpanIndex = 0; SpanIndex < LayerColumn.Num(); ++SpanIndex)
+        {
+            if (LayerColumn[SpanIndex] == InLayer)
+            { return SpanIndex; }
+        }
+
+        return INDEX_NONE;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
         DoDecompose_Plates(
-            const FCk_GroundNav_SpanField&     InSpans,
-            const FCk_GroundNav_LayerField&    InLayers,
-            const FCk_GroundNav_MergeTunables& InTunables,
-            FCk_GroundNav_PlateField&          OutPlates,
-            TConstArrayView<int32>             InCellPolicy)
+            const FCk_GroundNav_SpanField&       InSpans,
+            const FCk_GroundNav_LayerField&      InLayers,
+            const FCk_GroundNav_ConnectionField& InConnections,
+            const FCk_GroundNav_MergeTunables&   InTunables,
+            FCk_GroundNav_PlateField&            OutPlates,
+            TConstArrayView<int32>               InCellPolicy)
         -> FCk_GroundNav_BakeStageResult
     {
         using namespace plates_private;
@@ -156,11 +175,67 @@ namespace ck::groundnav
             InTunables.Get_NormalConeDegrees() >= 0.0f &&
             InTunables.Get_NormalConeDegrees() <= 90.0f;
 
+        const auto DimensionsArePositive = InLayers._SizeX > 0 && InLayers._SizeY > 0;
+        const auto ExpectedColumnCount64 = static_cast<int64>(InLayers._SizeX) * InLayers._SizeY;
+        const auto ColumnCountIsRepresentable = ExpectedColumnCount64 > 0 &&
+            ExpectedColumnCount64 <= TNumericLimits<int32>::Max();
+        const auto ColumnCount = ColumnCountIsRepresentable
+            ? static_cast<int32>(ExpectedColumnCount64)
+            : 0;
+        const auto ExpectedPlateCellCount64 = ColumnCountIsRepresentable && InLayers._LayerCount >= 0
+            ? ExpectedColumnCount64 * InLayers._LayerCount
+            : -1;
+        const auto PlateCellCountIsRepresentable =
+            ExpectedPlateCellCount64 >= 0 && ExpectedPlateCellCount64 <= TNumericLimits<int32>::Max();
+        const auto DimensionsMatch =
+            InSpans._SizeX == InLayers._SizeX && InSpans._SizeY == InLayers._SizeY &&
+            InConnections._SizeX == InLayers._SizeX && InConnections._SizeY == InLayers._SizeY;
         const auto CellPolicyIsWellFormed = InCellPolicy.IsEmpty() ||
-            InCellPolicy.Num() == (InLayers._SizeX * InLayers._SizeY * InLayers._LayerCount);
+            (PlateCellCountIsRepresentable &&
+                static_cast<int64>(InCellPolicy.Num()) == ExpectedPlateCellCount64);
+        auto ColumnsAreWellFormed = DimensionsArePositive && ColumnCountIsRepresentable && DimensionsMatch &&
+            InSpans._Columns.Num() == ColumnCount && InLayers._Columns.Num() == ColumnCount &&
+            InConnections._Columns.Num() == ColumnCount;
 
-        if (NOT TunablesAreValid || NOT CellPolicyIsWellFormed ||
-            InLayers._SizeX <= 0 || InLayers._SizeY <= 0)
+        if (ColumnsAreWellFormed)
+        {
+            for (auto ColumnIndex = 0; ColumnIndex < ColumnCount && ColumnsAreWellFormed; ++ColumnIndex)
+            {
+                const auto SpanCount = InSpans._Columns[ColumnIndex].Num();
+                ColumnsAreWellFormed = InLayers._Columns[ColumnIndex].Num() == SpanCount &&
+                    InConnections._Columns[ColumnIndex].Num() == SpanCount;
+
+                for (auto SpanIndex = 0; SpanIndex < SpanCount && ColumnsAreWellFormed; ++SpanIndex)
+                {
+                    const auto X = ColumnIndex % InLayers._SizeX;
+                    const auto Y = ColumnIndex / InLayers._SizeX;
+                    const auto& Connections = InConnections._Columns[ColumnIndex][SpanIndex];
+
+                    for (auto Direction = 0; Direction < kDirectionCount; ++Direction)
+                    {
+                        const auto NeighbourSpan = Connections._Neighbours[Direction];
+
+                        if (NeighbourSpan == FCk_GroundNav_SpanConnections::kNoConnection)
+                        { continue; }
+
+                        const auto Offset = Get_DirectionOffset(Direction);
+                        const auto NeighbourX = X + Offset.X;
+                        const auto NeighbourY = Y + Offset.Y;
+
+                        if (NeighbourSpan < 0 || NeighbourX < 0 || NeighbourY < 0 ||
+                            NeighbourX >= InLayers._SizeX || NeighbourY >= InLayers._SizeY ||
+                            NeighbourSpan >= InSpans.Get_Column(NeighbourX, NeighbourY).Num())
+                        {
+                            ColumnsAreWellFormed = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (NOT TunablesAreValid || NOT PlateCellCountIsRepresentable || NOT CellPolicyIsWellFormed ||
+            NOT ColumnsAreWellFormed)
         {
             Result.Set_Status(ECk_GroundNav_BakeStatus::InvalidInput);
             return Result;
@@ -168,14 +243,15 @@ namespace ck::groundnav
 
         const auto SizeX = InLayers._SizeX;
         const auto SizeY = InLayers._SizeY;
-        const auto CellCount = SizeX * SizeY;
+        const auto CellCount = ColumnCount;
         const auto CellSize = static_cast<double>(InSpans._CellSizeUu);
 
         OutPlates = FCk_GroundNav_PlateField{};
         OutPlates._SizeX = SizeX;
         OutPlates._SizeY = SizeY;
         OutPlates._LayerCount = InLayers._LayerCount;
-        OutPlates._CellToPlate.Init(FCk_GroundNav_Plate::kNoPlate, CellCount * InLayers._LayerCount);
+        OutPlates._CellToPlate.Init(
+            FCk_GroundNav_Plate::kNoPlate, static_cast<int32>(ExpectedPlateCellCount64));
 
         const auto Tolerance = static_cast<double>(InTunables.Get_PlaneFitToleranceUu());
 
@@ -197,7 +273,25 @@ namespace ck::groundnav
                     : InCellPolicy[PlaneOffset + (InY * SizeX) + InX];
             };
 
-            const auto Get_IsMergeable = [&](int32 InX, int32 InY, const FSeedPlane& InSeed, int32 InSeedPolicy) -> bool
+            const auto Get_IsReciprocallyConnected = [&](int32 InX, int32 InY, int32 InNeighbourX,
+                int32 InNeighbourY, int32 InDirection) -> bool
+            {
+                const auto SpanIndex = Get_SpanIndexForLayer(InLayers, InX, InY, LayerIndex);
+                const auto NeighbourSpanIndex = Get_SpanIndexForLayer(
+                    InLayers, InNeighbourX, InNeighbourY, LayerIndex);
+
+                if (SpanIndex == INDEX_NONE || NeighbourSpanIndex == INDEX_NONE)
+                { return false; }
+
+                const auto& Connections = InConnections.Get_Column(InX, InY);
+                const auto& NeighbourConnections = InConnections.Get_Column(InNeighbourX, InNeighbourY);
+
+                return Connections[SpanIndex]._Neighbours[InDirection] == NeighbourSpanIndex &&
+                    NeighbourConnections[NeighbourSpanIndex]._Neighbours[Get_OppositeDirection(InDirection)] == SpanIndex;
+            };
+
+            const auto Get_IsMergeable = [&](int32 InX, int32 InY, int32 InNeighbourX, int32 InNeighbourY,
+                int32 InDirection, const FSeedPlane& InSeed, int32 InSeedPolicy) -> bool
             {
                 ++ProbesSpent;
 
@@ -205,6 +299,9 @@ namespace ck::groundnav
                 { return false; }
 
                 if (Get_CellPolicy(InX, InY) != InSeedPolicy)
+                { return false; }
+
+                if (NOT Get_IsReciprocallyConnected(InX, InY, InNeighbourX, InNeighbourY, InDirection))
                 { return false; }
 
                 auto TopZ = 0.0f;
@@ -248,7 +345,7 @@ namespace ck::groundnav
 
                     auto MaxX = X;
 
-                    while (MaxX + 1 < SizeX && Get_IsMergeable(MaxX + 1, Y, Seed, SeedPolicy))
+                    while (MaxX + 1 < SizeX && Get_IsMergeable(MaxX + 1, Y, MaxX, Y, 2, Seed, SeedPolicy))
                     { ++MaxX; }
 
                     auto MaxY = Y;
@@ -258,7 +355,16 @@ namespace ck::groundnav
                         auto WholeRowJoins = true;
 
                         for (auto CandidateX = X; CandidateX <= MaxX && WholeRowJoins; ++CandidateX)
-                        { WholeRowJoins = Get_IsMergeable(CandidateX, CandidateY, Seed, SeedPolicy); }
+                        {
+                            WholeRowJoins = Get_IsMergeable(
+                                CandidateX, CandidateY, CandidateX, CandidateY - 1, 3, Seed, SeedPolicy);
+
+                            if (WholeRowJoins && CandidateX > X)
+                            {
+                                WholeRowJoins = Get_IsReciprocallyConnected(
+                                    CandidateX, CandidateY, CandidateX - 1, CandidateY, 2);
+                            }
+                        }
 
                         if (NOT WholeRowJoins)
                         { break; }
@@ -340,7 +446,7 @@ namespace ck::groundnav
 
         // A probe here is one cell surface read: a seed candidacy test, a mergeability test while the
         // rectangle grows (the row that fails to join included), a member assignment, or a member's
-        // re-measure against the re-centred plane.
+        // re-measure against the re-centred plane. Connection admission reads are not probes.
         Result.Set_ProbesSpent(ProbesSpent);
 
         return Result;

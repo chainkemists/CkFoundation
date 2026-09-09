@@ -79,6 +79,14 @@ namespace ck::groundnav
         if (Seed._Status != ECk_GroundNav_PathStatus::InProgress)
         { return Seed._Status; }
 
+        if (NOT InQuery._DynamicObstacles.Get_IsEmpty())
+        {
+            _CellSearch = MakeUnique<FCk_GroundNav_CellPathSearch>();
+            const auto Status = _CellSearch->Request_Begin(InField, InQuery, _Result);
+            _Result = _CellSearch->Get_Result();
+            return Status;
+        }
+
         DoSeed_Cold(Seed._StartFlatPlate);
 
         return DoSet_Status(ECk_GroundNav_PathStatus::InProgress);
@@ -92,7 +100,8 @@ namespace ck::groundnav
             const FCk_GroundNav_FieldPtr&              InField,
             const FCk_GroundNav_PathQuery&             InQuery,
             TConstArrayView<FCk_GroundNav_CrossingKey> InExistingCorridor,
-            FCk_GroundNav_Epoch                        InPlannedAgainstEpoch)
+            FCk_GroundNav_Epoch                        InPlannedAgainstEpoch,
+            bool                                        InForceFullReplan)
         -> ECk_GroundNav_PathStatus
     {
         using namespace ck_groundnav_pathsearch;
@@ -101,6 +110,22 @@ namespace ck::groundnav
 
         if (Seed._Status != ECk_GroundNav_PathStatus::InProgress)
         { return Seed._Status; }
+
+        if (NOT InQuery._DynamicObstacles.Get_IsEmpty())
+        {
+            _CellSearch = MakeUnique<FCk_GroundNav_CellPathSearch>();
+            const auto Status = _CellSearch->Request_Begin(InField, InQuery, _Result);
+            _Result = _CellSearch->Get_Result();
+            _RepairVerdict = ECk_GroundNav_RepairVerdict::FullReplan;
+            return Status;
+        }
+
+        if (InForceFullReplan)
+        {
+            DoSeed_Cold(Seed._StartFlatPlate);
+            _RepairVerdict = ECk_GroundNav_RepairVerdict::FullReplan;
+            return DoSet_Status(ECk_GroundNav_PathStatus::InProgress);
+        }
 
         _Graph = FCk_GroundNav_PlatePortalGraph{_Shared, Seed._StartFlatPlate};
 
@@ -212,6 +237,7 @@ namespace ck::groundnav
 
         _Query = InQuery;
         _Shared = nullptr;
+        _CellSearch.Reset();
         _Graph = FCk_GroundNav_PlatePortalGraph{};
         _Search = astar::TSearchState<FCk_GroundNav_PathNodeId, FCk_GroundNav_PlatePortalGraph>{};
         _Result = FCk_GroundNav_PathResult{};
@@ -229,6 +255,7 @@ namespace ck::groundnav
         const auto& Field = *InField;
 
         _Result._PlannedAgainstEpoch = Field._Epoch;
+        _Result._DynamicObstacles = InQuery._DynamicObstacles;
 
         if (NOT Get_IsRadiusAnswerable(Field, InQuery._Agent))
         { return Stop(ECk_GroundNav_PathStatus::Blocked); }
@@ -316,7 +343,7 @@ namespace ck::groundnav
         // A plate is a convex rectangle, so the two ends see each other across it and there is no
         // door to find. The corridor is the plate they share and nothing else — and the one leg
         // across it is still priced, because a free route is a lie every reader of the cost inherits.
-        if (StartFlatPlate == GoalFlatPlate)
+        if (InQuery._DynamicObstacles.Get_IsEmpty() && StartFlatPlate == GoalFlatPlate)
         {
             _Result._PlateCorridor.Add(StartFlatPlate);
             _Result._ExpansionCount = 0;
@@ -356,6 +383,11 @@ namespace ck::groundnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    auto FCk_GroundNav_PathSearch::Get_CellSearchTiming() const -> FCk_GroundNav_CellSearchTiming
+    {
+        return _CellSearch.IsValid() ? _CellSearch->Get_Timing() : FCk_GroundNav_CellSearchTiming{};
+    }
+
     auto
         FCk_GroundNav_PathSearch::
         ContinueSearch(
@@ -366,6 +398,13 @@ namespace ck::groundnav
 
         if (Get_IsTerminal())
         { return _Result._Status; }
+
+        if (_CellSearch.IsValid())
+        {
+            const auto Status = _CellSearch->ContinueSearch(InSlice);
+            _Result = _CellSearch->Get_Result();
+            return Status;
+        }
 
         auto Params = astar::FSearchParams{};
         Params.BudgetMicroseconds = Get_Microseconds(InSlice._Budget);

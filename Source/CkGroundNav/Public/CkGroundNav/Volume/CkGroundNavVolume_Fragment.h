@@ -9,7 +9,9 @@
 #include "CkGroundNav/Bake/CkGroundNav_Fingerprint.h"
 #include "CkGroundNav/Bake/CkGroundNav_LinkTypes.h"
 #include "CkGroundNav/Bake/CkGroundNav_MarkupTypes.h"
+#include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldBuild.h"
+#include "CkGroundNav/Field/CkGroundNav_BuildInvoker.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldRepair.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_Fragment_Data.h"
 
@@ -125,6 +127,15 @@ namespace ck
         groundnav::FCk_GroundNav_ContentFingerprint _BakedInputFingerprint;
         uint64 _BakedGeometryRevision = 0;
 
+        // The geometry selector the published fields were actually baked with. This may differ from
+        // the authored default after an explicit build-request override, and automatic repair/build
+        // work must keep using it until a later explicit request selects another value.
+        groundnav::FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+
+        // Positive-volume publication registers one owner once. This local bit prevents a second
+        // volume that reuses the id from mistaking that owner's snapshot for its own refresh target.
+        bool _StreamOwnerRegistered = false;
+
         // SETUP answers it - the cook is resolved there and nowhere else. A runtime build that
         // publishes over a cooked field DEMOTES it to StaleCook: the ground standing here stopped
         // being the cook's the moment that field was replaced, and only a fresh Setup reads one again.
@@ -138,7 +149,11 @@ namespace ck
         CK_PROPERTY_GET(_Epoch);
         CK_PROPERTY_GET(_BakedInputFingerprint);
         CK_PROPERTY_GET(_BakedGeometryRevision);
+        CK_PROPERTY_GET(_DataLayerSelector);
         CK_PROPERTY_GET(_CookStatus);
+
+        auto Get_IsStreamOwnerRegistered() const -> bool { return _StreamOwnerRegistered; }
+        auto Set_StreamOwnerRegistered(bool InValue) -> void { _StreamOwnerRegistered = InValue; }
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -169,6 +184,12 @@ namespace ck
         groundnav::FCk_GroundNav_FieldBuildState _Build;
         TUniquePtr<groundnav::FCk_GroundNav_GeometryBackend_Jolt> _Backend;
         FCk_Request_GroundNavVolume_Build _PendingRequest;
+        bool _HasPendingBuildRequest = false;
+
+        // Snapshotted at StartBuild and retained through every slice. The request object is completion
+        // state, while this value is part of the bake identity and must not be inferred from mutable
+        // authored params after the build has begun.
+        groundnav::FCk_GroundNav_DataLayerSelector _ActiveDataLayerSelector;
 
         // The profile tags this build began for, in the order their params went in. Completion keys the
         // fields it releases by this list and not by the params it can still read: _ProfileVariants is
@@ -190,6 +211,42 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Build);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * World-aggregation-owned state for an invoker-driven streaming owner. It keeps source handles
+     * and retained tile coordinates out of serialized field data, and generation numbers make a
+     * completion from an older invoker snapshot ineligible to publish.
+     */
+    struct CKGROUNDNAV_API FFragment_GroundNavVolume_InvokerState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_GroundNavVolume_InvokerState);
+
+        friend class FProcessor_GroundNavVolume_InvokerAggregation;
+        friend class FProcessor_GroundNavVolume_StartBuild;
+        friend class FProcessor_GroundNavVolume_Build;
+
+    private:
+        groundnav::world_fields::FCk_GroundNav_StreamSourceHandle _Source;
+        // The registry-visible subset. _Field deliberately retains disabled tile blobs, so it must
+        // never be used as the hysteresis input: doing so would make outer retention resurrect a
+        // purged tile without it returning to a generation set.
+        TArray<int32> _EnabledTileIndices;
+        TArray<int32> _DesiredTileIndices;
+        TArray<int32> _ActiveBuildTileIndices;
+        uint64 _TargetGeneration = 0;
+        uint64 _ActiveBuildGeneration = 0;
+
+    public:
+        auto Get_Source() const -> groundnav::world_fields::FCk_GroundNav_StreamSourceHandle { return _Source; }
+        auto Set_Source(groundnav::world_fields::FCk_GroundNav_StreamSourceHandle InSource) -> void
+        { _Source = InSource; }
+        const TArray<int32>& Get_EnabledTileIndices() const { return _EnabledTileIndices; }
+        const TArray<int32>& Get_DesiredTileIndices() const { return _DesiredTileIndices; }
+        auto Get_TargetGeneration() const -> uint64 { return _TargetGeneration; }
     };
 
     // ----------------------------------------------------------------------------------------------------------------

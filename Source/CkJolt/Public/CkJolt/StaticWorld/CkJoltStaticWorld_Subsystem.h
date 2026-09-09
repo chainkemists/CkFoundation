@@ -283,7 +283,8 @@ private:
     auto
     DoCreate_ActorEntity(
         const FCk_Handle& InTransientEntity,
-        const AActor& InSourceActor) -> FCk_Handle_JoltStaticActor;
+        const AActor& InSourceActor,
+        const TArray<FName>* InCookedDataLayerNames = nullptr) -> FCk_Handle_JoltStaticActor;
 
     auto
     DoCreate_ComponentEntity(

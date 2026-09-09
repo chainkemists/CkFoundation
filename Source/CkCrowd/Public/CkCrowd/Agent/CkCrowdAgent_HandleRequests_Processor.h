@@ -5,6 +5,8 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkGroundNav/Query/CkGroundNav_Query_DynamicObstacles.h"
+
 #include "CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
@@ -21,10 +23,9 @@ namespace ck_crowd_agent_handle_requests
     /**
      * What ONE planning phase decides about the filter a route is planned under.
      *
-     * Provider-neutral on purpose: the phase is the crowd's own idea and the two providers merely
-     * carry it differently — Recast takes the base tag and the override as separate fields it
-     * resolves, GroundNav takes one tag through the neutral filter registry. Deciding it twice, once
-     * per branch, is how the two would drift about what "strict" means for the same agent.
+     * The phase is the crowd's own idea, but strict standing-crowd treatment differs at the provider
+     * boundary: Recast excludes its per-polygon area while GroundNav prices the area and verifies the
+     * returned geometry at install. Keep that decision here so every GroundNav dispatch agrees.
      */
     struct FCk_CrowdAgent_PlanPhaseFilter
     {
@@ -61,8 +62,8 @@ namespace ck_crowd_agent_handle_requests
      * Declared here rather than kept .cpp-local because every FRESH path dispatch — the two
      * providers' plans and the A/B shadow that has to mirror whichever one ran — derives its filter
      * from this one decision, and a site that hardcodes the agent's base filter instead plans
-     * straight THROUGH painted standing-crowd markup: the base filter merely PRICES an agent disc,
-     * only the strict standing-crowd filter DENIES it. The PathNetwork route requests deliberately
+     * straight THROUGH painted standing-crowd markup: the base filter prices an agent disc, while
+     * GroundNav applies the strict geometric verdict at install and Recast excludes it. The PathNetwork route requests deliberately
      * do NOT come through here — that provider announces a strict route MISS as a route FAILURE at
      * resolution, so it has no strict-then-permissive retry and must plan under the base filter,
      * leaving confirmed discs to the markup bypass helpers.
@@ -71,6 +72,7 @@ namespace ck_crowd_agent_handle_requests
         FCk_Handle_CrowdAgent                      InHandle,
         const ck::FFragment_CrowdAgent_Params&     InParams,
         const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
+        ECk_CrowdAgent_PathProvider                InProvider,
         bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter;
 }
 
@@ -171,6 +173,18 @@ namespace ck
         Get_ShouldPlanStrict(
             HandleType InHandle,
             const FFragment_CrowdAgent_PathFollow& InPathFollow) -> bool;
+
+        // Captures the complete confirmed strict geometry as one immutable GroundNav query value.
+        // Unset is terminal: callers must not discard malformed records and continue permissively.
+        static auto
+        Try_GetStrictDynamicObstacles(
+            FCk_Handle InSelf,
+            const FVector& InGoal,
+            float InAgentRadius,
+            float InArrivalRadius = 0.0f) -> TOptional<ck::groundnav::FCk_GroundNav_DynamicObstacleSnapshot>;
+
+        static auto
+        FailStrictGroundNavDispatch(HandleType InHandle, int32 InRevision) -> void;
 
         static auto
         ApplyMarkupEscapeStart(
