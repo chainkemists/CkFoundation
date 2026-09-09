@@ -24,6 +24,8 @@ enum class ECk_CpuWorkCounter : uint8
     CosmeticsPruned,
     CosmeticSocketMisses,
     CosmeticTransformRequests,
+    CosmeticTransformTargetUnchanged,
+    CosmeticTransformTargetChanged,
     ComponentEntries,
     ComponentSetupRejected,
     ComponentPushDisabled,

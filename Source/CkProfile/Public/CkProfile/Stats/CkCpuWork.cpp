@@ -30,6 +30,8 @@ namespace ck_cpu_work
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticsPruned, TEXT("CkCpuWork_CosmeticsPruned"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticSocketMisses, TEXT("CkCpuWork_CosmeticSocketMisses"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformRequests, TEXT("CkCpuWork_CosmeticTransformRequests"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformTargetUnchanged, TEXT("CkCpuWork_CosmeticTransformTargetUnchanged"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformTargetChanged, TEXT("CkCpuWork_CosmeticTransformTargetChanged"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentEntries, TEXT("CkCpuWork_ComponentEntries"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentSetupRejected, TEXT("CkCpuWork_ComponentSetupRejected"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentPushDisabled, TEXT("CkCpuWork_ComponentPushDisabled"));
@@ -139,6 +141,8 @@ auto ck::cpu_work::EndFrame() -> void
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticsPruned, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticsPruned)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticSocketMisses, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticSocketMisses)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformRequests, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformRequests)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformTargetUnchanged, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformTargetUnchanged)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformTargetChanged, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformTargetChanged)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentEntries, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentEntries)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentSetupRejected, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentSetupRejected)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentPushDisabled, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentPushDisabled)]);
