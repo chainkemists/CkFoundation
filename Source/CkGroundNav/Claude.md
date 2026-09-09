@@ -754,22 +754,18 @@ the bytes it sits next to, which nothing downstream could tell. The writing side
 `CkGroundNavEditor`, an UncookedOnly module; the asset types stay in the runtime module, because the
 game loads them and only the editor writes them.
 
-**A volume's cook identity is a NAME it authors.** `FCk_Fragment_GroundNavVolume_ParamsData::_CookKey`
-is that name, and **None means runtime-only**: no cooked field is ever written for such a volume and
-none is ever looked up for it, which is the honest answer for every gym, test and prototype volume
-rather than a key invented on their behalf. Nothing else about a volume is stable enough to key on —
-the params carry bounds, config and profile, the world-field registry keys on a runtime handle, and
-there is no volume actor. Two volumes in one world carrying the SAME key is an admission failure,
-refused where the params are judged and again where a build is asked for: a duplicate would have the
-two of them writing over each other's tiles and reading back whichever landed last. None is exempt,
-because it is not a key.
+**Cook identity is `{source level package, CookKey, ProfileTag}`.** `None` CookKey means runtime-only.
+Duplicate keys are refused within one source level; different source levels may reuse a key.
+`CookLevelPackage` records that source explicitly. None retains persistent-level lookup for existing
+runtime callers. The authored volume EntityScript obtains the level through EntitySpawner's optional
+`_SpawnLevelPackage` injection, alongside `_SpawnTransform`; it does not infer the source from the
+entity's transient ownership or the duplicated script's outer.
 
-**A key and a profile variant cannot both stand**, refused at those same two sites. An index names ONE
-field for a volume, so a volume reading its ground from a cook has no field under any variant's tag —
-and a query naming one is answered from nothing rather than from the default's ground, which would
-walk an agent up a step its own profile cannot climb. Refusing the two together is what tells an
-author which of them to give up; dropping the variants quietly at the load would not.
-
+The default and every authored profile variant have separate indices and tiles. Empty ProfileTag
+retains the default asset path. Variants use a separate `__CkGroundNavProfiles` directory, a counted source-level path, escaped tag segments, and distinct `GroundNavProfileIndex`/`GroundNavProfileTile` basenames. This prevents nested map paths from colliding with profile paths.
+Every index and tile records its profile tag, and every profile uses the full volume input fingerprint.
+Setup resolves all profiles into temporary fields before publishing anything. A missing or stale member
+rejects the entire cooked bundle and follows the volume's runtime fallback policy.
 `UCk_GroundNav_CookedFieldIndex_UE` (`Cook/CkGroundNav_CookedFieldIndex.h`) is one volume's cooked
 field: the level package the cook ran over, the volume's cook key, the INPUT fingerprint of the bake,
 the blob format version, the lattice, and the tiles as soft references in the lattice's own tile-index
@@ -803,8 +799,7 @@ after the volume is admitted, walks the states in the order they rule one anothe
 `Try_LoadCookedField` refuses → `StaleCook`, arm the build as before; the load holds → `Cooked`,
 publish that field exactly as the build's publish does and arm nothing. `_AutoBuildOnSetup` is moot
 on the last of those: it says whether the volume bakes itself unasked, and the ground is already
-published. The variant map goes out empty there, and by ADMISSION rather than by a decision at the
-publish: a volume carrying a cook key cannot carry a profile variant. A cooked field participates in
+published. Default and variant fields are restamped and published together. A cooked field participates in
 repair, in the cost derive and in the link derive like any other published field — it is a field, and
 nothing downstream of the publish knows where it came from.
 
@@ -815,11 +810,11 @@ new epoch and the `Request_NotifySurfaceRebuilt` bounds would be the empty box. 
 union of every tile the cook held — a fresh publish of everything, which is what a cooked publish is.
 
 The load itself is PURE and lives apart from the world for that reason.
-`Cook/CkGroundNav_CookedFieldLoad.h` splits it in two: `Find_CookedFieldIndex(world, cookKey)`
-resolves the persistent level's package through `Get_LevelPackageKey` — the one derivation of it,
-`Get_PackageLookupKey` over the persistent level — and the path convention, and loads the asset; null
-is `MissingCook`. `Try_LoadCookedField(index, levelPackage, cookKey, params, inputFingerprint,
-outField)` reaches no world at all. Nothing in it ensures, and `OutField` is untouched unless the whole
+`Cook/CkGroundNav_CookedFieldLoad.h` splits lookup from validation:
+`Find_CookedFieldIndex(world, cookKey, profileTag, sourceLevelPackage)` normalizes the explicit source
+level, or uses the persistent level when None, and loads the convention path. Null means `MissingCook`.
+`Try_LoadCookedField(index, levelPackage, cookKey, params, inputFingerprint, outField, profileTag)`
+reaches no world at all. Nothing in it ensures, and `OutField` is untouched unless the whole
 load held — a cook older than the code reading it is an ordinary state of a shipped game whose answer
 is to bake at runtime, and a caller falling back needs something to fall back TO. All of which is what
 makes every refusal assertable headless against assets built in a transient package.
