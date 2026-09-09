@@ -23,7 +23,11 @@ void FCkProfileModule::StartupModule()
     FCoreDelegates::OnBeginFrame.AddRaw(this, &FCkProfileModule::OnBeginFrame);
     FCoreDelegates::OnEndFrame.AddRaw(this, &FCkProfileModule::OnEndFrame);
 
-#if WITH_ANGELSCRIPT_CK && STATS
+    // NOT gated on STATS. The named-event cache in CkScopedStat.cpp keys on the same epoch and is
+    // compiled in every configuration, so registering only under STATS would leave it with nothing
+    // to invalidate it - and AngelScript recycles function ids, so a recompile could then hand a
+    // recycled id the previous function's name.
+#if WITH_ANGELSCRIPT_CK
     _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic(
         &ck::Invalidate_ActiveScriptScopeStatCache);
     // PreCompile runs before old modules become unavailable; a later callback could still enter
@@ -38,7 +42,7 @@ void FCkProfileModule::ShutdownModule()
     FCoreDelegates::OnBeginFrame.RemoveAll(this);
     FCoreDelegates::OnEndFrame.RemoveAll(this);
 
-#if WITH_ANGELSCRIPT_CK && STATS
+#if WITH_ANGELSCRIPT_CK
     if (_PreCompileDelegateHandle.IsValid() && FModuleManager::Get().IsModuleLoaded(TEXT("AngelscriptCode")))
     { FAngelscriptCodeModule::GetPreCompile().Remove(_PreCompileDelegateHandle); }
     if (_PostCompileDelegateHandle.IsValid() && FModuleManager::Get().IsModuleLoaded(TEXT("AngelscriptCode")))

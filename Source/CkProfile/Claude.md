@@ -56,9 +56,19 @@ auto _Sub = ck::ScopedStat("AI::EvaluateGoals::Phase2"); // explicit name (sub-m
 
 `auto _S = ck::ScopedStat()` is the intended idiom — AngelScript constructs the value in place (no copy), so the non-copyable guard records exactly once on scope exit. The no-arg form reads the calling script function from the active context (`ck::Get_ActiveScriptScopeName()`, also bound to script) — no string to type. `UFUNCTION(BlueprintOverride)` handlers report as `Method_Implementation`; the suffix is stripped so the name matches the clean handler name.
 
-It's a non-copyable value type: `FScopeCycleCounter` under `STATS`, a named CPU event otherwise (mirrors `CK_STAT`'s non-STATS fallback). Under `STATS`, the auto form caches `TStatId` by the active script function's numeric ID in thread-local storage, so a hot loop avoids rebuilding the method/class `FString` as well as the dynamic-stat registration. The cache retains no script functions, types, or UObjects. The explicit-string form remains useful for sub-method scopes with a deliberately different name.
+It's a non-copyable value type: `FScopeCycleCounter` under `STATS`, a named CPU event otherwise. Under `STATS`, the auto form caches `TStatId` by the active script function's numeric ID in thread-local storage, so a hot loop avoids rebuilding the method/class `FString` as well as the dynamic-stat registration. The cache retains no script functions, types, or UObjects. The explicit-string form remains useful for sub-method scopes with a deliberately different name.
 
-AngelScript recompilation advances the cache epoch at both PreCompile and successful PostCompile. Each thread discards its own function-ID entries lazily when it observes the epoch; this prevents IDs from the outgoing module surviving a swap without mutating another thread's cache. The non-`STATS` named-event path does not use this cache and is unchanged.
+Do **not** read the non-`STATS` half as "the same thing `CK_STAT` does" — they are gated by different macros and diverge exactly where it matters. `CK_STAT` falls back to `SCOPED_NAMED_EVENT_TCHAR`, gated by `ENABLE_NAMED_EVENTS` = `(!UE_BUILD_SHIPPING && (!UE_BUILD_TEST || ALLOW_NAMED_EVENTS_IN_TEST))`, and nothing in this project sets `ALLOW_NAMED_EVENTS_IN_TEST` — so `CK_STAT` emits **nothing in Test**. `FCk_ScopedStat` calls `FPlatformMisc::BeginNamedEvent` directly, gated by `ENABLE_GENERIC_NAMED_EVENTS`, which **is** on in Test via `ENABLE_STATNAMEDEVENTS`. Net effect per configuration:
+
+| configuration | `STATS` | `ENABLE_GENERIC_NAMED_EVENTS` | `ck::ScopedStat()` |
+|---|---|---|---|
+| Editor / Development | 1 | 1 | `FScopeCycleCounter`, stat-id cache |
+| Test | 0 | 1 | named event, **name cache live** |
+| Shipping | 0 | 0 | compiled out entirely |
+
+AngelScript recompilation advances the cache epoch at both PreCompile and successful PostCompile. Each thread discards its own function-ID entries lazily when it observes the epoch; this prevents IDs from the outgoing module surviving a swap without mutating another thread's cache. **The epoch is advanced in every configuration, not only under `STATS`** — the non-`STATS` path keeps its own thread-local cache of scope *names* (`Get_ActiveScriptScopeName_Cached`) keyed on the same epoch, so registering the bump only under `STATS` would leave that cache with nothing to invalidate it, and AngelScript recycles function IDs.
+
+That name cache is compiled in **every** configuration even though only the non-`STATS` constructor calls it. That is deliberate: gating it on `!STATS` would mean the editor never compiles it, so a compile error would surface only in a Test or Shipping build and no automation test in any configuration could reach it. `_ForTests` seams (cached name, hit/miss counters, reset) mirror the `STATS` twin and are bound to script.
 
 ---
 

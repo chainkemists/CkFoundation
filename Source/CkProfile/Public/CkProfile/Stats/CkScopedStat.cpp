@@ -41,6 +41,26 @@ namespace ck
         static thread_local FActiveScriptScopeStatThreadCache GActiveScriptScopeStatThreadCache;
 #endif
 
+        // The named-event twin of the cache above. BeginNamedEvent takes a NAME rather than a stat
+        // id, so the STATS cache cannot serve it - and the derivation it skips is the same one: a
+        // script-context walk plus three FString allocations, on every scope entry.
+        //
+        // Compiled in EVERY configuration on purpose, even though only the non-STATS ctor calls it.
+        // Gating it on !STATS would mean the editor never compiles it and no test in any
+        // configuration could reach it, which is how the STATS twin came to have this gap.
+        struct FActiveScriptScopeNameThreadCache
+        {
+            uint64               _Epoch = 0;
+            TMap<int32, FString> _Names;
+
+#if WITH_DEV_AUTOMATION_TESTS
+            uint64 _HitCount = 0;
+            uint64 _MissCount = 0;
+#endif
+        };
+
+        static thread_local FActiveScriptScopeNameThreadCache GActiveScriptScopeNameThreadCache;
+
         auto
             Get_ScriptScopeName(
                 asIScriptFunction* InFunction)
@@ -146,6 +166,55 @@ namespace ck
 #endif
     }
 #endif
+
+    auto
+        Get_ActiveScriptScopeName_Cached()
+        -> const TCHAR*
+    {
+#if WITH_ANGELSCRIPT_CK
+        auto* Context = FAngelscriptManager::GetCurrentScriptContext();
+        if (Context == nullptr)
+        { return TEXT("Script::Unknown"); }
+
+        auto* Func = Context->GetFunction(0);
+        if (Func == nullptr || Func->GetId() < 0)
+        { return TEXT("Script::Unknown"); }
+
+        auto& Cache = GActiveScriptScopeNameThreadCache;
+
+        const auto Epoch = GActiveScriptScopeStatCacheEpoch.load(std::memory_order_acquire);
+        if (Cache._Epoch != Epoch)
+        {
+            Cache._Names.Reset();
+            Cache._Epoch = Epoch;
+        }
+
+        const auto FunctionId = Func->GetId();
+        if (const auto* const Found = Cache._Names.Find(FunctionId))
+        {
+#if WITH_DEV_AUTOMATION_TESTS
+            ++Cache._HitCount;
+#endif
+            return **Found;
+        }
+
+        // Returning a pointer INTO the map is safe here, but only because of the ordering above.
+        // FString's characters live in a heap allocation the FString object owns, so relocating the
+        // object (sparse-array growth reallocs the element storage) moves the owner and not the
+        // buffer - an earlier pointer survives a later insert. What would invalidate one is
+        // overwriting the SAME key, which destroys the old FString and frees its buffer; that cannot
+        // happen here because this Add only ever follows a Find MISS on this thread's own map, with
+        // nothing in between that touches it (Get_ScriptScopeName constructs no scope of its own).
+        // The pointer dies at the next epoch change, and every caller hands it straight to
+        // BeginNamedEvent - whose sinks all copy the text - rather than retaining it.
+#if WITH_DEV_AUTOMATION_TESTS
+        ++Cache._MissCount;
+#endif
+        return *Cache._Names.Add(FunctionId, Get_ScriptScopeName(Func));
+#else
+        return TEXT("Script::Unknown");
+#endif
+    }
 
     auto
         Invalidate_ActiveScriptScopeStatCache()
@@ -271,6 +340,45 @@ namespace ck
     }
 
     auto
+        Get_ActiveScriptScopeNameCached_ForTests()
+        -> FString
+    {
+        return FString{Get_ActiveScriptScopeName_Cached()};
+    }
+
+    auto
+        Get_ActiveScriptScopeNameCacheHitCount_ForTests()
+        -> uint64
+    {
+#if WITH_ANGELSCRIPT_CK
+        return GActiveScriptScopeNameThreadCache._HitCount;
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Get_ActiveScriptScopeNameCacheMissCount_ForTests()
+        -> uint64
+    {
+#if WITH_ANGELSCRIPT_CK
+        return GActiveScriptScopeNameThreadCache._MissCount;
+#else
+        return 0;
+#endif
+    }
+
+    auto
+        Reset_ActiveScriptScopeNameCacheCounters_ForTests()
+        -> void
+    {
+#if WITH_ANGELSCRIPT_CK
+        GActiveScriptScopeNameThreadCache._HitCount = 0;
+        GActiveScriptScopeNameThreadCache._MissCount = 0;
+#endif
+    }
+
+    auto
         Run_ActiveScriptScopeStatBenchmark_ForTests()
         -> FString
     {
@@ -353,23 +461,33 @@ FCk_ScopedStat::
 
 #else
 
+// ENABLE_GENERIC_NAMED_EVENTS is 0 in Shipping, where BeginNamedEvent is an empty inline. Without
+// this guard the scope would still derive its name for a call that compiles to nothing - caching
+// that derivation makes it cheaper, only skipping it makes it free. Begin and End are guarded
+// together so they stay paired.
 FCk_ScopedStat::
     FCk_ScopedStat()
 {
-    FPlatformMisc::BeginNamedEvent(FColor::Red, *ck::Get_ActiveScriptScopeName());
+#if ENABLE_GENERIC_NAMED_EVENTS
+    FPlatformMisc::BeginNamedEvent(FColor::Red, ck::Get_ActiveScriptScopeName_Cached());
+#endif
 }
 
 FCk_ScopedStat::
     FCk_ScopedStat(
         const FString& InName)
 {
+#if ENABLE_GENERIC_NAMED_EVENTS
     FPlatformMisc::BeginNamedEvent(FColor::Red, *InName);
+#endif
 }
 
 FCk_ScopedStat::
     ~FCk_ScopedStat()
 {
+#if ENABLE_GENERIC_NAMED_EVENTS
     FPlatformMisc::EndNamedEvent();
+#endif
 }
 
 #endif
@@ -429,6 +547,18 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind Bind_ck_ScopedStat(FAngelscriptBind
         []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeStatCacheMissCount_ForTests()); });
     FAngelscriptBinds::BindGlobalFunction("void Reset_ActiveScriptScopeStatCacheCounters_ForTests()",
         []() -> void { ck::Reset_ActiveScriptScopeStatCacheCounters_ForTests(); });
+
+    FAngelscriptBinds::BindGlobalFunction("FString Get_ActiveScriptScopeNameCached_ForTests()",
+        []() -> FString { return ck::Get_ActiveScriptScopeNameCached_ForTests(); });
+
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeNameCacheHitCount_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeNameCacheHitCount_ForTests()); });
+
+    FAngelscriptBinds::BindGlobalFunction("int64 Get_ActiveScriptScopeNameCacheMissCount_ForTests()",
+        []() -> int64 { return static_cast<int64>(ck::Get_ActiveScriptScopeNameCacheMissCount_ForTests()); });
+
+    FAngelscriptBinds::BindGlobalFunction("void Reset_ActiveScriptScopeNameCacheCounters_ForTests()",
+        []() -> void { ck::Reset_ActiveScriptScopeNameCacheCounters_ForTests(); });
     FAngelscriptBinds::BindGlobalFunction("FString Run_ActiveScriptScopeStatBenchmark_ForTests()",
         []() -> FString { return ck::Run_ActiveScriptScopeStatBenchmark_ForTests(); });
 #endif
