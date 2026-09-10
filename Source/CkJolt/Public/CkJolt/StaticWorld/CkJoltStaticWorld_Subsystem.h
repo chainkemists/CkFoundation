@@ -207,7 +207,7 @@ private:
 
     auto
     DoNote_BodiesChanged(
-        int32 InCount) -> void;
+        int32 InBodyCountDelta) -> void;
 
     // Binds the collision-sync event routes for a freshly created attribution entity: the actor overload
     // binds ALL of the source actor's primitives (the cooked path retains no per-component attribution,
