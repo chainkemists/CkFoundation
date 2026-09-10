@@ -252,6 +252,8 @@ namespace ck
                             ++DrainActions;
                             continue;
                         }
+                        Result._Diagnostics._LastQueryDurationMs = 0.0f;
+                        Result._Diagnostics._HasQueryDuration = false;
                         Result._Status = ECk_Nav_PathStatus::Failed;
                         Result._RequestRevision = Entry.Request.Get_RequestRevision();
                         Result._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavData;
@@ -317,6 +319,8 @@ namespace ck
 
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
         {
+            InResult._Diagnostics._LastQueryDurationMs = 0.0f;
+            InResult._Diagnostics._HasQueryDuration = false;
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NotAuthority;
@@ -329,6 +333,8 @@ namespace ck
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (NOT IsValid(World))
         {
+            InResult._Diagnostics._LastQueryDurationMs = 0.0f;
+            InResult._Diagnostics._HasQueryDuration = false;
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
@@ -339,6 +345,8 @@ namespace ck
         auto* NavSys = UNavigationSystemV1::GetCurrent(World);
         if (NavSys == nullptr)
         {
+            InResult._Diagnostics._LastQueryDurationMs = 0.0f;
+            InResult._Diagnostics._HasQueryDuration = false;
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::NoNavSystem;
@@ -351,6 +359,8 @@ namespace ck
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
         if (ck::Is_NOT_Valid(TransformHandle))
         {
+            InResult._Diagnostics._LastQueryDurationMs = 0.0f;
+            InResult._Diagnostics._HasQueryDuration = false;
             InResult._Status = ECk_Nav_PathStatus::Failed;
             InResult._RequestRevision = LatestRequestRevision;
             InResult._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::StartProjectFailed;
@@ -377,6 +387,8 @@ namespace ck
             // measurable, leave it alone" early-out — so a bare status write here would re-park an
             // episode that can never be timed out again, which is the silent wedge this whole
             // change exists to remove. Every write of Pending carries its clock.
+            InResult._Diagnostics._LastQueryDurationMs = 0.0f;
+            InResult._Diagnostics._HasQueryDuration = false;
             InResult._Status = ECk_Nav_PathStatus::Pending;
             InResult._PendingSinceSeconds = NowSec;
 

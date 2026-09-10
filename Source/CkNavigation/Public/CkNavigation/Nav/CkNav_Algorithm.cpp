@@ -52,6 +52,7 @@ auto
     Diag._LastTargetLocation = InEnd;
     Diag._LastAgentLocation  = InStart;
     Diag._LastQueryWallTime  = FPlatformTime::Seconds();
+    Diag._HasQueryDuration   = true;
 
     OutResult._DestinationLocation = InEnd;
 
@@ -319,6 +320,8 @@ auto
     auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
     Result._Status = ECk_Nav_PathStatus::Pending;
     Result._RequestRevision = InRequestRevision;
+    Result._Diagnostics._LastQueryDurationMs = 0.0f;
+    Result._Diagnostics._HasQueryDuration = false;
     Result._PendingSinceSeconds = FPlatformTime::Seconds();
 }
 
@@ -346,6 +349,8 @@ auto
     Result._Waypoints.Reset();
     Result._DestinationLocation = FVector::ZeroVector;
     Result._Diagnostics._LastFailReason = ECk_Nav_PathFailReason::None;
+    Result._Diagnostics._LastQueryDurationMs = 0.0f;
+    Result._Diagnostics._HasQueryDuration = false;
     Result._PendingSinceSeconds = 0.0;
 }
 
@@ -370,6 +375,8 @@ auto
     auto& Result = InHandle.Get<ck::FFragment_Nav_PathResult>();
     Result._Status = ECk_Nav_PathStatus::Failed;
     Result._RequestRevision = InRequestRevision;
+    Result._Diagnostics._LastQueryDurationMs = 0.0f;
+    Result._Diagnostics._HasQueryDuration = false;
     Result._Diagnostics._LastFailReason = InReason;
     Result._PendingSinceSeconds = 0.0;
 }
