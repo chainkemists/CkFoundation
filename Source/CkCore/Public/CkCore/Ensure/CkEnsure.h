@@ -38,6 +38,11 @@ namespace ck::ensure
         const FString& InNamespace,
         const FString& InFunctionName) -> bool;
 
+    // The StaticJIT arm sees whole declarations rather than a namespace/name pair. Exposed so the parse
+    // that recovers the pair is pinned by a test, on a machine with no JIT build.
+    CKCORE_API auto Get_IsEnsurePlumbingDeclaration_ForTesting(
+        const FString& InFunctionDeclaration) -> bool;
+
     CKCORE_API auto Ensure_Impl_ForTesting(
         const FString& InMessage,
         const FString& InExpressionText,

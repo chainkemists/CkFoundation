@@ -155,6 +155,61 @@ bool FCkTest_Ensure_ScriptPlumbingFrames::RunTest(const FString&)
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Ensure_ScriptPlumbingDeclarations,
+    "Ck.CkCore.Ensure.ScriptPlumbingDeclarations",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Ensure_ScriptPlumbingDeclarations::RunTest(const FString&)
+{
+    // Under StaticJIT there is no VM context to interrogate, so the walk is handed whole declarations --
+    // the form GetDeclarationStr(true, true, false, true, false) bakes into each JIT frame. These cases
+    // pin the parse that recovers the namespace/name pair; the JIT arm itself needs a JIT build to run,
+    // but a parse that drops the namespace or keeps the return type would silently defeat it.
+    TestTrue(TEXT("A ck::Ensure declaration is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool ck::Ensure(bool InCondition, const FString&in InMessage)")));
+    TestTrue(TEXT("A ck::TriggerEnsure declaration is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("void ck::TriggerEnsure(const FString&in InMessage)")));
+    TestTrue(TEXT("A void-returning ck::EnsureIfNot declaration is plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool ck::EnsureIfNot(bool InCondition)")));
+
+    // A return type containing a space would take the function name with it if the parse split on
+    // whitespace, so the wrapper would stop being recognised and its frame would be reported.
+    TestTrue(TEXT("A wrapper whose return type contains a space is still plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("TArray<int32, TInlineAllocator<4>> ck::Ensure(bool InCondition)")));
+
+    // The failure that matters: skipping a frame that is NOT a wrapper reports the frame above it.
+    TestFalse(TEXT("A gameplay helper in the ck namespace is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool ck::EnsureStoreIsOpen(FCk_Handle&in InStore)")));
+    TestFalse(TEXT("A wrapper name in another namespace is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool bb::Ensure(bool InCondition)")));
+    TestFalse(TEXT("A wrapper name at global scope is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool Ensure(bool InCondition)")));
+
+    // Only the LAST qualifier is the immediate scope, so a method on a type inside ck keeps its own
+    // attribution -- matching the VM walk's GetObjectType() == nullptr requirement.
+    TestFalse(TEXT("A method named Ensure on a type inside ck is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(
+            TEXT("bool ck::FCk_Store::Ensure(bool InCondition)")));
+
+    // Degenerate inputs must not match: matching is the strictly worse failure direction.
+    TestFalse(TEXT("An empty declaration is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(TEXT("")));
+    TestFalse(TEXT("A declaration with no parameter list is not plumbing"),
+        ck::ensure::Get_IsEnsurePlumbingDeclaration_ForTesting(TEXT("bool ck::")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_Ensure_ScriptProvenanceDepth,
     "Ck.CkCore.Ensure.ScriptProvenanceDepth",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

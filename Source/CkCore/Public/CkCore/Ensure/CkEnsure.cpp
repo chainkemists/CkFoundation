@@ -67,6 +67,58 @@ namespace ck::ensure
             || InFunctionName.Equals(TEXT("TriggerEnsure"), CaseSensitive);
     }
 
+    auto Get_ScriptFunctionQualifiedName(
+        const FString& InFunctionDeclaration)
+        -> FString
+    {
+        // The engine's per-frame accessor reports a whole declaration -- "bool ck::Ensure(bool, const FString&)"
+        // -- rather than a namespace/name pair, because that is the form the StaticJIT transpiler bakes into
+        // each frame at codegen time. Recover the qualified name so the SAME wrapper list above decides both
+        // the VM walk and the JIT walk; restating the rule per-arm is how the two silently diverge.
+        auto ParameterListStart = INDEX_NONE;
+        if (NOT InFunctionDeclaration.FindChar(TCHAR('('), ParameterListStart))
+        { ParameterListStart = InFunctionDeclaration.Len(); }
+
+        // Scanned backwards from the parameter list rather than split on whitespace, because a return type
+        // can itself contain a space (TArray<int32, TInlineAllocator<4>>) and would take the name with it.
+        auto NameStart = ParameterListStart;
+        while (NameStart > 0)
+        {
+            const auto PrecedingChar = InFunctionDeclaration[NameStart - 1];
+            if (NOT (FChar::IsAlnum(PrecedingChar) || PrecedingChar == TCHAR('_') || PrecedingChar == TCHAR(':')))
+            { break; }
+
+            --NameStart;
+        }
+
+        return InFunctionDeclaration.Mid(NameStart, ParameterListStart - NameStart);
+    }
+
+    auto Get_IsEnsurePlumbingDeclaration(
+        const FString& InFunctionDeclaration)
+        -> bool
+    {
+        const auto QualifiedName = Get_ScriptFunctionQualifiedName(InFunctionDeclaration);
+        if (QualifiedName.IsEmpty())
+        { return false; }
+
+        // Only the LAST qualifier is the immediate scope. A method declares as ck::FCk_Type::Method, whose
+        // scope is "ck::FCk_Type" and so never matches -- the same exclusion the VM walk gets from its
+        // GetObjectType() == nullptr check. A declaration cannot tell `namespace ck` from a class named
+        // `ck`, and nothing in this codebase declares a lowercase class.
+        auto Scope = FString{};
+        auto FunctionName = QualifiedName;
+
+        if (const auto ScopeEnd = QualifiedName.Find(TEXT("::"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            ScopeEnd != INDEX_NONE)
+        {
+            Scope = QualifiedName.Left(ScopeEnd);
+            FunctionName = QualifiedName.Mid(ScopeEnd + 2);
+        }
+
+        return Get_IsEnsurePlumbingFunction(Scope, FunctionName);
+    }
+
 #if WITH_DEV_AUTOMATION_TESTS
     auto Get_IsEnsurePlumbingFunction_ForTesting(
         const FString& InNamespace,
@@ -74,6 +126,13 @@ namespace ck::ensure
         -> bool
     {
         return Get_IsEnsurePlumbingFunction(InNamespace, InFunctionName);
+    }
+
+    auto Get_IsEnsurePlumbingDeclaration_ForTesting(
+        const FString& InFunctionDeclaration)
+        -> bool
+    {
+        return Get_IsEnsurePlumbingDeclaration(InFunctionDeclaration);
     }
 #endif
 
@@ -135,19 +194,59 @@ namespace ck::ensure
                 }
             }
 
-            // A StaticJIT-compiled function is entered as native C++ and pushes no AngelScript context,
-            // so the walk above finds nothing and every script-raised ensure reported Script::Unknown --
-            // on the one configuration whose functional parity is least proven. The transpiler does keep
-            // a frame stack (AS_JIT_DEBUG_CALLSTACKS, live in every non-Shipping config) and this
-            // exported accessor reads it, falling back to the context itself.
+            // A StaticJIT-compiled function is entered as native C++ and pushes no AngelScript context
+            // (FScriptExecution nulls tld->activeContext on entry), so the walk above finds nothing and
+            // every script-raised ensure reported Script::Unknown -- on the one configuration whose
+            // functional parity is least proven. The transpiler does keep a frame stack
+            // (AS_JIT_DEBUG_CALLSTACKS, live in every non-Shipping config).
             //
-            // It reports the INNERMOST frame, which under the JIT is the ck::Ensure wrapper rather than
-            // its caller, so this recovers a real file and line but not the frame-skipping above. The
-            // engine exposes no skip-count form; doing better needs an engine-side accessor.
-            if (const auto& ExecutionPosition = FAngelscriptManager::GetAngelscriptExecutionPosition();
-                NOT ExecutionPosition.IsEmpty())
+            // GetAngelscriptExecutionPosition reads only the INNERMOST of those frames, which under the
+            // JIT is the ck::Ensure wrapper itself -- so every script ensure in a JIT build collapsed onto
+            // CkUtils_Common.as, the exact dedup pathology the VM walk above exists to remove.
+            // GetAngelscriptExecutionFrame is the engine-side skip-count form: it walks the JIT frames
+            // innermost-first and then continues into the VM context chain, so one wrapper list decides
+            // both arms.
+            constexpr auto MaxScriptFramesToWalk = 64;
+
+            auto InnermostFilename = FString{};
+            auto InnermostQualifiedName = FString{};
+            auto InnermostLine = 0;
+            auto FoundAnyFrame = false;
+
+            for (auto FrameIndex = 0; FrameIndex < MaxScriptFramesToWalk; ++FrameIndex)
             {
-                return ck::Format_UE(TEXT("AS:{}"), ExecutionPosition);
+                auto FrameFilename = FString{};
+                auto FrameDeclaration = FString{};
+                auto FrameLine = 0;
+
+                if (NOT FAngelscriptManager::GetAngelscriptExecutionFrame(
+                    FrameIndex, FrameFilename, FrameDeclaration, FrameLine))
+                { break; }
+
+                auto QualifiedName = Get_ScriptFunctionQualifiedName(FrameDeclaration);
+                if (QualifiedName.IsEmpty())
+                { QualifiedName = FString{TEXT("UnknownFunction")}; }
+
+                if (NOT FoundAnyFrame)
+                {
+                    InnermostFilename = FrameFilename;
+                    InnermostQualifiedName = QualifiedName;
+                    InnermostLine = FrameLine;
+                    FoundAnyFrame = true;
+                }
+
+                if (Get_IsEnsurePlumbingDeclaration(FrameDeclaration))
+                { continue; }
+
+                return ck::Format_UE(TEXT("AS:{}@{}:{}"), QualifiedName, FrameFilename, FrameLine);
+            }
+
+            // Every frame was a wrapper -- reachable when a wrapper is entered from native code with no
+            // script caller above it. Naming the wrapper is exactly what this reported before the walk, so
+            // the degradation is to the previous behaviour rather than to Script::Unknown.
+            if (FoundAnyFrame)
+            {
+                return ck::Format_UE(TEXT("AS:{}@{}:{}"), InnermostQualifiedName, InnermostFilename, InnermostLine);
             }
         }
     #endif
