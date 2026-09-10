@@ -62,6 +62,40 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Lives on the component-owning TRANSFORM entity. The push's change detection compares the owner's
+    // fragment against this — never against the live USceneComponent — so externally-drifted components
+    // are only re-authored when the OWNER actually moves, and a fragment write is delivered no matter
+    // which frame position (main pass or pump pass) drained it. Gating the push on
+    // FTag_Transform_Updated instead loses pump-drained one-shots outright (the tag is cleared by
+    // Transform_Cleanup before the next main-pass push slot), and comparing against the component
+    // stomps external drift (TransformPropagation.DirtyOwnersOnly).
+    //
+    // It is also the view's MEMBERSHIP ticket, which is why Setup adds it to every scene-component owner
+    // regardless of FTag_UnrealComponent_TransformPushDisabled: that tag is per-COMPONENT, so an owner
+    // whose components are all disabled must still be tracked, or re-enabling one could never deliver
+    // another push. Its value is therefore "the owner transform as of the last push pass" — what every
+    // push-eligible component of this owner was last given — and a component returning from disabled is
+    // put back in step with it by Request_EnableTransformPush's synchronization, never by re-seeding it.
+    // FProcessor_UnrealComponent_PushTransform is the only writer of the value after Setup's seed.
+    struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_LastPushedTransform
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_UnrealComponent_LastPushedTransform);
+
+        friend class FProcessor_UnrealComponent_Setup;
+        friend class FProcessor_UnrealComponent_PushTransform;
+
+    private:
+        FTransform _Transform = FTransform::Identity;
+
+    public:
+        CK_PROPERTY_GET(_Transform);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_UnrealComponent_LastPushedTransform, _Transform);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(
         RecordOfUnrealComponents_Utils,
         FFragment_RecordOfUnrealComponents,

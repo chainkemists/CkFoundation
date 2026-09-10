@@ -137,12 +137,31 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_UnrealComponent_IsScene>();
 
+            auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+            const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
+
             if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
             {
-                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
                 ck_unreal_component_processor::PushTransformIfChanged(
-                    CastChecked<USceneComponent>(NewComponent),
-                    UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform));
+                    CastChecked<USceneComponent>(NewComponent), OwnerWorldTransform);
+            }
+
+            // UNCONDITIONAL, and deliberately OUTSIDE the disabled-tag branch: this fragment is the
+            // PushTransform view's membership ticket, it lives on the OWNER, and the disabled tag lives
+            // per-COMPONENT. Seeding it only for enabled components left an owner whose every scene
+            // component was disabled at setup permanently out of that view — Request_EnableTransformPush
+            // drops the per-component tag and synchronizes that one component, but with no fragment the
+            // owner is never visited again, so no later owner move can reach it. Seeded for every
+            // scene-component owner, the fragment tracks the owner's transform in BOTH states, and
+            // enabling stays what it is: a tag removal plus the one-shot sync it already performs.
+            //
+            // Seed only when ABSENT — the fragment is shared by all of the owner's components, so
+            // resetting it here would swallow an owner move that a sibling component (added earlier,
+            // positioned at the old pose) still needs delivered. FProcessor_UnrealComponent_PushTransform
+            // is the sole writer of the VALUE from this point on.
+            if (NOT OwnerTransform.Has<FFragment_UnrealComponent_LastPushedTransform>())
+            {
+                OwnerTransform.Add<FFragment_UnrealComponent_LastPushedTransform>(OwnerWorldTransform);
             }
         }
 
@@ -228,12 +247,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_RecordOfUnrealComponents&)
+            const FFragment_RecordOfUnrealComponents&,
+            FFragment_UnrealComponent_LastPushedTransform& InLastPushed)
         -> void
     {
         // PostTransform runs after root-to-ECS synchronization and transform requests. At this point the
         // fragment is the authoritative value for both root-driven and externally-driven owners.
+        const auto& CurrentTransform = InTransform.Get_Transform();
+
+        // The view is deliberately NOT tag-gated (a pump-drained tag is already dead by the next main
+        // pass), so EVERY component-owning transform entity is visited each tick and this comparison is
+        // what keeps the push owner-driven: an owner whose fragment still matches what was last
+        // delivered has nothing to deliver, and re-pushing it would stomp externally-driven component
+        // drift (TransformPropagation.DirtyOwnersOnly). Rationale on the fragment's declaration.
+        const auto OwnerSettled = InLastPushed.Get_Transform().Equals(CurrentTransform);
+
         const auto Enabled = cpu_work::Get_Enabled();
+
+        // A settled owner bails BEFORE the record walk, so the steady-state cost is one Equals. In an
+        // enabled frame the walk still runs with the push suppressed, so those entries land in their real
+        // buckets (Unchanged, or their eligibility rejection) rather than vanishing from the partition the
+        // component counters are documented to form over valid Record callbacks. The extra traversal is
+        // diagnostic-only by construction — CkProfile's contract is that this instrumentation is never
+        // itself a gameplay optimization, and its overhead is characterized by an on/off capture.
+        if (OwnerSettled && NOT Enabled)
+        { return; }
+
         TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_ComponentRecord, Enabled);
 
         auto Entries = int32{0};
@@ -246,7 +285,9 @@ namespace ck
         auto Changed = int32{0};
         auto StaticRebakes = int32{0};
 
-        const auto& CurrentTransform = InTransform.Get_Transform();
+        if (NOT OwnerSettled)
+        { InLastPushed._Transform = CurrentTransform; }
+
         RecordOfUnrealComponents_Utils::ForEach_ValidEntry(
             InHandle,
             [&](FCk_Handle_UnrealComponent InComponentHandle)
@@ -284,7 +325,9 @@ namespace ck
                     return;
                 }
 
-                const auto TransformChanged =
+                // A settled owner reaches here only to be counted; suppressing the push is the whole point
+                // of the early-out, and "nothing was delivered to this component" is Unchanged.
+                const auto TransformChanged = NOT OwnerSettled &&
                     ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
                 if (Enabled)
                 {
