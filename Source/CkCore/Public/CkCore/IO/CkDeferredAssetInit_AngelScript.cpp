@@ -466,7 +466,13 @@ namespace ck_deferred_asset_init_angelscript
             });
         });
 
-        if (Stats.Declared == 0 && NOT GPreClearCapturedLiterals.IsEmpty())
+        // Keyed on the module registry being EMPTY, exactly as Phase 1 is, and NOT on Stats.Declared == 0.
+        // In surgical mode Declared counts only the literals attribution recorded, so a SOURCE boot where a
+        // CDO deferred a load but no literal body did also walks to Declared == 0 — and the capture above
+        // runs on every OnPostReload, so it is never empty. Gating on Declared would send that boot down
+        // the cache-boot path and re-initialise every captured literal, which is the full heal the surgical
+        // mode exists to avoid. The registry being empty is the one condition only a cache boot produces.
+        if (ActiveModules.Num() == 0 && NOT GPreClearCapturedLiterals.IsEmpty())
         {
             // Precompiled-cache boot: DeclaredLiteralAssets is never restored and the module registry
             // is emptied post-init, so the walk above declared nothing — heal from the pre-clear
