@@ -42,6 +42,7 @@ namespace ck_pathnetwork_editor
         const FNavmeshConformance& InConformance,
         float InMaxPlanarProjectionDelta,
         float InMaxVerticalProjectionDelta) -> bool;
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -208,6 +209,53 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_PathNetworkEditor_GroundNavSnapStatus : uint8
+{
+    Projected,
+    NoSurface,
+    Unavailable
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PathNetworkEditor_GroundNavSnapStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_pathnetwork_editor
+{
+    CKPATHNETWORKEDITOR_API auto
+    Get_GroundNavSnapStatus(
+        const FCk_NavSurface_ProjectionResult& InProjection) -> ECk_PathNetworkEditor_GroundNavSnapStatus;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPATHNETWORKEDITOR_API FCk_PathNetworkEditor_GroundNavSnapResult
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_PathNetworkEditor_GroundNavSnapResult);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ECk_PathNetworkEditor_GroundNavSnapStatus _Status = ECk_PathNetworkEditor_GroundNavSnapStatus::Unavailable;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _SourceLocation = FVector::ZeroVector;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector _ProjectedLocation = FVector::ZeroVector;
+
+public:
+    CK_PROPERTY_GET(_Status);
+    CK_PROPERTY_GET(_SourceLocation);
+    CK_PROPERTY_GET(_ProjectedLocation);
+
+private:
+    friend class UCk_Utils_PathNetworkEditor_UE;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKPATHNETWORKEDITOR_API UCk_Utils_PathNetworkEditor_UE : public UBlueprintFunctionLibrary
 {
@@ -250,6 +298,18 @@ public:
         FVector InProjectionExtent,
         float InMaxPlanarProjectionDelta,
         float InMaxVerticalProjectionDelta);
+
+    /** Projects one editable ribbon point through the active GroundNav editor surface. Failed projections leave the actor unchanged. */
+    UFUNCTION(BlueprintCallable,
+              Category="Ck|Utils|PathNetworkEditor",
+              DisplayName="[Ck][PathNetworkEditor] Snap Ribbon Point To GroundNav")
+    static FCk_PathNetworkEditor_GroundNavSnapResult
+    Snap_RibbonPointToGroundNav(
+        ACk_PathNetwork_UE* InActor,
+        int32 InRibbonIndex,
+        int32 InPointIndex,
+        FVector InDesiredWorldLocation,
+        FVector InProjectionExtent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
