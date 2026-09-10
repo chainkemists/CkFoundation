@@ -100,6 +100,11 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     float _LastQueryDurationMs = 0.0f;
 
+    // Zero milliseconds is a valid measured duration. This distinguishes it from an episode that
+    // is Pending, was rejected before provider work, or has otherwise not attempted a query.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    bool _HasQueryDuration = false;
+
 public:
     CK_PROPERTY_GET(_LastFailReason);
     CK_PROPERTY_GET(_LastTargetLocation);
@@ -112,6 +117,7 @@ public:
     CK_PROPERTY_GET(_ExtractedWaypointCount);
     CK_PROPERTY_GET(_LastQueryWallTime);
     CK_PROPERTY_GET(_LastQueryDurationMs);
+    CK_PROPERTY_GET(_HasQueryDuration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
