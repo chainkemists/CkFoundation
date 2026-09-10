@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GroundNav Acceptance Guide</title>
+<style>
+  /* Dark is the fallback default (applies whenever the OS/browser theme can't be
+     determined). Auto-light via prefers-color-scheme. Explicit [data-theme] wins
+     over both — stamped by the toggle button's script, further down. Copy this
+     whole block, the .theme-toggle rules, the toggle <button>, and the <script>
+     at the end of <body> VERBATIM — none of it is a {{...}} placeholder. */
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#0f141a; --bd:#30363d;
+    --tx:#c9d1d9; --mut:#8b949e; --hd:#e6edf3;
+    --green:#3fb950; --greenbg:rgba(46,160,67,.16); --greentx:#7ee787;
+    --amber:#d29922; --amberbg:rgba(210,153,34,.16); --ambertx:#e3b341;
+    --blue:#58a6ff;  --bluebg:rgba(56,139,253,.16);  --bluetx:#79c0ff;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#f6f8fa; --panel:#ffffff; --panel2:#f6f8fa; --bd:#d0d7de;
+      --tx:#1f2328; --mut:#656d76; --hd:#1f2328;
+      --green:#1a7f37; --greenbg:rgba(26,127,55,.10); --greentx:#1a7f37;
+      --amber:#9a6700; --amberbg:rgba(154,103,0,.12); --ambertx:#9a6700;
+      --blue:#0969da;  --bluebg:rgba(9,105,218,.10);  --bluetx:#0969da;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#f6f8fa; --bd:#d0d7de;
+    --tx:#1f2328; --mut:#656d76; --hd:#1f2328;
+    --green:#1a7f37; --greenbg:rgba(26,127,55,.10); --greentx:#1a7f37;
+    --amber:#9a6700; --amberbg:rgba(154,103,0,.12); --ambertx:#9a6700;
+    --blue:#0969da;  --bluebg:rgba(9,105,218,.10);  --bluetx:#0969da;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1117; --panel:#161b22; --panel2:#0f141a; --bd:#30363d;
+    --tx:#c9d1d9; --mut:#8b949e; --hd:#e6edf3;
+    --green:#3fb950; --greenbg:rgba(46,160,67,.16); --greentx:#7ee787;
+    --amber:#d29922; --amberbg:rgba(210,153,34,.16); --ambertx:#e3b341;
+    --blue:#58a6ff;  --bluebg:rgba(56,139,253,.16);  --bluetx:#79c0ff;
+  }
+  .theme-toggle{position:fixed;top:18px;right:20px;width:34px;height:34px;border-radius:50%;
+    border:1px solid var(--bd);background:var(--panel);color:var(--tx);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;
+    z-index:10;transition:border-color .15s}
+  .theme-toggle:hover{border-color:var(--mut)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1040px;margin:0 auto;padding:32px 24px 80px}
+  h1{font-size:22px;margin:0 0 4px;color:var(--hd);letter-spacing:.2px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut);
+    margin:36px 0 14px;font-weight:600}
+  .sub{color:var(--mut);margin:0 0 2px}
+  .meta{color:var(--mut);font-size:13px;margin-top:8px}
+  .meta code{font-family:var(--mono);color:var(--tx)} .meta b{color:var(--greentx)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;
+    border:1px solid var(--bd);background:var(--panel);font-size:13px}
+  .pill b{font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .ok .dot{background:var(--green)} .ok{border-color:color-mix(in srgb,var(--green) 45%,transparent)}
+  .def .dot{background:var(--amber)} .def{border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+  .info .dot{background:var(--blue)} .info{border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:18px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:12px;height:12px;border-radius:3px;border:1px solid}
+  .sw.g{background:var(--greenbg);border-color:var(--green)}
+  .sw.a{background:var(--amberbg);border-color:var(--amber)}
+  .sw.b{background:var(--bluebg);border-color:var(--blue)}
+  /* CSS chip-flow — use for LINEAR flows (no coordinate math, always aligned) */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px}
+  .chip{padding:9px 13px;border-radius:9px;border:1px solid;font-size:13px;line-height:1.3;display:flex;flex-direction:column;justify-content:center}
+  .chip .ct{font-weight:600;color:var(--hd)} .chip .cs{color:var(--mut);font:11px var(--mono)}
+  .chip.g{background:var(--greenbg);border-color:var(--green)}
+  .chip.a{background:var(--amberbg);border-color:var(--amber);border-style:dashed}
+  .chip.b{background:var(--bluebg);border-color:var(--blue)}
+  .arrow{display:flex;align-items:center;color:var(--mut);font-size:18px}
+  /* inline SVG — use for BRANCHY graphs; hand-place coords, <=14 nodes, labels <=24 chars */
+  svg{width:100%;height:auto;display:block}
+  .n-bd{stroke-width:1.4}
+  .g .n-bd{stroke:var(--green)} .g .n-bg{fill:var(--greenbg)}
+  .a .n-bd{stroke:var(--amber);stroke-dasharray:5 4} .a .n-bg{fill:var(--amberbg)}
+  .b .n-bd{stroke:var(--blue)} .b .n-bg{fill:var(--bluebg)}
+  .t{fill:var(--hd);font:600 13px sans-serif}
+  .st{fill:var(--mut);font:11px var(--mono)}
+  .edge{stroke:var(--mut);stroke-width:1.6;fill:none}
+  .edge.dash{stroke:var(--amber);stroke-dasharray:5 4}
+  .elabel{fill:var(--mut);font:11px sans-serif} .elabel.am{fill:var(--ambertx)}
+  #arrhead{fill:var(--mut)} #arrheadA{fill:var(--amber)}
+  /* file / item map */
+  .files{font-family:var(--mono);font-size:13px;line-height:1.85}
+  .files .row{display:flex;gap:10px;align-items:baseline;padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent)}
+  .files .row:last-child{border-bottom:0}
+  .files .path{color:var(--tx);flex:0 0 auto}
+  .files .note{color:var(--mut);font-family:sans-serif;font-size:12.5px}
+  .files code{font-family:var(--mono)}
+  .tag{font-family:sans-serif;font-size:11px;padding:1px 7px;border-radius:5px;white-space:nowrap;border:1px solid}
+  .tag.new{background:var(--greenbg);color:var(--greentx);border-color:color-mix(in srgb,var(--green) 40%,transparent)}
+  .tag.mod{background:var(--bluebg);color:var(--bluetx);border-color:color-mix(in srgb,var(--blue) 40%,transparent)}
+  .tag.del{background:var(--amberbg);color:var(--ambertx);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+  details{background:var(--panel);border:1px solid var(--bd);border-radius:10px;margin:8px 0}
+  summary{cursor:pointer;padding:13px 16px;font-weight:600;color:var(--hd);list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸";color:var(--mut);margin-right:10px;display:inline-block;transition:.15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details .body{padding:0 16px 14px 38px;color:var(--tx);font-size:14px}
+  details .body code,.sub code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  ul.next{list-style:none;padding:0;margin:0}
+  ul.next li{padding:9px 14px;background:var(--panel);border:1px solid var(--bd);
+    border-left:3px solid var(--amber);border-radius:7px;margin-bottom:8px;font-size:14px}
+  ul.next li code{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .footnote{color:var(--mut);font-size:12px;margin-top:30px}
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">🌙</button>
+<div class="wrap">
+
+  <h1>GroundNav Acceptance Guide</h1>
+  <p class="sub">Follow these gates in order to validate the visual showcase, matched benchmark, real streaming, packaged behavior, and safe BusterBlock rollout. Gate119's human/showcase decision closed by user attestation on 2026-09-10 after all seven gyms were run; no screenshot, clip, or log archive is claimed, and the prepared pre-change baseline was not rendered. Gate123 closes local fixture/harness acceptance; its crowd distributions are not convergence, equivalence or performance evidence. See <a href="GATE119_CAPTURE_RUNBOOK.md">the capture runbook</a> for the historical capture matrix and its evidence boundary.</p>
+  <p class="meta"><code>feature/ck-navigation · fd9f6ab · 2026-09-10</code> · <b>local implementation verified</b> · build-machine performance deferred to BusterBlock integration</p>
+
+  <div class="pills">
+    <span class="pill ok"><span class="dot"></span><b>GroundNav</b> 474/474</span>
+    <span class="pill ok"><span class="dot"></span><b>Local PIE lifecycle</b> passed in two worlds</span>
+    <span class="pill ok"><span class="dot"></span><b>Visual showcase</b> user-attested; no capture archive claimed</span>
+    <span class="pill def"><span class="dot"></span><b>Matched A/B</b> local harness accepted; build-machine pairs deferred</span>
+    <span class="pill def"><span class="dot"></span><b>Cook/package/BusterBlock</b> open</span>
+  </div>
+
+  <h2>Closeout order — stop at the first red gate</h2>
+  <div class="card">
+    <div class="flow">
+      <span class="chip g"><span class="ct">1. Showcase gyms</span><span class="cs">user-attested; no archive claimed</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">2. Matched A/B</span><span class="cs">128 queries + 240 agents</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">3. Editor checks</span><span class="cs">snap + gyms + LiveExtract</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">4. Real map + cook</span><span class="cs">WP + Data Layers</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">5. Packages</span><span class="cs">Dev + Test + Shipping</span></span>
+      <span class="arrow">→</span>
+      <span class="chip a"><span class="ct">6. BusterBlock</span><span class="cs">Recast-first migration</span></span>
+    </div>
+    <div class="legend">
+      <span><span class="sw g"></span>verified</span>
+      <span><span class="sw a"></span>open / stop-go gate</span>
+      <span><span class="sw b"></span>next implementation input</span>
+    </div>
+  </div>
+
+  <h2>Before every run</h2>
+  <div class="card files">
+    <div class="row"><span class="tag mod">record</span><span class="path">identity</span><span class="note">root/Foundation/Tests SHA, machine, build configuration, map/package, provider, profile and settings</span></div>
+    <div class="row"><span class="tag mod">isolate</span><span class="path">environment</span><span class="note">one editor/benchmark process, fixed resolution/RHI/scalability, no background build, debug draw off for timing</span></div>
+    <div class="row"><span class="tag mod">retain</span><span class="path">artifacts</span><span class="note">Toolbox output, fresh editor/game log, screenshots/video, raw metrics, trace path and operator verdict</span></div>
+    <div class="row"><span class="tag del">stop</span><span class="path">invalid run</span><span class="note">any ensure/script error, missing field, unequal workload, stale callback, incomplete manifest or non-finite metric</span></div>
+  </div>
+
+  <h2>1 — Professional visual gym pass</h2>
+  <details open><summary>Gate119 status and historical capture procedure</summary><div class="body">All seven gyms were run and the human/showcase decision closed by user attestation on 2026-09-10. No screenshot, clip, or log archive is claimed, and the pre-change baseline was prepared rather than rendered. The procedure below remains the required method if an artifact archive is later requested: open the gym level, PIE, press <code>Tab</code>, and visit all six GroundNav entries plus PathNetwork. Use <code>D:\Repos\JoltNav\Screenshots</code> as the presentation reference, while keeping the gym verdict as the behavioral oracle.</div></details>
+  <div class="card files">
+    <div class="row"><span class="tag mod">Tuning</span><span class="path">Tuning Range</span><span class="note">show tiles, layers, stairs, catwalk/ledge and one selected tuning row</span></div>
+    <div class="row"><span class="tag mod">Route</span><span class="path">Walk</span><span class="note">show pillar weave, ramp/landing and unreachable island with 1/3/8 walkers</span></div>
+    <div class="row"><span class="tag mod">Traversal</span><span class="path">Links</span><span class="note">show ladder/drop link and enabled/disabled/re-enabled state</span></div>
+    <div class="row"><span class="tag mod">Repair</span><span class="path">Dynamic Obstacle</span><span class="note">show moved obstacle, local field repair and visible reroute</span></div>
+    <div class="row"><span class="tag mod">Policy</span><span class="path">Markup</span><span class="note">show painted blocker, gap, detour and unpainted corridor</span></div>
+    <div class="row"><span class="tag mod">Parity</span><span class="path">GroundNav vs Recast</span><span class="note">matched camera, scene, walkers and explicit provider label</span></div>
+    <div class="row"><span class="tag mod">Network</span><span class="path">PathNetwork</span><span class="note">one overview of six scenarios plus a clip of live rebuild</span></div>
+  </div>
+  <details><summary>Presentation acceptance</summary><div class="body">The human/showcase decision is closed by the 2026-09-10 user attestation; it does not assert an artifact archive or fresh diagnostic log. If archival evidence is later required, each gym needs one clean 16:9 hero image and one diagnostic image. Links, Obstacle, Markup, Parity and PathNetwork rebuild also need a 10–20 second clip. The feature, agent and result must read within roughly three seconds; title/caption must be concise; overlays must remain legible; decorative collision must either be disabled or intentionally baked. Name captures <code>GroundNav_&lt;Gym&gt;_&lt;State&gt;_&lt;Provider&gt;_&lt;date&gt;.png</code>.</div></details>
+
+  <h2>2 — Build and measure a credible provider A/B</h2>
+  <div class="card">
+    <svg viewBox="0 0 992 330" role="img" aria-label="Matched GroundNav and Recast benchmark flow">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path id="arrhead" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path id="arrheadA" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <path class="edge" d="M210,165 L276,90" marker-end="url(#arr)"/>
+      <path class="edge" d="M210,165 L276,240" marker-end="url(#arr)"/>
+      <path class="edge" d="M486,90 L555,165" marker-end="url(#arr)"/>
+      <path class="edge" d="M486,240 L555,165" marker-end="url(#arr)"/>
+      <path class="edge" d="M755,165 L810,165" marker-end="url(#arr)"/>
+      <g class="b"><rect class="n-bg" x="20" y="130" width="190" height="70" rx="9"/><rect class="n-bd" x="20" y="130" width="190" height="70" rx="9" fill="none"/><text class="t" x="115" y="158" text-anchor="middle">Fixed authored fixture</text><text class="st" x="115" y="179" text-anchor="middle">same endpoints + capsule</text></g>
+      <g class="g"><rect class="n-bg" x="276" y="55" width="210" height="70" rx="9"/><rect class="n-bd" x="276" y="55" width="210" height="70" rx="9" fill="none"/><text class="t" x="381" y="83" text-anchor="middle">GroundNav sample</text><text class="st" x="381" y="104" text-anchor="middle">eligible + provider-labeled</text></g>
+      <g class="b"><rect class="n-bg" x="276" y="205" width="210" height="70" rx="9"/><rect class="n-bd" x="276" y="205" width="210" height="70" rx="9" fill="none"/><text class="t" x="381" y="233" text-anchor="middle">Recast sample</text><text class="st" x="381" y="254" text-anchor="middle">eligible + provider-labeled</text></g>
+      <g class="a"><rect class="n-bg" x="555" y="130" width="200" height="70" rx="9"/><rect class="n-bd" x="555" y="130" width="200" height="70" rx="9" fill="none"/><text class="t" x="655" y="158" text-anchor="middle">Alternate ≥3 pairs</text><text class="st" x="655" y="179" text-anchor="middle">G→R · R→G · G→R</text></g>
+      <g class="a"><rect class="n-bg" x="810" y="130" width="162" height="70" rx="9"/><rect class="n-bd" x="810" y="130" width="162" height="70" rx="9" fill="none"/><text class="t" x="891" y="158" text-anchor="middle">Evidence table</text><text class="st" x="891" y="179" text-anchor="middle">raw + spread + traces</text></g>
+      <text class="elabel" x="496" y="45">warmup, debug draw off</text>
+      <text class="elabel am" x="574" y="218">unequal behavior = inconclusive</text>
+    </svg>
+    <div class="legend">
+      <span><span class="sw g"></span>GroundNav lane</span>
+      <span><span class="sw b"></span>shared/Recast input</span>
+      <span><span class="sw a"></span>evidence gate</span>
+    </div>
+  </div>
+  <details open><summary>Implement two separate workload modes</summary><div class="body"><b>Gate123 local status:</b> 5/5 in 57 s, four eligible real reports, schema 21/21 and no ensure failures, script errors, Pending Timeout or never-answered warnings. <b>QueryBurst128:</b> both providers report 128 Ready and zero Partial/Failed; end-to-end issue-to-observed-terminal latency is not search time. <b>CrowdConvergence240:</b> explicit sample-boundary Stop240 closes local harness acceptance, but GroundNav ends 1 completion / 239 PathPending and Recast 0 completions / 233 Walking / 7 PathPending. It proves neither convergence, behavioral equivalence nor performance.</div></details>
+  <details><summary>Fixture and schema contract</summary><div class="body">Use one authored floor/four-pillar scene with valid <code>NavMeshBoundsVolume</code>, Jolt/static collision and a settled GroundNav field. Both providers use the same 42 radius / 192 height body and the same endpoint set. Every record includes run id, provider, fixture/map hash, build/config, machine/settings, counts, eligibility and raw output/trace path. Reject missing or non-finite diagnostics. Restore the prior provider on every exit path.</div></details>
+  <details><summary>What counts as a performance result</summary><div class="body">Actual build-machine performance is deferred until BusterBlock integration. This is neither accepted nor cancelled and does not block current autonomous source work. When authorized, use the same Development-game binary, map, resolution/RHI, scalability, CVars and machine. Discard settle runs, collect at least three alternating eligible pairs, preserve every raw run and one Insights trace per provider, then report mean/median and range. Timing has no hard pass threshold; setup, behavior eligibility and schema completeness do. A lone green test or FPS value is not a comparison. Recast remains the A/B provider and rollback path.</div></details>
+
+  <h2>3 — Human editor acceptance</h2>
+  <ul class="next">
+    <li><b>Gym walkthrough</b> — closed by 2026-09-10 user attestation after all seven gyms were run; no capture or fresh-log archive is claimed. If repeated for archival evidence, operate all six GroundNav gyms and all six PathNetwork scenarios and confirm visible cause/result, correct verdict, stable restart and no fresh diagnostics.</li>
+    <li><b>PathNetwork snap</b> — outside PIE, snap nodes on flat ground, a ramp and the upper of overlapping floors. Drag fully off-surface and require an explicit unsnapped result. Run Ctrl+Z then Ctrl+Y; verify position, route data and connections restore without stale state.</li>
+    <li><b>LiveExtract</b> — modify representative large static geometry inside a GroundNav volume. Record extraction/update timing, field identity and epoch before/after, localized visual change, undo/redo re-sweep and the fresh log.</li>
+  </ul>
+
+  <h2>4 — Authored World Partition, Data Layers, cook and real routes</h2>
+  <details open><summary>Author the real acceptance map</summary><div class="body">Create a real World Partition map with at least two independently streamable cells/partitions, a named Data Layer that changes included geometry, a manifest-driven volume, stable positive volume/partition/tile identity, adjacent bindings and at least one profile variant. The generated CkTests West/East fixture is a setup aid; its immediate PIE path does not prove these real events.</div></details>
+  <details><summary>Dry-run, write, then inspect generated assets</summary><div class="body">Use the GroundNav commandlet through the supported Toolbox/build-machine workflow. Run DryRun first, then the real write/cook. Inspect source manifest, index, default and all profile variants, tile coordinates, canonical selector, source level package and fingerprint/content hash. On write failure, correct I/O and perform a fresh recook; sequential persistence does not promise rollback.</div></details>
+  <details><summary>Exercise lifecycle and active paths</summary><div class="body">Load cell → path available; unload → no stale installed/in-flight success or duplicate callback; reload → correct field returns. Deactivate Data Layer → excluded geometry unavailable; reactivate → geometry returns. Repeat replacement while routes are idle, installed and in flight. Capture map/cell/profile/provider identity, video, path result and fresh logs.</div></details>
+
+  <h2>5 — Build-machine packages</h2>
+  <div class="card files">
+    <div class="row"><span class="tag del">open</span><span class="path">Development</span><span class="note">cook/package; loaded-from-cook; WP/Data Layer lifecycle; real routes; matched A/B with traces</span></div>
+    <div class="row"><span class="tag del">open</span><span class="path">Test</span><span class="note">same runtime behavior; module-tier stripping correct; matched A/B evidence</span></div>
+    <div class="row"><span class="tag del">open</span><span class="path">Shipping</span><span class="note">compile/package plus basic map load and provider selection; no editor-only dependency</span></div>
+  </div>
+
+  <h2>6 — BusterBlock migration comes last</h2>
+  <details open><summary>Why a direct update is unsafe</summary><div class="body">The framework default is GroundNav, while BusterBlock does not explicitly select Recast and currently has no authored GroundNav fields/manifests. Its eight <code>Nav.Filter.*</code> mappings reference legacy <code>UNavigationQueryFilter</code> classes rather than provider-neutral definitions. Its sidewalk vectorizer also directly queries <code>ARecastNavMesh</code>. A pointer-only update can produce NoData navigation and weakened filters.</div></details>
+  <ol>
+    <li>Explicitly pin BusterBlock to Recast and confirm its default Recast nav data exists.</li>
+    <li>Migrate or bridge all eight query filters to neutral definitions.</li>
+    <li>Update plugins in the existing checkout, then compile and run the existing Recast baseline.</li>
+    <li>Introduce GroundNav on one isolated authored BusterBlock map; keep production worlds on Recast.</li>
+    <li>Run editor, cook, real streaming/pathing and packaged matched A/B acceptance.</li>
+    <li>Migrate one real map only after every prior gate is green.</li>
+    <li>Exercise rollback: select Recast, confirm nav data, rerun affected routes, and archive evidence. Retain Recast.</li>
+  </ol>
+
+  <h2>Toolbox launch rule</h2>
+  <div class="card"><code>$arguments = @('&lt;validated build/test arguments&gt;', '--output=&lt;absolute log&gt;', '--project=D:\Repos\CkPlugins_3')<br>Start-Process -FilePath 'D:\Repos\CkPlugins_3\CkAuto\UnrealToolbox.exe' -ArgumentList $arguments -PassThru -WindowStyle Hidden</code><p class="meta">State the required editor-boot count first. Monitor the detached process and output log. Never use raw Build.bat/UBT/UnrealEditor-Cmd and never pass <code>--no-progress-window</code>. Use <code>--config</code> only with <code>--build</code>.</p></div>
+
+  <h2>Final evidence checklist</h2>
+  <ul class="next">
+    <li>☑ Human/showcase decision closed by 2026-09-10 user attestation after all seven gyms were run; no visual baseline, hero/diagnostic, clip, or fresh-log archive is claimed.</li>
+    <li>☑ Local fixture, harness, schema reports, QueryBurst128 and CrowdConvergence240 harness acceptance; crowd distributions are not convergence/equivalence evidence.</li>
+    <li>☐ At least three alternating matched pairs, all raw metrics, comparison table and provider traces.</li>
+    <li>☐ PathNetwork snap/undo/redo and LiveExtract measurement.</li>
+    <li>☐ Actual WP/Data Layer lifecycle, real commandlet assets and real-map installed/in-flight routes.</li>
+    <li>☐ Packaged Development/Test runtime and Shipping compile/package.</li>
+    <li>☐ BusterBlock Recast baseline, eight-filter bridge, isolated GroundNav map, packaged A/B and rollback drill.</li>
+  </ul>
+
+  <p class="footnote">GO only when every required row names its artifact and is green. Missing evidence or an unmatched comparison remains open. This standalone operator guide is fully offline.</p>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('theme-toggle');
+  var saved=null; try{saved=localStorage.getItem('digest-theme');}catch(e){}
+  function osTheme(){return (window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}
+  function apply(t){root.setAttribute('data-theme',t);btn.textContent=t==='dark'?'☀️':'🌙';}
+  apply(saved||osTheme());
+  btn.addEventListener('click',function(){
+    var next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    apply(next);
+    try{localStorage.setItem('digest-theme',next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

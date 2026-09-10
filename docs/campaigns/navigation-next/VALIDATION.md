@@ -520,8 +520,9 @@ A settle you cannot justify is not a defect to fix — record why you kept it, i
 
 ### 2.3 Layer 3 — Gym (interactive, human-verified)
 
-- [ ] **Four CkGroundNav gyms** exist in `Script/CkGroundNav/` — **GroundNav Tuning Range**,
-      **GroundNav Links**, **GroundNav Repair**, **GroundNav Routing** — each **registered in
+- [ ] **Six CkGroundNav gyms** exist in `Script/CkGroundNav/` — **GroundNav Tuning Range**,
+      **GroundNav Walk**, **GroundNav Links**, **GroundNav Dynamic Obstacle**, **GroundNav Markup** and
+      **GroundNav vs Recast** — each **registered in
       `Script/Common/CkTests_GymRegistry.as`** via `RegisterProjectGym`.
 - [ ] Steps are **CkStateMachine graphs** — one `UCk_Gym_StepState` subclass per step, dwell gated by
       `UCk_Gym_Dwell` — so the HUD highlights the live state and the displayed sequence cannot drift
@@ -752,3 +753,94 @@ nicely, a video, or a hand-picked query proves that one path worked once. Parity
 report of §3 over the full suites, with agreement on **every** test and deltas inside **measured**
 budgets. Anyone offering a working demo in place of that report has not met this gate, and the
 reviewer's correct response is to ask for the report.
+
+---
+
+## 7. Closeout order — showcase, matched performance, external acceptance, then BusterBlock
+
+This order supersedes any older text that treats the current `GroundNav vs Recast` gym or isolated
+provider measurements as performance acceptance.
+
+### 7.1 Professional visual showcase
+
+Gate119 implements Baseline/Hero/Diagnostic controls and a shared presentation candidate. Final
+runtime gates passed GroundNav 523/523 (historical network Iris diagnostic retained) and
+PathNetwork 108/108. The seven gyms were run through the Gate119 runbook and the human/showcase
+gate was closed by user attestation on 2026-09-10. No image, clip, or log artifact was archived or
+is claimed by that attestation; the pre-change baseline was prepared, not rendered. Frozen file/DLL identity is in
+`GATE119_PRESENTATION_ARTIFACTS.md`. Its
+pre-edit identity and contract are in `GATE119_SHOWCASE_BASELINE_AND_CONTRACT.md`; exact capture
+commands, matrix, and historical sign-off criteria are in `GATE119_CAPTURE_RUNBOOK.md`. The
+attestation closes the human/showcase decision only; it does not create a rendered baseline or an
+archived capture matrix.
+
+- [ ] Pre-change baseline rendered and archived for the six registered GroundNav gyms and the
+      PathNetwork gym. **Not claimed:** preparation occurred, but no rendered baseline was archived.
+- [x] Give every gym a fixed hero view, readable feature/cause/result, concise caption, consistent
+      route/agent/field colors, and a capture-safe presentation state without changing its verdict.
+- [ ] Fresh 16:9 hero/diagnostic captures and state-changing clips archived with revision, provider,
+      settings, resolution, action, verdict, and log. **Not claimed:** no capture archive was supplied or verified in this session; this is not a request to repeat the approved gyms.
+- [x] Human visual review closed by user attestation on 2026-09-10. This is not a substitute for the
+      unarchived capture evidence above.
+
+### 7.2 Matched GroundNav-versus-Recast benchmark
+
+Gate123 final passed 5/5 in 57 s with zero skips/contamination; four real reports pass `--require-eligible`, schema is 21/21, and no ensure failures, script errors, Pending Timeout or never-answered warnings occurred. The local authored map, MapContract and native harness are accepted: both `QueryBurst128` rows are 128 Ready; crowd has 240 ready/replanned, zero goal failures/off-surface, provider/debug restored and explicit sample-boundary `Stop240`. GroundNav ends `completions=1, Walking=0, PathPending=239, Idle=1, None=0` in 136 frames; Recast ends `completions=0, Walking=233, PathPending=7, Idle=0, None=0` in 174 frames. This is not convergence, behavioral-equivalence or performance-win evidence. Gate121d's two post-terminal Pending Timeout warnings are historical; Gate123 removed the post-sample live-simulation path. Gate122 PathDiagnostics remains 7/7 with zero ensure/script errors. Provenance: `Saved/Logs/S14-Gate123-MatchedBenchmarkFinal.log`, SHA-256 `4649f895c26e07c940c6298b2a6b83769515ad52823a7322747f142d52f79157`. Build-machine matched pairs, build artifact/run-id provenance and traces remain deferred until BusterBlock integration. Recast remains retained as the A/B provider and rollback path.
+
+- [x] Use one shared authored geometry fixture that supplies valid Recast nav data and a settled
+      GroundNav field for the same agent capsule. Dynamic parity-gym geometry alone is insufficient.
+- [x] `QueryBurst128`: identical deterministic endpoints; both providers report 128 Ready and zero
+      Partial/Failed. Observed latency is end-to-end issue-to-observed-terminal, not pure queue wait or search duration.
+- [x] `CrowdConvergence240`: local harness/schema acceptance is complete with explicit `Stop240` at the
+      sample boundary and no post-terminal warnings. Its terminal distributions do not imply convergence or equivalence.
+- [ ] Every record includes run id, provider, map/fixture hash, build/config, machine/settings, workload,
+      behavior eligibility, and raw sample/export location. Missing or non-finite fields reject a run.
+- [ ] Collect at least three eligible paired runs on the same Development-game artifact, alternating
+      provider order. Debug draw is off. Preserve one Insights trace per provider. Report all runs and
+      spread; an ineligible or behaviorally different workload is inconclusive, never a winner.
+
+### 7.3 Remaining editor, real-map, and package acceptance
+
+- [x] Complete §4.1 gym walkthroughs using the current six gym names, plus the PathNetwork six-scenario
+      walkthrough. Closed by user attestation on 2026-09-10 after all seven gyms were run; no capture
+      matrix or fresh diagnostic-free log archive is claimed.
+- [ ] Complete §4.3 PathNetwork snap on flat, ramp, and overlapping floors, including Ctrl+Z/Ctrl+Y,
+      no stale connection, and measured editor responsiveness.
+- [ ] Measure LiveExtract on representative large static geometry and record before/after timing,
+      affected field identity/epoch, undo/redo behavior, and log evidence.
+- [ ] On an authored World Partition map, exercise real cell and data-layer load, deactivate,
+      reactivate, replacement, unload, and reload while routes are idle, installed, and in flight.
+- [ ] Run commandlet DryRun, then the real build-machine write/cook; inspect source manifest, index,
+      all profile variants, tile identity, selector, fingerprint/hash, and loaded-from-cook evidence.
+- [ ] Exercise the same map and matched benchmark in packaged Development and Test. Compile/package
+      Shipping and confirm basic provider selection/load. Local editor evidence does not close these.
+
+### 7.4 BusterBlock migration is the final integration gate
+
+- [ ] Before updating plugins, explicitly pin BusterBlock to Recast and preserve its Recast nav data.
+- [ ] Migrate or bridge all eight legacy `Nav.Filter.*` class mappings to provider-neutral definitions.
+- [ ] Update plugins, compile, and run the existing BusterBlock Recast regression before GroundNav opt-in.
+- [ ] Author one isolated BusterBlock GroundNav map and complete real cook, streaming, pathing, and
+      packaged matched A/B acceptance without changing production-world defaults.
+- [ ] Migrate one real map only after all prior gates pass. Retain and exercise the Recast rollback
+      switch. A missing field, filter mismatch, behavior-ineligible benchmark, ensure, stale callback,
+      or package-only divergence is a stop condition.
+
+The step-by-step operator version of this checklist is
+`docs/campaigns/navigation-next/GROUNDNAV_ACCEPTANCE_GUIDE.html`.
+
+
+## 8. Gate124 compatibility and A/B readiness - 2026-09-10
+
+The authoritative BusterBlock continuation prompt supersedes older priority ordering, not acceptance requirements. See `GATE124_COMPATIBILITY_AND_REBASE_PLAN.md` for the concrete scope and preserved backlog.
+
+- [x] Verify both selected roots and actual Foundation/Tests/Toolbox pins, original dirty identities, candidate ancestry and protected hashes before the game baseline. Evidence: `GATE124_ENTRY_EVIDENCE.json`; 60 SHA256 matches plus fixture MD5.
+- [x] Capture an unchanged-game focused Recast baseline with named failures. Evidence: `GATE124_RECAST_BASELINE_EVIDENCE.json`, 22/27, exit 1, one boot; this does not satisfy the campaign full-suite/clean-startup gate.
+- [ ] Obtain the explicit scoped dirty-work preservation/commit decision and safely rebase feature branches onto refreshed dev without advancing any dev ref.
+- [ ] Preserve all eight actual game filters, underlying area costs (including crowd cost 64), Recast area registration and wrong/missing mapping rejection with no unrestricted fallback/partial publication.
+- [ ] Preserve exact AccessZone/Entryway policy geometry and owned lifecycle for the selected provider; legacy Recast markup alone is not GroundNav policy.
+- [ ] Prove game Recast routes and queue/sidewalk behavior after integration. Carry the fresh LivenessWatchdogAccrual assertion and source-control diagnostics separately from historical Gate102/Gate112 debt.
+- [ ] Implement per-run startup choice and requested/effective provider, field/filter/markup readiness, scenario/seed/settings/source/artifact reporting, with bounded explicit ineligibility.
+- [ ] Exercise the isolated authored game scenario in Recast -> GroundNav -> Recast runs. Explicitly label retained Recast projections and sidewalk backing; no whole-game provider-equivalence claim.
+- [ ] Keep controls-ready, behavior-accepted, package-accepted and performance-measured statuses separate. No startup control or game A/B behavior has been implemented at this entry checkpoint.
+- [ ] Retain deferred editor snap/undo/LiveExtract, authored WP/data layers, manifests/DryRun/build-machine cook, Development/Test/Shipping package checks, matched performance, later production-map adoption/rollback, named Recast queue debt, inherited suite failures and unrelated CPU/voice/dirty work. The seven approved gyms remain closed; no local cook/package.
