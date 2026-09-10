@@ -106,6 +106,12 @@ public:
     CK_PROPERTY_GET(_Params);
     CK_PROPERTY_GET(_SpawnTransform);
 
+#if WITH_EDITOR
+    /** Editor fixture/authoring helpers may replace the complete value params, then request a preview rebuild. */
+    auto EditorOnly_SetParams(const FCk_Fragment_GroundNavVolume_ParamsData& InParams) -> void
+    { _Params = InParams; }
+#endif
+
 private:
     // EntitySpawner injects the source level before duplicating this script for construction.
     UPROPERTY()
