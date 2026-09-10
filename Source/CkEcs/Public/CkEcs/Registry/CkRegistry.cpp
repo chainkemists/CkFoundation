@@ -119,6 +119,29 @@ auto
 
 auto
     FCk_Registry::
+    DestroyEntityIDs(
+        const TArray<EntityType::IdType>& InEntityIDs)
+    -> void
+{
+#if !UE_BUILD_SHIPPING
+    ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::DestroyEntityIDs"));
+#endif
+
+    auto* Reg = Resolve();
+    const auto RegistryIsValid = Reg != nullptr;
+    CK_ENSURE_IF_NOT(RegistryIsValid,
+        TEXT("FCk_Registry::DestroyEntityIDs: registry handle is stale or unset"))
+    { }
+
+    if (NOT RegistryIsValid)
+    { return; }
+
+    // EnTT's public range destroy performs component-pool removal and entity-slot release as one opaque operation.
+    Reg->destroy(InEntityIDs.begin(), InEntityIDs.end());
+}
+
+auto
+    FCk_Registry::
     Get_ValidEntity(
         EntityType::IdType InEntity) const
     -> EntityType

@@ -136,11 +136,15 @@ auto
     INC_DWORD_STAT(STAT_CkEcs_EntitiesDestroyed);
 
     auto LifetimeDependents = Get_LifetimeDependents(InHandle);
-    Request_DestroyEntities(LifetimeDependents);
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(EntityLifetime_RequestDestroyDependents)
+        Request_DestroyEntities(LifetimeDependents);
+    }
 
     // broadcast AFTER walking the dependents since destruction order should be leaf-to-root
     if (ck::UUtils_Signal_OnEntityBeginDestroy::Has(InHandle))
     {
+        QUICK_SCOPE_CYCLE_COUNTER(EntityLifetime_OnBeginDestroyCallbacks)
         ck::UUtils_Signal_OnEntityBeginDestroy::Broadcast(InHandle, ck::MakePayload(InHandle));
     }
 }
